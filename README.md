@@ -56,7 +56,7 @@ There are several open source JavaScript NIfTI viewers. What makes niivue unique
 # You must install nodejs on your system FIRST!
 
 # Use https protocol also if you want
-git clone git@github.com:hanayik/niivue.git
+git clone git@github.com:niivue/niivue.git
 
 cd niivue
 
