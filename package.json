@@ -1,0 +1,42 @@
+{
+  "name": "niivue",
+  "version": "0.0.1",
+  "description": "minimal webgl2 nifti image viewer",
+  "main": "src/niivue.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "npx webpack && npm run copy-test",
+    "copy-test": "cp ./dist/niivue.js ./test/niivue.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niivue/niivue.git"
+  },
+  "keywords": [
+    "niivue",
+    "webgl2",
+    "nifti",
+    "image",
+    "viewer"
+  ],
+  "author": "niivue authors",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/niivue/niivue/issues"
+  },
+  "homepage": "https://github.com/niivue/niivue#readme",
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "gl-matrix": "^3.3.0",
+    "hammerjs": "^2.0.8",
+    "nifti-reader-js": "^0.5.4"
+  },
+  "devDependencies": {
+    "http-server": "^0.12.3",
+    "webpack": "^5.34.0",
+    "webpack-cli": "^4.6.0"
+  }
+}
