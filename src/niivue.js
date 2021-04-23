@@ -57,7 +57,8 @@ import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOri
     crosshairColor: [1, 0, 0 ,1],
     colorBarMargin: 0.05 // x axis margin arount color bar, clip space coordinates
   }
-  this.gl = null
+  this.canvas = null // the canvas element on the page
+  this.gl = null // the gl context
   this.colormapTexture = null
   this.volumeTexture = null
   this.overlayTexture = null
@@ -107,6 +108,28 @@ import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOri
   }
 }
 
+// attach the Niivue instance to the webgl2 canvas by element id
+// @example niivue = new Niivue().attachTo('gl')
+Niivue.prototype.attachTo = function (id) {
+  this.canvas = document.getElementById(id)
+	this.gl = this.canvas.getContext("webgl2");
+	if (!this.gl){
+    alert("unable to get webgl2 context. Perhaps this browser does not support webgl2")
+    console.log("unable to get webgl2 context. Perhaps this browser does not support webgl2")
+
+  }
+  // fill all space in parent
+  this.canvas.style.width ='100%'
+  this.canvas.style.height='100%'
+  this.canvas.width  = this.canvas.offsetWidth
+  this.canvas.height = this.canvas.offsetHeight
+
+  window.addEventListener('resize', this.resizeListener.bind(this)) // must bind 'this' niivue object or else 'this' becomes 'window'
+  this.init()
+  return this
+} // attachTo
+
+
 /**
  * test if two arrays have equal values for each element
  * @param {Array} a the first array
@@ -118,6 +141,16 @@ Niivue.prototype.arrayEquals = function(a, b) {
     Array.isArray(b) &&
     a.length === b.length &&
     a.every((val, index) => val === b[index]);
+}
+
+//handle window resizing
+Niivue.prototype.resizeListener = function() {
+  this.canvas.style.width ='100%'
+  this.canvas.style.height='100%'
+  this.canvas.width  = this.canvas.offsetWidth
+  this.canvas.height = this.canvas.offsetHeight
+
+  this.drawScene()
 }
 
 // update mouse position from new mouse down coordinates
@@ -191,18 +224,6 @@ Niivue.prototype.setScale = function (scale) {
   this.drawScene()
 } // setScale()
 
-// attach the Niivue instance to the webgl2 canvas by element id
-// @example niivue = new Niivue().attachTo('#gl')
-Niivue.prototype.attachTo = function (id) {
-	this.gl = document.querySelector(id).getContext("webgl2");
-	if (!this.gl){
-    alert("unable to get webgl2 context. Perhaps this browser does not support webgl2")
-    console.log("unable to get webgl2 context. Perhaps this browser does not support webgl2")
-
-  }
-  this.init()
-  return this
-} // attachTo
 
 Niivue.prototype.overlayRGBA = function (volume) {
 	let hdr = volume.hdr;
@@ -510,6 +531,7 @@ Niivue.prototype.init = async function () {
   this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
   this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
   await this.initText();
+  this.updateGLVolume()
   return this
 } // init()
 

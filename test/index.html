@@ -10,7 +10,7 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <div id="app">
+    <div id="app" style="width:100%; heigh:100%">
       <canvas id="gl" height=480 width=640>
       </canvas>
     </div>
@@ -32,7 +32,7 @@
          }
       ]
 
-      var nv = new niivue.Niivue().attachTo('#gl').loadVolumes(volumeList)
+      var nv = new niivue.Niivue().attachTo('gl').loadVolumes(volumeList)
 
     </script>
   </body>
