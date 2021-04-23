@@ -1,6 +1,8 @@
 # NiiVue
 
-**WARNING: THIS IS A WORK IN PROGRESS**
+** WARNING: THIS IS A WORK IN PROGRESS. HIGHLY VOLATILE CODE **
+
+This is the core NiiVue library. Just import NiiVue and use it with your webgl2 canvas. No UI is included (but examples are coming soon). 
 
 - [Overview](#overview)
 - [Development Environment](#development-environment)
