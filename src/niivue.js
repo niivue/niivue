@@ -2,6 +2,7 @@ var Buffer = require('buffer/').Buffer
 import * as nifti from "nifti-reader-js"
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
+import * as Hammer from 'hammerjs' // for touch and click interactions
 import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
 import { vertLineShader, fragLineShader } from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
@@ -57,6 +58,7 @@ import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOri
     crosshairColor: [1, 0, 0 ,1],
     colorBarMargin: 0.05 // x axis margin arount color bar, clip space coordinates
   }
+
   this.canvas = null // the canvas element on the page
   this.gl = null // the gl context
   this.colormapTexture = null
@@ -84,6 +86,8 @@ import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOri
   this.scene.renderElevation = 15
   this.scene.crosshairPos = [0.5, 0.5, 0.5]
   this.scene.clipPlane = [0, 0, 0, 0]
+  this.scene.mousedown = false
+  this.scene.touchdown = false
   this.back = {} // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = [] // all loaded images. Can add in the ability to push or slice as needed
@@ -125,6 +129,7 @@ Niivue.prototype.attachTo = function (id) {
   this.canvas.height = this.canvas.offsetHeight
 
   window.addEventListener('resize', this.resizeListener.bind(this)) // must bind 'this' niivue object or else 'this' becomes 'window'
+  this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
   this.init()
   return this
 } // attachTo
@@ -151,6 +156,90 @@ Niivue.prototype.resizeListener = function() {
   this.canvas.height = this.canvas.offsetHeight
 
   this.drawScene()
+}
+
+// handler for mouse left button down
+Niivue.prototype.mouseDownListener = function(e) {
+  e.preventDefault()
+  var rect = this.canvas.getBoundingClientRect()
+  this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
+  this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
+  this.scene.mousedown = true
+}
+
+// handler for mouse left button up
+Niivue.prototype.mouseUpListener = function() {
+  this.scene.mousedown = false
+}
+
+// handler for single finger touch event (like mouse down)
+Niivue.prototype.touchStartListener = function (e) {
+  e.preventDefault()
+  this.scene.touchdown = true
+  var rect = this.canvas.getBoundingClientRect()
+  this.mouseClick(e.touches[0].clientX - rect.left, e.      touches[0].clientY - rect.top)
+  this.mouseDown(e.touches[0].clientX - rect.left, e.       touches[0].clientY - rect.top)
+}
+
+// handler for touchend (finger lift off screen)
+Niivue.prototype.touchEndListener = function () {
+  this.scene.touchdown = false
+}
+
+// handler for mouse move over canvas
+Niivue.prototype.mouseMoveListener = function(e) {
+  // move crosshair and change slices if mouse click and move
+  if (this.scene.mousedown) {
+    var rect = this.canvas.getBoundingClientRect()
+    // mouseClick if any 2D mode
+    this.mouseClick(e.clientX - rect.left, e.clientY -      rect.top)
+    // mouseMove if 3D render mode
+    this.mouseMove(e.clientX - rect.left,e.clientY - rect.  top)
+  }
+}
+
+// handler for touch move (moving finger on screen)
+Niivue.prototype.touchMoveListener = function (e) {
+  if (this.scene.touchdown && e.touches.length < 2) {
+    var rect = this.canvas.getBoundingClientRect()
+    this.mouseClick(e.touches[0].clientX - rect.left, e.    touches[0].clientY - rect.top)
+    this.mouseMove(e.touches[0].clientX - rect.left,e.      touches[0].clientY - rect.top)
+  }
+}
+
+// handler for scroll wheel events (slice scrolling)
+Niivue.prototype.wheelListener = function(e) {
+  // scroll 2D slices
+  e.preventDefault()
+  e.stopPropagation()
+  var rect = this.canvas.getBoundingClientRect()
+  if (e.deltaY < 0){
+    this.sliceScroll2D(-0.01, e.clientX - rect.left, e.   clientY - rect.top)
+   } else {
+    this.sliceScroll2D(0.01, e.clientX - rect.left, e.    clientY - rect.top)
+   }
+}
+
+// setup interactions with the canvas. Mouse clicks and touches
+Niivue.prototype.registerInteractions = function() {
+  // add mousedown
+  this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this))
+  // add mouseup
+  this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this))
+  // add mouse move
+  this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this))
+
+  // add touchstart
+  this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this))
+  // add touchend
+  this.canvas.addEventListener('touchend', this.touchEndListener.bind(this))
+  // add touchmove
+  this.canvas.addEventListener('touchmove', this.touchMoveListener.bind(this))
+
+  // add scroll wheel
+  this.canvas.addEventListener('wheel', this.wheelListener.bind(this))
+
+
 }
 
 // update mouse position from new mouse down coordinates
@@ -205,6 +294,7 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta=true) {
 Niivue.prototype.setSliceType = function(st) {
   this.sliceType = st
   this.drawScene()
+  return this
 } // setSliceType()
 
 Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
