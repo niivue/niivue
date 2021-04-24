@@ -68,6 +68,7 @@ npm install
 ### Serves for development (be sure to shift click reload to avoid cache)
 ```
 # npm install -g http-server
+# must run: `npm run build` before serving for development
 http-server test/
 ```
 
