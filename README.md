@@ -77,37 +77,5 @@ http-server test/
 npm run build
 ```
 
-## Core data loading concepts
-
-`niivue.js` functions should be designed to accept an `overlayList` (Array) such as:
-
-```
-overlayList: [
-    {
-      volumeURL: "./mni152.nii.gz",
-      volume: {hdr: null, img: null},
-      name: "mni152.nii.gz",
-      intensityMin: 0,
-      intensityMax: 100,
-      intensityRange:[0, 100],
-      colorMap: "gray", // gray
-      opacity: 100,
-    },
-    {
-      volumeURL: "./chris_T1.nii.gz",
-      volume: {hdr: null, img: null},
-      name: "chris_T1.nii.gz",
-      intensityMin: 0,
-      intensityMax: 100,
-      intensityRange:[0, 100],
-      colorMap: "gray", // gray
-      opacity: 100,
-    }
-]
-
-```
-
-This `overlayList` informs niivue WebGL calls about most rendering related settings. For now, only the first item in the array is rendered until overlays (layering) is actually supported. 
-
-
+More documentation to come soon!
 
