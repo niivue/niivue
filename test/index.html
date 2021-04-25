@@ -10,14 +10,42 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <div id="app" style="width:100%; heigh:100%">
-      <canvas id="gl" height=480 width=640>
+
+    <!-- demo 1 -->
+    <div id="demo1" style="width:90%; height:400px; margin:20px;">
+      <canvas id="gl1" height=480 width=640>
       </canvas>
     </div>
+
+    <!-- demo 2 -->
+    <div id="demo2" style="width:90%; height:400px; margin:20px;">
+      <canvas id="gl2" height=480 width=640>
+      </canvas>
+    </div>
+
+    <!-- demo 3 -->
+    <div id="demo3" style="width:90%; height:400px; margin:20px;">
+      <canvas id="gl3" height=480 width=640>
+      </canvas>
+    </div>
+
+    <!-- demo 4 -->
+    <div id="demo4" style="width:90%; height:400px; margin:20px;">
+      <canvas id="gl4" height=480 width=640>
+      </canvas>
+    </div>
+
+    <!-- demo 5 -->
+    <div id="demo5" style="width:90%; height:400px; margin:20px;">
+      <canvas id="gl5" height=480 width=640>
+      </canvas>
+    </div>
+
+
     <script src="./niivue.js">
     </script>
     <script>
-     var volumeList = [
+     var volumeListA = [
        // first item is brackground image
          {
            url: "./RAS.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
@@ -32,10 +60,32 @@
          }
       ]
 
-      var nv = new niivue.Niivue()
-      nv.attachTo('gl')
-      nv.loadVolumes(volumeList)
-      nv.setSliceType(nv.sliceTypeMultiPlanar)
+      var nv1 = new niivue.Niivue()
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeListA)
+      nv1.setSliceType(nv1.sliceTypeMultiPlanar)
+
+      var nv2 = new niivue.Niivue()
+      nv2.attachTo('gl2')
+      nv2.loadVolumes(volumeListA)
+      nv2.setSliceType(nv2.sliceTypeRender)
+
+      var nv3 = new niivue.Niivue()
+      nv3.attachTo('gl3')
+      nv3.loadVolumes(volumeListA)
+      nv3.setSliceType(nv3.sliceTypeSagittal)
+
+      var nv4 = new niivue.Niivue()
+      nv4.attachTo('gl4')
+      nv4.loadVolumes(volumeListA)
+      nv4.setSliceType(nv4.sliceTypeCoronal)
+
+      var nv5 = new niivue.Niivue()
+      nv5.attachTo('gl5')
+      nv5.loadVolumes(volumeListA)
+      nv5.setSliceType(nv5.sliceTypeAxial)
+
+
 
     </script>
   </body>

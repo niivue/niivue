@@ -1,15 +1,12 @@
 {
-  "name": "niivue",
+  "name": "@niivue/niivue",
   "version": "0.0.1",
   "description": "minimal webgl2 nifti image viewer",
-  "main": "src/niivue.js",
-  "directories": {
-    "test": "test"
-  },
+  "main": "dist/niivue.js",
   "scripts": {
     "build": "npx webpack && npm run copy-test",
     "copy-test": "cp ./dist/niivue.js ./test/niivue.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"See ./tets/index.html\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -28,14 +25,12 @@
     "url": "https://github.com/niivue/niivue/issues"
   },
   "homepage": "https://github.com/niivue/niivue#readme",
-  "dependencies": {
+  "devDependencies": {
     "buffer": "^6.0.3",
     "gl-matrix": "^3.3.0",
     "hammerjs": "^2.0.8",
-    "nifti-reader-js": "^0.5.4"
-  },
-  "devDependencies": {
     "http-server": "^0.12.3",
+    "nifti-reader-js": "^0.5.4",
     "webpack": "^5.34.0",
     "webpack-cli": "^4.6.0"
   }
