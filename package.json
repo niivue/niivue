@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "minimal webgl2 nifti image viewer",
   "main": "dist/niivue.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "copy-test": "cp ./dist/niivue.js ./test/niivue.js",
     "copy-docs": "cp -r ./test/* ./docs/",
     "test": "echo \"See ./tets/index.html\" && exit 1",
-    "publish": "npm publish --access public"
+    "pub": "npm publish --access public"
   },
   "files": [
     "dist/niivue.js"
