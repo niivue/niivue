@@ -21,6 +21,39 @@ The goal is to have a simple viewer component that can be embedded in an existin
 ## Requirements
 
 - WebGL2 enabled browser (Chrome, FireFox or Safari Technology Preview).
+
+## Usage
+
+#### existing html page
+```
+<script src="https://unpkg.com/@niivue/niivue@0.1.0/dist/niivue.js"></script>
+
+<canvas id="gl" height=480 width=640></canvas>
+
+<script>
+  var volumeList = [
+    // first item in array is brackground image
+      {
+        url: "./some_image.nii.gz",
+        volume: {hdr: null, img: null},
+        name: "some_image",
+        intensityMin: 0, // not used yet
+        intensityMax: 100, // not used yet
+        intensityRange:[0, 100], // not used yet
+        colorMap: "gray",
+        opacity: 100,
+        visible: true,
+      }
+   ]
+
+ // Niivue will adjust the canvas to 100% of its parent container's size 
+ // the parent element can be any size you want (small or large)
+ var nv = new niivue.Niivue()
+ nv.attachTo('gl') // the canvas element id
+ nv.loadVolumes(volumeList)
+ nv.setSliceType(nv.sliceTypeMultiPlanar)
+</script>
+```
  
 ## Contributors
 
