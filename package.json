@@ -7,8 +7,12 @@
     "build": "npx webpack && npm run copy-test && npm run copy-docs",
     "copy-test": "cp ./dist/niivue.js ./test/niivue.js",
     "copy-docs": "cp -r ./test/* ./docs/",
-    "test": "echo \"See ./tets/index.html\" && exit 1"
+    "test": "echo \"See ./tets/index.html\" && exit 1",
+    "publish": "npm publish --access public"
   },
+  "files": [
+    "dist/niivue.js"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/niivue/niivue.git"
