@@ -2,13 +2,14 @@ var Buffer = require('buffer/').Buffer
 import * as nifti from "nifti-reader-js"
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
-import * as Hammer from 'hammerjs' // for touch and click interactions
 import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
 import { vertLineShader, fragLineShader } from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import { vertFontShader, fragFontShader } from "./shader-srcs.js";
 import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOrientShaderU, fragOrientShaderI, fragOrientShaderF, fragOrientShader} from "./shader-srcs.js";
+import {fontPng} from './fnt.js' // pngName;
+import metrics from './fnt.json'
 
 /**
  * @class Niivue
@@ -56,7 +57,9 @@ import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOri
     crosshairWidth: 1, // 0 for no crosshairs
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0 ,1],
-    colorBarMargin: 0.05 // x axis margin arount color bar, clip space coordinates
+    colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
+    briStep: 0.25, // step size for brightness changes
+    conStep: 0.25 // step size for contrast changes
   }
 
   this.canvas = null // the canvas element on the page
@@ -88,6 +91,14 @@ import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOri
   this.scene.clipPlane = [0, 0, 0, 0]
   this.scene.mousedown = false
   this.scene.touchdown = false
+  this.scene.mouseButtonLeft = 0
+  this.scene.mouseButtonRight = 2
+  this.scene.mouseButtonLeftDown = false
+  this.scene.mouseButtonRightDown = false
+  this.scene.prevX = 0
+  this.scene.prevY = 0
+  this.scene.currX = 0
+  this.scene.currY = 0
   this.back = {} // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = [] // all loaded images. Can add in the ability to push or slice as needed
@@ -158,18 +169,44 @@ Niivue.prototype.resizeListener = function() {
   this.drawScene()
 }
 
-// handler for mouse left button down
+// handler for context menu (right click)
+// here, we disable the normal context menu so that
+// we can use some custom right click events
+Niivue.prototype.mouseContextMenuListener = function(e) {
+  e.preventDefault()
+}
+
+// handler for all mouse button presses
 Niivue.prototype.mouseDownListener = function(e) {
   e.preventDefault()
   var rect = this.canvas.getBoundingClientRect()
-  this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
-  this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
   this.scene.mousedown = true
+  if (e.button === this.scene.mouseButtonLeft) {
+    this.scene.mouseButtonLeftDown = true
+    this.mouseLeftButtonHandler(e, rect)
+  } else if (e.button === this.scene.mouseButtonRight) {
+    this.scene.mouseButtonRightDown = true
+    this.mouseRightButtonHandler(e, rect)
+  }
 }
 
-// handler for mouse left button up
+// handler for mouse left button down
+Niivue.prototype.mouseLeftButtonHandler = function(e, rect) {
+  console.log('left')
+  this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
+  this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
+}
+
+// handler for mouse right button down
+Niivue.prototype.mouseRightButtonHandler = function(e, rect) {
+  return
+}
+
+// handler for mouse button up (all buttons)
 Niivue.prototype.mouseUpListener = function() {
   this.scene.mousedown = false
+  this.scene.mouseButtonRightDown = false
+  this.scene.mouseButtonLeftDown = false
 }
 
 // handler for single finger touch event (like mouse down)
@@ -186,15 +223,86 @@ Niivue.prototype.touchEndListener = function () {
   this.scene.touchdown = false
 }
 
+
+// increase brightness
+Niivue.prototype.increaseBrightness = function(step=null) {
+  this.volumes[0].cal_min += step ? step : this.opts.briStep
+  this.volumes[0].cal_max += step ? step : this.opts.briStep
+}
+
+// decrease brightness
+Niivue.prototype.decreaseBrightness = function(step=null) {
+  this.volumes[0].cal_min -= step ? step : this.opts.briStep
+  this.volumes[0].cal_max -= step ? step : this.opts.briStep
+}
+
+// increase contrast
+Niivue.prototype.increaseContrast = function(step=null) {
+  if (!step){ step = this.opts.conStep}
+  if (this.volumes[0].cal_min + step > this.volumes[0].cal_max - step){
+    return
+  }
+  this.volumes[0].cal_min += step
+  this.volumes[0].cal_max -= step
+}
+
+// decrease contrast
+Niivue.prototype.decreaseContrast = function(step=null) {
+  if (!step){ step = this.opts.conStep}
+  if (this.volumes[0].cal_min - step  > this.volumes[0].cal_max + step){
+    return
+  }
+  this.volumes[0].cal_min -= step
+  this.volumes[0].cal_max += step
+}
+
 // handler for mouse move over canvas
 Niivue.prototype.mouseMoveListener = function(e) {
   // move crosshair and change slices if mouse click and move
-  if (this.scene.mousedown) {
+  if (this.scene.mousedown && this.scene.mouseButtonLeftDown) {
     var rect = this.canvas.getBoundingClientRect()
     // mouseClick if any 2D mode
     this.mouseClick(e.clientX - rect.left, e.clientY -      rect.top)
     // mouseMove if 3D render mode
     this.mouseMove(e.clientX - rect.left,e.clientY - rect.  top)
+  } else if (this.scene.mousedown && this.scene.mouseButtonRightDown) {
+    // handle first mouse click appropriately
+    if (this.prevX === 0) { this.prevX = e.clientX}
+    if (this.prevY === 0) { this.prevY = e.clientY}
+    this.scene.currX = e.clientX
+    this.scene.currY = e.clientY
+
+    // increase brightness
+    if (this.scene.currY > this.scene.prevY){
+      this.increaseBrightness()
+    }
+    // decrease brightness
+    if (this.scene.currY < this.scene.prevY){
+      this.decreaseBrightness()
+    }
+
+    // increase contrast
+    if (this.scene.currX > this.scene.prevX) {
+      this.increaseContrast()
+    }
+    // decrease contrast
+    if (this.scene.currX < this.scene.prevX) {
+      this.decreaseContrast()
+    }
+
+    if (this.volumes[0].cal_min < this.volumes[0].global_min){
+        this.volumes[0].cal_min = this.volumes[0].global_min
+    }
+    if (this.volumes[0].cal_max > this.volumes[0].global_max){
+        this.volumes[0].cal_max = this.volumes[0].global_max
+    }
+
+    this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+
+    console.log(this.volumes[0].cal_min, this.volumes[0].cal_max)
+    this.drawScene()
+    this.scene.prevX = this.scene.currX
+    this.scene.prevY = this.scene.currY
   }
 }
 
@@ -238,8 +346,8 @@ Niivue.prototype.registerInteractions = function() {
 
   // add scroll wheel
   this.canvas.addEventListener('wheel', this.wheelListener.bind(this))
-
-
+  // add context event disabler
+  this.canvas.addEventListener('contextmenu', this.mouseContextMenuListener.bind(this))
 }
 
 // update mouse position from new mouse down coordinates
@@ -515,7 +623,7 @@ Niivue.prototype.loadPng = function(pngName) {
 		// Upload the image into the texture.
 		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pngImage);
 	}.bind(this) // bind "this" context to niivue instance
-	pngImage.src = pngName;  // MUST BE SAME DOMAIN!!!
+	pngImage.src =  fontPng
 	//console.log("loading PNG ", pngName);
 } // loadPng()
 
@@ -531,10 +639,11 @@ Niivue.prototype.initText = async function () {
 		this.fontMets[id].lbwh = [0, 0, 0, 0];
 	}
 	//load metrics values: may only sparsely describe range 0..255
-	var metrics = [];
+	//var metrics = [];
 	async function fetchMetrics() {
-		const response = await fetch('./fnt.json');
-		metrics = await response.json();
+		//const response = await fetch('./fnt.json');
+		//metrics = await response.json();
+
 	}
 	await fetchMetrics();
 	this.fontMets.distanceRange = metrics.atlas.distanceRange;
@@ -755,6 +864,9 @@ Niivue.prototype.calMinMax = function(overlayItem, img, percentileFrac=0.02, ign
 	overlayItem.cal_max = minMax[1]
 	overlayItem.global_min = minMax[2]
 	overlayItem.global_max = minMax[3]
+
+  overlayItem.cal_min = overlayItem.global_min
+  overlayItem.cal_max = overlayItem.global_max
 } // calMinMax()
 
 Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {

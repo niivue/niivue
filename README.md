@@ -16,12 +16,11 @@ The goal is to have a simple viewer component that can be embedded in an existin
 
 ## Live View 
 
-[Load a NiiVue web page](https://hanayik.github.io/niivue/)
+[Load a demo NiiVue web page](https://niivue.github.io/niivue/)
 
 ## Requirements
 
 - WebGL2 enabled browser (Chrome, FireFox or Safari Technology Preview).
-- Several node modules should be automatically installed, including the [NIFTI-Reader-JS](https://github.com/rii-mango/NIFTI-Reader-JS).
  
 ## Contributors
 
@@ -77,5 +76,11 @@ http-server test/
 npm run build
 ```
 
+### to make a new base64 encoded font png
+```
+{ echo "data:image/png;base64,"; openssl enc -base64 -in fnt.png; } > fnt.txt
+
+# then copy the contents of fnt.txt to the font string in src/fnt.js
+```
 More documentation to come soon!
 
