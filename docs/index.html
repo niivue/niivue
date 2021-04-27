@@ -48,13 +48,24 @@
      var volumeListA = [
        // first item is brackground image
          {
-           url: "./RAS.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           url: "./mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
            volume: {hdr: null, img: null},
-           name: "RAS.nii.gz",
+           name: "mni152",
            intensityMin: 0, // not used yet
            intensityMax: 100, // not used yet
            intensityRange:[0, 100], // not used yet
            colorMap: "gray",
+           opacity: 100,
+           visible: true,
+         },
+         {
+           url: "./hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "hippo",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "Winter",
            opacity: 100,
            visible: true,
          }
