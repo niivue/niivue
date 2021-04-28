@@ -26,7 +26,7 @@ The goal is to have a simple viewer component that can be embedded in an existin
 
 #### existing html page
 ```
-<script src="https://unpkg.com/@niivue/niivue@0.1.0/dist/niivue.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.1.1/dist/niivue.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 
