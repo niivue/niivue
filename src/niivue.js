@@ -122,6 +122,10 @@ Niivue.prototype.attachTo = function (id) {
     console.log("unable to get webgl2 context. Perhaps this browser does not support webgl2")
 
   }
+
+  // set parent background container to black (default empty canvas color)
+  // avoids white cube around image in 3D render mode
+  this.canvas.parentElement.style.backgroundColor = "black"
   // fill all space in parent
   this.canvas.style.width ='100%'
   this.canvas.style.height='100%'
