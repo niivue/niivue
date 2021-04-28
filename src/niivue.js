@@ -58,8 +58,8 @@ import metrics from './fnt.json'
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0 ,1],
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
-    briStep: 0.25, // step size for brightness changes
-    conStep: 0.25 // step size for contrast changes
+    briStep: 1, // step size for brightness changes
+    conStep: 1 // step size for contrast changes
   }
 
   this.canvas = null // the canvas element on the page
@@ -310,6 +310,14 @@ Niivue.prototype.mouseMoveListener = function(e) {
   }
 }
 
+// reset brightness and contrast to global min and max
+Niivue.prototype.resetBriCon = function() {
+  this.volumes[0].cal_min = this.volumes[0].global_min
+  this.volumes[0].cal_max = this.volumes[0].global_max
+  this.refreshLayers(this.volumes[0], 0, this.volumes.length)
+  this.drawScene()
+}
+
 // handler for touch move (moving finger on screen)
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
@@ -352,6 +360,9 @@ Niivue.prototype.registerInteractions = function() {
   this.canvas.addEventListener('wheel', this.wheelListener.bind(this))
   // add context event disabler
   this.canvas.addEventListener('contextmenu', this.mouseContextMenuListener.bind(this))
+
+  // add double click
+  this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this))
 }
 
 // update mouse position from new mouse down coordinates

@@ -18,7 +18,7 @@
     </div>
 
     <!-- demo 2 -->
-    <div id="demo2" style="width:90%; height:400px; margin:20px;">
+    <div id="demo2" style="background-color: white; width:90%; height:400px; margin:20px;">
       <canvas id="gl2" height=480 width=640>
       </canvas>
     </div>
@@ -68,7 +68,20 @@
            colorMap: "Winter",
            opacity: 100,
            visible: true,
+         },
+         {
+           url: "./hippolr.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "hippolr",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "Warm",
+           opacity: 100,
+           visible: true,
          }
+
+
       ]
 
       var nv1 = new niivue.Niivue()
