@@ -114,6 +114,10 @@ import metrics from './fnt.json'
   {leftTopWidthHeight: [1, 0, 0, 1], axCorSag: this.sliceTypeAxial}
 ];
   this.backOpacity = 1.0
+  this.isDragging = false
+  this.dragStart = [0.0, 0.0]
+  this.dragEnd = [0.0, 0.0]
+
   // loop through known Niivue properties
   // if the user supplied opts object has a
   // property listed in the known properties, then set
@@ -173,6 +177,27 @@ Niivue.prototype.resizeListener = function() {
   this.drawScene()
 }
 
+Niivue.prototype.getRelativeMousePosition = function(event, target) {
+	target = target || event.target;
+	var rect = target.getBoundingClientRect();
+  
+	return {
+	  x: event.clientX - rect.left,
+	  y: event.clientY - rect.top,
+	}
+  }
+  
+  // assumes target or event.target is canvas
+  Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function(event, target) {
+	target = target || event.target;
+	var pos = this.getRelativeMousePosition(event, target);
+  
+	pos.x = pos.x * target.width  / target.clientWidth;
+	pos.y = pos.y * target.height / target.clientHeight;
+  
+	return pos;  
+  }
+
 // handler for context menu (right click)
 // here, we disable the normal context menu so that
 // we can use some custom right click events
@@ -197,20 +222,137 @@ Niivue.prototype.mouseDownListener = function(e) {
 // handler for mouse left button down
 Niivue.prototype.mouseLeftButtonHandler = function(e, rect) {
   console.log('left')
-  this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
-  this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
+  let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+//   this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
+//   this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
+  this.mouseClick(pos.x, pos.y);
+  this.mouseDown(pos.x, pos.y);
 }
 
 // handler for mouse right button down
 Niivue.prototype.mouseRightButtonHandler = function(e, rect) {
+	console.log('right');
+	this.isDragging = true;
+	let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+	this.dragStart[0] = pos.x;
+	this.dragStart[1] = pos.y;
   return
 }
+
+Niivue.prototype.calculateMinMax = function(array) {
+	return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))]
+}
+
+Niivue.prototype.calculateNewRange = function() {
+	// calculate our box
+	console.log('new range');
+	let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
+	let startVox = this.frac2vox(frac);
+
+	console.log('starting vox is ');
+	console.log(startVox);
+
+	frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
+	let endVox = this.frac2vox(frac);
+
+	console.log('ending vox is ');
+	console.log(endVox);	
+	
+	let hi = -Number.MAX_VALUE, lo = Number.MAX_VALUE; 
+	let xrange;
+	let yrange;
+	let zrange;
+
+	xrange = this.calculateMinMax([startVox[0], endVox[0]]);
+	yrange = this.calculateMinMax([startVox[1], endVox[1]]);
+	zrange = this.calculateMinMax([startVox[2], endVox[2]]);
+
+	// for our constant dimension we add one so that the for loop runs at least once
+	if(startVox[0] - endVox[0] === 0) {
+		xrange[1] = startVox[0] + 1;
+	}
+	else if(startVox[1] - endVox[1] === 0) {
+		yrange[1] = startVox[1] + 1;
+	}
+	else if(startVox[2] - endVox[2] === 0) {
+		zrange[1] = startVox[2] + 1;
+	}
+
+	let imgRaw;
+	const datatypeCode = this.volumes[0].volume.hdr.datatypeCode;
+	const hdr = this.volumes[0].volume.hdr;
+	const img = this.volumes[0].volume.img;
+	console.log(this.volumes[0]);
+	// console.log('datatype code is ' + datatypeCode);
+	
+	switch(datatypeCode) {
+		case 2:
+			imgRaw = new Uint8Array(img);
+			break;
+		case 4:
+			imgRaw = new Int16Array(img);
+			break;
+		case 16:
+			imgRaw = new Float32Array(img);
+			break;
+		case 64:
+			imgRaw = new Float64Array(img);
+			break;
+		case 512:
+			imgRaw = new Uint16Array(img);
+			break;
+	}
+	
+	console.log('first pixel is ');
+	console.log(imgRaw[xrange[0]*yrange[0]*zrange[0]]);
+	console.log(xrange);
+	console.log(yrange);
+	console.log(zrange);
+	const xdim = hdr.dims[1];
+	const ydim = hdr.dims[2];
+
+	for(let z = zrange[0]; z < zrange[1]; z++) {
+		for(let y = yrange[0]; y < yrange[1]; y++) {
+			for(let x = xrange[0]; x < xrange[1]; x++) {
+				let index = z*xdim*ydim+y*xdim+x;
+				if(lo > imgRaw[index]) {
+					lo = imgRaw[index];
+				}
+				if(hi < imgRaw[index]) {
+					hi = imgRaw[index];
+				}
+			}
+		}
+	}
+	
+	console.log("hi is " + hi);
+	console.log("lo is " + lo);
+	var mnScale = intensityRaw2Scaled(hdr, lo);
+	var mxScale = intensityRaw2Scaled(hdr, hi);
+	console.log(mxScale);
+	console.log(mnScale);
+	this.volumes[0].cal_min = mnScale;
+	this.volumes[0].cal_max = mxScale;
+	this.volumes[0].global_min = mnScale;
+	this.volumes[0].global_max = mxScale;
+	this.drawScene();
+	// let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
+	// let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
+
+}
+
 
 // handler for mouse button up (all buttons)
 Niivue.prototype.mouseUpListener = function() {
   this.scene.mousedown = false
   this.scene.mouseButtonRightDown = false
   this.scene.mouseButtonLeftDown = false
+  if(this.isDragging) {
+  	this.isDragging = false;
+	this.calculateNewRange();
+	// remove colorbar
+	this.drawScene();
+  }
 }
 
 // handler for single finger touch event (like mouse down)
@@ -218,8 +360,8 @@ Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault()
   this.scene.touchdown = true
   var rect = this.canvas.getBoundingClientRect()
-  this.mouseClick(e.touches[0].clientX - rect.left, e.      touches[0].clientY - rect.top)
-  this.mouseDown(e.touches[0].clientX - rect.left, e.       touches[0].clientY - rect.top)
+  this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+  this.mouseDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
 }
 
 // handler for touchend (finger lift off screen)
@@ -263,43 +405,52 @@ Niivue.prototype.decreaseContrast = function(step=null) {
 // handler for mouse move over canvas
 Niivue.prototype.mouseMoveListener = function(e) {
   // move crosshair and change slices if mouse click and move
-  if (this.scene.mousedown && this.scene.mouseButtonLeftDown) {
-    var rect = this.canvas.getBoundingClientRect()
+  if (this.scene.mousedown) {
+	let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+  	if(this.scene.mouseButtonLeftDown) {
     // mouseClick if any 2D mode
-    this.mouseClick(e.clientX - rect.left, e.clientY -      rect.top)
-    // mouseMove if 3D render mode
-    this.mouseMove(e.clientX - rect.left,e.clientY - rect.  top)
-  } else if (this.scene.mousedown && this.scene.mouseButtonRightDown) {
+    // this.mouseMove(e.clientX - rect.left,e.clientY - rect.top)
+    // // mouseMove if 3D render mode
+    // this.mouseMove(e.clientX - rect.left,e.clientY - rect.top)
+		this.mouseMove(pos.x, pos.y);
+		this.mouseMove(pos.x,pos.y);
+
+  	} else if (this.scene.mousedown && this.scene.mouseButtonRightDown) {
+	// var rect = this.canvas.getBoundingClientRect()
+		this.dragEnd[0] = pos.x;
+		this.dragEnd[1] = pos.y; //e.clientY - rect.top;
+		console.log('dragging ' + this.dragEnd[0] + ':' + this.dragEnd[1]);
+	}
     // handle first mouse click appropriately
-    if (this.prevX === 0) { this.prevX = e.clientX}
-    if (this.prevY === 0) { this.prevY = e.clientY}
-    this.scene.currX = e.clientX
-    this.scene.currY = e.clientY
+    // if (this.prevX === 0) { this.prevX = e.clientX}
+    // if (this.prevY === 0) { this.prevY = e.clientY}
+    // this.scene.currX = e.clientX
+    // this.scene.currY = e.clientY
 
-    // increase brightness
-    if (this.scene.currY > this.scene.prevY){
-      this.increaseBrightness()
-    }
-    // decrease brightness
-    if (this.scene.currY < this.scene.prevY){
-      this.decreaseBrightness()
-    }
+    // // increase brightness
+    // if (this.scene.currY > this.scene.prevY){
+    //   this.increaseBrightness()
+    // }
+    // // decrease brightness
+    // if (this.scene.currY < this.scene.prevY){
+    //   this.decreaseBrightness()
+    // }
 
-    // increase contrast
-    if (this.scene.currX > this.scene.prevX) {
-      this.increaseContrast()
-    }
-    // decrease contrast
-    if (this.scene.currX < this.scene.prevX) {
-      this.decreaseContrast()
-    }
+    // // increase contrast
+    // if (this.scene.currX > this.scene.prevX) {
+    //   this.increaseContrast()
+    // }
+    // // decrease contrast
+    // if (this.scene.currX < this.scene.prevX) {
+    //   this.decreaseContrast()
+    // }
 
-    if (this.volumes[0].cal_min < this.volumes[0].global_min){
-        this.volumes[0].cal_min = this.volumes[0].global_min
-    }
-    if (this.volumes[0].cal_max > this.volumes[0].global_max){
-        this.volumes[0].cal_max = this.volumes[0].global_max
-    }
+    // if (this.volumes[0].cal_min < this.volumes[0].global_min){
+    //     this.volumes[0].cal_min = this.volumes[0].global_min
+    // }
+    // if (this.volumes[0].cal_max > this.volumes[0].global_max){
+    //     this.volumes[0].cal_max = this.volumes[0].global_max
+    // }
 
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
 
@@ -776,6 +927,8 @@ function intensityRaw2Scaled(hdr, raw) {
 Niivue.prototype.calMinMaxCore = function(overlayItem, img, percentileFrac=0.02, ignoreZeroVoxels = false){
   let imgRaw
   let hdr = overlayItem.volume.hdr
+//   console.log('hdr');
+//   console.log(hdr);
   if (hdr.datatypeCode === 2)
     imgRaw = new Uint8Array(img)
   else if (hdr.datatypeCode === 4)
@@ -870,7 +1023,7 @@ Niivue.prototype.calMinMaxCore = function(overlayItem, img, percentileFrac=0.02,
     pct98 = overlayItem.volume.hdr.cal_max;
   }
   return [ pct2, pct98, mnScale, mxScale ]
-} //sliceScale
+} //calMinMaxCore
 
 Niivue.prototype.calMinMax = function(overlayItem, img, percentileFrac=0.02, ignoreZeroVoxels = false){
 	let minMax = this.calMinMaxCore(overlayItem, img, percentileFrac, ignoreZeroVoxels)
@@ -1078,7 +1231,7 @@ Niivue.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 		var k = idxLo * 4;
 		for (var j = idxLo; j <= idxHi; j++) {
 			var f = (j - idxLo) / idxRng;
-      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
+      		lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
 			lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]); //Green
 			lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
 			lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
@@ -1094,6 +1247,7 @@ Niivue.prototype.sliceScale = function() {
 	var vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
 	return { volScale, vox }
 } // sliceScale()
+
 
 Niivue.prototype.mouseClick = function(x, y, posChange=0, isDelta=true) {
   var posNow
@@ -1165,19 +1319,27 @@ Niivue.prototype.mouseClick = function(x, y, posChange=0, isDelta=true) {
   } //for i: each slice on screen
 } // mouseClick()
 
+Niivue.prototype.drawSelectionBox = function(leftTopWidthHeight) {
+	this.lineShader.use(this.gl)
+	this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], [1, 1, 1 ,0.5]);
+	this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
+	this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+}
+
 Niivue.prototype.drawColorbar = function(leftTopWidthHeight) {
 	if ((leftTopWidthHeight[2] <= 0) || (leftTopWidthHeight[3] <= 0))
 		return;
 	//console.log("bar:", leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-	if (this.opts.crosshairWidth > 0) {
-		//gl.disable(gl.DEPTH_TEST);
-		this.lineShader.use(this.gl)
-		this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.crosshairColor);
-		this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
-		let ltwh = [leftTopWidthHeight[0]-1, leftTopWidthHeight[1]-1, leftTopWidthHeight[2]+2, leftTopWidthHeight[3]+2];
-		this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
-		this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
-	}
+	// if (this.opts.crosshairWidth > 0) {
+	// 	//gl.disable(gl.DEPTH_TEST);
+	// 	this.lineShader.use(this.gl)
+	// 	this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.crosshairColor);
+	// 	this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
+	// 	let ltwh = [leftTopWidthHeight[0]-1, leftTopWidthHeight[1]-1, leftTopWidthHeight[2]+2, leftTopWidthHeight[3]+2];
+	// 	this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
+	// 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+	// }
 	this.colorbarShader.use(this.gl);
 	this.gl.activeTexture(this.gl.TEXTURE1);
 	this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
@@ -1396,6 +1558,61 @@ Niivue.prototype.frac2mm = function(frac) {
 	return pos;
 } // frac2mm()
 
+Niivue.prototype.canvasPos2frac = function(canvasPos) {
+	let x, y, z;
+
+	// convert canvas pos to normalized texture space
+	for (let i = 0; i < this.numScreenSlices; i++) {
+		var axCorSag = this.screenSlices[i].axCorSag;
+		if (axCorSag > this.sliceTypeSagittal) continue;
+		
+		var ltwh = this.screenSlices[i].leftTopWidthHeight;
+		let isMirror = false;
+		if (ltwh[2] < 0) {
+			isMirror = true;
+			ltwh[0] += ltwh[2];
+			ltwh[2] = - ltwh[2];
+		}
+
+		var fracX = (canvasPos[0] - ltwh[0]) / ltwh[2];
+		if (isMirror) {
+			fracX = 1.0 - fracX;
+		}
+
+		var fracY = 1.0 - ((canvasPos[1] - ltwh[1]) / ltwh[3]);
+		if ((fracX >= 0.0) && (fracX < 1.0) && (fracY >= 0.0) && (fracY < 1.0)) {
+			// this is the slice the user right clicked in
+			switch(axCorSag) {
+				case this.sliceTypeAxial:
+					break;
+				case this.sliceTypeCoronal:
+					break;
+				default:
+			}
+			
+			if (axCorSag === this.sliceTypeAxial) {
+				x = fracX;
+				y = fracY;
+				z = this.scene.crosshairPos[2];
+			}
+			if (axCorSag === this.sliceTypeCoronal) {
+				x = fracX;
+				y = this.scene.crosshairPos[1];
+				z = fracY;
+			}
+			if (axCorSag === this.sliceTypeSagittal) {
+				x = this.scene.crosshairPos[0];
+				y = fracX;
+				z = fracY;
+			}
+			
+			break; 
+		}
+	}
+
+	return [x, y, z]
+} // canvas2frac
+
 Niivue.prototype.scaleSlice = function(w, h) {
 	let scalePix = this.gl.canvas.clientWidth / w;
 	if ((h * scalePix) > this.gl.canvas.clientHeight)
@@ -1461,6 +1678,16 @@ Niivue.prototype.drawScene = function() {
 			// drawTextBelow(gl, [ltwh[0]+ wX + (wY * 0.5), ltwh[1] + hZ + margin + hY * colorbarHeight], "Syzygy"); //DEMO
 		}
 	}
+	
+	if(this.isDragging) {
+		let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
+		let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
+		if(width + height > 10) {
+			this.drawSelectionBox([this.dragStart[0], this.dragStart[1], width, height]);
+			console.log('drawing selection box at ' + this.dragStart[0] + ':' + this.dragStart[1]);
+		}
+	}
+
 	const pos = this.frac2mm([this.scene.crosshairPos[0],this.scene.crosshairPos[1],this.scene.crosshairPos[2]]);
 	posString = pos[0].toFixed(2)+'×'+pos[1].toFixed(2)+'×'+pos[2].toFixed(2);
 	this.gl.finish();
