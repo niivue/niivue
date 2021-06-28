@@ -173,6 +173,33 @@ Niivue.prototype.resizeListener = function() {
   this.drawScene()
 }
 
+/*
+* The following two functions are to address offset issues
+* https://stackoverflow.com/questions/42309715/how-to-correctly-pass-mouse-coordinates-to-webgl
+*/
+
+// Fixes offset issues downstream
+Niivue.prototype.getRelativeMousePosition = function(event, target) {
+	target = target || event.target;
+	var rect = target.getBoundingClientRect();
+  
+	return {
+	  x: event.clientX - rect.left,
+	  y: event.clientY - rect.top,
+	}
+  }
+  
+// assumes target or event.target is canvas
+Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function(event, target) {
+	target = target || event.target;
+	var pos = this.getRelativeMousePosition(event, target);
+
+	pos.x = pos.x * target.width  / target.clientWidth;
+	pos.y = pos.y * target.height / target.clientHeight;
+
+	return pos;  
+}
+
 // handler for context menu (right click)
 // here, we disable the normal context menu so that
 // we can use some custom right click events
@@ -183,26 +210,26 @@ Niivue.prototype.mouseContextMenuListener = function(e) {
 // handler for all mouse button presses
 Niivue.prototype.mouseDownListener = function(e) {
   e.preventDefault()
-  var rect = this.canvas.getBoundingClientRect()
   this.scene.mousedown = true
   if (e.button === this.scene.mouseButtonLeft) {
     this.scene.mouseButtonLeftDown = true
-    this.mouseLeftButtonHandler(e, rect)
+    this.mouseLeftButtonHandler(e)
   } else if (e.button === this.scene.mouseButtonRight) {
     this.scene.mouseButtonRightDown = true
-    this.mouseRightButtonHandler(e, rect)
+    this.mouseRightButtonHandler(e)
   }
 }
 
 // handler for mouse left button down
-Niivue.prototype.mouseLeftButtonHandler = function(e, rect) {
+Niivue.prototype.mouseLeftButtonHandler = function(e) {
   console.log('left')
-  this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
-  this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
+  const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+  this.mouseClick(pos.x, pos.y)
+  this.mouseDown(pos.x, pos.y)
 }
 
 // handler for mouse right button down
-Niivue.prototype.mouseRightButtonHandler = function(e, rect) {
+Niivue.prototype.mouseRightButtonHandler = function(e) {
   return
 }
 
@@ -217,9 +244,9 @@ Niivue.prototype.mouseUpListener = function() {
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault()
   this.scene.touchdown = true
-  var rect = this.canvas.getBoundingClientRect()
-  this.mouseClick(e.touches[0].clientX - rect.left, e.      touches[0].clientY - rect.top)
-  this.mouseDown(e.touches[0].clientX - rect.left, e.       touches[0].clientY - rect.top)
+  const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+  this.mouseClick(pos.x, pos.y)
+  this.mouseDown(pos.x, pos.y)
 }
 
 // handler for touchend (finger lift off screen)
@@ -447,6 +474,7 @@ Niivue.prototype.overlayRGBA = function (volume) {
 	let halfY = 0.5 * hdr.dims[2];
 	let halfZ = 0.5 * hdr.dims[3];
 	let j = 0;
+	
 	for (let z = 0; z < hdr.dims[3]; z++) {
 		for (let y = 0; y < hdr.dims[2]; y++) {
 			for (let x = 0; x < hdr.dims[1]; x++) {
