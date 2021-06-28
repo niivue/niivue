@@ -10,6 +10,7 @@ import { vertFontShader, fragFontShader } from "./shader-srcs.js";
 import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOrientShaderU, fragOrientShaderI, fragOrientShaderF, fragOrientShader} from "./shader-srcs.js";
 import {fontPng} from './fnt.js' // pngName;
 import metrics from './fnt.json'
+import { Subject } from 'rxjs';
 
 /**
  * @class Niivue
@@ -118,6 +119,9 @@ import metrics from './fnt.json'
   this.dragStart = [0.0, 0.0]
   this.dragEnd = [0.0, 0.0]
 
+  this.crosshairPosition$ = new Subject();
+  this.intensityRange$ = new Subject();
+
   // loop through known Niivue properties
   // if the user supplied opts object has a
   // property listed in the known properties, then set
@@ -177,6 +181,10 @@ Niivue.prototype.resizeListener = function() {
   this.drawScene()
 }
 
+/*
+* The following two functions are to address offset issues
+* https://stackoverflow.com/questions/42309715/how-to-correctly-pass-mouse-coordinates-to-webgl
+*/
 Niivue.prototype.getRelativeMousePosition = function(event, target) {
 	target = target || event.target;
 	var rect = target.getBoundingClientRect();
@@ -303,18 +311,18 @@ Niivue.prototype.calculateNewRange = function() {
 			break;
 	}
 	
-	console.log('first pixel is ');
 	console.log(imgRaw[xrange[0]*yrange[0]*zrange[0]]);
 	console.log(xrange);
 	console.log(yrange);
 	console.log(zrange);
 	const xdim = hdr.dims[1];
 	const ydim = hdr.dims[2];
-
 	for(let z = zrange[0]; z < zrange[1]; z++) {
+		let zi = z*xdim*ydim; 
 		for(let y = yrange[0]; y < yrange[1]; y++) {
+			let yi = y*xdim;
 			for(let x = xrange[0]; x < xrange[1]; x++) {
-				let index = z*xdim*ydim+y*xdim+x;
+				let index = zi + yi + x;
 				if(lo > imgRaw[index]) {
 					lo = imgRaw[index];
 				}
@@ -325,20 +333,18 @@ Niivue.prototype.calculateNewRange = function() {
 		}
 	}
 	
+	
 	console.log("hi is " + hi);
 	console.log("lo is " + lo);
 	var mnScale = intensityRaw2Scaled(hdr, lo);
 	var mxScale = intensityRaw2Scaled(hdr, hi);
 	console.log(mxScale);
 	console.log(mnScale);
+	console.log('scaled');
 	this.volumes[0].cal_min = mnScale;
 	this.volumes[0].cal_max = mxScale;
-	this.volumes[0].global_min = mnScale;
-	this.volumes[0].global_max = mxScale;
+	this.intensityRange$.next([mnScale, mxScale]);
 	this.drawScene();
-	// let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
-	// let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
-
 }
 
 
@@ -408,49 +414,13 @@ Niivue.prototype.mouseMoveListener = function(e) {
   if (this.scene.mousedown) {
 	let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
   	if(this.scene.mouseButtonLeftDown) {
-    // mouseClick if any 2D mode
-    // this.mouseMove(e.clientX - rect.left,e.clientY - rect.top)
-    // // mouseMove if 3D render mode
-    // this.mouseMove(e.clientX - rect.left,e.clientY - rect.top)
-		this.mouseMove(pos.x, pos.y);
+		this.mouseClick(pos.x, pos.y);
 		this.mouseMove(pos.x,pos.y);
-
-  	} else if (this.scene.mousedown && this.scene.mouseButtonRightDown) {
-	// var rect = this.canvas.getBoundingClientRect()
+  	} else if (this.scene.mouseButtonRightDown) {
 		this.dragEnd[0] = pos.x;
-		this.dragEnd[1] = pos.y; //e.clientY - rect.top;
-		console.log('dragging ' + this.dragEnd[0] + ':' + this.dragEnd[1]);
+		this.dragEnd[1] = pos.y; 
 	}
-    // handle first mouse click appropriately
-    // if (this.prevX === 0) { this.prevX = e.clientX}
-    // if (this.prevY === 0) { this.prevY = e.clientY}
-    // this.scene.currX = e.clientX
-    // this.scene.currY = e.clientY
-
-    // // increase brightness
-    // if (this.scene.currY > this.scene.prevY){
-    //   this.increaseBrightness()
-    // }
-    // // decrease brightness
-    // if (this.scene.currY < this.scene.prevY){
-    //   this.decreaseBrightness()
-    // }
-
-    // // increase contrast
-    // if (this.scene.currX > this.scene.prevX) {
-    //   this.increaseContrast()
-    // }
-    // // decrease contrast
-    // if (this.scene.currX < this.scene.prevX) {
-    //   this.decreaseContrast()
-    // }
-
-    // if (this.volumes[0].cal_min < this.volumes[0].global_min){
-    //     this.volumes[0].cal_min = this.volumes[0].global_min
-    // }
-    // if (this.volumes[0].cal_max > this.volumes[0].global_max){
-    //     this.volumes[0].cal_max = this.volumes[0].global_max
-    // }
+    
 
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
 
@@ -523,11 +493,11 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 } // mouseDown()
 
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
-	if (this.sliceType != this.sliceTypeRender) return;
-	this.scene.renderAzimuth += x - this.mousePos[0];
-	this.scene.renderElevation += y - this.mousePos[1];
-	this.mousePos = [x,y];
-	this.drawScene()
+	// if (this.sliceType != this.sliceTypeRender) return;
+	// this.scene.renderAzimuth += x - this.mousePos[0];
+	// this.scene.renderElevation += y - this.mousePos[1];
+	// this.mousePos = [x,y];
+	// this.drawScene()
 } // mouseMove()
 
 Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
@@ -1307,6 +1277,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange=0, isDelta=true) {
 				this.scene.crosshairPos[2] = fracY;
 			}
 			this.drawScene()
+			this.crosshairPosition$.next([this.scene.crosshairPos[0], this.scene.crosshairPos[1], this.scene.crosshairPos[2]]);
 			return;
 		} else {//if click in slice i
       // if x and y are null, likely due to a slider widget sending the posChange (no mouse info in that case)
@@ -1507,6 +1478,7 @@ Niivue.prototype.draw3D = function() {
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 14); //cube is 12 triangles, triangle-strip creates n-2 triangles
 	let posString = 'azimuth: ' + this.scene.renderAzimuth.toFixed(0)+' elevation: '+this.scene.renderElevation.toFixed(0);
 	//bus.$emit('crosshair-pos-change', posString);
+	
 	return posString;
 } // draw3D()
 
@@ -1684,7 +1656,7 @@ Niivue.prototype.drawScene = function() {
 		let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
 		if(width + height > 10) {
 			this.drawSelectionBox([this.dragStart[0], this.dragStart[1], width, height]);
-			console.log('drawing selection box at ' + this.dragStart[0] + ':' + this.dragStart[1]);
+			// console.log('drawing selection box at ' + this.dragStart[0] + ':' + this.dragStart[1]);
 		}
 	}
 
