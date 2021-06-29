@@ -16,37 +16,6 @@
       <canvas id="gl1" height=480 width=640>
       </canvas>
     </div>
-
-    <!-- demo 2 -->
-    <div id="demo2" style="background-color: white; width:90%; height:400px; margin:20px;">
-      <canvas id="gl2" height=480 width=640>
-      </canvas>
-    </div>
-
-    <!-- demo 3 -->
-    <div id="demo3" style="width:90%; height:400px; margin:20px;">
-      <canvas id="gl3" height=480 width=640>
-      </canvas>
-    </div>
-
-    <!-- demo 4 -->
-    <div id="demo4" style="width:90%; height:400px; margin:20px;">
-      <canvas id="gl4" height=480 width=640>
-      </canvas>
-    </div>
-
-    <!-- demo 5 -->
-    <div id="demo5" style="width:90%; height:400px; margin:20px;">
-      <canvas id="gl5" height=480 width=640>
-      </canvas>
-    </div>
-
-     <!-- demo 6 -->
-     <div id="demo5" style="width:90%; height:400px; margin:20px;">
-      <canvas id="gl6" height=480 width=640>
-      </canvas>
-    </div>
-
     <script src="./niivue.js">
     </script>
     <script>
@@ -93,34 +62,7 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeListA)
       nv1.setSliceType(nv1.sliceTypeMultiPlanar)
-
-      var nv2 = new niivue.Niivue()
-      nv2.attachTo('gl2')
-      nv2.loadVolumes(volumeListA)
-      nv2.setSliceType(nv2.sliceTypeRender)
-
-      var nv3 = new niivue.Niivue()
-      nv3.attachTo('gl3')
-      nv3.loadVolumes(volumeListA)
-      nv3.setSliceType(nv3.sliceTypeSagittal)
-
-      var nv4 = new niivue.Niivue()
-      nv4.attachTo('gl4')
-      nv4.loadVolumes(volumeListA)
-      nv4.setSliceType(nv4.sliceTypeCoronal)
-
-      var nv5 = new niivue.Niivue()
-      nv5.attachTo('gl5')
-      nv5.loadVolumes(volumeListA)
-      nv5.setSliceType(nv5.sliceTypeAxial)
-
-      var nv6 = new niivue.Niivue()
-      nv6.attachTo('gl6')
-      nv6.loadVolumes(volumeListA)
-      nv6.setSliceType(nv1.sliceTypeMultiPlanar)
-      nv6.setSelectionBoxColor([0, 0, 1, .5]);
-      nv6.setCrosshairColor([0, 1, 0, 1]);
-
+      nv1.setSelectionBoxColor([0, 0, 1, .5]);
     </script>
   </body>
 </html>

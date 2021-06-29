@@ -27,6 +27,7 @@ import { Subject } from 'rxjs';
     crosshairWidth: 1,            // 0 for no crosshairs
     backColor: [0, 0, 0, 1],      // [R, G, B, A] range 0..1
     crosshairColor: [1, 0, 0 ,1], // [R, G, B, A] range 0..1
+	selectionBoxColor: [1, 1, 1, .5] // [R, G, B, A] range 0..1
     colorBarMargin: 0.05          // x axis margin arount color bar, fraction of canvas width
   }
 
@@ -47,6 +48,7 @@ import { Subject } from 'rxjs';
     crosshairWidth: 1,            // 0 for no crosshairs
     backColor: [0, 0, 0, 1],      // [R, G, B, A] range 0..1
     crosshairColor: [1, 0, 0 ,1], // [R, G, B, A] range 0..1
+	selectionBoxColor: [1, 1, 1, .5] // [R, G, B, A] range 0..1
     colorBarMargin: 0.05          // x axis margin arount color bar, fraction of canvas width
   }
 
@@ -58,6 +60,7 @@ import { Subject } from 'rxjs';
     crosshairWidth: 1, // 0 for no crosshairs
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0 ,1],
+	selectionBoxColor: [1, 1, 1, .5],
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
     briStep: 1, // step size for brightness changes
     conStep: 1 // step size for contrast changes
@@ -530,6 +533,10 @@ Niivue.prototype.setCrosshairColor = function (color) {
   this.opts.crosshairColor = color
   this.drawScene()
 } // setCrosshairColor()
+
+Niivue.prototype.setSelectionBoxColor = function (color) {
+	this.opts.selectionBoxColor = color
+  } // setSelectionBoxColor()
 
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta=true) {
   this.mouseClick(x, y, posChange, isDelta);
@@ -1292,7 +1299,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange=0, isDelta=true) {
 
 Niivue.prototype.drawSelectionBox = function(leftTopWidthHeight) {
 	this.lineShader.use(this.gl)
-	this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], [1, 1, 1 ,0.5]);
+	this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.selectionBoxColor);
 	this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
 	this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
