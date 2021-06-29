@@ -493,11 +493,11 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 } // mouseDown()
 
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
-	// if (this.sliceType != this.sliceTypeRender) return;
-	// this.scene.renderAzimuth += x - this.mousePos[0];
-	// this.scene.renderElevation += y - this.mousePos[1];
-	// this.mousePos = [x,y];
-	// this.drawScene()
+	if (this.sliceType != this.sliceTypeRender) return;
+	this.scene.renderAzimuth += x - this.mousePos[0];
+	this.scene.renderElevation += y - this.mousePos[1];
+	this.mousePos = [x,y];
+	this.drawScene()
 } // mouseMove()
 
 Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
