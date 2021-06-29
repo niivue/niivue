@@ -41,6 +41,11 @@
       </canvas>
     </div>
 
+     <!-- demo 6 -->
+     <div id="demo5" style="width:90%; height:400px; margin:20px;">
+      <canvas id="gl6" height=480 width=640>
+      </canvas>
+    </div>
 
     <script src="./niivue.js">
     </script>
@@ -109,7 +114,12 @@
       nv5.loadVolumes(volumeListA)
       nv5.setSliceType(nv5.sliceTypeAxial)
 
-
+      var nv6 = new niivue.Niivue()
+      nv6.attachTo('gl6')
+      nv6.loadVolumes(volumeListA)
+      nv6.setSliceType(nv1.sliceTypeMultiPlanar)
+      nv6.setSelectionBoxColor([0, 0, 1, .5]);
+      nv6.setCrosshairColor([0, 1, 0, 1]);
 
     </script>
   </body>

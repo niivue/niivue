@@ -232,17 +232,13 @@ Niivue.prototype.mouseDownListener = function(e) {
 
 // handler for mouse left button down
 Niivue.prototype.mouseLeftButtonHandler = function(e, rect) {
-  console.log('left')
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-//   this.mouseClick(e.clientX - rect.left, e.clientY - rect.top)
-//   this.mouseDown(e.clientX - rect.left,e.clientY - rect.top)
   this.mouseClick(pos.x, pos.y);
   this.mouseDown(pos.x, pos.y);
 }
 
 // handler for mouse right button down
 Niivue.prototype.mouseRightButtonHandler = function(e, rect) {
-	console.log('right');
 	this.isDragging = true;
 	let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
 	this.dragStart[0] = pos.x;
@@ -256,18 +252,11 @@ Niivue.prototype.calculateMinMax = function(array) {
 
 Niivue.prototype.calculateNewRange = function() {
 	// calculate our box
-	console.log('new range');
 	let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
 	let startVox = this.frac2vox(frac);
-
-	console.log('starting vox is ');
-	console.log(startVox);
-
+	
 	frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
 	let endVox = this.frac2vox(frac);
-
-	console.log('ending vox is ');
-	console.log(endVox);	
 	
 	let hi = -Number.MAX_VALUE, lo = Number.MAX_VALUE; 
 	let xrange;
@@ -347,7 +336,6 @@ Niivue.prototype.calculateNewRange = function() {
 	this.volumes[0].cal_min = mnScale;
 	this.volumes[0].cal_max = mxScale;
 	this.intensityRange$.next([mnScale, mxScale]);
-	this.drawScene();
 }
 
 
@@ -360,6 +348,10 @@ Niivue.prototype.mouseUpListener = function() {
   	this.isDragging = false;
 	this.calculateNewRange();
 	// remove colorbar
+	// this.drawScene();
+	this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+
+    console.log(this.volumes[0].cal_min, this.volumes[0].cal_max)
 	this.drawScene();
   }
 }
@@ -425,9 +417,7 @@ Niivue.prototype.mouseMoveListener = function(e) {
 	}
     
 
-    this.refreshLayers(this.volumes[0], 0, this.volumes.length);
-
-    console.log(this.volumes[0].cal_min, this.volumes[0].cal_max)
+    
     this.drawScene()
     this.scene.prevX = this.scene.currX
     this.scene.prevY = this.scene.currY
@@ -1663,7 +1653,6 @@ Niivue.prototype.drawScene = function() {
 		let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
 		if(width + height > 10) {
 			this.drawSelectionBox([this.dragStart[0], this.dragStart[1], width, height]);
-			// console.log('drawing selection box at ' + this.dragStart[0] + ':' + this.dragStart[1]);
 		}
 	}
 
