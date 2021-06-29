@@ -36,9 +36,7 @@
     "http-server": "^0.12.3",
     "nifti-reader-js": "^0.5.4",
     "webpack": "^5.34.0",
-    "webpack-cli": "^4.6.0"
-  },
-  "dependencies": {
+    "webpack-cli": "^4.6.0",
     "rxjs": "^7.1.0"
   }
 }
