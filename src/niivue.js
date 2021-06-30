@@ -1651,9 +1651,8 @@ Niivue.prototype.drawScene = function() {
 	if(this.isDragging) {
 		let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
 		let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
-		if(width + height > 10) {
-			this.drawSelectionBox([this.dragStart[0], this.dragStart[1], width, height]);
-		}
+
+		this.drawSelectionBox([Math.min(this.dragStart[0], this.dragEnd[0]), Math.min(this.dragStart[1], this.dragEnd[1]), width, height]);
 	}
 
 	const pos = this.frac2mm([this.scene.crosshairPos[0],this.scene.crosshairPos[1],this.scene.crosshairPos[2]]);
