@@ -28,5 +28,6 @@ jobs:
         cache: 'npm'
     - run: rm package-lock.json
     - run: npm install
+    - run: npm i puppeteer-core
     - run: npm run build --if-present
     - run: npm test

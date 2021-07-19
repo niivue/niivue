@@ -8,5 +8,6 @@ module.exports = {
   server: {
     command: "node server.js",
     port: 5000,
+    launchTimeout: 10000
   }
 }
