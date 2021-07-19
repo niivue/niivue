@@ -4,10 +4,9 @@
   "description": "minimal webgl2 nifti image viewer",
   "main": "dist/niivue.js",
   "scripts": {
-    "build": "npx webpack && npm run copy-test && npm run copy-docs",
-    "copy-test": "cp ./dist/niivue.js ./test/niivue.js",
-    "copy-docs": "cp -r ./test/* ./docs/",
-    "test": "echo \"See ./tets/index.html\" && exit 1",
+    "build": "npx webpack && npm run copy-test",
+    "copy-test": "cp ./dist/niivue.js ./tests/niivue.js",
+    "test": "jest",
     "pub": "npm publish --access public"
   },
   "files": [
@@ -32,11 +31,15 @@
   "homepage": "https://github.com/niivue/niivue#readme",
   "devDependencies": {
     "buffer": "^6.0.3",
+    "express": "^4.17.1",
     "gl-matrix": "^3.3.0",
     "http-server": "^0.12.3",
+    "jest": "^27.0.6",
+    "jest-puppeteer": "^5.0.4",
     "nifti-reader-js": "^0.5.4",
+    "puppeteer": "^9.1.1",
+    "rxjs": "^7.1.0",
     "webpack": "^5.34.0",
-    "webpack-cli": "^4.6.0",
-    "rxjs": "^7.1.0"
+    "webpack-cli": "^4.6.0"
   }
 }
