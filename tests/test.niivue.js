@@ -1,20 +1,19 @@
 //import 'expect-puppeteer'
 
 describe('Niivue', () => {
+  // start a new page for each test below.
+  // A server is started prior to navigating to this location
   beforeEach(async () => {
     await page.goto('http://localhost:5000/index.html')
   })
 
-  it('title should be niivue test', async () => {
-    let title = await page.title()
-    await expect(title).toMatch('niivue test')
-  })
-
+  // notice that the test cases use async functions
+  // if you want to evaluate (run) a niivue method then do it like this:
   it('should create a Niivue instance', async () => {
     let nv = null
     nv = await page.evaluate(() => {
       nv = new niivue.Niivue()
-      return nv
+      return nv // return the Niivue instance so that we can run assertion tests on it outside of this local function
     })
     await expect(nv).toBeDefined()
   })
@@ -37,7 +36,7 @@ describe('Niivue', () => {
       // load one volume object in an array
       var volumeList = [
           {
-            url: "./mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+            url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
             volume: {hdr: null, img: null},
             name: "mni152",
             intensityMin: 0, // not used yet

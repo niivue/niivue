@@ -84,6 +84,8 @@ There are several open source JavaScript NIfTI viewers. What makes niivue unique
 
 ## Development Environment
 
+Note: All PRs from `<branch>` to `main` will require the automated github actions test suite to pass. 
+
 ### Development Installation
 
 ```
@@ -107,6 +109,11 @@ http-server test/
 ### Compiles and minifies for production
 ```
 npm run build
+```
+
+### Runs tests locally
+```
+npm run test
 ```
 
 ### to make a new base64 encoded font png
