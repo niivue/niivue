@@ -4,9 +4,8 @@
   "description": "minimal webgl2 nifti image viewer",
   "main": "dist/niivue.js",
   "scripts": {
-    "build": "npx webpack && npm run copy-test && npm run copy-docs",
+    "build": "npx webpack && npm run copy-test",
     "copy-test": "cp ./dist/niivue.js ./tests/niivue.js",
-    "copy-docs": "cp -r ./test/* ./docs/",
     "test": "jest",
     "pub": "npm publish --access public"
   },
