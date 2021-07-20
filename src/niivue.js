@@ -175,6 +175,7 @@ Niivue.prototype.arrayEquals = function(a, b) {
 }
 
 //handle window resizing
+// note: no test yet
 Niivue.prototype.resizeListener = function() {
   this.canvas.style.width ='100%'
   this.canvas.style.height='100%'
@@ -187,6 +188,7 @@ Niivue.prototype.resizeListener = function() {
 /*
 * The following two functions are to address offset issues
 * https://stackoverflow.com/questions/42309715/how-to-correctly-pass-mouse-coordinates-to-webgl
+* note:  no test yet
 */
 Niivue.prototype.getRelativeMousePosition = function(event, target) {
 	target = target || event.target;
@@ -199,6 +201,7 @@ Niivue.prototype.getRelativeMousePosition = function(event, target) {
   }
   
   // assumes target or event.target is canvas
+  // note: no test yet
   Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function(event, target) {
 	target = target || event.target;
 	var pos = this.getRelativeMousePosition(event, target);
@@ -212,11 +215,13 @@ Niivue.prototype.getRelativeMousePosition = function(event, target) {
 // handler for context menu (right click)
 // here, we disable the normal context menu so that
 // we can use some custom right click events
+// note: no test yet
 Niivue.prototype.mouseContextMenuListener = function(e) {
   e.preventDefault()
 }
 
 // handler for all mouse button presses
+// note: no test yet
 Niivue.prototype.mouseDownListener = function(e) {
   e.preventDefault()
   var rect = this.canvas.getBoundingClientRect()
@@ -231,6 +236,7 @@ Niivue.prototype.mouseDownListener = function(e) {
 }
 
 // handler for mouse left button down
+// note: no test yet
 Niivue.prototype.mouseLeftButtonHandler = function(e, rect) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
   this.mouseClick(pos.x, pos.y);
@@ -238,6 +244,7 @@ Niivue.prototype.mouseLeftButtonHandler = function(e, rect) {
 }
 
 // handler for mouse right button down
+// note: no test yet
 Niivue.prototype.mouseRightButtonHandler = function(e, rect) {
 	this.isDragging = true;
 	let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
@@ -246,10 +253,14 @@ Niivue.prototype.mouseRightButtonHandler = function(e, rect) {
   return
 }
 
-Niivue.prototype.calculateMinMax = function(array) {
+Niivue.prototype.calculateMinMaxVoxIdx = function(array) {
+  if (array.length > 2){
+    throw new Error('array must not contain more than two values')
+  }
 	return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))]
 }
 
+// note: no test yet
 Niivue.prototype.calculateNewRange = function() {
 	// calculate our box
 	let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
@@ -263,9 +274,9 @@ Niivue.prototype.calculateNewRange = function() {
 	let yrange;
 	let zrange;
 
-	xrange = this.calculateMinMax([startVox[0], endVox[0]]);
-	yrange = this.calculateMinMax([startVox[1], endVox[1]]);
-	zrange = this.calculateMinMax([startVox[2], endVox[2]]);
+	xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]]);
+	yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]]);
+	zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]]);
 
 	// for our constant dimension we add one so that the for loop runs at least once
 	if(startVox[0] - endVox[0] === 0) {
@@ -340,6 +351,7 @@ Niivue.prototype.calculateNewRange = function() {
 
 
 // handler for mouse button up (all buttons)
+// note: no test yet
 Niivue.prototype.mouseUpListener = function() {
   this.scene.mousedown = false
   this.scene.mouseButtonRightDown = false
@@ -357,6 +369,7 @@ Niivue.prototype.mouseUpListener = function() {
 }
 
 // handler for single finger touch event (like mouse down)
+// note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault()
   this.scene.touchdown = true
@@ -366,24 +379,26 @@ Niivue.prototype.touchStartListener = function (e) {
 }
 
 // handler for touchend (finger lift off screen)
+// note: no test yet
 Niivue.prototype.touchEndListener = function () {
   this.scene.touchdown = false
 }
 
 
-// increase brightness
+// increase brightness (deprecated)
+// note: no test yet
 Niivue.prototype.increaseBrightness = function(step=null) {
   this.volumes[0].cal_min += step ? step : this.opts.briStep
   this.volumes[0].cal_max += step ? step : this.opts.briStep
 }
 
-// decrease brightness
+// decrease brightness (deprecated)
 Niivue.prototype.decreaseBrightness = function(step=null) {
   this.volumes[0].cal_min -= step ? step : this.opts.briStep
   this.volumes[0].cal_max -= step ? step : this.opts.briStep
 }
 
-// increase contrast
+// increase contrast (deprecated)
 Niivue.prototype.increaseContrast = function(step=null) {
   if (!step){ step = this.opts.conStep}
   if (this.volumes[0].cal_min + step > this.volumes[0].cal_max - step){
@@ -393,7 +408,7 @@ Niivue.prototype.increaseContrast = function(step=null) {
   this.volumes[0].cal_max -= step
 }
 
-// decrease contrast
+// decrease contrast (deprecated)
 Niivue.prototype.decreaseContrast = function(step=null) {
   if (!step){ step = this.opts.conStep}
   if (this.volumes[0].cal_min - step  > this.volumes[0].cal_max + step){
@@ -404,6 +419,7 @@ Niivue.prototype.decreaseContrast = function(step=null) {
 }
 
 // handler for mouse move over canvas
+// note: no test yet
 Niivue.prototype.mouseMoveListener = function(e) {
   // move crosshair and change slices if mouse click and move
   if (this.scene.mousedown) {
@@ -415,9 +431,6 @@ Niivue.prototype.mouseMoveListener = function(e) {
 		this.dragEnd[0] = pos.x;
 		this.dragEnd[1] = pos.y; 
 	}
-    
-
-    
     this.drawScene()
     this.scene.prevX = this.scene.currX
     this.scene.prevY = this.scene.currY
@@ -425,6 +438,7 @@ Niivue.prototype.mouseMoveListener = function(e) {
 }
 
 // reset brightness and contrast to global min and max
+// note: no test yet
 Niivue.prototype.resetBriCon = function() {
   this.volumes[0].cal_min = this.volumes[0].global_min
   this.volumes[0].cal_max = this.volumes[0].global_max
@@ -433,6 +447,7 @@ Niivue.prototype.resetBriCon = function() {
 }
 
 // handler for touch move (moving finger on screen)
+// note: no test yet
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect()
@@ -442,6 +457,7 @@ Niivue.prototype.touchMoveListener = function (e) {
 }
 
 // handler for scroll wheel events (slice scrolling)
+// note: no test yet
 Niivue.prototype.wheelListener = function(e) {
   // scroll 2D slices
   e.preventDefault()
@@ -455,6 +471,7 @@ Niivue.prototype.wheelListener = function(e) {
 }
 
 // setup interactions with the canvas. Mouse clicks and touches
+// note: no test yet
 Niivue.prototype.registerInteractions = function() {
   // add mousedown
   this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this))
@@ -480,11 +497,13 @@ Niivue.prototype.registerInteractions = function() {
 }
 
 // update mouse position from new mouse down coordinates
+// note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
   if (this.sliceType != this.sliceTypeRender) return;
 	this.mousePos = [x,y];
 } // mouseDown()
 
+// note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
 	if (this.sliceType != this.sliceTypeRender) return;
 	this.scene.renderAzimuth += x - this.mousePos[0];
