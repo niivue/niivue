@@ -37,6 +37,7 @@
     "jest": "^27.0.6",
     "jest-puppeteer": "^5.0.4",
     "nifti-reader-js": "^0.5.4",
+    "pixelmatch": "^5.2.1",
     "puppeteer": "^9.1.1",
     "rxjs": "^7.1.0",
     "webpack": "^5.34.0",
