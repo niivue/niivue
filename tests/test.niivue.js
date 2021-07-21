@@ -1,6 +1,35 @@
 const fs = require('fs');
 const PNG = require('pngjs').PNG;
 const pixelmatch = require('pixelmatch');
+const path = require('path')
+const srcScreenshotsDir = './tests/src_screenshots'
+const refScreenshotsDir = './tests/ref_screenshots'
+const difScreenshotsDir = './tests/dif_screenshots'
+
+/**
+ * uses puppeteer's "page" to capture a screenshot, then uses pixelmatch to compare 
+ * the current screenshot to a reference 
+ * @param {string} screenshotName 
+ * @returns ndiff
+ */
+async function captureAndCompare(screenshotName) {
+  let screenshotRef = path.join(refScreenshotsDir, screenshotName)
+  let screenshotSrc = path.join(srcScreenshotsDir, screenshotName)
+  let screenshotDif = path.join(difScreenshotsDir, 'diff_' + screenshotName)
+  await page.screenshot({ path: screenshotSrc }); // src_screenshots is not committed to github. It is is gitignore
+  if (!fs.existsSync(screenshotRef)) {
+    console.log(`*** WARNING *** no reference screenshot exists for ${screenshotName}. If running in CI, download the artifacts from Github and add a new reference image if needed. If running locally, you should add this reference image.`)
+    return -1 // anything other than 0 will be an error
+  }
+  const ref = PNG.sync.read(fs.readFileSync(screenshotRef));
+  const src = PNG.sync.read(fs.readFileSync(screenshotSrc));
+  const { width, height } = ref;
+  const diff = new PNG({ width, height });
+  // returns number of different pixels
+  var ndiff = pixelmatch(ref.data, src.data, diff.data, width, height, { threshold: 0.1 });
+  fs.writeFileSync(screenshotDif, PNG.sync.write(diff));
+  return ndiff
+}
 
 
 describe('Niivue', () => {
@@ -39,7 +68,7 @@ describe('Niivue', () => {
       // load one volume object in an array
       var volumeList = [
         {
-          url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "./data/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
           name: "mni152",
           intensityMin: 0, // not used yet
@@ -55,16 +84,15 @@ describe('Niivue', () => {
     })
     await expect(nv.volumes).toHaveLength(1)
     await page.waitForTimeout(10000) // 10 secs is more than enough to render the mni152 image
-    await page.screenshot({ path: './tests/screenshots/mni152_2.png' });
-    // const img1 = PNG.sync.read(fs.readFileSync('screenshot.png'));
-    // const img2 = PNG.sync.read(fs.readFileSync('screenshot2.png'));
-    // const { width, height } = img1;
-    // const diff = new PNG({ width, height });
-    // // returns number of different pixels
-    // var ndiff = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
-    // fs.writeFileSync('diff.png', PNG.sync.write(diff));
+    // the default page size is 800x600. screenshots will have those dimensions.
+    // I (Taylor) have tested that a screenshot generated on my 2015 retina macbook, and
+    // a screenshot generated on the github CI runner have 0% pixel difference. They are identical. 
+    // given this, it seems ok to generate the reference set of screenshots locally, and add them to the repo. 
+    // Then the github CI runner screenshots will be compared to a reference within each relevant test (i.e. all tests that need screenshots)
+    let screenshotName = 'mni152_render.png'
+    ndiff = await captureAndCompare(screenshotName)
 
-    //await expect(ndiff).toEqual(0)
+    await expect(ndiff).toEqual(0)
   },
     15000) // wait for 15 seconds, this needs to be more than the page.waitForTimeout time.
 
@@ -76,7 +104,7 @@ describe('Niivue', () => {
       // load one volume object in an array
       var volumeList = [
         {
-          url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "./data/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
           name: "mni152",
           intensityMin: 0, // not used yet
@@ -87,7 +115,7 @@ describe('Niivue', () => {
           visible: true,
         },
         {
-          url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "./data/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
           name: "mni152",
           intensityMin: 0, // not used yet
@@ -113,7 +141,7 @@ describe('Niivue', () => {
       // load one volume object in an array
       var volumeList = [
         {
-          url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "./data/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
           name: "mni152",
           intensityMin: 0, // not used yet
@@ -151,7 +179,7 @@ describe('Niivue', () => {
       // load one volume object in an array
       var volumeList = [
         {
-          url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "./data/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
           name: "mni152",
           intensityMin: 0, // not used yet
@@ -205,7 +233,7 @@ describe('Niivue', () => {
       // load one volume object in an array
       var volumeList = [
         {
-          url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "./data/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
           name: "mni152",
           intensityMin: 0, // not used yet

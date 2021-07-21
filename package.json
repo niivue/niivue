@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npx webpack && npm run copy-test",
     "copy-test": "cp ./dist/niivue.js ./tests/niivue.js",
-    "test": "jest",
+    "test": "mkdir -p tests/src_screenshots && mkdir -p tests/dif_screenshots && jest",
     "pub": "npm publish --access public"
   },
   "files": [

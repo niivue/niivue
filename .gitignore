@@ -2,7 +2,8 @@
 node_modules
 /dist
 /_md_docs
-
+src_screenshots
+dif_screenshots
 
 # local env files
 .env.local
