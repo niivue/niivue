@@ -55,7 +55,7 @@ describe('Niivue', () => {
     })
     await expect(nv.volumes).toHaveLength(1)
     await page.waitForTimeout(10000) // 10 secs is more than enough to render the mni152 image
-    await page.screenshot({ path: './tests/screenshots/mni152.png' });
+    await page.screenshot({ path: './tests/screenshots/mni152_2.png' });
     // const img1 = PNG.sync.read(fs.readFileSync('screenshot.png'));
     // const img2 = PNG.sync.read(fs.readFileSync('screenshot2.png'));
     // const { width, height } = img1;
