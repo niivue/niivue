@@ -74,7 +74,7 @@ void main() {
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
-		float val = texture(volume, samplePos.xyz).r;
+		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
