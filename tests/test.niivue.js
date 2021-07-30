@@ -1,3 +1,6 @@
+const { toMatchImageSnapshot } = require('jest-image-snapshot');
+expect.extend({ toMatchImageSnapshot });
+
 describe('Niivue', () => {
   // start a new page for each test below.
   // A server is started prior to navigating to this location
@@ -213,5 +216,81 @@ describe('Niivue', () => {
         0.5
       ]
     )
+  })
+
+  it ('read RGB --slices', async () => {
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0,0,1,1] // green
+      }
+      nv = new niivue.Niivue(opts=opts)
+      nv.attachTo('gl')
+      // load one volume object in an array
+      var volumeList = [
+          {
+            url: "../images/ct_perfusion.nii",//"./RAS.nii.gz", "./spm152.nii.gz",
+            volume: {hdr: null, img: null},
+            name: "ct perfusion",
+            intensityMin: 0, // not used yet
+            intensityMax: 100, // not used yet
+            intensityRange:[0, 100], // not used yet
+            colorMap: "gray",
+            opacity: 100,
+            visible: true,
+          },
+        ]
+      nv.loadVolumes(volumeList)
+      return nv
+    })
+
+    await page.waitForSelector('#gl');          // Method to ensure that the element is loaded
+    const canvas2 = await page.$('#gl');
+    const image = await canvas2.screenshot();
+
+    expect(image).toMatchImageSnapshot({
+      failureThreshold: 0.01,
+      failureThresholdType: 'percent'
+    });
+  })
+ 
+  it ('read RGB --render', async () => {
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0,0,1,1] // green
+      }
+      nv = new niivue.Niivue(opts=opts)
+      nv.attachTo('gl')
+      
+      // load one volume object in an array
+      var volumeList = [
+          {
+            url: "../images/ct_perfusion.nii",//"./RAS.nii.gz", "./spm152.nii.gz",
+            volume: {hdr: null, img: null},
+            name: "ct perfusion",
+            intensityMin: 0, // not used yet
+            intensityMax: 100, // not used yet
+            intensityRange:[0, 100], // not used yet
+            colorMap: "gray",
+            opacity: 100,
+            visible: true,
+          },
+        ]
+      nv.loadVolumes(volumeList)
+      nv.setSliceType(nv.sliceTypeRender)
+      return nv
+    })
+
+    await page.waitForSelector('#gl');          // Method to ensure that the element is loaded
+    const canvas2 = await page.$('#gl');
+    const image = await canvas2.screenshot();
+
+    expect(image).toMatchImageSnapshot({
+      failureThreshold: 0.1,
+      failureThresholdType: 'percent'
+    });
   })
 })
