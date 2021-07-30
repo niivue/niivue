@@ -7,7 +7,7 @@ import { vertLineShader, fragLineShader } from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import { vertFontShader, fragFontShader } from "./shader-srcs.js";
-import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOrientShaderU, fragOrientShaderI, fragOrientShaderF, fragOrientShader} from "./shader-srcs.js";
+import { vertOrientShader, vertPassThroughShader, fragPassThroughShader, fragOrientShaderU, fragOrientShaderI, fragOrientShaderF, fragOrientShader, fragRGBOrientShader} from "./shader-srcs.js";
 import {fontPng} from './fnt.js' // pngName;
 import metrics from './fnt.json'
 import { Subject } from 'rxjs';
@@ -80,6 +80,7 @@ import { Subject } from 'rxjs';
   this.orientShaderU = null
   this.orientShaderI = null
   this.orientShaderF = null
+  this.orientShaderRGBU = null;
   this.fontMets = null
 
   this.sliceTypeAxial = 0
@@ -881,6 +882,7 @@ Niivue.prototype.init = async function () {
   this.orientShaderU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader));
   this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
   this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
+  this.orientShaderRGBU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
   await this.initText();
   this.updateGLVolume()
   return this
@@ -915,6 +917,7 @@ Niivue.prototype.calMinMaxCore = function(overlayItem, img, percentileFrac=0.02,
   let hdr = overlayItem.volume.hdr
 //   console.log('hdr');
 //   console.log(hdr);
+
   if (hdr.datatypeCode === 2)
     imgRaw = new Uint8Array(img)
   else if (hdr.datatypeCode === 4)
@@ -923,8 +926,15 @@ Niivue.prototype.calMinMaxCore = function(overlayItem, img, percentileFrac=0.02,
     imgRaw = new Float32Array(img)
   else if (hdr.datatypeCode === 64)
     imgRaw = new Float64Array(img)
+  else if (hdr.datatypeCode === 128) {
+	imgRaw = new Uint8Array(img);
+  }
   else if (hdr.datatypeCode === 512)
     imgRaw = new Uint16Array(img)
+  else if (hdr.datatypeCode === 2304) {
+	imgRaw = new Uint8Array(img);
+  }
+
   //determine full range: min..max
   let mn=img[0]
   let mx=img[0]
@@ -1067,7 +1077,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
 	this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb);
 	this.gl.disable(this.gl.CULL_FACE);
 	this.gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]); //output in background dimensions
-	this.gl.disable(this.gl.BLEND);
+	// this.gl.disable(this.gl.BLEND);
 	let tempTex3D = this.gl.createTexture();
 	this.gl.activeTexture(this.gl.TEXTURE6); //Temporary 3D Texture
 	this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
@@ -1101,11 +1111,26 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
 		this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
 		this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED, this.gl.FLOAT, img32f);
 		orientShader = this.orientShaderF;
+	} else if (hdr.datatypeCode === 128) {
+		orientShader = this.orientShaderRGBU;
+		orientShader.use(this.gl);
+		this.gl.uniform1i(orientShader.uniforms["hasAlpha"], false);
+		imgRaw = new Uint8Array(img);
+		this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+		this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RGB_INTEGER, this.gl.UNSIGNED_BYTE, imgRaw);
 	} else if (hdr.datatypeCode === 512) {
 		imgRaw = new Uint16Array(img);
 		this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
 		this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED_INTEGER, this.gl.UNSIGNED_SHORT, imgRaw);
+	} else if (hdr.datatypeCode === 2304) {
+		orientShader = this.orientShaderRGBU;
+		orientShader.use(this.gl);
+		this.gl.uniform1i(orientShader.uniforms["hasAlpha"], true);
+		imgRaw = new Uint8Array(img);
+		this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+		this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RGBA_INTEGER, this.gl.UNSIGNED_BYTE, imgRaw);
 	}
+
 	if (overlayItem.global_min === undefined) //only once, first time volume is loaded
 		this.calMinMax(overlayItem, imgRaw)
 
