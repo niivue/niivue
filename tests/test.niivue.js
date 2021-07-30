@@ -249,7 +249,10 @@ describe('Niivue', () => {
     const canvas2 = await page.$('#gl');
     const image = await canvas2.screenshot();
 
-    expect(image).toMatchImageSnapshot();
+    expect(image).toMatchImageSnapshot({
+      failureThreshold: 0.01,
+      failureThresholdType: 'percent'
+    });
   })
  
   it ('read RGB --render', async () => {
@@ -283,7 +286,11 @@ describe('Niivue', () => {
 
     await page.waitForSelector('#gl');          // Method to ensure that the element is loaded
     const canvas2 = await page.$('#gl');
-    const image = await canvas2.screenshot();
+    const image = await canvas2.screenshot({
+      failureThreshold: 0.1,
+      failureThresholdType: 'percent'
+    }
+    );
 
     expect(image).toMatchImageSnapshot();
   })
