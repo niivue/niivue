@@ -347,6 +347,34 @@ void main(void) {
  FragColor.a = aout;
 }`; 
 
+export var fragRGBOrientShader =
+`#line 309
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float layer;
+uniform float numLayers;
+uniform float scl_slope;
+uniform float scl_inter;
+uniform float cal_max;
+uniform float cal_min;
+uniform highp sampler2D colormap;
+uniform lowp sampler3D blend3D;
+uniform float opacity;
+uniform mat4 mtx;
+uniform bool hasAlpha;
+
+void main(void) {
+vec4 vx = vec4(TexCoord.xy, coordZ, 1.0);// * mtx;
+ 
+ uvec4 aColor = texture(intensityVol, vx.xyz);
+ float a = hasAlpha ? float(aColor.a) / 255.0f : float(aColor.r) * 0.21f + float(aColor.g) * 0.72f + float(aColor.b) * 0.07;  
+ FragColor = vec4(float(aColor.r) / 255.0f, float(aColor.g) / 255.0f, float(aColor.b) / 255.0f, a);
+ FragColor.a *= opacity;
+}`; 
+
 export var vertPassThroughShader =
 `#version 300 es
 #line 283
