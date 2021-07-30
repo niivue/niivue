@@ -289,8 +289,7 @@ describe('Niivue', () => {
     const image = await canvas2.screenshot({
       failureThreshold: 0.1,
       failureThresholdType: 'percent'
-    }
-    );
+    });
 
     expect(image).toMatchImageSnapshot();
   })
