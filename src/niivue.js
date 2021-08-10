@@ -936,8 +936,8 @@ Niivue.prototype.calMinMaxCore = function(overlayItem, img, percentileFrac=0.02,
   }
 
   //determine full range: min..max
-  let mn=img[0]
-  let mx=img[0]
+  let mn=Number.MAX_VALUE //img[0]
+  let mx=-Number.MAX_VALUE
   let nZero = 0
   let nNan = 0
   let nVox = imgRaw.length
