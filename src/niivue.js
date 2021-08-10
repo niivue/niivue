@@ -936,8 +936,8 @@ Niivue.prototype.calMinMaxCore = function(overlayItem, img, percentileFrac=0.02,
   }
 
   //determine full range: min..max
-  let mn=img[0]
-  let mx=img[0]
+  let mn=Number.MAX_VALUE //img[0]
+  let mx=-Number.MAX_VALUE
   let nZero = 0
   let nNan = 0
   let nVox = imgRaw.length
@@ -1077,7 +1077,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
 	this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb);
 	this.gl.disable(this.gl.CULL_FACE);
 	this.gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]); //output in background dimensions
-	// this.gl.disable(this.gl.BLEND);
+	this.gl.disable(this.gl.BLEND);
 	let tempTex3D = this.gl.createTexture();
 	this.gl.activeTexture(this.gl.TEXTURE6); //Temporary 3D Texture
 	this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
