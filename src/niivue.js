@@ -289,6 +289,9 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
 
 // note: no test yet
 Niivue.prototype.calculateNewRange = function () {
+  if (this.sliceType === this.sliceTypeRender) {
+    return;
+  }
   // calculate our box
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
   let startVox = this.frac2vox(frac);
