@@ -1,5 +1,4 @@
-export var vertRenderShader =
-`#version 300 es
+export var vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
 uniform mat4 mvpMtx;
@@ -9,8 +8,7 @@ void main(void) {
 	vColor = pos;
 }`;
 
-export var fragRenderShader =
-`#version 300 es
+export var fragRenderShader = `#version 300 es
 #line 15
 precision highp int;
 precision highp float;
@@ -145,8 +143,7 @@ void main() {
 	fColor.a = max(fColor.a, colAcc.a);
 }`;
 
-export var vertSliceShader =
-`#version 300 es
+export var vertSliceShader = `#version 300 es
 #line 150
 layout(location=0) in vec3 pos;
 uniform int axCorSag;
@@ -169,8 +166,7 @@ void main(void) {
 		texPos = vec3(pos.xy, slice);
 }`;
 
-export var fragSliceShader =
-`#version 300 es
+export var fragSliceShader = `#version 300 es
 #line 173
 precision highp int;
 precision highp float;
@@ -187,8 +183,7 @@ void main() {
     color.a = aout;
 }`;
 
-export var fragLineShader =
-`#version 300 es
+export var fragLineShader = `#version 300 es
 #line 189
 precision highp int;
 precision highp float;
@@ -198,8 +193,7 @@ void main() {
 	color = lineColor;
 }`;
 
-export var vertColorbarShader =
-`#version 300 es
+export var vertColorbarShader = `#version 300 es
 #line 200
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -215,8 +209,7 @@ void main(void) {
 	vColor = pos.xy;
 }`;
 
-export var fragColorbarShader =
-`#version 300 es
+export var fragColorbarShader = `#version 300 es
 #line 217
 precision highp int;
 precision highp float;
@@ -227,8 +220,7 @@ void main() {
 	color = vec4(texture(colormap, vColor).rgb, 1.0);
 }`;
 
-export var vertLineShader =
-`#version 300 es
+export var vertLineShader = `#version 300 es
 #line 229
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -242,8 +234,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
 
-export var vertFontShader =
-`#version 300 es
+export var vertFontShader = `#version 300 es
 #line 244
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -260,8 +251,7 @@ void main(void) {
 	vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y  + ((1.0 - pos.y) * uvLeftTopWidthHeight.w) );
 }`;
 
-export var fragFontShader =
-`#version 300 es
+export var fragFontShader = `#version 300 es
 #line 262
 precision highp int;
 precision highp float;
@@ -281,8 +271,7 @@ void main() {
 	color = vec4(fontColor.rgb , fontColor.a * opacity);
 }`;
 
-export var vertOrientShader =
-`#version 300 es
+export var vertOrientShader = `#version 300 es
 #line 283
 precision highp int;
 precision highp float;
@@ -293,23 +282,19 @@ void main() {
     gl_Position = vec4( (vPos.xy-vec2(0.5,0.5)) * 2.0, 0.0, 1.0);
 }`;
 
-export var fragOrientShaderU =
-`#version 300 es
+export var fragOrientShaderU = `#version 300 es
 uniform highp usampler3D intensityVol;
 `;
 
-export var fragOrientShaderI =
-`#version 300 es
+export var fragOrientShaderI = `#version 300 es
 uniform highp isampler3D intensityVol;
 `;
 
-export var fragOrientShaderF =
-`#version 300 es
+export var fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
 `;
 
-export var fragOrientShader =
-`#line 309
+export var fragOrientShader = `#line 309
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -345,10 +330,9 @@ void main(void) {
  if (aout <= 0.0) return;
  FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
  FragColor.a = aout;
-}`; 
+}`;
 
-export var fragRGBOrientShader =
-`#line 309
+export var fragRGBOrientShader = `#line 309
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -373,10 +357,9 @@ vec4 vx = vec4(TexCoord.xy, coordZ, 1.0);// * mtx;
  float a = hasAlpha ? float(aColor.a) / 255.0f : float(aColor.r) * 0.21f + float(aColor.g) * 0.72f + float(aColor.b) * 0.07;  
  FragColor = vec4(float(aColor.r) / 255.0f, float(aColor.g) / 255.0f, float(aColor.b) / 255.0f, a);
  FragColor.a *= opacity;
-}`; 
+}`;
 
-export var vertPassThroughShader =
-`#version 300 es
+export var vertPassThroughShader = `#version 300 es
 #line 283
 precision highp int;
 precision highp float;
@@ -387,8 +370,7 @@ void main() {
     gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
 }`;
 
-export var fragPassThroughShader =
-`#version 300 es
+export var fragPassThroughShader = `#version 300 es
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -397,5 +379,4 @@ uniform float coordZ;
 uniform lowp sampler3D in3D;
 void main(void) {
  FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
-}`; 
-
+}`;
