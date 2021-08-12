@@ -2290,7 +2290,7 @@ Niivue.prototype.drawScene = function () {
     }
   }
 
-  if (this.isDragging) {
+  if (this.isDragging && this.sliceType !== this.sliceTypeRender) {
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
 
