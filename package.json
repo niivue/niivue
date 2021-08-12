@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "minimal webgl2 nifti image viewer",
   "main": "dist/niivue.js",
   "scripts": {
