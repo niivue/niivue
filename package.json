@@ -4,10 +4,11 @@
   "description": "minimal webgl2 nifti image viewer",
   "main": "dist/niivue.js",
   "scripts": {
-    "build": "npx webpack && npm run copy-test && npm run copy-demo",
+    "build": "npx prettier --write src/ && npx webpack && npm run copy-test && npm run copy-demo",
+    "demo": "npm run build && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.js ./tests/niivue.js",
     "copy-demo": "cp ./dist/niivue.js ./demos/niivue.js",
-    "test": "jest",
+    "test": "npm run build && jest",
     "pub": "npm publish --access public"
   },
   "files": [
@@ -39,6 +40,7 @@
     "jest-image-snapshot": "^4.5.1",
     "jest-puppeteer": "^5.0.4",
     "nifti-reader-js": "^0.5.4",
+    "prettier": "^2.3.2",
     "puppeteer": "^9.1.1",
     "rxjs": "^7.1.0",
     "webpack": "^5.34.0",
