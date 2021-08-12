@@ -376,6 +376,46 @@ describe('Niivue', () => {
 
   })
 
+  it('selectionbox disabled in 3D', async () => {
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      nv.loadVolumes(volumeList)
+      nv.setSliceType(nv.sliceTypeRender)
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    await page.mouse.move(100, 200)
+    await page.mouse.click(100, 200)
+    await page.mouse.down({ button: 'right' })
+    await page.mouse.move(130, 230)
+    // await page.mouse.up({button: 'right'})
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
+
   it('mouse right click and drag sets intensity range', async () => {
     let nv = null
     nv = await page.evaluate(() => {
