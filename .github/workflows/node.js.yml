@@ -31,7 +31,7 @@ jobs:
     - run: npm i puppeteer-core
     - run: npm run build --if-present
     - run: sudo apt-get install xvfb
-    - run: xvfb-run --auto-servernum –-server-args="-screen 0 1920x1080x24" npm test
+    - run: xvfb-run --auto-servernum npm test
     - uses: actions/upload-artifact@v2
       if: failure()
       with:

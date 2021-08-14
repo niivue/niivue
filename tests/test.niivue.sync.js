@@ -4,13 +4,12 @@ expect.extend({ toMatchImageSnapshot });
 async function snapshot() {
   await page.waitForSelector('#gl2');          // Method to ensure that the element is loaded
   await page.waitForTimeout(1000) // wait a little longer to ensure image loaded (some images were not loading in time)
-  // const canvas2 = await page.$('#gl2');
-  const image = await page.screenshot();
+  const canvas2 = await page.$('#gl2');
+  const image = await canvas2.screenshot();
 
   expect(image).toMatchImageSnapshot({
     failureThreshold: 0.1,
     failureThresholdType: 'percent',
-    allowSizeMismatch: true
   });
 }
 
