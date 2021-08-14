@@ -9,7 +9,8 @@ async function snapshot() {
 
   expect(image).toMatchImageSnapshot({
     failureThreshold: 0.1,
-    failureThresholdType: 'percent'
+    failureThresholdType: 'percent',
+    allowSizeMismatch: true
   });
 }
 
