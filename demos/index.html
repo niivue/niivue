@@ -12,15 +12,26 @@
     </noscript>
 
     <!-- demo 1 -->
-    <div id="demo" style="width:90%; height:400px; margin:20px;">
-      <canvas id="gl" height=480 width=640>
-      </canvas>
-    </div>
+    <section>
+      <div id="demo1" style="width:90%; height:400px; margin:20px;">
+        <canvas id="gl1" height=480 width=640>
+        </canvas>
+      </div>
+    </section>
+
+    <!-- demo 2 -->
+    <section>
+      <div id="demo2" style="width:50%; height:400px; margin:20px;">
+        <canvas id="gl2" height=480 width=480>
+        </canvas>
+      </div>
+    </section>
+    
 
     <script src="./niivue.js">
     </script>
     <script>
-     var volumeList = [
+     var volumeList1 = [
        // first item is brackground image
          {
            url: "./images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
@@ -35,9 +46,30 @@
          },
         ] 
       var nv1 = new niivue.Niivue()
-      nv1.attachTo('gl')
-      nv1.loadVolumes(volumeList)
-      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeRenderMultiplanar)
+
+      var volumeList2 = [
+       // first item is brackground image
+         {
+           url: "./images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "mni152",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "gray",
+           opacity: 100,
+           visible: true,
+         },
+        ] 
+      var nv2 = new niivue.Niivue()
+      nv2.attachTo('gl2')
+      nv2.loadVolumes(volumeList2)
+      nv2.setSliceType(nv2.sliceTypeMultiplanar)
+      nv1.syncWith(nv2)
+      // nv2.syncWith(nv1)
     </script>
   </body>
 </html>

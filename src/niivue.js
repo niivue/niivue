@@ -131,6 +131,7 @@ export let Niivue = function (opts = {}) {
   this.isDragging = false;
   this.dragStart = [0.0, 0.0];
   this.dragEnd = [0.0, 0.0];
+  this.otherNV = null; // another niivue instance that we wish to sync postion with
 
   this.crosshairPosition$ = new Subject();
   this.intensityRange$ = new Subject();
@@ -173,6 +174,26 @@ Niivue.prototype.attachTo = function (id) {
   this.init();
   return this;
 }; // attachTo
+
+Niivue.prototype.syncWith = function (otherNV) {
+  // this.scene.renderAzimuth = 120;
+  // this.scene.renderElevation = 15;
+  // this.scene.crosshairPos = [0.5, 0.5, 0.5];
+  // this.scene.clipPlane = [0, 0, 0, 0];
+  this.otherNV = otherNV;
+  // console.log(otherNV);
+};
+
+Niivue.prototype.sync = function () {
+  if (!this.otherNV || typeof this.otherNV === "undefined") {
+    return;
+  }
+  let thisMM = this.frac2mm(this.scene.crosshairPos);
+  this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
+  this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
+  this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  this.otherNV.drawScene();
+};
 
 /**
  * test if two arrays have equal values for each element
@@ -2016,6 +2037,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
       ],
       "S"
     );
+  this.sync();
 }; // draw2D()
 
 Niivue.prototype.draw3D = function () {
@@ -2083,6 +2105,7 @@ Niivue.prototype.draw3D = function () {
     this.scene.renderElevation.toFixed(0);
   //bus.$emit('crosshair-pos-change', posString);
 
+  this.sync();
   return posString;
 }; // draw3D()
 
@@ -2091,7 +2114,10 @@ Niivue.prototype.mm2frac = function (mm) {
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   let mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
   let d = this.back.dims;
-  let frac = [0, 0, 0];
+  let frac = this.scene.crosshairPos; // default to center, or last known
+  if (typeof d === "undefined") {
+    return frac;
+  }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1) return frac;
   let sform = mat.mat4.clone(this.back.matRAS);
   mat.mat4.transpose(sform, sform);

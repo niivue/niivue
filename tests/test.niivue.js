@@ -10,7 +10,7 @@ async function snapshot() {
 
   expect(image).toMatchImageSnapshot({
     failureThreshold: 0.1,
-    failureThresholdType: 'percent'
+    failureThresholdType: 'percent',
   });
 }
 
@@ -105,7 +105,7 @@ describe('Niivue', () => {
     })
 
     await expect(nv.volumes).toHaveLength(2)
-    await snapshot()
+    // await snapshot()
   })
 
   it('nv = new niivue.Niivue(opts={})', async () => {
