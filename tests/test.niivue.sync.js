@@ -67,6 +67,7 @@ describe('Niivue sync', () => {
     })
     await page.waitForTimeout(5000)
     await page.mouse.click(100, 200)
+    await page.waitForTimeout(1000)
     await snapshot()
     return 0
   })
