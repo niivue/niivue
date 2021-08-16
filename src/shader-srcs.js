@@ -380,3 +380,19 @@ uniform lowp sampler3D in3D;
 void main(void) {
  FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
 }`;
+
+export var vertClipPlaneShader = `#version 300 es
+layout(location=0) in vec3 pos;
+uniform mat4 mvpMtx;
+void main(void) {
+	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+}`;
+
+export var fragClipPlaneShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 clipPlaneColor;
+out vec4 color;
+void main() {
+	color = clipPlaneColor;
+}`;
