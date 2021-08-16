@@ -854,7 +854,67 @@ describe('Niivue', () => {
     }
   })
 
-  it('calMinMax', async () => {
+  it('calMinMax do not trust cal min max', async () => {
+    let minmax = null
+    minmax = await page.evaluate(async () => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1], // green
+        trustCalMinMax: false
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      nv = nv.loadVolumes(volumeList)
+      let minmax = await wait(2 * 1000).then(() => {
+        let overlayItem = nv.volumes[0]
+        console.log(overlayItem)
+        let hdr = overlayItem.volume.hdr
+        let img = overlayItem.volume.img
+        let imgRaw
+        if (hdr.datatypeCode === 2) {
+          imgRaw = new Uint8Array(img);
+        } else if (hdr.datatypeCode === 4) {
+          imgRaw = new Int16Array(img);
+        } else if (hdr.datatypeCode === 16) {
+          imgRaw = new Float32Array(img);
+        } else if (hdr.datatypeCode === 64) {
+          imgRaw = new Float64Array(img)
+        } else if (hdr.datatypeCode === 128) {
+          imgRaw = new Uint8Array(img);
+        } else if (hdr.datatypeCode === 512) {
+          imgRaw = new Uint16Array(img);
+        } else if (hdr.datatypeCode === 2304) {
+          imgRaw = new Uint8Array(img);
+        }
+        let minmax = nv.calMinMax(overlayItem, imgRaw)
+        return minmax
+      });
+      return minmax
+    })
+    console.log(minmax)
+    expected = [40, 80, 0.3629564046859741, 91.46501398086548]
+    for (let i=0; i<minmax.length; i++){
+      await expect(minmax[i]).toBeCloseTo(expected[i])
+    }
+  })
+
+  it('calMinMax trust cal min max', async () => {
     let minmax = null
     minmax = await page.evaluate(async () => {
       let opts = {
@@ -907,7 +967,7 @@ describe('Niivue', () => {
       return minmax
     })
     console.log(minmax)
-    expected = [40, 80, 0.3629564046859741, 91.46501398086548]
+    expected = [40, 80, 40, 80]
     for (let i=0; i<minmax.length; i++){
       await expect(minmax[i]).toBeCloseTo(expected[i])
     }

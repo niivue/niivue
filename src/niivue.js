@@ -72,6 +72,7 @@ export let Niivue = function (opts = {}) {
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
     briStep: 1, // step size for brightness changes
     conStep: 1, // step size for contrast changes
+    trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
   };
 
   this.canvas = null; // the canvas element on the page
@@ -1084,6 +1085,20 @@ Niivue.prototype.calMinMaxCore = function (
   percentileFrac = 0.02,
   ignoreZeroVoxels = false
 ) {
+  if (
+    this.opts.trustCalMinMax &&
+    isFinite(overlayItem.volume.hdr.cal_min) &&
+    isFinite(overlayItem.volume.hdr.cal_max) &&
+    overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
+  ) {
+    console.log("using hdr calminmax");
+    return [
+      overlayItem.volume.hdr.cal_min,
+      overlayItem.volume.hdr.cal_max,
+      overlayItem.volume.hdr.cal_min,
+      overlayItem.volume.hdr.cal_max,
+    ];
+  }
   let imgRaw;
   let hdr = overlayItem.volume.hdr;
   //   console.log('hdr');
