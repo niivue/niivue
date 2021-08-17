@@ -73,6 +73,7 @@ export let Niivue = function (opts = {}) {
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
+    clipPlaneColor: [1, 1, 1, 0.5],
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
     briStep: 1, // step size for brightness changes
     conStep: 1, // step size for contrast changes
@@ -624,6 +625,10 @@ Niivue.prototype.setScale = function (scale) {
   this.drawScene();
 }; // setScale()
 
+Niivue.prototype.setClipPlaneColor = function (color) {
+  this.opts.clipPlaneColor = color;
+}; // setClipPlaneColor()
+
 Niivue.prototype.overlayRGBA = function (volume) {
   let hdr = volume.hdr;
   let vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -1012,6 +1017,7 @@ Niivue.prototype.init = async function () {
     0.0,
     0.5, // Triangle 2
   ]);
+
   // Create a buffer object
   let vertexBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexBuffer);
@@ -1029,7 +1035,7 @@ Niivue.prototype.init = async function () {
     6
   );
   this.clipPlaneObject3D.position = [0, 0, DISTANCE_FROM_CAMERA];
-  this.clipPlaneObject3D.isVisible = false;
+  this.clipPlaneObject3D.isVisible = false; // clip plane should be invisible until activated
   this.objectsToRender3D.push(this.clipPlaneObject3D);
 
   let cubeStrip = [
@@ -1133,7 +1139,7 @@ Niivue.prototype.init = async function () {
   this.surfaceShader.use(this.gl);
   this.gl.uniform4fv(
     this.surfaceShader.uniforms["surfaceColor"],
-    [0.0, 1.0, 0.0, 0.5]
+    this.opts.clipPlaneColor
   );
 
   let clipPlaneShader = new NiivueShader3D(this.surfaceShader);

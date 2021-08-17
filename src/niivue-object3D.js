@@ -17,8 +17,6 @@ export var NiivueObject3D = function (vertexBuffer, mode, indexCount) {
 
   this.modelMatrix = mat.mat4.create();
   this.scale = [1, 1, 1];
-  this.position = mat.mat3.create();
-  this.rotationX = 0;
-  this.rotationY = 0;
-  this.rotationZ = 0;
+  this.position = [0, 0, 0];
+  this.rotation = [0, 0, 0];
 };
