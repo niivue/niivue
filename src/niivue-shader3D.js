@@ -1,4 +1,4 @@
-export var RenderShader3D = function (shader) {
+export var NiivueShader3D = function (shader) {
   this.shader = shader;
   this.uniforms = shader.uniforms;
   this.mvpUniformName = "";
@@ -6,6 +6,6 @@ export var RenderShader3D = function (shader) {
   this.rayDirUniformName = "";
 };
 
-RenderShader3D.prototype.use = function (gl) {
+NiivueShader3D.prototype.use = function (gl) {
   return this.shader.use(gl);
 };

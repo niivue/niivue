@@ -1,6 +1,6 @@
 import * as mat from "gl-matrix";
 
-export var RenderObject3D = function (vertexBuffer, mode, indexCount) {
+export var NiivueObject3D = function (vertexBuffer, mode, indexCount) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
   this.CULL_FRONT = 4;
@@ -16,6 +16,7 @@ export var RenderObject3D = function (vertexBuffer, mode, indexCount) {
   this.glFlags = 0;
 
   this.modelMatrix = mat.mat4.create();
+  this.scale = [1, 1, 1];
   this.position = mat.mat3.create();
   this.rotationX = 0;
   this.rotationY = 0;
