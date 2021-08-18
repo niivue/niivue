@@ -16,10 +16,14 @@ import {
   fragOrientShaderF,
   fragOrientShader,
   fragRGBOrientShader,
+  vertSurfaceShader,
+  fragSurfaceShader,
 } from "./shader-srcs.js";
 import { fontPng } from "./fnt.js"; // pngName;
 import metrics from "./fnt.json";
 import { Subject } from "rxjs";
+import { NiivueObject3D } from "./niivue-object3D.js";
+import { NiivueShader3D } from "./niivue-shader3D";
 
 /**
  * @class Niivue
@@ -69,6 +73,7 @@ export let Niivue = function (opts = {}) {
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
+    clipPlaneColor: [1, 1, 1, 0.5],
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
     briStep: 1, // step size for brightness changes
     conStep: 1, // step size for contrast changes
@@ -90,6 +95,7 @@ export let Niivue = function (opts = {}) {
   this.orientShaderI = null;
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
+  this.surfaceShader = null;
   this.fontMets = null;
 
   this.sliceTypeAxial = 0;
@@ -117,8 +123,11 @@ export let Niivue = function (opts = {}) {
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.backTexture = [];
+  this.objectsToRender3D = [];
   this.isRadiologicalConvention = false;
   this.volScaleMultiplier = 1;
+  this.volScale = [];
+  this.vox = [];
   this.mousePos = [0, 0];
   this.numScreenSlices = 0; // e.g. for multiplanar view, 3 simultaneous slices: axial, coronal, sagittal
   this.screenSlices = [
@@ -133,7 +142,8 @@ export let Niivue = function (opts = {}) {
   this.dragStart = [0.0, 0.0];
   this.dragEnd = [0.0, 0.0];
   this.otherNV = null; // another niivue instance that we wish to sync postion with
-
+  this.volumeObject3D = null;
+  this.clipPlaneObject3D = null;
   this.crosshairPosition$ = new Subject();
   this.intensityRange$ = new Subject();
 
@@ -615,6 +625,10 @@ Niivue.prototype.setScale = function (scale) {
   this.drawScene();
 }; // setScale()
 
+Niivue.prototype.setClipPlaneColor = function (color) {
+  this.opts.clipPlaneColor = color;
+}; // setClipPlaneColor()
+
 Niivue.prototype.overlayRGBA = function (volume) {
   let hdr = volume.hdr;
   let vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -956,6 +970,10 @@ Niivue.prototype.initText = async function () {
   }
 }; // initText()
 
+const CLIP_PLANE_INDEX = 0;
+const VOLUME_INDEX = 1;
+const DISTANCE_FROM_CAMERA = -0.54;
+
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
@@ -973,12 +991,58 @@ Niivue.prototype.init = async function () {
   this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
   this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
 
+  let vao = this.gl.createVertexArray();
+  this.gl.bindVertexArray(vao);
+
+  // We will render the objects in order they are stored in this.objectsToRender3D
+
+  // clip plane geometry
+  let clipPlaneVertices = new Float32Array([
+    0.0,
+    1.0,
+    0.5,
+    1.0,
+    1.0,
+    0.5,
+    1.0,
+    0.0,
+    0.5, // Triangle 1
+    0.0,
+    1.0,
+    0.5,
+    1.0,
+    0.0,
+    0.5,
+    0.0,
+    0.0,
+    0.5, // Triangle 2
+  ]);
+
+  // Create a buffer object
+  let vertexBuffer = this.gl.createBuffer();
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexBuffer);
+  this.gl.bufferData(
+    this.gl.ARRAY_BUFFER,
+    clipPlaneVertices,
+    this.gl.STATIC_DRAW
+  );
+  this.gl.enableVertexAttribArray(0);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+  this.clipPlaneObject3D = new NiivueObject3D(
+    vertexBuffer,
+    this.gl.TRIANGLES,
+    6
+  );
+  this.clipPlaneObject3D.position = [0, 0, DISTANCE_FROM_CAMERA];
+  this.clipPlaneObject3D.isVisible = false; // clip plane should be invisible until activated
+  this.objectsToRender3D.push(this.clipPlaneObject3D);
+
   let cubeStrip = [
     0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
   ];
-  let vao = this.gl.createVertexArray();
-  this.gl.bindVertexArray(vao);
+
   let vbo = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
   this.gl.bufferData(
@@ -988,6 +1052,14 @@ Niivue.prototype.init = async function () {
   );
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+  this.volumeObject3D = new NiivueObject3D(vbo, this.gl.TRIANGLE_STRIP, 14); //cube is 12 triangles, triangle-strip creates n-2 triangles
+  this.volumeObject3D.glFlags =
+    this.volumeObject3D.BLEND |
+    this.volumeObject3D.CULL_FACE |
+    this.volumeObject3D.CULL_FRONT;
+  this.volumeObject3D.position = [0, 0, DISTANCE_FROM_CAMERA];
+  this.objectsToRender3D.push(this.volumeObject3D);
 
   // slice shader
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
@@ -1005,6 +1077,13 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
+
+  // add shader to object
+  let volumeRenderShader = new NiivueShader3D(this.renderShader);
+  volumeRenderShader.mvpUniformName = "mvpMtx";
+  volumeRenderShader.rayDirUniformName = "rayDir";
+  volumeRenderShader.clipPlaneUniformName = "clipPlane";
+  this.objectsToRender3D[VOLUME_INDEX].shaders.push(volumeRenderShader);
 
   // colorbar shader
   this.colorbarShader = new Shader(
@@ -1049,6 +1128,24 @@ Niivue.prototype.init = async function () {
     vertOrientShader,
     fragOrientShaderU.concat(fragRGBOrientShader)
   );
+
+  // clip planer shader
+  this.surfaceShader = new Shader(
+    this.gl,
+    vertSurfaceShader,
+    fragSurfaceShader
+  );
+
+  this.surfaceShader.use(this.gl);
+  this.gl.uniform4fv(
+    this.surfaceShader.uniforms["surfaceColor"],
+    this.opts.clipPlaneColor
+  );
+
+  let clipPlaneShader = new NiivueShader3D(this.surfaceShader);
+  clipPlaneShader.mvpUniformName = "mvpMtx";
+  this.clipPlaneObject3D.shaders.push(clipPlaneShader);
+
   await this.initText();
   this.updateGLVolume();
   return this;
@@ -1257,6 +1354,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       this.gl.TEXTURE0,
       overlayItem.dimsRAS
     ); //this.back.dims)
+    let { volScale, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+    this.volScale = volScale;
+    this.vox = vox;
+    this.volumeObject3D.scale = volScale;
   } else {
     if (this.back.dims === undefined)
       console.log(
@@ -1576,6 +1677,20 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.deleteFramebuffer(fb);
+
+  // set slice scale for render shader
+  this.renderShader.use(this.gl);
+  let { _, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+  this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(
+    this.renderShader.uniforms["backOpacity"],
+    this.volumes[0].opacity
+  );
+  this.gl.uniform4fv(
+    this.renderShader.uniforms["clipPlane"],
+    this.scene.clipPlane
+  );
+  this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
 }; // refreshLayers()
 
 Niivue.prototype.colormap = function (lutName = "") {
@@ -2055,9 +2170,37 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.sync();
 }; // draw2D()
 
+// Niivue.prototype.calculateMvpMatrix = function (modelMatrix, scale) {
+//   const fDistance = -0.54;
+//   let m = mat.mat4.clone(modelMatrix);
+//   mat.mat4.translate(m, m, [0, 0, fDistance]);
+//   // https://glmatrix.net/docs/module-mat4.html  https://glmatrix.net/docs/mat4.js.html
+//   var rad = ((90 - this.scene.renderElevation - scale[0]) * Math.PI) / 180;
+//   mat.mat4.rotate(m, m, rad, [-1, 0, 0]);
+//   rad = (this.scene.renderAzimuth * Math.PI) / 180;
+//   mat.mat4.rotate(m, m, rad, [0, 0, 1]);
+//   mat.mat4.scale(m, m, scale); // volume aspect ratio
+//   mat.mat4.scale(m, m, [0.57, 0.57, 0.57]); //unit cube has maximum 1.73
+//   return m;
+// };
+
+Niivue.prototype.calculateMvpMatrix = function (object3D) {
+  let m = mat.mat4.clone(object3D.modelMatrix);
+  mat.mat4.translate(m, m, object3D.position);
+  // https://glmatrix.net/docs/module-mat4.html  https://glmatrix.net/docs/mat4.js.html
+  var rad =
+    ((90 - this.scene.renderElevation - object3D.scale[0]) * Math.PI) / 180;
+  mat.mat4.rotate(m, m, rad, [-1, 0, 0]);
+  rad = (this.scene.renderAzimuth * Math.PI) / 180;
+  mat.mat4.rotate(m, m, rad, [0, 0, 1]);
+  mat.mat4.scale(m, m, object3D.scale); // volume aspect ratio
+  mat.mat4.scale(m, m, [0.57, 0.57, 0.57]); //unit cube has maximum 1.73
+  return m;
+}; // calculateMvpMatrix
+
 Niivue.prototype.draw3D = function () {
-  let { volScale, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
-  this.renderShader.use(this.gl);
+  // let { volScale, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+
   let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
   if (mn <= 0) return;
   mn *= this.volScaleMultiplier;
@@ -2067,52 +2210,69 @@ Niivue.prototype.draw3D = function () {
   let yPix = mn;
   this.gl.viewport(xCenter - xPix * 0.5, yCenter - yPix * 0.5, xPix, yPix);
   this.gl.clearColor(0.2, 0, 0, 1);
-  var m = mat.mat4.create();
-  var fDistance = -0.54;
-  //https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange
-  // default is 0..1
-  // unit cube with corner aligned
-  //this.gl.depthRange(0.1, -fDistance * 3.0); //xerxes
-  //modelMatrix *= TMat4.Translate(0, 0, -fDistance);
-  mat.mat4.translate(m, m, [0, 0, fDistance]);
-  // https://glmatrix.net/docs/module-mat4.html  https://glmatrix.net/docs/mat4.js.html
-  var rad = ((90 - this.scene.renderElevation - volScale[0]) * Math.PI) / 180;
-  mat.mat4.rotate(m, m, rad, [-1, 0, 0]);
-  rad = (this.scene.renderAzimuth * Math.PI) / 180;
-  mat.mat4.rotate(m, m, rad, [0, 0, 1]);
-  mat.mat4.scale(m, m, volScale); // volume aspect ratio
-  mat.mat4.scale(m, m, [0.57, 0.57, 0.57]); //unit cube has maximum 1.73
 
-  //compute ray direction
-  var inv = mat.mat4.create();
-  mat.mat4.invert(inv, m);
-  var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
-  mat.vec4.transformMat4(rayDir4, rayDir4, inv);
-  var rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
-  mat.vec3.normalize(rayDir, rayDir);
-  //defuzz, avoid divide by zero
-  const tiny = 0.00001;
-  if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny;
-  if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny;
-  if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny;
-  //console.log( ">>", renderAzimuth, " : ", renderElevation, ">>>> ", rayDir);
-  //this.gl.disable(this.gl.DEPTH_TEST);
-  //gl.enable(gl.CULL_FACE);
-  //gl.cullFace(gl.FRONT);
-  this.gl.enable(this.gl.CULL_FACE);
-  this.gl.uniformMatrix4fv(this.renderShader.uniforms["mvpMtx"], false, m);
-  this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
-  this.gl.uniform1f(
-    this.renderShader.uniforms["backOpacity"],
-    this.volumes[0].opacity
-  );
-  this.gl.uniform4fv(
-    this.renderShader.uniforms["clipPlane"],
-    this.scene.clipPlane
-  );
-  this.gl.uniform3fv(this.renderShader.uniforms["rayDir"], rayDir);
-  this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 14); //cube is 12 triangles, triangle-strip creates n-2 triangles
+  for (const object3D of this.objectsToRender3D) {
+    if (!object3D.isVisible) {
+      continue;
+    }
+
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+    // set GL options
+    if (object3D.glFlags & object3D.BLEND) {
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+    } else {
+      this.gl.disable(this.gl.BLEND);
+    }
+
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.BACK);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+
+    // let m = this.calculateMvpMatrix(object3D.modelMatrix, volScale);
+    let m = this.calculateMvpMatrix(object3D);
+
+    //compute ray direction
+    var inv = mat.mat4.create();
+    mat.mat4.invert(inv, m);
+    var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
+    mat.vec4.transformMat4(rayDir4, rayDir4, inv);
+    var rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
+    mat.vec3.normalize(rayDir, rayDir);
+    //defuzz, avoid divide by zero
+    const tiny = 0.00001;
+    if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny;
+    if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny;
+    if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny;
+
+    for (const shader of object3D.shaders) {
+      shader.use(this.gl);
+      if (shader.mvpUniformName) {
+        this.gl.uniformMatrix4fv(
+          shader.uniforms[shader.mvpUniformName],
+          false,
+          m
+        );
+      }
+
+      if (shader.rayDirUniformName) {
+        this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
+      }
+    }
+
+    this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
+  }
+
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
