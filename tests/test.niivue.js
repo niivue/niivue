@@ -1170,4 +1170,40 @@ describe('Niivue', () => {
     }
   })
 
+  it('clip plane is rendered when it is set to visible', async () => {
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      nv.loadVolumes(volumeList)
+      nv.sliceType = nv.sliceTypeRender;
+      nv.clipPlaneObject3D.isVisible = true;
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
+
 })
