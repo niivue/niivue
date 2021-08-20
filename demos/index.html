@@ -4,72 +4,48 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>niivue test</title>
+    <title>niivue demos</title>
+    <style>
+      section {
+        margin: 20px;
+      }
+    </style>
   </head>
-  <body>
+  <body style="font-family: sans-serif;">
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
 
-    <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px; margin:20px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
-      </div>
+      <h1>
+        NiiVue Demos
+      </h1>
+      <p>
+        NiiVue has many built in features and canvas interactions (e.g. mouse clicks and keyboard button presses).
+      </p>
+      <p>
+        The links on this page can be used to navigate to each demo in a new page.
+      </p>
     </section>
 
-    <!-- demo 2 -->
     <section>
-      <div id="demo2" style="width:50%; height:400px; margin:20px;">
-        <canvas id="gl2" height=480 width=480>
-        </canvas>
-      </div>
+      <a href="./features/basic.multiplanar.html" target="_blank" rel="noopener noreferrer">Basic multiplanar</a>
     </section>
-    
+    <section>
+      <a href="./features/basic.3d.html" target="_blank" rel="noopener noreferrer">Basic 3D</a>
+    </section>
+    <section>
+      <a href="./features/overlay.multiplanar.html" target="_blank" rel="noopener noreferrer">Overlay multiplanar</a>
+    </section>
+    <section>
+      <a href="./features/overlay.3d.html" target="_blank" rel="noopener noreferrer">Overlay 3D</a>
+    </section>
+    <section>
+      <a href="./features/sync.multiplanar.html" target="_blank" rel="noopener noreferrer">Sync multiplanar</a>
+    </section>
+    <section>
+      <a href="./features/sync.3D.html" target="_blank" rel="noopener noreferrer">Sync 3D</a>
+    </section>
 
-    <script src="./niivue.js">
-    </script>
-    <script>
-     var volumeList1 = [
-       // first item is brackground image
-         {
-           url: "./images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
-           colorMap: "gray",
-           opacity: 100,
-           visible: true,
-         },
-        ] 
-      var nv1 = new niivue.Niivue()
-      nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeRenderMultiplanar)
-
-      var volumeList2 = [
-       // first item is brackground image
-         {
-           url: "./images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
-           colorMap: "gray",
-           opacity: 100,
-           visible: true,
-         },
-        ] 
-      var nv2 = new niivue.Niivue()
-      nv2.attachTo('gl2')
-      nv2.loadVolumes(volumeList2)
-      nv2.setSliceType(nv2.sliceTypeMultiplanar)
-      nv1.syncWith(nv2)
-      // nv2.syncWith(nv1)
-    </script>
   </body>
 </html>

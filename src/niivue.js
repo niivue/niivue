@@ -1260,8 +1260,8 @@ Niivue.prototype.calMinMaxCore = function (
   }
 
   //determine full range: min..max
-  let mn = Number.MAX_VALUE; //img[0]
-  let mx = -Number.MAX_VALUE;
+  let mn = img[0];
+  let mx = img[0];
   let nZero = 0;
   let nNan = 0;
   let nVox = imgRaw.length;
@@ -1376,8 +1376,8 @@ Niivue.prototype.calMinMax = function (
   overlayItem.global_min = minMax[2];
   overlayItem.global_max = minMax[3];
 
-  overlayItem.cal_min = overlayItem.global_min;
-  overlayItem.cal_max = overlayItem.global_max;
+  // overlayItem.cal_min = overlayItem.global_min;
+  // overlayItem.cal_max = overlayItem.global_max;
   return minMax;
 }; // calMinMax()
 
@@ -1659,9 +1659,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     );
   }
 
-  if (overlayItem.global_min === undefined)
+  if (overlayItem.global_min === undefined) {
     //only once, first time volume is loaded
     this.calMinMax(overlayItem, imgRaw);
+  }
 
   //blend texture
   let blendTexture = null;
@@ -2327,7 +2328,7 @@ Niivue.prototype.mm2frac = function (mm) {
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   let mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
   let d = this.back.dims;
-  let frac = this.scene.crosshairPos; // default to center, or last known
+  let frac = [0, 0, 0];
   if (typeof d === "undefined") {
     return frac;
   }
