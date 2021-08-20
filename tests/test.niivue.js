@@ -70,9 +70,9 @@ describe('Niivue', () => {
     await snapshot()
   })
 
-  it('nv.loadVolumes(volumeList) -- multiple', async () => {
+  it('overlay', async () => {
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       nv = new niivue.Niivue()
       nv.attachTo('gl')
       // load one volume object in an array
@@ -89,23 +89,27 @@ describe('Niivue', () => {
           visible: true,
         },
         {
-          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          url: "../images/hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
           volume: { hdr: null, img: null },
-          name: "mni152",
+          name: "hippo",
           intensityMin: 0, // not used yet
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
-          colorMap: "gray",
+          colorMap: "Winter",
           opacity: 100,
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+      nv = nv.loadVolumes(volumeList)
+      await wait(2 * 1000).then(() => {
+      });
       return nv
     })
 
     await expect(nv.volumes).toHaveLength(2)
-    // await snapshot()
+    // await page.waitForTimeout(5000)
+    await snapshot()
   })
 
   it('nv = new niivue.Niivue(opts={})', async () => {
@@ -908,7 +912,7 @@ describe('Niivue', () => {
       return minmax
     })
     console.log(minmax)
-    expected = [40, 80, 0.3629564046859741, 91.46501398086548]
+    expected = [40, 80, 0, 91.46501398086548]
     for (let i=0; i<minmax.length; i++){
       await expect(minmax[i]).toBeCloseTo(expected[i])
     }

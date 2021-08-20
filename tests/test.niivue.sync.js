@@ -25,7 +25,7 @@ describe('Niivue sync', () => {
     // });
   })
   it('crosshairs synced on click', async () => {
-    jest.setTimeout(50000); // long running test
+    // jest.setTimeout(50000); // long running test
 
     x = await page.evaluate(() => {
       let opts = {
@@ -71,6 +71,5 @@ describe('Niivue sync', () => {
     await page.mouse.click(100, 200)
     await page.waitForTimeout(1000)
     await snapshot()
-    return 0
   })
 })

@@ -1229,20 +1229,20 @@ Niivue.prototype.calMinMaxCore = function (
   percentileFrac = 0.02,
   ignoreZeroVoxels = false
 ) {
-  // if (
-  //   this.opts.trustCalMinMax &&
-  //   isFinite(overlayItem.volume.hdr.cal_min) &&
-  //   isFinite(overlayItem.volume.hdr.cal_max) &&
-  //   overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
-  // ) {
-  //   console.log("using hdr calminmax");
-  //   return [
-  //     overlayItem.volume.hdr.cal_min,
-  //     overlayItem.volume.hdr.cal_max,
-  //     overlayItem.volume.hdr.cal_min,
-  //     overlayItem.volume.hdr.cal_max,
-  //   ];
-  // }
+  if (
+    this.opts.trustCalMinMax &&
+    isFinite(overlayItem.volume.hdr.cal_min) &&
+    isFinite(overlayItem.volume.hdr.cal_max) &&
+    overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
+  ) {
+    console.log("using hdr calminmax");
+    return [
+      overlayItem.volume.hdr.cal_min,
+      overlayItem.volume.hdr.cal_max,
+      overlayItem.volume.hdr.cal_min,
+      overlayItem.volume.hdr.cal_max,
+    ];
+  }
   let imgRaw;
   let hdr = overlayItem.volume.hdr;
   //   console.log('hdr');
@@ -1376,8 +1376,8 @@ Niivue.prototype.calMinMax = function (
   overlayItem.global_min = minMax[2];
   overlayItem.global_max = minMax[3];
 
-  overlayItem.cal_min = overlayItem.global_min;
-  overlayItem.cal_max = overlayItem.global_max;
+  // overlayItem.cal_min = overlayItem.global_min;
+  // overlayItem.cal_max = overlayItem.global_max;
   return minMax;
 }; // calMinMax()
 
@@ -1659,9 +1659,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     );
   }
 
-  if (overlayItem.global_min === undefined)
+  if (overlayItem.global_min === undefined) {
     //only once, first time volume is loaded
     this.calMinMax(overlayItem, imgRaw);
+  }
 
   //blend texture
   let blendTexture = null;
@@ -2327,7 +2328,7 @@ Niivue.prototype.mm2frac = function (mm) {
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   let mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
   let d = this.back.dims;
-  let frac = this.scene.crosshairPos; // default to center, or last known
+  let frac = [0, 0, 0];
   if (typeof d === "undefined") {
     return frac;
   }
