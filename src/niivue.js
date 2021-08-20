@@ -1229,20 +1229,20 @@ Niivue.prototype.calMinMaxCore = function (
   percentileFrac = 0.02,
   ignoreZeroVoxels = false
 ) {
-  if (
-    this.opts.trustCalMinMax &&
-    isFinite(overlayItem.volume.hdr.cal_min) &&
-    isFinite(overlayItem.volume.hdr.cal_max) &&
-    overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
-  ) {
-    console.log("using hdr calminmax");
-    return [
-      overlayItem.volume.hdr.cal_min,
-      overlayItem.volume.hdr.cal_max,
-      overlayItem.volume.hdr.cal_min,
-      overlayItem.volume.hdr.cal_max,
-    ];
-  }
+  // if (
+  //   this.opts.trustCalMinMax &&
+  //   isFinite(overlayItem.volume.hdr.cal_min) &&
+  //   isFinite(overlayItem.volume.hdr.cal_max) &&
+  //   overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
+  // ) {
+  //   console.log("using hdr calminmax");
+  //   return [
+  //     overlayItem.volume.hdr.cal_min,
+  //     overlayItem.volume.hdr.cal_max,
+  //     overlayItem.volume.hdr.cal_min,
+  //     overlayItem.volume.hdr.cal_max,
+  //   ];
+  // }
   let imgRaw;
   let hdr = overlayItem.volume.hdr;
   //   console.log('hdr');
@@ -1260,8 +1260,8 @@ Niivue.prototype.calMinMaxCore = function (
   }
 
   //determine full range: min..max
-  let mn = Number.MAX_VALUE; //img[0]
-  let mx = -Number.MAX_VALUE;
+  let mn = img[0];
+  let mx = img[0];
   let nZero = 0;
   let nNan = 0;
   let nVox = imgRaw.length;
