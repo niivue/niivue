@@ -501,7 +501,7 @@ Niivue.prototype.touchMoveListener = function (e) {
 
 // handler for keyboard shortcuts
 Niivue.prototype.keyUpListener = function (e) {
-  console.log("keyup listener called");
+  //   console.log("keyup listener called");
   if (e.code === this.opts.clipPlaneHotKey) {
     let now = new Date().getTime();
     let elapsed = now - this.lastCalled;
@@ -509,7 +509,7 @@ Niivue.prototype.keyUpListener = function (e) {
     if (elapsed > 1000) {
       this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 4;
       this.clipPlaneObject3D.isVisible = this.currentClipPlaneIndex;
-      console.log("clip plane index is " + this.currentClipPlaneIndex);
+      //   console.log("clip plane index is " + this.currentClipPlaneIndex);
       switch (this.currentClipPlaneIndex) {
         case 0:
           this.scene.clipPlane = [0, 0, 0, 0];
