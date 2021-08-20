@@ -1170,4 +1170,160 @@ describe('Niivue', () => {
     }
   })
 
+  it('clip plane is rendered when it is set to visible', async () => {
+    jest.setTimeout(30000); // long running test
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      nv.loadVolumes(volumeList)
+      nv.sliceType = nv.sliceTypeRender;
+      nv.clipPlaneObject3D.isVisible = true;
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
+
+  it('volume is properly clipped in sagittal plane', async () => {
+    jest.setTimeout(30000); // long running test
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      nv.loadVolumes(volumeList)
+      nv.sliceType = nv.sliceTypeRender;
+      nv.clipPlaneObject3D.isVisible = true;
+      nv.scene.clipPlane = [1, 0, 0, 0];
+      nv.clipPlaneObject3D.rotation = [0, 1, 0];
+
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
+
+  it('volume is properly clipped in axial plane', async () => {
+    jest.setTimeout(30000); // long running test
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      nv.loadVolumes(volumeList)
+      nv.sliceType = nv.sliceTypeRender;
+      nv.clipPlaneObject3D.isVisible = true;
+      nv.scene.clipPlane = [0, 1, 0, 0];
+      nv.clipPlaneObject3D.rotation = [1, 0, 0];
+
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
+
+  it('volume is properly clipped in coronal plane', async () => {
+    jest.setTimeout(30000); // long running test
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      // load one volume object in an array
+      var volumeList = [
+        {
+          url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+          volume: { hdr: null, img: null },
+          name: "mni152",
+          intensityMin: 0, // not used yet
+          intensityMax: 100, // not used yet
+          intensityRange: [0, 100], // not used yet
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        },
+      ]
+      nv.loadVolumes(volumeList)
+      nv.sliceType = nv.sliceTypeRender;
+      nv.clipPlaneObject3D.isVisible = true;
+      nv.scene.clipPlane = [0, 0, 1, 0];
+      nv.clipPlaneObject3D.rotation = [0, 0, 1];
+
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
 })

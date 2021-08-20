@@ -25,6 +25,8 @@ describe('Niivue sync', () => {
     // });
   })
   it('crosshairs synced on click', async () => {
+    jest.setTimeout(50000); // long running test
+
     x = await page.evaluate(() => {
       let opts = {
         textHeight: 0.05, // larger text

@@ -19,4 +19,5 @@ export var NiivueObject3D = function (vertexBuffer, mode, indexCount) {
   this.scale = [1, 1, 1];
   this.position = [0, 0, 0];
   this.rotation = [0, 0, 0];
+  this.rotationRadians = 0.0;
 };
