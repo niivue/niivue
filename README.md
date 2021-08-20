@@ -210,6 +210,12 @@ npm run test -- -t 'test string'
 
 All contributions to NiiVue are encouraged and welcomed. Feel free to update documentation, add features, fix bugs, or just ask questions on the [issue board](https://github.com/niivue/niivue/issues). 
 
+## Using Issues
+
+**All** contributions should start as a new issue on the [NiiVue issue board](https://github.com/niivue/niivue/issues). 
+
+By starting a new issue for everything we ping everyone watching the project at the same time, and therefore alerting them to the feature, bug, or question. It also gives everyone a change to comment on new posts. 
+
 ## Things to consider
 
 When adding features please keep in mind that we want NiiVue to work on all devices that support WebGL 2.0 (laptops, desktops, tablets, and phones). Therefore, please do your best to test features on as many devices as you have access to. 
