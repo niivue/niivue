@@ -78,7 +78,7 @@ export let Niivue = function (opts = {}) {
     briStep: 1, // step size for brightness changes
     conStep: 1, // step size for contrast changes
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
-	clipPlaneHotKey: 'KeyC', // keyboard short cut to activate the clip plane
+    clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
   };
 
   this.canvas = null; // the canvas element on the page
@@ -501,37 +501,41 @@ Niivue.prototype.touchMoveListener = function (e) {
 
 // handler for keyboard shortcuts
 Niivue.prototype.keyUpListener = function (e) {
+  console.log("keyup listener called");
+  if (e.code === this.opts.clipPlaneHotKey) {
+    let now = new Date().getTime();
+    let elapsed = now - this.lastCalled;
 
-	console.log('keyup listener called');
-	if (e.code === this.opts.clipPlaneHotKey) {
-		let now = new Date().getTime();
-		let elapsed = now - this.lastCalled;
-		
-		if (elapsed > 1000) {
-			this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 4;
-			this.clipPlaneObject3D.isVisible = this.currentClipPlaneIndex;
-			switch (this.currentClipPlaneIndex) {
-				case 0:
-					this.scene.clipPlane = [0, 0, 0, 0];
-					break;
-				case 1:
-					this.scene.clipPlane = [1, 0, 0, 0];
-					break;
-				case 2:
-					this.scene.clipPlane = [0, 1, 0, 0];
-					break;
-				case 3:
-					this.scene.clipPlane = [0, 0, 1, 0];
-					break;
-			}
-	
-			console.log(this.scene.clipPlane);
-			this.drawScene();
-			// e.preventDefault();
-		}
-		this.lastCalled = now;
-	}
-}
+    if (elapsed > 1000) {
+      this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 4;
+      this.clipPlaneObject3D.isVisible = this.currentClipPlaneIndex;
+      console.log("clip plane index is " + this.currentClipPlaneIndex);
+      switch (this.currentClipPlaneIndex) {
+        case 0:
+          this.scene.clipPlane = [0, 0, 0, 0];
+          this.clipPlaneObject3D.rotation = [0, 0, 0];
+          break;
+        case 1:
+          this.scene.clipPlane = [1, 0, 0, 0];
+          this.clipPlaneObject3D.rotation = [0, 1, 0];
+          break;
+        case 2:
+          this.scene.clipPlane = [0, 1, 0, 0];
+          this.clipPlaneObject3D.rotation = [1, 0, 0];
+          break;
+        case 3:
+          this.scene.clipPlane = [0, 0, 1, 0];
+          this.clipPlaneObject3D.rotation = [0, 0, 1];
+          break;
+      }
+
+      console.log(this.scene.clipPlane);
+      this.drawScene();
+      // e.preventDefault();
+    }
+    this.lastCalled = now;
+  }
+};
 
 // handler for scroll wheel events (slice scrolling)
 // note: no test yet
@@ -546,8 +550,6 @@ Niivue.prototype.wheelListener = function (e) {
     this.sliceScroll2D(0.01, e.clientX - rect.left, e.clientY - rect.top);
   }
 };
-
-
 
 // setup interactions with the canvas. Mouse clicks and touches
 // note: no test yet
@@ -579,6 +581,11 @@ Niivue.prototype.registerInteractions = function () {
 
   // add double click
   this.canvas.addEventListener("dblclick", this.resetBriCon.bind(this));
+
+  // add keyup
+  this.canvas.setAttribute("tabindex", 0);
+  this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
+  this.canvas.focus();
 };
 
 // update mouse position from new mouse down coordinates
@@ -1075,6 +1082,7 @@ Niivue.prototype.init = async function () {
   );
   this.clipPlaneObject3D.position = [0, 0, DISTANCE_FROM_CAMERA];
   this.clipPlaneObject3D.isVisible = false; // clip plane should be invisible until activated
+  this.clipPlaneObject3D.rotationRadians = Math.PI / 2;
   this.objectsToRender3D.push(this.clipPlaneObject3D);
 
   let cubeStrip = [
@@ -2218,6 +2226,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   mat.mat4.rotate(m, m, rad, [-1, 0, 0]);
   rad = (this.scene.renderAzimuth * Math.PI) / 180;
   mat.mat4.rotate(m, m, rad, [0, 0, 1]);
+  mat.mat4.rotate(m, m, object3D.rotationRadians, object3D.rotation);
   mat.mat4.scale(m, m, object3D.scale); // volume aspect ratio
   mat.mat4.scale(m, m, [0.57, 0.57, 0.57]); //unit cube has maximum 1.73
   return m;
@@ -2292,6 +2301,10 @@ Niivue.prototype.draw3D = function () {
 
       if (shader.rayDirUniformName) {
         this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
+      }
+
+      if (shader.clipPlaneUniformName) {
+        this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
       }
     }
 
