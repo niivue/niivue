@@ -61,7 +61,54 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## VueJS example
 
-to come...
+```
+<script>
+import {Niivue} from '@niivue/niivue'
+console.log(Niivue)
+const nv = new Niivue()
+
+
+export default {
+  name: 'App',
+  props: {
+
+  },
+  data(){
+    return {
+      volumeList: [
+        {
+          url: "./mni152.nii.gz",
+          volume: {hdr: null, img: null},
+          colorMap: "gray",
+          opacity: 100,
+          visible: true,
+        }
+      ]
+
+    }
+  },
+
+  mounted() {
+
+    nv.attachTo('gl')
+    nv.loadVolumes(this.volumeList)
+
+  }
+}
+
+</script>
+
+<template>
+<canvas id="gl" height="480" width="640">
+
+</canvas>
+</template>
+
+<style>
+#app {
+}
+</style>
+```
 
 ## React example
 
