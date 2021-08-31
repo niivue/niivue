@@ -1,6 +1,6 @@
 import * as mat from "gl-matrix";
 
-export var NiivueObject3D = function (vertexBuffer, mode, indexCount) {
+export var NiivueObject3D = function (id, vertexBuffer, mode, indexCount) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
   this.CULL_FRONT = 4;
@@ -14,6 +14,13 @@ export var NiivueObject3D = function (vertexBuffer, mode, indexCount) {
   this.mode = mode;
 
   this.glFlags = 0;
+  this.id = id;
+  this.colorId = [
+    ((id >> 0) & 0xff) / 255.0,
+    ((id >> 8) & 0xff) / 255.0,
+    ((id >> 16) & 0xff) / 255.0,
+    ((id >> 24) & 0xff) / 255.0,
+  ];
 
   this.modelMatrix = mat.mat4.create();
   this.scale = [1, 1, 1];

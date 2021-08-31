@@ -149,6 +149,9 @@ export let Niivue = function (opts = {}) {
   this.intensityRange$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
+  this.CLIP_PLANE_ID = 1;
+  this.VOLUME_ID = 2;
+  this.DISTANCE_FROM_CAMERA = -0.54;
 
   // loop through known Niivue properties
   // if the user supplied opts object has a
@@ -1016,10 +1019,6 @@ Niivue.prototype.initText = async function () {
   }
 }; // initText()
 
-const CLIP_PLANE_INDEX = 0;
-const VOLUME_INDEX = 1;
-const DISTANCE_FROM_CAMERA = -0.54;
-
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
@@ -1076,11 +1075,12 @@ Niivue.prototype.init = async function () {
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
   this.clipPlaneObject3D = new NiivueObject3D(
+    this.CLIP_PLANE_ID,
     vertexBuffer,
     this.gl.TRIANGLES,
     6
   );
-  this.clipPlaneObject3D.position = [0, 0, DISTANCE_FROM_CAMERA];
+  this.clipPlaneObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
   this.clipPlaneObject3D.isVisible = false; // clip plane should be invisible until activated
   this.clipPlaneObject3D.rotationRadians = Math.PI / 2;
   this.objectsToRender3D.push(this.clipPlaneObject3D);
@@ -1100,12 +1100,17 @@ Niivue.prototype.init = async function () {
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
-  this.volumeObject3D = new NiivueObject3D(vbo, this.gl.TRIANGLE_STRIP, 14); //cube is 12 triangles, triangle-strip creates n-2 triangles
+  this.volumeObject3D = new NiivueObject3D(
+    this.VOLUME_ID,
+    vbo,
+    this.gl.TRIANGLE_STRIP,
+    14
+  ); //cube is 12 triangles, triangle-strip creates n-2 triangles
   this.volumeObject3D.glFlags =
     this.volumeObject3D.BLEND |
     this.volumeObject3D.CULL_FACE |
     this.volumeObject3D.CULL_FRONT;
-  this.volumeObject3D.position = [0, 0, DISTANCE_FROM_CAMERA];
+  this.volumeObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
   this.objectsToRender3D.push(this.volumeObject3D);
 
   // slice shader
@@ -1130,7 +1135,7 @@ Niivue.prototype.init = async function () {
   volumeRenderShader.mvpUniformName = "mvpMtx";
   volumeRenderShader.rayDirUniformName = "rayDir";
   volumeRenderShader.clipPlaneUniformName = "clipPlane";
-  this.objectsToRender3D[VOLUME_INDEX].shaders.push(volumeRenderShader);
+  this.volumeObject3D.shaders.push(volumeRenderShader);
 
   // colorbar shader
   this.colorbarShader = new Shader(
