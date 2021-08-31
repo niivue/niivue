@@ -97,6 +97,7 @@ export let Niivue = function (opts = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
+  this.pickingSurfaceShader = null;
   this.fontMets = null;
 
   this.sliceTypeAxial = 0;
@@ -149,6 +150,7 @@ export let Niivue = function (opts = {}) {
   this.intensityRange$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
+  this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 2;
   this.DISTANCE_FROM_CAMERA = -0.54;
@@ -1083,6 +1085,7 @@ Niivue.prototype.init = async function () {
   this.clipPlaneObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
   this.clipPlaneObject3D.isVisible = false; // clip plane should be invisible until activated
   this.clipPlaneObject3D.rotationRadians = Math.PI / 2;
+
   this.objectsToRender3D.push(this.clipPlaneObject3D);
 
   let cubeStrip = [
@@ -1159,7 +1162,6 @@ Niivue.prototype.init = async function () {
     fragPassThroughShader
   );
 
-  //this.passThroughShader  = new Shader(this.gl, vertOrientShader,fragPassThroughShader);
   this.orientShaderU = new Shader(
     this.gl,
     vertOrientShader,
@@ -1179,6 +1181,12 @@ Niivue.prototype.init = async function () {
     this.gl,
     vertOrientShader,
     fragOrientShaderU.concat(fragRGBOrientShader)
+  );
+
+  this.pickingSurfaceShader = new Shader(
+    this.gl,
+    vertSurfaceShader,
+    fragSurfaceShader
   );
 
   // clip planer shader
@@ -2239,8 +2247,6 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
 }; // calculateMvpMatrix
 
 Niivue.prototype.draw3D = function () {
-  // let { volScale, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
-
   let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
   if (mn <= 0) return;
   mn *= this.volScaleMultiplier;
@@ -2249,6 +2255,72 @@ Niivue.prototype.draw3D = function () {
   let xPix = mn;
   let yPix = mn;
   this.gl.viewport(xCenter - xPix * 0.5, yCenter - yPix * 0.5, xPix, yPix);
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+
+  // render picking surfaces
+  let m = null;
+  let rayDir = null;
+  this.gl.disable(this.gl.BLEND);
+  this.pickingSurfaceShader.use(this.gl);
+  for (const object3D of this.objectsToRender3D) {
+    if (!object3D.isVisible) {
+      continue;
+    }
+
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.BACK);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+    m = this.calculateMvpMatrix(object3D);
+    this.gl.uniformMatrix4fv(
+      this.pickingSurfaceShader.uniforms["mvpMtx"],
+      false,
+      m
+    );
+    this.gl.uniform4fv(
+      this.pickingSurfaceShader.uniforms["surfaceColor"],
+      object3D.colorId
+    );
+
+    this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
+  }
+
+  // check if we have a selected object
+  const pixelX =
+    (this.mousePos[0] * this.gl.canvas.width) / this.gl.canvas.clientWidth;
+  const pixelY =
+    this.gl.canvas.height -
+    (this.mousePos[1] * this.gl.canvas.height) / this.gl.canvas.clientHeight -
+    1;
+  const rgbaPixel = new Uint8Array(4);
+  this.gl.readPixels(
+    pixelX, // x
+    pixelY, // y
+    1, // width
+    1, // height
+    this.gl.RGBA, // format
+    this.gl.UNSIGNED_BYTE, // type
+    rgbaPixel
+  ); // typed array to hold result
+
+  this.selectedObjectId =
+    rgbaPixel[0] +
+    (rgbaPixel[1] << 8) +
+    (rgbaPixel[2] << 16) +
+    (rgbaPixel[3] << 24);
+
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
 
   for (const object3D of this.objectsToRender3D) {
@@ -2279,15 +2351,14 @@ Niivue.prototype.draw3D = function () {
       this.gl.disable(this.gl.CULL_FACE);
     }
 
-    // let m = this.calculateMvpMatrix(object3D.modelMatrix, volScale);
-    let m = this.calculateMvpMatrix(object3D);
+    m = this.calculateMvpMatrix(object3D);
 
     //compute ray direction
     var inv = mat.mat4.create();
     mat.mat4.invert(inv, m);
     var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
     mat.vec4.transformMat4(rayDir4, rayDir4, inv);
-    var rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
+    rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
     mat.vec3.normalize(rayDir, rayDir);
     //defuzz, avoid divide by zero
     const tiny = 0.00001;
@@ -2312,9 +2383,9 @@ Niivue.prototype.draw3D = function () {
       if (shader.clipPlaneUniformName) {
         this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
       }
-    }
 
-    this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
+      this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
+    }
   }
 
   let posString =
