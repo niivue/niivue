@@ -1,0 +1,9 @@
+export { default as red } from "./red.json";
+export { default as green } from "./green.json";
+export { default as blue } from "./blue.json";
+export { default as gray } from "./gray.json";
+export { default as winter } from "./winter.json";
+export { default as inferno } from "./inferno.json";
+export { default as plasma } from "./plasma.json";
+export { default as viridis } from "./viridis.json";
+export { default as warm } from "./warm.json";
