@@ -21,6 +21,7 @@ import {
 } from "./shader-srcs.js";
 import { fontPng } from "./fnt.js"; // pngName;
 import metrics from "./fnt.json";
+import * as cmaps from "./cmaps";
 import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
@@ -1754,50 +1755,40 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
 }; // refreshLayers()
 
+Niivue.prototype.colorMaps = function (sort = true) {
+  let cm = [];
+  for (const [key, value] of Object.entries(cmaps)) {
+    cm.push(key);
+  }
+  console.log(cm);
+  return sort === true ? cm.sort() : cm;
+};
+
 Niivue.prototype.colormap = function (lutName = "") {
   //function colormap(lutName = "") {
-  var lut = this.makeLut([0, 255], [0, 255], [0, 255], [0, 128], [0, 255]); //gray
-  if (lutName === "Winter")
-    lut = this.makeLut(
-      [0, 0, 0],
-      [0, 128, 255],
-      [255, 196, 128],
-      [0, 64, 128],
-      [0, 128, 255]
-    ); //winter
-  if (lutName === "Warm")
-    lut = this.makeLut(
-      [255, 255, 255],
-      [127, 196, 254],
-      [0, 0, 0],
-      [0, 64, 128],
-      [0, 128, 255]
-    ); //warm
-  if (lutName === "Plasma")
-    lut = this.makeLut(
-      [13, 156, 237, 240],
-      [8, 23, 121, 249],
-      [135, 158, 83, 33],
-      [0, 56, 80, 88],
-      [0, 64, 192, 255]
-    ); //plasma
-  if (lutName === "Viridis")
-    lut = this.makeLut(
-      [68, 49, 53, 253],
-      [1, 104, 183, 231],
-      [84, 142, 121, 37],
-      [0, 56, 80, 88],
-      [0, 65, 192, 255]
-    ); //viridis
-  if (lutName === "Inferno")
-    lut = this.makeLut(
-      [0, 120, 237, 240],
-      [0, 28, 105, 249],
-      [4, 109, 37, 33],
-      [0, 56, 80, 88],
-      [0, 64, 192, 255]
-    ); //inferno
-  return lut;
+  let defaultLutName = "gray";
+  let availMaps = this.colorMaps();
+  for (let i = 0; i < availMaps.length; i++) {
+    let key = availMaps[i];
+    console.log(key);
+    if (lutName === key) {
+      return this.makeLut(
+        cmaps[lutName].R,
+        cmaps[lutName].G,
+        cmaps[lutName].B,
+        cmaps[lutName].A,
+        cmaps[lutName].I
+      );
+    }
+  }
+  // if no match the return the default gray lut
+  return this.makeLut(
+    cmaps[defaultLutName].R,
+    cmaps[defaultLutName].G,
+    cmaps[defaultLutName].B,
+    cmaps[defaultLutName].A,
+    cmaps[defaultLutName].I
+  );
 }; // colormap()
 
 Niivue.prototype.refreshColormaps = function () {
