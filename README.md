@@ -6,7 +6,7 @@ The NiiVue package is intented to be used by individuals developing interactive 
 
 # Active Projects
 
-[See our active projects here](https://github.com/niivue/niivue/projects)
+[See our active projects here](https://github.com/orgs/niivue/projects)
 
 # Overview/Mission
 
