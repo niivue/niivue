@@ -144,6 +144,7 @@ export let Niivue = function (opts = {}) {
   this.isDragging = false;
   this.dragStart = [0.0, 0.0];
   this.dragEnd = [0.0, 0.0];
+  this.lastTwoTouchDistance = 0;
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
   this.clipPlaneObject3D = null;
@@ -456,6 +457,7 @@ Niivue.prototype.touchStartListener = function (e) {
 // note: no test yet
 Niivue.prototype.touchEndListener = function () {
   this.scene.touchdown = false;
+  this.lastTwoTouchDistance = 0;
 };
 
 // handler for mouse move over canvas
@@ -502,6 +504,25 @@ Niivue.prototype.touchMoveListener = function (e) {
       e.touches[0].clientX - rect.left,
       e.touches[0].clientY - rect.top
     );
+  } else {
+    // Check this event for 2-touch Move/Pinch/Zoom gesture
+    this.handlePinchZoom(e);
+  }
+};
+
+Niivue.prototype.handlePinchZoom = function (ev) {
+  if (ev.targetTouches.length == 2 && ev.changedTouches.length == 2) {
+    var dist = Math.hypot(
+      ev.touches[0].pageX - ev.touches[1].pageX,
+      ev.touches[0].pageY - ev.touches[1].pageY
+    );
+    if (dist < this.lastTwoTouchDistance) {
+      this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.95);
+    } else {
+      this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.05);
+    }
+    this.drawScene();
+    this.lastTwoTouchDistance = dist;
   }
 };
 
