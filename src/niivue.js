@@ -152,6 +152,8 @@ export let Niivue = function (opts = {}) {
   this.intensityRange$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
+  this.multiTouchGesture = false;
+  this.gestureInterval = null;
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 2;
@@ -437,20 +439,31 @@ Niivue.prototype.mouseUpListener = function () {
   }
 };
 
+Niivue.prototype.checkMultitouch = function (e) {
+  if (this.scene.touchdown && !this.multiTouchGesture) {
+    var rect = this.canvas.getBoundingClientRect();
+    this.mouseClick(
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top
+    );
+    this.mouseDown(
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top
+    );
+  }
+};
+
 // handler for single finger touch event (like mouse down)
 // note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
   this.scene.touchdown = true;
-  var rect = this.canvas.getBoundingClientRect();
-  this.mouseClick(
-    e.touches[0].clientX - rect.left,
-    e.touches[0].clientY - rect.top
-  );
-  this.mouseDown(
-    e.touches[0].clientX - rect.left,
-    e.touches[0].clientY - rect.top
-  );
+  if (this.scene.touchdown && e.touches.length < 2) {
+  } else {
+    this.multiTouchGesture = true;
+  }
+
+  setTimeout(this.checkMultitouch.bind(this), 50, e);
 };
 
 // handler for touchend (finger lift off screen)
@@ -458,6 +471,7 @@ Niivue.prototype.touchStartListener = function (e) {
 Niivue.prototype.touchEndListener = function () {
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
+  this.multiTouchGesture = false;
 };
 
 // handler for mouse move over canvas
@@ -510,18 +524,36 @@ Niivue.prototype.touchMoveListener = function (e) {
   }
 };
 
-Niivue.prototype.handlePinchZoom = function (ev) {
-  if (ev.targetTouches.length == 2 && ev.changedTouches.length == 2) {
+Niivue.prototype.handlePinchZoom = function (e) {
+  if (e.targetTouches.length == 2 && e.changedTouches.length == 2) {
     var dist = Math.hypot(
-      ev.touches[0].pageX - ev.touches[1].pageX,
-      ev.touches[0].pageY - ev.touches[1].pageY
+      e.touches[0].pageX - e.touches[1].pageX,
+      e.touches[0].pageY - e.touches[1].pageY
     );
+
+    var rect = this.canvas.getBoundingClientRect();
+    this.mousePos = [
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top,
+    ];
+
+    // scroll 2D slices
     if (dist < this.lastTwoTouchDistance) {
-      this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.95);
+      // this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.95);
+      this.sliceScroll2D(
+        -0.01,
+        e.touches[0].clientX - rect.left,
+        e.touches[0].clientY - rect.top
+      );
     } else {
-      this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.05);
+      // this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.05);
+      this.sliceScroll2D(
+        0.01,
+        e.touches[0].clientX - rect.left,
+        e.touches[0].clientY - rect.top
+      );
     }
-    this.drawScene();
+    // this.drawScene();
     this.lastTwoTouchDistance = dist;
   }
 };
