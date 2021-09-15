@@ -450,7 +450,7 @@ Niivue.prototype.checkMultitouch = function (e) {
       e.touches[0].clientX - rect.left,
       e.touches[0].clientY - rect.top
     );
-  } 
+  }
 };
 
 // handler for single finger touch event (like mouse down)
