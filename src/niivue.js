@@ -1312,6 +1312,17 @@ Niivue.prototype.calMinMaxCore = function (
       overlayItem.volume.hdr.cal_max,
     ];
   }
+
+  let cm = overlayItem.colorMap;
+  let cmMin = cmaps[cm].min;
+  let cmMax = cmaps[cm].max;
+  // if color map specifies non zero values for min and max then use them
+  if (cmMin != cmMax) {
+    console.log("using colormap min and max");
+    return [cmMin, cmMax, cmMin, cmMax];
+    // overlayItem.cal_min = cmMin;
+    // overlayItem.cal_max = cmMax;
+  }
   let imgRaw;
   let hdr = overlayItem.volume.hdr;
   //   console.log('hdr');
