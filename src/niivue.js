@@ -18,6 +18,8 @@ import {
   fragRGBOrientShader,
   vertSurfaceShader,
   fragSurfaceShader,
+  vertDepthPickingShader,
+  fragDepthPickingShader,
 } from "./shader-srcs.js";
 import { fontPng } from "./fnt.js"; // pngName;
 import metrics from "./fnt.json";
@@ -1209,8 +1211,8 @@ Niivue.prototype.init = async function () {
 
   this.pickingSurfaceShader = new Shader(
     this.gl,
-    vertSurfaceShader,
-    fragSurfaceShader
+    vertDepthPickingShader,
+    fragDepthPickingShader
   );
 
   // clip planer shader
@@ -2302,10 +2304,7 @@ Niivue.prototype.draw3D = function () {
       false,
       m
     );
-    this.gl.uniform4fv(
-      this.pickingSurfaceShader.uniforms["surfaceColor"],
-      object3D.colorId
-    );
+    this.gl.uniform1i(this.pickingSurfaceShader.uniforms["id"], object3D.id);
 
     this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
   }
@@ -2328,11 +2327,11 @@ Niivue.prototype.draw3D = function () {
     rgbaPixel
   ); // typed array to hold result
 
-  this.selectedObjectId =
-    rgbaPixel[0] +
-    (rgbaPixel[1] << 8) +
-    (rgbaPixel[2] << 16) +
-    (rgbaPixel[3] << 24);
+  this.selectedObjectId = rgbaPixel[3];
+  this.objectCoordinates = rgbaPixel.slice(0, 3);
+
+  console.log("object id is " + this.selectedObjectId);
+  console.log(this.objectCoordinates);
 
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
