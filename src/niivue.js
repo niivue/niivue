@@ -2379,7 +2379,7 @@ Niivue.prototype.draw3D = function () {
   ); // typed array to hold result
 
   this.selectedObjectId = rgbaPixel[3];
-  if(this.selectedObjectId === this.VOLUME_ID) {
+  if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
