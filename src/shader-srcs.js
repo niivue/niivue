@@ -472,14 +472,14 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-  fColor = vec4(0.0,0.0,0.0,0.0);
+  // fColor = vec4(0.0,0.0,0.0,0.0);
 	vec3 start = posColor;
 	vec3 backPosition = GetBackPosition(start);
 	//fColor = vec4(backPosition, 1.0); return;
   vec3 dir = backPosition - start;
   float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if (lenVox < 0.5) return;
+	if (lenVox < 0.5) discard;
 	// fColor = vec4(posColor, 1.0);
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
@@ -496,18 +496,14 @@ void main() {
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) {
 			fColor = vec4(samplePos.rgb, float(id & 255) / 255.0);
-			break;
+			return;
 		}
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
 
-	if (samplePos.a <= len) {
-		fColor = vec4(samplePos.rgb, float(id & 255) / 255.0);
-		return;
-	}
 	
-	if (overlays < 1.0) return;
+	if (overlays < 1.0) discard;
 	
 	//overlay pass
 	len = lenNoClip;

@@ -2379,11 +2379,13 @@ Niivue.prototype.draw3D = function () {
   ); // typed array to hold result
 
   this.selectedObjectId = rgbaPixel[3];
-  this.objectCoordinates = rgbaPixel.slice(0, 3);
+  this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
+    (x) => x / 255.0
+  );
 
   console.log("object id is " + this.selectedObjectId);
-  console.log(this.objectCoordinates);
-  return;
+  console.log(this.scene.crosshairPos);
+
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
 
