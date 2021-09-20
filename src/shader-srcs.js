@@ -421,10 +421,10 @@ export var vertVolumePickingShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
 uniform mat4 mvpMtx;
-out vec3 vColor;
+out vec3 posColor;
 void main(void) {
 	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	vColor = pos;
+	posColor = pos;
 }`;
 
 export var fragVolumePickingShader = `#version 300 es
@@ -438,7 +438,7 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 uniform int id;
-in vec3 vColor;
+in vec3 posColor;
 out vec4 fColor;
 vec3 GetBackPosition (vec3 startPosition) {
  vec3 invR = 1.0 / rayDir;
@@ -472,18 +472,19 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-    fColor = vec4(0.0,0.0,0.0,0.0);
-	vec3 start = vColor;
+  fColor = vec4(0.0,0.0,0.0,0.0);
+	vec3 start = posColor;
 	vec3 backPosition = GetBackPosition(start);
 	//fColor = vec4(backPosition, 1.0); return;
-    vec3 dir = backPosition - start;
-    float len = length(dir);
+  vec3 dir = backPosition - start;
+  float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if (lenVox < 0.5) return;
+	// fColor = vec4(posColor, 1.0);
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
 	float opacityCorrection = stepSize/sliceSize;
-    dir = normalize(dir);
+  dir = normalize(dir);
 	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
@@ -493,17 +494,20 @@ void main() {
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(volume, samplePos.xyz).a;
-		if (val > 0.01) break;
+		if (val > 0.01) {
+			fColor = vec4(samplePos.rgb, float(id & 255) / 255.0);
+			break;
+		}
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
 
 	if (samplePos.a <= len) {
-		fColor = vec4(posColor, float(id & 255) / 255.0);
+		fColor = vec4(samplePos.rgb, float(id & 255) / 255.0);
 		return;
 	}
 	
-	if (overlays < 1.0)) return;
+	if (overlays < 1.0) return;
 	
 	//overlay pass
 	len = lenNoClip;

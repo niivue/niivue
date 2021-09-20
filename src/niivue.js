@@ -20,6 +20,8 @@ import {
   fragSurfaceShader,
   vertDepthPickingShader,
   fragDepthPickingShader,
+  vertVolumePickingShader,
+  fragVolumePickingShader,
 } from "./shader-srcs.js";
 import { fontPng } from "./fnt.js"; // pngName;
 import metrics from "./fnt.json";
@@ -1140,6 +1142,19 @@ Niivue.prototype.init = async function () {
     this.volumeObject3D.CULL_FACE |
     this.volumeObject3D.CULL_FRONT;
   this.volumeObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
+  let pickingShader = new Shader(
+    this.gl,
+    vertVolumePickingShader,
+    fragVolumePickingShader
+  );
+  pickingShader.use(this.gl);
+  this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
+  this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
+  this.gl.uniform1i(pickingShader.uniforms["overlay"], 2);
+  pickingShader.mvpUniformName = "mvpMtx";
+  pickingShader.rayDirUniformName = "rayDir";
+  pickingShader.clipPlaneUniformName = "clipPlane";
+  this.volumeObject3D.pickingShader = pickingShader;
   this.objectsToRender3D.push(this.volumeObject3D);
 
   // slice shader
@@ -1164,7 +1179,7 @@ Niivue.prototype.init = async function () {
   volumeRenderShader.mvpUniformName = "mvpMtx";
   volumeRenderShader.rayDirUniformName = "rayDir";
   volumeRenderShader.clipPlaneUniformName = "clipPlane";
-  this.volumeObject3D.shaders.push(volumeRenderShader);
+  this.volumeObject3D.renderShaders.push(volumeRenderShader);
 
   // colorbar shader
   this.colorbarShader = new Shader(
@@ -1230,7 +1245,7 @@ Niivue.prototype.init = async function () {
 
   let clipPlaneShader = new NiivueShader3D(this.surfaceShader);
   clipPlaneShader.mvpUniformName = "mvpMtx";
-  this.clipPlaneObject3D.shaders.push(clipPlaneShader);
+  this.clipPlaneObject3D.renderShaders.push(clipPlaneShader);
 
   await this.initText();
   this.updateGLVolume();
@@ -1778,6 +1793,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.scene.clipPlane
   );
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
+
+  this.volumeObject3D.pickingShader.use(this.gl);
+  this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
 }; // refreshLayers()
 
 Niivue.prototype.colorMaps = function (sort = true) {
@@ -2262,6 +2280,23 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   return m;
 }; // calculateMvpMatrix
 
+Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
+  //compute ray direction
+  var inv = mat.mat4.create();
+  mat.mat4.invert(inv, mvpMatrix);
+  var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
+  mat.vec4.transformMat4(rayDir4, rayDir4, inv);
+  let rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
+  mat.vec3.normalize(rayDir, rayDir);
+  //defuzz, avoid divide by zero
+  const tiny = 0.00001;
+  if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny;
+  if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny;
+  if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny;
+
+  return rayDir;
+}; // calculateRayDirection
+
 Niivue.prototype.draw3D = function () {
   let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
   if (mn <= 0) return;
@@ -2275,13 +2310,17 @@ Niivue.prototype.draw3D = function () {
 
   // render picking surfaces
   let m = null;
-  let rayDir = null;
   this.gl.disable(this.gl.BLEND);
-  this.pickingSurfaceShader.use(this.gl);
+
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
     }
+
+    let pickingShader = object3D.pickingShader
+      ? object3D.pickingShader
+      : this.pickingSurfaceShader;
+    pickingShader.use(this.gl);
 
     if (object3D.glFlags & object3D.CULL_FACE) {
       this.gl.enable(this.gl.CULL_FACE);
@@ -2299,12 +2338,24 @@ Niivue.prototype.draw3D = function () {
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
     m = this.calculateMvpMatrix(object3D);
-    this.gl.uniformMatrix4fv(
-      this.pickingSurfaceShader.uniforms["mvpMtx"],
-      false,
-      m
-    );
-    this.gl.uniform1i(this.pickingSurfaceShader.uniforms["id"], object3D.id);
+    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+
+    if (pickingShader.rayDirUniformName) {
+      let rayDir = this.calculateRayDirection(m);
+      this.gl.uniform3fv(
+        pickingShader.uniforms[pickingShader.rayDirUniformName],
+        rayDir
+      );
+    }
+
+    if (pickingShader.clipPlaneUniformName) {
+      this.gl.uniform4fv(
+        pickingShader.uniforms["clipPlane"],
+        this.scene.clipPlane
+      );
+    }
+
+    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
 
     this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
   }
@@ -2332,7 +2383,7 @@ Niivue.prototype.draw3D = function () {
 
   console.log("object id is " + this.selectedObjectId);
   console.log(this.objectCoordinates);
-
+  return;
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
 
@@ -2366,20 +2417,9 @@ Niivue.prototype.draw3D = function () {
 
     m = this.calculateMvpMatrix(object3D);
 
-    //compute ray direction
-    var inv = mat.mat4.create();
-    mat.mat4.invert(inv, m);
-    var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
-    mat.vec4.transformMat4(rayDir4, rayDir4, inv);
-    rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
-    mat.vec3.normalize(rayDir, rayDir);
-    //defuzz, avoid divide by zero
-    const tiny = 0.00001;
-    if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny;
-    if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny;
-    if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny;
+    let rayDir = this.calculateRayDirection(m);
 
-    for (const shader of object3D.shaders) {
+    for (const shader of object3D.renderShaders) {
       shader.use(this.gl);
       if (shader.mvpUniformName) {
         this.gl.uniformMatrix4fv(
