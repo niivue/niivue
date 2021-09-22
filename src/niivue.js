@@ -1314,8 +1314,14 @@ Niivue.prototype.calMinMaxCore = function (
   }
 
   let cm = overlayItem.colorMap;
-  let cmMin = cmaps[cm].min;
-  let cmMax = cmaps[cm].max;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+
   // if color map specifies non zero values for min and max then use them
   if (cmMin != cmMax) {
     console.log("using colormap min and max");
@@ -1842,14 +1848,13 @@ Niivue.prototype.colormap = function (lutName = "") {
   let availMaps = this.colorMaps();
   for (let i = 0; i < availMaps.length; i++) {
     let key = availMaps[i];
-    console.log(key);
-    if (lutName === key) {
+    if (lutName.toLowerCase() === key.toLowerCase()) {
       return this.makeLut(
-        cmaps[lutName].R,
-        cmaps[lutName].G,
-        cmaps[lutName].B,
-        cmaps[lutName].A,
-        cmaps[lutName].I
+        cmaps[key].R,
+        cmaps[key].G,
+        cmaps[key].B,
+        cmaps[key].A,
+        cmaps[key].I
       );
     }
   }
