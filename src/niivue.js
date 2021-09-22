@@ -1295,7 +1295,7 @@ function intensityRaw2Scaled(hdr, raw) {
 Niivue.prototype.calMinMaxCore = function (
   overlayItem,
   img,
-  percentileFrac = 0.02,
+  percentileFrac = 0.0,
   ignoreZeroVoxels = false
 ) {
   if (
@@ -1352,7 +1352,9 @@ Niivue.prototype.calMinMaxCore = function (
     }
     if (imgRaw[i] === 0) {
       nZero++;
-      continue;
+      if (ignoreZeroVoxels) {
+        continue;
+      }
     }
     mn = Math.min(imgRaw[i], mn);
     mx = Math.max(imgRaw[i], mx);
@@ -1369,17 +1371,21 @@ Niivue.prototype.calMinMaxCore = function (
   let nBins = 1001;
   let scl = (nBins - 1) / (mx - mn);
   let hist = new Array(nBins);
-  for (let i = 0; i < nBins; i++) hist[i] = 0;
+  for (let i = 0; i < nBins; i++) {
+    hist[i] = 0;
+  }
   if (ignoreZeroVoxels) {
     for (let i = 0; i <= nVox; i++) {
       if (imgRaw[i] === 0) continue;
       if (isNaN(imgRaw[i])) continue;
-      hist[(imgRaw[i] - mn) * scl]++;
+      hist[Math.round((imgRaw[i] - mn) * scl)]++;
     }
   } else {
     for (let i = 0; i <= nVox; i++) {
-      if (isNaN(imgRaw[i])) continue;
-      hist[(imgRaw[i] - mn) * scl]++;
+      if (isNaN(imgRaw[i])) {
+        continue;
+      }
+      hist[Math.round((imgRaw[i] - mn) * scl)]++;
     }
   }
   let n = 0;
