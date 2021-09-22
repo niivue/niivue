@@ -53,7 +53,7 @@
      var volumeList1 = [
        // first item is brackground image
          {
-           url: "../images/test.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
            volume: {hdr: null, img: null},
            name: "mni152",
            intensityMin: 0, // not used yet
@@ -64,7 +64,7 @@
            visible: true,
          },
         ] 
-      var nv1 = new niivue.Niivue({trustCalMinMax: false})
+      var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
