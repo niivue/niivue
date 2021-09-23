@@ -1987,6 +1987,7 @@ Niivue.prototype.sliceScale = function () {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
+  
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
     if (posChange > 0)
