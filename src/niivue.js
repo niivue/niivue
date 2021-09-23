@@ -156,6 +156,8 @@ export let Niivue = function (opts = {}) {
   this.intensityRange$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
+  this.multiTouchGesture = false;
+  this.gestureInterval = null;
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 2;
@@ -441,20 +443,31 @@ Niivue.prototype.mouseUpListener = function () {
   }
 };
 
+Niivue.prototype.checkMultitouch = function (e) {
+  if (this.scene.touchdown && !this.multiTouchGesture) {
+    var rect = this.canvas.getBoundingClientRect();
+    this.mouseClick(
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top
+    );
+    this.mouseDown(
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top
+    );
+  }
+};
+
 // handler for single finger touch event (like mouse down)
 // note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
   this.scene.touchdown = true;
-  var rect = this.canvas.getBoundingClientRect();
-  this.mouseClick(
-    e.touches[0].clientX - rect.left,
-    e.touches[0].clientY - rect.top
-  );
-  this.mouseDown(
-    e.touches[0].clientX - rect.left,
-    e.touches[0].clientY - rect.top
-  );
+  if (this.scene.touchdown && e.touches.length < 2) {
+  } else {
+    this.multiTouchGesture = true;
+  }
+
+  setTimeout(this.checkMultitouch.bind(this), 50, e);
 };
 
 // handler for touchend (finger lift off screen)
@@ -462,6 +475,7 @@ Niivue.prototype.touchStartListener = function (e) {
 Niivue.prototype.touchEndListener = function () {
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
+  this.multiTouchGesture = false;
 };
 
 // handler for mouse move over canvas
@@ -514,18 +528,36 @@ Niivue.prototype.touchMoveListener = function (e) {
   }
 };
 
-Niivue.prototype.handlePinchZoom = function (ev) {
-  if (ev.targetTouches.length == 2 && ev.changedTouches.length == 2) {
+Niivue.prototype.handlePinchZoom = function (e) {
+  if (e.targetTouches.length == 2 && e.changedTouches.length == 2) {
     var dist = Math.hypot(
-      ev.touches[0].pageX - ev.touches[1].pageX,
-      ev.touches[0].pageY - ev.touches[1].pageY
+      e.touches[0].pageX - e.touches[1].pageX,
+      e.touches[0].pageY - e.touches[1].pageY
     );
+
+    var rect = this.canvas.getBoundingClientRect();
+    this.mousePos = [
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top,
+    ];
+
+    // scroll 2D slices
     if (dist < this.lastTwoTouchDistance) {
-      this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.95);
+      // this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.95);
+      this.sliceScroll2D(
+        -0.01,
+        e.touches[0].clientX - rect.left,
+        e.touches[0].clientY - rect.top
+      );
     } else {
-      this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.05);
+      // this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.05);
+      this.sliceScroll2D(
+        0.01,
+        e.touches[0].clientX - rect.left,
+        e.touches[0].clientY - rect.top
+      );
     }
-    this.drawScene();
+    // this.drawScene();
     this.lastTwoTouchDistance = dist;
   }
 };
@@ -1280,7 +1312,7 @@ function intensityRaw2Scaled(hdr, raw) {
 Niivue.prototype.calMinMaxCore = function (
   overlayItem,
   img,
-  percentileFrac = 0.02,
+  percentileFrac = 0.0,
   ignoreZeroVoxels = false
 ) {
   if (
@@ -1296,6 +1328,23 @@ Niivue.prototype.calMinMaxCore = function (
       overlayItem.volume.hdr.cal_min,
       overlayItem.volume.hdr.cal_max,
     ];
+  }
+
+  let cm = overlayItem.colorMap;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+
+  // if color map specifies non zero values for min and max then use them
+  if (cmMin != cmMax) {
+    console.log("using colormap min and max");
+    return [cmMin, cmMax, cmMin, cmMax];
+    // overlayItem.cal_min = cmMin;
+    // overlayItem.cal_max = cmMax;
   }
   let imgRaw;
   let hdr = overlayItem.volume.hdr;
@@ -1326,7 +1375,9 @@ Niivue.prototype.calMinMaxCore = function (
     }
     if (imgRaw[i] === 0) {
       nZero++;
-      continue;
+      if (ignoreZeroVoxels) {
+        continue;
+      }
     }
     mn = Math.min(imgRaw[i], mn);
     mx = Math.max(imgRaw[i], mx);
@@ -1343,17 +1394,21 @@ Niivue.prototype.calMinMaxCore = function (
   let nBins = 1001;
   let scl = (nBins - 1) / (mx - mn);
   let hist = new Array(nBins);
-  for (let i = 0; i < nBins; i++) hist[i] = 0;
+  for (let i = 0; i < nBins; i++) {
+    hist[i] = 0;
+  }
   if (ignoreZeroVoxels) {
     for (let i = 0; i <= nVox; i++) {
       if (imgRaw[i] === 0) continue;
       if (isNaN(imgRaw[i])) continue;
-      hist[(imgRaw[i] - mn) * scl]++;
+      hist[Math.round((imgRaw[i] - mn) * scl)]++;
     }
   } else {
     for (let i = 0; i <= nVox; i++) {
-      if (isNaN(imgRaw[i])) continue;
-      hist[(imgRaw[i] - mn) * scl]++;
+      if (isNaN(imgRaw[i])) {
+        continue;
+      }
+      hist[Math.round((imgRaw[i] - mn) * scl)]++;
     }
   }
   let n = 0;
@@ -1813,14 +1868,13 @@ Niivue.prototype.colormap = function (lutName = "") {
   let availMaps = this.colorMaps();
   for (let i = 0; i < availMaps.length; i++) {
     let key = availMaps[i];
-    console.log(key);
-    if (lutName === key) {
+    if (lutName.toLowerCase() === key.toLowerCase()) {
       return this.makeLut(
-        cmaps[lutName].R,
-        cmaps[lutName].G,
-        cmaps[lutName].B,
-        cmaps[lutName].A,
-        cmaps[lutName].I
+        cmaps[key].R,
+        cmaps[key].G,
+        cmaps[key].B,
+        cmaps[key].A,
+        cmaps[key].I
       );
     }
   }

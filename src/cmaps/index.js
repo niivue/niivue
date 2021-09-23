@@ -7,3 +7,4 @@ export { default as inferno } from "./inferno.json";
 export { default as plasma } from "./plasma.json";
 export { default as viridis } from "./viridis.json";
 export { default as warm } from "./warm.json";
+export { default as ct_brain } from "./ct_brain.json";
