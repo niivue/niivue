@@ -4,7 +4,7 @@ import * as cmaps from "./cmaps";
 
 export var NVImage = function (
   dataBuffer,
-  colorMap = "",
+  colorMap = "gray",
   opacity = 1.0,
   trustCalMinMax = true,
   percentileFrac = 0.02,
@@ -72,6 +72,12 @@ export var NVImage = function (
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
 
+  this.calculateRAS();
+  this.calMinMaxCore();
+  
+};
+
+NVImage.prototype.calculateRAS = function() {
   //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
   // not elegant, as JavaScript arrays are always 1D
@@ -183,7 +189,7 @@ export var NVImage = function (
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
   this.toRAS = mat.mat4.clone(rotM);
-};
+}
 
 NVImage.prototype.vox2mm = function (XYZ, mtx) {
   let sform = mat.mat4.clone(mtx);
@@ -272,6 +278,10 @@ NVImage.prototype.calMinMaxCore = function () {
   let n2pct = Math.round((nVox - nZero) * percentileFrac);
   if (n2pct < 1 || mn === mx) {
     console.log("no variability in image intensity?");
+    this.cal_min = mnScale;
+    this.cal_max = mxScale;
+    this.global_min = mnScale;
+    this.global_max = mxScale;
     return [mnScale, mxScale, mnScale, mxScale];
   }
   let nBins = 1001;
@@ -333,7 +343,7 @@ NVImage.prototype.calMinMaxCore = function () {
     pct98
   );
   if (
-    this.hdr.cal_min < hdr.cal_max &&
+    this.hdr.cal_min < this.hdr.cal_max &&
     this.hdr.cal_min >= mnScale &&
     this.hdr.cal_max <= mxScale
   ) {
@@ -341,6 +351,10 @@ NVImage.prototype.calMinMaxCore = function () {
     pct2 = this.hdr.cal_min;
     pct98 = this.hdr.cal_max;
   }
+  this.cal_min = pct2;
+  this.cal_max = pct98;
+  this.global_min = mnScale;
+  this.global_max = mxScale;
   return [pct2, pct98, mnScale, mxScale];
 }; //calMinMaxCore
 
