@@ -1,5 +1,6 @@
 import * as nifti from "nifti-reader-js";
 import * as mat from "gl-matrix";
+import * as cmaps from "./cmaps";
 
 export var NVImage = function (
   dataBuffer,
@@ -70,8 +71,6 @@ export var NVImage = function (
     default:
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
-
-  
 
   //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
@@ -227,6 +226,23 @@ NVImage.prototype.calMinMaxCore = function () {
       this.hdr.cal_min,
       this.hdr.cal_max,
     ];
+  }
+
+  let cm = this.colorMap;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+
+  // if color map specifies non zero values for min and max then use them
+  if (cmMin != cmMax) {
+    console.log("using colormap min and max");
+    this.cal_min = cmMin;
+    this.cal_max = cmMax;
+    return [cmMin, cmMax, cmMin, cmMax];
   }
 
   //determine full range: min..max
