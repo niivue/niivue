@@ -3,6 +3,8 @@ import * as mat from "gl-matrix";
 
 export var NVImage = function (
   dataBuffer,
+  colorMap = "",
+  opacity = 1.0,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false
@@ -29,6 +31,8 @@ export var NVImage = function (
   this.DT_COMPLEX256 = 2048; /* long double pair (256 bits)  */
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
 
+  this.colorMap = colorMap;
+  this.opacity = opacity;
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
@@ -67,7 +71,7 @@ export var NVImage = function (
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
 
-  this.opacity = 1.0;
+  
 
   //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
