@@ -908,7 +908,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
     this.updateGLVolume();
   } // for
   return this;
-}; // loadVolume()
+}; // loadVolumes()
 
 Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
   if (texID) this.gl.deleteTexture(texID);
