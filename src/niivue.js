@@ -29,6 +29,7 @@ import * as cmaps from "./cmaps";
 import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
+import { NVImage } from "./nvimage.js";
 
 /**
  * @class Niivue
@@ -890,7 +891,7 @@ Niivue.prototype.nii2RAS = function (overlayItem) {
 }; // nii2RAS()
 
 // currently: volumeList is an array if objects, each object is a volume that can be loaded
-Niivue.prototype.loadVolumes = function (volumeList) {
+Niivue.prototype.loadVolumes = async function (volumeList) {
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   this.volumes = volumeList;
@@ -901,40 +902,42 @@ Niivue.prototype.loadVolumes = function (volumeList) {
   let img = null;
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
-    console.log("loading ", volumeList[i].url);
-    let url = this.volumes[i].url;
-    xhr.push(new XMLHttpRequest());
-    xhr[i].open("GET", url, true);
-    xhr[i].responseType = "arraybuffer";
-    xhr[i].onerror = function () {
-      console.error("error loading volume ", this.volumes[i].url);
-      alert("error loading " + this.volumes[i].url);
-    };
-    xhr[i].onload = function () {
-      let dataBuffer = xhr[i].response;
-      hdr = null;
-      img = null;
-      if (dataBuffer) {
-        hdr = nifti.readHeader(dataBuffer);
-        if (nifti.isCompressed(dataBuffer)) {
-          img = nifti.readImage(hdr, nifti.decompress(dataBuffer));
-        } else {
-          img = nifti.readImage(hdr, dataBuffer);
-        }
-      } else {
-        alert("Unable to load buffer properly from volume?");
-        console.log("no buffer?");
-      }
-      this.volumes[i].volume = {};
-      this.volumes[i].volume.hdr = hdr;
-      this.volumes[i].volume.img = img;
-      this.volumes[i].opacity = 1;
-      this.nii2RAS(this.volumes[i]);
-      //_overlayItem = overlayItem
-      //this.selectColormap(this.volumes[0].colorMap) //only base image for now
-      this.updateGLVolume();
-    }.bind(this); // bind "this" niivue instance context
-    xhr[i].send();
+    // console.log("loading ", volumeList[i].url);
+    // let url = this.volumes[i].url;
+    // xhr.push(new XMLHttpRequest());
+    // xhr[i].open("GET", url, true);
+    // xhr[i].responseType = "arraybuffer";
+    // xhr[i].onerror = function () {
+    //   console.error("error loading volume ", this.volumes[i].url);
+    //   alert("error loading " + this.volumes[i].url);
+    // };
+    // xhr[i].onload = function () {
+    //   let dataBuffer = xhr[i].response;
+    //   hdr = null;
+    //   img = null;
+    //   if (dataBuffer) {
+    //     hdr = nifti.readHeader(dataBuffer);
+    //     if (nifti.isCompressed(dataBuffer)) {
+    //       img = nifti.readImage(hdr, nifti.decompress(dataBuffer));
+    //     } else {
+    //       img = nifti.readImage(hdr, dataBuffer);
+    //     }
+    //   } else {
+    //     alert("Unable to load buffer properly from volume?");
+    //     console.log("no buffer?");
+    //   }
+    //   this.volumes[i].volume = {};
+    //   this.volumes[i].volume.hdr = hdr;
+    //   this.volumes[i].volume.img = img;
+    //   this.volumes[i].opacity = 1;
+    //   this.nii2RAS(this.volumes[i]);
+    //   //_overlayItem = overlayItem
+    //   //this.selectColormap(this.volumes[0].colorMap) //only base image for now
+    //   this.updateGLVolume();
+    // }.bind(this); // bind "this" niivue instance context
+    // xhr[i].send();
+    this.volumes[i].volume = await NVImage.loadFromUrl(this.volumes[i].url);
+    console.log(this.volumes[i].volume);
   } // for
   return this;
 }; // loadVolume()
@@ -1987,11 +1990,10 @@ Niivue.prototype.sliceScale = function () {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
-  
+
   this.canvas.focus();
-  
+
   if (this.sliceType === this.sliceTypeRender) {
-    
     if (posChange === 0) return;
     if (posChange > 0)
       this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.1);
