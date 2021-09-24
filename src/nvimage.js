@@ -4,11 +4,13 @@ import * as cmaps from "./cmaps";
 
 export var NVImage = function (
   dataBuffer,
-  colorMap = "gray",
+  name = '',
+  colorMap = 'gray',
   opacity = 1.0,
   trustCalMinMax = true,
   percentileFrac = 0.02,
-  ignoreZeroVoxels = false
+  ignoreZeroVoxels = false,
+  visible = true
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -32,11 +34,13 @@ export var NVImage = function (
   this.DT_COMPLEX256 = 2048; /* long double pair (256 bits)  */
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
 
+  this.name = name;
   this.colorMap = colorMap;
   this.opacity = opacity;
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
+  this.visible = visible;
 
   this.hdr = nifti.readHeader(dataBuffer);
   let imgRaw = null;
@@ -218,7 +222,7 @@ NVImage.prototype.arrayEquals = function (a, b) {
 // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
-NVImage.prototype.calMinMaxCore = function () {
+NVImage.prototype.calMinMax = function () {
   if (
     this.trustCalMinMax &&
     isFinite(this.hdr.cal_min) &&
@@ -363,7 +367,7 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
   return raw * hdr.scl_slope + hdr.scl_inter;
 };
 
-NVImage.loadFromUrl = async function (url) {
+NVImage.loadFromUrl = async function (url, name = '', colorMap = 'gray', opacity = 1.0, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
   let response = await fetch(url);
   let nvimage = null;
 
@@ -373,7 +377,7 @@ NVImage.loadFromUrl = async function (url) {
 
   let dataBuffer = await response.arrayBuffer();
   if (dataBuffer) {
-    nvimage = new NVImage(dataBuffer);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
   } else {
     alert("Unable to load buffer properly from volume");
   }
@@ -381,11 +385,11 @@ NVImage.loadFromUrl = async function (url) {
   return nvimage;
 };
 
-NVImage.loadFromFile = async function (file) {
+NVImage.loadFromFile = async function (file, name = '', colorMap = 'gray', opacity = 1.0, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
   let nvimage = null;
   try {
     let dataBuffer = await this.readFileAsync(file);
-    nvimage = new NVImage(dataBuffer);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
   } catch (err) {
     console.log(err);
   }

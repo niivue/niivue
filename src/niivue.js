@@ -900,11 +900,12 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     let volume = await NVImage.loadFromUrl(this.volumes[i].url);
-    this.volumes[i].volume = {};
-    this.volumes[i].volume.hdr = volume.hdr;
-    this.volumes[i].volume.img = volume.img;
-    this.volumes[i].opacity = 1;
-    this.nii2RAS(this.volumes[i]);
+    this.volumes[i].volume = volume;
+    // this.volumes[i].volume = {};
+    // this.volumes[i].volume.hdr = volume.hdr;
+    // this.volumes[i].volume.img = volume.img;
+    // this.volumes[i].opacity = 1;
+    // this.nii2RAS(this.volumes[i]);
     this.updateGLVolume();
   } // for
   return this;
@@ -1272,195 +1273,6 @@ Niivue.prototype.updateGLVolume = function () {
   this.drawScene();
 }; // updateVolume()
 
-function intensityRaw2Scaled(hdr, raw) {
-  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
-  return raw * hdr.scl_slope + hdr.scl_inter;
-}
-
-// given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
-//clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
-//ToDo: convert to web assembly, this is slow in JavaScript
-Niivue.prototype.calMinMaxCore = function (
-  overlayItem,
-  img,
-  percentileFrac = 0.0,
-  ignoreZeroVoxels = false
-) {
-  if (
-    this.opts.trustCalMinMax &&
-    isFinite(overlayItem.volume.hdr.cal_min) &&
-    isFinite(overlayItem.volume.hdr.cal_max) &&
-    overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
-  ) {
-    console.log("using hdr calminmax");
-    return [
-      overlayItem.volume.hdr.cal_min,
-      overlayItem.volume.hdr.cal_max,
-      overlayItem.volume.hdr.cal_min,
-      overlayItem.volume.hdr.cal_max,
-    ];
-  }
-
-  let cm = overlayItem.colorMap;
-  let allColorMaps = this.colorMaps();
-  let cmMin = 0;
-  let cmMax = 0;
-  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
-    cmMin = cmaps[cm.toLowerCase()].min;
-    cmMax = cmaps[cm.toLowerCase()].max;
-  }
-
-  // if color map specifies non zero values for min and max then use them
-  if (cmMin != cmMax) {
-    console.log("using colormap min and max");
-    return [cmMin, cmMax, cmMin, cmMax];
-    // overlayItem.cal_min = cmMin;
-    // overlayItem.cal_max = cmMax;
-  }
-  let imgRaw;
-  let hdr = overlayItem.volume.hdr;
-  //   console.log('hdr');
-  //   console.log(hdr);
-
-  if (hdr.datatypeCode === 2) imgRaw = new Uint8Array(img);
-  else if (hdr.datatypeCode === 4) imgRaw = new Int16Array(img);
-  else if (hdr.datatypeCode === 16) imgRaw = new Float32Array(img);
-  else if (hdr.datatypeCode === 64) imgRaw = new Float64Array(img);
-  else if (hdr.datatypeCode === 128) {
-    imgRaw = new Uint8Array(img);
-  } else if (hdr.datatypeCode === 512) imgRaw = new Uint16Array(img);
-  else if (hdr.datatypeCode === 2304) {
-    imgRaw = new Uint8Array(img);
-  }
-
-  //determine full range: min..max
-  let mn = img[0];
-  let mx = img[0];
-  let nZero = 0;
-  let nNan = 0;
-  let nVox = imgRaw.length;
-  for (let i = 0; i < nVox; i++) {
-    if (isNaN(imgRaw[i])) {
-      nNan++;
-      continue;
-    }
-    if (imgRaw[i] === 0) {
-      nZero++;
-      if (ignoreZeroVoxels) {
-        continue;
-      }
-    }
-    mn = Math.min(imgRaw[i], mn);
-    mx = Math.max(imgRaw[i], mx);
-  }
-  var mnScale = intensityRaw2Scaled(hdr, mn);
-  var mxScale = intensityRaw2Scaled(hdr, mx);
-  if (!ignoreZeroVoxels) nZero = 0;
-  nZero += nNan;
-  let n2pct = Math.round((nVox - nZero) * percentileFrac);
-  if (n2pct < 1 || mn === mx) {
-    console.log("no variability in image intensity?");
-    return [mnScale, mxScale, mnScale, mxScale];
-  }
-  let nBins = 1001;
-  let scl = (nBins - 1) / (mx - mn);
-  let hist = new Array(nBins);
-  for (let i = 0; i < nBins; i++) {
-    hist[i] = 0;
-  }
-  if (ignoreZeroVoxels) {
-    for (let i = 0; i <= nVox; i++) {
-      if (imgRaw[i] === 0) continue;
-      if (isNaN(imgRaw[i])) continue;
-      hist[Math.round((imgRaw[i] - mn) * scl)]++;
-    }
-  } else {
-    for (let i = 0; i <= nVox; i++) {
-      if (isNaN(imgRaw[i])) {
-        continue;
-      }
-      hist[Math.round((imgRaw[i] - mn) * scl)]++;
-    }
-  }
-  let n = 0;
-  let lo = 0;
-  while (n < n2pct) {
-    n += hist[lo];
-    lo++;
-  }
-  lo--; //remove final increment
-  n = 0;
-  let hi = nBins;
-  while (n < n2pct) {
-    hi--;
-    n += hist[hi];
-  }
-  if (lo == hi) {
-    //MAJORITY are not black or white
-    let ok = -1;
-    while (ok !== 0) {
-      if (lo > 0) {
-        lo--;
-        if (hist[lo] > 0) ok = 0;
-      }
-      if (ok != 0 && hi < nBins - 1) {
-        hi++;
-        if (hist[hi] > 0) ok = 0;
-      }
-      if (lo == 0 && hi == nBins - 1) ok = 0;
-    } //while not ok
-  } //if lo == hi
-  var pct2 = intensityRaw2Scaled(hdr, lo / scl + mn);
-  var pct98 = intensityRaw2Scaled(hdr, hi / scl + mn);
-  console.log(
-    "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
-    mnScale,
-    mxScale,
-    nZero,
-    pct2,
-    pct98
-  );
-  if (
-    overlayItem.volume.hdr.cal_min < overlayItem.volume.hdr.cal_max &&
-    overlayItem.volume.hdr.cal_min >= mnScale &&
-    overlayItem.volume.hdr.cal_max <= mxScale
-  ) {
-    console.log("ignoring robust range: using header cal_min and cal_max");
-    pct2 = overlayItem.volume.hdr.cal_min;
-    pct98 = overlayItem.volume.hdr.cal_max;
-  }
-  return [pct2, pct98, mnScale, mxScale];
-}; //calMinMaxCore
-
-Niivue.prototype.calMinMax = function (
-  overlayItem,
-  img,
-  percentileFrac = 0.02,
-  ignoreZeroVoxels = false
-) {
-  let minMax = this.calMinMaxCore(
-    overlayItem,
-    img,
-    percentileFrac,
-    ignoreZeroVoxels
-  );
-  console.log(
-    "cal_min, cal_max, global_min, global_max",
-    minMax[0],
-    minMax[1],
-    minMax[2],
-    minMax[3]
-  );
-  overlayItem.cal_min = minMax[0];
-  overlayItem.cal_max = minMax[1];
-  overlayItem.global_min = minMax[2];
-  overlayItem.global_max = minMax[3];
-
-  // overlayItem.cal_min = overlayItem.global_min;
-  // overlayItem.cal_max = overlayItem.global_max;
-  return minMax;
-}; // calMinMax()
-
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.volume.hdr;
   let img = overlayItem.volume.img;
@@ -1741,7 +1553,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
   if (overlayItem.global_min === undefined) {
     //only once, first time volume is loaded
-    this.calMinMax(overlayItem, imgRaw);
+    // this.calMinMax(overlayItem, imgRaw);
+    overlayItem.calMinMax();
   }
 
   //blend texture
