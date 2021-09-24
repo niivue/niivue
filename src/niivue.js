@@ -901,6 +901,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   for (let i = 0; i < volumeList.length; i++) {
     let volume = await NVImage.loadFromUrl(this.volumes[i].url);
     this.volumes[i].volume = volume;
+    console.log(volume);
     // this.volumes[i].volume = {};
     // this.volumes[i].volume.hdr = volume.hdr;
     // this.volumes[i].volume.img = volume.img;

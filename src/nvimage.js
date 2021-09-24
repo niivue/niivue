@@ -4,8 +4,8 @@ import * as cmaps from "./cmaps";
 
 export var NVImage = function (
   dataBuffer,
-  name = '',
-  colorMap = 'gray',
+  name = "",
+  colorMap = "gray",
   opacity = 1.0,
   trustCalMinMax = true,
   percentileFrac = 0.02,
@@ -77,11 +77,10 @@ export var NVImage = function (
   }
 
   this.calculateRAS();
-  this.calMinMaxCore();
-  
+  this.calMinMax();
 };
 
-NVImage.prototype.calculateRAS = function() {
+NVImage.prototype.calculateRAS = function () {
   //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
   // not elegant, as JavaScript arrays are always 1D
@@ -193,7 +192,7 @@ NVImage.prototype.calculateRAS = function() {
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
   this.toRAS = mat.mat4.clone(rotM);
-}
+};
 
 NVImage.prototype.vox2mm = function (XYZ, mtx) {
   let sform = mat.mat4.clone(mtx);
@@ -367,7 +366,16 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
   return raw * hdr.scl_slope + hdr.scl_inter;
 };
 
-NVImage.loadFromUrl = async function (url, name = '', colorMap = 'gray', opacity = 1.0, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
+NVImage.loadFromUrl = async function (
+  url,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+) {
   let response = await fetch(url);
   let nvimage = null;
 
@@ -377,7 +385,16 @@ NVImage.loadFromUrl = async function (url, name = '', colorMap = 'gray', opacity
 
   let dataBuffer = await response.arrayBuffer();
   if (dataBuffer) {
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colorMap,
+      opacity,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible
+    );
   } else {
     alert("Unable to load buffer properly from volume");
   }
@@ -385,11 +402,29 @@ NVImage.loadFromUrl = async function (url, name = '', colorMap = 'gray', opacity
   return nvimage;
 };
 
-NVImage.loadFromFile = async function (file, name = '', colorMap = 'gray', opacity = 1.0, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
+NVImage.loadFromFile = async function (
+  file,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+) {
   let nvimage = null;
   try {
     let dataBuffer = await this.readFileAsync(file);
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colorMap,
+      opacity,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible
+    );
   } catch (err) {
     console.log(err);
   }
