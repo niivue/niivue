@@ -897,47 +897,15 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.volumes = volumeList;
   this.back = this.volumes[0]; // load first volume as back layer
   this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
-  let xhr = [];
-  let hdr = null;
-  let img = null;
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
-    // console.log("loading ", volumeList[i].url);
-    // let url = this.volumes[i].url;
-    // xhr.push(new XMLHttpRequest());
-    // xhr[i].open("GET", url, true);
-    // xhr[i].responseType = "arraybuffer";
-    // xhr[i].onerror = function () {
-    //   console.error("error loading volume ", this.volumes[i].url);
-    //   alert("error loading " + this.volumes[i].url);
-    // };
-    // xhr[i].onload = function () {
-    //   let dataBuffer = xhr[i].response;
-    //   hdr = null;
-    //   img = null;
-    //   if (dataBuffer) {
-    //     hdr = nifti.readHeader(dataBuffer);
-    //     if (nifti.isCompressed(dataBuffer)) {
-    //       img = nifti.readImage(hdr, nifti.decompress(dataBuffer));
-    //     } else {
-    //       img = nifti.readImage(hdr, dataBuffer);
-    //     }
-    //   } else {
-    //     alert("Unable to load buffer properly from volume?");
-    //     console.log("no buffer?");
-    //   }
-    //   this.volumes[i].volume = {};
-    //   this.volumes[i].volume.hdr = hdr;
-    //   this.volumes[i].volume.img = img;
-    //   this.volumes[i].opacity = 1;
-    //   this.nii2RAS(this.volumes[i]);
-    //   //_overlayItem = overlayItem
-    //   //this.selectColormap(this.volumes[0].colorMap) //only base image for now
-    //   this.updateGLVolume();
-    // }.bind(this); // bind "this" niivue instance context
-    // xhr[i].send();
-    this.volumes[i].volume = await NVImage.loadFromUrl(this.volumes[i].url);
-    console.log(this.volumes[i].volume);
+    let volume = await NVImage.loadFromUrl(this.volumes[i].url);
+    this.volumes[i].volume = {};
+    this.volumes[i].volume.hdr = volume.hdr;
+    this.volumes[i].volume.img = volume.img;
+    this.volumes[i].opacity = 1;
+    this.nii2RAS(this.volumes[i]);
+    this.updateGLVolume();
   } // for
   return this;
 }; // loadVolume()
