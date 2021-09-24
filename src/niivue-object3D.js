@@ -7,7 +7,8 @@ export var NiivueObject3D = function (id, vertexBuffer, mode, indexCount) {
   this.CULL_BACK = 8;
   this.ENABLE_DEPTH_TEST = 16;
 
-  this.shaders = [];
+  this.renderShaders = [];
+  this.pickingShader = null;
   this.isVisible = true;
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
