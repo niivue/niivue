@@ -785,7 +785,13 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
-    let volume = await NVImage.loadFromUrl(this.volumes[i].url);
+    let volume = await NVImage.loadFromUrl(
+      this.volumes[i].url,
+      this.volumes[i].name,
+      this.volumes[i].colorMap,
+      this.volumes[i].opacity,
+      this.opts.trustCalMinMax
+    );
     this.volumes[i] = volume;
     this.updateGLVolume();
   } // for

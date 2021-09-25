@@ -883,32 +883,10 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let minmax = await wait(2 * 1000).then(() => {
-        let overlayItem = nv.volumes[0]
-        console.log(overlayItem)
-        let hdr = overlayItem.volume.hdr
-        let img = overlayItem.volume.img
-        let imgRaw
-        if (hdr.datatypeCode === 2) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 4) {
-          imgRaw = new Int16Array(img);
-        } else if (hdr.datatypeCode === 16) {
-          imgRaw = new Float32Array(img);
-        } else if (hdr.datatypeCode === 64) {
-          imgRaw = new Float64Array(img)
-        } else if (hdr.datatypeCode === 128) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 512) {
-          imgRaw = new Uint16Array(img);
-        } else if (hdr.datatypeCode === 2304) {
-          imgRaw = new Uint8Array(img);
-        }
-        let minmax = nv.calMinMax(overlayItem, imgRaw)
-        return minmax
-      });
+      
+      await nv.loadVolumes(volumeList)
+      let overlayItem = nv.volumes[0]
+      let minmax = overlayItem.calMinMax()
       return minmax
     })
     console.log(minmax)
@@ -942,32 +920,10 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let minmax = await wait(2 * 1000).then(() => {
-        let overlayItem = nv.volumes[0]
-        console.log(overlayItem)
-        let hdr = overlayItem.volume.hdr
-        let img = overlayItem.volume.img
-        let imgRaw
-        if (hdr.datatypeCode === 2) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 4) {
-          imgRaw = new Int16Array(img);
-        } else if (hdr.datatypeCode === 16) {
-          imgRaw = new Float32Array(img);
-        } else if (hdr.datatypeCode === 64) {
-          imgRaw = new Float64Array(img)
-        } else if (hdr.datatypeCode === 128) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 512) {
-          imgRaw = new Uint16Array(img);
-        } else if (hdr.datatypeCode === 2304) {
-          imgRaw = new Uint8Array(img);
-        }
-        let minmax = nv.calMinMax(overlayItem, imgRaw)
-        return minmax
-      });
+      
+      await nv.loadVolumes(volumeList)
+      let overlayItem = nv.volumes[0]
+      let minmax = overlayItem.calMinMax()
       return minmax
     })
     console.log(minmax)
