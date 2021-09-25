@@ -336,6 +336,11 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   ];
 };
 
+function intensityRaw2Scaled(hdr, raw) {
+  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
+  return raw * hdr.scl_slope + hdr.scl_inter;
+}
+
 // note: no test yet
 Niivue.prototype.calculateNewRange = function () {
   if (this.sliceType === this.sliceTypeRender) {
@@ -367,32 +372,11 @@ Niivue.prototype.calculateNewRange = function () {
     zrange[1] = startVox[2] + 1;
   }
 
-  let imgRaw;
-  const datatypeCode = this.volumes[0].hdr.datatypeCode;
   const hdr = this.volumes[0].hdr;
   const img = this.volumes[0].img;
   console.log(this.volumes[0]);
-  // console.log('datatype code is ' + datatypeCode);
 
-  switch (datatypeCode) {
-    case 2:
-      imgRaw = new Uint8Array(img);
-      break;
-    case 4:
-      imgRaw = new Int16Array(img);
-      break;
-    case 16:
-      imgRaw = new Float32Array(img);
-      break;
-    case 64:
-      imgRaw = new Float64Array(img);
-      break;
-    case 512:
-      imgRaw = new Uint16Array(img);
-      break;
-  }
-
-  console.log(imgRaw[xrange[0] * yrange[0] * zrange[0]]);
+  console.log(img[xrange[0] * yrange[0] * zrange[0]]);
   console.log(xrange);
   console.log(yrange);
   console.log(zrange);
@@ -404,11 +388,11 @@ Niivue.prototype.calculateNewRange = function () {
       let yi = y * xdim;
       for (let x = xrange[0]; x < xrange[1]; x++) {
         let index = zi + yi + x;
-        if (lo > imgRaw[index]) {
-          lo = imgRaw[index];
+        if (lo > img[index]) {
+          lo = img[index];
         }
-        if (hi < imgRaw[index]) {
-          hi = imgRaw[index];
+        if (hi < img[index]) {
+          hi = img[index];
         }
       }
     }
