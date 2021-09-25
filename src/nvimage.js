@@ -229,6 +229,10 @@ NVImage.prototype.calMinMax = function () {
     this.hdr.cal_max > this.hdr.cal_min
   ) {
     console.log("using hdr calminmax");
+    this.cal_min = this.hdr.cal_min;
+    this.cal_max = this.hdr.cal_max;
+    this.global_min = this.hdr.cal_min;
+    this.global_max = this.hdr.cal_max;
     return [
       this.hdr.cal_min,
       this.hdr.cal_max,
