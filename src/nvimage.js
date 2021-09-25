@@ -218,6 +218,15 @@ NVImage.prototype.arrayEquals = function (a, b) {
   );
 };
 
+NVImage.prototype.colorMaps = function (sort = true) {
+  let cm = [];
+  for (const [key, value] of Object.entries(cmaps)) {
+    cm.push(key);
+  }
+  console.log(cm);
+  return sort === true ? cm.sort() : cm;
+};
+
 // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
@@ -259,30 +268,30 @@ NVImage.prototype.calMinMax = function () {
   }
 
   //determine full range: min..max
-  let mn = img[0];
-  let mx = img[0];
+  let mn = this.img[0];
+  let mx = this.img[0];
   let nZero = 0;
   let nNan = 0;
-  let nVox = imgRaw.length;
+  let nVox = this.img.length;
   for (let i = 0; i < nVox; i++) {
-    if (isNaN(imgRaw[i])) {
+    if (isNaN(this.img[i])) {
       nNan++;
       continue;
     }
-    if (imgRaw[i] === 0) {
+    if (this.img[i] === 0) {
       nZero++;
-      if (ignoreZeroVoxels) {
+      if (this.ignoreZeroVoxels) {
         continue;
       }
     }
-    mn = Math.min(imgRaw[i], mn);
-    mx = Math.max(imgRaw[i], mx);
+    mn = Math.min(this.img[i], mn);
+    mx = Math.max(this.img[i], mx);
   }
-  var mnScale = intensityRaw2Scaled(hdr, mn);
-  var mxScale = intensityRaw2Scaled(hdr, mx);
-  if (!ignoreZeroVoxels) nZero = 0;
+  var mnScale = this.intensityRaw2Scaled(this.hdr, mn);
+  var mxScale = this.intensityRaw2Scaled(this.hdr, mx);
+  if (!this.ignoreZeroVoxels) nZero = 0;
   nZero += nNan;
-  let n2pct = Math.round((nVox - nZero) * percentileFrac);
+  let n2pct = Math.round((nVox - nZero) * this.percentileFrac);
   if (n2pct < 1 || mn === mx) {
     console.log("no variability in image intensity?");
     this.cal_min = mnScale;
@@ -297,18 +306,18 @@ NVImage.prototype.calMinMax = function () {
   for (let i = 0; i < nBins; i++) {
     hist[i] = 0;
   }
-  if (ignoreZeroVoxels) {
+  if (this.ignoreZeroVoxels) {
     for (let i = 0; i <= nVox; i++) {
-      if (imgRaw[i] === 0) continue;
-      if (isNaN(imgRaw[i])) continue;
-      hist[Math.round((imgRaw[i] - mn) * scl)]++;
+      if (this.img[i] === 0) continue;
+      if (isNaN(this.img[i])) continue;
+      hist[Math.round((this.img[i] - mn) * scl)]++;
     }
   } else {
     for (let i = 0; i <= nVox; i++) {
-      if (isNaN(imgRaw[i])) {
+      if (isNaN(this.img[i])) {
         continue;
       }
-      hist[Math.round((imgRaw[i] - mn) * scl)]++;
+      hist[Math.round((this.img[i] - mn) * scl)]++;
     }
   }
   let n = 0;
@@ -339,8 +348,8 @@ NVImage.prototype.calMinMax = function () {
       if (lo == 0 && hi == nBins - 1) ok = 0;
     } //while not ok
   } //if lo == hi
-  var pct2 = this.intensityRaw2Scaled(hdr, lo / scl + mn);
-  var pct98 = this.intensityRaw2Scaled(hdr, hi / scl + mn);
+  var pct2 = this.intensityRaw2Scaled(this.hdr, lo / scl + mn);
+  var pct98 = this.intensityRaw2Scaled(this.hdr, hi / scl + mn);
   console.log(
     "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
     mnScale,

@@ -781,21 +781,15 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   this.volumes = volumeList;
-
+  this.back = this.volumes[0]; // load first volume as back layer
   this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     let volume = await NVImage.loadFromUrl(this.volumes[i].url);
     this.volumes[i] = volume;
-    console.log(volume);
-    // this.volumes[i].volume = {};
-    // this.volumes[i].volume.hdr = volume.hdr;
-    // this.volumes[i].volume.img = volume.img;
-    // this.volumes[i].opacity = 1;
-    // this.nii2RAS(this.volumes[i]);
     this.updateGLVolume();
   } // for
-  this.back = this.volumes[0]; // load first volume as back layer
+
   return this;
 }; // loadVolumes()
 
@@ -1175,6 +1169,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
+
     outTexture = this.rgbaTex(
       this.volumeTexture,
       this.gl.TEXTURE0,
@@ -2321,9 +2316,13 @@ Niivue.prototype.drawScene = function () {
   );
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   let posString = "";
-  if (!this.back.dims)
+
+  if (!this.back.dims) {
     // exit if we have nothing to draw
+    console.log("nothing to draw");
     return;
+  }
+
   if (this.sliceType === this.sliceTypeRender)
     //draw rendering
     return this.draw3D();
