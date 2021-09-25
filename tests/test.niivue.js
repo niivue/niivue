@@ -957,13 +957,9 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let frac = await wait(2 * 1000).then(() => {
-        let mm = [0.20249909162521362, -16.400001525878906, 23.377498626708984]
-        let frac = nv.mm2frac(mm)
-        return frac
-      });
+      await nv.loadVolumes(volumeList)
+      let mm = [0.20249909162521362, -16.400001525878906, 23.377498626708984]
+      let frac = nv.mm2frac(mm)
       return frac
     })
     console.log(frac)
