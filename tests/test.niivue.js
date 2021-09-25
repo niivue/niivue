@@ -994,13 +994,11 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let frac = await wait(2 * 1000).then(() => {
-        let vox = [103, 128, 129]
-        let frac = nv.vox2frac(vox)
-        return frac
-      });
+      
+      await nv.loadVolumes(volumeList)
+      let vox = [103, 128, 129]
+      let frac = nv.vox2frac(vox)
+      
       return frac
     })
     expected = [0.5000415009576917, 0.5017796754837036, 0.6023715706758721]
