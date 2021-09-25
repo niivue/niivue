@@ -1102,13 +1102,9 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let frac = await wait(2 * 1000).then(() => {
-        let pos = [100, 200]
-        let frac = nv.canvasPos2frac(pos)
-        return frac
-      });
+      await nv.loadVolumes(volumeList)
+      let pos = [100, 200]
+      let frac = nv.canvasPos2frac(pos)
       return frac
     })
     let expected = [ 0.4045893719806762, 0.5, 0.5 ]
