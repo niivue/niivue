@@ -1511,6 +1511,16 @@ Niivue.prototype.colorMaps = function (sort = true) {
   return sort === true ? cm.sort() : cm;
 };
 
+Niivue.prototype.colormapFromKey = function (name) {
+  let availMaps = this.colorMaps();
+  for (let i = 0; i < availMaps.length; i++) {
+    let key = availMaps[i];
+    if (name.toLowerCase() === key.toLowerCase()) {
+      return cmaps[key];
+    }
+  }
+};
+
 Niivue.prototype.colormap = function (lutName = "") {
   //function colormap(lutName = "") {
   let defaultLutName = "gray";
