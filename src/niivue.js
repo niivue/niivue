@@ -452,7 +452,7 @@ Niivue.prototype.touchStartListener = function (e) {
     this.multiTouchGesture = true;
   }
 
-  setTimeout(this.checkMultitouch.bind(this), 50, e);
+  setTimeout(this.checkMultitouch.bind(this), 1, e);
 };
 
 // handler for touchend (finger lift off screen)
