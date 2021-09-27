@@ -883,32 +883,10 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let minmax = await wait(2 * 1000).then(() => {
-        let overlayItem = nv.volumes[0]
-        console.log(overlayItem)
-        let hdr = overlayItem.volume.hdr
-        let img = overlayItem.volume.img
-        let imgRaw
-        if (hdr.datatypeCode === 2) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 4) {
-          imgRaw = new Int16Array(img);
-        } else if (hdr.datatypeCode === 16) {
-          imgRaw = new Float32Array(img);
-        } else if (hdr.datatypeCode === 64) {
-          imgRaw = new Float64Array(img)
-        } else if (hdr.datatypeCode === 128) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 512) {
-          imgRaw = new Uint16Array(img);
-        } else if (hdr.datatypeCode === 2304) {
-          imgRaw = new Uint8Array(img);
-        }
-        let minmax = nv.calMinMax(overlayItem, imgRaw)
-        return minmax
-      });
+      
+      await nv.loadVolumes(volumeList)
+      let overlayItem = nv.volumes[0]
+      let minmax = overlayItem.calMinMax()
       return minmax
     })
     console.log(minmax)
@@ -942,32 +920,10 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let minmax = await wait(2 * 1000).then(() => {
-        let overlayItem = nv.volumes[0]
-        console.log(overlayItem)
-        let hdr = overlayItem.volume.hdr
-        let img = overlayItem.volume.img
-        let imgRaw
-        if (hdr.datatypeCode === 2) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 4) {
-          imgRaw = new Int16Array(img);
-        } else if (hdr.datatypeCode === 16) {
-          imgRaw = new Float32Array(img);
-        } else if (hdr.datatypeCode === 64) {
-          imgRaw = new Float64Array(img)
-        } else if (hdr.datatypeCode === 128) {
-          imgRaw = new Uint8Array(img);
-        } else if (hdr.datatypeCode === 512) {
-          imgRaw = new Uint16Array(img);
-        } else if (hdr.datatypeCode === 2304) {
-          imgRaw = new Uint8Array(img);
-        }
-        let minmax = nv.calMinMax(overlayItem, imgRaw)
-        return minmax
-      });
+      
+      await nv.loadVolumes(volumeList)
+      let overlayItem = nv.volumes[0]
+      let minmax = overlayItem.calMinMax()
       return minmax
     })
     console.log(minmax)
@@ -1001,13 +957,9 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let frac = await wait(2 * 1000).then(() => {
-        let mm = [0.20249909162521362, -16.400001525878906, 23.377498626708984]
-        let frac = nv.mm2frac(mm)
-        return frac
-      });
+      await nv.loadVolumes(volumeList)
+      let mm = [0.20249909162521362, -16.400001525878906, 23.377498626708984]
+      let frac = nv.mm2frac(mm)
       return frac
     })
     console.log(frac)
@@ -1042,13 +994,11 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let frac = await wait(2 * 1000).then(() => {
-        let vox = [103, 128, 129]
-        let frac = nv.vox2frac(vox)
-        return frac
-      });
+      
+      await nv.loadVolumes(volumeList)
+      let vox = [103, 128, 129]
+      let frac = nv.vox2frac(vox)
+      
       return frac
     })
     expected = [0.5000415009576917, 0.5017796754837036, 0.6023715706758721]
@@ -1081,13 +1031,10 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let vox = await wait(2 * 1000).then(() => {
-        let frac = [0.5000415009576917, 0.5017796754837036, 0.6023715706758721]
-        let vox = nv.frac2vox(frac)
-        return vox
-      });
+      await nv.loadVolumes(volumeList)
+      let frac = [0.5000415009576917, 0.5017796754837036, 0.6023715706758721]
+      let vox = nv.frac2vox(frac)
+      
       return vox
     })
     let expected = [103, 128, 129]
@@ -1120,13 +1067,9 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let mm = await wait(2 * 1000).then(() => {
-        let frac = [0.5000415009576917, 0.5017796754837036, 0.6023715706758721]
-        let mm = nv.frac2mm(frac)
-        return mm
-      });
+      await nv.loadVolumes(volumeList)
+      let frac = [0.5000415009576917, 0.5017796754837036, 0.6023715706758721]
+      let mm = nv.frac2mm(frac)
       return mm
     })
     let expected = [0.20249909162521362, -16.400001525878906, 23.377498626708984]
@@ -1159,13 +1102,9 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
-      let frac = await wait(2 * 1000).then(() => {
-        let pos = [100, 200]
-        let frac = nv.canvasPos2frac(pos)
-        return frac
-      });
+      await nv.loadVolumes(volumeList)
+      let pos = [100, 200]
+      let frac = nv.canvasPos2frac(pos)
       return frac
     })
     let expected = [ 0.4045893719806762, 0.5, 0.5 ]

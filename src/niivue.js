@@ -29,6 +29,7 @@ import * as cmaps from "./cmaps";
 import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
+import { NVImage } from "./nvimage.js";
 
 /**
  * @class Niivue
@@ -335,6 +336,11 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   ];
 };
 
+function intensityRaw2Scaled(hdr, raw) {
+  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
+  return raw * hdr.scl_slope + hdr.scl_inter;
+}
+
 // note: no test yet
 Niivue.prototype.calculateNewRange = function () {
   if (this.sliceType === this.sliceTypeRender) {
@@ -366,32 +372,11 @@ Niivue.prototype.calculateNewRange = function () {
     zrange[1] = startVox[2] + 1;
   }
 
-  let imgRaw;
-  const datatypeCode = this.volumes[0].volume.hdr.datatypeCode;
-  const hdr = this.volumes[0].volume.hdr;
-  const img = this.volumes[0].volume.img;
+  const hdr = this.volumes[0].hdr;
+  const img = this.volumes[0].img;
   console.log(this.volumes[0]);
-  // console.log('datatype code is ' + datatypeCode);
 
-  switch (datatypeCode) {
-    case 2:
-      imgRaw = new Uint8Array(img);
-      break;
-    case 4:
-      imgRaw = new Int16Array(img);
-      break;
-    case 16:
-      imgRaw = new Float32Array(img);
-      break;
-    case 64:
-      imgRaw = new Float64Array(img);
-      break;
-    case 512:
-      imgRaw = new Uint16Array(img);
-      break;
-  }
-
-  console.log(imgRaw[xrange[0] * yrange[0] * zrange[0]]);
+  console.log(img[xrange[0] * yrange[0] * zrange[0]]);
   console.log(xrange);
   console.log(yrange);
   console.log(zrange);
@@ -403,11 +388,11 @@ Niivue.prototype.calculateNewRange = function () {
       let yi = y * xdim;
       for (let x = xrange[0]; x < xrange[1]; x++) {
         let index = zi + yi + x;
-        if (lo > imgRaw[index]) {
-          lo = imgRaw[index];
+        if (lo > img[index]) {
+          lo = img[index];
         }
-        if (hi < imgRaw[index]) {
-          hi = imgRaw[index];
+        if (hi < img[index]) {
+          hi = img[index];
         }
       }
     }
@@ -775,169 +760,28 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
   return pos3;
 }; // vox2mm()
 
-Niivue.prototype.nii2RAS = function (overlayItem) {
-  //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
-  // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
-  // not elegant, as JavaScript arrays are always 1D
-  let hdr = overlayItem.volume.hdr;
-  let a = hdr.affine;
-  let absR = mat.mat3.fromValues(
-    Math.abs(a[0][0]),
-    Math.abs(a[0][1]),
-    Math.abs(a[0][2]),
-    Math.abs(a[1][0]),
-    Math.abs(a[1][1]),
-    Math.abs(a[1][2]),
-    Math.abs(a[2][0]),
-    Math.abs(a[2][1]),
-    Math.abs(a[2][2])
-  );
-  //1st column = x
-  let ixyz = [1, 1, 1];
-  if (absR[3] > absR[0]) ixyz[0] = 2; //(absR[1][0] > absR[0][0]) ixyz[0] = 2;
-  if (absR[6] > absR[0] && absR[6] > absR[3]) ixyz[0] = 3; //((absR[2][0] > absR[0][0]) && (absR[2][0]> absR[1][0])) ixyz[0] = 3;
-  //2nd column = y
-  ixyz[1] = 1;
-  if (ixyz[0] === 1) {
-    if (absR[4] > absR[7])
-      //(absR[1][1] > absR[2][1])
-      ixyz[1] = 2;
-    else ixyz[1] = 3;
-  } else if (ixyz[0] === 2) {
-    if (absR[1] > absR[7])
-      //(absR[0][1] > absR[2][1])
-      ixyz[1] = 1;
-    else ixyz[1] = 3;
-  } else {
-    if (absR[1] > absR[4])
-      //(absR[0][1] > absR[1][1])
-      ixyz[1] = 1;
-    else ixyz[1] = 2;
-  }
-  //3rd column = z: constrained as x+y+z = 1+2+3 = 6
-  ixyz[2] = 6 - ixyz[1] - ixyz[0];
-  let perm = [1, 2, 3];
-  perm[ixyz[0] - 1] = 1;
-  perm[ixyz[1] - 1] = 2;
-  perm[ixyz[2] - 1] = 3;
-  let rotM = mat.mat4.fromValues(
-    a[0][0],
-    a[0][1],
-    a[0][2],
-    a[0][3],
-    a[1][0],
-    a[1][1],
-    a[1][2],
-    a[1][3],
-    a[2][0],
-    a[2][1],
-    a[2][2],
-    a[2][3],
-    0,
-    0,
-    0,
-    1
-  );
-  //n.b. 0.5 in these values to account for voxel centers, e.g. a 3-pixel wide bitmap in unit space has voxel centers at 0.25, 0.5 and 0.75
-  overlayItem.mm000 = this.vox2mm([-0.5, -0.5, -0.5], rotM);
-  overlayItem.mm100 = this.vox2mm([hdr.dims[1] - 0.5, -0.5, -0.5], rotM);
-  overlayItem.mm010 = this.vox2mm([-0.5, hdr.dims[2] - 0.5, -0.5], rotM);
-  overlayItem.mm001 = this.vox2mm([-0.5, -0.5, hdr.dims[3] - 0.5], rotM);
-  let R = mat.mat4.create();
-  mat.mat4.copy(R, rotM);
-  for (let i = 0; i < 3; i++)
-    for (let j = 0; j < 3; j++) R[i * 4 + j] = rotM[i * 4 + perm[j] - 1]; //rotM[i+(4*(perm[j]-1))];//rotM[i],[perm[j]-1];
-  let flip = [0, 0, 0];
-  if (R[0] < 0) flip[0] = 1; //R[0][0]
-  if (R[5] < 0) flip[1] = 1; //R[1][1]
-  if (R[10] < 0) flip[2] = 1; //R[2][2]
-  overlayItem.dimsRAS = [
-    hdr.dims[0],
-    hdr.dims[perm[0]],
-    hdr.dims[perm[1]],
-    hdr.dims[perm[2]],
-  ];
-  overlayItem.pixDimsRAS = [
-    hdr.pixDims[0],
-    hdr.pixDims[perm[0]],
-    hdr.pixDims[perm[1]],
-    hdr.pixDims[perm[2]],
-  ];
-  if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
-    overlayItem.toRAS = mat.mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-    overlayItem.matRAS = mat.mat4.clone(rotM);
-    return; //no rotation required!
-  }
-  mat.mat4.identity(rotM);
-  rotM[0 + 0 * 4] = 1 - flip[0] * 2;
-  rotM[1 + 1 * 4] = 1 - flip[1] * 2;
-  rotM[2 + 2 * 4] = 1 - flip[2] * 2;
-  rotM[3 + 0 * 4] = (hdr.dims[perm[0]] - 1) * flip[0];
-  rotM[3 + 1 * 4] = (hdr.dims[perm[1]] - 1) * flip[1];
-  rotM[3 + 2 * 4] = (hdr.dims[perm[2]] - 1) * flip[2];
-  let residualR = mat.mat4.create();
-  mat.mat4.invert(residualR, rotM);
-  mat.mat4.multiply(residualR, residualR, R);
-  overlayItem.matRAS = mat.mat4.clone(residualR);
-  rotM = mat.mat4.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
-  rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1;
-  rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1;
-  rotM[perm[2] - 1 + 2 * 4] = -flip[2] * 2 + 1;
-  rotM[3 + 0 * 4] = flip[0];
-  rotM[3 + 1 * 4] = flip[1];
-  rotM[3 + 2 * 4] = flip[2];
-  overlayItem.toRAS = mat.mat4.clone(rotM);
-}; // nii2RAS()
-
 // currently: volumeList is an array if objects, each object is a volume that can be loaded
-Niivue.prototype.loadVolumes = function (volumeList) {
+Niivue.prototype.loadVolumes = async function (volumeList) {
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   this.volumes = volumeList;
   this.back = this.volumes[0]; // load first volume as back layer
   this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
-  let xhr = [];
-  let hdr = null;
-  let img = null;
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
-    console.log("loading ", volumeList[i].url);
-    let url = this.volumes[i].url;
-    xhr.push(new XMLHttpRequest());
-    xhr[i].open("GET", url, true);
-    xhr[i].responseType = "arraybuffer";
-    xhr[i].onerror = function () {
-      console.error("error loading volume ", this.volumes[i].url);
-      alert("error loading " + this.volumes[i].url);
-    };
-    xhr[i].onload = function () {
-      let dataBuffer = xhr[i].response;
-      hdr = null;
-      img = null;
-      if (dataBuffer) {
-        hdr = nifti.readHeader(dataBuffer);
-        if (nifti.isCompressed(dataBuffer)) {
-          img = nifti.readImage(hdr, nifti.decompress(dataBuffer));
-        } else {
-          img = nifti.readImage(hdr, dataBuffer);
-        }
-      } else {
-        alert("Unable to load buffer properly from volume?");
-        console.log("no buffer?");
-      }
-      this.volumes[i].volume = {};
-      this.volumes[i].volume.hdr = hdr;
-      this.volumes[i].volume.img = img;
-      this.volumes[i].opacity = 1;
-      this.nii2RAS(this.volumes[i]);
-      //_overlayItem = overlayItem
-      //this.selectColormap(this.volumes[0].colorMap) //only base image for now
-      this.updateGLVolume();
-    }.bind(this); // bind "this" niivue instance context
-    xhr[i].send();
+    let volume = await NVImage.loadFromUrl(
+      this.volumes[i].url,
+      this.volumes[i].name,
+      this.volumes[i].colorMap,
+      this.volumes[i].opacity,
+      this.opts.trustCalMinMax
+    );
+    this.volumes[i] = volume;
+    this.updateGLVolume();
   } // for
+
   return this;
-}; // loadVolume()
+}; // loadVolumes()
 
 Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
   if (texID) this.gl.deleteTexture(texID);
@@ -1301,200 +1145,10 @@ Niivue.prototype.updateGLVolume = function () {
   this.drawScene();
 }; // updateVolume()
 
-function intensityRaw2Scaled(hdr, raw) {
-  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
-  return raw * hdr.scl_slope + hdr.scl_inter;
-}
-
-// given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
-//clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
-//ToDo: convert to web assembly, this is slow in JavaScript
-Niivue.prototype.calMinMaxCore = function (
-  overlayItem,
-  img,
-  percentileFrac = 0.0,
-  ignoreZeroVoxels = false
-) {
-  if (
-    this.opts.trustCalMinMax &&
-    isFinite(overlayItem.volume.hdr.cal_min) &&
-    isFinite(overlayItem.volume.hdr.cal_max) &&
-    overlayItem.volume.hdr.cal_max > overlayItem.volume.hdr.cal_min
-  ) {
-    console.log("using hdr calminmax");
-    return [
-      overlayItem.volume.hdr.cal_min,
-      overlayItem.volume.hdr.cal_max,
-      overlayItem.volume.hdr.cal_min,
-      overlayItem.volume.hdr.cal_max,
-    ];
-  }
-
-  let cm = overlayItem.colorMap;
-  let allColorMaps = this.colorMaps();
-  let cmMin = 0;
-  let cmMax = 0;
-  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
-    cmMin = cmaps[cm.toLowerCase()].min;
-    cmMax = cmaps[cm.toLowerCase()].max;
-  }
-
-  // if color map specifies non zero values for min and max then use them
-  if (cmMin != cmMax) {
-    console.log("using colormap min and max");
-    return [cmMin, cmMax, cmMin, cmMax];
-    // overlayItem.cal_min = cmMin;
-    // overlayItem.cal_max = cmMax;
-  }
-  let imgRaw;
-  let hdr = overlayItem.volume.hdr;
-  //   console.log('hdr');
-  //   console.log(hdr);
-
-  if (hdr.datatypeCode === 2) imgRaw = new Uint8Array(img);
-  else if (hdr.datatypeCode === 4) imgRaw = new Int16Array(img);
-  else if (hdr.datatypeCode === 16) imgRaw = new Float32Array(img);
-  else if (hdr.datatypeCode === 64) imgRaw = new Float64Array(img);
-  else if (hdr.datatypeCode === 128) {
-    imgRaw = new Uint8Array(img);
-  } else if (hdr.datatypeCode === 512) imgRaw = new Uint16Array(img);
-  else if (hdr.datatypeCode === 2304) {
-    imgRaw = new Uint8Array(img);
-  }
-
-  //determine full range: min..max
-  let mn = img[0];
-  let mx = img[0];
-  let nZero = 0;
-  let nNan = 0;
-  let nVox = imgRaw.length;
-  for (let i = 0; i < nVox; i++) {
-    if (isNaN(imgRaw[i])) {
-      nNan++;
-      continue;
-    }
-    if (imgRaw[i] === 0) {
-      nZero++;
-      if (ignoreZeroVoxels) {
-        continue;
-      }
-    }
-    mn = Math.min(imgRaw[i], mn);
-    mx = Math.max(imgRaw[i], mx);
-  }
-  var mnScale = intensityRaw2Scaled(hdr, mn);
-  var mxScale = intensityRaw2Scaled(hdr, mx);
-  if (!ignoreZeroVoxels) nZero = 0;
-  nZero += nNan;
-  let n2pct = Math.round((nVox - nZero) * percentileFrac);
-  if (n2pct < 1 || mn === mx) {
-    console.log("no variability in image intensity?");
-    return [mnScale, mxScale, mnScale, mxScale];
-  }
-  let nBins = 1001;
-  let scl = (nBins - 1) / (mx - mn);
-  let hist = new Array(nBins);
-  for (let i = 0; i < nBins; i++) {
-    hist[i] = 0;
-  }
-  if (ignoreZeroVoxels) {
-    for (let i = 0; i <= nVox; i++) {
-      if (imgRaw[i] === 0) continue;
-      if (isNaN(imgRaw[i])) continue;
-      hist[Math.round((imgRaw[i] - mn) * scl)]++;
-    }
-  } else {
-    for (let i = 0; i <= nVox; i++) {
-      if (isNaN(imgRaw[i])) {
-        continue;
-      }
-      hist[Math.round((imgRaw[i] - mn) * scl)]++;
-    }
-  }
-  let n = 0;
-  let lo = 0;
-  while (n < n2pct) {
-    n += hist[lo];
-    lo++;
-  }
-  lo--; //remove final increment
-  n = 0;
-  let hi = nBins;
-  while (n < n2pct) {
-    hi--;
-    n += hist[hi];
-  }
-  if (lo == hi) {
-    //MAJORITY are not black or white
-    let ok = -1;
-    while (ok !== 0) {
-      if (lo > 0) {
-        lo--;
-        if (hist[lo] > 0) ok = 0;
-      }
-      if (ok != 0 && hi < nBins - 1) {
-        hi++;
-        if (hist[hi] > 0) ok = 0;
-      }
-      if (lo == 0 && hi == nBins - 1) ok = 0;
-    } //while not ok
-  } //if lo == hi
-  var pct2 = intensityRaw2Scaled(hdr, lo / scl + mn);
-  var pct98 = intensityRaw2Scaled(hdr, hi / scl + mn);
-  console.log(
-    "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
-    mnScale,
-    mxScale,
-    nZero,
-    pct2,
-    pct98
-  );
-  if (
-    overlayItem.volume.hdr.cal_min < overlayItem.volume.hdr.cal_max &&
-    overlayItem.volume.hdr.cal_min >= mnScale &&
-    overlayItem.volume.hdr.cal_max <= mxScale
-  ) {
-    console.log("ignoring robust range: using header cal_min and cal_max");
-    pct2 = overlayItem.volume.hdr.cal_min;
-    pct98 = overlayItem.volume.hdr.cal_max;
-  }
-  return [pct2, pct98, mnScale, mxScale];
-}; //calMinMaxCore
-
-Niivue.prototype.calMinMax = function (
-  overlayItem,
-  img,
-  percentileFrac = 0.02,
-  ignoreZeroVoxels = false
-) {
-  let minMax = this.calMinMaxCore(
-    overlayItem,
-    img,
-    percentileFrac,
-    ignoreZeroVoxels
-  );
-  console.log(
-    "cal_min, cal_max, global_min, global_max",
-    minMax[0],
-    minMax[1],
-    minMax[2],
-    minMax[3]
-  );
-  overlayItem.cal_min = minMax[0];
-  overlayItem.cal_max = minMax[1];
-  overlayItem.global_min = minMax[2];
-  overlayItem.global_max = minMax[3];
-
-  // overlayItem.cal_min = overlayItem.global_min;
-  // overlayItem.cal_max = overlayItem.global_max;
-  return minMax;
-}; // calMinMax()
-
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
-  let hdr = overlayItem.volume.hdr;
-  let img = overlayItem.volume.img;
+  let hdr = overlayItem.hdr;
+  let img = overlayItem.img;
   let opacity = overlayItem.opacity;
-  let imgRaw;
   let outTexture = null;
 
   let mtx = [];
@@ -1505,6 +1159,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
+
     outTexture = this.rgbaTex(
       this.volumeTexture,
       this.gl.TEXTURE0,
@@ -1595,7 +1250,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let orientShader = this.orientShaderU;
   if (hdr.datatypeCode === 2) {
     // raw input data
-    imgRaw = new Uint8Array(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1615,10 +1269,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       hdr.dims[3],
       this.gl.RED_INTEGER,
       this.gl.UNSIGNED_BYTE,
-      imgRaw
+      img
     );
   } else if (hdr.datatypeCode === 4) {
-    imgRaw = new Int16Array(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1638,11 +1291,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       hdr.dims[3],
       this.gl.RED_INTEGER,
       this.gl.SHORT,
-      imgRaw
+      img
     );
     orientShader = this.orientShaderI;
   } else if (hdr.datatypeCode === 16) {
-    imgRaw = new Float32Array(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1662,13 +1314,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       hdr.dims[3],
       this.gl.RED,
       this.gl.FLOAT,
-      imgRaw
+      img
     );
     orientShader = this.orientShaderF;
   } else if (hdr.datatypeCode === 64) {
-    imgRaw = new Float64Array(img);
     let img32f = new Float32Array();
-    img32f = Float32Array.from(imgRaw);
+    img32f = Float32Array.from(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1695,7 +1346,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     orientShader = this.orientShaderRGBU;
     orientShader.use(this.gl);
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], false);
-    imgRaw = new Uint8Array(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1715,10 +1365,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       hdr.dims[3],
       this.gl.RGB_INTEGER,
       this.gl.UNSIGNED_BYTE,
-      imgRaw
+      img
     );
   } else if (hdr.datatypeCode === 512) {
-    imgRaw = new Uint16Array(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1738,13 +1387,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       hdr.dims[3],
       this.gl.RED_INTEGER,
       this.gl.UNSIGNED_SHORT,
-      imgRaw
+      img
     );
   } else if (hdr.datatypeCode === 2304) {
     orientShader = this.orientShaderRGBU;
     orientShader.use(this.gl);
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], true);
-    imgRaw = new Uint8Array(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       6,
@@ -1764,13 +1412,14 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       hdr.dims[3],
       this.gl.RGBA_INTEGER,
       this.gl.UNSIGNED_BYTE,
-      imgRaw
+      img
     );
   }
 
   if (overlayItem.global_min === undefined) {
     //only once, first time volume is loaded
-    this.calMinMax(overlayItem, imgRaw);
+    // this.calMinMax(overlayItem, imgRaw);
+    overlayItem.calMinMax();
   }
 
   //blend texture
@@ -1987,11 +1636,10 @@ Niivue.prototype.sliceScale = function () {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
-  
+
   this.canvas.focus();
-  
+
   if (this.sliceType === this.sliceTypeRender) {
-    
     if (posChange === 0) return;
     if (posChange > 0)
       this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.1);
@@ -2560,7 +2208,7 @@ Niivue.prototype.frac2vox = function (frac) {
 Niivue.prototype.frac2mm = function (frac) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to object space in millimeters
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
-  //let d = overlayItem.volume.hdr.dims;
+  //let d = overlayItem.hdr.dims;
   let dim = mat.vec4.fromValues(
     this.back.dims[1],
     this.back.dims[2],
@@ -2658,9 +2306,13 @@ Niivue.prototype.drawScene = function () {
   );
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   let posString = "";
-  if (!this.back.dims)
+
+  if (!this.back.dims) {
     // exit if we have nothing to draw
+    console.log("nothing to draw");
     return;
+  }
+
   if (this.sliceType === this.sliceTypeRender)
     //draw rendering
     return this.draw3D();
