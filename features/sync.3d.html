@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>sync 3d</title>
+    <style>
+      section {
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body style="font-family: sans-serif;">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+
+    <section>
+      <h1>
+        Sync 3D
+      </h1>
+      <p>
+        NiiVue can sync two NiiVue instances using two canvases. In 3D mode, this allows syncing the azimuth and elevation. 
+      </p>
+      <p>
+        The first canvas can control the second one. The second canvas can be controlled separately from the first. 
+      </p>
+    </section>
+
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:90%; height:400px;">
+        <canvas id="gl1" height=480 width=640>
+        </canvas>
+      </div>
+    </section>
+
+    <!-- demo 2 -->
+    <section>
+      <div id="demo2" style="width:90%; height:400px;">
+        <canvas id="gl2" height=480 width=480>
+        </canvas>
+      </div>
+    </section>
+    
+
+    <script src="../niivue.js">
+    </script>
+    <script>
+     var volumeList1 = [
+       // first item is brackground image
+         {
+           url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "mni152",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "gray",
+           opacity: 100,
+           visible: true,
+         },
+        ] 
+      var nv1 = new niivue.Niivue()
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeRender)
+
+      var volumeList2 = [
+       // first item is brackground image
+         {
+           url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "mni152",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "gray",
+           opacity: 100,
+           visible: true,
+         },
+        ] 
+      var nv2 = new niivue.Niivue()
+      nv2.attachTo('gl2')
+      nv2.loadVolumes(volumeList2)
+      nv2.setSliceType(nv2.sliceTypeRender)
+      nv1.syncWith(nv2)
+    </script>
+  </body>
+</html>
