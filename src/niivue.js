@@ -1846,7 +1846,6 @@ Niivue.prototype.drawText = function (
   let screenPxRange =
     (scale / this.fontMets.size) * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
-  this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], scale); //screenPxRange);
   var bytes = new Buffer(str);
   for (let i = 0; i < str.length; i++)
     xy[0] += this.drawChar(xy, scale, bytes[i]);
