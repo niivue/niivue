@@ -762,8 +762,6 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
 
 // currently: volumeList is an array if objects, each object is a volume that can be loaded
 Niivue.prototype.loadVolumes = async function (volumeList) {
-  this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   this.volumes = volumeList;
   this.back = this.volumes[0]; // load first volume as back layer
   this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
@@ -923,6 +921,7 @@ Niivue.prototype.initText = async function () {
     h = glyph.planeBounds.top - glyph.planeBounds.bottom;
     this.fontMets[id].lbwh = [l, b, w, h];
   }
+  this.drawScene();
 }; // initText()
 
 Niivue.prototype.init = async function () {
@@ -1125,6 +1124,7 @@ Niivue.prototype.init = async function () {
 
   await this.initText();
   this.updateGLVolume();
+  setTimeout(this.drawScene.bind(this), 1); // draw our loading text
   return this;
 }; // init()
 
@@ -1814,16 +1814,30 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
   return scale * metrics.xadv;
 }; // drawChar()
 
-Niivue.prototype.drawText = function (xy, str) {
+Niivue.prototype.drawText = function (
+  xy,
+  str,
+  width = 0,
+  height = 0,
+  size = 0
+) {
   //to right of x, vertically centered on y
+  if (width === 0) {
+    width = this.gl.canvas.width;
+  }
+
+  if (height === 0) {
+    height = this.canvas.height;
+  }
+
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
-  let scale = this.opts.textHeight * this.gl.canvas.height;
+  let scale = size === 0 ? this.opts.textHeight * this.gl.canvas.height : size;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(
     this.fontShader.uniforms["canvasWidthHeight"],
-    this.gl.canvas.width,
-    this.gl.canvas.height
+    width,
+    height
   );
   this.gl.uniform4fv(
     this.fontShader.uniforms["fontColor"],
@@ -1832,7 +1846,7 @@ Niivue.prototype.drawText = function (xy, str) {
   let screenPxRange =
     (scale / this.fontMets.size) * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
-  this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
+  this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], scale); //screenPxRange);
   var bytes = new Buffer(str);
   for (let i = 0; i < str.length; i++)
     xy[0] += this.drawChar(xy, scale, bytes[i]);
@@ -2308,7 +2322,29 @@ Niivue.prototype.drawScene = function () {
   let posString = "";
 
   if (!this.back.dims) {
-    // exit if we have nothing to draw
+    // draw loading text
+
+    // bind geometry of placard
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.volumeObject3D.vertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+    // draw text
+    if (this.fontMets) {
+      let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
+      if (mn <= 0) return;
+      let xCenter = this.gl.canvas.width / 2;
+      let yCenter = this.gl.canvas.height / 2;
+      let xPix = mn;
+      let yPix = mn;
+      this.gl.viewport(xCenter - xPix * 0.5, yCenter - yPix * 0.5, xPix, yPix);
+      let width = this.gl.canvas.clientWidth / 2;
+      this.drawText([width / 3, width / 2], "loading", width, width, 48);
+      console.log("drawing loading text");
+      return;
+    } else {
+      console.log("font metrics not initialized");
+    }
     console.log("nothing to draw");
     return;
   }

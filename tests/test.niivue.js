@@ -1269,4 +1269,23 @@ describe('Niivue', () => {
     await snapshot()
 
   })
+
+  it('loading text is visible before load volumes is called', async () => {
+    let nv = null
+    nv = await page.evaluate(() => {
+      let opts = {
+        textHeight: 0.05, // larger text
+        crosshairColor: [0, 0, 1, 1] // green
+      }
+      nv = new niivue.Niivue(opts = opts)
+      nv.attachTo('gl')
+
+      return nv
+    })
+
+    await page.waitForTimeout(500)
+    // take a snapshot for comparison
+    await snapshot()
+
+  })
 })
