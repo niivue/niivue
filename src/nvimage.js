@@ -396,6 +396,9 @@ NVImage.loadFromUrl = async function (
     throw Error(response.statusText);
   }
 
+  let urlParts = url.split("/"); // split url parts at slash
+  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+
   let dataBuffer = await response.arrayBuffer();
   if (dataBuffer) {
     nvimage = new NVImage(
