@@ -58,7 +58,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -85,7 +85,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
         {
@@ -96,7 +96,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "winter",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -127,7 +127,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -166,7 +166,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -221,7 +221,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -261,7 +261,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -293,7 +293,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -326,7 +326,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -361,7 +361,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -400,7 +400,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -440,7 +440,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -479,7 +479,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -522,7 +522,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -564,7 +564,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -598,7 +598,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -637,7 +637,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -670,7 +670,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -703,7 +703,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -736,7 +736,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -769,12 +769,12 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
       nv.loadVolumes(volumeList)
-      nv.setOpacity(0, 0.2) // 0 is backgroun image (first in list)
+      nv.setOpacity(0, 0.2) // 0 is background image (first in list)
       return nv
     })
     // take a snapshot for comparison
@@ -802,7 +802,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -836,7 +836,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -879,7 +879,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -916,7 +916,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -953,7 +953,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -990,7 +990,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1027,7 +1027,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1063,7 +1063,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1098,7 +1098,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1134,7 +1134,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1171,7 +1171,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1211,7 +1211,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]
@@ -1251,7 +1251,7 @@ describe('Niivue', () => {
           intensityMax: 100, // not used yet
           intensityRange: [0, 100], // not used yet
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         },
       ]

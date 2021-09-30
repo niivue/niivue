@@ -1149,13 +1149,13 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
+
   let outTexture = null;
 
   let mtx = [];
   if (layer === 0) {
-    this.back = {};
+    // this.back = {};
     mtx = overlayItem.toRAS;
-    opacity = 1.0;
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
