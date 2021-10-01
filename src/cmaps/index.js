@@ -27,6 +27,7 @@ export { default as cubehelix } from "./cubehelix.json";
 export { default as electric_blue } from "./electric_blue.json";
 export { default as ge_color } from "./ge_color.json";
 export { default as gold } from "./gold.json";
+export { default as gray } from "./gray.json";
 export { default as green } from "./green.json";
 export { default as hot } from "./hot.json";
 export { default as hotiron } from "./hotiron.json";
