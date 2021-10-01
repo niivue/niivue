@@ -681,7 +681,7 @@ Niivue.prototype.dropListener = async function (e) {
 
 Niivue.prototype.addVolume = function (volume) {
   if (this.volumes.length > 0) {
-    this.volumes[i] = volume;
+    this.volumes[0] = volume;
   } else {
     this.volumes.push(volume);
   }
