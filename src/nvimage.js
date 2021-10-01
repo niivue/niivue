@@ -418,6 +418,21 @@ NVImage.loadFromUrl = async function (
   return nvimage;
 };
 
+// loading Nifti files
+NVImage.readFileAsync = function (file) {
+  return new Promise((resolve, reject) => {
+    let reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+
+    reader.onerror = reject;
+
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 NVImage.loadFromFile = async function (
   file,
   name = "",
