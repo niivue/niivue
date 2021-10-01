@@ -630,12 +630,63 @@ Niivue.prototype.registerInteractions = function () {
   // add double click
   this.canvas.addEventListener("dblclick", this.resetBriCon.bind(this));
 
+  //  drag and drop support
+  this.canvas.addEventListener(
+    "dragenter",
+    this.dragEnterListener.bind(this),
+    false
+  );
+  this.canvas.addEventListener(
+    "dragover",
+    this.dragOverListener.bind(this),
+    false
+  );
+  this.canvas.addEventListener("drop", this.dropListener.bind(this), false);
+
   // add keyup
   this.canvas.setAttribute("tabindex", 0);
   this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
   this.canvas.focus();
 };
 
+Niivue.prototype.dragEnterListener = function (e) {
+  e.stopPropagation();
+  e.preventDefault();
+  // console.log("drag enter");
+};
+
+Niivue.prototype.dragOverListener = function (e) {
+  e.stopPropagation();
+  e.preventDefault();
+  // console.log("drag over");
+};
+
+Niivue.prototype.dropListener = async function (e) {
+  e.stopPropagation();
+  e.preventDefault();
+  const dt = e.dataTransfer;
+  const url = dt.getData("text/uri-list");
+  if (url) {
+    console.log("dropped url: " + url);
+    let volume = await NVImage.loadFromUrl(url);
+    this.addVolume(volume);
+  } else {
+    const files = dt.files;
+    if (files.length > 0) {
+      let volume = await NVImage.loadFromFile(files[0]);
+      this.addVolume(volume);
+    }
+  }
+};
+
+Niivue.prototype.addVolume = function (volume) {
+  if (this.volumes.length > 0) {
+    this.volumes[i] = volume;
+  } else {
+    this.volumes.push(volume);
+  }
+  this.updateGLVolume();
+};
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
