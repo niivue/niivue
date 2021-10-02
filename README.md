@@ -34,7 +34,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## existing html page
 ```
-<script src="https://unpkg.com/@niivue/niivue@0.10.0/dist/niivue.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.10.1/dist/niivue.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 
@@ -296,5 +296,13 @@ You can edit a feature branch as many times as needed to fix broken tests in ord
 ## Protected branches
 
 The `main` branch is protected. This means that no one can commit to main directly. All edits must be merged in from forks or feature branches. 
+
+## Making colormap loader
+
+```
+cd src/cmaps
+
+for f in ls *.json; do echo "export { default as `basename $f .json` } from './$f';" >> index.js; done;
+```
 
 

@@ -101,7 +101,7 @@ describe('Niivue', () => {
         },
       ]
       const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv = nv.loadVolumes(volumeList)
+      nv =  nv.loadVolumes(volumeList)
       await wait(2 * 1000).then(() => {
       });
       return nv
