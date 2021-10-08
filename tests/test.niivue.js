@@ -2,6 +2,8 @@ const { toMatchImageSnapshot } = require('jest-image-snapshot');
 const { onErrorResumeNext } = require('rxjs/operators');
 expect.extend({ toMatchImageSnapshot });
 
+
+
 async function snapshot() {
   await page.waitForSelector('#gl');          // Method to ensure that the element is loaded
   await page.waitForTimeout(1000) // wait a little longer to ensure image loaded (some images were not loading in time)
@@ -34,18 +36,18 @@ describe('Niivue', () => {
 
   it('nv.attachTo("gl")', async () => {
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       nv = new niivue.Niivue()
       nv.attachTo('gl')
       return nv
     })
     await expect(nv.gl).toBeDefined()
-    await snapshot() // will be blank as expected
   })
 
   it('nv.loadVolumes(volumeList) -- single', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       nv = new niivue.Niivue()
       nv.attachTo('gl')
       // load one volume object in an array
@@ -62,7 +64,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -71,6 +73,7 @@ describe('Niivue', () => {
   })
 
   it('overlay', async () => {
+    jest.setTimeout(30000);
     let nv = null
     nv = await page.evaluate(async () => {
       nv = new niivue.Niivue()
@@ -100,10 +103,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-      nv =  nv.loadVolumes(volumeList)
-      await wait(2 * 1000).then(() => {
-      });
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -113,8 +113,9 @@ describe('Niivue', () => {
   })
 
   it('nv = new niivue.Niivue(opts={})', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       nv = new niivue.Niivue()
       nv.attachTo('gl')
       // load one volume object in an array
@@ -131,7 +132,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -148,8 +149,9 @@ describe('Niivue', () => {
   })
 
   it('nv = new niivue.Niivue(opts=opts)', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -170,7 +172,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -208,7 +210,8 @@ describe('Niivue', () => {
   })
 
   it('nv.clipPlaneUpdate(azimuthElevationDepth)', async () => {
-    let clipPlane = await page.evaluate(() => {
+    jest.setTimeout(30000);
+    let clipPlane = await page.evaluate(async () => {
       nv = new niivue.Niivue()
       nv.attachTo('gl')
       // load one volume object in an array
@@ -225,7 +228,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.sliceType = nv.sliceTypeRender // ensure render mode is activated 
       nv.clipPlaneUpdate([42, 42, 0.5])
       return nv.scene.clipPlane
@@ -243,8 +246,9 @@ describe('Niivue', () => {
   })
 
   it('read RGB --slices', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -265,7 +269,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -274,8 +278,9 @@ describe('Niivue', () => {
   })
 
   it('read RGB --render', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -297,7 +302,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeRender)
       return nv
     })
@@ -307,8 +312,9 @@ describe('Niivue', () => {
   })
 
   it('mouse left click focuses crosshair', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -330,7 +336,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -342,8 +348,9 @@ describe('Niivue', () => {
   })
 
   it('mouse right click and drag draws selection box', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -365,7 +372,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -381,8 +388,8 @@ describe('Niivue', () => {
   })
 
   it('selectionbox disabled in 3D', async () => {
-    let nv = null
-    nv = await page.evaluate(() => {
+    jest.setTimeout(30000); // long running test
+    await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -404,12 +411,12 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeRender)
       return nv
     })
 
-    await page.waitForTimeout(500)
+    // await page.waitForTimeout(5000)
     await page.mouse.move(100, 200)
     await page.mouse.click(100, 200)
     await page.mouse.down({ button: 'right' })
@@ -421,8 +428,9 @@ describe('Niivue', () => {
   })
 
   it('mouse right click and drag sets intensity range', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -444,7 +452,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -460,8 +468,9 @@ describe('Niivue', () => {
   })
 
   it('reset brightness and contrast', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -483,7 +492,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
 
@@ -503,8 +512,9 @@ describe('Niivue', () => {
   })
 
   it('set selection box color', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -526,7 +536,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSelectionBoxColor([0, 1, 0, 1]) // green (rgba)
       return nv
     })
@@ -545,8 +555,9 @@ describe('Niivue', () => {
   })
 
   it('set crosshair color', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -568,7 +579,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setCrosshairColor([0, 1, 0, 1]) // green (rgba)
       return nv
     })
@@ -579,8 +590,9 @@ describe('Niivue', () => {
   })
 
   it('mouse wheel changes slices in 2D view', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -602,7 +614,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       return nv
     })
     await page.waitForTimeout(500)
@@ -618,8 +630,9 @@ describe('Niivue', () => {
   })
 
   it('sets slice type axial', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -641,7 +654,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeAxial)
       return nv
     })
@@ -651,8 +664,9 @@ describe('Niivue', () => {
   })
 
   it('sets slice type coronal', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -674,7 +688,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeCoronal)
       return nv
     })
@@ -684,8 +698,9 @@ describe('Niivue', () => {
   })
 
   it('sets slice type sagittal', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -707,7 +722,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeSagittal)
       return nv
     })
@@ -717,8 +732,9 @@ describe('Niivue', () => {
   })
 
   it('sets slice type render', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -740,7 +756,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeRender)
       return nv
     })
@@ -750,8 +766,9 @@ describe('Niivue', () => {
   })
 
   it('sets volume opacity', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -773,7 +790,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setOpacity(0, 0.2) // 0 is background image (first in list)
       return nv
     })
@@ -783,8 +800,9 @@ describe('Niivue', () => {
   })
 
   it('sets volume scale in render mode', async () => {
+    jest.setTimeout(30000);
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -806,7 +824,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.setSliceType(nv.sliceTypeRender)
       nv.setScale(0.5)
       return nv
@@ -818,7 +836,7 @@ describe('Niivue', () => {
 
   it('vox2mm', async () => {
     let mm = []
-    mm = await page.evaluate(() => {
+    mm = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -840,7 +858,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       let vox = [103, 128, 129]
       let xfm = [
         0.7375, 0, 0, -75.76,
@@ -1116,7 +1134,7 @@ describe('Niivue', () => {
   it('clip plane is rendered when it is set to visible', async () => {
     jest.setTimeout(30000); // long running test
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -1138,7 +1156,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.sliceType = nv.sliceTypeRender;
       nv.clipPlaneObject3D.isVisible = true;
       return nv
@@ -1153,7 +1171,7 @@ describe('Niivue', () => {
   it('volume is properly clipped in sagittal plane', async () => {
     jest.setTimeout(30000); // long running test
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -1175,7 +1193,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.sliceType = nv.sliceTypeRender;
       nv.clipPlaneObject3D.isVisible = true;
       nv.scene.clipPlane = [1, 0, 0, 0];
@@ -1193,7 +1211,7 @@ describe('Niivue', () => {
   it('volume is properly clipped in axial plane', async () => {
     jest.setTimeout(30000); // long running test
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -1215,7 +1233,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.sliceType = nv.sliceTypeRender;
       nv.clipPlaneObject3D.isVisible = true;
       nv.scene.clipPlane = [0, 1, 0, 0];
@@ -1233,7 +1251,7 @@ describe('Niivue', () => {
   it('volume is properly clipped in coronal plane', async () => {
     jest.setTimeout(30000); // long running test
     let nv = null
-    nv = await page.evaluate(() => {
+    nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // green
@@ -1255,7 +1273,7 @@ describe('Niivue', () => {
           visible: true,
         },
       ]
-      nv.loadVolumes(volumeList)
+      await nv.loadVolumes(volumeList)
       nv.sliceType = nv.sliceTypeRender;
       nv.clipPlaneObject3D.isVisible = true;
       nv.scene.clipPlane = [0, 0, 1, 0];

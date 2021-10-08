@@ -167,6 +167,7 @@ export let Niivue = function (opts = {}) {
   this.VOLUME_ID = 2;
   this.DISTANCE_FROM_CAMERA = -0.54;
 
+  this.initialized = false;
   // loop through known Niivue properties
   // if the user supplied opts object has a
   // property listed in the known properties, then set
@@ -202,7 +203,6 @@ Niivue.prototype.attachTo = function (id) {
 
   window.addEventListener("resize", this.resizeListener.bind(this)); // must bind 'this' niivue object or else 'this' becomes 'window'
   this.registerInteractions(); // attach mouse click and touch screen event handlers for the canvas
-  this.init();
   return this;
 }; // attachTo
 
@@ -816,6 +816,10 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
 
 // currently: volumeList is an array if objects, each object is a volume that can be loaded
 Niivue.prototype.loadVolumes = async function (volumeList) {
+  if (!this.initialized) {
+    await this.init();
+    this.initialized = true;
+  }
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   this.volumes = volumeList;
