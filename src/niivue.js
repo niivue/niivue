@@ -104,6 +104,9 @@ export let Niivue = function (opts = {}) {
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
   this.pickingSurfaceShader = null;
+
+  this.DEFAULT_FONT_GLYPH_SHEET = "/fonts/Roboto-Regular.png";
+  this.DEFAULT_FONT_METRICS = "/fonts/Roboto-Regular.json";
   this.fontMets = null;
 
   this.sliceTypeAxial = 0;
@@ -818,6 +821,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.volumes = volumeList;
   this.back = this.volumes[0]; // load first volume as back layer
   this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
+
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     let volume = await NVImage.loadFromUrl(
@@ -935,10 +939,74 @@ Niivue.prototype.loadPng = function (pngName) {
   //console.log("loading PNG ", pngName);
 }; // loadPng()
 
-Niivue.prototype.initText = async function () {
-  //load bitmap
-  await this.loadPng("fnt.png");
-  //create font metrics
+// remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
+Niivue.prototype.requestCORSIfNotSameOrigin = function (img, url) {
+  if (new URL(url, window.location.href).origin !== window.location.origin) {
+    img.crossOrigin = "";
+  }
+};
+
+Niivue.prototype.loadFontTexture = function (fontUrl) {
+  return new Promise((resolve, reject) => {
+    let img = new Image();
+    img.onload = () => {
+      let pngTexture = this.gl.createTexture();
+      this.gl.activeTexture(this.gl.TEXTURE3);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
+      this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+      // Set the parameters so we can render any size image.
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_WRAP_S,
+        this.gl.CLAMP_TO_EDGE
+      );
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_WRAP_T,
+        this.gl.CLAMP_TO_EDGE
+      );
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_MIN_FILTER,
+        this.gl.LINEAR
+      );
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_MAG_FILTER,
+        this.gl.LINEAR
+      );
+      // Upload the image into the texture.
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        this.gl.RGBA,
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        img
+      );
+
+      resolve(pngTexture);
+    };
+
+    img.onerror = reject;
+
+    this.requestCORSIfNotSameOrigin(img, fontUrl);
+    img.src = fontUrl;
+  });
+};
+
+Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
+  await this.loadFontTexture(fontSheetUrl);
+  let response = await fetch(metricsUrl);
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+
+  let jsonText = await response.text();
+  console.log(jsonText);
+  this.fontMetrics = JSON.parse(jsonText);
+  console.log(this.fontMetrics);
+
   this.fontMets = [];
   for (let id = 0; id < 256; id++) {
     //clear ASCII codes 0..256
@@ -947,19 +1015,13 @@ Niivue.prototype.initText = async function () {
     this.fontMets[id].uv_lbwh = [0, 0, 0, 0];
     this.fontMets[id].lbwh = [0, 0, 0, 0];
   }
-  //load metrics values: may only sparsely describe range 0..255
-  //var metrics = [];
-  async function fetchMetrics() {
-    //const response = await fetch('./fnt.json');
-    //metrics = await response.json();
-  }
-  await fetchMetrics();
-  this.fontMets.distanceRange = metrics.atlas.distanceRange;
-  this.fontMets.size = metrics.atlas.size;
-  let scaleW = metrics.atlas.width;
-  let scaleH = metrics.atlas.height;
-  for (let i = 0; i < metrics.glyphs.length; i++) {
-    let glyph = metrics.glyphs[i];
+
+  this.fontMets.distanceRange = this.fontMetrics.atlas.distanceRange;
+  this.fontMets.size = this.fontMetrics.atlas.size;
+  let scaleW = this.fontMetrics.atlas.width;
+  let scaleH = this.fontMetrics.atlas.height;
+  for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
+    let glyph = this.fontMetrics.glyphs[i];
     let id = glyph.unicode;
     this.fontMets[id].xadv = glyph.advance;
     if (glyph.planeBounds === undefined) continue;
@@ -974,6 +1036,23 @@ Niivue.prototype.initText = async function () {
     h = glyph.planeBounds.top - glyph.planeBounds.bottom;
     this.fontMets[id].lbwh = [l, b, w, h];
   }
+
+  this.fontShader.use(this.gl);
+  this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+
+  console.log("font metrics loaded");
+  console.log(this.fontMets);
+  this.drawScene();
+};
+
+Niivue.prototype.initText = async function () {
+  // font shader
+  //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
+  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
+  this.fontShader.use(this.gl);
+
+  await this.loadFont(this.DEFAULT_FONT_GLYPH_SHEET, this.DEFAULT_FONT_METRICS);
+  this.drawLoadingText("drag and drop");
 }; // initText()
 
 Niivue.prototype.init = async function () {
@@ -1116,12 +1195,6 @@ Niivue.prototype.init = async function () {
   );
   this.colorbarShader.use(this.gl);
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
-
-  // font shader
-  //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
-  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
-  this.fontShader.use(this.gl);
-  this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
 
   // orientation shaders
   this.passThroughShader = new Shader(
@@ -1875,11 +1948,22 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
   return scale * metrics.xadv;
 }; // drawChar()
 
-Niivue.prototype.drawText = function (xy, str) {
+Niivue.prototype.drawLoadingText = function (text) {
+  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.volumeObject3D.vertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  this.gl.enable(this.gl.CULL_FACE);
+
+  this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
+  this.canvas.focus();
+};
+
+Niivue.prototype.drawText = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
-  let scale = this.opts.textHeight * this.gl.canvas.height;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(
     this.fontShader.uniforms["canvasWidthHeight"],
@@ -1890,30 +1974,27 @@ Niivue.prototype.drawText = function (xy, str) {
     this.fontShader.uniforms["fontColor"],
     this.opts.crosshairColor
   );
-  let screenPxRange =
-    (scale / this.fontMets.size) * this.fontMets.distanceRange;
+  let screenPxRange = (size / this.fontMets.size) * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
   var bytes = new Buffer(str);
   for (let i = 0; i < str.length; i++)
-    xy[0] += this.drawChar(xy, scale, bytes[i]);
+    xy[0] += this.drawChar(xy, size, bytes[i]);
 }; // drawText()
 
-Niivue.prototype.drawTextRight = function (xy, str) {
+Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
-  this.fontShader.use(this.gl);
   xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
-  this.drawText(xy, str);
+  this.drawText(xy, str, scale);
 }; // drawTextRight()
 
-Niivue.prototype.drawTextBelow = function (xy, str) {
+Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
   //horizontally centered on x, below y
   if (this.opts.textHeight <= 0) return;
-  this.fontShader.use(this.gl);
-  let scale = this.opts.textHeight * this.gl.canvas.height;
-  xy[0] -= 0.5 * this.textWidth(scale, str);
-  this.drawText(xy, str);
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  xy[0] -= 0.5 * this.textWidth(size, str);
+  this.drawText(xy, str, scale);
 }; // drawTextBelow()
 
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
@@ -2369,6 +2450,12 @@ Niivue.prototype.drawScene = function () {
   let posString = "";
 
   if (!this.back.dims) {
+    if (this.volumes && this.volumes.length > 0) {
+      // let the user know we are loading
+      this.drawLoadingText("loading");
+    } else {
+      this.drawLoadingText("drag and drop a file to start");
+    }
     // exit if we have nothing to draw
     console.log("nothing to draw");
     return;
