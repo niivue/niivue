@@ -180,7 +180,7 @@ export let Niivue = function (opts = {}) {
 
 // attach the Niivue instance to the webgl2 canvas by element id
 // @example niivue = new Niivue().attachTo('gl')
-Niivue.prototype.attachTo = function (id) {
+Niivue.prototype.attachTo = async function (id) {
   this.canvas = document.getElementById(id);
   this.gl = this.canvas.getContext("webgl2");
   if (!this.gl) {
@@ -203,6 +203,9 @@ Niivue.prototype.attachTo = function (id) {
 
   window.addEventListener("resize", this.resizeListener.bind(this)); // must bind 'this' niivue object or else 'this' becomes 'window'
   this.registerInteractions(); // attach mouse click and touch screen event handlers for the canvas
+
+  await this.init();
+  this.drawScene();
   return this;
 }; // attachTo
 
