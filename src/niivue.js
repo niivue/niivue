@@ -821,7 +821,6 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
 Niivue.prototype.loadVolumes = async function (volumeList) {
   if (!this.initialized) {
     await this.init();
-    this.initialized = true;
   }
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -1256,6 +1255,8 @@ Niivue.prototype.init = async function () {
 
   await this.initText();
   this.updateGLVolume();
+  this.initialized = true;
+  this.drawScene();
   return this;
 }; // init()
 
@@ -2447,6 +2448,10 @@ Niivue.prototype.scaleSlice = function (w, h) {
 }; // scaleSlice()
 
 Niivue.prototype.drawScene = function () {
+  if (!this.initialized) {
+    return; // do not do anything until we are initialized (init will call drawScene).
+  }
+
   this.gl.clearColor(
     this.opts.backColor[0],
     this.opts.backColor[1],

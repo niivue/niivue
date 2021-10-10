@@ -44,7 +44,7 @@ describe('Niivue', () => {
   })
 
   it('nv.loadVolumes(volumeList) -- single', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let nv = await page.evaluate(async () => {
       let nv = new niivue.Niivue()
       await nv.attachTo('gl')
@@ -70,7 +70,7 @@ describe('Niivue', () => {
   })
 
   it('overlay', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let nv = await page.evaluate(async () => {
       nv = new niivue.Niivue()
       await nv.attachTo('gl')
@@ -108,7 +108,7 @@ describe('Niivue', () => {
   })
 
   it('nv = new niivue.Niivue(opts={})', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let nv = await page.evaluate(async () => {
       let nv = new niivue.Niivue()
       await nv.attachTo('gl')
@@ -144,7 +144,7 @@ describe('Niivue', () => {
   })
 
   it('nv = new niivue.Niivue(opts=opts)', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -203,7 +203,7 @@ describe('Niivue', () => {
   })
 
   it('nv.clipPlaneUpdate(azimuthElevationDepth)', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let clipPlane = await page.evaluate(async () => {
       let nv = new niivue.Niivue()
       await nv.attachTo('gl')
@@ -240,7 +240,7 @@ describe('Niivue', () => {
   })
 
   it('read RGB --slices', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -270,7 +270,7 @@ describe('Niivue', () => {
   })
 
   it('read RGB --render', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -302,7 +302,7 @@ describe('Niivue', () => {
   })
 
   it('mouse left click focuses crosshair', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -337,7 +337,7 @@ describe('Niivue', () => {
   })
 
   it('mouse right click and drag draws selection box', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -375,7 +375,7 @@ describe('Niivue', () => {
   })
 
   it('selectionbox disabled in 3D', async () => {
-    jest.setTimeout(30000); // long running test
+    jest.setTimeout(90000); // long running test
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -414,7 +414,7 @@ describe('Niivue', () => {
   })
 
   it('mouse right click and drag sets intensity range', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -452,7 +452,7 @@ describe('Niivue', () => {
   })
 
   it('reset brightness and contrast', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -494,7 +494,7 @@ describe('Niivue', () => {
   })
 
   it('set selection box color', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -536,7 +536,7 @@ describe('Niivue', () => {
   })
 
   it('set crosshair color', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     let nv = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -571,7 +571,7 @@ describe('Niivue', () => {
   })
 
   it('mouse wheel changes slices in 2D view', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -610,7 +610,7 @@ describe('Niivue', () => {
   })
 
   it('sets slice type axial', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -643,7 +643,7 @@ describe('Niivue', () => {
   })
 
   it('sets slice type coronal', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -676,7 +676,7 @@ describe('Niivue', () => {
   })
 
   it('sets slice type sagittal', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -710,7 +710,7 @@ describe('Niivue', () => {
   })
 
   it('sets slice type render', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -743,7 +743,7 @@ describe('Niivue', () => {
   })
 
   it('sets volume opacity', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -776,7 +776,7 @@ describe('Niivue', () => {
   })
 
   it('sets volume scale in render mode', async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(90000);
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -1099,7 +1099,7 @@ describe('Niivue', () => {
   })
 
   it('clip plane is rendered when it is set to visible', async () => {
-    jest.setTimeout(30000); // long running test
+    jest.setTimeout(90000); // long running test
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -1134,7 +1134,7 @@ describe('Niivue', () => {
   })
 
   it('volume is properly clipped in sagittal plane', async () => {
-    jest.setTimeout(30000); // long running test
+    jest.setTimeout(90000); // long running test
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -1171,7 +1171,7 @@ describe('Niivue', () => {
   })
 
   it('volume is properly clipped in axial plane', async () => {
-    jest.setTimeout(30000); // long running test
+    jest.setTimeout(90000); // long running test
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
@@ -1208,7 +1208,7 @@ describe('Niivue', () => {
   })
 
   it('volume is properly clipped in coronal plane', async () => {
-    jest.setTimeout(30000); // long running test
+    jest.setTimeout(90000); // long running test
     await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
