@@ -20,7 +20,7 @@ describe('Niivue', () => {
   // start a new page for each test below.
   // A server is started prior to navigating to this location
   beforeEach(async () => {
-    await page.goto('http://localhost:5000/index.html')
+    await page.goto('http://localhost:5000/index.html', {timeout:0})
   })
 
   // notice that the test cases use async functions
