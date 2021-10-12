@@ -902,49 +902,6 @@ Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
   return texID;
 }; // rgbaTex()
 
-Niivue.prototype.loadPng = function (pngName) {
-  var pngImage = null;
-  pngImage = new Image();
-  pngImage.onload = function () {
-    //console.log("PNG resolution ", pngImage.width, ",", pngImage.height);
-    var pngTexture = this.gl.createTexture();
-    this.gl.activeTexture(this.gl.TEXTURE3);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
-    // Set the parameters so we can render any size image.
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_WRAP_S,
-      this.gl.CLAMP_TO_EDGE
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_WRAP_T,
-      this.gl.CLAMP_TO_EDGE
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_MIN_FILTER,
-      this.gl.LINEAR
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_MAG_FILTER,
-      this.gl.LINEAR
-    );
-    // Upload the image into the texture.
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D,
-      0,
-      this.gl.RGBA,
-      this.gl.RGBA,
-      this.gl.UNSIGNED_BYTE,
-      pngImage
-    );
-  }.bind(this); // bind "this" context to niivue instance
-  pngImage.src = fontPng;
-  //console.log("loading PNG ", pngName);
-}; // loadPng()
-
 // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
 Niivue.prototype.requestCORSIfNotSameOrigin = function (img, url) {
   if (new URL(url, window.location.href).origin !== window.location.origin) {
@@ -1001,18 +958,7 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
   });
 };
 
-Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
-  await this.loadFontTexture(fontSheetUrl);
-  let response = await fetch(metricsUrl);
-  if (!response.ok) {
-    throw Error(response.statusText);
-  }
-
-  let jsonText = await response.text();
-  console.log(jsonText);
-  this.fontMetrics = JSON.parse(jsonText);
-  console.log(this.fontMetrics);
-
+Niivue.prototype.initFontMets = function () {
   this.fontMets = [];
   for (let id = 0; id < 256; id++) {
     //clear ASCII codes 0..256
@@ -1042,6 +988,21 @@ Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
     h = glyph.planeBounds.top - glyph.planeBounds.bottom;
     this.fontMets[id].lbwh = [l, b, w, h];
   }
+};
+
+Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
+  await this.loadFontTexture(fontSheetUrl);
+  let response = await fetch(metricsUrl);
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+
+  let jsonText = await response.text();
+  console.log(jsonText);
+  this.fontMetrics = JSON.parse(jsonText);
+  console.log(this.fontMetrics);
+
+  this.initFontMets();
 
   this.fontShader.use(this.gl);
   this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
@@ -1051,13 +1012,19 @@ Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
   this.drawScene();
 };
 
+Niivue.prototype.loadDefaultFont = async function () {
+  await this.loadFontTexture(fontPng);
+  this.fontMetrics = metrics;
+  this.initFontMets();
+};
+
 Niivue.prototype.initText = async function () {
   // font shader
   //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
   this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
   this.fontShader.use(this.gl);
 
-  await this.loadFont(this.DEFAULT_FONT_GLYPH_SHEET, this.DEFAULT_FONT_METRICS);
+  await this.loadDefaultFont();
   this.drawLoadingText("drag and drop");
 }; // initText()
 
