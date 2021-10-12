@@ -44,8 +44,9 @@
         <label for="fonts">Choose a font:</label>
         <select name="fonts" id="fonts" onchange="changeFont()">
           <option value="roboto">Roboto</option>
-          <option value="ephesis">Ephesis</option>
-          <option value="lobster">Lobster</option>
+          <option value="garamond">Garamond</option>
+          <option value="ubuntu">Ubuntu</option>
+          <option value="ubuntubold">UbuntuBold</option>
         </select>
       </div>
     </section>
@@ -58,11 +59,14 @@
           case "roboto":
             nv1.loadFont("/fonts/Roboto-Regular.png", "/fonts/Roboto-Regular.json");
             break;
-          case "ephesis":
-            nv1.loadFont("/fonts/Ephesis-Regular.png", "/fonts/Ephesis-Regular.json");
+          case "garamond":
+            nv1.loadFont("/fonts/Garamond.png", "/fonts/Garamond.json");
             break;
-          case "lobster":
-            nv1.loadFont("/fonts/Lobster-Regular.png", "/fonts/Lobster-Regular.json");
+          case "ubuntu":
+            nv1.loadFont("/fonts/Ubuntu.png", "/fonts/Ubuntu.json");
+            break;
+          case "ubuntubold":
+            nv1.loadFont("/fonts/UbuntuBold.png", "/fonts/UbuntuBold.json");
             break;
         }
       }
