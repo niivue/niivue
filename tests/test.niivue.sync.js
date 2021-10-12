@@ -27,7 +27,7 @@ describe('Niivue sync', () => {
   it('crosshairs synced on click', async () => {
     // jest.setTimeout(50000); // long running test
 
-    x = await page.evaluate(() => {
+    x = await page.evaluate(async () => {
       let opts = {
         textHeight: 0.05, // larger text
         crosshairColor: [0, 0, 1, 1] // blue
@@ -63,8 +63,8 @@ describe('Niivue sync', () => {
           visible: true,
         },
       ]
-      nv1.loadVolumes(volumeList1)
-      nv2.loadVolumes(volumeList2)
+      await nv1.loadVolumes(volumeList1)
+      await nv2.loadVolumes(volumeList2)
       nv1.syncWith(nv2)
     })
     await page.waitForTimeout(5000)
