@@ -42,6 +42,11 @@ export var NVImage = function (
   this.trustCalMinMax = trustCalMinMax;
   this.visible = visible;
 
+  // Added to support zerosLike
+  if (!dataBuffer) {
+    return;
+  }
+
   this.hdr = nifti.readHeader(dataBuffer);
   let imgRaw = null;
   if (nifti.isCompressed(dataBuffer)) {
@@ -460,4 +465,23 @@ NVImage.loadFromFile = async function (
     console.log(err);
   }
   return nvimage;
+};
+
+NVImage.prototype.clone = function () {
+  let clonedImage = new NVImage();
+  clonedImage.hdr = Object.assign({}, this.hdr);
+  clonedImage.img = this.img.slice();
+  clonedImage.calculateRAS();
+  clonedImage.calMinMax();
+  return clonedImage;
+};
+
+NVImage.prototype.zeroImage = function () {
+  this.img.fill(0);
+};
+
+NVImage.zerosLike = function (nvImage) {
+  let zeroClone = nvImage.clone();
+  zeroClone.zeroImage();
+  return zeroClone;
 };
