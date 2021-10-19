@@ -31,6 +31,8 @@ import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
 import { NVImage } from "./nvimage.js";
 
+export { NVImage } from "./nvimage";
+
 /**
  * @class Niivue
  * @description
@@ -675,14 +677,36 @@ Niivue.prototype.dropListener = async function (e) {
   if (url) {
     console.log("dropped url: " + url);
     let volume = await NVImage.loadFromUrl(url);
-    this.addVolume(volume);
+    this.setVolume(volume);
   } else {
     const files = dt.files;
     if (files.length > 0) {
       let volume = await NVImage.loadFromFile(files[0]);
-      this.addVolume(volume);
+      this.setVolume(volume);
     }
   }
+};
+
+Niivue.prototype.addVolume = function (volume) {
+  if (this.volumes.length > 1) {
+    this.overlays.push(volume);
+  } else {
+    this.back = volume;
+  }
+
+  this.volumes.push(volume);
+  this.updateGLVolume();
+};
+
+Niivue.prototype.setVolume = function (volume, index = 0) {
+  if (index === 0) {
+    this.back = volume;
+  } else {
+    this.overlays.splice(index - 1, 1, volume);
+  }
+
+  this.volumes.splice(index, 1, volume);
+  this.updateGLVolume();
 };
 
 Niivue.prototype.addVolume = function (volume) {
@@ -817,6 +841,10 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
   return pos3;
 }; // vox2mm()
 
+Niivue.prototype.cloneVolume = function (index) {
+  return this.volumes[index].clone();
+};
+
 // currently: volumeList is an array if objects, each object is a volume that can be loaded
 Niivue.prototype.loadVolumes = async function (volumeList) {
   if (!this.initialized) {
@@ -840,7 +868,6 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
     this.volumes[i] = volume;
     this.updateGLVolume();
   } // for
-
   return this;
 }; // loadVolumes()
 

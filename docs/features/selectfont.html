@@ -57,22 +57,22 @@
         const fontName = document.getElementById("fonts").value;
         switch(fontName) {
           case "roboto":
-            nv1.loadFont("/fonts/Roboto-Regular.png", "/fonts/Roboto-Regular.json");
+            nv1.loadFont("../fonts/Roboto-Regular.png", "../fonts/Roboto-Regular.json");
             break;
           case "garamond":
-            nv1.loadFont("/fonts/Garamond.png", "/fonts/Garamond.json");
+            nv1.loadFont("../fonts/Garamond.png", "../fonts/Garamond.json");
             break;
           case "ubuntu":
-            nv1.loadFont("/fonts/Ubuntu.png", "/fonts/Ubuntu.json");
+            nv1.loadFont("../fonts/Ubuntu.png", "../fonts/Ubuntu.json");
             break;
           case "ubuntubold":
-            nv1.loadFont("/fonts/UbuntuBold.png", "/fonts/UbuntuBold.json");
+            nv1.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
             break;
         }
       }
       var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
-      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
 
     </script>
   </body>
