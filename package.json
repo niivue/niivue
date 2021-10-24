@@ -14,7 +14,7 @@
     "copy-demo-win": "copy .\\dist\\niivue.js .\\demos\\niivue.js && copy .\\src\\fonts\\*.* .\\demos\\fonts",
     "copy-doc": "cp -r ./demos/* ./docs/",
     "copy-doc-win": "robocopy .\\demos .\\docs /E",
-    "test": "npm run build && jest -i",
+    "test": "npm run build && jest -i -t 'set crosshair color'",
     "test-win": "npm run build-win && jest -i",
     "pub": "npm publish --access public"
   },
