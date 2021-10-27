@@ -33,7 +33,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 # Usage
 
 ## existing html page
-```
+```html
 <script src="https://unpkg.com/@niivue/niivue@0.10.1/dist/niivue.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
@@ -65,7 +65,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## VueJS example
 
-```
+```js
 <script>
 import {Niivue} from '@niivue/niivue'
 console.log(Niivue)
