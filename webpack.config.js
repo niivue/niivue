@@ -9,6 +9,7 @@ module.exports = {
     library: {
       name: 'niivue',
       type: 'umd'
-    }
+    },
+    globalObject: 'this',
   },
 };
