@@ -116,8 +116,31 @@ export default {
 
 ## React example
 
-to come...
- 
+```js
+import { Niivue } from '@niivue/niivue'
+
+const NiiVue = ({ imageUrl }) => {
+  useEffect(() => {
+    const volumeList = [
+      {
+        url: imageUrl,
+        volume: { hdr: null, img: null },
+        colorMap: 'gray',
+        opacity: 100,
+        visible: true,
+      },
+    ]
+    const nv = new Niivue()
+    nv.attachTo('niivue')
+    nv.loadVolumes(volumeList)
+  }, [imageUrl])
+
+  return (
+    <canvas id="niivue" height={480} width={640} />
+  )
+}
+```
+
 # Contributors
 
 - [Taylor Hanayik](https://github.com/hanayik)
