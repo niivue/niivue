@@ -117,9 +117,11 @@ export default {
 ## React example
 
 ```js
+import { useRef, useState } from 'react'
 import { Niivue } from '@niivue/niivue'
 
 const NiiVue = ({ imageUrl }) => {
+  const canvas = useRef()
   useEffect(() => {
     const volumeList = [
       {
@@ -131,12 +133,12 @@ const NiiVue = ({ imageUrl }) => {
       },
     ]
     const nv = new Niivue()
-    nv.attachTo('niivue')
+    nv.attachToCanvas(canvas)
     nv.loadVolumes(volumeList)
   }, [imageUrl])
 
   return (
-    <canvas id="niivue" height={480} width={640} />
+    <canvas ref={canvas} height={480} width={640} />
   )
 }
 ```
