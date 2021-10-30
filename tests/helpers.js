@@ -1,13 +1,11 @@
 const { toMatchImageSnapshot } = require('jest-image-snapshot');
 expect.extend({ toMatchImageSnapshot });
 
-
-
-async function snapshot() {
-  await page.waitForSelector('#gl');          // Method to ensure that the element is loaded
-  //await page.waitForTimeout(1000) // wait a little longer to ensure image loaded (some images were not loading in time)
-  const canvas2 = await page.$('#gl');
-  const image = await canvas2.screenshot();
+async function snapshot(id='#gl') {
+  // await page.waitForSelector('#gl');          // Method to ensure that the element is loaded
+  await page.waitForTimeout(1000) // wait a little longer to ensure image loaded (some images were not loading in time)
+  const canvas = await page.$(id);
+  const image = await canvas.screenshot();
 
   expect(image).toMatchImageSnapshot({
     failureThreshold: 0.1,
@@ -16,9 +14,10 @@ async function snapshot() {
 }
 
 function seconds(n) {
-  return 1000*n
+  return 1000 * n
 }
 
 module.exports.httpServerAddress = 'http://localhost:5000/index.html'
+module.exports.httpServerAddressSync = 'http://localhost:5000/sync.html'
 module.exports.snapshot = snapshot
 module.exports.seconds = seconds
