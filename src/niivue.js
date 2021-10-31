@@ -184,6 +184,7 @@ export let Niivue = function (opts = {}) {
 // @example niivue = new Niivue().attachTo('gl')
 Niivue.prototype.attachTo = async function (id) {
   await this.attachToCanvas(document.getElementById(id));
+  return this;
 }; // attachTo
 
 // attach the Niivue instance to a canvas element
