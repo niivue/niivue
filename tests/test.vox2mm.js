@@ -26,7 +26,6 @@ test('vox2mm', async () => {
         visible: true,
       },
     ]
-    nv.sliceType = nv.sliceTypeRender
     await nv.loadVolumes(volumeList)
     let vox = [103, 128, 129]
     let xfm = [
