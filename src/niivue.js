@@ -183,7 +183,14 @@ export let Niivue = function (opts = {}) {
 // attach the Niivue instance to the webgl2 canvas by element id
 // @example niivue = new Niivue().attachTo('gl')
 Niivue.prototype.attachTo = async function (id) {
-  this.canvas = document.getElementById(id);
+  await this.attachToCanvas(document.getElementById(id));
+  return this;
+}; // attachTo
+
+// attach the Niivue instance to a canvas element
+// @example niivue = new Niivue().attachToCanvas(document.getElementById(id))
+Niivue.prototype.attachToCanvas = async function (canvas) {
+  this.canvas = canvas;
   this.gl = this.canvas.getContext("webgl2");
   if (!this.gl) {
     alert(
@@ -209,7 +216,7 @@ Niivue.prototype.attachTo = async function (id) {
   await this.init();
   this.drawScene();
   return this;
-}; // attachTo
+};
 
 Niivue.prototype.syncWith = function (otherNV) {
   // this.scene.renderAzimuth = 120;
