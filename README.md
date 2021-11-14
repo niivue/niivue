@@ -259,7 +259,15 @@ Running the tests will format, build, and copy the bundled `niivue.js` to the `t
 
 ### on macOS and Linux
 
+**If using macOS with Apple Silicon add this to your .zshrc (if zsh). Also ensure Chrome is installed at that location:**
+
 ```
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_EXECUTABLE_PATH=/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome
+```
+
+```
+npm install
 npm run test
 ```
 
