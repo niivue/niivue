@@ -9,7 +9,7 @@ module.exports = {
   browserContext: 'default',
   server: {
     command: "node server.js",
-    port: 5000,
+    port: 8888,
     launchTimeout: 10000
   }
 }
