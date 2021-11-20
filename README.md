@@ -209,6 +209,14 @@ Source code can be found in `src/`.
 
 You can edit the sources and then launch demos to see the effect of your changes. See the "Launch inlcluded demos" section.
 
+## Run hot module reload development mode
+
+This will run the vite HMR dev server. Open a browser to the URL output in your terminal. changes made to the source code will be immediately reflected in the browser. 
+
+```
+npm run dev
+```
+
 ## Launch included demos
 
 Launching the demos will format, build, and serve niivue demo pages. Open the demo URL in your browser to view the demo web pages. You can find the demo URL in your terminal after running `npm run demo`. The demos are intentionally simple, and each canvas showcases different NiiVue features.  
