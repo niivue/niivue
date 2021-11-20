@@ -2,9 +2,9 @@
 node_modules
 /dist
 /_md_docs
-/docs/niivue.js
-/demos/niivue.js
-/tests/niivue.js
+/docs/niivue*.js
+/demos/niivue*.js
+/tests/niivue*.js
 
 
 # local env files

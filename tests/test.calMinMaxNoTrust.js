@@ -30,7 +30,6 @@ test('calMinMax do not trust header cal min max', async () => {
     let minmax = overlayItem.calMinMax()
     return minmax
   })
-  console.log(minmax)
   expected = [40, 80, 0, 91.46501398086548]
   for (let i=0; i<minmax.length; i++){
     expect(minmax[i]).toBeCloseTo(expected[i])
