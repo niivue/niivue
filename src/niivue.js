@@ -158,8 +158,8 @@ export const Niivue = function (opts = {}) {
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
   this.clipPlaneObject3D = null;
-  this.crosshairPosition$ = new Subject();
-  this.intensityRange$ = new Subject();
+  this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
+  this.scene.location = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -178,6 +178,14 @@ export const Niivue = function (opts = {}) {
     this.opts[prop] =
       opts[prop] === undefined ? this.defaults[prop] : opts[prop];
   }
+
+  // maping of keys (event strings) to rxjs subjects
+  this.eventsToSubjects = {
+    location: this.scene.location,
+  };
+
+  // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
+  this.subscriptions = [];
 };
 
 // attach the Niivue instance to the webgl2 canvas by element id
@@ -186,6 +194,43 @@ Niivue.prototype.attachTo = async function (id) {
   await this.attachToCanvas(document.getElementById(id));
   return this;
 }; // attachTo
+
+// on handles matching event strings (event) with know rxjs subjects within NiiVue.
+// if the event string exists (e.g. 'location') then the corrsponding rxjs subject reference
+// is extracted from this.eventsToSubjects and the callback passed as the second argument to NiiVue.on
+// is added to the subsciptions to the next method. These callbacks are called whenever subject.next is called within
+// various NiiVue methods.
+Niivue.prototype.on = function (event, callback) {
+  let knownEvents = Object.keys(this.eventsToSubjects);
+  if (knownEvents.indexOf(event) == -1) {
+    console.log(`there is no known event ${event}`);
+    return;
+  }
+  let subject = this.eventsToSubjects[event];
+  let subscription = subject.subscribe({
+    next: (data) => callback(data),
+  });
+  this.subscriptions.push({ [event]: subscription });
+};
+
+
+// off unsubscribes events and subjects (the opposite of on)
+Niivue.prototype.off = function (event) {
+  let knownEvents = Object.keys(this.eventsToSubjects);
+  if (knownEvents.indexOf(event) == -1) {
+    console.log(`there is no known event ${event}`);
+    return;
+  }
+  let nsubs = this.subscriptions.length;
+  for (let i = 0; i < nsubs; i++) {
+    let key = Object.keys(this.subscriptions[i])[0];
+    if (key === event) {
+      this.subscriptions[i][event].unsubscribe();
+      this.subscriptions.splice(i, 1);
+      return;
+    }
+  }
+};
 
 // attach the Niivue instance to a canvas element
 // @example niivue = new Niivue().attachToCanvas(document.getElementById(id))
@@ -1823,6 +1868,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         //console.log(scrollVal,':',axCorSag, '>>', posFuture);
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
+        this.scene.location.next({
+          mm: this.frac2mm(this.scene.crosshairPos),
+          vox: this.frac2vox(this.scene.crosshairPos),
+          frac: this.scene.crosshairPos,
+        });
         return;
       }
       if (axCorSag === this.sliceTypeAxial) {
@@ -1838,11 +1888,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2] = fracY;
       }
       this.drawScene();
-      this.crosshairPosition$.next([
-        this.scene.crosshairPos[0],
-        this.scene.crosshairPos[1],
-        this.scene.crosshairPos[2],
-      ]);
+      this.scene.location.next({
+        mm: this.frac2mm(this.scene.crosshairPos),
+        vox: this.frac2vox(this.scene.crosshairPos),
+        frac: this.scene.crosshairPos,
+      });
       return;
     } else {
       //if click in slice i

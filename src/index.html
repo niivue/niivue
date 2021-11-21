@@ -44,6 +44,10 @@
       </div>
     </section>
 
+    <section>
+      <p id="location"></p>
+    </section>
+
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module">
@@ -67,6 +71,12 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
+
+      // example of using the 'location' change event with a callback function
+      nv1.on('location', (data) => {
+        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox
+      })
 
     </script>
   </div>
