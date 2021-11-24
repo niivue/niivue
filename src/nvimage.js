@@ -225,10 +225,9 @@ NVImage.prototype.arrayEquals = function (a, b) {
 
 NVImage.prototype.colorMaps = function (sort = true) {
   let cm = [];
-  for (const [key, value] of Object.entries(cmaps)) {
+  for (const [key] of Object.entries(cmaps)) {
     cm.push(key);
   }
-  console.log(cm);
   return sort === true ? cm.sort() : cm;
 };
 
@@ -242,7 +241,6 @@ NVImage.prototype.calMinMax = function () {
     isFinite(this.hdr.cal_max) &&
     this.hdr.cal_max > this.hdr.cal_min
   ) {
-    console.log("using hdr calminmax");
     this.cal_min = this.hdr.cal_min;
     this.cal_max = this.hdr.cal_max;
     this.global_min = this.hdr.cal_min;
@@ -266,7 +264,6 @@ NVImage.prototype.calMinMax = function () {
 
   // if color map specifies non zero values for min and max then use them
   if (cmMin != cmMax) {
-    console.log("using colormap min and max");
     this.cal_min = cmMin;
     this.cal_max = cmMax;
     return [cmMin, cmMax, cmMin, cmMax];
@@ -355,20 +352,20 @@ NVImage.prototype.calMinMax = function () {
   } //if lo == hi
   var pct2 = this.intensityRaw2Scaled(this.hdr, lo / scl + mn);
   var pct98 = this.intensityRaw2Scaled(this.hdr, hi / scl + mn);
-  console.log(
-    "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
-    mnScale,
-    mxScale,
-    nZero,
-    pct2,
-    pct98
-  );
+  // console.log(
+  //   "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
+  //   mnScale,
+  //   mxScale,
+  //   nZero,
+  //   pct2,
+  //   pct98
+  // );
   if (
     this.hdr.cal_min < this.hdr.cal_max &&
     this.hdr.cal_min >= mnScale &&
     this.hdr.cal_max <= mxScale
   ) {
-    console.log("ignoring robust range: using header cal_min and cal_max");
+    // console.log("ignoring robust range: using header cal_min and cal_max");
     pct2 = this.hdr.cal_min;
     pct98 = this.hdr.cal_max;
   }

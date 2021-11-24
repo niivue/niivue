@@ -1,5 +1,4 @@
-var Buffer = require("buffer/").Buffer;
-import * as nifti from "nifti-reader-js";
+// import * as nifti from "nifti-reader-js";
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
 import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
@@ -23,15 +22,14 @@ import {
   vertVolumePickingShader,
   fragVolumePickingShader,
 } from "./shader-srcs.js";
-import { fontPng } from "./fnt.js"; // pngName;
-import metrics from "./fnt.json";
 import * as cmaps from "./cmaps";
 import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
 import { NVImage } from "./nvimage.js";
-
 export { NVImage } from "./nvimage";
+import defaultFontPNG from "./fonts/Roboto-Regular.png";
+import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 
 /**
  * @class Niivue
@@ -54,7 +52,7 @@ export { NVImage } from "./nvimage";
 
   let myNiivue = new Niivue(opts)
  */
-export let Niivue = function (opts = {}) {
+export const Niivue = function (opts = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
 
   /**
@@ -87,6 +85,8 @@ export let Niivue = function (opts = {}) {
     conStep: 1, // step size for contrast changes
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
+    viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
+    keyDebounceTime: 50, // default debounce time used in keyup listeners
   };
 
   this.canvas = null; // the canvas element on the page
@@ -107,8 +107,8 @@ export let Niivue = function (opts = {}) {
   this.surfaceShader = null;
   this.pickingSurfaceShader = null;
 
-  this.DEFAULT_FONT_GLYPH_SHEET = "/fonts/Roboto-Regular.png";
-  this.DEFAULT_FONT_METRICS = "/fonts/Roboto-Regular.json";
+  this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
+  this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
 
   this.sliceTypeAxial = 0;
@@ -158,8 +158,8 @@ export let Niivue = function (opts = {}) {
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
   this.clipPlaneObject3D = null;
-  this.crosshairPosition$ = new Subject();
-  this.intensityRange$ = new Subject();
+  this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
+  this.scene.location = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -178,6 +178,14 @@ export let Niivue = function (opts = {}) {
     this.opts[prop] =
       opts[prop] === undefined ? this.defaults[prop] : opts[prop];
   }
+
+  // maping of keys (event strings) to rxjs subjects
+  this.eventsToSubjects = {
+    location: this.scene.location,
+  };
+
+  // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
+  this.subscriptions = [];
 };
 
 // attach the Niivue instance to the webgl2 canvas by element id
@@ -186,6 +194,43 @@ Niivue.prototype.attachTo = async function (id) {
   await this.attachToCanvas(document.getElementById(id));
   return this;
 }; // attachTo
+
+// on handles matching event strings (event) with know rxjs subjects within NiiVue.
+// if the event string exists (e.g. 'location') then the corrsponding rxjs subject reference
+// is extracted from this.eventsToSubjects and the callback passed as the second argument to NiiVue.on
+// is added to the subsciptions to the next method. These callbacks are called whenever subject.next is called within
+// various NiiVue methods.
+Niivue.prototype.on = function (event, callback) {
+  let knownEvents = Object.keys(this.eventsToSubjects);
+  if (knownEvents.indexOf(event) == -1) {
+    console.log(`there is no known event ${event}`);
+    return;
+  }
+  let subject = this.eventsToSubjects[event];
+  let subscription = subject.subscribe({
+    next: (data) => callback(data),
+  });
+  this.subscriptions.push({ [event]: subscription });
+};
+
+
+// off unsubscribes events and subjects (the opposite of on)
+Niivue.prototype.off = function (event) {
+  let knownEvents = Object.keys(this.eventsToSubjects);
+  if (knownEvents.indexOf(event) == -1) {
+    console.log(`there is no known event ${event}`);
+    return;
+  }
+  let nsubs = this.subscriptions.length;
+  for (let i = 0; i < nsubs; i++) {
+    let key = Object.keys(this.subscriptions[i])[0];
+    if (key === event) {
+      this.subscriptions[i][event].unsubscribe();
+      this.subscriptions.splice(i, 1);
+      return;
+    }
+  }
+};
 
 // attach the Niivue instance to a canvas element
 // @example niivue = new Niivue().attachToCanvas(document.getElementById(id))
@@ -306,20 +351,20 @@ Niivue.prototype.mouseContextMenuListener = function (e) {
 // note: no test yet
 Niivue.prototype.mouseDownListener = function (e) {
   e.preventDefault();
-  var rect = this.canvas.getBoundingClientRect();
+  // var rect = this.canvas.getBoundingClientRect();
   this.scene.mousedown = true;
   if (e.button === this.scene.mouseButtonLeft) {
     this.scene.mouseButtonLeftDown = true;
-    this.mouseLeftButtonHandler(e, rect);
+    this.mouseLeftButtonHandler(e);
   } else if (e.button === this.scene.mouseButtonRight) {
     this.scene.mouseButtonRightDown = true;
-    this.mouseRightButtonHandler(e, rect);
+    this.mouseRightButtonHandler(e);
   }
 };
 
 // handler for mouse left button down
 // note: no test yet
-Niivue.prototype.mouseLeftButtonHandler = function (e, rect) {
+Niivue.prototype.mouseLeftButtonHandler = function (e) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
     e,
     this.gl.canvas
@@ -330,7 +375,7 @@ Niivue.prototype.mouseLeftButtonHandler = function (e, rect) {
 
 // handler for mouse right button down
 // note: no test yet
-Niivue.prototype.mouseRightButtonHandler = function (e, rect) {
+Niivue.prototype.mouseRightButtonHandler = function (e) {
   this.isDragging = true;
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
     e,
@@ -389,12 +434,7 @@ Niivue.prototype.calculateNewRange = function () {
 
   const hdr = this.volumes[0].hdr;
   const img = this.volumes[0].img;
-  console.log(this.volumes[0]);
 
-  console.log(img[xrange[0] * yrange[0] * zrange[0]]);
-  console.log(xrange);
-  console.log(yrange);
-  console.log(zrange);
   const xdim = hdr.dims[1];
   const ydim = hdr.dims[2];
   for (let z = zrange[0]; z < zrange[1]; z++) {
@@ -413,13 +453,8 @@ Niivue.prototype.calculateNewRange = function () {
     }
   }
 
-  console.log("hi is " + hi);
-  console.log("lo is " + lo);
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
-  console.log(mxScale);
-  console.log(mnScale);
-  console.log("scaled");
   this.volumes[0].cal_min = mnScale;
   this.volumes[0].cal_max = mxScale;
   this.intensityRange$.next([mnScale, mxScale]);
@@ -437,8 +472,6 @@ Niivue.prototype.mouseUpListener = function () {
     // remove colorbar
     // this.drawScene();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
-
-    console.log(this.volumes[0].cal_min, this.volumes[0].cal_max);
     this.drawScene();
   }
 };
@@ -463,6 +496,7 @@ Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
   this.scene.touchdown = true;
   if (this.scene.touchdown && e.touches.length < 2) {
+    this.multiTouchGesture = false;
   } else {
     this.multiTouchGesture = true;
   }
@@ -566,10 +600,12 @@ Niivue.prototype.handlePinchZoom = function (e) {
 Niivue.prototype.keyUpListener = function (e) {
   //   console.log("keyup listener called");
   if (e.code === this.opts.clipPlaneHotKey) {
+    if (this.sliceType != this.sliceTypeRender) {
+      return;
+    }
     let now = new Date().getTime();
     let elapsed = now - this.lastCalled;
-
-    if (elapsed > 1000) {
+    if (elapsed > this.opts.keyDebounceTime) {
       this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 4;
       this.clipPlaneObject3D.isVisible = this.currentClipPlaneIndex;
       //   console.log("clip plane index is " + this.currentClipPlaneIndex);
@@ -591,12 +627,17 @@ Niivue.prototype.keyUpListener = function (e) {
           this.clipPlaneObject3D.rotation = [0, 0, 1];
           break;
       }
-
-      console.log(this.scene.clipPlane);
       this.drawScene();
       // e.preventDefault();
     }
     this.lastCalled = now;
+  } else if (e.code === this.opts.viewModeHotKey) {
+    let now = new Date().getTime();
+    let elapsed = now - this.lastCalled;
+    if (elapsed > this.opts.keyDebounceTime) {
+      this.setSliceType((this.sliceType + 1) % 5); // 5 total slice types
+      this.lastCalled = now;
+    }
   }
 };
 
@@ -682,7 +723,6 @@ Niivue.prototype.dropListener = async function (e) {
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {
-    console.log("dropped url: " + url);
     let volume = await NVImage.loadFromUrl(url);
     this.setVolume(volume);
   } else {
@@ -1024,7 +1064,10 @@ Niivue.prototype.initFontMets = function () {
   }
 };
 
-Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
+Niivue.prototype.loadFont = async function (
+  fontSheetUrl = defaultFontPNG,
+  metricsUrl = defaultFontMetrics
+) {
   await this.loadFontTexture(fontSheetUrl);
   let response = await fetch(metricsUrl);
   if (!response.ok) {
@@ -1032,23 +1075,18 @@ Niivue.prototype.loadFont = async function (fontSheetUrl, metricsUrl) {
   }
 
   let jsonText = await response.text();
-  console.log(jsonText);
   this.fontMetrics = JSON.parse(jsonText);
-  console.log(this.fontMetrics);
 
   this.initFontMets();
 
   this.fontShader.use(this.gl);
   this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
-
-  console.log("font metrics loaded");
-  console.log(this.fontMets);
   this.drawScene();
 };
 
 Niivue.prototype.loadDefaultFont = async function () {
-  await this.loadFontTexture(fontPng);
-  this.fontMetrics = metrics;
+  await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
+  this.fontMetrics = this.DEFAULT_FONT_METRICS;
   this.initFontMets();
 };
 
@@ -1065,11 +1103,12 @@ Niivue.prototype.initText = async function () {
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
-  let debugInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
-  let vendor = this.gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-  let renderer = this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-  console.log("gpu vendor: ", vendor);
-  console.log("gpu renderer: ", renderer);
+  // let debugInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
+  // let vendor = this.gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+  // let renderer = this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+  // console.log("gpu vendor: ", vendor);
+  // console.log("gpu renderer: ", renderer);
+  // await this.loadFont()
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -1619,7 +1658,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
   // set slice scale for render shader
   this.renderShader.use(this.gl);
-  let { _, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+  let slicescl = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+  let vox = slicescl.vox;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
   this.gl.uniform1f(
     this.renderShader.uniforms["backOpacity"],
@@ -1637,10 +1677,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
 Niivue.prototype.colorMaps = function (sort = true) {
   let cm = [];
-  for (const [key, value] of Object.entries(cmaps)) {
+  for (const [key] of Object.entries(cmaps)) {
     cm.push(key);
   }
-  console.log(cm);
   return sort === true ? cm.sort() : cm;
 };
 
@@ -1829,6 +1868,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         //console.log(scrollVal,':',axCorSag, '>>', posFuture);
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
+        this.scene.location.next({
+          mm: this.frac2mm(this.scene.crosshairPos),
+          vox: this.frac2vox(this.scene.crosshairPos),
+          frac: this.scene.crosshairPos,
+        });
         return;
       }
       if (axCorSag === this.sliceTypeAxial) {
@@ -1844,11 +1888,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2] = fracY;
       }
       this.drawScene();
-      this.crosshairPosition$.next([
-        this.scene.crosshairPos[0],
-        this.scene.crosshairPos[1],
-        this.scene.crosshairPos[2],
-      ]);
+      this.scene.location.next({
+        mm: this.frac2mm(this.scene.crosshairPos),
+        vox: this.frac2vox(this.scene.crosshairPos),
+        frac: this.scene.crosshairPos,
+      });
       return;
     } else {
       //if click in slice i
@@ -1934,7 +1978,7 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
 
 Niivue.prototype.textWidth = function (scale, str) {
   let w = 0;
-  var bytes = new Buffer(str);
+  var bytes = new TextEncoder().encode(str);
   for (let i = 0; i < str.length; i++)
     w += scale * this.fontMets[bytes[i]].xadv;
   return w;
@@ -1986,7 +2030,7 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
   let screenPxRange = (size / this.fontMets.size) * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
-  var bytes = new Buffer(str);
+  var bytes = new TextEncoder().encode(str);
   for (let i = 0; i < str.length; i++)
     xy[0] += this.drawChar(xy, size, bytes[i]);
 }; // drawText()
@@ -2241,10 +2285,6 @@ Niivue.prototype.draw3D = function () {
       (x) => x / 255.0
     );
   }
-
-  console.log("object id is " + this.selectedObjectId);
-  console.log(this.scene.crosshairPos);
-
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
 
@@ -2470,7 +2510,6 @@ Niivue.prototype.drawScene = function () {
       this.drawLoadingText("drag and drop a file to start");
     }
     // exit if we have nothing to draw
-    console.log("nothing to draw");
     return;
   }
 

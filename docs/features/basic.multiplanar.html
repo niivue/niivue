@@ -41,13 +41,7 @@
         </canvas>
       </div>
     </section>
-
-    <section>
-      <p>available color maps:</p>
-      <p id="colormaps"></p>
-    </section>
-
-    <script src="../niivue.js">
+    <script src="../niivue.umd.js">
     </script>
     <script>
      var volumeList1 = [
@@ -68,7 +62,6 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      document.getElementById('colormaps').innerText = nv1.colorMaps()
 
     </script>
   </body>

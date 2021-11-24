@@ -45,11 +45,8 @@ We host many NiiVue examples via github pages. These are updated and deployed au
         url: "./some_image.nii.gz",
         volume: {hdr: null, img: null},
         name: "some_image",
-        intensityMin: 0, // not used yet
-        intensityMax: 100, // not used yet
-        intensityRange:[0, 100], // not used yet
         colorMap: "gray",
-        opacity: 100,
+        opacity: 1,
         visible: true,
       }
    ]
@@ -59,7 +56,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
  var nv = new niivue.Niivue()
  nv.attachTo('gl') // the canvas element id
  nv.loadVolumes(volumeList)
- nv.setSliceType(nv.sliceTypeMultiPlanar)
+ nv.setSliceType(nv.sliceTypeMultiPlanar) // press the "v" key to cycle through views
 </script>
 ```
 
@@ -68,7 +65,6 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 ```js
 <script>
 import {Niivue} from '@niivue/niivue'
-console.log(Niivue)
 const nv = new Niivue()
 
 
@@ -84,7 +80,7 @@ export default {
           url: "./mni152.nii.gz",
           volume: {hdr: null, img: null},
           colorMap: "gray",
-          opacity: 100,
+          opacity: 1,
           visible: true,
         }
       ]
@@ -95,7 +91,7 @@ export default {
   mounted() {
 
     nv.attachTo('gl')
-    nv.loadVolumes(this.volumeList)
+    nv.loadVolumes(this.volumeList) // press the "v" key to cycle through views
 
   }
 }
@@ -128,13 +124,13 @@ const NiiVue = ({ imageUrl }) => {
         url: imageUrl,
         volume: { hdr: null, img: null },
         colorMap: 'gray',
-        opacity: 100,
+        opacity: 1,
         visible: true,
       },
     ]
     const nv = new Niivue()
     nv.attachToCanvas(canvas)
-    nv.loadVolumes(volumeList)
+    nv.loadVolumes(volumeList) // press the "v" key to cycle through volumes
   }, [imageUrl])
 
   return (
@@ -208,6 +204,14 @@ npm install --save-dev @niivue/niivue
 Source code can be found in `src/`.
 
 You can edit the sources and then launch demos to see the effect of your changes. See the "Launch inlcluded demos" section.
+
+## Run hot module reload development mode
+
+This will run the vite HMR dev server. Open a browser to the URL output in your terminal. changes made to the source code will be immediately reflected in the browser. 
+
+```
+npm run dev
+```
 
 ## Launch included demos
 
