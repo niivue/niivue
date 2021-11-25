@@ -4,7 +4,7 @@ beforeEach(async () => {
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 test('overlay', async () => {
-  let nv = await page.evaluate(async () => {
+  let nvols = await page.evaluate(async () => {
     nv = new niivue.Niivue()
     await nv.attachTo('gl')
     // load one volume object in an array
@@ -27,9 +27,9 @@ test('overlay', async () => {
       },
     ]
     await nv.loadVolumes(volumeList)
-    return nv
+    return nv.volumes.length
   })
 
-  // expect(nv.volumes).toHaveLength(2)
+  expect(nvols).toBe(2)
   await snapshot()
 })

@@ -4,7 +4,7 @@ beforeEach(async () => {
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 test('loadSingleImage', async () => {
-  let nv = await page.evaluate(async () => {
+  let nvols = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
     await nv.attachTo('gl')
     // load one volume object in an array
@@ -19,8 +19,8 @@ test('loadSingleImage', async () => {
       },
     ]
     await nv.loadVolumes(volumeList)
-    return nv
+    return nv.volumes.length
   })
-  expect(nv.volumes).toHaveLength(1)
+  expect(nvols).toBe(1)
   await snapshot()
 })

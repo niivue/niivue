@@ -938,22 +938,23 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   if (!this.initialized) {
     await this.init();
   }
+  this.volumes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  this.volumes = volumeList;
-  this.back = this.volumes[0]; // load first volume as back layer
-  this.overlays = this.volumes.slice(1); // remove first element (that is now this.back, all other imgaes are overlays)
-
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     let volume = await NVImage.loadFromUrl(
-      this.volumes[i].url,
-      this.volumes[i].name,
-      this.volumes[i].colorMap,
-      this.volumes[i].opacity,
+      volumeList[i].url,
+      volumeList[i].name,
+      volumeList[i].colorMap,
+      volumeList[i].opacity,
       this.opts.trustCalMinMax
     );
-    this.volumes[i] = volume;
+    this.volumes.push(volume);
+    if (i === 0) {
+      this.back = volume;
+    }
+    this.overlays = this.volumes.slice(1);
     this.updateGLVolume();
   } // for
   return this;
