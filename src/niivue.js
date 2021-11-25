@@ -159,7 +159,7 @@ export const Niivue = function (opts = {}) {
   this.volumeObject3D = null;
   this.clipPlaneObject3D = null;
   this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
-  this.scene.location = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
+  this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -181,7 +181,7 @@ export const Niivue = function (opts = {}) {
 
   // maping of keys (event strings) to rxjs subjects
   this.eventsToSubjects = {
-    location: this.scene.location,
+    location: this.scene.location$,
   };
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
@@ -212,7 +212,6 @@ Niivue.prototype.on = function (event, callback) {
   });
   this.subscriptions.push({ [event]: subscription });
 };
-
 
 // off unsubscribes events and subjects (the opposite of on)
 Niivue.prototype.off = function (event) {
@@ -1868,7 +1867,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         //console.log(scrollVal,':',axCorSag, '>>', posFuture);
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.scene.location.next({
+        this.scene.location$.next({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
@@ -1888,7 +1887,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2] = fracY;
       }
       this.drawScene();
-      this.scene.location.next({
+      this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
