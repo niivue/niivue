@@ -343,4 +343,14 @@ cd src/cmaps
 for f in ls *.json; do echo "export { default as `basename $f .json` } from './$f';" >> index.js; done;
 ```
 
+## macOS kill test server if kept alive because of failing tests
+
+```
+sudo lsof -iTCP -sTCP:LISTEN -n -P | grep 8888 # 8888 is the test server used by jest
+
+# the process id is the second column in the result
+
+kill <pid> # kill the node process running the server if needed (when tests fail locally)
+```
+
 

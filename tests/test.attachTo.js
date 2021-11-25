@@ -4,11 +4,11 @@ beforeEach(async () => {
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 test('attachTo', async () => {
-  let nv = await page.evaluate(async () => {
+  let gl = await page.evaluate(async () => {
     nv = new niivue.Niivue()
     nv = await nv.attachTo('gl')
-    return nv;
+    return nv.gl;
   })
-  expect(nv.gl).toBeDefined()
+  expect(gl).toBeDefined()
   await snapshot()
 })

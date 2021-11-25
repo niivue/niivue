@@ -4,7 +4,7 @@ beforeEach(async () => {
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 test('set selection box color', async () => {
-  let nv = await page.evaluate(async () => {
+  let selectionBoxColor = await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
@@ -25,7 +25,7 @@ test('set selection box color', async () => {
     ]
     await nv.loadVolumes(volumeList)
     nv.setSelectionBoxColor([0, 1, 0, 1]) // green (rgba)
-    return nv
+    return nv.opts.selectionBoxColor
   })
 
   await page.waitForTimeout(500)
@@ -35,7 +35,7 @@ test('set selection box color', async () => {
   await page.mouse.down({ button: 'right' })
   await page.mouse.move(130, 230)
 
-  expect(nv.opts.selectionBoxColor).toEqual([0, 1, 0, 1])
+  expect(selectionBoxColor).toEqual([0, 1, 0, 1])
   // take a snapshot for comparison
   await snapshot()
 

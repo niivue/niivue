@@ -15,8 +15,8 @@
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\niivue.umd.js",
     "copy-doc": "cp -r ./demos/* ./docs/",
     "copy-doc-win": "robocopy .\\demos .\\docs /E",
-    "test": "npm run build && jest -i",
-    "test-win": "npm run build-win && jest -i",
+    "test": "npm run build && jest --maxWorkers=1",
+    "test-win": "npm run build-win && jest --maxWorkers=1",
     "pub": "npm publish --access public"
   },
   "files": [

@@ -4,7 +4,7 @@ beforeEach(async () => {
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 it('nv = new niivue.Niivue(opts=opts)', async () => {
-  let nv = await page.evaluate(async () => {
+  let opts = await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
@@ -23,10 +23,10 @@ it('nv = new niivue.Niivue(opts=opts)', async () => {
       },
     ]
     await nv.loadVolumes(volumeList)
-    return nv
+    return nv.opts
   })
 
-  expect(nv.opts.textHeight).toEqual(0.05)
-  expect(nv.opts.crosshairColor).toEqual([0, 0, 1, 1])
+  expect(opts.textHeight).toEqual(0.05)
+  expect(opts.crosshairColor).toEqual([0, 0, 1, 1])
   await snapshot()
 })

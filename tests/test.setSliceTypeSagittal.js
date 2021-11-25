@@ -25,7 +25,7 @@ test('sets slice type sagittal', async () => {
     ]
     await nv.loadVolumes(volumeList)
     nv.setSliceType(nv.sliceTypeSagittal)
-    return nv
+    return
   })
 
   // take a snapshot for comparison

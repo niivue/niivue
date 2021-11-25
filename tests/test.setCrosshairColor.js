@@ -4,7 +4,7 @@ beforeEach(async () => {
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 test('set crosshair color', async () => {
-  let nv = await page.evaluate(async () => {
+  let crosshairColor = await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
@@ -25,10 +25,10 @@ test('set crosshair color', async () => {
     ]
     await nv.loadVolumes(volumeList)
     nv.setCrosshairColor([0, 1, 0, 1]) // green (rgba)
-    return nv
+    return nv.opts.crosshairColor
   })
 
-  expect(nv.opts.crosshairColor).toEqual([0, 1, 0, 1])
+  expect(crosshairColor).toEqual([0, 1, 0, 1])
   // take a snapshot for comparison
   await snapshot()
 
