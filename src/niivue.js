@@ -727,6 +727,8 @@ Niivue.prototype.dropListener = async function (e) {
   } else {
     const files = dt.files;
     if (files.length > 0) {
+      this.volumes = [];
+      this.overlays = [];
       let volume = await NVImage.loadFromFile(files[0]);
       this.setVolume(volume);
     }
@@ -744,15 +746,63 @@ Niivue.prototype.addVolume = function (volume) {
   this.updateGLVolume();
 };
 
-Niivue.prototype.setVolume = function (volume, index = 0) {
-  if (index === 0) {
-    this.back = volume;
-  } else {
-    this.overlays.splice(index - 1, 1, volume);
+Niivue.prototype.getVolumeIndexByID = function (id) {
+  let n = this.volumes.length;
+  for (let i = 0; i < n; i++) {
+    let id_i = this.volumes[i].id;
+    if (id_i === id) {
+      return i;
+    }
   }
+  return -1; // -1 signals that no valid index was found for a volume with the given id
+};
 
-  this.volumes.splice(index, 1, volume);
+Niivue.prototype.getOverlayIndexByID = function (id) {
+  let n = this.overlays.length;
+  for (let i = 0; i < n; i++) {
+    let id_i = this.overlays[i].id;
+    if (id_i === id) {
+      return i;
+    }
+  }
+  return -1; // -1 signals that no valid index was found for an overlay with the given id
+};
+
+Niivue.prototype.setVolume = function (volume, toIndex = 0) {
+  let numberOfLoadedImages = this.volumes.length;
+  if (toIndex > numberOfLoadedImages) {
+    return;
+  }
+  let volIndex = this.getVolumeIndexByID(volume.id);
+  if (volIndex >= 0) {
+    this.volumes.splice(volIndex, 1);
+  }
+  if (toIndex === 0) {
+    this.volumes.unshift(volume);
+    this.back = this.volumes[0];
+  } else {
+    this.volumes.splice(toIndex, 0, volume);
+    this.overlays = this.volumes.slice(1);
+  }
   this.updateGLVolume();
+};
+
+Niivue.prototype.moveVolumeToBottom = function (volume) {
+  this.setVolume(volume, 0);
+};
+
+Niivue.prototype.moveVolumeUp = function (volume) {
+  let volIdx = this.getVolumeIndexByID(volume.id);
+  this.setVolume(volume, volIdx + 1);
+};
+
+Niivue.prototype.moveVolumeDown = function (volume) {
+  let volIdx = this.getVolumeIndexByID(volume.id);
+  this.setVolume(volume, volIdx - 1);
+};
+
+Niivue.prototype.moveVolumeToTop = function (volume) {
+  this.setVolume(volume, this.volumes.length - 1);
 };
 
 // update mouse position from new mouse down coordinates
@@ -1322,7 +1372,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
-
     outTexture = this.rgbaTex(
       this.volumeTexture,
       this.gl.TEXTURE0,

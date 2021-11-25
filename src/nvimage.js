@@ -1,4 +1,5 @@
 import * as nifti from "nifti-reader-js";
+import { v4 as uuidv4 } from "uuid";
 import * as mat from "gl-matrix";
 import * as cmaps from "./cmaps";
 
@@ -35,6 +36,7 @@ export var NVImage = function (
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
 
   this.name = name;
+  this.id = uuidv4();
   this.colorMap = colorMap;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
