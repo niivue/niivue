@@ -34,7 +34,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## existing html page
 ```html
-<script src="https://unpkg.com/@niivue/niivue@0.10.1/dist/niivue.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.12.0/dist/niivue.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 
@@ -61,6 +61,8 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 ```
 
 ## VueJS example
+
+install: `npm i @niivue/niivue`
 
 ```js
 <script>
@@ -111,6 +113,8 @@ export default {
 ```
 
 ## React example
+
+install: `npm i @niivue/niivue`
 
 ```js
 import { useRef, useState } from 'react'
