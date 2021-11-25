@@ -755,14 +755,6 @@ Niivue.prototype.setVolume = function (volume, index = 0) {
   this.updateGLVolume();
 };
 
-Niivue.prototype.addVolume = function (volume) {
-  if (this.volumes.length > 0) {
-    this.volumes[0] = volume;
-  } else {
-    this.volumes.push(volume);
-  }
-  this.updateGLVolume();
-};
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
