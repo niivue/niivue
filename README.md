@@ -4,6 +4,10 @@ NiiVue is a WebGL 2.0 medical image viewer. This repository contains the **core 
 
 The NiiVue package is intented to be used by individuals developing interactive web pages related to showing [nifti](https://nifti.nimh.nih.gov) images. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our [web-based user interface implementation](https://github.com/niivue/niivue-ui) (under development) will demonstrate how to integrate NiiVue into a more comprehensive [VueJS](https://vuejs.org/) UI.  
 
+# Getting started Docs and References
+
+[click here to go to the docs web page](https://niivue.github.io/niivue/devdocs/)
+
 # Active Projects
 
 [See our active projects here](https://github.com/orgs/niivue/projects)
