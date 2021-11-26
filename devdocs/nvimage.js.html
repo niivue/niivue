@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Adding favicon -->
+    
+
+    <!-- Adding meta -->
+    
+
+    <!-- Adding external script-->
+    
+
+    <!-- Adding external style-->
+    
+
+    <!-- Adding scripts-->
+    
+
+    <!-- Adding style-->
+    
+
+    <!-- Adding overlay script-->
+    
+
+    <!-- Adding overlay style-->
+    
+
+
+    <title>
+      nvimage.js
+    </title>
+
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/third-party/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/third-party/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/reset.css">
+    <link type="text/css" rel="stylesheet" href="styles/clean-jsdoc-theme-base.css">
+    <link type="text/css" rel="stylesheet" href="styles/clean-jsdoc-theme-light.css">
+    
+    <svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    style="display:none">
+    <defs>
+        <symbol id="copy-icon" viewbox="0 0 488.3 488.3">
+            <g>
+                <path
+                    d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z" />
+                <path
+                    d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z" />
+            </g>
+        </symbol>
+        <symbol id='search-icon' viewBox="0 0 512 512">
+            <g>
+                <g>
+                    <path
+                        d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z" />
+                </g>
+            </g>
+            <g>
+                <g>
+                    <path
+                        d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z" />
+                </g>
+            </g>
+        </symbol>
+        <symbol id="down-icon" viewBox="0 0 16 16">
+            <path 
+                fill-rule="evenodd" 
+                clip-rule="evenodd" 
+                d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"
+            >
+            </path>
+        </symbol>
+    </defs>
+</svg>
+  </head>
+
+  <body>
+
+    <nav class="navbar" id="navbar">
+      <div class="navbar-heading" id="navbar-heading"><a href="index.html"><h2 class="navbar-heading-text">Home</h2></a></div><div class="search-box" id="search-box"><div class="search-box-input-container"><input class="search-box-input" type="text" placeholder="Search..." id="search-box-input" /><svg class="search-icon" alt="search-icon"><use xlink:href="#search-icon"></use></svg></div><div class="search-item-container" id="search-item-container"><ul class="search-item-ul" id="search-item-ul"></ul></div></div><div class="sidebar-main-content" id="sidebar-main-content"><div class="accordion collapsed" id="773036" > <h3 class="accordion-heading">Classes<svg><use xlink:href="#down-icon"></use></svg></h3><ul class="accordion-content"><li class="accordion collapsed child" id=163761><div class="accordion-heading child"><a href="Niivue.html">Niivue</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Niivue.html#addVolume">addVolume</a></li><li data-type='method'><a href="Niivue.html#attachTo">attachTo</a></li><li data-type='method'><a href="Niivue.html#attachToCanvas">attachToCanvas</a></li><li data-type='method'><a href="Niivue.html#clipPlaneUpdate">clipPlaneUpdate</a></li><li data-type='method'><a href="Niivue.html#cloneVolume">cloneVolume</a></li><li data-type='method'><a href="Niivue.html#colorMaps">colorMaps</a></li><li data-type='method'><a href="Niivue.html#getOverlayIndexByID">getOverlayIndexByID</a></li><li data-type='method'><a href="Niivue.html#getVolumeIndexByID">getVolumeIndexByID</a></li><li data-type='method'><a href="Niivue.html#loadVolumes">loadVolumes</a></li><li data-type='method'><a href="Niivue.html#moveVolumeDown">moveVolumeDown</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToBottom">moveVolumeToBottom</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToTop">moveVolumeToTop</a></li><li data-type='method'><a href="Niivue.html#moveVolumeUp">moveVolumeUp</a></li><li data-type='method'><a href="Niivue.html#off">off</a></li><li data-type='method'><a href="Niivue.html#on">on</a></li><li data-type='method'><a href="Niivue.html#setClipPlaneColor">setClipPlaneColor</a></li><li data-type='method'><a href="Niivue.html#setCrosshairColor">setCrosshairColor</a></li><li data-type='method'><a href="Niivue.html#setOpacity">setOpacity</a></li><li data-type='method'><a href="Niivue.html#setScale">setScale</a></li><li data-type='method'><a href="Niivue.html#setSelectionBoxColor">setSelectionBoxColor</a></li><li data-type='method'><a href="Niivue.html#setSliceType">setSliceType</a></li><li data-type='method'><a href="Niivue.html#setVolume">setVolume</a></li><li data-type='method'><a href="Niivue.html#sph2cartDeg">sph2cartDeg</a></li><li data-type='method'><a href="Niivue.html#syncWith">syncWith</a></li><li data-type='method'><a href="Niivue.html#updateGLVolume">updateGLVolume</a></li></ul></li><li class="accordion collapsed child" id=8372870><div class="accordion-heading child"><a href="NVImage.html">NVImage</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="NVImage.html#.loadFromFile">loadFromFile</a></li><li data-type='method'><a href="NVImage.html#.loadFromUrl">loadFromUrl</a></li><li data-type='method'><a href="NVImage.html#.zerosLike">zerosLike</a></li><li data-type='method'><a href="NVImage.html#clone">clone</a></li><li data-type='method'><a href="NVImage.html#colorMaps">colorMaps</a></li><li data-type='method'><a href="NVImage.html#zeroImage">zeroImage</a></li></ul></li></ul> </div></div>
+      
+
+    </nav>
+    <div class="navbar-ham" id="navbar-ham">
+      <div>
+        <div class="first"></div>
+        <div class="second"></div>
+        <div class="third"></div>
+      </div>
+    </div>
+
+    <div id="main" class="main-content">
+      
+      <h1 id='page-title' class="page-title">
+        nvimage.js
+      </h1>
+      
+
+      
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import * as nifti from "nifti-reader-js";
+import { v4 as uuidv4 } from "uuid";
+import * as mat from "gl-matrix";
+import * as cmaps from "./cmaps";
+
+/**
+ * query all available color maps that can be applied to volumes
+ * @param {boolean} [sort=true] whether or not to sort the returned array
+ * @returns {array} an array of colormap strings
+ * @example
+ * niivue = new Niivue()
+ * colormaps = niivue.colorMaps()
+ */
+
+/**
+ * @class NVImage
+ * @description
+ * a NVImage encapsulates some images data and provides methods to query and operate on images
+ * @constructor
+ * @param {array} dataBuffer an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ */
+export var NVImage = function (
+  dataBuffer,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+) {
+  // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+  this.DT_NONE = 0;
+  this.DT_UNKNOWN = 0; /* what it says, dude           */
+  this.DT_BINARY = 1; /* binary (1 bit/voxel)         */
+  this.DT_UNSIGNED_CHAR = 2; /* unsigned char (8 bits/voxel) */
+  this.DT_SIGNED_SHORT = 4; /* signed short (16 bits/voxel) */
+  this.DT_SIGNED_INT = 8; /* signed int (32 bits/voxel)   */
+  this.DT_FLOAT = 16; /* float (32 bits/voxel)        */
+  this.DT_COMPLEX = 32; /* complex (64 bits/voxel)      */
+  this.DT_DOUBLE = 64; /* double (64 bits/voxel)       */
+  this.DT_RGB = 128; /* RGB triple (24 bits/voxel)   */
+  this.DT_ALL = 255; /* not very useful (?)          */
+  this.DT_INT8 = 256; /* signed char (8 bits)         */
+  this.DT_UINT16 = 512; /* unsigned short (16 bits)     */
+  this.DT_UINT32 = 768; /* unsigned int (32 bits)       */
+  this.DT_INT64 = 1024; /* long long (64 bits)          */
+  this.DT_UINT64 = 1280; /* unsigned long long (64 bits) */
+  this.DT_FLOAT128 = 1536; /* long double (128 bits)       */
+  this.DT_COMPLEX128 = 1792; /* double pair (128 bits)       */
+  this.DT_COMPLEX256 = 2048; /* long double pair (256 bits)  */
+  this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
+
+  this.name = name;
+  this.id = uuidv4();
+  this.colorMap = colorMap;
+  this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
+  this.percentileFrac = percentileFrac;
+  this.ignoreZeroVoxels = ignoreZeroVoxels;
+  this.trustCalMinMax = trustCalMinMax;
+  this.visible = visible;
+
+  // Added to support zerosLike
+  if (!dataBuffer) {
+    return;
+  }
+
+  this.hdr = nifti.readHeader(dataBuffer);
+  let imgRaw = null;
+  if (nifti.isCompressed(dataBuffer)) {
+    imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
+  } else {
+    imgRaw = nifti.readImage(this.hdr, dataBuffer);
+  }
+
+  switch (this.hdr.datatypeCode) {
+    case this.DT_UNSIGNED_CHAR:
+      this.img = new Uint8Array(imgRaw);
+      break;
+    case this.DT_SIGNED_SHORT:
+      this.img = new Int16Array(imgRaw);
+      break;
+    case this.DT_FLOAT:
+      this.img = new Float32Array(imgRaw);
+      break;
+    case this.DT_DOUBLE:
+      this.img = new Float64Array(imgRaw);
+      break;
+    case this.DT_RGB:
+      this.img = new Uint8Array(imgRaw);
+      break;
+    case this.DT_UINT16:
+      this.img = new Uint16Array(imgRaw);
+      break;
+    case this.DT_RGBA32:
+      this.img = new Uint8Array(imgRaw);
+      break;
+    default:
+      throw "datatype " + this.hdr.datatypeCode + " not supported";
+  }
+
+  this.calculateRAS();
+  this.calMinMax();
+};
+
+// not included in public docs
+NVImage.prototype.calculateRAS = function () {
+  //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
+  // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
+  // not elegant, as JavaScript arrays are always 1D
+  let a = this.hdr.affine;
+  let header = this.hdr;
+  let absR = mat.mat3.fromValues(
+    Math.abs(a[0][0]),
+    Math.abs(a[0][1]),
+    Math.abs(a[0][2]),
+    Math.abs(a[1][0]),
+    Math.abs(a[1][1]),
+    Math.abs(a[1][2]),
+    Math.abs(a[2][0]),
+    Math.abs(a[2][1]),
+    Math.abs(a[2][2])
+  );
+  //1st column = x
+  let ixyz = [1, 1, 1];
+  if (absR[3] > absR[0]) ixyz[0] = 2; //(absR[1][0] > absR[0][0]) ixyz[0] = 2;
+  if (absR[6] > absR[0] &amp;&amp; absR[6] > absR[3]) ixyz[0] = 3; //((absR[2][0] > absR[0][0]) &amp;&amp; (absR[2][0]> absR[1][0])) ixyz[0] = 3;
+  //2nd column = y
+  ixyz[1] = 1;
+  if (ixyz[0] === 1) {
+    if (absR[4] > absR[7])
+      //(absR[1][1] > absR[2][1])
+      ixyz[1] = 2;
+    else ixyz[1] = 3;
+  } else if (ixyz[0] === 2) {
+    if (absR[1] > absR[7])
+      //(absR[0][1] > absR[2][1])
+      ixyz[1] = 1;
+    else ixyz[1] = 3;
+  } else {
+    if (absR[1] > absR[4])
+      //(absR[0][1] > absR[1][1])
+      ixyz[1] = 1;
+    else ixyz[1] = 2;
+  }
+  //3rd column = z: constrained as x+y+z = 1+2+3 = 6
+  ixyz[2] = 6 - ixyz[1] - ixyz[0];
+  let perm = [1, 2, 3];
+  perm[ixyz[0] - 1] = 1;
+  perm[ixyz[1] - 1] = 2;
+  perm[ixyz[2] - 1] = 3;
+  let rotM = mat.mat4.fromValues(
+    a[0][0],
+    a[0][1],
+    a[0][2],
+    a[0][3],
+    a[1][0],
+    a[1][1],
+    a[1][2],
+    a[1][3],
+    a[2][0],
+    a[2][1],
+    a[2][2],
+    a[2][3],
+    0,
+    0,
+    0,
+    1
+  );
+  //n.b. 0.5 in these values to account for voxel centers, e.g. a 3-pixel wide bitmap in unit space has voxel centers at 0.25, 0.5 and 0.75
+  this.mm000 = this.vox2mm([-0.5, -0.5, -0.5], rotM);
+  this.mm100 = this.vox2mm([header.dims[1] - 0.5, -0.5, -0.5], rotM);
+  this.mm010 = this.vox2mm([-0.5, header.dims[2] - 0.5, -0.5], rotM);
+  this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
+  let R = mat.mat4.create();
+  mat.mat4.copy(R, rotM);
+  for (let i = 0; i &lt; 3; i++)
+    for (let j = 0; j &lt; 3; j++) R[i * 4 + j] = rotM[i * 4 + perm[j] - 1]; //rotM[i+(4*(perm[j]-1))];//rotM[i],[perm[j]-1];
+  let flip = [0, 0, 0];
+  if (R[0] &lt; 0) flip[0] = 1; //R[0][0]
+  if (R[5] &lt; 0) flip[1] = 1; //R[1][1]
+  if (R[10] &lt; 0) flip[2] = 1; //R[2][2]
+  this.dimsRAS = [
+    header.dims[0],
+    header.dims[perm[0]],
+    header.dims[perm[1]],
+    header.dims[perm[2]],
+  ];
+  this.pixDimsRAS = [
+    header.pixDims[0],
+    header.pixDims[perm[0]],
+    header.pixDims[perm[1]],
+    header.pixDims[perm[2]],
+  ];
+  if (this.arrayEquals(perm, [1, 2, 3]) &amp;&amp; this.arrayEquals(flip, [0, 0, 0])) {
+    this.toRAS = mat.mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+    this.matRAS = mat.mat4.clone(rotM);
+    return; //no rotation required!
+  }
+  mat.mat4.identity(rotM);
+  rotM[0 + 0 * 4] = 1 - flip[0] * 2;
+  rotM[1 + 1 * 4] = 1 - flip[1] * 2;
+  rotM[2 + 2 * 4] = 1 - flip[2] * 2;
+  rotM[3 + 0 * 4] = (header.dims[perm[0]] - 1) * flip[0];
+  rotM[3 + 1 * 4] = (header.dims[perm[1]] - 1) * flip[1];
+  rotM[3 + 2 * 4] = (header.dims[perm[2]] - 1) * flip[2];
+  let residualR = mat.mat4.create();
+  mat.mat4.invert(residualR, rotM);
+  mat.mat4.multiply(residualR, residualR, R);
+  this.matRAS = mat.mat4.clone(residualR);
+  rotM = mat.mat4.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
+  rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1;
+  rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1;
+  rotM[perm[2] - 1 + 2 * 4] = -flip[2] * 2 + 1;
+  rotM[3 + 0 * 4] = flip[0];
+  rotM[3 + 1 * 4] = flip[1];
+  rotM[3 + 2 * 4] = flip[2];
+  this.toRAS = mat.mat4.clone(rotM);
+};
+
+// not included in public docs
+NVImage.prototype.vox2mm = function (XYZ, mtx) {
+  let sform = mat.mat4.clone(mtx);
+  mat.mat4.transpose(sform, sform);
+  let pos = mat.vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
+  mat.vec4.transformMat4(pos, pos, sform);
+  let pos3 = mat.vec3.fromValues(pos[0], pos[1], pos[2]);
+  return pos3;
+}; // vox2mm()
+
+// not included in public docs
+NVImage.prototype.arrayEquals = function (a, b) {
+  return (
+    Array.isArray(a) &amp;&amp;
+    Array.isArray(b) &amp;&amp;
+    a.length === b.length &amp;&amp;
+    a.every((val, index) => val === b[index])
+  );
+};
+
+/**
+ * query all available color maps that can be applied to volumes
+ * @param {boolean} [sort=true] whether or not to sort the returned array
+ * @returns {array} an array of colormap strings
+ * @example
+ * myImage = NVImage.loadFromUrl('./someURL/someFile.nii.gz')
+ * colormaps = myImage.colorMaps()
+ */
+NVImage.prototype.colorMaps = function (sort = true) {
+  let cm = [];
+  for (const [key] of Object.entries(cmaps)) {
+    cm.push(key);
+  }
+  return sort === true ? cm.sort() : cm;
+};
+
+// not included in public docs
+// given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
+//clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
+//ToDo: convert to web assembly, this is slow in JavaScript
+NVImage.prototype.calMinMax = function () {
+  if (
+    this.trustCalMinMax &amp;&amp;
+    isFinite(this.hdr.cal_min) &amp;&amp;
+    isFinite(this.hdr.cal_max) &amp;&amp;
+    this.hdr.cal_max > this.hdr.cal_min
+  ) {
+    this.cal_min = this.hdr.cal_min;
+    this.cal_max = this.hdr.cal_max;
+    this.global_min = this.hdr.cal_min;
+    this.global_max = this.hdr.cal_max;
+    return [
+      this.hdr.cal_min,
+      this.hdr.cal_max,
+      this.hdr.cal_min,
+      this.hdr.cal_max,
+    ];
+  }
+
+  let cm = this.colorMap;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+
+  // if color map specifies non zero values for min and max then use them
+  if (cmMin != cmMax) {
+    this.cal_min = cmMin;
+    this.cal_max = cmMax;
+    return [cmMin, cmMax, cmMin, cmMax];
+  }
+
+  //determine full range: min..max
+  let mn = this.img[0];
+  let mx = this.img[0];
+  let nZero = 0;
+  let nNan = 0;
+  let nVox = this.img.length;
+  for (let i = 0; i &lt; nVox; i++) {
+    if (isNaN(this.img[i])) {
+      nNan++;
+      continue;
+    }
+    if (this.img[i] === 0) {
+      nZero++;
+      if (this.ignoreZeroVoxels) {
+        continue;
+      }
+    }
+    mn = Math.min(this.img[i], mn);
+    mx = Math.max(this.img[i], mx);
+  }
+  var mnScale = this.intensityRaw2Scaled(this.hdr, mn);
+  var mxScale = this.intensityRaw2Scaled(this.hdr, mx);
+  if (!this.ignoreZeroVoxels) nZero = 0;
+  nZero += nNan;
+  let n2pct = Math.round((nVox - nZero) * this.percentileFrac);
+  if (n2pct &lt; 1 || mn === mx) {
+    console.log("no variability in image intensity?");
+    this.cal_min = mnScale;
+    this.cal_max = mxScale;
+    this.global_min = mnScale;
+    this.global_max = mxScale;
+    return [mnScale, mxScale, mnScale, mxScale];
+  }
+  let nBins = 1001;
+  let scl = (nBins - 1) / (mx - mn);
+  let hist = new Array(nBins);
+  for (let i = 0; i &lt; nBins; i++) {
+    hist[i] = 0;
+  }
+  if (this.ignoreZeroVoxels) {
+    for (let i = 0; i &lt;= nVox; i++) {
+      if (this.img[i] === 0) continue;
+      if (isNaN(this.img[i])) continue;
+      hist[Math.round((this.img[i] - mn) * scl)]++;
+    }
+  } else {
+    for (let i = 0; i &lt;= nVox; i++) {
+      if (isNaN(this.img[i])) {
+        continue;
+      }
+      hist[Math.round((this.img[i] - mn) * scl)]++;
+    }
+  }
+  let n = 0;
+  let lo = 0;
+  while (n &lt; n2pct) {
+    n += hist[lo];
+    lo++;
+  }
+  lo--; //remove final increment
+  n = 0;
+  let hi = nBins;
+  while (n &lt; n2pct) {
+    hi--;
+    n += hist[hi];
+  }
+  if (lo == hi) {
+    //MAJORITY are not black or white
+    let ok = -1;
+    while (ok !== 0) {
+      if (lo > 0) {
+        lo--;
+        if (hist[lo] > 0) ok = 0;
+      }
+      if (ok != 0 &amp;&amp; hi &lt; nBins - 1) {
+        hi++;
+        if (hist[hi] > 0) ok = 0;
+      }
+      if (lo == 0 &amp;&amp; hi == nBins - 1) ok = 0;
+    } //while not ok
+  } //if lo == hi
+  var pct2 = this.intensityRaw2Scaled(this.hdr, lo / scl + mn);
+  var pct98 = this.intensityRaw2Scaled(this.hdr, hi / scl + mn);
+  // console.log(
+  //   "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
+  //   mnScale,
+  //   mxScale,
+  //   nZero,
+  //   pct2,
+  //   pct98
+  // );
+  if (
+    this.hdr.cal_min &lt; this.hdr.cal_max &amp;&amp;
+    this.hdr.cal_min >= mnScale &amp;&amp;
+    this.hdr.cal_max &lt;= mxScale
+  ) {
+    // console.log("ignoring robust range: using header cal_min and cal_max");
+    pct2 = this.hdr.cal_min;
+    pct98 = this.hdr.cal_max;
+  }
+  this.cal_min = pct2;
+  this.cal_max = pct98;
+  this.global_min = mnScale;
+  this.global_max = mxScale;
+  return [pct2, pct98, mnScale, mxScale];
+}; //calMinMaxCore
+
+// not included in public docs
+NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
+  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
+  return raw * hdr.scl_slope + hdr.scl_inter;
+};
+
+/**
+ * factory function to load and return a new NVImage instance from a given URL
+ * @param {string} url the resolvable URL pointing to a nifti image to load
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
+ */
+NVImage.loadFromUrl = async function (
+  url,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+) {
+  let response = await fetch(url);
+  let nvimage = null;
+
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+
+  let urlParts = url.split("/"); // split url parts at slash
+  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+
+  let dataBuffer = await response.arrayBuffer();
+  if (dataBuffer) {
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colorMap,
+      opacity,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible
+    );
+  } else {
+    alert("Unable to load buffer properly from volume");
+  }
+
+  return nvimage;
+};
+
+// not included in public docs
+// loading Nifti files
+NVImage.readFileAsync = function (file) {
+  return new Promise((resolve, reject) => {
+    let reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+
+    reader.onerror = reject;
+
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+/**
+ * factory function to load and return a new NVImage instance from a file in the browser
+ * @param {string} file the file object
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ */
+NVImage.loadFromFile = async function (
+  file,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+) {
+  let nvimage = null;
+  try {
+    let dataBuffer = await this.readFileAsync(file);
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colorMap,
+      opacity,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible
+    );
+  } catch (err) {
+    console.log(err);
+  }
+  return nvimage;
+};
+
+/**
+ * make a clone of a NVImage instance and return a new NVImage
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * clonedImage = myImage.clone()
+ */
+NVImage.prototype.clone = function () {
+  let clonedImage = new NVImage();
+  clonedImage.hdr = Object.assign({}, this.hdr);
+  clonedImage.img = this.img.slice();
+  clonedImage.calculateRAS();
+  clonedImage.calMinMax();
+  return clonedImage;
+};
+
+/**
+ * fill a NVImage instance with zeros for the image data
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * clonedImageWithZeros = myImage.clone().zeroImage()
+ */
+NVImage.prototype.zeroImage = function () {
+  this.img.fill(0);
+};
+
+/**
+ * a factory function to make a zero filled image given a NVImage as a reference
+ * @param {NVImage} nvImage an existing NVImage as a reference
+ * @returns {NVImage} returns a new NVImage filled with zeros for the image data
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * newZeroImage = NVImage.zerosLike(myImage)
+ */
+NVImage.zerosLike = function (nvImage) {
+  let zeroClone = nvImage.clone();
+  zeroClone.zeroImage();
+  return zeroClone;
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    </div>
+
+    <footer class="footer" id="footer">
+      
+    </footer>
+
+    <script src="scripts/third-party/prettify.js"></script>
+    <script src="scripts/third-party/lang-css.js"></script>
+    <script type="text/javascript" src="scripts/misc.js"></script>
+
+    <script>prettyPrint();</script>
+    <script src="scripts/linenumber.js"></script>
+    <script src="scripts/fix-code-block.js"></script>
+    <script src="scripts/fix-navbar.js"></script>
+    
+      <script src="scripts/search.js"></script>
+      <script src="scripts/third-party/fuse.js"></script>
+      <script>
+        var list = [{"title":"Niivue","link":"<a href=\"Niivue.html\">Niivue</a>"},{"title":"Niivue#addVolume","link":"<a href=\"Niivue.html#addVolume\">Niivue &rtrif; addVolume</a>"},{"title":"Niivue#attachTo","link":"<a href=\"Niivue.html#attachTo\">Niivue &rtrif; attachTo</a>"},{"title":"Niivue#attachToCanvas","link":"<a href=\"Niivue.html#attachToCanvas\">Niivue &rtrif; attachToCanvas</a>"},{"title":"Niivue#clipPlaneUpdate","link":"<a href=\"Niivue.html#clipPlaneUpdate\">Niivue &rtrif; clipPlaneUpdate</a>"},{"title":"Niivue#cloneVolume","link":"<a href=\"Niivue.html#cloneVolume\">Niivue &rtrif; cloneVolume</a>"},{"title":"Niivue#colorMaps","link":"<a href=\"Niivue.html#colorMaps\">Niivue &rtrif; colorMaps</a>"},{"title":"Niivue#getOverlayIndexByID","link":"<a href=\"Niivue.html#getOverlayIndexByID\">Niivue &rtrif; getOverlayIndexByID</a>"},{"title":"Niivue#getVolumeIndexByID","link":"<a href=\"Niivue.html#getVolumeIndexByID\">Niivue &rtrif; getVolumeIndexByID</a>"},{"title":"Niivue#loadVolumes","link":"<a href=\"Niivue.html#loadVolumes\">Niivue &rtrif; loadVolumes</a>"},{"title":"Niivue#moveVolumeDown","link":"<a href=\"Niivue.html#moveVolumeDown\">Niivue &rtrif; moveVolumeDown</a>"},{"title":"Niivue#moveVolumeToBottom","link":"<a href=\"Niivue.html#moveVolumeToBottom\">Niivue &rtrif; moveVolumeToBottom</a>"},{"title":"Niivue#moveVolumeToTop","link":"<a href=\"Niivue.html#moveVolumeToTop\">Niivue &rtrif; moveVolumeToTop</a>"},{"title":"Niivue#moveVolumeUp","link":"<a href=\"Niivue.html#moveVolumeUp\">Niivue &rtrif; moveVolumeUp</a>"},{"title":"Niivue#off","link":"<a href=\"Niivue.html#off\">Niivue &rtrif; off</a>"},{"title":"Niivue#on","link":"<a href=\"Niivue.html#on\">Niivue &rtrif; on</a>"},{"title":"Niivue#setClipPlaneColor","link":"<a href=\"Niivue.html#setClipPlaneColor\">Niivue &rtrif; setClipPlaneColor</a>"},{"title":"Niivue#setCrosshairColor","link":"<a href=\"Niivue.html#setCrosshairColor\">Niivue &rtrif; setCrosshairColor</a>"},{"title":"Niivue#setOpacity","link":"<a href=\"Niivue.html#setOpacity\">Niivue &rtrif; setOpacity</a>"},{"title":"Niivue#setScale","link":"<a href=\"Niivue.html#setScale\">Niivue &rtrif; setScale</a>"},{"title":"Niivue#setSelectionBoxColor","link":"<a href=\"Niivue.html#setSelectionBoxColor\">Niivue &rtrif; setSelectionBoxColor</a>"},{"title":"Niivue#setSliceType","link":"<a href=\"Niivue.html#setSliceType\">Niivue &rtrif; setSliceType</a>"},{"title":"Niivue#setVolume","link":"<a href=\"Niivue.html#setVolume\">Niivue &rtrif; setVolume</a>"},{"title":"Niivue#sph2cartDeg","link":"<a href=\"Niivue.html#sph2cartDeg\">Niivue &rtrif; sph2cartDeg</a>"},{"title":"Niivue#syncWith","link":"<a href=\"Niivue.html#syncWith\">Niivue &rtrif; syncWith</a>"},{"title":"Niivue#updateGLVolume","link":"<a href=\"Niivue.html#updateGLVolume\">Niivue &rtrif; updateGLVolume</a>"},{"title":"NVImage","link":"<a href=\"NVImage.html\">NVImage</a>"},{"title":"NVImage.loadFromFile","link":"<a href=\"NVImage.html#.loadFromFile\">NVImage.loadFromFile &rtrif; undefined</a>"},{"title":"NVImage.loadFromUrl","link":"<a href=\"NVImage.html#.loadFromUrl\">NVImage.loadFromUrl &rtrif; undefined</a>"},{"title":"NVImage.zerosLike","link":"<a href=\"NVImage.html#.zerosLike\">NVImage.zerosLike &rtrif; undefined</a>"},{"title":"NVImage#clone","link":"<a href=\"NVImage.html#clone\">NVImage &rtrif; clone</a>"},{"title":"NVImage#colorMaps","link":"<a href=\"NVImage.html#colorMaps\">NVImage &rtrif; colorMaps</a>"},{"title":"NVImage#zeroImage","link":"<a href=\"NVImage.html#zeroImage\">NVImage &rtrif; zeroImage</a>"}];
+        var options = 
+          setupSearch(list, options)
+      </script>
+    
+
+    
+
+    
+
+    
+
+    
+
+
+  </body>
+
+</html>
