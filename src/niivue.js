@@ -1,4 +1,3 @@
-// import * as nifti from "nifti-reader-js";
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
 import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
@@ -34,44 +33,27 @@ import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 /**
  * @class Niivue
  * @description
- * Documentation is a work in progress
+ * Niivue can be attached to a canvas. An instance of Niivue contains methods for
+ * loading and rendering NIFTI image data in a WebGL 2.0 context.
  * @constructor
- * @param {object} [opts] options object to set modifiable properties of the canvas
+ * @param {object} [options] options object to set modifiable Niivue properties
+ * @param {number} [options.textHeight=0.3] the text height for orientation labels (0 to 1). Zero for no text labels
+ * @param {number} [options.colorbarHeight=0.05] size of colorbar. 0 for no colorbars, fraction of Nifti j dimension
+ * @param {number} [options.colorBarMargin=0.05] padding around colorbar when displayed
+ * @param {number} [options.crosshairWidth=1] crosshair size. Zero for no crosshair
+ * @param {array}  [options.backColor=[0,0,0,1]] the background color. RGBA values from 0 to 1. Default is black
+ * @param {array}  [options.crosshairColor=[1,0,0,1]] the crosshair color. RGBA values from 0 to 1. Default is red
+ * @param {array}  [options.selectionBoxColor=[1,1,1,0.5]] the selection box color when the intensty selection box is shown (right click and drag). RGBA values from 0 to 1. Default is transparent white
+ * @param {array}  [options.clipPlaneColor=[1,1,1,0.5]] the color of the visible clip plane. RGBA values from 0 to 1. Default is white
+ * @param {boolean} [options.trustCalMinMax=true] true/false whether to trust the nifti header values for cal_min and cal_max. Trusting them results in faster loading because we skip computing these values from the data
+ * @param {string} [options.clipPlaneHotKey="KeyC"] the keyboard key used to cycle through clip plane orientations. The default is "c"
+ * @param {string} [options.viewModeHotKey="KeyV"] the keyboard key used to cycle through view modes. The default is "v"
+ * @param {number} [options.keyDebounceTime=50] the keyUp debounce time in milliseconds. The default is 50 ms. You must wait this long before a new hot-key keystroke will be registered by the event listener
  * @example
- * // All available properties are listed in the example.
- * // All properties are optional. If omitted, a default will be used from Niivue.defaults
- * opts = {
-    textHeight: 0.03,             // 0 for no text, fraction of canvas height
-    colorbarHeight: 0.05,         // 0 for no colorbars, fraction of Nifti j dimension
-    crosshairWidth: 1,            // 0 for no crosshairs
-    backColor: [0, 0, 0, 1],      // [R, G, B, A] range 0..1
-    crosshairColor: [1, 0, 0 ,1], // [R, G, B, A] range 0..1
-  selectionBoxColor: [1, 1, 1, .5] // [R, G, B, A] range 0..1
-    colorBarMargin: 0.05          // x axis margin arount color bar, fraction of canvas width
-  }
-
-  let myNiivue = new Niivue(opts)
+ * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
-export const Niivue = function (opts = {}) {
+export const Niivue = function (options = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
-
-  /**
-   * @memberof Niivue
-   * @property {object} defaults - the default values for all options a user might supply in an opts object
-   * @example
-   * // The example shows all available use configurable properties.
-   * this.defaults = {
-    textHeight: 0.03,             // 0 for no text, fraction of canvas height
-    colorbarHeight: 0.05,         // 0 for no colorbars, fraction of Nifti j dimension
-    crosshairWidth: 1,            // 0 for no crosshairs
-    backColor: [0, 0, 0, 1],      // [R, G, B, A] range 0..1
-    crosshairColor: [1, 0, 0 ,1], // [R, G, B, A] range 0..1
-  selectionBoxColor: [1, 1, 1, .5] // [R, G, B, A] range 0..1
-    colorBarMargin: 0.05          // x axis margin arount color bar, fraction of canvas width
-  }
-
-   *
-   */
   this.defaults = {
     textHeight: 0.03, // 0 for no text, fraction of canvas height
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
@@ -81,8 +63,6 @@ export const Niivue = function (opts = {}) {
     selectionBoxColor: [1, 1, 1, 0.5],
     clipPlaneColor: [1, 1, 1, 0.5],
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
-    briStep: 1, // step size for brightness changes
-    conStep: 1, // step size for contrast changes
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
@@ -176,7 +156,7 @@ export const Niivue = function (opts = {}) {
   // Niivue.opts.<prop> to that value, else apply defaults.
   for (let prop in this.defaults) {
     this.opts[prop] =
-      opts[prop] === undefined ? this.defaults[prop] : opts[prop];
+      options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
 
   // maping of keys (event strings) to rxjs subjects
@@ -188,8 +168,12 @@ export const Niivue = function (opts = {}) {
   this.subscriptions = [];
 };
 
-// attach the Niivue instance to the webgl2 canvas by element id
-// @example niivue = new Niivue().attachTo('gl')
+/**
+ * attach the Niivue instance to the webgl2 canvas by element id
+ * @param {string} id the id of an html canvas element
+ * @example niivue = new Niivue().attachTo('gl')
+ * @example niivue.attachTo('gl')
+ */
 Niivue.prototype.attachTo = async function (id) {
   await this.attachToCanvas(document.getElementById(id));
   return this;
@@ -200,6 +184,21 @@ Niivue.prototype.attachTo = async function (id) {
 // is extracted from this.eventsToSubjects and the callback passed as the second argument to NiiVue.on
 // is added to the subsciptions to the next method. These callbacks are called whenever subject.next is called within
 // various NiiVue methods.
+
+/**
+ * register a callback function to run when known Niivue events happen
+ * @param {("location")} event the name of the event to watch for. Event names are shown in the type column
+ * @param {function} callback the function to call when the event happens
+ * @example
+ * niivue = new Niivue()
+ *
+ * // 'location' update event is fired when the crosshair changes position via user input
+ * function doSomethingWithLocationData(data){
+ *    // data has the shape {mm: [N, N, N], vox: [N, N, N], frac: [N, N, N]}
+ *    //...
+ * }
+ * niivue.on('location', doSomethingWithLocationData)
+ */
 Niivue.prototype.on = function (event, callback) {
   let knownEvents = Object.keys(this.eventsToSubjects);
   if (knownEvents.indexOf(event) == -1) {
@@ -213,7 +212,13 @@ Niivue.prototype.on = function (event, callback) {
   this.subscriptions.push({ [event]: subscription });
 };
 
-// off unsubscribes events and subjects (the opposite of on)
+/**
+ * off unsubscribes events and subjects (the opposite of on)
+ * @param {("location")} event the name of the event to watch for. Event names are shown in the type column
+ * @example
+ * niivue = new Niivue()
+ * niivue.off('location')
+ */
 Niivue.prototype.off = function (event) {
   let knownEvents = Object.keys(this.eventsToSubjects);
   if (knownEvents.indexOf(event) == -1) {
@@ -231,8 +236,13 @@ Niivue.prototype.off = function (event) {
   }
 };
 
-// attach the Niivue instance to a canvas element
-// @example niivue = new Niivue().attachToCanvas(document.getElementById(id))
+/**
+ * attach the Niivue instance to a canvas element directly
+ * @param {object} canvas the canvas element reference
+ * @example
+ * niivue = new Niivue()
+ * niivue.attachToCanvas(document.getElementById(id))
+ */
 Niivue.prototype.attachToCanvas = async function (canvas) {
   this.canvas = canvas;
   this.gl = this.canvas.getContext("webgl2");
@@ -262,6 +272,14 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
   return this;
 };
 
+/**
+ * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
+ * @param {object} otherNV the other Niivue instance that is the main controller
+ * @example
+ * niivue1 = new Niivue()
+ * niivue2 = new Niivue()
+ * niivue2.syncWith(niivue1)
+ */
 Niivue.prototype.syncWith = function (otherNV) {
   // this.scene.renderAzimuth = 120;
   // this.scene.renderElevation = 15;
@@ -282,7 +300,7 @@ Niivue.prototype.sync = function () {
   this.otherNV.drawScene();
 };
 
-/**
+/* Not documented publicly for now
  * test if two arrays have equal values for each element
  * @param {Array} a the first array
  * @param {Array} b the second array
@@ -308,7 +326,7 @@ Niivue.prototype.resizeListener = function () {
   this.drawScene();
 };
 
-/*
+/* Not included in public docs
  * The following two functions are to address offset issues
  * https://stackoverflow.com/questions/42309715/how-to-correctly-pass-mouse-coordinates-to-webgl
  * note:  no test yet
@@ -323,6 +341,7 @@ Niivue.prototype.getRelativeMousePosition = function (event, target) {
   };
 };
 
+// not included in public docs
 // assumes target or event.target is canvas
 // note: no test yet
 Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function (
@@ -338,6 +357,7 @@ Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function (
   return pos;
 };
 
+// not included in public docs
 // handler for context menu (right click)
 // here, we disable the normal context menu so that
 // we can use some custom right click events
@@ -346,6 +366,7 @@ Niivue.prototype.mouseContextMenuListener = function (e) {
   e.preventDefault();
 };
 
+// not included in public docs
 // handler for all mouse button presses
 // note: no test yet
 Niivue.prototype.mouseDownListener = function (e) {
@@ -361,6 +382,7 @@ Niivue.prototype.mouseDownListener = function (e) {
   }
 };
 
+// not included in public docs
 // handler for mouse left button down
 // note: no test yet
 Niivue.prototype.mouseLeftButtonHandler = function (e) {
@@ -372,6 +394,7 @@ Niivue.prototype.mouseLeftButtonHandler = function (e) {
   this.mouseDown(pos.x, pos.y);
 };
 
+// not included in public docs
 // handler for mouse right button down
 // note: no test yet
 Niivue.prototype.mouseRightButtonHandler = function (e) {
@@ -385,6 +408,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
   return;
 };
 
+// not included in public docs
 Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   if (array.length > 2) {
     throw new Error("array must not contain more than two values");
@@ -395,11 +419,13 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   ];
 };
 
+// not included in public docs
 function intensityRaw2Scaled(hdr, raw) {
   if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
   return raw * hdr.scl_slope + hdr.scl_inter;
 }
 
+// not included in public docs
 // note: no test yet
 Niivue.prototype.calculateNewRange = function () {
   if (this.sliceType === this.sliceTypeRender) {
@@ -459,6 +485,7 @@ Niivue.prototype.calculateNewRange = function () {
   this.intensityRange$.next([mnScale, mxScale]);
 };
 
+// not included in public docs
 // handler for mouse button up (all buttons)
 // note: no test yet
 Niivue.prototype.mouseUpListener = function () {
@@ -475,6 +502,7 @@ Niivue.prototype.mouseUpListener = function () {
   }
 };
 
+// not included in public docs
 Niivue.prototype.checkMultitouch = function (e) {
   if (this.scene.touchdown && !this.multiTouchGesture) {
     var rect = this.canvas.getBoundingClientRect();
@@ -489,6 +517,7 @@ Niivue.prototype.checkMultitouch = function (e) {
   }
 };
 
+// not included in public docs
 // handler for single finger touch event (like mouse down)
 // note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
@@ -503,6 +532,7 @@ Niivue.prototype.touchStartListener = function (e) {
   setTimeout(this.checkMultitouch.bind(this), 1, e);
 };
 
+// not included in public docs
 // handler for touchend (finger lift off screen)
 // note: no test yet
 Niivue.prototype.touchEndListener = function () {
@@ -511,6 +541,7 @@ Niivue.prototype.touchEndListener = function () {
   this.multiTouchGesture = false;
 };
 
+// not included in public docs
 // handler for mouse move over canvas
 // note: no test yet
 Niivue.prototype.mouseMoveListener = function (e) {
@@ -533,6 +564,8 @@ Niivue.prototype.mouseMoveListener = function (e) {
   }
 };
 
+// not included in public docs
+// note: should update this to accept a volume index to reset a selected volume rather than only the background (TODO)
 // reset brightness and contrast to global min and max
 // note: no test yet
 Niivue.prototype.resetBriCon = function () {
@@ -542,6 +575,7 @@ Niivue.prototype.resetBriCon = function () {
   this.drawScene();
 };
 
+// not included in public docs
 // handler for touch move (moving finger on screen)
 // note: no test yet
 Niivue.prototype.touchMoveListener = function (e) {
@@ -561,6 +595,7 @@ Niivue.prototype.touchMoveListener = function (e) {
   }
 };
 
+// not included in public docs
 Niivue.prototype.handlePinchZoom = function (e) {
   if (e.targetTouches.length == 2 && e.changedTouches.length == 2) {
     var dist = Math.hypot(
@@ -595,6 +630,7 @@ Niivue.prototype.handlePinchZoom = function (e) {
   }
 };
 
+// not included in public docs
 // handler for keyboard shortcuts
 Niivue.prototype.keyUpListener = function (e) {
   //   console.log("keyup listener called");
@@ -640,6 +676,7 @@ Niivue.prototype.keyUpListener = function (e) {
   }
 };
 
+// not included in public docs
 // handler for scroll wheel events (slice scrolling)
 // note: no test yet
 Niivue.prototype.wheelListener = function (e) {
@@ -654,6 +691,7 @@ Niivue.prototype.wheelListener = function (e) {
   }
 };
 
+// not included in public docs
 // setup interactions with the canvas. Mouse clicks and touches
 // note: no test yet
 Niivue.prototype.registerInteractions = function () {
@@ -704,18 +742,21 @@ Niivue.prototype.registerInteractions = function () {
   this.canvas.focus();
 };
 
+// not included in public docs
 Niivue.prototype.dragEnterListener = function (e) {
   e.stopPropagation();
   e.preventDefault();
   // console.log("drag enter");
 };
 
+// not included in public docs
 Niivue.prototype.dragOverListener = function (e) {
   e.stopPropagation();
   e.preventDefault();
   // console.log("drag over");
 };
 
+// not included in public docs
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
   e.preventDefault();
@@ -735,6 +776,13 @@ Niivue.prototype.dropListener = async function (e) {
   }
 };
 
+/**
+ * add a new volume to the canvas
+ * @param {NVImage} volume the new volume to add to the canvas
+ * @example
+ * niivue = new Niivue()
+ * niivue.addVolume(NVImage.loadFromUrl('./someURL.nii.gz'))
+ */
 Niivue.prototype.addVolume = function (volume) {
   if (this.volumes.length > 1) {
     this.overlays.push(volume);
@@ -746,6 +794,13 @@ Niivue.prototype.addVolume = function (volume) {
   this.updateGLVolume();
 };
 
+/**
+ * get the index of a volume by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
+ * @param {string} id the id string to search for
+ * @example
+ * niivue = new Niivue()
+ * niivue.getVolumeIndexByID(someVolume.id)
+ */
 Niivue.prototype.getVolumeIndexByID = function (id) {
   let n = this.volumes.length;
   for (let i = 0; i < n; i++) {
@@ -757,6 +812,14 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
+/**
+ * get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
+ * @param {string} id the id string to search for
+ * @see NiiVue#getVolumeIndexByID
+ * @example
+ * niivue = new Niivue()
+ * niivue.getOverlayIndexByID(someVolume.id)
+ */
 Niivue.prototype.getOverlayIndexByID = function (id) {
   let n = this.overlays.length;
   for (let i = 0; i < n; i++) {
@@ -768,6 +831,14 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for an overlay with the given id
 };
 
+/**
+ * set the index of a volume. This will change it's ordering and appearance if there are multiple volumes loaded.
+ * @param {NVImage} volume the volume to update
+ * @param {number} [toIndex=0] the index to move the volume to. The default is the background (0 index)
+ * @example
+ * niivue = new Niivue()
+ * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
+ */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   let numberOfLoadedImages = this.volumes.length;
   if (toIndex > numberOfLoadedImages) {
@@ -787,24 +858,53 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   this.updateGLVolume();
 };
 
+/**
+ * Move a volume to the bottom of the stack of loaded volumes. The volume will become the background
+ * @param {NVImage} volume the volume to move
+ * @example
+ * niivue = new Niivue()
+ * niivue.moveVolumeToBottom(this.volumes[3]) // move the 4th volume to the 0 position. It will be the new background
+ */
 Niivue.prototype.moveVolumeToBottom = function (volume) {
   this.setVolume(volume, 0);
 };
 
+/**
+ * Move a volume up one index position in the stack of loaded volumes. This moves it up one layer
+ * @param {NVImage} volume the volume to move
+ * @example
+ * niivue = new Niivue()
+ * niivue.moveVolumeUp(this.volumes[0]) // move the background image to the second index position (it was 0 index, now will be 1)
+ */
 Niivue.prototype.moveVolumeUp = function (volume) {
   let volIdx = this.getVolumeIndexByID(volume.id);
   this.setVolume(volume, volIdx + 1);
 };
 
+/**
+ * Move a volume down one index position in the stack of loaded volumes. This moves it down one layer
+ * @param {NVImage} volume the volume to move
+ * @example
+ * niivue = new Niivue()
+ * niivue.moveVolumeDown(this.volumes[1]) // move the second image to the background position (it was 1 index, now will be 0)
+ */
 Niivue.prototype.moveVolumeDown = function (volume) {
   let volIdx = this.getVolumeIndexByID(volume.id);
   this.setVolume(volume, volIdx - 1);
 };
 
+/**
+ * Move a volume to the top position in the stack of loaded volumes. This will be the top layer
+ * @param {NVImage} volume the volume to move
+ * @example
+ * niivue = new Niivue()
+ * niivue.moveVolumeToTop(this.volumes[0]) // move the background image to the top layer position
+ */
 Niivue.prototype.moveVolumeToTop = function (volume) {
   this.setVolume(volume, this.volumes.length - 1);
 };
 
+// not included in public docs
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
@@ -812,6 +912,7 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
   this.mousePos = [x, y];
 }; // mouseDown()
 
+// not included in public docs
 // note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
   if (this.sliceType != this.sliceTypeRender) return;
@@ -821,6 +922,15 @@ Niivue.prototype.mouseMove = function mouseMove(x, y) {
   this.drawScene();
 }; // mouseMove()
 
+/**
+ * convert spherical AZIMUTH, ELEVATION to Cartesian
+ * @param {number} azimuth azimuth number
+ * @param {number} elevation elevation number
+ * @returns {array} the converted [x, y, z] coordinates
+ * @example
+ * niivue = new Niivue()
+ * xyz = niivue.sph2cartDeg(42, 42)
+ */
 Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   //convert spherical AZIMUTH,ELEVATION,RANGE to Cartesion
   //see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
@@ -840,36 +950,73 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   return ret;
 }; // sph2cartDeg()
 
-Niivue.prototype.clipPlaneUpdate = function (azimuthElevationDepth) {
-  // azimuthElevationDepth is 3 component vector [a, e, d]
+/**
+ * update the clip plane orientation in 3D view mode
+ * @param {array} azimuthElevationDepth a two component vector. azimuth: camera position in degrees around object, typically 0..360 (or -180..+180). elevation: camera height in degrees, range -90..90
+ * @example
+ * niivue = new Niivue()
+ * niivue.clipPlaneUpdate([42, 42])
+ */
+Niivue.prototype.clipPlaneUpdate = function (azimuthElevation) {
+  // azimuthElevation is 2 component vector [a, e, d]
   //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
   //  elevation: camera height in degrees, range -90..90
   //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
   if (this.sliceType != this.sliceTypeRender) return;
-  let v = this.sph2cartDeg(azimuthElevationDepth[0], azimuthElevationDepth[1]);
-  this.scene.clipPlane = [v[0], v[1], v[2], azimuthElevationDepth[2]];
+  let v = this.sph2cartDeg(azimuthElevation[0], azimuthElevation[1]);
+  this.scene.clipPlane = [v[0], v[1], v[2], azimuthElevation[2]];
   this.drawScene();
 }; // clipPlaneUpdate()
 
+/**
+ * set the crosshair color
+ * @param {array} color an RGBA array. values range from 0 to 1
+ * @example
+ * niivue = new Niivue()
+ * niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green
+ */
 Niivue.prototype.setCrosshairColor = function (color) {
   this.opts.crosshairColor = color;
   this.drawScene();
 }; // setCrosshairColor()
 
+/**
+ * set the selection box color. A selection box is drawn when you right click and drag to change image intensity
+ * @param {array} color an RGBA array. values range from 0 to 1
+ * @example
+ * niivue = new Niivue()
+ * niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green
+ */
 Niivue.prototype.setSelectionBoxColor = function (color) {
   this.opts.selectionBoxColor = color;
 }; // setSelectionBoxColor()
 
+// not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
   this.mouseClick(x, y, posChange, isDelta);
 }; // sliceScroll2D()
 
+/**
+ * set the slice type. This changes the view mode
+ * @param {(Niivue.sliceTypeAxial | Niivue.sliceTypeCoronal | Niivue.sliceTypeSagittal | Niivue.sliceTypeMultiplanar | Niivue.sliceTypeRender)} sliceType an enum of slice types to use
+ * @example
+ * niivue = new Niivue()
+ * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
+ */
 Niivue.prototype.setSliceType = function (st) {
   this.sliceType = st;
   this.drawScene();
   return this;
 }; // setSliceType()
 
+/**
+ * set the opacity of a volume given by volume index
+ * @param {number} volIdx the volume index of the volume to change
+ * @param {number} newOpacity the opacity value. valid values range from 0 to 1. 0 will effectively remove a volume from the scene
+ * @example
+ * niivue = new Niivue()
+ * niivue.setOpacity(0, 0.5) // make the first volume transparent
+ */
 Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
   this.volumes[volIdx].opacity = newOpacity;
   if (volIdx === 0) {
@@ -883,15 +1030,32 @@ Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
   //
 }; // setOpacity()
 
+/**
+ * set the scale of the 3D rendering. Larger numbers effectively zoom.
+ * @param {number} scale the new scale value
+ * @example
+ * niivue = new Niivue()
+ * niivue.setScale(2) // zoom some
+ */
 Niivue.prototype.setScale = function (scale) {
   this.volScaleMultiplier = scale;
   this.drawScene();
 }; // setScale()
 
+/**
+ * set the color of the 3D clip plane
+ * @param {array} color the new color. expects an array of RGBA values. values can range from 0 to 1
+ * @example
+ * niivue = new Niivue()
+ * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
+ */
 Niivue.prototype.setClipPlaneColor = function (color) {
   this.opts.clipPlaneColor = color;
+  this.drawScene();
 }; // setClipPlaneColor()
 
+// not included in public docs.
+// note: marked for removal at some point in the future (this just makes a test sphere)
 Niivue.prototype.overlayRGBA = function (volume) {
   let hdr = volume.hdr;
   let vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -920,6 +1084,7 @@ Niivue.prototype.overlayRGBA = function (volume) {
   return imgRGBA;
 }; // overlayRGBA()
 
+// not included in public docs
 Niivue.prototype.vox2mm = function (XYZ, mtx) {
   let sform = mat.mat4.clone(mtx);
   mat.mat4.transpose(sform, sform);
@@ -929,11 +1094,26 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
   return pos3;
 }; // vox2mm()
 
+/**
+ * clone a volume and return a new volume
+ * @param {number} index the index of the volume to clone
+ * @returns {NVImage} returns a new volume to work with, but that volume is not added to the canvas
+ * @example
+ * niivue = new Niivue()
+ * niivue.cloneVolume(0)
+ */
 Niivue.prototype.cloneVolume = function (index) {
   return this.volumes[index].clone();
 };
 
-// currently: volumeList is an array if objects, each object is a volume that can be loaded
+/**
+ * load an array of volume objects
+ * @param {array} volumeList the array of objects to load. each object must have a resolvable "url" property at a minimum
+ * @returns {Niivue} returns the Niivue instance
+ * @example
+ * niivue = new Niivue()
+ * niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
+ */
 Niivue.prototype.loadVolumes = async function (volumeList) {
   if (!this.initialized) {
     await this.init();
@@ -960,6 +1140,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   return this;
 }; // loadVolumes()
 
+// not included in public docs
 Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
   if (texID) this.gl.deleteTexture(texID);
   texID = this.gl.createTexture();
@@ -1018,6 +1199,7 @@ Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
   return texID;
 }; // rgbaTex()
 
+// not included in public docs
 // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
 Niivue.prototype.requestCORSIfNotSameOrigin = function (img, url) {
   if (new URL(url, window.location.href).origin !== window.location.origin) {
@@ -1025,6 +1207,7 @@ Niivue.prototype.requestCORSIfNotSameOrigin = function (img, url) {
   }
 };
 
+// not included in public docs
 Niivue.prototype.loadFontTexture = function (fontUrl) {
   return new Promise((resolve, reject) => {
     let img = new Image();
@@ -1074,6 +1257,7 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
   });
 };
 
+// not included in public docs
 Niivue.prototype.initFontMets = function () {
   this.fontMets = [];
   for (let id = 0; id < 256; id++) {
@@ -1106,6 +1290,7 @@ Niivue.prototype.initFontMets = function () {
   }
 };
 
+// not included in public docs
 Niivue.prototype.loadFont = async function (
   fontSheetUrl = defaultFontPNG,
   metricsUrl = defaultFontMetrics
@@ -1126,12 +1311,14 @@ Niivue.prototype.loadFont = async function (
   this.drawScene();
 };
 
+// not included in public docs
 Niivue.prototype.loadDefaultFont = async function () {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
   this.initFontMets();
 };
 
+// not included in public docs
 Niivue.prototype.initText = async function () {
   // font shader
   //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
@@ -1142,6 +1329,7 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText("drag and drop");
 }; // initText()
 
+// not included in public docs
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
@@ -1342,6 +1530,12 @@ Niivue.prototype.init = async function () {
   return this;
 }; // init()
 
+/**
+ * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
+ * @example
+ * niivue = new Niivue()
+ * niivue.updateGLVolume()
+ */
 Niivue.prototype.updateGLVolume = function () {
   //load volume or change contrast
   let visibleLayers = 0;
@@ -1359,6 +1553,7 @@ Niivue.prototype.updateGLVolume = function () {
   this.drawScene();
 }; // updateVolume()
 
+// not included in public docs
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
@@ -1716,6 +1911,14 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
 }; // refreshLayers()
 
+/**
+ * query all available color maps that can be applied to volumes
+ * @param {boolean} [sort=true] whether or not to sort the returned array
+ * @returns {array} an array of colormap strings
+ * @example
+ * niivue = new Niivue()
+ * colormaps = niivue.colorMaps()
+ */
 Niivue.prototype.colorMaps = function (sort = true) {
   let cm = [];
   for (const [key] of Object.entries(cmaps)) {
@@ -1724,6 +1927,7 @@ Niivue.prototype.colorMaps = function (sort = true) {
   return sort === true ? cm.sort() : cm;
 };
 
+// not included in public docs
 Niivue.prototype.colormapFromKey = function (name) {
   let availMaps = this.colorMaps();
   for (let i = 0; i < availMaps.length; i++) {
@@ -1734,6 +1938,7 @@ Niivue.prototype.colormapFromKey = function (name) {
   }
 };
 
+// not included in public docs
 Niivue.prototype.colormap = function (lutName = "") {
   //function colormap(lutName = "") {
   let defaultLutName = "gray";
@@ -1760,6 +1965,7 @@ Niivue.prototype.colormap = function (lutName = "") {
   );
 }; // colormap()
 
+// not included in public docs
 Niivue.prototype.refreshColormaps = function () {
   let nLayer = this.volumes.length;
   if (nLayer < 1) return;
@@ -1817,6 +2023,7 @@ Niivue.prototype.refreshColormaps = function () {
   return this;
 }; // refreshColormaps()
 
+// not included in public docs
 Niivue.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
   //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
   //intensity indices should be in increasing order with the first value 0 and the last 255.
@@ -1839,6 +2046,7 @@ Niivue.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
   return lut;
 }; // makeLut()
 
+// not included in public docs
 Niivue.prototype.sliceScale = function () {
   var dims = [
     1.0,
@@ -1856,6 +2064,7 @@ Niivue.prototype.sliceScale = function () {
   return { volScale, vox };
 }; // sliceScale()
 
+// not included in public docs
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
@@ -1947,6 +2156,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   } //for i: each slice on screen
 }; // mouseClick()
 
+// not included in public docs
 Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
   this.lineShader.use(this.gl);
   this.gl.uniform4fv(
@@ -1967,6 +2177,7 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
 };
 
+// not included in public docs
 Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) return;
   //console.log("bar:", leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
@@ -2017,6 +2228,7 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
   //gl.enable(gl.DEPTH_TEST);
 }; // drawColorbar()
 
+// not included in public docs
 Niivue.prototype.textWidth = function (scale, str) {
   let w = 0;
   var bytes = new TextEncoder().encode(str);
@@ -2025,6 +2237,7 @@ Niivue.prototype.textWidth = function (scale, str) {
   return w;
 }; // textWidth()
 
+// not included in public docs
 Niivue.prototype.drawChar = function (xy, scale, char) {
   //draw single character, never call directly: ALWAYS call from drawText()
   let metrics = this.fontMets[char];
@@ -2042,6 +2255,7 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
   return scale * metrics.xadv;
 }; // drawChar()
 
+// not included in public docs
 Niivue.prototype.drawLoadingText = function (text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.enableVertexAttribArray(0);
@@ -2053,6 +2267,7 @@ Niivue.prototype.drawLoadingText = function (text) {
   this.canvas.focus();
 };
 
+// not included in public docs
 Niivue.prototype.drawText = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
@@ -2076,6 +2291,7 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
     xy[0] += this.drawChar(xy, size, bytes[i]);
 }; // drawText()
 
+// not included in public docs
 Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
@@ -2083,6 +2299,7 @@ Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
   this.drawText(xy, str, scale);
 }; // drawTextRight()
 
+// not included in public docs
 Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
   //horizontally centered on x, below y
   if (this.opts.textHeight <= 0) return;
@@ -2091,6 +2308,7 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
   this.drawText(xy, str, scale);
 }; // drawTextBelow()
 
+// not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   var crossXYZ = [
     this.scene.crosshairPos[0],
@@ -2207,6 +2425,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.sync();
 }; // draw2D()
 
+// not included in public docs
 Niivue.prototype.calculateMvpMatrix = function (object3D) {
   let m = mat.mat4.clone(object3D.modelMatrix);
   mat.mat4.translate(m, m, object3D.position);
@@ -2222,6 +2441,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   return m;
 }; // calculateMvpMatrix
 
+// not included in public docs
 Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
   //compute ray direction
   var inv = mat.mat4.create();
@@ -2239,6 +2459,7 @@ Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
   return rayDir;
 }; // calculateRayDirection
 
+// not included in public docs
 Niivue.prototype.draw3D = function () {
   let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
   if (mn <= 0) return;
@@ -2394,6 +2615,7 @@ Niivue.prototype.draw3D = function () {
   return posString;
 }; // draw3D()
 
+// not included in public docs
 Niivue.prototype.mm2frac = function (mm) {
   //given mm, return volume fraction
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
@@ -2415,6 +2637,7 @@ Niivue.prototype.mm2frac = function (mm) {
   return frac;
 }; // mm2frac()
 
+// not included in public docs
 Niivue.prototype.vox2frac = function (vox) {
   //convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
@@ -2426,6 +2649,7 @@ Niivue.prototype.vox2frac = function (vox) {
   return frac;
 }; // vox2frac()
 
+// not included in public docs
 Niivue.prototype.frac2vox = function (frac) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
@@ -2437,6 +2661,7 @@ Niivue.prototype.frac2vox = function (frac) {
   return vox;
 }; // frac2vox()
 
+// not included in public docs
 Niivue.prototype.frac2mm = function (frac) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to object space in millimeters
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
@@ -2457,6 +2682,7 @@ Niivue.prototype.frac2mm = function (frac) {
   return pos;
 }; // frac2mm()
 
+// not included in public docs
 Niivue.prototype.canvasPos2frac = function (canvasPos) {
   let x, y, z;
 
@@ -2512,6 +2738,8 @@ Niivue.prototype.canvasPos2frac = function (canvasPos) {
   return [x, y, z];
 }; // canvas2frac
 
+// not included in public docs
+// note: we also have a "sliceScale" method, which could be confusing
 Niivue.prototype.scaleSlice = function (w, h) {
   let scalePix = this.gl.canvas.clientWidth / w;
   if (h * scalePix > this.gl.canvas.clientHeight)
@@ -2529,6 +2757,7 @@ Niivue.prototype.scaleSlice = function (w, h) {
   return leftTopWidthHeight;
 }; // scaleSlice()
 
+// not included in public docs
 Niivue.prototype.drawScene = function () {
   if (!this.initialized) {
     return; // do not do anything until we are initialized (init will call drawScene).

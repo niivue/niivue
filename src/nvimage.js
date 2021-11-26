@@ -3,6 +3,29 @@ import { v4 as uuidv4 } from "uuid";
 import * as mat from "gl-matrix";
 import * as cmaps from "./cmaps";
 
+/**
+ * query all available color maps that can be applied to volumes
+ * @param {boolean} [sort=true] whether or not to sort the returned array
+ * @returns {array} an array of colormap strings
+ * @example
+ * niivue = new Niivue()
+ * colormaps = niivue.colorMaps()
+ */
+
+/**
+ * @class NVImage
+ * @description
+ * a NVImage encapsulates some images data and provides methods to query and operate on images
+ * @constructor
+ * @param {array} dataBuffer an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ */
 export var NVImage = function (
   dataBuffer,
   name = "",
@@ -87,6 +110,7 @@ export var NVImage = function (
   this.calMinMax();
 };
 
+// not included in public docs
 NVImage.prototype.calculateRAS = function () {
   //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
@@ -201,6 +225,7 @@ NVImage.prototype.calculateRAS = function () {
   this.toRAS = mat.mat4.clone(rotM);
 };
 
+// not included in public docs
 NVImage.prototype.vox2mm = function (XYZ, mtx) {
   let sform = mat.mat4.clone(mtx);
   mat.mat4.transpose(sform, sform);
@@ -210,12 +235,7 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
   return pos3;
 }; // vox2mm()
 
-/**
- * test if two arrays have equal values for each element
- * @param {Array} a the first array
- * @param {Array} b the second array
- * @example Niivue.arrayEquals(a, b)
- */
+// not included in public docs
 NVImage.prototype.arrayEquals = function (a, b) {
   return (
     Array.isArray(a) &&
@@ -225,6 +245,14 @@ NVImage.prototype.arrayEquals = function (a, b) {
   );
 };
 
+/**
+ * query all available color maps that can be applied to volumes
+ * @param {boolean} [sort=true] whether or not to sort the returned array
+ * @returns {array} an array of colormap strings
+ * @example
+ * myImage = NVImage.loadFromUrl('./someURL/someFile.nii.gz')
+ * colormaps = myImage.colorMaps()
+ */
 NVImage.prototype.colorMaps = function (sort = true) {
   let cm = [];
   for (const [key] of Object.entries(cmaps)) {
@@ -233,6 +261,7 @@ NVImage.prototype.colorMaps = function (sort = true) {
   return sort === true ? cm.sort() : cm;
 };
 
+// not included in public docs
 // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
@@ -378,11 +407,26 @@ NVImage.prototype.calMinMax = function () {
   return [pct2, pct98, mnScale, mxScale];
 }; //calMinMaxCore
 
+// not included in public docs
 NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
   if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
   return raw * hdr.scl_slope + hdr.scl_inter;
 };
 
+/**
+ * factory function to load and return a new NVImage instance from a given URL
+ * @param {string} url the resolvable URL pointing to a nifti image to load
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
+ */
 NVImage.loadFromUrl = async function (
   url,
   name = "",
@@ -422,6 +466,7 @@ NVImage.loadFromUrl = async function (
   return nvimage;
 };
 
+// not included in public docs
 // loading Nifti files
 NVImage.readFileAsync = function (file) {
   return new Promise((resolve, reject) => {
@@ -437,6 +482,20 @@ NVImage.readFileAsync = function (file) {
   });
 };
 
+/**
+ * factory function to load and return a new NVImage instance from a file in the browser
+ * @param {string} file the file object
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ */
 NVImage.loadFromFile = async function (
   file,
   name = "",
@@ -466,6 +525,13 @@ NVImage.loadFromFile = async function (
   return nvimage;
 };
 
+/**
+ * make a clone of a NVImage instance and return a new NVImage
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * clonedImage = myImage.clone()
+ */
 NVImage.prototype.clone = function () {
   let clonedImage = new NVImage();
   clonedImage.hdr = Object.assign({}, this.hdr);
@@ -475,10 +541,24 @@ NVImage.prototype.clone = function () {
   return clonedImage;
 };
 
+/**
+ * fill a NVImage instance with zeros for the image data
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * clonedImageWithZeros = myImage.clone().zeroImage()
+ */
 NVImage.prototype.zeroImage = function () {
   this.img.fill(0);
 };
 
+/**
+ * a factory function to make a zero filled image given a NVImage as a reference
+ * @param {NVImage} nvImage an existing NVImage as a reference
+ * @returns {NVImage} returns a new NVImage filled with zeros for the image data
+ * @example
+ * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * newZeroImage = NVImage.zerosLike(myImage)
+ */
 NVImage.zerosLike = function (nvImage) {
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
