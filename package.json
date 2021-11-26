@@ -6,18 +6,18 @@
   "unpkg": "./dist/niivue.umd.js",
   "scripts": {
     "dev": "vite",
-    "build": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test && npm run copy-demo && npm run copy-doc",
-    "build-win": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test-win && npm run copy-demo-win && npm run copy-doc-win",
+    "build": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test && npm run copy-demo",
+    "build-win": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
     "demo": "npm run build && npx http-server demos/",
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
     "copy-demo": "cp ./dist/niivue.umd.js ./demos/niivue.umd.js",
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\niivue.umd.js",
-    "copy-doc": "cp -r ./demos/* ./docs/",
-    "copy-doc-win": "robocopy .\\demos .\\docs /E",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
+    "docs": "npx jsdoc --readme ./README.md -d devdocs -t ./node_modules/clean-jsdoc-theme/ src/",
+    "serve-docs": "npx http-server devdocs",
     "pub": "npm publish --access public"
   },
   "files": [
@@ -48,12 +48,14 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "clean-jsdoc-theme": "^3.2.10",
     "eslint": "^8.2.0",
     "express": "^4.17.1",
     "http-server": "^0.12.3",
     "jest": "^27.0.6",
     "jest-image-snapshot": "^4.5.1",
     "jest-puppeteer": "^5.0.4",
+    "jsdoc": "^3.6.7",
     "prettier": "^2.3.2",
     "puppeteer": "^9.1.1",
     "vite": "^2.6.14"
