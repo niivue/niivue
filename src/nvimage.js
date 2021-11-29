@@ -571,7 +571,7 @@ NVImage.zerosLike = function (nvImage) {
  * @param {nifti.NIFTI1} header nifti-1 header to convert
  * @returns {ArrayBuffer}
  */
- nifti.NIFTI1.convertNiftiOneHeaderToArrayBuffer = function(header) {
+nifti.NIFTI1.convertNiftiOneHeaderToArrayBuffer = function (header) {
   const SHORT_SIZE = 2;
   const FLOAT32_SIZE = 4;
 
@@ -579,22 +579,22 @@ NVImage.zerosLike = function (nvImage) {
   let view = new DataView(byteArray.buffer);
   // sizeof_hdr
   view.setInt32(0, 348, header.littleEndian);
-  
+
   // data_type, db_name, extents, session_error, regular are not used
 
   // dim_info
   view.setUint8(39, header.dim_info);
 
   // dims
-  for(let i = 0; i < 8; i++) {
-      view.setUint16(40 + SHORT_SIZE * i, header.dims[i], header.littleEndian);
+  for (let i = 0; i < 8; i++) {
+    view.setUint16(40 + SHORT_SIZE * i, header.dims[i], header.littleEndian);
   }
 
   // intent_p1, intent_p2, intent_p3
   view.setFloat32(56, header.intent_p1, header.littleEndian);
   view.setFloat32(60, header.intent_p2, header.littleEndian);
   view.setFloat32(64, header.intent_p3, header.littleEndian);
-  
+
   // intent_code, datatype, bitpix, slice_start
   view.setInt16(68, header.intent_code, header.littleEndian);
   view.setInt16(70, header.datatypeCode, header.littleEndian);
@@ -602,8 +602,12 @@ NVImage.zerosLike = function (nvImage) {
   view.setInt16(74, header.slice_start, header.littleEndian);
 
   // pixdim[8], vox_offset, scl_slope, scl_inter
-  for(let i = 0; i < 8; i++) {
-      view.setFloat32(76 + FLOAT32_SIZE * i,  header.pixDims[i], header.littleEndian);
+  for (let i = 0; i < 8; i++) {
+    view.setFloat32(
+      76 + FLOAT32_SIZE * i,
+      header.pixDims[i],
+      header.littleEndian
+    );
   }
   view.setFloat32(108, header.vox_offset, header.littleEndian);
   view.setFloat32(112, header.scl_slope, header.littleEndian);
@@ -611,19 +615,19 @@ NVImage.zerosLike = function (nvImage) {
 
   // slice_end
   view.setInt16(120, header.slice_end, header.littleEndian);
-  
+
   // slice_code, xyzt_units
   view.setUint8(122, header.slice_code);
   view.setUint8(123, header.xyzt_units);
-  
+
   // cal_max, cal_min, slice_duration, toffset
   view.setFloat32(124, header.cal_max, header.littleEndian);
   view.setFloat32(128, header.cal_min, header.littleEndian);
   view.setFloat32(132, header.slice_duration, header.littleEndian);
   view.setFloat32(136, header.toffset, header.littleEndian);
-  
+
   // glmax, glmin are unused
-  
+
   // descrip and aux_file
   byteArray.set(Buffer.from(header.description), 148);
   byteArray.set(Buffer.from(header.aux_file), 228);
@@ -631,7 +635,7 @@ NVImage.zerosLike = function (nvImage) {
   // qform_code, sform_code
   view.setInt16(252, header.qform_code, header.littleEndian);
   view.setInt16(254, header.sform_code, header.littleEndian);
-  
+
   // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
   view.setFloat32(256, header.quatern_b, header.littleEndian);
   view.setFloat32(260, header.quatern_c, header.littleEndian);
@@ -641,10 +645,10 @@ NVImage.zerosLike = function (nvImage) {
   view.setFloat32(276, header.qoffset_z, header.littleEndian);
   const flattened = header.affine.flat();
   // we only want the first three rows
-  for(let i = 0; i < 12; i++) {
-      view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i]);
+  for (let i = 0; i < 12; i++) {
+    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i]);
   }
-  
+
   // intent_name and magic
   byteArray.set(Buffer.from(header.intent_name), 328);
   byteArray.set(Buffer.from(header.magic), 344);
@@ -657,7 +661,7 @@ NVImage.zerosLike = function (nvImage) {
  * @param {nifti.NIFTI2} header nifti2 header to convert
  * @returns {ArrayBuffer}
  */
- NVImage.convertNiftiTwoHeaderToArrayBuffer = function(header) {
+NVImage.convertNiftiTwoHeaderToArrayBuffer = function (header) {
   const INT64_SIZE = 8;
   const DOUBLE_SIZE = 8;
 
@@ -665,7 +669,7 @@ NVImage.zerosLike = function (nvImage) {
   let view = new DataView(byteArray.buffer);
   // sizeof_hdr
   view.setInt32(0, 540, header.littleEndian);
-  
+
   // magic
   byteArray.set(Buffer.from(header.magic), 4);
 
@@ -676,8 +680,12 @@ NVImage.zerosLike = function (nvImage) {
   view.setInt16(14, header.numBitsPerVoxel, header.littleEndian);
 
   // dim[8]
-  for(let i = 0; i < 8; i++) {
-      view.setBigInt64(16 + INT64_SIZE * i, BigInt(header.dims[i]), header.littleEndian);
+  for (let i = 0; i < 8; i++) {
+    view.setBigInt64(
+      16 + INT64_SIZE * i,
+      BigInt(header.dims[i]),
+      header.littleEndian
+    );
   }
 
   // intent_p1
@@ -690,8 +698,12 @@ NVImage.zerosLike = function (nvImage) {
   view.setFloat64(96, header.intent_p3, header.littleEndian);
 
   // pixdim
-  for(let i = 0; i < 8; i++) {
-      view.setFloat64(104 + DOUBLE_SIZE * i, header.pixDims[i], header.littleEndian);
+  for (let i = 0; i < 8; i++) {
+    view.setFloat64(
+      104 + DOUBLE_SIZE * i,
+      header.pixDims[i],
+      header.littleEndian
+    );
   }
 
   // vox_offset
@@ -721,9 +733,9 @@ NVImage.zerosLike = function (nvImage) {
   // slice end
   view.setBigInt64(232, BigInt(header.slice_end), header.littleEndian);
 
-  // descrip  
+  // descrip
   byteArray.set(Buffer.from(header.description), 240);
-  
+
   // aux_file
   byteArray.set(Buffer.from(header.aux_file), 320);
 
@@ -738,24 +750,24 @@ NVImage.zerosLike = function (nvImage) {
 
   // quatern_c
   view.setFloat64(360, header.quatern_c, header.littleEndian);
- 
+
   // quatern_d
   view.setFloat64(368, header.quatern_d, header.littleEndian);
 
   // qoffset_x
   view.setFloat64(376, header.qoffset_x, header.littleEndian);
-  
+
   // qoffset_y
   view.setFloat64(384, header.qoffset_y, header.littleEndian);
 
   // qoffset_z
   view.setFloat64(392, header.qoffset_z, header.littleEndian);
-  
+
   // srow_x[4], srow_y[4], and srow_z[4]
   const flattened = header.affine.flat();
   // we only want the first three rows
-  for(let i = 0; i < 12; i++) {
-      view.setFloat64(400 + DOUBLE_SIZE * i, flattened[i], header.littleEndian);
+  for (let i = 0; i < 12; i++) {
+    view.setFloat64(400 + DOUBLE_SIZE * i, flattened[i], header.littleEndian);
   }
 
   // slice_code
@@ -769,4 +781,4 @@ NVImage.zerosLike = function (nvImage) {
   // dim_info
   view.setUint8(524, header.dim_info);
   return byteArray.buffer;
-}
+};

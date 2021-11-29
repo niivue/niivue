@@ -29,6 +29,7 @@ import { NVImage } from "./nvimage.js";
 export { NVImage } from "./nvimage";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
+import createModule from "./process-image";
 
 /**
  * @class Niivue
@@ -1354,6 +1355,15 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
+Niivue.prototype.initWasm = async function () {
+  Module = await createModule();
+  Niivue.prototype.processNiftiImage = Module.cwrap(
+    "ProcessNiftiImage",
+    "number",
+    ["array", "string"]
+  );
+};
+
 // not included in public docs
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
@@ -1364,6 +1374,8 @@ Niivue.prototype.init = async function () {
   // console.log("gpu vendor: ", vendor);
   // console.log("gpu renderer: ", renderer);
   // await this.loadFont()
+  await this.initWasm();
+
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
