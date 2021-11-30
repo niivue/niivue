@@ -566,12 +566,21 @@ NVImage.zerosLike = function (nvImage) {
   return zeroClone;
 };
 
+String.prototype.getBytes = function () {
+  let bytes = [];
+  for (var i = 0; i < this.length; i++) {
+    bytes.push(this.charCodeAt(i));
+  }
+
+  return bytes;
+};
+
 /**
  * Returns nifti-1 header as ArrayBuffer.
  * @param {nifti.NIFTI1} header nifti-1 header to convert
  * @returns {ArrayBuffer}
  */
-nifti.NIFTI1.convertNiftiOneHeaderToArrayBuffer = function (header) {
+NVImage.convertNiftiOneHeaderToArrayBuffer = function (header) {
   const SHORT_SIZE = 2;
   const FLOAT32_SIZE = 4;
 
@@ -629,8 +638,8 @@ nifti.NIFTI1.convertNiftiOneHeaderToArrayBuffer = function (header) {
   // glmax, glmin are unused
 
   // descrip and aux_file
-  byteArray.set(Buffer.from(header.description), 148);
-  byteArray.set(Buffer.from(header.aux_file), 228);
+  byteArray.set(header.description.getBytes(), 148);
+  byteArray.set(header.aux_file.getBytes(), 228);
 
   // qform_code, sform_code
   view.setInt16(252, header.qform_code, header.littleEndian);
@@ -650,8 +659,8 @@ nifti.NIFTI1.convertNiftiOneHeaderToArrayBuffer = function (header) {
   }
 
   // intent_name and magic
-  byteArray.set(Buffer.from(header.intent_name), 328);
-  byteArray.set(Buffer.from(header.magic), 344);
+  byteArray.set(header.intent_name.getBytes(), 328);
+  byteArray.set(header.magic.getBytes(), 344);
 
   return byteArray.buffer;
 };
@@ -671,7 +680,7 @@ NVImage.convertNiftiTwoHeaderToArrayBuffer = function (header) {
   view.setInt32(0, 540, header.littleEndian);
 
   // magic
-  byteArray.set(Buffer.from(header.magic), 4);
+  byteArray.set(header.magic.getBytes(), 4);
 
   // datatype
   view.setInt16(12, header.datatypeCode, header.littleEndian);
@@ -777,7 +786,7 @@ NVImage.convertNiftiTwoHeaderToArrayBuffer = function (header) {
   //  intent_code
   view.setInt32(504, header.intent_code, header.littleEndian);
   //  intent_name
-  byteArray.set(Buffer.from(header.intent_name), 508);
+  byteArray.set(header.intent_name.getBytes(), 508);
   // dim_info
   view.setUint8(524, header.dim_info);
   return byteArray.buffer;
