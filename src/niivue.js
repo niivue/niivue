@@ -29,8 +29,11 @@ import { NVImage } from "./nvimage.js";
 export { NVImage } from "./nvimage";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-import createModule from "./process-image";
+// import createModule from "./process-image";
+import init from "./process-image.wasm";
+import nifti from "nifti-reader-js";
 
+var Module;
 /**
  * @class Niivue
  * @description
@@ -1330,13 +1333,65 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText("drag and drop");
 }; // initText()
 
+Niivue.prototype.processImage = function (imageIndex, command) {
+  // clone so we can update the voxel offset
+  let image = this.volumes[imageIndex].clone();
+  let byteArray;
+  let ret = -1;
+
+  // const PAGE_SIZE = 65536;
+  // determine if this is a nifti-1 or nifti-2 image
+  if (image.hdr instanceof nifti.NIFTI2) {
+    throw new Error("nifti-2 not handled");
+  } else {
+    image.hdr.vox_offset = nifti.NIFTI1.MAGIC_COOKIE;
+    const headerBytes = NVImage.convertNiftiOneHeaderToArrayBuffer(image.hdr);
+    const headerView = new Uint8Array(headerBytes);
+    // const memorySize = headerBytes.length + image.img.buffer.length;
+    const pageCount = 1000; //memorySize / PAGE_SIZE;
+    byteArray = new WebAssembly.Memory({
+      initial: pageCount,
+      maximum: pageCount * 1.5,
+      shared: true,
+    });
+    // this.wasmMemory.grow(2000);
+    const ta = new Uint8Array(this.wasmMemory.buffer);
+    console.log("header bytes");
+    console.log(headerBytes);
+    let i = 0;
+    for (; i < headerView.length; i++) {
+      // Atomics.store(ta, i, headerView[i]);
+      ta[i] = headerView[i];
+    }
+
+    const imageView = new Uint8Array(image.img.buffer);
+    for (let j = 0; j < imageView.length; j++) {
+      Atomics.store(ta, i + j, imageView[j]);
+    }
+
+    console.log(image);
+
+    console.log("byte array before processing");
+    console.log(byteArray);
+    console.log(command);
+    ret = this.processNiftiImage(
+      byteArray,
+      headerView.length + imageView.length,
+      command
+    );
+    console.log(ret);
+    console.log("byte array after processing");
+    console.log(byteArray);
+  }
+
+  return ret;
+};
+
 Niivue.prototype.initWasm = async function () {
-  Module = await createModule();
-  Niivue.prototype.processNiftiImage = Module.cwrap(
-    "ProcessNiftiImage",
-    "number",
-    ["array", "string"]
-  );
+  let exports = await init();
+  Niivue.prototype.processNiftiImage = exports.ProcessNiftiImage;
+  this.wasmMemory = exports.memory;
+  console.log(exports);
 };
 
 // not included in public docs
