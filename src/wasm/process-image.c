@@ -3,8 +3,12 @@
 #include <stdlib.h>
 #include <emscripten.h>
 
+#define NIFTI_1_MAGIC 348
+#define NIFTI_2_MAGIC 540
+
 
 int InvertFloat32Image(float *, size_t);
+int InvertUint8Image(uint8_t *, size_t);
 int ProcessNiftiOneImage(nifti_1_header *, size_t, char *);
 int ProcessNiftiTwoImage(nifti_2_header *, size_t, char *);
 
@@ -23,27 +27,35 @@ inline uint32_t Reverse32(uint32_t value)
 }
 
 EMSCRIPTEN_KEEPALIVE
-int ProcessNiftiImage(char *nifti_byte_array, size_t file_size, char *options) {
+int ProcessNiftiImage(uint8_t *nifti_byte_array, size_t file_size, char *options) {
   int size_of_header = *(int *)nifti_byte_array; 
   int swapped = Reverse32(size_of_header);
-  if(size_of_header == 348 || swapped == 348) {
+  if(size_of_header == NIFTI_1_MAGIC || swapped == NIFTI_1_MAGIC) {
     return ProcessNiftiOneImage((nifti_1_header *)nifti_byte_array, file_size, options);
   }
-  else if(size_of_header == 540) {
+  else if(size_of_header == NIFTI_2_MAGIC) {
     ProcessNiftiTwoImage((nifti_2_header *)nifti_byte_array, file_size, options);
   }
-  return size_of_header;
+  return 7;//size_of_header;
 }
 
 int ProcessNiftiOneImage(nifti_1_header *header, size_t file_size, char *options) {
   size_t offset = header->vox_offset;
   size_t array_length = file_size - offset; 
-  if(header->datatype != DT_FLOAT) {
-    return -1;
-  }
+  int swapped = Reverse32(header->datatype); 
+  
   char *ptr = (char *)header;
-  InvertFloat32Image((float *)&ptr[offset], array_length); 
-  return 11;
+  switch(header->datatype) {
+    case DT_FLOAT32:
+      InvertFloat32Image((float *)&ptr[offset], array_length); 
+      break;
+    case DT_UINT8:
+      InvertUint8Image((uint8_t *)&ptr[offset], array_length);
+      break;
+  }
+  
+  
+  return header->datatype;
 }
 
 int ProcessNiftiTwoImage(nifti_2_header *header, size_t file_size, char *options) {
@@ -52,6 +64,16 @@ int ProcessNiftiTwoImage(nifti_2_header *header, size_t file_size, char *options
 
 int InvertFloat32Image(float *image, size_t length) {
   float mx = image[0];
+	for (int i = 0; i < length; i++)
+		if (image[i] > mx) mx = image[i];
+	for (int i = 0; i < length; ++i) {
+		image[i] = mx - image[i];
+	}
+	return 0;
+}
+
+int InvertUint8Image(uint8_t *image, size_t length) {
+  uint8_t mx = image[0];
 	for (int i = 0; i < length; i++)
 		if (image[i] > mx) mx = image[i];
 	for (int i = 0; i < length; ++i) {

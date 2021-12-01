@@ -1380,33 +1380,58 @@ Niivue.prototype.processImage = function (imageIndex, command) {
       shared: true,
     });
     // this.wasmMemory.grow(2000);
-    const ta = new Uint8Array(this.wasmMemory.buffer);
-    console.log("header bytes");
-    console.log(headerBytes);
+    let ta = new Uint8Array(this.wasmMemory.buffer);
+
     let i = 0;
     for (; i < headerView.length; i++) {
-      // Atomics.store(ta, i, headerView[i]);
       ta[i] = headerView[i];
     }
 
     const imageView = new Uint8Array(image.img.buffer);
     for (let j = 0; j < imageView.length; j++) {
-      Atomics.store(ta, i + j, imageView[j]);
+      ta[i + j] = imageView[j];
     }
 
-    console.log(image);
-
-    console.log("byte array before processing");
-    console.log(byteArray);
-    console.log(command);
     ret = this.processNiftiImage(
       byteArray,
       headerView.length + imageView.length,
       command
     );
-    console.log(ret);
-    console.log("byte array after processing");
-    console.log(byteArray);
+
+    ta = new Uint8Array(this.wasmMemory.buffer);
+    ta = ta.slice(headerView.length);
+    switch (image.hdr.datatypeCode) {
+      case image.DT_UNSIGNED_CHAR:
+        this.volumes[imageIndex].img = ta;
+        break;
+      case image.DT_SIGNED_SHORT:
+        this.volumes[imageIndex].img = new Int16Array(ta);
+        break;
+      case image.DT_FLOAT:
+        this.volumes[imageIndex].img = new Float32Array(ta);
+        break;
+      case image.DT_DOUBLE:
+        this.volumes[imageIndex].img = new Float64Array(ta);
+        break;
+      case image.DT_RGB:
+        this.volumes[imageIndex].img = new Uint8Array(ta);
+        break;
+      case image.DT_UINT16:
+        this.volumes[imageIndex].img = new Uint16Array(ta);
+        break;
+      case image.DT_RGBA32:
+        this.volumes[imageIndex].img = new Uint8Array(ta);
+        break;
+      default:
+        throw "datatype " + image.hdr.datatypeCode + " not supported";
+    }
+
+    this.refreshLayers(
+      this.volumes[imageIndex],
+      imageIndex,
+      this.volumes.length
+    );
+    this.drawScene();
   }
 
   return ret;

@@ -17,9 +17,10 @@
         text-decoration: none;
         display: inline-block;
         font-size: 16px;
-        margin: 4px 2px;
         transition-duration: 0.4s;
         cursor: pointer;
+        margin:0 auto;
+        display:block;
       }
 
       .invert-button {
@@ -44,7 +45,7 @@
         Invert image with WASM
       </h1>
       <p>
-        The most basic usage of NiiVue is to display a single image in the canvas. 
+        Use image processing WASM to invert the image. 
       </p>
       <p>
         <h3>Controls</h3>
@@ -62,7 +63,7 @@
       <div id="demo1" style="width:90%; height:400px;">
         <canvas id="gl1" height=480 width=640>
         </canvas>
-        <button class="invert-button" onclick="process()"></button>
+        <button class="invert-button" onclick="process()">Invert</button>
       </div>
     </section>
     <script src="../niivue.umd.js">
