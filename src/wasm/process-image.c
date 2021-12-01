@@ -36,14 +36,13 @@ int ProcessNiftiImage(uint8_t *nifti_byte_array, size_t file_size, char *options
   else if(size_of_header == NIFTI_2_MAGIC) {
     ProcessNiftiTwoImage((nifti_2_header *)nifti_byte_array, file_size, options);
   }
-  return 7;//size_of_header;
+  return 0;
 }
 
 int ProcessNiftiOneImage(nifti_1_header *header, size_t file_size, char *options) {
   size_t offset = header->vox_offset;
   size_t array_length = file_size - offset; 
-  int swapped = Reverse32(header->datatype); 
-  
+    
   char *ptr = (char *)header;
   switch(header->datatype) {
     case DT_FLOAT32:
@@ -55,7 +54,7 @@ int ProcessNiftiOneImage(nifti_1_header *header, size_t file_size, char *options
   }
   
   
-  return header->datatype;
+  return 0;
 }
 
 int ProcessNiftiTwoImage(nifti_2_header *header, size_t file_size, char *options) {
