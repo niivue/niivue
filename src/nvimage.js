@@ -438,6 +438,7 @@ NVImage.loadFromUrl = async function (
   visible = true
 ) {
   let response = await fetch(url);
+
   let nvimage = null;
 
   if (!response.ok) {

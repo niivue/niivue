@@ -38,7 +38,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## existing html page
 ```html
-<script src="https://unpkg.com/@niivue/niivue@0.12.1/dist/niivue.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.12.2/dist/niivue.umd.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 
