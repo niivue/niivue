@@ -140,6 +140,8 @@ export const Niivue = function (options = {}) {
   this.clipPlaneObject3D = null;
   this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
+  this.scene.loading$ = new Subject(); // whether or not the scene is loading
+  this.loadingText = "drag and drop to start";
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -162,6 +164,7 @@ export const Niivue = function (options = {}) {
   // maping of keys (event strings) to rxjs subjects
   this.eventsToSubjects = {
     location: this.scene.location$,
+    loading: this.scene.loading$,
   };
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
@@ -1115,12 +1118,22 @@ Niivue.prototype.cloneVolume = function (index) {
  * niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
  */
 Niivue.prototype.loadVolumes = async function (volumeList) {
+  this.on("loading", (isLoading) => {
+    if (isLoading) {
+      this.loadingText = "loading...";
+      this.drawScene();
+    } else {
+      this.loadingText = "drag and drop to start";
+    }
+  });
   if (!this.initialized) {
     await this.init();
   }
   this.volumes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+  this.scene.loading$.next(true);
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     let volume = await NVImage.loadFromUrl(
@@ -1130,6 +1143,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       volumeList[i].opacity,
       this.opts.trustCalMinMax
     );
+    this.scene.loading$.next(false);
     this.volumes.push(volume);
     if (i === 0) {
       this.back = volume;
@@ -1326,7 +1340,7 @@ Niivue.prototype.initText = async function () {
   this.fontShader.use(this.gl);
 
   await this.loadDefaultFont();
-  this.drawLoadingText("drag and drop");
+  this.drawLoadingText(this.loadingText);
 }; // initText()
 
 // not included in public docs
@@ -2773,13 +2787,7 @@ Niivue.prototype.drawScene = function () {
   let posString = "";
 
   if (!this.back.dims) {
-    if (this.volumes && this.volumes.length > 0) {
-      // let the user know we are loading
-      this.drawLoadingText("loading");
-    } else {
-      this.drawLoadingText("drag and drop a file to start");
-    }
-    // exit if we have nothing to draw
+    this.drawLoadingText(this.loadingText);
     return;
   }
 
