@@ -1941,6 +1941,20 @@ Niivue.prototype.colorMaps = function (sort = true) {
   return sort === true ? cm.sort() : cm;
 };
 
+/**
+ * update the colormap of an image given its ID
+ * @param {string} id the ID of the NVImage
+ * @param {string} colorMap the name of the colorMap to use
+ * @example
+ * niivue = new Niivue()
+ * niivue.setColorMap(someImage.id, 'red')
+ */
+Niivue.prototype.setColorMap = function (id, colorMap) {
+  let idx = this.getVolumeIndexByID(id);
+  this.volumes[idx].colorMap = colorMap;
+  this.updateGLVolume();
+};
+
 // not included in public docs
 Niivue.prototype.colormapFromKey = function (name) {
   let availMaps = this.colorMaps();
