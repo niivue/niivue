@@ -9,7 +9,7 @@
       section {
         margin: 20px;
       }
-      .invert-button {
+      .process-button {
         border: none;
         color: white;
         padding: 16px 32px;
@@ -23,22 +23,32 @@
         display:block;
       }
 
-      .invert-button {
+      .process-button {
         background-color: white; 
         color: black; 
         border: 2px solid #008CBA;
       }
 
-      .invert-button:hover {
+      .process-button:hover {
         background-color: #008CBA;
         color: white;
       }
 
+      .input-line {
+        margin:auto;
+        text-align: center;
+        padding: 10px;
+      }
+
       #niimath-command {
-        width: 100%;
+        width: 50%;
         text-align: center;
         margin: auto;
-
+        padding: 5px;
+        display: inline;
+      }
+      #add-as-overlay-checkbox {
+        display: inline;
       }
     </style>
   </head>
@@ -49,10 +59,10 @@
 
     <section>
       <h1>
-        Process image with niimath WASM
+        Process image with niimath and WASM
       </h1>
       <p>
-        Use image processing WASM to invert the image. 
+        Use image processing WASM to modify the image or add an overlay. 
       </p>
       <p>
         <h3>Controls</h3>
@@ -70,8 +80,12 @@
       <div id="demo1" style="width:90%; height:400px;">
         <canvas id="gl1" height=480 width=640>
         </canvas>
-        <input id="niimath-command" value="-add 10"/>
-        <button class="invert-button" onclick="process()">Process</button>
+        <div class="input-line">
+        <input id="niimath-command" value="-dehaze 5 -dog 2 3.2"/>
+        <input id="add-as-overlay-checkbox" type="checkbox">
+        <label for="add-as-overlay-checkbox"> Add as overlay</label>
+        </div>
+        <button class="process-button" onclick="process()">Process</button>
       </div>
     </section>
     <script src="../niivue.umd.js">
@@ -79,7 +93,8 @@
     <script>
     function process() {
       let inputElem = document.getElementById("niimath-command")
-      nv1.processImage(0, inputElem.value)
+      let addAsOverlay = document.getElementById("add-as-overlay-checkbox").checked
+      nv1.processImage(0, inputElem.value, addAsOverlay)
     }
      var volumeList1 = [
        // first item is brackground image
