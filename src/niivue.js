@@ -1405,7 +1405,7 @@ Niivue.prototype.processImageOld = function (imageIndex, command) {
 
   return ret;
 };
-Niivue.prototype.processImage = function (imageIndex, cmd) {
+Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
   // clone so we can update the voxel offset
   let image = this.volumes[imageIndex].clone();
   console.log("command is " + cmd);
@@ -1435,42 +1435,7 @@ Niivue.prototype.processImage = function (imageIndex, cmd) {
   let ptr = this.walloc(nvox * bpv);
   this.linearMemory.record_malloc(ptr, nvox * bpv);
   let cimg = new Uint8Array(this.wasmMemory.buffer, ptr, nvox * bpv);
-  console.log("ptr is ");
-  console.log(ptr);
-  let img8 = new Uint8Array(image.img.buffer);
-
-  for (let i = 0; i < img8.length; i++) {
-    cimg[i] = img8[i];
-  }
-  // cimg.set(new Uint8Array(image.img.buffer));
-  let copy = cimg.slice();
-  let allZeros = true;
-  for (let i = 0; i < cimg.length; i++) {
-    if (cimg[i] != 0) {
-      allZeros = false;
-      break;
-    }
-  }
-  console.log("cimg length " + cimg.length);
-
-  if (allZeros) {
-    console.log("cimg all zeros");
-  }
-
-  allZeros = true;
-  for (let i = 0; i < image.img.length; i++) {
-    if (image.img[i] != 0) {
-      allZeros = false;
-      break;
-    }
-  }
-
-  if (allZeros) {
-    console.log("img all zeros");
-  } else {
-    console.log("img not all zeros");
-  }
-  console.log("img length " + image.img.length);
+  cimg.set(new Uint8Array(image.img.buffer));
 
   let ok = this.processNiftiImage(
     ptr,
@@ -1485,166 +1450,72 @@ Niivue.prototype.processImage = function (imageIndex, cmd) {
     dt,
     cptr
   );
+
+  // Unintuitive Solution: renew cimg pointer
+  // https://depth-first.com/articles/2019/10/16/compiling-c-to-webassembly-and-running-it-without-emscripten/
+  cimg = new Uint8Array(this.wasmMemory.buffer, ptr, nvox * bpv);
+
   if (ok != 0) {
     console.log(" -> '", cmd, " generated a fatal error: ", ok);
     return;
   }
 
-  allZeros = true;
-  for (let i = 0; i < cimg.length; i++) {
-    if (cimg[i] != 0) {
-      allZeros = false;
-      break;
-    }
-  }
-  if (allZeros) {
-    console.log("cimg all zeros");
-  } else {
-    console.log("cimg is NOT all zeros");
-  }
-  if (cimg.every((val, index) => val === copy[index])) {
-    console.log("arrays are equal");
-  } else {
-    console.log("arrays are NOT equal");
+  let processedImage = addLayer ? image : this.volumes[imageIndex];
+
+  let isBinaryImage = cmd.toLowerCase().includes("-dog");
+  // deal with binarized image from dog
+  if (isBinaryImage) {
+    cimg = cimg.map((x) => x * 255);
+    processedImage.colorMap = "red";
   }
 
-  let diff = cimg[0] - copy[0];
-  console.log("diff is " + diff);
-  if (cimg.every((val, index) => val === copy[index] + diff)) {
-    console.log("all values have a diff of " + diff);
-  } else {
-    console.log(
-      "cimg bytes per element is " +
-        cimg.BYTES_PER_ELEMENT +
-        " copy bytes per element is " +
-        copy.BYTES_PER_ELEMENT
+  switch (processedImage.hdr.datatypeCode) {
+    case processedImage.DT_UNSIGNED_CHAR:
+      processedImage.img = new Uint8Array(cimg);
+      break;
+    case processedImage.DT_SIGNED_SHORT:
+      processedImage.img = new Int16Array(cimg);
+      break;
+    case processedImage.DT_FLOAT:
+      processedImage.img = new Float32Array(cimg);
+      break;
+    case processedImage.DT_DOUBLE:
+      processedImage.img = new Float64Array(cimg);
+      break;
+    case processedImage.DT_RGB:
+      processedImage.img = new Uint8Array(cimg);
+      break;
+    case processedImage.DT_UINT16:
+      processedImage.img = new Uint16Array(cimg);
+      break;
+    case processedImage.DT_RGBA32:
+      processedImage.img = new Uint8Array(cimg);
+      break;
+    default:
+      throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
+  }
+
+  //free WASM memory
+  this.linearMemory.record_free(cptr);
+  this.wfree(cptr);
+  this.linearMemory.record_free(ptr);
+  this.wfree(ptr);
+
+  // recalculate
+  processedImage.calMinMax();
+  if (addLayer) {
+    this.setVolume(processedImage, this.volumes.length);
+    this.refreshLayers(
+      processedImage,
+      this.volumes.length - 1,
+      this.volumes.length
     );
-
-    console.log("diff length is " + (cimg.length - copy.length));
-    console.log("nvox is " + nvox);
-    let diffCount = 0;
-    console.log("differences are NOT equal");
-    for (let i = 0; i < cimg.length; i++) {
-      if (cimg[i] != copy[i] + diff) {
-        // let secondDiff = cimg[i] - copy[i];
-        // console.log("diff is " + secondDiff + " index is " + i);
-        // break;
-        diffCount++;
-      }
-    }
-    console.log("diff count is " + diffCount);
+  } else {
+    this.refreshLayers(processedImage, imageIndex, this.volumes.length);
   }
+  this.drawScene();
 
-  switch (image.hdr.datatypeCode) {
-    case image.DT_UNSIGNED_CHAR:
-      this.volumes[imageIndex].img = new Uint8Array(cimg);
-      break;
-    case image.DT_SIGNED_SHORT:
-      this.volumes[imageIndex].img = new Int16Array(cimg);
-      break;
-    case image.DT_FLOAT:
-      this.volumes[imageIndex].img = new Float32Array(cimg);
-      break;
-    case image.DT_DOUBLE:
-      this.volumes[imageIndex].img = new Float64Array(cimg);
-      break;
-    case image.DT_RGB:
-      this.volumes[imageIndex].img = new Uint8Array(cimg);
-      break;
-    case image.DT_UINT16:
-      this.volumes[imageIndex].img = new Uint16Array(cimg);
-      break;
-    case image.DT_RGBA32:
-      this.volumes[imageIndex].img = new Uint8Array(cimg);
-      break;
-    default:
-      throw "datatype " + image.hdr.datatypeCode + " not supported";
-  }
-
-  // console.log(image.img);
-
-  // this.refreshLayers(this.volumes[imageIndex], imageIndex, this.volumes.length);
-  // this.drawScene();
   this.updateGLVolume();
-};
-Niivue.prototype.processImageOlder = function (imageIndex, cmd) {
-  // clone so we can update the voxel offset
-  let image = this.volumes[imageIndex].clone();
-  console.log("command is " + cmd);
-
-  const dims = image.hdr.dims;
-  const nx = dims[1]; //number of columns
-  const ny = dims[2]; //number of rows
-  const nz = dims[3]; //number of slices
-  const nt = Math.max(1, dims[4]); //number of volumes
-  const pixDims = image.hdr.pixDims;
-  const dx = pixDims[1]; //space between columns
-  const dy = pixDims[2]; //space between rows
-  const dz = pixDims[3]; //space between slices
-  const dt = pixDims[4]; //time between volumes
-  // let nvox = nx * ny * nz * nt;
-
-  let ta = new Uint8Array(this.wasmMemory.buffer);
-  // ta.set(new Uint8Array(image.img.buffer));
-  let img8 = new Uint8Array(image.img.buffer);
-
-  for (let i = 0; i < img8.length; i++) {
-    ta[i] = img8[i];
-  }
-
-  console.log(ta);
-
-  const ok = this.processNiftiImage(
-    ta.buffer,
-    image.hdr.datatypeCode,
-    nx,
-    ny,
-    nz,
-    nt,
-    dx,
-    dy,
-    dz,
-    dt,
-    cmd
-  );
-
-  console.log(
-    "image is " + image.img.length * image.img.BYTES_PER_ELEMENT + " bytes"
-  );
-  console.log("nvox = " + nx * ny * nz);
-  console.log("ret is " + ok);
-  if (ok != 0) {
-    throw new Error("failure!");
-  }
-
-  switch (image.hdr.datatypeCode) {
-    case image.DT_UNSIGNED_CHAR:
-      this.volumes[imageIndex].img = ta;
-      break;
-    case image.DT_SIGNED_SHORT:
-      this.volumes[imageIndex].img = new Int16Array(ta);
-      break;
-    case image.DT_FLOAT:
-      this.volumes[imageIndex].img = new Float32Array(ta);
-      break;
-    case image.DT_DOUBLE:
-      this.volumes[imageIndex].img = new Float64Array(ta);
-      break;
-    case image.DT_RGB:
-      this.volumes[imageIndex].img = new Uint8Array(ta);
-      break;
-    case image.DT_UINT16:
-      this.volumes[imageIndex].img = new Uint16Array(ta);
-      break;
-    case image.DT_RGBA32:
-      this.volumes[imageIndex].img = new Uint8Array(ta);
-      break;
-    default:
-      throw "datatype " + image.hdr.datatypeCode + " not supported";
-  }
-  this.updateGLVolume();
-  // this.refreshLayers(this.volumes[imageIndex], imageIndex, this.volumes.length);
-  // this.drawScene();
 };
 
 Niivue.prototype.initWasm = async function () {
@@ -1652,6 +1523,7 @@ Niivue.prototype.initWasm = async function () {
   let exports = await init({ env: this.linearMemory.env() });
   Niivue.prototype.processNiftiImage = exports.niimath;
   Niivue.prototype.walloc = exports.walloc;
+  Niivue.prototype.wfree = exports.wfree;
   console.log(Niivue.prototype.processNiftiImage);
   this.wasmMemory = exports.memory;
   console.log(exports);
