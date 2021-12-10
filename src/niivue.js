@@ -49,6 +49,7 @@ import defaultFontMetrics from "./fonts/Roboto-Regular.json";
  * @param {string} [options.clipPlaneHotKey="KeyC"] the keyboard key used to cycle through clip plane orientations. The default is "c"
  * @param {string} [options.viewModeHotKey="KeyV"] the keyboard key used to cycle through view modes. The default is "v"
  * @param {number} [options.keyDebounceTime=50] the keyUp debounce time in milliseconds. The default is 50 ms. You must wait this long before a new hot-key keystroke will be registered by the event listener
+ * @param {boolean} [options.isRadiologicalConvention=false] whether or not to use radiological convention in the display
  * @example
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
@@ -67,6 +68,7 @@ export const Niivue = function (options = {}) {
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
     keyDebounceTime: 50, // default debounce time used in keyup listeners
+    isRadiologicalConvention: false,
   };
 
   this.canvas = null; // the canvas element on the page
@@ -117,7 +119,6 @@ export const Niivue = function (options = {}) {
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.backTexture = [];
   this.objectsToRender3D = [];
-  this.isRadiologicalConvention = false;
   this.volScaleMultiplier = 1;
   this.volScale = [];
   this.vox = [];
@@ -782,11 +783,11 @@ Niivue.prototype.dropListener = async function (e) {
 Niivue.prototype.setRadiologicalConvention = function (
   isRadiologicalConvention
 ) {
-  this.isRadiologicalConvention = isRadiologicalConvention;
+  this.opts.isRadiologicalConvention = isRadiologicalConvention;
 };
 
 Niivue.prototype.getRadiologicalConvention = function () {
-  return this.isRadiologicalConvention;
+  return this.opts.isRadiologicalConvention;
 };
 
 /**
@@ -2366,7 +2367,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
       this.scene.crosshairPos[0],
     ]; //sagittal: width=j, height=k, slice=i
   let isMirrorLR =
-    this.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
+    this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
   this.sliceShader.use(this.gl);
   this.gl.uniform1f(this.sliceShader.uniforms["opacity"], this.backOpacity);
   this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
