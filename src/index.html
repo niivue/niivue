@@ -51,19 +51,19 @@
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module">
-      import {Niivue} from './niivue.js'
+      import { Niivue } from './niivue.js'
       // console.log(Niivue)
       var volumeList1 = [
         // first item is brackground image
         {
-          // url: "./mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: "https://openneuro.org/crn/datasets/ds002328/snapshots/1.0.0/files/sub-01:anat:sub-01_T1w.nii.gz",
+          url: "./mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           colorMap: "gray",
           opacity: 1,
           visible: true,
         }
       ]
       var nv1 = new Niivue()
+      nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
