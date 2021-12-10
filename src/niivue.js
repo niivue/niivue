@@ -32,6 +32,7 @@ import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 // import createModule from "./process-image";
 import init from "./process-image.wasm";
 import nifti from "nifti-reader-js";
+import { LinearMemory } from "./linear-memory.js";
 
 var Module;
 /**
@@ -1358,13 +1359,12 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
-Niivue.prototype.processImage = function (imageIndex, command) {
+Niivue.prototype.processImageOld = function (imageIndex, command) {
   // clone so we can update the voxel offset
   let image = this.volumes[imageIndex].clone();
   let byteArray;
   let ret = -1;
 
-  // const PAGE_SIZE = 65536;
   // determine if this is a nifti-1 or nifti-2 image
   if (image.hdr instanceof nifti.NIFTI2) {
     throw new Error("nifti-2 not handled");
@@ -1372,13 +1372,7 @@ Niivue.prototype.processImage = function (imageIndex, command) {
     image.hdr.vox_offset = nifti.NIFTI1.MAGIC_COOKIE;
     const headerBytes = NVImage.convertNiftiOneHeaderToArrayBuffer(image.hdr);
     const headerView = new Uint8Array(headerBytes);
-    // const memorySize = headerBytes.length + image.img.buffer.length;
-    const pageCount = 1000; //memorySize / PAGE_SIZE;
-    byteArray = new WebAssembly.Memory({
-      initial: pageCount,
-      maximum: pageCount * 1.5,
-      shared: true,
-    });
+
     // this.wasmMemory.grow(2000);
     let ta = new Uint8Array(this.wasmMemory.buffer);
 
@@ -1436,10 +1430,254 @@ Niivue.prototype.processImage = function (imageIndex, command) {
 
   return ret;
 };
+Niivue.prototype.processImage = function (imageIndex, cmd) {
+  // clone so we can update the voxel offset
+  let image = this.volumes[imageIndex].clone();
+  console.log("command is " + cmd);
+
+  const dims = image.hdr.dims;
+  const nx = dims[1]; //number of columns
+  const ny = dims[2]; //number of rows
+  const nz = dims[3]; //number of slices
+  const nt = Math.max(1, dims[4]); //number of volumes
+  const pixDims = image.hdr.pixDims;
+  const dx = pixDims[1]; //space between columns
+  const dy = pixDims[2]; //space between rows
+  const dz = pixDims[3]; //space between slices
+  const dt = pixDims[4]; //time between volumes
+  let bpv = Math.floor(image.hdr.numBitsPerVoxel / 8);
+
+  //allocate WASM null-terminated command string
+  let cptr = this.walloc(cmd.length + 1);
+  this.linearMemory.record_malloc(cptr, cmd.length + 1);
+  let cmdstr = new Uint8Array(cmd.length + 1);
+  for (let i = 0; i < cmd.length; i++) cmdstr[i] = cmd.charCodeAt(i);
+  let cstr = new Uint8Array(this.wasmMemory.buffer, cptr, cmd.length + 1);
+  cstr.set(cmdstr);
+  console.log(cstr);
+  //allocate WASM image data
+  let nvox = nx * ny * nz * nt;
+  let ptr = this.walloc(nvox * bpv);
+  this.linearMemory.record_malloc(ptr, nvox * bpv);
+  let cimg = new Uint8Array(this.wasmMemory.buffer, ptr, nvox * bpv);
+  console.log("ptr is ");
+  console.log(ptr);
+  let img8 = new Uint8Array(image.img.buffer);
+
+  for (let i = 0; i < img8.length; i++) {
+    cimg[i] = img8[i];
+  }
+  // cimg.set(new Uint8Array(image.img.buffer));
+  let copy = cimg.slice();
+  let allZeros = true;
+  for (let i = 0; i < cimg.length; i++) {
+    if (cimg[i] != 0) {
+      allZeros = false;
+      break;
+    }
+  }
+  console.log("cimg length " + cimg.length);
+
+  if (allZeros) {
+    console.log("cimg all zeros");
+  }
+
+  allZeros = true;
+  for (let i = 0; i < image.img.length; i++) {
+    if (image.img[i] != 0) {
+      allZeros = false;
+      break;
+    }
+  }
+
+  if (allZeros) {
+    console.log("img all zeros");
+  } else {
+    console.log("img not all zeros");
+  }
+  console.log("img length " + image.img.length);
+
+  let ok = this.processNiftiImage(
+    ptr,
+    image.hdr.datatypeCode,
+    nx,
+    ny,
+    nz,
+    nt,
+    dx,
+    dy,
+    dz,
+    dt,
+    cptr
+  );
+  if (ok != 0) {
+    console.log(" -> '", cmd, " generated a fatal error: ", ok);
+    return;
+  }
+
+  allZeros = true;
+  for (let i = 0; i < cimg.length; i++) {
+    if (cimg[i] != 0) {
+      allZeros = false;
+      break;
+    }
+  }
+  if (allZeros) {
+    console.log("cimg all zeros");
+  } else {
+    console.log("cimg is NOT all zeros");
+  }
+  if (cimg.every((val, index) => val === copy[index])) {
+    console.log("arrays are equal");
+  } else {
+    console.log("arrays are NOT equal");
+  }
+
+  let diff = cimg[0] - copy[0];
+  console.log("diff is " + diff);
+  if (cimg.every((val, index) => val === copy[index] + diff)) {
+    console.log("all values have a diff of " + diff);
+  } else {
+    console.log(
+      "cimg bytes per element is " +
+        cimg.BYTES_PER_ELEMENT +
+        " copy bytes per element is " +
+        copy.BYTES_PER_ELEMENT
+    );
+
+    console.log("diff length is " + (cimg.length - copy.length));
+    console.log("nvox is " + nvox);
+    let diffCount = 0;
+    console.log("differences are NOT equal");
+    for (let i = 0; i < cimg.length; i++) {
+      if (cimg[i] != copy[i] + diff) {
+        // let secondDiff = cimg[i] - copy[i];
+        // console.log("diff is " + secondDiff + " index is " + i);
+        // break;
+        diffCount++;
+      }
+    }
+    console.log("diff count is " + diffCount);
+  }
+
+  switch (image.hdr.datatypeCode) {
+    case image.DT_UNSIGNED_CHAR:
+      this.volumes[imageIndex].img = new Uint8Array(cimg);
+      break;
+    case image.DT_SIGNED_SHORT:
+      this.volumes[imageIndex].img = new Int16Array(cimg);
+      break;
+    case image.DT_FLOAT:
+      this.volumes[imageIndex].img = new Float32Array(cimg);
+      break;
+    case image.DT_DOUBLE:
+      this.volumes[imageIndex].img = new Float64Array(cimg);
+      break;
+    case image.DT_RGB:
+      this.volumes[imageIndex].img = new Uint8Array(cimg);
+      break;
+    case image.DT_UINT16:
+      this.volumes[imageIndex].img = new Uint16Array(cimg);
+      break;
+    case image.DT_RGBA32:
+      this.volumes[imageIndex].img = new Uint8Array(cimg);
+      break;
+    default:
+      throw "datatype " + image.hdr.datatypeCode + " not supported";
+  }
+
+  // console.log(image.img);
+
+  // this.refreshLayers(this.volumes[imageIndex], imageIndex, this.volumes.length);
+  // this.drawScene();
+  this.updateGLVolume();
+};
+Niivue.prototype.processImageOlder = function (imageIndex, cmd) {
+  // clone so we can update the voxel offset
+  let image = this.volumes[imageIndex].clone();
+  console.log("command is " + cmd);
+
+  const dims = image.hdr.dims;
+  const nx = dims[1]; //number of columns
+  const ny = dims[2]; //number of rows
+  const nz = dims[3]; //number of slices
+  const nt = Math.max(1, dims[4]); //number of volumes
+  const pixDims = image.hdr.pixDims;
+  const dx = pixDims[1]; //space between columns
+  const dy = pixDims[2]; //space between rows
+  const dz = pixDims[3]; //space between slices
+  const dt = pixDims[4]; //time between volumes
+  // let nvox = nx * ny * nz * nt;
+
+  let ta = new Uint8Array(this.wasmMemory.buffer);
+  // ta.set(new Uint8Array(image.img.buffer));
+  let img8 = new Uint8Array(image.img.buffer);
+
+  for (let i = 0; i < img8.length; i++) {
+    ta[i] = img8[i];
+  }
+
+  console.log(ta);
+
+  const ok = this.processNiftiImage(
+    ta.buffer,
+    image.hdr.datatypeCode,
+    nx,
+    ny,
+    nz,
+    nt,
+    dx,
+    dy,
+    dz,
+    dt,
+    cmd
+  );
+
+  console.log(
+    "image is " + image.img.length * image.img.BYTES_PER_ELEMENT + " bytes"
+  );
+  console.log("nvox = " + nx * ny * nz);
+  console.log("ret is " + ok);
+  if (ok != 0) {
+    throw new Error("failure!");
+  }
+
+  switch (image.hdr.datatypeCode) {
+    case image.DT_UNSIGNED_CHAR:
+      this.volumes[imageIndex].img = ta;
+      break;
+    case image.DT_SIGNED_SHORT:
+      this.volumes[imageIndex].img = new Int16Array(ta);
+      break;
+    case image.DT_FLOAT:
+      this.volumes[imageIndex].img = new Float32Array(ta);
+      break;
+    case image.DT_DOUBLE:
+      this.volumes[imageIndex].img = new Float64Array(ta);
+      break;
+    case image.DT_RGB:
+      this.volumes[imageIndex].img = new Uint8Array(ta);
+      break;
+    case image.DT_UINT16:
+      this.volumes[imageIndex].img = new Uint16Array(ta);
+      break;
+    case image.DT_RGBA32:
+      this.volumes[imageIndex].img = new Uint8Array(ta);
+      break;
+    default:
+      throw "datatype " + image.hdr.datatypeCode + " not supported";
+  }
+  this.updateGLVolume();
+  // this.refreshLayers(this.volumes[imageIndex], imageIndex, this.volumes.length);
+  // this.drawScene();
+};
 
 Niivue.prototype.initWasm = async function () {
-  let exports = await init();
-  Niivue.prototype.processNiftiImage = exports.ProcessNiftiImage;
+  this.linearMemory = new LinearMemory({ initial: 2048, maximum: 2048 });
+  let exports = await init({ env: this.linearMemory.env() });
+  Niivue.prototype.processNiftiImage = exports.niimath;
+  Niivue.prototype.walloc = exports.walloc;
+  console.log(Niivue.prototype.processNiftiImage);
   this.wasmMemory = exports.memory;
   console.log(exports);
 };
