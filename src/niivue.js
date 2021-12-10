@@ -779,7 +779,9 @@ Niivue.prototype.dropListener = async function (e) {
   }
 };
 
-Niivue.prototype.setRadiologicalConvention = function (isRadiologicalConvention) {
+Niivue.prototype.setRadiologicalConvention = function (
+  isRadiologicalConvention
+) {
   this.isRadiologicalConvention = isRadiologicalConvention;
 };
 
