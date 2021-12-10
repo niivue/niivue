@@ -779,6 +779,14 @@ Niivue.prototype.dropListener = async function (e) {
   }
 };
 
+Niivue.prototype.setRadiologicalConvention = function (isRadiologicalConvention) {
+  this.isRadiologicalConvention = isRadiologicalConvention;
+};
+
+Niivue.prototype.getRadiologicalConvention = function () {
+  return this.isRadiologicalConvention;
+};
+
 /**
  * add a new volume to the canvas
  * @param {NVImage} volume the new volume to add to the canvas

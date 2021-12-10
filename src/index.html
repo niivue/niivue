@@ -51,7 +51,7 @@
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module">
-      import {Niivue} from './niivue.js'
+      import { Niivue } from './niivue.js'
       // console.log(Niivue)
       var volumeList1 = [
         // first item is brackground image
@@ -64,6 +64,7 @@
         }
       ]
       var nv1 = new Niivue()
+      nv1.setRadiologicalConvention(true)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
