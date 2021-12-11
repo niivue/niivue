@@ -1357,7 +1357,6 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
-
 Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
   // clone so we can update the voxel offset
   let image = this.volumes[imageIndex].clone();
