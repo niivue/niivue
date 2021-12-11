@@ -1359,77 +1359,7 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
-Niivue.prototype.processImageOld = function (imageIndex, command) {
-  // clone so we can update the voxel offset
-  let image = this.volumes[imageIndex].clone();
-  let byteArray;
-  let ret = -1;
 
-  // determine if this is a nifti-1 or nifti-2 image
-  if (image.hdr instanceof nifti.NIFTI2) {
-    throw new Error("nifti-2 not handled");
-  } else {
-    image.hdr.vox_offset = nifti.NIFTI1.MAGIC_COOKIE;
-    const headerBytes = NVImage.convertNiftiOneHeaderToArrayBuffer(image.hdr);
-    const headerView = new Uint8Array(headerBytes);
-
-    // this.wasmMemory.grow(2000);
-    let ta = new Uint8Array(this.wasmMemory.buffer);
-
-    let i = 0;
-    for (; i < headerView.length; i++) {
-      ta[i] = headerView[i];
-    }
-
-    const imageView = new Uint8Array(image.img.buffer);
-    for (let j = 0; j < imageView.length; j++) {
-      ta[i + j] = imageView[j];
-    }
-
-    ret = this.processNiftiImage(
-      byteArray,
-      headerView.length + imageView.length,
-      command
-    );
-
-    ta = new Uint8Array(this.wasmMemory.buffer);
-    ta = ta.slice(headerView.length);
-    switch (image.hdr.datatypeCode) {
-      case image.DT_UNSIGNED_CHAR:
-        this.volumes[imageIndex].img = ta;
-        break;
-      case image.DT_SIGNED_SHORT:
-        this.volumes[imageIndex].img = new Int16Array(ta);
-        break;
-      case image.DT_FLOAT:
-        this.volumes[imageIndex].img = new Float32Array(ta);
-        break;
-      case image.DT_DOUBLE:
-        this.volumes[imageIndex].img = new Float64Array(ta);
-        break;
-      case image.DT_RGB:
-        this.volumes[imageIndex].img = new Uint8Array(ta);
-        break;
-      case image.DT_UINT16:
-        this.volumes[imageIndex].img = new Uint16Array(ta);
-        break;
-      case image.DT_RGBA32:
-        this.volumes[imageIndex].img = new Uint8Array(ta);
-        break;
-      default:
-        throw "datatype " + image.hdr.datatypeCode + " not supported";
-    }
-
-    this.refreshLayers(
-      this.volumes[imageIndex],
-      imageIndex,
-      this.volumes.length
-    );
-    this.drawScene();
-  }
-
-  return ret;
-};
 Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
   // clone so we can update the voxel offset
   let image = this.volumes[imageIndex].clone();
