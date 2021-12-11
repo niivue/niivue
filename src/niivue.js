@@ -1430,8 +1430,7 @@ Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
       processedImage.img = new Float32Array(cimg);
       break;
     case processedImage.DT_DOUBLE:
-      processedImage.img = new Float64Array(cimg);
-      break;
+      throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
     case processedImage.DT_RGB:
       processedImage.img = new Uint8Array(cimg);
       break;

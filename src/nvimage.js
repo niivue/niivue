@@ -575,7 +575,8 @@ String.prototype.getBytes = function () {
   return bytes;
 };
 
-/**
+// not included in public docs
+/*
  * Returns nifti-1 header as ArrayBuffer.
  * @param {nifti.NIFTI1} header nifti-1 header to convert
  * @returns {ArrayBuffer}
@@ -665,7 +666,8 @@ NVImage.convertNiftiOneHeaderToArrayBuffer = function (header) {
   return byteArray.buffer;
 };
 
-/**
+// not included in public docs
+/*
  * Returns nifti-2 header as ArrayBuffer.
  * @param {nifti.NIFTI2} header nifti2 header to convert
  * @returns {ArrayBuffer}

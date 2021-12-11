@@ -2,9 +2,6 @@ import { HeapVerifier } from "./heap-verifier";
 
 export class LinearMemory {
   constructor({ initial = 2048, maximum = 2048 }) {
-    //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory
-    //shared is problematic if pointer moved (e.g. pointer not handle)
-    //this.memory = new WebAssembly.Memory({ initial, maximum, shared: true })
     this.memory = new WebAssembly.Memory({ initial, maximum });
     this.verifier = new HeapVerifier(maximum * 65536);
   }
