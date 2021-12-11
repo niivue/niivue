@@ -211,7 +211,6 @@ Niivue.prototype.attachTo = async function (id) {
 Niivue.prototype.on = function (event, callback) {
   let knownEvents = Object.keys(this.eventsToSubjects);
   if (knownEvents.indexOf(event) == -1) {
-    console.log(`there is no known event ${event}`);
     return;
   }
   let subject = this.eventsToSubjects[event];
@@ -231,7 +230,6 @@ Niivue.prototype.on = function (event, callback) {
 Niivue.prototype.off = function (event) {
   let knownEvents = Object.keys(this.eventsToSubjects);
   if (knownEvents.indexOf(event) == -1) {
-    console.log(`there is no known event ${event}`);
     return;
   }
   let nsubs = this.subscriptions.length;
@@ -1363,7 +1361,6 @@ Niivue.prototype.initText = async function () {
 Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
   // clone so we can update the voxel offset
   let image = this.volumes[imageIndex].clone();
-  console.log("command is " + cmd);
 
   const dims = image.hdr.dims;
   const nx = dims[1]; //number of columns
@@ -1384,7 +1381,6 @@ Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
   for (let i = 0; i < cmd.length; i++) cmdstr[i] = cmd.charCodeAt(i);
   let cstr = new Uint8Array(this.wasmMemory.buffer, cptr, cmd.length + 1);
   cstr.set(cmdstr);
-  console.log(cstr);
   //allocate WASM image data
   let nvox = nx * ny * nz * nt;
   let ptr = this.walloc(nvox * bpv);
@@ -1411,7 +1407,7 @@ Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
   cimg = new Uint8Array(this.wasmMemory.buffer, ptr, nvox * bpv);
 
   if (ok != 0) {
-    console.log(" -> '", cmd, " generated a fatal error: ", ok);
+    console.error(" -> '", cmd, " generated a fatal error: ", ok);
     return;
   }
 
@@ -1479,9 +1475,7 @@ Niivue.prototype.initWasm = async function () {
   Niivue.prototype.processNiftiImage = exports.niimath;
   Niivue.prototype.walloc = exports.walloc;
   Niivue.prototype.wfree = exports.wfree;
-  console.log(Niivue.prototype.processNiftiImage);
   this.wasmMemory = exports.memory;
-  console.log(exports);
 };
 
 // not included in public docs
