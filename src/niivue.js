@@ -31,7 +31,6 @@ import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 // import createModule from "./process-image";
 import init from "./process-image.wasm";
-import nifti from "nifti-reader-js";
 import { LinearMemory } from "./linear-memory.js";
 
 var Module;
