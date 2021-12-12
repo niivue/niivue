@@ -1,4 +1,3 @@
-// from https://github.com/wingo/walloc
 // walloc.c: a small malloc implementation for use in WebAssembly targets
 // Copyright (c) 2020 Igalia, S.L.
 // 
@@ -439,14 +438,14 @@ allocate_large(size_t size) {
 }
   
 void*
-malloc(size_t size) {
+xmalloc(size_t size) {
   size_t granules = size_to_granules(size);
   enum chunk_kind kind = granules_to_chunk_kind(granules);
   return (kind == LARGE_OBJECT) ? allocate_large(size) : allocate_small(kind);
 }
 
 void
-free(void *ptr) {
+xfree(void *ptr) {
   if (!ptr) return;
   struct page *page = get_page(ptr);
   unsigned chunk = get_chunk_index(ptr);
