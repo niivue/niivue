@@ -975,15 +975,15 @@ staticx int nifti_otsu(nifti_image *nim, int mode, int makeBinary) { //binarize 
 //mode is 1..5 corresponding to 3/4, 2/3, 1/2 1/3 and 1/4 compartments made dark
 //makeBinary: -1 replace dark with darkest, 0 = replace dark with 0, 1 = binary (0 or 1)
 	if ((nim->nvox < 1) || (nim->datatype != DT_CALC))
-		return 91;// changed from 1;
+		return 1;
 	//Create histogram of intensity frequency
 	// hist[0..kOtsuBins-1]: each bin is number of pixels with this intensity
 	flt mn, mx;
 
 	if (nifti_robust_range(nim, &mn, &mx, 0) != 0)
-		return 90;//changed from 1;
+		return 1;
 	if (mn >= mx)
-		return 92;// changed from 1; //no variability
+		return 1; //no variability
 	#define kOtsuBins 256
 	flt *inimg = (flt *)nim->data;
 	flt scl = (kOtsuBins - 1) / (mx - mn);

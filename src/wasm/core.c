@@ -336,7 +336,7 @@ int nifti_image_change_datatype(nifti_image *nim, int dt, in_hdr *ihdr) {
 	if (nim->datatype == dt)
 		return 0; //no change!
 	if (nim->nvox < 1)
-		return -12;
+		return -1;
 	if (nim->scl_slope == 0.0f)
 		nim->scl_slope = 1.0;
 	float scl = nim->scl_slope;
