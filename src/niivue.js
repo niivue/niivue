@@ -1467,7 +1467,7 @@ Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
 };
 
 Niivue.prototype.initWasm = async function () {
-  this.linearMemory = new LinearMemory({ initial: 2048, maximum: 2048 });
+  this.linearMemory = new LinearMemory({ initial: 256, maximum: 2048 });
   let exports = await init({ env: this.linearMemory.env() });
   Niivue.prototype.processNiftiImage = exports.niimath;
   Niivue.prototype.walloc = exports.walloc;
