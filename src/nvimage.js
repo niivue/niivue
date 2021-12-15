@@ -565,3 +565,12 @@ NVImage.zerosLike = function (nvImage) {
   zeroClone.zeroImage();
   return zeroClone;
 };
+
+String.prototype.getBytes = function () {
+  let bytes = [];
+  for (var i = 0; i < this.length; i++) {
+    bytes.push(this.charCodeAt(i));
+  }
+
+  return bytes;
+};
