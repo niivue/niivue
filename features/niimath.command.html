@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Image Processing with WASM</title>
+  <style>
+    section {
+      margin: 20px;
+    }
+
+    .process-button {
+      border: none;
+      color: white;
+      padding: 16px 32px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      transition-duration: 0.4s;
+      cursor: pointer;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .process-button {
+      background-color: white;
+      color: black;
+      border: 2px solid #008CBA;
+    }
+
+    .process-button:hover {
+      background-color: #008CBA;
+      color: white;
+    }
+
+    .input-line {
+      margin: auto;
+      text-align: center;
+      padding: 10px;
+    }
+
+    #niimath-command {
+      width: 50%;
+      text-align: center;
+      margin: auto;
+      padding: 5px;
+      display: inline;
+    }
+
+    #add-as-overlay-checkbox {
+      display: inline;
+    }
+  </style>
+</head>
+
+<body style="font-family: sans-serif;">
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+  </noscript>
+
+  <section>
+    <h1>
+      Process image with niimath and WASM
+    </h1>
+    <p>
+      Use image processing WASM to modify the image or add an overlay.
+    </p>
+    <p>
+    <h3>Controls</h3>
+    <ul>
+      <li>move the crosshairs: left mouse click and drag (or click around)</li>
+      <li>slice scrolling: mouse or touch pad scroll up and down (pinch zoom for mobile)</li>
+      <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
+      <li>reset intensity: left mouse click double click (mobile not supported)</li>
+    </ul>
+    </p>
+  </section>
+
+  <!-- demo 1 -->
+  <section>
+    <div id="demo1" style="width:90%; height:400px;">
+      <canvas id="gl1" height=480 width=640>
+      </canvas>
+      <div class="input-line">
+        <input id="niimath-command" value="-dehaze 5 -dog 2 3.2" />
+        <input id="add-as-overlay-checkbox" type="checkbox">
+        <label for="add-as-overlay-checkbox"> Add as overlay</label>
+      </div>
+      <button class="process-button" onclick="process()">Process</button>
+    </div>
+  </section>
+  <section style="margin-top: 120px;">
+    <pre>
+        Datatype information:
+ -dt sets the datatype used internally for calculations (default float for all except double images)
+ -odt sets the output datatype ( default is float )
+ Possible datatypes are: char short int float double input
+ input will set the datatype to that of the original image
+
+New operations: (not in fslmaths)
+ -bandpass <hp> <lp> <tr> : Butterworth filter, highpass and lowpass in Hz,TR in seconds (zero-phase 2*2nd order filtfilt)
+ -bptfm  <hp> <lp>        : Same as bptf but does not remove mean (emulates fslmaths < 5.0.7)
+ -ceil                    : round voxels upwards to the nearest integer
+ -crop <tmin> <tsize>     : remove volumes, starts with 0 not 1! Inputting -1 for a size will set it to the full range
+ -detrend                 : remove linear trend (and mean) from input
+ -demean                  : remove average signal across volumes (requires 4D input)
+ -edt                     : estimate Euler Distance Transform (distance field). Assumes isotropic input
+ -floor                    : round voxels downwards to the nearest integer
+ -mod                     : modulus fractional remainder - same as '-rem' but includes fractions
+ -p <threads>             : set maximum number of parallel threads. DISABLED: recompile for OpenMP support
+ -resize <X> <Y> <Z> <m>  : grow (>1) or shrink (<1) image. Method <m> (0=nearest,1=linear,2=spline,3=Lanczos,4=Mitchell)
+ -round                   : round voxels to the nearest integer
+ -sobel                   : fast edge detection
+ -sobel_binary              : sobel creating binary edge
+ -tensor_2lower           : convert FSL style upper triangle image to NIfTI standard lower triangle order
+ -tensor_2upper           : convert NIfTI standard lower triangle image to FSL style upper triangle order
+ -tensor_decomp_lower     : as tensor_decomp except input stores lower diagonal (AFNI, ANTS, Camino convention)
+ -trunc                   : truncates the decimal value from floating point value and returns integer value
+ -unsharp  <sigma> <scl>  : edge enhancing unsharp mask (sigma in mm, not voxels; 1.0 is typical for amount (scl))
+ -dog <sPos> <sNeg>       : difference of gaussian with zero-crossing edges (positive and negative sigma mm)
+ -dogr <sPos> <sNeg>      : as dog, without zero-crossing (raw rather than binarized data)
+ -dogx <sPos> <sNeg>      : as dog, zero-crossing for 2D sagittal slices
+ -dogy <sPos> <sNeg>      : as dog, zero-crossing for 2D coronal slices
+ -dogz <sPos> <sNeg>      : as dog, zero-crossing for 2D axial slices
+ --compare <ref>          : report if images are identical, terminates without saving new image
+ filename.nii             : mimic fslhd (can also export to a txt file: 'niimath T1.nii 2> T1.txt') report header and terminate without saving new image
+
+Binary operations:
+  (some inputs can be either an image or a number)
+ -add   : add following input to current image
+ -sub   : subtract following input from current image
+ -mul   : multiply current image by following input
+ -div   : divide current image by following input
+ -rem   : modulus remainder - divide current image by following input and take remainder
+ -mas   : use (following image>0) to mask current image
+ -thr   : use following number to threshold current image (zero anything below the number)
+ -thrp  : use following percentage (0-100) of ROBUST RANGE to threshold current image (zero anything below the number)
+ -thrP  : use following percentage (0-100) of ROBUST RANGE of non-zero voxels and threshold below
+ -uthr  : use following number to upper-threshold current image (zero anything above the number)
+ -uthrp : use following percentage (0-100) of ROBUST RANGE to upper-threshold current image (zero anything above the number)
+ -uthrP : use following percentage (0-100) of ROBUST RANGE of non-zero voxels and threshold above
+ -clamp : use following percentage (0-100) of ROBUST RANGE to threshold current image (anything below set to this threshold)
+ -uclamp: use following percentage (0-100) of ROBUST RANGE to threshold current image (anything above set to this threshold)
+ -max   : take maximum of following input and current image
+ -min   : take minimum of following input and current image
+ -seed  : seed random number generator with following number
+ -restart : replace the current image with input for future processing operations
+ -save : save the current working image to the input filename
+ -inm <mean> :  (-i i ip.c) intensity normalisation (per 3D volume mean)
+ -ing <mean> :  (-I i ip.c) intensity normalisation, global 4D mean)
+ -s <sigma> : create a gauss kernel of sigma mm and perform mean filtering
+
+Basic unary operations:
+ -exp   : exponential
+ -log   : natural logarithm
+ -sin   : sine function
+ -cos   : cosine function
+ -tan   : tangent function
+ -asin  : arc sine function
+ -acos  : arc cosine function
+ -atan  : arc tangent function
+ -sqr   : square
+ -sqrt  : square root
+ -recip : reciprocal (1/current image)
+ -abs   : absolute value
+ -bin   : use (current image>0) to binarise
+ -binv  : binarise and invert (binarisation and logical inversion)
+ -fillh : fill holes in a binary mask (holes are internal - i.e. do not touch the edge of the FOV)
+ -fillh26 : fill holes using 26 connectivity
+ -index : replace each nonzero voxel with a unique (subject to wrapping) index number
+ -grid <value> <spacing> : add a 3D grid of intensity <value> with grid spacing <spacing>
+ -edge  : edge strength
+ -tfce <H> <E> <connectivity>: enhance with TFCE, e.g. -tfce 2 0.5 6 (maybe change 6 to 26 for skeletons)
+ -tfceS <H> <E> <connectivity> <X> <Y> <Z> <tfce_thresh>: show support area for voxel (X,Y,Z)
+ -nan   : replace NaNs (improper numbers) with 0
+ -nanm  : make NaN (improper number) mask with 1 for NaN voxels, 0 otherwise
+ -rand  : add uniform noise (range 0:1)
+ -randn : add Gaussian noise (mean=0 sigma=1)
+ -range : set the output calmin/max to full data range
+
+Matrix operations:
+ -tensor_decomp : convert a 4D (6-timepoint )tensor image into L1,2,3,FA,MD,MO,V1,2,3 (remaining image in pipeline is FA)
+
+Kernel operations (set BEFORE filtering operation if desired):
+ -kernel 3D : 3x3x3 box centered on target voxel (set as default kernel)
+ -kernel 2D : 3x3x1 box centered on target voxel
+ -kernel box    <size>     : all voxels in a cube of width <size> mm centered on target voxel
+ -kernel boxv   <size>     : all voxels in a cube of width <size> voxels centered on target voxel, CAUTION: size should be an odd number
+ -kernel boxv3  <X> <Y> <Z>: all voxels in a cuboid of dimensions X x Y x Z centered on target voxel, CAUTION: size should be an odd number
+ -kernel gauss  <sigma>    : gaussian kernel (sigma in mm, not voxels)
+ -kernel sphere <size>     : all voxels in a sphere of radius <size> mm centered on target voxel
+ -kernel file   <filename> : use external file as kernel
+
+Spatial Filtering operations: N.B. all options apart from -s use the default kernel or that _previously_ specified by -kernel
+ -dilM    : Mean Dilation of non-zero voxels
+ -dilD    : Maximum Dilation of non-zero voxels (emulating output of fslmaths 6.0.1, max not modal)
+ -dilF    : Maximum filtering of all voxels
+ -dilall  : Apply -dilM repeatedly until the entire FOV is covered
+ -ero     : Erode by zeroing non-zero voxels when zero voxels found in kernel
+ -eroF    : Minimum filtering of all voxels
+ -fmedian : Median Filtering 
+ -fmean   : Mean filtering, kernel weighted (conventionally used with gauss kernel)
+ -fmeanu  : Mean filtering, kernel weighted, un-normalized (gives edge effects)
+ -s <sigma> : create a gauss kernel of sigma mm and perform mean filtering
+ -subsamp2  : downsamples image by a factor of 2 (keeping new voxels centered on old)
+ -subsamp2offc  : downsamples image by a factor of 2 (non-centered)
+
+Dimensionality reduction operations:
+  (the T can be replaced by X, Y or Z to collapse across a different dimension)
+ -Tmean   : mean across time
+ -Tstd    : standard deviation across time
+ -Tmax    : max across time
+ -Tmaxn   : time index of max across time
+ -Tmin    : min across time
+ -Tmedian : median across time
+ -Tperc <percentage> : nth percentile (0-100) of FULL RANGE across time
+ -Tar1    : temporal AR(1) coefficient (use -odt float and probably demean first)
+
+Basic statistical operations:
+ -pval    : Nonparametric uncorrected P-value, assuming timepoints are the permutations; first timepoint is actual (unpermuted) stats image
+ -pval0   : Same as -pval, but treat zeros as missing data
+ -cpval   : Same as -pval, but gives FWE corrected P-values
+ -ztop    : Convert Z-stat to (uncorrected) P
+ -ptoz    : Convert (uncorrected) P to Z
+ -rank    : Convert data to ranks (over T dim)
+ -ranknorm: Transform to Normal dist via ranks
+
+Multi-argument operations:
+ -roi <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize> : zero outside roi (using voxel coordinates). Inputting -1 for a size will set it to the full image extent for that dimension
+ -bptf  <hp_sigma> <lp_sigma> : (-t in ip.c) Bandpass temporal filtering; nonlinear highpass and Gaussian linear lowpass (with sigmas in volumes, not seconds); set either sigma<0 to skip that filter
+ -roc <AROC-thresh> <outfile> [4Dnoiseonly] <truth> : take (normally binary) truth and test current image in ROC analysis against truth. <AROC-thresh> is usually 0.05 and is limit of Area-under-ROC measure FP axis. <outfile> is a text file of the ROC curve (triplets of values: FP TP threshold). If the truth image contains negative voxels these get excluded from all calculations. If <AROC-thresh> is positive then the [4Dnoiseonly] option needs to be set, and the FP rate is determined from this noise-only data, and is set to be the fraction of timepoints where any FP (anywhere) is seen, as found in the noise-only 4d-dataset. This is then controlling the FWE rate. If <AROC-thresh> is negative the FP rate is calculated from the zero-value parts of the <truth> image, this time averaging voxelwise FP rate over all timepoints. In both cases the TP rate is the average fraction of truth=positive voxels correctly found
+      </pre>
+  </section>
+  <script src="../niivue.umd.js">
+  </script>
+  <script>
+    function process() {
+      let inputElem = document.getElementById("niimath-command")
+      let addAsOverlay = document.getElementById("add-as-overlay-checkbox").checked
+      nv1.processImage(0, inputElem.value, addAsOverlay)
+    }
+    var volumeList1 = [
+      // first item is brackground image
+      {
+        url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+        volume: { hdr: null, img: null },
+        name: "mni152",
+        intensityMin: 0, // not used yet
+        intensityMax: 100, // not used yet
+        intensityRange: [0, 100], // not used yet
+        colorMap: "gray",
+        opacity: 1,
+        visible: true,
+      },
+    ]
+    var nv1 = new niivue.Niivue()
+    nv1.attachTo("gl1")
+    nv1.loadVolumes(volumeList1)
+    nv1.setSliceType(nv1.sliceTypeMultiplanar)
+
+  </script>
+</body>
+
+</html>
