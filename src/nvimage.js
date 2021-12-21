@@ -535,6 +535,7 @@ NVImage.loadFromFile = async function (
  */
 NVImage.prototype.clone = function () {
   let clonedImage = new NVImage();
+  clonedImage.id = this.id;
   clonedImage.hdr = Object.assign({}, this.hdr);
   clonedImage.img = this.img.slice();
   clonedImage.calculateRAS();
@@ -552,6 +553,55 @@ NVImage.prototype.zeroImage = function () {
   this.img.fill(0);
 };
 
+/**
+ * Image M.
+ * @typedef {Object} NVImage~MetaData
+ * @property {uuidv4} id - unique if of image
+ * @property {number} datatypeCode - data type
+ * @property {number} nx - number of columns
+ * @property {number} ny - number of rows
+ * @property {number} nz - number of slices
+ * @property {number} nt - number of volumes
+ * @property {number} dx - space between columns
+ * @property {number} dy - space between rows
+ * @property {number} dz - space between slices
+ * @property {number} dt - time between volumes
+ * @property {number} bpx - bits per voxel
+ */
+
+/**
+ * get nifti specific metadata about the image
+ * @returns {NVImage~Metadata} - {@link NVImage~Metadata}
+ */
+NVImage.prototype.getImageMetadata = function () {
+  const id = this.id;
+  const datatypeCode = this.hdr.datatypeCode;
+  const dims = this.hdr.dims;
+  const nx = dims[1];
+  const ny = dims[2];
+  const nz = dims[3];
+  const nt = Math.max(1, dims[4]);
+  const pixDims = this.hdr.pixDims;
+  const dx = pixDims[1];
+  const dy = pixDims[2];
+  const dz = pixDims[3];
+  const dt = pixDims[4];
+  const bpv = Math.floor(this.hdr.numBitsPerVoxel / 8);
+
+  return {
+    id,
+    datatypeCode,
+    nx,
+    ny,
+    nz,
+    nt,
+    dx,
+    dy,
+    dz,
+    dt,
+    bpv,
+  };
+};
 /**
  * a factory function to make a zero filled image given a NVImage as a reference
  * @param {NVImage} nvImage an existing NVImage as a reference
