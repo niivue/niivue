@@ -1372,8 +1372,6 @@ Niivue.prototype.processImage = function (imageIndex, cmd, isNewLayer = true) {
 Niivue.prototype.initWasm = async function () {
   this.worker = new MyWorker();
   this.worker.onmessage = (e) => {
-    console.log("results");
-    console.log(e.data);
     // find our processed image
     const id = e.data.id;
     let processedImage = this.volumes.find((image) => image.id == id);
@@ -1386,18 +1384,9 @@ Niivue.prototype.initWasm = async function () {
     if (isNewLayer) {
       processedImage = processedImage.clone();
       processedImage.id = uuidv4();
-      console.log("adding new layer");
     }
 
-    const cmd = e.data.cmd;
-    const isBinaryImage = cmd.toLowerCase().includes("-dog");
     let imageBytes = e.data.imageBytes;
-
-    // deal with binarized image from dog
-    if (isBinaryImage) {
-      imageBytes = imageBytes.map((x) => x * 255);
-      processedImage.colorMap = "red";
-    }
 
     switch (processedImage.hdr.datatypeCode) {
       case processedImage.DT_UNSIGNED_CHAR:
@@ -1425,6 +1414,7 @@ Niivue.prototype.initWasm = async function () {
     }
 
     // recalculate
+    processedImage.trustCalMinMax = false;
     processedImage.calMinMax();
 
     let imageIndex = this.volumes.length;
