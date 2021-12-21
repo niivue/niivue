@@ -37,6 +37,7 @@ import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 // const workerURL = URL.createObjectURL(workerBlob);
 // const worker = new Worker(workerURL, { type: "classic" });
 import MyWorker from "./worker?worker&inline";
+import { v4 as uuidv4 } from "uuid";
 
 var Module;
 /**
@@ -1384,6 +1385,8 @@ Niivue.prototype.initWasm = async function () {
     const isNewLayer = e.data.isNewLayer;
     if (isNewLayer) {
       processedImage = processedImage.clone();
+      processedImage.id = uuidv4();
+      console.log("adding new layer");
     }
 
     const cmd = e.data.cmd;
