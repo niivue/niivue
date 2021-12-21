@@ -1363,7 +1363,6 @@ Niivue.prototype.initText = async function () {
 }; // initText()
 
 Niivue.prototype.processImage = function (imageIndex, cmd, isNewLayer = true) {
-  console.log(imageIndex, cmd, isNewLayer);
   let image = this.volumes[imageIndex].clone();
   let metadata = image.getImageMetadata();
   this.worker.postMessage([metadata, image.img.buffer, cmd, isNewLayer]);
@@ -1423,7 +1422,6 @@ Niivue.prototype.initWasm = async function () {
     } else {
       imageIndex = this.volumes.indexOf(processedImage);
     }
-    console.log("image index is " + imageIndex);
     this.refreshLayers(processedImage, imageIndex, this.volumes.length);
     this.drawScene();
 
