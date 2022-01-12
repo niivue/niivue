@@ -30,8 +30,14 @@ export { NVImage } from "./nvimage";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 // import createModule from "./process-image";
-import init from "./process-image.wasm";
-import { LinearMemory } from "./linear-memory.js";
+// import init from "./process-image.wasm";
+// import { LinearMemory } from "./linear-memory.js";
+// import workerString from "./worker.js?raw";
+// const workerBlob = new Blob([workerString], { type: "text/javascript" });
+// const workerURL = URL.createObjectURL(workerBlob);
+// const worker = new Worker(workerURL, { type: "classic" });
+import MyWorker from "./worker?worker&inline";
+import { v4 as uuidv4 } from "uuid";
 
 var Module;
 /**
@@ -1356,123 +1362,71 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
-Niivue.prototype.processImage = function (imageIndex, cmd, addLayer = true) {
-  // clone so we can update the voxel offset
+Niivue.prototype.processImage = function (imageIndex, cmd, isNewLayer = true) {
   let image = this.volumes[imageIndex].clone();
-
-  const dims = image.hdr.dims;
-  const nx = dims[1]; //number of columns
-  const ny = dims[2]; //number of rows
-  const nz = dims[3]; //number of slices
-  const nt = Math.max(1, dims[4]); //number of volumes
-  const pixDims = image.hdr.pixDims;
-  const dx = pixDims[1]; //space between columns
-  const dy = pixDims[2]; //space between rows
-  const dz = pixDims[3]; //space between slices
-  const dt = pixDims[4]; //time between volumes
-  let bpv = Math.floor(image.hdr.numBitsPerVoxel / 8);
-
-  //allocate WASM null-terminated command string
-  let cptr = this.walloc(cmd.length + 1);
-  this.linearMemory.record_malloc(cptr, cmd.length + 1);
-  let cmdstr = new Uint8Array(cmd.length + 1);
-  for (let i = 0; i < cmd.length; i++) cmdstr[i] = cmd.charCodeAt(i);
-  let cstr = new Uint8Array(this.wasmMemory.buffer, cptr, cmd.length + 1);
-  cstr.set(cmdstr);
-  //allocate WASM image data
-  let nvox = nx * ny * nz * nt;
-  let ptr = this.walloc(nvox * bpv);
-  this.linearMemory.record_malloc(ptr, nvox * bpv);
-  let cimg = new Uint8Array(this.wasmMemory.buffer, ptr, nvox * bpv);
-  cimg.set(new Uint8Array(image.img.buffer));
-
-  let ok = this.processNiftiImage(
-    ptr,
-    image.hdr.datatypeCode,
-    nx,
-    ny,
-    nz,
-    nt,
-    dx,
-    dy,
-    dz,
-    dt,
-    cptr
-  );
-
-  // Unintuitive Solution: renew cimg pointer
-  // https://depth-first.com/articles/2019/10/16/compiling-c-to-webassembly-and-running-it-without-emscripten/
-  cimg = new Uint8Array(this.wasmMemory.buffer, ptr, nvox * bpv);
-
-  if (ok != 0) {
-    console.error(" -> '", cmd, " generated a fatal error: ", ok);
-    return;
-  }
-
-  let processedImage = addLayer ? image : this.volumes[imageIndex];
-
-  let isBinaryImage = cmd.toLowerCase().includes("-dog");
-  // deal with binarized image from dog
-  if (isBinaryImage) {
-    cimg = cimg.map((x) => x * 255);
-    processedImage.colorMap = "red";
-  }
-
-  switch (processedImage.hdr.datatypeCode) {
-    case processedImage.DT_UNSIGNED_CHAR:
-      processedImage.img = new Uint8Array(cimg);
-      break;
-    case processedImage.DT_SIGNED_SHORT:
-      processedImage.img = new Int16Array(cimg);
-      break;
-    case processedImage.DT_FLOAT:
-      processedImage.img = new Float32Array(cimg);
-      break;
-    case processedImage.DT_DOUBLE:
-      throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
-    case processedImage.DT_RGB:
-      processedImage.img = new Uint8Array(cimg);
-      break;
-    case processedImage.DT_UINT16:
-      processedImage.img = new Uint16Array(cimg);
-      break;
-    case processedImage.DT_RGBA32:
-      processedImage.img = new Uint8Array(cimg);
-      break;
-    default:
-      throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
-  }
-
-  //free WASM memory
-  this.linearMemory.record_free(cptr);
-  this.wfree(cptr);
-  this.linearMemory.record_free(ptr);
-  this.wfree(ptr);
-
-  // recalculate
-  processedImage.calMinMax();
-  if (addLayer) {
-    this.setVolume(processedImage, this.volumes.length);
-    this.refreshLayers(
-      processedImage,
-      this.volumes.length - 1,
-      this.volumes.length
-    );
-  } else {
-    this.refreshLayers(processedImage, imageIndex, this.volumes.length);
-  }
-  this.drawScene();
-
-  this.updateGLVolume();
+  let metadata = image.getImageMetadata();
+  this.worker.postMessage([metadata, image.img.buffer, cmd, isNewLayer]);
 };
 
 Niivue.prototype.initWasm = async function () {
-  this.linearMemory = new LinearMemory({ initial: 256, maximum: 2048 });
-  let exports = await init({ env: this.linearMemory.env() });
-  Niivue.prototype.processNiftiImage = exports.niimath;
-  Niivue.prototype.walloc = exports.walloc;
-  Niivue.prototype.wfree = exports.wfree;
-  this.wasmMemory = exports.memory;
+  this.worker = new MyWorker();
+  this.worker.onmessage = (e) => {
+    // find our processed image
+    const id = e.data.id;
+    let processedImage = this.volumes.find((image) => image.id == id);
+    if (!processedImage) {
+      console.log("image not found");
+      return;
+    }
+
+    const isNewLayer = e.data.isNewLayer;
+    if (isNewLayer) {
+      processedImage = processedImage.clone();
+      processedImage.id = uuidv4();
+    }
+
+    let imageBytes = e.data.imageBytes;
+
+    switch (processedImage.hdr.datatypeCode) {
+      case processedImage.DT_UNSIGNED_CHAR:
+        processedImage.img = new Uint8Array(imageBytes);
+        break;
+      case processedImage.DT_SIGNED_SHORT:
+        processedImage.img = new Int16Array(imageBytes);
+        break;
+      case processedImage.DT_FLOAT:
+        processedImage.img = new Float32Array(imageBytes);
+        break;
+      case processedImage.DT_DOUBLE:
+        throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
+      case processedImage.DT_RGB:
+        processedImage.img = new Uint8Array(imageBytes);
+        break;
+      case processedImage.DT_UINT16:
+        processedImage.img = new Uint16Array(imageBytes);
+        break;
+      case processedImage.DT_RGBA32:
+        processedImage.img = new Uint8Array(imageBytes);
+        break;
+      default:
+        throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
+    }
+
+    // recalculate
+    processedImage.trustCalMinMax = false;
+    processedImage.calMinMax();
+
+    let imageIndex = this.volumes.length;
+    if (isNewLayer) {
+      this.setVolume(processedImage, this.volumes.length);
+    } else {
+      imageIndex = this.volumes.indexOf(processedImage);
+    }
+    this.refreshLayers(processedImage, imageIndex, this.volumes.length);
+    this.drawScene();
+
+    this.updateGLVolume();
+  };
 };
 
 // not included in public docs
