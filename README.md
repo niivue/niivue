@@ -137,7 +137,7 @@ const NiiVue = ({ imageUrl }) => {
       },
     ]
     const nv = new Niivue()
-    nv.attachToCanvas(canvas)
+    nv.attachToCanvas(canvas.current)
     nv.loadVolumes(volumeList) // press the "v" key to cycle through volumes
   }, [imageUrl])
 
@@ -145,6 +145,8 @@ const NiiVue = ({ imageUrl }) => {
     <canvas ref={canvas} height={480} width={640} />
   )
 }
+
+// use as: <NiiVue imageUrl={someUrl}> </NiiVue>
 ```
 
 # Contributors
