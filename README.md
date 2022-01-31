@@ -38,7 +38,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## existing html page
 ```html
-<script src="https://unpkg.com/@niivue/niivue@0.13.1/dist/niivue.umd.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.13.2/dist/niivue.umd.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 
@@ -137,7 +137,7 @@ const NiiVue = ({ imageUrl }) => {
       },
     ]
     const nv = new Niivue()
-    nv.attachToCanvas(canvas)
+    nv.attachToCanvas(canvas.current)
     nv.loadVolumes(volumeList) // press the "v" key to cycle through volumes
   }, [imageUrl])
 
@@ -145,6 +145,8 @@ const NiiVue = ({ imageUrl }) => {
     <canvas ref={canvas} height={480} width={640} />
   )
 }
+
+// use as: <NiiVue imageUrl={someUrl}> </NiiVue>
 ```
 
 # Contributors

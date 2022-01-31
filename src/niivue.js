@@ -36,7 +36,7 @@ import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 // const workerBlob = new Blob([workerString], { type: "text/javascript" });
 // const workerURL = URL.createObjectURL(workerBlob);
 // const worker = new Worker(workerURL, { type: "classic" });
-import MyWorker from "./worker?worker&inline";
+import NiiMathWorker from "./worker?worker";
 import { v4 as uuidv4 } from "uuid";
 
 var Module;
@@ -1369,7 +1369,7 @@ Niivue.prototype.processImage = function (imageIndex, cmd, isNewLayer = true) {
 };
 
 Niivue.prototype.initWasm = async function () {
-  this.worker = new MyWorker();
+  this.worker = new NiiMathWorker();
   this.worker.onmessage = (e) => {
     // find our processed image
     const id = e.data.id;
