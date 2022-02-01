@@ -42,6 +42,7 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "@niivue/niimath-js": "^0.0.1643716563816",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.5.4",
     "rxjs": "^7.4.0",
