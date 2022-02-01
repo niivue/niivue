@@ -12320,10 +12320,11 @@ var defaultFontMetrics = {
   kerning
 };
 function WorkerWrapper() {
-  return new Worker("/assets/worker.9df7e894.js", {
+  return new Worker("/assets/niimathWorker.1f52eda8.js", {
     "type": "module"
   });
 }
+var niiMathWorker = new WorkerWrapper();
 const Niivue = function(options = {}) {
   this.opts = {};
   this.defaults = {
@@ -13079,7 +13080,7 @@ Niivue.prototype.processImage = function(imageIndex, cmd, isNewLayer = true) {
   this.worker.postMessage([metadata, image.img.buffer, cmd, isNewLayer]);
 };
 Niivue.prototype.initWasm = async function() {
-  this.worker = new WorkerWrapper();
+  this.worker = niiMathWorker;
   this.worker.onmessage = (e) => {
     const id = e.data.id;
     let processedImage = this.volumes.find((image) => image.id == id);
