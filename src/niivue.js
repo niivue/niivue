@@ -27,17 +27,12 @@ import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
 import { NVImage } from "./nvimage.js";
 export { NVImage } from "./nvimage";
+import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-// import createModule from "./process-image";
-// import init from "./process-image.wasm";
-// import { LinearMemory } from "./linear-memory.js";
-// import workerString from "./worker.js?raw";
-// const workerBlob = new Blob([workerString], { type: "text/javascript" });
-// const workerURL = URL.createObjectURL(workerBlob);
-// const worker = new Worker(workerURL, { type: "classic" });
 import niiMathWorker from "@niivue/niimath-js";
 import { v4 as uuidv4 } from "uuid";
+const log = new Log();
 
 /**
  * @class Niivue
@@ -59,6 +54,7 @@ import { v4 as uuidv4 } from "uuid";
  * @param {string} [options.viewModeHotKey="KeyV"] the keyboard key used to cycle through view modes. The default is "v"
  * @param {number} [options.keyDebounceTime=50] the keyUp debounce time in milliseconds. The default is 50 ms. You must wait this long before a new hot-key keystroke will be registered by the event listener
  * @param {boolean} [options.isRadiologicalConvention=false] whether or not to use radiological convention in the display
+ * @param {string} [options.logLevel="info"] the log level of NiiVue logs. options (in order of most to least verbose) are: 'debug', 'info', 'warn', 'error'
  * @example
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
@@ -78,6 +74,7 @@ export const Niivue = function (options = {}) {
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isRadiologicalConvention: false,
+    logLevel: "info",
   };
 
   this.canvas = null; // the canvas element on the page
@@ -171,6 +168,8 @@ export const Niivue = function (options = {}) {
       options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
 
+  log.setLogLevel(this.opts.logLevel);
+
   // maping of keys (event strings) to rxjs subjects
   this.eventsToSubjects = {
     location: this.scene.location$,
@@ -189,6 +188,7 @@ export const Niivue = function (options = {}) {
  */
 Niivue.prototype.attachTo = async function (id) {
   await this.attachToCanvas(document.getElementById(id));
+  log.debug("attached to canvas", [1, 0, 1], false);
   return this;
 }; // attachTo
 
