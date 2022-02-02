@@ -6,7 +6,7 @@
   "unpkg": "./dist/niivue.umd.js",
   "scripts": {
     "dev": "vite",
-    "build": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test && npm run copy-demo",
+    "build": "npx prettier --write src/ && npx vite build --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
     "build-win": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
     "demo": "npm run build && npx http-server demos/",
     "demo-win": "npm run build-win && npx http-server demos/",
