@@ -11,7 +11,7 @@ export const Log = function (logLevel) {
   this.LOG_PREFIX = "NiiVue: ";
   this.logLevel = logLevel;
 
-	//logs take the form of `NiiVue: <unix_time> ...arguments` when printed to the console
+  //logs take the form of `NiiVue: <unix_time> ...arguments` when printed to the console
 };
 
 Log.prototype.getTimeStamp = function () {
