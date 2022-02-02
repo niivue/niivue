@@ -12354,7 +12354,7 @@ var defaultFontMetrics = {
   kerning
 };
 function WorkerWrapper() {
-  return new Worker("/assets/niimathWorker.1f52eda8.js", {
+  return new Worker("./assets/niimathWorker.1f52eda8.js", {
     "type": "module"
   });
 }
