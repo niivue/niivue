@@ -62,7 +62,7 @@
           visible: true,
         }
       ]
-      var nv1 = new Niivue()
+			var nv1 = new Niivue({logLevel: 'debug'})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
