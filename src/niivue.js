@@ -30,7 +30,8 @@ export { NVImage } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-import niiMathWorker from "@niivue/niimath-js";
+//import { niimathWorker } from "@niivue/niimath-js";
+import { niimathWorker } from "../node_modules/@niivue/niimath-js/src/index";
 import { v4 as uuidv4 } from "uuid";
 const log = new Log();
 
@@ -1368,7 +1369,7 @@ Niivue.prototype.processImage = function (imageIndex, cmd, isNewLayer = true) {
 };
 
 Niivue.prototype.initWasm = async function () {
-  this.worker = niiMathWorker;
+  this.worker = niimathWorker;
   this.worker.onmessage = (e) => {
     // find our processed image
     const id = e.data.id;

@@ -12,7 +12,7 @@
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
-    "copy-demo": "cp -r ./dist/* ./demos/",
+    "copy-demo": "cp -r ./dist/* ./demos/features/",
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
@@ -42,7 +42,7 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
-    "@niivue/niimath-js": "^0.0.1643716563816",
+    "@niivue/niimath-js": "^0.0.1643874671203",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.5.4",
     "rxjs": "^7.4.0",
