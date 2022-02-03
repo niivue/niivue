@@ -12358,7 +12358,6 @@ function WorkerWrapper() {
     "type": "module"
   });
 }
-var niiMathWorker = new WorkerWrapper();
 const log = new Log();
 const Niivue = function(options = {}) {
   this.opts = {};
@@ -13118,7 +13117,7 @@ Niivue.prototype.processImage = function(imageIndex, cmd, isNewLayer = true) {
   this.worker.postMessage([metadata, image.img.buffer, cmd, isNewLayer]);
 };
 Niivue.prototype.initWasm = async function() {
-  this.worker = niiMathWorker;
+  this.worker = WorkerWrapper;
   this.worker.onmessage = (e) => {
     const id = e.data.id;
     let processedImage = this.volumes.find((image) => image.id == id);
