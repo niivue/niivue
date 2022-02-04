@@ -2170,8 +2170,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
           values: this.volumes.map((v, index) => {
-            let vox = this.frac2vox(this.scene.crosshairPos, index);
-            return v.getValue(...vox);
+            let mm = this.frac2mm(this.scene.crosshairPos);
+						let vox = v.mm2vox(mm)
+						let val = v.getValue(...vox)
+						return val
           }),
         });
         return;
@@ -2194,9 +2196,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
         values: this.volumes.map((v, index) => {
-          let vox = this.frac2vox(this.scene.crosshairPos, index);
-          return v.getValue(...vox);
-        }),
+            let mm = this.frac2mm(this.scene.crosshairPos);
+						let vox = v.mm2vox(mm)
+						let val = v.getValue(...vox)
+            return val;
+          }),
       });
       return;
     } else {
