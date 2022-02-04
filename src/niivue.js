@@ -31,7 +31,6 @@ import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 //import { niimathWorker } from "@niivue/niimath-js";
-import { niimathWorker } from "../node_modules/@niivue/niimath-js/src/index";
 import { v4 as uuidv4 } from "uuid";
 const log = new Log();
 
@@ -1362,73 +1361,6 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
-Niivue.prototype.processImage = function (imageIndex, cmd, isNewLayer = true) {
-  let image = this.volumes[imageIndex].clone();
-  let metadata = image.getImageMetadata();
-  this.worker.postMessage([metadata, image.img.buffer, cmd, isNewLayer]);
-};
-
-Niivue.prototype.initWasm = async function () {
-  this.worker = niimathWorker;
-  this.worker.onmessage = (e) => {
-    // find our processed image
-    const id = e.data.id;
-    let processedImage = this.volumes.find((image) => image.id == id);
-    if (!processedImage) {
-      console.log("image not found");
-      return;
-    }
-
-    const isNewLayer = e.data.isNewLayer;
-    if (isNewLayer) {
-      processedImage = processedImage.clone();
-      processedImage.id = uuidv4();
-    }
-
-    let imageBytes = e.data.imageBytes;
-
-    switch (processedImage.hdr.datatypeCode) {
-      case processedImage.DT_UNSIGNED_CHAR:
-        processedImage.img = new Uint8Array(imageBytes);
-        break;
-      case processedImage.DT_SIGNED_SHORT:
-        processedImage.img = new Int16Array(imageBytes);
-        break;
-      case processedImage.DT_FLOAT:
-        processedImage.img = new Float32Array(imageBytes);
-        break;
-      case processedImage.DT_DOUBLE:
-        throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
-      case processedImage.DT_RGB:
-        processedImage.img = new Uint8Array(imageBytes);
-        break;
-      case processedImage.DT_UINT16:
-        processedImage.img = new Uint16Array(imageBytes);
-        break;
-      case processedImage.DT_RGBA32:
-        processedImage.img = new Uint8Array(imageBytes);
-        break;
-      default:
-        throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
-    }
-
-    // recalculate
-    processedImage.trustCalMinMax = false;
-    processedImage.calMinMax();
-
-    let imageIndex = this.volumes.length;
-    if (isNewLayer) {
-      this.setVolume(processedImage, this.volumes.length);
-    } else {
-      imageIndex = this.volumes.indexOf(processedImage);
-    }
-    this.refreshLayers(processedImage, imageIndex, this.volumes.length);
-    this.drawScene();
-
-    this.updateGLVolume();
-  };
-};
-
 // not included in public docs
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
@@ -1439,7 +1371,6 @@ Niivue.prototype.init = async function () {
   // console.log("gpu vendor: ", vendor);
   // console.log("gpu renderer: ", renderer);
   // await this.loadFont()
-  await this.initWasm();
 
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);

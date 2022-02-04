@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./src/niivue.js",
   "unpkg": "./dist/niivue.umd.js",
@@ -42,7 +42,6 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
-    "@niivue/niimath-js": "^0.0.1643874671203",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.5.4",
     "rxjs": "^7.4.0",
