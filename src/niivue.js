@@ -207,7 +207,7 @@ Niivue.prototype.attachTo = async function (id) {
  *
  * // 'location' update event is fired when the crosshair changes position via user input
  * function doSomethingWithLocationData(data){
- *    // data has the shape {mm: [N, N, N], vox: [N, N, N], frac: [N, N, N]}
+ *    // data has the shape {mm: [N, N, N], vox: [N, N, N], frac: [N, N, N], values: this.volumes.map(v => {return val})}
  *    //...
  * }
  * niivue.on('location', doSomethingWithLocationData)
@@ -438,16 +438,16 @@ function intensityRaw2Scaled(hdr, raw) {
 
 // not included in public docs
 // note: no test yet
-Niivue.prototype.calculateNewRange = function () {
+Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
   // calculate our box
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
-  let startVox = this.frac2vox(frac);
+  let startVox = this.frac2vox(frac, volIdx);
 
   frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
-  let endVox = this.frac2vox(frac);
+  let endVox = this.frac2vox(frac, volIdx);
 
   let hi = -Number.MAX_VALUE,
     lo = Number.MAX_VALUE;
@@ -468,8 +468,8 @@ Niivue.prototype.calculateNewRange = function () {
     zrange[1] = startVox[2] + 1;
   }
 
-  const hdr = this.volumes[0].hdr;
-  const img = this.volumes[0].img;
+  const hdr = this.volumes[volIdx].hdr;
+  const img = this.volumes[volIdx].img;
 
   const xdim = hdr.dims[1];
   const ydim = hdr.dims[2];
@@ -491,8 +491,8 @@ Niivue.prototype.calculateNewRange = function () {
 
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
-  this.volumes[0].cal_min = mnScale;
-  this.volumes[0].cal_max = mxScale;
+  this.volumes[volIdx].cal_min = mnScale;
+  this.volumes[volIdx].cal_max = mxScale;
   this.intensityRange$.next([mnScale, mxScale]);
 };
 
@@ -2169,6 +2169,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
+          values: this.volumes.map((v, index) => {
+            let vox = this.frac2vox(this.scene.crosshairPos, index);
+            return v.getValue(...vox);
+          }),
         });
         return;
       }
@@ -2189,6 +2193,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
+        values: this.volumes.map((v, index) => {
+          let vox = this.frac2vox(this.scene.crosshairPos, index);
+          return v.getValue(...vox);
+        }),
       });
       return;
     } else {
@@ -2663,17 +2671,17 @@ Niivue.prototype.draw3D = function () {
 }; // draw3D()
 
 // not included in public docs
-Niivue.prototype.mm2frac = function (mm) {
+Niivue.prototype.mm2frac = function (mm, volIdx = 0) {
   //given mm, return volume fraction
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   let mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
-  let d = this.back.dims;
+  let d = this.volumes[volIdx].hdr.dims;
   let frac = [0, 0, 0];
   if (typeof d === "undefined") {
     return frac;
   }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1) return frac;
-  let sform = mat.mat4.clone(this.back.matRAS);
+  let sform = mat.mat4.clone(this.volumes[volIdx].matRAS);
   mat.mat4.transpose(sform, sform);
   mat.mat4.invert(sform, sform);
   mat.vec4.transformMat4(mm4, mm4, sform);
@@ -2685,41 +2693,41 @@ Niivue.prototype.mm2frac = function (mm) {
 }; // mm2frac()
 
 // not included in public docs
-Niivue.prototype.vox2frac = function (vox) {
+Niivue.prototype.vox2frac = function (vox, volIdx = 0) {
   //convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
   let frac = [
-    (vox[0] + 0.5) / this.back.dims[1],
-    (vox[1] + 0.5) / this.back.dims[2],
-    (vox[2] + 0.5) / this.back.dims[3],
+    (vox[0] + 0.5) / this.volumes[volIdx].hdr.dims[1],
+    (vox[1] + 0.5) / this.volumes[volIdx].hdr.dims[2],
+    (vox[2] + 0.5) / this.volumes[volIdx].hdr.dims[3],
   ];
   return frac;
 }; // vox2frac()
 
 // not included in public docs
-Niivue.prototype.frac2vox = function (frac) {
+Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
   let vox = [
-    Math.round(frac[0] * this.back.dims[1] - 0.5),
-    Math.round(frac[1] * this.back.dims[2] - 0.5),
-    Math.round(frac[2] * this.back.dims[3] - 0.5),
+    Math.round(frac[0] * this.volumes[volIdx].hdr.dims[1] - 0.5),
+    Math.round(frac[1] * this.volumes[volIdx].hdr.dims[2] - 0.5),
+    Math.round(frac[2] * this.volumes[volIdx].hdr.dims[3] - 0.5),
   ];
   return vox;
 }; // frac2vox()
 
 // not included in public docs
-Niivue.prototype.frac2mm = function (frac) {
+Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to object space in millimeters
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
   //let d = overlayItem.hdr.dims;
   let dim = mat.vec4.fromValues(
-    this.back.dims[1],
-    this.back.dims[2],
-    this.back.dims[3],
+    this.volumes[volIdx].hdr.dims[1],
+    this.volumes[volIdx].hdr.dims[2],
+    this.volumes[volIdx].hdr.dims[3],
     1
   );
-  let sform = mat.mat4.clone(this.back.matRAS);
+  let sform = mat.mat4.clone(this.volumes[volIdx].matRAS);
   mat.mat4.transpose(sform, sform);
   mat.vec4.mul(pos, pos, dim);
   let shim = mat.vec4.fromValues(-0.5, -0.5, -0.5, 0); //bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9

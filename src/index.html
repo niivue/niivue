@@ -60,7 +60,11 @@
           colorMap: "gray",
           opacity: 1,
           visible: true,
-        }
+        },
+				{
+					url: "./hippo.nii.gz",
+					colorMap: 'red'
+				}
       ]
 			var nv1 = new Niivue({logLevel: 'debug'})
       nv1.setRadiologicalConvention(false)
@@ -71,7 +75,7 @@
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
-        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values[0]
       })
 
     </script>

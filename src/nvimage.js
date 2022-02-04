@@ -624,3 +624,8 @@ String.prototype.getBytes = function () {
 
   return bytes;
 };
+
+NVImage.prototype.getValue = function (x, y, z) {
+  const { nx, ny } = this.getImageMetadata();
+  return this.img[x + y * nx + z * nx * ny];
+};

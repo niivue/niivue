@@ -10785,6 +10785,10 @@ String.prototype.getBytes = function() {
   }
   return bytes;
 };
+NVImage.prototype.getValue = function(x, y, z) {
+  const { nx, ny } = this.getImageMetadata();
+  return this.img[x + y * nx + z * nx * ny];
+};
 const Log = function(logLevel) {
   this.DEBUG = "debug";
   this.INFO = "info";
@@ -12587,14 +12591,14 @@ function intensityRaw2Scaled(hdr, raw) {
     hdr.scl_slope = 1;
   return raw * hdr.scl_slope + hdr.scl_inter;
 }
-Niivue.prototype.calculateNewRange = function() {
+Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
-  let startVox = this.frac2vox(frac);
+  let startVox = this.frac2vox(frac, volIdx);
   frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
-  let endVox = this.frac2vox(frac);
+  let endVox = this.frac2vox(frac, volIdx);
   let hi = -Number.MAX_VALUE, lo = Number.MAX_VALUE;
   let xrange;
   let yrange;
@@ -12609,8 +12613,8 @@ Niivue.prototype.calculateNewRange = function() {
   } else if (startVox[2] - endVox[2] === 0) {
     zrange[1] = startVox[2] + 1;
   }
-  const hdr = this.volumes[0].hdr;
-  const img = this.volumes[0].img;
+  const hdr = this.volumes[volIdx].hdr;
+  const img = this.volumes[volIdx].img;
   const xdim = hdr.dims[1];
   const ydim = hdr.dims[2];
   for (let z = zrange[0]; z < zrange[1]; z++) {
@@ -12630,8 +12634,8 @@ Niivue.prototype.calculateNewRange = function() {
   }
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
-  this.volumes[0].cal_min = mnScale;
-  this.volumes[0].cal_max = mxScale;
+  this.volumes[volIdx].cal_min = mnScale;
+  this.volumes[volIdx].cal_max = mxScale;
   this.intensityRange$.next([mnScale, mxScale]);
 };
 Niivue.prototype.mouseUpListener = function() {
@@ -13534,7 +13538,11 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         this.scene.location$.next({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
-          frac: this.scene.crosshairPos
+          frac: this.scene.crosshairPos,
+          values: this.volumes.map((v, index) => {
+            let vox = this.frac2vox(this.scene.crosshairPos, index);
+            return v.getValue(...vox);
+          })
         });
         return;
       }
@@ -13554,7 +13562,11 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
-        frac: this.scene.crosshairPos
+        frac: this.scene.crosshairPos,
+        values: this.volumes.map((v, index) => {
+          let vox = this.frac2vox(this.scene.crosshairPos, index);
+          return v.getValue(...vox);
+        })
       });
       return;
     } else {
@@ -13848,16 +13860,16 @@ Niivue.prototype.draw3D = function() {
   this.sync();
   return posString;
 };
-Niivue.prototype.mm2frac = function(mm) {
+Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);
-  let d = this.back.dims;
+  let d = this.volumes[volIdx].hdr.dims;
   let frac = [0, 0, 0];
   if (typeof d === "undefined") {
     return frac;
   }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1)
     return frac;
-  let sform = clone(this.back.matRAS);
+  let sform = clone(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   invert(sform, sform);
   transformMat4(mm4, mm4, sform);
@@ -13866,26 +13878,26 @@ Niivue.prototype.mm2frac = function(mm) {
   frac[2] = (mm4[2] + 0.5) / d[3];
   return frac;
 };
-Niivue.prototype.vox2frac = function(vox) {
+Niivue.prototype.vox2frac = function(vox, volIdx = 0) {
   let frac = [
-    (vox[0] + 0.5) / this.back.dims[1],
-    (vox[1] + 0.5) / this.back.dims[2],
-    (vox[2] + 0.5) / this.back.dims[3]
+    (vox[0] + 0.5) / this.volumes[volIdx].hdr.dims[1],
+    (vox[1] + 0.5) / this.volumes[volIdx].hdr.dims[2],
+    (vox[2] + 0.5) / this.volumes[volIdx].hdr.dims[3]
   ];
   return frac;
 };
-Niivue.prototype.frac2vox = function(frac) {
+Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
   let vox = [
-    Math.round(frac[0] * this.back.dims[1] - 0.5),
-    Math.round(frac[1] * this.back.dims[2] - 0.5),
-    Math.round(frac[2] * this.back.dims[3] - 0.5)
+    Math.round(frac[0] * this.volumes[volIdx].hdr.dims[1] - 0.5),
+    Math.round(frac[1] * this.volumes[volIdx].hdr.dims[2] - 0.5),
+    Math.round(frac[2] * this.volumes[volIdx].hdr.dims[3] - 0.5)
   ];
   return vox;
 };
-Niivue.prototype.frac2mm = function(frac) {
+Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
   let pos = fromValues(frac[0], frac[1], frac[2], 1);
-  let dim = fromValues(this.back.dims[1], this.back.dims[2], this.back.dims[3], 1);
-  let sform = clone(this.back.matRAS);
+  let dim = fromValues(this.volumes[volIdx].hdr.dims[1], this.volumes[volIdx].hdr.dims[2], this.volumes[volIdx].hdr.dims[3], 1);
+  let sform = clone(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   mul(pos, pos, dim);
   let shim = fromValues(-0.5, -0.5, -0.5, 0);
