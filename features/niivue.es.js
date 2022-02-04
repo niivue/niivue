@@ -12353,11 +12353,6 @@ var defaultFontMetrics = {
   glyphs,
   kerning
 };
-function WorkerWrapper() {
-  return new Worker("./assets/niimathWorker.1f52eda8.js", {
-    "type": "module"
-  });
-}
 const log = new Log();
 const Niivue = function(options = {}) {
   this.opts = {};
@@ -13111,65 +13106,7 @@ Niivue.prototype.initText = async function() {
   await this.loadDefaultFont();
   this.drawLoadingText(this.loadingText);
 };
-Niivue.prototype.processImage = function(imageIndex, cmd, isNewLayer = true) {
-  let image = this.volumes[imageIndex].clone();
-  let metadata = image.getImageMetadata();
-  this.worker.postMessage([metadata, image.img.buffer, cmd, isNewLayer]);
-};
-Niivue.prototype.initWasm = async function() {
-  this.worker = WorkerWrapper;
-  this.worker.onmessage = (e) => {
-    const id = e.data.id;
-    let processedImage = this.volumes.find((image) => image.id == id);
-    if (!processedImage) {
-      console.log("image not found");
-      return;
-    }
-    const isNewLayer = e.data.isNewLayer;
-    if (isNewLayer) {
-      processedImage = processedImage.clone();
-      processedImage.id = v4();
-    }
-    let imageBytes = e.data.imageBytes;
-    switch (processedImage.hdr.datatypeCode) {
-      case processedImage.DT_UNSIGNED_CHAR:
-        processedImage.img = new Uint8Array(imageBytes);
-        break;
-      case processedImage.DT_SIGNED_SHORT:
-        processedImage.img = new Int16Array(imageBytes);
-        break;
-      case processedImage.DT_FLOAT:
-        processedImage.img = new Float32Array(imageBytes);
-        break;
-      case processedImage.DT_DOUBLE:
-        throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
-      case processedImage.DT_RGB:
-        processedImage.img = new Uint8Array(imageBytes);
-        break;
-      case processedImage.DT_UINT16:
-        processedImage.img = new Uint16Array(imageBytes);
-        break;
-      case processedImage.DT_RGBA32:
-        processedImage.img = new Uint8Array(imageBytes);
-        break;
-      default:
-        throw "datatype " + processedImage.hdr.datatypeCode + " not supported";
-    }
-    processedImage.trustCalMinMax = false;
-    processedImage.calMinMax();
-    let imageIndex = this.volumes.length;
-    if (isNewLayer) {
-      this.setVolume(processedImage, this.volumes.length);
-    } else {
-      imageIndex = this.volumes.indexOf(processedImage);
-    }
-    this.refreshLayers(processedImage, imageIndex, this.volumes.length);
-    this.drawScene();
-    this.updateGLVolume();
-  };
-};
 Niivue.prototype.init = async function() {
-  await this.initWasm();
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
