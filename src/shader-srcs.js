@@ -16,19 +16,26 @@ precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
+uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition (vec3 startPosition) {
+vec3 GetBackPosition(vec3 startPositionTex) {
+ //texture space is 0..1 in each dimension, volScale adjusts for relative field of view
+ //convert startPosition to world space units:
+ vec3 startPosition = startPositionTex * volScale; 
  vec3 invR = 1.0 / rayDir;
  vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (vec3(1.0)-startPosition);
+ vec3 ttop = invR * (volScale-startPosition);
  vec3 tmax = max(ttop, tbot);
  vec2 t = min(tmax.xx, tmax.yz);
- return startPosition + (rayDir * min(t.x, t.y));
+ vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+ //convert world position back to texture position:
+ endPosition = endPosition / volScale;
+ return endPosition;
 }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
@@ -55,7 +62,7 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 }
 void main() {
   fColor = vec4(0.0,0.0,0.0,0.0);
-	// fColor = vec4(vColor.rgb, 1.0);
+	//fColor = vec4(vColor.rgb, 1.0); return;
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	// fColor = texture(volume, vColor.xyz);
