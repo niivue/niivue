@@ -236,7 +236,6 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
 }; // vox2mm()
 
 NVImage.prototype.mm2vox = function (mm) {
-  //let sform = mat.mat4.clone(this.matRAS);
   let sform = mat.mat4.fromValues(...this.hdr.affine.flat());
   let out = mat.mat4.clone(sform);
   mat.mat4.transpose(out, sform);
