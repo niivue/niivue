@@ -74,7 +74,7 @@ export const Niivue = function (options = {}) {
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isRadiologicalConvention: false,
-    logLevel: "info",
+    logging: false,
   };
 
   this.canvas = null; // the canvas element on the page
@@ -148,7 +148,7 @@ export const Niivue = function (options = {}) {
   this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
-  this.loadingText = "drag and drop to start";
+  this.loadingText = "waiting for images...";
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -168,7 +168,7 @@ export const Niivue = function (options = {}) {
       options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
 
-  log.setLogLevel(this.opts.logLevel);
+  log.setLogLevel(this.opts.logging);
 
   // maping of keys (event strings) to rxjs subjects
   this.eventsToSubjects = {
@@ -188,7 +188,7 @@ export const Niivue = function (options = {}) {
  */
 Niivue.prototype.attachTo = async function (id) {
   await this.attachToCanvas(document.getElementById(id));
-  log.debug("attached to canvas", [1, 0, 1], false);
+  log.debug("attached to element with id: ", id);
   return this;
 }; // attachTo
 
@@ -1141,11 +1141,11 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       this.loadingText = "loading...";
       this.drawScene();
     } else {
-      this.loadingText = "drag and drop to start";
+      this.loadingText = "waiting for images...";
     }
   });
   if (!this.initialized) {
-    await this.init();
+    //await this.init();
   }
   this.volumes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -1365,12 +1365,14 @@ Niivue.prototype.initText = async function () {
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
-  // let debugInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
-  // let vendor = this.gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-  // let renderer = this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+  let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
+  let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
+  let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
   // console.log("gpu vendor: ", vendor);
   // console.log("gpu renderer: ", renderer);
   // await this.loadFont()
+  log.info("renderer vendor: ", vendor);
+  log.info("renderer: ", renderer);
 
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
@@ -2171,9 +2173,9 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           frac: this.scene.crosshairPos,
           values: this.volumes.map((v, index) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
-						let vox = v.mm2vox(mm)
-						let val = v.getValue(...vox)
-						return val
+            let vox = v.mm2vox(mm);
+            let val = v.getValue(...vox);
+            return val;
           }),
         });
         return;
@@ -2196,11 +2198,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
         values: this.volumes.map((v, index) => {
-            let mm = this.frac2mm(this.scene.crosshairPos);
-						let vox = v.mm2vox(mm)
-						let val = v.getValue(...vox)
-            return val;
-          }),
+          let mm = this.frac2mm(this.scene.crosshairPos);
+          let vox = v.mm2vox(mm);
+          let val = v.getValue(...vox);
+          return val;
+        }),
       });
       return;
     } else {
@@ -2737,7 +2739,6 @@ Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   let shim = mat.vec4.fromValues(-0.5, -0.5, -0.5, 0); //bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
   mat.vec4.add(pos, pos, shim);
   mat.vec4.transformMat4(pos, pos, sform);
-  this.mm2frac(pos);
   return pos;
 }; // frac2mm()
 

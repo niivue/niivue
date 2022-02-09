@@ -66,7 +66,7 @@
 					colorMap: 'red'
 				}
       ]
-			var nv1 = new Niivue({logLevel: 'debug'})
+			var nv1 = new Niivue({logging: true})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
@@ -76,6 +76,7 @@
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
+
       })
 
     </script>
