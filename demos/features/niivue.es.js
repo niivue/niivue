@@ -331,7 +331,7 @@ function translate(out, a, v) {
   }
   return out;
 }
-function scale(out, a, v) {
+function scale$1(out, a, v) {
   var x = v[0], y = v[1], z = v[2];
   out[0] = a[0] * x;
   out[1] = a[1] * x;
@@ -412,6 +412,29 @@ function rotate(out, a, rad, axis) {
   }
   return out;
 }
+function orthoNO(out, left, right, bottom, top, near, far) {
+  var lr = 1 / (left - right);
+  var bt = 1 / (bottom - top);
+  var nf = 1 / (near - far);
+  out[0] = -2 * lr;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  out[5] = -2 * bt;
+  out[6] = 0;
+  out[7] = 0;
+  out[8] = 0;
+  out[9] = 0;
+  out[10] = 2 * nf;
+  out[11] = 0;
+  out[12] = (left + right) * lr;
+  out[13] = (top + bottom) * bt;
+  out[14] = (far + near) * nf;
+  out[15] = 1;
+  return out;
+}
+var ortho = orthoNO;
 function create$1() {
   var out = new ARRAY_TYPE(3);
   if (ARRAY_TYPE != Float32Array) {
@@ -421,6 +444,12 @@ function create$1() {
   }
   return out;
 }
+function length(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  return Math.hypot(x, y, z);
+}
 function fromValues$1(x, y, z) {
   var out = new ARRAY_TYPE(3);
   out[0] = x;
@@ -428,10 +457,22 @@ function fromValues$1(x, y, z) {
   out[2] = z;
   return out;
 }
+function add$1(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
+  return out;
+}
 function subtract(out, a, b) {
   out[0] = a[0] - b[0];
   out[1] = a[1] - b[1];
   out[2] = a[2] - b[2];
+  return out;
+}
+function scale(out, a, b) {
+  out[0] = a[0] * b;
+  out[1] = a[1] * b;
+  out[2] = a[2] * b;
   return out;
 }
 function normalize(out, a) {
@@ -547,11 +588,13 @@ var mul = multiply;
 var vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
+
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	vColor = pos;
+	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	vColor = texCoords;
 }`;
 var fragRenderShader = `#version 300 es
 #line 15
@@ -597,12 +640,18 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-    fColor = vec4(0.0,0.0,0.0,0.0);
+  fColor = vec4(0.0,0.0,0.0,0.0);
+	// fColor = vec4(vColor.rgb, 1.0);
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
+	// fColor = texture(volume, vColor.xyz);
+	// fColor = vec4(texture(volume, vColor.xyz).rgb, vColor.r);
+	// return;
 	vec3 start = vColor;
 	vec3 backPosition = GetBackPosition(start);
-	//fColor = vec4(backPosition, 1.0); return;
-    vec3 dir = backPosition - start;
-    float len = length(dir);
+	// fColor = vec4(backPosition, 1.0); return;
+  vec3 dir = backPosition - start;
+  float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if (lenVox < 0.5) return;
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
@@ -621,6 +670,7 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) return;
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
@@ -5514,7 +5564,7 @@ var AnonymousSubject = function(_super) {
   };
   return AnonymousSubject2;
 }(Subject);
-var NiivueObject3D = function(id, vertexBuffer, mode, indexCount) {
+var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = null, textureCoordinateBuffer = null) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
   this.CULL_FRONT = 4;
@@ -5525,6 +5575,8 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount) {
   this.isVisible = true;
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
+  this.indexBuffer = indexBuffer;
+  this.textureCoordinateBuffer = textureCoordinateBuffer;
   this.mode = mode;
   this.glFlags = 0;
   this.id = id;
@@ -5539,6 +5591,8 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount) {
   this.position = [0, 0, 0];
   this.rotation = [0, 0, 0];
   this.rotationRadians = 0;
+  this.extentsMin = [];
+  this.extentsMax = [];
 };
 var NiivueShader3D = function(shader) {
   this.shader = shader;
@@ -6407,15 +6461,15 @@ const put_short = (s, w) => {
   s.pending_buf[s.pending++] = w & 255;
   s.pending_buf[s.pending++] = w >>> 8 & 255;
 };
-const send_bits = (s, value, length) => {
-  if (s.bi_valid > Buf_size - length) {
+const send_bits = (s, value, length2) => {
+  if (s.bi_valid > Buf_size - length2) {
     s.bi_buf |= value << s.bi_valid & 65535;
     put_short(s, s.bi_buf);
     s.bi_buf = value >> Buf_size - s.bi_valid;
-    s.bi_valid += length - Buf_size;
+    s.bi_valid += length2 - Buf_size;
   } else {
     s.bi_buf |= value << s.bi_valid & 65535;
-    s.bi_valid += length;
+    s.bi_valid += length2;
   }
 };
 const send_code = (s, c, tree) => {
@@ -6528,18 +6582,18 @@ const gen_codes = (tree, max_code, bl_count) => {
 const tr_static_init = () => {
   let n;
   let bits;
-  let length;
+  let length2;
   let code;
   let dist;
   const bl_count = new Array(MAX_BITS$1 + 1);
-  length = 0;
+  length2 = 0;
   for (code = 0; code < LENGTH_CODES$1 - 1; code++) {
-    base_length[code] = length;
+    base_length[code] = length2;
     for (n = 0; n < 1 << extra_lbits[code]; n++) {
-      _length_code[length++] = code;
+      _length_code[length2++] = code;
     }
   }
-  _length_code[length - 1] = code;
+  _length_code[length2 - 1] = code;
   dist = 0;
   for (code = 0; code < 16; code++) {
     base_dist[code] = dist;
@@ -10785,6 +10839,261 @@ String.prototype.getBytes = function() {
   }
   return bytes;
 };
+function getExtents(positions) {
+  const min2 = positions.slice(0, 3);
+  const max2 = positions.slice(0, 3);
+  for (let i = 3; i < positions.length; i += 3) {
+    for (let j = 0; j < 3; ++j) {
+      const v = positions[i + j];
+      min2[j] = Math.min(v, min2[j]);
+      max2[j] = Math.max(v, max2[j]);
+    }
+  }
+  return { min: min2, max: max2 };
+}
+NVImage.prototype.method1 = function() {
+  return {
+    left: 0,
+    right: this.hdr.dims[1] * this.hdr.pixDims[1],
+    posterior: 0,
+    anterior: this.hdr.dims[2] * this.hdr.pixDims[2],
+    inferior: 0,
+    superior: this.hdr.dims[3] * this.hdr.pixDims[3]
+  };
+};
+NVImage.prototype.method2 = function() {
+  const affine = [];
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      affine.push(this.hdr.affine[i][j]);
+    }
+  }
+  const affineMatrix = fromValues$2(...affine);
+  let rightTopFront = fromValues(this.hdr.dims[1], this.hdr.dims[2], this.hdr.dims[3], 1);
+  let leftBackBottom = fromValues(0, 0, 0, 1);
+  let maxExtent = create();
+  transformMat4(maxExtent, rightTopFront, affineMatrix);
+  let minExtent = create();
+  transformMat4(minExtent, leftBackBottom, affineMatrix);
+  return {
+    left: minExtent[0],
+    right: maxExtent[0],
+    posterior: minExtent[1],
+    anterior: maxExtent[1],
+    inferior: minExtent[2],
+    superior: maxExtent[2]
+  };
+};
+NVImage.prototype.method3 = function() {
+};
+NVImage.prototype.toNiivueObject3D = function(id, gl) {
+  let left = -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1];
+  let right = this.hdr.dims[1] / 2 * this.hdr.pixDims[1];
+  let bottom = -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2];
+  let top = this.hdr.dims[2] / 2 * this.hdr.pixDims[2];
+  let front = this.hdr.dims[3] / 2 * this.hdr.pixDims[3];
+  let back = -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3];
+  const positions = [
+    left,
+    bottom,
+    front,
+    right,
+    bottom,
+    front,
+    right,
+    top,
+    front,
+    left,
+    top,
+    front,
+    left,
+    bottom,
+    back,
+    left,
+    top,
+    back,
+    right,
+    top,
+    back,
+    right,
+    bottom,
+    back,
+    left,
+    top,
+    back,
+    left,
+    top,
+    front,
+    right,
+    top,
+    front,
+    right,
+    top,
+    back,
+    left,
+    bottom,
+    back,
+    right,
+    bottom,
+    back,
+    right,
+    bottom,
+    front,
+    left,
+    bottom,
+    front,
+    right,
+    bottom,
+    back,
+    right,
+    top,
+    back,
+    right,
+    top,
+    front,
+    right,
+    bottom,
+    front,
+    left,
+    bottom,
+    back,
+    left,
+    bottom,
+    front,
+    left,
+    top,
+    front,
+    left,
+    top,
+    back
+  ];
+  const textureCoordinates = [
+    0,
+    0,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0
+  ];
+  const vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+  const indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  const indices = [
+    0,
+    3,
+    2,
+    2,
+    1,
+    0,
+    4,
+    7,
+    6,
+    6,
+    5,
+    4,
+    8,
+    11,
+    10,
+    10,
+    9,
+    8,
+    12,
+    15,
+    14,
+    14,
+    13,
+    12,
+    16,
+    19,
+    18,
+    18,
+    17,
+    16,
+    20,
+    23,
+    22,
+    22,
+    21,
+    20
+  ];
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  const textureCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+  const obj3D = new NiivueObject3D(id, vertexBuffer, gl.TRIANGLES, indices.length, indexBuffer, textureCoordBuffer);
+  const extents = getExtents(positions);
+  obj3D.extentsMin = extents.min;
+  obj3D.extentsMax = extents.max;
+  return obj3D;
+};
 const Log = function(logLevel) {
   this.DEBUG = "debug";
   this.INFO = "info";
@@ -13264,6 +13573,9 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let outTexture = null;
   let mtx = [];
   if (layer === 0) {
+    this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
+    this.volumeObject3D.glFlags = this.volumeObject3D.BLEND | this.volumeObject3D.CULL_FACE;
+    this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
     mtx = overlayItem.toRAS;
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
@@ -13273,6 +13585,21 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.volScale = volScale;
     this.vox = vox2;
     this.volumeObject3D.scale = volScale;
+    this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox2);
+    let volumeRenderShader = new NiivueShader3D(this.renderShader);
+    volumeRenderShader.mvpUniformName = "mvpMtx";
+    volumeRenderShader.rayDirUniformName = "rayDir";
+    volumeRenderShader.clipPlaneUniformName = "clipPlane";
+    let pickingShader = new Shader(this.gl, vertVolumePickingShader, fragVolumePickingShader);
+    pickingShader.use(this.gl);
+    this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
+    this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
+    this.gl.uniform1i(pickingShader.uniforms["overlay"], 2);
+    pickingShader.mvpUniformName = "mvpMtx";
+    pickingShader.rayDirUniformName = "rayDir";
+    pickingShader.clipPlaneUniformName = "clipPlane";
+    this.volumeObject3D.pickingShader = pickingShader;
+    this.volumeObject3D.renderShaders.push(volumeRenderShader);
   } else {
     if (this.back.dims === void 0)
       console.log("Fatal error: Unable to render overlay: background dimensions not defined!");
@@ -13724,16 +14051,36 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.sync();
 };
 Niivue.prototype.calculateMvpMatrix = function(object3D) {
-  let m = clone(object3D.modelMatrix);
-  translate(m, m, object3D.position);
-  var rad = (90 - this.scene.renderElevation - object3D.scale[0]) * Math.PI / 180;
-  rotate(m, m, rad, [-1, 0, 0]);
+  const range = create$1();
+  subtract(range, object3D.extentsMax, object3D.extentsMin);
+  console.log(range);
+  const offset = create$1();
+  scale(offset, range, 0.5);
+  add$1(offset, object3D.extentsMin, offset);
+  scale(offset, offset, -1);
+  const radius = length(range);
+  console.log("radius is " + radius);
+  const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  const zNear = 0.1;
+  const zFar = radius * 3;
+  const halfWorldWidth = this.gl.canvas.clientWidth / 2;
+  const ratio = aspect;
+  const projectionMatrix = create$2();
+  ortho(projectionMatrix, -halfWorldWidth, halfWorldWidth, -halfWorldWidth / ratio, halfWorldWidth / ratio, zNear, zFar);
+  const modelViewMatrix = create$2();
+  translate(modelViewMatrix, modelViewMatrix, [-0, 0, -radius * 2]);
+  var rad = (90 - this.scene.renderElevation) * Math.PI / 180;
+  rotate(modelViewMatrix, modelViewMatrix, rad, [1, 0, 0]);
   rad = this.scene.renderAzimuth * Math.PI / 180;
-  rotate(m, m, rad, [0, 0, 1]);
-  rotate(m, m, object3D.rotationRadians, object3D.rotation);
-  scale(m, m, object3D.scale);
-  scale(m, m, [0.57, 0.57, 0.57]);
-  return m;
+  rotate(modelViewMatrix, modelViewMatrix, rad, [0, 0, -1]);
+  scale$1(modelViewMatrix, modelViewMatrix, [
+    this.volScaleMultiplier,
+    this.volScaleMultiplier,
+    this.volScaleMultiplier
+  ]);
+  const mvpMatrix = create$2();
+  multiply$1(mvpMatrix, projectionMatrix, modelViewMatrix);
+  return mvpMatrix;
 };
 Niivue.prototype.calculateRayDirection = function(mvpMatrix) {
   var inv = create$2();
@@ -13752,59 +14099,9 @@ Niivue.prototype.calculateRayDirection = function(mvpMatrix) {
   return rayDir;
 };
 Niivue.prototype.draw3D = function() {
-  let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
-  if (mn <= 0)
-    return;
-  mn *= this.volScaleMultiplier;
-  let xCenter = this.gl.canvas.width / 2;
-  let yCenter = this.gl.canvas.height / 2;
-  let xPix = mn;
-  let yPix = mn;
-  this.gl.viewport(xCenter - xPix * 0.5, yCenter - yPix * 0.5, xPix, yPix);
+  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   let m = null;
-  this.gl.disable(this.gl.BLEND);
-  for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible) {
-      continue;
-    }
-    let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
-    pickingShader.use(this.gl);
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.BACK);
-      }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
-    this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-    m = this.calculateMvpMatrix(object3D);
-    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
-    if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection(m);
-      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
-    }
-    if (pickingShader.clipPlaneUniformName) {
-      this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
-    }
-    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
-    this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
-  }
-  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
-  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
-  const rgbaPixel = new Uint8Array(4);
-  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
-  this.selectedObjectId = rgbaPixel[3];
-  if (this.selectedObjectId === this.VOLUME_ID) {
-    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-  }
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -13812,6 +14109,14 @@ Niivue.prototype.draw3D = function() {
     this.gl.enableVertexAttribArray(0);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+    if (object3D.textureCoordinateBuffer) {
+      this.gl.enableVertexAttribArray(1);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
+      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+    }
+    if (object3D.indexBuffer) {
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    }
     if (object3D.glFlags & object3D.BLEND) {
       this.gl.enable(this.gl.BLEND);
       this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
@@ -13841,7 +14146,7 @@ Niivue.prototype.draw3D = function() {
       if (shader.clipPlaneUniformName) {
         this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
       }
-      this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
+      this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     }
   }
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);

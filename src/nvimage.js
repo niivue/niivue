@@ -2,6 +2,7 @@ import * as nifti from "nifti-reader-js";
 import { v4 as uuidv4 } from "uuid";
 import * as mat from "gl-matrix";
 import * as cmaps from "./cmaps";
+import { NiivueObject3D } from "./niivue-object3D";
 
 /**
  * query all available color maps that can be applied to volumes
@@ -623,4 +624,304 @@ String.prototype.getBytes = function () {
   }
 
   return bytes;
+};
+
+/**
+ * @typedef {Object} NVImage~Extents
+ * @property {number[]} min - min bounding point
+ * @property {number[]} max - max bounding point
+ */
+
+/**
+ *
+ * @param {number[]} positions
+ * @returns {NVImage~Extents}
+ */
+function getExtents(positions) {
+  const min = positions.slice(0, 3);
+  const max = positions.slice(0, 3);
+  for (let i = 3; i < positions.length; i += 3) {
+    for (let j = 0; j < 3; ++j) {
+      const v = positions[i + j];
+      min[j] = Math.min(v, min[j]);
+      max[j] = Math.max(v, max[j]);
+    }
+  }
+  return { min, max };
+}
+
+// returns the left, right, up, down, front and back via pixdims, qform or sform
+// +x = Right  +y = Anterior  +z = Superior.
+
+/**
+ * calculate cuboid extents via pixdims * dims
+ * @returns {number[]}
+ */
+NVImage.prototype.method1 = function () {
+  return {
+    left: 0,
+    right: this.hdr.dims[1] * this.hdr.pixDims[1], // x
+    posterior: 0,
+    anterior: this.hdr.dims[2] * this.hdr.pixDims[2], // y
+    inferior: 0,
+    superior: this.hdr.dims[3] * this.hdr.pixDims[3], // z
+  };
+};
+
+/**
+ * calculate cuboid extents via qform
+ * @returns {number[]}
+ */
+NVImage.prototype.method2 = function () {
+  const affine = [];
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      affine.push(this.hdr.affine[i][j]);
+    }
+  }
+  const affineMatrix = mat.mat4.fromValues(...affine);
+  let rightTopFront = mat.vec4.fromValues(
+    this.hdr.dims[1],
+    this.hdr.dims[2],
+    this.hdr.dims[3],
+    1
+  );
+  let leftBackBottom = mat.vec4.fromValues(0, 0, 0, 1);
+  let maxExtent = mat.vec4.create();
+  mat.vec4.transformMat4(maxExtent, rightTopFront, affineMatrix);
+  let minExtent = mat.vec4.create();
+  mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
+  return {
+    left: minExtent[0],
+    right: maxExtent[0], // x
+    posterior: minExtent[1],
+    anterior: maxExtent[1], // y
+    inferior: minExtent[2],
+    superior: maxExtent[2], // z
+  };
+};
+
+/**
+ * calculate cuboid extents via sform
+ * @returns {number[]}
+ */
+NVImage.prototype.method3 = function () {};
+
+/**
+ * @param {number} id - id of 3D Object (is this the base volume or an overlay?)
+ * @param {WebGLRenderingContext} gl - WebGL rendering context
+ * @returns {NiivueObject3D} returns a new 3D object in model space
+ */
+NVImage.prototype.toNiivueObject3D = function (id, gl) {
+  // const x = (this.hdr.dims[1] / 2) * this.hdr.pixDims[1]; //
+  let left = -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1]; // -1.0 // -x; //-1.0; //
+  let right = (this.hdr.dims[1] / 2) * this.hdr.pixDims[1]; // x; // 1.0; //
+  let bottom = -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2]; // -1.0; // -x; //-1.0; //
+  let top = (this.hdr.dims[2] / 2) * this.hdr.pixDims[2]; // 1.0; // x; //1.0; //
+  let front = (this.hdr.dims[3] / 2) * this.hdr.pixDims[3]; // x; //1.0; //
+  let back = -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3]; // -x; //-1.0; //
+
+  // let cuboid;
+
+  // // if (this.hdr.qform_code != 0) {
+  // //   cuboid = this.method2();
+  // //   console.log("method 2 used");
+  // // } else {
+  // //   cuboid = this.method1();
+  // // }
+  // cuboid = this.method1();
+  // console.log("cuboid");
+  // console.log(cuboid);
+
+  // let left = cuboid.left / -2;
+  // let right = cuboid.right / 2;
+  // let bottom = cuboid.inferior / -2;
+  // let top = cuboid.superior / 2;
+  // let front = cuboid.anterior / -2;
+  // let back = cuboid.posterior / 2;
+
+  const positions = [
+    // Front face
+    left,
+    bottom,
+    front,
+    right,
+    bottom,
+    front,
+    right,
+    top,
+    front,
+    left,
+    top,
+    front,
+
+    // Back face
+    left,
+    bottom,
+    back,
+    left,
+    top,
+    back,
+    right,
+    top,
+    back,
+    right,
+    bottom,
+    back,
+
+    // Top face
+    left,
+    top,
+    back,
+    left,
+    top,
+    front,
+    right,
+    top,
+    front,
+    right,
+    top,
+    back,
+
+    // Bottom face
+    left,
+    bottom,
+    back,
+    right,
+    bottom,
+    back,
+    right,
+    bottom,
+    front,
+    left,
+    bottom,
+    front,
+
+    // Right face
+    right,
+    bottom,
+    back,
+    right,
+    top,
+    back,
+    right,
+    top,
+    front,
+    right,
+    bottom,
+    front,
+
+    // Left face
+    left,
+    bottom,
+    back,
+    left,
+    bottom,
+    front,
+    left,
+    top,
+    front,
+    left,
+    top,
+    back,
+  ];
+
+  const textureCoordinates = [
+    // Front
+    0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0,
+
+    // Back
+    0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0,
+
+    // Top
+    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0,
+
+    // Bottom
+    0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+
+    // Right
+    1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0,
+
+    // Left
+    0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0,
+  ];
+
+  const vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+  const indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+  // This array defines each face as two triangles, using the
+  // indices into the vertex array to specify each triangle's
+  // position.
+
+  const indices = [
+    0,
+    3,
+    2,
+    2,
+    1,
+    0, // Top
+    4,
+    7,
+    6,
+    6,
+    5,
+    4, // Bottom
+    8,
+    11,
+    10,
+    10,
+    9,
+    8, // Front
+    12,
+    15,
+    14,
+    14,
+    13,
+    12, // Back
+    16,
+    19,
+    18,
+    18,
+    17,
+    16, // right
+    20,
+    23,
+    22,
+    22,
+    21,
+    20, // left
+  ];
+  // Now send the element array to GL
+
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array(indices),
+    gl.STATIC_DRAW
+  );
+
+  const textureCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array(textureCoordinates),
+    gl.STATIC_DRAW
+  );
+
+  const obj3D = new NiivueObject3D(
+    id,
+    vertexBuffer,
+    gl.TRIANGLES,
+    indices.length,
+    indexBuffer,
+    textureCoordBuffer
+  );
+
+  const extents = getExtents(positions);
+  obj3D.extentsMin = extents.min;
+  obj3D.extentsMax = extents.max;
+  return obj3D;
 };
