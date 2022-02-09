@@ -10559,6 +10559,16 @@ NVImage.prototype.vox2mm = function(XYZ, mtx) {
   let pos3 = fromValues$1(pos[0], pos[1], pos[2]);
   return pos3;
 };
+NVImage.prototype.mm2vox = function(mm) {
+  let sform = fromValues$2(...this.hdr.affine.flat());
+  let out = clone(sform);
+  transpose(out, sform);
+  invert(out, out);
+  let pos = fromValues(mm[0], mm[1], mm[2], 1);
+  transformMat4(pos, pos, out);
+  let pos3 = fromValues$1(pos[0], pos[1], pos[2]);
+  return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
+};
 NVImage.prototype.arrayEquals = function(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
 };
@@ -10785,35 +10795,37 @@ String.prototype.getBytes = function() {
   }
   return bytes;
 };
+NVImage.prototype.getValue = function(x, y, z) {
+  const { nx, ny } = this.getImageMetadata();
+  return this.img[x + y * nx + z * nx * ny];
+};
 const Log = function(logLevel) {
-  this.DEBUG = "debug";
-  this.INFO = "info";
-  this.WARN = "warn";
-  this.ERROR = "error";
-  this.LOG_PREFIX = "NiiVue: ";
+  this.LOGGING_ON = true;
+  this.LOGGING_OFF = false;
+  this.LOG_PREFIX = "NiiVue:";
   this.logLevel = logLevel;
 };
 Log.prototype.getTimeStamp = function() {
-  return `${this.LOG_PREFIX}${Date.now()} `;
+  return `${this.LOG_PREFIX} `;
 };
 Log.prototype.debug = function() {
-  if (this.logLevel === this.DEBUG) {
-    console.log(this.getTimeStamp(), ...arguments);
+  if (this.logLevel === this.LOGGING_ON) {
+    console.log(this.getTimeStamp(), "DEBUG", ...arguments);
   }
 };
 Log.prototype.info = function() {
-  if (this.logLevel === this.INFO) {
-    console.log(this.getTimeStamp(), ...arguments);
+  if (this.logLevel === this.LOGGING_ON) {
+    console.log(this.getTimeStamp(), "INFO", ...arguments);
   }
 };
 Log.prototype.warn = function() {
-  if (this.logLevel === this.WARN) {
-    console.warn(this.getTimeStamp(), ...arguments);
+  if (this.logLevel === this.LOGGING_ON) {
+    console.warn(this.getTimeStamp(), "WARN", ...arguments);
   }
 };
 Log.prototype.error = function() {
-  if (this.logLevel === this.ERROR) {
-    console.error(this.getTimeStamp(), ...arguments);
+  if (this.logLevel === this.LOGGING_ON) {
+    console.error(this.getTimeStamp(), "ERROR", ...arguments);
   }
 };
 Log.prototype.setLogLevel = function(logLevel) {
@@ -12370,7 +12382,7 @@ const Niivue = function(options = {}) {
     viewModeHotKey: "KeyV",
     keyDebounceTime: 50,
     isRadiologicalConvention: false,
-    logLevel: "info"
+    logging: false
   };
   this.canvas = null;
   this.gl = null;
@@ -12440,7 +12452,7 @@ const Niivue = function(options = {}) {
   this.intensityRange$ = new Subject();
   this.scene.location$ = new Subject();
   this.scene.loading$ = new Subject();
-  this.loadingText = "drag and drop to start";
+  this.loadingText = "waiting for images...";
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -12453,7 +12465,7 @@ const Niivue = function(options = {}) {
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
   }
-  log.setLogLevel(this.opts.logLevel);
+  log.setLogLevel(this.opts.logging);
   this.eventsToSubjects = {
     location: this.scene.location$,
     loading: this.scene.loading$
@@ -12462,7 +12474,7 @@ const Niivue = function(options = {}) {
 };
 Niivue.prototype.attachTo = async function(id) {
   await this.attachToCanvas(document.getElementById(id));
-  log.debug("attached to canvas", [1, 0, 1], false);
+  log.debug("attached to element with id: ", id);
   return this;
 };
 Niivue.prototype.on = function(event, callback) {
@@ -12587,14 +12599,14 @@ function intensityRaw2Scaled(hdr, raw) {
     hdr.scl_slope = 1;
   return raw * hdr.scl_slope + hdr.scl_inter;
 }
-Niivue.prototype.calculateNewRange = function() {
+Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
-  let startVox = this.frac2vox(frac);
+  let startVox = this.frac2vox(frac, volIdx);
   frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
-  let endVox = this.frac2vox(frac);
+  let endVox = this.frac2vox(frac, volIdx);
   let hi = -Number.MAX_VALUE, lo = Number.MAX_VALUE;
   let xrange;
   let yrange;
@@ -12609,8 +12621,8 @@ Niivue.prototype.calculateNewRange = function() {
   } else if (startVox[2] - endVox[2] === 0) {
     zrange[1] = startVox[2] + 1;
   }
-  const hdr = this.volumes[0].hdr;
-  const img = this.volumes[0].img;
+  const hdr = this.volumes[volIdx].hdr;
+  const img = this.volumes[volIdx].img;
   const xdim = hdr.dims[1];
   const ydim = hdr.dims[2];
   for (let z = zrange[0]; z < zrange[1]; z++) {
@@ -12630,8 +12642,8 @@ Niivue.prototype.calculateNewRange = function() {
   }
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
-  this.volumes[0].cal_min = mnScale;
-  this.volumes[0].cal_max = mxScale;
+  this.volumes[volIdx].cal_min = mnScale;
+  this.volumes[volIdx].cal_max = mxScale;
   this.intensityRange$.next([mnScale, mxScale]);
 };
 Niivue.prototype.mouseUpListener = function() {
@@ -12986,12 +12998,11 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
       this.loadingText = "loading...";
       this.drawScene();
     } else {
-      this.loadingText = "drag and drop to start";
+      this.loadingText = "waiting for images...";
     }
   });
-  if (!this.initialized) {
-    await this.init();
-  }
+  if (!this.initialized)
+    ;
   this.volumes = [];
   this.gl.clearColor(0, 0, 0, 1);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -13107,6 +13118,11 @@ Niivue.prototype.initText = async function() {
   this.drawLoadingText(this.loadingText);
 };
 Niivue.prototype.init = async function() {
+  let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
+  let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
+  let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
+  log.info("renderer vendor: ", vendor);
+  log.info("renderer: ", renderer);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -13534,7 +13550,13 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         this.scene.location$.next({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
-          frac: this.scene.crosshairPos
+          frac: this.scene.crosshairPos,
+          values: this.volumes.map((v, index) => {
+            let mm = this.frac2mm(this.scene.crosshairPos);
+            let vox = v.mm2vox(mm);
+            let val = v.getValue(...vox);
+            return val;
+          })
         });
         return;
       }
@@ -13554,7 +13576,13 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
-        frac: this.scene.crosshairPos
+        frac: this.scene.crosshairPos,
+        values: this.volumes.map((v, index) => {
+          let mm = this.frac2mm(this.scene.crosshairPos);
+          let vox = v.mm2vox(mm);
+          let val = v.getValue(...vox);
+          return val;
+        })
       });
       return;
     } else {
@@ -13848,16 +13876,16 @@ Niivue.prototype.draw3D = function() {
   this.sync();
   return posString;
 };
-Niivue.prototype.mm2frac = function(mm) {
+Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);
-  let d = this.back.dims;
+  let d = this.volumes[volIdx].hdr.dims;
   let frac = [0, 0, 0];
   if (typeof d === "undefined") {
     return frac;
   }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1)
     return frac;
-  let sform = clone(this.back.matRAS);
+  let sform = clone(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   invert(sform, sform);
   transformMat4(mm4, mm4, sform);
@@ -13866,32 +13894,31 @@ Niivue.prototype.mm2frac = function(mm) {
   frac[2] = (mm4[2] + 0.5) / d[3];
   return frac;
 };
-Niivue.prototype.vox2frac = function(vox) {
+Niivue.prototype.vox2frac = function(vox, volIdx = 0) {
   let frac = [
-    (vox[0] + 0.5) / this.back.dims[1],
-    (vox[1] + 0.5) / this.back.dims[2],
-    (vox[2] + 0.5) / this.back.dims[3]
+    (vox[0] + 0.5) / this.volumes[volIdx].hdr.dims[1],
+    (vox[1] + 0.5) / this.volumes[volIdx].hdr.dims[2],
+    (vox[2] + 0.5) / this.volumes[volIdx].hdr.dims[3]
   ];
   return frac;
 };
-Niivue.prototype.frac2vox = function(frac) {
+Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
   let vox = [
-    Math.round(frac[0] * this.back.dims[1] - 0.5),
-    Math.round(frac[1] * this.back.dims[2] - 0.5),
-    Math.round(frac[2] * this.back.dims[3] - 0.5)
+    Math.round(frac[0] * this.volumes[volIdx].hdr.dims[1] - 0.5),
+    Math.round(frac[1] * this.volumes[volIdx].hdr.dims[2] - 0.5),
+    Math.round(frac[2] * this.volumes[volIdx].hdr.dims[3] - 0.5)
   ];
   return vox;
 };
-Niivue.prototype.frac2mm = function(frac) {
+Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
   let pos = fromValues(frac[0], frac[1], frac[2], 1);
-  let dim = fromValues(this.back.dims[1], this.back.dims[2], this.back.dims[3], 1);
-  let sform = clone(this.back.matRAS);
+  let dim = fromValues(this.volumes[volIdx].hdr.dims[1], this.volumes[volIdx].hdr.dims[2], this.volumes[volIdx].hdr.dims[3], 1);
+  let sform = clone(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   mul(pos, pos, dim);
   let shim = fromValues(-0.5, -0.5, -0.5, 0);
   add(pos, pos, shim);
   transformMat4(pos, pos, sform);
-  this.mm2frac(pos);
   return pos;
 };
 Niivue.prototype.canvasPos2frac = function(canvasPos) {
