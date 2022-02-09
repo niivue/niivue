@@ -241,7 +241,7 @@ NVImage.prototype.mm2vox = function (mm) {
   let out = mat.mat4.clone(sform);
   mat.mat4.transpose(out, sform);
   mat.mat4.invert(out, out);
-  let pos = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1); // WHY IS -x HARD CODE needed?
+  let pos = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
   mat.vec4.transformMat4(pos, pos, out);
   let pos3 = mat.vec3.fromValues(pos[0], pos[1], pos[2]);
   return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
