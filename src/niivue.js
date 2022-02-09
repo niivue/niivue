@@ -1616,6 +1616,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.vox = vox;
     this.volumeObject3D.scale = volScale;
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
+    this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
     // add shader to object
     let volumeRenderShader = new NiivueShader3D(this.renderShader);
     volumeRenderShader.mvpUniformName = "mvpMtx";
@@ -1956,6 +1957,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.renderShader.use(this.gl);
   let slicescl = this.sliceScale(); // slice scale determined by this.back --> the base image layer
   let vox = slicescl.vox;
+  let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
   this.gl.uniform1f(
     this.renderShader.uniforms["backOpacity"],
@@ -1966,7 +1968,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.scene.clipPlane
   );
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
-
+  this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
 }; // refreshLayers()
