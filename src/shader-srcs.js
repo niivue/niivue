@@ -1,11 +1,13 @@
 export var vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
+
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	vColor = pos;
+	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	vColor = texCoords;
 }`;
 
 export var fragRenderShader = `#version 300 es
@@ -52,12 +54,18 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-    fColor = vec4(0.0,0.0,0.0,0.0);
+  fColor = vec4(0.0,0.0,0.0,0.0);
+	// fColor = vec4(vColor.rgb, 1.0);
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
+	// fColor = texture(volume, vColor.xyz);
+	// fColor = vec4(texture(volume, vColor.xyz).rgb, vColor.r);
+	// return;
 	vec3 start = vColor;
 	vec3 backPosition = GetBackPosition(start);
-	//fColor = vec4(backPosition, 1.0); return;
-    vec3 dir = backPosition - start;
-    float len = length(dir);
+	// fColor = vec4(backPosition, 1.0); return;
+  vec3 dir = backPosition - start;
+  float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if (lenVox < 0.5) return;
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
@@ -76,6 +84,7 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) return;
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
