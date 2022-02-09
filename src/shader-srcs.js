@@ -171,16 +171,22 @@ export var fragSliceShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
+uniform float overlays;
 uniform float opacity;
 in vec3 texPos;
 out vec4 color;
 void main() {
 	color = vec4(texture(volume, texPos).rgb, opacity);
-	vec4 ocolor = texture(overlay, texPos);
-    float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-    if (aout <= 0.0) return;
-    color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-    color.a = aout;
+	vec4 ocolor = vec4(0.0);
+	if (overlays < 1.0) {
+	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
+	} else {
+		ocolor = texture(overlay, texPos);
+	}
+	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
+	if (aout <= 0.0) return;
+	color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	color.a = aout;
 }`;
 
 export var fragLineShader = `#version 300 es

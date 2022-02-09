@@ -861,22 +861,45 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
+  this.volumes.map((v) => {
+    log.debug(v.name);
+  });
   let numberOfLoadedImages = this.volumes.length;
   if (toIndex > numberOfLoadedImages) {
     return;
   }
   let volIndex = this.getVolumeIndexByID(volume.id);
+  /*
   if (volIndex >= 0) {
     this.volumes.splice(volIndex, 1);
   }
+	*/
   if (toIndex === 0) {
     this.volumes.unshift(volume);
     this.back = this.volumes[0];
+    this.overlays = this.volumes.slice(1);
+  } else if (toIndex < 0) {
+    // -1 to remove a volume
+    this.volumes.splice(this.getVolumeIndexByID(volume.id), 1);
+    //this.volumes = this.overlays
+    this.back = this.volumes[0];
+    if (this.volumes.length > 1) {
+      this.overlays = this.volumes.slice(1);
+    } else {
+      this.overlays = [];
+    }
   } else {
     this.volumes.splice(toIndex, 0, volume);
     this.overlays = this.volumes.slice(1);
   }
   this.updateGLVolume();
+  this.volumes.map((v) => {
+    log.debug(v.name);
+  });
+};
+
+Niivue.prototype.removeVolume = function (volume) {
+  this.setVolume(volume, -1);
 };
 
 /**
@@ -1926,6 +1949,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.deleteFramebuffer(fb);
+
+  // set overlays for slice shader
+  this.sliceShader.use(this.gl);
+  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
 
   // set slice scale for render shader
   this.renderShader.use(this.gl);
