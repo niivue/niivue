@@ -714,16 +714,22 @@ var fragSliceShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
+uniform float overlays;
 uniform float opacity;
 in vec3 texPos;
 out vec4 color;
 void main() {
 	color = vec4(texture(volume, texPos).rgb, opacity);
-	vec4 ocolor = texture(overlay, texPos);
-    float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-    if (aout <= 0.0) return;
-    color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-    color.a = aout;
+	vec4 ocolor = vec4(0.0);
+	if (overlays < 1.0) {
+	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
+	} else {
+		ocolor = texture(overlay, texPos);
+	}
+	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
+	if (aout <= 0.0) return;
+	color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	color.a = aout;
 }`;
 var fragLineShader = `#version 300 es
 #line 189
@@ -12854,22 +12860,37 @@ Niivue.prototype.getOverlayIndexByID = function(id) {
   return -1;
 };
 Niivue.prototype.setVolume = function(volume, toIndex = 0) {
+  this.volumes.map((v) => {
+    log.debug(v.name);
+  });
   let numberOfLoadedImages = this.volumes.length;
   if (toIndex > numberOfLoadedImages) {
     return;
   }
-  let volIndex = this.getVolumeIndexByID(volume.id);
-  if (volIndex >= 0) {
-    this.volumes.splice(volIndex, 1);
-  }
+  this.getVolumeIndexByID(volume.id);
   if (toIndex === 0) {
     this.volumes.unshift(volume);
     this.back = this.volumes[0];
+    this.overlays = this.volumes.slice(1);
+  } else if (toIndex < 0) {
+    this.volumes.splice(this.getVolumeIndexByID(volume.id), 1);
+    this.back = this.volumes[0];
+    if (this.volumes.length > 1) {
+      this.overlays = this.volumes.slice(1);
+    } else {
+      this.overlays = [];
+    }
   } else {
     this.volumes.splice(toIndex, 0, volume);
     this.overlays = this.volumes.slice(1);
   }
   this.updateGLVolume();
+  this.volumes.map((v) => {
+    log.debug(v.name);
+  });
+};
+Niivue.prototype.removeVolume = function(volume) {
+  this.setVolume(volume, -1);
 };
 Niivue.prototype.moveVolumeToBottom = function(volume) {
   this.setVolume(volume, 0);
@@ -13398,6 +13419,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.deleteFramebuffer(fb);
+  this.sliceShader.use(this.gl);
+  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
   this.renderShader.use(this.gl);
   let slicescl = this.sliceScale();
   let vox = slicescl.vox;
