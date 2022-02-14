@@ -869,12 +869,9 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     return;
   }
   let volIndex = this.getVolumeIndexByID(volume.id);
-  /*
-  if (volIndex >= 0) {
-    this.volumes.splice(volIndex, 1);
-  }
-	*/
+
   if (toIndex === 0) {
+    this.volumes.splice(volIndex, 1);
     this.volumes.unshift(volume);
     this.back = this.volumes[0];
     this.overlays = this.volumes.slice(1);
@@ -889,8 +886,10 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
       this.overlays = [];
     }
   } else {
+    this.volumes.splice(volIndex, 1);
     this.volumes.splice(toIndex, 0, volume);
     this.overlays = this.volumes.slice(1);
+    this.back = this.volumes[0];
   }
   this.updateGLVolume();
   this.volumes.map((v) => {
@@ -2859,7 +2858,10 @@ Niivue.prototype.drawScene = function () {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   let posString = "";
 
-  if (!this.back.dims) {
+  if (
+    this.volumes.length === 0 ||
+    typeof this.volumes[0].dims === "undefined"
+  ) {
     this.drawLoadingText(this.loadingText);
     return;
   }

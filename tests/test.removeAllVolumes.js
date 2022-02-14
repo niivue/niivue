@@ -3,7 +3,7 @@ beforeEach(async () => {
   await page.goto(httpServerAddress, {timeout:10000})
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
-test('overlay', async () => {
+test('removeAllVolumes', async () => {
   let nvols = await page.evaluate(async () => {
     nv = new niivue.Niivue()
     await nv.attachTo('gl')
@@ -27,9 +27,12 @@ test('overlay', async () => {
       },
     ]
     await nv.loadVolumes(volumeList)
+		// move the background to the top of the stack now
+		nv.removeVolume(nv.volumes[1])
+		nv.removeVolume(nv.volumes[0])
     return nv.volumes.length
   })
 
-  expect(nvols).toBe(2)
+  expect(nvols).toBe(0)
   await snapshot()
 })
