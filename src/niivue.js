@@ -2859,7 +2859,7 @@ Niivue.prototype.drawScene = function () {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   let posString = "";
 
-  if (!this.back.dims) {
+  if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
     this.drawLoadingText(this.loadingText);
     return;
   }
