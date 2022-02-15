@@ -602,19 +602,26 @@ precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
+uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition (vec3 startPosition) {
+vec3 GetBackPosition(vec3 startPositionTex) {
+ //texture space is 0..1 in each dimension, volScale adjusts for relative field of view
+ //convert startPosition to world space units:
+ vec3 startPosition = startPositionTex * volScale; 
  vec3 invR = 1.0 / rayDir;
  vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (vec3(1.0)-startPosition);
+ vec3 ttop = invR * (volScale-startPosition);
  vec3 tmax = max(ttop, tbot);
  vec2 t = min(tmax.xx, tmax.yz);
- return startPosition + (rayDir * min(t.x, t.y));
+ vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+ //convert world position back to texture position:
+ endPosition = endPosition / volScale;
+ return endPosition;
 }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
@@ -641,11 +648,8 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 }
 void main() {
   fColor = vec4(0.0,0.0,0.0,0.0);
-	// fColor = vec4(vColor.rgb, 1.0);
-	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
-	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
+	//fColor = vec4(vColor.rgb, 1.0); return;
 	// fColor = texture(volume, vColor.xyz);
-	// fColor = vec4(texture(volume, vColor.xyz).rgb, vColor.r);
 	// return;
 	vec3 start = vColor;
 	vec3 backPosition = GetBackPosition(start);
@@ -980,13 +984,15 @@ void main() {
 	color = surfaceColor;
 }`;
 var vertDepthPickingShader = `#version 300 es
-#line 4
+#line 414
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 posColor;
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	posColor = pos;
+	// gl_Position =  mvpMtx * vec4(pos, 1.0); // mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	posColor = texCoords;
 }`;
 var fragDepthPickingShader = `#version 300 es
 precision highp int;
@@ -1000,17 +1006,19 @@ void main() {
 var vertVolumePickingShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 posColor;
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	posColor = pos;
+	gl_Position = mvpMtx * vec4(pos, 1.0);//mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	posColor = texCoords; //pos;
 }`;
 var fragVolumePickingShader = `#version 300 es
 #line 15
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
+uniform vec3 volScale;
 uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
@@ -1019,14 +1027,20 @@ uniform float backOpacity;
 uniform int id;
 in vec3 posColor;
 out vec4 fColor;
-vec3 GetBackPosition (vec3 startPosition) {
- vec3 invR = 1.0 / rayDir;
- vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (vec3(1.0)-startPosition);
- vec3 tmax = max(ttop, tbot);
- vec2 t = min(tmax.xx, tmax.yz);
- return startPosition + (rayDir * min(t.x, t.y));
-}
+vec3 GetBackPosition(vec3 startPositionTex) {
+	//texture space is 0..1 in each dimension, volScale adjusts for relative field of view
+	//convert startPosition to world space units:
+	vec3 startPosition = startPositionTex * volScale; 
+	vec3 invR = 1.0 / rayDir;
+	vec3 tbot = invR * (vec3(0.0)-startPosition);
+	vec3 ttop = invR * (volScale-startPosition);
+	vec3 tmax = max(ttop, tbot);
+	vec2 t = min(tmax.xx, tmax.yz);
+	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+	//convert world position back to texture position:
+	endPosition = endPosition / volScale;
+	return endPosition;
+ }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
 	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
@@ -10874,12 +10888,12 @@ function getExtents(positions) {
 }
 NVImage.prototype.method1 = function() {
   return {
-    left: 0,
-    right: this.hdr.dims[1] * this.hdr.pixDims[1],
-    posterior: 0,
-    anterior: this.hdr.dims[2] * this.hdr.pixDims[2],
-    inferior: 0,
-    superior: this.hdr.dims[3] * this.hdr.pixDims[3]
+    left: -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
+    right: this.hdr.dims[1] / 2 * this.hdr.pixDims[1],
+    posterior: -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3],
+    anterior: this.hdr.dims[3] / 2 * this.hdr.pixDims[3],
+    inferior: -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
+    superior: this.hdr.dims[2] / 2 * this.hdr.pixDims[2]
   };
 };
 NVImage.prototype.method2 = function() {
@@ -10890,30 +10904,36 @@ NVImage.prototype.method2 = function() {
     }
   }
   const affineMatrix = fromValues$2(...affine);
-  let rightTopFront = fromValues(this.hdr.dims[1], this.hdr.dims[2], this.hdr.dims[3], 1);
-  let leftBackBottom = fromValues(0, 0, 0, 1);
+  const qfac = this.hdr.dims[0] ? this.hdr.pixDims[0] : 1;
+  let rightTopFront = fromValues(this.hdr.dims[1] * this.hdr.pixDims[1], this.hdr.dims[2] * this.hdr.pixDims[2], qfac * this.hdr.dims[3] * this.hdr.pixDims[3], 1);
   let maxExtent = create();
   transformMat4(maxExtent, rightTopFront, affineMatrix);
-  let minExtent = create();
-  transformMat4(minExtent, leftBackBottom, affineMatrix);
   return {
-    left: minExtent[0],
-    right: maxExtent[0],
-    posterior: minExtent[1],
-    anterior: maxExtent[1],
-    inferior: minExtent[2],
-    superior: maxExtent[2]
+    left: 0 - maxExtent[0] / 2,
+    right: maxExtent[0] / 2,
+    posterior: 0 - maxExtent[1] / 2,
+    anterior: maxExtent[1] / 2,
+    inferior: 0 - maxExtent[2] / 2,
+    superior: maxExtent[2] / 2
   };
 };
 NVImage.prototype.method3 = function() {
 };
 NVImage.prototype.toNiivueObject3D = function(id, gl) {
-  let left = -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1];
-  let right = this.hdr.dims[1] / 2 * this.hdr.pixDims[1];
-  let bottom = -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2];
-  let top = this.hdr.dims[2] / 2 * this.hdr.pixDims[2];
-  let front = this.hdr.dims[3] / 2 * this.hdr.pixDims[3];
-  let back = -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3];
+  let cuboid;
+  if (this.hdr.qform_code != 0) {
+    cuboid = this.method2();
+    console.log("method 2 used");
+  } else {
+    cuboid = this.method1();
+  }
+  cuboid = this.method1();
+  let left = cuboid.left;
+  let right = cuboid.right;
+  let bottom = cuboid.inferior;
+  let top = cuboid.superior;
+  let front = cuboid.anterior;
+  let back = cuboid.posterior;
   const positions = [
     left,
     bottom,
@@ -12728,8 +12748,8 @@ const Niivue = function(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar;
   this.scene = {};
-  this.scene.renderAzimuth = 120;
-  this.scene.renderElevation = 15;
+  this.scene.renderAzimuth = -45;
+  this.scene.renderElevation = -165;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -13452,6 +13472,12 @@ Niivue.prototype.initText = async function() {
   await this.loadDefaultFont();
   this.drawLoadingText(this.loadingText);
 };
+Niivue.prototype.initText = async function() {
+  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
+  this.fontShader.use(this.gl);
+  await this.loadDefaultFont();
+  this.drawLoadingText(this.loadingText);
+};
 Niivue.prototype.init = async function() {
   let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
   let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
@@ -13540,6 +13566,9 @@ Niivue.prototype.init = async function() {
     0,
     0
   ];
+  this.cuboidVertexBuffer = this.gl.createBuffer();
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(cubeStrip), this.gl.STATIC_DRAW);
   let vbo = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
   this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(cubeStrip), this.gl.STATIC_DRAW);
@@ -13616,18 +13645,20 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let mtx = [];
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
-    this.volumeObject3D.glFlags = this.volumeObject3D.BLEND | this.volumeObject3D.CULL_FACE;
+    this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
     mtx = overlayItem.toRAS;
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
     outTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, overlayItem.dimsRAS);
-    let { volScale, vox: vox2 } = this.sliceScale();
-    this.volScale = volScale;
+    let { volScale: volScale2, vox: vox2 } = this.sliceScale();
+    this.volScale = volScale2;
     this.vox = vox2;
-    this.volumeObject3D.scale = volScale;
+    this.volumeObject3D.scale = volScale2;
+    this.renderShader.use(this.gl);
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox2);
+    this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale2);
     let volumeRenderShader = new NiivueShader3D(this.renderShader);
     volumeRenderShader.mvpUniformName = "mvpMtx";
     volumeRenderShader.rayDirUniformName = "rayDir";
@@ -13640,6 +13671,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     pickingShader.mvpUniformName = "mvpMtx";
     pickingShader.rayDirUniformName = "rayDir";
     pickingShader.clipPlaneUniformName = "clipPlane";
+    this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale2);
     this.volumeObject3D.pickingShader = pickingShader;
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
   } else {
@@ -13756,10 +13788,12 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.renderShader.use(this.gl);
   let slicescl = this.sliceScale();
   let vox = slicescl.vox;
+  let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
   this.gl.uniform1f(this.renderShader.uniforms["backOpacity"], this.volumes[0].opacity);
   this.gl.uniform4fv(this.renderShader.uniforms["clipPlane"], this.scene.clipPlane);
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
+  this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
 };
@@ -13998,7 +14032,7 @@ Niivue.prototype.drawChar = function(xy, scale2, char) {
 Niivue.prototype.drawLoadingText = function(text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.volumeObject3D.vertexBuffer);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.enable(this.gl.CULL_FACE);
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
@@ -14033,6 +14067,8 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1) {
   this.drawText(xy, str, scale2);
 };
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   var crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
@@ -14109,13 +14145,11 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
 Niivue.prototype.calculateMvpMatrix = function(object3D) {
   const range = create$1();
   subtract(range, object3D.extentsMax, object3D.extentsMin);
-  console.log(range);
   const offset = create$1();
   scale(offset, range, 0.5);
   add$1(offset, object3D.extentsMin, offset);
   scale(offset, offset, -1);
   const radius = length(range);
-  console.log("radius is " + radius);
   const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   const zNear = 0.1;
   const zFar = radius * 3;
@@ -14162,6 +14196,58 @@ Niivue.prototype.draw3D = function() {
     if (!object3D.isVisible) {
       continue;
     }
+    let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
+    pickingShader.use(this.gl);
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.BACK);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+    m = this.calculateMvpMatrix(object3D);
+    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+    if (pickingShader.rayDirUniformName) {
+      let rayDir = this.calculateRayDirection(m);
+      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
+    }
+    if (pickingShader.clipPlaneUniformName) {
+      this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
+    }
+    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+    if (object3D.textureCoordinateBuffer) {
+      this.gl.enableVertexAttribArray(1);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
+      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+    }
+    if (object3D.indexBuffer) {
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    }
+    this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
+    break;
+  }
+  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
+  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
+  const rgbaPixel = new Uint8Array(4);
+  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
+  this.selectedObjectId = rgbaPixel[3];
+  if (this.selectedObjectId === this.VOLUME_ID) {
+    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
+    console.log("cross hairs");
+    console.log(this.scene.crosshairPos);
+  }
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  this.gl.clearColor(0.2, 0, 0, 1);
+  for (const object3D of this.objectsToRender3D) {
+    if (!object3D.isVisible) {
+      continue;
+    }
     this.gl.enableVertexAttribArray(0);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
@@ -14204,6 +14290,7 @@ Niivue.prototype.draw3D = function() {
       }
       this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     }
+    break;
   }
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
   this.sync();

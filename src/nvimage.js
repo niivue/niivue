@@ -667,6 +667,7 @@ function getExtents(positions) {
 
 // returns the left, right, up, down, front and back via pixdims, qform or sform
 // +x = Right  +y = Anterior  +z = Superior.
+// https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/qsform.html
 
 /**
  * calculate cuboid extents via pixdims * dims
@@ -674,12 +675,12 @@ function getExtents(positions) {
  */
 NVImage.prototype.method1 = function () {
   return {
-    left: 0,
-    right: this.hdr.dims[1] * this.hdr.pixDims[1], // x
-    posterior: 0,
-    anterior: this.hdr.dims[2] * this.hdr.pixDims[2], // y
-    inferior: 0,
-    superior: this.hdr.dims[3] * this.hdr.pixDims[3], // z
+    left: -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
+    right: (this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
+    posterior: -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3],
+    anterior: (this.hdr.dims[3] / 2) * this.hdr.pixDims[3], // y
+    inferior: -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
+    superior: (this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
   };
 };
 
@@ -695,24 +696,26 @@ NVImage.prototype.method2 = function () {
     }
   }
   const affineMatrix = mat.mat4.fromValues(...affine);
+  const qfac = this.hdr.dims[0] ? this.hdr.pixDims[0] : 1;
+
   let rightTopFront = mat.vec4.fromValues(
-    this.hdr.dims[1],
-    this.hdr.dims[2],
-    this.hdr.dims[3],
+    this.hdr.dims[1] * this.hdr.pixDims[1],
+    this.hdr.dims[2] * this.hdr.pixDims[2],
+    qfac * this.hdr.dims[3] * this.hdr.pixDims[3],
     1
   );
-  let leftBackBottom = mat.vec4.fromValues(0, 0, 0, 1);
+  // let leftBackBottom = mat.vec4.fromValues(0, 0, 0, 1);
   let maxExtent = mat.vec4.create();
   mat.vec4.transformMat4(maxExtent, rightTopFront, affineMatrix);
-  let minExtent = mat.vec4.create();
-  mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
+  // let minExtent = mat.vec4.create();
+  // mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
   return {
-    left: minExtent[0],
-    right: maxExtent[0], // x
-    posterior: minExtent[1],
-    anterior: maxExtent[1], // y
-    inferior: minExtent[2],
-    superior: maxExtent[2], // z
+    left: 0 - maxExtent[0] / 2,
+    right: maxExtent[0] / 2, // x
+    posterior: 0 - maxExtent[1] / 2,
+    anterior: maxExtent[1] / 2, // z
+    inferior: 0 - maxExtent[2] / 2,
+    superior: maxExtent[2] / 2, // y
   };
 };
 
@@ -728,32 +731,21 @@ NVImage.prototype.method3 = function () {};
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
-  // const x = (this.hdr.dims[1] / 2) * this.hdr.pixDims[1]; //
-  let left = -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1]; // -1.0 // -x; //-1.0; //
-  let right = (this.hdr.dims[1] / 2) * this.hdr.pixDims[1]; // x; // 1.0; //
-  let bottom = -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2]; // -1.0; // -x; //-1.0; //
-  let top = (this.hdr.dims[2] / 2) * this.hdr.pixDims[2]; // 1.0; // x; //1.0; //
-  let front = (this.hdr.dims[3] / 2) * this.hdr.pixDims[3]; // x; //1.0; //
-  let back = -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3]; // -x; //-1.0; //
+  let cuboid = this.method1();
+  // if (this.hdr.qform_code != 0) {
+  //   cuboid = this.method2();
+  //   console.log("method 2 used");
+  // } else {
+  //   cuboid = this.method1();
+  // }
+  
 
-  // let cuboid;
-
-  // // if (this.hdr.qform_code != 0) {
-  // //   cuboid = this.method2();
-  // //   console.log("method 2 used");
-  // // } else {
-  // //   cuboid = this.method1();
-  // // }
-  // cuboid = this.method1();
-  // console.log("cuboid");
-  // console.log(cuboid);
-
-  // let left = cuboid.left / -2;
-  // let right = cuboid.right / 2;
-  // let bottom = cuboid.inferior / -2;
-  // let top = cuboid.superior / 2;
-  // let front = cuboid.anterior / -2;
-  // let back = cuboid.posterior / 2;
+  let left = cuboid.left;
+  let right = cuboid.right;
+  let bottom = cuboid.inferior;
+  let top = cuboid.superior;
+  let front = cuboid.anterior;
+  let back = cuboid.posterior;
 
   const positions = [
     // Front face
