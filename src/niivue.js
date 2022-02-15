@@ -1597,8 +1597,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let mtx = [];
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
-    this.volumeObject3D.glFlags =
-      this.volumeObject3D.BLEND | this.volumeObject3D.CULL_FACE;
+    this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE; 
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
 
     // this.back = {};
@@ -1615,6 +1614,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.volScale = volScale;
     this.vox = vox;
     this.volumeObject3D.scale = volScale;
+    this.renderShader.use(this.gl);
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
     // add shader to object
@@ -1635,6 +1635,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     pickingShader.mvpUniformName = "mvpMtx";
     pickingShader.rayDirUniformName = "rayDir";
     pickingShader.clipPlaneUniformName = "clipPlane";
+    this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale);
     this.volumeObject3D.pickingShader = pickingShader;
 
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
@@ -2503,22 +2504,9 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
 
 // not included in public docs
 Niivue.prototype.calculateMvpMatrix = function (object3D) {
-  // let m = mat.mat4.clone(object3D.modelMatrix);
-  // mat.mat4.translate(m, m, object3D.position);
-  // // https://glmatrix.net/docs/module-mat4.html  https://glmatrix.net/docs/mat4.js.html
-  // var rad =
-  //   ((90 - this.scene.renderElevation - object3D.scale[0]) * Math.PI) / 180;
-  // mat.mat4.rotate(m, m, rad, [-1, 0, 0]);
-  // rad = (this.scene.renderAzimuth * Math.PI) / 180;
-  // mat.mat4.rotate(m, m, rad, [0, 0, 1]);
-  // mat.mat4.rotate(m, m, object3D.rotationRadians, object3D.rotation);
-  // mat.mat4.scale(m, m, object3D.scale); // volume aspect ratio
-  // mat.mat4.scale(m, m, [0.57, 0.57, 0.57]); //unit cube has maximum 1.73
-
-  // return m;
   const range = mat.vec3.create();
   mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
-  console.log(range);
+  // console.log(range);
   const offset = mat.vec3.create();
   mat.vec3.scale(offset, range, 0.5);
   mat.vec3.add(offset, object3D.extentsMin, offset);
@@ -2526,45 +2514,12 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   // const cameraTarget = [0, 0, 0];
   const radius = mat.vec3.length(range);
   // const radius = 1.0; //Math.sqrt(3);
-  console.log("radius is " + radius);
-  // const cameraPosition = mat.vec3.create();
-  // mat.vec3.add(cameraPosition, cameraTarget, [0, 0, radius]);
-  // // Set zNear and zFar to something hopefully appropriate
-  // // for the size of this object.
-  // const zNear = -radius; // 100;
-  // const zFar = radius * 3;
+  // console.log("radius is " + radius);
 
-  // const cameraMatrix = mat.mat4.create();
-  // mat.mat4.lookAt(cameraMatrix, [0, 0, 10], [0, 0, 0], [0, 1, 0]);
-
-  // const perspectiveMatrix = mat.mat4.create();
-  // mat.mat4.perspective(
-  //   perspectiveMatrix,
-  //   0.5,
-  //   this.gl.canvas.width / this.gl.canvas.height,
-  //   zNear,
-  //   zFar
-  // );
-
-  // mat.mat4.translate(perspectiveMatrix, perspectiveMatrix, [0, 0, radius / 4]);
-  // mat.mat4.rotate(perspectiveMatrix, perspectiveMatrix, Math.PI / 4, [0, 1, 0]);
-  // // mat.mat4.scale(perspectiveMatrix, perspectiveMatrix, [0.05, 0.05, 0.05]);
-  // const mvpMatrix = mat.mat4.create();
-  // mat.mat4.multiply(mvpMatrix, perspectiveMatrix, cameraMatrix);
-  // const fieldOfView = (45 * Math.PI) / 180; // in radians
   const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   const zNear = 0.1; //-300.0; //
   const zFar = radius * 3;
 
-  // const projectionMatrix = mat.mat4.create();
-
-  // note: glmatrix.js always has the first argument
-  // as the destination to receive the result.
-  // mat.mat4.fromValues(
-
-  // mat.mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-  // Set the drawing position to the "identity" point, which is
-  // the center of the scene.
   const halfWorldWidth = this.gl.canvas.clientWidth / 2;
   const ratio = aspect;
 
@@ -2591,25 +2546,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
     modelViewMatrix, // matrix to translate
     [-0.0, 0.0, -radius * 2]
   ); // amount to translate
-  // mat.mat4.rotate(
-  //   modelViewMatrix, // destination matrix
-  //   modelViewMatrix, // matrix to rotate
-  //   Math.PI / 4, // amount to rotate in radians
-  //   [0, 0, 1]
-  // ); // axis to rotate around (Z)
-  // mat.mat4.rotate(
-  //   modelViewMatrix, // destination matrix
-  //   modelViewMatrix, // matrix to rotate
-  //   Math.PI / 2, // amount to rotate in radians
-  //   [1, 0, 0]
-  // ); // axis to rotate around (Z)
-  // mat.mat4.rotate(
-  //   modelViewMatrix, // destination matrix
-  //   modelViewMatrix, // matrix to rotate
-  //   Math.PI / 4, // amount to rotate in radians
-  //   [0, 1, 0]
-  // ); // axis to rotate around (X)
-  // return m;
+
   var rad = ((90 - this.scene.renderElevation) * Math.PI) / 180;
   mat.mat4.rotate(modelViewMatrix, modelViewMatrix, rad, [1, 0, 0]);
   rad = (this.scene.renderAzimuth * Math.PI) / 180;
@@ -2645,100 +2582,51 @@ Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
 
 // not included in public docs
 Niivue.prototype.draw3D = function () {
-  // let mn = Math.min(this.gl.canvas.width, this.gl.canvas.height);
-  // if (mn <= 0) return;
-  // mn *= this.volScaleMultiplier;
-  // let xCenter = this.gl.canvas.width / 2;
-  // let yCenter = this.gl.canvas.height / 2;
-  // let xPix = mn;
-  // let yPix = mn;
-  // this.gl.viewport(xCenter - xPix * 0.5, yCenter - yPix * 0.5, xPix, yPix);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
   // render picking surfaces
   let m = null;
-  // this.gl.disable(this.gl.BLEND);
-
-  // for (const object3D of this.objectsToRender3D) {
-  //   if (!object3D.isVisible) {
-  //     continue;
-  //   }
-
-  //   let pickingShader = object3D.pickingShader
-  //     ? object3D.pickingShader
-  //     : this.pickingSurfaceShader;
-  //   pickingShader.use(this.gl);
-
-  //   if (object3D.glFlags & object3D.CULL_FACE) {
-  //     this.gl.enable(this.gl.CULL_FACE);
-  //     if (object3D.glFlags & object3D.CULL_FRONT) {
-  //       this.gl.cullFace(this.gl.FRONT);
-  //     } else {
-  //       this.gl.cullFace(this.gl.BACK);
-  //     }
-  //   } else {
-  //     this.gl.disable(this.gl.CULL_FACE);
-  //   }
-
-  //   this.gl.enableVertexAttribArray(0);
-  //   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-  //   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-
-  //   m = this.calculateMvpMatrix(object3D);
-  //   this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
-
-  //   if (pickingShader.rayDirUniformName) {
-  //     let rayDir = this.calculateRayDirection(m);
-  //     this.gl.uniform3fv(
-  //       pickingShader.uniforms[pickingShader.rayDirUniformName],
-  //       rayDir
-  //     );
-  //   }
-
-  //   if (pickingShader.clipPlaneUniformName) {
-  //     this.gl.uniform4fv(
-  //       pickingShader.uniforms["clipPlane"],
-  //       this.scene.clipPlane
-  //     );
-  //   }
-
-  //   this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
-
-  //   this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
-  // }
-
-  // // check if we have a selected object
-  // const pixelX =
-  //   (this.mousePos[0] * this.gl.canvas.width) / this.gl.canvas.clientWidth;
-  // const pixelY =
-  //   this.gl.canvas.height -
-  //   (this.mousePos[1] * this.gl.canvas.height) / this.gl.canvas.clientHeight -
-  //   1;
-  // const rgbaPixel = new Uint8Array(4);
-  // this.gl.readPixels(
-  //   pixelX, // x
-  //   pixelY, // y
-  //   1, // width
-  //   1, // height
-  //   this.gl.RGBA, // format
-  //   this.gl.UNSIGNED_BYTE, // type
-  //   rgbaPixel
-  // ); // typed array to hold result
-
-  // this.selectedObjectId = rgbaPixel[3];
-  // if (this.selectedObjectId === this.VOLUME_ID) {
-  //   this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
-  //     (x) => x / 255.0
-  //   );
-  // }
-  // this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  // this.gl.clearColor(0.2, 0, 0, 1);
-
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
     }
+
+    let pickingShader = object3D.pickingShader
+      ? object3D.pickingShader
+      : this.pickingSurfaceShader;
+    pickingShader.use(this.gl);
+
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.BACK);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+
+    m = this.calculateMvpMatrix(object3D);
+    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+
+    if (pickingShader.rayDirUniformName) {
+      let rayDir = this.calculateRayDirection(m);
+      this.gl.uniform3fv(
+        pickingShader.uniforms[pickingShader.rayDirUniformName],
+        rayDir
+      );
+    }
+
+    if (pickingShader.clipPlaneUniformName) {
+      this.gl.uniform4fv(
+        pickingShader.uniforms["clipPlane"],
+        this.scene.clipPlane
+      );
+    }
+
+    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
 
     this.gl.enableVertexAttribArray(0);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
@@ -2757,6 +2645,63 @@ Niivue.prototype.draw3D = function () {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
     }
 
+    this.gl.drawElements(
+      object3D.mode,
+      object3D.indexCount,
+      this.gl.UNSIGNED_SHORT,
+      0
+    );
+    break;
+  }
+  // // check if we have a selected object
+  const pixelX =
+    (this.mousePos[0] * this.gl.canvas.width) / this.gl.canvas.clientWidth;
+  const pixelY =
+    this.gl.canvas.height -
+    (this.mousePos[1] * this.gl.canvas.height) / this.gl.canvas.clientHeight -
+    1;
+  const rgbaPixel = new Uint8Array(4);
+  this.gl.readPixels(
+    pixelX, // x
+    pixelY, // y
+    1, // width
+    1, // height
+    this.gl.RGBA, // format
+    this.gl.UNSIGNED_BYTE, // type
+    rgbaPixel
+  ); // typed array to hold result
+
+  this.selectedObjectId = rgbaPixel[3];
+  if (this.selectedObjectId === this.VOLUME_ID) {
+    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
+      (x) => x / 255.0
+    );
+    console.log("cross hairs");
+    console.log(this.scene.crosshairPos);
+  }
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  this.gl.clearColor(0.2, 0, 0, 1);
+  // return;
+  for (const object3D of this.objectsToRender3D) {
+    if (!object3D.isVisible) {
+      continue;
+    }
+
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+    if (object3D.textureCoordinateBuffer) {
+      this.gl.enableVertexAttribArray(1);
+      this.gl.bindBuffer(
+        this.gl.ARRAY_BUFFER,
+        object3D.textureCoordinateBuffer
+      );
+      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+    }
+
+    if (object3D.indexBuffer) {
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    }
     // set GL options
     if (object3D.glFlags & object3D.BLEND) {
       this.gl.enable(this.gl.BLEND);
@@ -2807,6 +2752,7 @@ Niivue.prototype.draw3D = function () {
         0
       );
     }
+    break;
   }
 
   let posString =
