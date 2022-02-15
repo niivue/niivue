@@ -106,8 +106,8 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
-  this.scene.renderAzimuth = 120;
-  this.scene.renderElevation = 15;
+  this.scene.renderAzimuth = -45;
+  this.scene.renderElevation = -165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -1361,16 +1361,28 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
+Niivue.prototype.initText = async function () {
+  // font shader
+  //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
+  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
+  this.fontShader.use(this.gl);
+
+  await this.loadDefaultFont();
+  this.drawLoadingText(this.loadingText);
+}; // initText()
+
 // not included in public docs
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
-  // let debugInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
-  // let vendor = this.gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-  // let renderer = this.gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+  let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
+  let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
+  let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
   // console.log("gpu vendor: ", vendor);
   // console.log("gpu renderer: ", renderer);
   // await this.loadFont()
+  log.info("renderer vendor: ", vendor);
+  log.info("renderer: ", renderer);
 
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
@@ -1435,6 +1447,13 @@ Niivue.prototype.init = async function () {
     0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
     0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
   ];
+  this.cuboidVertexBuffer = this.gl.createBuffer();
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.bufferData(
+    this.gl.ARRAY_BUFFER,
+    new Float32Array(cubeStrip),
+    this.gl.STATIC_DRAW
+  );
 
   let vbo = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
@@ -1597,7 +1616,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let mtx = [];
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
-    this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE; 
+    this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
 
     // this.back = {};
@@ -2336,7 +2355,7 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
 Niivue.prototype.drawLoadingText = function (text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.volumeObject3D.vertexBuffer);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.enable(this.gl.CULL_FACE);
 
@@ -2387,6 +2406,9 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
 
 // not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
   var crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
