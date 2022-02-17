@@ -1,11 +1,13 @@
 export var vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
+
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	vColor = pos;
+	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	vColor = texCoords;
 }`;
 
 export var fragRenderShader = `#version 300 es
@@ -14,19 +16,26 @@ precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
+uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition (vec3 startPosition) {
+vec3 GetBackPosition(vec3 startPositionTex) {
+ //texture space is 0..1 in each dimension, volScale adjusts for relative field of view
+ //convert startPosition to world space units:
+ vec3 startPosition = startPositionTex * volScale; 
  vec3 invR = 1.0 / rayDir;
  vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (vec3(1.0)-startPosition);
+ vec3 ttop = invR * (volScale-startPosition);
  vec3 tmax = max(ttop, tbot);
  vec2 t = min(tmax.xx, tmax.yz);
- return startPosition + (rayDir * min(t.x, t.y));
+ vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+ //convert world position back to texture position:
+ endPosition = endPosition / volScale;
+ return endPosition;
 }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
@@ -52,12 +61,15 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-    fColor = vec4(0.0,0.0,0.0,0.0);
+  fColor = vec4(0.0,0.0,0.0,0.0);
+	//fColor = vec4(vColor.rgb, 1.0); return;
+	// fColor = texture(volume, vColor.xyz);
+	// return;
 	vec3 start = vColor;
 	vec3 backPosition = GetBackPosition(start);
-	//fColor = vec4(backPosition, 1.0); return;
-    vec3 dir = backPosition - start;
-    float len = length(dir);
+	// fColor = vec4(backPosition, 1.0); return;
+  vec3 dir = backPosition - start;
+  float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if (lenVox < 0.5) return;
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
@@ -76,6 +88,7 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
+	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) return;
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
@@ -404,13 +417,15 @@ void main() {
 }`;
 
 export var vertDepthPickingShader = `#version 300 es
-#line 4
+#line 414
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 posColor;
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	posColor = pos;
+	// gl_Position =  mvpMtx * vec4(pos, 1.0); // mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	posColor = texCoords;
 }`;
 
 export var fragDepthPickingShader = `#version 300 es
@@ -426,11 +441,12 @@ void main() {
 export var vertVolumePickingShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
+in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 posColor;
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	posColor = pos;
+	gl_Position = mvpMtx * vec4(pos, 1.0);//mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	posColor = texCoords; //pos;
 }`;
 
 export var fragVolumePickingShader = `#version 300 es
@@ -438,6 +454,7 @@ export var fragVolumePickingShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
+uniform vec3 volScale;
 uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
@@ -446,14 +463,20 @@ uniform float backOpacity;
 uniform int id;
 in vec3 posColor;
 out vec4 fColor;
-vec3 GetBackPosition (vec3 startPosition) {
- vec3 invR = 1.0 / rayDir;
- vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (vec3(1.0)-startPosition);
- vec3 tmax = max(ttop, tbot);
- vec2 t = min(tmax.xx, tmax.yz);
- return startPosition + (rayDir * min(t.x, t.y));
-}
+vec3 GetBackPosition(vec3 startPositionTex) {
+	//texture space is 0..1 in each dimension, volScale adjusts for relative field of view
+	//convert startPosition to world space units:
+	vec3 startPosition = startPositionTex * volScale; 
+	vec3 invR = 1.0 / rayDir;
+	vec3 tbot = invR * (vec3(0.0)-startPosition);
+	vec3 ttop = invR * (volScale-startPosition);
+	vec3 tmax = max(ttop, tbot);
+	vec2 t = min(tmax.xx, tmax.yz);
+	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+	//convert world position back to texture position:
+	endPosition = endPosition / volScale;
+	return endPosition;
+ }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
 	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;

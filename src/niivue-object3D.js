@@ -1,6 +1,13 @@
 import * as mat from "gl-matrix";
 
-export var NiivueObject3D = function (id, vertexBuffer, mode, indexCount) {
+export var NiivueObject3D = function (
+  id,
+  vertexBuffer,
+  mode,
+  indexCount,
+  indexBuffer = null,
+  textureCoordinateBuffer = null
+) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
   this.CULL_FRONT = 4;
@@ -12,6 +19,8 @@ export var NiivueObject3D = function (id, vertexBuffer, mode, indexCount) {
   this.isVisible = true;
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
+  this.indexBuffer = indexBuffer;
+  this.textureCoordinateBuffer = textureCoordinateBuffer;
   this.mode = mode;
 
   this.glFlags = 0;
@@ -28,4 +37,7 @@ export var NiivueObject3D = function (id, vertexBuffer, mode, indexCount) {
   this.position = [0, 0, 0];
   this.rotation = [0, 0, 0];
   this.rotationRadians = 0.0;
+
+  this.extentsMin = [];
+  this.extentsMax = [];
 };
