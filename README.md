@@ -44,7 +44,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 <script>
   var volumeList = [
-    // first object in array is brackground image
+    // first object in array is background image
       {
         url: "./some_image.nii.gz",
         volume: {hdr: null, img: null},
