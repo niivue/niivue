@@ -640,7 +640,8 @@ String.prototype.getBytes = function () {
 NVImage.prototype.getValue = function (x, y, z) {
   const { nx, ny } = this.getImageMetadata();
   return this.img[x + y * nx + z * nx * ny];
-  
+};
+
 /**
  * @typedef {Object} NVImage~Extents
  * @property {number[]} min - min bounding point
@@ -738,7 +739,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   // } else {
   //   cuboid = this.method1();
   // }
-  
 
   let left = cuboid.left;
   let right = cuboid.right;

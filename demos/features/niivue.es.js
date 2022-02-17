@@ -10869,11 +10869,10 @@ String.prototype.getBytes = function() {
   }
   return bytes;
 };
-<<<<<<< HEAD
 NVImage.prototype.getValue = function(x, y, z) {
   const { nx, ny } = this.getImageMetadata();
   return this.img[x + y * nx + z * nx * ny];
-=======
+};
 function getExtents(positions) {
   const min2 = positions.slice(0, 3);
   const max2 = positions.slice(0, 3);
@@ -10920,14 +10919,7 @@ NVImage.prototype.method2 = function() {
 NVImage.prototype.method3 = function() {
 };
 NVImage.prototype.toNiivueObject3D = function(id, gl) {
-  let cuboid;
-  if (this.hdr.qform_code != 0) {
-    cuboid = this.method2();
-    console.log("method 2 used");
-  } else {
-    cuboid = this.method1();
-  }
-  cuboid = this.method1();
+  let cuboid = this.method1();
   let left = cuboid.left;
   let right = cuboid.right;
   let bottom = cuboid.inferior;
@@ -11134,7 +11126,6 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   return obj3D;
->>>>>>> Render in model space
 };
 const Log = function(logLevel) {
   this.LOGGING_ON = true;
