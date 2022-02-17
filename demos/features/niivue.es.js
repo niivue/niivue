@@ -14058,6 +14058,7 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1) {
   this.drawText(xy, str, scale2);
 };
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
+  this.gl.cullFace(this.gl.FRONT);
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   var crossXYZ = [
@@ -14230,8 +14231,6 @@ Niivue.prototype.draw3D = function() {
   this.selectedObjectId = rgbaPixel[3];
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-    console.log("cross hairs");
-    console.log(this.scene.crosshairPos);
   }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);

@@ -297,7 +297,6 @@ Niivue.prototype.syncWith = function (otherNV) {
   // this.scene.crosshairPos = [0.5, 0.5, 0.5];
   // this.scene.clipPlane = [0, 0, 0, 0];
   this.otherNV = otherNV;
-  // console.log(otherNV);
 };
 
 Niivue.prototype.sync = function () {
@@ -644,7 +643,6 @@ Niivue.prototype.handlePinchZoom = function (e) {
 // not included in public docs
 // handler for keyboard shortcuts
 Niivue.prototype.keyUpListener = function (e) {
-  //   console.log("keyup listener called");
   if (e.code === this.opts.clipPlaneHotKey) {
     if (this.sliceType != this.sliceTypeRender) {
       return;
@@ -654,7 +652,6 @@ Niivue.prototype.keyUpListener = function (e) {
     if (elapsed > this.opts.keyDebounceTime) {
       this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 4;
       this.clipPlaneObject3D.isVisible = this.currentClipPlaneIndex;
-      //   console.log("clip plane index is " + this.currentClipPlaneIndex);
       switch (this.currentClipPlaneIndex) {
         case 0:
           this.scene.clipPlane = [0, 0, 0, 0];
@@ -757,14 +754,12 @@ Niivue.prototype.registerInteractions = function () {
 Niivue.prototype.dragEnterListener = function (e) {
   e.stopPropagation();
   e.preventDefault();
-  // console.log("drag enter");
 };
 
 // not included in public docs
 Niivue.prototype.dragOverListener = function (e) {
   e.stopPropagation();
   e.preventDefault();
-  // console.log("drag over");
 };
 
 // not included in public docs
@@ -1400,8 +1395,6 @@ Niivue.prototype.init = async function () {
   let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
   let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
   let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
-  // console.log("gpu vendor: ", vendor);
-  // console.log("gpu renderer: ", renderer);
   // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
@@ -1712,7 +1705,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       1
     );
     mat.mat4.invert(mtx, mtx);
-    //console.log('v2', mtx);
     if (layer === 1) {
       outTexture = this.rgbaTex(
         this.overlayTexture,
@@ -2128,7 +2120,6 @@ Niivue.prototype.refreshColormaps = function () {
       c.set(luts);
       c.set(lut, luts.length);
       luts = c;
-      //console.log(i, '>>>',this.volumes[i].colorMap)
     } //colorMap
   }
   this.gl.texSubImage2D(
@@ -2237,7 +2228,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         posFuture = posNow + posChange;
         if (posFuture > 1) posFuture = 1;
         if (posFuture < 0) posFuture = 0;
-        //console.log(scrollVal,':',axCorSag, '>>', posFuture);
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
         this.scene.location$.next({
@@ -2444,6 +2434,7 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
 
 // not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
+  this.gl.cullFace(this.gl.FRONT);
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
@@ -2566,7 +2557,6 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
 Niivue.prototype.calculateMvpMatrix = function (object3D) {
   const range = mat.vec3.create();
   mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
-  // console.log(range);
   const offset = mat.vec3.create();
   mat.vec3.scale(offset, range, 0.5);
   mat.vec3.add(offset, object3D.extentsMin, offset);
@@ -2574,7 +2564,6 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   // const cameraTarget = [0, 0, 0];
   const radius = mat.vec3.length(range);
   // const radius = 1.0; //Math.sqrt(3);
-  // console.log("radius is " + radius);
 
   const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   const zNear = 0.1; //-300.0; //
@@ -2594,8 +2583,6 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
     zNear,
     zFar
   );
-  // console.log("projection matrix");
-  // console.log(projectionMatrix);
 
   const modelViewMatrix = mat.mat4.create();
 
@@ -2736,8 +2723,6 @@ Niivue.prototype.draw3D = function () {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
-    console.log("cross hairs");
-    console.log(this.scene.crosshairPos);
   }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
@@ -2844,7 +2829,6 @@ Niivue.prototype.mm2frac = function (mm, volIdx = 0) {
   frac[0] = (mm4[0] + 0.5) / d[1];
   frac[1] = (mm4[1] + 0.5) / d[2];
   frac[2] = (mm4[2] + 0.5) / d[3];
-  //console.log("mm", mm, " -> frac", frac);
   return frac;
 }; // mm2frac()
 
