@@ -1633,9 +1633,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
-
-    // this.back = {};
     mtx = overlayItem.toRAS;
+    mat.mat4.invert(mtx, mtx);
+    log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
@@ -1968,6 +1968,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
+  log.debug("back dims: ", this.back.dims);
   for (let i = 0; i < this.back.dims[3]; i++) {
     //output slices
     let coordZ = (1 / this.back.dims[3]) * (i + 0.5);

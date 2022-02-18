@@ -10545,26 +10545,31 @@ NVImage.prototype.calculateRAS = function() {
   let header = this.hdr;
   let absR = fromValues$3(Math.abs(a[0][0]), Math.abs(a[0][1]), Math.abs(a[0][2]), Math.abs(a[1][0]), Math.abs(a[1][1]), Math.abs(a[1][2]), Math.abs(a[2][0]), Math.abs(a[2][1]), Math.abs(a[2][2]));
   let ixyz = [1, 1, 1];
-  if (absR[3] > absR[0])
+  if (absR[3] > absR[0]) {
     ixyz[0] = 2;
-  if (absR[6] > absR[0] && absR[6] > absR[3])
+  }
+  if (absR[6] > absR[0] && absR[6] > absR[3]) {
     ixyz[0] = 3;
+  }
   ixyz[1] = 1;
   if (ixyz[0] === 1) {
-    if (absR[4] > absR[7])
+    if (absR[4] > absR[7]) {
       ixyz[1] = 2;
-    else
+    } else {
       ixyz[1] = 3;
+    }
   } else if (ixyz[0] === 2) {
-    if (absR[1] > absR[7])
+    if (absR[1] > absR[7]) {
       ixyz[1] = 1;
-    else
+    } else {
       ixyz[1] = 3;
+    }
   } else {
-    if (absR[1] > absR[4])
+    if (absR[1] > absR[4]) {
       ixyz[1] = 1;
-    else
+    } else {
       ixyz[1] = 2;
+    }
   }
   ixyz[2] = 6 - ixyz[1] - ixyz[0];
   let perm = [1, 2, 3];
@@ -10578,16 +10583,21 @@ NVImage.prototype.calculateRAS = function() {
   this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
   let R2 = create$2();
   copy(R2, rotM);
-  for (let i = 0; i < 3; i++)
-    for (let j = 0; j < 3; j++)
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
       R2[i * 4 + j] = rotM[i * 4 + perm[j] - 1];
+    }
+  }
   let flip = [0, 0, 0];
-  if (R2[0] < 0)
+  if (R2[0] < 0) {
     flip[0] = 1;
-  if (R2[5] < 0)
+  }
+  if (R2[5] < 0) {
     flip[1] = 1;
-  if (R2[10] < 0)
+  }
+  if (R2[10] < 0) {
     flip[2] = 1;
+  }
   this.dimsRAS = [
     header.dims[0],
     header.dims[perm[0]],
@@ -10624,6 +10634,8 @@ NVImage.prototype.calculateRAS = function() {
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
   this.toRAS = clone(rotM);
+  console.log(this.hdr.dims);
+  console.log(this.dimsRAS);
 };
 NVImage.prototype.vox2mm = function(XYZ, mtx) {
   let sform = clone(mtx);
@@ -13639,6 +13651,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
     mtx = overlayItem.toRAS;
+    invert(mtx, mtx);
+    log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
@@ -13764,6 +13778,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
+  log.debug("back dims: ", this.back.dims);
   for (let i = 0; i < this.back.dims[3]; i++) {
     let coordZ = 1 / this.back.dims[3] * (i + 0.5);
     this.gl.uniform1f(orientShader.uniforms["coordZ"], coordZ);
