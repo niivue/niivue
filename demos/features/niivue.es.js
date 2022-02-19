@@ -412,6 +412,68 @@ function rotate(out, a, rad, axis) {
   }
   return out;
 }
+function rotateX(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  var a20 = a[8];
+  var a21 = a[9];
+  var a22 = a[10];
+  var a23 = a[11];
+  if (a !== out) {
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  }
+  out[4] = a10 * c + a20 * s;
+  out[5] = a11 * c + a21 * s;
+  out[6] = a12 * c + a22 * s;
+  out[7] = a13 * c + a23 * s;
+  out[8] = a20 * c - a10 * s;
+  out[9] = a21 * c - a11 * s;
+  out[10] = a22 * c - a12 * s;
+  out[11] = a23 * c - a13 * s;
+  return out;
+}
+function rotateZ(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a00 = a[0];
+  var a01 = a[1];
+  var a02 = a[2];
+  var a03 = a[3];
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  if (a !== out) {
+    out[8] = a[8];
+    out[9] = a[9];
+    out[10] = a[10];
+    out[11] = a[11];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  }
+  out[0] = a00 * c + a10 * s;
+  out[1] = a01 * c + a11 * s;
+  out[2] = a02 * c + a12 * s;
+  out[3] = a03 * c + a13 * s;
+  out[4] = a10 * c - a00 * s;
+  out[5] = a11 * c - a01 * s;
+  out[6] = a12 * c - a02 * s;
+  out[7] = a13 * c - a03 * s;
+  return out;
+}
 function orthoNO(out, left, right, bottom, top, near, far) {
   var lr = 1 / (left - right);
   var bt = 1 / (bottom - top);
@@ -10899,12 +10961,12 @@ function getExtents(positions) {
 }
 NVImage.prototype.method1 = function() {
   return {
-    left: -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
-    right: this.hdr.dims[1] / 2 * this.hdr.pixDims[1],
-    posterior: -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3],
-    anterior: this.hdr.dims[3] / 2 * this.hdr.pixDims[3],
-    inferior: -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
-    superior: this.hdr.dims[2] / 2 * this.hdr.pixDims[2]
+    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
+    right: this.dimsRAS[1] / 2 * this.pixDimsRAS[1],
+    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
+    anterior: this.dimsRAS[2] / 2 * this.pixDimsRAS[2],
+    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
+    superior: this.dimsRAS[3] / 2 * this.pixDimsRAS[3]
   };
 };
 NVImage.prototype.method2 = function() {
@@ -10920,8 +10982,8 @@ NVImage.prototype.method2 = function() {
   let maxExtent = create();
   transformMat4(maxExtent, rightTopFront, affineMatrix);
   return {
-    left: 0 - maxExtent[0] / 2,
-    right: maxExtent[0] / 2,
+    left: maxExtent[0] / 2,
+    right: 0 - maxExtent[0] / 2,
     posterior: 0 - maxExtent[1] / 2,
     anterior: maxExtent[1] / 2,
     inferior: 0 - maxExtent[2] / 2,
@@ -10934,83 +10996,83 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   let cuboid = this.method1();
   let left = cuboid.left;
   let right = cuboid.right;
-  let bottom = cuboid.inferior;
-  let top = cuboid.superior;
-  let front = cuboid.anterior;
-  let back = cuboid.posterior;
+  let posterior = cuboid.posterior;
+  let anterior = cuboid.anterior;
+  let inferior = cuboid.inferior;
+  let superior = cuboid.superior;
   const positions = [
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    back
+    anterior,
+    inferior
   ];
   const textureCoordinates = [
     0,
@@ -12770,7 +12832,7 @@ const Niivue = function(options = {}) {
   this.volumes = [];
   this.backTexture = [];
   this.objectsToRender3D = [];
-  this.volScaleMultiplier = 1;
+  this.volScaleMultiplier = 0.01;
   this.volScale = [];
   this.vox = [];
   this.mousePos = [0, 0];
@@ -13645,12 +13707,11 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
   let outTexture = null;
-  let mtx = [];
+  let mtx = clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
-    mtx = overlayItem.toRAS;
     invert(mtx, mtx);
     log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
@@ -14150,8 +14211,37 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.sync();
 };
 Niivue.prototype.calculateMvpMatrix = function(object3D) {
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+  }
   const range = create$1();
   subtract(range, object3D.extentsMax, object3D.extentsMin);
+  Math.max(Math.max(range[0], range[1]), range[2]);
+  let scale2 = 1;
+  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  let projectionMatrix = create$2();
+  ortho(projectionMatrix, -scale2, scale2, -scale2 / whratio, scale2 / whratio, 0.01, 5);
+  let lrFlipMatrix = create$2();
+  lrFlipMatrix[5] = -1;
+  const modelMatrix = create$2();
+  scale2 = 1;
+  let scaleVec3 = fromValues$1(0.5 / scale2, 0.5 / scale2, 0.5 / scale2);
+  scale$1(modelMatrix, modelMatrix, scaleVec3);
+  let translateVec3 = fromValues$1(0, 0, -scale2 * 2);
+  translate(modelMatrix, modelMatrix, translateVec3);
+  rotateX(modelMatrix, modelMatrix, deg2rad(90 - this.scene.renderElevation));
+  rotateZ(modelMatrix, modelMatrix, -deg2rad(this.scene.renderAzimuth));
+  multiply$1(modelMatrix, modelMatrix, lrFlipMatrix);
+  let volScaleMultiplierVec3 = fromValues$1(this.volScaleMultiplier, this.volScaleMultiplier, this.volScaleMultiplier);
+  scale$1(modelMatrix, modelMatrix, volScaleMultiplierVec3);
+  let modelViewProjectionMatrix = create$2();
+  multiply$1(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+  return modelViewProjectionMatrix;
+};
+Niivue.prototype.calculateMvpMatrixOLD = function(object3D) {
+  const range = create$1();
+  subtract(range, object3D.extentsMax, object3D.extentsMin);
+  Math.max(Math.max(range[0], range[1]), range[2]);
   const offset = create$1();
   scale(offset, range, 0.5);
   add$1(offset, object3D.extentsMin, offset);
@@ -14177,6 +14267,7 @@ Niivue.prototype.calculateMvpMatrix = function(object3D) {
   ]);
   const mvpMatrix = create$2();
   multiply$1(mvpMatrix, projectionMatrix, modelViewMatrix);
+  log.debug("mvp old", mvpMatrix);
   return mvpMatrix;
 };
 Niivue.prototype.calculateRayDirection = function(mvpMatrix) {
@@ -14275,7 +14366,7 @@ Niivue.prototype.draw3D = function() {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT);
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);

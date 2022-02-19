@@ -125,7 +125,7 @@ export const Niivue = function (options = {}) {
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.backTexture = [];
   this.objectsToRender3D = [];
-  this.volScaleMultiplier = 1;
+  this.volScaleMultiplier = 0.01;
   this.volScale = [];
   this.vox = [];
   this.mousePos = [0, 0];
@@ -505,8 +505,6 @@ Niivue.prototype.mouseUpListener = function () {
   if (this.isDragging) {
     this.isDragging = false;
     this.calculateNewRange();
-    // remove colorbar
-    // this.drawScene();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
     this.drawScene();
   }
@@ -1628,12 +1626,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
   let outTexture = null;
 
-  let mtx = [];
+  let mtx = mat.mat4.clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
-    mtx = overlayItem.toRAS;
+
     mat.mat4.invert(mtx, mtx);
     log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
@@ -2556,8 +2554,66 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
 
 // not included in public docs
 Niivue.prototype.calculateMvpMatrix = function (object3D) {
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+  }
   const range = mat.vec3.create();
   mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
+  let mxFOV = Math.max(Math.max(range[0], range[1]), range[2]);
+  let scale = 1;
+  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  let projectionMatrix = mat.mat4.create();
+  mat.mat4.ortho(
+    projectionMatrix,
+    -scale,
+    scale,
+    -scale / whratio,
+    scale / whratio,
+    0.01,
+    5.0
+  );
+  let lrFlipMatrix = mat.mat4.create();
+  lrFlipMatrix[5] = -1;
+
+  const modelMatrix = mat.mat4.create();
+  scale = 1.0;
+  let scaleVec3 = mat.vec3.fromValues(0.5 / scale, 0.5 / scale, 0.5 / scale);
+  mat.mat4.scale(modelMatrix, modelMatrix, scaleVec3);
+  let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 2);
+  mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
+  mat.mat4.rotateX(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(90 - this.scene.renderElevation)
+  );
+  mat.mat4.rotateZ(
+    modelMatrix,
+    modelMatrix,
+    -deg2rad(this.scene.renderAzimuth)
+  );
+  mat.mat4.multiply(modelMatrix, modelMatrix, lrFlipMatrix);
+
+  //let modelViewMatrix = mat.mat4.clone(modelMatrix)
+  let volScaleMultiplierVec3 = mat.vec3.fromValues(
+    this.volScaleMultiplier,
+    this.volScaleMultiplier,
+    this.volScaleMultiplier
+  );
+  mat.mat4.scale(modelMatrix, modelMatrix, volScaleMultiplierVec3);
+
+  let modelViewProjectionMatrix = mat.mat4.create();
+  mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+
+  //mat.mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
+  //log.debug('mvp', modelViewProjectionMatrix)
+  return modelViewProjectionMatrix;
+}; // calculateMvpMatrix
+
+// not included in public docs
+Niivue.prototype.calculateMvpMatrixOLD = function (object3D) {
+  const range = mat.vec3.create();
+  mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
+  let mxFOV = Math.max(Math.max(range[0], range[1]), range[2]);
   const offset = mat.vec3.create();
   mat.vec3.scale(offset, range, 0.5);
   mat.vec3.add(offset, object3D.extentsMin, offset);
@@ -2607,6 +2663,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
 
   const mvpMatrix = mat.mat4.create();
   mat.mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
+  log.debug("mvp old", mvpMatrix);
   return mvpMatrix;
 }; // calculateMvpMatrix
 
@@ -2761,7 +2818,7 @@ Niivue.prototype.draw3D = function () {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);

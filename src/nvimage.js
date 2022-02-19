@@ -696,12 +696,12 @@ function getExtents(positions) {
  */
 NVImage.prototype.method1 = function () {
   return {
-    left: -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
-    right: (this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
-    posterior: -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3],
-    anterior: (this.hdr.dims[3] / 2) * this.hdr.pixDims[3], // y
-    inferior: -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
-    superior: (this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
+    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
+    right: (this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
+    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
+    anterior: (this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
+    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
+    superior: (this.dimsRAS[3] / 2) * this.pixDimsRAS[3], // y
   };
 };
 
@@ -731,8 +731,8 @@ NVImage.prototype.method2 = function () {
   // let minExtent = mat.vec4.create();
   // mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
   return {
-    left: 0 - maxExtent[0] / 2,
-    right: maxExtent[0] / 2, // x
+    left: maxExtent[0] / 2,
+    right: 0 - maxExtent[0] / 2, // x
     posterior: 0 - maxExtent[1] / 2,
     anterior: maxExtent[1] / 2, // z
     inferior: 0 - maxExtent[2] / 2,
@@ -753,123 +753,117 @@ NVImage.prototype.method3 = function () {};
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
   let cuboid = this.method1();
-  // if (this.hdr.qform_code != 0) {
-  //   cuboid = this.method2();
-  //   console.log("method 2 used");
-  // } else {
-  //   cuboid = this.method1();
-  // }
 
   let left = cuboid.left;
   let right = cuboid.right;
-  let bottom = cuboid.inferior;
-  let top = cuboid.superior;
-  let front = cuboid.anterior;
-  let back = cuboid.posterior;
+  let posterior = cuboid.posterior;
+  let anterior = cuboid.anterior;
+  let inferior = cuboid.inferior;
+  let superior = cuboid.superior;
 
   const positions = [
-    // Front face
+    // Superior face
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
 
-    // Back face
+    // Inferior face
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
 
-    // Top face
+    // Anterior face
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
 
-    // Bottom face
+    // Posterior face
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
 
     // Right face
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
 
     // Left face
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
   ];
 
   const textureCoordinates = [
-    // Front
+    // Superior Z=1.0
     0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0,
 
-    // Back
+    // Inferior Z=1.0
     0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0,
 
-    // Top
+    // Anterior Y=1
     0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0,
 
-    // Bottom
+    // Posterior Y=0
     0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0,
 
-    // Right
+    // Right X=1
     1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0,
 
-    // Left
+    // Left X=0
     0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0,
   ];
 
