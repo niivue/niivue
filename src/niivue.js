@@ -2558,22 +2558,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
-  //position of vertex furthest from origin: this should be computed ONCE in nvimage.js
-  let dx = Math.max(
-    Math.abs(object3D.extentsMax[0]),
-    Math.abs(object3D.extentsMin[0])
-  );
-  let dy = Math.max(
-    Math.abs(object3D.extentsMax[1]),
-    Math.abs(object3D.extentsMin[1])
-  );
-  let dz = Math.max(
-    Math.abs(object3D.extentsMax[2]),
-    Math.abs(object3D.extentsMin[2])
-  );
-  let furthestVertexFromOrigin = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  //default volScaleMultiplier ~1.0: see entire object even if ~45-degree azimuth/elevation
-  let scale = (0.7 * furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  let scale = (0.7 * object3D.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(

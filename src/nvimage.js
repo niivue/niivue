@@ -694,14 +694,18 @@ NVImage.prototype.getValue = function (x, y, z) {
 function getExtents(positions) {
   const min = positions.slice(0, 3);
   const max = positions.slice(0, 3);
+  let mxDx = 0.0;
   for (let i = 3; i < positions.length; i += 3) {
     for (let j = 0; j < 3; ++j) {
       const v = positions[i + j];
       min[j] = Math.min(v, min[j]);
       max[j] = Math.max(v, max[j]);
     }
+    let dx = (positions[i]*positions[i])+(positions[i+1]*positions[i+1])+(positions[i+2]*positions[i+2]);
+    mxDx = Math.max(mxDx, dx);
   }
-  return { min, max };
+  let furthestVertexFromOrigin =  Math.sqrt(mxDx)
+  return { min, max, furthestVertexFromOrigin };
 }
 
 // returns the left, right, up, down, front and back via pixdims, qform or sform
@@ -962,5 +966,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   const extents = getExtents(positions);
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
+  obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   return obj3D;
 };
