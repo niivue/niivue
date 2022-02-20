@@ -106,8 +106,8 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
-  this.scene.renderAzimuth = -45;
-  this.scene.renderElevation = -165; //15;
+  this.scene.renderAzimuth = -90; //-45;
+  this.scene.renderElevation = 90; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -125,7 +125,7 @@ export const Niivue = function (options = {}) {
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.backTexture = [];
   this.objectsToRender3D = [];
-  this.volScaleMultiplier = 0.01;
+  this.volScaleMultiplier = 1.0;
   this.volScale = [];
   this.vox = [];
   this.mousePos = [0, 0];
@@ -2552,119 +2552,70 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.sync();
 }; // draw2D()
 
-// not included in public docs
 Niivue.prototype.calculateMvpMatrix = function (object3D) {
   function deg2rad(deg) {
-    return deg * (Math.PI / 180);
+    return deg * (Math.PI / 180.0);
   }
-  const range = mat.vec3.create();
-  mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
-  let mxFOV = Math.max(Math.max(range[0], range[1]), range[2]);
-  let scale = 1;
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
-  mat.mat4.ortho(
-    projectionMatrix,
-    -scale,
-    scale,
-    -scale / whratio,
-    scale / whratio,
-    0.01,
-    5.0
+  //position of vertex furthest from origin: this should be computed ONCE in nvimage.js
+  let dx = Math.max(
+    Math.abs(object3D.extentsMax[0]),
+    Math.abs(object3D.extentsMin[0])
   );
-  let lrFlipMatrix = mat.mat4.create();
-  lrFlipMatrix[5] = -1;
-
+  let dy = Math.max(
+    Math.abs(object3D.extentsMax[1]),
+    Math.abs(object3D.extentsMin[1])
+  );
+  let dz = Math.max(
+    Math.abs(object3D.extentsMax[2]),
+    Math.abs(object3D.extentsMin[2])
+  );
+  let furthestVertexFromOrigin = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  //default volScaleMultiplier ~1.0: see entire object even if ~45-degree azimuth/elevation
+  let scale = (0.7 * furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  if (whratio < 1)
+    //tall window: "portrait" mode, width constrains
+    mat.mat4.ortho(
+      projectionMatrix,
+      -scale,
+      scale,
+      -scale / whratio,
+      scale / whratio,
+      0.01,
+      scale * 8.0
+    );
+  //Wide window: "landscape" mode, height constrains
+  else
+    mat.mat4.ortho(
+      projectionMatrix,
+      -scale * whratio,
+      scale * whratio,
+      -scale,
+      scale,
+      0.01,
+      scale * 8.0
+    );
   const modelMatrix = mat.mat4.create();
-  scale = 1.0;
-  let scaleVec3 = mat.vec3.fromValues(0.5 / scale, 0.5 / scale, 0.5 / scale);
-  mat.mat4.scale(modelMatrix, modelMatrix, scaleVec3);
-  let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 2);
+  modelMatrix[0] = -1; //mirror X coordinate
+  //push the model away from the camera so camera not inside model
+  let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
+  //apply elevation
   mat.mat4.rotateX(
     modelMatrix,
     modelMatrix,
-    deg2rad(90 - this.scene.renderElevation)
+    deg2rad(270 - this.scene.renderElevation)
   );
+  //apply azimuth
   mat.mat4.rotateZ(
     modelMatrix,
     modelMatrix,
-    -deg2rad(this.scene.renderAzimuth)
+    deg2rad(this.scene.renderAzimuth - 180)
   );
-  mat.mat4.multiply(modelMatrix, modelMatrix, lrFlipMatrix);
-
-  //let modelViewMatrix = mat.mat4.clone(modelMatrix)
-  let volScaleMultiplierVec3 = mat.vec3.fromValues(
-    this.volScaleMultiplier,
-    this.volScaleMultiplier,
-    this.volScaleMultiplier
-  );
-  mat.mat4.scale(modelMatrix, modelMatrix, volScaleMultiplierVec3);
-
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
-
-  //mat.mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
-  //log.debug('mvp', modelViewProjectionMatrix)
   return modelViewProjectionMatrix;
-}; // calculateMvpMatrix
-
-// not included in public docs
-Niivue.prototype.calculateMvpMatrixOLD = function (object3D) {
-  const range = mat.vec3.create();
-  mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
-  let mxFOV = Math.max(Math.max(range[0], range[1]), range[2]);
-  const offset = mat.vec3.create();
-  mat.vec3.scale(offset, range, 0.5);
-  mat.vec3.add(offset, object3D.extentsMin, offset);
-  mat.vec3.scale(offset, offset, -1);
-  // const cameraTarget = [0, 0, 0];
-  const radius = mat.vec3.length(range);
-  // const radius = 1.0; //Math.sqrt(3);
-
-  const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
-  const zNear = 0.1; //-300.0; //
-  const zFar = radius * 3;
-
-  const halfWorldWidth = this.gl.canvas.clientWidth / 2;
-  const ratio = aspect;
-
-  const projectionMatrix = mat.mat4.create();
-
-  mat.mat4.ortho(
-    projectionMatrix,
-    -halfWorldWidth,
-    halfWorldWidth,
-    -halfWorldWidth / ratio,
-    halfWorldWidth / ratio,
-    zNear,
-    zFar
-  );
-
-  const modelViewMatrix = mat.mat4.create();
-
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
-  mat.mat4.translate(
-    modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to translate
-    [-0.0, 0.0, -radius * 2]
-  ); // amount to translate
-
-  var rad = ((90 - this.scene.renderElevation) * Math.PI) / 180;
-  mat.mat4.rotate(modelViewMatrix, modelViewMatrix, rad, [1, 0, 0]);
-  rad = (this.scene.renderAzimuth * Math.PI) / 180;
-  mat.mat4.rotate(modelViewMatrix, modelViewMatrix, rad, [0, 0, -1]);
-  mat.mat4.scale(modelViewMatrix, modelViewMatrix, [
-    this.volScaleMultiplier,
-    this.volScaleMultiplier,
-    this.volScaleMultiplier,
-  ]);
-
-  const mvpMatrix = mat.mat4.create();
-  mat.mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
-  log.debug("mvp old", mvpMatrix);
-  return mvpMatrix;
 }; // calculateMvpMatrix
 
 // not included in public docs
