@@ -131,25 +131,34 @@ NVImage.prototype.calculateRAS = function () {
   );
   //1st column = x
   let ixyz = [1, 1, 1];
-  if (absR[3] > absR[0]) ixyz[0] = 2; //(absR[1][0] > absR[0][0]) ixyz[0] = 2;
-  if (absR[6] > absR[0] && absR[6] > absR[3]) ixyz[0] = 3; //((absR[2][0] > absR[0][0]) && (absR[2][0]> absR[1][0])) ixyz[0] = 3;
-  //2nd column = y
+  if (absR[3] > absR[0]) {
+    ixyz[0] = 2; //(absR[1][0] > absR[0][0]) ixyz[0] = 2;
+  }
+  if (absR[6] > absR[0] && absR[6] > absR[3]) {
+    ixyz[0] = 3; //((absR[2][0] > absR[0][0]) && (absR[2][0]> absR[1][0])) ixyz[0] = 3;
+  } //2nd column = y
   ixyz[1] = 1;
   if (ixyz[0] === 1) {
-    if (absR[4] > absR[7])
+    if (absR[4] > absR[7]) {
       //(absR[1][1] > absR[2][1])
       ixyz[1] = 2;
-    else ixyz[1] = 3;
+    } else {
+      ixyz[1] = 3;
+    }
   } else if (ixyz[0] === 2) {
-    if (absR[1] > absR[7])
+    if (absR[1] > absR[7]) {
       //(absR[0][1] > absR[2][1])
       ixyz[1] = 1;
-    else ixyz[1] = 3;
+    } else {
+      ixyz[1] = 3;
+    }
   } else {
-    if (absR[1] > absR[4])
+    if (absR[1] > absR[4]) {
       //(absR[0][1] > absR[1][1])
       ixyz[1] = 1;
-    else ixyz[1] = 2;
+    } else {
+      ixyz[1] = 2;
+    }
   }
   //3rd column = z: constrained as x+y+z = 1+2+3 = 6
   ixyz[2] = 6 - ixyz[1] - ixyz[0];
@@ -182,12 +191,21 @@ NVImage.prototype.calculateRAS = function () {
   this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
   let R = mat.mat4.create();
   mat.mat4.copy(R, rotM);
-  for (let i = 0; i < 3; i++)
-    for (let j = 0; j < 3; j++) R[i * 4 + j] = rotM[i * 4 + perm[j] - 1]; //rotM[i+(4*(perm[j]-1))];//rotM[i],[perm[j]-1];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      R[i * 4 + j] = rotM[i * 4 + perm[j] - 1]; //rotM[i+(4*(perm[j]-1))];//rotM[i],[perm[j]-1];
+    }
+  }
   let flip = [0, 0, 0];
-  if (R[0] < 0) flip[0] = 1; //R[0][0]
-  if (R[5] < 0) flip[1] = 1; //R[1][1]
-  if (R[10] < 0) flip[2] = 1; //R[2][2]
+  if (R[0] < 0) {
+    flip[0] = 1; //R[0][0]
+  }
+  if (R[5] < 0) {
+    flip[1] = 1; //R[1][1]
+  }
+  if (R[10] < 0) {
+    flip[2] = 1; //R[2][2]
+  }
   this.dimsRAS = [
     header.dims[0],
     header.dims[perm[0]],
@@ -224,6 +242,8 @@ NVImage.prototype.calculateRAS = function () {
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
   this.toRAS = mat.mat4.clone(rotM);
+  console.log(this.hdr.dims);
+  console.log(this.dimsRAS);
 };
 
 // not included in public docs
@@ -676,12 +696,12 @@ function getExtents(positions) {
  */
 NVImage.prototype.method1 = function () {
   return {
-    left: -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
-    right: (this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
-    posterior: -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3],
-    anterior: (this.hdr.dims[3] / 2) * this.hdr.pixDims[3], // y
-    inferior: -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
-    superior: (this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
+    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
+    right: (this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
+    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
+    anterior: (this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
+    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
+    superior: (this.dimsRAS[3] / 2) * this.pixDimsRAS[3], // y
   };
 };
 
@@ -711,8 +731,8 @@ NVImage.prototype.method2 = function () {
   // let minExtent = mat.vec4.create();
   // mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
   return {
-    left: 0 - maxExtent[0] / 2,
-    right: maxExtent[0] / 2, // x
+    left: maxExtent[0] / 2,
+    right: 0 - maxExtent[0] / 2, // x
     posterior: 0 - maxExtent[1] / 2,
     anterior: maxExtent[1] / 2, // z
     inferior: 0 - maxExtent[2] / 2,
@@ -733,123 +753,117 @@ NVImage.prototype.method3 = function () {};
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
   let cuboid = this.method1();
-  // if (this.hdr.qform_code != 0) {
-  //   cuboid = this.method2();
-  //   console.log("method 2 used");
-  // } else {
-  //   cuboid = this.method1();
-  // }
 
   let left = cuboid.left;
   let right = cuboid.right;
-  let bottom = cuboid.inferior;
-  let top = cuboid.superior;
-  let front = cuboid.anterior;
-  let back = cuboid.posterior;
+  let posterior = cuboid.posterior;
+  let anterior = cuboid.anterior;
+  let inferior = cuboid.inferior;
+  let superior = cuboid.superior;
 
   const positions = [
-    // Front face
+    // Superior face
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
 
-    // Back face
+    // Inferior face
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
 
-    // Top face
+    // Anterior face
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
 
-    // Bottom face
+    // Posterior face
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
 
     // Right face
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
 
     // Left face
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
   ];
 
   const textureCoordinates = [
-    // Front
+    // Superior Z=1.0
     0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0,
 
-    // Back
+    // Inferior Z=1.0
     0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0,
 
-    // Top
+    // Anterior Y=1
     0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0,
 
-    // Bottom
+    // Posterior Y=0
     0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0,
 
-    // Right
+    // Right X=1
     1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0,
 
-    // Left
+    // Left X=0
     0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0,
   ];
 

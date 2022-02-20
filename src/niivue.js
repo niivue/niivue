@@ -106,8 +106,8 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
-  this.scene.renderAzimuth = -45;
-  this.scene.renderElevation = -165; //15;
+  this.scene.renderAzimuth = -90; //-45;
+  this.scene.renderElevation = 90; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -125,7 +125,7 @@ export const Niivue = function (options = {}) {
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.backTexture = [];
   this.objectsToRender3D = [];
-  this.volScaleMultiplier = 1;
+  this.volScaleMultiplier = 1.0;
   this.volScale = [];
   this.vox = [];
   this.mousePos = [0, 0];
@@ -505,8 +505,6 @@ Niivue.prototype.mouseUpListener = function () {
   if (this.isDragging) {
     this.isDragging = false;
     this.calculateNewRange();
-    // remove colorbar
-    // this.drawScene();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
     this.drawScene();
   }
@@ -1628,14 +1626,14 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
   let outTexture = null;
 
-  let mtx = [];
+  let mtx = mat.mat4.clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
 
-    // this.back = {};
-    mtx = overlayItem.toRAS;
+    mat.mat4.invert(mtx, mtx);
+    log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
@@ -1968,6 +1966,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
+  log.debug("back dims: ", this.back.dims);
   for (let i = 0; i < this.back.dims[3]; i++) {
     //output slices
     let coordZ = (1 / this.back.dims[3]) * (i + 0.5);
@@ -2553,60 +2552,70 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.sync();
 }; // draw2D()
 
-// not included in public docs
 Niivue.prototype.calculateMvpMatrix = function (object3D) {
-  const range = mat.vec3.create();
-  mat.vec3.subtract(range, object3D.extentsMax, object3D.extentsMin);
-  const offset = mat.vec3.create();
-  mat.vec3.scale(offset, range, 0.5);
-  mat.vec3.add(offset, object3D.extentsMin, offset);
-  mat.vec3.scale(offset, offset, -1);
-  // const cameraTarget = [0, 0, 0];
-  const radius = mat.vec3.length(range);
-  // const radius = 1.0; //Math.sqrt(3);
-
-  const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
-  const zNear = 0.1; //-300.0; //
-  const zFar = radius * 3;
-
-  const halfWorldWidth = this.gl.canvas.clientWidth / 2;
-  const ratio = aspect;
-
-  const projectionMatrix = mat.mat4.create();
-
-  mat.mat4.ortho(
-    projectionMatrix,
-    -halfWorldWidth,
-    halfWorldWidth,
-    -halfWorldWidth / ratio,
-    halfWorldWidth / ratio,
-    zNear,
-    zFar
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180.0);
+  }
+  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  let projectionMatrix = mat.mat4.create();
+  //position of vertex furthest from origin: this should be computed ONCE in nvimage.js
+  let dx = Math.max(
+    Math.abs(object3D.extentsMax[0]),
+    Math.abs(object3D.extentsMin[0])
   );
-
-  const modelViewMatrix = mat.mat4.create();
-
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
-  mat.mat4.translate(
-    modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to translate
-    [-0.0, 0.0, -radius * 2]
-  ); // amount to translate
-
-  var rad = ((90 - this.scene.renderElevation) * Math.PI) / 180;
-  mat.mat4.rotate(modelViewMatrix, modelViewMatrix, rad, [1, 0, 0]);
-  rad = (this.scene.renderAzimuth * Math.PI) / 180;
-  mat.mat4.rotate(modelViewMatrix, modelViewMatrix, rad, [0, 0, -1]);
-  mat.mat4.scale(modelViewMatrix, modelViewMatrix, [
-    this.volScaleMultiplier,
-    this.volScaleMultiplier,
-    this.volScaleMultiplier,
-  ]);
-
-  const mvpMatrix = mat.mat4.create();
-  mat.mat4.multiply(mvpMatrix, projectionMatrix, modelViewMatrix);
-  return mvpMatrix;
+  let dy = Math.max(
+    Math.abs(object3D.extentsMax[1]),
+    Math.abs(object3D.extentsMin[1])
+  );
+  let dz = Math.max(
+    Math.abs(object3D.extentsMax[2]),
+    Math.abs(object3D.extentsMin[2])
+  );
+  let furthestVertexFromOrigin = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  //default volScaleMultiplier ~1.0: see entire object even if ~45-degree azimuth/elevation
+  let scale = (0.7 * furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  if (whratio < 1)
+    //tall window: "portrait" mode, width constrains
+    mat.mat4.ortho(
+      projectionMatrix,
+      -scale,
+      scale,
+      -scale / whratio,
+      scale / whratio,
+      0.01,
+      scale * 8.0
+    );
+  //Wide window: "landscape" mode, height constrains
+  else
+    mat.mat4.ortho(
+      projectionMatrix,
+      -scale * whratio,
+      scale * whratio,
+      -scale,
+      scale,
+      0.01,
+      scale * 8.0
+    );
+  const modelMatrix = mat.mat4.create();
+  modelMatrix[0] = -1; //mirror X coordinate
+  //push the model away from the camera so camera not inside model
+  let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
+  mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
+  //apply elevation
+  mat.mat4.rotateX(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(270 - this.scene.renderElevation)
+  );
+  //apply azimuth
+  mat.mat4.rotateZ(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(this.scene.renderAzimuth - 180)
+  );
+  let modelViewProjectionMatrix = mat.mat4.create();
+  mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+  return modelViewProjectionMatrix;
 }; // calculateMvpMatrix
 
 // not included in public docs
@@ -2760,7 +2769,7 @@ Niivue.prototype.draw3D = function () {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);

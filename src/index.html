@@ -60,7 +60,7 @@
       var volumeList1 = [
         // first item is brackground image
         {
-          url: url ? url : "./mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
 					colorMap: "gray",
           opacity: 1,
@@ -77,8 +77,8 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      //nv1.setSliceType(nv1.sliceTypeRender)
+      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceType(nv1.sliceTypeRender)
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
