@@ -103,6 +103,14 @@ export var NVImage = function (
     case this.DT_RGBA32:
       this.img = new Uint8Array(imgRaw);
       break;
+    case this.DT_INT64:
+      let i64 = new BigInt64Array(imgRaw);
+      let vx = i64.length;
+      this.img = new Float64Array(vx);
+      for (var i = 0; i < vx - 1; i++)
+         this.img[i] = Number(i64[i]);
+      this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
     default:
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
@@ -659,6 +667,16 @@ String.prototype.getBytes = function () {
 
 NVImage.prototype.getValue = function (x, y, z) {
   const { nx, ny } = this.getImageMetadata();
+  if (this.hdr.datatypeCode === this.DT_RGBA32) {
+    let vx = 4 * (x + y * nx + z * nx * ny);
+    //convert rgb to luminance
+    return Math.round(this.img[vx] * 0.21 + this.img[vx+1] * 0.72 + this.img[vx+2] * 0.07);
+  }
+  if (this.hdr.datatypeCode === this.DT_RGB) {
+    let vx = 3 * (x + y * nx + z * nx * ny);
+    //convert rgb to luminance
+    return Math.round(this.img[vx] * 0.21 + this.img[vx+1] * 0.72 + this.img[vx+2] * 0.07);
+  }
   return this.img[x + y * nx + z * nx * ny];
 };
 

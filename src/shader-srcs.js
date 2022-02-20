@@ -370,11 +370,10 @@ uniform mat4 mtx;
 uniform bool hasAlpha;
 
 void main(void) {
-vec4 vx = vec4(TexCoord.xy, coordZ, 1.0);// * mtx;
- 
- uvec4 aColor = texture(intensityVol, vx.xyz);
- float a = hasAlpha ? float(aColor.a) / 255.0f : float(aColor.r) * 0.21f + float(aColor.g) * 0.72f + float(aColor.b) * 0.07;  
- FragColor = vec4(float(aColor.r) / 255.0f, float(aColor.g) / 255.0f, float(aColor.b) / 255.0f, a);
+ uvec4 aColor = texture(intensityVol, vec3(TexCoord.xy, coordZ));
+ FragColor = vec4(float(aColor.r) / 255.0f, float(aColor.g) / 255.0f, float(aColor.b) / 255.0f, float(aColor.a) / 255.0f);
+ if (!hasAlpha)
+   FragColor.a = (FragColor.r * 0.21f + FragColor.g * 0.72f + FragColor.b * 0.07);
  FragColor.a *= opacity;
 }`;
 

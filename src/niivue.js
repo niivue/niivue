@@ -106,8 +106,8 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
-  this.scene.renderAzimuth = -90; //-45;
-  this.scene.renderElevation = 90; //-165; //15;
+  this.scene.renderAzimuth = 110; //-45;
+  this.scene.renderElevation = 15; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
