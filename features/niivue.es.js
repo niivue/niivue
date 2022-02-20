@@ -53,7 +53,6 @@ var compileShader = function(gl, vert, frag) {
   }
   return program;
 };
-var EPSILON = 1e-6;
 var ARRAY_TYPE = typeof Float32Array !== "undefined" ? Float32Array : Array;
 if (!Math.hypot)
   Math.hypot = function() {
@@ -331,85 +330,66 @@ function translate(out, a, v) {
   }
   return out;
 }
-function scale$1(out, a, v) {
-  var x = v[0], y = v[1], z = v[2];
-  out[0] = a[0] * x;
-  out[1] = a[1] * x;
-  out[2] = a[2] * x;
-  out[3] = a[3] * x;
-  out[4] = a[4] * y;
-  out[5] = a[5] * y;
-  out[6] = a[6] * y;
-  out[7] = a[7] * y;
-  out[8] = a[8] * z;
-  out[9] = a[9] * z;
-  out[10] = a[10] * z;
-  out[11] = a[11] * z;
-  out[12] = a[12];
-  out[13] = a[13];
-  out[14] = a[14];
-  out[15] = a[15];
-  return out;
-}
-function rotate(out, a, rad, axis) {
-  var x = axis[0], y = axis[1], z = axis[2];
-  var len = Math.hypot(x, y, z);
-  var s, c, t;
-  var a00, a01, a02, a03;
-  var a10, a11, a12, a13;
-  var a20, a21, a22, a23;
-  var b00, b01, b02;
-  var b10, b11, b12;
-  var b20, b21, b22;
-  if (len < EPSILON) {
-    return null;
-  }
-  len = 1 / len;
-  x *= len;
-  y *= len;
-  z *= len;
-  s = Math.sin(rad);
-  c = Math.cos(rad);
-  t = 1 - c;
-  a00 = a[0];
-  a01 = a[1];
-  a02 = a[2];
-  a03 = a[3];
-  a10 = a[4];
-  a11 = a[5];
-  a12 = a[6];
-  a13 = a[7];
-  a20 = a[8];
-  a21 = a[9];
-  a22 = a[10];
-  a23 = a[11];
-  b00 = x * x * t + c;
-  b01 = y * x * t + z * s;
-  b02 = z * x * t - y * s;
-  b10 = x * y * t - z * s;
-  b11 = y * y * t + c;
-  b12 = z * y * t + x * s;
-  b20 = x * z * t + y * s;
-  b21 = y * z * t - x * s;
-  b22 = z * z * t + c;
-  out[0] = a00 * b00 + a10 * b01 + a20 * b02;
-  out[1] = a01 * b00 + a11 * b01 + a21 * b02;
-  out[2] = a02 * b00 + a12 * b01 + a22 * b02;
-  out[3] = a03 * b00 + a13 * b01 + a23 * b02;
-  out[4] = a00 * b10 + a10 * b11 + a20 * b12;
-  out[5] = a01 * b10 + a11 * b11 + a21 * b12;
-  out[6] = a02 * b10 + a12 * b11 + a22 * b12;
-  out[7] = a03 * b10 + a13 * b11 + a23 * b12;
-  out[8] = a00 * b20 + a10 * b21 + a20 * b22;
-  out[9] = a01 * b20 + a11 * b21 + a21 * b22;
-  out[10] = a02 * b20 + a12 * b21 + a22 * b22;
-  out[11] = a03 * b20 + a13 * b21 + a23 * b22;
+function rotateX(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  var a20 = a[8];
+  var a21 = a[9];
+  var a22 = a[10];
+  var a23 = a[11];
   if (a !== out) {
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
     out[12] = a[12];
     out[13] = a[13];
     out[14] = a[14];
     out[15] = a[15];
   }
+  out[4] = a10 * c + a20 * s;
+  out[5] = a11 * c + a21 * s;
+  out[6] = a12 * c + a22 * s;
+  out[7] = a13 * c + a23 * s;
+  out[8] = a20 * c - a10 * s;
+  out[9] = a21 * c - a11 * s;
+  out[10] = a22 * c - a12 * s;
+  out[11] = a23 * c - a13 * s;
+  return out;
+}
+function rotateZ(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a00 = a[0];
+  var a01 = a[1];
+  var a02 = a[2];
+  var a03 = a[3];
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  if (a !== out) {
+    out[8] = a[8];
+    out[9] = a[9];
+    out[10] = a[10];
+    out[11] = a[11];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  }
+  out[0] = a00 * c + a10 * s;
+  out[1] = a01 * c + a11 * s;
+  out[2] = a02 * c + a12 * s;
+  out[3] = a03 * c + a13 * s;
+  out[4] = a10 * c - a00 * s;
+  out[5] = a11 * c - a01 * s;
+  out[6] = a12 * c - a02 * s;
+  out[7] = a13 * c - a03 * s;
   return out;
 }
 function orthoNO(out, left, right, bottom, top, near, far) {
@@ -444,12 +424,6 @@ function create$1() {
   }
   return out;
 }
-function length(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  return Math.hypot(x, y, z);
-}
 function fromValues$1(x, y, z) {
   var out = new ARRAY_TYPE(3);
   out[0] = x;
@@ -457,22 +431,10 @@ function fromValues$1(x, y, z) {
   out[2] = z;
   return out;
 }
-function add$1(out, a, b) {
-  out[0] = a[0] + b[0];
-  out[1] = a[1] + b[1];
-  out[2] = a[2] + b[2];
-  return out;
-}
 function subtract(out, a, b) {
   out[0] = a[0] - b[0];
   out[1] = a[1] - b[1];
   out[2] = a[2] - b[2];
-  return out;
-}
-function scale(out, a, b) {
-  out[0] = a[0] * b;
-  out[1] = a[1] * b;
-  out[2] = a[2] * b;
   return out;
 }
 function normalize(out, a) {
@@ -6481,15 +6443,15 @@ const put_short = (s, w) => {
   s.pending_buf[s.pending++] = w & 255;
   s.pending_buf[s.pending++] = w >>> 8 & 255;
 };
-const send_bits = (s, value, length2) => {
-  if (s.bi_valid > Buf_size - length2) {
+const send_bits = (s, value, length) => {
+  if (s.bi_valid > Buf_size - length) {
     s.bi_buf |= value << s.bi_valid & 65535;
     put_short(s, s.bi_buf);
     s.bi_buf = value >> Buf_size - s.bi_valid;
-    s.bi_valid += length2 - Buf_size;
+    s.bi_valid += length - Buf_size;
   } else {
     s.bi_buf |= value << s.bi_valid & 65535;
-    s.bi_valid += length2;
+    s.bi_valid += length;
   }
 };
 const send_code = (s, c, tree) => {
@@ -6602,18 +6564,18 @@ const gen_codes = (tree, max_code, bl_count) => {
 const tr_static_init = () => {
   let n;
   let bits;
-  let length2;
+  let length;
   let code;
   let dist;
   const bl_count = new Array(MAX_BITS$1 + 1);
-  length2 = 0;
+  length = 0;
   for (code = 0; code < LENGTH_CODES$1 - 1; code++) {
-    base_length[code] = length2;
+    base_length[code] = length;
     for (n = 0; n < 1 << extra_lbits[code]; n++) {
-      _length_code[length2++] = code;
+      _length_code[length++] = code;
     }
   }
-  _length_code[length2 - 1] = code;
+  _length_code[length - 1] = code;
   dist = 0;
   for (code = 0; code < 16; code++) {
     base_dist[code] = dist;
@@ -10545,26 +10507,31 @@ NVImage.prototype.calculateRAS = function() {
   let header = this.hdr;
   let absR = fromValues$3(Math.abs(a[0][0]), Math.abs(a[0][1]), Math.abs(a[0][2]), Math.abs(a[1][0]), Math.abs(a[1][1]), Math.abs(a[1][2]), Math.abs(a[2][0]), Math.abs(a[2][1]), Math.abs(a[2][2]));
   let ixyz = [1, 1, 1];
-  if (absR[3] > absR[0])
+  if (absR[3] > absR[0]) {
     ixyz[0] = 2;
-  if (absR[6] > absR[0] && absR[6] > absR[3])
+  }
+  if (absR[6] > absR[0] && absR[6] > absR[3]) {
     ixyz[0] = 3;
+  }
   ixyz[1] = 1;
   if (ixyz[0] === 1) {
-    if (absR[4] > absR[7])
+    if (absR[4] > absR[7]) {
       ixyz[1] = 2;
-    else
+    } else {
       ixyz[1] = 3;
+    }
   } else if (ixyz[0] === 2) {
-    if (absR[1] > absR[7])
+    if (absR[1] > absR[7]) {
       ixyz[1] = 1;
-    else
+    } else {
       ixyz[1] = 3;
+    }
   } else {
-    if (absR[1] > absR[4])
+    if (absR[1] > absR[4]) {
       ixyz[1] = 1;
-    else
+    } else {
       ixyz[1] = 2;
+    }
   }
   ixyz[2] = 6 - ixyz[1] - ixyz[0];
   let perm = [1, 2, 3];
@@ -10578,16 +10545,21 @@ NVImage.prototype.calculateRAS = function() {
   this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
   let R2 = create$2();
   copy(R2, rotM);
-  for (let i = 0; i < 3; i++)
-    for (let j = 0; j < 3; j++)
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
       R2[i * 4 + j] = rotM[i * 4 + perm[j] - 1];
+    }
+  }
   let flip = [0, 0, 0];
-  if (R2[0] < 0)
+  if (R2[0] < 0) {
     flip[0] = 1;
-  if (R2[5] < 0)
+  }
+  if (R2[5] < 0) {
     flip[1] = 1;
-  if (R2[10] < 0)
+  }
+  if (R2[10] < 0) {
     flip[2] = 1;
+  }
   this.dimsRAS = [
     header.dims[0],
     header.dims[perm[0]],
@@ -10624,6 +10596,8 @@ NVImage.prototype.calculateRAS = function() {
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
   this.toRAS = clone(rotM);
+  console.log(this.hdr.dims);
+  console.log(this.dimsRAS);
 };
 NVImage.prototype.vox2mm = function(XYZ, mtx) {
   let sform = clone(mtx);
@@ -10887,12 +10861,12 @@ function getExtents(positions) {
 }
 NVImage.prototype.method1 = function() {
   return {
-    left: -(this.hdr.dims[1] / 2) * this.hdr.pixDims[1],
-    right: this.hdr.dims[1] / 2 * this.hdr.pixDims[1],
-    posterior: -(this.hdr.dims[3] / 2) * this.hdr.pixDims[3],
-    anterior: this.hdr.dims[3] / 2 * this.hdr.pixDims[3],
-    inferior: -(this.hdr.dims[2] / 2) * this.hdr.pixDims[2],
-    superior: this.hdr.dims[2] / 2 * this.hdr.pixDims[2]
+    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
+    right: this.dimsRAS[1] / 2 * this.pixDimsRAS[1],
+    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
+    anterior: this.dimsRAS[2] / 2 * this.pixDimsRAS[2],
+    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
+    superior: this.dimsRAS[3] / 2 * this.pixDimsRAS[3]
   };
 };
 NVImage.prototype.method2 = function() {
@@ -10908,8 +10882,8 @@ NVImage.prototype.method2 = function() {
   let maxExtent = create();
   transformMat4(maxExtent, rightTopFront, affineMatrix);
   return {
-    left: 0 - maxExtent[0] / 2,
-    right: maxExtent[0] / 2,
+    left: maxExtent[0] / 2,
+    right: 0 - maxExtent[0] / 2,
     posterior: 0 - maxExtent[1] / 2,
     anterior: maxExtent[1] / 2,
     inferior: 0 - maxExtent[2] / 2,
@@ -10922,83 +10896,83 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   let cuboid = this.method1();
   let left = cuboid.left;
   let right = cuboid.right;
-  let bottom = cuboid.inferior;
-  let top = cuboid.superior;
-  let front = cuboid.anterior;
-  let back = cuboid.posterior;
+  let posterior = cuboid.posterior;
+  let anterior = cuboid.anterior;
+  let inferior = cuboid.inferior;
+  let superior = cuboid.superior;
   const positions = [
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    top,
-    back,
+    anterior,
+    inferior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     right,
-    bottom,
-    back,
+    posterior,
+    inferior,
     right,
-    top,
-    back,
+    anterior,
+    inferior,
     right,
-    top,
-    front,
+    anterior,
+    superior,
     right,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    bottom,
-    back,
+    posterior,
+    inferior,
     left,
-    bottom,
-    front,
+    posterior,
+    superior,
     left,
-    top,
-    front,
+    anterior,
+    superior,
     left,
-    top,
-    back
+    anterior,
+    inferior
   ];
   const textureCoordinates = [
     0,
@@ -12739,8 +12713,8 @@ const Niivue = function(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar;
   this.scene = {};
-  this.scene.renderAzimuth = -45;
-  this.scene.renderElevation = -165;
+  this.scene.renderAzimuth = -90;
+  this.scene.renderElevation = 90;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -13291,8 +13265,8 @@ Niivue.prototype.setOpacity = function(volIdx, newOpacity) {
   }
   this.updateGLVolume();
 };
-Niivue.prototype.setScale = function(scale2) {
-  this.volScaleMultiplier = scale2;
+Niivue.prototype.setScale = function(scale) {
+  this.volScaleMultiplier = scale;
   this.drawScene();
 };
 Niivue.prototype.setClipPlaneColor = function(color) {
@@ -13633,12 +13607,13 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
   let outTexture = null;
-  let mtx = [];
+  let mtx = clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
     this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
-    mtx = overlayItem.toRAS;
+    invert(mtx, mtx);
+    log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
     this.back.dims = overlayItem.dimsRAS;
     this.back.pixDims = overlayItem.pixDimsRAS;
@@ -13764,6 +13739,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
+  log.debug("back dims: ", this.back.dims);
   for (let i = 0; i < this.back.dims[3]; i++) {
     let coordZ = 1 / this.back.dims[3] * (i + 0.5);
     this.gl.uniform1f(orientShader.uniforms["coordZ"], coordZ);
@@ -14001,24 +13977,24 @@ Niivue.prototype.drawColorbar = function(leftTopWidthHeight) {
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
 };
-Niivue.prototype.textWidth = function(scale2, str) {
+Niivue.prototype.textWidth = function(scale, str) {
   let w = 0;
   var bytes = new TextEncoder().encode(str);
   for (let i = 0; i < str.length; i++)
-    w += scale2 * this.fontMets[bytes[i]].xadv;
+    w += scale * this.fontMets[bytes[i]].xadv;
   return w;
 };
-Niivue.prototype.drawChar = function(xy, scale2, char) {
+Niivue.prototype.drawChar = function(xy, scale, char) {
   let metrics2 = this.fontMets[char];
-  let l = xy[0] + scale2 * metrics2.lbwh[0];
-  let b = -(scale2 * metrics2.lbwh[1]);
-  let w = scale2 * metrics2.lbwh[2];
-  let h = scale2 * metrics2.lbwh[3];
-  let t = xy[1] + (b - h) + scale2;
+  let l = xy[0] + scale * metrics2.lbwh[0];
+  let b = -(scale * metrics2.lbwh[1]);
+  let w = scale * metrics2.lbwh[2];
+  let h = scale * metrics2.lbwh[3];
+  let t = xy[1] + (b - h) + scale;
   this.gl.uniform4f(this.fontShader.uniforms["leftTopWidthHeight"], l, t, w, h);
   this.gl.uniform4fv(this.fontShader.uniforms["uvLeftTopWidthHeight"], metrics2.uv_lbwh);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
-  return scale2 * metrics2.xadv;
+  return scale * metrics2.xadv;
 };
 Niivue.prototype.drawLoadingText = function(text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
@@ -14029,11 +14005,11 @@ Niivue.prototype.drawLoadingText = function(text) {
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
   this.canvas.focus();
 };
-Niivue.prototype.drawText = function(xy, str, scale2 = 1) {
+Niivue.prototype.drawText = function(xy, str, scale = 1) {
   if (this.opts.textHeight <= 0)
     return;
   this.fontShader.use(this.gl);
-  let size = this.opts.textHeight * this.gl.canvas.height * scale2;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(this.fontShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
   this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], this.opts.crosshairColor);
@@ -14044,18 +14020,18 @@ Niivue.prototype.drawText = function(xy, str, scale2 = 1) {
   for (let i = 0; i < str.length; i++)
     xy[0] += this.drawChar(xy, size, bytes[i]);
 };
-Niivue.prototype.drawTextRight = function(xy, str, scale2 = 1) {
+Niivue.prototype.drawTextRight = function(xy, str, scale = 1) {
   if (this.opts.textHeight <= 0)
     return;
   xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
-  this.drawText(xy, str, scale2);
+  this.drawText(xy, str, scale);
 };
-Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1) {
+Niivue.prototype.drawTextBelow = function(xy, str, scale = 1) {
   if (this.opts.textHeight <= 0)
     return;
-  let size = this.opts.textHeight * this.gl.canvas.height * scale2;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= 0.5 * this.textWidth(size, str);
-  this.drawText(xy, str, scale2);
+  this.drawText(xy, str, scale);
 };
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);
@@ -14135,34 +14111,29 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.sync();
 };
 Niivue.prototype.calculateMvpMatrix = function(object3D) {
-  const range = create$1();
-  subtract(range, object3D.extentsMax, object3D.extentsMin);
-  const offset = create$1();
-  scale(offset, range, 0.5);
-  add$1(offset, object3D.extentsMin, offset);
-  scale(offset, offset, -1);
-  const radius = length(range);
-  const aspect = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = radius * 3;
-  const halfWorldWidth = this.gl.canvas.clientWidth / 2;
-  const ratio = aspect;
-  const projectionMatrix = create$2();
-  ortho(projectionMatrix, -halfWorldWidth, halfWorldWidth, -halfWorldWidth / ratio, halfWorldWidth / ratio, zNear, zFar);
-  const modelViewMatrix = create$2();
-  translate(modelViewMatrix, modelViewMatrix, [-0, 0, -radius * 2]);
-  var rad = (90 - this.scene.renderElevation) * Math.PI / 180;
-  rotate(modelViewMatrix, modelViewMatrix, rad, [1, 0, 0]);
-  rad = this.scene.renderAzimuth * Math.PI / 180;
-  rotate(modelViewMatrix, modelViewMatrix, rad, [0, 0, -1]);
-  scale$1(modelViewMatrix, modelViewMatrix, [
-    this.volScaleMultiplier,
-    this.volScaleMultiplier,
-    this.volScaleMultiplier
-  ]);
-  const mvpMatrix = create$2();
-  multiply$1(mvpMatrix, projectionMatrix, modelViewMatrix);
-  return mvpMatrix;
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+  }
+  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  let projectionMatrix = create$2();
+  let dx = Math.max(Math.abs(object3D.extentsMax[0]), Math.abs(object3D.extentsMin[0]));
+  let dy = Math.max(Math.abs(object3D.extentsMax[1]), Math.abs(object3D.extentsMin[1]));
+  let dz = Math.max(Math.abs(object3D.extentsMax[2]), Math.abs(object3D.extentsMin[2]));
+  let furthestVertexFromOrigin = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  let scale = 0.7 * furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
+  if (whratio < 1)
+    ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, 0.01, scale * 8);
+  else
+    ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, 0.01, scale * 8);
+  const modelMatrix = create$2();
+  modelMatrix[0] = -1;
+  let translateVec3 = fromValues$1(0, 0, -scale * 1.8);
+  translate(modelMatrix, modelMatrix, translateVec3);
+  rotateX(modelMatrix, modelMatrix, deg2rad(270 - this.scene.renderElevation));
+  rotateZ(modelMatrix, modelMatrix, deg2rad(this.scene.renderAzimuth - 180));
+  let modelViewProjectionMatrix = create$2();
+  multiply$1(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+  return modelViewProjectionMatrix;
 };
 Niivue.prototype.calculateRayDirection = function(mvpMatrix) {
   var inv = create$2();
@@ -14260,7 +14231,7 @@ Niivue.prototype.draw3D = function() {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT);
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);
