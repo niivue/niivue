@@ -35,7 +35,8 @@ export var NVImage = function (
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
+  visible = true,
+  useQFormNotSForm = false
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -74,44 +75,104 @@ export var NVImage = function (
   }
 
   this.hdr = nifti.readHeader(dataBuffer);
-  if ((isNaN(this.hdr.scl_slope)) || (this.hdr.scl_slope === 0.0))
+  function isAffineOK(mtx) {
+    //A good matrix should not have any components that are not a number
+    //A good spatial transformation matrix should not have a row or column that is all zeros
+    let iOK = [false, false, false, false];
+    let jOK = [false, false, false, false];
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        if (isNaN(mtx[i][j])) return false;
+      }
+    }
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (mtx[i][j] === 0.0) continue;
+        iOK[i] = true;
+        jOK[j] = true;
+      }
+    }
+    for (let i = 0; i < 3; i++) {
+      if (!iOK[i]) return false;
+      if (!jOK[i]) return false;
+    }
+    return true;
+  } // vox2mm()
+  if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0)
     this.hdr.scl_slope = 1.0; //https://github.com/nipreps/fmriprep/issues/2507
-  if (isNaN(this.hdr.scl_inter))
-    this.hdr.scl_inter  = 0.0;
-  if (this.hdr.qform_code > this.hdr.sform_code) {
-    console.log('resorting to QForm::',this.hdr)
+  if (isNaN(this.hdr.scl_inter)) this.hdr.scl_inter = 0.0;
+  let affineOK = isAffineOK(this.hdr.affine);
+  if (
+    useQFormNotSForm ||
+    !affineOK ||
+    this.hdr.qform_code > this.hdr.sform_code
+  ) {
+    console.log("spatial transform based on QForm");
     //https://github.com/rii-mango/NIFTI-Reader-JS/blob/6908287bf99eb3bc4795c1591d3e80129da1e2f6/src/nifti1.js#L238
     // Define a, b, c, d for coding covenience
-    const b = this.hdr.quatern_b
-    const c = this.hdr.quatern_c
-    const d = this.hdr.quatern_d
+    const b = this.hdr.quatern_b;
+    const c = this.hdr.quatern_c;
+    const d = this.hdr.quatern_d;
     // quatern_a is a parameter in quaternion [a, b, c, d], which is required in affine calculation (METHOD 2)
     // mentioned in the nifti1.h file
     // It can be calculated by a = sqrt(1.0-(b*b+c*c+d*d))
-    const a = Math.sqrt(1.0 -
-        (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2)))
-    const qfac = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0]
+    const a = Math.sqrt(
+      1.0 - (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2))
+    );
+    const qfac = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0];
     const quatern_R = [
-            [a * a + b * b - c * c - d * d,  2 * b * c - 2 * a * d,          2 * b * d + 2 * a * c],
-            [2 * b * c + 2 * a * d,          a * a + c * c - b * b - d * d,  2 * c * d - 2 * a * b],
-            [2 * b * d - 2 * a * c,          2 * c * d + 2 * a * b,          a * a + d * d - c * c - b * b]
-        ]
+      [
+        a * a + b * b - c * c - d * d,
+        2 * b * c - 2 * a * d,
+        2 * b * d + 2 * a * c,
+      ],
+      [
+        2 * b * c + 2 * a * d,
+        a * a + c * c - b * b - d * d,
+        2 * c * d - 2 * a * b,
+      ],
+      [
+        2 * b * d - 2 * a * c,
+        2 * c * d + 2 * a * b,
+        a * a + d * d - c * c - b * b,
+      ],
+    ];
     const affine = this.hdr.affine;
     for (let ctrOut = 0; ctrOut < 3; ctrOut += 1) {
-        for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
-            affine[ctrOut][ctrIn] = quatern_R[ctrOut][ctrIn] * this.hdr.pixDims[ctrIn + 1];
-            if (ctrIn === 2) {
-                affine[ctrOut][ctrIn] *= qfac;
-            }
+      for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
+        affine[ctrOut][ctrIn] =
+          quatern_R[ctrOut][ctrIn] * this.hdr.pixDims[ctrIn + 1];
+        if (ctrIn === 2) {
+          affine[ctrOut][ctrIn] *= qfac;
         }
+      }
     }
     // The last row of affine matrix is the offset vector
-    affine[0][3] = this.hdr.qoffset_x
-    affine[1][3] = this.hdr.qoffset_y
-    affine[2][3] = this.hdr.qoffset_z
-    //console.log('!!!',affine);
+    affine[0][3] = this.hdr.qoffset_x;
+    affine[1][3] = this.hdr.qoffset_y;
+    affine[2][3] = this.hdr.qoffset_z;
     this.hdr.affine = affine;
   }
+  affineOK = isAffineOK(this.hdr.affine);
+  if (affineOK) {
+    console.log("Defective NIfTI: spatial transform does not make sense");
+    let x = this.hdr.pixDims[1];
+    let y = this.hdr.pixDims[2];
+    let z = this.hdr.pixDims[3];
+    if (isNaN(x) || x === 0.0) x = 1.0;
+    if (isNaN(y) || y === 0.0) y = 1.0;
+    if (isNaN(z) || z === 0.0) z = 1.0;
+    this.hdr.pixDims[1] = x;
+    this.hdr.pixDims[2] = y;
+    this.hdr.pixDims[3] = z;
+    const affine = [
+      [x, 0, 0, 0],
+      [0, y, 0, 0],
+      [0, 0, z, 0],
+      [0, 0, 0, 1],
+    ];
+  } //defective affine
+
   let imgRaw = null;
   if (nifti.isCompressed(dataBuffer)) {
     imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
