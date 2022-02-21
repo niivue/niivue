@@ -862,7 +862,6 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     return;
   }
   let volIndex = this.getVolumeIndexByID(volume.id);
-
   if (toIndex === 0) {
     this.volumes.splice(volIndex, 1);
     this.volumes.unshift(volume);
