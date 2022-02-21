@@ -902,13 +902,11 @@ uniform lowp sampler3D blend3D;
 uniform float opacity;
 uniform mat4 mtx;
 uniform bool hasAlpha;
-
 void main(void) {
-vec4 vx = vec4(TexCoord.xy, coordZ, 1.0);// * mtx;
- 
- uvec4 aColor = texture(intensityVol, vx.xyz);
- float a = hasAlpha ? float(aColor.a) / 255.0f : float(aColor.r) * 0.21f + float(aColor.g) * 0.72f + float(aColor.b) * 0.07;  
- FragColor = vec4(float(aColor.r) / 255.0f, float(aColor.g) / 255.0f, float(aColor.b) / 255.0f, a);
+ uvec4 aColor = texture(intensityVol, vec3(TexCoord.xy, coordZ));
+ FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
+ if (!hasAlpha)
+   FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
  FragColor.a *= opacity;
 }`;
 var vertPassThroughShader = `#version 300 es
@@ -952,7 +950,6 @@ in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 posColor;
 void main(void) {
-	// gl_Position =  mvpMtx * vec4(pos, 1.0); // mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	posColor = texCoords;
 }`;
@@ -10496,6 +10493,38 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     case this.DT_RGBA32:
       this.img = new Uint8Array(imgRaw);
       break;
+    case this.DT_INT8:
+      let i8 = new Int8Array(imgRaw);
+      var vx8 = i8.length;
+      this.img = new Int16Array(vx8);
+      for (var i = 0; i < vx8 - 1; i++)
+        this.img[i] = i8[i];
+      this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
+      break;
+    case this.DT_UINT32:
+      let u32 = new Uint32Array(imgRaw);
+      var vx32 = u32.length;
+      this.img = new Float64Array(vx32);
+      for (var i = 0; i < vx32 - 1; i++)
+        this.img[i] = u32[i];
+      this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
+    case this.DT_SIGNED_INT:
+      let i32 = new Int32Array(imgRaw);
+      var vxi32 = i32.length;
+      this.img = new Float64Array(vxi32);
+      for (var i = 0; i < vxi32 - 1; i++)
+        this.img[i] = i32[i];
+      this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
+    case this.DT_INT64:
+      let i64 = new BigInt64Array(imgRaw);
+      let vx = i64.length;
+      this.img = new Float64Array(vx);
+      for (var i = 0; i < vx - 1; i++)
+        this.img[i] = Number(i64[i]);
+      this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
     default:
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
@@ -10845,19 +10874,31 @@ String.prototype.getBytes = function() {
 };
 NVImage.prototype.getValue = function(x, y, z) {
   const { nx, ny } = this.getImageMetadata();
+  if (this.hdr.datatypeCode === this.DT_RGBA32) {
+    let vx = 4 * (x + y * nx + z * nx * ny);
+    return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
+  }
+  if (this.hdr.datatypeCode === this.DT_RGB) {
+    let vx = 3 * (x + y * nx + z * nx * ny);
+    return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
+  }
   return this.img[x + y * nx + z * nx * ny];
 };
 function getExtents(positions) {
   const min2 = positions.slice(0, 3);
   const max2 = positions.slice(0, 3);
+  let mxDx = 0;
   for (let i = 3; i < positions.length; i += 3) {
     for (let j = 0; j < 3; ++j) {
       const v = positions[i + j];
       min2[j] = Math.min(v, min2[j]);
       max2[j] = Math.max(v, max2[j]);
     }
+    let dx = positions[i] * positions[i] + positions[i + 1] * positions[i + 1] + positions[i + 2] * positions[i + 2];
+    mxDx = Math.max(mxDx, dx);
   }
-  return { min: min2, max: max2 };
+  let furthestVertexFromOrigin = Math.sqrt(mxDx);
+  return { min: min2, max: max2, furthestVertexFromOrigin };
 }
 NVImage.prototype.method1 = function() {
   return {
@@ -11099,6 +11140,7 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   const extents = getExtents(positions);
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
+  obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   return obj3D;
 };
 const Log = function(logLevel) {
@@ -12713,8 +12755,8 @@ const Niivue = function(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar;
   this.scene = {};
-  this.scene.renderAzimuth = -90;
-  this.scene.renderElevation = 90;
+  this.scene.renderAzimuth = 110;
+  this.scene.renderElevation = 15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -13674,36 +13716,36 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
   let orientShader = this.orientShaderU;
   if (hdr.datatypeCode === 2) {
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED_INTEGER, this.gl.UNSIGNED_BYTE, img);
   } else if (hdr.datatypeCode === 4) {
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED_INTEGER, this.gl.SHORT, img);
     orientShader = this.orientShaderI;
   } else if (hdr.datatypeCode === 16) {
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED, this.gl.FLOAT, img);
     orientShader = this.orientShaderF;
   } else if (hdr.datatypeCode === 64) {
     let img32f = new Float32Array();
     img32f = Float32Array.from(img);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED, this.gl.FLOAT, img32f);
     orientShader = this.orientShaderF;
   } else if (hdr.datatypeCode === 128) {
     orientShader = this.orientShaderRGBU;
     orientShader.use(this.gl);
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], false);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RGB_INTEGER, this.gl.UNSIGNED_BYTE, img);
   } else if (hdr.datatypeCode === 512) {
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED_INTEGER, this.gl.UNSIGNED_SHORT, img);
   } else if (hdr.datatypeCode === 2304) {
     orientShader = this.orientShaderRGBU;
     orientShader.use(this.gl);
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], true);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 6, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RGBA_INTEGER, this.gl.UNSIGNED_BYTE, img);
   }
   if (overlayItem.global_min === void 0) {
@@ -14116,11 +14158,7 @@ Niivue.prototype.calculateMvpMatrix = function(object3D) {
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = create$2();
-  let dx = Math.max(Math.abs(object3D.extentsMax[0]), Math.abs(object3D.extentsMin[0]));
-  let dy = Math.max(Math.abs(object3D.extentsMax[1]), Math.abs(object3D.extentsMin[1]));
-  let dz = Math.max(Math.abs(object3D.extentsMax[2]), Math.abs(object3D.extentsMin[2]));
-  let furthestVertexFromOrigin = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  let scale = 0.7 * furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
+  let scale = 0.7 * object3D.furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
   if (whratio < 1)
     ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, 0.01, scale * 8);
   else
