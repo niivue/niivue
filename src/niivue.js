@@ -2622,6 +2622,12 @@ Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
   return rayDir;
 }; // calculateRayDirection
 
+
+// not included in public docs
+Niivue.prototype.generateCylinder = function(minExtents, maxExtents, radius) {
+  
+}
+
 // not included in public docs
 Niivue.prototype.draw3D = function () {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
