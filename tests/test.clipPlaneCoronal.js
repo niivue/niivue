@@ -3,7 +3,7 @@ beforeEach(async () => {
   await page.goto(httpServerAddress, {timeout:0})
   await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
-test('volume is properly clipped in axial plane', async () => {
+test('volume is properly clipped in coronal plane', async () => {
   await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
@@ -13,8 +13,8 @@ test('volume is properly clipped in axial plane', async () => {
     await nv.attachTo('gl')
     nv.sliceType = nv.sliceTypeRender;
     nv.clipPlaneObject3D.isVisible = true;
-    nv.scene.clipPlane = [0, 0, 1, 0];
-    nv.clipPlaneObject3D.rotation = [1, 0, 0];
+    nv.scene.clipPlane = [0, 1, 0, 0];
+    nv.clipPlaneObject3D.rotation = [0, 0, 1];
 
     // load one volume object in an array
     var volumeList = [
@@ -28,8 +28,9 @@ test('volume is properly clipped in axial plane', async () => {
       },
     ]
     await nv.loadVolumes(volumeList)
+    return nv
   })
   // take a snapshot for comparison
-  await snapshot()
+  await snapshot('#gl', 0.5)
 
 })

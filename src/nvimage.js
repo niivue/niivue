@@ -145,32 +145,28 @@ export var NVImage = function (
       let i8 = new Int8Array(imgRaw);
       var vx8 = i8.length;
       this.img = new Int16Array(vx8);
-      for (var i = 0; i < vx8 - 1; i++)
-         this.img[i] = i8[i];
+      for (var i = 0; i < vx8 - 1; i++) this.img[i] = i8[i];
       this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
       break;
     case this.DT_UINT32:
       let u32 = new Uint32Array(imgRaw);
       var vx32 = u32.length;
       this.img = new Float64Array(vx32);
-      for (var i = 0; i < vx32 - 1; i++)
-         this.img[i] = u32[i];
+      for (var i = 0; i < vx32 - 1; i++) this.img[i] = u32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_SIGNED_INT: 
+    case this.DT_SIGNED_INT:
       let i32 = new Int32Array(imgRaw);
       var vxi32 = i32.length;
       this.img = new Float64Array(vxi32);
-      for (var i = 0; i < vxi32 - 1; i++)
-         this.img[i] = i32[i];
+      for (var i = 0; i < vxi32 - 1; i++) this.img[i] = i32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
     case this.DT_INT64:
       let i64 = new BigInt64Array(imgRaw);
       let vx = i64.length;
       this.img = new Float64Array(vx);
-      for (var i = 0; i < vx - 1; i++)
-         this.img[i] = Number(i64[i]);
+      for (var i = 0; i < vx - 1; i++) this.img[i] = Number(i64[i]);
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
     default:
@@ -732,12 +728,16 @@ NVImage.prototype.getValue = function (x, y, z) {
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
     let vx = 4 * (x + y * nx + z * nx * ny);
     //convert rgb to luminance
-    return Math.round(this.img[vx] * 0.21 + this.img[vx+1] * 0.72 + this.img[vx+2] * 0.07);
+    return Math.round(
+      this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
+    );
   }
   if (this.hdr.datatypeCode === this.DT_RGB) {
     let vx = 3 * (x + y * nx + z * nx * ny);
     //convert rgb to luminance
-    return Math.round(this.img[vx] * 0.21 + this.img[vx+1] * 0.72 + this.img[vx+2] * 0.07);
+    return Math.round(
+      this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
+    );
   }
   return this.img[x + y * nx + z * nx * ny];
 };
@@ -763,10 +763,13 @@ function getExtents(positions) {
       min[j] = Math.min(v, min[j]);
       max[j] = Math.max(v, max[j]);
     }
-    let dx = (positions[i]*positions[i])+(positions[i+1]*positions[i+1])+(positions[i+2]*positions[i+2]);
+    let dx =
+      positions[i] * positions[i] +
+      positions[i + 1] * positions[i + 1] +
+      positions[i + 2] * positions[i + 2];
     mxDx = Math.max(mxDx, dx);
   }
-  let furthestVertexFromOrigin =  Math.sqrt(mxDx)
+  let furthestVertexFromOrigin = Math.sqrt(mxDx);
   return { min, max, furthestVertexFromOrigin };
 }
 

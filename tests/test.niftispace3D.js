@@ -31,5 +31,7 @@ test.each(files)('niftispace_%s', async (file) => {
 		return file
 	}, file)
 	expect(retFile).toBe(file)
-	await snapshot()
+	// set failure threshold to 50% due to volume renderer differences between macos local screenshots and CI macos screenshots
+	// local screenshots (macos 12 M1, Chrome) have a slight noise in them, whereas github actions macos 11 runner does not
+	await snapshot('#gl', 0.5)
 })
