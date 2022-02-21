@@ -10465,6 +10465,48 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     return;
   }
   this.hdr = nifti.exports.readHeader(dataBuffer);
+  if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0)
+    this.hdr.scl_slope = 1;
+  if (isNaN(this.hdr.scl_inter))
+    this.hdr.scl_inter = 0;
+  if (this.hdr.qform_code > this.hdr.sform_code) {
+    console.log("resorting to QForm::", this.hdr);
+    const b = this.hdr.quatern_b;
+    const c = this.hdr.quatern_c;
+    const d = this.hdr.quatern_d;
+    const a = Math.sqrt(1 - (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2)));
+    const qfac = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0];
+    const quatern_R = [
+      [
+        a * a + b * b - c * c - d * d,
+        2 * b * c - 2 * a * d,
+        2 * b * d + 2 * a * c
+      ],
+      [
+        2 * b * c + 2 * a * d,
+        a * a + c * c - b * b - d * d,
+        2 * c * d - 2 * a * b
+      ],
+      [
+        2 * b * d - 2 * a * c,
+        2 * c * d + 2 * a * b,
+        a * a + d * d - c * c - b * b
+      ]
+    ];
+    const affine = this.hdr.affine;
+    for (let ctrOut = 0; ctrOut < 3; ctrOut += 1) {
+      for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
+        affine[ctrOut][ctrIn] = quatern_R[ctrOut][ctrIn] * this.hdr.pixDims[ctrIn + 1];
+        if (ctrIn === 2) {
+          affine[ctrOut][ctrIn] *= qfac;
+        }
+      }
+    }
+    affine[0][3] = this.hdr.qoffset_x;
+    affine[1][3] = this.hdr.qoffset_y;
+    affine[2][3] = this.hdr.qoffset_z;
+    this.hdr.affine = affine;
+  }
   let imgRaw = null;
   if (nifti.exports.isCompressed(dataBuffer)) {
     imgRaw = nifti.exports.readImage(this.hdr, nifti.exports.decompress(dataBuffer));
