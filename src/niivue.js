@@ -1753,7 +1753,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     // raw input data
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R8UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -1775,7 +1775,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else if (hdr.datatypeCode === 4) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R16I,
       hdr.dims[1],
       hdr.dims[2],
@@ -1798,7 +1798,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else if (hdr.datatypeCode === 16) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R32F,
       hdr.dims[1],
       hdr.dims[2],
@@ -1823,7 +1823,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     img32f = Float32Array.from(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R32F,
       hdr.dims[1],
       hdr.dims[2],
@@ -1849,7 +1849,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], false);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.RGB8UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -1871,7 +1871,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else if (hdr.datatypeCode === 512) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R16UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -1896,7 +1896,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], true);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.RGBA8UI,
       hdr.dims[1],
       hdr.dims[2],

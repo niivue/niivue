@@ -103,6 +103,30 @@ export var NVImage = function (
     case this.DT_RGBA32:
       this.img = new Uint8Array(imgRaw);
       break;
+    case this.DT_INT8:
+      let i8 = new Int8Array(imgRaw);
+      var vx8 = i8.length;
+      this.img = new Int16Array(vx8);
+      for (var i = 0; i < vx8 - 1; i++)
+         this.img[i] = i8[i];
+      this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
+      break;
+    case this.DT_UINT32:
+      let u32 = new Uint32Array(imgRaw);
+      var vx32 = u32.length;
+      this.img = new Float64Array(vx32);
+      for (var i = 0; i < vx32 - 1; i++)
+         this.img[i] = u32[i];
+      this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
+    case this.DT_SIGNED_INT: 
+      let i32 = new Int32Array(imgRaw);
+      var vxi32 = i32.length;
+      this.img = new Float64Array(vxi32);
+      for (var i = 0; i < vxi32 - 1; i++)
+         this.img[i] = i32[i];
+      this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
     case this.DT_INT64:
       let i64 = new BigInt64Array(imgRaw);
       let vx = i64.length;
