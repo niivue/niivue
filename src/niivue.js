@@ -106,8 +106,8 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
-  this.scene.renderAzimuth = -90; //-45;
-  this.scene.renderElevation = 90; //-165; //15;
+  this.scene.renderAzimuth = 110; //-45;
+  this.scene.renderElevation = 15; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -1753,7 +1753,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     // raw input data
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R8UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -1775,7 +1775,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else if (hdr.datatypeCode === 4) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R16I,
       hdr.dims[1],
       hdr.dims[2],
@@ -1798,7 +1798,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else if (hdr.datatypeCode === 16) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R32F,
       hdr.dims[1],
       hdr.dims[2],
@@ -1823,7 +1823,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     img32f = Float32Array.from(img);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R32F,
       hdr.dims[1],
       hdr.dims[2],
@@ -1849,7 +1849,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], false);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.RGB8UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -1871,7 +1871,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else if (hdr.datatypeCode === 512) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.R16UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -1896,7 +1896,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform1i(orientShader.uniforms["hasAlpha"], true);
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
-      6,
+      1,
       this.gl.RGBA8UI,
       hdr.dims[1],
       hdr.dims[2],
@@ -2558,22 +2558,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
-  //position of vertex furthest from origin: this should be computed ONCE in nvimage.js
-  let dx = Math.max(
-    Math.abs(object3D.extentsMax[0]),
-    Math.abs(object3D.extentsMin[0])
-  );
-  let dy = Math.max(
-    Math.abs(object3D.extentsMax[1]),
-    Math.abs(object3D.extentsMin[1])
-  );
-  let dz = Math.max(
-    Math.abs(object3D.extentsMax[2]),
-    Math.abs(object3D.extentsMin[2])
-  );
-  let furthestVertexFromOrigin = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  //default volScaleMultiplier ~1.0: see entire object even if ~45-degree azimuth/elevation
-  let scale = (0.7 * furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  let scale = (0.7 * object3D.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(

@@ -368,13 +368,11 @@ uniform lowp sampler3D blend3D;
 uniform float opacity;
 uniform mat4 mtx;
 uniform bool hasAlpha;
-
 void main(void) {
-vec4 vx = vec4(TexCoord.xy, coordZ, 1.0);// * mtx;
- 
- uvec4 aColor = texture(intensityVol, vx.xyz);
- float a = hasAlpha ? float(aColor.a) / 255.0f : float(aColor.r) * 0.21f + float(aColor.g) * 0.72f + float(aColor.b) * 0.07;  
- FragColor = vec4(float(aColor.r) / 255.0f, float(aColor.g) / 255.0f, float(aColor.b) / 255.0f, a);
+ uvec4 aColor = texture(intensityVol, vec3(TexCoord.xy, coordZ));
+ FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
+ if (!hasAlpha)
+   FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
  FragColor.a *= opacity;
 }`;
 
@@ -423,7 +421,6 @@ in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 posColor;
 void main(void) {
-	// gl_Position =  mvpMtx * vec4(pos, 1.0); // mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	posColor = texCoords;
 }`;
