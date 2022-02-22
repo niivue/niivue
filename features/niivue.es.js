@@ -10432,7 +10432,7 @@ function v4(options, buf, offset) {
   }
   return stringify(rnds);
 }
-var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
+var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -10465,12 +10465,38 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     return;
   }
   this.hdr = nifti.exports.readHeader(dataBuffer);
+  function isAffineOK(mtx) {
+    let iOK = [false, false, false, false];
+    let jOK = [false, false, false, false];
+    for (let i2 = 0; i2 < 4; i2++) {
+      for (let j = 0; j < 4; j++) {
+        if (isNaN(mtx[i2][j]))
+          return false;
+      }
+    }
+    for (let i2 = 0; i2 < 3; i2++) {
+      for (let j = 0; j < 3; j++) {
+        if (mtx[i2][j] === 0)
+          continue;
+        iOK[i2] = true;
+        jOK[j] = true;
+      }
+    }
+    for (let i2 = 0; i2 < 3; i2++) {
+      if (!iOK[i2])
+        return false;
+      if (!jOK[i2])
+        return false;
+    }
+    return true;
+  }
   if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0)
     this.hdr.scl_slope = 1;
   if (isNaN(this.hdr.scl_inter))
     this.hdr.scl_inter = 0;
-  if (this.hdr.qform_code > this.hdr.sform_code) {
-    console.log("resorting to QForm::", this.hdr);
+  let affineOK = isAffineOK(this.hdr.affine);
+  if (useQFormNotSForm || !affineOK || this.hdr.qform_code > this.hdr.sform_code) {
+    console.log("spatial transform based on QForm");
     const b = this.hdr.quatern_b;
     const c = this.hdr.quatern_c;
     const d = this.hdr.quatern_d;
@@ -10506,6 +10532,22 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     affine[1][3] = this.hdr.qoffset_y;
     affine[2][3] = this.hdr.qoffset_z;
     this.hdr.affine = affine;
+  }
+  affineOK = isAffineOK(this.hdr.affine);
+  if (affineOK) {
+    console.log("Defective NIfTI: spatial transform does not make sense");
+    let x = this.hdr.pixDims[1];
+    let y = this.hdr.pixDims[2];
+    let z = this.hdr.pixDims[3];
+    if (isNaN(x) || x === 0)
+      x = 1;
+    if (isNaN(y) || y === 0)
+      y = 1;
+    if (isNaN(z) || z === 0)
+      z = 1;
+    this.hdr.pixDims[1] = x;
+    this.hdr.pixDims[2] = y;
+    this.hdr.pixDims[3] = z;
   }
   let imgRaw = null;
   if (nifti.exports.isCompressed(dataBuffer)) {
@@ -12767,6 +12809,7 @@ const Niivue = function(options = {}) {
     clipPlaneHotKey: "KeyC",
     viewModeHotKey: "KeyV",
     keyDebounceTime: 50,
+    isNearestInterpolation: false,
     isRadiologicalConvention: false,
     logging: false
   };
@@ -13847,6 +13890,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
+  this.updateInterpolation(layer);
 };
 Niivue.prototype.colorMaps = function(sort = true) {
   let cm = [];
@@ -14116,6 +14160,28 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale = 1) {
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= 0.5 * this.textWidth(size, str);
   this.drawText(xy, str, scale);
+};
+Niivue.prototype.updateInterpolation = function(layer) {
+  let interp = this.gl.LINEAR;
+  if (this.opts.isNearestInterpolation)
+    interp = this.gl.NEAREST;
+  if (layer === 0)
+    this.gl.activeTexture(this.gl.TEXTURE0);
+  else
+    this.gl.activeTexture(this.gl.TEXTURE2);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
+  this.volumes.length;
+};
+Niivue.prototype.setInterpolation = function(isNearest) {
+  this.opts.isNearestInterpolation = isNearest;
+  let numLayers = this.volumes.length;
+  if (numLayers < 1)
+    return;
+  this.updateInterpolation(0);
+  if (numLayers > 1)
+    this.updateInterpolation(1);
+  this.drawScene();
 };
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);
