@@ -10432,7 +10432,7 @@ function v4(options, buf, offset) {
   }
   return stringify(rnds);
 }
-var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
+var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -10465,6 +10465,90 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     return;
   }
   this.hdr = nifti.exports.readHeader(dataBuffer);
+  function isAffineOK(mtx) {
+    let iOK = [false, false, false, false];
+    let jOK = [false, false, false, false];
+    for (let i2 = 0; i2 < 4; i2++) {
+      for (let j = 0; j < 4; j++) {
+        if (isNaN(mtx[i2][j]))
+          return false;
+      }
+    }
+    for (let i2 = 0; i2 < 3; i2++) {
+      for (let j = 0; j < 3; j++) {
+        if (mtx[i2][j] === 0)
+          continue;
+        iOK[i2] = true;
+        jOK[j] = true;
+      }
+    }
+    for (let i2 = 0; i2 < 3; i2++) {
+      if (!iOK[i2])
+        return false;
+      if (!jOK[i2])
+        return false;
+    }
+    return true;
+  }
+  if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0)
+    this.hdr.scl_slope = 1;
+  if (isNaN(this.hdr.scl_inter))
+    this.hdr.scl_inter = 0;
+  let affineOK = isAffineOK(this.hdr.affine);
+  if (useQFormNotSForm || !affineOK || this.hdr.qform_code > this.hdr.sform_code) {
+    console.log("spatial transform based on QForm");
+    const b = this.hdr.quatern_b;
+    const c = this.hdr.quatern_c;
+    const d = this.hdr.quatern_d;
+    const a = Math.sqrt(1 - (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2)));
+    const qfac = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0];
+    const quatern_R = [
+      [
+        a * a + b * b - c * c - d * d,
+        2 * b * c - 2 * a * d,
+        2 * b * d + 2 * a * c
+      ],
+      [
+        2 * b * c + 2 * a * d,
+        a * a + c * c - b * b - d * d,
+        2 * c * d - 2 * a * b
+      ],
+      [
+        2 * b * d - 2 * a * c,
+        2 * c * d + 2 * a * b,
+        a * a + d * d - c * c - b * b
+      ]
+    ];
+    const affine = this.hdr.affine;
+    for (let ctrOut = 0; ctrOut < 3; ctrOut += 1) {
+      for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
+        affine[ctrOut][ctrIn] = quatern_R[ctrOut][ctrIn] * this.hdr.pixDims[ctrIn + 1];
+        if (ctrIn === 2) {
+          affine[ctrOut][ctrIn] *= qfac;
+        }
+      }
+    }
+    affine[0][3] = this.hdr.qoffset_x;
+    affine[1][3] = this.hdr.qoffset_y;
+    affine[2][3] = this.hdr.qoffset_z;
+    this.hdr.affine = affine;
+  }
+  affineOK = isAffineOK(this.hdr.affine);
+  if (affineOK) {
+    console.log("Defective NIfTI: spatial transform does not make sense");
+    let x = this.hdr.pixDims[1];
+    let y = this.hdr.pixDims[2];
+    let z = this.hdr.pixDims[3];
+    if (isNaN(x) || x === 0)
+      x = 1;
+    if (isNaN(y) || y === 0)
+      y = 1;
+    if (isNaN(z) || z === 0)
+      z = 1;
+    this.hdr.pixDims[1] = x;
+    this.hdr.pixDims[2] = y;
+    this.hdr.pixDims[3] = z;
+  }
   let imgRaw = null;
   if (nifti.exports.isCompressed(dataBuffer)) {
     imgRaw = nifti.exports.readImage(this.hdr, nifti.exports.decompress(dataBuffer));

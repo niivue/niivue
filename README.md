@@ -149,18 +149,11 @@ const NiiVue = ({ imageUrl }) => {
 // use as: <NiiVue imageUrl={someUrl}> </NiiVue>
 ```
 
-# Contributors
-
-- [Taylor Hanayik](https://github.com/hanayik)
-- [Chris Rorden](https://github.com/neurolabusc)
-- [Christopher Drake](https://github.com/cdrake)
-- [Nell Hardcastle](https://github.com/nellh)
-
-*To add yourself please create a PR
-
-# Acknowledgements 
+# Core Libraries
 
 - [shader.js source](https://github.com/Twinklebear/webgl-util)
+- [NIFTI-Reader-JS source](https://github.com/rii-mango/NIFTI-Reader-JS)
+- [glMatrix](https://glmatrix.net/)
 
 # Funding
 
