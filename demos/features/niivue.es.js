@@ -637,7 +637,11 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
-	if ((samplePos.a > len) && (overlays < 1.0)) return;
+	if ((samplePos.a > len) && (overlays < 1.0)) {
+		gl_FragDepth = 1.0;
+		return;
+	}
+	gl_FragDepth = 0.5;
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
@@ -933,7 +937,7 @@ var vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
 uniform mat4 mvpMtx;
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
 }`;
 var fragSurfaceShader = `#version 300 es
 precision highp int;
@@ -5572,6 +5576,125 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = 
   this.rotationRadians = 0;
   this.extentsMin = [];
   this.extentsMax = [];
+};
+NiivueObject3D.generateCrosshairs = function(gl, id, furthestVertexFromOrigin, radius, sides = 20) {
+  let geometry = this.generateCrosshairsGeometry(gl, furthestVertexFromOrigin, radius, sides);
+  return new NiivueObject3D(id, geometry.vertexBuffer, gl.TRIANGLES, geometry.indexCount, geometry.indexBuffer);
+};
+NiivueObject3D.generateCrosshairsGeometry = function(gl, furthestVertexFromOrigin, radius, sides = 20) {
+  let vertices = [];
+  let indices = [];
+  NiivueObject3D.makeCylinder(vertices, indices, 0, furthestVertexFromOrigin, radius, sides);
+  NiivueObject3D.makeCylinder(vertices, indices, 1, furthestVertexFromOrigin, radius, sides);
+  NiivueObject3D.makeCylinder(vertices, indices, 2, furthestVertexFromOrigin, radius, sides);
+  let vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  let indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  return {
+    vertexBuffer,
+    indexBuffer,
+    indexCount: indices.length
+  };
+};
+NiivueObject3D.makeCylinder = function(vertices, indices, axis, cylinderLength, radius, sides = 20) {
+  var stepTheta = 2 * Math.PI / sides;
+  var verticesPerCap = 9 * sides;
+  var theta = 0;
+  var i = 0;
+  let v0 = vertices.length;
+  let xOffset = 0;
+  let yOffset = 1;
+  let zOffset = 2;
+  let vals = null;
+  switch (axis) {
+    case 1:
+      yOffset = 0;
+      zOffset = 1;
+      xOffset = 2;
+      break;
+    case 2:
+      zOffset = 0;
+      xOffset = 1;
+      yOffset = 2;
+      break;
+  }
+  for (; i < verticesPerCap; i += 9) {
+    vals = [];
+    vals.push(radius * Math.cos(theta));
+    vals.push(cylinderLength);
+    vals.push(radius * Math.sin(theta));
+    vertices[v0 + i] = vals[xOffset];
+    vertices[v0 + i + 1] = vals[yOffset];
+    vertices[v0 + i + 2] = vals[zOffset];
+    theta += stepTheta;
+    vals = [];
+    vals.push(0);
+    vals.push(cylinderLength);
+    vals.push(0);
+    vertices[v0 + i + 3] = vals[xOffset];
+    vertices[v0 + i + 4] = vals[yOffset];
+    vertices[v0 + i + 5] = vals[zOffset];
+    vals = [];
+    vals.push(radius * Math.cos(theta));
+    vals.push(cylinderLength);
+    vals.push(radius * Math.sin(theta));
+    vertices[v0 + i + 6] = vals[xOffset];
+    vertices[v0 + i + 7] = vals[yOffset];
+    vertices[v0 + i + 8] = vals[zOffset];
+  }
+  theta = 0;
+  for (; i < verticesPerCap * 2; i += 9) {
+    vals = [];
+    vals.push(radius * Math.cos(theta));
+    vals.push(-cylinderLength);
+    vals.push(radius * Math.sin(theta));
+    vertices[v0 + i + 6] = vals[xOffset];
+    vertices[v0 + i + 7] = vals[yOffset];
+    vertices[v0 + i + 8] = vals[zOffset];
+    theta += stepTheta;
+    vals = [];
+    vals.push(0);
+    vals.push(-cylinderLength);
+    vals.push(0);
+    vertices[v0 + i + 3] = vals[xOffset];
+    vertices[v0 + i + 4] = vals[yOffset];
+    vertices[v0 + i + 5] = vals[zOffset];
+    vals = [];
+    vals.push(radius * Math.cos(theta));
+    vals.push(-cylinderLength);
+    vals.push(radius * Math.sin(theta));
+    vertices[v0 + i] = vals[xOffset];
+    vertices[v0 + i + 1] = vals[yOffset];
+    vertices[v0 + i + 2] = vals[zOffset];
+  }
+  for (var j = 0; j < sides; ++j) {
+    for (let k = 0; k < 3; ++k, ++i) {
+      vertices[v0 + i] = vertices[v0 + k + 9 * j];
+    }
+    for (let k = 0; k < 3; ++k, ++i) {
+      vertices[v0 + i] = vertices[v0 + 6 + k + 9 * j];
+    }
+    for (let k = 0; k < 3; ++k, ++i) {
+      vertices[v0 + i] = vertices[verticesPerCap + v0 + k + 9 * j];
+    }
+    for (let k = 0; k < 3; ++k, ++i) {
+      vertices[v0 + i] = vertices[v0 + k + 9 * j];
+    }
+    for (let k = 0; k < 3; ++k, ++i) {
+      vertices[v0 + i] = vertices[v0 + verticesPerCap + k + 9 * j];
+    }
+    for (let k = 0; k < 3; ++k, ++i) {
+      vertices[v0 + i] = vertices[v0 + verticesPerCap + 6 + k + 9 * j];
+    }
+  }
+  let indicesLength = indices.length;
+  var indicesToAdd = new Array((vertices.length - v0) / 3);
+  for (i = 0; i < indicesToAdd.length; ++i)
+    indicesToAdd[i] = indicesLength + i;
+  indices.push(...indicesToAdd);
 };
 var NiivueShader3D = function(shader) {
   this.shader = shader;
@@ -13682,6 +13805,16 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale2);
     this.volumeObject3D.pickingShader = pickingShader;
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
+    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, this.volumeObject3D.furthestVertexFromOrigin, 5);
+    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
+    this.crosshairs3D.glFlags |= this.crosshairs3D.ENABLE_DEPTH_TEST;
+    console.log(this.volumeObject3D);
+    let crosshairsShader = new NiivueShader3D(this.surfaceShader);
+    crosshairsShader.mvpUniformName = "mvpMtx";
+    this.crosshairs3D.renderShaders.push(crosshairsShader);
+    console.log(this.objectsToRender3D);
   } else {
     if (this.back.dims === void 0)
       console.log("Fatal error: Unable to render overlay: background dimensions not defined!");
@@ -14233,20 +14366,38 @@ Niivue.prototype.draw3D = function() {
     this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     break;
   }
-  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
-  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
-  const rgbaPixel = new Uint8Array(4);
-  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
-  this.selectedObjectId = rgbaPixel[3];
-  if (this.selectedObjectId === this.VOLUME_ID) {
-    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-  }
+  return;
+};
+Niivue.prototype.draw3DNew = function() {
+  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
+  let m = null;
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
     }
+    let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
+    pickingShader.use(this.gl);
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.BACK);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+    m = this.calculateMvpMatrix(object3D);
+    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+    if (pickingShader.rayDirUniformName) {
+      let rayDir = this.calculateRayDirection(m);
+      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
+    }
+    if (pickingShader.clipPlaneUniformName) {
+      this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
+    }
+    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
     this.gl.enableVertexAttribArray(0);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
@@ -14258,42 +14409,27 @@ Niivue.prototype.draw3D = function() {
     if (object3D.indexBuffer) {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
     }
-    if (object3D.glFlags & object3D.BLEND) {
-      this.gl.enable(this.gl.BLEND);
-      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-    } else {
-      this.gl.disable(this.gl.BLEND);
-    }
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.FRONT);
-      }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
-    m = this.calculateMvpMatrix(object3D);
-    let rayDir = this.calculateRayDirection(m);
-    for (const shader of object3D.renderShaders) {
-      shader.use(this.gl);
-      if (shader.mvpUniformName) {
-        this.gl.uniformMatrix4fv(shader.uniforms[shader.mvpUniformName], false, m);
-      }
-      if (shader.rayDirUniformName) {
-        this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
-      }
-      if (shader.clipPlaneUniformName) {
-        this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
-      }
-      this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
-    }
+    this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
+    console.log("rendered pickable object");
     break;
   }
-  let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
-  this.sync();
-  return posString;
+  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
+  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
+  const rgbaPixel = new Uint8Array(4);
+  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
+  this.selectedObjectId = rgbaPixel[3];
+  if (this.selectedObjectId === this.VOLUME_ID) {
+    console.log("base volume selected");
+    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
+    if (this.crosshairs3D) {
+      this.crosshairs3D.position = [
+        this.scene.crosshairPos[0] * this.volumeObject3D.maxExtent[0],
+        this.scene.crosshairPos[1] * this.volumeObject3D.maxExtent[1],
+        this.scene.crosshairPos[2] * this.volumeObject3D.maxExtent[2]
+      ];
+    }
+  }
+  return;
 };
 Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);

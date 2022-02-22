@@ -89,7 +89,11 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
-	if ((samplePos.a > len) && (overlays < 1.0)) return;
+	if ((samplePos.a > len) && (overlays < 1.0)) {
+		gl_FragDepth = 1.0;
+		return;
+	}
+	gl_FragDepth = 0.5;
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
@@ -402,7 +406,7 @@ export var vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
 uniform mat4 mvpMtx;
 void main(void) {
-	gl_Position = mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
 }`;
 
 export var fragSurfaceShader = `#version 300 es

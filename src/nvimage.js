@@ -708,6 +708,7 @@ NVImage.prototype.getValue = function (x, y, z) {
  * @typedef {Object} NVImage~Extents
  * @property {number[]} min - min bounding point
  * @property {number[]} max - max bounding point
+ * @property {number} furthestVertexFromOrigin - point furthest from origin
  */
 
 /**
