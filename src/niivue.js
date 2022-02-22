@@ -73,6 +73,7 @@ export const Niivue = function (options = {}) {
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
     keyDebounceTime: 50, // default debounce time used in keyup listeners
+    isNearestInterpolation: false,
     isRadiologicalConvention: false,
     logging: false,
   };
@@ -2007,6 +2008,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
+  this.updateInterpolation(layer);
 }; // refreshLayers()
 
 /**
@@ -2429,6 +2431,37 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
   xy[0] -= 0.5 * this.textWidth(size, str);
   this.drawText(xy, str, scale);
 }; // drawTextBelow()
+
+Niivue.prototype.updateInterpolation = function (layer) {
+  let interp = this.gl.LINEAR;
+  if (this.opts.isNearestInterpolation)
+    interp = this.gl.NEAREST;
+  if (layer === 0) //background
+    this.gl.activeTexture(this.gl.TEXTURE0);
+  else
+    this.gl.activeTexture(this.gl.TEXTURE2);
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_MIN_FILTER,
+    interp
+  );
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_MAG_FILTER,
+    interp
+  );
+  let numLayers = this.volumes.length;
+}
+
+Niivue.prototype.setInterpolation = function (isNearest) {
+  this.opts.isNearestInterpolation = isNearest;
+  let numLayers = this.volumes.length;
+  if (numLayers < 1) return;
+  this.updateInterpolation(0);
+  if (numLayers > 1)
+    this.updateInterpolation(1);
+  this.drawScene();
+}; // setCrosshairColor()
 
 // not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
