@@ -17,6 +17,7 @@ export var NiivueObject3D = function (
   this.renderShaders = [];
   this.pickingShader = null;
   this.isVisible = true;
+  this.isPickable = true;
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
   this.indexBuffer = indexBuffer;

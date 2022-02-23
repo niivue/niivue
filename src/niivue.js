@@ -510,8 +510,8 @@ Niivue.prototype.mouseUpListener = function () {
     this.isDragging = false;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
-    this.drawScene();
   }
+  this.drawScene();
 };
 
 // not included in public docs
@@ -1688,6 +1688,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       this.volumeObject3D.furthestVertexFromOrigin,
       Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
     );
+    this.crosshairs3D.isPickable = false;
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.furthestVertexFromOrigin =
@@ -2696,7 +2697,7 @@ Niivue.prototype.draw3D = function () {
   // render picking surfaces
   let m = null;
   for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible) {
+    if (!object3D.isVisible || !object3D.isPickable) {
       continue;
     }
 
@@ -2792,13 +2793,21 @@ Niivue.prototype.draw3D = function () {
       //   (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2],
       // ];
       let position = [
-        (this.scene.crosshairPos[0] - 0.5) * this.volumeObject3D.extentsMax[0],
-        (this.scene.crosshairPos[1] - 0.5) * this.volumeObject3D.extentsMax[1],
-        (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2],
+        (this.scene.crosshairPos[0] - 0.5) *
+          this.volumeObject3D.extentsMax[0] *
+          2,
+        (this.scene.crosshairPos[2] - 0.5) *
+          this.volumeObject3D.extentsMax[2] *
+          2,
+        (this.scene.crosshairPos[1] - 0.5) *
+          this.volumeObject3D.extentsMax[1] *
+          2,
       ];
       this.crosshairs3D.position = position;
       console.log(this.volumeObject3D.extentsMax);
       console.log(position);
+      console.log("screen crosshairs");
+      console.log(this.scene.crosshairPos);
       // console.log(this.crosshairs3D.position);
     }
 

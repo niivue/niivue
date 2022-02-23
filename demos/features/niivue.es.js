@@ -5606,6 +5606,7 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = 
   this.renderShaders = [];
   this.pickingShader = null;
   this.isVisible = true;
+  this.isPickable = true;
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
   this.indexBuffer = indexBuffer;
@@ -13266,8 +13267,8 @@ Niivue.prototype.mouseUpListener = function() {
     this.isDragging = false;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
-    this.drawScene();
   }
+  this.drawScene();
 };
 Niivue.prototype.checkMultitouch = function(e) {
   if (this.scene.touchdown && !this.multiTouchGesture) {
@@ -13951,7 +13952,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale2);
     this.volumeObject3D.pickingShader = pickingShader;
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
-    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, this.volumeObject3D.furthestVertexFromOrigin, 5);
+    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, this.volumeObject3D.furthestVertexFromOrigin, Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50, 1));
+    this.crosshairs3D.isPickable = false;
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
@@ -13960,6 +13962,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     let crosshairsShader = new NiivueShader3D(this.surfaceShader);
     crosshairsShader.mvpUniformName = "mvpMtx";
     this.crosshairs3D.renderShaders.push(crosshairsShader);
+    this.objectsToRender3D.splice(1, 1, this.crosshairs3D);
     console.log(this.objectsToRender3D);
   } else {
     if (this.back.dims === void 0)
@@ -14486,6 +14489,7 @@ Niivue.prototype.calculateMvpMatrix = function(object3D) {
   modelMatrix[0] = -1;
   let translateVec3 = fromValues$1(0, 0, -scale * 1.8);
   translate(modelMatrix, modelMatrix, translateVec3);
+  translate(modelMatrix, modelMatrix, object3D.position);
   rotateX(modelMatrix, modelMatrix, deg2rad(270 - this.scene.renderElevation));
   rotateZ(modelMatrix, modelMatrix, deg2rad(this.scene.renderAzimuth - 180));
   let modelViewProjectionMatrix = create$2();
@@ -14513,7 +14517,7 @@ Niivue.prototype.draw3D = function() {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   let m = null;
   for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible) {
+    if (!object3D.isVisible || !object3D.isPickable) {
       continue;
     }
     let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
@@ -14523,7 +14527,7 @@ Niivue.prototype.draw3D = function() {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT);
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);
@@ -14550,9 +14554,78 @@ Niivue.prototype.draw3D = function() {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
     }
     this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
-    break;
   }
-  return;
+  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
+  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
+  const rgbaPixel = new Uint8Array(4);
+  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
+  this.selectedObjectId = rgbaPixel[3];
+  if (this.selectedObjectId === this.VOLUME_ID) {
+    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
+    if (this.crosshairs3D) {
+      let position = [
+        (this.scene.crosshairPos[0] - 0.5) * this.volumeObject3D.extentsMax[0] * 2,
+        (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2] * 2,
+        (this.scene.crosshairPos[1] - 0.5) * this.volumeObject3D.extentsMax[1] * 2
+      ];
+      this.crosshairs3D.position = position;
+      console.log(this.volumeObject3D.extentsMax);
+      console.log(position);
+      console.log("screen crosshairs");
+      console.log(this.scene.crosshairPos);
+    }
+    console.log("base object selected");
+  }
+  for (const object3D of this.objectsToRender3D) {
+    if (!object3D.isVisible) {
+      continue;
+    }
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+    if (object3D.textureCoordinateBuffer) {
+      this.gl.enableVertexAttribArray(1);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
+      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+    }
+    if (object3D.indexBuffer) {
+      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    }
+    if (object3D.glFlags & object3D.BLEND) {
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+    } else {
+      this.gl.disable(this.gl.BLEND);
+    }
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.FRONT);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+    m = this.calculateMvpMatrix(object3D);
+    let rayDir = this.calculateRayDirection(m);
+    for (const shader of object3D.renderShaders) {
+      shader.use(this.gl);
+      if (shader.mvpUniformName) {
+        this.gl.uniformMatrix4fv(shader.uniforms[shader.mvpUniformName], false, m);
+      }
+      if (shader.rayDirUniformName) {
+        this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
+      }
+      if (shader.clipPlaneUniformName) {
+        this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
+      }
+      this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
+    }
+  }
+  let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
+  this.sync();
+  return posString;
 };
 Niivue.prototype.draw3DNew = function() {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
