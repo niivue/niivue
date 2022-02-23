@@ -1677,7 +1677,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       this.gl,
       1,
       this.volumeObject3D.furthestVertexFromOrigin,
-      5.0
+      Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
     );
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
@@ -1689,7 +1689,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     let crosshairsShader = new NiivueShader3D(this.surfaceShader);
     crosshairsShader.mvpUniformName = "mvpMtx";
     this.crosshairs3D.renderShaders.push(crosshairsShader);
-    // this.objectsToRender3D.splice(1, 1, this.crosshairs3D);
+    this.objectsToRender3D.splice(1, 1, this.crosshairs3D);
     // this.objectsToRender3D.splice(0, 0, this.crosshairs3D);
     console.log(this.objectsToRender3D);
   } else {
@@ -2608,6 +2608,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   //push the model away from the camera so camera not inside model
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
+  mat.mat4.translate(modelMatrix, modelMatrix, object3D.position);
   //apply elevation
   mat.mat4.rotateX(
     modelMatrix,
@@ -2665,7 +2666,7 @@ Niivue.prototype.draw3D = function () {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT);
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);
@@ -2714,7 +2715,6 @@ Niivue.prototype.draw3D = function () {
       this.gl.UNSIGNED_SHORT,
       0
     );
-    break;
   }
   // // check if we have a selected object
   const pixelX =
@@ -2739,9 +2739,30 @@ Niivue.prototype.draw3D = function () {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
+
+    // update crosshairs 3d position
+    if (this.crosshairs3D) {
+      // this.crosshairs3D.position = [
+      //   (this.scene.crosshairPos[0] - 0.5) * this.volumeObject3D.extentsMax[0],
+      //   (this.scene.crosshairPos[1] - 0.5) * this.volumeObject3D.extentsMax[1],
+      //   (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2],
+      // ];
+      let position = [
+        (this.scene.crosshairPos[0] - 0.5) * this.volumeObject3D.extentsMax[0],
+        (this.scene.crosshairPos[1] - 0.5) * this.volumeObject3D.extentsMax[1],
+        (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2],
+      ];
+      this.crosshairs3D.position = position;
+      console.log(this.volumeObject3D.extentsMax);
+      console.log(position);
+      // console.log(this.crosshairs3D.position);
+    }
+
+    console.log("base object selected");
   }
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
+  // return;
+  // this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  // this.gl.clearColor(0.2, 0, 0, 1);
   // return;
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
@@ -2813,7 +2834,6 @@ Niivue.prototype.draw3D = function () {
         0
       );
     }
-    break;
   }
 
   let posString =
