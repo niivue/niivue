@@ -75,11 +75,7 @@ export var NVImage = function (
   }
 
   this.hdr = nifti.readHeader(dataBuffer);
-<<<<<<< HEAD
-  function isAffineOK(mtx) {
-=======
 function isAffineOK(mtx) {
->>>>>>> Warn user if shear (gantry tilt) detected. Double click resets to robust not full image intensity range.
     //A good matrix should not have any components that are not a number
     //A good spatial transformation matrix should not have a row or column that is all zeros
     let iOK = [false, false, false, false];
@@ -101,11 +97,7 @@ function isAffineOK(mtx) {
       if (!jOK[i]) return false;
     }
     return true;
-<<<<<<< HEAD
-  } // vox2mm()
-=======
   } //
->>>>>>> Warn user if shear (gantry tilt) detected. Double click resets to robust not full image intensity range.
   if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0)
     this.hdr.scl_slope = 1.0; //https://github.com/nipreps/fmriprep/issues/2507
   if (isNaN(this.hdr.scl_inter)) this.hdr.scl_inter = 0.0;
@@ -181,10 +173,6 @@ function isAffineOK(mtx) {
     ];
     this.hdr.affine = affine;
   } //defective affine
-<<<<<<< HEAD
-
-=======
->>>>>>> Warn user if shear (gantry tilt) detected. Double click resets to robust not full image intensity range.
   let imgRaw = null;
   if (nifti.isCompressed(dataBuffer)) {
     imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));

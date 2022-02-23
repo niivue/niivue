@@ -1526,7 +1526,11 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
 
-  this.pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
+  this.pickingShader = new Shader(
+    this.gl,
+    vertRenderShader,
+    fragVolumePickingShader
+  );
 
   // add shader to object
   let volumeRenderShader = new NiivueShader3D(this.renderShader);
@@ -1639,8 +1643,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let opacity = overlayItem.opacity;
   let outTexture = null;
 
-  if (this.crosshairs3D !== null) 
-    this.crosshairs3D.mm[0] = NaN; //force crosshairs3D redraw
+  if (this.crosshairs3D !== null) this.crosshairs3D.mm[0] = NaN; //force crosshairs3D redraw
   let mtx = mat.mat4.clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
@@ -1665,7 +1668,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
     // add shader to object
-    let volumeRenderShader  = this.renderShader;
+    let volumeRenderShader = this.renderShader;
     let pickingShader = this.pickingShader;
     volumeRenderShader.mvpUniformName = "mvpMtx";
     volumeRenderShader.matRASUniformName = "matRAS";
@@ -2441,7 +2444,10 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
   //let size = this.opts.textHeight * this.gl.canvas.height * scale;
-  let size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(
     this.fontShader.uniforms["canvasWidthHeight"],
@@ -2632,7 +2638,8 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
   let scale =
-    (0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+    (0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1.0) /
+    this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -2674,7 +2681,11 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
     deg2rad(this.scene.renderAzimuth - 180)
   );
   //translate object to be in center of field of view (e.g. CT brain scans where origin is distant table center)
-  mat.mat4.translate(modelMatrix, modelMatrix, this.volumeObject3D.originNegate);
+  mat.mat4.translate(
+    modelMatrix,
+    modelMatrix,
+    this.volumeObject3D.originNegate
+  );
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   return modelViewProjectionMatrix;
@@ -2704,11 +2715,23 @@ Niivue.prototype.calculateRayDirection = function () {
   mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
   //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
   let projectionMatrix = mat.mat4.fromValues(
-      1,0,0,0,
-      0,-1,0,0,
-      0,0,-1,0,
-      0,0,0,1,
-    );
+    1,
+    0,
+    0,
+    0,
+    0,
+    -1,
+    0,
+    0,
+    0,
+    0,
+    -1,
+    0,
+    0,
+    0,
+    0,
+    1
+  );
   let mvpMatrix = mat.mat4.create();
   mat.mat4.multiply(mvpMatrix, projectionMatrix, modelMatrix);
   var inv = mat.mat4.create();
@@ -2730,7 +2753,7 @@ Niivue.prototype.calculateRayDirection = function () {
 Niivue.prototype.draw3D = function () {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-//this.gl.clearDepth(0.0);
+  //this.gl.clearDepth(0.0);
   // render picking surfaces
 
   let m = null;
@@ -2925,13 +2948,21 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   let mm = this.frac2mm(this.scene.crosshairPos);
   // mm = [-20, 0, 30]; // <- set any value here to test
   // generate our crosshairs for the base volume
-  if ((this.crosshairs3D === null) || (this.crosshairs3D.mm[0] !== mm[0]) || (this.crosshairs3D.mm[1] !== mm[1]) || (this.crosshairs3D.mm[2] !== mm[2])){
+  if (
+    this.crosshairs3D === null ||
+    this.crosshairs3D.mm[0] !== mm[0] ||
+    this.crosshairs3D.mm[1] !== mm[1] ||
+    this.crosshairs3D.mm[2] !== mm[2]
+  ) {
     if (this.crosshairs3D !== null) {
       gl.deleteBuffer(this.crosshairs3D.indexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
       gl.deleteBuffer(this.crosshairs3D.vertexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
     }
     //let radius = Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0);
-    let radius = Math.min(Math.min(this.back.pixDims[1],this.back.pixDims[2]),this.back.pixDims[3]);
+    let radius = Math.min(
+      Math.min(this.back.pixDims[1], this.back.pixDims[2]),
+      this.back.pixDims[3]
+    );
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(
       this.gl,
       1,

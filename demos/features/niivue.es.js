@@ -97,7 +97,7 @@ function create$2() {
   out[15] = 1;
   return out;
 }
-function clone(a) {
+function clone$1(a) {
   var out = new ARRAY_TYPE(16);
   out[0] = a[0];
   out[1] = a[1];
@@ -117,7 +117,7 @@ function clone(a) {
   out[15] = a[15];
   return out;
 }
-function copy(out, a) {
+function copy$1(out, a) {
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -424,11 +424,36 @@ function create$1() {
   }
   return out;
 }
+function clone(a) {
+  var out = new ARRAY_TYPE(3);
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  return out;
+}
+function length(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  return Math.hypot(x, y, z);
+}
 function fromValues$1(x, y, z) {
   var out = new ARRAY_TYPE(3);
   out[0] = x;
   out[1] = y;
   out[2] = z;
+  return out;
+}
+function copy(out, a) {
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  return out;
+}
+function add$1(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
   return out;
 }
 function subtract(out, a, b) {
@@ -437,19 +462,62 @@ function subtract(out, a, b) {
   out[2] = a[2] - b[2];
   return out;
 }
+function min$Q(out, a, b) {
+  out[0] = Math.min(a[0], b[0]);
+  out[1] = Math.min(a[1], b[1]);
+  out[2] = Math.min(a[2], b[2]);
+  return out;
+}
+function max$Q(out, a, b) {
+  out[0] = Math.max(a[0], b[0]);
+  out[1] = Math.max(a[1], b[1]);
+  out[2] = Math.max(a[2], b[2]);
+  return out;
+}
+function negate(out, a) {
+  out[0] = -a[0];
+  out[1] = -a[1];
+  out[2] = -a[2];
+  return out;
+}
 function normalize(out, a) {
   var x = a[0];
   var y = a[1];
   var z = a[2];
-  var len = x * x + y * y + z * z;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
+  var len2 = x * x + y * y + z * z;
+  if (len2 > 0) {
+    len2 = 1 / Math.sqrt(len2);
   }
-  out[0] = a[0] * len;
-  out[1] = a[1] * len;
-  out[2] = a[2] * len;
+  out[0] = a[0] * len2;
+  out[1] = a[1] * len2;
+  out[2] = a[2] * len2;
   return out;
 }
+function dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+function cross(out, a, b) {
+  var ax = a[0], ay = a[1], az = a[2];
+  var bx = b[0], by = b[1], bz = b[2];
+  out[0] = ay * bz - az * by;
+  out[1] = az * bx - ax * bz;
+  out[2] = ax * by - ay * bx;
+  return out;
+}
+function lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  return out;
+}
+function angle(a, b) {
+  var ax = a[0], ay = a[1], az = a[2], bx = b[0], by = b[1], bz = b[2], mag1 = Math.sqrt(ax * ax + ay * ay + az * az), mag2 = Math.sqrt(bx * bx + by * by + bz * bz), mag = mag1 * mag2, cosine = mag && dot(a, b) / mag;
+  return Math.acos(Math.min(Math.max(cosine, -1), 1));
+}
+var len = length;
 (function() {
   var vec = create$1();
   return function(a, stride, offset, count, fn, arg) {
@@ -553,13 +621,12 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
-
 void main(void) {
 	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
 	vColor = texCoords;
 }`;
 var fragRenderShader = `#version 300 es
-#line 15
+#line 14
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -570,6 +637,7 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
+uniform mat4 matRAS;
 in vec3 vColor;
 out vec4 fColor;
 vec3 GetBackPosition(vec3 startPositionTex) {
@@ -609,19 +677,32 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     }
     return samplePos;
 }
+float frac2ndc(vec3 frac) {
+//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
+	vec4 pos = vec4(frac.xyz, 1.0); //fraction
+	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
+	pos = pos * dim;
+	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
+	pos += shim;
+	vec4 mm = transpose(matRAS) * pos;
+	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
+	return (z_ndc + 1.0) / 2.0;
+	
+}
 void main() {
   fColor = vec4(0.0,0.0,0.0,0.0);
+  //vec3 dimsRAS = vec3(textureSize(volume, 0));
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	// fColor = texture(volume, vColor.xyz);
 	// return;
 	vec3 start = vColor;
+	gl_FragDepth = 0.5;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
   vec3 dir = backPosition - start;
   float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if (lenVox < 0.5) {
-		gl_FragDepth = 1.0;
+	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
 		return;
 	}
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
@@ -642,23 +723,26 @@ void main() {
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) {
-		gl_FragDepth = 1.0;
+		gl_FragDepth = frac2ndc(samplePos.xyz);
 		return;
 	}
-	gl_FragDepth = (mvpMtx * vec4(samplePos.xyz, 1.0)).z;
+	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
+	vec4 firstHit = colAcc;
 	const float earlyTermination = 0.95;
 	float backNearest = len; //assume no hit
-    float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
-    samplePos += deltaDir * ran; //jitter ray
+	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
+	samplePos += deltaDir * ran; //jitter ray
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
+		if (firstHit.a == 0.0)
+			firstHit = samplePos;
 		backNearest = min(backNearest, samplePos.a);
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
@@ -666,6 +750,7 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
+	gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	if (overlays < 1.0) return;
@@ -1067,7 +1152,7 @@ void main() {
   vec3 dir = backPosition - start;
   float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if (lenVox < 0.5) return;
+	if ((lenVox < 0.5) || (len > 3.0)) return; //length limit for parallel rays
 	// fColor = vec4(posColor, 1.0);
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
@@ -5619,9 +5704,15 @@ NiivueObject3D.generateCrosshairs = function(gl, id, xyzMM, xyzMin, xyzMax, radi
 NiivueObject3D.generateCrosshairsGeometry = function(gl, xyzMM, xyzMin, xyzMax, radius, sides = 20) {
   let vertices = [];
   let indices = [];
-  NiivueObject3D.makeCylinder(vertices, indices, 0, xyzMM, xyzMin, xyzMax, radius, sides);
-  NiivueObject3D.makeCylinder(vertices, indices, 2, xyzMM, xyzMin, xyzMax, radius, sides);
-  NiivueObject3D.makeCylinder(vertices, indices, 1, xyzMM, xyzMin, xyzMax, radius, sides);
+  let start = fromValues$1(xyzMin[0], xyzMM[1], xyzMM[2]);
+  let dest = fromValues$1(xyzMax[0], xyzMM[1], xyzMM[2]);
+  NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides);
+  start = fromValues$1(xyzMM[0], xyzMin[1], xyzMM[2]);
+  dest = fromValues$1(xyzMM[0], xyzMax[1], xyzMM[2]);
+  NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides);
+  start = fromValues$1(xyzMM[0], xyzMM[1], xyzMin[2]);
+  dest = fromValues$1(xyzMM[0], xyzMM[1], xyzMax[2]);
+  NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides);
   let vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
@@ -5634,108 +5725,81 @@ NiivueObject3D.generateCrosshairsGeometry = function(gl, xyzMM, xyzMin, xyzMax, 
     indexCount: indices.length
   };
 };
-NiivueObject3D.makeCylinder = function(vertices, indices, axis, xyzMMi, xyzMin, xyzMax, radius, sides = 20) {
-  var stepTheta = 2 * Math.PI / sides;
-  var verticesPerCap = 9 * sides;
-  var xyzMM = xyzMMi.slice();
-  var theta = 0;
-  var i = 0;
-  let v0 = vertices.length;
-  let constrain = 0;
-  let xOffset = 1;
-  let yOffset = 2;
-  let zOffset = 0;
-  if (axis === 1) {
-    constrain = 1;
-    xOffset = 0;
-    yOffset = 1;
-    zOffset = 2;
+NiivueObject3D.getFirstPerpVector = function(v1) {
+  let v2 = fromValues$1(0, 0, 0);
+  if (v1[0] === 0)
+    v2[0] = 1;
+  else if (v1[1] === 0)
+    v2[1] = 1;
+  else if (v1[2] === 0)
+    v2[2] = 1;
+  else {
+    v2[0] = v1[2];
+    v2[1] = v1[2];
+    v2[2] = -(v1[0] + v1[1]);
+    normalize(v2, v2);
   }
-  if (axis === 2) {
-    constrain = 2;
-    xOffset = 0;
-    yOffset = 2;
-    zOffset = 1;
+  return v2;
+};
+NiivueObject3D.makeCylinder = function(vertices, indices, start, dest, radius, sides = 20) {
+  if (sides < 3)
+    sides = 3;
+  let v1 = create$1();
+  subtract(v1, dest, start);
+  normalize(v1, v1);
+  let v2 = NiivueObject3D.getFirstPerpVector(v1);
+  let v3 = create$1();
+  cross(v3, v1, v2);
+  normalize(v3, v3);
+  let num_v = 2 * sides;
+  let num_f = 2 * sides;
+  {
+    num_f += 2 * sides;
+    num_v += 2;
   }
-  let cylinderMin = xyzMin[constrain];
-  let cylinderMax = xyzMax[constrain];
-  let mm = xyzMM;
-  mm[constrain] = 0;
-  let vals = null;
-  for (; i < verticesPerCap; i += 9) {
-    vals = [];
-    vals.push(radius * Math.cos(theta));
-    vals.push(cylinderMax);
-    vals.push(radius * Math.sin(theta));
-    vertices[v0 + i] = vals[xOffset] + mm[0];
-    vertices[v0 + i + 1] = vals[yOffset] + mm[1];
-    vertices[v0 + i + 2] = vals[zOffset] + mm[2];
-    theta += stepTheta;
-    vals = [];
-    vals.push(0);
-    vals.push(cylinderMax);
-    vals.push(0);
-    vertices[v0 + i + 3] = vals[xOffset] + mm[0];
-    vertices[v0 + i + 4] = vals[yOffset] + mm[1];
-    vertices[v0 + i + 5] = vals[zOffset] + mm[2];
-    vals = [];
-    vals.push(radius * Math.cos(theta));
-    vals.push(cylinderMax);
-    vals.push(radius * Math.sin(theta));
-    vertices[v0 + i + 6] = vals[xOffset] + mm[0];
-    vertices[v0 + i + 7] = vals[yOffset] + mm[1];
-    vertices[v0 + i + 8] = vals[zOffset] + mm[2];
+  let idx0 = Math.floor(vertices.length / 3);
+  let idx = new Uint16Array(num_f * 3);
+  let vtx = new Float32Array(num_v * 3);
+  function setV(i, vec3) {
+    vtx[i * 3 + 0] = vec3[0];
+    vtx[i * 3 + 1] = vec3[1];
+    vtx[i * 3 + 2] = vec3[2];
   }
-  theta = 0;
-  for (; i < verticesPerCap * 2; i += 9) {
-    vals = [];
-    vals.push(radius * Math.cos(theta));
-    vals.push(cylinderMin);
-    vals.push(radius * Math.sin(theta));
-    vertices[v0 + i + 6] = vals[xOffset] + mm[0];
-    vertices[v0 + i + 7] = vals[yOffset] + mm[1];
-    vertices[v0 + i + 8] = vals[zOffset] + mm[2];
-    theta += stepTheta;
-    vals = [];
-    vals.push(0);
-    vals.push(cylinderMin);
-    vals.push(0);
-    vertices[v0 + i + 3] = vals[xOffset] + mm[0];
-    vertices[v0 + i + 4] = vals[yOffset] + mm[1];
-    vertices[v0 + i + 5] = vals[zOffset] + mm[2];
-    vals = [];
-    vals.push(radius * Math.cos(theta));
-    vals.push(cylinderMin);
-    vals.push(radius * Math.sin(theta));
-    vertices[v0 + i] = vals[xOffset] + mm[0];
-    vertices[v0 + i + 1] = vals[yOffset] + mm[1];
-    vertices[v0 + i + 2] = vals[zOffset] + mm[2];
+  function setI(i, a, b, c) {
+    idx[i * 3 + 0] = a + idx0;
+    idx[i * 3 + 1] = b + idx0;
+    idx[i * 3 + 2] = c + idx0;
   }
-  for (var j = 0; j < sides; ++j) {
-    for (let k = 0; k < 3; ++k, ++i) {
-      vertices[v0 + i] = vertices[v0 + k + 9 * j];
-    }
-    for (let k = 0; k < 3; ++k, ++i) {
-      vertices[v0 + i] = vertices[v0 + 6 + k + 9 * j];
-    }
-    for (let k = 0; k < 3; ++k, ++i) {
-      vertices[v0 + i] = vertices[verticesPerCap + v0 + k + 9 * j];
-    }
-    for (let k = 0; k < 3; ++k, ++i) {
-      vertices[v0 + i] = vertices[v0 + k + 9 * j];
-    }
-    for (let k = 0; k < 3; ++k, ++i) {
-      vertices[v0 + i] = vertices[v0 + verticesPerCap + k + 9 * j];
-    }
-    for (let k = 0; k < 3; ++k, ++i) {
-      vertices[v0 + i] = vertices[v0 + verticesPerCap + 6 + k + 9 * j];
+  let startPole = 2 * sides;
+  let destPole = startPole + 1;
+  {
+    setV(startPole, start);
+    setV(destPole, dest);
+  }
+  let pt1 = create$1();
+  let pt2 = create$1();
+  for (let i = 0; i < sides; i++) {
+    let c = Math.cos(i / sides * 2 * Math.PI);
+    let s = Math.sin(i / sides * 2 * Math.PI);
+    pt1[0] = radius * (c * v2[0] + s * v3[0]);
+    pt1[1] = radius * (c * v2[1] + s * v3[1]);
+    pt1[2] = radius * (c * v2[2] + s * v3[2]);
+    add$1(pt2, start, pt1);
+    setV(i, pt2);
+    add$1(pt2, dest, pt1);
+    setV(i + sides, pt2);
+    let nxt = 0;
+    if (i < sides - 1)
+      nxt = i + 1;
+    setI(i * 2, i, nxt, i + sides);
+    setI(i * 2 + 1, nxt, nxt + sides, i + sides);
+    {
+      setI(sides * 2 + i, i, startPole, nxt);
+      setI(sides * 2 + i + sides, destPole, i + sides, nxt + sides);
     }
   }
-  let indicesLength = indices.length;
-  var indicesToAdd = new Array((vertices.length - v0) / 3);
-  for (i = 0; i < indicesToAdd.length; ++i)
-    indicesToAdd[i] = indicesLength + i;
-  indices.push(...indicesToAdd);
+  indices.push(...idx);
+  vertices.push(...vtx);
 };
 var NiivueShader3D = function(shader) {
   this.shader = shader;
@@ -6541,9 +6605,9 @@ const Z_BINARY = 0;
 const Z_TEXT = 1;
 const Z_UNKNOWN$1 = 2;
 function zero$1(buf) {
-  let len = buf.length;
-  while (--len >= 0) {
-    buf[len] = 0;
+  let len2 = buf.length;
+  while (--len2 >= 0) {
+    buf[len2] = 0;
   }
 }
 const STORED_BLOCK = 0;
@@ -6604,27 +6668,27 @@ const put_short = (s, w) => {
   s.pending_buf[s.pending++] = w & 255;
   s.pending_buf[s.pending++] = w >>> 8 & 255;
 };
-const send_bits = (s, value, length) => {
-  if (s.bi_valid > Buf_size - length) {
+const send_bits = (s, value, length2) => {
+  if (s.bi_valid > Buf_size - length2) {
     s.bi_buf |= value << s.bi_valid & 65535;
     put_short(s, s.bi_buf);
     s.bi_buf = value >> Buf_size - s.bi_valid;
-    s.bi_valid += length - Buf_size;
+    s.bi_valid += length2 - Buf_size;
   } else {
     s.bi_buf |= value << s.bi_valid & 65535;
-    s.bi_valid += length;
+    s.bi_valid += length2;
   }
 };
 const send_code = (s, c, tree) => {
   send_bits(s, tree[c * 2], tree[c * 2 + 1]);
 };
-const bi_reverse = (code, len) => {
+const bi_reverse = (code, len2) => {
   let res = 0;
   do {
     res |= code & 1;
     code >>>= 1;
     res <<= 1;
-  } while (--len > 0);
+  } while (--len2 > 0);
   return res >>> 1;
 };
 const bi_flush = (s) => {
@@ -6715,28 +6779,28 @@ const gen_codes = (tree, max_code, bl_count) => {
     next_code[bits] = code = code + bl_count[bits - 1] << 1;
   }
   for (n = 0; n <= max_code; n++) {
-    let len = tree[n * 2 + 1];
-    if (len === 0) {
+    let len2 = tree[n * 2 + 1];
+    if (len2 === 0) {
       continue;
     }
-    tree[n * 2] = bi_reverse(next_code[len]++, len);
+    tree[n * 2] = bi_reverse(next_code[len2]++, len2);
   }
 };
 const tr_static_init = () => {
   let n;
   let bits;
-  let length;
+  let length2;
   let code;
   let dist;
   const bl_count = new Array(MAX_BITS$1 + 1);
-  length = 0;
+  length2 = 0;
   for (code = 0; code < LENGTH_CODES$1 - 1; code++) {
-    base_length[code] = length;
+    base_length[code] = length2;
     for (n = 0; n < 1 << extra_lbits[code]; n++) {
-      _length_code[length++] = code;
+      _length_code[length2++] = code;
     }
   }
-  _length_code[length - 1] = code;
+  _length_code[length2 - 1] = code;
   dist = 0;
   for (code = 0; code < 16; code++) {
     base_dist[code] = dist;
@@ -6808,14 +6872,14 @@ const bi_windup = (s) => {
   s.bi_buf = 0;
   s.bi_valid = 0;
 };
-const copy_block = (s, buf, len, header) => {
+const copy_block = (s, buf, len2, header) => {
   bi_windup(s);
   if (header) {
-    put_short(s, len);
-    put_short(s, ~len);
+    put_short(s, len2);
+    put_short(s, ~len2);
   }
-  s.pending_buf.set(s.window.subarray(buf, buf + len), s.pending);
-  s.pending += len;
+  s.pending_buf.set(s.window.subarray(buf, buf + len2), s.pending);
+  s.pending += len2;
 };
 const smaller = (tree, n, m, depth) => {
   const _n2 = n * 2;
@@ -7131,11 +7195,11 @@ trees._tr_stored_block = _tr_stored_block$1;
 trees._tr_flush_block = _tr_flush_block$1;
 trees._tr_tally = _tr_tally$1;
 trees._tr_align = _tr_align$1;
-const adler32$2 = (adler, buf, len, pos) => {
+const adler32$2 = (adler, buf, len2, pos) => {
   let s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
-  while (len !== 0) {
-    n = len > 2e3 ? 2e3 : len;
-    len -= n;
+  while (len2 !== 0) {
+    n = len2 > 2e3 ? 2e3 : len2;
+    len2 -= n;
     do {
       s1 = s1 + buf[pos++] | 0;
       s2 = s2 + s1 | 0;
@@ -7158,9 +7222,9 @@ const makeTable = () => {
   return table;
 };
 const crcTable = new Uint32Array(makeTable());
-const crc32$2 = (crc, buf, len, pos) => {
+const crc32$2 = (crc, buf, len2, pos) => {
   const t = crcTable;
-  const end = pos + len;
+  const end = pos + len2;
   crc ^= -1;
   for (let i = pos; i < end; i++) {
     crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
@@ -7267,28 +7331,28 @@ const rank = (f) => {
   return (f << 1) - (f > 4 ? 9 : 0);
 };
 const zero = (buf) => {
-  let len = buf.length;
-  while (--len >= 0) {
-    buf[len] = 0;
+  let len2 = buf.length;
+  while (--len2 >= 0) {
+    buf[len2] = 0;
   }
 };
 let HASH_ZLIB = (s, prev, data) => (prev << s.hash_shift ^ data) & s.hash_mask;
 let HASH = HASH_ZLIB;
 const flush_pending = (strm) => {
   const s = strm.state;
-  let len = s.pending;
-  if (len > strm.avail_out) {
-    len = strm.avail_out;
+  let len2 = s.pending;
+  if (len2 > strm.avail_out) {
+    len2 = strm.avail_out;
   }
-  if (len === 0) {
+  if (len2 === 0) {
     return;
   }
-  strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len), strm.next_out);
-  strm.next_out += len;
-  s.pending_out += len;
-  strm.total_out += len;
-  strm.avail_out -= len;
-  s.pending -= len;
+  strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len2), strm.next_out);
+  strm.next_out += len2;
+  s.pending_out += len2;
+  strm.total_out += len2;
+  strm.avail_out -= len2;
+  s.pending -= len2;
   if (s.pending === 0) {
     s.pending_out = 0;
   }
@@ -7306,29 +7370,29 @@ const putShortMSB = (s, b) => {
   s.pending_buf[s.pending++] = b & 255;
 };
 const read_buf = (strm, buf, start, size) => {
-  let len = strm.avail_in;
-  if (len > size) {
-    len = size;
+  let len2 = strm.avail_in;
+  if (len2 > size) {
+    len2 = size;
   }
-  if (len === 0) {
+  if (len2 === 0) {
     return 0;
   }
-  strm.avail_in -= len;
-  buf.set(strm.input.subarray(strm.next_in, strm.next_in + len), start);
+  strm.avail_in -= len2;
+  buf.set(strm.input.subarray(strm.next_in, strm.next_in + len2), start);
   if (strm.state.wrap === 1) {
-    strm.adler = adler32$1(strm.adler, buf, len, start);
+    strm.adler = adler32$1(strm.adler, buf, len2, start);
   } else if (strm.state.wrap === 2) {
-    strm.adler = crc32$1(strm.adler, buf, len, start);
+    strm.adler = crc32$1(strm.adler, buf, len2, start);
   }
-  strm.next_in += len;
-  strm.total_in += len;
-  return len;
+  strm.next_in += len2;
+  strm.total_in += len2;
+  return len2;
 };
 const longest_match = (s, cur_match) => {
   let chain_length = s.max_chain_length;
   let scan = s.strstart;
   let match;
-  let len;
+  let len2;
   let best_len = s.prev_length;
   let nice_match = s.nice_match;
   const limit = s.strstart > s.w_size - MIN_LOOKAHEAD ? s.strstart - (s.w_size - MIN_LOOKAHEAD) : 0;
@@ -7353,12 +7417,12 @@ const longest_match = (s, cur_match) => {
     match++;
     do {
     } while (_win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && scan < strend);
-    len = MAX_MATCH - (strend - scan);
+    len2 = MAX_MATCH - (strend - scan);
     scan = strend - MAX_MATCH;
-    if (len > best_len) {
+    if (len2 > best_len) {
       s.match_start = cur_match;
-      best_len = len;
-      if (len >= nice_match) {
+      best_len = len2;
+      if (len2 >= nice_match) {
         break;
       }
       scan_end1 = _win[scan + best_len - 1];
@@ -8252,11 +8316,11 @@ common.assign = function(obj) {
   return obj;
 };
 common.flattenChunks = (chunks) => {
-  let len = 0;
+  let len2 = 0;
   for (let i = 0, l = chunks.length; i < l; i++) {
-    len += chunks[i].length;
+    len2 += chunks[i].length;
   }
-  const result = new Uint8Array(len);
+  const result = new Uint8Array(len2);
   for (let i = 0, pos = 0, l = chunks.length; i < l; i++) {
     let chunk = chunks[i];
     result.set(chunk, pos);
@@ -8320,26 +8384,26 @@ strings$2.string2buf = (str) => {
   }
   return buf;
 };
-const buf2binstring = (buf, len) => {
-  if (len < 65534) {
+const buf2binstring = (buf, len2) => {
+  if (len2 < 65534) {
     if (buf.subarray && STR_APPLY_UIA_OK) {
-      return String.fromCharCode.apply(null, buf.length === len ? buf : buf.subarray(0, len));
+      return String.fromCharCode.apply(null, buf.length === len2 ? buf : buf.subarray(0, len2));
     }
   }
   let result = "";
-  for (let i = 0; i < len; i++) {
+  for (let i = 0; i < len2; i++) {
     result += String.fromCharCode(buf[i]);
   }
   return result;
 };
 strings$2.buf2string = (buf, max2) => {
-  const len = max2 || buf.length;
+  const len2 = max2 || buf.length;
   if (typeof TextDecoder === "function" && TextDecoder.prototype.decode) {
     return new TextDecoder().decode(buf.subarray(0, max2));
   }
   let i, out;
-  const utf16buf = new Array(len * 2);
-  for (out = 0, i = 0; i < len; ) {
+  const utf16buf = new Array(len2 * 2);
+  for (out = 0, i = 0; i < len2; ) {
     let c = buf[i++];
     if (c < 128) {
       utf16buf[out++] = c;
@@ -8352,7 +8416,7 @@ strings$2.buf2string = (buf, max2) => {
       continue;
     }
     c &= c_len === 2 ? 31 : c_len === 3 ? 15 : 7;
-    while (c_len > 1 && i < len) {
+    while (c_len > 1 && i < len2) {
       c = c << 6 | buf[i++] & 63;
       c_len--;
     }
@@ -8575,7 +8639,7 @@ var inffast = function inflate_fast(strm, start) {
   let dmask;
   let here;
   let op;
-  let len;
+  let len2;
   let dist;
   let from;
   let from_source;
@@ -8617,14 +8681,14 @@ var inffast = function inflate_fast(strm, start) {
           if (op === 0) {
             output[_out++] = here & 65535;
           } else if (op & 16) {
-            len = here & 65535;
+            len2 = here & 65535;
             op &= 15;
             if (op) {
               if (bits < op) {
                 hold += input[_in++] << bits;
                 bits += 8;
               }
-              len += hold & (1 << op) - 1;
+              len2 += hold & (1 << op) - 1;
               hold >>>= op;
               bits -= op;
             }
@@ -8674,8 +8738,8 @@ var inffast = function inflate_fast(strm, start) {
                     from_source = s_window;
                     if (wnext === 0) {
                       from += wsize - op;
-                      if (op < len) {
-                        len -= op;
+                      if (op < len2) {
+                        len2 -= op;
                         do {
                           output[_out++] = s_window[from++];
                         } while (--op);
@@ -8685,15 +8749,15 @@ var inffast = function inflate_fast(strm, start) {
                     } else if (wnext < op) {
                       from += wsize + wnext - op;
                       op -= wnext;
-                      if (op < len) {
-                        len -= op;
+                      if (op < len2) {
+                        len2 -= op;
                         do {
                           output[_out++] = s_window[from++];
                         } while (--op);
                         from = 0;
-                        if (wnext < len) {
+                        if (wnext < len2) {
                           op = wnext;
-                          len -= op;
+                          len2 -= op;
                           do {
                             output[_out++] = s_window[from++];
                           } while (--op);
@@ -8703,8 +8767,8 @@ var inffast = function inflate_fast(strm, start) {
                       }
                     } else {
                       from += wnext - op;
-                      if (op < len) {
-                        len -= op;
+                      if (op < len2) {
+                        len2 -= op;
                         do {
                           output[_out++] = s_window[from++];
                         } while (--op);
@@ -8712,15 +8776,15 @@ var inffast = function inflate_fast(strm, start) {
                         from_source = output;
                       }
                     }
-                    while (len > 2) {
+                    while (len2 > 2) {
                       output[_out++] = from_source[from++];
                       output[_out++] = from_source[from++];
                       output[_out++] = from_source[from++];
-                      len -= 3;
+                      len2 -= 3;
                     }
-                    if (len) {
+                    if (len2) {
                       output[_out++] = from_source[from++];
-                      if (len > 1) {
+                      if (len2 > 1) {
                         output[_out++] = from_source[from++];
                       }
                     }
@@ -8730,11 +8794,11 @@ var inffast = function inflate_fast(strm, start) {
                       output[_out++] = output[from++];
                       output[_out++] = output[from++];
                       output[_out++] = output[from++];
-                      len -= 3;
-                    } while (len > 2);
-                    if (len) {
+                      len2 -= 3;
+                    } while (len2 > 2);
+                    if (len2) {
                       output[_out++] = output[from++];
-                      if (len > 1) {
+                      if (len2 > 1) {
                         output[_out++] = output[from++];
                       }
                     }
@@ -8763,9 +8827,9 @@ var inffast = function inflate_fast(strm, start) {
           break;
         }
     } while (_in < last && _out < end);
-  len = bits >> 3;
-  _in -= len;
-  bits -= len << 3;
+  len2 = bits >> 3;
+  _in -= len2;
+  bits -= len2 << 3;
   hold &= (1 << bits) - 1;
   strm.next_in = _in;
   strm.next_out = _out;
@@ -8917,7 +8981,7 @@ const dext = new Uint8Array([
 ]);
 const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work, opts) => {
   const bits = opts.bits;
-  let len = 0;
+  let len2 = 0;
   let sym = 0;
   let min2 = 0, max2 = 0;
   let root = 0;
@@ -8939,8 +9003,8 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
   let extra = null;
   let extra_index = 0;
   let here_bits, here_op, here_val;
-  for (len = 0; len <= MAXBITS; len++) {
-    count[len] = 0;
+  for (len2 = 0; len2 <= MAXBITS; len2++) {
+    count[len2] = 0;
   }
   for (sym = 0; sym < codes; sym++) {
     count[lens[lens_index + sym]]++;
@@ -8969,9 +9033,9 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
     root = min2;
   }
   left = 1;
-  for (len = 1; len <= MAXBITS; len++) {
+  for (len2 = 1; len2 <= MAXBITS; len2++) {
     left <<= 1;
-    left -= count[len];
+    left -= count[len2];
     if (left < 0) {
       return -1;
     }
@@ -8980,8 +9044,8 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
     return -1;
   }
   offs[1] = 0;
-  for (len = 1; len < MAXBITS; len++) {
-    offs[len + 1] = offs[len] + count[len];
+  for (len2 = 1; len2 < MAXBITS; len2++) {
+    offs[len2 + 1] = offs[len2] + count[len2];
   }
   for (sym = 0; sym < codes; sym++) {
     if (lens[lens_index + sym] !== 0) {
@@ -9004,7 +9068,7 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
   }
   huff = 0;
   sym = 0;
-  len = min2;
+  len2 = min2;
   next = table_index;
   curr = root;
   drop = 0;
@@ -9015,7 +9079,7 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
     return 1;
   }
   for (; ; ) {
-    here_bits = len - drop;
+    here_bits = len2 - drop;
     if (work[sym] < end) {
       here_op = 0;
       here_val = work[sym];
@@ -9026,14 +9090,14 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
       here_op = 32 + 64;
       here_val = 0;
     }
-    incr = 1 << len - drop;
+    incr = 1 << len2 - drop;
     fill = 1 << curr;
     min2 = fill;
     do {
       fill -= incr;
       table[next + (huff >> drop) + fill] = here_bits << 24 | here_op << 16 | here_val | 0;
     } while (fill !== 0);
-    incr = 1 << len - 1;
+    incr = 1 << len2 - 1;
     while (huff & incr) {
       incr >>= 1;
     }
@@ -9044,18 +9108,18 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
       huff = 0;
     }
     sym++;
-    if (--count[len] === 0) {
-      if (len === max2) {
+    if (--count[len2] === 0) {
+      if (len2 === max2) {
         break;
       }
-      len = lens[lens_index + work[sym]];
+      len2 = lens[lens_index + work[sym]];
     }
-    if (len > root && (huff & mask) !== low) {
+    if (len2 > root && (huff & mask) !== low) {
       if (drop === 0) {
         drop = root;
       }
       next += min2;
-      curr = len - drop;
+      curr = len2 - drop;
       left = 1 << curr;
       while (curr + drop < max2) {
         left -= count[curr + drop];
@@ -9074,7 +9138,7 @@ const inflate_table$1 = (type, lens, lens_index, codes, table, table_index, work
     }
   }
   if (huff !== 0) {
-    table[next + huff] = len - drop << 24 | 64 << 16 | 0;
+    table[next + huff] = len2 - drop << 24 | 64 << 16 | 0;
   }
   opts.bits = root;
   return 0;
@@ -9333,7 +9397,7 @@ const inflate$2 = (strm, flush) => {
   let here = 0;
   let here_bits, here_op, here_val;
   let last_bits, last_op, last_val;
-  let len;
+  let len2;
   let ret;
   const hbuf = new Uint8Array(4);
   let opts;
@@ -9399,10 +9463,10 @@ const inflate$2 = (strm, flush) => {
           }
           hold >>>= 4;
           bits -= 4;
-          len = (hold & 15) + 8;
+          len2 = (hold & 15) + 8;
           if (state.wbits === 0) {
-            state.wbits = len;
-          } else if (len > state.wbits) {
+            state.wbits = len2;
+          } else if (len2 > state.wbits) {
             strm.msg = "invalid window size";
             state.mode = BAD;
             break;
@@ -9520,11 +9584,11 @@ const inflate$2 = (strm, flush) => {
             }
             if (copy2) {
               if (state.head) {
-                len = state.head.extra_len - state.length;
+                len2 = state.head.extra_len - state.length;
                 if (!state.head.extra) {
                   state.head.extra = new Uint8Array(state.head.extra_len);
                 }
-                state.head.extra.set(input.subarray(next, next + copy2), len);
+                state.head.extra.set(input.subarray(next, next + copy2), len2);
               }
               if (state.flags & 512) {
                 state.check = crc32(state.check, input, copy2, next);
@@ -9546,17 +9610,17 @@ const inflate$2 = (strm, flush) => {
             }
             copy2 = 0;
             do {
-              len = input[next + copy2++];
-              if (state.head && len && state.length < 65536) {
-                state.head.name += String.fromCharCode(len);
+              len2 = input[next + copy2++];
+              if (state.head && len2 && state.length < 65536) {
+                state.head.name += String.fromCharCode(len2);
               }
-            } while (len && copy2 < have);
+            } while (len2 && copy2 < have);
             if (state.flags & 512) {
               state.check = crc32(state.check, input, copy2, next);
             }
             have -= copy2;
             next += copy2;
-            if (len) {
+            if (len2) {
               break inf_leave;
             }
           } else if (state.head) {
@@ -9571,17 +9635,17 @@ const inflate$2 = (strm, flush) => {
             }
             copy2 = 0;
             do {
-              len = input[next + copy2++];
-              if (state.head && len && state.length < 65536) {
-                state.head.comment += String.fromCharCode(len);
+              len2 = input[next + copy2++];
+              if (state.head && len2 && state.length < 65536) {
+                state.head.comment += String.fromCharCode(len2);
               }
-            } while (len && copy2 < have);
+            } while (len2 && copy2 < have);
             if (state.flags & 512) {
               state.check = crc32(state.check, input, copy2, next);
             }
             have -= copy2;
             next += copy2;
-            if (len) {
+            if (len2) {
               break inf_leave;
             }
           } else if (state.head) {
@@ -9823,7 +9887,7 @@ const inflate$2 = (strm, flush) => {
                   state.mode = BAD;
                   break;
                 }
-                len = state.lens[state.have - 1];
+                len2 = state.lens[state.have - 1];
                 copy2 = 3 + (hold & 3);
                 hold >>>= 2;
                 bits -= 2;
@@ -9839,7 +9903,7 @@ const inflate$2 = (strm, flush) => {
                 }
                 hold >>>= here_bits;
                 bits -= here_bits;
-                len = 0;
+                len2 = 0;
                 copy2 = 3 + (hold & 7);
                 hold >>>= 3;
                 bits -= 3;
@@ -9855,7 +9919,7 @@ const inflate$2 = (strm, flush) => {
                 }
                 hold >>>= here_bits;
                 bits -= here_bits;
-                len = 0;
+                len2 = 0;
                 copy2 = 11 + (hold & 127);
                 hold >>>= 7;
                 bits -= 7;
@@ -9866,7 +9930,7 @@ const inflate$2 = (strm, flush) => {
                 break;
               }
               while (copy2--) {
-                state.lens[state.have++] = len;
+                state.lens[state.have++] = len2;
               }
             }
           }
@@ -10786,6 +10850,23 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
   this.calculateRAS();
   this.calMinMax();
 };
+NVImage.prototype.calculateOblique = function() {
+  let LPI = this.vox2mm([0, 0, 0], this.matRAS);
+  let X1mm = this.vox2mm([1 / this.pixDimsRAS[1], 0, 0], this.matRAS);
+  let Y1mm = this.vox2mm([0, 1 / this.pixDimsRAS[2], 0], this.matRAS);
+  let Z1mm = this.vox2mm([0, 0, 1 / this.pixDimsRAS[3]], this.matRAS);
+  subtract(X1mm, X1mm, LPI);
+  subtract(Y1mm, Y1mm, LPI);
+  subtract(Z1mm, Z1mm, LPI);
+  let oblique = fromValues$2(X1mm[0], X1mm[1], X1mm[2], 0, Y1mm[0], Y1mm[1], Y1mm[2], 0, Z1mm[0], Z1mm[1], Z1mm[2], 0, 0, 0, 0, 1);
+  this.obliqueRAS = clone$1(oblique);
+  let XY = Math.abs(90 - angle(X1mm, Y1mm) * (180 / Math.PI));
+  let XZ = Math.abs(90 - angle(X1mm, Z1mm) * (180 / Math.PI));
+  let YZ = Math.abs(90 - angle(Y1mm, Z1mm) * (180 / Math.PI));
+  let maxShear = Math.max(Math.max(XY, XZ), YZ);
+  if (maxShear > 0.1)
+    console.log("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+};
 NVImage.prototype.calculateRAS = function() {
   let a = this.hdr.affine;
   let header = this.hdr;
@@ -10828,7 +10909,7 @@ NVImage.prototype.calculateRAS = function() {
   this.mm010 = this.vox2mm([-0.5, header.dims[2] - 0.5, -0.5], rotM);
   this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
   let R2 = create$2();
-  copy(R2, rotM);
+  copy$1(R2, rotM);
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
       R2[i * 4 + j] = rotM[i * 4 + perm[j] - 1];
@@ -10858,7 +10939,8 @@ NVImage.prototype.calculateRAS = function() {
   ];
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
     this.toRAS = create$2();
-    this.matRAS = clone(rotM);
+    this.matRAS = clone$1(rotM);
+    this.calculateOblique();
     return;
   }
   identity$1(rotM);
@@ -10871,7 +10953,7 @@ NVImage.prototype.calculateRAS = function() {
   let residualR = create$2();
   invert(residualR, rotM);
   multiply$1(residualR, residualR, R2);
-  this.matRAS = clone(residualR);
+  this.matRAS = clone$1(residualR);
   rotM = fromValues$2(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
   rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1;
   rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1;
@@ -10879,12 +10961,13 @@ NVImage.prototype.calculateRAS = function() {
   rotM[3 + 0 * 4] = flip[0];
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
-  this.toRAS = clone(rotM);
+  this.toRAS = clone$1(rotM);
   console.log(this.hdr.dims);
   console.log(this.dimsRAS);
+  this.calculateOblique();
 };
 NVImage.prototype.vox2mm = function(XYZ, mtx) {
-  let sform = clone(mtx);
+  let sform = clone$1(mtx);
   transpose(sform, sform);
   let pos = fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
   transformMat4(pos, pos, sform);
@@ -10893,7 +10976,7 @@ NVImage.prototype.vox2mm = function(XYZ, mtx) {
 };
 NVImage.prototype.mm2vox = function(mm) {
   let sform = fromValues$2(...this.hdr.affine.flat());
-  let out = clone(sform);
+  let out = clone$1(sform);
   transpose(out, sform);
   invert(out, out);
   let pos = fromValues(mm[0], mm[1], mm[2], 1);
@@ -10915,6 +10998,8 @@ NVImage.prototype.calMinMax = function() {
   if (this.trustCalMinMax && isFinite(this.hdr.cal_min) && isFinite(this.hdr.cal_max) && this.hdr.cal_max > this.hdr.cal_min) {
     this.cal_min = this.hdr.cal_min;
     this.cal_max = this.hdr.cal_max;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     this.global_min = this.hdr.cal_min;
     this.global_max = this.hdr.cal_max;
     return [
@@ -10935,6 +11020,8 @@ NVImage.prototype.calMinMax = function() {
   if (cmMin != cmMax) {
     this.cal_min = cmMin;
     this.cal_max = cmMax;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     return [cmMin, cmMax, cmMin, cmMax];
   }
   let mn = this.img[0];
@@ -10966,6 +11053,8 @@ NVImage.prototype.calMinMax = function() {
     console.log("no variability in image intensity?");
     this.cal_min = mnScale;
     this.cal_max = mxScale;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     this.global_min = mnScale;
     this.global_max = mxScale;
     return [mnScale, mxScale, mnScale, mxScale];
@@ -11030,6 +11119,8 @@ NVImage.prototype.calMinMax = function() {
   }
   this.cal_min = pct2;
   this.cal_max = pct98;
+  this.robust_min = this.cal_min;
+  this.robust_max = this.cal_max;
   this.global_min = mnScale;
   this.global_max = mxScale;
   return [pct2, pct98, mnScale, mxScale];
@@ -11140,104 +11231,66 @@ NVImage.prototype.getValue = function(x, y, z) {
   let i = this.img[x + y * nx + z * nx * ny];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
-function getExtents(positions) {
-  const min2 = positions.slice(0, 3);
-  const max2 = positions.slice(0, 3);
+function getExtents(positions, forceOriginInVolume = true) {
+  let nV = (positions.length / 3).toFixed();
+  let origin = fromValues$1(0, 0, 0);
+  let mn = create$1();
+  let mx = create$1();
   let mxDx = 0;
-  for (let i = 3; i < positions.length; i += 3) {
-    for (let j = 0; j < 3; ++j) {
-      const v = positions[i + j];
-      min2[j] = Math.min(v, min2[j]);
-      max2[j] = Math.max(v, max2[j]);
+  let nLoops = 1;
+  if (forceOriginInVolume)
+    nLoops = 2;
+  for (let loop = 0; loop < nLoops; loop++) {
+    mxDx = 0;
+    for (let i = 0; i < nV; i++) {
+      let v = fromValues$1(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+      if (i === 0) {
+        copy(mn, v);
+        copy(mx, v);
+      }
+      min$Q(mn, mn, v);
+      max$Q(mx, mx, v);
+      subtract(v, v, origin);
+      let dx = len(v);
+      mxDx = Math.max(mxDx, dx);
     }
-    let dx = positions[i] * positions[i] + positions[i + 1] * positions[i + 1] + positions[i + 2] * positions[i + 2];
-    mxDx = Math.max(mxDx, dx);
+    if (loop + 1 >= nLoops)
+      break;
+    let ok = true;
+    for (let j = 0; j < 3; ++j) {
+      if (mn[j] > origin[j])
+        ok = false;
+      if (mx[j] < origin[j])
+        ok = false;
+    }
+    if (ok)
+      break;
+    lerp(origin, mn, mx, 0.5);
+    console.log("origin moved inside volume: ", origin);
   }
-  let furthestVertexFromOrigin = Math.sqrt(mxDx);
-  return { min: min2, max: max2, furthestVertexFromOrigin };
+  let min2 = [mn[0], mn[1], mn[2]];
+  let max2 = [mx[0], mx[1], mx[2]];
+  let furthestVertexFromOrigin = mxDx;
+  return { min: min2, max: max2, furthestVertexFromOrigin, origin };
 }
 NVImage.prototype.toNiivueObject3D = function(id, gl) {
-  let v000 = this.vox2mm([0, 0, 0], this.matRAS);
-  let v111 = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
-  let left = v000[0];
-  let right = v111[0];
-  let posterior = v000[1];
-  let anterior = v111[1];
-  let inferior = v000[2];
-  let superior = v111[2];
+  let LPI = this.vox2mm([0, 0, 0], this.matRAS);
+  let LAI = this.vox2mm([0, this.dimsRAS[2] - 1, 0], this.matRAS);
+  let LPS = this.vox2mm([0, 0, this.dimsRAS[3] - 1], this.matRAS);
+  let LAS = this.vox2mm([0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0, 0], this.matRAS);
+  let RAI = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0], this.matRAS);
+  let RPS = this.vox2mm([this.dimsRAS[1] - 1, 0, this.dimsRAS[3] - 1], this.matRAS);
+  let RAS = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
   const positions = [
-    left,
-    posterior,
-    superior,
-    right,
-    posterior,
-    superior,
-    right,
-    anterior,
-    superior,
-    left,
-    anterior,
-    superior,
-    left,
-    posterior,
-    inferior,
-    left,
-    anterior,
-    inferior,
-    right,
-    anterior,
-    inferior,
-    right,
-    posterior,
-    inferior,
-    left,
-    anterior,
-    inferior,
-    left,
-    anterior,
-    superior,
-    right,
-    anterior,
-    superior,
-    right,
-    anterior,
-    inferior,
-    left,
-    posterior,
-    inferior,
-    right,
-    posterior,
-    inferior,
-    right,
-    posterior,
-    superior,
-    left,
-    posterior,
-    superior,
-    right,
-    posterior,
-    inferior,
-    right,
-    anterior,
-    inferior,
-    right,
-    anterior,
-    superior,
-    right,
-    posterior,
-    superior,
-    left,
-    posterior,
-    inferior,
-    left,
-    posterior,
-    superior,
-    left,
-    anterior,
-    superior,
-    left,
-    anterior,
-    inferior
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI
   ];
   const textureCoordinates = [
     0,
@@ -11331,30 +11384,30 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
     6,
     5,
     4,
-    8,
-    11,
-    10,
-    10,
-    9,
-    8,
-    12,
-    15,
-    14,
-    14,
-    13,
-    12,
-    16,
-    19,
-    18,
-    18,
-    17,
-    16,
-    20,
-    23,
-    22,
-    22,
-    21,
-    20
+    5,
+    6,
+    2,
+    2,
+    3,
+    5,
+    4,
+    0,
+    1,
+    1,
+    7,
+    4,
+    7,
+    1,
+    2,
+    2,
+    6,
+    7,
+    4,
+    5,
+    3,
+    3,
+    0,
+    4
   ];
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
   const textureCoordBuffer = gl.createBuffer();
@@ -11365,6 +11418,8 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
+  obj3D.originNegate = clone(extents.origin);
+  negate(obj3D.originNegate, obj3D.originNegate);
   return obj3D;
 };
 const Log = function(logLevel) {
@@ -12962,6 +13017,7 @@ const Niivue = function(options = {}) {
   this.sliceShader = null;
   this.lineShader = null;
   this.renderShader = null;
+  this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
   this.passThroughShader = null;
@@ -12971,6 +13027,7 @@ const Niivue = function(options = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
+  this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG;
   this.DEFAULT_FONT_METRICS = defaultFontMetrics;
@@ -12982,8 +13039,8 @@ const Niivue = function(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar;
   this.scene = {};
-  this.scene.renderAzimuth = 90;
-  this.scene.renderElevation = 0;
+  this.scene.renderAzimuth = 110;
+  this.scene.renderElevation = 10;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -13266,8 +13323,8 @@ Niivue.prototype.mouseMoveListener = function(e) {
   }
 };
 Niivue.prototype.resetBriCon = function() {
-  this.volumes[0].cal_min = this.volumes[0].global_min;
-  this.volumes[0].cal_max = this.volumes[0].global_max;
+  this.volumes[0].cal_min = this.volumes[0].robust_min;
+  this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -13495,12 +13552,12 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
     Math.cos(Phi) * Math.sin(Theta),
     Math.sin(Phi)
   ];
-  let len = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2]);
-  if (len <= 0)
+  let len2 = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2]);
+  if (len2 <= 0)
     return ret;
-  ret[0] /= len;
-  ret[1] /= len;
-  ret[2] /= len;
+  ret[0] /= len2;
+  ret[1] /= len2;
+  ret[2] /= len2;
   return ret;
 };
 Niivue.prototype.clipPlaneUpdate = function(azimuthElevation) {
@@ -13571,7 +13628,7 @@ Niivue.prototype.overlayRGBA = function(volume) {
   return imgRGBA;
 };
 Niivue.prototype.vox2mm = function(XYZ, mtx) {
-  let sform = clone(mtx);
+  let sform = clone$1(mtx);
   transpose(sform, sform);
   let pos = fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
   transformMat4(pos, pos, sform);
@@ -13832,8 +13889,10 @@ Niivue.prototype.init = async function() {
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
+  this.pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
   let volumeRenderShader = new NiivueShader3D(this.renderShader);
   volumeRenderShader.mvpUniformName = "mvpMtx";
+  volumeRenderShader.matRASUniformName = "matRAS";
   volumeRenderShader.rayDirUniformName = "rayDir";
   volumeRenderShader.clipPlaneUniformName = "clipPlane";
   this.volumeObject3D.renderShaders.push(volumeRenderShader);
@@ -13877,7 +13936,9 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
   let outTexture = null;
-  let mtx = clone(overlayItem.toRAS);
+  if (this.crosshairs3D !== null)
+    this.crosshairs3D.mm[0] = NaN;
+  let mtx = clone$1(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
     this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
@@ -13895,11 +13956,12 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.renderShader.use(this.gl);
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox2);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale2);
-    let volumeRenderShader = new NiivueShader3D(this.renderShader);
+    let volumeRenderShader = this.renderShader;
+    let pickingShader = this.pickingShader;
     volumeRenderShader.mvpUniformName = "mvpMtx";
+    volumeRenderShader.matRASUniformName = "matRAS";
     volumeRenderShader.rayDirUniformName = "rayDir";
     volumeRenderShader.clipPlaneUniformName = "clipPlane";
-    let pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -13908,7 +13970,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     pickingShader.rayDirUniformName = "rayDir";
     pickingShader.clipPlaneUniformName = "clipPlane";
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale2);
-    this.volumeObject3D.pickingShader = pickingShader;
+    if (this.volumeObject3D.pickingShader === null)
+      this.volumeObject3D.pickingShader = pickingShader;
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
     console.log(this.volumeObject3D);
   } else {
@@ -14293,7 +14356,7 @@ Niivue.prototype.drawText = function(xy, str, scale = 1) {
   if (this.opts.textHeight <= 0)
     return;
   this.fontShader.use(this.gl);
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(this.fontShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
   this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], this.opts.crosshairColor);
@@ -14427,7 +14490,7 @@ Niivue.prototype.calculateMvpMatrix = function(object3D) {
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = create$2();
-  let scale = 0.7 * object3D.furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
+  let scale = 0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
   if (whratio < 1)
     ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, 0.01, scale * 8);
   else
@@ -14436,21 +14499,34 @@ Niivue.prototype.calculateMvpMatrix = function(object3D) {
   modelMatrix[0] = -1;
   let translateVec3 = fromValues$1(0, 0, -scale * 1.8);
   translate(modelMatrix, modelMatrix, translateVec3);
-  translate(modelMatrix, modelMatrix, object3D.position);
+  translate(modelMatrix, modelMatrix, this.volumeObject3D.position);
   rotateX(modelMatrix, modelMatrix, deg2rad(270 - this.scene.renderElevation));
   rotateZ(modelMatrix, modelMatrix, deg2rad(this.scene.renderAzimuth - 180));
+  translate(modelMatrix, modelMatrix, this.volumeObject3D.originNegate);
   let modelViewProjectionMatrix = create$2();
   multiply$1(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   return modelViewProjectionMatrix;
 };
-Niivue.prototype.calculateRayDirection = function(mvpMatrix) {
+Niivue.prototype.calculateRayDirection = function() {
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+  }
+  const modelMatrix = create$2();
+  modelMatrix[0] = -1;
+  rotateX(modelMatrix, modelMatrix, deg2rad(270 - this.scene.renderElevation));
+  rotateZ(modelMatrix, modelMatrix, deg2rad(this.scene.renderAzimuth - 180));
+  let oblique = clone$1(this.back.obliqueRAS);
+  multiply$1(modelMatrix, modelMatrix, oblique);
+  let projectionMatrix = fromValues$2(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1);
+  let mvpMatrix = create$2();
+  multiply$1(mvpMatrix, projectionMatrix, modelMatrix);
   var inv = create$2();
   invert(inv, mvpMatrix);
   var rayDir4 = fromValues(0, 0, -1, 1);
   transformMat4(rayDir4, rayDir4, inv);
   let rayDir = fromValues$1(rayDir4[0], rayDir4[1], rayDir4[2]);
   normalize(rayDir, rayDir);
-  const tiny = 1e-5;
+  const tiny = 5e-5;
   if (Math.abs(rayDir[0]) < tiny)
     rayDir[0] = tiny;
   if (Math.abs(rayDir[1]) < tiny)
@@ -14482,7 +14558,7 @@ Niivue.prototype.draw3D = function() {
     m = this.calculateMvpMatrix(object3D);
     this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
     if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection(m);
+      let rayDir = this.calculateRayDirection();
       this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
     }
     if (pickingShader.clipPlaneUniformName) {
@@ -14511,8 +14587,6 @@ Niivue.prototype.draw3D = function() {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
     console.log("base object selected");
   }
-  console.log(this.selectedObjectId);
-  this.drawCrosshairs(true);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -14545,11 +14619,14 @@ Niivue.prototype.draw3D = function() {
       this.gl.disable(this.gl.CULL_FACE);
     }
     m = this.calculateMvpMatrix(object3D);
-    let rayDir = this.calculateRayDirection(m);
+    let rayDir = this.calculateRayDirection();
     for (const shader of object3D.renderShaders) {
       shader.use(this.gl);
       if (shader.mvpUniformName) {
         this.gl.uniformMatrix4fv(shader.uniforms[shader.mvpUniformName], false, m);
+      }
+      if (shader.matRASUniformName) {
+        this.gl.uniformMatrix4fv(shader.uniforms[shader.matRASUniformName], false, this.back.matRAS);
       }
       if (shader.rayDirUniformName) {
         this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
@@ -14560,19 +14637,29 @@ Niivue.prototype.draw3D = function() {
       this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     }
   }
-  this.drawCrosshairs(false);
+  this.drawCrosshairs3D(true, 1);
+  this.drawCrosshairs3D(false, 0.35);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
   this.sync();
   return posString;
 };
-Niivue.prototype.drawCrosshairs = function(isOpaque = true) {
+Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
-  this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, this.volumeObject3D.extentsMin, this.volumeObject3D.extentsMax, Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50, 1));
-  this.crosshairs3D.isPickable = false;
-  this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
-  this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
-  this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
+  if (this.crosshairs3D === null || this.crosshairs3D.mm[0] !== mm[0] || this.crosshairs3D.mm[1] !== mm[1] || this.crosshairs3D.mm[2] !== mm[2]) {
+    if (this.crosshairs3D !== null) {
+      gl.deleteBuffer(this.crosshairs3D.indexBuffer);
+      gl.deleteBuffer(this.crosshairs3D.vertexBuffer);
+    }
+    let radius = Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3]);
+    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, this.volumeObject3D.extentsMin, this.volumeObject3D.extentsMax, radius);
+    this.crosshairs3D.isPickable = false;
+    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    this.crosshairs3D.mm = mm;
+    this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
+    this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
+  }
   let crosshairsShader = new NiivueShader3D(this.surfaceShader);
   crosshairsShader.mvpUniformName = "mvpMtx";
   this.crosshairs3D.renderShaders.push(crosshairsShader);
@@ -14591,16 +14678,16 @@ Niivue.prototype.drawCrosshairs = function(isOpaque = true) {
   gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, m);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
   gl.enable(gl.DEPTH_TEST);
-  let color = [];
-  if (isOpaque) {
+  let color = [...this.opts.crosshairColor];
+  if (isDepthTest) {
     gl.disable(gl.BLEND);
-    gl.depthFunc(gl.LESS);
-    color = [0, 0, 1, 1];
+    gl.depthFunc(gl.GREATER);
+    color[3] = alpha;
   } else {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
-    color = [0, 0, 1, 0.2];
+    color[3] = alpha;
   }
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
   {
@@ -14609,6 +14696,9 @@ Niivue.prototype.drawCrosshairs = function(isOpaque = true) {
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 };
 Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);
@@ -14619,7 +14709,7 @@ Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1)
     return frac;
-  let sform = clone(this.volumes[volIdx].matRAS);
+  let sform = clone$1(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   invert(sform, sform);
   transformMat4(mm4, mm4, sform);
@@ -14647,7 +14737,7 @@ Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
 Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
   let pos = fromValues(frac[0], frac[1], frac[2], 1);
   let dim = fromValues(this.volumes[volIdx].dimsRAS[1], this.volumes[volIdx].dimsRAS[2], this.volumes[volIdx].dimsRAS[3], 1);
-  let sform = clone(this.volumes[volIdx].matRAS);
+  let sform = clone$1(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   mul(pos, pos, dim);
   let shim = fromValues(-0.5, -0.5, -0.5, 0);
