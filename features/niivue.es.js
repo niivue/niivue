@@ -10966,7 +10966,8 @@ NVImage.prototype.getValue = function(x, y, z) {
     let vx = 3 * (x + y * nx + z * nx * ny);
     return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
   }
-  return this.img[x + y * nx + z * nx * ny];
+  let i = this.img[x + y * nx + z * nx * ny];
+  return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 function getExtents(positions) {
   const min2 = positions.slice(0, 3);
