@@ -154,7 +154,7 @@ export var NVImage = function (
     this.hdr.affine = affine;
   }
   affineOK = isAffineOK(this.hdr.affine);
-  if (affineOK) {
+  if (!affineOK) {
     console.log("Defective NIfTI: spatial transform does not make sense");
     let x = this.hdr.pixDims[1];
     let y = this.hdr.pixDims[2];
@@ -171,6 +171,7 @@ export var NVImage = function (
       [0, 0, z, 0],
       [0, 0, 0, 1],
     ];
+    this.hdr.affine = affine;
   } //defective affine
 
   let imgRaw = null;
