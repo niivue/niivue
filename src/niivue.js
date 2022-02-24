@@ -1760,8 +1760,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let orientShader = this.orientShaderU;
   if (hdr.datatypeCode === 2) {
     // raw input data
-    if (hdr.intent_code === 1002)
-      orientShader = this.orientShaderAtlasU;
+    if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU;
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       1,
@@ -1955,7 +1954,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       );
       //this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
-}
+    }
   } else
     blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
   orientShader.use(this.gl);
@@ -1975,13 +1974,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
   if (hdr.intent_code === 1002) {
-    let x = 1.0/this.back.dims[1]
-    if (!this.opts.isAtlasOutline)
-      x = -x;
+    let x = 1.0 / this.back.dims[1];
+    if (!this.opts.isAtlasOutline) x = -x;
     this.gl.uniform3fv(orientShader.uniforms["xyzFrac"], [
       x,
-      1.0/this.back.dims[2],
-      1.0/this.back.dims[3]
+      1.0 / this.back.dims[2],
+      1.0 / this.back.dims[3],
     ]);
   }
   log.debug("back dims: ", this.back.dims);
@@ -2452,25 +2450,15 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
 
 Niivue.prototype.updateInterpolation = function (layer) {
   let interp = this.gl.LINEAR;
-  if (this.opts.isNearestInterpolation)
-    interp = this.gl.NEAREST;
-  if (layer === 0) //background
+  if (this.opts.isNearestInterpolation) interp = this.gl.NEAREST;
+  if (layer === 0)
+    //background
     this.gl.activeTexture(this.gl.TEXTURE0);
-  else
-    this.gl.activeTexture(this.gl.TEXTURE2);
-  this.gl.texParameteri(
-    this.gl.TEXTURE_3D,
-    this.gl.TEXTURE_MIN_FILTER,
-    interp
-  );
-  this.gl.texParameteri(
-    this.gl.TEXTURE_3D,
-    this.gl.TEXTURE_MAG_FILTER,
-    interp
-  );
+  else this.gl.activeTexture(this.gl.TEXTURE2);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
   let numLayers = this.volumes.length;
-}
-
+};
 
 Niivue.prototype.setAtlasOutline = function (isOutline) {
   this.opts.isAtlasOutline = isOutline;
@@ -2483,8 +2471,7 @@ Niivue.prototype.setInterpolation = function (isNearest) {
   let numLayers = this.volumes.length;
   if (numLayers < 1) return;
   this.updateInterpolation(0);
-  if (numLayers > 1)
-    this.updateInterpolation(1);
+  if (numLayers > 1) this.updateInterpolation(1);
   this.drawScene();
 }; // setInterpolation()
 

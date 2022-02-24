@@ -314,7 +314,7 @@ uniform highp sampler3D intensityVol;
 `;
 
 //uniform vec2 canvasWidthHeight;
-export var fragOrientShaderAtlas= `#line 309
+export var fragOrientShaderAtlas = `#line 309
 precision highp int;
 precision highp float;
 in vec2 TexCoord;

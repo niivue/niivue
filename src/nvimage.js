@@ -802,7 +802,7 @@ NVImage.prototype.getValue = function (x, y, z) {
     );
   }
   let i = this.img[x + y * nx + z * nx * ny];
-  return (this.hdr.scl_slope * i) + this.hdr.scl_inter;
+  return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 
 /**
