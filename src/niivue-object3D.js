@@ -46,13 +46,17 @@ export var NiivueObject3D = function (
 NiivueObject3D.generateCrosshairs = function (
   gl,
   id,
-  furthestVertexFromOrigin,
+    xyzMM,
+    xyzMin,
+    xyzMax,
   radius,
   sides = 20
 ) {
   let geometry = this.generateCrosshairsGeometry(
     gl,
-    furthestVertexFromOrigin,
+    xyzMM,
+    xyzMin,
+    xyzMax,
     radius,
     sides
   );
@@ -68,7 +72,9 @@ NiivueObject3D.generateCrosshairs = function (
 // not included in public docs
 NiivueObject3D.generateCrosshairsGeometry = function (
   gl,
-  furthestVertexFromOrigin,
+    xyzMM,
+    xyzMin,
+    xyzMax,
   radius,
   sides = 20
 ) {
@@ -80,15 +86,9 @@ NiivueObject3D.generateCrosshairsGeometry = function (
     vertices,
     indices,
     0,
-    furthestVertexFromOrigin,
-    radius,
-    sides
-  );
-  NiivueObject3D.makeCylinder(
-    vertices,
-    indices,
-    1,
-    furthestVertexFromOrigin,
+    xyzMM,
+    xyzMin,
+    xyzMax,
     radius,
     sides
   );
@@ -96,11 +96,22 @@ NiivueObject3D.generateCrosshairsGeometry = function (
     vertices,
     indices,
     2,
-    furthestVertexFromOrigin,
+    xyzMM,
+    xyzMin,
+    xyzMax,
     radius,
     sides
   );
-
+  NiivueObject3D.makeCylinder(
+    vertices,
+    indices,
+    1,
+    xyzMM,
+    xyzMin,
+    xyzMax,
+    radius,
+    sides
+  );
   let vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
@@ -121,65 +132,74 @@ NiivueObject3D.generateCrosshairsGeometry = function (
   };
 };
 
-// modified from https://github.com/nickdesaulniers/prims/blob/master/cylinder.js
 NiivueObject3D.makeCylinder = function (
   vertices,
   indices,
   axis,
-  cylinderLength,
+    xyzMMi,
+    xyzMin,
+    xyzMax,
   radius,
   sides = 20
 ) {
   var stepTheta = (2 * Math.PI) / sides;
   var verticesPerCap = 9 * sides;
   // var radius = 0.05;
+  var xyzMM = xyzMMi.slice();
   var theta = 0;
   var i = 0;
-
   let v0 = vertices.length;
-  let xOffset = 0;
-  let yOffset = 1;
-  let zOffset = 2;
-  let vals = null;
-  switch (axis) {
-    case 1:
-      yOffset = 0;
-      zOffset = 1;
-      xOffset = 2;
-      break;
-    case 2:
-      zOffset = 0;
-      xOffset = 1;
+  //default: axis = 0, X goes from far left to far right
+   let constrain = 0;
+   let xOffset = 1;
+   let yOffset = 2;
+   let zOffset = 0;
+   if (axis === 0) {
+   }
+   if (axis === 1) { //Y goes from posterior to anteiro
+      constrain = 1;
+      xOffset = 0;
+      yOffset = 1;
+      zOffset = 2;
+   }
+   if (axis === 2) { //Z goes from inferior to superior
+      constrain = 2;
+      xOffset = 0;
       yOffset = 2;
-      break;
-  }
-
+      zOffset = 1;
+   }
+   
+   let cylinderMin = xyzMin[constrain];
+   let cylinderMax = xyzMax[constrain];
+   let mm = xyzMM;
+   mm[constrain] = 0;
+  let vals = null;
   // Top Cap
   for (; i < verticesPerCap; i += 9) {
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(cylinderLength);
+    vals.push(cylinderMax);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i] = vals[xOffset];
-    vertices[v0 + i + 1] = vals[yOffset];
-    vertices[v0 + i + 2] = vals[zOffset];
+    vertices[v0 + i] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 1] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 2] = vals[zOffset] + mm[2];
     theta += stepTheta;
 
     vals = [];
     vals.push(0.0);
-    vals.push(cylinderLength);
+    vals.push(cylinderMax);
     vals.push(0.0);
-    vertices[v0 + i + 3] = vals[xOffset];
-    vertices[v0 + i + 4] = vals[yOffset];
-    vertices[v0 + i + 5] = vals[zOffset];
+    vertices[v0 + i + 3] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 4] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 5] = vals[zOffset] + mm[2];
 
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(cylinderLength);
+    vals.push(cylinderMax);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i + 6] = vals[xOffset];
-    vertices[v0 + i + 7] = vals[yOffset];
-    vertices[v0 + i + 8] = vals[zOffset];
+    vertices[v0 + i + 6] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 7] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 8] = vals[zOffset] + mm[2];
   }
 
   // Bottom Cap
@@ -187,28 +207,28 @@ NiivueObject3D.makeCylinder = function (
   for (; i < verticesPerCap * 2; i += 9) {
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(-cylinderLength);
+    vals.push(cylinderMin);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i + 6] = vals[xOffset];
-    vertices[v0 + i + 7] = vals[yOffset];
-    vertices[v0 + i + 8] = vals[zOffset];
+    vertices[v0 + i + 6] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 7] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 8] = vals[zOffset] + mm[2];
     theta += stepTheta;
 
     vals = [];
     vals.push(0.0);
-    vals.push(-cylinderLength);
+    vals.push(cylinderMin);
     vals.push(0.0);
-    vertices[v0 + i + 3] = vals[xOffset];
-    vertices[v0 + i + 4] = vals[yOffset];
-    vertices[v0 + i + 5] = vals[zOffset];
+    vertices[v0 + i + 3] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 4] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 5] = vals[zOffset] + mm[2];
 
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(-cylinderLength);
+    vals.push(cylinderMin);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i] = vals[xOffset];
-    vertices[v0 + i + 1] = vals[yOffset];
-    vertices[v0 + i + 2] = vals[zOffset];
+    vertices[v0 + i] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 1] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 2] = vals[zOffset] + mm[2];
   }
 
   for (var j = 0; j < sides; ++j) {
