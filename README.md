@@ -109,11 +109,6 @@ export default {
 
 </canvas>
 </template>
-
-<style>
-#app {
-}
-</style>
 ```
 
 ## React example
@@ -121,7 +116,7 @@ export default {
 install: `npm i @niivue/niivue`
 
 ```js
-import { useRef, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { Niivue } from '@niivue/niivue'
 
 const NiiVue = ({ imageUrl }) => {
