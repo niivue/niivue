@@ -1,7 +1,7 @@
 export var vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
-in vec3 texCoords;
+layout(location=1) in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
 
@@ -470,36 +470,14 @@ void main() {
 	color = surfaceColor;
 }`;
 
-export var vertDepthPickingShader = `#version 300 es
-#line 414
-layout(location=0) in vec3 pos;
-in vec3 texCoords;
-uniform mat4 mvpMtx;
-out vec3 posColor;
-void main(void) {
-	gl_Position = mvpMtx * vec4(pos, 1.0);
-	posColor = texCoords;
-}`;
-
 export var fragDepthPickingShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform int id;
-in vec3 posColor;
+in vec3 vColor;
 out vec4 color;
 void main() {
-	color = vec4(posColor, float(id & 255) / 255.0);
-}`;
-
-export var vertVolumePickingShader = `#version 300 es
-#line 4
-layout(location=0) in vec3 pos;
-in vec3 texCoords;
-uniform mat4 mvpMtx;
-out vec3 posColor;
-void main(void) {
-	gl_Position = mvpMtx * vec4(pos, 1.0);//mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	posColor = texCoords; //pos;
+	color = vec4(vColor, float(id & 255) / 255.0);
 }`;
 
 export var fragVolumePickingShader = `#version 300 es
@@ -514,7 +492,7 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 uniform int id;
-in vec3 posColor;
+in vec3 vColor;
 out vec4 fColor;
 vec3 GetBackPosition(vec3 startPositionTex) {
 	//texture space is 0..1 in each dimension, volScale adjusts for relative field of view
@@ -554,7 +532,7 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-	vec3 start = posColor;
+	vec3 start = vColor;
 	vec3 backPosition = GetBackPosition(start);
   vec3 dir = backPosition - start;
   float len = length(dir);
@@ -597,5 +575,5 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	if (samplePos.a > len) return;
-	fColor = vec4(posColor, float(id & 255) / 255.0);
+	fColor = vec4(vColor, float(id & 255) / 255.0);
 }`;

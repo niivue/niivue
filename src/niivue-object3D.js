@@ -141,7 +141,6 @@ NiivueObject3D.makeCylinder = function (
   let yOffset = 1;
   let zOffset = 2;
   let vals = null;
-
   switch (axis) {
     case 1:
       yOffset = 0;

@@ -17,9 +17,7 @@ import {
   fragRGBOrientShader,
   vertSurfaceShader,
   fragSurfaceShader,
-  vertDepthPickingShader,
   fragDepthPickingShader,
-  vertVolumePickingShader,
   fragVolumePickingShader,
 } from "./shader-srcs.js";
 import * as cmaps from "./cmaps";
@@ -1494,7 +1492,7 @@ Niivue.prototype.init = async function () {
   this.volumeObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
   let pickingShader = new Shader(
     this.gl,
-    vertVolumePickingShader,
+    vertRenderShader,
     fragVolumePickingShader
   );
   pickingShader.use(this.gl);
@@ -1576,7 +1574,7 @@ Niivue.prototype.init = async function () {
 
   this.pickingSurfaceShader = new Shader(
     this.gl,
-    vertDepthPickingShader,
+    vertRenderShader,
     fragDepthPickingShader
   );
 
@@ -1666,7 +1664,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
     let pickingShader = new Shader(
       this.gl,
-      vertVolumePickingShader,
+      vertRenderShader,
       fragVolumePickingShader
     );
     pickingShader.use(this.gl);
