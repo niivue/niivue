@@ -848,6 +848,55 @@ uniform highp isampler3D intensityVol;
 var fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
 `;
+var fragOrientShaderAtlas = `#line 309
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float layer;
+uniform float numLayers;
+uniform highp sampler2D colormap;
+uniform lowp sampler3D blend3D;
+uniform float opacity;
+uniform vec3 xyzFrac;
+uniform mat4 mtx;
+void main(void) {
+ vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
+ uint idx = texture(intensityVol, vx.xyz).r;
+ FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+ if (idx == uint(0))
+   return;
+ if (xyzFrac.x > 0.0) { //outline
+   vx = vec4(TexCoord.x+xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+   uint R = texture(intensityVol, vx.xyz).r;
+   vx = vec4(TexCoord.x-xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+   uint L = texture(intensityVol, vx.xyz).r;
+   vx = vec4(TexCoord.x, TexCoord.y+xyzFrac.y, coordZ, 1.0) * mtx;
+   uint A = texture(intensityVol, vx.xyz).r;
+   vx = vec4(TexCoord.x, TexCoord.y-xyzFrac.y, coordZ, 1.0) * mtx;
+   uint P = texture(intensityVol, vx.xyz).r;
+   vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzFrac.z, 1.0) * mtx;
+   uint S = texture(intensityVol, vx.xyz).r;
+   vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzFrac.z, 1.0) * mtx;
+   uint I = texture(intensityVol, vx.xyz).r;
+   if ((idx == R) && (idx == L) && (idx == A) && (idx == P) && (idx == S) && (idx == I))
+     return;
+ }
+ idx = ((idx - uint(1)) % uint(100))+uint(1);
+ float fx = (float(idx)+0.5) / 256.0;
+ float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
+ FragColor = texture(colormap, vec2(fx, y)).rgba;
+ FragColor.a *= opacity;
+ if (layer < 2.0) return;
+ vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
+ vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+ // https://en.wikipedia.org/wiki/Alpha_compositing
+ float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+ if (aout <= 0.0) return;
+ FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+ FragColor.a = aout;
+}`;
 var fragOrientShader = `#line 309
 precision highp int;
 precision highp float;
@@ -903,7 +952,8 @@ uniform float opacity;
 uniform mat4 mtx;
 uniform bool hasAlpha;
 void main(void) {
- uvec4 aColor = texture(intensityVol, vec3(TexCoord.xy, coordZ));
+ vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+ uvec4 aColor = texture(intensityVol, vx.xyz);
  FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
  if (!hasAlpha)
    FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
@@ -10534,7 +10584,7 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     this.hdr.affine = affine;
   }
   affineOK = isAffineOK(this.hdr.affine);
-  if (affineOK) {
+  if (!affineOK) {
     console.log("Defective NIfTI: spatial transform does not make sense");
     let x = this.hdr.pixDims[1];
     let y = this.hdr.pixDims[2];
@@ -10548,6 +10598,13 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     this.hdr.pixDims[1] = x;
     this.hdr.pixDims[2] = y;
     this.hdr.pixDims[3] = z;
+    const affine = [
+      [x, 0, 0, 0],
+      [0, y, 0, 0],
+      [0, 0, z, 0],
+      [0, 0, 0, 1]
+    ];
+    this.hdr.affine = affine;
   }
   let imgRaw = null;
   if (nifti.exports.isCompressed(dataBuffer)) {
@@ -10966,7 +11023,8 @@ NVImage.prototype.getValue = function(x, y, z) {
     let vx = 3 * (x + y * nx + z * nx * ny);
     return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
   }
-  return this.img[x + y * nx + z * nx * ny];
+  let i = this.img[x + y * nx + z * nx * ny];
+  return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 function getExtents(positions) {
   const min2 = positions.slice(0, 3);
@@ -12809,6 +12867,8 @@ const Niivue = function(options = {}) {
     clipPlaneHotKey: "KeyC",
     viewModeHotKey: "KeyV",
     keyDebounceTime: 50,
+    isNearestInterpolation: false,
+    isAtlasOutline: false,
     isRadiologicalConvention: false,
     logging: false
   };
@@ -12823,6 +12883,7 @@ const Niivue = function(options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.passThroughShader = null;
+  this.orientShaderAtlasU = null;
   this.orientShaderU = null;
   this.orientShaderI = null;
   this.orientShaderF = null;
@@ -13698,6 +13759,7 @@ Niivue.prototype.init = async function() {
   this.colorbarShader.use(this.gl);
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
   this.passThroughShader = new Shader(this.gl, vertPassThroughShader, fragPassThroughShader);
+  this.orientShaderAtlasU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas));
   this.orientShaderU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader));
   this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
   this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
@@ -13800,6 +13862,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
   let orientShader = this.orientShaderU;
   if (hdr.datatypeCode === 2) {
+    if (hdr.intent_code === 1002)
+      orientShader = this.orientShaderAtlasU;
     this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
     this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED_INTEGER, this.gl.UNSIGNED_BYTE, img);
   } else if (hdr.datatypeCode === 4) {
@@ -13865,6 +13929,16 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
+  if (hdr.intent_code === 1002) {
+    let x = 1 / this.back.dims[1];
+    if (!this.opts.isAtlasOutline)
+      x = -x;
+    this.gl.uniform3fv(orientShader.uniforms["xyzFrac"], [
+      x,
+      1 / this.back.dims[2],
+      1 / this.back.dims[3]
+    ]);
+  }
   log.debug("back dims: ", this.back.dims);
   for (let i = 0; i < this.back.dims[3]; i++) {
     let coordZ = 1 / this.back.dims[3] * (i + 0.5);
@@ -13889,6 +13963,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
+  this.updateInterpolation(layer);
 };
 Niivue.prototype.colorMaps = function(sort = true) {
   let cm = [];
@@ -14158,6 +14233,33 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale = 1) {
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= 0.5 * this.textWidth(size, str);
   this.drawText(xy, str, scale);
+};
+Niivue.prototype.updateInterpolation = function(layer) {
+  let interp = this.gl.LINEAR;
+  if (this.opts.isNearestInterpolation)
+    interp = this.gl.NEAREST;
+  if (layer === 0)
+    this.gl.activeTexture(this.gl.TEXTURE0);
+  else
+    this.gl.activeTexture(this.gl.TEXTURE2);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
+  this.volumes.length;
+};
+Niivue.prototype.setAtlasOutline = function(isOutline) {
+  this.opts.isAtlasOutline = isOutline;
+  this.updateGLVolume();
+  this.drawScene();
+};
+Niivue.prototype.setInterpolation = function(isNearest) {
+  this.opts.isNearestInterpolation = isNearest;
+  let numLayers = this.volumes.length;
+  if (numLayers < 1)
+    return;
+  this.updateInterpolation(0);
+  if (numLayers > 1)
+    this.updateInterpolation(1);
+  this.drawScene();
 };
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);

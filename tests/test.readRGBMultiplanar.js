@@ -7,14 +7,15 @@ test('readRGB multiplanar', async () => {
   await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
-      crosshairColor: [0, 0, 1, 1] // green
+      crosshairColor: [0, 0, 1, 1], // green
+			isRadiologicalConvention: true
     }
     let nv = new niivue.Niivue(opts = opts)
     await nv.attachTo('gl')
     // load one volume object in an array
     var volumeList = [
       {
-        url: "../images/ct_perfusion.nii",//"./RAS.nii.gz", "./spm152.nii.gz",
+        url: "../images/ct_perfusion.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
         volume: { hdr: null, img: null },
         name: "ct perfusion",
         colorMap: "gray",

@@ -13,6 +13,7 @@ import {
   fragOrientShaderI,
   fragOrientShaderF,
   fragOrientShader,
+  fragOrientShaderAtlas,
   fragRGBOrientShader,
   vertSurfaceShader,
   fragSurfaceShader,
@@ -74,6 +75,7 @@ export const Niivue = function (options = {}) {
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isNearestInterpolation: false,
+    isAtlasOutline: false,
     isRadiologicalConvention: false,
     logging: false,
   };
@@ -89,6 +91,7 @@ export const Niivue = function (options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.passThroughShader = null;
+  this.orientShaderAtlasU = null;
   this.orientShaderU = null;
   this.orientShaderI = null;
   this.orientShaderF = null;
@@ -1544,6 +1547,12 @@ Niivue.prototype.init = async function () {
     fragPassThroughShader
   );
 
+  this.orientShaderAtlasU = new Shader(
+    this.gl,
+    vertOrientShader,
+    fragOrientShaderU.concat(fragOrientShaderAtlas)
+  );
+
   this.orientShaderU = new Shader(
     this.gl,
     vertOrientShader,
@@ -1751,6 +1760,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let orientShader = this.orientShaderU;
   if (hdr.datatypeCode === 2) {
     // raw input data
+    if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU;
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       1,
@@ -1922,7 +1932,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     // this.calMinMax(overlayItem, imgRaw);
     overlayItem.calMinMax();
   }
-
   //blend texture
   let blendTexture = null;
   if (layer > 1) {
@@ -1949,8 +1958,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   } else
     blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
   orientShader.use(this.gl);
-  //this.selectColormap(overlayItem.colorMap)
-  //this.refreshColormaps()
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
 
@@ -1966,6 +1973,15 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
+  if (hdr.intent_code === 1002) {
+    let x = 1.0 / this.back.dims[1];
+    if (!this.opts.isAtlasOutline) x = -x;
+    this.gl.uniform3fv(orientShader.uniforms["xyzFrac"], [
+      x,
+      1.0 / this.back.dims[2],
+      1.0 / this.back.dims[3],
+    ]);
+  }
   log.debug("back dims: ", this.back.dims);
   for (let i = 0; i < this.back.dims[3]; i++) {
     //output slices
@@ -2434,34 +2450,30 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
 
 Niivue.prototype.updateInterpolation = function (layer) {
   let interp = this.gl.LINEAR;
-  if (this.opts.isNearestInterpolation)
-    interp = this.gl.NEAREST;
-  if (layer === 0) //background
+  if (this.opts.isNearestInterpolation) interp = this.gl.NEAREST;
+  if (layer === 0)
+    //background
     this.gl.activeTexture(this.gl.TEXTURE0);
-  else
-    this.gl.activeTexture(this.gl.TEXTURE2);
-  this.gl.texParameteri(
-    this.gl.TEXTURE_3D,
-    this.gl.TEXTURE_MIN_FILTER,
-    interp
-  );
-  this.gl.texParameteri(
-    this.gl.TEXTURE_3D,
-    this.gl.TEXTURE_MAG_FILTER,
-    interp
-  );
+  else this.gl.activeTexture(this.gl.TEXTURE2);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
   let numLayers = this.volumes.length;
-}
+};
+
+Niivue.prototype.setAtlasOutline = function (isOutline) {
+  this.opts.isAtlasOutline = isOutline;
+  this.updateGLVolume();
+  this.drawScene();
+}; // setAtlasOutline()
 
 Niivue.prototype.setInterpolation = function (isNearest) {
   this.opts.isNearestInterpolation = isNearest;
   let numLayers = this.volumes.length;
   if (numLayers < 1) return;
   this.updateInterpolation(0);
-  if (numLayers > 1)
-    this.updateInterpolation(1);
+  if (numLayers > 1) this.updateInterpolation(1);
   this.drawScene();
-}; // setCrosshairColor()
+}; // setInterpolation()
 
 // not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
