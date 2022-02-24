@@ -744,57 +744,7 @@ function getExtents(positions) {
  * calculate cuboid extents via pixdims * dims
  * @returns {number[]}
  */
-NVImage.prototype.method1 = function () {
-  return {
-    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
-    right: (this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
-    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
-    anterior: (this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
-    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
-    superior: (this.dimsRAS[3] / 2) * this.pixDimsRAS[3], // y
-  };
-};
 
-/**
- * calculate cuboid extents via qform
- * @returns {number[]}
- */
-NVImage.prototype.method2 = function () {
-  const affine = [];
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      affine.push(this.hdr.affine[i][j]);
-    }
-  }
-  const affineMatrix = mat.mat4.fromValues(...affine);
-  const qfac = this.hdr.dims[0] ? this.hdr.pixDims[0] : 1;
-
-  let rightTopFront = mat.vec4.fromValues(
-    this.hdr.dims[1] * this.hdr.pixDims[1],
-    this.hdr.dims[2] * this.hdr.pixDims[2],
-    qfac * this.hdr.dims[3] * this.hdr.pixDims[3],
-    1
-  );
-  // let leftBackBottom = mat.vec4.fromValues(0, 0, 0, 1);
-  let maxExtent = mat.vec4.create();
-  mat.vec4.transformMat4(maxExtent, rightTopFront, affineMatrix);
-  // let minExtent = mat.vec4.create();
-  // mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
-  return {
-    left: maxExtent[0] / 2,
-    right: 0 - maxExtent[0] / 2, // x
-    posterior: 0 - maxExtent[1] / 2,
-    anterior: maxExtent[1] / 2, // z
-    inferior: 0 - maxExtent[2] / 2,
-    superior: maxExtent[2] / 2, // y
-  };
-};
-
-/**
- * calculate cuboid extents via sform
- * @returns {number[]}
- */
-NVImage.prototype.method3 = function () {};
 
 /**
  * @param {number} id - id of 3D Object (is this the base volume or an overlay?)
@@ -802,14 +752,15 @@ NVImage.prototype.method3 = function () {};
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
-  let cuboid = this.method1();
 
-  let left = cuboid.left;
-  let right = cuboid.right;
-  let posterior = cuboid.posterior;
-  let anterior = cuboid.anterior;
-  let inferior = cuboid.inferior;
-  let superior = cuboid.superior;
+  let v000 = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
+  let v111 = this.vox2mm([this.dimsRAS[1]-1, this.dimsRAS[2]-1, this.dimsRAS[3]-1], this.matRAS);
+  let left = v000[0];
+  let right = v111[0];
+  let posterior = v000[1];
+  let anterior = v111[1];
+  let inferior = v000[2];
+  let superior = v111[2];
 
   const positions = [
     // Superior face

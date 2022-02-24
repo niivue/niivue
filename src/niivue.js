@@ -59,7 +59,7 @@ const log = new Log();
 export const Niivue = function (options = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
   this.defaults = {
-    textHeight: 0.03, // 0 for no text, fraction of canvas height
+    textHeight: 0.07, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
     crosshairWidth: 1, // 0 for no crosshairs
     backColor: [0, 0, 0, 1],
@@ -104,8 +104,8 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
-  this.scene.renderAzimuth = 110; //-45;
-  this.scene.renderElevation = 15; //-165; //15;
+  this.scene.renderAzimuth = 90; //-45;
+  this.scene.renderElevation = 0; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -1669,12 +1669,16 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.volumeObject3D.pickingShader = pickingShader;
 
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
-
+    
+    let mm = this.frac2mm(this.scene.crosshairPos)
+    //mm = [-20, 0, 30]; // <- set any value here to test
     // generate our crosshairs for the base volume
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(
       this.gl,
       1,
-      this.volumeObject3D.furthestVertexFromOrigin,
+      mm,
+      this.volumeObject3D.extentsMin,
+      this.volumeObject3D.extentsMax,
       Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
     );
     this.crosshairs3D.isPickable = false;
@@ -2741,28 +2745,9 @@ Niivue.prototype.draw3D = function () {
 
     // update crosshairs 3d position
     if (this.crosshairs3D) {
-      // this.crosshairs3D.position = [
-      //   (this.scene.crosshairPos[0] - 0.5) * this.volumeObject3D.extentsMax[0],
-      //   (this.scene.crosshairPos[1] - 0.5) * this.volumeObject3D.extentsMax[1],
-      //   (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2],
-      // ];
-      let position = [
-        (this.scene.crosshairPos[0] - 0.5) *
-          this.volumeObject3D.extentsMax[0] *
-          2,
-        (this.scene.crosshairPos[2] - 0.5) *
-          this.volumeObject3D.extentsMax[2] *
-          2,
-        (this.scene.crosshairPos[1] - 0.5) *
-          this.volumeObject3D.extentsMax[1] *
-          2,
-      ];
-      this.crosshairs3D.position = position;
-      console.log(this.volumeObject3D.extentsMax);
-      console.log(position);
-      console.log("screen crosshairs");
-      console.log(this.scene.crosshairPos);
-      // console.log(this.crosshairs3D.position);
+      let mm = this.frac2mm(this.scene.crosshairPos) 
+      //TODO: we shouldn't have to refresh layers, just redraw generateCrosshairsGeometry
+        this.refreshLayers(this.volumes[0], 0, this.volumes.length);
     }
 
     console.log("base object selected");
@@ -2955,15 +2940,6 @@ Niivue.prototype.draw3DNew = function () {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
-
-    // update crosshairs 3d position
-    if (this.crosshairs3D) {
-      this.crosshairs3D.position = [
-        this.scene.crosshairPos[0] * this.volumeObject3D.maxExtent[0],
-        this.scene.crosshairPos[1] * this.volumeObject3D.maxExtent[1],
-        this.scene.crosshairPos[2] * this.volumeObject3D.maxExtent[2],
-      ];
-    }
   }
   return;
   console.log(this.selectedObjectId);
@@ -3112,9 +3088,9 @@ Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
   //let d = overlayItem.hdr.dims;
   let dim = mat.vec4.fromValues(
-    this.volumes[volIdx].hdr.dims[1],
-    this.volumes[volIdx].hdr.dims[2],
-    this.volumes[volIdx].hdr.dims[3],
+    this.volumes[volIdx].dimsRAS[1],
+    this.volumes[volIdx].dimsRAS[2],
+    this.volumes[volIdx].dimsRAS[3],
     1
   );
   let sform = mat.mat4.clone(this.volumes[volIdx].matRAS);
