@@ -63,6 +63,7 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 }
 void main() {
   fColor = vec4(0.0,0.0,0.0,0.0);
+  //vec3 dimsRAS = vec3(textureSize(volume, 0));
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	// fColor = texture(volume, vColor.xyz);
 	// return;
