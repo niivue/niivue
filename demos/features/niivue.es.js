@@ -550,7 +550,7 @@ var mul = multiply;
 var vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
-in vec3 texCoords;
+layout(location=1) in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
 
@@ -907,7 +907,8 @@ uniform float opacity;
 uniform mat4 mtx;
 uniform bool hasAlpha;
 void main(void) {
- uvec4 aColor = texture(intensityVol, vec3(TexCoord.xy, coordZ));
+ vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+ uvec4 aColor = texture(intensityVol, vx.xyz);
  FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
  if (!hasAlpha)
    FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
@@ -947,34 +948,14 @@ out vec4 color;
 void main() {
 	color = surfaceColor;
 }`;
-var vertDepthPickingShader = `#version 300 es
-#line 414
-layout(location=0) in vec3 pos;
-in vec3 texCoords;
-uniform mat4 mvpMtx;
-out vec3 posColor;
-void main(void) {
-	gl_Position = mvpMtx * vec4(pos, 1.0);
-	posColor = texCoords;
-}`;
 var fragDepthPickingShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform int id;
-in vec3 posColor;
+in vec3 vColor;
 out vec4 color;
 void main() {
-	color = vec4(posColor, float(id & 255) / 255.0);
-}`;
-var vertVolumePickingShader = `#version 300 es
-#line 4
-layout(location=0) in vec3 pos;
-in vec3 texCoords;
-uniform mat4 mvpMtx;
-out vec3 posColor;
-void main(void) {
-	gl_Position = mvpMtx * vec4(pos, 1.0);//mvpMtx * vec4(2.0 * (pos.xyz - 0.5), 1.0);
-	posColor = texCoords; //pos;
+	color = vec4(vColor, float(id & 255) / 255.0);
 }`;
 var fragVolumePickingShader = `#version 300 es
 #line 15
@@ -988,7 +969,7 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 uniform int id;
-in vec3 posColor;
+in vec3 vColor;
 out vec4 fColor;
 vec3 GetBackPosition(vec3 startPositionTex) {
 	//texture space is 0..1 in each dimension, volScale adjusts for relative field of view
@@ -1028,7 +1009,7 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     return samplePos;
 }
 void main() {
-	vec3 start = posColor;
+	vec3 start = vColor;
 	vec3 backPosition = GetBackPosition(start);
   vec3 dir = backPosition - start;
   float len = length(dir);
@@ -1071,7 +1052,7 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	if (samplePos.a > len) return;
-	fColor = vec4(posColor, float(id & 255) / 255.0);
+	fColor = vec4(vColor, float(id & 255) / 255.0);
 }`;
 const min$P = 0;
 const max$P = 0;
@@ -5578,16 +5559,16 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = 
   this.extentsMin = [];
   this.extentsMax = [];
 };
-NiivueObject3D.generateCrosshairs = function(gl, id, furthestVertexFromOrigin, radius, sides = 20) {
-  let geometry = this.generateCrosshairsGeometry(gl, furthestVertexFromOrigin, radius, sides);
+NiivueObject3D.generateCrosshairs = function(gl, id, xyzMM, xyzMin, xyzMax, radius, sides = 20) {
+  let geometry = this.generateCrosshairsGeometry(gl, xyzMM, xyzMin, xyzMax, radius, sides);
   return new NiivueObject3D(id, geometry.vertexBuffer, gl.TRIANGLES, geometry.indexCount, geometry.indexBuffer);
 };
-NiivueObject3D.generateCrosshairsGeometry = function(gl, furthestVertexFromOrigin, radius, sides = 20) {
+NiivueObject3D.generateCrosshairsGeometry = function(gl, xyzMM, xyzMin, xyzMax, radius, sides = 20) {
   let vertices = [];
   let indices = [];
-  NiivueObject3D.makeCylinder(vertices, indices, 0, furthestVertexFromOrigin, radius, sides);
-  NiivueObject3D.makeCylinder(vertices, indices, 1, furthestVertexFromOrigin, radius, sides);
-  NiivueObject3D.makeCylinder(vertices, indices, 2, furthestVertexFromOrigin, radius, sides);
+  NiivueObject3D.makeCylinder(vertices, indices, 0, xyzMM, xyzMin, xyzMax, radius, sides);
+  NiivueObject3D.makeCylinder(vertices, indices, 2, xyzMM, xyzMin, xyzMax, radius, sides);
+  NiivueObject3D.makeCylinder(vertices, indices, 1, xyzMM, xyzMin, xyzMax, radius, sides);
   let vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
@@ -5600,76 +5581,82 @@ NiivueObject3D.generateCrosshairsGeometry = function(gl, furthestVertexFromOrigi
     indexCount: indices.length
   };
 };
-NiivueObject3D.makeCylinder = function(vertices, indices, axis, cylinderLength, radius, sides = 20) {
+NiivueObject3D.makeCylinder = function(vertices, indices, axis, xyzMMi, xyzMin, xyzMax, radius, sides = 20) {
   var stepTheta = 2 * Math.PI / sides;
   var verticesPerCap = 9 * sides;
+  var xyzMM = xyzMMi.slice();
   var theta = 0;
   var i = 0;
   let v0 = vertices.length;
-  let xOffset = 0;
-  let yOffset = 1;
-  let zOffset = 2;
-  let vals = null;
-  switch (axis) {
-    case 1:
-      yOffset = 0;
-      zOffset = 1;
-      xOffset = 2;
-      break;
-    case 2:
-      zOffset = 0;
-      xOffset = 1;
-      yOffset = 2;
-      break;
+  let constrain = 0;
+  let xOffset = 1;
+  let yOffset = 2;
+  let zOffset = 0;
+  if (axis === 1) {
+    constrain = 1;
+    xOffset = 0;
+    yOffset = 1;
+    zOffset = 2;
   }
+  if (axis === 2) {
+    constrain = 2;
+    xOffset = 0;
+    yOffset = 2;
+    zOffset = 1;
+  }
+  let cylinderMin = xyzMin[constrain];
+  let cylinderMax = xyzMax[constrain];
+  let mm = xyzMM;
+  mm[constrain] = 0;
+  let vals = null;
   for (; i < verticesPerCap; i += 9) {
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(cylinderLength);
+    vals.push(cylinderMax);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i] = vals[xOffset];
-    vertices[v0 + i + 1] = vals[yOffset];
-    vertices[v0 + i + 2] = vals[zOffset];
+    vertices[v0 + i] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 1] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 2] = vals[zOffset] + mm[2];
     theta += stepTheta;
     vals = [];
     vals.push(0);
-    vals.push(cylinderLength);
+    vals.push(cylinderMax);
     vals.push(0);
-    vertices[v0 + i + 3] = vals[xOffset];
-    vertices[v0 + i + 4] = vals[yOffset];
-    vertices[v0 + i + 5] = vals[zOffset];
+    vertices[v0 + i + 3] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 4] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 5] = vals[zOffset] + mm[2];
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(cylinderLength);
+    vals.push(cylinderMax);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i + 6] = vals[xOffset];
-    vertices[v0 + i + 7] = vals[yOffset];
-    vertices[v0 + i + 8] = vals[zOffset];
+    vertices[v0 + i + 6] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 7] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 8] = vals[zOffset] + mm[2];
   }
   theta = 0;
   for (; i < verticesPerCap * 2; i += 9) {
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(-cylinderLength);
+    vals.push(cylinderMin);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i + 6] = vals[xOffset];
-    vertices[v0 + i + 7] = vals[yOffset];
-    vertices[v0 + i + 8] = vals[zOffset];
+    vertices[v0 + i + 6] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 7] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 8] = vals[zOffset] + mm[2];
     theta += stepTheta;
     vals = [];
     vals.push(0);
-    vals.push(-cylinderLength);
+    vals.push(cylinderMin);
     vals.push(0);
-    vertices[v0 + i + 3] = vals[xOffset];
-    vertices[v0 + i + 4] = vals[yOffset];
-    vertices[v0 + i + 5] = vals[zOffset];
+    vertices[v0 + i + 3] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 4] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 5] = vals[zOffset] + mm[2];
     vals = [];
     vals.push(radius * Math.cos(theta));
-    vals.push(-cylinderLength);
+    vals.push(cylinderMin);
     vals.push(radius * Math.sin(theta));
-    vertices[v0 + i] = vals[xOffset];
-    vertices[v0 + i + 1] = vals[yOffset];
-    vertices[v0 + i + 2] = vals[zOffset];
+    vertices[v0 + i] = vals[xOffset] + mm[0];
+    vertices[v0 + i + 1] = vals[yOffset] + mm[1];
+    vertices[v0 + i + 2] = vals[zOffset] + mm[2];
   }
   for (var j = 0; j < sides; ++j) {
     for (let k = 0; k < 3; ++k, ++i) {
@@ -11024,47 +11011,15 @@ function getExtents(positions) {
   let furthestVertexFromOrigin = Math.sqrt(mxDx);
   return { min: min2, max: max2, furthestVertexFromOrigin };
 }
-NVImage.prototype.method1 = function() {
-  return {
-    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
-    right: this.dimsRAS[1] / 2 * this.pixDimsRAS[1],
-    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
-    anterior: this.dimsRAS[2] / 2 * this.pixDimsRAS[2],
-    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
-    superior: this.dimsRAS[3] / 2 * this.pixDimsRAS[3]
-  };
-};
-NVImage.prototype.method2 = function() {
-  const affine = [];
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      affine.push(this.hdr.affine[i][j]);
-    }
-  }
-  const affineMatrix = fromValues$2(...affine);
-  const qfac = this.hdr.dims[0] ? this.hdr.pixDims[0] : 1;
-  let rightTopFront = fromValues(this.hdr.dims[1] * this.hdr.pixDims[1], this.hdr.dims[2] * this.hdr.pixDims[2], qfac * this.hdr.dims[3] * this.hdr.pixDims[3], 1);
-  let maxExtent = create();
-  transformMat4(maxExtent, rightTopFront, affineMatrix);
-  return {
-    left: maxExtent[0] / 2,
-    right: 0 - maxExtent[0] / 2,
-    posterior: 0 - maxExtent[1] / 2,
-    anterior: maxExtent[1] / 2,
-    inferior: 0 - maxExtent[2] / 2,
-    superior: maxExtent[2] / 2
-  };
-};
-NVImage.prototype.method3 = function() {
-};
 NVImage.prototype.toNiivueObject3D = function(id, gl) {
-  let cuboid = this.method1();
-  let left = cuboid.left;
-  let right = cuboid.right;
-  let posterior = cuboid.posterior;
-  let anterior = cuboid.anterior;
-  let inferior = cuboid.inferior;
-  let superior = cuboid.superior;
+  let v000 = this.vox2mm([0, 0, 0], this.matRAS);
+  let v111 = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+  let left = v000[0];
+  let right = v111[0];
+  let posterior = v000[1];
+  let anterior = v111[1];
+  let inferior = v000[2];
+  let superior = v111[2];
   const positions = [
     left,
     posterior,
@@ -12837,7 +12792,7 @@ const log = new Log();
 const Niivue = function(options = {}) {
   this.opts = {};
   this.defaults = {
-    textHeight: 0.03,
+    textHeight: 0.07,
     colorbarHeight: 0.05,
     crosshairWidth: 1,
     backColor: [0, 0, 0, 1],
@@ -12879,8 +12834,8 @@ const Niivue = function(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar;
   this.scene = {};
-  this.scene.renderAzimuth = 110;
-  this.scene.renderElevation = 15;
+  this.scene.renderAzimuth = 90;
+  this.scene.renderElevation = 0;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -13708,7 +13663,7 @@ Niivue.prototype.init = async function() {
   this.volumeObject3D = new NiivueObject3D(this.VOLUME_ID, vbo, this.gl.TRIANGLE_STRIP, 14);
   this.volumeObject3D.glFlags = this.volumeObject3D.BLEND | this.volumeObject3D.CULL_FACE | this.volumeObject3D.CULL_FRONT;
   this.volumeObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
-  let pickingShader = new Shader(this.gl, vertVolumePickingShader, fragVolumePickingShader);
+  let pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
   pickingShader.use(this.gl);
   this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
   this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -13742,7 +13697,7 @@ Niivue.prototype.init = async function() {
   this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
   this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
   this.orientShaderRGBU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
-  this.pickingSurfaceShader = new Shader(this.gl, vertDepthPickingShader, fragDepthPickingShader);
+  this.pickingSurfaceShader = new Shader(this.gl, vertRenderShader, fragDepthPickingShader);
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
   this.surfaceShader.use(this.gl);
   this.gl.uniform4fv(this.surfaceShader.uniforms["surfaceColor"], this.opts.clipPlaneColor);
@@ -13795,7 +13750,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     volumeRenderShader.mvpUniformName = "mvpMtx";
     volumeRenderShader.rayDirUniformName = "rayDir";
     volumeRenderShader.clipPlaneUniformName = "clipPlane";
-    let pickingShader = new Shader(this.gl, vertVolumePickingShader, fragVolumePickingShader);
+    let pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -13806,18 +13761,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale2);
     this.volumeObject3D.pickingShader = pickingShader;
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
-    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, this.volumeObject3D.furthestVertexFromOrigin, Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50, 1));
-    this.crosshairs3D.isPickable = false;
-    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
-    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
-    this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
-    this.crosshairs3D.glFlags |= this.crosshairs3D.ENABLE_DEPTH_TEST;
     console.log(this.volumeObject3D);
-    let crosshairsShader = new NiivueShader3D(this.surfaceShader);
-    crosshairsShader.mvpUniformName = "mvpMtx";
-    this.crosshairs3D.renderShaders.push(crosshairsShader);
-    this.objectsToRender3D.splice(1, 1, this.crosshairs3D);
-    console.log(this.objectsToRender3D);
   } else {
     if (this.back.dims === void 0)
       console.log("Fatal error: Unable to render overlay: background dimensions not defined!");
@@ -14376,20 +14320,11 @@ Niivue.prototype.draw3D = function() {
   this.selectedObjectId = rgbaPixel[3];
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-    if (this.crosshairs3D) {
-      let position = [
-        (this.scene.crosshairPos[0] - 0.5) * this.volumeObject3D.extentsMax[0] * 2,
-        (this.scene.crosshairPos[2] - 0.5) * this.volumeObject3D.extentsMax[2] * 2,
-        (this.scene.crosshairPos[1] - 0.5) * this.volumeObject3D.extentsMax[1] * 2
-      ];
-      this.crosshairs3D.position = position;
-      console.log(this.volumeObject3D.extentsMax);
-      console.log(position);
-      console.log("screen crosshairs");
-      console.log(this.scene.crosshairPos);
-    }
     console.log("base object selected");
   }
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  this.gl.clearColor(0.2, 0, 0, 1);
+  this.drawCrosshairs(false);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -14437,72 +14372,55 @@ Niivue.prototype.draw3D = function() {
       this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     }
   }
+  this.drawCrosshairs(true);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
   this.sync();
   return posString;
 };
-Niivue.prototype.draw3DNew = function() {
-  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  let m = null;
-  for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible) {
-      continue;
-    }
-    let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
-    pickingShader.use(this.gl);
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.BACK);
-      }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
-    m = this.calculateMvpMatrix(object3D);
-    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
-    if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection(m);
-      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
-    }
-    if (pickingShader.clipPlaneUniformName) {
-      this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
-    }
-    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
-    this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-    if (object3D.textureCoordinateBuffer) {
-      this.gl.enableVertexAttribArray(1);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
-      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
-    }
-    if (object3D.indexBuffer) {
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
-    }
-    this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
-    console.log("rendered pickable object");
-    break;
+Niivue.prototype.drawCrosshairs = function(isOpaque = true) {
+  let gl = this.gl;
+  let mm = this.frac2mm(this.scene.crosshairPos);
+  this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, this.volumeObject3D.extentsMin, this.volumeObject3D.extentsMax, Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50, 1));
+  this.crosshairs3D.isPickable = false;
+  this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+  this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+  this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
+  let crosshairsShader = new NiivueShader3D(this.surfaceShader);
+  crosshairsShader.mvpUniformName = "mvpMtx";
+  this.crosshairs3D.renderShaders.push(crosshairsShader);
+  {
+    const numComponents = 3;
+    const type = gl.FLOAT;
+    const normalize2 = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.crosshairs3D.vertexBuffer);
+    gl.vertexAttribPointer(this.surfaceShader.uniforms["pos"], numComponents, type, normalize2, stride, offset);
+    gl.enableVertexAttribArray(this.surfaceShader.uniforms["pos"]);
   }
-  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
-  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
-  const rgbaPixel = new Uint8Array(4);
-  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
-  this.selectedObjectId = rgbaPixel[3];
-  if (this.selectedObjectId === this.VOLUME_ID) {
-    console.log("base volume selected");
-    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-    if (this.crosshairs3D) {
-      this.crosshairs3D.position = [
-        this.scene.crosshairPos[0] * this.volumeObject3D.maxExtent[0],
-        this.scene.crosshairPos[1] * this.volumeObject3D.maxExtent[1],
-        this.scene.crosshairPos[2] * this.volumeObject3D.maxExtent[2]
-      ];
-    }
+  crosshairsShader.use(this.gl);
+  let m = this.calculateMvpMatrix(this.crosshairs3D);
+  gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, m);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
+  gl.enable(gl.DEPTH_TEST);
+  let color = [];
+  if (isOpaque) {
+    gl.disable(gl.BLEND);
+    gl.depthFunc(gl.LESS);
+    color = [0, 0, 1, 1];
+  } else {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.ALWAYS);
+    color = [0, 0, 1, 0.2];
   }
-  return;
+  gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
+  {
+    const vertexCount = this.crosshairs3D.indexCount;
+    const type = gl.UNSIGNED_SHORT;
+    const offset = 0;
+    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+  }
 };
 Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);
@@ -14540,7 +14458,7 @@ Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
 };
 Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
   let pos = fromValues(frac[0], frac[1], frac[2], 1);
-  let dim = fromValues(this.volumes[volIdx].hdr.dims[1], this.volumes[volIdx].hdr.dims[2], this.volumes[volIdx].hdr.dims[3], 1);
+  let dim = fromValues(this.volumes[volIdx].dimsRAS[1], this.volumes[volIdx].dimsRAS[2], this.volumes[volIdx].dimsRAS[3], 1);
   let sform = clone(this.volumes[volIdx].matRAS);
   transpose(sform, sform);
   mul(pos, pos, dim);

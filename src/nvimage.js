@@ -745,16 +745,17 @@ function getExtents(positions) {
  * @returns {number[]}
  */
 
-
 /**
  * @param {number} id - id of 3D Object (is this the base volume or an overlay?)
  * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
-
   let v000 = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-  let v111 = this.vox2mm([this.dimsRAS[1]-1, this.dimsRAS[2]-1, this.dimsRAS[3]-1], this.matRAS);
+  let v111 = this.vox2mm(
+    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
   let left = v000[0];
   let right = v111[0];
   let posterior = v000[1];
