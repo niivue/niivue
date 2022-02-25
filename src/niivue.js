@@ -2899,7 +2899,11 @@ Niivue.prototype.drawCrosshairs = function (isOpaque = true) {
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
-};
+  //restore default vertex buffer:
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+}; //drawCrosshairs()
 
 // not included in public docs
 Niivue.prototype.mm2frac = function (mm, volIdx = 0) {
