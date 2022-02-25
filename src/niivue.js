@@ -83,6 +83,7 @@ export const Niivue = function (options = {}) {
   this.sliceShader = null;
   this.lineShader = null;
   this.renderShader = null;
+  this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
   this.passThroughShader = null;
@@ -575,6 +576,8 @@ Niivue.prototype.mouseMoveListener = function (e) {
 // reset brightness and contrast to global min and max
 // note: no test yet
 Niivue.prototype.resetBriCon = function () {
+  //if ((this.volumes[0].cal_min === this.volumes[0].global_min) && (this.volumes[0].cal_max === this.volumes[0].global_max))
+  //  return; //do not waste time refreshes if there is no change
   this.volumes[0].cal_min = this.volumes[0].global_min;
   this.volumes[0].cal_max = this.volumes[0].global_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -1519,6 +1522,8 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
 
+  this.pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
+
   // add shader to object
   let volumeRenderShader = new NiivueShader3D(this.renderShader);
   volumeRenderShader.mvpUniformName = "mvpMtx";
@@ -1621,7 +1626,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
-
   let outTexture = null;
 
   let mtx = mat.mat4.clone(overlayItem.toRAS);
@@ -1648,16 +1652,11 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
     // add shader to object
-    let volumeRenderShader = new NiivueShader3D(this.renderShader);
+    let volumeRenderShader  = this.renderShader;
+    let pickingShader = this.pickingShader;
     volumeRenderShader.mvpUniformName = "mvpMtx";
     volumeRenderShader.rayDirUniformName = "rayDir";
     volumeRenderShader.clipPlaneUniformName = "clipPlane";
-
-    let pickingShader = new Shader(
-      this.gl,
-      vertRenderShader,
-      fragVolumePickingShader
-    );
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -1666,10 +1665,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     pickingShader.rayDirUniformName = "rayDir";
     pickingShader.clipPlaneUniformName = "clipPlane";
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale);
-    this.volumeObject3D.pickingShader = pickingShader;
+    if (this.volumeObject3D.pickingShader === null)
+      this.volumeObject3D.pickingShader = pickingShader;
 
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
-
     // let mm = this.frac2mm(this.scene.crosshairPos);
     //mm = [-20, 0, 30]; // <- set any value here to test
     // generate our crosshairs for the base volume
