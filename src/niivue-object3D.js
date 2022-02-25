@@ -46,9 +46,9 @@ export var NiivueObject3D = function (
 NiivueObject3D.generateCrosshairs = function (
   gl,
   id,
-    xyzMM,
-    xyzMin,
-    xyzMax,
+  xyzMM,
+  xyzMin,
+  xyzMax,
   radius,
   sides = 20
 ) {
@@ -72,9 +72,9 @@ NiivueObject3D.generateCrosshairs = function (
 // not included in public docs
 NiivueObject3D.generateCrosshairsGeometry = function (
   gl,
-    xyzMM,
-    xyzMin,
-    xyzMax,
+  xyzMM,
+  xyzMin,
+  xyzMax,
   radius,
   sides = 20
 ) {
@@ -136,9 +136,9 @@ NiivueObject3D.makeCylinder = function (
   vertices,
   indices,
   axis,
-    xyzMMi,
-    xyzMin,
-    xyzMax,
+  xyzMMi,
+  xyzMin,
+  xyzMax,
   radius,
   sides = 20
 ) {
@@ -150,29 +150,31 @@ NiivueObject3D.makeCylinder = function (
   var i = 0;
   let v0 = vertices.length;
   //default: axis = 0, X goes from far left to far right
-   let constrain = 0;
-   let xOffset = 1;
-   let yOffset = 2;
-   let zOffset = 0;
-   if (axis === 0) {
-   }
-   if (axis === 1) { //Y goes from posterior to anteiro
-      constrain = 1;
-      xOffset = 0;
-      yOffset = 1;
-      zOffset = 2;
-   }
-   if (axis === 2) { //Z goes from inferior to superior
-      constrain = 2;
-      xOffset = 0;
-      yOffset = 2;
-      zOffset = 1;
-   }
-   
-   let cylinderMin = xyzMin[constrain];
-   let cylinderMax = xyzMax[constrain];
-   let mm = xyzMM;
-   mm[constrain] = 0;
+  let constrain = 0;
+  let xOffset = 1;
+  let yOffset = 2;
+  let zOffset = 0;
+  if (axis === 0) {
+  }
+  if (axis === 1) {
+    //Y goes from posterior to anteiro
+    constrain = 1;
+    xOffset = 0;
+    yOffset = 1;
+    zOffset = 2;
+  }
+  if (axis === 2) {
+    //Z goes from inferior to superior
+    constrain = 2;
+    xOffset = 0;
+    yOffset = 2;
+    zOffset = 1;
+  }
+
+  let cylinderMin = xyzMin[constrain];
+  let cylinderMax = xyzMax[constrain];
+  let mm = xyzMM;
+  mm[constrain] = 0;
   let vals = null;
   // Top Cap
   for (; i < verticesPerCap; i += 9) {

@@ -2744,11 +2744,10 @@ Niivue.prototype.draw3D = function () {
     );
     console.log("base object selected");
   }
-  // this.drawCrosshairs(false);
+  console.log(this.selectedObjectId);
   // return;
-
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
+  // this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  // this.gl.clearColor(0.2, 0, 0, 1);
   this.drawCrosshairs(true);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
@@ -2811,8 +2810,6 @@ Niivue.prototype.draw3D = function () {
         this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
       }
 
-      // this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
-
       this.gl.drawElements(
         object3D.mode,
         object3D.indexCount,
@@ -2822,7 +2819,6 @@ Niivue.prototype.draw3D = function () {
     }
   }
   // draw crosshairs
-
   this.drawCrosshairs(false);
 
   let posString =

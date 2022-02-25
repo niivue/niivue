@@ -14326,8 +14326,7 @@ Niivue.prototype.draw3D = function() {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
     console.log("base object selected");
   }
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
+  console.log(this.selectedObjectId);
   this.drawCrosshairs(true);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
