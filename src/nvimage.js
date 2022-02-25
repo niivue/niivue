@@ -852,21 +852,102 @@ function getExtents(positions) {
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
-//cube has 8 vertices: left/right, posterior/anterior, inferior/superior
-  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-  let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
-  let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let LAS = this.vox2mm([0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
-  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
-  let RAI = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0], this.matRAS);
-  let RPS = this.vox2mm([this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let RAS = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+  let v000 = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
+  let v111 = this.vox2mm(
+    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
+  let left = v000[0];
+  let right = v111[0];
+  let posterior = v000[1];
+  let anterior = v111[1];
+  let inferior = v000[2];
+  let superior = v111[2];
 
   const positions = [
     // Superior face
-    ...LPS, ...RPS, ...RAS, ...LAS,
+    left,
+    posterior,
+    superior,
+    right,
+    posterior,
+    superior,
+    right,
+    anterior,
+    superior,
+    left,
+    anterior,
+    superior,
+
     // Inferior face
-    ...LPI, ...LAI, ...RAI, ...RPI,
+    left,
+    posterior,
+    inferior,
+    left,
+    anterior,
+    inferior,
+    right,
+    anterior,
+    inferior,
+    right,
+    posterior,
+    inferior,
+
+    // Anterior face
+    left,
+    anterior,
+    inferior,
+    left,
+    anterior,
+    superior,
+    right,
+    anterior,
+    superior,
+    right,
+    anterior,
+    inferior,
+
+    // Posterior face
+    left,
+    posterior,
+    inferior,
+    right,
+    posterior,
+    inferior,
+    right,
+    posterior,
+    superior,
+    left,
+    posterior,
+    superior,
+
+    // Right face
+    right,
+    posterior,
+    inferior,
+    right,
+    anterior,
+    inferior,
+    right,
+    anterior,
+    superior,
+    right,
+    posterior,
+    superior,
+
+    // Left face
+    left,
+    posterior,
+    inferior,
+    left,
+    posterior,
+    superior,
+    left,
+    anterior,
+    superior,
+    left,
+    anterior,
+    inferior,
   ];
 
   const textureCoordinates = [
@@ -901,12 +982,42 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   // position.
 
   const indices = [
-0,3,2,2,1,0, // Top
-4,7,6,6,5,4, // Bottom
-5,6,2,2,3,5, // Front
-4,0,1,1,7,4, // Back
-7,0,2,2,6,7, // right
-4,5,3,3,0,4, // left
+    0,
+    3,
+    2,
+    2,
+    1,
+    0, // Top
+    4,
+    7,
+    6,
+    6,
+    5,
+    4, // Bottom
+    8,
+    11,
+    10,
+    10,
+    9,
+    8, // Front
+    12,
+    15,
+    14,
+    14,
+    13,
+    12, // Back
+    16,
+    19,
+    18,
+    18,
+    17,
+    16, // right
+    20,
+    23,
+    22,
+    22,
+    21,
+    20, // left
   ];
   // Now send the element array to GL
 
