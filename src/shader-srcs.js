@@ -21,6 +21,7 @@ uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
+uniform mat4 mvpMtx;
 in vec3 vColor;
 out vec4 fColor;
 vec3 GetBackPosition(vec3 startPositionTex) {
@@ -71,7 +72,10 @@ void main() {
   vec3 dir = backPosition - start;
   float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if (lenVox < 0.5) return;
+	if (lenVox < 0.5) {
+		gl_FragDepth = 1.0;
+		return;
+	}
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
 	float opacityCorrection = stepSize/sliceSize;
@@ -93,7 +97,7 @@ void main() {
 		gl_FragDepth = 1.0;
 		return;
 	}
-	gl_FragDepth = 0.5;
+	gl_FragDepth = (mvpMtx * vec4(samplePos.xyz, 1.0)).z;
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
