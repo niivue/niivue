@@ -2793,7 +2793,7 @@ Niivue.prototype.draw3D = function () {
 
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
-  this.drawCrosshairs(false);
+  this.drawCrosshairs(true);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -2867,7 +2867,7 @@ Niivue.prototype.draw3D = function () {
   }
   // draw crosshairs
 
-  this.drawCrosshairs(true);
+  this.drawCrosshairs(false);
 
   let posString =
     "azimuth: " +
@@ -2932,13 +2932,11 @@ Niivue.prototype.drawCrosshairs = function (isOpaque = true) {
   if (isOpaque) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.LESS);
-    // gl.disable(gl.BLEND);
     color = [0.0, 0.0, 1.0, 1.0];
   } else {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
-    // gl.disable(gl.DEPTH_TEST);
     color = [0.0, 0.0, 1.0, 0.2];
   }
 
