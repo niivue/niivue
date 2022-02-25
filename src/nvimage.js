@@ -852,11 +852,61 @@ function getExtents(positions) {
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
+//cube has 8 vertices: left/right, posterior/anterior, inferior/superior
+  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
+  let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
+  let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
+  let LAS = this.vox2mm([0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
+  let RAI = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0], this.matRAS);
+  let RPS = this.vox2mm([this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1], this.matRAS);
+  let RAS = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+
+  const positions = [
+    // Superior face
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
+
+    // Inferior face
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI,
+
+    // Anterior face
+    ...LAI,
+    ...LAS,
+    ...RAS,
+    ...RAI,
+
+    // Posterior face
+    ...LPI,
+    ...RPI,
+    ...RPS,
+    ...LPS,
+
+    // ...R face
+    ...RPI,
+    ...RAI,
+    ...RAS,
+    ...RPS,
+
+    // ...L face
+    ...LPI,
+    ...LPS,
+    ...LAS,
+    ...LAI,
+  ];
+
+/*
   let v000 = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
   let v111 = this.vox2mm(
     [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
     this.matRAS
   );
+
   let left = v000[0];
   let right = v111[0];
   let posterior = v000[1];
@@ -866,90 +916,42 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
 
   const positions = [
     // Superior face
-    left,
-    posterior,
-    superior,
-    right,
-    posterior,
-    superior,
-    right,
-    anterior,
-    superior,
-    left,
-    anterior,
-    superior,
+    left,posterior,superior,
+    right,posterior,superior,
+    right,anterior,superior,
+    left,anterior,superior,
 
     // Inferior face
-    left,
-    posterior,
-    inferior,
-    left,
-    anterior,
-    inferior,
-    right,
-    anterior,
-    inferior,
-    right,
-    posterior,
-    inferior,
+    left,posterior,inferior,
+    left,anterior,inferior,
+    right,anterior,inferior,
+    right,posterior,inferior,
 
     // Anterior face
-    left,
-    anterior,
-    inferior,
-    left,
-    anterior,
-    superior,
-    right,
-    anterior,
-    superior,
-    right,
-    anterior,
-    inferior,
+    left,anterior,inferior,
+    left,anterior,superior,
+    right,anterior,superior,
+    right,anterior,inferior,
 
     // Posterior face
-    left,
-    posterior,
-    inferior,
-    right,
-    posterior,
-    inferior,
-    right,
-    posterior,
-    superior,
-    left,
-    posterior,
-    superior,
+    left,posterior,inferior,
+    right,posterior,inferior,
+    right,posterior,superior,
+    left,posterior,superior,
 
     // Right face
-    right,
-    posterior,
-    inferior,
-    right,
-    anterior,
-    inferior,
-    right,
-    anterior,
-    superior,
-    right,
-    posterior,
-    superior,
+    right,posterior,inferior,
+    right,anterior,inferior,
+    right,anterior,superior,
+    right,posterior,superior,
 
     // Left face
-    left,
-    posterior,
-    inferior,
-    left,
-    posterior,
-    superior,
-    left,
-    anterior,
-    superior,
-    left,
-    anterior,
-    inferior,
+    left,posterior,inferior,
+    left,posterior,superior,
+    left,anterior,superior,
+    left,anterior,inferior,
   ];
-
+*/
   const textureCoordinates = [
     // Superior Z=1.0
     0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0,
