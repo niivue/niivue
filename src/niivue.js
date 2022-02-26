@@ -580,8 +580,6 @@ Niivue.prototype.mouseMoveListener = function (e) {
 // reset brightness and contrast to global min and max
 // note: no test yet
 Niivue.prototype.resetBriCon = function () {
-  if ((this.volumes[0].cal_min === this.volumes[0].global_min) && (this.volumes[0].cal_max === this.volumes[0].global_max))
-    return; //do not waste time refreshes if there is no change
   this.volumes[0].cal_min = this.volumes[0].global_min;
   this.volumes[0].cal_max = this.volumes[0].global_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
