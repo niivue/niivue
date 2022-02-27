@@ -4,14 +4,13 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
-
 void main(void) {
 	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
 	vColor = texCoords;
 }`;
 
 export var fragRenderShader = `#version 300 es
-#line 15
+#line 14
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -22,6 +21,7 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
+uniform mat4 matRAS;
 in vec3 vColor;
 out vec4 fColor;
 vec3 GetBackPosition(vec3 startPositionTex) {
@@ -61,6 +61,18 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
     }
     return samplePos;
 }
+float frac2ndc(vec3 frac) {
+//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
+	vec4 pos = vec4(frac.xyz, 1.0); //fraction
+	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
+	pos = pos * dim;
+	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
+	pos += shim;
+	vec4 mm = transpose(matRAS) * pos;
+	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
+	return (z_ndc + 1.0) / 2.0;
+	
+}
 void main() {
   fColor = vec4(0.0,0.0,0.0,0.0);
   //vec3 dimsRAS = vec3(textureSize(volume, 0));
@@ -68,13 +80,13 @@ void main() {
 	// fColor = texture(volume, vColor.xyz);
 	// return;
 	vec3 start = vColor;
+	gl_FragDepth = 0.5;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
   vec3 dir = backPosition - start;
   float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if (lenVox < 0.5) {
-		gl_FragDepth = 1.0;
+	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
 		return;
 	}
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
@@ -95,23 +107,26 @@ void main() {
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) {
-		gl_FragDepth = 1.0;
+		gl_FragDepth = frac2ndc(samplePos.xyz);
 		return;
 	}
-	gl_FragDepth = (mvpMtx * vec4(samplePos.xyz, 1.0)).z;
+	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
+	vec4 firstHit = colAcc;
 	const float earlyTermination = 0.95;
 	float backNearest = len; //assume no hit
-    float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
-    samplePos += deltaDir * ran; //jitter ray
+	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
+	samplePos += deltaDir * ran; //jitter ray
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
+		if (firstHit.a == 0.0)
+			firstHit = samplePos;
 		backNearest = min(backNearest, samplePos.a);
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
@@ -119,6 +134,7 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
+	gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	if (overlays < 1.0) return;
@@ -542,7 +558,7 @@ void main() {
   vec3 dir = backPosition - start;
   float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if (lenVox < 0.5) return;
+	if ((lenVox < 0.5) || (len > 3.0)) return; //length limit for parallel rays
 	// fColor = vec4(posColor, 1.0);
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
