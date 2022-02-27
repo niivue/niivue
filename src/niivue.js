@@ -92,6 +92,7 @@ export const Niivue = function (options = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
+  this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
 
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
@@ -1626,6 +1627,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let opacity = overlayItem.opacity;
   let outTexture = null;
 
+  if (this.crosshairs3D !== null) 
+    this.crosshairs3D.mm[0] = NaN; //force crosshairs3D redraw
   let mtx = mat.mat4.clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
@@ -2627,8 +2630,36 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
 }; // calculateMvpMatrix
 
 // not included in public docs
-Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
-  //compute ray direction
+Niivue.prototype.calculateRayDirection = function () {
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180.0);
+  }
+  const modelMatrix = mat.mat4.create();
+  modelMatrix[0] = -1; //mirror X coordinate
+  //push the model away from the camera so camera not inside model
+  //apply elevation
+  mat.mat4.rotateX(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(270 - this.scene.renderElevation)
+  );
+  //apply azimuth
+  mat.mat4.rotateZ(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(this.scene.renderAzimuth - 180)
+  );
+  let oblique = mat.mat4.clone(this.back.obliqueRAS);
+  mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
+  //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
+  let projectionMatrix = mat.mat4.fromValues(
+      1,0,0,0,
+      0,-1,0,0,
+      0,0,-1,0,
+      0,0,0,1,
+    );
+  let mvpMatrix = mat.mat4.create();
+  mat.mat4.multiply(mvpMatrix, projectionMatrix, modelMatrix);
   var inv = mat.mat4.create();
   mat.mat4.invert(inv, mvpMatrix);
   var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
@@ -2676,7 +2707,7 @@ Niivue.prototype.draw3D = function () {
     this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
 
     if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection(m);
+      let rayDir = this.calculateRayDirection();
       this.gl.uniform3fv(
         pickingShader.uniforms[pickingShader.rayDirUniformName],
         rayDir
@@ -2787,7 +2818,7 @@ Niivue.prototype.draw3D = function () {
 
     m = this.calculateMvpMatrix(object3D);
 
-    let rayDir = this.calculateRayDirection(m);
+    let rayDir = this.calculateRayDirection();
 
     for (const shader of object3D.renderShaders) {
       shader.use(this.gl);
@@ -2835,19 +2866,26 @@ Niivue.prototype.drawCrosshairs = function (isOpaque = true) {
   let mm = this.frac2mm(this.scene.crosshairPos);
   // mm = [-20, 0, 30]; // <- set any value here to test
   // generate our crosshairs for the base volume
-  this.crosshairs3D = NiivueObject3D.generateCrosshairs(
-    this.gl,
-    1,
-    mm,
-    this.volumeObject3D.extentsMin,
-    this.volumeObject3D.extentsMax,
-    Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
-  );
-  this.crosshairs3D.isPickable = false;
-  this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
-  this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
-  this.crosshairs3D.furthestVertexFromOrigin =
-    this.volumeObject3D.furthestVertexFromOrigin;
+  if ((this.crosshairs3D === null) || (this.crosshairs3D.mm[0] !== mm[0]) || (this.crosshairs3D.mm[1] !== mm[1]) || (this.crosshairs3D.mm[2] !== mm[2])){
+    if (this.crosshairs3D !== null) {
+      gl.deleteBuffer(this.crosshairs3D.indexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
+      gl.deleteBuffer(this.crosshairs3D.vertexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
+    }
+    this.crosshairs3D = NiivueObject3D.generateCrosshairs(
+      this.gl,
+      1,
+      mm,
+      this.volumeObject3D.extentsMin,
+      this.volumeObject3D.extentsMax,
+      Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
+    );
+    this.crosshairs3D.isPickable = false;
+    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    this.crosshairs3D.mm = mm;
+    this.crosshairs3D.furthestVertexFromOrigin =
+      this.volumeObject3D.furthestVertexFromOrigin;
+  }
   let crosshairsShader = new NiivueShader3D(this.surfaceShader);
   crosshairsShader.mvpUniformName = "mvpMtx";
   this.crosshairs3D.renderShaders.push(crosshairsShader);
