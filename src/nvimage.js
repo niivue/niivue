@@ -735,24 +735,42 @@ NVImage.prototype.getValue = function (x, y, z) {
  * @param {number[]} positions
  * @returns {NVImage~Extents}
  */
-function getExtents(positions) {
-  const min = positions.slice(0, 3);
-  const max = positions.slice(0, 3);
+function getExtents(positions, forceOriginInVolume = true) {
+  let nV = (positions.length / 3).toFixed(); //each vertex has 3 components: XYZ
+  let origin = mat.vec3.fromValues(0,0,0); //default center of rotation
+  let mn = mat.vec3.create();
+  let mx = mat.vec3.create();
   let mxDx = 0.0;
-  for (let i = 3; i < positions.length; i += 3) {
-    for (let j = 0; j < 3; ++j) {
-      const v = positions[i + j];
-      min[j] = Math.min(v, min[j]);
-      max[j] = Math.max(v, max[j]);
+  let nLoops = 1;
+  if (forceOriginInVolume) nLoops = 2; //second pass to reposition origin
+  for (let loop = 0; loop < nLoops; loop++) {
+    mxDx = 0.0;
+    for (let i = 0; i < nV; i++) {
+      let v = mat.vec3.fromValues(positions[i*3], positions[(i*3)+1], positions[(i*3)+2]);  
+      if (i === 0) {
+        mat.vec3.copy(mn, v);
+        mat.vec3.copy(mx, v);
+      }
+      mat.vec3.min(mn, mn, v);
+      mat.vec3.max(mx, mx, v);
+      mat.vec3.subtract(v, v, origin);
+      let dx = mat.vec3.len(v);
+      mxDx = Math.max(mxDx, dx);
     }
-    let dx =
-      positions[i] * positions[i] +
-      positions[i + 1] * positions[i + 1] +
-      positions[i + 2] * positions[i + 2];
-    mxDx = Math.max(mxDx, dx);
+    if ((loop +1) >= nLoops) break;
+    let ok = true;
+    for (let j = 0; j < 3; ++j) {
+      if (mn[j] > origin[j]) ok = false;
+      if (mx[j] < origin[j]) ok = false;
+    }
+    if (ok) break;
+    mat.vec3.lerp(origin,mn,mx, 0.5)
+    console.log('origin moved inside volume: ', origin);
   }
-  let furthestVertexFromOrigin = Math.sqrt(mxDx);
-  return { min, max, furthestVertexFromOrigin };
+  let min = [mn[0], mn[1], mn[2]];
+  let max = [mx[0], mx[1], mx[2]];
+  let furthestVertexFromOrigin = mxDx;
+  return { min, max, furthestVertexFromOrigin, origin };
 }
 
 // returns the left, right, up, down, front and back via pixdims, qform or sform
@@ -863,5 +881,7 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
+  obj3D.originNegate = mat.vec3.clone(extents.origin);
+  mat.vec3.negate(obj3D.originNegate,obj3D.originNegate);
   return obj3D;
 };
