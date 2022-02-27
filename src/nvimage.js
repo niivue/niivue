@@ -239,6 +239,23 @@ export var NVImage = function (
   this.calMinMax();
 };
 
+NVImage.prototype.calculateOblique = function () {
+  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
+  let X1mm = this.vox2mm([1.0/this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
+  let Y1mm = this.vox2mm([0.0, 1.0/this.pixDimsRAS[2], 0.0], this.matRAS);
+  let Z1mm = this.vox2mm([0.0, 0.0, 1.0/this.pixDimsRAS[3]], this.matRAS);
+  mat.vec3.subtract(X1mm, X1mm, LPI);
+  mat.vec3.subtract(Y1mm, Y1mm, LPI);
+  mat.vec3.subtract(Z1mm, Z1mm, LPI);
+  let oblique = mat.mat4.fromValues(
+   X1mm[0],X1mm[1],X1mm[2],0,
+   Y1mm[0],Y1mm[1],Y1mm[2],0,
+   Z1mm[0],Z1mm[1],Z1mm[2],0,
+   0, 0, 0, 1
+  );
+  this.obliqueRAS = mat.mat4.clone(oblique);
+}
+
 // not included in public docs
 NVImage.prototype.calculateRAS = function () {
   //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
@@ -349,6 +366,7 @@ NVImage.prototype.calculateRAS = function () {
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
     this.toRAS = mat.mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
     this.matRAS = mat.mat4.clone(rotM);
+    this.calculateOblique();
     return; //no rotation required!
   }
   mat.mat4.identity(rotM);
@@ -372,6 +390,7 @@ NVImage.prototype.calculateRAS = function () {
   this.toRAS = mat.mat4.clone(rotM);
   console.log(this.hdr.dims);
   console.log(this.dimsRAS);
+  this.calculateOblique();
 };
 
 // not included in public docs
@@ -854,7 +873,6 @@ function getExtents(positions) {
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
 //cube has 8 vertices: left/right, posterior/anterior, inferior/superior
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-/*
  //TODO: ray direction needs to be corrected for oblique rotations
   let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
   let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
@@ -863,21 +881,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   let RAI = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0], this.matRAS);
   let RPS = this.vox2mm([this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1], this.matRAS);
   let RAS = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
-*/
-  let L = LPI[0];
-  let R = L+this.dimsRAS[1] * Math.abs(this.pixDimsRAS[1]);
-  let P = LPI[1];
-  let A = P+this.dimsRAS[2]* Math.abs(this.pixDimsRAS[2]);
-  let I = LPI[2];
-  let S = I+this.dimsRAS[3] * Math.abs(this.pixDimsRAS[3]);
-
-  let LPS = [L,P,S];
-  let LAI = [L,A,I];
-  let LAS = [L,A,S];
-  let RPI = [R,P,I];
-  let RPS = [R,P,S];
-  let RAI = [R,A,I];
-  let RAS = [R,A,S];
 
   const positions = [
     // Superior face
@@ -929,8 +932,8 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     4,7,6,6,5,4, // Bottom
     5,6,2,2,3,5, // Front
     4,0,1,1,7,4, // Back
-    7,1,2,2,6,7, // right
-    4,5,3,3,0,4, // left
+    7,1,2,2,6,7, // Right
+    4,5,3,3,0,4, // Left
   ];
   // Now send the element array to GL
 
