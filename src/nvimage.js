@@ -75,7 +75,7 @@ export var NVImage = function (
   }
 
   this.hdr = nifti.readHeader(dataBuffer);
-function isAffineOK(mtx) {
+  function isAffineOK(mtx) {
     //A good matrix should not have any components that are not a number
     //A good spatial transformation matrix should not have a row or column that is all zeros
     let iOK = [false, false, false, false];
@@ -240,26 +240,41 @@ function isAffineOK(mtx) {
 
 NVImage.prototype.calculateOblique = function () {
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-  let X1mm = this.vox2mm([1.0/this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
-  let Y1mm = this.vox2mm([0.0, 1.0/this.pixDimsRAS[2], 0.0], this.matRAS);
-  let Z1mm = this.vox2mm([0.0, 0.0, 1.0/this.pixDimsRAS[3]], this.matRAS);
+  let X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
+  let Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS);
+  let Z1mm = this.vox2mm([0.0, 0.0, 1.0 / this.pixDimsRAS[3]], this.matRAS);
   mat.vec3.subtract(X1mm, X1mm, LPI);
   mat.vec3.subtract(Y1mm, Y1mm, LPI);
   mat.vec3.subtract(Z1mm, Z1mm, LPI);
   let oblique = mat.mat4.fromValues(
-   X1mm[0],X1mm[1],X1mm[2],0,
-   Y1mm[0],Y1mm[1],Y1mm[2],0,
-   Z1mm[0],Z1mm[1],Z1mm[2],0,
-   0, 0, 0, 1
+    X1mm[0],
+    X1mm[1],
+    X1mm[2],
+    0,
+    Y1mm[0],
+    Y1mm[1],
+    Y1mm[2],
+    0,
+    Z1mm[0],
+    Z1mm[1],
+    Z1mm[2],
+    0,
+    0,
+    0,
+    0,
+    1
   );
   this.obliqueRAS = mat.mat4.clone(oblique);
-  let XY = Math.abs(90 - mat.vec3.angle(X1mm, Y1mm) * (180/Math.PI));
-  let XZ = Math.abs(90 - mat.vec3.angle(X1mm, Z1mm) * (180/Math.PI));
-  let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180/Math.PI));
-  let maxShear = Math.max(Math.max(XY,XZ),YZ);
+  let XY = Math.abs(90 - mat.vec3.angle(X1mm, Y1mm) * (180 / Math.PI));
+  let XZ = Math.abs(90 - mat.vec3.angle(X1mm, Z1mm) * (180 / Math.PI));
+  let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
+  let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
-    console.log('Warning: shear detected (gantry tilt) of %f degrees', maxShear);
-}
+    console.log(
+      "Warning: shear detected (gantry tilt) of %f degrees",
+      maxShear
+    );
+};
 
 // not included in public docs
 NVImage.prototype.calculateRAS = function () {
@@ -851,7 +866,7 @@ NVImage.prototype.getValue = function (x, y, z) {
  */
 function getExtents(positions, forceOriginInVolume = true) {
   let nV = (positions.length / 3).toFixed(); //each vertex has 3 components: XYZ
-  let origin = mat.vec3.fromValues(0,0,0); //default center of rotation
+  let origin = mat.vec3.fromValues(0, 0, 0); //default center of rotation
   let mn = mat.vec3.create();
   let mx = mat.vec3.create();
   let mxDx = 0.0;
@@ -860,7 +875,11 @@ function getExtents(positions, forceOriginInVolume = true) {
   for (let loop = 0; loop < nLoops; loop++) {
     mxDx = 0.0;
     for (let i = 0; i < nV; i++) {
-      let v = mat.vec3.fromValues(positions[i*3], positions[(i*3)+1], positions[(i*3)+2]);  
+      let v = mat.vec3.fromValues(
+        positions[i * 3],
+        positions[i * 3 + 1],
+        positions[i * 3 + 2]
+      );
       if (i === 0) {
         mat.vec3.copy(mn, v);
         mat.vec3.copy(mx, v);
@@ -871,15 +890,15 @@ function getExtents(positions, forceOriginInVolume = true) {
       let dx = mat.vec3.len(v);
       mxDx = Math.max(mxDx, dx);
     }
-    if ((loop +1) >= nLoops) break;
+    if (loop + 1 >= nLoops) break;
     let ok = true;
     for (let j = 0; j < 3; ++j) {
       if (mn[j] > origin[j]) ok = false;
       if (mx[j] < origin[j]) ok = false;
     }
     if (ok) break;
-    mat.vec3.lerp(origin,mn,mx, 0.5)
-    console.log('origin moved inside volume: ', origin);
+    mat.vec3.lerp(origin, mn, mx, 0.5);
+    console.log("origin moved inside volume: ", origin);
   }
   let min = [mn[0], mn[1], mn[2]];
   let max = [mx[0], mx[1], mx[2]];
@@ -902,16 +921,28 @@ function getExtents(positions, forceOriginInVolume = true) {
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
-//cube has 8 vertices: left/right, posterior/anterior, inferior/superior
+  //cube has 8 vertices: left/right, posterior/anterior, inferior/superior
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
- //TODO: ray direction needs to be corrected for oblique rotations
+  //TODO: ray direction needs to be corrected for oblique rotations
   let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
   let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let LAS = this.vox2mm([0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+  let LAS = this.vox2mm(
+    [0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
   let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
-  let RAI = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0], this.matRAS);
-  let RPS = this.vox2mm([this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let RAS = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
+  let RAI = this.vox2mm(
+    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0],
+    this.matRAS
+  );
+  let RPS = this.vox2mm(
+    [this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
+  let RAS = this.vox2mm(
+    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
 
   const positions = [
     // Superior face
@@ -959,12 +990,42 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   // position.
 
   const indices = [
-    0,3,2,2,1,0, // Top
-    4,7,6,6,5,4, // Bottom
-    5,6,2,2,3,5, // Front
-    4,0,1,1,7,4, // Back
-    7,1,2,2,6,7, // Right
-    4,5,3,3,0,4, // Left
+    0,
+    3,
+    2,
+    2,
+    1,
+    0, // Top
+    4,
+    7,
+    6,
+    6,
+    5,
+    4, // Bottom
+    5,
+    6,
+    2,
+    2,
+    3,
+    5, // Front
+    4,
+    0,
+    1,
+    1,
+    7,
+    4, // Back
+    7,
+    1,
+    2,
+    2,
+    6,
+    7, // Right
+    4,
+    5,
+    3,
+    3,
+    0,
+    4, // Left
   ];
   // Now send the element array to GL
 
@@ -996,6 +1057,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   obj3D.originNegate = mat.vec3.clone(extents.origin);
-  mat.vec3.negate(obj3D.originNegate,obj3D.originNegate);
+  mat.vec3.negate(obj3D.originNegate, obj3D.originNegate);
   return obj3D;
 };
