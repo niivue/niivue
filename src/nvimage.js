@@ -75,7 +75,11 @@ export var NVImage = function (
   }
 
   this.hdr = nifti.readHeader(dataBuffer);
+<<<<<<< HEAD
   function isAffineOK(mtx) {
+=======
+function isAffineOK(mtx) {
+>>>>>>> Warn user if shear (gantry tilt) detected. Double click resets to robust not full image intensity range.
     //A good matrix should not have any components that are not a number
     //A good spatial transformation matrix should not have a row or column that is all zeros
     let iOK = [false, false, false, false];
@@ -97,7 +101,11 @@ export var NVImage = function (
       if (!jOK[i]) return false;
     }
     return true;
+<<<<<<< HEAD
   } // vox2mm()
+=======
+  } //
+>>>>>>> Warn user if shear (gantry tilt) detected. Double click resets to robust not full image intensity range.
   if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0)
     this.hdr.scl_slope = 1.0; //https://github.com/nipreps/fmriprep/issues/2507
   if (isNaN(this.hdr.scl_inter)) this.hdr.scl_inter = 0.0;
@@ -173,7 +181,10 @@ export var NVImage = function (
     ];
     this.hdr.affine = affine;
   } //defective affine
+<<<<<<< HEAD
 
+=======
+>>>>>>> Warn user if shear (gantry tilt) detected. Double click resets to robust not full image intensity range.
   let imgRaw = null;
   if (nifti.isCompressed(dataBuffer)) {
     imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
@@ -254,6 +265,12 @@ NVImage.prototype.calculateOblique = function () {
    0, 0, 0, 1
   );
   this.obliqueRAS = mat.mat4.clone(oblique);
+  let XY = Math.abs(90 - mat.vec3.angle(X1mm, Y1mm) * (180/Math.PI));
+  let XZ = Math.abs(90 - mat.vec3.angle(X1mm, Z1mm) * (180/Math.PI));
+  let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180/Math.PI));
+  let maxShear = Math.max(Math.max(XY,XZ),YZ);
+  if (maxShear > 0.1)
+    console.log('Warning: shear detected (gantry tilt) of %f degrees', maxShear);
 }
 
 // not included in public docs
@@ -453,6 +470,8 @@ NVImage.prototype.calMinMax = function () {
   ) {
     this.cal_min = this.hdr.cal_min;
     this.cal_max = this.hdr.cal_max;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     this.global_min = this.hdr.cal_min;
     this.global_max = this.hdr.cal_max;
     return [
@@ -476,6 +495,8 @@ NVImage.prototype.calMinMax = function () {
   if (cmMin != cmMax) {
     this.cal_min = cmMin;
     this.cal_max = cmMax;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     return [cmMin, cmMax, cmMin, cmMax];
   }
 
@@ -508,6 +529,8 @@ NVImage.prototype.calMinMax = function () {
     console.log("no variability in image intensity?");
     this.cal_min = mnScale;
     this.cal_max = mxScale;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     this.global_min = mnScale;
     this.global_max = mxScale;
     return [mnScale, mxScale, mnScale, mxScale];
@@ -581,10 +604,12 @@ NVImage.prototype.calMinMax = function () {
   }
   this.cal_min = pct2;
   this.cal_max = pct98;
+  this.robust_min = this.cal_min;
+  this.robust_max = this.cal_max;
   this.global_min = mnScale;
   this.global_max = mxScale;
   return [pct2, pct98, mnScale, mxScale];
-}; //calMinMaxCore
+}; //calMinMax
 
 // not included in public docs
 NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {

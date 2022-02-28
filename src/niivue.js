@@ -581,8 +581,10 @@ Niivue.prototype.mouseMoveListener = function (e) {
 // reset brightness and contrast to global min and max
 // note: no test yet
 Niivue.prototype.resetBriCon = function () {
-  this.volumes[0].cal_min = this.volumes[0].global_min;
-  this.volumes[0].cal_max = this.volumes[0].global_max;
+  //this.volumes[0].cal_min = this.volumes[0].global_min;
+  //this.volumes[0].cal_max = this.volumes[0].global_max;
+  this.volumes[0].cal_min = this.volumes[0].robust_min;
+  this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -2927,13 +2929,15 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
       gl.deleteBuffer(this.crosshairs3D.indexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
       gl.deleteBuffer(this.crosshairs3D.vertexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
     }
+    //let radius = Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0);
+    let radius = Math.min(Math.min(this.back.pixDims[1],this.back.pixDims[2]),this.back.pixDims[3]);
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(
       this.gl,
       1,
       mm,
       this.volumeObject3D.extentsMin,
       this.volumeObject3D.extentsMax,
-      Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
+      radius
     );
     this.crosshairs3D.isPickable = false;
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
