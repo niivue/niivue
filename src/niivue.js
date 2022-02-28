@@ -2423,7 +2423,8 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  //let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(
     this.fontShader.uniforms["canvasWidthHeight"],
