@@ -14538,7 +14538,8 @@ Niivue.prototype.calculateRayDirection = function() {
 Niivue.prototype.draw3D = function() {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  let m = null;
+  const mvpMatrix = this.calculateMvpMatrix(this.volumeObject3D);
+  const rayDir = this.calculateRayDirection();
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible || !object3D.isPickable) {
       continue;
@@ -14555,11 +14556,10 @@ Niivue.prototype.draw3D = function() {
     } else {
       this.gl.disable(this.gl.CULL_FACE);
     }
-    m = this.calculateMvpMatrix(object3D);
-    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
     if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection();
-      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
+      let rayDir2 = this.calculateRayDirection();
+      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir2);
     }
     if (pickingShader.clipPlaneUniformName) {
       this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
@@ -14585,8 +14585,9 @@ Niivue.prototype.draw3D = function() {
   this.selectedObjectId = rgbaPixel[3];
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-    console.log("base object selected");
   }
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -14618,12 +14619,10 @@ Niivue.prototype.draw3D = function() {
     } else {
       this.gl.disable(this.gl.CULL_FACE);
     }
-    m = this.calculateMvpMatrix(object3D);
-    let rayDir = this.calculateRayDirection();
     for (const shader of object3D.renderShaders) {
       shader.use(this.gl);
       if (shader.mvpUniformName) {
-        this.gl.uniformMatrix4fv(shader.uniforms[shader.mvpUniformName], false, m);
+        this.gl.uniformMatrix4fv(shader.uniforms[shader.mvpUniformName], false, mvpMatrix);
       }
       if (shader.matRASUniformName) {
         this.gl.uniformMatrix4fv(shader.uniforms[shader.matRASUniformName], false, this.back.matRAS);

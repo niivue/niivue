@@ -2753,10 +2753,12 @@ Niivue.prototype.calculateRayDirection = function () {
 Niivue.prototype.draw3D = function () {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  //this.gl.clearDepth(0.0);
   // render picking surfaces
 
-  let m = null;
+  // mvp matrix and ray direction can now be a constant because of world space
+  const mvpMatrix = this.calculateMvpMatrix(this.volumeObject3D);
+  const rayDir = this.calculateRayDirection();
+
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible || !object3D.isPickable) {
       continue;
@@ -2778,8 +2780,11 @@ Niivue.prototype.draw3D = function () {
       this.gl.disable(this.gl.CULL_FACE);
     }
 
-    m = this.calculateMvpMatrix(object3D);
-    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+    this.gl.uniformMatrix4fv(
+      pickingShader.uniforms["mvpMtx"],
+      false,
+      mvpMatrix
+    );
 
     if (pickingShader.rayDirUniformName) {
       let rayDir = this.calculateRayDirection();
@@ -2845,12 +2850,10 @@ Niivue.prototype.draw3D = function () {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
-    console.log("base object selected");
   }
-  //console.log(this.selectedObjectId);
-  // return;
-  // this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  // this.gl.clearColor(0.2, 0, 0, 1);
+
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -2890,17 +2893,13 @@ Niivue.prototype.draw3D = function () {
       this.gl.disable(this.gl.CULL_FACE);
     }
 
-    m = this.calculateMvpMatrix(object3D);
-
-    let rayDir = this.calculateRayDirection();
-
     for (const shader of object3D.renderShaders) {
       shader.use(this.gl);
       if (shader.mvpUniformName) {
         this.gl.uniformMatrix4fv(
           shader.uniforms[shader.mvpUniformName],
           false,
-          m
+          mvpMatrix
         );
       }
       if (shader.matRASUniformName) {
@@ -2926,8 +2925,6 @@ Niivue.prototype.draw3D = function () {
       );
     }
   }
-  // draw crosshairs
-  //this.drawCrosshairs3D(false, 1.0);
 
   this.drawCrosshairs3D(true, 1.0);
   this.drawCrosshairs3D(false, 0.35);
