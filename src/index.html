@@ -73,7 +73,10 @@
 				}
 				*/
       ]
-			var nv1 = new Niivue({logging: true})
+			var nv1 = new Niivue({
+				logging: true,
+				show3Dcrosshair: true
+			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)

@@ -12992,9 +12992,10 @@ const log = new Log();
 const Niivue = function(options = {}) {
   this.opts = {};
   this.defaults = {
-    textHeight: 0.07,
+    textHeight: 0.03,
     colorbarHeight: 0.05,
     crosshairWidth: 1,
+    show3Dcrosshair: false,
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
@@ -13039,6 +13040,7 @@ const Niivue = function(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar;
   this.scene = {};
+  this.syncOpts = {};
   this.scene.renderAzimuth = 110;
   this.scene.renderElevation = 10;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
@@ -13149,17 +13151,22 @@ Niivue.prototype.attachToCanvas = async function(canvas) {
   this.drawScene();
   return this;
 };
-Niivue.prototype.syncWith = function(otherNV) {
+Niivue.prototype.syncWith = function(otherNV, syncOpts = { "2d": true, "3d": true }) {
   this.otherNV = otherNV;
+  this.syncOpts = syncOpts;
 };
 Niivue.prototype.sync = function() {
   if (!this.otherNV || typeof this.otherNV === "undefined") {
     return;
   }
   let thisMM = this.frac2mm(this.scene.crosshairPos);
-  this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
-  this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
-  this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  if (this.syncOpts["2d"]) {
+    this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
+  }
+  if (this.syncOpts["3d"]) {
+    this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
+    this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  }
   this.otherNV.drawScene();
 };
 Niivue.prototype.arrayEquals = function(a, b) {
@@ -14643,6 +14650,9 @@ Niivue.prototype.draw3D = function() {
   return posString;
 };
 Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
+  if (!this.opts.show3Dcrosshair) {
+    return;
+  }
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
   if (this.crosshairs3D === null || this.crosshairs3D.mm[0] !== mm[0] || this.crosshairs3D.mm[1] !== mm[1] || this.crosshairs3D.mm[2] !== mm[2]) {

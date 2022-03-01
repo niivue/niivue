@@ -63,6 +63,7 @@ export const Niivue = function (options = {}) {
     textHeight: 0.03, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
     crosshairWidth: 1, // 0 for no crosshairs
+    show3Dcrosshair: false,
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
@@ -110,6 +111,7 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
+  this.syncOpts = {};
   this.scene.renderAzimuth = 110; //-45;
   this.scene.renderElevation = 10; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
@@ -295,12 +297,16 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
  * niivue2 = new Niivue()
  * niivue2.syncWith(niivue1)
  */
-Niivue.prototype.syncWith = function (otherNV) {
+Niivue.prototype.syncWith = function (
+  otherNV,
+  syncOpts = { "2d": true, "3d": true }
+) {
   // this.scene.renderAzimuth = 120;
   // this.scene.renderElevation = 15;
   // this.scene.crosshairPos = [0.5, 0.5, 0.5];
   // this.scene.clipPlane = [0, 0, 0, 0];
   this.otherNV = otherNV;
+  this.syncOpts = syncOpts;
 };
 
 Niivue.prototype.sync = function () {
@@ -308,9 +314,13 @@ Niivue.prototype.sync = function () {
     return;
   }
   let thisMM = this.frac2mm(this.scene.crosshairPos);
-  this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
-  this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
-  this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  if (this.syncOpts["2d"]) {
+    this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
+  }
+  if (this.syncOpts["3d"]) {
+    this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
+    this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  }
   this.otherNV.drawScene();
 };
 
@@ -2941,6 +2951,9 @@ Niivue.prototype.draw3D = function () {
 }; // draw3D()
 
 Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
+  if (!this.opts.show3Dcrosshair) {
+    return;
+  }
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
   // mm = [-20, 0, 30]; // <- set any value here to test
