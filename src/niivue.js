@@ -60,7 +60,7 @@ const log = new Log();
 export const Niivue = function (options = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
   this.defaults = {
-    textHeight: 0.07, // 0 for no text, fraction of canvas min(height,width)
+    textHeight: 0.03, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
     crosshairWidth: 1, // 0 for no crosshairs
     backColor: [0, 0, 0, 1],
