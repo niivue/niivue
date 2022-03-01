@@ -63,7 +63,7 @@
          },
          
         ] 
-      var nv1 = new niivue.Niivue()
+			var nv1 = new niivue.Niivue({show3Dcrosshair:true})
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
@@ -86,7 +86,7 @@
       nv2.attachTo('gl2')
       nv2.loadVolumes(volumeList2)
       nv2.setSliceType(nv2.sliceTypeRenderMultiplanar)
-      nv1.syncWith(nv2)
+			nv2.syncWith(nv1, {'3d': false, '2d':true})
     </script>
   </body>
 </html>

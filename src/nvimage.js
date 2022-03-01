@@ -97,7 +97,7 @@ export var NVImage = function (
       if (!jOK[i]) return false;
     }
     return true;
-  } // vox2mm()
+  } //
   if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0)
     this.hdr.scl_slope = 1.0; //https://github.com/nipreps/fmriprep/issues/2507
   if (isNaN(this.hdr.scl_inter)) this.hdr.scl_inter = 0.0;
@@ -173,7 +173,6 @@ export var NVImage = function (
     ];
     this.hdr.affine = affine;
   } //defective affine
-
   let imgRaw = null;
   if (nifti.isCompressed(dataBuffer)) {
     imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
@@ -237,6 +236,44 @@ export var NVImage = function (
 
   this.calculateRAS();
   this.calMinMax();
+};
+
+NVImage.prototype.calculateOblique = function () {
+  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
+  let X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
+  let Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS);
+  let Z1mm = this.vox2mm([0.0, 0.0, 1.0 / this.pixDimsRAS[3]], this.matRAS);
+  mat.vec3.subtract(X1mm, X1mm, LPI);
+  mat.vec3.subtract(Y1mm, Y1mm, LPI);
+  mat.vec3.subtract(Z1mm, Z1mm, LPI);
+  let oblique = mat.mat4.fromValues(
+    X1mm[0],
+    X1mm[1],
+    X1mm[2],
+    0,
+    Y1mm[0],
+    Y1mm[1],
+    Y1mm[2],
+    0,
+    Z1mm[0],
+    Z1mm[1],
+    Z1mm[2],
+    0,
+    0,
+    0,
+    0,
+    1
+  );
+  this.obliqueRAS = mat.mat4.clone(oblique);
+  let XY = Math.abs(90 - mat.vec3.angle(X1mm, Y1mm) * (180 / Math.PI));
+  let XZ = Math.abs(90 - mat.vec3.angle(X1mm, Z1mm) * (180 / Math.PI));
+  let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
+  let maxShear = Math.max(Math.max(XY, XZ), YZ);
+  if (maxShear > 0.1)
+    console.log(
+      "Warning: shear detected (gantry tilt) of %f degrees",
+      maxShear
+    );
 };
 
 // not included in public docs
@@ -349,6 +386,7 @@ NVImage.prototype.calculateRAS = function () {
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
     this.toRAS = mat.mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
     this.matRAS = mat.mat4.clone(rotM);
+    this.calculateOblique();
     return; //no rotation required!
   }
   mat.mat4.identity(rotM);
@@ -372,6 +410,7 @@ NVImage.prototype.calculateRAS = function () {
   this.toRAS = mat.mat4.clone(rotM);
   console.log(this.hdr.dims);
   console.log(this.dimsRAS);
+  this.calculateOblique();
 };
 
 // not included in public docs
@@ -434,6 +473,8 @@ NVImage.prototype.calMinMax = function () {
   ) {
     this.cal_min = this.hdr.cal_min;
     this.cal_max = this.hdr.cal_max;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     this.global_min = this.hdr.cal_min;
     this.global_max = this.hdr.cal_max;
     return [
@@ -457,6 +498,8 @@ NVImage.prototype.calMinMax = function () {
   if (cmMin != cmMax) {
     this.cal_min = cmMin;
     this.cal_max = cmMax;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     return [cmMin, cmMax, cmMin, cmMax];
   }
 
@@ -489,6 +532,8 @@ NVImage.prototype.calMinMax = function () {
     console.log("no variability in image intensity?");
     this.cal_min = mnScale;
     this.cal_max = mxScale;
+    this.robust_min = this.cal_min;
+    this.robust_max = this.cal_max;
     this.global_min = mnScale;
     this.global_max = mxScale;
     return [mnScale, mxScale, mnScale, mxScale];
@@ -562,10 +607,12 @@ NVImage.prototype.calMinMax = function () {
   }
   this.cal_min = pct2;
   this.cal_max = pct98;
+  this.robust_min = this.cal_min;
+  this.robust_max = this.cal_max;
   this.global_min = mnScale;
   this.global_max = mxScale;
   return [pct2, pct98, mnScale, mxScale];
-}; //calMinMaxCore
+}; //calMinMax
 
 // not included in public docs
 NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
@@ -809,6 +856,7 @@ NVImage.prototype.getValue = function (x, y, z) {
  * @typedef {Object} NVImage~Extents
  * @property {number[]} min - min bounding point
  * @property {number[]} max - max bounding point
+ * @property {number} furthestVertexFromOrigin - point furthest from origin
  */
 
 /**
@@ -816,24 +864,46 @@ NVImage.prototype.getValue = function (x, y, z) {
  * @param {number[]} positions
  * @returns {NVImage~Extents}
  */
-function getExtents(positions) {
-  const min = positions.slice(0, 3);
-  const max = positions.slice(0, 3);
+function getExtents(positions, forceOriginInVolume = true) {
+  let nV = (positions.length / 3).toFixed(); //each vertex has 3 components: XYZ
+  let origin = mat.vec3.fromValues(0, 0, 0); //default center of rotation
+  let mn = mat.vec3.create();
+  let mx = mat.vec3.create();
   let mxDx = 0.0;
-  for (let i = 3; i < positions.length; i += 3) {
-    for (let j = 0; j < 3; ++j) {
-      const v = positions[i + j];
-      min[j] = Math.min(v, min[j]);
-      max[j] = Math.max(v, max[j]);
+  let nLoops = 1;
+  if (forceOriginInVolume) nLoops = 2; //second pass to reposition origin
+  for (let loop = 0; loop < nLoops; loop++) {
+    mxDx = 0.0;
+    for (let i = 0; i < nV; i++) {
+      let v = mat.vec3.fromValues(
+        positions[i * 3],
+        positions[i * 3 + 1],
+        positions[i * 3 + 2]
+      );
+      if (i === 0) {
+        mat.vec3.copy(mn, v);
+        mat.vec3.copy(mx, v);
+      }
+      mat.vec3.min(mn, mn, v);
+      mat.vec3.max(mx, mx, v);
+      mat.vec3.subtract(v, v, origin);
+      let dx = mat.vec3.len(v);
+      mxDx = Math.max(mxDx, dx);
     }
-    let dx =
-      positions[i] * positions[i] +
-      positions[i + 1] * positions[i + 1] +
-      positions[i + 2] * positions[i + 2];
-    mxDx = Math.max(mxDx, dx);
+    if (loop + 1 >= nLoops) break;
+    let ok = true;
+    for (let j = 0; j < 3; ++j) {
+      if (mn[j] > origin[j]) ok = false;
+      if (mx[j] < origin[j]) ok = false;
+    }
+    if (ok) break;
+    mat.vec3.lerp(origin, mn, mx, 0.5);
+    console.log("origin moved inside volume: ", origin);
   }
-  let furthestVertexFromOrigin = Math.sqrt(mxDx);
-  return { min, max, furthestVertexFromOrigin };
+  let min = [mn[0], mn[1], mn[2]];
+  let max = [mx[0], mx[1], mx[2]];
+  let furthestVertexFromOrigin = mxDx;
+  return { min, max, furthestVertexFromOrigin, origin };
 }
 
 // returns the left, right, up, down, front and back via pixdims, qform or sform
@@ -844,57 +914,6 @@ function getExtents(positions) {
  * calculate cuboid extents via pixdims * dims
  * @returns {number[]}
  */
-NVImage.prototype.method1 = function () {
-  return {
-    left: -(this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
-    right: (this.dimsRAS[1] / 2) * this.pixDimsRAS[1],
-    posterior: -(this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
-    anterior: (this.dimsRAS[2] / 2) * this.pixDimsRAS[2],
-    inferior: -(this.dimsRAS[3] / 2) * this.pixDimsRAS[3],
-    superior: (this.dimsRAS[3] / 2) * this.pixDimsRAS[3], // y
-  };
-};
-
-/**
- * calculate cuboid extents via qform
- * @returns {number[]}
- */
-NVImage.prototype.method2 = function () {
-  const affine = [];
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      affine.push(this.hdr.affine[i][j]);
-    }
-  }
-  const affineMatrix = mat.mat4.fromValues(...affine);
-  const qfac = this.hdr.dims[0] ? this.hdr.pixDims[0] : 1;
-
-  let rightTopFront = mat.vec4.fromValues(
-    this.hdr.dims[1] * this.hdr.pixDims[1],
-    this.hdr.dims[2] * this.hdr.pixDims[2],
-    qfac * this.hdr.dims[3] * this.hdr.pixDims[3],
-    1
-  );
-  // let leftBackBottom = mat.vec4.fromValues(0, 0, 0, 1);
-  let maxExtent = mat.vec4.create();
-  mat.vec4.transformMat4(maxExtent, rightTopFront, affineMatrix);
-  // let minExtent = mat.vec4.create();
-  // mat.vec4.transformMat4(minExtent, leftBackBottom, affineMatrix);
-  return {
-    left: maxExtent[0] / 2,
-    right: 0 - maxExtent[0] / 2, // x
-    posterior: 0 - maxExtent[1] / 2,
-    anterior: maxExtent[1] / 2, // z
-    inferior: 0 - maxExtent[2] / 2,
-    superior: maxExtent[2] / 2, // y
-  };
-};
-
-/**
- * calculate cuboid extents via sform
- * @returns {number[]}
- */
-NVImage.prototype.method3 = function () {};
 
 /**
  * @param {number} id - id of 3D Object (is this the base volume or an overlay?)
@@ -902,99 +921,41 @@ NVImage.prototype.method3 = function () {};
  * @returns {NiivueObject3D} returns a new 3D object in model space
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
-  let cuboid = this.method1();
-
-  let left = cuboid.left;
-  let right = cuboid.right;
-  let posterior = cuboid.posterior;
-  let anterior = cuboid.anterior;
-  let inferior = cuboid.inferior;
-  let superior = cuboid.superior;
+  //cube has 8 vertices: left/right, posterior/anterior, inferior/superior
+  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
+  //TODO: ray direction needs to be corrected for oblique rotations
+  let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
+  let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
+  let LAS = this.vox2mm(
+    [0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
+  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
+  let RAI = this.vox2mm(
+    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0],
+    this.matRAS
+  );
+  let RPS = this.vox2mm(
+    [this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
+  let RAS = this.vox2mm(
+    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
+    this.matRAS
+  );
 
   const positions = [
     // Superior face
-    left,
-    posterior,
-    superior,
-    right,
-    posterior,
-    superior,
-    right,
-    anterior,
-    superior,
-    left,
-    anterior,
-    superior,
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
 
     // Inferior face
-    left,
-    posterior,
-    inferior,
-    left,
-    anterior,
-    inferior,
-    right,
-    anterior,
-    inferior,
-    right,
-    posterior,
-    inferior,
-
-    // Anterior face
-    left,
-    anterior,
-    inferior,
-    left,
-    anterior,
-    superior,
-    right,
-    anterior,
-    superior,
-    right,
-    anterior,
-    inferior,
-
-    // Posterior face
-    left,
-    posterior,
-    inferior,
-    right,
-    posterior,
-    inferior,
-    right,
-    posterior,
-    superior,
-    left,
-    posterior,
-    superior,
-
-    // Right face
-    right,
-    posterior,
-    inferior,
-    right,
-    anterior,
-    inferior,
-    right,
-    anterior,
-    superior,
-    right,
-    posterior,
-    superior,
-
-    // Left face
-    left,
-    posterior,
-    inferior,
-    left,
-    posterior,
-    superior,
-    left,
-    anterior,
-    superior,
-    left,
-    anterior,
-    inferior,
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI,
   ];
 
   const textureCoordinates = [
@@ -1041,30 +1002,30 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     6,
     5,
     4, // Bottom
-    8,
-    11,
-    10,
-    10,
-    9,
-    8, // Front
-    12,
-    15,
-    14,
-    14,
-    13,
-    12, // Back
-    16,
-    19,
-    18,
-    18,
-    17,
-    16, // right
-    20,
-    23,
-    22,
-    22,
-    21,
-    20, // left
+    5,
+    6,
+    2,
+    2,
+    3,
+    5, // Front
+    4,
+    0,
+    1,
+    1,
+    7,
+    4, // Back
+    7,
+    1,
+    2,
+    2,
+    6,
+    7, // Right
+    4,
+    5,
+    3,
+    3,
+    0,
+    4, // Left
   ];
   // Now send the element array to GL
 
@@ -1095,5 +1056,7 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
+  obj3D.originNegate = mat.vec3.clone(extents.origin);
+  mat.vec3.negate(obj3D.originNegate, obj3D.originNegate);
   return obj3D;
 };

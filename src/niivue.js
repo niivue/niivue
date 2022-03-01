@@ -17,9 +17,7 @@ import {
   fragRGBOrientShader,
   vertSurfaceShader,
   fragSurfaceShader,
-  vertDepthPickingShader,
   fragDepthPickingShader,
-  vertVolumePickingShader,
   fragVolumePickingShader,
 } from "./shader-srcs.js";
 import * as cmaps from "./cmaps";
@@ -62,9 +60,10 @@ const log = new Log();
 export const Niivue = function (options = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
   this.defaults = {
-    textHeight: 0.03, // 0 for no text, fraction of canvas height
+    textHeight: 0.03, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
     crosshairWidth: 1, // 0 for no crosshairs
+    show3Dcrosshair: false,
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
@@ -88,6 +87,7 @@ export const Niivue = function (options = {}) {
   this.sliceShader = null;
   this.lineShader = null;
   this.renderShader = null;
+  this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
   this.passThroughShader = null;
@@ -97,6 +97,7 @@ export const Niivue = function (options = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
+  this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
 
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
@@ -110,8 +111,9 @@ export const Niivue = function (options = {}) {
   this.sliceTypeRender = 4;
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
+  this.syncOpts = {};
   this.scene.renderAzimuth = 110; //-45;
-  this.scene.renderElevation = 15; //-165; //15;
+  this.scene.renderElevation = 10; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
   this.scene.mousedown = false;
@@ -295,12 +297,16 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
  * niivue2 = new Niivue()
  * niivue2.syncWith(niivue1)
  */
-Niivue.prototype.syncWith = function (otherNV) {
+Niivue.prototype.syncWith = function (
+  otherNV,
+  syncOpts = { "2d": true, "3d": true }
+) {
   // this.scene.renderAzimuth = 120;
   // this.scene.renderElevation = 15;
   // this.scene.crosshairPos = [0.5, 0.5, 0.5];
   // this.scene.clipPlane = [0, 0, 0, 0];
   this.otherNV = otherNV;
+  this.syncOpts = syncOpts;
 };
 
 Niivue.prototype.sync = function () {
@@ -308,9 +314,13 @@ Niivue.prototype.sync = function () {
     return;
   }
   let thisMM = this.frac2mm(this.scene.crosshairPos);
-  this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
-  this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
-  this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  if (this.syncOpts["2d"]) {
+    this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
+  }
+  if (this.syncOpts["3d"]) {
+    this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
+    this.otherNV.scene.renderElevation = this.scene.renderElevation;
+  }
   this.otherNV.drawScene();
 };
 
@@ -510,8 +520,8 @@ Niivue.prototype.mouseUpListener = function () {
     this.isDragging = false;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
-    this.drawScene();
   }
+  this.drawScene();
 };
 
 // not included in public docs
@@ -581,8 +591,10 @@ Niivue.prototype.mouseMoveListener = function (e) {
 // reset brightness and contrast to global min and max
 // note: no test yet
 Niivue.prototype.resetBriCon = function () {
-  this.volumes[0].cal_min = this.volumes[0].global_min;
-  this.volumes[0].cal_max = this.volumes[0].global_max;
+  //this.volumes[0].cal_min = this.volumes[0].global_min;
+  //this.volumes[0].cal_max = this.volumes[0].global_max;
+  this.volumes[0].cal_min = this.volumes[0].robust_min;
+  this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -1494,7 +1506,7 @@ Niivue.prototype.init = async function () {
   this.volumeObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
   let pickingShader = new Shader(
     this.gl,
-    vertVolumePickingShader,
+    vertRenderShader,
     fragVolumePickingShader
   );
   pickingShader.use(this.gl);
@@ -1524,9 +1536,16 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
 
+  this.pickingShader = new Shader(
+    this.gl,
+    vertRenderShader,
+    fragVolumePickingShader
+  );
+
   // add shader to object
   let volumeRenderShader = new NiivueShader3D(this.renderShader);
   volumeRenderShader.mvpUniformName = "mvpMtx";
+  volumeRenderShader.matRASUniformName = "matRAS";
   volumeRenderShader.rayDirUniformName = "rayDir";
   volumeRenderShader.clipPlaneUniformName = "clipPlane";
   this.volumeObject3D.renderShaders.push(volumeRenderShader);
@@ -1576,7 +1595,7 @@ Niivue.prototype.init = async function () {
 
   this.pickingSurfaceShader = new Shader(
     this.gl,
-    vertDepthPickingShader,
+    vertRenderShader,
     fragDepthPickingShader
   );
 
@@ -1632,9 +1651,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
-
   let outTexture = null;
 
+  if (this.crosshairs3D !== null) this.crosshairs3D.mm[0] = NaN; //force crosshairs3D redraw
   let mtx = mat.mat4.clone(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
@@ -1659,16 +1678,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
     // add shader to object
-    let volumeRenderShader = new NiivueShader3D(this.renderShader);
+    let volumeRenderShader = this.renderShader;
+    let pickingShader = this.pickingShader;
     volumeRenderShader.mvpUniformName = "mvpMtx";
+    volumeRenderShader.matRASUniformName = "matRAS";
     volumeRenderShader.rayDirUniformName = "rayDir";
     volumeRenderShader.clipPlaneUniformName = "clipPlane";
-
-    let pickingShader = new Shader(
-      this.gl,
-      vertVolumePickingShader,
-      fragVolumePickingShader
-    );
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -1677,9 +1692,35 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     pickingShader.rayDirUniformName = "rayDir";
     pickingShader.clipPlaneUniformName = "clipPlane";
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale);
-    this.volumeObject3D.pickingShader = pickingShader;
+    if (this.volumeObject3D.pickingShader === null)
+      this.volumeObject3D.pickingShader = pickingShader;
 
     this.volumeObject3D.renderShaders.push(volumeRenderShader);
+    // let mm = this.frac2mm(this.scene.crosshairPos);
+    //mm = [-20, 0, 30]; // <- set any value here to test
+    // generate our crosshairs for the base volume
+    // this.crosshairs3D = NiivueObject3D.generateCrosshairs(
+    //   this.gl,
+    //   1,
+    //   mm,
+    //   this.volumeObject3D.extentsMin,
+    //   this.volumeObject3D.extentsMax,
+    //   Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0)
+    // );
+    // this.crosshairs3D.isPickable = false;
+    // this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    // this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    // this.crosshairs3D.furthestVertexFromOrigin =
+    //   this.volumeObject3D.furthestVertexFromOrigin;
+    // this.crosshairs3D.glFlags |= this.crosshairs3D.ENABLE_DEPTH_TEST;
+    // this.crosshairs3D.glFlags |= this.crosshairs3D.BLEND;
+    console.log(this.volumeObject3D);
+    // let crosshairsShader = new NiivueShader3D(this.surfaceShader);
+    // crosshairsShader.mvpUniformName = "mvpMtx";
+    // this.crosshairs3D.renderShaders.push(crosshairsShader);
+    // this.objectsToRender3D.splice(1, 1, this.crosshairs3D);
+    // // this.objectsToRender3D.splice(0, 0, this.crosshairs3D);
+    // console.log(this.objectsToRender3D);
   } else {
     if (this.back.dims === undefined)
       console.log(
@@ -2412,7 +2453,11 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  //let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(
     this.fontShader.uniforms["canvasWidthHeight"],
@@ -2603,7 +2648,8 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
   let scale =
-    (0.7 * object3D.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+    (0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1.0) /
+    this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -2631,6 +2677,7 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   //push the model away from the camera so camera not inside model
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
+  mat.mat4.translate(modelMatrix, modelMatrix, this.volumeObject3D.position);
   //apply elevation
   mat.mat4.rotateX(
     modelMatrix,
@@ -2643,14 +2690,60 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
     modelMatrix,
     deg2rad(this.scene.renderAzimuth - 180)
   );
+  //translate object to be in center of field of view (e.g. CT brain scans where origin is distant table center)
+  mat.mat4.translate(
+    modelMatrix,
+    modelMatrix,
+    this.volumeObject3D.originNegate
+  );
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   return modelViewProjectionMatrix;
 }; // calculateMvpMatrix
 
 // not included in public docs
-Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
-  //compute ray direction
+Niivue.prototype.calculateRayDirection = function () {
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180.0);
+  }
+  const modelMatrix = mat.mat4.create();
+  modelMatrix[0] = -1; //mirror X coordinate
+  //push the model away from the camera so camera not inside model
+  //apply elevation
+  mat.mat4.rotateX(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(270 - this.scene.renderElevation)
+  );
+  //apply azimuth
+  mat.mat4.rotateZ(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(this.scene.renderAzimuth - 180)
+  );
+  let oblique = mat.mat4.clone(this.back.obliqueRAS);
+  mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
+  //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
+  let projectionMatrix = mat.mat4.fromValues(
+    1,
+    0,
+    0,
+    0,
+    0,
+    -1,
+    0,
+    0,
+    0,
+    0,
+    -1,
+    0,
+    0,
+    0,
+    0,
+    1
+  );
+  let mvpMatrix = mat.mat4.create();
+  mat.mat4.multiply(mvpMatrix, projectionMatrix, modelMatrix);
   var inv = mat.mat4.create();
   mat.mat4.invert(inv, mvpMatrix);
   var rayDir4 = mat.vec4.fromValues(0, 0, -1, 1);
@@ -2658,7 +2751,7 @@ Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
   let rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
   mat.vec3.normalize(rayDir, rayDir);
   //defuzz, avoid divide by zero
-  const tiny = 0.00001;
+  const tiny = 0.00005;
   if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny;
   if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny;
   if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny;
@@ -2670,11 +2763,14 @@ Niivue.prototype.calculateRayDirection = function (mvpMatrix) {
 Niivue.prototype.draw3D = function () {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
   // render picking surfaces
-  let m = null;
+
+  // mvp matrix and ray direction can now be a constant because of world space
+  const mvpMatrix = this.calculateMvpMatrix(this.volumeObject3D);
+  const rayDir = this.calculateRayDirection();
+
   for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible) {
+    if (!object3D.isVisible || !object3D.isPickable) {
       continue;
     }
 
@@ -2688,17 +2784,20 @@ Niivue.prototype.draw3D = function () {
       if (object3D.glFlags & object3D.CULL_FRONT) {
         this.gl.cullFace(this.gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.BACK);
+        this.gl.cullFace(this.gl.FRONT);
       }
     } else {
       this.gl.disable(this.gl.CULL_FACE);
     }
 
-    m = this.calculateMvpMatrix(object3D);
-    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, m);
+    this.gl.uniformMatrix4fv(
+      pickingShader.uniforms["mvpMtx"],
+      false,
+      mvpMatrix
+    );
 
     if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection(m);
+      let rayDir = this.calculateRayDirection();
       this.gl.uniform3fv(
         pickingShader.uniforms[pickingShader.rayDirUniformName],
         rayDir
@@ -2737,7 +2836,6 @@ Niivue.prototype.draw3D = function () {
       this.gl.UNSIGNED_SHORT,
       0
     );
-    break;
   }
   // // check if we have a selected object
   const pixelX =
@@ -2763,9 +2861,9 @@ Niivue.prototype.draw3D = function () {
       (x) => x / 255.0
     );
   }
+
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   this.gl.clearColor(0.2, 0, 0, 1);
-  // return;
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -2805,20 +2903,22 @@ Niivue.prototype.draw3D = function () {
       this.gl.disable(this.gl.CULL_FACE);
     }
 
-    m = this.calculateMvpMatrix(object3D);
-
-    let rayDir = this.calculateRayDirection(m);
-
     for (const shader of object3D.renderShaders) {
       shader.use(this.gl);
       if (shader.mvpUniformName) {
         this.gl.uniformMatrix4fv(
           shader.uniforms[shader.mvpUniformName],
           false,
-          m
+          mvpMatrix
         );
       }
-
+      if (shader.matRASUniformName) {
+        this.gl.uniformMatrix4fv(
+          shader.uniforms[shader.matRASUniformName],
+          false,
+          this.back.matRAS
+        );
+      }
       if (shader.rayDirUniformName) {
         this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
       }
@@ -2827,8 +2927,6 @@ Niivue.prototype.draw3D = function () {
         this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
       }
 
-      // this.gl.drawArrays(object3D.mode, 0, object3D.indexCount);
-
       this.gl.drawElements(
         object3D.mode,
         object3D.indexCount,
@@ -2836,8 +2934,10 @@ Niivue.prototype.draw3D = function () {
         0
       );
     }
-    break;
   }
+
+  this.drawCrosshairs3D(true, 1.0);
+  this.drawCrosshairs3D(false, 0.35);
 
   let posString =
     "azimuth: " +
@@ -2849,6 +2949,101 @@ Niivue.prototype.draw3D = function () {
   this.sync();
   return posString;
 }; // draw3D()
+
+Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
+  if (!this.opts.show3Dcrosshair) {
+    return;
+  }
+  let gl = this.gl;
+  let mm = this.frac2mm(this.scene.crosshairPos);
+  // mm = [-20, 0, 30]; // <- set any value here to test
+  // generate our crosshairs for the base volume
+  if (
+    this.crosshairs3D === null ||
+    this.crosshairs3D.mm[0] !== mm[0] ||
+    this.crosshairs3D.mm[1] !== mm[1] ||
+    this.crosshairs3D.mm[2] !== mm[2]
+  ) {
+    if (this.crosshairs3D !== null) {
+      gl.deleteBuffer(this.crosshairs3D.indexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
+      gl.deleteBuffer(this.crosshairs3D.vertexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
+    }
+    //let radius = Math.max(this.volumeObject3D.furthestVertexFromOrigin / 50.0, 1.0);
+    let radius = Math.min(
+      Math.min(this.back.pixDims[1], this.back.pixDims[2]),
+      this.back.pixDims[3]
+    );
+    this.crosshairs3D = NiivueObject3D.generateCrosshairs(
+      this.gl,
+      1,
+      mm,
+      this.volumeObject3D.extentsMin,
+      this.volumeObject3D.extentsMax,
+      radius
+    );
+    this.crosshairs3D.isPickable = false;
+    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    this.crosshairs3D.mm = mm;
+    this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
+    this.crosshairs3D.furthestVertexFromOrigin =
+      this.volumeObject3D.furthestVertexFromOrigin;
+  }
+  let crosshairsShader = new NiivueShader3D(this.surfaceShader);
+  crosshairsShader.mvpUniformName = "mvpMtx";
+  this.crosshairs3D.renderShaders.push(crosshairsShader);
+
+  {
+    const numComponents = 3;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.crosshairs3D.vertexBuffer);
+    gl.vertexAttribPointer(
+      this.surfaceShader.uniforms["pos"],
+      numComponents,
+      type,
+      normalize,
+      stride,
+      offset
+    );
+    gl.enableVertexAttribArray(this.surfaceShader.uniforms["pos"]);
+  }
+
+  crosshairsShader.use(this.gl);
+  let m = this.calculateMvpMatrix(this.crosshairs3D);
+  gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, m);
+
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
+
+  gl.enable(gl.DEPTH_TEST);
+  let color = [...this.opts.crosshairColor];
+  if (isDepthTest) {
+    gl.disable(gl.BLEND);
+    //gl.depthFunc(gl.LESS); //pass if LESS than incoming value
+    gl.depthFunc(gl.GREATER);
+    color[3] = alpha;
+  } else {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.ALWAYS);
+    color[3] = alpha;
+  }
+
+  gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
+
+  {
+    const vertexCount = this.crosshairs3D.indexCount;
+    const type = gl.UNSIGNED_SHORT;
+    const offset = 0;
+    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+  }
+  //restore default vertex buffer:
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+}; //drawCrosshairs3D()
 
 // not included in public docs
 Niivue.prototype.mm2frac = function (mm, volIdx = 0) {
@@ -2901,9 +3096,9 @@ Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
   //let d = overlayItem.hdr.dims;
   let dim = mat.vec4.fromValues(
-    this.volumes[volIdx].hdr.dims[1],
-    this.volumes[volIdx].hdr.dims[2],
-    this.volumes[volIdx].hdr.dims[3],
+    this.volumes[volIdx].dimsRAS[1],
+    this.volumes[volIdx].dimsRAS[2],
+    this.volumes[volIdx].dimsRAS[3],
     1
   );
   let sform = mat.mat4.clone(this.volumes[volIdx].matRAS);
