@@ -267,7 +267,7 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
     alert(
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
     );
-    console.log(
+    log.warn(
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
     );
   }
@@ -814,14 +814,9 @@ Niivue.prototype.getRadiologicalConvention = function () {
  * niivue.addVolume(NVImage.loadFromUrl('./someURL.nii.gz'))
  */
 Niivue.prototype.addVolume = function (volume) {
-  if (this.volumes.length > 1) {
-    this.overlays.push(volume);
-  } else {
-    this.back = volume;
-  }
-
   this.volumes.push(volume);
-  this.updateGLVolume();
+	let idx = this.volumes.length === 1 ? 1 : this.volumes.length - 1 
+	this.setVolume(volume, idx)
 };
 
 /**
@@ -1714,7 +1709,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     //   this.volumeObject3D.furthestVertexFromOrigin;
     // this.crosshairs3D.glFlags |= this.crosshairs3D.ENABLE_DEPTH_TEST;
     // this.crosshairs3D.glFlags |= this.crosshairs3D.BLEND;
-    console.log(this.volumeObject3D);
+    log.debug(this.volumeObject3D);
     // let crosshairsShader = new NiivueShader3D(this.surfaceShader);
     // crosshairsShader.mvpUniformName = "mvpMtx";
     // this.crosshairs3D.renderShaders.push(crosshairsShader);
@@ -1723,7 +1718,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     // console.log(this.objectsToRender3D);
   } else {
     if (this.back.dims === undefined)
-      console.log(
+      log.error(
         "Fatal error: Unable to render overlay: background dimensions not defined!"
       );
     let f000 = this.mm2frac(overlayItem.mm000); //origin in output space

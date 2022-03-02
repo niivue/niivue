@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 import * as mat from "gl-matrix";
 import * as cmaps from "./cmaps";
 import { NiivueObject3D } from "./niivue-object3D";
+import {Log} from "./logger"
+const log = new Log();
 
 /**
  * query all available color maps that can be applied to volumes
@@ -107,7 +109,7 @@ export var NVImage = function (
     !affineOK ||
     this.hdr.qform_code > this.hdr.sform_code
   ) {
-    console.log("spatial transform based on QForm");
+    log.debug("spatial transform based on QForm");
     //https://github.com/rii-mango/NIFTI-Reader-JS/blob/6908287bf99eb3bc4795c1591d3e80129da1e2f6/src/nifti1.js#L238
     // Define a, b, c, d for coding covenience
     const b = this.hdr.quatern_b;
@@ -155,7 +157,7 @@ export var NVImage = function (
   }
   affineOK = isAffineOK(this.hdr.affine);
   if (!affineOK) {
-    console.log("Defective NIfTI: spatial transform does not make sense");
+    log.debug("Defective NIfTI: spatial transform does not make sense");
     let x = this.hdr.pixDims[1];
     let y = this.hdr.pixDims[2];
     let z = this.hdr.pixDims[3];
@@ -270,7 +272,7 @@ NVImage.prototype.calculateOblique = function () {
   let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
   let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
-    console.log(
+    log.debug(
       "Warning: shear detected (gantry tilt) of %f degrees",
       maxShear
     );
@@ -408,8 +410,8 @@ NVImage.prototype.calculateRAS = function () {
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
   this.toRAS = mat.mat4.clone(rotM);
-  console.log(this.hdr.dims);
-  console.log(this.dimsRAS);
+  log.debug(this.hdr.dims);
+  log.debug(this.dimsRAS);
   this.calculateOblique();
 };
 
@@ -529,7 +531,7 @@ NVImage.prototype.calMinMax = function () {
   nZero += nNan;
   let n2pct = Math.round((nVox - nZero) * this.percentileFrac);
   if (n2pct < 1 || mn === mx) {
-    console.log("no variability in image intensity?");
+    log.debug("no variability in image intensity?");
     this.cal_min = mnScale;
     this.cal_max = mxScale;
     this.robust_min = this.cal_min;
@@ -728,7 +730,7 @@ NVImage.loadFromFile = async function (
       visible
     );
   } catch (err) {
-    console.log(err);
+    log.debug(err);
   }
   return nvimage;
 };
@@ -898,7 +900,7 @@ function getExtents(positions, forceOriginInVolume = true) {
     }
     if (ok) break;
     mat.vec3.lerp(origin, mn, mx, 0.5);
-    console.log("origin moved inside volume: ", origin);
+    log.debug("origin moved inside volume: ", origin);
   }
   let min = [mn[0], mn[1], mn[2]];
   let max = [mx[0], mx[1], mx[2]];
