@@ -8,7 +8,7 @@ async function snapshot(id='#gl', failureThreshold=0.1) {
   const image = await canvas.screenshot();
 
   expect(image).toMatchImageSnapshot({
-    failureThreshold: 0.1,
+    failureThreshold: failureThreshold,
     failureThresholdType: 'percent',
   });
 }
