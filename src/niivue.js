@@ -53,7 +53,8 @@ const log = new Log();
  * @param {string} [options.viewModeHotKey="KeyV"] the keyboard key used to cycle through view modes. The default is "v"
  * @param {number} [options.keyDebounceTime=50] the keyUp debounce time in milliseconds. The default is 50 ms. You must wait this long before a new hot-key keystroke will be registered by the event listener
  * @param {boolean} [options.isRadiologicalConvention=false] whether or not to use radiological convention in the display
- * @param {string} [options.logLevel="info"] the log level of NiiVue logs. options (in order of most to least verbose) are: 'debug', 'info', 'warn', 'error'
+ * @param {string} [options.logging=false] turn on logging or not (true/false)
+ * @param {string} [options.loadingText="waiting on images..."] the loading text to display when there is a blank canvas and no images
  * @example
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
@@ -77,6 +78,7 @@ export const Niivue = function (options = {}) {
     isAtlasOutline: false,
     isRadiologicalConvention: false,
     logging: false,
+		loadingText: 'waiting for images...'
   };
 
   this.canvas = null; // the canvas element on the page
@@ -154,7 +156,6 @@ export const Niivue = function (options = {}) {
   this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
-  this.loadingText = "waiting for images...";
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -173,6 +174,8 @@ export const Niivue = function (options = {}) {
     this.opts[prop] =
       options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
+
+  this.loadingText = this.opts.loadingText;
 
   log.setLogLevel(this.opts.logging);
 
@@ -1166,7 +1169,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       this.loadingText = "loading...";
       this.drawScene();
     } else {
-      this.loadingText = "waiting for images...";
+      this.loadingText = this.opts.loadingText;
     }
   });
   if (!this.initialized) {
@@ -1176,9 +1179,10 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-  this.scene.loading$.next(true);
+  this.scene.loading$.next(false);
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
+		this.scene.loading$.next(true)
     let volume = await NVImage.loadFromUrl(
       volumeList[i].url,
       volumeList[i].name,
