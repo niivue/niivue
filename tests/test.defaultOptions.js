@@ -10,7 +10,7 @@ test('defaultOptions', async () => {
     return nv.opts
   })
 
-  expect(opts.textHeight).toEqual(0.03)
+  expect(opts.textHeight).toEqual(0.06)
   expect(opts.colorbarHeight).toEqual(0.05)
   expect(opts.crosshairWidth).toEqual(1)
   expect(opts.backColor).toEqual([0, 0, 0, 1])

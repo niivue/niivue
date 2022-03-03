@@ -79,8 +79,8 @@ export const Niivue = function (options = {}) {
     isAtlasOutline: false,
     isRadiologicalConvention: false,
     logging: false,
-		loadingText: 'waiting for images...',
-		dragAndDropEnabled: true
+    loadingText: "waiting for images...",
+    dragAndDropEnabled: true,
   };
 
   this.canvas = null; // the canvas element on the page
@@ -598,9 +598,11 @@ Niivue.prototype.mouseMoveListener = function (e) {
 Niivue.prototype.resetBriCon = function () {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
-	
-	// don't reset bri/con if the user is in 3D mode and double clicks
-	if (this.sliceType === this.sliceTypeRender){return}
+
+  // don't reset bri/con if the user is in 3D mode and double clicks
+  if (this.sliceType === this.sliceTypeRender) {
+    return;
+  }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -788,8 +790,10 @@ Niivue.prototype.dragOverListener = function (e) {
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
   e.preventDefault();
-	// don't do anything if drag and drop has been turned off 
-	if (!this.opts.dragAndDropEnabled) {return}
+  // don't do anything if drag and drop has been turned off
+  if (!this.opts.dragAndDropEnabled) {
+    return;
+  }
 
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
@@ -826,8 +830,8 @@ Niivue.prototype.getRadiologicalConvention = function () {
  */
 Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
-	let idx = this.volumes.length === 1 ? 1 : this.volumes.length - 1 
-	this.setVolume(volume, idx)
+  let idx = this.volumes.length === 1 ? 1 : this.volumes.length - 1;
+  this.setVolume(volume, idx);
 };
 
 /**
@@ -1190,7 +1194,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.scene.loading$.next(false);
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
-		this.scene.loading$.next(true)
+    this.scene.loading$.next(true);
     let volume = await NVImage.loadFromUrl(
       volumeList[i].url,
       volumeList[i].name,

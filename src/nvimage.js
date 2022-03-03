@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import * as mat from "gl-matrix";
 import * as cmaps from "./cmaps";
 import { NiivueObject3D } from "./niivue-object3D";
-import {Log} from "./logger"
+import { Log } from "./logger";
 const log = new Log();
 
 /**
@@ -272,10 +272,7 @@ NVImage.prototype.calculateOblique = function () {
   let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
   let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
-    log.debug(
-      "Warning: shear detected (gantry tilt) of %f degrees",
-      maxShear
-    );
+    log.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
 };
 
 // not included in public docs
