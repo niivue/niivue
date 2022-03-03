@@ -2801,11 +2801,14 @@ Niivue.prototype.draw3D = function () {
       this.gl.disable(this.gl.CULL_FACE);
     }
 
-    this.gl.uniformMatrix4fv(
-      pickingShader.uniforms["mvpMtx"],
+		/*
+		this.gl.uniformMatrix4fv(
+      //pickingShader.uniforms["mvpMtx"],
+		  pickingShader.uniforms[pickingShader.mvpUniformName],
       false,
       mvpMatrix
     );
+		*/
 
     if (pickingShader.rayDirUniformName) {
       let rayDir = this.calculateRayDirection();
