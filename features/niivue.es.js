@@ -12993,7 +12993,7 @@ const log = new Log();
 const Niivue = function(options = {}) {
   this.opts = {};
   this.defaults = {
-    textHeight: 0.03,
+    textHeight: 0.06,
     colorbarHeight: 0.05,
     crosshairWidth: 1,
     show3Dcrosshair: false,
@@ -13009,7 +13009,9 @@ const Niivue = function(options = {}) {
     isNearestInterpolation: false,
     isAtlasOutline: false,
     isRadiologicalConvention: false,
-    logging: false
+    logging: false,
+    loadingText: "waiting for images...",
+    dragAndDropEnabled: true
   };
   this.canvas = null;
   this.gl = null;
@@ -13083,7 +13085,6 @@ const Niivue = function(options = {}) {
   this.intensityRange$ = new Subject();
   this.scene.location$ = new Subject();
   this.scene.loading$ = new Subject();
-  this.loadingText = "waiting for images...";
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -13096,6 +13097,7 @@ const Niivue = function(options = {}) {
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
   }
+  this.loadingText = this.opts.loadingText;
   log.setLogLevel(this.opts.logging);
   this.eventsToSubjects = {
     location: this.scene.location$,
@@ -13331,6 +13333,9 @@ Niivue.prototype.mouseMoveListener = function(e) {
   }
 };
 Niivue.prototype.resetBriCon = function() {
+  if (this.sliceType === this.sliceTypeRender) {
+    return;
+  }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -13439,6 +13444,9 @@ Niivue.prototype.dragOverListener = function(e) {
 Niivue.prototype.dropListener = async function(e) {
   e.stopPropagation();
   e.preventDefault();
+  if (!this.opts.dragAndDropEnabled) {
+    return;
+  }
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {
@@ -13648,7 +13656,7 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
       this.loadingText = "loading...";
       this.drawScene();
     } else {
-      this.loadingText = "waiting for images...";
+      this.loadingText = this.opts.loadingText;
     }
   });
   if (!this.initialized)
@@ -13656,8 +13664,9 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
   this.volumes = [];
   this.gl.clearColor(0, 0, 0, 1);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  this.scene.loading$.next(true);
+  this.scene.loading$.next(false);
   for (let i = 0; i < volumeList.length; i++) {
+    this.scene.loading$.next(true);
     let volume = await NVImage.loadFromUrl(volumeList[i].url, volumeList[i].name, volumeList[i].colorMap, volumeList[i].opacity, this.opts.trustCalMinMax);
     this.scene.loading$.next(false);
     this.volumes.push(volume);
