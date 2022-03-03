@@ -55,13 +55,14 @@ const log = new Log();
  * @param {boolean} [options.isRadiologicalConvention=false] whether or not to use radiological convention in the display
  * @param {string} [options.logging=false] turn on logging or not (true/false)
  * @param {string} [options.loadingText="waiting on images..."] the loading text to display when there is a blank canvas and no images
+ * @param {boolean} [options.dragAndDropEnabled=true] whether or not to allow file and url drag and drop on the canvas
  * @example
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export const Niivue = function (options = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
   this.defaults = {
-    textHeight: 0.03, // 0 for no text, fraction of canvas min(height,width)
+    textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
     crosshairWidth: 1, // 0 for no crosshairs
     show3Dcrosshair: false,
@@ -78,7 +79,8 @@ export const Niivue = function (options = {}) {
     isAtlasOutline: false,
     isRadiologicalConvention: false,
     logging: false,
-		loadingText: 'waiting for images...'
+		loadingText: 'waiting for images...',
+		dragAndDropEnabled: true
   };
 
   this.canvas = null; // the canvas element on the page
@@ -783,6 +785,9 @@ Niivue.prototype.dragOverListener = function (e) {
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
   e.preventDefault();
+	// don't do anything if drag and drop has been turned off 
+	if (!this.opts.dragAndDropEnabled) {return}
+
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {

@@ -67,17 +67,16 @@
           opacity: 1,
           visible: true,
         },
-				/*
 				{
 					url: "./hippo.nii.gz",
 					colorMap: 'red'
 				}
-				*/
       ]
 			var nv1 = new Niivue({
 				logging: true,
 				show3Dcrosshair: true,
-				loadingText: 'there are no images'
+				loadingText: 'there are no images',
+				dragAndDropEnabled: true
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
