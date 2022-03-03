@@ -598,6 +598,9 @@ Niivue.prototype.mouseMoveListener = function (e) {
 Niivue.prototype.resetBriCon = function () {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
+	
+	// don't reset bri/con if the user is in 3D mode and double clicks
+	if (this.sliceType === this.sliceTypeRender){return}
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
