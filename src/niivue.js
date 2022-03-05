@@ -164,7 +164,7 @@ export const Niivue = function (options = {}) {
   this.gestureInterval = null;
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
-  this.VOLUME_ID = 2;
+  this.VOLUME_ID = 250;
   this.DISTANCE_FROM_CAMERA = -0.54;
 
   this.initialized = false;
@@ -2075,6 +2075,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
+  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
   this.updateInterpolation(layer);
 }; // refreshLayers()
@@ -2835,12 +2836,28 @@ Niivue.prototype.draw3D = function () {
         object3D.textureCoordinateBuffer
       );
       this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+    } else {
+      this.gl.disableVertexAttribArray(1);
     }
 
     if (object3D.indexBuffer) {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
     }
 
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+  if (object3D.mode === this.gl.TRIANGLE_STRIP) {
+    console.log(object3D.mode, 'picking clip plane (strip)', object3D.vertexBuffer);
+    continue; //nx= TO DO: support clip planes
+  }
     this.gl.drawElements(
       object3D.mode,
       object3D.indexCount,
@@ -2866,6 +2883,11 @@ Niivue.prototype.draw3D = function () {
     rgbaPixel
   ); // typed array to hold result
 
+  //restore default vertex buffer:
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  
   this.selectedObjectId = rgbaPixel[3];
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
@@ -2874,7 +2896,7 @@ Niivue.prototype.draw3D = function () {
   }
 
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
+  //???WHY this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
