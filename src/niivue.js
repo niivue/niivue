@@ -3073,6 +3073,9 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
   //restore default vertex buffer:
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthFunc(gl.ALWAYS);
   this.gl.enableVertexAttribArray(0);
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);

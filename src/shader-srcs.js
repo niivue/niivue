@@ -80,7 +80,7 @@ void main() {
 	// fColor = texture(volume, vColor.xyz);
 	// return;
 	vec3 start = vColor;
-	gl_FragDepth = 0.5;
+	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
   vec3 dir = backPosition - start;
@@ -107,7 +107,6 @@ void main() {
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) {
-		gl_FragDepth = frac2ndc(samplePos.xyz);
 		return;
 	}
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
@@ -134,7 +133,8 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	gl_FragDepth = frac2ndc(firstHit.xyz);
+	if (firstHit.a != 0.0)
+		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	if (overlays < 1.0) return;
@@ -535,7 +535,7 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	bool frontface = (cdot > 0.0);
 	float clipThick = 2.0;
 	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	float disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
 	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
 		samplePos.a = len + 1.0;
 		return samplePos;
