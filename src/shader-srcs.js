@@ -518,7 +518,6 @@ uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
-uniform float backOpacity;
 uniform int id;
 in vec3 vColor;
 out vec4 fColor;
