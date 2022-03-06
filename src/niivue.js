@@ -164,7 +164,7 @@ export const Niivue = function (options = {}) {
   this.gestureInterval = null;
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
-  this.VOLUME_ID = 250;
+  this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
 
   this.initialized = false;
@@ -2064,6 +2064,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let vox = slicescl.vox;
   let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform4fv(this.renderShader.uniforms["clipPlaneColor"], [0.5, 0.0, 0.5, 0.5]);
   this.gl.uniform1f(
     this.renderShader.uniforms["backOpacity"],
     this.volumes[0].opacity
@@ -2855,8 +2856,8 @@ Niivue.prototype.draw3D = function () {
       this.gl.disable(this.gl.CULL_FACE);
     }
   if (object3D.mode === this.gl.TRIANGLE_STRIP) {
-    console.log(object3D.mode, 'picking clip plane (strip)', object3D.vertexBuffer);
-    continue; //nx= TO DO: support clip planes
+    //console.log(object3D.mode, 'picking clip plane (strip)', object3D.vertexBuffer);
+    continue; //we no longer support clip planes like this
   }
     this.gl.drawElements(
       object3D.mode,
@@ -2894,7 +2895,12 @@ Niivue.prototype.draw3D = function () {
       (x) => x / 255.0
     );
   }
-
+  if (253 === rgbaPixel[3]) {
+    let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map(
+      (x) => x / 255.0
+    );
+    console.log('User clicked on the clip plane at '+clipXYZ);
+  }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   //???WHY this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
