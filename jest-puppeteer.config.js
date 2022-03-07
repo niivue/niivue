@@ -1,7 +1,8 @@
+const {os} = require("os")
 module.exports = {
   launch: {
     dumpio: true,
-    headless: process.env.HEADLESS, // process.env.HEADLESS === "true",
+		headless: os.platform() === 'win32' ? true : false,
     defaultViewport: null,
     args: [`--window-size=1920,1080`, '--no-sandbox', '--disable-setuid-sandbox'],
     product: 'chrome'
