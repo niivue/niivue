@@ -9,7 +9,46 @@ void main(void) {
 	vColor = texCoords;
 }`;
 
-export var fragRenderShader = `#version 300 es
+const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
+	vec3 startPosition = startPositionTex * volScale; 
+	vec3 invR = 1.0 / rayDir;
+	vec3 tbot = invR * (vec3(0.0)-startPosition);
+	vec3 ttop = invR * (volScale-startPosition);
+	vec3 tmax = max(ttop, tbot);
+	vec2 t = min(tmax.xx, tmax.yz);
+	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+	//convert world position back to texture position:
+	endPosition = endPosition / volScale;
+	return endPosition;
+}
+vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
+	float cdot = dot(dir,clipPlane.xyz);
+	isClip = false;
+	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
+	bool frontface = (cdot > 0.0);
+	float clipThick = 2.0;
+	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
+		samplePos.a = len + 1.0;
+		return samplePos;
+	}
+	if (frontface) {
+		dis = max(0.0, dis);
+		samplePos = vec4(samplePos.xyz+dir * dis, dis);
+		if (dis > 0.0) isClip = true;
+		len = min(disBackFace, len);
+	}
+	if (!frontface) {
+		len = min(dis, len);
+		disBackFace = max(0.0, disBackFace);
+		if (len == dis) isClip = true;
+		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
+	}
+	return samplePos;
+}`;
+export var fragRenderShader =
+  `#version 300 es
 #line 14
 precision highp int;
 precision highp float;
@@ -22,45 +61,12 @@ uniform float overlays;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
+uniform vec4 clipPlaneColor;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition(vec3 startPositionTex) {
- //texture space is 0..1 in each dimension, volScale adjusts for relative field of view
- //convert startPosition to world space units:
- vec3 startPosition = startPositionTex * volScale; 
- vec3 invR = 1.0 / rayDir;
- vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (volScale-startPosition);
- vec3 tmax = max(ttop, tbot);
- vec2 t = min(tmax.xx, tmax.yz);
- vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
- //convert world position back to texture position:
- endPosition = endPosition / volScale;
- return endPosition;
-}
-vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
-	float cdot = dot(dir,clipPlane.xyz);
-	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-    bool frontface = (cdot > 0.0);
-	float clipThick = 2.0;
-    float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-        samplePos.a = len + 1.0;
-        return samplePos;
-    }
-    if (frontface) {
-        dis = max(0.0, dis);
-        samplePos = vec4(samplePos.xyz+dir * dis, dis);
-        len = min(disBackFace, len);
-    }
-    if (!frontface) {
-        len = min(dis, len);
-        disBackFace = max(0.0, disBackFace);
-        samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-    }
-    return samplePos;
-}
+` +
+  kRenderFunc +
+  `
 float frac2ndc(vec3 frac) {
 //https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
 	vec4 pos = vec4(frac.xyz, 1.0); //fraction
@@ -74,17 +80,14 @@ float frac2ndc(vec3 frac) {
 	
 }
 void main() {
-  fColor = vec4(0.0,0.0,0.0,0.0);
-  //vec3 dimsRAS = vec3(textureSize(volume, 0));
+	fColor = vec4(0.0,0.0,0.0,0.0);
 	//fColor = vec4(vColor.rgb, 1.0); return;
-	// fColor = texture(volume, vColor.xyz);
-	// return;
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
-  vec3 dir = backPosition - start;
-  float len = length(dir);
+	vec3 dir = backPosition - start;
+	float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
 		return;
@@ -92,11 +95,12 @@ void main() {
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
 	float opacityCorrection = stepSize/sliceSize;
-    dir = normalize(dir);
+	dir = normalize(dir);
 	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
-	vec4 clipPos = applyClip(dir, samplePos, len);
+	bool isClip = false;
+	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
@@ -105,10 +109,12 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
-	if ((samplePos.a > len) && (overlays < 1.0)) {
+	if ((samplePos.a >= len) && (overlays < 1.0)) {
+		if (isClip)
+			fColor += clipPlaneColor;
 		return;
 	}
+	fColor = vec4(1.0, 1.0, 1.0, 1.0);
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
@@ -141,7 +147,7 @@ void main() {
 	//overlay pass
 	len = lenNoClip;
 	samplePos = vec4(start.xyz, 0.0); //ray position
-    //start: OPTIONAL fast pass: rapid traversal until first hit
+	//start: OPTIONAL fast pass: rapid traversal until first hit
 	stepSizeFast = sliceSize * 1.9;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
@@ -149,7 +155,11 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if (samplePos.a > len) return;
+	if (samplePos.a >= len) {
+		if (isClip && (fColor.a == 0.0))
+			fColor += clipPlaneColor;
+		return;
+	}
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
@@ -501,7 +511,8 @@ void main() {
 	color = vec4(vColor, float(id & 255) / 255.0);
 }`;
 
-export var fragVolumePickingShader = `#version 300 es
+export var fragVolumePickingShader =
+  `#version 300 es
 #line 506
 //precision highp int;
 precision highp float;
@@ -511,47 +522,12 @@ uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
-uniform float backOpacity;
 uniform int id;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition(vec3 startPositionTex) {
-	//texture space is 0..1 in each dimension, volScale adjusts for relative field of view
-	//convert startPosition to world space units:
-	vec3 startPosition = startPositionTex * volScale; 
-	vec3 invR = 1.0 / rayDir;
-	vec3 tbot = invR * (vec3(0.0)-startPosition);
-	vec3 ttop = invR * (volScale-startPosition);
-	vec3 tmax = max(ttop, tbot);
-	vec2 t = min(tmax.xx, tmax.yz);
-	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
-	//convert world position back to texture position:
-	endPosition = endPosition / volScale;
-	return endPosition;
- }
-vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
-	float cdot = dot(dir,clipPlane.xyz);
-	if ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-	bool frontface = (cdot > 0.0);
-	float clipThick = 2.0;
-	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	float disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-		samplePos.a = len + 1.0;
-		return samplePos;
-	}
-	if (frontface) {
-		dis = max(0.0, dis);
-		samplePos = vec4(samplePos.xyz+dir * dis, dis);
-		len = min(disBackFace, len);
-	}
-	if (!frontface) {
-		len = min(dis, len);
-		disBackFace = max(0.0, disBackFace);
-		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-	}
-	return samplePos;
-}
+` +
+  kRenderFunc +
+  `
 void main() {
 	vec3 start = vColor;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
@@ -567,7 +543,9 @@ void main() {
 	dir = normalize(dir);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
-	vec4 clipPos = applyClip(dir, samplePos, len);
+	bool isClip = false;
+	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	if (isClip) fColor = vec4(samplePos.xyz, 253.0 / 255.0); //assume no hit: ID = 0
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);

@@ -12,9 +12,7 @@ test('volume is properly clipped in sagittal plane', async () => {
     let nv = new niivue.Niivue(opts = opts)
     await nv.attachTo('gl')
     nv.sliceType = nv.sliceTypeRender;
-    nv.clipPlaneObject3D.isVisible = true;
-    nv.scene.clipPlane = [1, 0, 0, 0];
-    nv.clipPlaneObject3D.rotation = [0, 1, 0];
+		nv.clipPlaneUpdate([0, 270, 0])
 
     // load one volume object in an array
     var volumeList = [
