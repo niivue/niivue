@@ -625,6 +625,44 @@ void main(void) {
 	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
 	vColor = texCoords;
 }`;
+const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
+	vec3 startPosition = startPositionTex * volScale; 
+	vec3 invR = 1.0 / rayDir;
+	vec3 tbot = invR * (vec3(0.0)-startPosition);
+	vec3 ttop = invR * (volScale-startPosition);
+	vec3 tmax = max(ttop, tbot);
+	vec2 t = min(tmax.xx, tmax.yz);
+	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+	//convert world position back to texture position:
+	endPosition = endPosition / volScale;
+	return endPosition;
+}
+vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
+	float cdot = dot(dir,clipPlane.xyz);
+	isClip = false;
+	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
+	bool frontface = (cdot > 0.0);
+	float clipThick = 2.0;
+	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
+		samplePos.a = len + 1.0;
+		return samplePos;
+	}
+	if (frontface) {
+		dis = max(0.0, dis);
+		samplePos = vec4(samplePos.xyz+dir * dis, dis);
+		if (dis > 0.0) isClip = true;
+		len = min(disBackFace, len);
+	}
+	if (!frontface) {
+		len = min(dis, len);
+		disBackFace = max(0.0, disBackFace);
+		if (len == dis) isClip = true;
+		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
+	}
+	return samplePos;
+}`;
 var fragRenderShader = `#version 300 es
 #line 14
 precision highp int;
@@ -638,45 +676,10 @@ uniform float overlays;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
+uniform vec4 clipPlaneColor;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition(vec3 startPositionTex) {
- //texture space is 0..1 in each dimension, volScale adjusts for relative field of view
- //convert startPosition to world space units:
- vec3 startPosition = startPositionTex * volScale; 
- vec3 invR = 1.0 / rayDir;
- vec3 tbot = invR * (vec3(0.0)-startPosition);
- vec3 ttop = invR * (volScale-startPosition);
- vec3 tmax = max(ttop, tbot);
- vec2 t = min(tmax.xx, tmax.yz);
- vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
- //convert world position back to texture position:
- endPosition = endPosition / volScale;
- return endPosition;
-}
-vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
-	float cdot = dot(dir,clipPlane.xyz);
-	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-    bool frontface = (cdot > 0.0);
-	float clipThick = 2.0;
-    float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-        samplePos.a = len + 1.0;
-        return samplePos;
-    }
-    if (frontface) {
-        dis = max(0.0, dis);
-        samplePos = vec4(samplePos.xyz+dir * dis, dis);
-        len = min(disBackFace, len);
-    }
-    if (!frontface) {
-        len = min(dis, len);
-        disBackFace = max(0.0, disBackFace);
-        samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-    }
-    return samplePos;
-}
+` + kRenderFunc + `
 float frac2ndc(vec3 frac) {
 //https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
 	vec4 pos = vec4(frac.xyz, 1.0); //fraction
@@ -690,17 +693,14 @@ float frac2ndc(vec3 frac) {
 	
 }
 void main() {
-  fColor = vec4(0.0,0.0,0.0,0.0);
-  //vec3 dimsRAS = vec3(textureSize(volume, 0));
+	fColor = vec4(0.0,0.0,0.0,0.0);
 	//fColor = vec4(vColor.rgb, 1.0); return;
-	// fColor = texture(volume, vColor.xyz);
-	// return;
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
-  vec3 dir = backPosition - start;
-  float len = length(dir);
+	vec3 dir = backPosition - start;
+	float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
 		return;
@@ -708,11 +708,12 @@ void main() {
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
 	float opacityCorrection = stepSize/sliceSize;
-    dir = normalize(dir);
+	dir = normalize(dir);
 	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
-	vec4 clipPos = applyClip(dir, samplePos, len);
+	bool isClip = false;
+	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
@@ -721,10 +722,12 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
-	if ((samplePos.a > len) && (overlays < 1.0)) {
+	if ((samplePos.a >= len) && (overlays < 1.0)) {
+		if (isClip)
+			fColor += clipPlaneColor;
 		return;
 	}
+	fColor = vec4(1.0, 1.0, 1.0, 1.0);
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
@@ -757,7 +760,7 @@ void main() {
 	//overlay pass
 	len = lenNoClip;
 	samplePos = vec4(start.xyz, 0.0); //ray position
-    //start: OPTIONAL fast pass: rapid traversal until first hit
+	//start: OPTIONAL fast pass: rapid traversal until first hit
 	stepSizeFast = sliceSize * 1.9;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
@@ -765,7 +768,11 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if (samplePos.a > len) return;
+	if (samplePos.a >= len) {
+		if (isClip && (fColor.a == 0.0))
+			fColor += clipPlaneColor;
+		return;
+	}
 	samplePos -= deltaDirFast;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
@@ -1105,47 +1112,10 @@ uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
-uniform float backOpacity;
 uniform int id;
 in vec3 vColor;
 out vec4 fColor;
-vec3 GetBackPosition(vec3 startPositionTex) {
-	//texture space is 0..1 in each dimension, volScale adjusts for relative field of view
-	//convert startPosition to world space units:
-	vec3 startPosition = startPositionTex * volScale; 
-	vec3 invR = 1.0 / rayDir;
-	vec3 tbot = invR * (vec3(0.0)-startPosition);
-	vec3 ttop = invR * (volScale-startPosition);
-	vec3 tmax = max(ttop, tbot);
-	vec2 t = min(tmax.xx, tmax.yz);
-	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
-	//convert world position back to texture position:
-	endPosition = endPosition / volScale;
-	return endPosition;
- }
-vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
-	float cdot = dot(dir,clipPlane.xyz);
-	if ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-	bool frontface = (cdot > 0.0);
-	float clipThick = 2.0;
-	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	float disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-		samplePos.a = len + 1.0;
-		return samplePos;
-	}
-	if (frontface) {
-		dis = max(0.0, dis);
-		samplePos = vec4(samplePos.xyz+dir * dis, dis);
-		len = min(disBackFace, len);
-	}
-	if (!frontface) {
-		len = min(dis, len);
-		disBackFace = max(0.0, disBackFace);
-		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-	}
-	return samplePos;
-}
+` + kRenderFunc + `
 void main() {
 	vec3 start = vColor;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
@@ -1161,7 +1131,9 @@ void main() {
 	dir = normalize(dir);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
-	vec4 clipPos = applyClip(dir, samplePos, len);
+	bool isClip = false;
+	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	if (isClip) fColor = vec4(samplePos.xyz, 253.0 / 255.0); //assume no hit: ID = 0
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
@@ -13000,7 +12972,7 @@ const Niivue = function(options = {}) {
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
-    clipPlaneColor: [1, 1, 1, 0.5],
+    clipPlaneColor: [0.7, 0, 0.7, 0.5],
     colorBarMargin: 0.05,
     trustCalMinMax: true,
     clipPlaneHotKey: "KeyC",
@@ -13048,12 +13020,14 @@ const Niivue = function(options = {}) {
   this.scene.renderElevation = 10;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
+  this.scene.clipPlaneDepthAziElev = [2, 0, 0];
   this.scene.mousedown = false;
   this.scene.touchdown = false;
   this.scene.mouseButtonLeft = 0;
   this.scene.mouseButtonRight = 2;
   this.scene.mouseButtonLeftDown = false;
   this.scene.mouseButtonRightDown = false;
+  this.scene.mouseDepthPicker = false;
   this.scene.prevX = 0;
   this.scene.prevY = 0;
   this.scene.currX = 0;
@@ -13074,14 +13048,13 @@ const Niivue = function(options = {}) {
     { leftTopWidthHeight: [1, 0, 0, 1], axCorSag: this.sliceTypeAxial },
     { leftTopWidthHeight: [1, 0, 0, 1], axCorSag: this.sliceTypeAxial }
   ];
-  this.backOpacity = 1;
   this.isDragging = false;
   this.dragStart = [0, 0];
   this.dragEnd = [0, 0];
+  this.dragClipPlaneStartDepthAziElev = [0, 0, 0];
   this.lastTwoTouchDistance = 0;
   this.otherNV = null;
   this.volumeObject3D = null;
-  this.clipPlaneObject3D = null;
   this.intensityRange$ = new Subject();
   this.scene.location$ = new Subject();
   this.scene.loading$ = new Subject();
@@ -13091,7 +13064,7 @@ const Niivue = function(options = {}) {
   this.gestureInterval = null;
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
-  this.VOLUME_ID = 250;
+  this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
   this.initialized = false;
   for (let prop in this.defaults) {
@@ -13221,6 +13194,7 @@ Niivue.prototype.mouseRightButtonHandler = function(e) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
   this.dragStart[0] = pos.x;
   this.dragStart[1] = pos.y;
+  this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
 Niivue.prototype.calculateMinMaxVoxIdx = function(array) {
@@ -13334,6 +13308,8 @@ Niivue.prototype.mouseMoveListener = function(e) {
 };
 Niivue.prototype.resetBriCon = function() {
   if (this.sliceType === this.sliceTypeRender) {
+    this.scene.mouseDepthPicker = true;
+    this.drawScene();
     return;
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
@@ -13374,27 +13350,31 @@ Niivue.prototype.keyUpListener = function(e) {
     let now = new Date().getTime();
     let elapsed = now - this.lastCalled;
     if (elapsed > this.opts.keyDebounceTime) {
-      this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 4;
-      this.clipPlaneObject3D.isVisible = this.currentClipPlaneIndex;
+      this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 7;
       switch (this.currentClipPlaneIndex) {
         case 0:
-          this.scene.clipPlane = [0, 0, 0, 0];
-          this.clipPlaneObject3D.rotation = [0, 0, 0];
+          this.scene.clipPlaneDepthAziElev = [2, 0, 0];
           break;
         case 1:
-          this.scene.clipPlane = [1, 0, 0, 0];
-          this.clipPlaneObject3D.rotation = [0, 1, 0];
+          this.scene.clipPlaneDepthAziElev = [0, 270, 0];
           break;
         case 2:
-          this.scene.clipPlane = [0, 1, 0, 0];
-          this.clipPlaneObject3D.rotation = [1, 0, 0];
+          this.scene.clipPlaneDepthAziElev = [0, 90, 0];
           break;
         case 3:
-          this.scene.clipPlane = [0, 0, 1, 0];
-          this.clipPlaneObject3D.rotation = [0, 0, 1];
+          this.scene.clipPlaneDepthAziElev = [0, 0, 0];
+          break;
+        case 4:
+          this.scene.clipPlaneDepthAziElev = [0, 180, 0];
+          break;
+        case 5:
+          this.scene.clipPlaneDepthAziElev = [0, 0, -90];
+          break;
+        case 6:
+          this.scene.clipPlaneDepthAziElev = [0, 0, 90];
           break;
       }
-      this.drawScene();
+      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
     }
     this.lastCalled = now;
   } else if (e.code === this.opts.viewModeHotKey) {
@@ -13572,11 +13552,11 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   ret[2] /= len2;
   return ret;
 };
-Niivue.prototype.clipPlaneUpdate = function(azimuthElevation) {
+Niivue.prototype.clipPlaneUpdate = function(depthAzimuthElevation) {
   if (this.sliceType != this.sliceTypeRender)
     return;
-  let v = this.sph2cartDeg(azimuthElevation[0], azimuthElevation[1]);
-  this.scene.clipPlane = [v[0], v[1], v[2], azimuthElevation[2]];
+  let v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
+  this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.drawScene();
 };
 Niivue.prototype.setCrosshairColor = function(color) {
@@ -13597,7 +13577,6 @@ Niivue.prototype.setSliceType = function(st) {
 Niivue.prototype.setOpacity = function(volIdx, newOpacity) {
   this.volumes[volIdx].opacity = newOpacity;
   if (volIdx === 0) {
-    this.backOpacity = newOpacity;
     this.drawScene();
     return;
   }
@@ -13821,11 +13800,6 @@ Niivue.prototype.init = async function() {
   this.gl.bufferData(this.gl.ARRAY_BUFFER, clipPlaneVertices, this.gl.STATIC_DRAW);
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  this.clipPlaneObject3D = new NiivueObject3D(this.CLIP_PLANE_ID, vertexBuffer, this.gl.TRIANGLES, 6);
-  this.clipPlaneObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
-  this.clipPlaneObject3D.isVisible = false;
-  this.clipPlaneObject3D.rotationRadians = Math.PI / 2;
-  this.objectsToRender3D.push(this.clipPlaneObject3D);
   let cubeStrip = [
     0,
     1,
@@ -13924,7 +13898,6 @@ Niivue.prototype.init = async function() {
   this.gl.uniform4fv(this.surfaceShader.uniforms["surfaceColor"], this.opts.clipPlaneColor);
   let clipPlaneShader = new NiivueShader3D(this.surfaceShader);
   clipPlaneShader.mvpUniformName = "mvpMtx";
-  this.clipPlaneObject3D.renderShaders.push(clipPlaneShader);
   await this.initText();
   this.updateGLVolume();
   this.initialized = true;
@@ -14116,6 +14089,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let vox = slicescl.vox;
   let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform4fv(this.renderShader.uniforms["clipPlaneColor"], this.opts.clipPlaneColor);
   this.gl.uniform1f(this.renderShader.uniforms["backOpacity"], this.volumes[0].opacity);
   this.gl.uniform4fv(this.renderShader.uniforms["clipPlane"], this.scene.clipPlane);
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
@@ -14225,6 +14199,18 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0)
       return;
+    if (this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+      let depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
+      if (posChange > 0)
+        depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025);
+      if (posChange < 0)
+        depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025);
+      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
+        this.scene.clipPlaneDepthAziElev = depthAziElev;
+        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      }
+      return;
+    }
     if (posChange > 0)
       this.volScaleMultiplier = Math.min(2, this.volScaleMultiplier * 1.1);
     if (posChange < 0)
@@ -14444,7 +14430,7 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
     ];
   let isMirrorLR = this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
   this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["opacity"], this.backOpacity);
+  this.gl.uniform1f(this.sliceShader.uniforms["opacity"], this.volumes[0].opacity);
   this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceShader.uniforms["slice"], crossXYZ[2]);
   this.gl.uniform2fv(this.sliceShader.uniforms["canvasWidthHeight"], [
@@ -14554,70 +14540,80 @@ Niivue.prototype.draw3D = function() {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   const mvpMatrix = this.calculateMvpMatrix(this.volumeObject3D);
   const rayDir = this.calculateRayDirection();
-  for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible || !object3D.isPickable) {
-      continue;
-    }
-    let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
-    pickingShader.use(this.gl);
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.FRONT);
+  if (this.scene.mouseDepthPicker) {
+    this.scene.mouseDepthPicker = false;
+    for (const object3D of this.objectsToRender3D) {
+      if (!object3D.isVisible || !object3D.isPickable) {
+        continue;
       }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
+      let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
+      pickingShader.use(this.gl);
+      if (object3D.glFlags & object3D.CULL_FACE) {
+        this.gl.enable(this.gl.CULL_FACE);
+        if (object3D.glFlags & object3D.CULL_FRONT) {
+          this.gl.cullFace(this.gl.FRONT);
+        } else {
+          this.gl.cullFace(this.gl.FRONT);
+        }
+      } else {
+        this.gl.disable(this.gl.CULL_FACE);
+      }
+      this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
+      if (pickingShader.rayDirUniformName) {
+        let rayDir2 = this.calculateRayDirection();
+        this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir2);
+      }
+      if (pickingShader.clipPlaneUniformName) {
+        this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
+      }
+      this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
+      this.gl.enableVertexAttribArray(0);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+      this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+      if (object3D.textureCoordinateBuffer) {
+        this.gl.enableVertexAttribArray(1);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
+        this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+      } else {
+        this.gl.disableVertexAttribArray(1);
+      }
+      if (object3D.indexBuffer) {
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+      }
+      if (object3D.glFlags & object3D.CULL_FACE) {
+        this.gl.enable(this.gl.CULL_FACE);
+        if (object3D.glFlags & object3D.CULL_FRONT) {
+          this.gl.cullFace(this.gl.FRONT);
+        } else {
+          this.gl.cullFace(this.gl.FRONT);
+        }
+      } else {
+        this.gl.disable(this.gl.CULL_FACE);
+      }
+      if (object3D.mode === this.gl.TRIANGLE_STRIP) {
+        continue;
+      }
+      this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     }
-    this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
-    if (pickingShader.rayDirUniformName) {
-      let rayDir2 = this.calculateRayDirection();
-      this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir2);
-    }
-    if (pickingShader.clipPlaneUniformName) {
-      this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
-    }
-    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
+    const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
+    const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
+    const rgbaPixel = new Uint8Array(4);
+    this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
     this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-    if (object3D.textureCoordinateBuffer) {
-      this.gl.enableVertexAttribArray(1);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
-      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
-    } else {
-      this.gl.disableVertexAttribArray(1);
+    this.selectedObjectId = rgbaPixel[3];
+    if (this.selectedObjectId === this.VOLUME_ID) {
+      this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
     }
-    if (object3D.indexBuffer) {
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    if (rgbaPixel[3] === 253) {
+      let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
+      console.log(this.scene.clipPlaneDepthAziElev[0], "User clicked on the clip plane at " + clipXYZ);
+      this.scene.clipPlaneDepthAziElev[0] = this.scene.clipPlaneDepthAziElev[0] - 0.1;
+      if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
+        this.scene.clipPlaneDepthAziElev[0] = 0.4;
+      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
     }
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.FRONT);
-      }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
-    if (object3D.mode === this.gl.TRIANGLE_STRIP) {
-      console.log(object3D.mode, "picking clip plane (strip)", object3D.vertexBuffer);
-      continue;
-    }
-    this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
-  }
-  const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
-  const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
-  const rgbaPixel = new Uint8Array(4);
-  this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  this.selectedObjectId = rgbaPixel[3];
-  if (this.selectedObjectId === this.VOLUME_ID) {
-    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
   }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   for (const object3D of this.objectsToRender3D) {
@@ -14635,7 +14631,7 @@ Niivue.prototype.draw3D = function() {
     if (object3D.indexBuffer) {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
     }
-    if (object3D.glFlags & object3D.BLEND) {
+    if (object3D.BLEND) {
       this.gl.enable(this.gl.BLEND);
       this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     } else {
@@ -14852,8 +14848,25 @@ Niivue.prototype.drawScene = function() {
     this.drawLoadingText(this.loadingText);
     return;
   }
-  if (this.sliceType === this.sliceTypeRender)
+  if (this.sliceType === this.sliceTypeRender) {
+    if (this.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+      let x = this.dragStart[0] - this.dragEnd[0];
+      let y = this.dragStart[1] - this.dragEnd[1];
+      let depthAziElev = this.dragClipPlaneStartDepthAziElev.slice();
+      depthAziElev[1] -= x;
+      depthAziElev[1] = depthAziElev[1] % 360;
+      depthAziElev[2] += y;
+      if (depthAziElev[2] > 90)
+        depthAziElev[2] = 90;
+      if (depthAziElev[2] < -90)
+        depthAziElev[2] = -90;
+      if (depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] || depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]) {
+        this.scene.clipPlaneDepthAziElev = depthAziElev;
+        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      }
+    }
     return this.draw3D();
+  }
   let { volScale } = this.sliceScale();
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.numScreenSlices = 0;
