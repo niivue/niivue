@@ -80,7 +80,7 @@ void main() {
 	// fColor = texture(volume, vColor.xyz);
 	// return;
 	vec3 start = vColor;
-	gl_FragDepth = 0.5;
+	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
   vec3 dir = backPosition - start;
@@ -107,7 +107,6 @@ void main() {
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) {
-		gl_FragDepth = frac2ndc(samplePos.xyz);
 		return;
 	}
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
@@ -134,7 +133,8 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	gl_FragDepth = frac2ndc(firstHit.xyz);
+	if (firstHit.a != 0.0)
+		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	if (overlays < 1.0) return;
@@ -502,8 +502,8 @@ void main() {
 }`;
 
 export var fragVolumePickingShader = `#version 300 es
-#line 15
-precision highp int;
+#line 506
+//precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 volScale;
@@ -531,40 +531,40 @@ vec3 GetBackPosition(vec3 startPositionTex) {
  }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
-	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-    bool frontface = (cdot > 0.0);
+	if ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
+	bool frontface = (cdot > 0.0);
 	float clipThick = 2.0;
-    float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-        samplePos.a = len + 1.0;
-        return samplePos;
-    }
-    if (frontface) {
-        dis = max(0.0, dis);
-        samplePos = vec4(samplePos.xyz+dir * dis, dis);
-        len = min(disBackFace, len);
-    }
-    if (!frontface) {
-        len = min(dis, len);
-        disBackFace = max(0.0, disBackFace);
-        samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-    }
-    return samplePos;
+	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	float disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
+		samplePos.a = len + 1.0;
+		return samplePos;
+	}
+	if (frontface) {
+		dis = max(0.0, dis);
+		samplePos = vec4(samplePos.xyz+dir * dis, dis);
+		len = min(disBackFace, len);
+	}
+	if (!frontface) {
+		len = min(dis, len);
+		disBackFace = max(0.0, disBackFace);
+		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
+	}
+	return samplePos;
 }
 void main() {
 	vec3 start = vColor;
+	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
+	float fid = float(id & 255)/ 255.0;
 	vec3 backPosition = GetBackPosition(start);
-  vec3 dir = backPosition - start;
-  float len = length(dir);
+	vec3 dir = backPosition - start;
+	float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if ((lenVox < 0.5) || (len > 3.0)) return; //length limit for parallel rays
-	// fColor = vec4(posColor, 1.0);
+	if ((lenVox < 0.5) || (len > 3.0)) return;//discard; //length limit for parallel rays
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
 	float opacityCorrection = stepSize/sliceSize;
-  dir = normalize(dir);
-	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
+	dir = normalize(dir);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
 	vec4 clipPos = applyClip(dir, samplePos, len);
@@ -574,27 +574,27 @@ void main() {
 	while (samplePos.a <= len) {
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) {
-			fColor = vec4(samplePos.rgb, float(id & 255) / 255.0);
-			return;
+			fColor = vec4(samplePos.rgb, fid);
+			break;
 		}
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
-
-	
-	if (overlays < 1.0) discard;
-	
+	if (overlays < 1.0) {
+		//if (fColor.a == 0.0) discard; //no hit, no overlays
+		return; //background hit, no overlays
+	}
 	//overlay pass
-	len = lenNoClip;
+	len = min(lenNoClip, samplePos.a); //only find overlay closer than background
 	samplePos = vec4(start.xyz, 0.0); //ray position
-    //start: OPTIONAL fast pass: rapid traversal until first hit
-	stepSizeFast = sliceSize * 1.9;
-	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(overlay, samplePos.xyz).a;
-		if (val > 0.01) break;
+		if (val > 0.01) {
+			fColor = vec4(samplePos.rgb, fid);
+			return;
+		}
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if (samplePos.a > len) return;
-	fColor = vec4(vColor, float(id & 255) / 255.0);
+	//if (fColor.a == 0.0) discard; //no hit in either background or overlays
+	//you only get here if there is a hit with the background that is closer than any overlay
 }`;
