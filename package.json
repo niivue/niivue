@@ -15,7 +15,7 @@
     "copy-demo": "cp -r ./dist/* ./demos/features/",
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
-    "test-win": "npm run build-win && jest --maxWorkers=1",
+    "test-win": "npm run build-win && JEST_PUPPETEER_CONFIG=./jest-puppeteer.config-win.js jest --maxWorkers=1",
     "docs": "npx jsdoc --readme ./README.md -d devdocs -t ./node_modules/clean-jsdoc-theme/ src/",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm publish --access public"
