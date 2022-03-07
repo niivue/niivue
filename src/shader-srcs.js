@@ -46,8 +46,9 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isCl
 		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
 	}
 	return samplePos;
-}`
-export var fragRenderShader = `#version 300 es
+}`;
+export var fragRenderShader =
+  `#version 300 es
 #line 14
 precision highp int;
 precision highp float;
@@ -63,7 +64,9 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 in vec3 vColor;
 out vec4 fColor;
-`+kRenderFunc+`
+` +
+  kRenderFunc +
+  `
 float frac2ndc(vec3 frac) {
 //https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
 	vec4 pos = vec4(frac.xyz, 1.0); //fraction
@@ -508,7 +511,8 @@ void main() {
 	color = vec4(vColor, float(id & 255) / 255.0);
 }`;
 
-export var fragVolumePickingShader = `#version 300 es
+export var fragVolumePickingShader =
+  `#version 300 es
 #line 506
 //precision highp int;
 precision highp float;
@@ -521,7 +525,9 @@ uniform float overlays;
 uniform int id;
 in vec3 vColor;
 out vec4 fColor;
-`+kRenderFunc+`
+` +
+  kRenderFunc +
+  `
 void main() {
 	vec3 start = vColor;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0

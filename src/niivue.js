@@ -1033,7 +1033,10 @@ Niivue.prototype.clipPlaneUpdate = function (depthAzimuthElevation) {
   //  elevation: camera height in degrees, range -90..90
   //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
   if (this.sliceType != this.sliceTypeRender) return;
-  let v = this.sph2cartDeg(depthAzimuthElevation[1]+180, depthAzimuthElevation[2]);
+  let v = this.sph2cartDeg(
+    depthAzimuthElevation[1] + 180,
+    depthAzimuthElevation[2]
+  );
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.drawScene();
 }; // clipPlaneUpdate()
@@ -2059,7 +2062,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let vox = slicescl.vox;
   let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
-  this.gl.uniform4fv(this.renderShader.uniforms["clipPlaneColor"], this.opts.clipPlaneColor);
+  this.gl.uniform4fv(
+    this.renderShader.uniforms["clipPlaneColor"],
+    this.opts.clipPlaneColor
+  );
   this.gl.uniform1f(
     this.renderShader.uniforms["backOpacity"],
     this.volumes[0].opacity
@@ -2251,14 +2257,15 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
 
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
-    if (this.scene.clipPlaneDepthAziElev[0] < 1.8) { //clipping mode: change clip plane depth
+    if (this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+      //clipping mode: change clip plane depth
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
       let depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
       //bound clip sqrt(3) = 1.73
       if (posChange > 0)
-        depthAziElev[0] = Math.min(1.5,depthAziElev[0]+0.025); 
+        depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025);
       if (posChange < 0)
-        depthAziElev[0] = Math.max(-1.5,depthAziElev[0]-0.025); //Math.max(-1.7, 
+        depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025); //Math.max(-1.7,
       if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
         return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
@@ -2568,7 +2575,10 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   let isMirrorLR =
     this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
   this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["opacity"], this.volumes[0].opacity);
+  this.gl.uniform1f(
+    this.sliceShader.uniforms["opacity"],
+    this.volumes[0].opacity
+  );
   this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceShader.uniforms["slice"], crossXYZ[2]);
   this.gl.uniform2fv(this.sliceShader.uniforms["canvasWidthHeight"], [
@@ -2790,132 +2800,137 @@ Niivue.prototype.draw3D = function () {
   // mvp matrix and ray direction can now be a constant because of world space
   const mvpMatrix = this.calculateMvpMatrix(this.volumeObject3D);
   const rayDir = this.calculateRayDirection();
-if (this.scene.mouseDepthPicker) { //start PICKING: picking shader and reading values is slow
-  this.scene.mouseDepthPicker = false;
-  for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible || !object3D.isPickable) {
-      continue;
-    }
-
-    let pickingShader = object3D.pickingShader
-      ? object3D.pickingShader
-      : this.pickingSurfaceShader;
-    pickingShader.use(this.gl);
-
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.FRONT);
+  if (this.scene.mouseDepthPicker) {
+    //start PICKING: picking shader and reading values is slow
+    this.scene.mouseDepthPicker = false;
+    for (const object3D of this.objectsToRender3D) {
+      if (!object3D.isVisible || !object3D.isPickable) {
+        continue;
       }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
 
-    this.gl.uniformMatrix4fv(
-      pickingShader.uniforms["mvpMtx"],
-      false,
-      mvpMatrix
-    );
+      let pickingShader = object3D.pickingShader
+        ? object3D.pickingShader
+        : this.pickingSurfaceShader;
+      pickingShader.use(this.gl);
 
-    if (pickingShader.rayDirUniformName) {
-      let rayDir = this.calculateRayDirection();
-      this.gl.uniform3fv(
-        pickingShader.uniforms[pickingShader.rayDirUniformName],
-        rayDir
+      if (object3D.glFlags & object3D.CULL_FACE) {
+        this.gl.enable(this.gl.CULL_FACE);
+        if (object3D.glFlags & object3D.CULL_FRONT) {
+          this.gl.cullFace(this.gl.FRONT);
+        } else {
+          this.gl.cullFace(this.gl.FRONT);
+        }
+      } else {
+        this.gl.disable(this.gl.CULL_FACE);
+      }
+
+      this.gl.uniformMatrix4fv(
+        pickingShader.uniforms["mvpMtx"],
+        false,
+        mvpMatrix
+      );
+
+      if (pickingShader.rayDirUniformName) {
+        let rayDir = this.calculateRayDirection();
+        this.gl.uniform3fv(
+          pickingShader.uniforms[pickingShader.rayDirUniformName],
+          rayDir
+        );
+      }
+
+      if (pickingShader.clipPlaneUniformName) {
+        this.gl.uniform4fv(
+          pickingShader.uniforms["clipPlane"],
+          this.scene.clipPlane
+        );
+      }
+
+      this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
+
+      this.gl.enableVertexAttribArray(0);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+      this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+      if (object3D.textureCoordinateBuffer) {
+        this.gl.enableVertexAttribArray(1);
+        this.gl.bindBuffer(
+          this.gl.ARRAY_BUFFER,
+          object3D.textureCoordinateBuffer
+        );
+        this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+      } else {
+        this.gl.disableVertexAttribArray(1);
+      }
+
+      if (object3D.indexBuffer) {
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+      }
+
+      if (object3D.glFlags & object3D.CULL_FACE) {
+        this.gl.enable(this.gl.CULL_FACE);
+        if (object3D.glFlags & object3D.CULL_FRONT) {
+          this.gl.cullFace(this.gl.FRONT);
+        } else {
+          this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+        }
+      } else {
+        this.gl.disable(this.gl.CULL_FACE);
+      }
+      if (object3D.mode === this.gl.TRIANGLE_STRIP) {
+        //console.log(object3D.mode, 'picking clip plane (strip)', object3D.vertexBuffer);
+        continue; //we no longer support clip planes like this
+      }
+      this.gl.drawElements(
+        object3D.mode,
+        object3D.indexCount,
+        this.gl.UNSIGNED_SHORT,
+        0
       );
     }
+    //check if we have a selected object
+    const pixelX =
+      (this.mousePos[0] * this.gl.canvas.width) / this.gl.canvas.clientWidth;
+    const pixelY =
+      this.gl.canvas.height -
+      (this.mousePos[1] * this.gl.canvas.height) / this.gl.canvas.clientHeight -
+      1;
+    const rgbaPixel = new Uint8Array(4);
+    this.gl.readPixels(
+      pixelX, // x
+      pixelY, // y
+      1, // width
+      1, // height
+      this.gl.RGBA, // format
+      this.gl.UNSIGNED_BYTE, // type
+      rgbaPixel
+    ); // typed array to hold result
 
-    if (pickingShader.clipPlaneUniformName) {
-      this.gl.uniform4fv(
-        pickingShader.uniforms["clipPlane"],
-        this.scene.clipPlane
-      );
-    }
-
-    this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
-
+    //restore default vertex buffer:
     this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
-    if (object3D.textureCoordinateBuffer) {
-      this.gl.enableVertexAttribArray(1);
-      this.gl.bindBuffer(
-        this.gl.ARRAY_BUFFER,
-        object3D.textureCoordinateBuffer
+    this.selectedObjectId = rgbaPixel[3];
+    if (this.selectedObjectId === this.VOLUME_ID) {
+      this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
+        (x) => x / 255.0
       );
-      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
-    } else {
-      this.gl.disableVertexAttribArray(1);
     }
-
-    if (object3D.indexBuffer) {
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    if (253 === rgbaPixel[3]) {
+      let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map(
+        (x) => x / 255.0
+      );
+      console.log(
+        this.scene.clipPlaneDepthAziElev[0],
+        "User clicked on the clip plane at " + clipXYZ
+      );
+      this.scene.clipPlaneDepthAziElev[0] =
+        this.scene.clipPlaneDepthAziElev[0] - 0.1;
+      if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
+        this.scene.clipPlaneDepthAziElev[0] = 0.4;
+      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
     }
-
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-      }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
-    if (object3D.mode === this.gl.TRIANGLE_STRIP) {
-      //console.log(object3D.mode, 'picking clip plane (strip)', object3D.vertexBuffer);
-      continue; //we no longer support clip planes like this
-    }
-    this.gl.drawElements(
-      object3D.mode,
-      object3D.indexCount,
-      this.gl.UNSIGNED_SHORT,
-      0
-    );
-  }
-  //check if we have a selected object
-  const pixelX =
-    (this.mousePos[0] * this.gl.canvas.width) / this.gl.canvas.clientWidth;
-  const pixelY =
-    this.gl.canvas.height -
-    (this.mousePos[1] * this.gl.canvas.height) / this.gl.canvas.clientHeight -
-    1;
-  const rgbaPixel = new Uint8Array(4);
-  this.gl.readPixels(
-    pixelX, // x
-    pixelY, // y
-    1, // width
-    1, // height
-    this.gl.RGBA, // format
-    this.gl.UNSIGNED_BYTE, // type
-    rgbaPixel
-  ); // typed array to hold result
-
-  //restore default vertex buffer:
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  
-  this.selectedObjectId = rgbaPixel[3];
-  if (this.selectedObjectId === this.VOLUME_ID) {
-    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
-      (x) => x / 255.0
-    );
-  }
-  if (253 === rgbaPixel[3]) {
-    let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map(
-      (x) => x / 255.0
-    );
-    console.log(this.scene.clipPlaneDepthAziElev[0], 'User clicked on the clip plane at '+clipXYZ);
-     this.scene.clipPlaneDepthAziElev[0] = this.scene.clipPlaneDepthAziElev[0] - 0.1;
-     if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
-      this.scene.clipPlaneDepthAziElev[0] = 0.4;
-     this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
-  }
-} //end PICKING
+  } //end PICKING
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   //???WHY this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
@@ -3268,18 +3283,21 @@ Niivue.prototype.drawScene = function () {
 
   if (this.sliceType === this.sliceTypeRender) {
     //draw rendering
-    if ((this.isDragging) && (this.scene.clipPlaneDepthAziElev[0] < 1.8)) {
+    if (this.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
       let x = this.dragStart[0] - this.dragEnd[0];
       let y = this.dragStart[1] - this.dragEnd[1];
       let depthAziElev = this.dragClipPlaneStartDepthAziElev.slice();
       depthAziElev[1] -= x;
-      depthAziElev[1] = (depthAziElev[1] % 360);
+      depthAziElev[1] = depthAziElev[1] % 360;
       depthAziElev[2] += y;
       //gimbal lock: these next two lines could be changed - when we go over the pole, the Azimuth reverses
       if (depthAziElev[2] > 90) depthAziElev[2] = 90;
       if (depthAziElev[2] < -90) depthAziElev[2] = -90;
-      if ((depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1]) || (depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2])) {
+      if (
+        depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] ||
+        depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]
+      ) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
         return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
       }
