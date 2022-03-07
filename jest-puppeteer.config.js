@@ -1,4 +1,4 @@
-const {os} = require("os")
+const os = require('os');
 module.exports = {
   launch: {
     dumpio: true,
