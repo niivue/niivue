@@ -462,6 +462,8 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
+  if ((this.dragStart[0] === this.dragEnd[0]) && (this.dragStart[1] === this.dragEnd[1]))
+    return;
   // calculate our box
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
   let startVox = this.frac2vox(frac, volIdx);
@@ -508,7 +510,7 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
       }
     }
   }
-
+  if (lo >= hi) return; //no variability or outside volume
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
