@@ -14,4 +14,6 @@ Demos work on:
 - [ ] macOS Safari
 - [ ] macOS Firefox
 - [ ] macOS Chrome
+- [ ] Windows Chrome
+- [ ] Windows Firefox
 
