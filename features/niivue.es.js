@@ -696,7 +696,7 @@ void main() {
 	// fColor = texture(volume, vColor.xyz);
 	// return;
 	vec3 start = vColor;
-	gl_FragDepth = 0.5;
+	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
   vec3 dir = backPosition - start;
@@ -723,7 +723,6 @@ void main() {
 	}
 	// fColor = vec4(1.0, 0.0, 0.0, 1.0);
 	if ((samplePos.a > len) && (overlays < 1.0)) {
-		gl_FragDepth = frac2ndc(samplePos.xyz);
 		return;
 	}
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
@@ -750,7 +749,8 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	gl_FragDepth = frac2ndc(firstHit.xyz);
+	if (firstHit.a != 0.0)
+		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	if (overlays < 1.0) return;
@@ -1096,8 +1096,8 @@ void main() {
 	color = vec4(vColor, float(id & 255) / 255.0);
 }`;
 var fragVolumePickingShader = `#version 300 es
-#line 15
-precision highp int;
+#line 506
+//precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 volScale;
@@ -1125,40 +1125,40 @@ vec3 GetBackPosition(vec3 startPositionTex) {
  }
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len) {
 	float cdot = dot(dir,clipPlane.xyz);
-	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-    bool frontface = (cdot > 0.0);
+	if ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
+	bool frontface = (cdot > 0.0);
 	float clipThick = 2.0;
-    float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-    if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-        samplePos.a = len + 1.0;
-        return samplePos;
-    }
-    if (frontface) {
-        dis = max(0.0, dis);
-        samplePos = vec4(samplePos.xyz+dir * dis, dis);
-        len = min(disBackFace, len);
-    }
-    if (!frontface) {
-        len = min(dis, len);
-        disBackFace = max(0.0, disBackFace);
-        samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-    }
-    return samplePos;
+	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	float disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
+		samplePos.a = len + 1.0;
+		return samplePos;
+	}
+	if (frontface) {
+		dis = max(0.0, dis);
+		samplePos = vec4(samplePos.xyz+dir * dis, dis);
+		len = min(disBackFace, len);
+	}
+	if (!frontface) {
+		len = min(dis, len);
+		disBackFace = max(0.0, disBackFace);
+		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
+	}
+	return samplePos;
 }
 void main() {
 	vec3 start = vColor;
+	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
+	float fid = float(id & 255)/ 255.0;
 	vec3 backPosition = GetBackPosition(start);
-  vec3 dir = backPosition - start;
-  float len = length(dir);
+	vec3 dir = backPosition - start;
+	float len = length(dir);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
-	if ((lenVox < 0.5) || (len > 3.0)) return; //length limit for parallel rays
-	// fColor = vec4(posColor, 1.0);
+	if ((lenVox < 0.5) || (len > 3.0)) return;//discard; //length limit for parallel rays
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
 	float opacityCorrection = stepSize/sliceSize;
-  dir = normalize(dir);
-	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
+	dir = normalize(dir);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
 	vec4 clipPos = applyClip(dir, samplePos, len);
@@ -1168,29 +1168,29 @@ void main() {
 	while (samplePos.a <= len) {
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) {
-			fColor = vec4(samplePos.rgb, float(id & 255) / 255.0);
-			return;
+			fColor = vec4(samplePos.rgb, fid);
+			break;
 		}
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
-
-	
-	if (overlays < 1.0) discard;
-	
+	if (overlays < 1.0) {
+		//if (fColor.a == 0.0) discard; //no hit, no overlays
+		return; //background hit, no overlays
+	}
 	//overlay pass
-	len = lenNoClip;
+	len = min(lenNoClip, samplePos.a); //only find overlay closer than background
 	samplePos = vec4(start.xyz, 0.0); //ray position
-    //start: OPTIONAL fast pass: rapid traversal until first hit
-	stepSizeFast = sliceSize * 1.9;
-	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(overlay, samplePos.xyz).a;
-		if (val > 0.01) break;
+		if (val > 0.01) {
+			fColor = vec4(samplePos.rgb, fid);
+			return;
+		}
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if (samplePos.a > len) return;
-	fColor = vec4(vColor, float(id & 255) / 255.0);
+	//if (fColor.a == 0.0) discard; //no hit in either background or overlays
+	//you only get here if there is a hit with the background that is closer than any overlay
 }`;
 const min$P = 0;
 const max$P = 0;
@@ -13091,7 +13091,7 @@ const Niivue = function(options = {}) {
   this.gestureInterval = null;
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
-  this.VOLUME_ID = 2;
+  this.VOLUME_ID = 250;
   this.DISTANCE_FROM_CAMERA = -0.54;
   this.initialized = false;
   for (let prop in this.defaults) {
@@ -14121,6 +14121,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.volumeObject3D.pickingShader.use(this.gl);
+  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
   this.updateInterpolation(layer);
 };
@@ -14585,9 +14586,25 @@ Niivue.prototype.draw3D = function() {
       this.gl.enableVertexAttribArray(1);
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
       this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+    } else {
+      this.gl.disableVertexAttribArray(1);
     }
     if (object3D.indexBuffer) {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+    }
+    if (object3D.glFlags & object3D.CULL_FACE) {
+      this.gl.enable(this.gl.CULL_FACE);
+      if (object3D.glFlags & object3D.CULL_FRONT) {
+        this.gl.cullFace(this.gl.FRONT);
+      } else {
+        this.gl.cullFace(this.gl.FRONT);
+      }
+    } else {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+    if (object3D.mode === this.gl.TRIANGLE_STRIP) {
+      console.log(object3D.mode, "picking clip plane (strip)", object3D.vertexBuffer);
+      continue;
     }
     this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
   }
@@ -14595,12 +14612,14 @@ Niivue.prototype.draw3D = function() {
   const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
   const rgbaPixel = new Uint8Array(4);
   this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.selectedObjectId = rgbaPixel[3];
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
   }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  this.gl.clearColor(0.2, 0, 0, 1);
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -14711,6 +14730,9 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthFunc(gl.ALWAYS);
   this.gl.enableVertexAttribArray(0);
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
