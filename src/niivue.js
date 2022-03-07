@@ -3266,7 +3266,7 @@ Niivue.prototype.drawScene = function () {
     return;
   }
 
-  if (this.sliceType === this.sliceTypeRender)
+  if (this.sliceType === this.sliceTypeRender) {
     //draw rendering
     if ((this.isDragging) && (this.scene.clipPlaneDepthAziElev[0] < 1.8)) {
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
@@ -3285,6 +3285,7 @@ Niivue.prototype.drawScene = function () {
       }
     }
     return this.draw3D();
+  }
   let { volScale } = this.sliceScale();
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.numScreenSlices = 0;
