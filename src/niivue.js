@@ -120,7 +120,7 @@ export const Niivue = function (options = {}) {
   this.scene.renderElevation = 10; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
   this.scene.clipPlane = [0, 0, 0, 0];
-  this.scene.clipPlaneDepthAziElev = [0, 0, 0];
+  this.scene.clipPlaneDepthAziElev = [2, 0, 0];
   this.scene.mousedown = false;
   this.scene.touchdown = false;
   this.scene.mouseButtonLeft = 0;
@@ -152,6 +152,7 @@ export const Niivue = function (options = {}) {
   this.isDragging = false;
   this.dragStart = [0.0, 0.0];
   this.dragEnd = [0.0, 0.0];
+  this.dragClipPlaneStartDepthAziElev = [0, 0, 0];
   this.lastTwoTouchDistance = 0;
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
@@ -434,6 +435,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
   );
   this.dragStart[0] = pos.x;
   this.dragStart[1] = pos.y;
+  this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
 
@@ -2249,6 +2251,20 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
 
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
+    if (this.scene.clipPlaneDepthAziElev[0] < 1.8) { //clipping mode: change clip plane depth
+      //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
+      let depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
+      //bound clip sqrt(3) = 1.73
+      if (posChange > 0)
+        depthAziElev[0] = Math.min(1.5,depthAziElev[0]+0.025); 
+      if (posChange < 0)
+        depthAziElev[0] = Math.max(-1.5,depthAziElev[0]-0.025); //Math.max(-1.7, 
+      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
+        this.scene.clipPlaneDepthAziElev = depthAziElev;
+        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      }
+      return;
+    }
     if (posChange > 0)
       this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.1);
     if (posChange < 0)
@@ -3252,6 +3268,22 @@ Niivue.prototype.drawScene = function () {
 
   if (this.sliceType === this.sliceTypeRender)
     //draw rendering
+    if ((this.isDragging) && (this.scene.clipPlaneDepthAziElev[0] < 1.8)) {
+      //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
+      let x = this.dragStart[0] - this.dragEnd[0];
+      let y = this.dragStart[1] - this.dragEnd[1];
+      let depthAziElev = this.dragClipPlaneStartDepthAziElev.slice();
+      depthAziElev[1] -= x;
+      depthAziElev[1] = (depthAziElev[1] % 360);
+      depthAziElev[2] += y;
+      //gimbal lock: these next two lines could be changed - when we go over the pole, the Azimuth reverses
+      if (depthAziElev[2] > 90) depthAziElev[2] = 90;
+      if (depthAziElev[2] < -90) depthAziElev[2] = -90;
+      if ((depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1]) || (depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2])) {
+        this.scene.clipPlaneDepthAziElev = depthAziElev;
+        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      }
+    }
     return this.draw3D();
   let { volScale } = this.sliceScale();
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
