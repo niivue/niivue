@@ -462,6 +462,8 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
+  if ((this.dragStart[0] === this.dragEnd[0]) && (this.dragStart[1] === this.dragEnd[1]))
+    return;
   // calculate our box
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
   let startVox = this.frac2vox(frac, volIdx);
@@ -508,7 +510,7 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
       }
     }
   }
-
+  if (lo >= hi) return; //no variability or outside volume
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
@@ -3006,9 +3008,14 @@ Niivue.prototype.draw3D = function () {
     }
   }
 
-  this.drawCrosshairs3D(true, 1.0);
-  this.drawCrosshairs3D(false, 0.35);
-
+  if (this.opts.show3Dcrosshair) {
+    this.drawCrosshairs3D(true, 1.0);
+    this.drawCrosshairs3D(false, 0.35);
+  } else {//??? reset standard buffer - to test, try the basic.3d.html (which disables crosshairs and right click) - not sure WHAT is being drawn
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  }
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
