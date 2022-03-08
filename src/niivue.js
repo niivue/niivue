@@ -462,7 +462,10 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
-  if ((this.dragStart[0] === this.dragEnd[0]) && (this.dragStart[1] === this.dragEnd[1]))
+  if (
+    this.dragStart[0] === this.dragEnd[0] &&
+    this.dragStart[1] === this.dragEnd[1]
+  )
     return;
   // calculate our box
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
@@ -1034,12 +1037,13 @@ Niivue.prototype.clipPlaneUpdate = function (depthAzimuthElevation) {
   //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
   //  elevation: camera height in degrees, range -90..90
   //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
-  if (this.sliceType != this.sliceTypeRender) return;
   let v = this.sph2cartDeg(
     depthAzimuthElevation[1] + 180,
     depthAzimuthElevation[2]
   );
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
+  this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
+  if (this.sliceType != this.sliceTypeRender) return;
   this.drawScene();
 }; // clipPlaneUpdate()
 
@@ -3011,7 +3015,8 @@ Niivue.prototype.draw3D = function () {
   if (this.opts.show3Dcrosshair) {
     this.drawCrosshairs3D(true, 1.0);
     this.drawCrosshairs3D(false, 0.35);
-  } else {//??? reset standard buffer - to test, try the basic.3d.html (which disables crosshairs and right click) - not sure WHAT is being drawn
+  } else {
+    //??? reset standard buffer - to test, try the basic.3d.html (which disables crosshairs and right click) - not sure WHAT is being drawn
     this.gl.enableVertexAttribArray(0);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
     this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
