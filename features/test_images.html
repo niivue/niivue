@@ -18,18 +18,17 @@
 
     <section>
       <h1>
-        Color maps
+        Test images
       </h1>
       <p>
-        Click the buttons to change the color map 
+        Click the buttons to load test images
       </p>
       <p>
         <h3>Controls</h3>
         <ul>
-          <li>move the crosshairs: left mouse click and drag (or click around)</li>
-          <li>slice scrolling: mouse or touch pad scroll up and down (mobile not supported)</li>
-          <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
-          <li>reset intensity: left mouse click double click (mobile not supported)</li>
+          <li>clicks, double-clicks and drags interactively update image</li>
+          <li>press C for interactive clip plane (mobile not supported)</li>
+          <li>press V to toggle between 2D and 3D views (mobile not supported)</li>
         </ul>
       </p>
     </section>
@@ -43,17 +42,20 @@
     </section>
 
     <section>
+      <p>available test images:</p>
+      <p id="images"></p>
+    </section>
+    <section>
       <p>available color maps:</p>
       <p id="colormaps"></p>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
      var volumeList1 = [
        // first item is background image
          {
-           url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           url: "../images/mni152.nii.gz",
            volume: {hdr: null, img: null},
            name: "mni152",
            intensityMin: 0, // not used yet
@@ -67,7 +69,25 @@
       var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.clipPlaneUpdate([0.35, 270, 0])
+      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      imgs = ["chris_MRA", "chris_PD", "chris_t1", "chris_t2", "CT_Abdo", "CT_AVM", "CT_Electrodes", "CT_Philips", "CT_pitch", "fmri_pitch", "Iguana", "mni152", "MR_Gd", "pcasl", "spm152", "spmMotor", "visiblehuman"];
+      imgEl = document.getElementById('images')
+      for (let i=0; i<imgs.length; i++) {
+        let btn = document.createElement("button")
+        btn.innerHTML = imgs[i]
+        btn.onclick = function() {
+          let root = 'https://neurolabusc.github.io/niivue-images/'
+          let img = root + imgs[i] + '.nii.gz'
+          console.log("Loading: "+img)
+          volumeList1[0].url = img
+          console.log(volumeList1);
+          nv1.loadVolumes(volumeList1)
+          nv1.updateGLVolume()
+        }
+        imgEl.appendChild(btn)
+      }
       cmaps = nv1.colorMaps()
       cmapEl = document.getElementById('colormaps')
       for (let i=0; i<cmaps.length; i++) {
@@ -79,7 +99,6 @@
         }
         cmapEl.appendChild(btn)
       }
-
     </script>
   </body>
 </html>

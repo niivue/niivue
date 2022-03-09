@@ -21,7 +21,7 @@
         Overlay 3D
       </h1>
       <p>
-        NiiVue can support adding multiple overlay images in 3D mode as well (two overlays added here).
+        NiiVue can support adding multiple overlay images in 3D mode as well (two overlays added here). The user can also change the orientation and depth of the clip planes (if you have a keyboard, press C to turn off clip planes).
       </p>
     </section>
 
@@ -75,7 +75,7 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
-
+      nv1.clipPlaneUpdate([0.15, 270, 0])
     </script>
   </body>
 </html>

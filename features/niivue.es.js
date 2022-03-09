@@ -13557,10 +13557,11 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   return ret;
 };
 Niivue.prototype.clipPlaneUpdate = function(depthAzimuthElevation) {
-  if (this.sliceType != this.sliceTypeRender)
-    return;
   let v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
+  this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
+  if (this.sliceType != this.sliceTypeRender)
+    return;
   this.drawScene();
 };
 Niivue.prototype.setCrosshairColor = function(color) {
