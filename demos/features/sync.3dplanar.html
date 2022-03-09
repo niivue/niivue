@@ -21,10 +21,10 @@
         Sync 3D with multiplanar
       </h1>
       <p>
-        NiiVue can sync two NiiVue instances using two canvases. This allows matching crosshair locations when viewing images that are coregistered (same space)
+        NiiVue can sync two NiiVue instances using two canvases. This allows matching crosshair locations when viewing images that are coregistered (same space).
       </p>
       <p>
-        The first canvas can control the second one. The second canvas can be controlled separately from the first. 
+        The top canvas can control the lower one: double-click on the cortical surface in the top image to set the crosshair location for both images. The lower canvas can be controlled separately from the top one. 
       </p>
     </section>
 
@@ -63,13 +63,13 @@
          },
          
         ] 
-			var nv1 = new niivue.Niivue({show3Dcrosshair:true})
+      var nv1 = new niivue.Niivue({show3Dcrosshair:true})
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
 
       var volumeList2 = [
-       // first item is brackground image
+       // first item is background image
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
            volume: {hdr: null, img: null},
@@ -86,7 +86,7 @@
       nv2.attachTo('gl2')
       nv2.loadVolumes(volumeList2)
       nv2.setSliceType(nv2.sliceTypeRenderMultiplanar)
-			nv2.syncWith(nv1, {'3d': false, '2d':true})
+      nv1.syncWith(nv2, {'3d': false, '2d':true})
     </script>
   </body>
 </html>

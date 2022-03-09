@@ -13215,6 +13215,8 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   if (this.sliceType === this.sliceTypeRender) {
     return;
   }
+  if (this.dragStart[0] === this.dragEnd[0] && this.dragStart[1] === this.dragEnd[1])
+    return;
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
   let startVox = this.frac2vox(frac, volIdx);
   frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
@@ -13252,6 +13254,8 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
       }
     }
   }
+  if (lo >= hi)
+    return;
   var mnScale = intensityRaw2Scaled(hdr, lo);
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
@@ -13553,10 +13557,11 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   return ret;
 };
 Niivue.prototype.clipPlaneUpdate = function(depthAzimuthElevation) {
-  if (this.sliceType != this.sliceTypeRender)
-    return;
   let v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
+  this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
+  if (this.sliceType != this.sliceTypeRender)
+    return;
   this.drawScene();
 };
 Niivue.prototype.setCrosshairColor = function(color) {
@@ -14664,8 +14669,14 @@ Niivue.prototype.draw3D = function() {
       this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
     }
   }
-  this.drawCrosshairs3D(true, 1);
-  this.drawCrosshairs3D(false, 0.35);
+  if (this.opts.show3Dcrosshair) {
+    this.drawCrosshairs3D(true, 1);
+    this.drawCrosshairs3D(false, 0.35);
+  } else {
+    this.gl.enableVertexAttribArray(0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  }
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
   this.sync();
   return posString;
