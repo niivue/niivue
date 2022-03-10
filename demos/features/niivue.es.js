@@ -13458,7 +13458,7 @@ Niivue.prototype.getRadiologicalConvention = function() {
 };
 Niivue.prototype.addVolume = function(volume) {
   this.volumes.push(volume);
-  let idx = this.volumes.length === 1 ? 1 : this.volumes.length - 1;
+  let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
 };
 Niivue.prototype.getVolumeIndexByID = function(id) {
