@@ -10999,8 +10999,25 @@ NVImage.prototype.colorMaps = function(sort = true) {
   }
   return sort === true ? cm.sort() : cm;
 };
+NVImage.prototype.setColorMap = function(cm) {
+  let allColorMaps = this.colorMaps();
+  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
+    this.colorMap = cm.toLowerCase();
+    this.calMinMax();
+  } else {
+    log$1.warn(`color map ${cm} is not a valid color map`);
+  }
+};
 NVImage.prototype.calMinMax = function() {
-  if (this.trustCalMinMax && isFinite(this.hdr.cal_min) && isFinite(this.hdr.cal_max) && this.hdr.cal_max > this.hdr.cal_min) {
+  let cm = this.colorMap;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+  if (cmMin === cmMax && this.trustCalMinMax && isFinite(this.hdr.cal_min) && isFinite(this.hdr.cal_max) && this.hdr.cal_max > this.hdr.cal_min) {
     this.cal_min = this.hdr.cal_min;
     this.cal_max = this.hdr.cal_max;
     this.robust_min = this.cal_min;
@@ -11013,14 +11030,6 @@ NVImage.prototype.calMinMax = function() {
       this.hdr.cal_min,
       this.hdr.cal_max
     ];
-  }
-  let cm = this.colorMap;
-  let allColorMaps = this.colorMaps();
-  let cmMin = 0;
-  let cmMax = 0;
-  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
-    cmMin = cmaps[cm.toLowerCase()].min;
-    cmMax = cmaps[cm.toLowerCase()].max;
   }
   if (cmMin != cmMax) {
     this.cal_min = cmMin;

@@ -94,7 +94,7 @@
         let btn = document.createElement("button")
         btn.innerHTML = cmaps[i]
         btn.onclick = function() {
-          nv1.volumes[0].colorMap = cmaps[i]
+          nv1.volumes[0].setColorMap(cmaps[i])
           nv1.updateGLVolume()
         }
         cmapEl.appendChild(btn)
