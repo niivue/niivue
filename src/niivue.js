@@ -817,10 +817,16 @@ Niivue.prototype.dropListener = async function (e) {
   } else {
     const files = dt.files;
     if (files.length > 0) {
-      this.volumes = [];
-      this.overlays = [];
-      let volume = await NVImage.loadFromFile(files[0]);
-      this.setVolume(volume);
+      // adding or replacing
+      if (!e.shiftKey) {
+        this.volumes = [];
+        this.overlays = [];
+      }
+
+      for (const file of files) {
+        let volume = await NVImage.loadFromFile(file);
+        this.addVolume(volume);
+      }
     }
   }
 };
