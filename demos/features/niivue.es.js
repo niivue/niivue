@@ -13378,7 +13378,7 @@ Niivue.prototype.keyUpListener = function(e) {
           this.scene.clipPlaneDepthAziElev = [0, 0, 90];
           break;
       }
-      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
     }
     this.lastCalled = now;
   } else if (e.code === this.opts.viewModeHotKey) {
@@ -13560,7 +13560,7 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   ret[2] /= len2;
   return ret;
 };
-Niivue.prototype.clipPlaneUpdate = function(depthAzimuthElevation) {
+Niivue.prototype.setClipPlane = function(depthAzimuthElevation) {
   let v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
@@ -14216,7 +14216,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025);
       if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       }
       return;
     }
@@ -14621,7 +14621,7 @@ Niivue.prototype.draw3D = function() {
       this.scene.clipPlaneDepthAziElev[0] = this.scene.clipPlaneDepthAziElev[0] - 0.1;
       if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
         this.scene.clipPlaneDepthAziElev[0] = 0.4;
-      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
     }
   }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -14877,7 +14877,7 @@ Niivue.prototype.drawScene = function() {
         depthAziElev[2] = -90;
       if (depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] || depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       }
     }
     return this.draw3D();

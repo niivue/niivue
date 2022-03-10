@@ -708,7 +708,7 @@ Niivue.prototype.keyUpListener = function (e) {
           this.scene.clipPlaneDepthAziElev = [0, 0, 90];
           break;
       }
-      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       // e.preventDefault();
     }
     this.lastCalled = now;
@@ -1036,9 +1036,9 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
  * @param {array} azimuthElevationDepth a two component vector. azimuth: camera position in degrees around object, typically 0..360 (or -180..+180). elevation: camera height in degrees, range -90..90
  * @example
  * niivue = new Niivue()
- * niivue.clipPlaneUpdate([42, 42])
+ * niivue.setClipPlane([42, 42])
  */
-Niivue.prototype.clipPlaneUpdate = function (depthAzimuthElevation) {
+Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   // azimuthElevation is 2 component vector [a, e, d]
   //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
   //  elevation: camera height in degrees, range -90..90
@@ -1051,7 +1051,7 @@ Niivue.prototype.clipPlaneUpdate = function (depthAzimuthElevation) {
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
   if (this.sliceType != this.sliceTypeRender) return;
   this.drawScene();
-}; // clipPlaneUpdate()
+}; // setClipPlane()
 
 /**
  * set the crosshair color
@@ -2280,7 +2280,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025); //Math.max(-1.7,
       if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       }
       return;
     }
@@ -2940,7 +2940,7 @@ Niivue.prototype.draw3D = function () {
         this.scene.clipPlaneDepthAziElev[0] - 0.1;
       if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
         this.scene.clipPlaneDepthAziElev[0] = 0.4;
-      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
     }
   } //end PICKING
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -3317,7 +3317,7 @@ Niivue.prototype.drawScene = function () {
         depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]
       ) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       }
     }
     return this.draw3D();

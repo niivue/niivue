@@ -12,7 +12,7 @@ test('volume is properly clipped in axial plane', async () => {
     let nv = new niivue.Niivue(opts = opts)
     await nv.attachTo('gl')
     nv.sliceType = nv.sliceTypeRender;
-		nv.clipPlaneUpdate([0, 0, -90])
+		nv.setClipPlane([0, 0, -90])
 
     // load one volume object in an array
     var volumeList = [
