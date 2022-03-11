@@ -10999,8 +10999,25 @@ NVImage.prototype.colorMaps = function(sort = true) {
   }
   return sort === true ? cm.sort() : cm;
 };
+NVImage.prototype.setColorMap = function(cm) {
+  let allColorMaps = this.colorMaps();
+  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
+    this.colorMap = cm.toLowerCase();
+    this.calMinMax();
+  } else {
+    log$1.warn(`color map ${cm} is not a valid color map`);
+  }
+};
 NVImage.prototype.calMinMax = function() {
-  if (this.trustCalMinMax && isFinite(this.hdr.cal_min) && isFinite(this.hdr.cal_max) && this.hdr.cal_max > this.hdr.cal_min) {
+  let cm = this.colorMap;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+  if (cmMin === cmMax && this.trustCalMinMax && isFinite(this.hdr.cal_min) && isFinite(this.hdr.cal_max) && this.hdr.cal_max > this.hdr.cal_min) {
     this.cal_min = this.hdr.cal_min;
     this.cal_max = this.hdr.cal_max;
     this.robust_min = this.cal_min;
@@ -11013,14 +11030,6 @@ NVImage.prototype.calMinMax = function() {
       this.hdr.cal_min,
       this.hdr.cal_max
     ];
-  }
-  let cm = this.colorMap;
-  let allColorMaps = this.colorMaps();
-  let cmMin = 0;
-  let cmMax = 0;
-  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
-    cmMin = cmaps[cm.toLowerCase()].min;
-    cmMax = cmaps[cm.toLowerCase()].max;
   }
   if (cmMin != cmMax) {
     this.cal_min = cmMin;
@@ -13378,7 +13387,7 @@ Niivue.prototype.keyUpListener = function(e) {
           this.scene.clipPlaneDepthAziElev = [0, 0, 90];
           break;
       }
-      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
     }
     this.lastCalled = now;
   } else if (e.code === this.opts.viewModeHotKey) {
@@ -13439,10 +13448,14 @@ Niivue.prototype.dropListener = async function(e) {
   } else {
     const files = dt.files;
     if (files.length > 0) {
-      this.volumes = [];
-      this.overlays = [];
-      let volume = await NVImage.loadFromFile(files[0]);
-      this.setVolume(volume);
+      if (!e.shiftKey) {
+        this.volumes = [];
+        this.overlays = [];
+      }
+      for (const file of files) {
+        let volume = await NVImage.loadFromFile(file);
+        this.addVolume(volume);
+      }
     }
   }
 };
@@ -13454,7 +13467,7 @@ Niivue.prototype.getRadiologicalConvention = function() {
 };
 Niivue.prototype.addVolume = function(volume) {
   this.volumes.push(volume);
-  let idx = this.volumes.length === 1 ? 1 : this.volumes.length - 1;
+  let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
 };
 Niivue.prototype.getVolumeIndexByID = function(id) {
@@ -13556,7 +13569,7 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
   ret[2] /= len2;
   return ret;
 };
-Niivue.prototype.clipPlaneUpdate = function(depthAzimuthElevation) {
+Niivue.prototype.setClipPlane = function(depthAzimuthElevation) {
   let v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
@@ -14212,7 +14225,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025);
       if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       }
       return;
     }
@@ -14617,7 +14630,7 @@ Niivue.prototype.draw3D = function() {
       this.scene.clipPlaneDepthAziElev[0] = this.scene.clipPlaneDepthAziElev[0] - 0.1;
       if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
         this.scene.clipPlaneDepthAziElev[0] = 0.4;
-      this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
     }
   }
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -14873,7 +14886,7 @@ Niivue.prototype.drawScene = function() {
         depthAziElev[2] = -90;
       if (depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] || depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.clipPlaneUpdate(this.scene.clipPlaneDepthAziElev);
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
       }
     }
     return this.draw3D();

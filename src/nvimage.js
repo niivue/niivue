@@ -459,12 +459,32 @@ NVImage.prototype.colorMaps = function (sort = true) {
   return sort === true ? cm.sort() : cm;
 };
 
+NVImage.prototype.setColorMap = function (cm) {
+  let allColorMaps = this.colorMaps();
+  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
+    this.colorMap = cm.toLowerCase();
+    this.calMinMax();
+  } else {
+    log.warn(`color map ${cm} is not a valid color map`);
+  }
+};
+
 // not included in public docs
 // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
 NVImage.prototype.calMinMax = function () {
+  let cm = this.colorMap;
+  let allColorMaps = this.colorMaps();
+  let cmMin = 0;
+  let cmMax = 0;
+  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
+    cmMin = cmaps[cm.toLowerCase()].min;
+    cmMax = cmaps[cm.toLowerCase()].max;
+  }
+
   if (
+    cmMin === cmMax &&
     this.trustCalMinMax &&
     isFinite(this.hdr.cal_min) &&
     isFinite(this.hdr.cal_max) &&
@@ -483,16 +503,6 @@ NVImage.prototype.calMinMax = function () {
       this.hdr.cal_max,
     ];
   }
-
-  let cm = this.colorMap;
-  let allColorMaps = this.colorMaps();
-  let cmMin = 0;
-  let cmMax = 0;
-  if (allColorMaps.indexOf(cm.toLowerCase()) != -1) {
-    cmMin = cmaps[cm.toLowerCase()].min;
-    cmMax = cmaps[cm.toLowerCase()].max;
-  }
-
   // if color map specifies non zero values for min and max then use them
   if (cmMin != cmMax) {
     this.cal_min = cmMin;
@@ -501,7 +511,6 @@ NVImage.prototype.calMinMax = function () {
     this.robust_max = this.cal_max;
     return [cmMin, cmMax, cmMin, cmMax];
   }
-
   //determine full range: min..max
   let mn = this.img[0];
   let mx = this.img[0];
@@ -587,20 +596,11 @@ NVImage.prototype.calMinMax = function () {
   } //if lo == hi
   var pct2 = this.intensityRaw2Scaled(this.hdr, lo / scl + mn);
   var pct98 = this.intensityRaw2Scaled(this.hdr, hi / scl + mn);
-  // console.log(
-  //   "full range %f..%f  (voxels 0 or NaN = %i) robust range %f..%f",
-  //   mnScale,
-  //   mxScale,
-  //   nZero,
-  //   pct2,
-  //   pct98
-  // );
   if (
     this.hdr.cal_min < this.hdr.cal_max &&
     this.hdr.cal_min >= mnScale &&
     this.hdr.cal_max <= mxScale
   ) {
-    // console.log("ignoring robust range: using header cal_min and cal_max");
     pct2 = this.hdr.cal_min;
     pct98 = this.hdr.cal_max;
   }
