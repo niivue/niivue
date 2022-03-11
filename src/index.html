@@ -53,6 +53,11 @@
     <script type="module">
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
+			import {NVMesh} from './nvmesh.js'
+			NVMesh.loadFromUrl('./gzip.surf.gii')
+			.then((nvmesh) => {
+				console.log(nvmesh)
+			})
 			let query = window.location.search
 			const params = new URLSearchParams(query);
 			let url = params.get('url')

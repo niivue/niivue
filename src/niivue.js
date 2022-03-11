@@ -25,6 +25,8 @@ import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
 import { NVImage } from "./nvimage.js";
+import {NVMesh} from "./nvmesh.js"
+export {NVMesh} from "./nvmesh.js"
 export { NVImage } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
