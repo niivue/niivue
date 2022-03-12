@@ -501,6 +501,27 @@ void main() {
 	color = surfaceColor;
 }`;
 
+export var vertMeshShader = `#version 300 es
+layout(location=0) in vec3 pos;
+layout(location=1) in vec4 norm;
+layout(location=2) in vec4 clr;
+uniform mat4 mvpMtx;
+out vec4 vColor;
+void main(void) {
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	vColor = clr;
+}`;
+
+export var fragMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+in vec4 vColor;
+out vec4 color;
+uniform float opacity;
+void main() {
+	color = vec4(vColor.rgb, opacity);
+}`;
+
 export var fragDepthPickingShader = `#version 300 es
 precision highp int;
 precision highp float;
