@@ -168,6 +168,44 @@ NiivueObject3D.subdivide = function (verts, faces) {
        nv = nv + 3;
   }
 }
+
+NiivueObject3D.weldVertices = function (verts, faces) {
+//unify identical vertices
+  let nv = verts.length / 3;
+  //yikes: bubble sort! TO DO: see Surfice for more efficient solution
+  let nUnique = 0; //first vertex is unique
+  //var remap = new Array();
+  let remap = new Int32Array(nv);
+  for (let i = 0; i < (nv-1); i ++) {
+    if (remap[i] !== 0) continue; //previously tested
+    remap[i] = nUnique;
+    let v = i * 3;
+    let x = verts[v];
+    let y = verts[v+1];
+    let z = verts[v+2];
+    for (let j = i + 1; j < (nv); j ++) {
+      v += 3;
+      if ((x === verts[v]) && (y === verts[v+1]) && (z === verts[v+2]))
+        remap[j] = nUnique;
+    }
+    nUnique ++; //another new vertex
+  } //for i
+  if (nUnique === nv) return verts;
+  //console.log('welding vertices removed redundant positions ', nv, '->', nUnique);
+  let nf = faces.length;
+  for (let f = 0; f < nf; f ++)
+    faces[f] = remap[faces[f]];
+  let vtx = verts.slice(0, (nUnique * 3)-1);
+  for (let i = 0; i < (nv-1); i ++) {
+    let v = i * 3;
+    let r = remap[i] * 3;
+    vtx[r] = verts[v];
+    vtx[r + 1] = verts[v + 1];
+    vtx[r + 2] = verts[v + 2];
+  }
+  return vtx;
+}
+
     
 NiivueObject3D.makeSphere = function (
   vertices,
@@ -177,12 +215,11 @@ NiivueObject3D.makeSphere = function (
 ) {
   let vtx = [];
   let idx = [];
-  if (this.sphereVtx !== undefined) {
+  if (this.sphereVtx !== undefined) { //only generate unit sphere once...
     vtx = this.sphereVtx.slice();
     idx =this.sphereIdx.slice();
   } else {
      vtx = [
-
       0.000,  0.000,  1.0,
       0.894,  0.000,  0.447,
       0.276,  0.851,  0.447,
@@ -221,7 +258,7 @@ NiivueObject3D.makeSphere = function (
     ];
     this.subdivide(vtx, idx);
     this.subdivide(vtx, idx);
-    this.subdivide(vtx, idx);
+    vtx = this.weldVertices(vtx, idx)
     this.sphereVtx = vtx.slice();
     this.sphereIdx = idx.slice();
   }
