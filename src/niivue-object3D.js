@@ -13,7 +13,8 @@ export var NiivueObject3D = function (
   this.CULL_FRONT = 4;
   this.CULL_BACK = 8;
   this.ENABLE_DEPTH_TEST = 16;
-
+  this.sphereIdx = [];
+  this.sphereVtx = [];
   this.renderShaders = [];
   this.pickingShader = null;
   this.isVisible = true;
@@ -126,6 +127,123 @@ NiivueObject3D.getFirstPerpVector = function (v1) {
   }
   return v2;
 };
+
+NiivueObject3D.subdivide = function (verts, faces) {
+//Subdivide each triangle into four triangles, pushing verts to the unit sphere"""
+  let nv = verts.length / 3;
+  let nf = faces.length / 3;
+  let n = nf;
+  let vNew = mat.vec3.create();
+  let nNew = mat.vec3.create();
+  for (let faceIndex = 0; faceIndex < n; faceIndex++) {
+       //setlength(verts, nv + 3);
+       let fx = faces[(faceIndex * 3) + 0];
+       let fy = faces[(faceIndex * 3) + 1];
+       let fz = faces[(faceIndex * 3) + 2];
+       let vx = mat.vec3.fromValues(verts[(fx*3)+0], verts[(fx*3)+1], verts[(fx*3)+2]);
+       let vy = mat.vec3.fromValues(verts[(fy*3)+0], verts[(fy*3)+1], verts[(fy*3)+2]);
+       let vz = mat.vec3.fromValues(verts[(fz*3)+0], verts[(fz*3)+1], verts[(fz*3)+2]);
+       mat.vec3.add(vNew, vx, vy)
+       mat.vec3.normalize(nNew, vNew)
+       verts.push(...nNew);
+       
+       mat.vec3.add(vNew, vy, vz) 
+       mat.vec3.normalize(nNew, vNew)
+       verts.push(...nNew);
+
+       mat.vec3.add(vNew, vx, vz) 
+       mat.vec3.normalize(nNew, vNew)
+       verts.push(...nNew);
+       //Split the current triangle into four smaller triangles:
+       let face = [nv,nv + 1, nv + 2];
+       faces.push( ...face);
+       face = [fx, nv, nv + 2];
+       faces.push( ...face);
+       face = [nv, fy, nv + 1];
+       faces.push( ...face);
+       faces[(faceIndex * 3) + 0] = nv + 2;
+       faces[(faceIndex * 3) + 1] = nv + 1;
+       faces[(faceIndex * 3) + 2] = fz;
+       nf = nf + 3;
+       nv = nv + 3;
+  }
+}
+    
+NiivueObject3D.makeSphere = function (
+  vertices,
+  indices,
+  radius,
+  origin = [0,0,0]
+) {
+  let vtx = [];
+  let idx = [];
+  if (this.sphereVtx !== undefined) {
+    vtx = this.sphereVtx.slice();
+    idx =this.sphereIdx.slice();
+  } else {
+     vtx = [
+
+      0.000,  0.000,  1.0,
+      0.894,  0.000,  0.447,
+      0.276,  0.851,  0.447,
+      -0.724,  0.526,  0.447,
+      -0.724, -0.526,  0.447,
+      0.276, -0.851,  0.447,
+      0.724,  0.526, -0.447,
+      -0.276,  0.851, -0.447,
+      -0.894,  0.000, -0.447,
+      -0.276, -0.851, -0.447,
+      0.724, -0.526, -0.447,
+      0.000,  0.000, -1.0
+    ];
+  //let idx = new Uint16Array([
+   idx = [
+      0,1,2,
+      0,2,3,
+      0,3,4,
+      0,4,5,
+      0,5,1,
+      7,6,11,
+      8,7,11,
+      9,8,11,
+      10,9,11,
+      6,10,11,
+      6,2,1,
+      7,3,2,
+      8,4,3,
+      9,5,4,
+      10,1,5,
+      6,7,2,
+      7,8,3,
+      8,9,4,
+      9,10,5,
+      10,6,1
+    ];
+    this.subdivide(vtx, idx);
+    this.subdivide(vtx, idx);
+    this.subdivide(vtx, idx);
+    this.sphereVtx = vtx.slice();
+    this.sphereIdx = idx.slice();
+  }
+  for (let i = 0; i < vtx.length; i++)
+    vtx[i] = (vtx[i] * radius);
+  let nvtx = vtx.length / 3;
+  let j = 0;
+  for (let i = 0; i < nvtx; i++) {
+    vtx[j] = vtx[j] + origin[0];
+    j++;
+    vtx[j] = vtx[j] + origin[1];
+    j++;
+    vtx[j] = vtx[j] + origin[2];
+    j++;
+  }
+  let idx0 = Math.floor(vertices.length / 3); //first new vertex will be AFTER previous vertices
+  for (let i = 0; i < idx.length; i++)
+    idx[i] = idx[i] + idx0;
+  
+  indices.push(...idx);
+  vertices.push(...vtx);
+}
 
 NiivueObject3D.makeCylinder = function (
   vertices,

@@ -506,20 +506,60 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec4 norm;
 layout(location=2) in vec4 clr;
 uniform mat4 mvpMtx;
-out vec4 vColor;
+uniform mat4 modelMtx;
+uniform mat4 normMtx;
+out vec4 vClr;
+out vec3 vN, vL, vV;
 void main(void) {
+	vec3 lightPosition = vec3(0.0, -10.0, 10.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
-	vColor = clr;
-}`;
+	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
+	vL = normalize(lightPosition);
+	vV = -vec3(modelMtx*vec4(pos,1.0));
+	vClr = clr;
+}`
 
 export var fragMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
-in vec4 vColor;
+in vec4 vClr;
+in vec3 vN, vL, vV;
 out vec4 color;
 uniform float opacity;
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
 void main() {
-	color = vec4(vColor.rgb, opacity);
+	float Ambient = 0.4;
+	float Diffuse = 0.7;
+	float Specular = 0.6;
+	float DiffuseRough = 1.0;
+	float SpecularRough = 0.1;
+	float Sharpness = 0.0;
+	float Edge = 1.0;
+	bool LightBackfaces = true;
+	vec3 l = normalize(vL);
+	vec3 n = normalize(vN);
+	vec3 v = normalize(vV);
+	vec3 h = normalize(l+v);
+	vec3 a = vClr.rgb;
+	vec3 d = a * Diffuse;
+	a *= Ambient;
+	vec3 backcolor = desaturate(0.75 * a + 0.75 * d *  abs(dot(n,l)), 0.5);
+	float backface = 1.0 - step(0.0, n.z); //1=backface
+	n = mix(n, -n, backface * float(LightBackfaces)); //reverse normal if backface AND two-sided lighting
+	d *= max(pow(max(dot( l, n), 0.0), DiffuseRough), 0.0);
+	float s = pow(max(0.0,dot(n,h)), 1.0/(SpecularRough * SpecularRough));
+	float w = 0.72*(1.0-Sharpness);
+	s = smoothstep(0.72-w,0.72+w,s) * Specular;
+	vec3 frontcolor = a + d +  s;
+	frontcolor *= min((max(dot(n,normalize(v)), 0.0) - 0.5) * Edge, 0.0) + 1.0;
+	backface = 1.0 - step(0.0, n.z); //1=backface
+	//backface = 1.0 - backface; //1=backface
+	//backcolor = vec3(1.0,0.0,0.0);
+	color = vec4(mix(frontcolor,backcolor,   backface), opacity);
+
 }`;
 
 export var fragDepthPickingShader = `#version 300 es

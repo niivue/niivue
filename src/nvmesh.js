@@ -2,6 +2,7 @@ import * as gifti from "gifti-reader-js/release/current/gifti-reader";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
+import * as mat from "gl-matrix";
 const log = new Log();
 
 /**
@@ -127,12 +128,14 @@ function generateNormals(pts, tris) {
     return norms;
 };
 
-function generatePosNormClr(pts, norms) {
-  if ((pts.length !== norms.length) || (pts.length < 3)) {
+NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
+//function generatePosNormClr(pts) {
+  if (pts.length < 3) {
     console.log('Catastrophic failure generatePosNormClr()')
   }
+  let norms = generateNormals(pts, tris)
   //typecast 32-bit UINT8 RGBA as a 32-bit float!
-  let rgba255 = [255,0,0,255];
+  //let rgba255 = [255,0,0,255];
   var f32rgba = new Float32Array(1);
   const u32rgba = new Uint32Array(f32rgba.buffer);
   u32rgba[0] =  rgba255[0] + (rgba255[1] << 8) + (rgba255[2] << 16) +  (rgba255[3] << 24);
@@ -200,9 +203,7 @@ NVMesh.loadFromUrl = async function (
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  let norms = generateNormals(pts, tris)
-  let posNormClr = generatePosNormClr(pts, norms)
-  console.log(posNormClr.length, '???', norms.length)
+  let posNormClr = this.generatePosNormClr(pts, tris)
   if (posNormClr) {
     nvmesh = new NVMesh(
       gii,

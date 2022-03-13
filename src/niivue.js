@@ -106,6 +106,11 @@ export const Niivue = function (options = {}) {
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
   this.meshShader = null;
+  this.meshIdxBufferCount = 0;
+  this.meshVtxBuffer = null;
+  this.meshVAO = null;
+  this.meshIdxBuffer = null;
+  
   this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
 
@@ -2104,6 +2109,34 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
   this.updateInterpolation(layer);
+  
+  if (this.meshIdxBufferCount > 0) return; //only once for now...
+  let start = mat.vec3.fromValues(22, 0, 0);
+  let dest = mat.vec3.fromValues(-50, 40, 70);
+  let vtx = [];
+  let idx = [];
+  NiivueObject3D.makeSphere(vtx,idx,5.0,start);
+  NiivueObject3D.makeCylinder(vtx, idx, start, dest, 2.0);
+  NiivueObject3D.makeSphere(vtx,idx,5.0,dest);
+  
+  let posNormColor = NVMesh.generatePosNormClr(vtx, idx, [64,128,0,255]);
+  //Triangulated mesh includes three features:
+  // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA) 
+  // meshVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
+  // meshIdxBuffer: indices for triangle vertices, e.g. [0,1,2] is triangle composed of first 3 vertices
+  //use the shader designed for triangulated meshes
+  //show BOTH front and back faces, the shader can use the surface normal to draw them differently
+  //provide the model-view projection matrix to rotate mesh with respect to camera
+  this.meshIdxBuffer = this.gl.createBuffer();
+  this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
+  this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(idx), this.gl.STATIC_DRAW);
+  this.meshVtxBuffer = this.gl.createBuffer();
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
+  this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormColor, this.gl.STATIC_DRAW);
+  this.meshIdxBufferCount = idx.length;
+
+  this.meshVAO = this.gl.createVertexArray();  
+
 }; // refreshLayers()
 
 /**
@@ -2752,9 +2785,19 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
     modelMatrix,
     this.volumeObject3D.originNegate
   );
+  //
+  let iModelMatrix = mat.mat4.create();
+  mat.mat4.invert(iModelMatrix, modelMatrix)
+  let normalMatrix = mat.mat4.create();
+  mat.mat4.transpose(normalMatrix, iModelMatrix)
+  //this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
+
+  // transpose(out, a) → {mat4}
+  // invert(out, a)
+  //  normalMatrix := modelMatrix.Inverse.Transpose;
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
-  return modelViewProjectionMatrix;
+  return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
 }; // calculateMvpMatrix
 
 // not included in public docs
@@ -2822,7 +2865,8 @@ Niivue.prototype.draw3D = function () {
   // render picking surfaces
 
   // mvp matrix and ray direction can now be a constant because of world space
-  const mvpMatrix = this.calculateMvpMatrix(this.volumeObject3D);
+  let mvpMatrix, modelMatrix, normalMatrix
+  [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(this.volumeObject3D);
   const rayDir = this.calculateRayDirection();
   if (this.scene.mouseDepthPicker) {
     //start PICKING: picking shader and reading values is slow
@@ -3029,16 +3073,15 @@ Niivue.prototype.draw3D = function () {
       );
     }
   }
+  this.drawCrosshairs3D(true, 1.0);
+  this.drawMesh3D(true, 1.0);
+  this.drawCrosshairs3D(false, 0.35);
+  this.drawMesh3D(false, 0.25);
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
-  if (this.opts.show3Dcrosshair) {
-    this.drawCrosshairs3D(true, 1.0);
-    this.drawCrosshairs3D(false, 0.35);
-  } else {
-    //??? reset standard buffer - to test, try the basic.3d.html (which disables crosshairs and right click) - not sure WHAT is being drawn
-    this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  }
+
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
@@ -3049,6 +3092,66 @@ Niivue.prototype.draw3D = function () {
   this.sync();
   return posString;
 }; // draw3D()
+
+Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
+  if (this.meshIdxBufferCount < 3) return;
+  let gl = this.gl;
+  let m, modelMtx, normMtx;
+  [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
+  gl.enable(gl.DEPTH_TEST);
+  let color = [...this.opts.crosshairColor];
+  if (isDepthTest) {
+    gl.disable(gl.BLEND);
+    //gl.depthFunc(gl.LESS); //pass if LESS than incoming value
+    gl.depthFunc(gl.GREATER);
+  } else {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.ALWAYS);
+  }
+  this.gl.bindVertexArray(this.meshVAO);
+  this.gl.enableVertexAttribArray(this.meshVAO);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
+  //vertex position: 3 floats X,Y,Z
+  this.gl.enableVertexAttribArray(0);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
+  //vertex surface normal vector: (also three floats)
+  this.gl.enableVertexAttribArray(1);
+  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
+  //vertex color
+  this.gl.enableVertexAttribArray(2);
+  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
+
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
+  this.gl.bindBuffer(gl.ARRAY_BUFFER, this.meshVtxBuffer);
+  this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
+  //Draw the mesh
+  this.gl.enable(this.gl.CULL_FACE);
+  this.gl.cullFace(this.gl.BACK);
+
+  this.meshShader.use(this.gl);
+  this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
+  this.gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
+  this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
+  this.gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
+
+
+  this.gl.drawElements(gl.TRIANGLES, this.meshIdxBufferCount, this.gl.UNSIGNED_INT, 0);
+  this.gl.disableVertexAttribArray(this.meshVAO);
+  //this.gl.disableVertexAttribArray(normLoc);
+  //clean up: cull face by default
+  this.gl.enable(this.gl.CULL_FACE);  
+
+  
+  //restore default vertex buffer:
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthFunc(gl.ALWAYS);
+  this.gl.enableVertexAttribArray(0);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+}; //drawMesh3D()
+
 
 Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   if (!this.opts.show3Dcrosshair) {
@@ -3112,7 +3215,8 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   }
 
   crosshairsShader.use(this.gl);
-  let m = this.calculateMvpMatrix(this.crosshairs3D);
+  let m, modelMtx, normMtx;
+  [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, m);
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
@@ -3139,98 +3243,6 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
-//xxxx
-if (NVMesh.length > 0) {
-  //console.log('??',NVMesh)
-  //Triangulated mesh includes three features:
-  // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA) 
-  // posNormRgbaVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
-  // meshIdxBuffer: indices for triangle vertices, e.g. [0,1,2] is triangle composed of first 3 vertices
-  //use the shader designed for triangulated meshes
-  this.meshShader.use(this.gl);
-  //show BOTH front and back faces, the shader can use the surface normal to draw them differently
-  this.gl.disable(this.gl.CULL_FACE);
-  //provide the model-view projection matrix to rotate mesh with respect to camera
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-  this.gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
-
-  var meshVtxBuffer = this.gl.createBuffer();
-
-  this.gl.bindBuffer(gl.ARRAY_BUFFER, meshVtxBuffer);
-  var L = 0;
-  var R = L + 70;
-  var P = 0;
-  var A = P + 60;
-  var I = 0;
-  var S = I + 60;
-  let rgba255 = [255,0,0,255];
-  var f32rgba = new Float32Array(1);
-  const u32rgba = new Uint32Array(f32rgba.buffer);
-  u32rgba[0] =  rgba255[0] + (rgba255[1] << 8) + (rgba255[2] << 16) +  (rgba255[3] << 24);
-
-  
-  //var float32 = new Float32Array(2);
-  const f32 = new Float32Array([
-     L, P, I, 0,0,0, f32rgba[0],  // vertex 0
-     R, P, I, 0,0,0, f32rgba[0],// vertex 1
-     L, A, S, 0,0,0, f32rgba[0],// vertex 2
-     R, A, S, 0,0,0, f32rgba[0] // vertex 3
-  ]);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, f32, this.gl.STATIC_DRAW);
-  
-  //Create a vertex array object to describe describe meshVtxBuffer attributes
-  var posNormRgbaVAO = this.gl.createVertexArray();
-  this.gl.bindBuffer(gl.ARRAY_BUFFER, meshVtxBuffer);
-  // and make it the one we're currently working with
-  this.gl.bindVertexArray(posNormRgbaVAO);
-  //vertex position: 3 floats X,Y,Z
-  let posLoc = 0;
-  this.gl.enableVertexAttribArray(posLoc);
-  // Tell the attribute how to get data out of meshVtxBuffer (ARRAY_BUFFER)
-  var size = 3;          // 3 components per iteration (XYZ)
-  var type = this.gl.FLOAT;   // the data is 32bit floats
-  var normalize = false; // don't normalize the data
-  var stride = 28;        // 3*4byte position, 3*4byte normal, 4byte RGBA
-  var offset = 0;        // start at the beginning of the buffer
-  this.gl.vertexAttribPointer(posLoc, size, type, normalize, stride, offset);
-  //vertex surface normal vector: (also three floats)
-  let normLoc = 1;
-  offset = 12;        // start after 3*32-bit float
-  this.gl.enableVertexAttribArray(normLoc);
-  this.gl.vertexAttribPointer(normLoc, size, type, normalize, stride, offset);
-  //vertex color
-  let rgbaLoc = 2;
-  this.gl.enableVertexAttribArray(rgbaLoc);
-  offset = 24;        // start after 3*32-bit float
-  type = this.gl.UNSIGNED_BYTE
-  size = 4
-  normalize = true;
-  this.gl.vertexAttribPointer(rgbaLoc, size, type, normalize, stride, offset);
-
-
-const meshIdxBuffer = this.gl.createBuffer();
-
-// make this buffer the current 'ELEMENT_ARRAY_BUFFER'
-this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshIdxBuffer);
-// Fill the current element array buffer with data
-const indices = [
-  0, 1, 2,   // first triangle
-  2, 1, 3,   // second triangle
-];
-this.gl.bufferData(
-    this.gl.ELEMENT_ARRAY_BUFFER,
-    new Int32Array(indices),
-    this.gl.STATIC_DRAW
-);
-var offset = 0;
-var count = 6;
-//this.gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, offset);
-this.gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_INT, offset);
-
-  //clean up: cull face by default
-  this.gl.enable(this.gl.CULL_FACE);  
-}
-//xxx
   
   //restore default vertex buffer:
   gl.enable(gl.BLEND);
