@@ -175,6 +175,7 @@ NVMesh.loadFromUrl = async function (
   name = "",
   colorMap = "yellow",
   opacity = 1.0,
+  rgba255 = [192,0,192,255],
   visible = true
 ) {
   let response = await fetch(url);
@@ -203,7 +204,7 @@ NVMesh.loadFromUrl = async function (
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  let posNormClr = this.generatePosNormClr(pts, tris)
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
     nvmesh = new NVMesh(
       gii,

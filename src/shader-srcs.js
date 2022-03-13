@@ -171,6 +171,8 @@ void main() {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
+		if (firstHit.a > samplePos.a)
+			firstHit = samplePos;
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
 		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -178,6 +180,8 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
+	if (firstHit.a != 0.0)
+		gl_FragDepth = frac2ndc(firstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
 	if (fColor.a <= 0.0)
@@ -511,7 +515,7 @@ uniform mat4 normMtx;
 out vec4 vClr;
 out vec3 vN, vL, vV;
 void main(void) {
-	vec3 lightPosition = vec3(0.0, -10.0, 10.0);
+	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
 	vL = normalize(lightPosition);
@@ -520,6 +524,30 @@ void main(void) {
 }`
 
 export var fragMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.2;
+	float diffuse = 0.5;
+	float specular = 0.3;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -10.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color.rgb = a + d + s;
+	color.a = opacity;
+}`;
+
+export var fragMeshShaderZ = `#version 300 es
 precision highp int;
 precision highp float;
 in vec4 vClr;
@@ -533,12 +561,12 @@ vec3 desaturate(vec3 color, float amount) {
 void main() {
 	float Ambient = 0.4;
 	float Diffuse = 0.7;
-	float Specular = 0.6;
+	float Specular = 0.9;
 	float DiffuseRough = 1.0;
 	float SpecularRough = 0.1;
 	float Sharpness = 0.0;
 	float Edge = 1.0;
-	bool LightBackfaces = true;
+	bool LightBackfaces = false;
 	vec3 l = normalize(vL);
 	vec3 n = normalize(vN);
 	vec3 v = normalize(vV);
@@ -556,7 +584,7 @@ void main() {
 	vec3 frontcolor = a + d +  s;
 	frontcolor *= min((max(dot(n,normalize(v)), 0.0) - 0.5) * Edge, 0.0) + 1.0;
 	backface = 1.0 - step(0.0, n.z); //1=backface
-	//backface = 1.0 - backface; //1=backface
+	backface = 1.0 - backface; //1=backface
 	//backcolor = vec3(1.0,0.0,0.0);
 	color = vec4(mix(frontcolor,backcolor,   backface), opacity);
 

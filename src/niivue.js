@@ -2115,7 +2115,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let dest = mat.vec3.fromValues(-50, 40, 70);
   let vtx = [];
   let idx = [];
-  NiivueObject3D.makeSphere(vtx,idx,5.0,start);
+  NiivueObject3D.makeSphere(vtx,idx,35.0,start);
   NiivueObject3D.makeCylinder(vtx, idx, start, dest, 2.0);
   NiivueObject3D.makeSphere(vtx,idx,5.0,dest);
   
@@ -3001,6 +3001,7 @@ Niivue.prototype.draw3D = function () {
   } //end PICKING
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   //???WHY this.gl.clearColor(0.2, 0, 0, 1);
+  
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -3076,7 +3077,9 @@ Niivue.prototype.draw3D = function () {
   this.drawCrosshairs3D(true, 1.0);
   this.drawMesh3D(true, 1.0);
   this.drawCrosshairs3D(false, 0.35);
+  //this.drawMesh3D(true, 1.0);
   this.drawMesh3D(false, 0.25);
+
   this.gl.enableVertexAttribArray(0);
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
@@ -3100,9 +3103,12 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.enable(gl.DEPTH_TEST);
   let color = [...this.opts.crosshairColor];
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+//gl.depthFunc(gl.LESS);
   if (isDepthTest) {
     gl.disable(gl.BLEND);
-    //gl.depthFunc(gl.LESS); //pass if LESS than incoming value
+    gl.depthFunc(gl.LESS); //pass if LESS than incoming value
     gl.depthFunc(gl.GREATER);
   } else {
     gl.enable(gl.BLEND);
@@ -3127,9 +3133,12 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   //Draw the mesh
   this.gl.enable(this.gl.CULL_FACE);
+  //this.gl.cullFace(this.gl.FRONT);
   this.gl.cullFace(this.gl.BACK);
+  
 
   this.meshShader.use(this.gl);
+  let rayDir = this.calculateRayDirection();
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
