@@ -160,32 +160,31 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
     console.log('Catastrophic failure generatePosNormClr()')
   }
   let norms = generateNormals(pts, tris)
-  //typecast 32-bit UINT8 RGBA as a 32-bit float!
-  //let rgba255 = [255,0,0,255];
-  var f32rgba = new Float32Array(1);
-  const u32rgba = new Uint32Array(f32rgba.buffer);
-  u32rgba[0] =  rgba255[0] + (rgba255[1] << 8) + (rgba255[2] << 16) +  (rgba255[3] << 24);
   let npt = pts.length / 3
   let isPerVertexColors = npt === (rgba255.length / 4);
   var f32 = new Float32Array(npt * 7); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
-  let p = 0 //position
-  let j = 0
-  let c = 0;
+  var u8 = new Uint8Array(f32.buffer); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
+  let p = 0 //input position
+  let c = 0; //input color
+  let f = 0 //output float32 location (position and normals)
+  let u = 24; //output uint8 location (colors), offset 24 as after 3*position+3*normal
   for (let i = 0; i < npt; i++) {
-    f32[j+0] = pts[p+0]
-    f32[j+1] = pts[p+1]
-    f32[j+2] = pts[p+2]
-    f32[j+3] = norms[p+0]
-    f32[j+4] = norms[p+1]
-    f32[j+5] = norms[p+2]
-    if (isPerVertexColors) {
-      //u32rgba[0] =  rgba255[c] + (rgba255[c+1] << 8) + (rgba255[c+2] << 16) +  (rgba255[c+3] << 24);
-      u32rgba[0] =  rgba255[c] + (rgba255[c+1] << 8) + (rgba255[c+2] << 16) +  (rgba255[c+3] << 24);
+    f32[f+0] = pts[p+0]
+    f32[f+1] = pts[p+1]
+    f32[f+2] = pts[p+2]
+    f32[f+3] = norms[p+0]
+    f32[f+4] = norms[p+1]
+    f32[f+5] = norms[p+2]
+    u8[u] = rgba255[c+0];
+    u8[u+1] = rgba255[c+1];
+    u8[u+2] = rgba255[c+2];
+    u8[u+3] = rgba255[c+3];
+    if (isPerVertexColors)
       c += 4;
-    }
-    f32[j+6] = f32rgba[0]
+    //if (i > 13500) f32[j+6] = f32rgba1[0]
     p += 3; //read 3 input components: XYZ
-    j += 7; //write 7 output components: 3*Position, 3*Normal, 1*RGBA
+    f += 7; //write 7 output components: 3*Position, 3*Normal, 1*RGBA
+    u += 28; //stride of 28 bytes
   }
   return f32
 }
@@ -206,7 +205,7 @@ NVMesh.loadFromUrl = async function (
   name = "",
   colorMap = "yellow",
   opacity = 1.0,
-  rgba255 = [192,0,192,255],
+  rgba255 = [192,128,129,255],
   visible = true
 ) {
   let response = await fetch(url);
