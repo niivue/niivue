@@ -156,7 +156,7 @@ following conditions are met:
 
 NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
 //function generatePosNormClr(pts) {
-  if (pts.length < 3) {
+  if ((pts.length < 3) || (rgba255.length < 4)) {
     console.log('Catastrophic failure generatePosNormClr()')
   }
   let norms = generateNormals(pts, tris)
@@ -165,12 +165,12 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
   var f32rgba = new Float32Array(1);
   const u32rgba = new Uint32Array(f32rgba.buffer);
   u32rgba[0] =  rgba255[0] + (rgba255[1] << 8) + (rgba255[2] << 16) +  (rgba255[3] << 24);
-  //
-
   let npt = pts.length / 3
+  let isPerVertexColors = npt === (rgba255.length / 4);
   var f32 = new Float32Array(npt * 7); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
   let p = 0 //position
   let j = 0
+  let c = 0;
   for (let i = 0; i < npt; i++) {
     f32[j+0] = pts[p+0]
     f32[j+1] = pts[p+1]
@@ -178,6 +178,11 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
     f32[j+3] = norms[p+0]
     f32[j+4] = norms[p+1]
     f32[j+5] = norms[p+2]
+    if (isPerVertexColors) {
+      //u32rgba[0] =  rgba255[c] + (rgba255[c+1] << 8) + (rgba255[c+2] << 16) +  (rgba255[c+3] << 24);
+      u32rgba[0] =  rgba255[c] + (rgba255[c+1] << 8) + (rgba255[c+2] << 16) +  (rgba255[c+3] << 24);
+      c += 4;
+    }
     f32[j+6] = f32rgba[0]
     p += 3; //read 3 input components: XYZ
     j += 7; //write 7 output components: 3*Position, 3*Normal, 1*RGBA
@@ -226,7 +231,7 @@ NVMesh.loadFromUrl = async function (
       alert('GIfTI mesh should have at least one triangle and three vertices');
       return;
   }
-  console.log('npts ', npt, ' ntri ', ntri)
+  //console.log('npts ', npt, ' ntri ', ntri)
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }

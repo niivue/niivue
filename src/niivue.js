@@ -2152,17 +2152,25 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.updateInterpolation(layer);
   
   if (this.meshIdxBufferCount > 0) return; //only once for now...
-  //let start = mat.vec3.fromValues(22, 0, 0);
-	//let dest = mat.vec3.fromValues(-50, 40, 70);
-  //let vtx = [];
-  //let idx = [];
-  //NiivueObject3D.makeSphere(vtx,idx,35.0,start);
-  //NiivueObject3D.makeCylinder(vtx, idx, start, dest, 2.0);
-  //NiivueObject3D.makeSphere(vtx,idx,5.0,dest);
-  
-  //let posNormColor = NVMesh.generatePosNormClr(vtx, idx, [64,128,0,255]);
-	let posNormClr = this.meshes[0].posNormClr //only works with first NVMesh object in array of meshes for now...
-	let tris = this.meshes[0].tris
+
+  let posNormClr = [];
+  let tris = [];
+  if (false) { //connectome demo
+    let pt0 = mat.vec3.fromValues(22, 0, 0);
+    let pt1 = mat.vec3.fromValues(-42, 40, 30);
+    let pt2= mat.vec3.fromValues(-40, -40, 22);
+    let vtx = [];
+    let rgba255 = [];
+    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, 5.0,pt0, [128,128,0,255]);
+    NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pt0, pt1, 2.0, [64,128,0,255]);
+    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, 7.0,pt1, [128,0,255,255]);
+    NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pt1, pt2, 3.0, [255,0,255,255]);
+    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, 4.0,pt2, [128,255,0,255]);
+    posNormClr = NVMesh.generatePosNormClr(vtx, tris, rgba255);
+  } else {
+    posNormClr = this.meshes[0].posNormClr //only works with first NVMesh object in array of meshes for now...
+    tris = this.meshes[0].tris
+  }
   //Triangulated mesh includes three features:
   // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA) 
   // meshVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
@@ -3118,10 +3126,10 @@ Niivue.prototype.draw3D = function () {
     }
   }
   this.drawCrosshairs3D(true, 1.0);
+  this.drawMesh3D(false, 0.35);
   this.drawMesh3D(true, 1.0);
+
   this.drawCrosshairs3D(false, 0.35);
-  //this.drawMesh3D(true, 1.0);
-  this.drawMesh3D(false, 0.25);
 
   this.gl.enableVertexAttribArray(0);
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
@@ -3148,12 +3156,12 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let color = [...this.opts.crosshairColor];
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-//gl.depthFunc(gl.LESS);
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.LESS); //pass if LESS than incoming value
     gl.depthFunc(gl.GREATER);
   } else {
+    gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);

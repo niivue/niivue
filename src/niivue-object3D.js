@@ -288,7 +288,8 @@ NiivueObject3D.makeCylinder = function (
   start,
   dest,
   radius,
-  sides = 20
+  sides = 20,
+  endcaps = true
 ) {
   if (sides < 3) sides = 3; //prism is minimal 3D cylinder
   let v1 = mat.vec3.create();
@@ -301,7 +302,6 @@ NiivueObject3D.makeCylinder = function (
   mat.vec3.normalize(v3, v3);
   let num_v = 2 * sides;
   let num_f = 2 * sides;
-  let endcaps = true;
   if (endcaps) {
     num_f += 2 * sides;
     num_v += 2;
@@ -349,3 +349,50 @@ NiivueObject3D.makeCylinder = function (
   indices.push(...idx);
   vertices.push(...vtx);
 };
+
+NiivueObject3D.makeColoredCylinder = function (
+  vertices,
+  indices,
+  colors,
+  start,
+  dest,
+  radius,
+  rgba255 = [192,0,0,255],
+  sides = 20,
+  endcaps = false
+) {
+  let nv = vertices.length / 3;
+  this.makeCylinder(vertices, indices, start, dest, radius, sides, endcaps);
+  nv = (vertices.length / 3) - nv;
+  console.log(nv);
+  let clrs = [];
+  for (let i = 0; i < ((nv*4)-1); i += 4) {
+    clrs[i] = rgba255[0]
+    clrs[i+1] = rgba255[1]
+    clrs[i+2] = rgba255[2]
+    clrs[i+3] = rgba255[3]
+  }
+  colors.push(...clrs);
+};
+
+NiivueObject3D.makeColoredSphere = function (
+  vertices,
+  indices,
+  colors,
+  radius,
+  origin = [0,0,0],
+  rgba255 = [0,0,192,255]
+) {
+  let nv = vertices.length / 3;
+  this.makeSphere(vertices, indices, radius, origin);
+  nv = (vertices.length / 3) - nv;
+  console.log(nv);
+  let clrs = [];
+  for (let i = 0; i < ((nv*4)-1); i += 4) {
+    clrs[i] = rgba255[0]
+    clrs[i+1] = rgba255[1]
+    clrs[i+2] = rgba255[2]
+    clrs[i+3] = rgba255[3]
+  }
+  colors.push(...clrs);
+}
