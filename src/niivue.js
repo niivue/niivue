@@ -1282,6 +1282,7 @@ Niivue.prototype.loadMeshes = async function (meshList) {
     this.meshes.push(mesh);
     this.updateGLVolume();
   } // for
+	console.log(this.meshes)
   return this;
 }; // loadMeshes
 
@@ -2151,15 +2152,17 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.updateInterpolation(layer);
   
   if (this.meshIdxBufferCount > 0) return; //only once for now...
-  let start = mat.vec3.fromValues(22, 0, 0);
-  let dest = mat.vec3.fromValues(-50, 40, 70);
-  let vtx = [];
-  let idx = [];
-  NiivueObject3D.makeSphere(vtx,idx,35.0,start);
-  NiivueObject3D.makeCylinder(vtx, idx, start, dest, 2.0);
-  NiivueObject3D.makeSphere(vtx,idx,5.0,dest);
+  //let start = mat.vec3.fromValues(22, 0, 0);
+	//let dest = mat.vec3.fromValues(-50, 40, 70);
+  //let vtx = [];
+  //let idx = [];
+  //NiivueObject3D.makeSphere(vtx,idx,35.0,start);
+  //NiivueObject3D.makeCylinder(vtx, idx, start, dest, 2.0);
+  //NiivueObject3D.makeSphere(vtx,idx,5.0,dest);
   
-  let posNormColor = NVMesh.generatePosNormClr(vtx, idx, [64,128,0,255]);
+  //let posNormColor = NVMesh.generatePosNormClr(vtx, idx, [64,128,0,255]);
+	let posNormClr = this.meshes[0].posNormClr //only works with first NVMesh object in array of meshes for now...
+	let tris = this.meshes[0].tris
   //Triangulated mesh includes three features:
   // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA) 
   // meshVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
@@ -2169,11 +2172,11 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   //provide the model-view projection matrix to rotate mesh with respect to camera
   this.meshIdxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
-  this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(idx), this.gl.STATIC_DRAW);
+  this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), this.gl.STATIC_DRAW);
   this.meshVtxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormColor, this.gl.STATIC_DRAW);
-  this.meshIdxBufferCount = idx.length;
+  this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormClr, this.gl.STATIC_DRAW);
+  this.meshIdxBufferCount = tris.length;
 
   this.meshVAO = this.gl.createVertexArray();  
 

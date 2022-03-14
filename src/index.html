@@ -54,10 +54,6 @@
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
-			NVMesh.loadFromUrl('./gzip.surf.gii')
-			.then((nvmesh) => {
-				console.log(nvmesh)
-			})
 			let query = window.location.search
 			const params = new URLSearchParams(query);
 			let url = params.get('url')
@@ -86,7 +82,7 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
-			nv1.loadMeshes([{'url': './gzip.surf.gii'}])
+			nv1.loadMeshes([{'url': './sample_image.surf.gii'}])
       //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
