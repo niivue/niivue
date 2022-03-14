@@ -145,6 +145,7 @@ export const Niivue = function (options = {}) {
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
+	this.meshes = []
   this.backTexture = [];
   this.objectsToRender3D = [];
   this.volScaleMultiplier = 1.0;
@@ -1245,6 +1246,45 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   } // for
   return this;
 }; // loadVolumes()
+
+/**
+ * load an array of meshes
+ * @param {array} meshList the array of objects to load. each object must have a resolvable "url" property at a minimum
+ * @returns {Niivue} returns the Niivue instance
+ * @example
+ * niivue = new Niivue()
+ * niivue.loadMeshes([{url: 'someMesh.gii}])
+ */
+Niivue.prototype.loadMeshes = async function (meshList) {
+  this.on("loading", (isLoading) => {
+    if (isLoading) {
+      this.loadingText = "loading...";
+      this.drawScene();
+    } else {
+      this.loadingText = this.opts.loadingText;
+    }
+  });
+  if (!this.initialized) {
+    //await this.init();
+  }
+  this.meshes = [];
+  this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+  this.scene.loading$.next(false);
+  // for loop to load all volumes in volumeList
+  for (let i = 0; i < meshList.length; i++) {
+    this.scene.loading$.next(true);
+    let mesh = await NVMesh.loadFromUrl(
+      meshList[i].url
+    );
+    this.scene.loading$.next(false);
+    this.meshes.push(mesh);
+    this.updateGLVolume();
+  } // for
+  return this;
+}; // loadMeshes
+
 
 // not included in public docs
 Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {

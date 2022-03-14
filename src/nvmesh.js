@@ -29,6 +29,8 @@ export var NVMesh = function (
   visible = true,
 ) {
   this.name = name;
+	this.posNormClr = posNormClr
+	this.tris = tris
   this.id = uuidv4();
   this.colorMap = colorMap;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
