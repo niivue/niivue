@@ -3183,10 +3183,9 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   this.gl.bindBuffer(gl.ARRAY_BUFFER, this.meshVtxBuffer);
   this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   //Draw the mesh
-  this.gl.enable(this.gl.CULL_FACE);
-  //this.gl.cullFace(this.gl.FRONT);
-  this.gl.cullFace(this.gl.BACK);
-  
+//  this.gl.enable(this.gl.CULL_FACE);
+//  this.gl.cullFace(this.gl.BACK);
+  this.gl.disable(this.gl.CULL_FACE);
 
   this.meshShader.use(this.gl);
   let rayDir = this.calculateRayDirection();

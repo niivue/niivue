@@ -1,4 +1,5 @@
 import * as gifti from "gifti-reader-js/release/current/gifti-reader";
+import * as pako from "pako";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
@@ -40,7 +41,7 @@ export var NVMesh = function (
   if (!data) {
     return;
   }
-  this.gii = gifti.parse(data);
+  //???? this.gii = gifti.parse(data);
 }
   
 NVMesh.prototype.colorMaps = function (sort = true) {
@@ -189,6 +190,102 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
   return f32
 }
 
+NVMesh.readMZ3 = function (buffer) {
+//NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
+  if (buffer.byteLength < 20) //76 for raw, not sure of gzip
+    throw new Error( 'File to small to be mz3: bytes = '+ buffer.byteLength);
+  var reader = new DataView(buffer);
+  //get number of vertices and faces
+  var magic = reader.getUint16(0, true);
+  var _buffer = buffer;
+  if ((magic === 35615) || (magic === 8075)) { //gzip signature 0x1F8B in little and big endian
+    //console.log("detected gzipped mz3");
+    //HTML should source an inflate script:
+    // <script src="https://cdn.jsdelivr.net/pako/1.0.3/pako.min.js"></script>
+    // <script src="js/libs/gunzip.min.js"></script>
+    //for decompression there seems to be little real world difference
+    var raw;
+    if ((typeof pako === "object") && (typeof pako.deflate === "function")) {
+      raw = pako.inflate(new Uint8Array(buffer));
+    } else if ((typeof Zlib === "object") && (typeof Zlib.Gunzip === "function")) {
+      var inflate = new Zlib.Gunzip( new Uint8Array( buffer ) ); // eslint-disable-line no-undef
+      raw = inflate.decompress();
+    } else
+      alert("Required script missing: include either pako.min.js or gunzip.min.js");;
+    //console.log("gz->raw %d->%d", buffer.byteLength, raw.length);
+    var reader = new DataView(raw.buffer);
+    var magic = reader.getUint16(0, true);
+    _buffer = raw.buffer;
+    //throw new Error( 'Gzip MZ3 file' );
+  }
+  var attr = reader.getUint16(2, true);
+  var nface = reader.getUint32(4, true);
+  var nvert = reader.getUint32(8, true);
+  var nskip = reader.getUint32(12, true);
+  console.log("MZ3 magic %d attr %d face %d vert %d skip %d", magic, attr, nface, nvert, nskip);
+  if (magic != 23117)
+    throw new Error( 'Invalid MZ3 file' );
+  var isFace = attr & 1;
+  var isVert = attr & 2;
+  var isRGBA = attr & 4;
+  var isSCALAR = attr & 8;
+  var isDOUBLE = attr & 16;
+  var isAOMap = attr & 32;
+  if (attr > 63)
+    throw new Error("Unsupported future version of MZ3 file");
+  if ((!isFace) || (!isVert) || (nface < 1) || (nvert < 3))
+    throw new Error("Not a mesh MZ3 file (maybe scalar)");
+  var filepos = 16 + nskip;
+  var indices = null;
+  if (isFace) {
+    indices = new Int32Array(_buffer, filepos, nface*3, true);
+    filepos += nface*3*4;
+  }
+  var positions = null;
+  if (isVert) {
+    positions = new Float32Array(_buffer, filepos,nvert*3, true);
+    filepos += nvert*3*4;
+  }
+  var colors = null;
+  if (isRGBA) {
+    colors = new Float32Array(nvert * 3);
+    var rgba8 = new Uint8Array(_buffer, filepos,nvert*4, true);
+    filepos += nvert*4;
+    var k3 = 0;
+    var k4 = 0;
+    for ( var i = 0; i < nvert; i ++ ) {
+      for ( var j = 0; j < 3; j ++ ) { //for RGBA
+        colors[k3] = rgba8[k4] / 255;
+        k3++;
+        k4++;
+      }
+      k4++; //skip Alpha
+    } //for i
+  } //if isRGBA
+  //
+  var uv2 = null;
+  if ((!isRGBA) && (isSCALAR) && (isAOMap)) {
+    var scalars = new Float32Array(_buffer, filepos,nvert, true);
+    filepos += nvert*4;
+    /*var mn = scalars[0];
+    var mx = scalars[0];
+    for ( var i = 0; i < nvert; i ++ ) {
+      if (scalars[i] < mn) mn = scalars[i];
+      if (scalars[i] > mx) mx = scalars[i];
+    }
+    console.log("scalar range %g...%g", mn, mx);*/
+    uv2 = new Float32Array( nvert * 2 );
+    for ( var i = 0; i < nvert; i ++ ) {
+      uv2[ i * 2 ] = uv2[ i * 2 + 1 ] = scalars[i];
+    }
+  }
+  return {
+    positions,
+    indices,
+    uv2,
+    colors,
+  };
+}
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -218,26 +315,50 @@ NVMesh.loadFromUrl = async function (
 
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  let tris = [];
+  var pts = [];
+  var re = /(?:\.([^.]+))?$/
+  let ext = re.exec(name)[1]
+  if (ext.toUpperCase() === 'MZ3') {
+    let buffer = await response.arrayBuffer();
+    //use Three.JS reader, could be simplified by using native types
+    let obj = this.readMZ3(buffer);
+    pts = obj.positions.slice();
+    tris = obj.indices.slice();
+    if ((obj.colors) && (obj.colors.length === pts.length)) {
+      rgba255 = [];
+      let n = pts.length / 3;
+      let c = 0;
+      for (let i = 0; i < n; i++) { //convert ThreeJS unit RGB to RGBA255
+        rgba255.push(obj.colors[c] * 255); //red
+        rgba255.push(obj.colors[c+1] * 255); //green
+        rgba255.push(obj.colors[c+2] * 255); //blue
+        rgba255.push(255); //alpha
+        c += 3;
+      }
+    }
+  } else {
+    let xmlStr = await response.text();
+    let gii = gifti.parse(xmlStr)
+    pts = gii.getPointsDataArray().getData();
+    tris = gii.getTrianglesDataArray().getData();
+  }
 
-  let xmlStr = await response.text();
-  let gii = gifti.parse(xmlStr)
-
-  var pts = gii.getPointsDataArray().getData();
-  let npt = pts.length / 3
-  let tris = gii.getTrianglesDataArray().getData();
-  let ntri = tris.length / 3
+  let npt = pts.length / 3;
+  let ntri = tris.length / 3;
   if ((ntri < 1) || (npt < 3)) {
-      alert('GIfTI mesh should have at least one triangle and three vertices');
+      alert('Mesh should have at least one triangle and three vertices');
       return;
   }
   //console.log('npts ', npt, ' ntri ', ntri)
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
+  let gix = []; //???? we do not want "gii", e.g. if we load mz3, obj ply
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
     nvmesh = new NVMesh(
-      gii,
+      gix,
       posNormClr,
       tris,
       name,
