@@ -336,14 +336,41 @@ NVMesh.loadFromUrl = async function (
         rgba255.push(255); //alpha
         c += 3;
       }
-    }
-  } else {
+    } //colors
+  } else if (ext.toUpperCase() === 'GII') { //GIFTI
     let xmlStr = await response.text();
     let gii = gifti.parse(xmlStr)
     pts = gii.getPointsDataArray().getData();
     tris = gii.getTrianglesDataArray().getData();
-  }
-
+  } else { //file extension not recognized: assume FreeSurfer
+    let buf = await response.arrayBuffer();
+    const view = new DataView(buf); //ArrayBuffer to dataview
+    //ALWAYS big endian
+    let sig0 = view.getUint32(0, false);
+    let sig1 = view.getUint32(4, false);
+    if ((sig0 !== 4294966883) || (sig1 !== 1919246708))
+      console.log('Unable to recognize file type: does not appear to be FreeSurfer format.');
+    let offset = 0;
+    while (view.getUint8(offset) !== 10)
+      offset++;
+    offset += 2;
+    let nv = view.getUint32(offset, false); //number of vertices
+    offset += 4;
+    let nf = view.getUint32(offset, false); //number of faces
+    offset += 4;
+    nv *= 3; //each vertex has 3 positions: XYZ
+    pts = new Float32Array(nv);
+    for (let i = 0; i < nv; i++) {
+      pts[i] = view.getFloat32(offset, false);
+      offset += 4;
+    }
+    nf *= 3; //each triangle face indexes 3 triangles
+    tris = new Int32Array(nf);
+    for (let i = 0; i < nf; i++) {
+      tris[i] = view.getUint32(offset, false);
+      offset += 4;
+    }
+  } //read file types
   let npt = pts.length / 3;
   let ntri = tris.length / 3;
   if ((ntri < 1) || (npt < 3)) {
