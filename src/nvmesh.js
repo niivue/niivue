@@ -337,6 +337,32 @@ NVMesh.loadFromUrl = async function (
         c += 3;
       }
     } //colors
+  } else if (ext.toUpperCase() === 'OBJ') { //GIFTI
+    let txt = await response.text();
+    var lines = txt.split('\n');
+    var n = lines.length;
+    let t = [];
+    for(let i = 0; i < n; i++){
+      let str = lines[i];
+      if ((str[0] === 'v') && (str[1] === ' ')){ //'v ' but not 'vt' or 'vn'
+        let items = str.split(' ');
+        pts.push(parseFloat(items[1]));
+        pts.push(parseFloat(items[2]));
+        pts.push(parseFloat(items[3]));
+        //v 0 -0.5 -0
+      }
+      if (str[0] === 'f') {
+        let items = str.split(' ');
+        let tn = items[1].split('/');
+        t.push(parseInt(tn-1));
+        tn = items[2].split('/');
+        t.push(parseInt(tn-1));
+        tn = items[3].split('/');
+        t.push(parseInt(tn-1));
+      }
+      tris = new Int32Array(t);
+    } //for all lines
+    console.log('>>>', tris)
   } else if (ext.toUpperCase() === 'GII') { //GIFTI
     let xmlStr = await response.text();
     let gii = gifti.parse(xmlStr)
