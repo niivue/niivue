@@ -348,7 +348,7 @@ NiivueObject3D.makeColoredCylinder = function (
   let nv = vertices.length / 3;
   this.makeCylinder(vertices, indices, start, dest, radius, sides, endcaps);
   nv = vertices.length / 3 - nv;
-  console.log(nv);
+  //console.log(nv);
   let clrs = [];
   for (let i = 0; i < nv * 4 - 1; i += 4) {
     clrs[i] = rgba255[0];
@@ -370,7 +370,7 @@ NiivueObject3D.makeColoredSphere = function (
   let nv = vertices.length / 3;
   this.makeSphere(vertices, indices, radius, origin);
   nv = vertices.length / 3 - nv;
-  console.log(nv);
+  //console.log(nv);
   let clrs = [];
   for (let i = 0; i < nv * 4 - 1; i += 4) {
     clrs[i] = rgba255[0];
