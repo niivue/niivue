@@ -12,7 +12,7 @@ module.exports = defineConfig({
     	}
   	},
     build: {
-        outDir: '../dist',
+        outDir: './dist',
         lib: {
             entry: path.resolve(__dirname, 'src/niivue.js'),
             name: 'niivue',

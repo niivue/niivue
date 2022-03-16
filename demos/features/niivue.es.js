@@ -20911,7 +20911,7 @@ function generateNormals(pts, tris) {
 }
 NVMesh.generatePosNormClr = function(pts, tris, rgba255) {
   if (pts.length < 3 || rgba255.length < 4) {
-    console.log("Catastrophic failure generatePosNormClr()");
+    log$1.error("Catastrophic failure generatePosNormClr()");
   }
   let norms = generateNormals(pts, tris);
   let npt = pts.length / 3;
@@ -20964,7 +20964,7 @@ NVMesh.readMZ3 = function(buffer) {
   var nface = reader.getUint32(4, true);
   var nvert = reader.getUint32(8, true);
   var nskip = reader.getUint32(12, true);
-  console.log("MZ3 magic %d attr %d face %d vert %d skip %d", magic, attr, nface, nvert, nskip);
+  log$1.debug("MZ3 magic %d attr %d face %d vert %d skip %d", magic, attr, nface, nvert, nskip);
   if (magic != 23117)
     throw new Error("Invalid MZ3 file");
   var isFace = attr & 1;
@@ -21072,7 +21072,7 @@ NVMesh.loadFromUrl = async function(url, name = "", colorMap = "yellow", opacity
       }
       tris = new Int32Array(t);
     }
-    console.log(">>>", tris);
+    log$1.debug(">>>", tris);
   } else if (ext.toUpperCase() === "GII") {
     let xmlStr = await response.text();
     let gii = giftiReader.exports.parse(xmlStr);
@@ -21084,7 +21084,7 @@ NVMesh.loadFromUrl = async function(url, name = "", colorMap = "yellow", opacity
     let sig0 = view.getUint32(0, false);
     let sig1 = view.getUint32(4, false);
     if (sig0 !== 4294966883 || sig1 !== 1919246708)
-      console.log("Unable to recognize file type: does not appear to be FreeSurfer format.");
+      log$1.debug("Unable to recognize file type: does not appear to be FreeSurfer format.");
     let offset = 0;
     while (view.getUint8(offset) !== 10)
       offset++;
