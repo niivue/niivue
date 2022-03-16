@@ -167,9 +167,10 @@ export const Niivue = function (options = {}) {
   this.lastTwoTouchDistance = 0;
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
-  this.intensityRange$ = new Subject(); // needs to be updated to have an intensity range for each loaded image #172
+  this.intensityRange$ = new Subject(); // an array
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
+	this.imageLoaded$ = new Subject()
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -197,6 +198,8 @@ export const Niivue = function (options = {}) {
   this.eventsToSubjects = {
     location: this.scene.location$,
     loading: this.scene.loading$,
+		imageLoaded: this.imageLoaded$,
+		intensityRange: this.intensityRange$
   };
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
@@ -234,6 +237,8 @@ Niivue.prototype.attachTo = async function (id) {
  *    //...
  * }
  * niivue.on('location', doSomethingWithLocationData)
+ * niivue.on('intensityRange', callback)
+ * niivue.on('imageLoaded', callback)
  */
 Niivue.prototype.on = function (event, callback) {
   let knownEvents = Object.keys(this.eventsToSubjects);
@@ -863,7 +868,23 @@ Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
+	this.imageLoaded$.next(volume) // pass reference to the loaded NVImage (the volume)
 };
+
+/**
+ * add a new mesh to the canvas
+ * @param {NVMesh} mesh the new mesh to add to the canvas
+ * @example
+ * niivue = new Niivue()
+ * niivue.addMesh(NVMesh.loadFromUrl('./someURL.gii'))
+ */
+Niivue.prototype.addMesh = function (mesh) {
+  this.meshes.push(mesh);
+  let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
+  this.setMesh(mesh, idx);
+	this.imageLoaded$.next(mesh) // pass reference to the loaded NVImage (the volume)
+};
+
 
 /**
  * get the index of a volume by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
@@ -882,6 +903,18 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   }
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
+
+Niivue.prototype.getMeshIndexByID = function (id) {
+  let n = this.meshes.length;
+  for (let i = 0; i < n; i++) {
+    let id_i = this.meshes[i].id;
+    if (id_i === id) {
+      return i;
+    }
+  }
+  return -1; // -1 signals that no valid index was found for a volume with the given id
+};
+
 
 /**
  * get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
@@ -946,9 +979,39 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   });
 };
 
+Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
+  this.meshes.map((m) => {
+		log.debug('MESH: ', m.name);
+  });
+  let numberOfLoadedMeshes = this.meshes.length;
+  if (toIndex > numberOfLoadedMeshes) {
+    return;
+  }
+  let meshIndex = this.getMeshIndexByID(mesh.id);
+  if (toIndex === 0) {
+    this.meshes.splice(meshIndex, 1);
+    this.meshes.unshift(mesh);
+  } else if (toIndex < 0) {
+    this.meshes.splice(this.getMeshIndexByID(mesh.id), 1);
+  } else {
+    this.meshes.splice(meshIndex, 1);
+    this.meshes.splice(toIndex, 0, mesh);
+  }
+  this.updateGLVolume();
+  this.meshes.map((m) => {
+    log.debug(m.name);
+  });
+};
+
+
 Niivue.prototype.removeVolume = function (volume) {
   this.setVolume(volume, -1);
 };
+
+Niivue.prototype.removeMesh = function (mesh) {
+  this.setMesh(mesh, -1);
+};
+
 
 /**
  * Move a volume to the bottom of the stack of loaded volumes. The volume will become the background
@@ -1237,12 +1300,15 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       this.opts.trustCalMinMax
     );
     this.scene.loading$.next(false);
+		this.addVolume(volume)
+		/*
     this.volumes.push(volume);
     if (i === 0) {
       this.back = volume;
     }
     this.overlays = this.volumes.slice(1);
     this.updateGLVolume();
+		*/
   } // for
   return this;
 }; // loadVolumes()
@@ -1277,10 +1343,11 @@ Niivue.prototype.loadMeshes = async function (meshList) {
     this.scene.loading$.next(true);
     let mesh = await NVMesh.loadFromUrl(meshList[i].url);
     this.scene.loading$.next(false);
-    this.meshes.push(mesh);
-    this.updateGLVolume();
+		this.addMesh(mesh)
+    //this.meshes.push(mesh);
+    //this.updateGLVolume();
   } // for
-  console.log(this.meshes);
+  //console.log(this.meshes);
   return this;
 }; // loadMeshes
 
@@ -2202,9 +2269,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     if (this.meshes.length < 1) {
       return;
     }
-    posNormClr = this.meshes[0].posNormClr; //only works with first NVMesh object in array of meshes for now...
-    tris = this.meshes[0].tris;
-  }
+		posNormClr = this.meshes[0].posNormClr
+		tris = this.meshes[0].tris
+	}
   //Triangulated mesh includes three features:
   // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA)
   // meshVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
@@ -2221,7 +2288,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   );
   this.meshVtxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormClr, this.gl.STATIC_DRAW);
+  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(posNormClr), this.gl.STATIC_DRAW);
   this.meshIdxBufferCount = tris.length;
 
   this.meshVAO = this.gl.createVertexArray();
@@ -3078,11 +3145,7 @@ Niivue.prototype.draw3D = function () {
       let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map(
         (x) => x / 255.0
       );
-      console.log(
-        this.scene.clipPlaneDepthAziElev[0],
-        "User clicked on the clip plane at " + clipXYZ
-      );
-      this.scene.clipPlaneDepthAziElev[0] =
+        this.scene.clipPlaneDepthAziElev[0] =
         this.scene.clipPlaneDepthAziElev[0] - 0.1;
       if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
         this.scene.clipPlaneDepthAziElev[0] = 0.4;
