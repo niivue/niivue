@@ -172,7 +172,7 @@ following conditions are met:
 NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
   //function generatePosNormClr(pts) {
   if (pts.length < 3 || rgba255.length < 4) {
-    console.log("Catastrophic failure generatePosNormClr()");
+    log.error("Catastrophic failure generatePosNormClr()");
   }
   let norms = generateNormals(pts, tris);
   let npt = pts.length / 3;
@@ -239,7 +239,7 @@ NVMesh.readMZ3 = function (buffer) {
   var nface = reader.getUint32(4, true);
   var nvert = reader.getUint32(8, true);
   var nskip = reader.getUint32(12, true);
-  console.log(
+  log.debug(
     "MZ3 magic %d attr %d face %d vert %d skip %d",
     magic,
     attr,
@@ -388,7 +388,7 @@ NVMesh.loadFromUrl = async function (
       }
       tris = new Int32Array(t);
     } //for all lines
-    console.log(">>>", tris);
+    log.debug(">>>", tris);
   } else if (ext.toUpperCase() === "GII") {
     //GIFTI
     let xmlStr = await response.text();
@@ -403,7 +403,7 @@ NVMesh.loadFromUrl = async function (
     let sig0 = view.getUint32(0, false);
     let sig1 = view.getUint32(4, false);
     if (sig0 !== 4294966883 || sig1 !== 1919246708)
-      console.log(
+      log.debug(
         "Unable to recognize file type: does not appear to be FreeSurfer format."
       );
     let offset = 0;

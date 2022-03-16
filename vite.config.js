@@ -3,11 +3,12 @@ const path = require('path')
 const { defineConfig } = require('vite')
 
 module.exports = defineConfig({
-    root: 'src',
+    root: '.',
 		server: {
-    fs: {
-      // Allow serving files from one level up to the project root
-    	allow: ['..']
+			open: '/src/index.html',
+    	fs: {
+				// Allow serving files from one level up to the project root
+				allow: ['..']
     	}
   	},
     build: {
