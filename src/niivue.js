@@ -534,7 +534,7 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.intensityRange$.next([mnScale, mxScale]);
+  this.intensityRange$.next(this.volumes[volIdx]); //reference to volume to access cal_min and cal_max
 };
 
 // not included in public docs
@@ -630,6 +630,7 @@ Niivue.prototype.resetBriCon = function () {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
+	this.intensityRange$.next(this.volumes[0])
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
