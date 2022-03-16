@@ -33,8 +33,7 @@ export { NVImage } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-//import { niimathWorker } from "@niivue/niimath-js";
-import { v4 as uuidv4 } from "uuid";
+
 const log = new Log();
 
 /**
@@ -2148,7 +2147,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
 
   let posNormClr = [];
   let tris = [];
-  if (false) {
+  const isConnectomeDemo = false;
+  if (isConnectomeDemo) {
     //connectome demo
     let pt0 = mat.vec3.fromValues(22, 0, 0);
     let pt1 = mat.vec3.fromValues(-42, 40, 30);
@@ -2465,7 +2465,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
-          values: this.volumes.map((v, index) => {
+          values: this.volumes.map((v) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
@@ -2491,7 +2491,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
-        values: this.volumes.map((v, index) => {
+        values: this.volumes.map((v) => {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
@@ -2676,7 +2676,6 @@ Niivue.prototype.updateInterpolation = function (layer) {
   else this.gl.activeTexture(this.gl.TEXTURE2);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
-  let numLayers = this.volumes.length;
 };
 
 Niivue.prototype.setAtlasOutline = function (isOutline) {
@@ -2818,7 +2817,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.sync();
 }; // draw2D()
 
-Niivue.prototype.calculateMvpMatrix = function (object3D) {
+Niivue.prototype.calculateMvpMatrix = function () {
   function deg2rad(deg) {
     return deg * (Math.PI / 180.0);
   }
@@ -2954,6 +2953,7 @@ Niivue.prototype.draw3D = function () {
 
   // mvp matrix and ray direction can now be a constant because of world space
   let mvpMatrix, modelMatrix, normalMatrix;
+  // eslint-disable-next-line no-unused-vars
   [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(
     this.volumeObject3D
   );
@@ -3191,7 +3191,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.enable(gl.DEPTH_TEST);
-  let color = [...this.opts.crosshairColor];
+  // let color = [...this.opts.crosshairColor];
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   if (isDepthTest) {
@@ -3226,7 +3226,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   this.gl.disable(this.gl.CULL_FACE);
 
   this.meshShader.use(this.gl);
-  let rayDir = this.calculateRayDirection();
+  // let rayDir = this.calculateRayDirection();
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
   this.gl.uniformMatrix4fv(
     this.meshShader.uniforms["modelMtx"],
@@ -3319,6 +3319,7 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
 
   crosshairsShader.use(this.gl);
   let m, modelMtx, normMtx;
+  // eslint-disable-next-line no-unused-vars
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, m);
 
