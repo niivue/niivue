@@ -27,8 +27,8 @@ import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
 import { NVImage } from "./nvimage.js";
-import {NVMesh} from "./nvmesh.js"
-export {NVMesh} from "./nvmesh.js"
+import { NVMesh } from "./nvmesh.js";
+export { NVMesh } from "./nvmesh.js";
 export { NVImage } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
@@ -110,7 +110,7 @@ export const Niivue = function (options = {}) {
   this.meshVtxBuffer = null;
   this.meshVAO = null;
   this.meshIdxBuffer = null;
-  
+
   this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
 
@@ -145,7 +145,7 @@ export const Niivue = function (options = {}) {
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
-	this.meshes = []
+  this.meshes = [];
   this.backTexture = [];
   this.objectsToRender3D = [];
   this.volScaleMultiplier = 1.0;
@@ -1275,17 +1275,14 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl(
-      meshList[i].url
-    );
+    let mesh = await NVMesh.loadFromUrl(meshList[i].url);
     this.scene.loading$.next(false);
     this.meshes.push(mesh);
     this.updateGLVolume();
   } // for
-	console.log(this.meshes)
+  console.log(this.meshes);
   return this;
 }; // loadMeshes
-
 
 // not included in public docs
 Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
@@ -1679,12 +1676,8 @@ Niivue.prototype.init = async function () {
     fragSurfaceShader
   );
 
-//mesh
-  this.meshShader = new Shader( 
-    this.gl,
-    vertMeshShader,
-    fragMeshShader
-  );
+  //mesh
+  this.meshShader = new Shader(this.gl, vertMeshShader, fragMeshShader);
 
   this.surfaceShader.use(this.gl);
   this.gl.uniform4fv(
@@ -2150,29 +2143,70 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
   this.updateInterpolation(layer);
-  
+
   if (this.meshIdxBufferCount > 0) return; //only once for now...
 
   let posNormClr = [];
   let tris = [];
-  if (false) { //connectome demo
+  if (false) {
+    //connectome demo
     let pt0 = mat.vec3.fromValues(22, 0, 0);
     let pt1 = mat.vec3.fromValues(-42, 40, 30);
-    let pt2= mat.vec3.fromValues(-40, -40, 22);
+    let pt2 = mat.vec3.fromValues(-40, -40, 22);
     let vtx = [];
     let rgba255 = [];
-    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, 5.0,pt0, [128,128,0,255]);
-    NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pt0, pt1, 2.0, [64,128,0,255]);
-    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, 7.0,pt1, [128,0,255,255]);
-    NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pt1, pt2, 3.0, [255,0,255,255]);
-    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, 4.0,pt2, [128,255,0,255]);
+    NiivueObject3D.makeColoredSphere(
+      vtx,
+      tris,
+      rgba255,
+      5.0,
+      pt0,
+      [128, 128, 0, 255]
+    );
+    NiivueObject3D.makeColoredCylinder(
+      vtx,
+      tris,
+      rgba255,
+      pt0,
+      pt1,
+      2.0,
+      [64, 128, 0, 255]
+    );
+    NiivueObject3D.makeColoredSphere(
+      vtx,
+      tris,
+      rgba255,
+      7.0,
+      pt1,
+      [128, 0, 255, 255]
+    );
+    NiivueObject3D.makeColoredCylinder(
+      vtx,
+      tris,
+      rgba255,
+      pt1,
+      pt2,
+      3.0,
+      [255, 0, 255, 255]
+    );
+    NiivueObject3D.makeColoredSphere(
+      vtx,
+      tris,
+      rgba255,
+      4.0,
+      pt2,
+      [128, 255, 0, 255]
+    );
     posNormClr = NVMesh.generatePosNormClr(vtx, tris, rgba255);
   } else {
-    posNormClr = this.meshes[0].posNormClr //only works with first NVMesh object in array of meshes for now...
-    tris = this.meshes[0].tris
+    if (this.meshes.length < 1) {
+      return;
+    }
+    posNormClr = this.meshes[0].posNormClr; //only works with first NVMesh object in array of meshes for now...
+    tris = this.meshes[0].tris;
   }
   //Triangulated mesh includes three features:
-  // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA) 
+  // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA)
   // meshVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
   // meshIdxBuffer: indices for triangle vertices, e.g. [0,1,2] is triangle composed of first 3 vertices
   //use the shader designed for triangulated meshes
@@ -2180,14 +2214,17 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   //provide the model-view projection matrix to rotate mesh with respect to camera
   this.meshIdxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
-  this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), this.gl.STATIC_DRAW);
+  this.gl.bufferData(
+    this.gl.ELEMENT_ARRAY_BUFFER,
+    new Int32Array(tris),
+    this.gl.STATIC_DRAW
+  );
   this.meshVtxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
   this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormClr, this.gl.STATIC_DRAW);
   this.meshIdxBufferCount = tris.length;
 
-  this.meshVAO = this.gl.createVertexArray();  
-
+  this.meshVAO = this.gl.createVertexArray();
 }; // refreshLayers()
 
 /**
@@ -2838,9 +2875,9 @@ Niivue.prototype.calculateMvpMatrix = function (object3D) {
   );
   //
   let iModelMatrix = mat.mat4.create();
-  mat.mat4.invert(iModelMatrix, modelMatrix)
+  mat.mat4.invert(iModelMatrix, modelMatrix);
   let normalMatrix = mat.mat4.create();
-  mat.mat4.transpose(normalMatrix, iModelMatrix)
+  mat.mat4.transpose(normalMatrix, iModelMatrix);
   //this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
 
   // transpose(out, a) → {mat4}
@@ -2916,8 +2953,10 @@ Niivue.prototype.draw3D = function () {
   // render picking surfaces
 
   // mvp matrix and ray direction can now be a constant because of world space
-  let mvpMatrix, modelMatrix, normalMatrix
-  [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(this.volumeObject3D);
+  let mvpMatrix, modelMatrix, normalMatrix;
+  [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(
+    this.volumeObject3D
+  );
   const rayDir = this.calculateRayDirection();
   if (this.scene.mouseDepthPicker) {
     //start PICKING: picking shader and reading values is slow
@@ -3052,7 +3091,7 @@ Niivue.prototype.draw3D = function () {
   } //end PICKING
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   //???WHY this.gl.clearColor(0.2, 0, 0, 1);
-  
+
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
@@ -3135,7 +3174,6 @@ Niivue.prototype.draw3D = function () {
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 
-
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
@@ -3154,8 +3192,8 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.enable(gl.DEPTH_TEST);
   let color = [...this.opts.crosshairColor];
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.LESS); //pass if LESS than incoming value
@@ -3183,25 +3221,32 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   this.gl.bindBuffer(gl.ARRAY_BUFFER, this.meshVtxBuffer);
   this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   //Draw the mesh
-//  this.gl.enable(this.gl.CULL_FACE);
-//  this.gl.cullFace(this.gl.BACK);
+  //  this.gl.enable(this.gl.CULL_FACE);
+  //  this.gl.cullFace(this.gl.BACK);
   this.gl.disable(this.gl.CULL_FACE);
 
   this.meshShader.use(this.gl);
   let rayDir = this.calculateRayDirection();
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
+  this.gl.uniformMatrix4fv(
+    this.meshShader.uniforms["modelMtx"],
+    false,
+    modelMtx
+  );
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
   this.gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
 
-
-  this.gl.drawElements(gl.TRIANGLES, this.meshIdxBufferCount, this.gl.UNSIGNED_INT, 0);
+  this.gl.drawElements(
+    gl.TRIANGLES,
+    this.meshIdxBufferCount,
+    this.gl.UNSIGNED_INT,
+    0
+  );
   this.gl.disableVertexAttribArray(this.meshVAO);
   //this.gl.disableVertexAttribArray(normLoc);
   //clean up: cull face by default
-  this.gl.enable(this.gl.CULL_FACE);  
+  this.gl.enable(this.gl.CULL_FACE);
 
-  
   //restore default vertex buffer:
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -3210,7 +3255,6 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
 }; //drawMesh3D()
-
 
 Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   if (!this.opts.show3Dcrosshair) {
@@ -3302,7 +3346,7 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
-  
+
   //restore default vertex buffer:
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);

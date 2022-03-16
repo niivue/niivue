@@ -129,74 +129,85 @@ NiivueObject3D.getFirstPerpVector = function (v1) {
 };
 
 NiivueObject3D.subdivide = function (verts, faces) {
-//Subdivide each triangle into four triangles, pushing verts to the unit sphere"""
+  //Subdivide each triangle into four triangles, pushing verts to the unit sphere"""
   let nv = verts.length / 3;
   let nf = faces.length / 3;
   let n = nf;
   let vNew = mat.vec3.create();
   let nNew = mat.vec3.create();
   for (let faceIndex = 0; faceIndex < n; faceIndex++) {
-       //setlength(verts, nv + 3);
-       let fx = faces[(faceIndex * 3) + 0];
-       let fy = faces[(faceIndex * 3) + 1];
-       let fz = faces[(faceIndex * 3) + 2];
-       let vx = mat.vec3.fromValues(verts[(fx*3)+0], verts[(fx*3)+1], verts[(fx*3)+2]);
-       let vy = mat.vec3.fromValues(verts[(fy*3)+0], verts[(fy*3)+1], verts[(fy*3)+2]);
-       let vz = mat.vec3.fromValues(verts[(fz*3)+0], verts[(fz*3)+1], verts[(fz*3)+2]);
-       mat.vec3.add(vNew, vx, vy)
-       mat.vec3.normalize(nNew, vNew)
-       verts.push(...nNew);
-       
-       mat.vec3.add(vNew, vy, vz) 
-       mat.vec3.normalize(nNew, vNew)
-       verts.push(...nNew);
+    //setlength(verts, nv + 3);
+    let fx = faces[faceIndex * 3 + 0];
+    let fy = faces[faceIndex * 3 + 1];
+    let fz = faces[faceIndex * 3 + 2];
+    let vx = mat.vec3.fromValues(
+      verts[fx * 3 + 0],
+      verts[fx * 3 + 1],
+      verts[fx * 3 + 2]
+    );
+    let vy = mat.vec3.fromValues(
+      verts[fy * 3 + 0],
+      verts[fy * 3 + 1],
+      verts[fy * 3 + 2]
+    );
+    let vz = mat.vec3.fromValues(
+      verts[fz * 3 + 0],
+      verts[fz * 3 + 1],
+      verts[fz * 3 + 2]
+    );
+    mat.vec3.add(vNew, vx, vy);
+    mat.vec3.normalize(nNew, vNew);
+    verts.push(...nNew);
 
-       mat.vec3.add(vNew, vx, vz) 
-       mat.vec3.normalize(nNew, vNew)
-       verts.push(...nNew);
-       //Split the current triangle into four smaller triangles:
-       let face = [nv,nv + 1, nv + 2];
-       faces.push( ...face);
-       face = [fx, nv, nv + 2];
-       faces.push( ...face);
-       face = [nv, fy, nv + 1];
-       faces.push( ...face);
-       faces[(faceIndex * 3) + 0] = nv + 2;
-       faces[(faceIndex * 3) + 1] = nv + 1;
-       faces[(faceIndex * 3) + 2] = fz;
-       nf = nf + 3;
-       nv = nv + 3;
+    mat.vec3.add(vNew, vy, vz);
+    mat.vec3.normalize(nNew, vNew);
+    verts.push(...nNew);
+
+    mat.vec3.add(vNew, vx, vz);
+    mat.vec3.normalize(nNew, vNew);
+    verts.push(...nNew);
+    //Split the current triangle into four smaller triangles:
+    let face = [nv, nv + 1, nv + 2];
+    faces.push(...face);
+    face = [fx, nv, nv + 2];
+    faces.push(...face);
+    face = [nv, fy, nv + 1];
+    faces.push(...face);
+    faces[faceIndex * 3 + 0] = nv + 2;
+    faces[faceIndex * 3 + 1] = nv + 1;
+    faces[faceIndex * 3 + 2] = fz;
+    nf = nf + 3;
+    nv = nv + 3;
   }
-}
+};
 
 NiivueObject3D.weldVertices = function (verts, faces) {
-//unify identical vertices
+  //unify identical vertices
   let nv = verts.length / 3;
   //yikes: bubble sort! TO DO: see Surfice for more efficient solution
   let nUnique = 0; //first vertex is unique
   //var remap = new Array();
   let remap = new Int32Array(nv);
-  for (let i = 0; i < (nv-1); i ++) {
+  for (let i = 0; i < nv - 1; i++) {
     if (remap[i] !== 0) continue; //previously tested
     remap[i] = nUnique;
     let v = i * 3;
     let x = verts[v];
-    let y = verts[v+1];
-    let z = verts[v+2];
-    for (let j = i + 1; j < (nv); j ++) {
+    let y = verts[v + 1];
+    let z = verts[v + 2];
+    for (let j = i + 1; j < nv; j++) {
       v += 3;
-      if ((x === verts[v]) && (y === verts[v+1]) && (z === verts[v+2]))
+      if (x === verts[v] && y === verts[v + 1] && z === verts[v + 2])
         remap[j] = nUnique;
     }
-    nUnique ++; //another new vertex
+    nUnique++; //another new vertex
   } //for i
   if (nUnique === nv) return verts;
   //console.log('welding vertices removed redundant positions ', nv, '->', nUnique);
   let nf = faces.length;
-  for (let f = 0; f < nf; f ++)
-    faces[f] = remap[faces[f]];
-  let vtx = verts.slice(0, (nUnique * 3)-1);
-  for (let i = 0; i < (nv-1); i ++) {
+  for (let f = 0; f < nf; f++) faces[f] = remap[faces[f]];
+  let vtx = verts.slice(0, nUnique * 3 - 1);
+  for (let i = 0; i < nv - 1; i++) {
     let v = i * 3;
     let r = remap[i] * 3;
     vtx[r] = verts[v];
@@ -204,66 +215,40 @@ NiivueObject3D.weldVertices = function (verts, faces) {
     vtx[r + 2] = verts[v + 2];
   }
   return vtx;
-}
+};
 
-    
 NiivueObject3D.makeSphere = function (
   vertices,
   indices,
   radius,
-  origin = [0,0,0]
+  origin = [0, 0, 0]
 ) {
   let vtx = [];
   let idx = [];
-  if (this.sphereVtx !== undefined) { //only generate unit sphere once...
+  if (this.sphereVtx !== undefined) {
+    //only generate unit sphere once...
     vtx = this.sphereVtx.slice();
-    idx =this.sphereIdx.slice();
+    idx = this.sphereIdx.slice();
   } else {
-     vtx = [
-      0.000,  0.000,  1.0,
-      0.894,  0.000,  0.447,
-      0.276,  0.851,  0.447,
-      -0.724,  0.526,  0.447,
-      -0.724, -0.526,  0.447,
-      0.276, -0.851,  0.447,
-      0.724,  0.526, -0.447,
-      -0.276,  0.851, -0.447,
-      -0.894,  0.000, -0.447,
-      -0.276, -0.851, -0.447,
-      0.724, -0.526, -0.447,
-      0.000,  0.000, -1.0
+    vtx = [
+      0.0, 0.0, 1.0, 0.894, 0.0, 0.447, 0.276, 0.851, 0.447, -0.724, 0.526,
+      0.447, -0.724, -0.526, 0.447, 0.276, -0.851, 0.447, 0.724, 0.526, -0.447,
+      -0.276, 0.851, -0.447, -0.894, 0.0, -0.447, -0.276, -0.851, -0.447, 0.724,
+      -0.526, -0.447, 0.0, 0.0, -1.0,
     ];
-  //let idx = new Uint16Array([
-   idx = [
-      0,1,2,
-      0,2,3,
-      0,3,4,
-      0,4,5,
-      0,5,1,
-      7,6,11,
-      8,7,11,
-      9,8,11,
-      10,9,11,
-      6,10,11,
-      6,2,1,
-      7,3,2,
-      8,4,3,
-      9,5,4,
-      10,1,5,
-      6,7,2,
-      7,8,3,
-      8,9,4,
-      9,10,5,
-      10,6,1
+    //let idx = new Uint16Array([
+    idx = [
+      0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 1, 7, 6, 11, 8, 7, 11, 9, 8, 11,
+      10, 9, 11, 6, 10, 11, 6, 2, 1, 7, 3, 2, 8, 4, 3, 9, 5, 4, 10, 1, 5, 6, 7,
+      2, 7, 8, 3, 8, 9, 4, 9, 10, 5, 10, 6, 1,
     ];
     this.subdivide(vtx, idx);
     this.subdivide(vtx, idx);
-    vtx = this.weldVertices(vtx, idx)
+    vtx = this.weldVertices(vtx, idx);
     this.sphereVtx = vtx.slice();
     this.sphereIdx = idx.slice();
   }
-  for (let i = 0; i < vtx.length; i++)
-    vtx[i] = (vtx[i] * radius);
+  for (let i = 0; i < vtx.length; i++) vtx[i] = vtx[i] * radius;
   let nvtx = vtx.length / 3;
   let j = 0;
   for (let i = 0; i < nvtx; i++) {
@@ -275,12 +260,11 @@ NiivueObject3D.makeSphere = function (
     j++;
   }
   let idx0 = Math.floor(vertices.length / 3); //first new vertex will be AFTER previous vertices
-  for (let i = 0; i < idx.length; i++)
-    idx[i] = idx[i] + idx0;
-  
+  for (let i = 0; i < idx.length; i++) idx[i] = idx[i] + idx0;
+
   indices.push(...idx);
   vertices.push(...vtx);
-}
+};
 
 NiivueObject3D.makeCylinder = function (
   vertices,
@@ -357,20 +341,20 @@ NiivueObject3D.makeColoredCylinder = function (
   start,
   dest,
   radius,
-  rgba255 = [192,0,0,255],
+  rgba255 = [192, 0, 0, 255],
   sides = 20,
   endcaps = false
 ) {
   let nv = vertices.length / 3;
   this.makeCylinder(vertices, indices, start, dest, radius, sides, endcaps);
-  nv = (vertices.length / 3) - nv;
+  nv = vertices.length / 3 - nv;
   console.log(nv);
   let clrs = [];
-  for (let i = 0; i < ((nv*4)-1); i += 4) {
-    clrs[i] = rgba255[0]
-    clrs[i+1] = rgba255[1]
-    clrs[i+2] = rgba255[2]
-    clrs[i+3] = rgba255[3]
+  for (let i = 0; i < nv * 4 - 1; i += 4) {
+    clrs[i] = rgba255[0];
+    clrs[i + 1] = rgba255[1];
+    clrs[i + 2] = rgba255[2];
+    clrs[i + 3] = rgba255[3];
   }
   colors.push(...clrs);
 };
@@ -380,19 +364,19 @@ NiivueObject3D.makeColoredSphere = function (
   indices,
   colors,
   radius,
-  origin = [0,0,0],
-  rgba255 = [0,0,192,255]
+  origin = [0, 0, 0],
+  rgba255 = [0, 0, 192, 255]
 ) {
   let nv = vertices.length / 3;
   this.makeSphere(vertices, indices, radius, origin);
-  nv = (vertices.length / 3) - nv;
+  nv = vertices.length / 3 - nv;
   console.log(nv);
   let clrs = [];
-  for (let i = 0; i < ((nv*4)-1); i += 4) {
-    clrs[i] = rgba255[0]
-    clrs[i+1] = rgba255[1]
-    clrs[i+2] = rgba255[2]
-    clrs[i+3] = rgba255[3]
+  for (let i = 0; i < nv * 4 - 1; i += 4) {
+    clrs[i] = rgba255[0];
+    clrs[i + 1] = rgba255[1];
+    clrs[i + 2] = rgba255[2];
+    clrs[i + 3] = rgba255[3];
   }
   colors.push(...clrs);
-}
+};

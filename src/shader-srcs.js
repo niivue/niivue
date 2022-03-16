@@ -522,7 +522,7 @@ void main(void) {
 	vL = normalize(lightPosition);
 	vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
-}`
+}`;
 
 export var fragMeshShader = `#version 300 es
 precision highp int;
