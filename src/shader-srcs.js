@@ -167,10 +167,13 @@ void main() {
 	float overFarthest = len;
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
+	firstHit.a = len;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
+		if (firstHit.a > samplePos.a)
+			firstHit = samplePos;
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
 		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -178,6 +181,8 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
+	if (firstHit.a < len)
+		gl_FragDepth = frac2ndc(firstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
 	if (fColor.a <= 0.0)
@@ -499,6 +504,48 @@ uniform vec4 surfaceColor;
 out vec4 color;
 void main() {
 	color = surfaceColor;
+}`;
+
+export var vertMeshShader = `#version 300 es
+layout(location=0) in vec3 pos;
+layout(location=1) in vec4 norm;
+layout(location=2) in vec4 clr;
+uniform mat4 mvpMtx;
+uniform mat4 modelMtx;
+uniform mat4 normMtx;
+out vec4 vClr;
+out vec3 vN, vL, vV;
+void main(void) {
+	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
+	vL = normalize(lightPosition);
+	vV = -vec3(modelMtx*vec4(pos,1.0));
+	vClr = clr;
+}`;
+
+export var fragMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.3;
+	float diffuse = 0.6;
+	float specular = 0.25;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color.rgb = a + d + s;
+	color.a = opacity;
 }`;
 
 export var fragDepthPickingShader = `#version 300 es
