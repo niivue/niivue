@@ -1,5 +1,26 @@
-import * as mat from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
+/**
+ * @class NiivueObject3D
+ * @type NiivueObject3D
+ * @typedef NiivueObject3D
+ * @property {Shader[]} renderShaders
+ * @property {Shader} pickingShader
+ * @property {boolean} isVisible
+ * @property {WebGLVertexArrayObject} vertexBuffer
+ * @property {number} indexCount
+ * @property {WebGLVertexArrayObject} indexBuffer
+ * @property {WebGLVertexArrayObject} textureCoordinateBuffer
+ * @property {number} mode
+ * @description Object rendered with WebGL
+ * @constructor
+ * @param {number} id
+ * @param {WebGLVertexArrayObject} vertexBuffer
+ * @param {number} mode
+ * @param {number} indexCount
+ * @param {WebGLVertexArrayObject} indexBuffer
+ * @param {WebGLVertexArrayObject} textureCoordinateBuffer
+ **/
 export var NiivueObject3D = function (
   id,
   vertexBuffer,
@@ -34,7 +55,7 @@ export var NiivueObject3D = function (
     ((id >> 24) & 0xff) / 255.0,
   ];
 
-  this.modelMatrix = mat.mat4.create();
+  this.modelMatrix = mat4.create();
   this.scale = [1, 1, 1];
   this.position = [0, 0, 0];
   this.rotation = [0, 0, 0];
@@ -81,14 +102,14 @@ NiivueObject3D.generateCrosshairsGeometry = function (
 ) {
   let vertices = [];
   let indices = [];
-  let start = mat.vec3.fromValues(xyzMin[0], xyzMM[1], xyzMM[2]);
-  let dest = mat.vec3.fromValues(xyzMax[0], xyzMM[1], xyzMM[2]);
+  let start = vec3.fromValues(xyzMin[0], xyzMM[1], xyzMM[2]);
+  let dest = vec3.fromValues(xyzMax[0], xyzMM[1], xyzMM[2]);
   NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides);
-  start = mat.vec3.fromValues(xyzMM[0], xyzMin[1], xyzMM[2]);
-  dest = mat.vec3.fromValues(xyzMM[0], xyzMax[1], xyzMM[2]);
+  start = vec3.fromValues(xyzMM[0], xyzMin[1], xyzMM[2]);
+  dest = vec3.fromValues(xyzMM[0], xyzMax[1], xyzMM[2]);
   NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides);
-  start = mat.vec3.fromValues(xyzMM[0], xyzMM[1], xyzMin[2]);
-  dest = mat.vec3.fromValues(xyzMM[0], xyzMM[1], xyzMax[2]);
+  start = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMin[2]);
+  dest = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMax[2]);
   NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides);
   //console.log('i:',indices.length / 3, 'v:',vertices.length / 3);
 
@@ -113,7 +134,7 @@ NiivueObject3D.generateCrosshairsGeometry = function (
 };
 
 NiivueObject3D.getFirstPerpVector = function (v1) {
-  let v2 = mat.vec3.fromValues(0.0, 0.0, 0.0);
+  let v2 = vec3.fromValues(0.0, 0.0, 0.0);
   if (v1[0] === 0.0) v2[0] = 1.0;
   else if (v1[1] === 0.0) v2[1] = 1.0;
   else if (v1[2] === 0.0) v2[2] = 1.0;
@@ -123,7 +144,7 @@ NiivueObject3D.getFirstPerpVector = function (v1) {
     v2[0] = v1[2]; //scalp = z*x
     v2[1] = v1[2]; //scalp = z*(x+y)
     v2[2] = -(v1[0] + v1[1]); //scalp = z*(x+y)-z*(x+y) = 0
-    mat.vec3.normalize(v2, v2);
+    vec3.normalize(v2, v2);
   }
   return v2;
 };
@@ -133,38 +154,38 @@ NiivueObject3D.subdivide = function (verts, faces) {
   let nv = verts.length / 3;
   let nf = faces.length / 3;
   let n = nf;
-  let vNew = mat.vec3.create();
-  let nNew = mat.vec3.create();
+  let vNew = vec3.create();
+  let nNew = vec3.create();
   for (let faceIndex = 0; faceIndex < n; faceIndex++) {
     //setlength(verts, nv + 3);
     let fx = faces[faceIndex * 3 + 0];
     let fy = faces[faceIndex * 3 + 1];
     let fz = faces[faceIndex * 3 + 2];
-    let vx = mat.vec3.fromValues(
+    let vx = vec3.fromValues(
       verts[fx * 3 + 0],
       verts[fx * 3 + 1],
       verts[fx * 3 + 2]
     );
-    let vy = mat.vec3.fromValues(
+    let vy = vec3.fromValues(
       verts[fy * 3 + 0],
       verts[fy * 3 + 1],
       verts[fy * 3 + 2]
     );
-    let vz = mat.vec3.fromValues(
+    let vz = vec3.fromValues(
       verts[fz * 3 + 0],
       verts[fz * 3 + 1],
       verts[fz * 3 + 2]
     );
-    mat.vec3.add(vNew, vx, vy);
-    mat.vec3.normalize(nNew, vNew);
+    vec3.add(vNew, vx, vy);
+    vec3.normalize(nNew, vNew);
     verts.push(...nNew);
 
-    mat.vec3.add(vNew, vy, vz);
-    mat.vec3.normalize(nNew, vNew);
+    vec3.add(vNew, vy, vz);
+    vec3.normalize(nNew, vNew);
     verts.push(...nNew);
 
-    mat.vec3.add(vNew, vx, vz);
-    mat.vec3.normalize(nNew, vNew);
+    vec3.add(vNew, vx, vz);
+    vec3.normalize(nNew, vNew);
     verts.push(...nNew);
     //Split the current triangle into four smaller triangles:
     let face = [nv, nv + 1, nv + 2];
@@ -276,14 +297,14 @@ NiivueObject3D.makeCylinder = function (
   endcaps = true
 ) {
   if (sides < 3) sides = 3; //prism is minimal 3D cylinder
-  let v1 = mat.vec3.create();
-  mat.vec3.subtract(v1, dest, start);
-  mat.vec3.normalize(v1, v1); //principle axis of cylinder
+  let v1 = vec3.create();
+  vec3.subtract(v1, dest, start);
+  vec3.normalize(v1, v1); //principle axis of cylinder
   let v2 = NiivueObject3D.getFirstPerpVector(v1); //a unit length vector orthogonal to v1
   // Get the second perp vector by cross product
-  let v3 = mat.vec3.create();
-  mat.vec3.cross(v3, v1, v2); //a unit length vector orthogonal to v1 and v2
-  mat.vec3.normalize(v3, v3);
+  let v3 = vec3.create();
+  vec3.cross(v3, v1, v2); //a unit length vector orthogonal to v1 and v2
+  vec3.normalize(v3, v3);
   let num_v = 2 * sides;
   let num_f = 2 * sides;
   if (endcaps) {
@@ -309,17 +330,17 @@ NiivueObject3D.makeCylinder = function (
     setV(startPole, start);
     setV(destPole, dest);
   }
-  let pt1 = mat.vec3.create();
-  let pt2 = mat.vec3.create();
+  let pt1 = vec3.create();
+  let pt2 = vec3.create();
   for (let i = 0; i < sides; i++) {
     let c = Math.cos((i / sides) * 2 * Math.PI);
     let s = Math.sin((i / sides) * 2 * Math.PI);
     pt1[0] = radius * (c * v2[0] + s * v3[0]);
     pt1[1] = radius * (c * v2[1] + s * v3[1]);
     pt1[2] = radius * (c * v2[2] + s * v3[2]);
-    mat.vec3.add(pt2, start, pt1);
+    vec3.add(pt2, start, pt1);
     setV(i, pt2);
-    mat.vec3.add(pt2, dest, pt1);
+    vec3.add(pt2, dest, pt1);
     setV(i + sides, pt2);
     let nxt = 0;
     if (i < sides - 1) nxt = i + 1;
