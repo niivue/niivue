@@ -2217,54 +2217,107 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let posNormClr = [];
   let tris = [];
   if (false) {
-    //connectome demo
-    let pt0 = mat.vec3.fromValues(22, 0, 0);
-    let pt1 = mat.vec3.fromValues(-42, 40, 30);
-    let pt2 = mat.vec3.fromValues(-40, -40, 22);
+
+    //self-documenting JSON node/edge format:
+    let connect = {
+      "nodeColormap": "viridis",
+      "nodeColormapNegative": "viridis",
+      "nodeMinColor": 2,
+      "nodeMaxColor": 4,
+      "nodeScale": 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+      "edgeColormap": "warm",
+      "edgeColormapNegative": "winter",
+      "edgeMin": 2,
+      "edgeMax": 4,
+      "edgeScale": 1,
+      "nodes": {
+        "names":["RF", "LF", "RP","LP"], //currently unused
+        "X":[40, -40, 40, -40], //Xmm for each node
+        "Y":[40, 40, -40, -40], //Ymm for each node
+        "Z":[30, 20, 50, 50], //Zmm for each node
+        "Color":[2, 2, 3, 4], //Used to interpolate color
+        "Size":[2, 2, 3, 4], //Size of node
+      },
+      "edges": [1, 2, -3, 4,
+                0, 1, 0, 6,
+                0, 0, 1, 0,
+                0, 0, 0, 1,],
+    }
+    //draw nodes
+    let nNode = connect.nodes.X.length;
+    let hasEdges = false;
+    if ((nNode > 1) && (connect.hasOwnProperty('edges'))) {
+      let nEdges = connect.edges.length;
+      if (nEdges = (nNode * nNode)) 
+        hasEdges = true;
+      else
+        console.log('Expected %d edges not %d', nNode*nNode, nEdges);
+    }
+    //draw all nodes
     let vtx = [];
     let rgba255 = [];
-    NiivueObject3D.makeColoredSphere(
-      vtx,
-      tris,
-      rgba255,
-      5.0,
-      pt0,
-      [128, 128, 0, 255]
-    );
-    NiivueObject3D.makeColoredCylinder(
-      vtx,
-      tris,
-      rgba255,
-      pt0,
-      pt1,
-      2.0,
-      [64, 128, 0, 255]
-    );
-    NiivueObject3D.makeColoredSphere(
-      vtx,
-      tris,
-      rgba255,
-      7.0,
-      pt1,
-      [128, 0, 255, 255]
-    );
-    NiivueObject3D.makeColoredCylinder(
-      vtx,
-      tris,
-      rgba255,
-      pt1,
-      pt2,
-      3.0,
-      [255, 0, 255, 255]
-    );
-    NiivueObject3D.makeColoredSphere(
-      vtx,
-      tris,
-      rgba255,
-      4.0,
-      pt2,
-      [128, 255, 0, 255]
-    );
+    let lut = this.colormap(connect.nodeColormap);
+    let lutNeg = this.colormap(connect.nodeColormapNegative);
+    let hasNeg = connect.hasOwnProperty('nodeColormapNegative')
+    let min = connect.nodeMinColor;
+    let max = connect.nodeMaxColor;
+
+    for (let i = 0; i < nNode; i++) {
+      let radius = connect.nodes.Size[i] * connect.nodeScale;
+      if (radius <= 0.0) continue;
+      let color = connect.nodes.Color[i];
+      let isNeg = false;
+      if ((hasNeg) && (color < 0)) {
+        isNeg = true;
+        color = -color;
+      }
+      if (min < max) {
+        if (color < min) continue;
+        color = ((color-min) / (max-min))
+      } else
+        color = 1.0;
+      color = Math.round(Math.max(Math.min(255, color * 255)),1) * 4;
+      let rgba = [lut[color], lut[color+1], lut[color+2], 255];
+      if (isNeg)
+        rgba = [lutNeg[color], lutNeg[color+1], lutNeg[color+2], 255];
+      let pt = [connect.nodes.X[i], connect.nodes.Y[i], connect.nodes.Z[i]];
+      NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, radius,pt, rgba);
+    }
+    //draw all edges
+    if (hasEdges) {
+      lut = this.colormap(connect.edgeColormap);
+      lutNeg = this.colormap(connect.edgeColormapNegative);
+      hasNeg = connect.hasOwnProperty('edgeColormapNegative')
+      min = connect.edgeMin;
+      max = connect.edgeMax;
+      for (let i = 0; i < (nNode-1); i++) {
+        for (let j = i+1; j < nNode; j++) {
+          let color = connect.edges[(i * nNode)+j];
+          let isNeg = false;
+          if ((hasNeg) && (color < 0)) {
+            isNeg = true;
+            color = -color;
+          }
+          let radius = color * connect.edgeScale;
+          if (radius <= 0) continue;
+          if (min < max) {
+            if (color < min) continue;
+            color = ((color-min) / (max-min))
+          } else
+            color = 1.0;
+          color = Math.round(Math.max(Math.min(255, color * 255)),1) * 4;
+          let rgba = [lut[color], lut[color+1], lut[color+2], 255];
+          if (isNeg) 
+            rgba = [lutNeg[color], lutNeg[color+1], lutNeg[color+2], 255];
+          
+
+          let pti = [connect.nodes.X[i], connect.nodes.Y[i], connect.nodes.Z[i]];
+          let ptj = [connect.nodes.X[j], connect.nodes.Y[j], connect.nodes.Z[j]];
+          NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pti, ptj, radius, rgba);
+        }
+      }
+    }
+
     posNormClr = NVMesh.generatePosNormClr(vtx, tris, rgba255);
   } else {
     if (this.meshes.length < 1) {
