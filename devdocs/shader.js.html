@@ -31,7 +31,7 @@
 
 
     <title>
-      Global
+      shader.js
     </title>
 
     <!--[if lt IE 9]>
@@ -98,7 +98,7 @@
     <div id="main" class="main-content">
       
       <h1 id='page-title' class="page-title">
-        Global
+        shader.js
       </h1>
       
 
@@ -106,580 +106,97 @@
 
 
 
-
-<section>
-
-
-
-<article>
-    <div class="container-overview">
     
-        
-
-        
-
-
-
-
-
-
-        
-    
-    </div>
-
-    
-
-    
-
-    
-
-     
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    <h4 class="name" id="getExtents">
-        <a href="#getExtents">#</a>
-        <span class="type-signature"></span>getExtents<span class="signature">(positions)</span><span class="type-signature"> &rarr; {<a href="NVImage.html#~Extents">NVImage~Extents</a>}</span>
-    </h4>
-
-    
-
-
-
-
-
-
-
-
-
-
-
-    <div class="method-member-container flex flex-col w-100 overflow-auto mt-20">
-        <strong>Parameters:</strong>
-        
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>positions</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array.&lt;number></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    </div>
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <div class="details-item-container">
-            <dt class="tag-source">Source:</dt>
-            <dd class="tag-source"><ul class="dummy"><li>
-                <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line874">line 874</a>
-            </li></ul></dd>
-        </div>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <div class="method-member-container mt-20">
-    <strong>Returns:</strong>
-        
-            
-
-
-<dl class="param-type">
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type"><a href="NVImage.html#~Extents">NVImage~Extents</a></span>
-
-
-    </dd>
-</dl>
-
-            
-    </div>
-
-
-
-
-        
-    
-
-    
-        <h3 class="subsection-title">Type Definitions</h3>
-
-        
-                
-<h4 class="name" id="NVImageMetadata">
-    <a href="#NVImageMetadata">#</a>
-    NVImageMetadata
-</h4>
-
-
-
-
-<div class="description">
-    Image M.
-</div>
-
-
-
-    <div class="member-item-container flex">
-        <strong>Type: </strong>
-        <ul>
-            <li>
-                
-<span class="param-type">Object</span>
-
-
-            </li>
-        </ul>
-    </div>
-
-
-
-
-
-
-    <h5 class="subsection-title">Properties</h5>
-
-    
-<div class="allow-overflow">
-<table class="props">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">unique if of image</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>datatypeCode</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">data type</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>nx</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of columns</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>ny</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of rows</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>nz</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of slices</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>nt</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of volumes</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dx</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">space between columns</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dy</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">space between rows</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dz</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">space between slices</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dt</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">time between volumes</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>bpx</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">bits per voxel</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-</div>
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <div class="details-item-container">
-            <dt class="tag-source">Source:</dt>
-            <dd class="tag-source"><ul class="dummy"><li>
-                <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line770">line 770</a>
-            </li></ul></dd>
-        </div>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-            
-    
-
-    
-</article>
-
-</section>
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// shader.js is taken from github user Twinklebear: https://github.com/Twinklebear/webgl-util
+
+/**
+ * @class Shader
+ * @type Shader
+ * @constructor
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} vertexSrc
+ * @param {string} fragmentSrc
+ */
+export var Shader = function (gl, vertexSrc, fragmentSrc) {
+  var self = this;
+  this.program = compileShader(gl, vertexSrc, fragmentSrc);
+
+  var regexUniform = /uniform[^;]+[ ](\w+);/g;
+  var matchUniformName = /uniform[^;]+[ ](\w+);/;
+
+  this.uniforms = {};
+
+  var vertexUnifs = vertexSrc.match(regexUniform);
+  var fragUnifs = fragmentSrc.match(regexUniform);
+
+  if (vertexUnifs) {
+    vertexUnifs.forEach(function (unif) {
+      var m = unif.match(matchUniformName);
+      self.uniforms[m[1]] = -1;
+    });
+  }
+  if (fragUnifs) {
+    fragUnifs.forEach(function (unif) {
+      var m = unif.match(matchUniformName);
+      self.uniforms[m[1]] = -1;
+    });
+  }
+
+  for (var unif in this.uniforms) {
+    this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
+  }
+};
+
+Shader.prototype.use = function (gl) {
+  gl.useProgram(this.program);
+};
+
+// Compile and link the shaders vert and frag. vert and frag should contain
+// the shader source code for the vertex and fragment shaders respectively
+// Returns the compiled and linked program, or null if compilation or linking failed
+export var compileShader = function (gl, vert, frag) {
+  var vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, vert);
+  gl.compileShader(vs);
+  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+    alert("Vertex shader failed to compile, see console for log");
+    console.log(gl.getShaderInfoLog(vs));
+    return null;
+  }
+
+  var fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, frag);
+  gl.compileShader(fs);
+  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+    alert("Fragment shader failed to compile, see console for log");
+    console.log(gl.getShaderInfoLog(fs));
+    return null;
+  }
+
+  var program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    alert("Shader failed to link, see console for log");
+    console.log(gl.getProgramInfoLog(program));
+    return null;
+  }
+  return program;
+};
+
+export var getGLExtension = function (gl, ext) {
+  if (!gl.getExtension(ext)) {
+    alert("Missing " + ext + " WebGL extension");
+    return false;
+  }
+  return true;
+};
+</code></pre>
+        </article>
+    </section>
 
 
 

@@ -31,7 +31,7 @@
 
 
     <title>
-      Global
+      Shader
     </title>
 
     <!--[if lt IE 9]>
@@ -98,7 +98,7 @@
     <div id="main" class="main-content">
       
       <h1 id='page-title' class="page-title">
-        Global
+        Shader
       </h1>
       
 
@@ -110,46 +110,34 @@
 <section>
 
 
+<header>
+    
+        
+        <h2>
+        
+        Shader
+        
+        </h2>
+        
+        
+            <div class="class-description">Shader</div>
+        
+    
+</header>
+
 
 <article>
     <div class="container-overview">
     
         
 
-        
-
-
-
-
-
-
-        
     
-    </div>
-
+        <h2>Constructor</h2>
     
 
-    
-
-    
-
-     
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    <h4 class="name" id="getExtents">
-        <a href="#getExtents">#</a>
-        <span class="type-signature"></span>getExtents<span class="signature">(positions)</span><span class="type-signature"> &rarr; {<a href="NVImage.html#~Extents">NVImage~Extents</a>}</span>
+    <h4 class="name" id="Shader">
+        <a href="#Shader">#</a>
+        <span class="type-signature"></span>new Shader<span class="signature">(gl, vertexSrc, fragmentSrc)</span><span class="type-signature"></span>
     </h4>
 
     
@@ -190,13 +178,59 @@
 
         <tr>
             
-                <td class="name"><code>positions</code></td>
+                <td class="name"><code>gl</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Array.&lt;number></span>
+<span class="param-type">WebGL2RenderingContext</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>vertexSrc</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>fragmentSrc</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
 
             
@@ -251,7 +285,7 @@
         <div class="details-item-container">
             <dt class="tag-source">Source:</dt>
             <dd class="tag-source"><ul class="dummy"><li>
-                <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line874">line 874</a>
+                <a href="shader.js.html">shader.js</a>, <a href="shader.js.html#line11">line 11</a>
             </li></ul></dd>
         </div>
     
@@ -277,354 +311,19 @@
 
 
 
-    <div class="method-member-container mt-20">
-    <strong>Returns:</strong>
-        
-            
 
 
-<dl class="param-type">
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type"><a href="NVImage.html#~Extents">NVImage~Extents</a></span>
 
-
-    </dd>
-</dl>
-
-            
+    
     </div>
 
-
-
-
-        
     
 
     
-        <h3 class="subsection-title">Type Definitions</h3>
-
-        
-                
-<h4 class="name" id="NVImageMetadata">
-    <a href="#NVImageMetadata">#</a>
-    NVImageMetadata
-</h4>
-
-
-
-
-<div class="description">
-    Image M.
-</div>
-
-
-
-    <div class="member-item-container flex">
-        <strong>Type: </strong>
-        <ul>
-            <li>
-                
-<span class="param-type">Object</span>
-
-
-            </li>
-        </ul>
-    </div>
-
-
-
-
-
-
-    <h5 class="subsection-title">Properties</h5>
-
-    
-<div class="allow-overflow">
-<table class="props">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">unique if of image</td>
-        </tr>
 
     
 
-        <tr>
-            
-                <td class="name"><code>datatypeCode</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">data type</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>nx</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of columns</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>ny</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of rows</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>nz</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of slices</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>nt</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">number of volumes</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dx</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">space between columns</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dy</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">space between rows</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dz</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">space between slices</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>dt</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">time between volumes</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>bpx</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">bits per voxel</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-</div>
-
-
-
-
-
-<dl class="details">
+     
 
     
 
@@ -632,48 +331,6 @@
 
     
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <div class="details-item-container">
-            <dt class="tag-source">Source:</dt>
-            <dd class="tag-source"><ul class="dummy"><li>
-                <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line770">line 770</a>
-            </li></ul></dd>
-        </div>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-            
     
 
     

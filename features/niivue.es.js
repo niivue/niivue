@@ -6130,7 +6130,7 @@ function getAugmentedNamespace(n) {
 function commonjsRequire(path) {
   throw new Error('Could not dynamically require "' + path + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
 }
-var nifti = { exports: {} };
+var nifti$1 = { exports: {} };
 var nifti1 = { exports: {} };
 var utilities = { exports: {} };
 (function(module) {
@@ -10986,7 +10986,8 @@ var require$$3 = /* @__PURE__ */ getAugmentedNamespace(pako$1);
   if (module.exports) {
     module.exports = nifti3;
   }
-})(nifti);
+})(nifti$1);
+var nifti = nifti$1.exports;
 var getRandomValues;
 var rnds8 = new Uint8Array(16);
 function rng() {
@@ -11093,28 +11094,28 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
   if (!dataBuffer) {
     return;
   }
-  this.hdr = nifti.exports.readHeader(dataBuffer);
+  this.hdr = nifti.readHeader(dataBuffer);
   function isAffineOK(mtx) {
     let iOK = [false, false, false, false];
     let jOK = [false, false, false, false];
-    for (let i2 = 0; i2 < 4; i2++) {
+    for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 4; j++) {
-        if (isNaN(mtx[i2][j]))
+        if (isNaN(mtx[i][j]))
           return false;
       }
     }
-    for (let i2 = 0; i2 < 3; i2++) {
+    for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
-        if (mtx[i2][j] === 0)
+        if (mtx[i][j] === 0)
           continue;
-        iOK[i2] = true;
+        iOK[i] = true;
         jOK[j] = true;
       }
     }
-    for (let i2 = 0; i2 < 3; i2++) {
-      if (!iOK[i2])
+    for (let i = 0; i < 3; i++) {
+      if (!iOK[i])
         return false;
-      if (!jOK[i2])
+      if (!jOK[i])
         return false;
     }
     return true;
@@ -11186,10 +11187,10 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     this.hdr.affine = affine;
   }
   let imgRaw = null;
-  if (nifti.exports.isCompressed(dataBuffer)) {
-    imgRaw = nifti.exports.readImage(this.hdr, nifti.exports.decompress(dataBuffer));
+  if (nifti.isCompressed(dataBuffer)) {
+    imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
   } else {
-    imgRaw = nifti.exports.readImage(this.hdr, dataBuffer);
+    imgRaw = nifti.readImage(this.hdr, dataBuffer);
   }
   switch (this.hdr.datatypeCode) {
     case this.DT_UNSIGNED_CHAR:
@@ -11213,38 +11214,42 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     case this.DT_RGBA32:
       this.img = new Uint8Array(imgRaw);
       break;
-    case this.DT_INT8:
+    case this.DT_INT8: {
       let i8 = new Int8Array(imgRaw);
       var vx8 = i8.length;
       this.img = new Int16Array(vx8);
-      for (var i = 0; i < vx8 - 1; i++)
+      for (let i = 0; i < vx8 - 1; i++)
         this.img[i] = i8[i];
       this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
       break;
-    case this.DT_UINT32:
+    }
+    case this.DT_UINT32: {
       let u32 = new Uint32Array(imgRaw);
       var vx32 = u32.length;
       this.img = new Float64Array(vx32);
-      for (var i = 0; i < vx32 - 1; i++)
+      for (let i = 0; i < vx32 - 1; i++)
         this.img[i] = u32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_SIGNED_INT:
+    }
+    case this.DT_SIGNED_INT: {
       let i32 = new Int32Array(imgRaw);
       var vxi32 = i32.length;
       this.img = new Float64Array(vxi32);
-      for (var i = 0; i < vxi32 - 1; i++)
+      for (let i = 0; i < vxi32 - 1; i++)
         this.img[i] = i32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_INT64:
+    }
+    case this.DT_INT64: {
       let i64 = new BigInt64Array(imgRaw);
       let vx = i64.length;
       this.img = new Float64Array(vx);
-      for (var i = 0; i < vx - 1; i++)
+      for (let i = 0; i < vx - 1; i++)
         this.img[i] = Number(i64[i]);
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
+    }
     default:
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
@@ -24130,7 +24135,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
-          values: this.volumes.map((v, index) => {
+          values: this.volumes.map((v) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
@@ -24156,7 +24161,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
-        values: this.volumes.map((v, index) => {
+        values: this.volumes.map((v) => {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
@@ -24266,7 +24271,6 @@ Niivue.prototype.updateInterpolation = function(layer) {
     this.gl.activeTexture(this.gl.TEXTURE2);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
-  this.volumes.length;
 };
 Niivue.prototype.setAtlasOutline = function(isOutline) {
   this.opts.isAtlasOutline = isOutline;
@@ -24360,7 +24364,7 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
     ], "S");
   this.sync();
 };
-Niivue.prototype.calculateMvpMatrix = function(object3D) {
+Niivue.prototype.calculateMvpMatrix = function() {
   function deg2rad(deg) {
     return deg * (Math.PI / 180);
   }
@@ -24562,7 +24566,6 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.enable(gl.DEPTH_TEST);
-  [...this.opts.crosshairColor];
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   if (isDepthTest) {
@@ -24589,7 +24592,6 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   this.gl.disable(this.gl.CULL_FACE);
   this.meshShader.use(this.gl);
-  this.calculateRayDirection();
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
