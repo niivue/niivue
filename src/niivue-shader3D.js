@@ -2,7 +2,7 @@
  * @class NiivueShader3D
  * @type NiivueShader3D
  * @constructor
- * @param {Shader} shader 
+ * @param {Shader} shader
  */
 export var NiivueShader3D = function (shader) {
   this.shader = shader;

@@ -38,6 +38,7 @@ const log = new Log();
 
 /**
  * @class Niivue
+ * @type Niivue
  * @description
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
