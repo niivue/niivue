@@ -22788,6 +22788,7 @@ const Niivue = function(options = {}) {
   this.meshIdxBufferCount = 0;
   this.meshVtxBuffer = null;
   this.meshVAO = null;
+  this.unusedVAO = null;
   this.meshIdxBuffer = null;
   this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
@@ -23635,6 +23636,8 @@ Niivue.prototype.init = async function() {
   this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
   this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
   let vao = this.gl.createVertexArray();
+  this.meshVAO = this.gl.createVertexArray();
+  this.unusedVAO = this.gl.createVertexArray();
   this.gl.bindVertexArray(vao);
   let clipPlaneVertices = new Float32Array([
     0,
@@ -23971,6 +23974,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     posNormClr = this.meshes[0].posNormClr;
     tris = this.meshes[0].tris;
   }
+  this.gl.bindVertexArray(this.meshVAO);
   this.meshIdxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), this.gl.STATIC_DRAW);
@@ -23978,7 +23982,14 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
   this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(posNormClr), this.gl.STATIC_DRAW);
   this.meshIdxBufferCount = tris.length;
-  this.meshVAO = this.gl.createVertexArray();
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
+  this.gl.enableVertexAttribArray(0);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
+  this.gl.enableVertexAttribArray(1);
+  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
+  this.gl.enableVertexAttribArray(2);
+  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
+  this.gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.colorMaps = function(sort = true) {
   let cm = [];
@@ -24445,8 +24456,7 @@ Niivue.prototype.draw3D = function() {
       }
       this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
       if (pickingShader.rayDirUniformName) {
-        let rayDir2 = this.calculateRayDirection();
-        this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir2);
+        this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir);
       }
       if (pickingShader.clipPlaneUniformName) {
         this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
@@ -24578,26 +24588,15 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
-  this.gl.bindVertexArray(this.meshVAO);
-  this.gl.enableVertexAttribArray(this.meshVAO);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
-  this.gl.enableVertexAttribArray(1);
-  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
-  this.gl.enableVertexAttribArray(2);
-  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bindBuffer(gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   this.gl.disable(this.gl.CULL_FACE);
+  this.gl.bindVertexArray(this.meshVAO);
   this.meshShader.use(this.gl);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
   this.gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
   this.gl.drawElements(gl.TRIANGLES, this.meshIdxBufferCount, this.gl.UNSIGNED_INT, 0);
-  this.gl.disableVertexAttribArray(this.meshVAO);
+  this.gl.bindVertexArray(this.unusedVAO);
   this.gl.enable(this.gl.CULL_FACE);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
