@@ -1,3 +1,8 @@
+/**
+ * @class Log
+ * @type Log
+ * @param {number} logLevel
+ */
 export const Log = function (logLevel) {
   // log levels:
   // - 'debug'
