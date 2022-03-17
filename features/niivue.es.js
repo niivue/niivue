@@ -6024,7 +6024,6 @@ NiivueObject3D.makeColoredCylinder = function(vertices, indices, colors, start, 
   let nv = vertices.length / 3;
   this.makeCylinder(vertices, indices, start, dest, radius, sides, endcaps);
   nv = vertices.length / 3 - nv;
-  console.log(nv);
   let clrs = [];
   for (let i = 0; i < nv * 4 - 1; i += 4) {
     clrs[i] = rgba255[0];
@@ -6038,7 +6037,6 @@ NiivueObject3D.makeColoredSphere = function(vertices, indices, colors, radius, o
   let nv = vertices.length / 3;
   this.makeSphere(vertices, indices, radius, origin);
   nv = vertices.length / 3 - nv;
-  console.log(nv);
   let clrs = [];
   for (let i = 0; i < nv * 4 - 1; i += 4) {
     clrs[i] = rgba255[0];
@@ -22788,6 +22786,7 @@ const Niivue = function(options = {}) {
   this.intensityRange$ = new Subject();
   this.scene.location$ = new Subject();
   this.scene.loading$ = new Subject();
+  this.imageLoaded$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -22804,7 +22803,9 @@ const Niivue = function(options = {}) {
   log.setLogLevel(this.opts.logging);
   this.eventsToSubjects = {
     location: this.scene.location$,
-    loading: this.scene.loading$
+    loading: this.scene.loading$,
+    imageLoaded: this.imageLoaded$,
+    intensityRange: this.intensityRange$
   };
   this.subscriptions = [];
 };
@@ -22990,7 +22991,7 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.intensityRange$.next([mnScale, mxScale]);
+  this.intensityRange$.next(this.volumes[volIdx]);
 };
 Niivue.prototype.mouseUpListener = function() {
   this.scene.mousedown = false;
@@ -23048,6 +23049,7 @@ Niivue.prototype.resetBriCon = function() {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
+  this.intensityRange$.next(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -23190,11 +23192,28 @@ Niivue.prototype.addVolume = function(volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
+  this.imageLoaded$.next(volume);
+};
+Niivue.prototype.addMesh = function(mesh) {
+  this.meshes.push(mesh);
+  let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
+  this.setMesh(mesh, idx);
+  this.imageLoaded$.next(mesh);
 };
 Niivue.prototype.getVolumeIndexByID = function(id) {
   let n = this.volumes.length;
   for (let i = 0; i < n; i++) {
     let id_i = this.volumes[i].id;
+    if (id_i === id) {
+      return i;
+    }
+  }
+  return -1;
+};
+Niivue.prototype.getMeshIndexByID = function(id) {
+  let n = this.meshes.length;
+  for (let i = 0; i < n; i++) {
+    let id_i = this.meshes[i].id;
     if (id_i === id) {
       return i;
     }
@@ -23244,8 +23263,34 @@ Niivue.prototype.setVolume = function(volume, toIndex = 0) {
     log.debug(v.name);
   });
 };
+Niivue.prototype.setMesh = function(mesh, toIndex = 0) {
+  this.meshes.map((m) => {
+    log.debug("MESH: ", m.name);
+  });
+  let numberOfLoadedMeshes = this.meshes.length;
+  if (toIndex > numberOfLoadedMeshes) {
+    return;
+  }
+  let meshIndex = this.getMeshIndexByID(mesh.id);
+  if (toIndex === 0) {
+    this.meshes.splice(meshIndex, 1);
+    this.meshes.unshift(mesh);
+  } else if (toIndex < 0) {
+    this.meshes.splice(this.getMeshIndexByID(mesh.id), 1);
+  } else {
+    this.meshes.splice(meshIndex, 1);
+    this.meshes.splice(toIndex, 0, mesh);
+  }
+  this.updateGLVolume();
+  this.meshes.map((m) => {
+    log.debug(m.name);
+  });
+};
 Niivue.prototype.removeVolume = function(volume) {
   this.setVolume(volume, -1);
+};
+Niivue.prototype.removeMesh = function(mesh) {
+  this.setMesh(mesh, -1);
 };
 Niivue.prototype.moveVolumeToBottom = function(volume) {
   this.setVolume(volume, 0);
@@ -23387,12 +23432,7 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
     this.scene.loading$.next(true);
     let volume = await NVImage.loadFromUrl(volumeList[i].url, volumeList[i].name, volumeList[i].colorMap, volumeList[i].opacity, this.opts.trustCalMinMax);
     this.scene.loading$.next(false);
-    this.volumes.push(volume);
-    if (i === 0) {
-      this.back = volume;
-    }
-    this.overlays = this.volumes.slice(1);
-    this.updateGLVolume();
+    this.addVolume(volume);
   }
   return this;
 };
@@ -23415,10 +23455,8 @@ Niivue.prototype.loadMeshes = async function(meshList) {
     this.scene.loading$.next(true);
     let mesh = await NVMesh.loadFromUrl(meshList[i].url);
     this.scene.loading$.next(false);
-    this.meshes.push(mesh);
-    this.updateGLVolume();
+    this.addMesh(mesh);
   }
-  console.log(this.meshes);
   return this;
 };
 Niivue.prototype.rgbaTex = function(texID, activeID, dims, isInit = false) {
@@ -23879,7 +23917,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), this.gl.STATIC_DRAW);
   this.meshVtxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormClr, this.gl.STATIC_DRAW);
+  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(posNormClr), this.gl.STATIC_DRAW);
   this.meshIdxBufferCount = tris.length;
   this.meshVAO = this.gl.createVertexArray();
 };
@@ -24396,8 +24434,7 @@ Niivue.prototype.draw3D = function() {
       this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
     }
     if (rgbaPixel[3] === 253) {
-      let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-      console.log(this.scene.clipPlaneDepthAziElev[0], "User clicked on the clip plane at " + clipXYZ);
+      new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
       this.scene.clipPlaneDepthAziElev[0] = this.scene.clipPlaneDepthAziElev[0] - 0.1;
       if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
         this.scene.clipPlaneDepthAziElev[0] = 0.4;
