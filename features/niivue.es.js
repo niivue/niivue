@@ -4961,9 +4961,8 @@ var x_rain = {
   A,
   I
 };
-var cmaps = /* @__PURE__ */ Object.freeze({
+var cmaps = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  [Symbol.toStringTag]: "Module",
   actc,
   blue,
   blue2red,
@@ -5016,7 +5015,7 @@ var cmaps = /* @__PURE__ */ Object.freeze({
   warm,
   winter,
   x_rain
-});
+}, Symbol.toStringTag, { value: "Module" }));
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -5085,10 +5084,16 @@ function __read(o, n) {
   }
   return ar;
 }
-function __spreadArray(to, from) {
-  for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-    to[j] = from[i];
-  return to;
+function __spreadArray(to, from, pack) {
+  if (pack || arguments.length === 2)
+    for (var i = 0, l = from.length, ar; i < l; i++) {
+      if (ar || !(i in from)) {
+        if (!ar)
+          ar = Array.prototype.slice.call(from, 0, i);
+        ar[i] = from[i];
+      }
+    }
+  return to.concat(ar || Array.prototype.slice.call(from));
 }
 function isFunction(value) {
   return typeof value === "function";
@@ -5124,7 +5129,7 @@ var Subscription = function() {
     this.initialTeardown = initialTeardown;
     this.closed = false;
     this._parentage = null;
-    this._teardowns = null;
+    this._finalizers = null;
   }
   Subscription2.prototype.unsubscribe = function() {
     var e_1, _a, e_2, _b;
@@ -5155,22 +5160,22 @@ var Subscription = function() {
           _parentage.remove(this);
         }
       }
-      var initialTeardown = this.initialTeardown;
-      if (isFunction(initialTeardown)) {
+      var initialFinalizer = this.initialTeardown;
+      if (isFunction(initialFinalizer)) {
         try {
-          initialTeardown();
+          initialFinalizer();
         } catch (e) {
           errors = e instanceof UnsubscriptionError ? e.errors : [e];
         }
       }
-      var _teardowns = this._teardowns;
-      if (_teardowns) {
-        this._teardowns = null;
+      var _finalizers = this._finalizers;
+      if (_finalizers) {
+        this._finalizers = null;
         try {
-          for (var _teardowns_1 = __values(_teardowns), _teardowns_1_1 = _teardowns_1.next(); !_teardowns_1_1.done; _teardowns_1_1 = _teardowns_1.next()) {
-            var teardown_1 = _teardowns_1_1.value;
+          for (var _finalizers_1 = __values(_finalizers), _finalizers_1_1 = _finalizers_1.next(); !_finalizers_1_1.done; _finalizers_1_1 = _finalizers_1.next()) {
+            var finalizer = _finalizers_1_1.value;
             try {
-              execTeardown(teardown_1);
+              execFinalizer(finalizer);
             } catch (err2) {
               errors = errors !== null && errors !== void 0 ? errors : [];
               if (err2 instanceof UnsubscriptionError) {
@@ -5184,8 +5189,8 @@ var Subscription = function() {
           e_2 = { error: e_2_1 };
         } finally {
           try {
-            if (_teardowns_1_1 && !_teardowns_1_1.done && (_b = _teardowns_1.return))
-              _b.call(_teardowns_1);
+            if (_finalizers_1_1 && !_finalizers_1_1.done && (_b = _finalizers_1.return))
+              _b.call(_finalizers_1);
           } finally {
             if (e_2)
               throw e_2.error;
@@ -5201,7 +5206,7 @@ var Subscription = function() {
     var _a;
     if (teardown && teardown !== this) {
       if (this.closed) {
-        execTeardown(teardown);
+        execFinalizer(teardown);
       } else {
         if (teardown instanceof Subscription2) {
           if (teardown.closed || teardown._hasParent(this)) {
@@ -5209,7 +5214,7 @@ var Subscription = function() {
           }
           teardown._addParent(this);
         }
-        (this._teardowns = (_a = this._teardowns) !== null && _a !== void 0 ? _a : []).push(teardown);
+        (this._finalizers = (_a = this._finalizers) !== null && _a !== void 0 ? _a : []).push(teardown);
       }
     }
   };
@@ -5230,8 +5235,8 @@ var Subscription = function() {
     }
   };
   Subscription2.prototype.remove = function(teardown) {
-    var _teardowns = this._teardowns;
-    _teardowns && arrRemove(_teardowns, teardown);
+    var _finalizers = this._finalizers;
+    _finalizers && arrRemove(_finalizers, teardown);
     if (teardown instanceof Subscription2) {
       teardown._removeParent(this);
     }
@@ -5247,11 +5252,11 @@ var EMPTY_SUBSCRIPTION = Subscription.EMPTY;
 function isSubscription(value) {
   return value instanceof Subscription || value && "closed" in value && isFunction(value.remove) && isFunction(value.add) && isFunction(value.unsubscribe);
 }
-function execTeardown(teardown) {
-  if (isFunction(teardown)) {
-    teardown();
+function execFinalizer(finalizer) {
+  if (isFunction(finalizer)) {
+    finalizer();
   } else {
-    teardown.unsubscribe();
+    finalizer.unsubscribe();
   }
 }
 var config = {
@@ -5262,13 +5267,16 @@ var config = {
   useDeprecatedNextContext: false
 };
 var timeoutProvider = {
-  setTimeout: function() {
+  setTimeout: function(handler, timeout) {
     var args = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-      args[_i] = arguments[_i];
+    for (var _i = 2; _i < arguments.length; _i++) {
+      args[_i - 2] = arguments[_i];
     }
     var delegate = timeoutProvider.delegate;
-    return ((delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) || setTimeout).apply(void 0, __spreadArray([], __read(args)));
+    if (delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) {
+      return delegate.setTimeout.apply(delegate, __spreadArray([handler, timeout], __read(args)));
+    }
+    return setTimeout.apply(void 0, __spreadArray([handler, timeout], __read(args)));
   },
   clearTimeout: function(handle) {
     var delegate = timeoutProvider.delegate;
@@ -5371,51 +5379,84 @@ var Subscriber = function(_super) {
   };
   return Subscriber2;
 }(Subscription);
+var _bind = Function.prototype.bind;
+function bind(fn, thisArg) {
+  return _bind.call(fn, thisArg);
+}
+var ConsumerObserver = function() {
+  function ConsumerObserver2(partialObserver) {
+    this.partialObserver = partialObserver;
+  }
+  ConsumerObserver2.prototype.next = function(value) {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.next) {
+      try {
+        partialObserver.next(value);
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    }
+  };
+  ConsumerObserver2.prototype.error = function(err2) {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.error) {
+      try {
+        partialObserver.error(err2);
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    } else {
+      handleUnhandledError(err2);
+    }
+  };
+  ConsumerObserver2.prototype.complete = function() {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.complete) {
+      try {
+        partialObserver.complete();
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    }
+  };
+  return ConsumerObserver2;
+}();
 var SafeSubscriber = function(_super) {
   __extends(SafeSubscriber2, _super);
   function SafeSubscriber2(observerOrNext, error, complete) {
     var _this = _super.call(this) || this;
-    var next;
-    if (isFunction(observerOrNext)) {
-      next = observerOrNext;
-    } else if (observerOrNext) {
-      next = observerOrNext.next, error = observerOrNext.error, complete = observerOrNext.complete;
+    var partialObserver;
+    if (isFunction(observerOrNext) || !observerOrNext) {
+      partialObserver = {
+        next: observerOrNext !== null && observerOrNext !== void 0 ? observerOrNext : void 0,
+        error: error !== null && error !== void 0 ? error : void 0,
+        complete: complete !== null && complete !== void 0 ? complete : void 0
+      };
+    } else {
       var context_1;
       if (_this && config.useDeprecatedNextContext) {
         context_1 = Object.create(observerOrNext);
         context_1.unsubscribe = function() {
           return _this.unsubscribe();
         };
+        partialObserver = {
+          next: observerOrNext.next && bind(observerOrNext.next, context_1),
+          error: observerOrNext.error && bind(observerOrNext.error, context_1),
+          complete: observerOrNext.complete && bind(observerOrNext.complete, context_1)
+        };
       } else {
-        context_1 = observerOrNext;
+        partialObserver = observerOrNext;
       }
-      next = next === null || next === void 0 ? void 0 : next.bind(context_1);
-      error = error === null || error === void 0 ? void 0 : error.bind(context_1);
-      complete = complete === null || complete === void 0 ? void 0 : complete.bind(context_1);
     }
-    _this.destination = {
-      next: next ? wrapForErrorHandling(next) : noop,
-      error: wrapForErrorHandling(error !== null && error !== void 0 ? error : defaultErrorHandler),
-      complete: complete ? wrapForErrorHandling(complete) : noop
-    };
+    _this.destination = new ConsumerObserver(partialObserver);
     return _this;
   }
   return SafeSubscriber2;
 }(Subscriber);
-function wrapForErrorHandling(handler, instance) {
-  return function() {
-    var args = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-      args[_i] = arguments[_i];
-    }
-    try {
-      handler.apply(void 0, __spreadArray([], __read(args)));
-    } catch (err2) {
-      {
-        reportUnhandledError(err2);
-      }
-    }
-  };
+function handleUnhandledError(error) {
+  {
+    reportUnhandledError(error);
+  }
 }
 function defaultErrorHandler(err2) {
   throw err2;
@@ -5477,15 +5518,19 @@ var Observable = function() {
     var _this = this;
     promiseCtor = getPromiseCtor(promiseCtor);
     return new promiseCtor(function(resolve, reject) {
-      var subscription;
-      subscription = _this.subscribe(function(value) {
-        try {
-          next(value);
-        } catch (err2) {
-          reject(err2);
-          subscription === null || subscription === void 0 ? void 0 : subscription.unsubscribe();
-        }
-      }, reject, resolve);
+      var subscriber = new SafeSubscriber({
+        next: function(value) {
+          try {
+            next(value);
+          } catch (err2) {
+            reject(err2);
+            subscriber.unsubscribe();
+          }
+        },
+        error: reject,
+        complete: resolve
+      });
+      _this.subscribe(subscriber);
     });
   };
   Observable2.prototype._subscribe = function(subscriber) {
@@ -5543,6 +5588,7 @@ var Subject = function(_super) {
   function Subject2() {
     var _this = _super.call(this) || this;
     _this.closed = false;
+    _this.currentObservers = null;
     _this.observers = [];
     _this.isStopped = false;
     _this.hasError = false;
@@ -5565,18 +5611,20 @@ var Subject = function(_super) {
       var e_1, _a;
       _this._throwIfClosed();
       if (!_this.isStopped) {
-        var copy2 = _this.observers.slice();
+        if (!_this.currentObservers) {
+          _this.currentObservers = Array.from(_this.observers);
+        }
         try {
-          for (var copy_1 = __values(copy2), copy_1_1 = copy_1.next(); !copy_1_1.done; copy_1_1 = copy_1.next()) {
-            var observer = copy_1_1.value;
+          for (var _b = __values(_this.currentObservers), _c = _b.next(); !_c.done; _c = _b.next()) {
+            var observer = _c.value;
             observer.next(value);
           }
         } catch (e_1_1) {
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (copy_1_1 && !copy_1_1.done && (_a = copy_1.return))
-              _a.call(copy_1);
+            if (_c && !_c.done && (_a = _b.return))
+              _a.call(_b);
           } finally {
             if (e_1)
               throw e_1.error;
@@ -5614,7 +5662,7 @@ var Subject = function(_super) {
   };
   Subject2.prototype.unsubscribe = function() {
     this.isStopped = this.closed = true;
-    this.observers = null;
+    this.observers = this.currentObservers = null;
   };
   Object.defineProperty(Subject2.prototype, "observed", {
     get: function() {
@@ -5634,10 +5682,17 @@ var Subject = function(_super) {
     return this._innerSubscribe(subscriber);
   };
   Subject2.prototype._innerSubscribe = function(subscriber) {
+    var _this = this;
     var _a = this, hasError = _a.hasError, isStopped = _a.isStopped, observers = _a.observers;
-    return hasError || isStopped ? EMPTY_SUBSCRIPTION : (observers.push(subscriber), new Subscription(function() {
-      return arrRemove(observers, subscriber);
-    }));
+    if (hasError || isStopped) {
+      return EMPTY_SUBSCRIPTION;
+    }
+    this.currentObservers = null;
+    observers.push(subscriber);
+    return new Subscription(function() {
+      _this.currentObservers = null;
+      arrRemove(observers, subscriber);
+    });
   };
   Subject2.prototype._checkFinalizedStatuses = function(subscriber) {
     var _a = this, hasError = _a.hasError, thrownError = _a.thrownError, isStopped = _a.isStopped;
@@ -10825,9 +10880,8 @@ var pako = {
   ungzip: ungzip_1,
   constants: constants_1
 };
-var pako$1 = /* @__PURE__ */ Object.freeze({
+var pako$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  [Symbol.toStringTag]: "Module",
   Deflate: Deflate_1,
   Inflate: Inflate_1,
   constants: constants_1,
@@ -10838,7 +10892,7 @@ var pako$1 = /* @__PURE__ */ Object.freeze({
   inflate: inflate_1,
   inflateRaw: inflateRaw_1,
   ungzip: ungzip_1
-});
+}, Symbol.toStringTag, { value: "Module" }));
 var require$$3 = /* @__PURE__ */ getAugmentedNamespace(pako$1);
 (function(module) {
   var nifti3 = nifti3 || {};
