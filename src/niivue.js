@@ -109,6 +109,7 @@ export const Niivue = function (options = {}) {
   this.meshIdxBufferCount = 0;
   this.meshVtxBuffer = null;
   this.meshVAO = null;
+  this.unusedVAO = null;
   this.meshIdxBuffer = null;
 
   this.crosshairs3D = null;
@@ -1572,6 +1573,8 @@ Niivue.prototype.init = async function () {
   this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
 
   let vao = this.gl.createVertexArray();
+  this.meshVAO = this.gl.createVertexArray();
+  this.unusedVAO = this.gl.createVertexArray();
   this.gl.bindVertexArray(vao);
 
   // We will render the objects in order they are stored in this.objectsToRender3D
@@ -2333,6 +2336,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   //use the shader designed for triangulated meshes
   //show BOTH front and back faces, the shader can use the surface normal to draw them differently
   //provide the model-view projection matrix to rotate mesh with respect to camera
+  this.gl.bindVertexArray(this.meshVAO);
+
   this.meshIdxBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
   this.gl.bufferData(
@@ -2345,7 +2350,18 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(posNormClr), this.gl.STATIC_DRAW);
   this.meshIdxBufferCount = tris.length;
 
-  this.meshVAO = this.gl.createVertexArray();
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
+  //vertex position: 3 floats X,Y,Z
+  this.gl.enableVertexAttribArray(0);
+  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
+  //vertex surface normal vector: (also three floats)
+  this.gl.enableVertexAttribArray(1);
+  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
+  //vertex color
+  this.gl.enableVertexAttribArray(2);
+  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
+  this.gl.bindVertexArray(this.unusedVAO);
+
 }; // refreshLayers()
 
 /**
@@ -3063,7 +3079,6 @@ Niivue.prototype.calculateRayDirection = function () {
   if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny;
   if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny;
   if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny;
-
   return rayDir;
 }; // calculateRayDirection
 
@@ -3110,7 +3125,7 @@ Niivue.prototype.draw3D = function () {
       );
 
       if (pickingShader.rayDirUniformName) {
-        let rayDir = this.calculateRayDirection();
+        //let rayDir = this.calculateRayDirection();
         this.gl.uniform3fv(
           pickingShader.uniforms[pickingShader.rayDirUniformName],
           rayDir
@@ -3321,29 +3336,11 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
-  this.gl.bindVertexArray(this.meshVAO);
-  this.gl.enableVertexAttribArray(this.meshVAO);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  //vertex position: 3 floats X,Y,Z
-  this.gl.enableVertexAttribArray(0);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
-  //vertex surface normal vector: (also three floats)
-  this.gl.enableVertexAttribArray(1);
-  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
-  //vertex color
-  this.gl.enableVertexAttribArray(2);
-  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
-
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bindBuffer(gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
+  this.gl.disable(this.gl.CULL_FACE); //show front and back faces
   //Draw the mesh
-  //  this.gl.enable(this.gl.CULL_FACE);
-  //  this.gl.cullFace(this.gl.BACK);
-  this.gl.disable(this.gl.CULL_FACE);
-
-  this.meshShader.use(this.gl);
-  let rayDir = this.calculateRayDirection();
+  this.gl.bindVertexArray(this.meshVAO); //set vertex attributes
+  this.meshShader.use(this.gl); // set Shader
+  //set shader uniforms
   this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
   this.gl.uniformMatrix4fv(
     this.meshShader.uniforms["modelMtx"],
@@ -3359,8 +3356,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     this.gl.UNSIGNED_INT,
     0
   );
-  this.gl.disableVertexAttribArray(this.meshVAO);
-  //this.gl.disableVertexAttribArray(normLoc);
+  this.gl.bindVertexArray(this.unusedVAO);
   //clean up: cull face by default
   this.gl.enable(this.gl.CULL_FACE);
 
