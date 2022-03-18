@@ -6,7 +6,8 @@ export var NiivueObject3D = function (
   mode,
   indexCount,
   indexBuffer = null,
-  textureCoordinateBuffer = null
+  vao = null,
+
 ) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
@@ -22,7 +23,7 @@ export var NiivueObject3D = function (
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
   this.indexBuffer = indexBuffer;
-  this.textureCoordinateBuffer = textureCoordinateBuffer;
+  this.vao = vao;
   this.mode = mode;
 
   this.glFlags = 0;

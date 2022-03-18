@@ -59,6 +59,31 @@
 			let url = params.get('url')
 			console.log('url is: ',params.get('url'))
       // console.log(Niivue)
+      let connectome = {
+      "name": "simpleConnectome",
+      "nodeColormap": "viridis",
+      "nodeColormapNegative": "viridis",
+      "nodeMinColor": 2,
+      "nodeMaxColor": 4,
+      "nodeScale": 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+      "edgeColormap": "warm",
+      "edgeColormapNegative": "winter",
+      "edgeMin": 2,
+      "edgeMax": 4,
+      "edgeScale": 1,
+      "nodes": {
+        "names":["RF", "LF", "RP","LP"], //currently unused
+        "X":[40, -40, 40, -40], //Xmm for each node
+        "Y":[40, 40, -40, -40], //Ymm for each node
+        "Z":[30, 20, 50, 50], //Zmm for each node
+        "Color":[2, 2, 3, 4], //Used to interpolate color
+        "Size":[2, 2, 3, 4], //Size of node
+      },
+      "edges": [1, 2, -3, 4,
+                0, 1, 0, 6,
+                0, 0, 1, 0,
+                0, 0, 0, 1,],
+    }
       var volumeList1 = [
         // first item is brackground image
         {
@@ -82,9 +107,10 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
-      nv1.loadMeshes([
-				{'url': '../demos/images/BrainMesh_ICBM152.lh.mz3'},
-			])
+      //nv1.loadMeshes([
+      //   {'url': '../demos/images/BrainMesh_ICBM152.lh.mz3'},
+      //])
+      nv1.loadConnectome(connectome)
       //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])

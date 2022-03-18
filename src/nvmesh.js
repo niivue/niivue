@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import * as mat from "gl-matrix";
+import { NiivueObject3D } from "./niivue-object3D.js";
 const log = new Log();
 
 /**
@@ -170,7 +171,6 @@ following conditions are met:
 }
 
 NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
-  //function generatePosNormClr(pts) {
   if (pts.length < 3 || rgba255.length < 4) {
     log.error("Catastrophic failure generatePosNormClr()");
   }
@@ -309,6 +309,151 @@ NVMesh.readMZ3 = function (buffer) {
     colors,
   };
 };
+
+NVMesh.makeLut = function (Rs, Gs, Bs, As, Is) {
+  //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
+  //intensity indices should be in increasing order with the first value 0 and the last 255.
+  // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
+  var lut = new Uint8ClampedArray(256 * 4);
+  for (var i = 0; i < Is.length - 1; i++) {
+    //return a + f * (b - a);
+    var idxLo = Is[i];
+    var idxHi = Is[i + 1];
+    var idxRng = idxHi - idxLo;
+    var k = idxLo * 4;
+    for (var j = idxLo; j <= idxHi; j++) {
+      var f = (j - idxLo) / idxRng;
+      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
+      lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]); //Green
+      lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
+      lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
+    }
+  }
+  return lut;
+}; // makeLut()
+
+NVMesh.colormap = function (lutName = "") {
+  let cmaps = {
+    "min": 0,
+    "max": 0,
+    "R": [0, 128, 255],
+    "G": [0, 0, 0],
+    "B": [0, 0, 0],
+    "A": [0, 64, 128],
+    "I": [0, 128, 255]
+  }
+  return this.makeLut(
+    cmaps.R,
+    cmaps.G,
+    cmaps.B,
+    cmaps.A,
+    cmaps.I
+  );
+
+}
+
+NVMesh.loadConnectomeFromJSON = async function (
+  json,
+  name = "",
+  colorMap = "",
+  opacity = 1.0,
+  visible = true
+) {
+  let nvmesh = null;
+  let tris = [];
+  if (json.hasOwnProperty('name'))
+    name = json.name;
+  //draw nodes
+  let nNode = json.nodes.X.length;
+  let hasEdges = false;
+  if ((nNode > 1) && (json.hasOwnProperty('edges'))) {
+    let nEdges = json.edges.length;
+    if (nEdges = (nNode * nNode)) 
+      hasEdges = true;
+    else
+      console.log('Expected %d edges not %d', nNode*nNode, nEdges);
+  }
+  //draw all nodes
+  let vtx = [];
+  let rgba255 = [];
+  let lut = this.colormap(json.nodeColormap);
+  let lutNeg = this.colormap(json.nodeColormapNegative);
+  let hasNeg = json.hasOwnProperty('nodeColormapNegative')
+  let min = json.nodeMinColor;
+  let max = json.nodeMaxColor;
+  for (let i = 0; i < nNode; i++) {
+    let radius = json.nodes.Size[i] * json.nodeScale;
+    if (radius <= 0.0) continue;
+    let color = json.nodes.Color[i];
+    let isNeg = false;
+    if ((hasNeg) && (color < 0)) {
+      isNeg = true;
+      color = -color;
+    }
+    if (min < max) {
+      if (color < min) continue;
+      color = ((color-min) / (max-min))
+    } else
+      color = 1.0;
+    color = Math.round(Math.max(Math.min(255, color * 255)),1) * 4;
+    let rgba = [lut[color], lut[color+1], lut[color+2], 255];
+    if (isNeg)
+      rgba = [lutNeg[color], lutNeg[color+1], lutNeg[color+2], 255];
+    let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
+    NiivueObject3D.makeColoredSphere(vtx,tris,rgba255, radius,pt, rgba);
+  }
+  //draw all edges
+  if (hasEdges) {
+    lut = this.colormap(json.edgeColormap);
+    lutNeg = this.colormap(json.edgeColormapNegative);
+    hasNeg = json.hasOwnProperty('edgeColormapNegative')
+    min = json.edgeMin;
+    max = json.edgeMax;
+    for (let i = 0; i < (nNode-1); i++) {
+      for (let j = i+1; j < nNode; j++) {
+        let color = json.edges[(i * nNode)+j];
+        let isNeg = false;
+        if ((hasNeg) && (color < 0)) {
+          isNeg = true;
+          color = -color;
+        }
+        let radius = color * json.edgeScale;
+        if (radius <= 0) continue;
+        if (min < max) {
+          if (color < min) continue;
+          color = ((color-min) / (max-min))
+        } else
+          color = 1.0;
+        color = Math.round(Math.max(Math.min(255, color * 255)),1) * 4;
+        let rgba = [lut[color], lut[color+1], lut[color+2], 255];
+        if (isNeg) 
+          rgba = [lutNeg[color], lutNeg[color+1], lutNeg[color+2], 255];
+        
+
+        let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
+        let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
+        NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pti, ptj, radius, rgba);
+      } //for j
+    } //for i
+  } //hasEdges
+  let gix = []; //???? we do not want "gii", e.g. if we load mz3, obj ply
+  let posNormClr = this.generatePosNormClr(vtx, tris, rgba255);
+  if (posNormClr) {
+    nvmesh = new NVMesh(
+      gix,
+      posNormClr,
+      tris,
+      name,
+      colorMap,
+      opacity,
+      visible
+    );
+  } else {
+    alert("Unable to load buffer properly from mesh");
+  }
+  return nvmesh;
+}
+
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
