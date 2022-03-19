@@ -3176,16 +3176,16 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let gl = this.gl;
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
-  gl.enable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   if (isDepthTest) {
+    gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    gl.depthFunc(gl.LESS); //pass if LESS than incoming value
+    //gl.depthFunc(gl.LESS); //pass if LESS than incoming value
     gl.depthFunc(gl.GREATER);
   } else {
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    //gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
   gl.disable(gl.CULL_FACE); //show front and back faces
@@ -3242,7 +3242,6 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
       this.volumeObject3D.extentsMax,
       radius
     );
-    this.crosshairs3D.isPickable = false;
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
@@ -3253,22 +3252,6 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   let crosshairsShader = new NiivueShader3D(this.surfaceShader);
   crosshairsShader.mvpUniformName = "mvpMtx";
   this.crosshairs3D.renderShaders.push(crosshairsShader);
-
-  const numComponents = 3;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-  gl.bindBuffer(gl.ARRAY_BUFFER, this.crosshairs3D.vertexBuffer);
-  gl.vertexAttribPointer(
-    this.surfaceShader.uniforms["pos"],
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset
-  );
-  gl.enableVertexAttribArray(this.surfaceShader.uniforms["pos"]);
 
   crosshairsShader.use(this.gl);
   let m, modelMtx, normMtx;
@@ -3292,7 +3275,14 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   }
 
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
-  gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_SHORT, 0);
+  gl.bindVertexArray(this.crosshairs3D.vao);
+  gl.drawElements(
+    gl.TRIANGLES,
+    this.crosshairs3D.indexCount,
+    gl.UNSIGNED_SHORT,
+    0
+  );
+  gl.bindVertexArray(this.unusedVAO); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
 }; //drawCrosshairs3D()
 
 // not included in public docs
