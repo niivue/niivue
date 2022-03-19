@@ -6,8 +6,7 @@ export var NiivueObject3D = function (
   mode,
   indexCount,
   indexBuffer = null,
-  vao = null,
-
+  vao = null
 ) {
   this.BLEND = 1;
   this.CULL_FACE = 2;

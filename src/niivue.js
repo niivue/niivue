@@ -106,12 +106,8 @@ export const Niivue = function (options = {}) {
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
   this.meshShader = null;
-  this.meshIdxBufferCount = 0;
-  this.meshVtxBuffer = null;
   this.genericVAO = null; //used for 2D slices, 2D lines, 2D Fonts
-  this.meshVAO = null;
   this.unusedVAO = null;
-  this.meshIdxBuffer = null;
 
   this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
@@ -119,7 +115,6 @@ export const Niivue = function (options = {}) {
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
-
   this.sliceTypeAxial = 0;
   this.sliceTypeCoronal = 1;
   this.sliceTypeSagittal = 2;
@@ -172,7 +167,7 @@ export const Niivue = function (options = {}) {
   this.intensityRange$ = new Subject(); // an array
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
-	this.imageLoaded$ = new Subject()
+  this.imageLoaded$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -200,8 +195,8 @@ export const Niivue = function (options = {}) {
   this.eventsToSubjects = {
     location: this.scene.location$,
     loading: this.scene.loading$,
-		imageLoaded: this.imageLoaded$,
-		intensityRange: this.intensityRange$
+    imageLoaded: this.imageLoaded$,
+    intensityRange: this.intensityRange$,
   };
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
@@ -632,7 +627,7 @@ Niivue.prototype.resetBriCon = function () {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
-	this.intensityRange$.next(this.volumes[0])
+  this.intensityRange$.next(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -871,7 +866,7 @@ Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
-	this.imageLoaded$.next(volume) // pass reference to the loaded NVImage (the volume)
+  this.imageLoaded$.next(volume); // pass reference to the loaded NVImage (the volume)
 };
 
 /**
@@ -885,9 +880,8 @@ Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
   let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
   this.setMesh(mesh, idx);
-	this.imageLoaded$.next(mesh) // pass reference to the loaded NVImage (the volume)
+  this.imageLoaded$.next(mesh); // pass reference to the loaded NVImage (the volume)
 };
-
 
 /**
  * get the index of a volume by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
@@ -917,7 +911,6 @@ Niivue.prototype.getMeshIndexByID = function (id) {
   }
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
-
 
 /**
  * get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
@@ -984,7 +977,7 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
 
 Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
   this.meshes.map((m) => {
-		log.debug('MESH: ', m.name);
+    log.debug("MESH: ", m.name);
   });
   let numberOfLoadedMeshes = this.meshes.length;
   if (toIndex > numberOfLoadedMeshes) {
@@ -1006,7 +999,6 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
   });
 };
 
-
 Niivue.prototype.removeVolume = function (volume) {
   this.setVolume(volume, -1);
 };
@@ -1014,7 +1006,6 @@ Niivue.prototype.removeVolume = function (volume) {
 Niivue.prototype.removeMesh = function (mesh) {
   this.setMesh(mesh, -1);
 };
-
 
 /**
  * Move a volume to the bottom of the stack of loaded volumes. The volume will become the background
@@ -1303,8 +1294,8 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       this.opts.trustCalMinMax
     );
     this.scene.loading$.next(false);
-		this.addVolume(volume)
-		/*
+    this.addVolume(volume);
+    /*
     this.volumes.push(volume);
     if (i === 0) {
       this.back = volume;
@@ -1344,9 +1335,17 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl(meshList[i].url);
+    let mesh = await NVMesh.loadFromUrl(
+      meshList[i].url,
+      this.gl,
+      meshList[i].name,
+      meshList[i].colorMap,
+      meshList[i].opacity,
+      meshList[i].rgba255,
+      meshList[i].visible
+    );
     this.scene.loading$.next(false);
-    this.addMesh(mesh)
+    this.addMesh(mesh);
     //this.meshes.push(mesh);
     //this.updateGLVolume();
   } // for
@@ -1373,9 +1372,9 @@ Niivue.prototype.loadConnectome = async function (json) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < 1; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadConnectomeFromJSON(json);
+    let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
     this.scene.loading$.next(false);
-    this.addMesh(mesh)
+    this.addMesh(mesh);
     //this.meshes.push(mesh);
     //this.updateGLVolume();
   } // for
@@ -1624,8 +1623,6 @@ Niivue.prototype.init = async function () {
     0.5, // Triangle 2
   ]);
 
-  this.meshVAO = this.gl.createVertexArray(); //triangulated meshes
-  //this.unusedVAO = this.gl.createVertexArray();
   this.genericVAO = this.gl.createVertexArray(); //2D slices, fonts, lines
   this.gl.bindVertexArray(this.genericVAO);
 
@@ -2243,47 +2240,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
   this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
   this.updateInterpolation(layer);
-
-  if (this.meshIdxBufferCount > 0) return; //only once for now...
-
-  if (this.meshes.length < 1) {
-    return;
-  }
-  let posNormClr = this.meshes[0].posNormClr
-  let tris = this.meshes[0].tris
-  //Triangulated mesh includes three features:
-  // meshVtxBuffer: for each position (XYZ), surface normal (XYZ) and color (RGBA)
-  // meshVAO: Vertex Array Object (VAO) sets location of position (0), normal (1) and color (2)
-  // meshIdxBuffer: indices for triangle vertices, e.g. [0,1,2] is triangle composed of first 3 vertices
-  //use the shader designed for triangulated meshes
-  //show BOTH front and back faces, the shader can use the surface normal to draw them differently
-  //provide the model-view projection matrix to rotate mesh with respect to camera
-  this.gl.bindVertexArray(this.meshVAO);
-
-  this.meshIdxBuffer = this.gl.createBuffer();
-  this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
-  this.gl.bufferData(
-    this.gl.ELEMENT_ARRAY_BUFFER,
-    new Int32Array(tris),
-    this.gl.STATIC_DRAW
-  );
-  this.meshVtxBuffer = this.gl.createBuffer();
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(posNormClr), this.gl.STATIC_DRAW);
-  this.meshIdxBufferCount = tris.length;
-  
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  //vertex position: 3 floats X,Y,Z
-  this.gl.enableVertexAttribArray(0);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
-  //vertex surface normal vector: (also three floats)
-  this.gl.enableVertexAttribArray(1);
-  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
-  //vertex color
-  this.gl.enableVertexAttribArray(2);
-  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
-  this.gl.bindVertexArray(this.unusedVAO);
-
 }; // refreshLayers()
 
 /**
@@ -3008,8 +2964,9 @@ Niivue.prototype.calculateRayDirection = function () {
 
 // not included in public docs
 Niivue.prototype.draw3D = function () {
-  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  let gl = this.gl;
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   // render picking surfaces
 
   // mvp matrix and ray direction can now be a constant because of world space
@@ -3032,97 +2989,82 @@ Niivue.prototype.draw3D = function () {
       pickingShader.use(this.gl);
 
       if (object3D.glFlags & object3D.CULL_FACE) {
-        this.gl.enable(this.gl.CULL_FACE);
+        gl.enable(gl.CULL_FACE);
         if (object3D.glFlags & object3D.CULL_FRONT) {
-          this.gl.cullFace(this.gl.FRONT);
+          gl.cullFace(gl.FRONT);
         } else {
-          this.gl.cullFace(this.gl.FRONT);
+          gl.cullFace(gl.FRONT);
         }
       } else {
-        this.gl.disable(this.gl.CULL_FACE);
+        gl.disable(gl.CULL_FACE);
       }
 
-      this.gl.uniformMatrix4fv(
-        pickingShader.uniforms["mvpMtx"],
-        false,
-        mvpMatrix
-      );
+      gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
 
       if (pickingShader.rayDirUniformName) {
-        this.gl.uniform3fv(
+        gl.uniform3fv(
           pickingShader.uniforms[pickingShader.rayDirUniformName],
           rayDir
         );
       }
 
       if (pickingShader.clipPlaneUniformName) {
-        this.gl.uniform4fv(
+        gl.uniform4fv(
           pickingShader.uniforms["clipPlane"],
           this.scene.clipPlane
         );
       }
 
-      this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
+      gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
       if (object3D.vao) {
-        this.gl.bindVertexArray(object3D.vao);
+        gl.bindVertexArray(object3D.vao);
       } else {
-
         if (object3D.indexBuffer) {
-          this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
         }
-      
-        this.gl.enableVertexAttribArray(0);
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-        this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, object3D.vertexBuffer);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
       }
 
-        if (object3D.indexBuffer) {
-          this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
-        }
+      if (object3D.indexBuffer) {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+      }
       if (object3D.glFlags & object3D.CULL_FACE) {
-        this.gl.enable(this.gl.CULL_FACE);
+        gl.enable(gl.CULL_FACE);
         if (object3D.glFlags & object3D.CULL_FRONT) {
-          this.gl.cullFace(this.gl.FRONT);
+          gl.cullFace(gl.FRONT);
         } else {
-          this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+          gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
         }
       } else {
-        this.gl.disable(this.gl.CULL_FACE);
+        gl.disable(gl.CULL_FACE);
       }
-      if (object3D.mode === this.gl.TRIANGLE_STRIP) {
-        //console.log(object3D.mode, 'picking clip plane (strip)', object3D.vertexBuffer);
-        continue; //we no longer support clip planes like this
-      }
-      this.gl.drawElements(
-        object3D.mode,
-        object3D.indexCount,
-        this.gl.UNSIGNED_SHORT,
-        0
-      );
-      this.gl.bindVertexArray(this.unusedVAO);
+      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+      gl.bindVertexArray(this.unusedVAO);
     }
     //check if we have a selected object
-    const pixelX =
-      (this.mousePos[0] * this.gl.canvas.width) / this.gl.canvas.clientWidth;
+    const pixelX = (this.mousePos[0] * gl.canvas.width) / gl.canvas.clientWidth;
     const pixelY =
-      this.gl.canvas.height -
-      (this.mousePos[1] * this.gl.canvas.height) / this.gl.canvas.clientHeight -
+      gl.canvas.height -
+      (this.mousePos[1] * gl.canvas.height) / gl.canvas.clientHeight -
       1;
     const rgbaPixel = new Uint8Array(4);
-    this.gl.readPixels(
+    gl.readPixels(
       pixelX, // x
       pixelY, // y
       1, // width
       1, // height
-      this.gl.RGBA, // format
-      this.gl.UNSIGNED_BYTE, // type
+      gl.RGBA, // format
+      gl.UNSIGNED_BYTE, // type
       rgbaPixel
     ); // typed array to hold result
 
     //restore default vertex buffer:
-    this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
 
     this.selectedObjectId = rgbaPixel[3];
     if (this.selectedObjectId === this.VOLUME_ID) {
@@ -3134,28 +3076,28 @@ Niivue.prototype.draw3D = function () {
       let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map(
         (x) => x / 255.0
       );
-        this.scene.clipPlaneDepthAziElev[0] =
+      this.scene.clipPlaneDepthAziElev[0] =
         this.scene.clipPlaneDepthAziElev[0] - 0.1;
       if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
         this.scene.clipPlaneDepthAziElev[0] = 0.4;
       this.setClipPlane(this.scene.clipPlaneDepthAziElev);
     }
   } //end PICKING
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  //???WHY this.gl.clearColor(0.2, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  //???WHY gl.clearColor(0.2, 0, 0, 1);
 
   for (const object3D of this.objectsToRender3D) {
     if (!object3D.isVisible) {
       continue;
     }
     if (object3D.vao) {
-      this.gl.bindVertexArray(object3D.vao);
+      gl.bindVertexArray(object3D.vao);
     } else {
-      this.gl.enableVertexAttribArray(0);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-      this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, object3D.vertexBuffer);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
       if (object3D.indexBuffer) {
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
       }
     }
     // set GL options
@@ -3163,60 +3105,60 @@ Niivue.prototype.draw3D = function () {
     //  the volume rendering should be blended to blend partial volume voxels with background
     if (object3D.BLEND) {
       //if (object3D.glFlags & object3D.BLEND) {
-      this.gl.enable(this.gl.BLEND);
-      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     } else {
-      this.gl.disable(this.gl.BLEND);
+      gl.disable(gl.BLEND);
     }
     if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
+      gl.enable(gl.CULL_FACE);
       if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
+        gl.cullFace(gl.FRONT);
       } else {
-        this.gl.cullFace(this.gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+        gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
       }
     } else {
-      this.gl.disable(this.gl.CULL_FACE);
+      gl.disable(gl.CULL_FACE);
     }
     for (const shader of object3D.renderShaders) {
-
-      
       shader.use(this.gl);
       if (shader.mvpUniformName) {
-        this.gl.uniformMatrix4fv(
+        gl.uniformMatrix4fv(
           shader.uniforms[shader.mvpUniformName],
           false,
           mvpMatrix
         );
       }
       if (shader.matRASUniformName) {
-        this.gl.uniformMatrix4fv(
+        gl.uniformMatrix4fv(
           shader.uniforms[shader.matRASUniformName],
           false,
           this.back.matRAS
         );
       }
       if (shader.rayDirUniformName) {
-        this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
+        gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
       }
 
       if (shader.clipPlaneUniformName) {
-        this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
+        gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
       }
-      this.gl.drawElements(
-        object3D.mode,
-        object3D.indexCount,
-        this.gl.UNSIGNED_SHORT,
-        0
-      );
-      this.gl.bindVertexArray(this.unusedVAO);
+      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+      gl.bindVertexArray(this.unusedVAO);
     }
   }
   this.drawCrosshairs3D(true, 1.0);
+
   this.drawMesh3D(false, 0.35);
   this.drawMesh3D(true, 1.0);
 
   this.drawCrosshairs3D(false, 0.35);
+  //restore default vao
+  gl.bindVertexArray(this.unusedVAO);
+  gl.depthFunc(gl.ALWAYS);
+  gl.enableVertexAttribArray(0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
 
   let posString =
     "azimuth: " +
@@ -3230,13 +3172,11 @@ Niivue.prototype.draw3D = function () {
 }; // draw3D()
 
 Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
-  if (this.meshIdxBufferCount < 3) return;
+  if (this.meshes.length < 1) return;
   let gl = this.gl;
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.enable(gl.DEPTH_TEST);
-  let color = [...this.opts.crosshairColor];
-  gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   if (isDepthTest) {
     gl.disable(gl.BLEND);
@@ -3248,36 +3188,33 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
-  this.gl.disable(this.gl.CULL_FACE); //show front and back faces
+  gl.disable(gl.CULL_FACE); //show front and back faces
   //Draw the mesh
-  this.gl.bindVertexArray(this.meshVAO); //set vertex attributes
   this.meshShader.use(this.gl); // set Shader
   //set shader uniforms
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-  this.gl.uniformMatrix4fv(
-    this.meshShader.uniforms["modelMtx"],
-    false,
-    modelMtx
-  );
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
-  this.gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
+  gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
 
-  this.gl.drawElements(
-    gl.TRIANGLES,
-    this.meshIdxBufferCount,
-    this.gl.UNSIGNED_INT,
-    0
-  );
-  this.gl.bindVertexArray(this.unusedVAO);
+  for (let i = 0; i < this.meshes.length; i++) {
+    if (this.meshes[i].indexCount < 3) continue;
+    gl.bindVertexArray(this.meshes[i].vao);
+    gl.drawElements(
+      gl.TRIANGLES,
+      this.meshes[i].indexCount,
+      gl.UNSIGNED_INT,
+      0
+    );
+    gl.bindVertexArray(this.unusedVAO);
+  }
+
   //clean up: cull face by default
   this.gl.enable(this.gl.CULL_FACE);
-
 }; //drawMesh3D()
 
 Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
-  if (!this.opts.show3Dcrosshair) {
-    return;
-  }
+  if (!this.opts.show3Dcrosshair) return;
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
   // mm = [-20, 0, 30]; // <- set any value here to test
@@ -3317,23 +3254,21 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   crosshairsShader.mvpUniformName = "mvpMtx";
   this.crosshairs3D.renderShaders.push(crosshairsShader);
 
-  {
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.crosshairs3D.vertexBuffer);
-    gl.vertexAttribPointer(
-      this.surfaceShader.uniforms["pos"],
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset
-    );
-    gl.enableVertexAttribArray(this.surfaceShader.uniforms["pos"]);
-  }
+  const numComponents = 3;
+  const type = gl.FLOAT;
+  const normalize = false;
+  const stride = 0;
+  const offset = 0;
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.crosshairs3D.vertexBuffer);
+  gl.vertexAttribPointer(
+    this.surfaceShader.uniforms["pos"],
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset
+  );
+  gl.enableVertexAttribArray(this.surfaceShader.uniforms["pos"]);
 
   crosshairsShader.use(this.gl);
   let m, modelMtx, normMtx;
@@ -3357,21 +3292,7 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   }
 
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
-
-  {
-    const vertexCount = this.crosshairs3D.indexCount;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
-
-  //restore default vertex buffer:
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.depthFunc(gl.ALWAYS);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_SHORT, 0);
 }; //drawCrosshairs3D()
 
 // not included in public docs
