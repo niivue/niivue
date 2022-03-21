@@ -3,12 +3,11 @@ import * as pako from "pako";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
-import * as mat from "gl-matrix";
-import { NiivueObject3D } from "./niivue-object3D.js";
 const log = new Log();
 
 /**
  * @class NVMesh
+ * @type NVMesh
  * @description
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  * @constructor

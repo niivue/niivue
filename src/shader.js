@@ -1,4 +1,13 @@
 // shader.js is taken from github user Twinklebear: https://github.com/Twinklebear/webgl-util
+
+/**
+ * @class Shader
+ * @type Shader
+ * @constructor
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} vertexSrc
+ * @param {string} fragmentSrc
+ */
 export var Shader = function (gl, vertexSrc, fragmentSrc) {
   var self = this;
   this.program = compileShader(gl, vertexSrc, fragmentSrc);

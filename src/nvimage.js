@@ -1,6 +1,6 @@
-import * as nifti from "nifti-reader-js";
+import nifti from "nifti-reader-js";
 import { v4 as uuidv4 } from "uuid";
-import * as mat from "gl-matrix";
+import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import * as cmaps from "./cmaps";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
@@ -17,6 +17,7 @@ const log = new Log();
 
 /**
  * @class NVImage
+ * @type NVImage
  * @description
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  * @constructor
@@ -204,34 +205,39 @@ export var NVImage = function (
     case this.DT_RGBA32:
       this.img = new Uint8Array(imgRaw);
       break;
-    case this.DT_INT8:
+    case this.DT_INT8: {
       let i8 = new Int8Array(imgRaw);
       var vx8 = i8.length;
       this.img = new Int16Array(vx8);
-      for (var i = 0; i < vx8 - 1; i++) this.img[i] = i8[i];
+      for (let i = 0; i < vx8 - 1; i++) this.img[i] = i8[i];
       this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
       break;
-    case this.DT_UINT32:
+    }
+    case this.DT_UINT32: {
       let u32 = new Uint32Array(imgRaw);
       var vx32 = u32.length;
       this.img = new Float64Array(vx32);
-      for (var i = 0; i < vx32 - 1; i++) this.img[i] = u32[i];
+      for (let i = 0; i < vx32 - 1; i++) this.img[i] = u32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_SIGNED_INT:
+    }
+    case this.DT_SIGNED_INT: {
       let i32 = new Int32Array(imgRaw);
       var vxi32 = i32.length;
       this.img = new Float64Array(vxi32);
-      for (var i = 0; i < vxi32 - 1; i++) this.img[i] = i32[i];
+      for (let i = 0; i < vxi32 - 1; i++) this.img[i] = i32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_INT64:
+    }
+    case this.DT_INT64: {
+      // eslint-disable-next-line no-undef
       let i64 = new BigInt64Array(imgRaw);
       let vx = i64.length;
       this.img = new Float64Array(vx);
-      for (var i = 0; i < vx - 1; i++) this.img[i] = Number(i64[i]);
+      for (let i = 0; i < vx - 1; i++) this.img[i] = Number(i64[i]);
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
+    }
     default:
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
@@ -245,10 +251,10 @@ NVImage.prototype.calculateOblique = function () {
   let X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
   let Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS);
   let Z1mm = this.vox2mm([0.0, 0.0, 1.0 / this.pixDimsRAS[3]], this.matRAS);
-  mat.vec3.subtract(X1mm, X1mm, LPI);
-  mat.vec3.subtract(Y1mm, Y1mm, LPI);
-  mat.vec3.subtract(Z1mm, Z1mm, LPI);
-  let oblique = mat.mat4.fromValues(
+  vec3.subtract(X1mm, X1mm, LPI);
+  vec3.subtract(Y1mm, Y1mm, LPI);
+  vec3.subtract(Z1mm, Z1mm, LPI);
+  let oblique = mat4.fromValues(
     X1mm[0],
     X1mm[1],
     X1mm[2],
@@ -266,10 +272,10 @@ NVImage.prototype.calculateOblique = function () {
     0,
     1
   );
-  this.obliqueRAS = mat.mat4.clone(oblique);
-  let XY = Math.abs(90 - mat.vec3.angle(X1mm, Y1mm) * (180 / Math.PI));
-  let XZ = Math.abs(90 - mat.vec3.angle(X1mm, Z1mm) * (180 / Math.PI));
-  let YZ = Math.abs(90 - mat.vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
+  this.obliqueRAS = mat4.clone(oblique);
+  let XY = Math.abs(90 - vec3.angle(X1mm, Y1mm) * (180 / Math.PI));
+  let XZ = Math.abs(90 - vec3.angle(X1mm, Z1mm) * (180 / Math.PI));
+  let YZ = Math.abs(90 - vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
   let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
     log.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
@@ -282,7 +288,7 @@ NVImage.prototype.calculateRAS = function () {
   // not elegant, as JavaScript arrays are always 1D
   let a = this.hdr.affine;
   let header = this.hdr;
-  let absR = mat.mat3.fromValues(
+  let absR = mat3.fromValues(
     Math.abs(a[0][0]),
     Math.abs(a[0][1]),
     Math.abs(a[0][2]),
@@ -330,7 +336,7 @@ NVImage.prototype.calculateRAS = function () {
   perm[ixyz[0] - 1] = 1;
   perm[ixyz[1] - 1] = 2;
   perm[ixyz[2] - 1] = 3;
-  let rotM = mat.mat4.fromValues(
+  let rotM = mat4.fromValues(
     a[0][0],
     a[0][1],
     a[0][2],
@@ -353,8 +359,8 @@ NVImage.prototype.calculateRAS = function () {
   this.mm100 = this.vox2mm([header.dims[1] - 0.5, -0.5, -0.5], rotM);
   this.mm010 = this.vox2mm([-0.5, header.dims[2] - 0.5, -0.5], rotM);
   this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
-  let R = mat.mat4.create();
-  mat.mat4.copy(R, rotM);
+  let R = mat4.create();
+  mat4.copy(R, rotM);
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
       R[i * 4 + j] = rotM[i * 4 + perm[j] - 1]; //rotM[i+(4*(perm[j]-1))];//rotM[i],[perm[j]-1];
@@ -383,30 +389,30 @@ NVImage.prototype.calculateRAS = function () {
     header.pixDims[perm[2]],
   ];
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
-    this.toRAS = mat.mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-    this.matRAS = mat.mat4.clone(rotM);
+    this.toRAS = mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+    this.matRAS = mat4.clone(rotM);
     this.calculateOblique();
     return; //no rotation required!
   }
-  mat.mat4.identity(rotM);
+  mat4.identity(rotM);
   rotM[0 + 0 * 4] = 1 - flip[0] * 2;
   rotM[1 + 1 * 4] = 1 - flip[1] * 2;
   rotM[2 + 2 * 4] = 1 - flip[2] * 2;
   rotM[3 + 0 * 4] = (header.dims[perm[0]] - 1) * flip[0];
   rotM[3 + 1 * 4] = (header.dims[perm[1]] - 1) * flip[1];
   rotM[3 + 2 * 4] = (header.dims[perm[2]] - 1) * flip[2];
-  let residualR = mat.mat4.create();
-  mat.mat4.invert(residualR, rotM);
-  mat.mat4.multiply(residualR, residualR, R);
-  this.matRAS = mat.mat4.clone(residualR);
-  rotM = mat.mat4.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
+  let residualR = mat4.create();
+  mat4.invert(residualR, rotM);
+  mat4.multiply(residualR, residualR, R);
+  this.matRAS = mat4.clone(residualR);
+  rotM = mat4.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
   rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1;
   rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1;
   rotM[perm[2] - 1 + 2 * 4] = -flip[2] * 2 + 1;
   rotM[3 + 0 * 4] = flip[0];
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
-  this.toRAS = mat.mat4.clone(rotM);
+  this.toRAS = mat4.clone(rotM);
   log.debug(this.hdr.dims);
   log.debug(this.dimsRAS);
   this.calculateOblique();
@@ -414,22 +420,22 @@ NVImage.prototype.calculateRAS = function () {
 
 // not included in public docs
 NVImage.prototype.vox2mm = function (XYZ, mtx) {
-  let sform = mat.mat4.clone(mtx);
-  mat.mat4.transpose(sform, sform);
-  let pos = mat.vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
-  mat.vec4.transformMat4(pos, pos, sform);
-  let pos3 = mat.vec3.fromValues(pos[0], pos[1], pos[2]);
+  let sform = mat4.clone(mtx);
+  mat4.transpose(sform, sform);
+  let pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
+  vec4.transformMat4(pos, pos, sform);
+  let pos3 = vec3.fromValues(pos[0], pos[1], pos[2]);
   return pos3;
 }; // vox2mm()
 
 NVImage.prototype.mm2vox = function (mm) {
-  let sform = mat.mat4.fromValues(...this.hdr.affine.flat());
-  let out = mat.mat4.clone(sform);
-  mat.mat4.transpose(out, sform);
-  mat.mat4.invert(out, out);
-  let pos = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
-  mat.vec4.transformMat4(pos, pos, out);
-  let pos3 = mat.vec3.fromValues(pos[0], pos[1], pos[2]);
+  let sform = mat4.fromValues(...this.hdr.affine.flat());
+  let out = mat4.clone(sform);
+  mat4.transpose(out, sform);
+  mat4.invert(out, out);
+  let pos = vec4.fromValues(mm[0], mm[1], mm[2], 1);
+  vec4.transformMat4(pos, pos, out);
+  let pos3 = vec3.fromValues(pos[0], pos[1], pos[2]);
   return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
 }; // vox2mm()
 
@@ -621,6 +627,7 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
 
 /**
  * factory function to load and return a new NVImage instance from a given URL
+ * @constructs NVImage
  * @param {string} url the resolvable URL pointing to a nifti image to load
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {string} [colorMap='gray'] a color map to use. default is gray
@@ -691,6 +698,7 @@ NVImage.readFileAsync = function (file) {
 
 /**
  * factory function to load and return a new NVImage instance from a file in the browser
+ * @constructs NVImage
  * @param {string} file the file object
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {string} [colorMap='gray'] a color map to use. default is gray
@@ -761,8 +769,8 @@ NVImage.prototype.zeroImage = function () {
 
 /**
  * Image M.
- * @typedef {Object} NVImage~MetaData
- * @property {uuidv4} id - unique if of image
+ * @typedef {Object} NVImageMetadata
+ * @property {string} id - unique if of image
  * @property {number} datatypeCode - data type
  * @property {number} nx - number of columns
  * @property {number} ny - number of rows
@@ -777,7 +785,7 @@ NVImage.prototype.zeroImage = function () {
 
 /**
  * get nifti specific metadata about the image
- * @returns {NVImage~Metadata} - {@link NVImage~Metadata}
+ * @returns {NVImageMetadata} - {@link NVImageMetadata}
  */
 NVImage.prototype.getImageMetadata = function () {
   const id = this.id;
@@ -865,28 +873,28 @@ NVImage.prototype.getValue = function (x, y, z) {
  */
 function getExtents(positions, forceOriginInVolume = true) {
   let nV = (positions.length / 3).toFixed(); //each vertex has 3 components: XYZ
-  let origin = mat.vec3.fromValues(0, 0, 0); //default center of rotation
-  let mn = mat.vec3.create();
-  let mx = mat.vec3.create();
+  let origin = vec3.fromValues(0, 0, 0); //default center of rotation
+  let mn = vec3.create();
+  let mx = vec3.create();
   let mxDx = 0.0;
   let nLoops = 1;
   if (forceOriginInVolume) nLoops = 2; //second pass to reposition origin
   for (let loop = 0; loop < nLoops; loop++) {
     mxDx = 0.0;
     for (let i = 0; i < nV; i++) {
-      let v = mat.vec3.fromValues(
+      let v = vec3.fromValues(
         positions[i * 3],
         positions[i * 3 + 1],
         positions[i * 3 + 2]
       );
       if (i === 0) {
-        mat.vec3.copy(mn, v);
-        mat.vec3.copy(mx, v);
+        vec3.copy(mn, v);
+        vec3.copy(mx, v);
       }
-      mat.vec3.min(mn, mn, v);
-      mat.vec3.max(mx, mx, v);
-      mat.vec3.subtract(v, v, origin);
-      let dx = mat.vec3.len(v);
+      vec3.min(mn, mn, v);
+      vec3.max(mx, mx, v);
+      vec3.subtract(v, v, origin);
+      let dx = vec3.len(v);
       mxDx = Math.max(mxDx, dx);
     }
     if (loop + 1 >= nLoops) break;
@@ -896,7 +904,7 @@ function getExtents(positions, forceOriginInVolume = true) {
       if (mx[j] < origin[j]) ok = false;
     }
     if (ok) break;
-    mat.vec3.lerp(origin, mn, mx, 0.5);
+    vec3.lerp(origin, mn, mx, 0.5);
     log.debug("origin moved inside volume: ", origin);
   }
   let min = [mn[0], mn[1], mn[2]];
@@ -1058,7 +1066,7 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
-  obj3D.originNegate = mat.vec3.clone(extents.origin);
-  mat.vec3.negate(obj3D.originNegate, obj3D.originNegate);
+  obj3D.originNegate = vec3.clone(extents.origin);
+  vec3.negate(obj3D.originNegate, obj3D.originNegate);
   return obj3D;
 };
