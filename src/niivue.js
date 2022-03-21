@@ -1599,17 +1599,18 @@ Niivue.prototype.init = async function () {
   this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
   this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
 
-
-  let cubeStrip = [
-    0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0,
+  let rectStrip = [
+    1, 1, 0, //RAI
+    1, 0, 0, //RPI
+    0, 1, 0, //LAI
+    0, 0, 0, //LPI
   ];
 
   this.cuboidVertexBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.bufferData(
     this.gl.ARRAY_BUFFER,
-    new Float32Array(cubeStrip),
+    new Float32Array(rectStrip),
     this.gl.STATIC_DRAW
   );
 
@@ -2054,7 +2055,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
         i
       );
       //this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
   } else
     blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
@@ -2095,7 +2096,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
       i
     );
     //this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   }
   this.gl.bindVertexArray(this.unusedVAO);
   this.gl.deleteTexture(tempTex3D);
@@ -2437,7 +2438,9 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 };
 
 // not included in public docs
@@ -2451,7 +2454,7 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
   // 	this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
   // 	let ltwh = [leftTopWidthHeight[0]-1, leftTopWidthHeight[1]-1, leftTopWidthHeight[2]+2, leftTopWidthHeight[3]+2];
   // 	this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
-  // 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  // 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   // }
   this.colorbarShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
@@ -2478,7 +2481,7 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
     leftTopWidthHeight[3]
   );
   this.gl.bindVertexArray(this.genericVAO);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
   this.gl.texParameteri(
     this.gl.TEXTURE_2D,
@@ -2516,7 +2519,7 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
     this.fontShader.uniforms["uvLeftTopWidthHeight"],
     metrics.uv_lbwh
   );
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   return scale * metrics.xadv;
 }; // drawChar()
 
@@ -2648,9 +2651,9 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   );
   //console.log(leftTopWidthHeight);
   //gl.uniform4f(sliceShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  //gl.drawArrays(gl.TRIANGLE_STRIP, 5, 4);
+  //gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.genericVAO); //set vertex attributes
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   //record screenSlices to detect mouse click positions
   this.screenSlices[this.numScreenSlices].leftTopWidthHeight =
     leftTopWidthHeight;
@@ -2675,7 +2678,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
     this.opts.crosshairWidth,
     leftTopWidthHeight[3]
   );
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   //horizontal line of crosshair:
   var xtop =
     leftTopWidthHeight[1] + leftTopWidthHeight[3] * (1.0 - crossXYZ[1]);
@@ -2686,7 +2689,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
     leftTopWidthHeight[2],
     this.opts.crosshairWidth
   );
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 
   this.gl.enable(this.gl.CULL_FACE);
