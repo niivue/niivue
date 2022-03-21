@@ -3,6 +3,7 @@ import * as pako from "pako";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
+import { NiivueObject3D } from "./niivue-object3D.js";//n.b. used by connectome
 const log = new Log();
 
 /**

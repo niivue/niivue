@@ -109,8 +109,6 @@ export const Niivue = function (options = {}) {
   this.meshShader = null;
   this.genericVAO = null; //used for 2D slices, 2D lines, 2D Fonts
   this.unusedVAO = null;
-  this.hackVAO = null;
-
   this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
 
@@ -1632,6 +1630,9 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.pickingShader.uniforms["volume"], 0);
   //this.gl.uniform1i(pickingShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.pickingShader.uniforms["overlay"], 2);
+  this.pickingShader.mvpUniformLoc = this.pickingShader.uniforms["mvpMtx"];
+  this.pickingShader.rayDirUniformLoc = this.pickingShader.uniforms["rayDir"];
+  this.pickingShader.clipPlaneUniformLoc = this.pickingShader.uniforms["clipPlane"];
   // slice shader
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
@@ -1647,6 +1648,10 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
   //this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
+  this.renderShader.mvpUniformLoc = this.renderShader.uniforms["mvpMtx"],
+  this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"];
+  this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"],
+  this.renderShader.clipPlaneUniformLoc = this.renderShader.uniforms["clipPlane"],
 
   // colorbar shader
   this.colorbarShader = new Shader(
@@ -2029,6 +2034,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   //blend texture
   let blendTexture = null;
 
+  this.gl.bindVertexArray(this.genericVAO);
   if (layer > 1) {
     //use pass-through shader to copy previous color to temporary 2D texture
     blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims);
@@ -2091,9 +2097,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     //this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
   }
+  this.gl.bindVertexArray(this.unusedVAO);
   this.gl.deleteTexture(tempTex3D);
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+  this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+
   this.gl.deleteFramebuffer(fb);
 
   // set slice scale for render shader
@@ -2124,12 +2133,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
 
   this.updateInterpolation(layer);
-  //restore defaults: we have been writing to textures we now want to read from
-  this.gl.bindVertexArray(this.hackVAO);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  this.gl.bindVertexArray(this.unusedVAO);
 }; // refreshLayers()
 
 /**
@@ -2474,7 +2477,9 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
+  this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
   this.gl.texParameteri(
     this.gl.TEXTURE_2D,
     this.gl.TEXTURE_MIN_FILTER,
@@ -2547,8 +2552,10 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
   var bytes = new TextEncoder().encode(str);
+  this.gl.bindVertexArray(this.genericVAO);
   for (let i = 0; i < str.length; i++)
     xy[0] += this.drawChar(xy, size, bytes[i]);
+  this.gl.bindVertexArray(this.unusedVAO);
 }; // drawText()
 
 // not included in public docs
@@ -2556,9 +2563,7 @@ Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
-  this.gl.bindVertexArray(this.genericVAO);
   this.drawText(xy, str, scale);
-  this.gl.bindVertexArray(this.unusedVAO);
 }; // drawTextRight()
 
 // not included in public docs
@@ -2866,14 +2871,14 @@ Niivue.prototype.draw3D = function () {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.scene.mouseDepthPicker = false;
     if (object3D.isVisible && object3D.isPickable){
-      let pickingShader = this.pickingShader;
-      pickingShader.use(this.gl);
+      let shader = this.pickingShader;
+      shader.use(this.gl);
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-      gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
-      gl.uniform3fv(pickingShader.uniforms["rayDir"],rayDir);
-      gl.uniform4fv(pickingShader.uniforms["clipPlane"],this.scene.clipPlane);
-      gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
+      gl.uniformMatrix4fv(shader.mvpUniformLoc,false,mvpMatrix);
+      gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
+      gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
+      gl.uniform1i(shader.uniforms["id"], object3D.id);
       gl.bindVertexArray(object3D.vao);
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
       gl.bindVertexArray(this.unusedVAO);
@@ -2911,10 +2916,10 @@ Niivue.prototype.draw3D = function () {
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     let shader = this.renderShader;//.use(this.gl);
     shader.use(this.gl);
-    gl.uniformMatrix4fv(shader.uniforms["mvpMtx"],false,mvpMatrix);
-    gl.uniformMatrix4fv(shader.uniforms["matRAS"],false,this.back.matRAS);
-    gl.uniform3fv(shader.uniforms["rayDir"], rayDir);
-    gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
+    gl.uniformMatrix4fv(shader.mvpUniformLoc,false,mvpMatrix);
+    gl.uniformMatrix4fv(shader.mvpMatRASLoc,false,this.back.matRAS);
+    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
+    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
     gl.bindVertexArray(object3D.vao);
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(this.unusedVAO);
