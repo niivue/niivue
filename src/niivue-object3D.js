@@ -27,7 +27,7 @@ export var NiivueObject3D = function (
   mode,
   indexCount,
   indexBuffer = null,
-  textureCoordinateBuffer = null
+  vao = null
 ) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
@@ -43,7 +43,7 @@ export var NiivueObject3D = function (
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
   this.indexBuffer = indexBuffer;
-  this.textureCoordinateBuffer = textureCoordinateBuffer;
+  this.vao = vao;
   this.mode = mode;
 
   this.glFlags = 0;
@@ -87,7 +87,8 @@ NiivueObject3D.generateCrosshairs = function (
     geometry.vertexBuffer,
     gl.TRIANGLES,
     geometry.indexCount,
-    geometry.indexBuffer
+    geometry.indexBuffer,
+    geometry.vao
   );
 };
 
@@ -126,10 +127,20 @@ NiivueObject3D.generateCrosshairsGeometry = function (
     gl.STATIC_DRAW
   );
 
+  let vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  //vertex position: 3 floats X,Y,Z
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
+
   return {
     vertexBuffer,
     indexBuffer,
     indexCount: indices.length,
+    vao,
   };
 };
 

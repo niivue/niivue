@@ -951,43 +951,28 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     this.matRAS
   );
 
-  const positions = [
+  let posTex = [
+    //spatial position (XYZ), texture coordinates UVW
     // Superior face
     ...LPS,
+    ...[0.0, 0.0, 1.0],
     ...RPS,
+    ...[1.0, 0.0, 1.0],
     ...RAS,
+    ...[1.0, 1.0, 1.0],
     ...LAS,
+    ...[0.0, 1.0, 1.0],
 
     // Inferior face
     ...LPI,
+    ...[0.0, 0.0, 0.0],
     ...LAI,
+    ...[0.0, 1.0, 0.0],
     ...RAI,
+    ...[1.0, 1.0, 0.0],
     ...RPI,
+    ...[1.0, 0.0, 0.0],
   ];
-
-  const textureCoordinates = [
-    // Superior Z=1.0
-    0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0,
-
-    // Inferior Z=1.0
-    0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0,
-
-    // Anterior Y=1
-    0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0,
-
-    // Posterior Y=0
-    0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0,
-
-    // Right X=1
-    1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0,
-
-    // Left X=0
-    0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0,
-  ];
-
-  const vertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
   const indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -997,6 +982,7 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   // position.
 
   const indices = [
+    //six faces of cube: each has 2 triangles (6 indices)
     0,
     3,
     2,
@@ -1042,24 +1028,41 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     gl.STATIC_DRAW
   );
 
-  const textureCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(textureCoordinates),
-    gl.STATIC_DRAW
-  );
+  const posTexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW);
+
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  //vertex spatial position: 3 floats X,Y,Z
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+  //UVW texCoord: (also three floats)
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+  gl.bindVertexArray(null);
 
   const obj3D = new NiivueObject3D(
     id,
-    vertexBuffer,
+    posTexBuffer,
     gl.TRIANGLES,
     indices.length,
     indexBuffer,
-    textureCoordBuffer
+    vao
   );
 
-  const extents = getExtents(positions);
+  const extents = getExtents([
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI,
+  ]);
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;

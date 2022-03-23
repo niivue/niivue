@@ -121,7 +121,7 @@ void main() {
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
-	vec4 firstHit = colAcc;
+	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * lenNoClip);
 	const float earlyTermination = 0.95;
 	float backNearest = len; //assume no hit
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
@@ -130,7 +130,7 @@ void main() {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
-		if (firstHit.a == 0.0)
+		if (firstHit.a > lenNoClip)
 			firstHit = samplePos;
 		backNearest = min(backNearest, samplePos.a);
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
@@ -139,7 +139,7 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (firstHit.a != 0.0)
+	if (firstHit.a < len)
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
@@ -167,13 +167,13 @@ void main() {
 	float overFarthest = len;
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
-	firstHit.a = len;
+	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
-		if (firstHit.a > samplePos.a)
-			firstHit = samplePos;
+		if (overFirstHit.a > len)
+			overFirstHit = samplePos;
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
 		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -181,8 +181,9 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (firstHit.a < len)
-		gl_FragDepth = frac2ndc(firstHit.xyz);
+	if (overFirstHit.a < firstHit.a)
+	//if (overFirstHit.a < len)
+		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
 	if (fColor.a <= 0.0)
@@ -524,7 +525,54 @@ void main(void) {
 	vClr = clr;
 }`;
 
-export var fragMeshShader = `#version 300 es
+//ToonShader https://prideout.net/blog/old/blog/index.html@tag=toon-shader.html
+export var fragMeshToonShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+float stepmix(float edge0, float edge1, float E, float x){
+	float T = clamp(0.5 * (x - edge0 + E) / E, 0.0, 1.0);
+	return mix(edge0, edge1, T);
+}
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0);
+	float ambient = 0.3;
+	float diffuse = 0.6;
+	float specular = 0.5;
+	float shininess = 50.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float df = max(0.0, dot(n, l));
+	float sf =  pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	const float A = 0.1;
+	const float B = 0.3;
+	const float C = 0.6;
+	const float D = 1.0;
+	float E = fwidth(df);
+	if (df > A - E && df < A + E) df = stepmix(A, B, E, df);
+	else if (df > B - E && df < B + E) df = stepmix(B, C, E, df);
+	else if (df > C - E && df < C + E) df = stepmix(C, D, E, df);
+	else if (df < A) df = 0.0;
+	else if (df < B) df = B;
+	else if (df < C) df = C;
+	else df = D;
+	E = fwidth(sf);
+	if (sf > 0.5 - E && sf < 0.5 + E)
+		sf = smoothstep(0.5 - E, 0.5 + E, sf);
+	else
+		sf = step(0.5, sf);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(df, 0.0) * vClr.rgb * diffuse;
+	color.rgb = a + d + (specular * sf);
+	color.a = opacity;
+}`;
+
+//outline
+export var fragMeshOutlineShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -537,6 +585,35 @@ void main() {
 	float diffuse = 0.6;
 	float specular = 0.25;
 	float shininess = 10.0;
+	float PenWidth = 0.6;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	float view = abs(dot(n,r)); //with respect to viewer
+
+	if (PenWidth < view) discard;
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color.rgb = a + d + s;
+	color.a = opacity;
+}`;
+
+//Phong: default
+export var fragMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
 	vec3 n = normalize(vN);
 	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
 	vec3 l = normalize(lightPosition);
@@ -544,8 +621,114 @@ void main() {
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
 	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
-	color.rgb = a + d + s;
-	color.a = opacity;
+	color = vec4(a + d + s, opacity);
+}`;
+
+//matte: same as phong without specular and a bit more diffuse
+export var fragMeshMatteShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.6;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	color = vec4(a + d, opacity);
+}`;
+
+//Hemispheric
+export var fragMeshHemiShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 up = vec3(0.0, 1.0, 0.0);
+	float ax = dot(n, up) * 0.5 + 0.5;  //Shreiner et al. (2013) OpenGL Programming Guide, 8th Ed., p 388. ISBN-10: 0321773039
+	vec3 upClr = vec3(1.0, 1.0, 0.95);
+	vec3 downClr = vec3(0.4, 0.4, 0.6);
+	vec3 a = vClr.rgb * ambient;
+	a *= mix(downClr, upClr, ax);
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color = vec4(a + d + s, opacity);
+}`;
+
+export var fragMeshShaderSHBlue = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+//Spherical harmonics constants
+const float C1 = 0.429043;
+const float C2 = 0.511664;
+const float C3 = 0.743125;
+const float C4 = 0.886227;
+const float C5 = 0.247708;
+//Spherical harmonics coefficients
+// Ramamoorthi, R., and P. Hanrahan. 2001b. "An Efficient Representation for Irradiance Environment Maps." In Proceedings of SIGGRAPH 2001, pp. 497–500.
+// https://github.com/eskimoblood/processingSketches/blob/master/data/shader/shinyvert.glsl
+// https://github.com/eskimoblood/processingSketches/blob/master/data/shader/shinyvert.glsl
+// Constants for Eucalyptus Grove lighting
+const vec3 L00  = vec3( 0.3783264,  0.4260425,  0.4504587);
+const vec3 L1m1 = vec3( 0.2887813,  0.3586803,  0.4147053);
+const vec3 L10  = vec3( 0.0379030,  0.0295216,  0.0098567);
+const vec3 L11  = vec3(-0.1033028, -0.1031690, -0.0884924);
+const vec3 L2m2 = vec3(-0.0621750, -0.0554432, -0.0396779);
+const vec3 L2m1 = vec3( 0.0077820, -0.0148312, -0.0471301);
+const vec3 L20  = vec3(-0.0935561, -0.1254260, -0.1525629);
+const vec3 L21  = vec3(-0.0572703, -0.0502192, -0.0363410);
+const vec3 L22  = vec3( 0.0203348, -0.0044201, -0.0452180);
+vec3 SH(vec3 vNormal) {
+	vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
+	//vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
+	vec3 diffuseColor =  C1 * L22 * (vNormal.x * vNormal.x - vNormal.y * vNormal.y) +
+	C3 * L20 * vNormal.z * vNormal.z +
+	C4 * L00 -
+	C5 * L20 +
+	2.0 * C1 * L2m2 * vNormal.x * vNormal.y +
+	2.0 * C1 * L21  * vNormal.x * vNormal.z +
+	2.0 * C1 * L2m1 * vNormal.y * vNormal.z +
+	2.0 * C2 * L11  * vNormal.x +
+	2.0 * C2 * L1m1 * vNormal.y +
+	2.0 * C2 * L10  * vNormal.z;
+	return diffuseColor;
+}
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.3;
+	float diffuse = 0.6;
+	float specular = 0.1;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = vClr.rgb * diffuse * SH(-reflect(n, vec3(l.x, l.y, -l.z)) );
+	color = vec4(a + d + s, opacity);
 }`;
 
 export var fragDepthPickingShader = `#version 300 es

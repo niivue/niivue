@@ -734,7 +734,7 @@ void main() {
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
-	vec4 firstHit = colAcc;
+	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * lenNoClip);
 	const float earlyTermination = 0.95;
 	float backNearest = len; //assume no hit
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
@@ -743,7 +743,7 @@ void main() {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
-		if (firstHit.a == 0.0)
+		if (firstHit.a > lenNoClip)
 			firstHit = samplePos;
 		backNearest = min(backNearest, samplePos.a);
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
@@ -752,7 +752,7 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (firstHit.a != 0.0)
+	if (firstHit.a < len)
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
@@ -780,13 +780,13 @@ void main() {
 	float overFarthest = len;
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
-	firstHit.a = len;
+	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a < 0.01) continue;
-		if (firstHit.a > samplePos.a)
-			firstHit = samplePos;
+		if (overFirstHit.a > len)
+			overFirstHit = samplePos;
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
 		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -794,8 +794,9 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (firstHit.a < len)
-		gl_FragDepth = frac2ndc(firstHit.xyz);
+	if (overFirstHit.a < firstHit.a)
+	//if (overFirstHit.a < len)
+		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
 	if (fColor.a <= 0.0)
@@ -1115,7 +1116,51 @@ void main(void) {
 	vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
 }`;
-var fragMeshShader = `#version 300 es
+var fragMeshToonShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+float stepmix(float edge0, float edge1, float E, float x){
+	float T = clamp(0.5 * (x - edge0 + E) / E, 0.0, 1.0);
+	return mix(edge0, edge1, T);
+}
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0);
+	float ambient = 0.3;
+	float diffuse = 0.6;
+	float specular = 0.5;
+	float shininess = 50.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float df = max(0.0, dot(n, l));
+	float sf =  pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	const float A = 0.1;
+	const float B = 0.3;
+	const float C = 0.6;
+	const float D = 1.0;
+	float E = fwidth(df);
+	if (df > A - E && df < A + E) df = stepmix(A, B, E, df);
+	else if (df > B - E && df < B + E) df = stepmix(B, C, E, df);
+	else if (df > C - E && df < C + E) df = stepmix(C, D, E, df);
+	else if (df < A) df = 0.0;
+	else if (df < B) df = B;
+	else if (df < C) df = C;
+	else df = D;
+	E = fwidth(sf);
+	if (sf > 0.5 - E && sf < 0.5 + E)
+		sf = smoothstep(0.5 - E, 0.5 + E, sf);
+	else
+		sf = step(0.5, sf);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(df, 0.0) * vClr.rgb * diffuse;
+	color.rgb = a + d + (specular * sf);
+	color.a = opacity;
+}`;
+var fragMeshOutlineShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1128,6 +1173,33 @@ void main() {
 	float diffuse = 0.6;
 	float specular = 0.25;
 	float shininess = 10.0;
+	float PenWidth = 0.6;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	float view = abs(dot(n,r)); //with respect to viewer
+
+	if (PenWidth < view) discard;
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color.rgb = a + d + s;
+	color.a = opacity;
+}`;
+var fragMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
 	vec3 n = normalize(vN);
 	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
 	vec3 l = normalize(lightPosition);
@@ -1135,8 +1207,109 @@ void main() {
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
 	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
-	color.rgb = a + d + s;
-	color.a = opacity;
+	color = vec4(a + d + s, opacity);
+}`;
+var fragMeshMatteShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.6;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	color = vec4(a + d, opacity);
+}`;
+var fragMeshHemiShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 up = vec3(0.0, 1.0, 0.0);
+	float ax = dot(n, up) * 0.5 + 0.5;  //Shreiner et al. (2013) OpenGL Programming Guide, 8th Ed., p 388. ISBN-10: 0321773039
+	vec3 upClr = vec3(1.0, 1.0, 0.95);
+	vec3 downClr = vec3(0.4, 0.4, 0.6);
+	vec3 a = vClr.rgb * ambient;
+	a *= mix(downClr, upClr, ax);
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color = vec4(a + d + s, opacity);
+}`;
+var fragMeshShaderSHBlue = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+//Spherical harmonics constants
+const float C1 = 0.429043;
+const float C2 = 0.511664;
+const float C3 = 0.743125;
+const float C4 = 0.886227;
+const float C5 = 0.247708;
+//Spherical harmonics coefficients
+// Ramamoorthi, R., and P. Hanrahan. 2001b. "An Efficient Representation for Irradiance Environment Maps." In Proceedings of SIGGRAPH 2001, pp. 497\u2013500.
+// https://github.com/eskimoblood/processingSketches/blob/master/data/shader/shinyvert.glsl
+// https://github.com/eskimoblood/processingSketches/blob/master/data/shader/shinyvert.glsl
+// Constants for Eucalyptus Grove lighting
+const vec3 L00  = vec3( 0.3783264,  0.4260425,  0.4504587);
+const vec3 L1m1 = vec3( 0.2887813,  0.3586803,  0.4147053);
+const vec3 L10  = vec3( 0.0379030,  0.0295216,  0.0098567);
+const vec3 L11  = vec3(-0.1033028, -0.1031690, -0.0884924);
+const vec3 L2m2 = vec3(-0.0621750, -0.0554432, -0.0396779);
+const vec3 L2m1 = vec3( 0.0077820, -0.0148312, -0.0471301);
+const vec3 L20  = vec3(-0.0935561, -0.1254260, -0.1525629);
+const vec3 L21  = vec3(-0.0572703, -0.0502192, -0.0363410);
+const vec3 L22  = vec3( 0.0203348, -0.0044201, -0.0452180);
+vec3 SH(vec3 vNormal) {
+	vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
+	//vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
+	vec3 diffuseColor =  C1 * L22 * (vNormal.x * vNormal.x - vNormal.y * vNormal.y) +
+	C3 * L20 * vNormal.z * vNormal.z +
+	C4 * L00 -
+	C5 * L20 +
+	2.0 * C1 * L2m2 * vNormal.x * vNormal.y +
+	2.0 * C1 * L21  * vNormal.x * vNormal.z +
+	2.0 * C1 * L2m1 * vNormal.y * vNormal.z +
+	2.0 * C2 * L11  * vNormal.x +
+	2.0 * C2 * L1m1 * vNormal.y +
+	2.0 * C2 * L10  * vNormal.z;
+	return diffuseColor;
+}
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.3;
+	float diffuse = 0.6;
+	float specular = 0.1;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = vClr.rgb * diffuse * SH(-reflect(n, vec3(l.x, l.y, -l.z)) );
+	color = vec4(a + d + s, opacity);
 }`;
 var fragDepthPickingShader = `#version 300 es
 precision highp int;
@@ -4961,9 +5134,8 @@ var x_rain = {
   A,
   I
 };
-var cmaps = /* @__PURE__ */ Object.freeze({
+var cmaps = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  [Symbol.toStringTag]: "Module",
   actc,
   blue,
   blue2red,
@@ -5016,7 +5188,7 @@ var cmaps = /* @__PURE__ */ Object.freeze({
   warm,
   winter,
   x_rain
-});
+}, Symbol.toStringTag, { value: "Module" }));
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -5085,10 +5257,16 @@ function __read(o, n) {
   }
   return ar;
 }
-function __spreadArray(to, from) {
-  for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-    to[j] = from[i];
-  return to;
+function __spreadArray(to, from, pack) {
+  if (pack || arguments.length === 2)
+    for (var i = 0, l = from.length, ar; i < l; i++) {
+      if (ar || !(i in from)) {
+        if (!ar)
+          ar = Array.prototype.slice.call(from, 0, i);
+        ar[i] = from[i];
+      }
+    }
+  return to.concat(ar || Array.prototype.slice.call(from));
 }
 function isFunction(value) {
   return typeof value === "function";
@@ -5124,7 +5302,7 @@ var Subscription = function() {
     this.initialTeardown = initialTeardown;
     this.closed = false;
     this._parentage = null;
-    this._teardowns = null;
+    this._finalizers = null;
   }
   Subscription2.prototype.unsubscribe = function() {
     var e_1, _a, e_2, _b;
@@ -5155,22 +5333,22 @@ var Subscription = function() {
           _parentage.remove(this);
         }
       }
-      var initialTeardown = this.initialTeardown;
-      if (isFunction(initialTeardown)) {
+      var initialFinalizer = this.initialTeardown;
+      if (isFunction(initialFinalizer)) {
         try {
-          initialTeardown();
+          initialFinalizer();
         } catch (e) {
           errors = e instanceof UnsubscriptionError ? e.errors : [e];
         }
       }
-      var _teardowns = this._teardowns;
-      if (_teardowns) {
-        this._teardowns = null;
+      var _finalizers = this._finalizers;
+      if (_finalizers) {
+        this._finalizers = null;
         try {
-          for (var _teardowns_1 = __values(_teardowns), _teardowns_1_1 = _teardowns_1.next(); !_teardowns_1_1.done; _teardowns_1_1 = _teardowns_1.next()) {
-            var teardown_1 = _teardowns_1_1.value;
+          for (var _finalizers_1 = __values(_finalizers), _finalizers_1_1 = _finalizers_1.next(); !_finalizers_1_1.done; _finalizers_1_1 = _finalizers_1.next()) {
+            var finalizer = _finalizers_1_1.value;
             try {
-              execTeardown(teardown_1);
+              execFinalizer(finalizer);
             } catch (err2) {
               errors = errors !== null && errors !== void 0 ? errors : [];
               if (err2 instanceof UnsubscriptionError) {
@@ -5184,8 +5362,8 @@ var Subscription = function() {
           e_2 = { error: e_2_1 };
         } finally {
           try {
-            if (_teardowns_1_1 && !_teardowns_1_1.done && (_b = _teardowns_1.return))
-              _b.call(_teardowns_1);
+            if (_finalizers_1_1 && !_finalizers_1_1.done && (_b = _finalizers_1.return))
+              _b.call(_finalizers_1);
           } finally {
             if (e_2)
               throw e_2.error;
@@ -5201,7 +5379,7 @@ var Subscription = function() {
     var _a;
     if (teardown && teardown !== this) {
       if (this.closed) {
-        execTeardown(teardown);
+        execFinalizer(teardown);
       } else {
         if (teardown instanceof Subscription2) {
           if (teardown.closed || teardown._hasParent(this)) {
@@ -5209,7 +5387,7 @@ var Subscription = function() {
           }
           teardown._addParent(this);
         }
-        (this._teardowns = (_a = this._teardowns) !== null && _a !== void 0 ? _a : []).push(teardown);
+        (this._finalizers = (_a = this._finalizers) !== null && _a !== void 0 ? _a : []).push(teardown);
       }
     }
   };
@@ -5230,8 +5408,8 @@ var Subscription = function() {
     }
   };
   Subscription2.prototype.remove = function(teardown) {
-    var _teardowns = this._teardowns;
-    _teardowns && arrRemove(_teardowns, teardown);
+    var _finalizers = this._finalizers;
+    _finalizers && arrRemove(_finalizers, teardown);
     if (teardown instanceof Subscription2) {
       teardown._removeParent(this);
     }
@@ -5247,11 +5425,11 @@ var EMPTY_SUBSCRIPTION = Subscription.EMPTY;
 function isSubscription(value) {
   return value instanceof Subscription || value && "closed" in value && isFunction(value.remove) && isFunction(value.add) && isFunction(value.unsubscribe);
 }
-function execTeardown(teardown) {
-  if (isFunction(teardown)) {
-    teardown();
+function execFinalizer(finalizer) {
+  if (isFunction(finalizer)) {
+    finalizer();
   } else {
-    teardown.unsubscribe();
+    finalizer.unsubscribe();
   }
 }
 var config = {
@@ -5262,13 +5440,16 @@ var config = {
   useDeprecatedNextContext: false
 };
 var timeoutProvider = {
-  setTimeout: function() {
+  setTimeout: function(handler, timeout) {
     var args = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-      args[_i] = arguments[_i];
+    for (var _i = 2; _i < arguments.length; _i++) {
+      args[_i - 2] = arguments[_i];
     }
     var delegate = timeoutProvider.delegate;
-    return ((delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) || setTimeout).apply(void 0, __spreadArray([], __read(args)));
+    if (delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) {
+      return delegate.setTimeout.apply(delegate, __spreadArray([handler, timeout], __read(args)));
+    }
+    return setTimeout.apply(void 0, __spreadArray([handler, timeout], __read(args)));
   },
   clearTimeout: function(handle) {
     var delegate = timeoutProvider.delegate;
@@ -5371,51 +5552,84 @@ var Subscriber = function(_super) {
   };
   return Subscriber2;
 }(Subscription);
+var _bind = Function.prototype.bind;
+function bind(fn, thisArg) {
+  return _bind.call(fn, thisArg);
+}
+var ConsumerObserver = function() {
+  function ConsumerObserver2(partialObserver) {
+    this.partialObserver = partialObserver;
+  }
+  ConsumerObserver2.prototype.next = function(value) {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.next) {
+      try {
+        partialObserver.next(value);
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    }
+  };
+  ConsumerObserver2.prototype.error = function(err2) {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.error) {
+      try {
+        partialObserver.error(err2);
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    } else {
+      handleUnhandledError(err2);
+    }
+  };
+  ConsumerObserver2.prototype.complete = function() {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.complete) {
+      try {
+        partialObserver.complete();
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    }
+  };
+  return ConsumerObserver2;
+}();
 var SafeSubscriber = function(_super) {
   __extends(SafeSubscriber2, _super);
   function SafeSubscriber2(observerOrNext, error, complete) {
     var _this = _super.call(this) || this;
-    var next;
-    if (isFunction(observerOrNext)) {
-      next = observerOrNext;
-    } else if (observerOrNext) {
-      next = observerOrNext.next, error = observerOrNext.error, complete = observerOrNext.complete;
+    var partialObserver;
+    if (isFunction(observerOrNext) || !observerOrNext) {
+      partialObserver = {
+        next: observerOrNext !== null && observerOrNext !== void 0 ? observerOrNext : void 0,
+        error: error !== null && error !== void 0 ? error : void 0,
+        complete: complete !== null && complete !== void 0 ? complete : void 0
+      };
+    } else {
       var context_1;
       if (_this && config.useDeprecatedNextContext) {
         context_1 = Object.create(observerOrNext);
         context_1.unsubscribe = function() {
           return _this.unsubscribe();
         };
+        partialObserver = {
+          next: observerOrNext.next && bind(observerOrNext.next, context_1),
+          error: observerOrNext.error && bind(observerOrNext.error, context_1),
+          complete: observerOrNext.complete && bind(observerOrNext.complete, context_1)
+        };
       } else {
-        context_1 = observerOrNext;
+        partialObserver = observerOrNext;
       }
-      next = next === null || next === void 0 ? void 0 : next.bind(context_1);
-      error = error === null || error === void 0 ? void 0 : error.bind(context_1);
-      complete = complete === null || complete === void 0 ? void 0 : complete.bind(context_1);
     }
-    _this.destination = {
-      next: next ? wrapForErrorHandling(next) : noop,
-      error: wrapForErrorHandling(error !== null && error !== void 0 ? error : defaultErrorHandler),
-      complete: complete ? wrapForErrorHandling(complete) : noop
-    };
+    _this.destination = new ConsumerObserver(partialObserver);
     return _this;
   }
   return SafeSubscriber2;
 }(Subscriber);
-function wrapForErrorHandling(handler, instance) {
-  return function() {
-    var args = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-      args[_i] = arguments[_i];
-    }
-    try {
-      handler.apply(void 0, __spreadArray([], __read(args)));
-    } catch (err2) {
-      {
-        reportUnhandledError(err2);
-      }
-    }
-  };
+function handleUnhandledError(error) {
+  {
+    reportUnhandledError(error);
+  }
 }
 function defaultErrorHandler(err2) {
   throw err2;
@@ -5477,15 +5691,19 @@ var Observable = function() {
     var _this = this;
     promiseCtor = getPromiseCtor(promiseCtor);
     return new promiseCtor(function(resolve, reject) {
-      var subscription;
-      subscription = _this.subscribe(function(value) {
-        try {
-          next(value);
-        } catch (err2) {
-          reject(err2);
-          subscription === null || subscription === void 0 ? void 0 : subscription.unsubscribe();
-        }
-      }, reject, resolve);
+      var subscriber = new SafeSubscriber({
+        next: function(value) {
+          try {
+            next(value);
+          } catch (err2) {
+            reject(err2);
+            subscriber.unsubscribe();
+          }
+        },
+        error: reject,
+        complete: resolve
+      });
+      _this.subscribe(subscriber);
     });
   };
   Observable2.prototype._subscribe = function(subscriber) {
@@ -5543,6 +5761,7 @@ var Subject = function(_super) {
   function Subject2() {
     var _this = _super.call(this) || this;
     _this.closed = false;
+    _this.currentObservers = null;
     _this.observers = [];
     _this.isStopped = false;
     _this.hasError = false;
@@ -5565,18 +5784,20 @@ var Subject = function(_super) {
       var e_1, _a;
       _this._throwIfClosed();
       if (!_this.isStopped) {
-        var copy2 = _this.observers.slice();
+        if (!_this.currentObservers) {
+          _this.currentObservers = Array.from(_this.observers);
+        }
         try {
-          for (var copy_1 = __values(copy2), copy_1_1 = copy_1.next(); !copy_1_1.done; copy_1_1 = copy_1.next()) {
-            var observer = copy_1_1.value;
+          for (var _b = __values(_this.currentObservers), _c = _b.next(); !_c.done; _c = _b.next()) {
+            var observer = _c.value;
             observer.next(value);
           }
         } catch (e_1_1) {
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (copy_1_1 && !copy_1_1.done && (_a = copy_1.return))
-              _a.call(copy_1);
+            if (_c && !_c.done && (_a = _b.return))
+              _a.call(_b);
           } finally {
             if (e_1)
               throw e_1.error;
@@ -5614,7 +5835,7 @@ var Subject = function(_super) {
   };
   Subject2.prototype.unsubscribe = function() {
     this.isStopped = this.closed = true;
-    this.observers = null;
+    this.observers = this.currentObservers = null;
   };
   Object.defineProperty(Subject2.prototype, "observed", {
     get: function() {
@@ -5634,10 +5855,17 @@ var Subject = function(_super) {
     return this._innerSubscribe(subscriber);
   };
   Subject2.prototype._innerSubscribe = function(subscriber) {
+    var _this = this;
     var _a = this, hasError = _a.hasError, isStopped = _a.isStopped, observers = _a.observers;
-    return hasError || isStopped ? EMPTY_SUBSCRIPTION : (observers.push(subscriber), new Subscription(function() {
-      return arrRemove(observers, subscriber);
-    }));
+    if (hasError || isStopped) {
+      return EMPTY_SUBSCRIPTION;
+    }
+    this.currentObservers = null;
+    observers.push(subscriber);
+    return new Subscription(function() {
+      _this.currentObservers = null;
+      arrRemove(observers, subscriber);
+    });
   };
   Subject2.prototype._checkFinalizedStatuses = function(subscriber) {
     var _a = this, hasError = _a.hasError, thrownError = _a.thrownError, isStopped = _a.isStopped;
@@ -5683,7 +5911,7 @@ var AnonymousSubject = function(_super) {
   };
   return AnonymousSubject2;
 }(Subject);
-var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = null, textureCoordinateBuffer = null) {
+var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = null, vao = null) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
   this.CULL_FRONT = 4;
@@ -5698,7 +5926,7 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = 
   this.vertexBuffer = vertexBuffer;
   this.indexCount = indexCount;
   this.indexBuffer = indexBuffer;
-  this.textureCoordinateBuffer = textureCoordinateBuffer;
+  this.vao = vao;
   this.mode = mode;
   this.glFlags = 0;
   this.id = id;
@@ -5718,7 +5946,7 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = 
 };
 NiivueObject3D.generateCrosshairs = function(gl, id, xyzMM, xyzMin, xyzMax, radius, sides = 20) {
   let geometry = this.generateCrosshairsGeometry(gl, xyzMM, xyzMin, xyzMax, radius, sides);
-  return new NiivueObject3D(id, geometry.vertexBuffer, gl.TRIANGLES, geometry.indexCount, geometry.indexBuffer);
+  return new NiivueObject3D(id, geometry.vertexBuffer, gl.TRIANGLES, geometry.indexCount, geometry.indexBuffer, geometry.vao);
 };
 NiivueObject3D.generateCrosshairsGeometry = function(gl, xyzMM, xyzMin, xyzMax, radius, sides = 20) {
   let vertices = [];
@@ -5738,10 +5966,18 @@ NiivueObject3D.generateCrosshairsGeometry = function(gl, xyzMM, xyzMin, xyzMax, 
   let indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  let vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
   return {
     vertexBuffer,
     indexBuffer,
-    indexCount: indices.length
+    indexCount: indices.length,
+    vao
   };
 };
 NiivueObject3D.getFirstPerpVector = function(v1) {
@@ -6024,7 +6260,6 @@ NiivueObject3D.makeColoredCylinder = function(vertices, indices, colors, start, 
   let nv = vertices.length / 3;
   this.makeCylinder(vertices, indices, start, dest, radius, sides, endcaps);
   nv = vertices.length / 3 - nv;
-  console.log(nv);
   let clrs = [];
   for (let i = 0; i < nv * 4 - 1; i += 4) {
     clrs[i] = rgba255[0];
@@ -6038,7 +6273,6 @@ NiivueObject3D.makeColoredSphere = function(vertices, indices, colors, radius, o
   let nv = vertices.length / 3;
   this.makeSphere(vertices, indices, radius, origin);
   nv = vertices.length / 3 - nv;
-  console.log(nv);
   let clrs = [];
   for (let i = 0; i < nv * 4 - 1; i += 4) {
     clrs[i] = rgba255[0];
@@ -6047,16 +6281,6 @@ NiivueObject3D.makeColoredSphere = function(vertices, indices, colors, radius, o
     clrs[i + 3] = rgba255[3];
   }
   colors.push(...clrs);
-};
-var NiivueShader3D = function(shader) {
-  this.shader = shader;
-  this.uniforms = shader.uniforms;
-  this.mvpUniformName = "";
-  this.clipPlaneUniformName = "";
-  this.rayDirUniformName = "";
-};
-NiivueShader3D.prototype.use = function(gl) {
-  return this.shader.use(gl);
 };
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 function getAugmentedNamespace(n) {
@@ -6077,7 +6301,7 @@ function getAugmentedNamespace(n) {
 function commonjsRequire(path) {
   throw new Error('Could not dynamically require "' + path + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
 }
-var nifti = { exports: {} };
+var nifti$1 = { exports: {} };
 var nifti1 = { exports: {} };
 var utilities = { exports: {} };
 (function(module) {
@@ -10827,9 +11051,8 @@ var pako = {
   ungzip: ungzip_1,
   constants: constants_1
 };
-var pako$1 = /* @__PURE__ */ Object.freeze({
+var pako$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  [Symbol.toStringTag]: "Module",
   Deflate: Deflate_1,
   Inflate: Inflate_1,
   constants: constants_1,
@@ -10840,7 +11063,7 @@ var pako$1 = /* @__PURE__ */ Object.freeze({
   inflate: inflate_1,
   inflateRaw: inflateRaw_1,
   ungzip: ungzip_1
-});
+}, Symbol.toStringTag, { value: "Module" }));
 var require$$3 = /* @__PURE__ */ getAugmentedNamespace(pako$1);
 (function(module) {
   var nifti3 = nifti3 || {};
@@ -10934,7 +11157,8 @@ var require$$3 = /* @__PURE__ */ getAugmentedNamespace(pako$1);
   if (module.exports) {
     module.exports = nifti3;
   }
-})(nifti);
+})(nifti$1);
+var nifti = nifti$1.exports;
 var getRandomValues;
 var rnds8 = new Uint8Array(16);
 function rng() {
@@ -11041,28 +11265,28 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
   if (!dataBuffer) {
     return;
   }
-  this.hdr = nifti.exports.readHeader(dataBuffer);
+  this.hdr = nifti.readHeader(dataBuffer);
   function isAffineOK(mtx) {
     let iOK = [false, false, false, false];
     let jOK = [false, false, false, false];
-    for (let i2 = 0; i2 < 4; i2++) {
+    for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 4; j++) {
-        if (isNaN(mtx[i2][j]))
+        if (isNaN(mtx[i][j]))
           return false;
       }
     }
-    for (let i2 = 0; i2 < 3; i2++) {
+    for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
-        if (mtx[i2][j] === 0)
+        if (mtx[i][j] === 0)
           continue;
-        iOK[i2] = true;
+        iOK[i] = true;
         jOK[j] = true;
       }
     }
-    for (let i2 = 0; i2 < 3; i2++) {
-      if (!iOK[i2])
+    for (let i = 0; i < 3; i++) {
+      if (!iOK[i])
         return false;
-      if (!jOK[i2])
+      if (!jOK[i])
         return false;
     }
     return true;
@@ -11134,10 +11358,10 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     this.hdr.affine = affine;
   }
   let imgRaw = null;
-  if (nifti.exports.isCompressed(dataBuffer)) {
-    imgRaw = nifti.exports.readImage(this.hdr, nifti.exports.decompress(dataBuffer));
+  if (nifti.isCompressed(dataBuffer)) {
+    imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
   } else {
-    imgRaw = nifti.exports.readImage(this.hdr, dataBuffer);
+    imgRaw = nifti.readImage(this.hdr, dataBuffer);
   }
   switch (this.hdr.datatypeCode) {
     case this.DT_UNSIGNED_CHAR:
@@ -11161,38 +11385,42 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     case this.DT_RGBA32:
       this.img = new Uint8Array(imgRaw);
       break;
-    case this.DT_INT8:
+    case this.DT_INT8: {
       let i8 = new Int8Array(imgRaw);
       var vx8 = i8.length;
       this.img = new Int16Array(vx8);
-      for (var i = 0; i < vx8 - 1; i++)
+      for (let i = 0; i < vx8 - 1; i++)
         this.img[i] = i8[i];
       this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
       break;
-    case this.DT_UINT32:
+    }
+    case this.DT_UINT32: {
       let u32 = new Uint32Array(imgRaw);
       var vx32 = u32.length;
       this.img = new Float64Array(vx32);
-      for (var i = 0; i < vx32 - 1; i++)
+      for (let i = 0; i < vx32 - 1; i++)
         this.img[i] = u32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_SIGNED_INT:
+    }
+    case this.DT_SIGNED_INT: {
       let i32 = new Int32Array(imgRaw);
       var vxi32 = i32.length;
       this.img = new Float64Array(vxi32);
-      for (var i = 0; i < vxi32 - 1; i++)
+      for (let i = 0; i < vxi32 - 1; i++)
         this.img[i] = i32[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
-    case this.DT_INT64:
+    }
+    case this.DT_INT64: {
       let i64 = new BigInt64Array(imgRaw);
       let vx = i64.length;
       this.img = new Float64Array(vx);
-      for (var i = 0; i < vx - 1; i++)
+      for (let i = 0; i < vx - 1; i++)
         this.img[i] = Number(i64[i]);
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
+    }
     default:
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
@@ -11640,93 +11868,24 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   let RAI = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0], this.matRAS);
   let RPS = this.vox2mm([this.dimsRAS[1] - 1, 0, this.dimsRAS[3] - 1], this.matRAS);
   let RAS = this.vox2mm([this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1], this.matRAS);
-  const positions = [
+  let posTex = [
     ...LPS,
+    ...[0, 0, 1],
     ...RPS,
+    ...[1, 0, 1],
     ...RAS,
+    ...[1, 1, 1],
     ...LAS,
+    ...[0, 1, 1],
     ...LPI,
+    ...[0, 0, 0],
     ...LAI,
+    ...[0, 1, 0],
     ...RAI,
-    ...RPI
+    ...[1, 1, 0],
+    ...RPI,
+    ...[1, 0, 0]
   ];
-  const textureCoordinates = [
-    0,
-    0,
-    1,
-    1,
-    0,
-    1,
-    1,
-    1,
-    1,
-    0,
-    1,
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    1,
-    1,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    1,
-    0,
-    1,
-    0,
-    0,
-    1,
-    1,
-    0,
-    0,
-    1,
-    1,
-    0,
-    1,
-    1,
-    1,
-    1,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    1,
-    1,
-    0,
-    1,
-    0
-  ];
-  const vertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
   const indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   const indices = [
@@ -11768,11 +11927,29 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
     4
   ];
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-  const textureCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
-  const obj3D = new NiivueObject3D(id, vertexBuffer, gl.TRIANGLES, indices.length, indexBuffer, textureCoordBuffer);
-  const extents = getExtents(positions);
+  const posTexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+  gl.bindVertexArray(null);
+  const obj3D = new NiivueObject3D(id, posTexBuffer, gl.TRIANGLES, indices.length, indexBuffer, vao);
+  const extents = getExtents([
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI
+  ]);
   obj3D.extentsMin = extents.min;
   obj3D.extentsMax = extents.max;
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
@@ -20828,7 +21005,7 @@ var giftiReader = { exports: {} };
   });
 })(giftiReader);
 const log$1 = new Log();
-var NVMesh = function(data, posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true) {
+var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true, gl, indexCount = 0, vertexBuffer = null, indexBuffer = null, vao = null) {
   this.name = name;
   this.posNormClr = posNormClr;
   this.tris = tris;
@@ -20836,9 +21013,24 @@ var NVMesh = function(data, posNormClr, tris, name = "", colorMap = "green", opa
   this.colorMap = colorMap;
   this.opacity = opacity > 1 ? 1 : opacity;
   this.visible = visible;
-  if (!data) {
-    return;
-  }
+  this.indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
+  this.vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
+  this.indexCount = tris.length;
+  this.vao = gl.createVertexArray();
+  gl.bindVertexArray(this.vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 28, 12);
+  gl.enableVertexAttribArray(2);
+  gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
+  gl.bindVertexArray(null);
 };
 NVMesh.prototype.colorMaps = function(sort = true) {
   let cm = [];
@@ -20910,9 +21102,8 @@ function generateNormals(pts, tris) {
   return norms;
 }
 NVMesh.generatePosNormClr = function(pts, tris, rgba255) {
-  if (pts.length < 3 || rgba255.length < 4) {
+  if (pts.length < 3 || rgba255.length < 4)
     log$1.error("Catastrophic failure generatePosNormClr()");
-  }
   let norms = generateNormals(pts, tris);
   let npt = pts.length / 3;
   let isPerVertexColors = npt === rgba255.length / 4;
@@ -21019,7 +21210,121 @@ NVMesh.readMZ3 = function(buffer) {
     colors
   };
 };
-NVMesh.loadFromUrl = async function(url, name = "", colorMap = "yellow", opacity = 1, rgba255 = [192, 128, 129, 255], visible = true) {
+NVMesh.makeLut = function(Rs, Gs, Bs, As, Is) {
+  var lut = new Uint8ClampedArray(256 * 4);
+  for (var i = 0; i < Is.length - 1; i++) {
+    var idxLo = Is[i];
+    var idxHi = Is[i + 1];
+    var idxRng = idxHi - idxLo;
+    var k = idxLo * 4;
+    for (var j = idxLo; j <= idxHi; j++) {
+      var f = (j - idxLo) / idxRng;
+      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]);
+      lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]);
+      lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]);
+      lut[k++] = As[i] + f * (As[i + 1] - As[i]);
+    }
+  }
+  return lut;
+};
+NVMesh.colormap = function(lutName = "") {
+  let cmaps2 = {
+    min: 0,
+    max: 0,
+    R: [0, 128, 255],
+    G: [0, 0, 0],
+    B: [0, 0, 0],
+    A: [0, 64, 128],
+    I: [0, 128, 255]
+  };
+  return this.makeLut(cmaps2.R, cmaps2.G, cmaps2.B, cmaps2.A, cmaps2.I);
+};
+NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "", opacity = 1, visible = true) {
+  let nvmesh = null;
+  let tris = [];
+  if (json.hasOwnProperty("name"))
+    name = json.name;
+  let nNode = json.nodes.X.length;
+  let hasEdges = false;
+  if (nNode > 1 && json.hasOwnProperty("edges")) {
+    let nEdges = json.edges.length;
+    if (nEdges = nNode * nNode)
+      hasEdges = true;
+    else
+      console.log("Expected %d edges not %d", nNode * nNode, nEdges);
+  }
+  let vtx = [];
+  let rgba255 = [];
+  let lut = this.colormap(json.nodeColormap);
+  let lutNeg = this.colormap(json.nodeColormapNegative);
+  let hasNeg = json.hasOwnProperty("nodeColormapNegative");
+  let min2 = json.nodeMinColor;
+  let max2 = json.nodeMaxColor;
+  for (let i = 0; i < nNode; i++) {
+    let radius = json.nodes.Size[i] * json.nodeScale;
+    if (radius <= 0)
+      continue;
+    let color = json.nodes.Color[i];
+    let isNeg = false;
+    if (hasNeg && color < 0) {
+      isNeg = true;
+      color = -color;
+    }
+    if (min2 < max2) {
+      if (color < min2)
+        continue;
+      color = (color - min2) / (max2 - min2);
+    } else
+      color = 1;
+    color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+    let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+    if (isNeg)
+      rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+    let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
+    NiivueObject3D.makeColoredSphere(vtx, tris, rgba255, radius, pt, rgba);
+  }
+  if (hasEdges) {
+    lut = this.colormap(json.edgeColormap);
+    lutNeg = this.colormap(json.edgeColormapNegative);
+    hasNeg = json.hasOwnProperty("edgeColormapNegative");
+    min2 = json.edgeMin;
+    max2 = json.edgeMax;
+    for (let i = 0; i < nNode - 1; i++) {
+      for (let j = i + 1; j < nNode; j++) {
+        let color = json.edges[i * nNode + j];
+        let isNeg = false;
+        if (hasNeg && color < 0) {
+          isNeg = true;
+          color = -color;
+        }
+        let radius = color * json.edgeScale;
+        if (radius <= 0)
+          continue;
+        if (min2 < max2) {
+          if (color < min2)
+            continue;
+          color = (color - min2) / (max2 - min2);
+        } else
+          color = 1;
+        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg)
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+        let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
+        let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
+        NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pti, ptj, radius, rgba);
+      }
+    }
+  }
+  let posNormClr = this.generatePosNormClr(vtx, tris, rgba255);
+  if (posNormClr) {
+    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
+  } else {
+    alert("Unable to load buffer properly from mesh");
+  }
+  return nvmesh;
+};
+NVMesh.loadFromUrl = async function(url, gl, name = "", colorMap = "yellow", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true) {
   let response = await fetch(url);
   let nvmesh = null;
   if (!response.ok) {
@@ -21115,10 +21420,9 @@ NVMesh.loadFromUrl = async function(url, name = "", colorMap = "yellow", opacity
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  let gix = [];
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
-    nvmesh = new NVMesh(gix, posNormClr, tris, name, colorMap, opacity, visible);
+    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
   } else {
     alert("Unable to load buffer properly from mesh");
   }
@@ -22714,6 +23018,7 @@ const Niivue = function(options = {}) {
   this.colormapTexture = null;
   this.volumeTexture = null;
   this.overlayTexture = null;
+  this.overlayTextureID = [];
   this.sliceShader = null;
   this.lineShader = null;
   this.renderShader = null;
@@ -22728,10 +23033,8 @@ const Niivue = function(options = {}) {
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
   this.meshShader = null;
-  this.meshIdxBufferCount = 0;
-  this.meshVtxBuffer = null;
-  this.meshVAO = null;
-  this.meshIdxBuffer = null;
+  this.genericVAO = null;
+  this.unusedVAO = null;
   this.crosshairs3D = null;
   this.pickingSurfaceShader = null;
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG;
@@ -22765,8 +23068,6 @@ const Niivue = function(options = {}) {
   this.overlays = [];
   this.volumes = [];
   this.meshes = [];
-  this.backTexture = [];
-  this.objectsToRender3D = [];
   this.volScaleMultiplier = 1;
   this.volScale = [];
   this.vox = [];
@@ -22788,6 +23089,7 @@ const Niivue = function(options = {}) {
   this.intensityRange$ = new Subject();
   this.scene.location$ = new Subject();
   this.scene.loading$ = new Subject();
+  this.imageLoaded$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -22796,6 +23098,32 @@ const Niivue = function(options = {}) {
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
+  this.meshShaders = [
+    {
+      Name: "Phong",
+      Frag: fragMeshShader
+    },
+    {
+      Name: "Matte",
+      Frag: fragMeshMatteShader
+    },
+    {
+      Name: "Harmonic",
+      Frag: fragMeshShaderSHBlue
+    },
+    {
+      Name: "Hemispheric",
+      Frag: fragMeshHemiShader
+    },
+    {
+      Name: "Outline",
+      Frag: fragMeshOutlineShader
+    },
+    {
+      Name: "Toon",
+      Frag: fragMeshToonShader
+    }
+  ];
   this.initialized = false;
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
@@ -22804,7 +23132,9 @@ const Niivue = function(options = {}) {
   log.setLogLevel(this.opts.logging);
   this.eventsToSubjects = {
     location: this.scene.location$,
-    loading: this.scene.loading$
+    loading: this.scene.loading$,
+    imageLoaded: this.imageLoaded$,
+    intensityRange: this.intensityRange$
   };
   this.subscriptions = [];
 };
@@ -22990,7 +23320,7 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.intensityRange$.next([mnScale, mxScale]);
+  this.intensityRange$.next(this.volumes[volIdx]);
 };
 Niivue.prototype.mouseUpListener = function() {
   this.scene.mousedown = false;
@@ -23048,6 +23378,7 @@ Niivue.prototype.resetBriCon = function() {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
+  this.intensityRange$.next(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -23190,11 +23521,28 @@ Niivue.prototype.addVolume = function(volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
+  this.imageLoaded$.next(volume);
+};
+Niivue.prototype.addMesh = function(mesh) {
+  this.meshes.push(mesh);
+  let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
+  this.setMesh(mesh, idx);
+  this.imageLoaded$.next(mesh);
 };
 Niivue.prototype.getVolumeIndexByID = function(id) {
   let n = this.volumes.length;
   for (let i = 0; i < n; i++) {
     let id_i = this.volumes[i].id;
+    if (id_i === id) {
+      return i;
+    }
+  }
+  return -1;
+};
+Niivue.prototype.getMeshIndexByID = function(id) {
+  let n = this.meshes.length;
+  for (let i = 0; i < n; i++) {
+    let id_i = this.meshes[i].id;
     if (id_i === id) {
       return i;
     }
@@ -23244,8 +23592,34 @@ Niivue.prototype.setVolume = function(volume, toIndex = 0) {
     log.debug(v.name);
   });
 };
+Niivue.prototype.setMesh = function(mesh, toIndex = 0) {
+  this.meshes.map((m) => {
+    log.debug("MESH: ", m.name);
+  });
+  let numberOfLoadedMeshes = this.meshes.length;
+  if (toIndex > numberOfLoadedMeshes) {
+    return;
+  }
+  let meshIndex = this.getMeshIndexByID(mesh.id);
+  if (toIndex === 0) {
+    this.meshes.splice(meshIndex, 1);
+    this.meshes.unshift(mesh);
+  } else if (toIndex < 0) {
+    this.meshes.splice(this.getMeshIndexByID(mesh.id), 1);
+  } else {
+    this.meshes.splice(meshIndex, 1);
+    this.meshes.splice(toIndex, 0, mesh);
+  }
+  this.updateGLVolume();
+  this.meshes.map((m) => {
+    log.debug(m.name);
+  });
+};
 Niivue.prototype.removeVolume = function(volume) {
   this.setVolume(volume, -1);
+};
+Niivue.prototype.removeMesh = function(mesh) {
+  this.setMesh(mesh, -1);
 };
 Niivue.prototype.moveVolumeToBottom = function(volume) {
   this.setVolume(volume, 0);
@@ -23387,12 +23761,7 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
     this.scene.loading$.next(true);
     let volume = await NVImage.loadFromUrl(volumeList[i].url, volumeList[i].name, volumeList[i].colorMap, volumeList[i].opacity, this.opts.trustCalMinMax);
     this.scene.loading$.next(false);
-    this.volumes.push(volume);
-    if (i === 0) {
-      this.back = volume;
-    }
-    this.overlays = this.volumes.slice(1);
-    this.updateGLVolume();
+    this.addVolume(volume);
   }
   return this;
 };
@@ -23413,12 +23782,33 @@ Niivue.prototype.loadMeshes = async function(meshList) {
   this.scene.loading$.next(false);
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl(meshList[i].url);
+    let mesh = await NVMesh.loadFromUrl(meshList[i].url, this.gl, meshList[i].name, meshList[i].colorMap, meshList[i].opacity, meshList[i].rgba255, meshList[i].visible);
     this.scene.loading$.next(false);
-    this.meshes.push(mesh);
-    this.updateGLVolume();
+    this.addMesh(mesh);
   }
-  console.log(this.meshes);
+  return this;
+};
+Niivue.prototype.loadConnectome = async function(json) {
+  this.on("loading", (isLoading) => {
+    if (isLoading) {
+      this.loadingText = "loading...";
+      this.drawScene();
+    } else {
+      this.loadingText = this.opts.loadingText;
+    }
+  });
+  if (!this.initialized)
+    ;
+  this.meshes = [];
+  this.gl.clearColor(0, 0, 0, 1);
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  this.scene.loading$.next(false);
+  for (let i = 0; i < 1; i++) {
+    this.scene.loading$.next(true);
+    let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
+    this.scene.loading$.next(false);
+    this.addMesh(mesh);
+  }
   return this;
 };
 Niivue.prototype.rgbaTex = function(texID, activeID, dims, isInit = false) {
@@ -23525,61 +23915,47 @@ Niivue.prototype.initText = async function() {
   await this.loadDefaultFont();
   this.drawLoadingText(this.loadingText);
 };
+Niivue.prototype.setMeshShader = function(meshShaderNameOrNumber = 2) {
+  this.gl.deleteProgram(this.meshShader.program);
+  let num = 0;
+  if (typeof meshShaderNameOrNumber === "number")
+    num = meshShaderNameOrNumber;
+  else {
+    let name = meshShaderNameOrNumber.toLowerCase();
+    for (var i = 0; i < this.meshShaders.length; i++) {
+      if (this.meshShaders[i].Name.toLowerCase() === name) {
+        num = i;
+        break;
+      }
+    }
+  }
+  num = Math.min(num, this.meshShaders.length - 1);
+  num = Math.max(num, 0);
+  this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[num].Frag);
+  this.updateGLVolume();
+};
+Niivue.prototype.meshShaderNames = function(sort = true) {
+  let cm = [];
+  for (var i = 0; i < this.meshShaders.length; i++)
+    cm.push(this.meshShaders[i].Name);
+  return sort === true ? cm.sort() : cm;
+};
 Niivue.prototype.init = async function() {
   let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
   let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
   let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
+  let shaders = this.meshShaderNames();
+  console.log("<<<", this.meshShaders[0].Frag);
+  console.log("::>>>", shaders);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
   this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
   this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
   this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
-  let vao = this.gl.createVertexArray();
-  this.gl.bindVertexArray(vao);
-  let clipPlaneVertices = new Float32Array([
-    0,
-    1,
-    0.5,
-    1,
-    1,
-    0.5,
-    1,
-    0,
-    0.5,
-    0,
-    1,
-    0.5,
-    1,
-    0,
-    0.5,
-    0,
-    0,
-    0.5
-  ]);
-  let vertexBuffer = this.gl.createBuffer();
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, clipPlaneVertices, this.gl.STATIC_DRAW);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  let cubeStrip = [
-    0,
-    1,
-    0,
-    1,
-    1,
-    0,
-    0,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    0,
-    1,
+  let rectStrip = [
     1,
     1,
     0,
@@ -23590,64 +23966,36 @@ Niivue.prototype.init = async function() {
     1,
     0,
     0,
-    0,
-    0,
-    0,
-    1,
-    1,
-    0,
-    0,
-    1,
-    1,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
     0,
     0
   ];
   this.cuboidVertexBuffer = this.gl.createBuffer();
   this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(cubeStrip), this.gl.STATIC_DRAW);
-  let vbo = this.gl.createBuffer();
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(cubeStrip), this.gl.STATIC_DRAW);
+  this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(rectStrip), this.gl.STATIC_DRAW);
+  this.genericVAO = this.gl.createVertexArray();
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-  this.volumeObject3D = new NiivueObject3D(this.VOLUME_ID, vbo, this.gl.TRIANGLE_STRIP, 14);
-  this.volumeObject3D.glFlags = this.volumeObject3D.BLEND | this.volumeObject3D.CULL_FACE | this.volumeObject3D.CULL_FRONT;
-  this.volumeObject3D.position = [0, 0, this.DISTANCE_FROM_CAMERA];
-  let pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
-  pickingShader.use(this.gl);
-  this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
-  this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
-  this.gl.uniform1i(pickingShader.uniforms["overlay"], 2);
-  pickingShader.mvpUniformName = "mvpMtx";
-  pickingShader.rayDirUniformName = "rayDir";
-  pickingShader.clipPlaneUniformName = "clipPlane";
-  this.volumeObject3D.pickingShader = pickingShader;
-  this.objectsToRender3D.push(this.volumeObject3D);
+  this.gl.bindVertexArray(this.unusedVAO);
+  this.pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
+  this.pickingShader.use(this.gl);
+  this.gl.uniform1i(this.pickingShader.uniforms["volume"], 0);
+  this.gl.uniform1i(this.pickingShader.uniforms["overlay"], 2);
+  this.pickingShader.mvpUniformLoc = this.pickingShader.uniforms["mvpMtx"];
+  this.pickingShader.rayDirUniformLoc = this.pickingShader.uniforms["rayDir"];
+  this.pickingShader.clipPlaneUniformLoc = this.pickingShader.uniforms["clipPlane"];
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
   this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
-  this.gl.uniform1i(this.sliceShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
-  this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
-  this.pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
-  let volumeRenderShader = new NiivueShader3D(this.renderShader);
-  volumeRenderShader.mvpUniformName = "mvpMtx";
-  volumeRenderShader.matRASUniformName = "matRAS";
-  volumeRenderShader.rayDirUniformName = "rayDir";
-  volumeRenderShader.clipPlaneUniformName = "clipPlane";
-  this.volumeObject3D.renderShaders.push(volumeRenderShader);
-  this.colorbarShader = new Shader(this.gl, vertColorbarShader, fragColorbarShader);
+  this.renderShader.mvpUniformLoc = this.renderShader.uniforms["mvpMtx"], this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"];
+  this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"], this.renderShader.clipPlaneUniformLoc = this.renderShader.uniforms["clipPlane"], this.colorbarShader = new Shader(this.gl, vertColorbarShader, fragColorbarShader);
   this.colorbarShader.use(this.gl);
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
   this.passThroughShader = new Shader(this.gl, vertPassThroughShader, fragPassThroughShader);
@@ -23658,11 +24006,7 @@ Niivue.prototype.init = async function() {
   this.orientShaderRGBU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
   this.pickingSurfaceShader = new Shader(this.gl, vertRenderShader, fragDepthPickingShader);
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
-  this.meshShader = new Shader(this.gl, vertMeshShader, fragMeshShader);
-  this.surfaceShader.use(this.gl);
-  this.gl.uniform4fv(this.surfaceShader.uniforms["surfaceColor"], this.opts.clipPlaneColor);
-  let clipPlaneShader = new NiivueShader3D(this.surfaceShader);
-  clipPlaneShader.mvpUniformName = "mvpMtx";
+  this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
   await this.initText();
   this.updateGLVolume();
   this.initialized = true;
@@ -23687,13 +24031,12 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let img = overlayItem.img;
   let opacity = overlayItem.opacity;
   let outTexture = null;
+  this.gl.bindVertexArray(this.unusedVAO);
   if (this.crosshairs3D !== null)
     this.crosshairs3D.mm[0] = NaN;
   let mtx = clone$1(overlayItem.toRAS);
   if (layer === 0) {
     this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
-    this.volumeObject3D.glFlags = this.volumeObject3D.CULL_FACE;
-    this.objectsToRender3D.splice(0, 1, this.volumeObject3D);
     invert(mtx, mtx);
     log.debug(`mtx layer ${layer}`, mtx);
     this.back.matRAS = overlayItem.matRAS;
@@ -23707,23 +24050,13 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.renderShader.use(this.gl);
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox2);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale2);
-    let volumeRenderShader = this.renderShader;
+    this.renderShader;
     let pickingShader = this.pickingShader;
-    volumeRenderShader.mvpUniformName = "mvpMtx";
-    volumeRenderShader.matRASUniformName = "matRAS";
-    volumeRenderShader.rayDirUniformName = "rayDir";
-    volumeRenderShader.clipPlaneUniformName = "clipPlane";
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
     this.gl.uniform1i(pickingShader.uniforms["overlay"], 2);
-    pickingShader.mvpUniformName = "mvpMtx";
-    pickingShader.rayDirUniformName = "rayDir";
-    pickingShader.clipPlaneUniformName = "clipPlane";
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale2);
-    if (this.volumeObject3D.pickingShader === null)
-      this.volumeObject3D.pickingShader = pickingShader;
-    this.volumeObject3D.renderShaders.push(volumeRenderShader);
     log.debug(this.volumeObject3D);
   } else {
     if (this.back.dims === void 0)
@@ -23739,9 +24072,9 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     invert(mtx, mtx);
     if (layer === 1) {
       outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back.dims);
-      this.backTexture = outTexture;
+      this.overlayTextureID = outTexture;
     } else
-      outTexture = this.backTexture;
+      outTexture = this.overlayTextureID;
   }
   let fb = this.gl.createFramebuffer();
   this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb);
@@ -23797,6 +24130,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     overlayItem.calMinMax();
   }
   let blendTexture = null;
+  this.gl.bindVertexArray(this.genericVAO);
   if (layer > 1) {
     blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims);
     this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
@@ -23807,7 +24141,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
       let coordZ = 1 / this.back.dims[3] * (i + 0.5);
       this.gl.uniform1f(passShader.uniforms["coordZ"], coordZ);
       this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, blendTexture, 0, i);
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
   } else
     blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
@@ -23841,14 +24175,14 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     let coordZ = 1 / this.back.dims[3] * (i + 0.5);
     this.gl.uniform1f(orientShader.uniforms["coordZ"], coordZ);
     this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, outTexture, 0, i);
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   }
+  this.gl.bindVertexArray(this.unusedVAO);
   this.gl.deleteTexture(tempTex3D);
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+  this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
   this.gl.deleteFramebuffer(fb);
-  this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
   this.renderShader.use(this.gl);
   let slicescl = this.sliceScale();
   let vox = slicescl.vox;
@@ -23859,29 +24193,12 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform4fv(this.renderShader.uniforms["clipPlane"], this.scene.clipPlane);
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
-  this.volumeObject3D.pickingShader.use(this.gl);
+  this.pickingShader.use(this.gl);
   this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
-  this.gl.uniform3fv(this.volumeObject3D.pickingShader.uniforms["texVox"], vox);
+  this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
+  this.sliceShader.use(this.gl);
+  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
   this.updateInterpolation(layer);
-  if (this.meshIdxBufferCount > 0)
-    return;
-  let posNormClr = [];
-  let tris = [];
-  {
-    if (this.meshes.length < 1) {
-      return;
-    }
-    posNormClr = this.meshes[0].posNormClr;
-    tris = this.meshes[0].tris;
-  }
-  this.meshIdxBuffer = this.gl.createBuffer();
-  this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
-  this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), this.gl.STATIC_DRAW);
-  this.meshVtxBuffer = this.gl.createBuffer();
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bufferData(this.gl.ARRAY_BUFFER, posNormClr, this.gl.STATIC_DRAW);
-  this.meshIdxBufferCount = tris.length;
-  this.meshVAO = this.gl.createVertexArray();
 };
 Niivue.prototype.colorMaps = function(sort = true) {
   let cm = [];
@@ -24038,7 +24355,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
-          values: this.volumes.map((v, index) => {
+          values: this.volumes.map((v) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
@@ -24064,7 +24381,7 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
-        values: this.volumes.map((v, index) => {
+        values: this.volumes.map((v) => {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
@@ -24089,7 +24406,9 @@ Niivue.prototype.drawSelectionBox = function(leftTopWidthHeight) {
     this.gl.canvas.height
   ]);
   this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.drawColorbar = function(leftTopWidthHeight) {
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0)
@@ -24104,7 +24423,9 @@ Niivue.prototype.drawColorbar = function(leftTopWidthHeight) {
     this.gl.canvas.height
   ]);
   this.gl.uniform4f(this.colorbarShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
 };
@@ -24124,14 +24445,11 @@ Niivue.prototype.drawChar = function(xy, scale, char) {
   let t = xy[1] + (b - h) + scale;
   this.gl.uniform4f(this.fontShader.uniforms["leftTopWidthHeight"], l, t, w, h);
   this.gl.uniform4fv(this.fontShader.uniforms["uvLeftTopWidthHeight"], metrics2.uv_lbwh);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   return scale * metrics2.xadv;
 };
 Niivue.prototype.drawLoadingText = function(text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.enable(this.gl.CULL_FACE);
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
   this.canvas.focus();
@@ -24148,8 +24466,10 @@ Niivue.prototype.drawText = function(xy, str, scale = 1) {
   screenPxRange = Math.max(screenPxRange, 1);
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
   var bytes = new TextEncoder().encode(str);
+  this.gl.bindVertexArray(this.genericVAO);
   for (let i = 0; i < str.length; i++)
     xy[0] += this.drawChar(xy, size, bytes[i]);
+  this.gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.drawTextRight = function(xy, str, scale = 1) {
   if (this.opts.textHeight <= 0)
@@ -24174,7 +24494,6 @@ Niivue.prototype.updateInterpolation = function(layer) {
     this.gl.activeTexture(this.gl.TEXTURE2);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
-  this.volumes.length;
 };
 Niivue.prototype.setAtlasOutline = function(isOutline) {
   this.opts.isAtlasOutline = isOutline;
@@ -24193,8 +24512,6 @@ Niivue.prototype.setInterpolation = function(isNearest) {
 };
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   var crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
@@ -24227,7 +24544,8 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
     leftTopWidthHeight[0] = leftTopWidthHeight[0] - leftTopWidthHeight[2];
   }
   this.gl.uniform4f(this.sliceShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.screenSlices[this.numScreenSlices].leftTopWidthHeight = leftTopWidthHeight;
   this.screenSlices[this.numScreenSlices].axCorSag = axCorSag;
   this.numScreenSlices += 1;
@@ -24241,10 +24559,11 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   ]);
   var xleft = leftTopWidthHeight[0] + leftTopWidthHeight[2] * crossXYZ[0];
   this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], xleft - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[1], this.opts.crosshairWidth, leftTopWidthHeight[3]);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   var xtop = leftTopWidthHeight[1] + leftTopWidthHeight[3] * (1 - crossXYZ[1]);
   this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], xtop - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[2], this.opts.crosshairWidth);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 5, 4);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
   this.gl.enable(this.gl.CULL_FACE);
   if (isMirrorLR)
     this.drawTextRight([
@@ -24268,7 +24587,7 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
     ], "S");
   this.sync();
 };
-Niivue.prototype.calculateMvpMatrix = function(object3D) {
+Niivue.prototype.calculateMvpMatrix = function() {
   function deg2rad(deg) {
     return deg * (Math.PI / 180);
   }
@@ -24324,199 +24643,95 @@ Niivue.prototype.calculateRayDirection = function() {
   return rayDir;
 };
 Niivue.prototype.draw3D = function() {
-  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  let gl = this.gl;
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   let mvpMatrix, modelMatrix, normalMatrix;
   [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(this.volumeObject3D);
   const rayDir = this.calculateRayDirection();
+  let object3D = this.volumeObject3D;
   if (this.scene.mouseDepthPicker) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.scene.mouseDepthPicker = false;
-    for (const object3D of this.objectsToRender3D) {
-      if (!object3D.isVisible || !object3D.isPickable) {
-        continue;
-      }
-      let pickingShader = object3D.pickingShader ? object3D.pickingShader : this.pickingSurfaceShader;
-      pickingShader.use(this.gl);
-      if (object3D.glFlags & object3D.CULL_FACE) {
-        this.gl.enable(this.gl.CULL_FACE);
-        if (object3D.glFlags & object3D.CULL_FRONT) {
-          this.gl.cullFace(this.gl.FRONT);
-        } else {
-          this.gl.cullFace(this.gl.FRONT);
-        }
-      } else {
-        this.gl.disable(this.gl.CULL_FACE);
-      }
-      this.gl.uniformMatrix4fv(pickingShader.uniforms["mvpMtx"], false, mvpMatrix);
-      if (pickingShader.rayDirUniformName) {
-        let rayDir2 = this.calculateRayDirection();
-        this.gl.uniform3fv(pickingShader.uniforms[pickingShader.rayDirUniformName], rayDir2);
-      }
-      if (pickingShader.clipPlaneUniformName) {
-        this.gl.uniform4fv(pickingShader.uniforms["clipPlane"], this.scene.clipPlane);
-      }
-      this.gl.uniform1i(pickingShader.uniforms["id"], object3D.id);
-      this.gl.enableVertexAttribArray(0);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-      this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-      if (object3D.textureCoordinateBuffer) {
-        this.gl.enableVertexAttribArray(1);
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
-        this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
-      } else {
-        this.gl.disableVertexAttribArray(1);
-      }
-      if (object3D.indexBuffer) {
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
-      }
-      if (object3D.glFlags & object3D.CULL_FACE) {
-        this.gl.enable(this.gl.CULL_FACE);
-        if (object3D.glFlags & object3D.CULL_FRONT) {
-          this.gl.cullFace(this.gl.FRONT);
-        } else {
-          this.gl.cullFace(this.gl.FRONT);
-        }
-      } else {
-        this.gl.disable(this.gl.CULL_FACE);
-      }
-      if (object3D.mode === this.gl.TRIANGLE_STRIP) {
-        continue;
-      }
-      this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
+    if (object3D.isVisible && object3D.isPickable) {
+      let shader = this.pickingShader;
+      shader.use(this.gl);
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.FRONT);
+      gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
+      gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
+      gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
+      gl.uniform1i(shader.uniforms["id"], object3D.id);
+      gl.bindVertexArray(object3D.vao);
+      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+      gl.bindVertexArray(this.unusedVAO);
     }
-    const pixelX = this.mousePos[0] * this.gl.canvas.width / this.gl.canvas.clientWidth;
-    const pixelY = this.gl.canvas.height - this.mousePos[1] * this.gl.canvas.height / this.gl.canvas.clientHeight - 1;
+    const pixelX = this.mousePos[0] * gl.canvas.width / gl.canvas.clientWidth;
+    const pixelY = gl.canvas.height - this.mousePos[1] * gl.canvas.height / gl.canvas.clientHeight - 1;
     const rgbaPixel = new Uint8Array(4);
-    this.gl.readPixels(pixelX, pixelY, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, rgbaPixel);
-    this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+    gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgbaPixel);
     this.selectedObjectId = rgbaPixel[3];
     if (this.selectedObjectId === this.VOLUME_ID) {
       this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
     }
-    if (rgbaPixel[3] === 253) {
-      let clipXYZ = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255);
-      console.log(this.scene.clipPlaneDepthAziElev[0], "User clicked on the clip plane at " + clipXYZ);
-      this.scene.clipPlaneDepthAziElev[0] = this.scene.clipPlaneDepthAziElev[0] - 0.1;
-      if (this.scene.clipPlaneDepthAziElev[0] <= -0.4)
-        this.scene.clipPlaneDepthAziElev[0] = 0.4;
-      this.setClipPlane(this.scene.clipPlaneDepthAziElev);
-    }
   }
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-  for (const object3D of this.objectsToRender3D) {
-    if (!object3D.isVisible) {
-      continue;
-    }
-    this.gl.enableVertexAttribArray(0);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.vertexBuffer);
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
-    if (object3D.textureCoordinateBuffer) {
-      this.gl.enableVertexAttribArray(1);
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, object3D.textureCoordinateBuffer);
-      this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
-    }
-    if (object3D.indexBuffer) {
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, object3D.indexBuffer);
-    }
-    if (object3D.BLEND) {
-      this.gl.enable(this.gl.BLEND);
-      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-    } else {
-      this.gl.disable(this.gl.BLEND);
-    }
-    if (object3D.glFlags & object3D.CULL_FACE) {
-      this.gl.enable(this.gl.CULL_FACE);
-      if (object3D.glFlags & object3D.CULL_FRONT) {
-        this.gl.cullFace(this.gl.FRONT);
-      } else {
-        this.gl.cullFace(this.gl.FRONT);
-      }
-    } else {
-      this.gl.disable(this.gl.CULL_FACE);
-    }
-    for (const shader of object3D.renderShaders) {
-      shader.use(this.gl);
-      if (shader.mvpUniformName) {
-        this.gl.uniformMatrix4fv(shader.uniforms[shader.mvpUniformName], false, mvpMatrix);
-      }
-      if (shader.matRASUniformName) {
-        this.gl.uniformMatrix4fv(shader.uniforms[shader.matRASUniformName], false, this.back.matRAS);
-      }
-      if (shader.rayDirUniformName) {
-        this.gl.uniform3fv(shader.uniforms[shader.rayDirUniformName], rayDir);
-      }
-      if (shader.clipPlaneUniformName) {
-        this.gl.uniform4fv(shader.uniforms["clipPlane"], this.scene.clipPlane);
-      }
-      this.gl.drawElements(object3D.mode, object3D.indexCount, this.gl.UNSIGNED_SHORT, 0);
-    }
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  if (this.volumeObject3D.isVisible) {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.FRONT);
+    let shader = this.renderShader;
+    shader.use(this.gl);
+    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
+    gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
+    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
+    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
+    gl.bindVertexArray(object3D.vao);
+    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+    gl.bindVertexArray(this.unusedVAO);
   }
   this.drawCrosshairs3D(true, 1);
-  this.drawMesh3D(false, 0.35);
   this.drawMesh3D(true, 1);
   this.drawCrosshairs3D(false, 0.35);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
   this.sync();
   return posString;
 };
 Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
-  if (this.meshIdxBufferCount < 3)
+  if (this.meshes.length < 1)
     return;
   let gl = this.gl;
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
   gl.enable(gl.DEPTH_TEST);
-  [...this.opts.crosshairColor];
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   if (isDepthTest) {
+    gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    gl.depthFunc(gl.LESS);
     gl.depthFunc(gl.GREATER);
   } else {
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
-  this.gl.bindVertexArray(this.meshVAO);
-  this.gl.enableVertexAttribArray(this.meshVAO);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 28, 0);
-  this.gl.enableVertexAttribArray(1);
-  this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 28, 12);
-  this.gl.enableVertexAttribArray(2);
-  this.gl.vertexAttribPointer(2, 4, this.gl.UNSIGNED_BYTE, true, 28, 24);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bindBuffer(gl.ARRAY_BUFFER, this.meshVtxBuffer);
-  this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.meshIdxBuffer);
-  this.gl.disable(this.gl.CULL_FACE);
+  gl.disable(gl.CULL_FACE);
   this.meshShader.use(this.gl);
-  this.calculateRayDirection();
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
-  this.gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
-  this.gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
-  this.gl.drawElements(gl.TRIANGLES, this.meshIdxBufferCount, this.gl.UNSIGNED_INT, 0);
-  this.gl.disableVertexAttribArray(this.meshVAO);
-  this.gl.enable(this.gl.CULL_FACE);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.depthFunc(gl.ALWAYS);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
+  gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
+  for (let i = 0; i < this.meshes.length; i++) {
+    if (this.meshes[i].indexCount < 3)
+      continue;
+    gl.bindVertexArray(this.meshes[i].vao);
+    gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
+    gl.bindVertexArray(this.unusedVAO);
+  }
 };
 Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
-  if (!this.opts.show3Dcrosshair) {
+  if (!this.opts.show3Dcrosshair)
     return;
-  }
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
   if (this.crosshairs3D === null || this.crosshairs3D.mm[0] !== mm[0] || this.crosshairs3D.mm[1] !== mm[1] || this.crosshairs3D.mm[2] !== mm[2]) {
@@ -24526,26 +24741,13 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
     }
     let radius = Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3]);
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, this.volumeObject3D.extentsMin, this.volumeObject3D.extentsMax, radius);
-    this.crosshairs3D.isPickable = false;
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
     this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
     this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
   }
-  let crosshairsShader = new NiivueShader3D(this.surfaceShader);
-  crosshairsShader.mvpUniformName = "mvpMtx";
-  this.crosshairs3D.renderShaders.push(crosshairsShader);
-  {
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize2 = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.crosshairs3D.vertexBuffer);
-    gl.vertexAttribPointer(this.surfaceShader.uniforms["pos"], numComponents, type, normalize2, stride, offset);
-    gl.enableVertexAttribArray(this.surfaceShader.uniforms["pos"]);
-  }
+  let crosshairsShader = this.surfaceShader;
   crosshairsShader.use(this.gl);
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
@@ -24556,26 +24758,16 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
-    color[3] = alpha;
   } else {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
-    color[3] = alpha;
   }
+  color[3] = alpha;
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
-  {
-    const vertexCount = this.crosshairs3D.indexCount;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.depthFunc(gl.ALWAYS);
-  this.gl.enableVertexAttribArray(0);
-  this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer);
-  this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(this.crosshairs3D.vao);
+  gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_SHORT, 0);
+  gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);
