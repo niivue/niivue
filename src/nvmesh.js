@@ -3,7 +3,7 @@ import * as pako from "pako";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
-import { NiivueObject3D } from "./niivue-object3D.js";//n.b. used by connectome
+import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
 const log = new Log();
 
 /**
@@ -487,7 +487,6 @@ NVMesh.loadFromUrl = async function (
   let response = await fetch(url);
 
   let nvmesh = null;
-  console.log(colorMap, "::>", rgba255);
   if (!response.ok) {
     throw Error(response.statusText);
   }
@@ -592,7 +591,6 @@ NVMesh.loadFromUrl = async function (
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  console.log("::", rgba255);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
     nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);

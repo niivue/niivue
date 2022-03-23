@@ -17,6 +17,11 @@ import {
   fragRGBOrientShader,
   vertMeshShader,
   fragMeshShader,
+  fragMeshToonShader,
+  fragMeshOutlineShader,
+  fragMeshHemiShader,
+  fragMeshMatteShader,
+  fragMeshShaderSHBlue,
   vertSurfaceShader,
   fragSurfaceShader,
   fragDepthPickingShader,
@@ -174,6 +179,32 @@ export const Niivue = function (options = {}) {
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
+  this.meshShaders = [
+    {
+      Name: "Phong",
+      Frag: fragMeshShader,
+    },
+    {
+      Name: "Matte",
+      Frag: fragMeshMatteShader,
+    },
+    {
+      Name: "Harmonic",
+      Frag: fragMeshShaderSHBlue,
+    },
+    {
+      Name: "Hemispheric",
+      Frag: fragMeshHemiShader,
+    },
+    {
+      Name: "Outline",
+      Frag: fragMeshOutlineShader,
+    },
+    {
+      Name: "Toon",
+      Frag: fragMeshToonShader,
+    },
+  ];
 
   this.initialized = false;
   // loop through known Niivue properties
@@ -1579,6 +1610,37 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
+Niivue.prototype.setMeshShader = function (meshShaderNameOrNumber = 2) {
+  //Niivue.prototype.setMeshShader = function (name) {
+  this.gl.deleteProgram(this.meshShader.program);
+  let num = 0;
+  if (typeof meshShaderNameOrNumber === "number") num = meshShaderNameOrNumber;
+  else {
+    let name = meshShaderNameOrNumber.toLowerCase();
+    for (var i = 0; i < this.meshShaders.length; i++) {
+      if (this.meshShaders[i].Name.toLowerCase() === name) {
+        num = i;
+        break;
+      }
+    }
+  }
+  num = Math.min(num, this.meshShaders.length - 1);
+  num = Math.max(num, 0);
+  this.meshShader = new Shader(
+    this.gl,
+    vertMeshShader,
+    this.meshShaders[num].Frag
+  );
+  this.updateGLVolume();
+};
+
+Niivue.prototype.meshShaderNames = function (sort = true) {
+  let cm = [];
+  for (var i = 0; i < this.meshShaders.length; i++)
+    cm.push(this.meshShaders[i].Name);
+  return sort === true ? cm.sort() : cm;
+};
+
 // not included in public docs
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
@@ -1589,7 +1651,10 @@ Niivue.prototype.init = async function () {
   // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
-
+  let shaders = this.meshShaderNames();
+  //for (var i = 0; i < this.meshShaders.length; i++)
+  console.log("<<<", this.meshShaders[0].Frag);
+  console.log("::>>>", shaders);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -1600,10 +1665,18 @@ Niivue.prototype.init = async function () {
   this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
 
   let rectStrip = [
-    1, 1, 0, //RAI
-    1, 0, 0, //RPI
-    0, 1, 0, //LAI
-    0, 0, 0, //LPI
+    1,
+    1,
+    0, //RAI
+    1,
+    0,
+    0, //RPI
+    0,
+    1,
+    0, //LAI
+    0,
+    0,
+    0, //LPI
   ];
 
   this.cuboidVertexBuffer = this.gl.createBuffer();
@@ -1633,7 +1706,8 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.pickingShader.uniforms["overlay"], 2);
   this.pickingShader.mvpUniformLoc = this.pickingShader.uniforms["mvpMtx"];
   this.pickingShader.rayDirUniformLoc = this.pickingShader.uniforms["rayDir"];
-  this.pickingShader.clipPlaneUniformLoc = this.pickingShader.uniforms["clipPlane"];
+  this.pickingShader.clipPlaneUniformLoc =
+    this.pickingShader.uniforms["clipPlane"];
   // slice shader
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
@@ -1649,17 +1723,17 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
   //this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
-  this.renderShader.mvpUniformLoc = this.renderShader.uniforms["mvpMtx"],
-  this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"];
-  this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"],
-  this.renderShader.clipPlaneUniformLoc = this.renderShader.uniforms["clipPlane"],
-
-  // colorbar shader
-  this.colorbarShader = new Shader(
-    this.gl,
-    vertColorbarShader,
-    fragColorbarShader
-  );
+  (this.renderShader.mvpUniformLoc = this.renderShader.uniforms["mvpMtx"]),
+    (this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"]);
+  (this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"]),
+    (this.renderShader.clipPlaneUniformLoc =
+      this.renderShader.uniforms["clipPlane"]),
+    // colorbar shader
+    (this.colorbarShader = new Shader(
+      this.gl,
+      vertColorbarShader,
+      fragColorbarShader
+    ));
   this.colorbarShader.use(this.gl);
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
 
@@ -1711,7 +1785,11 @@ Niivue.prototype.init = async function () {
   );
 
   //mesh
-  this.meshShader = new Shader(this.gl, vertMeshShader, fragMeshShader);
+  this.meshShader = new Shader(
+    this.gl,
+    vertMeshShader,
+    this.meshShaders[0].Frag
+  );
   await this.initText();
   this.updateGLVolume();
   this.initialized = true;
@@ -2581,10 +2659,8 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
 Niivue.prototype.updateInterpolation = function (layer) {
   let interp = this.gl.LINEAR;
   if (this.opts.isNearestInterpolation) interp = this.gl.NEAREST;
-  if (layer === 0)
-    this.gl.activeTexture(this.gl.TEXTURE0); //background
-  else
-    this.gl.activeTexture(this.gl.TEXTURE2);
+  if (layer === 0) this.gl.activeTexture(this.gl.TEXTURE0); //background
+  else this.gl.activeTexture(this.gl.TEXTURE2);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
 };
@@ -2873,12 +2949,12 @@ Niivue.prototype.draw3D = function () {
     //start PICKING: picking shader and reading values is slow
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.scene.mouseDepthPicker = false;
-    if (object3D.isVisible && object3D.isPickable){
+    if (object3D.isVisible && object3D.isPickable) {
       let shader = this.pickingShader;
       shader.use(this.gl);
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-      gl.uniformMatrix4fv(shader.mvpUniformLoc,false,mvpMatrix);
+      gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
       gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
       gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
       gl.uniform1i(shader.uniforms["id"], object3D.id);
@@ -2917,10 +2993,10 @@ Niivue.prototype.draw3D = function () {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-    let shader = this.renderShader;//.use(this.gl);
+    let shader = this.renderShader; //.use(this.gl);
     shader.use(this.gl);
-    gl.uniformMatrix4fv(shader.mvpUniformLoc,false,mvpMatrix);
-    gl.uniformMatrix4fv(shader.mvpMatRASLoc,false,this.back.matRAS);
+    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
+    gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
     gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
     gl.bindVertexArray(object3D.vao);
@@ -2929,7 +3005,7 @@ Niivue.prototype.draw3D = function () {
   }
 
   this.drawCrosshairs3D(true, 1.0);
-  this.drawMesh3D(false, 0.35);
+  //this.drawMesh3D(false, 0.35);
   this.drawMesh3D(true, 1.0);
   this.drawCrosshairs3D(false, 0.35);
   let posString =
