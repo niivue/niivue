@@ -217,7 +217,6 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
     u8[u + 2] = rgba255[c + 2];
     u8[u + 3] = rgba255[c + 3];
     if (isPerVertexColors) c += 4;
-    //if (i > 13500) f32[j+6] = f32rgba1[0]
     p += 3; //read 3 input components: XYZ
     f += 7; //write 7 output components: 3*Position, 3*Normal, 1*RGBA
     u += 28; //stride of 28 bytes
@@ -225,11 +224,175 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
   return f32;
 };
 
+NVMesh.readTxtVTK = function (buffer) {
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  var lines = txt.split("\n");
+  var n = lines.length;
+  if (n < 7 || !lines[0].startsWith("# vtk DataFile"))
+    alert("Invalid VTK image");
+  if (!lines[2].startsWith("ASCII")) alert("Not ASCII VTK mesh");
+  let pos = 3;
+  while (lines[pos].length < 1) pos++; //skip blank lines
+  if (!lines[pos].includes("POLYDATA")) alert("Not ASCII VTK polydata");
+  pos++;
+  while (lines[pos].length < 1) pos++; //skip blank lines
+  if (!lines[pos].startsWith("POINTS")) alert("Not VTK POINTS");
+  let items = lines[pos].split(" ");
+  let nvert = parseInt(items[1]); //POINTS 10261 float
+  let nvert3 = nvert * 3;
+  var positions = new Float32Array(nvert * 3);
+  let v = 0;
+  while (v < nvert * 3) {
+    pos++;
+    let str = lines[pos].trim();
+    let pts = str.split(" ");
+    for (let i = 0; i < pts.length; i++) {
+      if (v >= nvert3) break;
+      positions[v] = parseFloat(pts[i]);
+      v++;
+    }
+  }
+  let tris = [];
+  pos++;
+  while (lines[pos].length < 1) pos++; //skip blank lines
+  items = lines[pos].split(" ");
+  pos++;
+  if (items[0].includes("TRIANGLE_STRIPS")) {
+    let nstrip = parseInt(items[1]);
+    for (let i = 0; i < nstrip; i++) {
+      let str = lines[pos].trim();
+      pos++;
+      let vs = str.split(" ");
+      let ntri = parseInt(vs[0]) - 2; //-2 as triangle strip is creates pts - 2 faces
+      let k = 1;
+      for (let t = 0; t < ntri; t++) {
+        if (t % 2) {
+          // preserve winding order
+          tris.push(parseInt(vs[k + 2]));
+          tris.push(parseInt(vs[k + 1]));
+          tris.push(parseInt(vs[k]));
+        } else {
+          tris.push(parseInt(vs[k]));
+          tris.push(parseInt(vs[k + 1]));
+          tris.push(parseInt(vs[k + 2]));
+        }
+        k += 1;
+      } //for each triangle
+    } //for each strip
+  } else if (items[0].includes("POLYGONS")) {
+    let npoly = parseInt(items[1]);
+    for (let i = 0; i < npoly; i++) {
+      let str = lines[pos].trim();
+      pos++;
+      let vs = str.split(" ");
+      let ntri = parseInt(vs[0]) - 2; //e.g. 3 for triangle
+      let fx = parseInt(vs[1]);
+      let fy = parseInt(vs[2]);
+      for (let t = 0; t < ntri; t++) {
+        let fz = parseInt(vs[3 + t]);
+        tris.push(fx);
+        tris.push(fy);
+        tris.push(fz);
+        fy = fz;
+      }
+    }
+  } else alert("Unsupported ASCII VTK datatype ", items[0]);
+  var indices = new Int32Array(tris);
+  return {
+    positions,
+    indices,
+  };
+}; // readTxtVTK()
+
+NVMesh.readVTK = function (buffer) {
+  let len = buffer.byteLength;
+  if (len < 20)
+    throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr(); //1st line: signature
+  if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
+  line = readStr(); //2nd line comment
+  line = readStr(); //3rd line ASCII/BINARY
+  if (line.startsWith("ASCII")) return this.readTxtVTK(buffer);
+  else if (!line.startsWith("BINARY"))
+    alert("Invalid VTK image, expected ASCII or BINARY", line);
+  line = readStr(); //5th line "DATASET POLYDATA"
+  if (!line.includes("POLYDATA")) alert("Only able to read VTK POLYDATA", line);
+  line = readStr(); //6th line "POINTS 10261 float"
+  if (!line.includes("POINTS") || !line.includes("float"))
+    alert("Only able to read VTK float POINTS", line);
+  let items = line.split(" ");
+  let nvert = parseInt(items[1]); //POINTS 10261 float
+  let nvert3 = nvert * 3;
+  var positions = new Float32Array(nvert3);
+  var reader = new DataView(buffer);
+  for (let i = 0; i < nvert3; i++) {
+    positions[i] = reader.getFloat32(pos, false);
+    pos += 4;
+  }
+  line = readStr();
+  items = line.split(" ");
+  let tris = [];
+  if (items[0].includes("TRIANGLE_STRIPS")) {
+    let nstrip = parseInt(items[1]);
+    for (let i = 0; i < nstrip; i++) {
+      let ntri = reader.getInt32(pos, false) - 2; //-2 as triangle strip is creates pts - 2 faces
+      pos += 4;
+      for (let t = 0; t < ntri; t++) {
+        if (t % 2) {
+          // preserve winding order
+          tris.push(reader.getInt32(pos + 8, false));
+          tris.push(reader.getInt32(pos + 4, false));
+          tris.push(reader.getInt32(pos, false));
+        } else {
+          tris.push(reader.getInt32(pos, false));
+          tris.push(reader.getInt32(pos + 4, false));
+          tris.push(reader.getInt32(pos + 8, false));
+        }
+        pos += 4;
+      } //for each triangle
+      pos += 8;
+    } //for each strip
+  } else if (items[0].includes("POLYGONS")) {
+    let npoly = parseInt(items[1]);
+    for (let i = 0; i < npoly; i++) {
+      let ntri = reader.getInt32(pos, false) - 2; //3 for single triangle, 4 for 2 triangles
+      pos += 4;
+      let fx = reader.getInt32(pos, false);
+      pos += 4;
+      let fy = reader.getInt32(pos, false);
+      pos += 4;
+      for (let t = 0; t < ntri; t++) {
+        let fz = reader.getInt32(pos, false);
+        pos += 4;
+        tris.push(fx);
+        tris.push(fy);
+        tris.push(fz);
+        fy = fz;
+      } //for each triangle
+    } //for each polygon
+  } else alert("Unsupported ASCII VTK datatype ", items[0]);
+  var indices = new Int32Array(tris);
+  return {
+    positions,
+    indices,
+  };
+}; // readVTK()
+
 NVMesh.readMZ3 = function (buffer) {
-  //NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
   if (buffer.byteLength < 20)
     //76 for raw, not sure of gzip
-    throw new Error("File to small to be mz3: bytes = " + buffer.byteLength);
+    throw new Error("File too small to be mz3: bytes = " + buffer.byteLength);
   var reader = new DataView(buffer);
   //get number of vertices and faces
   var magic = reader.getUint16(0, true);
@@ -329,6 +492,36 @@ NVMesh.readMZ3 = function (buffer) {
     indices,
     uv2,
     colors,
+  };
+}; // readMZ3()
+
+NVMesh.readSTL = function (buffer) {
+  if (buffer.byteLength < 80 + 4 + 50)
+    throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
+  var reader = new DataView(buffer);
+  let sig = reader.getUint32(80, true);
+  if (sig === 1768714099)
+    throw new Error("Only able to read binary (not ASCII) STL files.");
+  var ntri = reader.getUint32(80, true);
+  let ntri3 = 3 * ntri;
+  if (buffer.byteLength < 80 + 4 + ntri * 50)
+    throw new Error("STL file too small to store triangles = ", ntri);
+  var indices = new Int32Array(ntri3);
+  var positions = new Float32Array(ntri3 * 3);
+  let pos = 80 + 4 + 12;
+  let v = 0; //vertex
+  for (var i = 0; i < ntri; i++) {
+    for (var j = 0; j < 9; j++) {
+      positions[v] = reader.getFloat32(pos, true);
+      v += 1;
+      pos += 4;
+    }
+    pos += 14; //50 bytes for triangle, only 36 used for position
+  }
+  for (var i = 0; i < ntri3; i++) indices[i] = i;
+  return {
+    positions,
+    indices,
   };
 };
 
@@ -497,9 +690,18 @@ NVMesh.loadFromUrl = async function (
   var pts = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "MZ3") {
+  if (ext.toUpperCase() === "STL") {
     let buffer = await response.arrayBuffer();
-    //use Three.JS reader, could be simplified by using native types
+    let obj = this.readSTL(buffer);
+    pts = obj.positions.slice();
+    tris = obj.indices.slice();
+  } else if (ext.toUpperCase() === "VTK") {
+    let buffer = await response.arrayBuffer();
+    let obj = this.readVTK(buffer);
+    pts = obj.positions.slice();
+    tris = obj.indices.slice();
+  } else if (ext.toUpperCase() === "MZ3") {
+    let buffer = await response.arrayBuffer();
     let obj = this.readMZ3(buffer);
     pts = obj.positions.slice();
     tris = obj.indices.slice();
@@ -517,7 +719,7 @@ NVMesh.loadFromUrl = async function (
       }
     } //colors
   } else if (ext.toUpperCase() === "OBJ") {
-    //GIFTI
+    //WaveFront OBJ format
     let txt = await response.text();
     var lines = txt.split("\n");
     var n = lines.length;
@@ -543,7 +745,6 @@ NVMesh.loadFromUrl = async function (
       }
       tris = new Int32Array(t);
     } //for all lines
-    log.debug(">>>", tris);
   } else if (ext.toUpperCase() === "GII") {
     //GIFTI
     let xmlStr = await response.text();

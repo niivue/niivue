@@ -2,7 +2,7 @@
 
 NiiVue is a WebGL 2.0 medical image viewer. This repository contains the **core NiiVue package**. We have additional projects under development that will demonstrate a [web-based user interface implementation](https://github.com/niivue/niivue-ui), and a [desktop application](https://github.com/niivue/niivue-desktop) built using web technologies.
 
-The NiiVue package is intented to be used by individuals developing interactive web pages related to showing [nifti](https://nifti.nimh.nih.gov) images. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our [web-based user interface implementation](https://github.com/niivue/niivue-ui) (under development) will demonstrate how to integrate NiiVue into a more comprehensive [VueJS](https://vuejs.org/) UI.  
+The NiiVue package is intented to be used by individuals developing interactive web pages related to showing [nifti](https://nifti.nimh.nih.gov) and other formats popular in neuroimaging. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our [web-based user interface implementation](https://github.com/niivue/niivue-ui) (under development) will demonstrate how to integrate NiiVue into a more comprehensive [VueJS](https://vuejs.org/) UI.  
 
 # Getting started Docs and References
 
@@ -147,6 +147,7 @@ const NiiVue = ({ imageUrl }) => {
 # Core Libraries
 
 - [shader.js source](https://github.com/Twinklebear/webgl-util)
+- [GIFTI-Reader-JS source](https://github.com/rii-mango/GIFTI-Reader-JS)
 - [NIFTI-Reader-JS source](https://github.com/rii-mango/NIFTI-Reader-JS)
 - [glMatrix](https://glmatrix.net/)
 
@@ -155,22 +156,29 @@ const NiiVue = ({ imageUrl }) => {
 - 2021-2022
   - P50 DC014664/DC/NIDCD NIH HHS/United States
 
+# Supported Formats
+
+NiiVue can open several formats popular with brain imaging:
+
+ - Voxel-based formats: [NIfTI](https://brainder.org/2012/09/23/the-nifti-file-format/), [NRRD](http://teem.sourceforge.net/nrrd/format.html), [AFNI HEAD/BRIK](https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html).
+ - Mesh-based formats: [FreeSurfer](http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm), [GIfTI](https://www.nitrc.org/projects/gifti/), [MZ3](https://github.com/neurolabusc/surf-ice/tree/master/mz3), [Wavefront OBJ](https://brainder.org/tag/obj/), [STL](https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45), [Legacy VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf).
+
 # Alternatives
 
 There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is its use of WebGL 2.0, MRIcroGL inspired shaders, and its minimal design. This makes it easy to integrate with existing web pages quicky in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does **not** use [three.js](https://threejs.org). This means the WebGL calls are tuned for voxel display, and the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, niivue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets. However, there are popular UI frameworks such as [Vuetifyjs](https://vuetifyjs.com/en/) that greatly reduce this burden. Since there are numerous free alternatives, you can choose the optimal tool for your task.
 [Francesco Giorlando](https://f.giorlando.org/2018/07/web-viewers-for-fmri/) describes some of the differences between different tools.
 
-
 | Tool                                                                     | Live Demos                                                         |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | [AMI](https://github.com/FNNDSC/ami)                                     | [live demo](https://fnndsc.github.io/ami/)                         |
-| [BioImage Suite Web Project](https://github.com/bioimagesuiteweb/bisweb) | [live demo](https://bioimagesuiteweb.github.io/webapp/viewer.html) | 
-|  [BrainBrowser](https://brainbrowser.cbrain.mcgill.ca/)                  | [live demo](https://brainbrowser.cbrain.mcgill.ca/volume-viewer)   | 
-|  [nifti-drop](https://github.com/vsoch/nifti-drop)                       | [live demo](http://vsoch.github.io/nifti-drop)                     | 
-|  [Med3web](https://lifescience.opensource.epam.com/mri/)                 | [live demo](https://med3web.opensource.epam.com/)                  | 
-|  [MRIcroWeb](https://github.com/rordenlab/MRIcroWeb)                     | [live demo](https://rordenlab.github.io)                           |  
-|  [Papaya](https://github.com/rii-mango/Papaya)                           | [live demo](https://papaya.greenant.net/)                          | 
-|  [VTK.js](https://github.com/Kitware/vtk-js)                             | [live demo](https://kitware.github.io/paraview-glance/app/)        | 
+| [BioImage Suite Web Project](https://github.com/bioimagesuiteweb/bisweb) | [live demo](https://bioimagesuiteweb.github.io/webapp/viewer.html) |
+| [BrainBrowser](https://brainbrowser.cbrain.mcgill.ca/)                   | [live demo](https://brainbrowser.cbrain.mcgill.ca/volume-viewer)   |
+| [nifti-drop](https://github.com/vsoch/nifti-drop)                        | [live demo](http://vsoch.github.io/nifti-drop)                     |
+| [Med3web](https://lifescience.opensource.epam.com/mri/)                  | [live demo](https://med3web.opensource.epam.com/)                  |
+| [MRIcroWeb](https://github.com/rordenlab/MRIcroWeb)                      | [live demo](https://rordenlab.github.io)                           |
+| [Papaya](https://github.com/rii-mango/Papaya)                            | [live demo](https://papaya.greenant.net/)                          |
+| [VTK.js](https://github.com/Kitware/vtk-js)                              | [live demo](https://kitware.github.io/paraview-glance/app/)        |
+| [slicedrop](https://github.com/slicedrop/slicedrop.github.com)           | [live demo](https://slicedrop.com/)                                |
 
 # Development
 

@@ -854,6 +854,7 @@ Niivue.prototype.dropListener = async function (e) {
 
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
+  //TODO: handle meshes (obj, mz3, gii, stl, pial, vtk) and volumes (nii, nii.gz, nrrd)
   if (url) {
     let volume = await NVImage.loadFromUrl(url);
     this.setVolume(volume);
@@ -1320,6 +1321,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       volumeList[i].name,
       volumeList[i].colorMap,
       volumeList[i].opacity,
+      volumeList[i].urlImgData,
       this.opts.trustCalMinMax
     );
     this.scene.loading$.next(false);
@@ -1378,7 +1380,7 @@ Niivue.prototype.loadMeshes = async function (meshList) {
     //this.meshes.push(mesh);
     //this.updateGLVolume();
   } // for
-  //console.log(this.meshes);
+  this.drawScene();
   return this;
 }; // loadMeshes
 
@@ -1407,7 +1409,7 @@ Niivue.prototype.loadConnectome = async function (json) {
     //this.meshes.push(mesh);
     //this.updateGLVolume();
   } // for
-  //console.log(this.meshes);
+  this.drawScene();
   return this;
 }; // loadMeshes
 
@@ -1651,10 +1653,6 @@ Niivue.prototype.init = async function () {
   // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
-  let shaders = this.meshShaderNames();
-  //for (var i = 0; i < this.meshShaders.length; i++)
-  console.log("<<<", this.meshShaders[0].Frag);
-  console.log("::>>>", shaders);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
