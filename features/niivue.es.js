@@ -415,6 +415,25 @@ function orthoNO(out, left, right, bottom, top, near, far) {
   return out;
 }
 var ortho = orthoNO;
+function multiplyScalar(out, a, b) {
+  out[0] = a[0] * b;
+  out[1] = a[1] * b;
+  out[2] = a[2] * b;
+  out[3] = a[3] * b;
+  out[4] = a[4] * b;
+  out[5] = a[5] * b;
+  out[6] = a[6] * b;
+  out[7] = a[7] * b;
+  out[8] = a[8] * b;
+  out[9] = a[9] * b;
+  out[10] = a[10] * b;
+  out[11] = a[11] * b;
+  out[12] = a[12] * b;
+  out[13] = a[13] * b;
+  out[14] = a[14] * b;
+  out[15] = a[15] * b;
+  return out;
+}
 function create$1() {
   var out = new ARRAY_TYPE(3);
   if (ARRAY_TYPE != Float32Array) {
@@ -11233,7 +11252,7 @@ Log.prototype.setLogLevel = function(logLevel) {
   this.logLevel = logLevel;
 };
 const log$2 = new Log();
-var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
+var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -11265,7 +11284,28 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
   if (!dataBuffer) {
     return;
   }
-  this.hdr = nifti.readHeader(dataBuffer);
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(name)[1];
+  let imgRaw = null;
+  this.hdr = null;
+  if (ext.toUpperCase() === "NHDR" || ext.toUpperCase() === "NRRD") {
+    imgRaw = this.readNRRD(dataBuffer, pairedImgData);
+  } else if (ext.toUpperCase() === "MGH") {
+    imgRaw = this.readMGH(dataBuffer);
+  } else if (ext.toUpperCase() === "MGZ") {
+    imgRaw = this.readMGH(nifti.decompress(dataBuffer));
+  } else if (ext.toUpperCase() === "HEAD") {
+    imgRaw = this.readHEAD(dataBuffer, pairedImgData);
+  } else {
+    this.hdr = nifti.readHeader(dataBuffer);
+    if (nifti.isCompressed(dataBuffer)) {
+      imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
+    } else {
+      imgRaw = nifti.readImage(this.hdr, dataBuffer);
+    }
+  }
+  if (this.hdr.pixDims[1] === 0 || this.hdr.pixDims[2] === 0 || this.hdr.pixDims[3] === 0)
+    console.log("pixDims not plausible", this.hdr);
   function isAffineOK(mtx) {
     let iOK = [false, false, false, false];
     let jOK = [false, false, false, false];
@@ -11357,12 +11397,6 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, tr
     ];
     this.hdr.affine = affine;
   }
-  let imgRaw = null;
-  if (nifti.isCompressed(dataBuffer)) {
-    imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
-  } else {
-    imgRaw = nifti.readImage(this.hdr, dataBuffer);
-  }
   switch (this.hdr.datatypeCode) {
     case this.DT_UNSIGNED_CHAR:
       this.img = new Uint8Array(imgRaw);
@@ -11443,6 +11477,443 @@ NVImage.prototype.calculateOblique = function() {
   let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
     log$2.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+};
+NVImage.prototype.THD_daxes_to_NIFTI = function(xyzDelta, xyzOrigin, orientSpecific) {
+  let hdr = this.hdr;
+  hdr.sform_code = 2;
+  const ORIENT_xyz = "xxyyzzg";
+  let nif_x_axnum = -1;
+  let nif_y_axnum = -1;
+  let nif_z_axnum = -1;
+  let axcode = ["x", "y", "z"];
+  axcode[0] = ORIENT_xyz[orientSpecific[0]];
+  axcode[1] = ORIENT_xyz[orientSpecific[1]];
+  axcode[2] = ORIENT_xyz[orientSpecific[2]];
+  let axstep = xyzDelta.slice(0, 3);
+  let axstart = xyzOrigin.slice(0, 3);
+  for (var ii = 0; ii < 3; ii++) {
+    if (axcode[ii] === "x")
+      nif_x_axnum = ii;
+    else if (axcode[ii] === "y")
+      nif_y_axnum = ii;
+    else
+      nif_z_axnum = ii;
+  }
+  if (nif_x_axnum < 0 || nif_y_axnum < 0 || nif_z_axnum < 0)
+    return;
+  if (nif_x_axnum === nif_y_axnum || nif_x_axnum === nif_z_axnum || nif_y_axnum === nif_z_axnum)
+    return;
+  hdr.pixDims[1] = Math.abs(axstep[0]);
+  hdr.pixDims[2] = Math.abs(axstep[1]);
+  hdr.pixDims[3] = Math.abs(axstep[2]);
+  hdr.affine = [
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ];
+  hdr.affine[0][nif_x_axnum] = -axstep[nif_x_axnum];
+  hdr.affine[1][nif_y_axnum] = -axstep[nif_y_axnum];
+  hdr.affine[2][nif_z_axnum] = axstep[nif_z_axnum];
+  hdr.affine[0][3] = -axstart[nif_x_axnum];
+  hdr.affine[1][3] = -axstart[nif_y_axnum];
+  hdr.affine[2][3] = axstart[nif_z_axnum];
+};
+NVImage.prototype.SetPixDimFromSForm = function() {
+  let m = this.hdr.affine;
+  let mat = fromValues$2(m[0][0], m[0][1], m[0][2], m[0][3], m[1][0], m[1][1], m[1][2], m[1][3], m[2][0], m[2][1], m[2][2], m[2][3], m[3][0], m[3][1], m[3][2], m[3][3]);
+  let mm000 = this.vox2mm([0, 0, 0], mat);
+  let mm100 = this.vox2mm([1, 0, 0], mat);
+  subtract(mm100, mm100, mm000);
+  let mm010 = this.vox2mm([0, 1, 0], mat);
+  subtract(mm010, mm010, mm000);
+  let mm001 = this.vox2mm([0, 0, 1], mat);
+  subtract(mm001, mm001, mm000);
+  this.hdr.pixDims[1] = length(mm100);
+  this.hdr.pixDims[2] = length(mm010);
+  this.hdr.pixDims[3] = length(mm001);
+};
+NVImage.prototype.readMGH = function(dataBuffer) {
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  var reader = new DataView(dataBuffer);
+  let version = reader.getInt32(0, false);
+  let width = reader.getInt32(4, false);
+  let height = reader.getInt32(8, false);
+  let depth = reader.getInt32(12, false);
+  let nframes = reader.getInt32(16, false);
+  let mtype = reader.getInt32(20, false);
+  reader.getInt32(24, false);
+  reader.getInt16(28, false);
+  let spacingX = reader.getFloat32(30, false);
+  let spacingY = reader.getFloat32(34, false);
+  let spacingZ = reader.getFloat32(38, false);
+  let xr = reader.getFloat32(42, false);
+  let xa = reader.getFloat32(46, false);
+  let xs = reader.getFloat32(50, false);
+  let yr = reader.getFloat32(54, false);
+  let ya = reader.getFloat32(58, false);
+  let ys = reader.getFloat32(62, false);
+  let zr = reader.getFloat32(66, false);
+  let za = reader.getFloat32(70, false);
+  let zs = reader.getFloat32(74, false);
+  reader.getFloat32(78, false);
+  reader.getFloat32(82, false);
+  reader.getFloat32(86, false);
+  if (version !== 1 || mtype < 0 || mtype > 4)
+    console.log("Not a valid MGH file");
+  if (mtype === 0) {
+    hdr.numBitsPerVoxel = 8;
+    hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+  } else if (mtype === 4) {
+    hdr.numBitsPerVoxel = 16;
+    hdr.datatypeCode = this.DT_SIGNED_SHORT;
+  } else if (mtype === 1) {
+    hdr.numBitsPerVoxel = 32;
+    hdr.datatypeCode = this.DT_SIGNED_INT;
+  } else if (mtype === 3) {
+    hdr.numBitsPerVoxel = 32;
+    hdr.datatypeCode = this.DT_FLOAT;
+  }
+  hdr.dims[1] = width;
+  hdr.dims[2] = height;
+  hdr.dims[3] = depth;
+  hdr.dims[4] = nframes;
+  if (nframes > 1)
+    hdr.dims[0] = 4;
+  hdr.pixDims[1] = spacingX;
+  hdr.pixDims[2] = spacingY;
+  hdr.pixDims[3] = spacingZ;
+  hdr.vox_offset = 284;
+  hdr.sform_code = 1;
+  let rot44 = fromValues$2(xr * hdr.pixDims[1], yr * hdr.pixDims[2], zr * hdr.pixDims[3], 0, xa * hdr.pixDims[1], ya * hdr.pixDims[2], za * hdr.pixDims[3], 0, xs * hdr.pixDims[1], ys * hdr.pixDims[2], zs * hdr.pixDims[3], 0, 0, 0, 0, 1);
+  let base = 0;
+  let Pcrs = [
+    hdr.dims[1] / 2 + base,
+    hdr.dims[2] / 2 + base,
+    hdr.dims[3] / 2 + base,
+    1
+  ];
+  let PxyzOffset = [0, 0, 0, 0];
+  for (var i = 0; i < 3; i++) {
+    for (var j = 0; j < 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + rot44[i + j * 4] * Pcrs[j];
+    }
+  }
+  hdr.affine = [
+    [rot44[0], rot44[1], rot44[2], PxyzOffset[0]],
+    [rot44[4], rot44[5], rot44[6], PxyzOffset[1]],
+    [rot44[8], rot44[9], rot44[10], PxyzOffset[2]],
+    [0, 0, 0, 1]
+  ];
+  return dataBuffer.slice(hdr.vox_offset);
+};
+NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.dims[0] = 3;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  let orientSpecific = [0, 0, 0];
+  let xyzOrigin = [0, 0, 0];
+  let xyzDelta = [1, 1, 1];
+  let txt = new TextDecoder().decode(dataBuffer);
+  var lines = txt.split("\n");
+  let nlines = lines.length;
+  let i = 0;
+  let hasIJK_TO_DICOM_REAL = false;
+  while (i < nlines) {
+    let line = lines[i];
+    i++;
+    if (!line.startsWith("type"))
+      continue;
+    let isInt = line.includes("integer-attribute");
+    let isFloat = line.includes("float-attribute");
+    line = lines[i];
+    i++;
+    if (!line.startsWith("name"))
+      continue;
+    let items = line.split("= ");
+    let key = items[1];
+    line = lines[i];
+    i++;
+    items = line.split("= ");
+    let count = parseInt(items[1]);
+    if (count < 1)
+      continue;
+    line = lines[i];
+    i++;
+    items = line.trim().split(/\s+/);
+    if (isFloat || isInt) {
+      while (items.length < count) {
+        line = lines[i];
+        i++;
+        let items2 = line.trim().split(/\s+/);
+        items.push(...items2);
+      }
+      for (var j = 0; j < count; j++)
+        items[j] = parseFloat(items[j]);
+    }
+    switch (key) {
+      case "BYTEORDER_STRING":
+        if (items[0].includes("LSB_FIRST"))
+          hdr.littleEndian = true;
+        else if (items[0].includes("MSB_FIRST"))
+          hdr.littleEndian = false;
+        break;
+      case "BRICK_TYPES":
+        let datatype = parseInt(items[0]);
+        if (datatype === 0) {
+          hdr.numBitsPerVoxel = 8;
+          hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+        } else if (datatype === 1) {
+          hdr.numBitsPerVoxel = 16;
+          hdr.datatypeCode = this.DT_SIGNED_SHORT;
+        } else if (datatype === 1) {
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = this.DT_FLOAT;
+        } else
+          console.log("Unknown BRICK_TYPES ", datatype);
+        break;
+      case "IJK_TO_DICOM_REAL":
+        if (count < 12)
+          break;
+        hasIJK_TO_DICOM_REAL = true;
+        hdr.sform_code = 2;
+        hdr.affine = [
+          [-items[0], -items[1], -items[2], -items[3]],
+          [-items[4], -items[5], -items[6], -items[7]],
+          [items[8], items[9], items[10], items[11]],
+          [0, 0, 0, 1]
+        ];
+        break;
+      case "DATASET_DIMENSIONS":
+        count = Math.max(count, 3);
+        for (var j = 0; j < count; j++)
+          hdr.dims[j + 1] = items[j];
+        break;
+      case "ORIENT_SPECIFIC":
+        orientSpecific = items;
+        break;
+      case "ORIGIN":
+        xyzOrigin = items;
+        break;
+      case "DELTA":
+        xyzDelta = items;
+        break;
+      case "TAXIS_FLOATS":
+        hdr.pixDims[4] = items[0];
+        break;
+    }
+  }
+  if (!hasIJK_TO_DICOM_REAL)
+    this.THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific);
+  else
+    this.SetPixDimFromSForm();
+  return pairedImgData.slice();
+};
+NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  let len2 = dataBuffer.byteLength;
+  var txt = null;
+  var bytes = new Uint8Array(dataBuffer);
+  for (var i = 1; i < len2; i++) {
+    if (bytes[i - 1] == 10 && bytes[i] == 10) {
+      let v = dataBuffer.slice(0, i - 1);
+      txt = new TextDecoder().decode(v);
+      hdr.vox_offset = i + 1;
+      break;
+    }
+  }
+  var lines = txt.split("\n");
+  if (!lines[0].startsWith("NRRD"))
+    alert("Invalid NRRD image");
+  var n = lines.length;
+  let isGz = false;
+  let isMicron = false;
+  let isDetached = false;
+  let mat = [NaN, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  let rot44 = create$2();
+  for (let i2 = 1; i2 < n; i2++) {
+    let str = lines[i2];
+    if (str[0] === "#")
+      continue;
+    str = str.toLowerCase();
+    let items = str.split(":");
+    if (items.length < 2)
+      continue;
+    let key = items[0].trim();
+    let value = items[1].trim();
+    value = value.replaceAll(")", " ");
+    value = value.replaceAll("(", " ");
+    value = value.trim();
+    switch (key) {
+      case "data file":
+        isDetached = true;
+        break;
+      case "encoding":
+        if (value.includes("raw"))
+          isGz = false;
+        else if (value.includes("gz"))
+          isGz = true;
+        else
+          alert("Unsupported NRRD encoding");
+        break;
+      case "type":
+        switch (value) {
+          case "uchar":
+          case "unsigned char":
+          case "uint8":
+          case "uint8_t":
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+            break;
+          case "signed char":
+          case "int8":
+          case "int8_t":
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = this.DT_INT8;
+            break;
+          case "short":
+          case "short int":
+          case "signed short":
+          case "signed short int":
+          case "int16":
+          case "int16_t":
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = this.DT_SIGNED_SHORT;
+            break;
+          case "ushort":
+          case "unsigned short":
+          case "unsigned short int":
+          case "uint16":
+          case "uint16_t":
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = this.DT_UINT16;
+            break;
+          case "int":
+          case "signed int":
+          case "int32":
+          case "int32_t":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = this.DT_SIGNED_INT;
+            break;
+          case "uint":
+          case "unsigned int":
+          case "uint32":
+          case "uint32_t":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = this.DT_UINT32;
+            break;
+          case "float":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = this.DT_FLOAT;
+            break;
+          case "double":
+            hdr.numBitsPerVoxel = 64;
+            hdr.datatypeCode = this.DT_DOUBLE;
+            break;
+          default:
+            throw new Error("Unsupported NRRD data type: " + value);
+        }
+        break;
+      case "spacings":
+        let pixdims = value.split(/[ ,]+/);
+        for (var d = 0; d < pixdims.length; d++)
+          hdr.pixDims[d + 1] = parseFloat(dims[d]);
+      case "sizes":
+        let dims = value.split(/[ ,]+/);
+        hdr.dims[0] = dims.length;
+        for (var d = 0; d < dims.length; d++)
+          hdr.dims[d + 1] = parseInt(dims[d]);
+        break;
+      case "endian":
+        if (value.includes("little"))
+          hdr.littleEndian = true;
+        else if (value.includes("big"))
+          hdr.littleEndian = false;
+        break;
+      case "space directions":
+        let vs = value.split(/[ ,]+/);
+        if (vs.length !== 9)
+          break;
+        mat[0] = parseFloat(vs[0]);
+        mat[1] = parseFloat(vs[1]);
+        mat[2] = parseFloat(vs[2]);
+        mat[4] = parseFloat(vs[3]);
+        mat[5] = parseFloat(vs[4]);
+        mat[6] = parseFloat(vs[5]);
+        mat[8] = parseFloat(vs[6]);
+        mat[9] = parseFloat(vs[7]);
+        mat[10] = parseFloat(vs[8]);
+        break;
+      case "space origin":
+        let ts = value.split(/[ ,]+/);
+        if (ts.length !== 3)
+          break;
+        mat[3] = parseFloat(ts[0]);
+        mat[7] = parseFloat(ts[1]);
+        mat[11] = parseFloat(ts[2]);
+        break;
+      case "space":
+        if (value.includes("microns"))
+          isMicron = true;
+        break;
+      case "space":
+        if (value.includes("right-anterior-superior") || value.includes("RAS"))
+          rot44 = fromValues$2(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        else if (value.includes("left-anterior-superior") || value.includes("LAS"))
+          rot44 = fromValues$2(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        else if (value.includes("left-posterior-superior") || value.includes("LPS"))
+          rot44 = fromValues$2(-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        else
+          console.log("Unsupported NRRD space value:", value);
+        break;
+    }
+  }
+  if (!isNaN(mat[0])) {
+    this.hdr.sform_code = 2;
+    if (isMicron) {
+      multiplyScalar(mat, mat, 1e-3);
+      mat[15] = 1;
+    }
+    if (rot44[0] < 0)
+      mat[3] = -mat[3];
+    if (rot44[5] < 0)
+      mat[7] = -mat[7];
+    if (rot44[10] < 0)
+      mat[11] = -mat[11];
+    multiply$1(mat, mat, rot44);
+    let mm000 = this.vox2mm([0, 0, 0], mat);
+    let mm100 = this.vox2mm([1, 0, 0], mat);
+    subtract(mm100, mm100, mm000);
+    let mm010 = this.vox2mm([0, 1, 0], mat);
+    subtract(mm010, mm010, mm000);
+    let mm001 = this.vox2mm([0, 0, 1], mat);
+    subtract(mm001, mm001, mm000);
+    hdr.pixDims[1] = length(mm100);
+    hdr.pixDims[2] = length(mm010);
+    hdr.pixDims[3] = length(mm001);
+    hdr.affine = [
+      [mat[0], mat[1], mat[2], mat[3]],
+      [mat[4], mat[5], mat[6], mat[7]],
+      [mat[8], mat[9], mat[10], mat[11]],
+      [0, 0, 0, 1]
+    ];
+  }
+  hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (isDetached && pairedImgData) {
+    return pairedImgData.slice();
+  }
+  if (isDetached)
+    console.log("Missing data: NRRD header describes detached data file but only one URL provided");
+  if (isGz)
+    return inflate_1(new Uint8Array(dataBuffer.slice(hdr.vox_offset)));
+  else
+    return dataBuffer.slice(hdr.vox_offset);
 };
 NVImage.prototype.calculateRAS = function() {
   let a = this.hdr.affine;
@@ -11716,17 +12187,51 @@ NVImage.prototype.intensityRaw2Scaled = function(hdr, raw) {
     hdr.scl_slope = 1;
   return raw * hdr.scl_slope + hdr.scl_inter;
 };
-NVImage.loadFromUrl = async function(url, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
+NVImage.loadFromUrl = async function({
+  url = "",
+  urlImgData = "",
+  name = "",
+  colorMap = "gray",
+  opacity = 1,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+} = {}) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
   let response = await fetch(url);
   let nvimage = null;
   if (!response.ok) {
     throw Error(response.statusText);
   }
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(url)[1];
+  if (ext.toUpperCase() === "NHDR")
+    ;
+  else if (ext.toUpperCase() === "HEAD") {
+    if (urlImgData === "") {
+      urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
+      console.log(urlImgData);
+    }
+  }
   let urlParts = url.split("/");
   name = urlParts.slice(-1)[0];
   let dataBuffer = await response.arrayBuffer();
+  let pairedImgData = null;
+  if (urlImgData.length > 0) {
+    let resp = await fetch(urlImgData);
+    console.log(resp.status);
+    if (resp.status === 404) {
+      if (urlImgData.lastIndexOf("BRIK") !== -1) {
+        resp = await fetch(urlImgData + ".gz");
+      }
+    }
+    pairedImgData = await resp.arrayBuffer();
+  }
   if (dataBuffer) {
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
   } else {
     alert("Unable to load buffer properly from volume");
   }
@@ -11736,20 +12241,43 @@ NVImage.readFileAsync = function(file) {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
     reader.onload = () => {
-      resolve(reader.result);
+      if (file.name.lastIndexOf("gz") !== -1) {
+        resolve(nifti.decompress(reader.result));
+      } else {
+        resolve(reader.result);
+      }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
 };
-NVImage.loadFromFile = async function(file, name = "", colorMap = "gray", opacity = 1, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true) {
+NVImage.loadFromFile = async function({
+  file = null,
+  name = "",
+  colorMap = "gray",
+  opacity = 1,
+  urlImgData = null,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true
+} = {}) {
   let nvimage = null;
   try {
     let dataBuffer = await this.readFileAsync(file);
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    let pairedImgData = null;
+    console.log("before readimg paired image data!!!!");
+    if (urlImgData) {
+      console.log("reading paired image data!!!!!");
+      pairedImgData = await this.readFileAsync(urlImgData);
+    }
+    name = file.name;
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
   } catch (err2) {
+    console.log(err2);
     log$2.debug(err2);
   }
+  console.log(nvimage);
   return nvimage;
 };
 NVImage.prototype.clone = function() {
@@ -21132,9 +21660,185 @@ NVMesh.generatePosNormClr = function(pts, tris, rgba255) {
   }
   return f32;
 };
+NVMesh.readTxtVTK = function(buffer) {
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  var lines = txt.split("\n");
+  var n = lines.length;
+  if (n < 7 || !lines[0].startsWith("# vtk DataFile"))
+    alert("Invalid VTK image");
+  if (!lines[2].startsWith("ASCII"))
+    alert("Not ASCII VTK mesh");
+  let pos = 3;
+  while (lines[pos].length < 1)
+    pos++;
+  if (!lines[pos].includes("POLYDATA"))
+    alert("Not ASCII VTK polydata");
+  pos++;
+  while (lines[pos].length < 1)
+    pos++;
+  if (!lines[pos].startsWith("POINTS"))
+    alert("Not VTK POINTS");
+  let items = lines[pos].split(" ");
+  let nvert = parseInt(items[1]);
+  let nvert3 = nvert * 3;
+  var positions = new Float32Array(nvert * 3);
+  let v = 0;
+  while (v < nvert * 3) {
+    pos++;
+    let str = lines[pos].trim();
+    let pts = str.split(" ");
+    for (let i = 0; i < pts.length; i++) {
+      if (v >= nvert3)
+        break;
+      positions[v] = parseFloat(pts[i]);
+      v++;
+    }
+  }
+  let tris = [];
+  pos++;
+  while (lines[pos].length < 1)
+    pos++;
+  items = lines[pos].split(" ");
+  pos++;
+  if (items[0].includes("TRIANGLE_STRIPS")) {
+    let nstrip = parseInt(items[1]);
+    for (let i = 0; i < nstrip; i++) {
+      let str = lines[pos].trim();
+      pos++;
+      let vs = str.split(" ");
+      let ntri = parseInt(vs[0]) - 2;
+      let k = 1;
+      for (let t = 0; t < ntri; t++) {
+        if (t % 2) {
+          tris.push(parseInt(vs[k + 2]));
+          tris.push(parseInt(vs[k + 1]));
+          tris.push(parseInt(vs[k]));
+        } else {
+          tris.push(parseInt(vs[k]));
+          tris.push(parseInt(vs[k + 1]));
+          tris.push(parseInt(vs[k + 2]));
+        }
+        k += 1;
+      }
+    }
+  } else if (items[0].includes("POLYGONS")) {
+    let npoly = parseInt(items[1]);
+    for (let i = 0; i < npoly; i++) {
+      let str = lines[pos].trim();
+      pos++;
+      let vs = str.split(" ");
+      let ntri = parseInt(vs[0]) - 2;
+      let fx = parseInt(vs[1]);
+      let fy = parseInt(vs[2]);
+      for (let t = 0; t < ntri; t++) {
+        let fz = parseInt(vs[3 + t]);
+        tris.push(fx);
+        tris.push(fy);
+        tris.push(fz);
+        fy = fz;
+      }
+    }
+  } else
+    alert("Unsupported ASCII VTK datatype ", items[0]);
+  var indices = new Int32Array(tris);
+  return {
+    positions,
+    indices
+  };
+};
+NVMesh.readVTK = function(buffer) {
+  let len2 = buffer.byteLength;
+  if (len2 < 20)
+    throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len2 && bytes[pos] === 10)
+      pos++;
+    let startPos = pos;
+    while (pos < len2 && bytes[pos] !== 10)
+      pos++;
+    pos++;
+    if (pos - startPos < 1)
+      return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr();
+  if (!line.startsWith("# vtk DataFile"))
+    alert("Invalid VTK mesh");
+  line = readStr();
+  line = readStr();
+  if (line.startsWith("ASCII"))
+    return this.readTxtVTK(buffer);
+  else if (!line.startsWith("BINARY"))
+    alert("Invalid VTK image, expected ASCII or BINARY", line);
+  line = readStr();
+  if (!line.includes("POLYDATA"))
+    alert("Only able to read VTK POLYDATA", line);
+  line = readStr();
+  if (!line.includes("POINTS") || !line.includes("float"))
+    alert("Only able to read VTK float POINTS", line);
+  let items = line.split(" ");
+  let nvert = parseInt(items[1]);
+  let nvert3 = nvert * 3;
+  var positions = new Float32Array(nvert3);
+  var reader = new DataView(buffer);
+  for (let i = 0; i < nvert3; i++) {
+    positions[i] = reader.getFloat32(pos, false);
+    pos += 4;
+  }
+  line = readStr();
+  items = line.split(" ");
+  let tris = [];
+  if (items[0].includes("TRIANGLE_STRIPS")) {
+    let nstrip = parseInt(items[1]);
+    for (let i = 0; i < nstrip; i++) {
+      let ntri = reader.getInt32(pos, false) - 2;
+      pos += 4;
+      for (let t = 0; t < ntri; t++) {
+        if (t % 2) {
+          tris.push(reader.getInt32(pos + 8, false));
+          tris.push(reader.getInt32(pos + 4, false));
+          tris.push(reader.getInt32(pos, false));
+        } else {
+          tris.push(reader.getInt32(pos, false));
+          tris.push(reader.getInt32(pos + 4, false));
+          tris.push(reader.getInt32(pos + 8, false));
+        }
+        pos += 4;
+      }
+      pos += 8;
+    }
+  } else if (items[0].includes("POLYGONS")) {
+    let npoly = parseInt(items[1]);
+    for (let i = 0; i < npoly; i++) {
+      let ntri = reader.getInt32(pos, false) - 2;
+      pos += 4;
+      let fx = reader.getInt32(pos, false);
+      pos += 4;
+      let fy = reader.getInt32(pos, false);
+      pos += 4;
+      for (let t = 0; t < ntri; t++) {
+        let fz = reader.getInt32(pos, false);
+        pos += 4;
+        tris.push(fx);
+        tris.push(fy);
+        tris.push(fz);
+        fy = fz;
+      }
+    }
+  } else
+    alert("Unsupported ASCII VTK datatype ", items[0]);
+  var indices = new Int32Array(tris);
+  return {
+    positions,
+    indices
+  };
+};
 NVMesh.readMZ3 = function(buffer) {
   if (buffer.byteLength < 20)
-    throw new Error("File to small to be mz3: bytes = " + buffer.byteLength);
+    throw new Error("File too small to be mz3: bytes = " + buffer.byteLength);
   var reader = new DataView(buffer);
   var magic = reader.getUint16(0, true);
   var _buffer = buffer;
@@ -21208,6 +21912,36 @@ NVMesh.readMZ3 = function(buffer) {
     indices,
     uv2,
     colors
+  };
+};
+NVMesh.readSTL = function(buffer) {
+  if (buffer.byteLength < 80 + 4 + 50)
+    throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
+  var reader = new DataView(buffer);
+  let sig = reader.getUint32(80, true);
+  if (sig === 1768714099)
+    throw new Error("Only able to read binary (not ASCII) STL files.");
+  var ntri = reader.getUint32(80, true);
+  let ntri3 = 3 * ntri;
+  if (buffer.byteLength < 80 + 4 + ntri * 50)
+    throw new Error("STL file too small to store triangles = ", ntri);
+  var indices = new Int32Array(ntri3);
+  var positions = new Float32Array(ntri3 * 3);
+  let pos = 80 + 4 + 12;
+  let v = 0;
+  for (var i = 0; i < ntri; i++) {
+    for (var j = 0; j < 9; j++) {
+      positions[v] = reader.getFloat32(pos, true);
+      v += 1;
+      pos += 4;
+    }
+    pos += 14;
+  }
+  for (var i = 0; i < ntri3; i++)
+    indices[i] = i;
+  return {
+    positions,
+    indices
   };
 };
 NVMesh.makeLut = function(Rs, Gs, Bs, As, Is) {
@@ -21324,7 +22058,21 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
   }
   return nvmesh;
 };
-NVMesh.loadFromUrl = async function(url, gl, name = "", colorMap = "yellow", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true) {
+NVMesh.loadFromUrl = async function({
+  url = "",
+  gl = null,
+  name = "",
+  colorMap = "yellow",
+  opacity = 1,
+  rgba255 = [255, 255, 255, 255],
+  visible = true
+} = {}) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
+  if (gl === null) {
+    throw Error("gl context is null");
+  }
   let response = await fetch(url);
   let nvmesh = null;
   if (!response.ok) {
@@ -21336,7 +22084,17 @@ NVMesh.loadFromUrl = async function(url, gl, name = "", colorMap = "yellow", opa
   var pts = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "MZ3") {
+  if (ext.toUpperCase() === "STL") {
+    let buffer = await response.arrayBuffer();
+    let obj = this.readSTL(buffer);
+    pts = obj.positions.slice();
+    tris = obj.indices.slice();
+  } else if (ext.toUpperCase() === "VTK") {
+    let buffer = await response.arrayBuffer();
+    let obj = this.readVTK(buffer);
+    pts = obj.positions.slice();
+    tris = obj.indices.slice();
+  } else if (ext.toUpperCase() === "MZ3") {
     let buffer = await response.arrayBuffer();
     let obj = this.readMZ3(buffer);
     pts = obj.positions.slice();
@@ -21375,9 +22133,8 @@ NVMesh.loadFromUrl = async function(url, gl, name = "", colorMap = "yellow", opa
         tn = items[3].split("/");
         t.push(parseInt(tn - 1));
       }
-      tris = new Int32Array(t);
     }
-    log$1.debug(">>>", tris);
+    tris = new Int32Array(t);
   } else if (ext.toUpperCase() === "GII") {
     let xmlStr = await response.text();
     let gii = giftiReader.exports.parse(xmlStr);
@@ -23495,7 +24252,7 @@ Niivue.prototype.dropListener = async function(e) {
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {
-    let volume = await NVImage.loadFromUrl(url);
+    let volume = await NVImage.loadFromUrl({ url });
     this.setVolume(volume);
   } else {
     const files = dt.files;
@@ -23505,7 +24262,26 @@ Niivue.prototype.dropListener = async function(e) {
         this.overlays = [];
       }
       for (const file of files) {
-        let volume = await NVImage.loadFromFile(file);
+        console.log(file.name);
+        let pairedImageData = "";
+        if (file.name.lastIndexOf("HEAD") !== -1) {
+          for (const pairedFile of files) {
+            let fileBaseName = file.name.substring(0, file.name.lastIndexOf("HEAD"));
+            console.log(pairedFile.name);
+            let pairedFileBaseName = pairedFile.name.substring(0, pairedFile.name.lastIndexOf("BRIK"));
+            if (fileBaseName === pairedFileBaseName) {
+              console.log("base names match!!!!");
+              pairedImageData = pairedFile;
+            }
+          }
+        }
+        if (file.name.lastIndexOf("BRIK") !== -1) {
+          continue;
+        }
+        let volume = await NVImage.loadFromFile({
+          file,
+          urlImgData: pairedImageData
+        });
         this.addVolume(volume);
       }
     }
@@ -23561,6 +24337,7 @@ Niivue.prototype.getOverlayIndexByID = function(id) {
 };
 Niivue.prototype.setVolume = function(volume, toIndex = 0) {
   this.volumes.map((v) => {
+    console.log(v);
     log.debug(v.name);
   });
   let numberOfLoadedImages = this.volumes.length;
@@ -23759,7 +24536,14 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
   this.scene.loading$.next(false);
   for (let i = 0; i < volumeList.length; i++) {
     this.scene.loading$.next(true);
-    let volume = await NVImage.loadFromUrl(volumeList[i].url, volumeList[i].name, volumeList[i].colorMap, volumeList[i].opacity, this.opts.trustCalMinMax);
+    let volume = await NVImage.loadFromUrl({
+      url: volumeList[i].url,
+      name: volumeList[i].name,
+      colorMap: volumeList[i].colorMap,
+      opacity: volumeList[i].opacity,
+      urlImgData: volumeList[i].urlImgData,
+      trustCalMinMax: this.opts.trustCalMinMax
+    });
     this.scene.loading$.next(false);
     this.addVolume(volume);
   }
@@ -23782,10 +24566,19 @@ Niivue.prototype.loadMeshes = async function(meshList) {
   this.scene.loading$.next(false);
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl(meshList[i].url, this.gl, meshList[i].name, meshList[i].colorMap, meshList[i].opacity, meshList[i].rgba255, meshList[i].visible);
+    let mesh = await NVMesh.loadFromUrl({
+      url: meshList[i].url,
+      gl: this.gl,
+      name: meshList[i].name,
+      colorMap: meshList[i].colorMap,
+      opacity: meshList[i].opacity,
+      rgba255: meshList[i].rgba255,
+      visible: meshList[i].visible
+    });
     this.scene.loading$.next(false);
     this.addMesh(mesh);
   }
+  this.drawScene();
   return this;
 };
 Niivue.prototype.loadConnectome = async function(json) {
@@ -23809,6 +24602,7 @@ Niivue.prototype.loadConnectome = async function(json) {
     this.scene.loading$.next(false);
     this.addMesh(mesh);
   }
+  this.drawScene();
   return this;
 };
 Niivue.prototype.rgbaTex = function(texID, activeID, dims, isInit = false) {
@@ -23946,9 +24740,6 @@ Niivue.prototype.init = async function() {
   let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
-  let shaders = this.meshShaderNames();
-  console.log("<<<", this.meshShaders[0].Frag);
-  console.log("::>>>", shaders);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -24645,6 +25436,8 @@ Niivue.prototype.calculateRayDirection = function() {
 Niivue.prototype.draw3D = function() {
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.ALWAYS);
   let mvpMatrix, modelMatrix, normalMatrix;
   [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(this.volumeObject3D);
   const rayDir = this.calculateRayDirection();
