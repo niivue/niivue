@@ -2954,6 +2954,8 @@ Niivue.prototype.calculateRayDirection = function () {
 Niivue.prototype.draw3D = function () {
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.ALWAYS);
 
   // mvp matrix and ray direction can now be a constant because of world space
   let mvpMatrix, modelMatrix, normalMatrix;
