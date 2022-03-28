@@ -854,8 +854,9 @@ Niivue.prototype.dropListener = async function (e) {
 
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
+  //TODO: handle meshes (obj, mz3, gii, stl, pial, vtk) and volumes (nii, nii.gz, nrrd)
   if (url) {
-    let volume = await NVImage.loadFromUrl(url);
+		let volume = await NVImage.loadFromUrl({url:url});
     this.setVolume(volume);
   } else {
     const files = dt.files;
@@ -867,7 +868,27 @@ Niivue.prototype.dropListener = async function (e) {
       }
 
       for (const file of files) {
-        let volume = await NVImage.loadFromFile(file);
+				console.log(file.name)
+				let pairedImageData = ''
+				// check for afni HEAD BRIK pair
+				if (file.name.lastIndexOf('HEAD') !== -1){
+					for (const pairedFile of files) {
+						let fileBaseName = file.name.substring(0, file.name.lastIndexOf('HEAD'))
+						console.log(pairedFile.name)
+						let pairedFileBaseName = pairedFile.name.substring(0, pairedFile.name.lastIndexOf('BRIK'))
+						if (fileBaseName === pairedFileBaseName){
+							console.log('base names match!!!!')
+							pairedImageData = pairedFile
+						}
+					}
+				}
+				if (file.name.lastIndexOf('BRIK') !== -1){
+					continue
+				}
+				let volume = await NVImage.loadFromFile({
+					file:file,
+					urlImgData: pairedImageData
+				});
         this.addVolume(volume);
       }
     }
@@ -889,7 +910,7 @@ Niivue.prototype.getRadiologicalConvention = function () {
  * @param {NVImage} volume the new volume to add to the canvas
  * @example
  * niivue = new Niivue()
- * niivue.addVolume(NVImage.loadFromUrl('./someURL.nii.gz'))
+ * niivue.addVolume(NVImage.loadFromUrl({url:'./someURL.nii.gz'}))
  */
 Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
@@ -903,7 +924,7 @@ Niivue.prototype.addVolume = function (volume) {
  * @param {NVMesh} mesh the new mesh to add to the canvas
  * @example
  * niivue = new Niivue()
- * niivue.addMesh(NVMesh.loadFromUrl('./someURL.gii'))
+ * niivue.addMesh(NVMesh.loadFromUrl({url:'./someURL.gii'}))
  */
 Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
@@ -970,6 +991,7 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   this.volumes.map((v) => {
+		console.log(v)
     log.debug(v.name);
   });
   let numberOfLoadedImages = this.volumes.length;
@@ -1315,13 +1337,14 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     this.scene.loading$.next(true);
-    let volume = await NVImage.loadFromUrl(
-      volumeList[i].url,
-      volumeList[i].name,
-      volumeList[i].colorMap,
-      volumeList[i].opacity,
-      this.opts.trustCalMinMax
-    );
+    let volume = await NVImage.loadFromUrl({
+			url:volumeList[i].url,
+			name:volumeList[i].name,
+			colorMap:volumeList[i].colorMap,
+			opacity: volumeList[i].opacity,
+			urlImgData: volumeList[i].urlImgData,
+			trustCalMinMax:this.opts.trustCalMinMax
+		});
     this.scene.loading$.next(false);
     this.addVolume(volume);
     /*
@@ -1364,21 +1387,21 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl(
-      meshList[i].url,
-      this.gl,
-      meshList[i].name,
-      meshList[i].colorMap,
-      meshList[i].opacity,
-      meshList[i].rgba255,
-      meshList[i].visible
-    );
+    let mesh = await NVMesh.loadFromUrl({
+			url:meshList[i].url,
+			gl:this.gl,
+			name:meshList[i].name,
+			colorMap:meshList[i].colorMap,
+			opacity:meshList[i].opacity,
+			rgba255:meshList[i].rgba255,
+			visible:meshList[i].visible
+		});
     this.scene.loading$.next(false);
     this.addMesh(mesh);
     //this.meshes.push(mesh);
     //this.updateGLVolume();
   } // for
-  //console.log(this.meshes);
+  this.drawScene();
   return this;
 }; // loadMeshes
 
@@ -1407,7 +1430,7 @@ Niivue.prototype.loadConnectome = async function (json) {
     //this.meshes.push(mesh);
     //this.updateGLVolume();
   } // for
-  //console.log(this.meshes);
+  this.drawScene();
   return this;
 }; // loadMeshes
 
@@ -1651,10 +1674,6 @@ Niivue.prototype.init = async function () {
   // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
-  let shaders = this.meshShaderNames();
-  //for (var i = 0; i < this.meshShaders.length; i++)
-  console.log("<<<", this.meshShaders[0].Frag);
-  console.log("::>>>", shaders);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -2935,6 +2954,8 @@ Niivue.prototype.calculateRayDirection = function () {
 Niivue.prototype.draw3D = function () {
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.ALWAYS);
 
   // mvp matrix and ray direction can now be a constant because of world space
   let mvpMatrix, modelMatrix, normalMatrix;

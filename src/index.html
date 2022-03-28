@@ -87,31 +87,35 @@
       var volumeList1 = [
         // first item is brackground image
         {
+          //url: url ? url : "../demos/images/scaled+tlrc.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
-					colorMap: "gray",
+          colorMap: "gray",
+          //urlImgData : "../demos/images/scaled+tlrc.BRIK.gz",
           opacity: 1,
           visible: true,
         },
-				{
+				/*{
 					url: "../demos/images/hippo.nii.gz",
 					colorMap: 'red'
-				}
+				}*/
       ]
 			var nv1 = new Niivue({
 				logging: true,
 				show3Dcrosshair: true,
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
-				backColor: [1, 1, 1, 1]
+				backColor: [0.2, 0.2, 0.2, 1]
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
+			/*
       nv1.loadMeshes([
          {url: "../demos/images/motor_4t95mesh.rh.mz3", rgba255 : [0, 0, 255, 255]},
          {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
       ])
+			*/
       //nv1.loadConnectome(connectome)
       //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
