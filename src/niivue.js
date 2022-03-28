@@ -150,6 +150,7 @@ export const Niivue = function (options = {}) {
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.meshes = [];
+  this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1.0;
   this.volScale = [];
   this.vox = [];
@@ -1847,6 +1848,16 @@ Niivue.prototype.updateGLVolume = function () {
     this.refreshLayers(this.volumes[i], visibleLayers, numLayers);
     visibleLayers++;
   }
+  this.furthestVertexFromOrigin = 0.0;
+  if (numLayers > 0)
+    this.furthestVertexFromOrigin =
+      this.volumeObject3D.furthestVertexFromOrigin;
+  if (this.meshes)
+    for (let i = 0; i < this.meshes.length; i++)
+      this.furthestVertexFromOrigin = Math.max(
+        this.furthestVertexFromOrigin,
+        this.meshes[i].furthestVertexFromOrigin
+      );
   this.drawScene();
 }; // updateVolume()
 
@@ -2841,8 +2852,7 @@ Niivue.prototype.calculateMvpMatrix = function () {
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
   let scale =
-    (0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1.0) /
-    this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+    (0.7 * this.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -2870,7 +2880,8 @@ Niivue.prototype.calculateMvpMatrix = function () {
   //push the model away from the camera so camera not inside model
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
-  mat.mat4.translate(modelMatrix, modelMatrix, this.volumeObject3D.position);
+  if (this.position)
+    mat.mat4.translate(modelMatrix, modelMatrix, this.position);
   //apply elevation
   mat.mat4.rotateX(
     modelMatrix,
@@ -2884,11 +2895,13 @@ Niivue.prototype.calculateMvpMatrix = function () {
     deg2rad(this.scene.renderAzimuth - 180)
   );
   //translate object to be in center of field of view (e.g. CT brain scans where origin is distant table center)
-  mat.mat4.translate(
-    modelMatrix,
-    modelMatrix,
-    this.volumeObject3D.originNegate
-  );
+  if (this.volumeObject3D) {
+    mat.mat4.translate(
+      modelMatrix,
+      modelMatrix,
+      this.volumeObject3D.originNegate
+    );
+  }
   //
   let iModelMatrix = mat.mat4.create();
   mat.mat4.invert(iModelMatrix, modelMatrix);
@@ -2924,8 +2937,10 @@ Niivue.prototype.calculateRayDirection = function () {
     modelMatrix,
     deg2rad(this.scene.renderAzimuth - 180)
   );
-  let oblique = mat.mat4.clone(this.back.obliqueRAS);
-  mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
+  if (this.back.obliqueRAS) {
+    let oblique = mat.mat4.clone(this.back.obliqueRAS);
+    mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
+  }
   //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
   let projectionMatrix = mat.mat4.fromValues(
     1,
@@ -2967,6 +2982,13 @@ Niivue.prototype.draw3D = function () {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
+  if (this.volumes.length === 0) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clearDepth(0.0);
+    this.drawMesh3D(true, 1.0);
+    return;
+  }
+
   // mvp matrix and ray direction can now be a constant because of world space
   let mvpMatrix, modelMatrix, normalMatrix;
   // eslint-disable-next-line no-unused-vars
@@ -3034,6 +3056,7 @@ Niivue.prototype.draw3D = function () {
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(this.unusedVAO);
   }
+
   this.drawCrosshairs3D(true, 1.0);
   this.drawMesh3D(true, 1.0);
   this.drawMesh3D(false, 0.02);
@@ -3142,9 +3165,7 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
-    this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
-    this.crosshairs3D.furthestVertexFromOrigin =
-      this.volumeObject3D.furthestVertexFromOrigin;
+    //this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
   }
   let crosshairsShader = this.surfaceShader;
   crosshairsShader.use(this.gl);
@@ -3336,6 +3357,7 @@ Niivue.prototype.drawScene = function () {
     this.volumes.length === 0 ||
     typeof this.volumes[0].dims === "undefined"
   ) {
+    if (this.meshes.length > 0) return this.draw3D(); //meshes loaded but no volume
     this.drawLoadingText(this.loadingText);
     return;
   }

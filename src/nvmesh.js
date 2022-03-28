@@ -29,6 +29,7 @@ export var NVMesh = function (
   colorMap = "green",
   opacity = 1.0,
   visible = true,
+  furthestVertexFromOrigin,
   gl,
   //following properties generated when new mesh is created by this function
   indexCount = 0,
@@ -38,6 +39,7 @@ export var NVMesh = function (
 ) {
   this.name = name;
   this.id = uuidv4();
+  this.furthestVertexFromOrigin = furthestVertexFromOrigin;
   this.colorMap = colorMap;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
@@ -168,6 +170,16 @@ NVMesh.prototype.setColorMap = function (cm) {
     log.warn(`color map ${cm} is not a valid color map`);
   }
 };
+
+function getFurthestVertexFromOrigin(pts) {
+  //each vertex has 3 coordinates: XYZ
+  let mxDx = 0.0;
+  for (let i = 0; i < pts.length; i += 3) {
+    let v = vec3.fromValues(pts[i], pts[i + 1], pts[i + 2]);
+    mxDx = Math.max(mxDx, vec3.len(v));
+  }
+  return mxDx;
+}
 
 function generateNormals(pts, tris) {
   //from https://github.com/rii-mango/Papaya
@@ -888,7 +900,7 @@ NVMesh.loadConnectomeFromJSON = async function (
     else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
   }
   //draw all nodes
-  let vtx = [];
+  let pts = [];
   let rgba255 = [];
   let lut = this.colormap(json.nodeColormap);
   let lutNeg = this.colormap(json.nodeColormapNegative);
@@ -913,7 +925,7 @@ NVMesh.loadConnectomeFromJSON = async function (
     if (isNeg)
       rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
     let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
-    NiivueObject3D.makeColoredSphere(vtx, tris, rgba255, radius, pt, rgba);
+    NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
   }
   //draw all edges
   if (hasEdges) {
@@ -944,7 +956,7 @@ NVMesh.loadConnectomeFromJSON = async function (
         let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
         let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
         NiivueObject3D.makeColoredCylinder(
-          vtx,
+          pts,
           tris,
           rgba255,
           pti,
@@ -955,10 +967,19 @@ NVMesh.loadConnectomeFromJSON = async function (
       } //for j
     } //for i
   } //hasEdges
-  let gix = []; //???? we do not want "gii", e.g. if we load mz3, obj ply
-  let posNormClr = this.generatePosNormClr(vtx, tris, rgba255);
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
+    nvmesh = new NVMesh(
+      posNormClr,
+      tris,
+      name,
+      colorMap,
+      opacity,
+      visible,
+      furthestVertex,
+      gl
+    );
   } else {
     alert("Unable to load buffer properly from mesh");
   }
@@ -1001,14 +1022,34 @@ NVMesh.loadFromUrl = async function ({
     let obj = this.readTCK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
-    nvmesh = new NVMesh(pts, offsetPt0, "*", colorMap, opacity, visible, gl);
+    let furthestVertex = getFurthestVertexFromOrigin(pts);
+    nvmesh = new NVMesh(
+      pts,
+      offsetPt0,
+      "*",
+      colorMap,
+      opacity,
+      visible,
+      furthestVertex,
+      gl
+    );
     return nvmesh;
   } else if (ext.toUpperCase() === "TRK") {
     let buffer = await response.arrayBuffer();
     let obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
-    nvmesh = new NVMesh(pts, offsetPt0, "*", colorMap, opacity, visible, gl);
+    let furthestVertex = getFurthestVertexFromOrigin(pts);
+    nvmesh = new NVMesh(
+      pts,
+      offsetPt0,
+      "*",
+      colorMap,
+      opacity,
+      visible,
+      furthestVertex,
+      gl
+    );
     return nvmesh;
   } else if (ext.toUpperCase() === "GII") {
     //GIFTI
@@ -1051,9 +1092,19 @@ NVMesh.loadFromUrl = async function ({
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
+    nvmesh = new NVMesh(
+      posNormClr,
+      tris,
+      name,
+      colorMap,
+      opacity,
+      visible,
+      furthestVertex,
+      gl
+    );
   } else {
     alert("Unable to load buffer properly from mesh");
   }

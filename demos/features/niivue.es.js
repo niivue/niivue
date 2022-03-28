@@ -21553,9 +21553,10 @@ var giftiReader = { exports: {} };
   });
 })(giftiReader);
 const log$1 = new Log();
-var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true, gl, indexCount = 0, vertexBuffer = null, indexBuffer = null, vao = null) {
+var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true, furthestVertexFromOrigin, gl, indexCount = 0, vertexBuffer = null, indexBuffer = null, vao = null) {
   this.name = name;
   this.id = v4();
+  this.furthestVertexFromOrigin = furthestVertexFromOrigin;
   this.colorMap = colorMap;
   this.opacity = opacity > 1 ? 1 : opacity;
   this.visible = visible;
@@ -21661,6 +21662,14 @@ NVMesh.prototype.setColorMap = function(cm) {
     log$1.warn(`color map ${cm} is not a valid color map`);
   }
 };
+function getFurthestVertexFromOrigin(pts) {
+  let mxDx = 0;
+  for (let i = 0; i < pts.length; i += 3) {
+    let v = fromValues$1(pts[i], pts[i + 1], pts[i + 2]);
+    mxDx = Math.max(mxDx, len(v));
+  }
+  return mxDx;
+}
 function generateNormals(pts, tris) {
   var p1 = [], p2 = [], p3 = [], normal = [], ctr, normalsDataLength = pts.length, numIndices, qx, qy, qz, px, py, pz, index1, index2, index3;
   let norms = new Float32Array(normalsDataLength);
@@ -22244,7 +22253,7 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
     else
       console.log("Expected %d edges not %d", nNode * nNode, nEdges);
   }
-  let vtx = [];
+  let pts = [];
   let rgba255 = [];
   let lut = this.colormap(json.nodeColormap);
   let lutNeg = this.colormap(json.nodeColormapNegative);
@@ -22272,7 +22281,7 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
     if (isNeg)
       rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
     let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
-    NiivueObject3D.makeColoredSphere(vtx, tris, rgba255, radius, pt, rgba);
+    NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
   }
   if (hasEdges) {
     lut = this.colormap(json.edgeColormap);
@@ -22303,13 +22312,14 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
           rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
         let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
         let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
-        NiivueObject3D.makeColoredCylinder(vtx, tris, rgba255, pti, ptj, radius, rgba);
+        NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba);
       }
     }
   }
-  let posNormClr = this.generatePosNormClr(vtx, tris, rgba255);
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
+    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, furthestVertex, gl);
   } else {
     alert("Unable to load buffer properly from mesh");
   }
@@ -22343,14 +22353,16 @@ NVMesh.loadFromUrl = async function({
     let obj = this.readTCK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts2 = new Float32Array(obj.pts.slice());
-    nvmesh = new NVMesh(pts2, offsetPt0, "*", colorMap, opacity, visible, gl);
+    let furthestVertex2 = getFurthestVertexFromOrigin(pts2);
+    nvmesh = new NVMesh(pts2, offsetPt0, "*", colorMap, opacity, visible, furthestVertex2, gl);
     return nvmesh;
   } else if (ext.toUpperCase() === "TRK") {
     let buffer = await response.arrayBuffer();
     let obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts2 = new Float32Array(obj.pts.slice());
-    nvmesh = new NVMesh(pts2, offsetPt0, "*", colorMap, opacity, visible, gl);
+    let furthestVertex2 = getFurthestVertexFromOrigin(pts2);
+    nvmesh = new NVMesh(pts2, offsetPt0, "*", colorMap, opacity, visible, furthestVertex2, gl);
     return nvmesh;
   } else if (ext.toUpperCase() === "GII") {
     let xmlStr = await response.text();
@@ -22394,9 +22406,10 @@ NVMesh.loadFromUrl = async function({
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
+    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, furthestVertex, gl);
   } else {
     alert("Unable to load buffer properly from mesh");
   }
@@ -24042,6 +24055,7 @@ const Niivue = function(options = {}) {
   this.overlays = [];
   this.volumes = [];
   this.meshes = [];
+  this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1;
   this.volScale = [];
   this.vox = [];
@@ -25033,6 +25047,12 @@ Niivue.prototype.updateGLVolume = function() {
     this.refreshLayers(this.volumes[i], visibleLayers, numLayers);
     visibleLayers++;
   }
+  this.furthestVertexFromOrigin = 0;
+  if (numLayers > 0)
+    this.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
+  if (this.meshes)
+    for (let i = 0; i < this.meshes.length; i++)
+      this.furthestVertexFromOrigin = Math.max(this.furthestVertexFromOrigin, this.meshes[i].furthestVertexFromOrigin);
   this.drawScene();
 };
 Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
@@ -25602,7 +25622,7 @@ Niivue.prototype.calculateMvpMatrix = function() {
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = create$2();
-  let scale = 0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
+  let scale = 0.7 * this.furthestVertexFromOrigin * 1 / this.volScaleMultiplier;
   if (whratio < 1)
     ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, 0.01, scale * 8);
   else
@@ -25611,10 +25631,13 @@ Niivue.prototype.calculateMvpMatrix = function() {
   modelMatrix[0] = -1;
   let translateVec3 = fromValues$1(0, 0, -scale * 1.8);
   translate(modelMatrix, modelMatrix, translateVec3);
-  translate(modelMatrix, modelMatrix, this.volumeObject3D.position);
+  if (this.position)
+    translate(modelMatrix, modelMatrix, this.position);
   rotateX(modelMatrix, modelMatrix, deg2rad(270 - this.scene.renderElevation));
   rotateZ(modelMatrix, modelMatrix, deg2rad(this.scene.renderAzimuth - 180));
-  translate(modelMatrix, modelMatrix, this.volumeObject3D.originNegate);
+  if (this.volumeObject3D) {
+    translate(modelMatrix, modelMatrix, this.volumeObject3D.originNegate);
+  }
   let iModelMatrix = create$2();
   invert(iModelMatrix, modelMatrix);
   let normalMatrix = create$2();
@@ -25631,8 +25654,10 @@ Niivue.prototype.calculateRayDirection = function() {
   modelMatrix[0] = -1;
   rotateX(modelMatrix, modelMatrix, deg2rad(270 - this.scene.renderElevation));
   rotateZ(modelMatrix, modelMatrix, deg2rad(this.scene.renderAzimuth - 180));
-  let oblique = clone$1(this.back.obliqueRAS);
-  multiply$1(modelMatrix, modelMatrix, oblique);
+  if (this.back.obliqueRAS) {
+    let oblique = clone$1(this.back.obliqueRAS);
+    multiply$1(modelMatrix, modelMatrix, oblique);
+  }
   let projectionMatrix = fromValues$2(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1);
   let mvpMatrix = create$2();
   multiply$1(mvpMatrix, projectionMatrix, modelMatrix);
@@ -25656,6 +25681,12 @@ Niivue.prototype.draw3D = function() {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
+  if (this.volumes.length === 0) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clearDepth(0);
+    this.drawMesh3D(true, 1);
+    return;
+  }
   let mvpMatrix, modelMatrix, normalMatrix;
   [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(this.volumeObject3D);
   const rayDir = this.calculateRayDirection();
@@ -25775,8 +25806,6 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
-    this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
-    this.crosshairs3D.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
   }
   let crosshairsShader = this.surfaceShader;
   crosshairsShader.use(this.gl);
@@ -25912,6 +25941,8 @@ Niivue.prototype.drawScene = function() {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   let posString = "";
   if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
+    if (this.meshes.length > 0)
+      return this.draw3D();
     this.drawLoadingText(this.loadingText);
     return;
   }
