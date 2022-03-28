@@ -1155,10 +1155,10 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
 NVImage.loadFromUrl = async function (
 	{
   url = '',
+  urlImgData = '',
   name = '',
   colorMap = "gray",
   opacity = 1.0,
-  urlImgData = '',
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -1175,12 +1175,29 @@ NVImage.loadFromUrl = async function (
   if (!response.ok) {
     throw Error(response.statusText);
   }
+	var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(url)[1];
+	if (ext.toUpperCase() === "NHDR") {
+		if (urlImgData === '') {
+		}
+  } else if (ext.toUpperCase() === "HEAD") {
+		if (urlImgData === ''){
+			urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + "BRIK"
+			console.log(urlImgData)
+		}
+  } 
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
+		console.log(resp.status)
+		if (resp.status === 404){
+			if (urlImgData.lastIndexOf('BRIK') !== -1){
+				resp = await fetch(urlImgData + '.gz');
+			}
+		}
     pairedImgData = await resp.arrayBuffer();
   }
 
@@ -1210,7 +1227,11 @@ NVImage.readFileAsync = function (file) {
     let reader = new FileReader();
 
     reader.onload = () => {
-      resolve(reader.result);
+			if (file.name.lastIndexOf('gz') !== -1){
+				resolve(nifti.decompress(reader.result))
+			} else {
+      	resolve(reader.result);
+			}
     };
 
     reader.onerror = reject;
@@ -1235,21 +1256,24 @@ NVImage.readFileAsync = function (file) {
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
 NVImage.loadFromFile = async function (
-  file,
+	{
+  file=null,
   name = "",
   colorMap = "gray",
   opacity = 1.0,
-  urlImgData = "",
+  urlImgData = null,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true
-) {
+	} = {}) {
   let nvimage = null;
   try {
     let dataBuffer = await this.readFileAsync(file);
     let pairedImgData = null;
-		if (urlImgData.length > 0) {
+		console.log('before readimg paired image data!!!!')
+		if (urlImgData) {
+			console.log('reading paired image data!!!!!')
       pairedImgData = await this.readFileAsync(urlImgData);
 		}
 		name = file.name

@@ -868,7 +868,27 @@ Niivue.prototype.dropListener = async function (e) {
       }
 
       for (const file of files) {
-        let volume = await NVImage.loadFromFile(file);
+				console.log(file.name)
+				let pairedImageData = ''
+				// check for afni HEAD BRIK pair
+				if (file.name.lastIndexOf('HEAD') !== -1){
+					for (const pairedFile of files) {
+						let fileBaseName = file.name.substring(0, file.name.lastIndexOf('HEAD'))
+						console.log(pairedFile.name)
+						let pairedFileBaseName = pairedFile.name.substring(0, pairedFile.name.lastIndexOf('BRIK'))
+						if (fileBaseName === pairedFileBaseName){
+							console.log('base names match!!!!')
+							pairedImageData = pairedFile
+						}
+					}
+				}
+				if (file.name.lastIndexOf('BRIK') !== -1){
+					continue
+				}
+				let volume = await NVImage.loadFromFile({
+					file:file,
+					urlImgData: pairedImageData
+				});
         this.addVolume(volume);
       }
     }
