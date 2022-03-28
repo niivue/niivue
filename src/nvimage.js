@@ -1242,8 +1242,10 @@ NVImage.loadFromFile = async function (
   try {
     let dataBuffer = await this.readFileAsync(file);
     let pairedImgData = null;
-    if (urlImgData.length > 0)
+		if (urlImgData.length > 0) {
       pairedImgData = await this.readFileAsync(urlImgData);
+		}
+		name = file.name
     nvimage = new NVImage(
       dataBuffer,
       name,
@@ -1256,8 +1258,10 @@ NVImage.loadFromFile = async function (
       visible
     );
   } catch (err) {
+		console.log(err)
     log.debug(err);
   }
+	console.log(nvimage)
   return nvimage;
 };
 

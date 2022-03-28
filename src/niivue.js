@@ -971,6 +971,7 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   this.volumes.map((v) => {
+		console.log(v)
     log.debug(v.name);
   });
   let numberOfLoadedImages = this.volumes.length;
