@@ -749,8 +749,8 @@ NVMesh.loadFromUrl = async function ({
         tn = items[3].split("/");
         t.push(parseInt(tn - 1));
       }
-      tris = new Int32Array(t);
     } //for all lines
+    tris = new Int32Array(t);
   } else if (ext.toUpperCase() === "GII") {
     //GIFTI
     let xmlStr = await response.text();

@@ -432,8 +432,38 @@ NVImage.prototype.readMGH = function (dataBuffer) {
   hdr.pixDims[3] = spacingZ;
   hdr.vox_offset = 284;
   hdr.sform_code = 1;
-
-  console.log("??", hdr.dims);
+  let rot44 = mat4.fromValues(
+      xr*hdr.pixDims[1],
+      yr*hdr.pixDims[2],
+      zr*hdr.pixDims[3],
+      0,
+      xa*hdr.pixDims[1],
+      ya*hdr.pixDims[2],
+      za*hdr.pixDims[3],
+      0,
+      xs*hdr.pixDims[1],
+      ys*hdr.pixDims[2],
+      zs*hdr.pixDims[3],
+      0,
+      0,
+      0,
+      0,
+      1
+    );
+  let base = 0.0; //0 or 1: are voxels indexed from 0 or 1?
+  let Pcrs = [ (hdr.dims[1]/2.0)+base, (hdr.dims[2]/2.0)+base, (hdr.dims[3]/2.0)+base, 1];
+  let PxyzOffset = [0,0,0,0];
+  for (var i = 0; i < 3; i++) {//multiply Pcrs * m
+    for (var j = 0; j< 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + (rot44[i+(j*4)]*Pcrs[j]);
+    }
+  }
+  hdr.affine = [
+    [rot44[0], rot44[1], rot44[2], PxyzOffset[0]],
+    [rot44[4], rot44[5], rot44[6], PxyzOffset[1]],
+    [rot44[8], rot44[9], rot44[10], PxyzOffset[2]],
+    [0, 0, 0, 1],
+  ];
   return dataBuffer.slice(hdr.vox_offset);
 };
 
