@@ -433,29 +433,35 @@ NVImage.prototype.readMGH = function (dataBuffer) {
   hdr.vox_offset = 284;
   hdr.sform_code = 1;
   let rot44 = mat4.fromValues(
-      xr*hdr.pixDims[1],
-      yr*hdr.pixDims[2],
-      zr*hdr.pixDims[3],
-      0,
-      xa*hdr.pixDims[1],
-      ya*hdr.pixDims[2],
-      za*hdr.pixDims[3],
-      0,
-      xs*hdr.pixDims[1],
-      ys*hdr.pixDims[2],
-      zs*hdr.pixDims[3],
-      0,
-      0,
-      0,
-      0,
-      1
-    );
+    xr * hdr.pixDims[1],
+    yr * hdr.pixDims[2],
+    zr * hdr.pixDims[3],
+    0,
+    xa * hdr.pixDims[1],
+    ya * hdr.pixDims[2],
+    za * hdr.pixDims[3],
+    0,
+    xs * hdr.pixDims[1],
+    ys * hdr.pixDims[2],
+    zs * hdr.pixDims[3],
+    0,
+    0,
+    0,
+    0,
+    1
+  );
   let base = 0.0; //0 or 1: are voxels indexed from 0 or 1?
-  let Pcrs = [ (hdr.dims[1]/2.0)+base, (hdr.dims[2]/2.0)+base, (hdr.dims[3]/2.0)+base, 1];
-  let PxyzOffset = [0,0,0,0];
-  for (var i = 0; i < 3; i++) {//multiply Pcrs * m
-    for (var j = 0; j< 3; j++) {
-      PxyzOffset[i] = PxyzOffset[i] + (rot44[i+(j*4)]*Pcrs[j]);
+  let Pcrs = [
+    hdr.dims[1] / 2.0 + base,
+    hdr.dims[2] / 2.0 + base,
+    hdr.dims[3] / 2.0 + base,
+    1,
+  ];
+  let PxyzOffset = [0, 0, 0, 0];
+  for (var i = 0; i < 3; i++) {
+    //multiply Pcrs * m
+    for (var j = 0; j < 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + rot44[i + j * 4] * Pcrs[j];
     }
   }
   hdr.affine = [
@@ -1182,22 +1188,19 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
  * @example
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
  */
-NVImage.loadFromUrl = async function (
-	{
-  url = '',
-  urlImgData = '',
-  name = '',
+NVImage.loadFromUrl = async function ({
+  url = "",
+  urlImgData = "",
+  name = "",
   colorMap = "gray",
   opacity = 1.0,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
-	} = {}
-	) {
-
-	if (url === '') {
-    throw Error('url must not be empty');
+  visible = true,
+} = {}) {
+  if (url === "") {
+    throw Error("url must not be empty");
   }
 
   let response = await fetch(url);
@@ -1205,29 +1208,29 @@ NVImage.loadFromUrl = async function (
   if (!response.ok) {
     throw Error(response.statusText);
   }
-	var re = /(?:\.([^.]+))?$/;
+  var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(url)[1];
-	if (ext.toUpperCase() === "NHDR") {
-		if (urlImgData === '') {
-		}
+  if (ext.toUpperCase() === "NHDR") {
+    if (urlImgData === "") {
+    }
   } else if (ext.toUpperCase() === "HEAD") {
-		if (urlImgData === ''){
-			urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + "BRIK"
-			console.log(urlImgData)
-		}
-  } 
+    if (urlImgData === "") {
+      urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
+      console.log(urlImgData);
+    }
+  }
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
-		console.log(resp.status)
-		if (resp.status === 404){
-			if (urlImgData.lastIndexOf('BRIK') !== -1){
-				resp = await fetch(urlImgData + '.gz');
-			}
-		}
+    console.log(resp.status);
+    if (resp.status === 404) {
+      if (urlImgData.lastIndexOf("BRIK") !== -1) {
+        resp = await fetch(urlImgData + ".gz");
+      }
+    }
     pairedImgData = await resp.arrayBuffer();
   }
 
@@ -1257,11 +1260,11 @@ NVImage.readFileAsync = function (file) {
     let reader = new FileReader();
 
     reader.onload = () => {
-			if (file.name.lastIndexOf('gz') !== -1){
-				resolve(nifti.decompress(reader.result))
-			} else {
-      	resolve(reader.result);
-			}
+      if (file.name.lastIndexOf("gz") !== -1) {
+        resolve(nifti.decompress(reader.result));
+      } else {
+        resolve(reader.result);
+      }
     };
 
     reader.onerror = reject;
@@ -1285,9 +1288,8 @@ NVImage.readFileAsync = function (file) {
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
-NVImage.loadFromFile = async function (
-	{
-  file=null,
+NVImage.loadFromFile = async function ({
+  file = null,
   name = "",
   colorMap = "gray",
   opacity = 1.0,
@@ -1295,18 +1297,18 @@ NVImage.loadFromFile = async function (
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
-	} = {}) {
+  visible = true,
+} = {}) {
   let nvimage = null;
   try {
     let dataBuffer = await this.readFileAsync(file);
     let pairedImgData = null;
-		console.log('before readimg paired image data!!!!')
-		if (urlImgData) {
-			console.log('reading paired image data!!!!!')
+    console.log("before readimg paired image data!!!!");
+    if (urlImgData) {
+      console.log("reading paired image data!!!!!");
       pairedImgData = await this.readFileAsync(urlImgData);
-		}
-		name = file.name
+    }
+    name = file.name;
     nvimage = new NVImage(
       dataBuffer,
       name,
@@ -1319,10 +1321,10 @@ NVImage.loadFromFile = async function (
       visible
     );
   } catch (err) {
-		console.log(err)
+    console.log(err);
     log.debug(err);
   }
-	console.log(nvimage)
+  console.log(nvimage);
   return nvimage;
 };
 
