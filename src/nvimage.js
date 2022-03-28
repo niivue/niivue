@@ -1153,16 +1153,23 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
  */
 NVImage.loadFromUrl = async function (
-  url,
-  name = "",
+	{
+  url = '',
+  name = '',
   colorMap = "gray",
   opacity = 1.0,
-  urlImgData = "",
+  urlImgData = '',
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true
-) {
+	} = {}
+	) {
+
+	if (url === '') {
+    throw Error('url must not be empty');
+  }
+
   let response = await fetch(url);
   let nvimage = null;
   if (!response.ok) {

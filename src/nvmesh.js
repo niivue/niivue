@@ -668,15 +668,21 @@ NVMesh.loadConnectomeFromJSON = async function (
  * @example
  * myImage = NVMesh.loadFromUrl('./someURL/mesh.gii') // must be served from a server (local or remote)
  */
-NVMesh.loadFromUrl = async function (
-  url,
-  gl,
+NVMesh.loadFromUrl = async function ({
+  url = '',
+  gl= null,
   name = "",
   colorMap = "yellow",
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true
-) {
+	} = {}) {
+	if (url === '') {
+    throw Error('url must not be empty');
+  }
+	if (gl===null) {
+    throw Error('gl context is null');
+  }
   let response = await fetch(url);
 
   let nvmesh = null;

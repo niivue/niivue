@@ -856,7 +856,7 @@ Niivue.prototype.dropListener = async function (e) {
   const url = dt.getData("text/uri-list");
   //TODO: handle meshes (obj, mz3, gii, stl, pial, vtk) and volumes (nii, nii.gz, nrrd)
   if (url) {
-    let volume = await NVImage.loadFromUrl(url);
+		let volume = await NVImage.loadFromUrl({url:url});
     this.setVolume(volume);
   } else {
     const files = dt.files;
@@ -890,7 +890,7 @@ Niivue.prototype.getRadiologicalConvention = function () {
  * @param {NVImage} volume the new volume to add to the canvas
  * @example
  * niivue = new Niivue()
- * niivue.addVolume(NVImage.loadFromUrl('./someURL.nii.gz'))
+ * niivue.addVolume(NVImage.loadFromUrl({url:'./someURL.nii.gz'}))
  */
 Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
@@ -904,7 +904,7 @@ Niivue.prototype.addVolume = function (volume) {
  * @param {NVMesh} mesh the new mesh to add to the canvas
  * @example
  * niivue = new Niivue()
- * niivue.addMesh(NVMesh.loadFromUrl('./someURL.gii'))
+ * niivue.addMesh(NVMesh.loadFromUrl({url:'./someURL.gii'}))
  */
 Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
@@ -1317,14 +1317,14 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     this.scene.loading$.next(true);
-    let volume = await NVImage.loadFromUrl(
-      volumeList[i].url,
-      volumeList[i].name,
-      volumeList[i].colorMap,
-      volumeList[i].opacity,
-      volumeList[i].urlImgData,
-      this.opts.trustCalMinMax
-    );
+    let volume = await NVImage.loadFromUrl({
+			url:volumeList[i].url,
+			name:volumeList[i].name,
+			colorMap:volumeList[i].colorMap,
+			opacity: volumeList[i].opacity,
+			urlImgData: volumeList[i].urlImgData,
+			trustCalMinMax:this.opts.trustCalMinMax
+		});
     this.scene.loading$.next(false);
     this.addVolume(volume);
     /*
@@ -1367,15 +1367,15 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl(
-      meshList[i].url,
-      this.gl,
-      meshList[i].name,
-      meshList[i].colorMap,
-      meshList[i].opacity,
-      meshList[i].rgba255,
-      meshList[i].visible
-    );
+    let mesh = await NVMesh.loadFromUrl({
+			url:meshList[i].url,
+			gl:this.gl,
+			name:meshList[i].name,
+			colorMap:meshList[i].colorMap,
+			opacity:meshList[i].opacity,
+			rgba255:meshList[i].rgba255,
+			visible:meshList[i].visible
+		});
     this.scene.loading$.next(false);
     this.addMesh(mesh);
     //this.meshes.push(mesh);
