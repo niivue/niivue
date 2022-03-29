@@ -1885,6 +1885,11 @@ Niivue.prototype.updateGLVolume = function () {
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
+  if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
+    img = overlayItem.img.slice(
+      overlayItem.frame4D * overlayItem.nVox3D,
+      (overlayItem.frame4D + 1) * overlayItem.nVox3D
+    );
   let opacity = overlayItem.opacity;
   let outTexture = null;
   this.gl.bindVertexArray(this.unusedVAO);
@@ -2299,6 +2304,20 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
   let idx = this.getVolumeIndexByID(id);
   this.volumes[idx].colorMap = colorMap;
   this.updateGLVolume();
+};
+
+Niivue.prototype.setFrame4D = function (id, frame4D) {
+  console.log("setting frame to ");
+  let idx = this.getVolumeIndexByID(id);
+  console.log(this.volumes[idx]);
+  this.volumes[idx].frame4D = frame4D;
+  this.updateGLVolume();
+  console.log("setting frame to ", frame4D);
+};
+
+Niivue.prototype.getFrame4D = function (id) {
+  let idx = this.getVolumeIndexByID(id);
+  return this.volumes[idx].nFrame4D;
 };
 
 // not included in public docs

@@ -11299,6 +11299,7 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pa
   this.name = name;
   this.id = v4();
   this.colorMap = colorMap;
+  this.frame4D = 0;
   this.opacity = opacity > 1 ? 1 : opacity;
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
@@ -11327,6 +11328,14 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pa
       imgRaw = nifti.readImage(this.hdr, dataBuffer);
     }
   }
+  this.nFrame4D = 1;
+  for (let i = 4; i < 7; i++)
+    if (this.hdr.dims[i] > 1)
+      this.nFrame4D *= this.hdr.dims[i];
+  this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
+  let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
+  if (nVol4D !== this.nFrame4D)
+    console.log("This header does not match voxel data", this.hdr, imgRaw.byteLength);
   if (this.hdr.pixDims[1] === 0 || this.hdr.pixDims[2] === 0 || this.hdr.pixDims[3] === 0)
     console.log("pixDims not plausible", this.hdr);
   function isAffineOK(mtx) {
@@ -25082,6 +25091,8 @@ Niivue.prototype.updateGLVolume = function() {
 Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
+  if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
+    img = overlayItem.img.slice(overlayItem.frame4D * overlayItem.nVox3D, (overlayItem.frame4D + 1) * overlayItem.nVox3D);
   let opacity = overlayItem.opacity;
   let outTexture = null;
   this.gl.bindVertexArray(this.unusedVAO);
@@ -25260,6 +25271,18 @@ Niivue.prototype.setColorMap = function(id, colorMap) {
   let idx = this.getVolumeIndexByID(id);
   this.volumes[idx].colorMap = colorMap;
   this.updateGLVolume();
+};
+Niivue.prototype.setFrame4D = function(id, frame4D) {
+  console.log("setting frame to ");
+  let idx = this.getVolumeIndexByID(id);
+  console.log(this.volumes[idx]);
+  this.volumes[idx].frame4D = frame4D;
+  this.updateGLVolume();
+  console.log("setting frame to ", frame4D);
+};
+Niivue.prototype.getFrame4D = function(id) {
+  let idx = this.getVolumeIndexByID(id);
+  return this.volumes[idx].nFrame4D;
 };
 Niivue.prototype.colormapFromKey = function(name) {
   return cmapper.colormapFromKey(name);

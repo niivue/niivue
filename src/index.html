@@ -88,7 +88,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/scaled+tlrc.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/pcasl.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/scaled+tlrc.BRIK.gz",
@@ -117,14 +117,19 @@
       ])*/
 			
       //nv1.loadConnectome(connectome)
-      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      //nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
+      //nv1.volumes[0].frame4D = 5;
+
+      //nv1.updateGLVolume()
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-
+        console.log('>>>',nv1.volumes[0]);
+        nv1.volumes[0].frame4D =  Math.floor(Math.random() * 9);
+        nv1.updateGLVolume()
       })
 
 			nv1.on('imageLoaded', (image) => {

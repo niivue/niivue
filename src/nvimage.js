@@ -68,6 +68,7 @@ export var NVImage = function (
   this.name = name;
   this.id = uuidv4();
   this.colorMap = colorMap;
+  this.frame4D = 0; //indexed from 0!
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
@@ -98,6 +99,17 @@ export var NVImage = function (
       imgRaw = nifti.readImage(this.hdr, dataBuffer);
     }
   }
+  this.nFrame4D = 1;
+  for (let i = 4; i < 7; i++)
+    if (this.hdr.dims[i] > 1) this.nFrame4D *= this.hdr.dims[i];
+  this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
+  let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
+  if (nVol4D !== this.nFrame4D)
+    console.log(
+      "This header does not match voxel data",
+      this.hdr,
+      imgRaw.byteLength
+    );
   if (
     this.hdr.pixDims[1] === 0.0 ||
     this.hdr.pixDims[2] === 0.0 ||
@@ -1419,6 +1431,7 @@ NVImage.zerosLike = function (nvImage) {
 };
 
 String.prototype.getBytes = function () {
+  //CR??? What does this do?
   let bytes = [];
   for (var i = 0; i < this.length; i++) {
     bytes.push(this.charCodeAt(i));
