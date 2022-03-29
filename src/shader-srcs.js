@@ -101,6 +101,7 @@ void main() {
 	float lenNoClip = len;
 	bool isClip = false;
 	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	//if ((clipPos.a != samplePos.a) && (len < 3.0)) {
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
@@ -143,6 +144,8 @@ void main() {
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
+	if (isClip) //CR
+		fColor.rgb = mix(fColor.rgb, clipPlaneColor.rgb, clipPlaneColor.a * 0.15);
 	if (overlays < 1.0) return;
 	//overlay pass
 	len = lenNoClip;

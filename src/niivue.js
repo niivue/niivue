@@ -29,7 +29,6 @@ import {
   fragDepthPickingShader,
   fragVolumePickingShader,
 } from "./shader-srcs.js";
-import * as cmaps from "./cmaps";
 import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
@@ -40,8 +39,9 @@ export { NVImage } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-
+import { colortables } from "./colortables";
 const log = new Log();
+const cmapper = new colortables();
 
 /**
  * @class Niivue
@@ -871,7 +871,10 @@ Niivue.prototype.dropListener = async function (e) {
       }
 
       for (const file of files) {
-        console.log(file.name);
+        var re = /(?:\.([^.]+))?$/;
+        let ext = re.exec(file.name)[1];
+        ext = ext.toUpperCase();
+        console.log(ext, "dropped ", file.name);
         let pairedImageData = "";
         // check for afni HEAD BRIK pair
         if (file.name.lastIndexOf("HEAD") !== -1) {
@@ -892,6 +895,23 @@ Niivue.prototype.dropListener = async function (e) {
           }
         }
         if (file.name.lastIndexOf("BRIK") !== -1) {
+          continue;
+        }
+        if (
+          ext === "GII" ||
+          ext === "MZ3" ||
+          ext === "OBJ" ||
+          ext === "STL" ||
+          ext === "VTK"
+        ) {
+          console.log("mesh loading not yet supported");
+          /*let mesh = await NVMesh.loadFromFile({
+            file: file,
+            name: file.name,
+          });
+          console.log('+++>>>', mesh); 
+          this.scene.loading$.next(false);
+          this.addMesh(mesh);*/
           continue;
         }
         let volume = await NVImage.loadFromFile({
@@ -2264,11 +2284,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
  * colormaps = niivue.colorMaps()
  */
 Niivue.prototype.colorMaps = function (sort = true) {
-  let cm = [];
-  for (const [key] of Object.entries(cmaps)) {
-    cm.push(key);
-  }
-  return sort === true ? cm.sort() : cm;
+  return cmapper.colorMaps();
 };
 
 /**
@@ -2287,40 +2303,12 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
 
 // not included in public docs
 Niivue.prototype.colormapFromKey = function (name) {
-  let availMaps = this.colorMaps();
-  for (let i = 0; i < availMaps.length; i++) {
-    let key = availMaps[i];
-    if (name.toLowerCase() === key.toLowerCase()) {
-      return cmaps[key];
-    }
-  }
+  return cmapper.colormapFromKey(name);
 };
 
 // not included in public docs
 Niivue.prototype.colormap = function (lutName = "") {
-  //function colormap(lutName = "") {
-  let defaultLutName = "gray";
-  let availMaps = this.colorMaps();
-  for (let i = 0; i < availMaps.length; i++) {
-    let key = availMaps[i];
-    if (lutName.toLowerCase() === key.toLowerCase()) {
-      return this.makeLut(
-        cmaps[key].R,
-        cmaps[key].G,
-        cmaps[key].B,
-        cmaps[key].A,
-        cmaps[key].I
-      );
-    }
-  }
-  // if no match the return the default gray lut
-  return this.makeLut(
-    cmaps[defaultLutName].R,
-    cmaps[defaultLutName].G,
-    cmaps[defaultLutName].B,
-    cmaps[defaultLutName].A,
-    cmaps[defaultLutName].I
-  );
+  return cmapper.colormap(lutName);
 }; // colormap()
 
 // not included in public docs
@@ -2379,29 +2367,6 @@ Niivue.prototype.refreshColormaps = function () {
   );
   return this;
 }; // refreshColormaps()
-
-// not included in public docs
-Niivue.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
-  //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
-  //intensity indices should be in increasing order with the first value 0 and the last 255.
-  // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
-  var lut = new Uint8ClampedArray(256 * 4);
-  for (var i = 0; i < Is.length - 1; i++) {
-    //return a + f * (b - a);
-    var idxLo = Is[i];
-    var idxHi = Is[i + 1];
-    var idxRng = idxHi - idxLo;
-    var k = idxLo * 4;
-    for (var j = idxLo; j <= idxHi; j++) {
-      var f = (j - idxLo) / idxRng;
-      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
-      lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]); //Green
-      lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
-      lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
-    }
-  }
-  return lut;
-}; // makeLut()
 
 // not included in public docs
 Niivue.prototype.sliceScale = function () {

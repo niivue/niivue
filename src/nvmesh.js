@@ -5,8 +5,9 @@ import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
+import { colortables } from "./colortables";
+const cmapper = new colortables();
 const log = new Log();
-
 /**
  * @class NVMesh
  * @type NVMesh
@@ -151,24 +152,6 @@ export var NVMesh = function (
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
-};
-
-NVMesh.prototype.colorMaps = function (sort = true) {
-  let cm = [];
-  for (const [key] of Object.entries(cmaps)) {
-    cm.push(key);
-  }
-  return sort === true ? cm.sort() : cm;
-};
-
-NVMesh.prototype.setColorMap = function (cm) {
-  let allColorMaps = this.colorMaps();
-  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
-    this.colorMap = cm.toLowerCase();
-    this.calMinMax();
-  } else {
-    log.warn(`color map ${cm} is not a valid color map`);
-  }
 };
 
 function getFurthestVertexFromOrigin(pts) {
@@ -845,41 +828,6 @@ NVMesh.readSTL = function (buffer) {
   };
 };
 
-NVMesh.makeLut = function (Rs, Gs, Bs, As, Is) {
-  //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
-  //intensity indices should be in increasing order with the first value 0 and the last 255.
-  // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
-  var lut = new Uint8ClampedArray(256 * 4);
-  for (var i = 0; i < Is.length - 1; i++) {
-    //return a + f * (b - a);
-    var idxLo = Is[i];
-    var idxHi = Is[i + 1];
-    var idxRng = idxHi - idxLo;
-    var k = idxLo * 4;
-    for (var j = idxLo; j <= idxHi; j++) {
-      var f = (j - idxLo) / idxRng;
-      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
-      lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]); //Green
-      lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
-      lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
-    }
-  }
-  return lut;
-}; // makeLut()
-
-NVMesh.colormap = function (lutName = "") {
-  let cmaps = {
-    min: 0,
-    max: 0,
-    R: [0, 128, 255],
-    G: [0, 0, 0],
-    B: [0, 0, 0],
-    A: [0, 64, 128],
-    I: [0, 128, 255],
-  };
-  return this.makeLut(cmaps.R, cmaps.G, cmaps.B, cmaps.A, cmaps.I);
-};
-
 NVMesh.loadConnectomeFromJSON = async function (
   json,
   gl,
@@ -902,8 +850,8 @@ NVMesh.loadConnectomeFromJSON = async function (
   //draw all nodes
   let pts = [];
   let rgba255 = [];
-  let lut = this.colormap(json.nodeColormap);
-  let lutNeg = this.colormap(json.nodeColormapNegative);
+  let lut = cmapper.colormap(json.nodeColormap);
+  let lutNeg = cmapper.colormap(json.nodeColormapNegative);
   let hasNeg = json.hasOwnProperty("nodeColormapNegative");
   let min = json.nodeMinColor;
   let max = json.nodeMaxColor;
@@ -929,8 +877,8 @@ NVMesh.loadConnectomeFromJSON = async function (
   }
   //draw all edges
   if (hasEdges) {
-    lut = this.colormap(json.edgeColormap);
-    lutNeg = this.colormap(json.edgeColormapNegative);
+    lut = cmapper.colormap(json.edgeColormap);
+    lutNeg = cmapper.colormap(json.edgeColormapNegative);
     hasNeg = json.hasOwnProperty("edgeColormapNegative");
     min = json.edgeMin;
     max = json.edgeMax;
@@ -1013,6 +961,7 @@ NVMesh.loadFromUrl = async function ({
   if (!response.ok) throw Error(response.statusText);
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  //  return this.loadFromArrayBuffer(buffer, gl, name, colorMap, opacity, rgba255, visible);
   let tris = [];
   var pts = [];
   var re = /(?:\.([^.]+))?$/;
@@ -1058,7 +1007,8 @@ NVMesh.loadFromUrl = async function ({
     pts = gii.getPointsDataArray().getData();
     tris = gii.getTrianglesDataArray().getData();
   } else {
-    let buffer = await response.arrayBuffer();
+    let buffer = await response.arrayBuffer(); //array buffer
+    console.log("<<<", buffer);
     let obj = [];
     if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
     else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
@@ -1141,7 +1091,7 @@ NVMesh.readFileAsync = function (file) {
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
-NVMesh.loadFromFile = async function (
+NVMesh.loadFromFile = async function ({
   file,
   name = "",
   colorMap = "blue",
@@ -1149,11 +1099,11 @@ NVMesh.loadFromFile = async function (
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
-) {
-  let nvmesh = null;
+  visible = true,
+} = {}) {
+  let nvmesh = null; //TODO
   try {
-    let dataBuffer = await this.readFileAsync(file);
+    let dataBuffer = await this.readFileAsync(file); //arrayBuffer
     nvmesh = new NVMesh(
       dataBuffer,
       name,
