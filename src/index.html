@@ -23,23 +23,12 @@
       <h1>
         hot reloadable development preview
       </h1>
-      <p>
-      <h3>Controls</h3>
-      <ul>
-        <li>move the crosshairs: left mouse click and drag (or click around)</li>
-        <li>slice scrolling: mouse or touch pad scroll up and down (pinch zoom for mobile)</li>
-        <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
-        <li>reset intensity: left mouse click double click (mobile not supported)</li>
-        <li><b>change the view mode by pressing the "v" key on your keyboard (mobile not supported yet)</b></li>
-        <li><b>cycle through clip planes by pressing the "c" key on your keyboard (mobile not supported yet)</b></li>
-      </ul>
-      </p>
     </section>
 
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
@@ -88,7 +77,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/scaled+tlrc.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/pcasl.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/scaled+tlrc.BRIK.gz",
@@ -111,14 +100,14 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
 			
-      /*nv1.loadMeshes([
-         {url: "../demos/images/motor_4t95mesh.rh.mz3", rgba255 : [0, 0, 255, 255]},
-         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
-      ])*/
+      nv1.loadMeshes([
+         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 192, 192, 255]},
+         //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
+      ])
 			
       //nv1.loadConnectome(connectome)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      //nv1.setSliceType(nv1.sliceTypeRender)
+      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
       //nv1.volumes[0].frame4D = 5;
 
@@ -127,9 +116,8 @@
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-        console.log('>>>',nv1.volumes[0]);
-        nv1.volumes[0].frame4D =  Math.floor(Math.random() * 9);
-        nv1.updateGLVolume()
+        //nv1.volumes[0].frame4D =  Math.floor(Math.random() * 9);
+        //nv1.updateGLVolume()
       })
 
 			nv1.on('imageLoaded', (image) => {

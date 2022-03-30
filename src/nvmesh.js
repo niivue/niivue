@@ -828,6 +828,18 @@ NVMesh.readSTL = function (buffer) {
   };
 };
 
+NVMesh.readGII = function (buffer) {
+    var enc = new TextDecoder("utf-8");
+    var xmlStr = enc.decode(buffer);
+    let gii = gifti.parse(xmlStr);
+    var positions = gii.getPointsDataArray().getData();
+    var indices = gii.getTrianglesDataArray().getData();
+  return {
+    positions,
+    indices,
+  };
+}
+
 NVMesh.loadConnectomeFromJSON = async function (
   json,
   gl,
@@ -934,6 +946,50 @@ NVMesh.loadConnectomeFromJSON = async function (
   return nvmesh;
 };
 
+NVMesh.readMesh = function (buffer, name, rgba255 = [255, 255, 255, 255]) {
+  let tris = [];
+  let pts = [];
+  let obj = [];
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(name)[1];
+  if (ext.toUpperCase() === "GII") obj = this.readGII(buffer);
+  else if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
+  else if (ext.toUpperCase() === "VTK") obj = this.readVTK(buffer);
+  else if (ext.toUpperCase() === "STL") obj = this.readSTL(buffer);
+  //unknown file extension, try freeSurfer as hail mary
+  else obj = this.readFreeSurfer(buffer);
+  pts = obj.positions.slice();
+  tris = obj.indices.slice();
+  if (obj.colors && obj.colors.length === pts.length) {
+    rgba255 = [];
+    let n = pts.length / 3;
+    let c = 0;
+    for (let i = 0; i < n; i++) {
+      //convert ThreeJS unit RGB to RGBA255
+      rgba255.push(obj.colors[c] * 255); //red
+      rgba255.push(obj.colors[c + 1] * 255); //green
+      rgba255.push(obj.colors[c + 2] * 255); //blue
+      rgba255.push(255); //alpha
+      c += 3;
+    } //for i: each vertex
+  } //obj includes colors
+  let npt = pts.length / 3;
+  let ntri = tris.length / 3;
+  if (ntri < 1 || npt < 3) {
+    alert("Mesh should have at least one triangle and three vertices");
+    return;
+  }
+  if (tris.constructor !== Int32Array) {
+    alert("Expected triangle indices to be of type INT32");
+  }
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
+  return {
+    posNormClr, tris, furthestVertex
+  };
+}
+
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -964,11 +1020,15 @@ NVMesh.loadFromUrl = async function ({
   //  return this.loadFromArrayBuffer(buffer, gl, name, colorMap, opacity, rgba255, visible);
   let tris = [];
   var pts = [];
+  let buffer = await response.arrayBuffer();
+  let obj = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "TCK") {
-    let buffer = await response.arrayBuffer();
-    let obj = this.readTCK(buffer);
+  if ((ext.toUpperCase() === "TRK") || ((ext.toUpperCase() === "TCK"))) {
+    if (ext.toUpperCase() === "TCK") 
+      obj = this.readTCK(buffer);
+    else
+      obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
     let furthestVertex = getFurthestVertexFromOrigin(pts);
@@ -983,67 +1043,11 @@ NVMesh.loadFromUrl = async function ({
       gl
     );
     return nvmesh;
-  } else if (ext.toUpperCase() === "TRK") {
-    let buffer = await response.arrayBuffer();
-    let obj = this.readTRK(buffer);
-    let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-    let pts = new Float32Array(obj.pts.slice());
-    let furthestVertex = getFurthestVertexFromOrigin(pts);
-    nvmesh = new NVMesh(
-      pts,
-      offsetPt0,
-      "*",
-      colorMap,
-      opacity,
-      visible,
-      furthestVertex,
-      gl
-    );
-    return nvmesh;
-  } else if (ext.toUpperCase() === "GII") {
-    //GIFTI
-    let xmlStr = await response.text();
-    let gii = gifti.parse(xmlStr);
-    pts = gii.getPointsDataArray().getData();
-    tris = gii.getTrianglesDataArray().getData();
-  } else {
-    let buffer = await response.arrayBuffer(); //array buffer
-    console.log("<<<", buffer);
-    let obj = [];
-    if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
-    else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
-    else if (ext.toUpperCase() === "VTK") obj = this.readVTK(buffer);
-    else if (ext.toUpperCase() === "STL") obj = this.readSTL(buffer);
-    //unknown file extension, try freeSurfer as hail mary
-    else obj = this.readFreeSurfer(buffer);
-    pts = obj.positions.slice();
-    tris = obj.indices.slice();
-    if (obj.colors && obj.colors.length === pts.length) {
-      rgba255 = [];
-      let n = pts.length / 3;
-      let c = 0;
-      for (let i = 0; i < n; i++) {
-        //convert ThreeJS unit RGB to RGBA255
-        rgba255.push(obj.colors[c] * 255); //red
-        rgba255.push(obj.colors[c + 1] * 255); //green
-        rgba255.push(obj.colors[c + 2] * 255); //blue
-        rgba255.push(255); //alpha
-        c += 3;
-      } //for i: each vertex
-    } //obj includes colors
-  } //read file types
-  let npt = pts.length / 3;
-  let ntri = tris.length / 3;
-  if (ntri < 1 || npt < 3) {
-    alert("Mesh should have at least one triangle and three vertices");
-    return;
   }
-  //console.log('npts ', npt, ' ntri ', ntri)
-  if (tris.constructor !== Int32Array) {
-    alert("Expected triangle indices to be of type INT32");
-  }
-  let furthestVertex = getFurthestVertexFromOrigin(pts);
-  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
+  obj = this.readMesh(buffer, name, rgba255);
+  let posNormClr = obj.posNormClr.slice();
+  tris = obj.tris.slice();
+  let furthestVertex = obj.furthestVertex;
   if (posNormClr) {
     nvmesh = new NVMesh(
       posNormClr,
@@ -1093,34 +1097,40 @@ NVMesh.readFileAsync = function (file) {
  */
 NVMesh.loadFromFile = async function ({
   file,
+  gl,
   name = "",
   colorMap = "blue",
   opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
 } = {}) {
-  let nvmesh = null; //TODO
-  try {
-    let dataBuffer = await this.readFileAsync(file); //arrayBuffer
+  let nvmesh = [];
+  let buffer = await this.readFileAsync(file);
+  let obj = this.readMesh(buffer, name);
+  let posNormClr = obj.posNormClr.slice();
+  let tris = obj.tris.slice();
+  let furthestVertex = obj.furthestVertex;
+  if (posNormClr) {
     nvmesh = new NVMesh(
-      dataBuffer,
+      posNormClr,
+      tris,
       name,
       colorMap,
       opacity,
-      trustCalMinMax,
-      percentileFrac,
-      ignoreZeroVoxels,
-      visible
+      visible,
+      furthestVertex,
+      gl
     );
-  } catch (err) {
-    log.debug(err);
+  } else {
+    alert("Unable to load buffer properly from mesh");
   }
   return nvmesh;
 };
 
-String.prototype.getBytes = function () {
+String.prototype.getBytes = function () { //CR??? What does this do?
   let bytes = [];
   for (var i = 0; i < this.length; i++) {
     bytes.push(this.charCodeAt(i));

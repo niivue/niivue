@@ -904,14 +904,15 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "STL" ||
           ext === "VTK"
         ) {
-          console.log("mesh loading not yet supported");
-          /*let mesh = await NVMesh.loadFromFile({
+          //console.log("mesh loading not yet supported");
+          let mesh = await NVMesh.loadFromFile({
             file: file,
+            gl: this.gl,
             name: file.name,
           });
           console.log('+++>>>', mesh); 
           this.scene.loading$.next(false);
-          this.addMesh(mesh);*/
+          this.addMesh(mesh);
           continue;
         }
         let volume = await NVImage.loadFromFile({
