@@ -7,6 +7,13 @@ import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
 const log = new Log();
 
+function isPlatformLittleEndian() {
+//inspired by https://github.com/rii-mango/Papaya
+  var buffer = new ArrayBuffer(2);
+  new DataView(buffer).setInt16(0, 256, true);
+  return new Int16Array(buffer)[0] === 256;
+};
+
 /**
  * query all available color maps that can be applied to volumes
  * @param {boolean} [sort=true] whether or not to sort the returned array
@@ -214,12 +221,44 @@ export var NVImage = function (
     ];
     this.hdr.affine = affine;
   } //defective affine
+  //swap data if foreign endian:
+  if ((this.hdr.datatypeCode !== this.DT_RGB) && (this.hdr.datatypeCode !== this.DT_RGBA32) && (this.hdr.littleEndian !== isPlatformLittleEndian()) && (this.hdr.numBitsPerVoxel > 8)) {
+    if (this.hdr.numBitsPerVoxel === 16) {
+      //inspired by https://github.com/rii-mango/Papaya
+      var u16 = new Uint16Array(imgRaw);
+      for (let i = 0; i < u16.length; i ++) {
+        let val = u16[i];
+        u16[i] = ((((val & 0xFF) << 8) | ((val >> 8) & 0xFF)) << 16) >> 16;  // since JS uses 32-bit  when bit shifting
+      }
+    } else if (this.hdr.numBitsPerVoxel === 32) {
+      //inspired by https://github.com/rii-mango/Papaya
+      var u32 = new Uint32Array(imgRaw);
+      for (let i = 0; i < u32.length; i ++) {
+        let val = u32[i];
+        u32[i] = ((val & 0xFF) << 24) | ((val & 0xFF00) << 8) | ((val >> 8) & 0xFF00) | ((val >> 24) & 0xFF);
+      }
+    } else if (this.hdr.numBitsPerVoxel === 64) {
+      //inspired by MIT licensed code: https://github.com/rochars/endianness
+      let numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
+      var u8 = new Uint8Array(imgRaw);
+      for (let index = 0; index < u8.length; index += numBytesPerVoxel) {
+        let offset = bytesPer - 1;
+        for(let x = 0; x < offset; x++) {
+          let theByte = u8[index + x];
+          u8[index + x] = u8[index + offset];
+          u8[index + offset] = theByte;
+          offset--;
+        }
+      }
+    } //if 64-bits
+  } //swap byte order
   switch (this.hdr.datatypeCode) {
     case this.DT_UNSIGNED_CHAR:
       this.img = new Uint8Array(imgRaw);
       break;
     case this.DT_SIGNED_SHORT:
       this.img = new Int16Array(imgRaw);
+      
       break;
     case this.DT_FLOAT:
       this.img = new Float32Array(imgRaw);
