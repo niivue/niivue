@@ -11275,6 +11275,11 @@ Log.prototype.setLogLevel = function(logLevel) {
   this.logLevel = logLevel;
 };
 const log$2 = new Log();
+function isPlatformLittleEndian() {
+  var buffer = new ArrayBuffer(2);
+  new DataView(buffer).setInt16(0, 256, true);
+  return new Int16Array(buffer)[0] === 256;
+}
 var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
@@ -11429,6 +11434,33 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pa
     ];
     this.hdr.affine = affine;
   }
+  if (this.hdr.datatypeCode !== this.DT_RGB && this.hdr.datatypeCode !== this.DT_RGBA32 && this.hdr.littleEndian !== isPlatformLittleEndian() && this.hdr.numBitsPerVoxel > 8) {
+    if (this.hdr.numBitsPerVoxel === 16) {
+      var u16 = new Uint16Array(imgRaw);
+      for (let i = 0; i < u16.length; i++) {
+        let val = u16[i];
+        u16[i] = ((val & 255) << 8 | val >> 8 & 255) << 16 >> 16;
+      }
+    } else if (this.hdr.numBitsPerVoxel === 32) {
+      var u32 = new Uint32Array(imgRaw);
+      for (let i = 0; i < u32.length; i++) {
+        let val = u32[i];
+        u32[i] = (val & 255) << 24 | (val & 65280) << 8 | val >> 8 & 65280 | val >> 24 & 255;
+      }
+    } else if (this.hdr.numBitsPerVoxel === 64) {
+      let numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
+      var u8 = new Uint8Array(imgRaw);
+      for (let index = 0; index < u8.length; index += numBytesPerVoxel) {
+        let offset = bytesPer - 1;
+        for (let x = 0; x < offset; x++) {
+          let theByte = u8[index + x];
+          u8[index + x] = u8[index + offset];
+          u8[index + offset] = theByte;
+          offset--;
+        }
+      }
+    }
+  }
   switch (this.hdr.datatypeCode) {
     case this.DT_UNSIGNED_CHAR:
       this.img = new Uint8Array(imgRaw);
@@ -11461,11 +11493,11 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pa
       break;
     }
     case this.DT_UINT32: {
-      let u32 = new Uint32Array(imgRaw);
-      var vx32 = u32.length;
+      let u322 = new Uint32Array(imgRaw);
+      var vx32 = u322.length;
       this.img = new Float64Array(vx32);
       for (let i = 0; i < vx32 - 1; i++)
-        this.img[i] = u32[i];
+        this.img[i] = u322[i];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
     }
