@@ -868,7 +868,7 @@ Niivue.prototype.dropListener = async function (e) {
       if (!e.shiftKey) {
         this.volumes = [];
         this.overlays = [];
-				this.meshes = [];
+        this.meshes = [];
       }
 
       for (const file of files) {
@@ -911,7 +911,7 @@ Niivue.prototype.dropListener = async function (e) {
             gl: this.gl,
             name: file.name,
           });
-          console.log('+++>>>', mesh); 
+          console.log("+++>>>", mesh);
           this.scene.loading$.next(false);
           this.addMesh(mesh);
           continue;

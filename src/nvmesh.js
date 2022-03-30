@@ -829,16 +829,16 @@ NVMesh.readSTL = function (buffer) {
 };
 
 NVMesh.readGII = function (buffer) {
-    var enc = new TextDecoder("utf-8");
-    var xmlStr = enc.decode(buffer);
-    let gii = gifti.parse(xmlStr);
-    var positions = gii.getPointsDataArray().getData();
-    var indices = gii.getTrianglesDataArray().getData();
+  var enc = new TextDecoder("utf-8");
+  var xmlStr = enc.decode(buffer);
+  let gii = gifti.parse(xmlStr);
+  var positions = gii.getPointsDataArray().getData();
+  var indices = gii.getTrianglesDataArray().getData();
   return {
     positions,
     indices,
   };
-}
+};
 
 NVMesh.loadConnectomeFromJSON = async function (
   json,
@@ -986,9 +986,11 @@ NVMesh.readMesh = function (buffer, name, rgba255 = [255, 255, 255, 255]) {
   let furthestVertex = getFurthestVertexFromOrigin(pts);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   return {
-    posNormClr, tris, furthestVertex
+    posNormClr,
+    tris,
+    furthestVertex,
   };
-}
+};
 
 /**
  * factory function to load and return a new NVMesh instance from a given URL
@@ -1024,11 +1026,9 @@ NVMesh.loadFromUrl = async function ({
   let obj = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
-  if ((ext.toUpperCase() === "TRK") || ((ext.toUpperCase() === "TCK"))) {
-    if (ext.toUpperCase() === "TCK") 
-      obj = this.readTCK(buffer);
-    else
-      obj = this.readTRK(buffer);
+  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
+    if (ext.toUpperCase() === "TCK") obj = this.readTCK(buffer);
+    else obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
     let furthestVertex = getFurthestVertexFromOrigin(pts);
@@ -1130,7 +1130,8 @@ NVMesh.loadFromFile = async function ({
   return nvmesh;
 };
 
-String.prototype.getBytes = function () { //CR??? What does this do?
+String.prototype.getBytes = function () {
+  //CR??? What does this do?
   let bytes = [];
   for (var i = 0; i < this.length; i++) {
     bytes.push(this.charCodeAt(i));
