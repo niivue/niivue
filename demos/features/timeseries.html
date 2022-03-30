@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>time series demo</title>
+    <style>
+      section {
+        margin: 20px;
+      }
+    </style>
+
+		<script src="./niivue.umd.js"> </script>
+  </head>
+  <body style="font-family: sans-serif;">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+
+    <section>
+      <h1>
+        Basic multiplanar
+      </h1>
+      <p>
+      	You can see different volumes in a 4D time series by clicking the forward and back buttons
+      </p>
+    </section>
+
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:90%; height:400px;">
+        <canvas id="gl1" height=480 width=640>
+        </canvas>
+      </div>
+    </section>
+		<section>
+			<div>
+				<button onclick="prevVolume()">back</button>
+				<button onclick="nextVolume()">forward</button>
+			</div>
+		</section>
+    <script>
+     var volumeList1 = [
+       // first item is background image
+         {
+           url: "../images/filtered_func_data.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           colorMap: "gray",
+           opacity: 1,
+           visible: true,
+         },
+        ] 
+      var nv1 = new niivue.Niivue()
+      nv1.setRadiologicalConvention(false)
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+
+			let currentVol = 0
+
+			function prevVolume(){
+							nv1.setFrame4D(nv1.volumes[0].id, currentVol >= 0 ? currentVol-- : 0)
+			}
+
+			function nextVolume(){
+							nv1.setFrame4D(nv1.volumes[0].id, currentVol++)
+			}
+
+
+    </script>
+  </body>
+</html>
+

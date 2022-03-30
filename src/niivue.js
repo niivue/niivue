@@ -22,12 +22,13 @@ import {
   fragMeshHemiShader,
   fragMeshMatteShader,
   fragMeshShaderSHBlue,
+  vertFiberShader,
+  fragFiberShader,
   vertSurfaceShader,
   fragSurfaceShader,
   fragDepthPickingShader,
   fragVolumePickingShader,
 } from "./shader-srcs.js";
-import * as cmaps from "./cmaps";
 import { Subject } from "rxjs";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
@@ -38,8 +39,9 @@ export { NVImage } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-
+import { colortables } from "./colortables";
 const log = new Log();
+const cmapper = new colortables();
 
 /**
  * @class Niivue
@@ -148,6 +150,7 @@ export const Niivue = function (options = {}) {
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.meshes = [];
+  this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1.0;
   this.volScale = [];
   this.vox = [];
@@ -856,7 +859,7 @@ Niivue.prototype.dropListener = async function (e) {
   const url = dt.getData("text/uri-list");
   //TODO: handle meshes (obj, mz3, gii, stl, pial, vtk) and volumes (nii, nii.gz, nrrd)
   if (url) {
-		let volume = await NVImage.loadFromUrl({url:url});
+    let volume = await NVImage.loadFromUrl({ url: url });
     this.setVolume(volume);
   } else {
     const files = dt.files;
@@ -865,30 +868,58 @@ Niivue.prototype.dropListener = async function (e) {
       if (!e.shiftKey) {
         this.volumes = [];
         this.overlays = [];
+        this.meshes = [];
       }
 
       for (const file of files) {
-				console.log(file.name)
-				let pairedImageData = ''
-				// check for afni HEAD BRIK pair
-				if (file.name.lastIndexOf('HEAD') !== -1){
-					for (const pairedFile of files) {
-						let fileBaseName = file.name.substring(0, file.name.lastIndexOf('HEAD'))
-						console.log(pairedFile.name)
-						let pairedFileBaseName = pairedFile.name.substring(0, pairedFile.name.lastIndexOf('BRIK'))
-						if (fileBaseName === pairedFileBaseName){
-							console.log('base names match!!!!')
-							pairedImageData = pairedFile
-						}
-					}
-				}
-				if (file.name.lastIndexOf('BRIK') !== -1){
-					continue
-				}
-				let volume = await NVImage.loadFromFile({
-					file:file,
-					urlImgData: pairedImageData
-				});
+        var re = /(?:\.([^.]+))?$/;
+        let ext = re.exec(file.name)[1];
+        ext = ext.toUpperCase();
+        console.log(ext, "dropped ", file.name);
+        let pairedImageData = "";
+        // check for afni HEAD BRIK pair
+        if (file.name.lastIndexOf("HEAD") !== -1) {
+          for (const pairedFile of files) {
+            let fileBaseName = file.name.substring(
+              0,
+              file.name.lastIndexOf("HEAD")
+            );
+            console.log(pairedFile.name);
+            let pairedFileBaseName = pairedFile.name.substring(
+              0,
+              pairedFile.name.lastIndexOf("BRIK")
+            );
+            if (fileBaseName === pairedFileBaseName) {
+              console.log("base names match!!!!");
+              pairedImageData = pairedFile;
+            }
+          }
+        }
+        if (file.name.lastIndexOf("BRIK") !== -1) {
+          continue;
+        }
+        if (
+          ext === "GII" ||
+          ext === "MZ3" ||
+          ext === "OBJ" ||
+          ext === "STL" ||
+          ext === "VTK"
+        ) {
+          //console.log("mesh loading not yet supported");
+          let mesh = await NVMesh.loadFromFile({
+            file: file,
+            gl: this.gl,
+            name: file.name,
+          });
+          console.log("+++>>>", mesh);
+          this.scene.loading$.next(false);
+          this.addMesh(mesh);
+          continue;
+        }
+        let volume = await NVImage.loadFromFile({
+          file: file,
+          urlImgData: pairedImageData,
+        });
         this.addVolume(volume);
       }
     }
@@ -991,7 +1022,7 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   this.volumes.map((v) => {
-		console.log(v)
+    console.log(v);
     log.debug(v.name);
   });
   let numberOfLoadedImages = this.volumes.length;
@@ -1338,13 +1369,13 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   for (let i = 0; i < volumeList.length; i++) {
     this.scene.loading$.next(true);
     let volume = await NVImage.loadFromUrl({
-			url:volumeList[i].url,
-			name:volumeList[i].name,
-			colorMap:volumeList[i].colorMap,
-			opacity: volumeList[i].opacity,
-			urlImgData: volumeList[i].urlImgData,
-			trustCalMinMax:this.opts.trustCalMinMax
-		});
+      url: volumeList[i].url,
+      name: volumeList[i].name,
+      colorMap: volumeList[i].colorMap,
+      opacity: volumeList[i].opacity,
+      urlImgData: volumeList[i].urlImgData,
+      trustCalMinMax: this.opts.trustCalMinMax,
+    });
     this.scene.loading$.next(false);
     this.addVolume(volume);
     /*
@@ -1388,14 +1419,14 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
     let mesh = await NVMesh.loadFromUrl({
-			url:meshList[i].url,
-			gl:this.gl,
-			name:meshList[i].name,
-			colorMap:meshList[i].colorMap,
-			opacity:meshList[i].opacity,
-			rgba255:meshList[i].rgba255,
-			visible:meshList[i].visible
-		});
+      url: meshList[i].url,
+      gl: this.gl,
+      name: meshList[i].name,
+      colorMap: meshList[i].colorMap,
+      opacity: meshList[i].opacity,
+      rgba255: meshList[i].rgba255,
+      visible: meshList[i].visible,
+    });
     this.scene.loading$.next(false);
     this.addMesh(mesh);
     //this.meshes.push(mesh);
@@ -1803,6 +1834,9 @@ Niivue.prototype.init = async function () {
     fragSurfaceShader
   );
 
+  // tractography fibers
+  this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
+
   //mesh
   this.meshShader = new Shader(
     this.gl,
@@ -1836,6 +1870,16 @@ Niivue.prototype.updateGLVolume = function () {
     this.refreshLayers(this.volumes[i], visibleLayers, numLayers);
     visibleLayers++;
   }
+  this.furthestVertexFromOrigin = 0.0;
+  if (numLayers > 0)
+    this.furthestVertexFromOrigin =
+      this.volumeObject3D.furthestVertexFromOrigin;
+  if (this.meshes)
+    for (let i = 0; i < this.meshes.length; i++)
+      this.furthestVertexFromOrigin = Math.max(
+        this.furthestVertexFromOrigin,
+        this.meshes[i].furthestVertexFromOrigin
+      );
   this.drawScene();
 }; // updateVolume()
 
@@ -1843,6 +1887,11 @@ Niivue.prototype.updateGLVolume = function () {
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
+  if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
+    img = overlayItem.img.slice(
+      overlayItem.frame4D * overlayItem.nVox3D,
+      (overlayItem.frame4D + 1) * overlayItem.nVox3D
+    );
   let opacity = overlayItem.opacity;
   let outTexture = null;
   this.gl.bindVertexArray(this.unusedVAO);
@@ -2242,11 +2291,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
  * colormaps = niivue.colorMaps()
  */
 Niivue.prototype.colorMaps = function (sort = true) {
-  let cm = [];
-  for (const [key] of Object.entries(cmaps)) {
-    cm.push(key);
-  }
-  return sort === true ? cm.sort() : cm;
+  return cmapper.colorMaps();
 };
 
 /**
@@ -2263,42 +2308,28 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.setFrame4D = function (id, frame4D) {
+  console.log("setting frame to ");
+  let idx = this.getVolumeIndexByID(id);
+  console.log(this.volumes[idx]);
+  this.volumes[idx].frame4D = frame4D;
+  this.updateGLVolume();
+  console.log("setting frame to ", frame4D);
+};
+
+Niivue.prototype.getFrame4D = function (id) {
+  let idx = this.getVolumeIndexByID(id);
+  return this.volumes[idx].nFrame4D;
+};
+
 // not included in public docs
 Niivue.prototype.colormapFromKey = function (name) {
-  let availMaps = this.colorMaps();
-  for (let i = 0; i < availMaps.length; i++) {
-    let key = availMaps[i];
-    if (name.toLowerCase() === key.toLowerCase()) {
-      return cmaps[key];
-    }
-  }
+  return cmapper.colormapFromKey(name);
 };
 
 // not included in public docs
 Niivue.prototype.colormap = function (lutName = "") {
-  //function colormap(lutName = "") {
-  let defaultLutName = "gray";
-  let availMaps = this.colorMaps();
-  for (let i = 0; i < availMaps.length; i++) {
-    let key = availMaps[i];
-    if (lutName.toLowerCase() === key.toLowerCase()) {
-      return this.makeLut(
-        cmaps[key].R,
-        cmaps[key].G,
-        cmaps[key].B,
-        cmaps[key].A,
-        cmaps[key].I
-      );
-    }
-  }
-  // if no match the return the default gray lut
-  return this.makeLut(
-    cmaps[defaultLutName].R,
-    cmaps[defaultLutName].G,
-    cmaps[defaultLutName].B,
-    cmaps[defaultLutName].A,
-    cmaps[defaultLutName].I
-  );
+  return cmapper.colormap(lutName);
 }; // colormap()
 
 // not included in public docs
@@ -2357,29 +2388,6 @@ Niivue.prototype.refreshColormaps = function () {
   );
   return this;
 }; // refreshColormaps()
-
-// not included in public docs
-Niivue.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
-  //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
-  //intensity indices should be in increasing order with the first value 0 and the last 255.
-  // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
-  var lut = new Uint8ClampedArray(256 * 4);
-  for (var i = 0; i < Is.length - 1; i++) {
-    //return a + f * (b - a);
-    var idxLo = Is[i];
-    var idxHi = Is[i + 1];
-    var idxRng = idxHi - idxLo;
-    var k = idxLo * 4;
-    for (var j = idxLo; j <= idxHi; j++) {
-      var f = (j - idxLo) / idxRng;
-      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
-      lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]); //Green
-      lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
-      lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
-    }
-  }
-  return lut;
-}; // makeLut()
 
 // not included in public docs
 Niivue.prototype.sliceScale = function () {
@@ -2830,8 +2838,7 @@ Niivue.prototype.calculateMvpMatrix = function () {
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
   let projectionMatrix = mat.mat4.create();
   let scale =
-    (0.7 * this.volumeObject3D.furthestVertexFromOrigin * 1.0) /
-    this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+    (0.7 * this.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -2859,7 +2866,8 @@ Niivue.prototype.calculateMvpMatrix = function () {
   //push the model away from the camera so camera not inside model
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
-  mat.mat4.translate(modelMatrix, modelMatrix, this.volumeObject3D.position);
+  if (this.position)
+    mat.mat4.translate(modelMatrix, modelMatrix, this.position);
   //apply elevation
   mat.mat4.rotateX(
     modelMatrix,
@@ -2873,11 +2881,13 @@ Niivue.prototype.calculateMvpMatrix = function () {
     deg2rad(this.scene.renderAzimuth - 180)
   );
   //translate object to be in center of field of view (e.g. CT brain scans where origin is distant table center)
-  mat.mat4.translate(
-    modelMatrix,
-    modelMatrix,
-    this.volumeObject3D.originNegate
-  );
+  if (this.volumeObject3D) {
+    mat.mat4.translate(
+      modelMatrix,
+      modelMatrix,
+      this.volumeObject3D.originNegate
+    );
+  }
   //
   let iModelMatrix = mat.mat4.create();
   mat.mat4.invert(iModelMatrix, modelMatrix);
@@ -2913,8 +2923,10 @@ Niivue.prototype.calculateRayDirection = function () {
     modelMatrix,
     deg2rad(this.scene.renderAzimuth - 180)
   );
-  let oblique = mat.mat4.clone(this.back.obliqueRAS);
-  mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
+  if (this.back.obliqueRAS) {
+    let oblique = mat.mat4.clone(this.back.obliqueRAS);
+    mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
+  }
   //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
   let projectionMatrix = mat.mat4.fromValues(
     1,
@@ -2954,8 +2966,14 @@ Niivue.prototype.calculateRayDirection = function () {
 Niivue.prototype.draw3D = function () {
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-	gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
+  if (this.volumes.length === 0) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clearDepth(0.0);
+    this.drawMesh3D(true, 1.0);
+    return;
+  }
 
   // mvp matrix and ray direction can now be a constant because of world space
   let mvpMatrix, modelMatrix, normalMatrix;
@@ -3026,9 +3044,10 @@ Niivue.prototype.draw3D = function () {
   }
 
   this.drawCrosshairs3D(true, 1.0);
-  //this.drawMesh3D(false, 0.35);
   this.drawMesh3D(true, 1.0);
-  this.drawCrosshairs3D(false, 0.35);
+  this.drawMesh3D(false, 0.02);
+  //  this.drawMesh3D(true, 1.0);
+  this.drawCrosshairs3D(false, 0.15);
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
@@ -3044,20 +3063,15 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   if (this.meshes.length < 1) return;
   let gl = this.gl;
   let m, modelMtx, normMtx;
-  [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
+  [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.volumeObject3D);
   gl.enable(gl.DEPTH_TEST);
-  // let color = [...this.opts.crosshairColor];
-  gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
   if (isDepthTest) {
-    gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    //gl.depthFunc(gl.LESS); //pass if LESS than incoming value
     gl.depthFunc(gl.GREATER);
   } else {
-    gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
-    //gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
   gl.disable(gl.CULL_FACE); //show front and back faces
@@ -3068,10 +3082,14 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
   gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
   gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
-
+  let hasFibers = false;
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     gl.bindVertexArray(this.meshes[i].vao);
+    if (this.meshes[i].name.startsWith("*")) {
+      hasFibers = true;
+      continue;
+    }
     gl.drawElements(
       gl.TRIANGLES,
       this.meshes[i].indexCount,
@@ -3080,6 +3098,26 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     );
     gl.bindVertexArray(this.unusedVAO);
   }
+  //draw fibers
+  if (!hasFibers) return;
+  let shader = this.fiberShader;
+  shader.use(this.gl);
+  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+  gl.uniform1f(shader.uniforms["opacity"], alpha);
+  for (let i = 0; i < this.meshes.length; i++) {
+    if (this.meshes[i].indexCount < 3) continue;
+    gl.bindVertexArray(this.meshes[i].vao);
+    if (!this.meshes[i].name.startsWith("*")) continue;
+    gl.drawElements(
+      gl.LINE_STRIP,
+      this.meshes[i].indexCount,
+      gl.UNSIGNED_INT,
+      0
+    );
+    gl.bindVertexArray(this.unusedVAO);
+  }
+  gl.enable(gl.BLEND);
+  gl.depthFunc(gl.ALWAYS);
 }; //drawMesh3D()
 
 Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
@@ -3113,9 +3151,7 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
     this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
     this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
-    this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
-    this.crosshairs3D.furthestVertexFromOrigin =
-      this.volumeObject3D.furthestVertexFromOrigin;
+    //this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
   }
   let crosshairsShader = this.surfaceShader;
   crosshairsShader.use(this.gl);
@@ -3307,6 +3343,7 @@ Niivue.prototype.drawScene = function () {
     this.volumes.length === 0 ||
     typeof this.volumes[0].dims === "undefined"
   ) {
+    if (this.meshes.length > 0) return this.draw3D(); //meshes loaded but no volume
     this.drawLoadingText(this.loadingText);
     return;
   }

@@ -101,6 +101,7 @@ void main() {
 	float lenNoClip = len;
 	bool isClip = false;
 	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	//if ((clipPos.a != samplePos.a) && (len < 3.0)) {
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
@@ -143,6 +144,8 @@ void main() {
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
+	if (isClip) //CR
+		fColor.rgb = mix(fColor.rgb, clipPlaneColor.rgb, clipPlaneColor.a * 0.15);
 	if (overlays < 1.0) return;
 	//overlay pass
 	len = lenNoClip;
@@ -505,6 +508,27 @@ uniform vec4 surfaceColor;
 out vec4 color;
 void main() {
 	color = surfaceColor;
+}`;
+
+export var vertFiberShader = `#version 300 es
+layout(location=0) in vec3 pos;
+layout(location=1) in vec4 clr;
+out vec4 vClr;
+uniform mat4 mvpMtx;
+void main(void) {
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	vClr = clr;
+}`;
+
+export var fragFiberShader = `#version 300 es
+precision highp int;
+precision highp float;
+in vec4 vClr;
+out vec4 color;
+uniform float opacity;
+void main() {
+	//color = vClr;
+	color = vec4(vClr.rgb, opacity);
 }`;
 
 export var vertMeshShader = `#version 300 es
