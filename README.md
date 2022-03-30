@@ -144,7 +144,7 @@ const NiiVue = ({ imageUrl }) => {
 // use as: <NiiVue imageUrl={someUrl}> </NiiVue>
 ```
 ## Angular example
-Check our Angular TypeScript development notes for instructions on building an Angular App with Niivue.
+Check our [Angular TypeScript development notes](docs/development-notes/angular-typescript.md) for instructions on building an Angular App with Niivue.
 
 install: `npm i @niivue/niivue`
 
