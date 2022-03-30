@@ -868,6 +868,7 @@ Niivue.prototype.dropListener = async function (e) {
       if (!e.shiftKey) {
         this.volumes = [];
         this.overlays = [];
+				this.meshes = [];
       }
 
       for (const file of files) {
