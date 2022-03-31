@@ -857,7 +857,6 @@ Niivue.prototype.dropListener = async function (e) {
 
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
-  //TODO: handle meshes (obj, mz3, gii, stl, pial, vtk) and volumes (nii, nii.gz, nrrd)
   if (url) {
     let volume = await NVImage.loadFromUrl({ url: url });
     this.setVolume(volume);
@@ -903,6 +902,8 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "MZ3" ||
           ext === "OBJ" ||
           ext === "STL" ||
+          ext === "TCK" ||
+          ext === "TRK" ||
           ext === "VTK"
         ) {
           //console.log("mesh loading not yet supported");
@@ -3085,7 +3086,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     gl.bindVertexArray(this.meshes[i].vao);
-    if (this.meshes[i].name.startsWith("*")) {
+    if (this.meshes[i].colorMap.startsWith("*")) {
       hasFibers = true;
       continue;
     }
@@ -3106,7 +3107,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     gl.bindVertexArray(this.meshes[i].vao);
-    if (!this.meshes[i].name.startsWith("*")) continue;
+    if (!this.meshes[i].colorMap.startsWith("*")) continue;
     gl.drawElements(
       gl.LINE_STRIP,
       this.meshes[i].indexCount,
