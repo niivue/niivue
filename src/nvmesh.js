@@ -4,8 +4,10 @@ import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
+import { mat3, mat4, vec3, vec4 } from "gl-matrix";
+import { colortables } from "./colortables";
+const cmapper = new colortables();
 const log = new Log();
-
 /**
  * @class NVMesh
  * @type NVMesh
@@ -28,6 +30,7 @@ export var NVMesh = function (
   colorMap = "green",
   opacity = 1.0,
   visible = true,
+  furthestVertexFromOrigin,
   gl,
   //following properties generated when new mesh is created by this function
   indexCount = 0,
@@ -36,14 +39,96 @@ export var NVMesh = function (
   vao = null
 ) {
   this.name = name;
-  this.posNormClr = posNormClr;
-  this.tris = tris;
   this.id = uuidv4();
+  this.furthestVertexFromOrigin = furthestVertexFromOrigin;
   this.colorMap = colorMap;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
-  //generate webGL buffers and vao
+  if (colorMap.startsWith("*")) {
+    // The tractography kludge!
+    //nvmesh = new NVMesh(pts, offsetPt0, '*');
+    let pts = posNormClr;
+    let offsetPt0 = tris;
+    //determine fiber colors
+    let npt = pts.length / 3; //each point has three components: X,Y,Z
+    //Each streamline vertex has color and position attributes
+    //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
+    var posClrF32 = new Float32Array(npt * 4); //four 32-bit components X,Y,Z,C
+    var posClrU32 = new Uint32Array(posClrF32.buffer); //typecast of our X,Y,Z,C array
+    //fill XYZ position of XYZC array
+    let i3 = 0;
+    let i4 = 0;
+    for (let i = 0; i < npt; i++) {
+      posClrF32[i4 + 0] = pts[i3 + 0];
+      posClrF32[i4 + 1] = pts[i3 + 1];
+      posClrF32[i4 + 2] = pts[i3 + 2];
+      i3 += 3;
+      i4 += 4;
+    }
+    //fill fiber Color
+    let dither = 0.1;
+    let ditherHalf = dither * 0.5;
+    let r = 0.0;
+    let n_count = offsetPt0.length - 1;
+    for (let i = 0; i < n_count; i++) {
+      let vStart = offsetPt0[i]; //line start
+      let vEnd = offsetPt0[i + 1] - 1; //line end
+      let vStart3 = vStart * 3; //pts have 3 components XYZ
+      let vEnd3 = vEnd * 3;
+      let v = vec3.fromValues(
+        pts[vStart3] - pts[vEnd3],
+        pts[vStart3 + 1] - pts[vEnd3 + 1],
+        pts[vStart3 + 2] - pts[vEnd3 + 2]
+      );
+      vec3.normalize(v, v);
+      if (dither > 0.0) r = dither * Math.random() - ditherHalf;
+      for (let j = 0; j < 3; j++)
+        v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
+      let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
+      //let RBGA =  (Math.abs(v[0]) * 255) + ((Math.abs(v[1]) *255) << 8) + ((Math.abs(v[2]) *255) << 16) + (0 << 24); //RGBA
+      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      let vEnd4 = vEnd * 4 + 3;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RBGA;
+    }
+    //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
+    let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
+    this.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
+    n_count = offsetPt0.length - 1;
+    let indices = [];
+    let min_pts = 2;
+    for (let i = 0; i < n_count; i++) {
+      let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
+      if (n_pts < min_pts) continue;
+      for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
+      indices.push(primitiveRestart);
+    }
+    this.indexCount = indices.length;
+    this.indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.bufferData(
+      gl.ELEMENT_ARRAY_BUFFER,
+      new Uint32Array(indices),
+      gl.STATIC_DRAW
+    );
+    this.vao = gl.createVertexArray();
+    gl.bindVertexArray(this.vao);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    //vertex position: 3 floats X,Y,Z
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 16, 0);
+    //vertex color
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 4, gl.UNSIGNED_BYTE, true, 16, 12);
 
+    gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
+    return;
+  }
+  this.posNormClr = posNormClr;
+  this.tris = tris;
+  //generate webGL buffers and vao
   this.indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
@@ -68,23 +153,15 @@ export var NVMesh = function (
   gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
 };
 
-NVMesh.prototype.colorMaps = function (sort = true) {
-  let cm = [];
-  for (const [key] of Object.entries(cmaps)) {
-    cm.push(key);
+function getFurthestVertexFromOrigin(pts) {
+  //each vertex has 3 coordinates: XYZ
+  let mxDx = 0.0;
+  for (let i = 0; i < pts.length; i += 3) {
+    let v = vec3.fromValues(pts[i], pts[i + 1], pts[i + 2]);
+    mxDx = Math.max(mxDx, vec3.len(v));
   }
-  return sort === true ? cm.sort() : cm;
-};
-
-NVMesh.prototype.setColorMap = function (cm) {
-  let allColorMaps = this.colorMaps();
-  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
-    this.colorMap = cm.toLowerCase();
-    this.calMinMax();
-  } else {
-    log.warn(`color map ${cm} is not a valid color map`);
-  }
-};
+  return mxDx;
+}
 
 function generateNormals(pts, tris) {
   //from https://github.com/rii-mango/Papaya
@@ -194,6 +271,8 @@ following conditions are met:
 }
 
 NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
+  //Each streamline vertex has color, normal and position attributes
+  //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
   if (pts.length < 3 || rgba255.length < 4)
     log.error("Catastrophic failure generatePosNormClr()");
   let norms = generateNormals(pts, tris);
@@ -223,6 +302,160 @@ NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
   }
   return f32;
 };
+
+NVMesh.readTCK = function (buffer) {
+  //https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
+  let len = buffer.byteLength;
+  if (len < 20)
+    throw new Error("File too small to be TCK: bytes = " + buffer.byteLength);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr(); //1st line: signature 'mrtrix tracks'
+  if (!line.includes("mrtrix tracks")) {
+    console.log("Not a valid TCK file");
+    return;
+  }
+  while (pos < len && !line.includes("END")) line = readStr();
+  var reader = new DataView(buffer);
+  //read and transform vertex positions
+  let npt = 0;
+  let offsetPt0 = [];
+  offsetPt0.push(npt); //1st streamline starts at 0
+  let pts = [];
+  while (pos + 12 < len) {
+    var ptx = reader.getFloat32(pos, true);
+    pos += 4;
+    var pty = reader.getFloat32(pos, true);
+    pos += 4;
+    var ptz = reader.getFloat32(pos, true);
+    pos += 4;
+    if (!isFinite(ptx)) {
+      //both NaN and Inifinity are not finite
+      offsetPt0.push(npt);
+      if (!isNaN(ptx))
+        //terminate if infinity
+        break;
+    } else {
+      pts.push(ptx);
+      pts.push(pty);
+      pts.push(ptz);
+      npt++;
+    }
+  }
+  return {
+    pts,
+    offsetPt0,
+  };
+}; //readTCK()
+
+NVMesh.readTRK = function (buffer) {
+  // http://trackvis.org/docs/?subsect=fileformat
+  // http://www.tractometer.org/fiberweb/
+  // https://github.com/xtk/X/tree/master/io
+  // in practice, always little endian
+  var reader = new DataView(buffer);
+  var magic = reader.getUint32(0, true); //'TRAC'
+  var vers = reader.getUint32(992, true); //2
+  var hdr_sz = reader.getUint32(996, true); //1000
+  if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388)
+    throw new Error("Not a valid TRK file");
+  var n_scalars = reader.getInt16(36, true);
+  var voxel_sizeX = reader.getFloat32(12, true);
+  var voxel_sizeY = reader.getFloat32(16, true);
+  var voxel_sizeZ = reader.getFloat32(20, true);
+  var zoomMat = mat4.fromValues(
+    1 / voxel_sizeX,
+    0,
+    0,
+    -0.5,
+    0,
+    1 / voxel_sizeY,
+    0,
+    -0.5,
+    0,
+    0,
+    1 / voxel_sizeZ,
+    -0.5,
+    0,
+    0,
+    0,
+    1
+  );
+  var n_properties = reader.getInt16(238, true);
+  var mat = mat4.create();
+  for (let i = 0; i < 16; i++) mat[i] = reader.getFloat32(440 + i * 4, true);
+  if (mat[15] === 0.0) {
+    //vox_to_ras[3][3] is 0, it means the matrix is not recorded
+    console.log("TRK vox_to_ras not set");
+    mat4.identity(mat);
+  }
+  var vox2mmMat = mat4.create();
+  mat4.mul(vox2mmMat, mat, zoomMat);
+  let i32 = null;
+  let f32 = null;
+  if (n_scalars === 0 && n_properties === 0) {
+    //fast reading
+    i32 = new Int32Array(buffer.slice(hdr_sz));
+    f32 = new Float32Array(i32.buffer);
+  } else {
+    console.log("ooops");
+  }
+  let ntracks = i32.length;
+  //read and transform vertex positions
+  let i = 0;
+  let npt = 0;
+  let offsetPt0 = [];
+  let pts = [];
+  while (i < ntracks) {
+    let n_pts = i32[i];
+    i = i + 1; // read 1 32-bit integer for number of points in this streamline
+    offsetPt0.push(npt); //index of first vertex in this streamline
+    for (var j = 0; j < n_pts; j++) {
+      let ptx = f32[i + 0];
+      let pty = f32[i + 1];
+      let ptz = f32[i + 2];
+      i += 3; //read 3 32-bit floats for XYZ position
+      pts.push(
+        ptx * vox2mmMat[0] +
+          pty * vox2mmMat[1] +
+          ptz * vox2mmMat[2] +
+          vox2mmMat[3]
+      );
+      pts.push(
+        ptx * vox2mmMat[4] +
+          pty * vox2mmMat[5] +
+          ptz * vox2mmMat[6] +
+          vox2mmMat[7]
+      );
+      pts.push(
+        ptx * vox2mmMat[8] +
+          pty * vox2mmMat[9] +
+          ptz * vox2mmMat[10] +
+          vox2mmMat[11]
+      );
+      npt++;
+    }
+  } //compute n_count
+  offsetPt0.push(npt); //add 'first index' as if one more line was added (fence post problem)
+  console.log(
+    "TRK streamlines (n_count) >>",
+    offsetPt0.length - 1,
+    " vertices: ",
+    pts.length / 3
+  );
+  return {
+    pts,
+    offsetPt0,
+  };
+}; //readTRK()
 
 NVMesh.readTxtVTK = function (buffer) {
   var enc = new TextDecoder("utf-8");
@@ -495,6 +728,77 @@ NVMesh.readMZ3 = function (buffer) {
   };
 }; // readMZ3()
 
+NVMesh.readOBJ = function (buffer) {
+  //WaveFront OBJ format
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  //let txt = await response.text();
+  var lines = txt.split("\n");
+  var n = lines.length;
+  let pts = [];
+  let t = [];
+  for (let i = 0; i < n; i++) {
+    let str = lines[i];
+    if (str[0] === "v" && str[1] === " ") {
+      //'v ' but not 'vt' or 'vn'
+      let items = str.split(" ");
+      pts.push(parseFloat(items[1]));
+      pts.push(parseFloat(items[2]));
+      pts.push(parseFloat(items[3]));
+      //v 0 -0.5 -0
+    }
+    if (str[0] === "f") {
+      let items = str.split(" ");
+      let tn = items[1].split("/");
+      t.push(parseInt(tn - 1));
+      tn = items[2].split("/");
+      t.push(parseInt(tn - 1));
+      tn = items[3].split("/");
+      t.push(parseInt(tn - 1));
+    }
+  } //for all lines
+  var positions = new Float32Array(pts);
+  var indices = new Int32Array(t);
+  return {
+    positions,
+    indices,
+  };
+}; // readOBJ()
+
+NVMesh.readFreeSurfer = function (buffer) {
+  const view = new DataView(buffer); //ArrayBuffer to dataview
+  //ALWAYS big endian
+  let sig0 = view.getUint32(0, false);
+  let sig1 = view.getUint32(4, false);
+  if (sig0 !== 4294966883 || sig1 !== 1919246708)
+    log.debug(
+      "Unable to recognize file type: does not appear to be FreeSurfer format."
+    );
+  let offset = 0;
+  while (view.getUint8(offset) !== 10) offset++;
+  offset += 2;
+  let nv = view.getUint32(offset, false); //number of vertices
+  offset += 4;
+  let nf = view.getUint32(offset, false); //number of faces
+  offset += 4;
+  nv *= 3; //each vertex has 3 positions: XYZ
+  var positions = new Float32Array(nv);
+  for (let i = 0; i < nv; i++) {
+    positions[i] = view.getFloat32(offset, false);
+    offset += 4;
+  }
+  nf *= 3; //each triangle face indexes 3 triangles
+  var indices = new Int32Array(nf);
+  for (let i = 0; i < nf; i++) {
+    indices[i] = view.getUint32(offset, false);
+    offset += 4;
+  }
+  return {
+    positions,
+    indices,
+  };
+}; // readFreeSurfer()
+
 NVMesh.readSTL = function (buffer) {
   if (buffer.byteLength < 80 + 4 + 50)
     throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
@@ -523,42 +827,19 @@ NVMesh.readSTL = function (buffer) {
     positions,
     indices,
   };
-};
+}; // readSTL()
 
-NVMesh.makeLut = function (Rs, Gs, Bs, As, Is) {
-  //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
-  //intensity indices should be in increasing order with the first value 0 and the last 255.
-  // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
-  var lut = new Uint8ClampedArray(256 * 4);
-  for (var i = 0; i < Is.length - 1; i++) {
-    //return a + f * (b - a);
-    var idxLo = Is[i];
-    var idxHi = Is[i + 1];
-    var idxRng = idxHi - idxLo;
-    var k = idxLo * 4;
-    for (var j = idxLo; j <= idxHi; j++) {
-      var f = (j - idxLo) / idxRng;
-      lut[k++] = Rs[i] + f * (Rs[i + 1] - Rs[i]); //Red
-      lut[k++] = Gs[i] + f * (Gs[i + 1] - Gs[i]); //Green
-      lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
-      lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
-    }
-  }
-  return lut;
-}; // makeLut()
-
-NVMesh.colormap = function (lutName = "") {
-  let cmaps = {
-    min: 0,
-    max: 0,
-    R: [0, 128, 255],
-    G: [0, 0, 0],
-    B: [0, 0, 0],
-    A: [0, 64, 128],
-    I: [0, 128, 255],
+NVMesh.readGII = function (buffer) {
+  var enc = new TextDecoder("utf-8");
+  var xmlStr = enc.decode(buffer);
+  let gii = gifti.parse(xmlStr);
+  var positions = gii.getPointsDataArray().getData();
+  var indices = gii.getTrianglesDataArray().getData();
+  return {
+    positions,
+    indices,
   };
-  return this.makeLut(cmaps.R, cmaps.G, cmaps.B, cmaps.A, cmaps.I);
-};
+}; // readGII()
 
 NVMesh.loadConnectomeFromJSON = async function (
   json,
@@ -580,10 +861,10 @@ NVMesh.loadConnectomeFromJSON = async function (
     else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
   }
   //draw all nodes
-  let vtx = [];
+  let pts = [];
   let rgba255 = [];
-  let lut = this.colormap(json.nodeColormap);
-  let lutNeg = this.colormap(json.nodeColormapNegative);
+  let lut = cmapper.colormap(json.nodeColormap);
+  let lutNeg = cmapper.colormap(json.nodeColormapNegative);
   let hasNeg = json.hasOwnProperty("nodeColormapNegative");
   let min = json.nodeMinColor;
   let max = json.nodeMaxColor;
@@ -605,12 +886,12 @@ NVMesh.loadConnectomeFromJSON = async function (
     if (isNeg)
       rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
     let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
-    NiivueObject3D.makeColoredSphere(vtx, tris, rgba255, radius, pt, rgba);
+    NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
   }
   //draw all edges
   if (hasEdges) {
-    lut = this.colormap(json.edgeColormap);
-    lutNeg = this.colormap(json.edgeColormapNegative);
+    lut = cmapper.colormap(json.edgeColormap);
+    lutNeg = cmapper.colormap(json.edgeColormapNegative);
     hasNeg = json.hasOwnProperty("edgeColormapNegative");
     min = json.edgeMin;
     max = json.edgeMax;
@@ -636,7 +917,7 @@ NVMesh.loadConnectomeFromJSON = async function (
         let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
         let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
         NiivueObject3D.makeColoredCylinder(
-          vtx,
+          pts,
           tris,
           rgba255,
           pti,
@@ -647,10 +928,94 @@ NVMesh.loadConnectomeFromJSON = async function (
       } //for j
     } //for i
   } //hasEdges
-  let gix = []; //???? we do not want "gii", e.g. if we load mz3, obj ply
-  let posNormClr = this.generatePosNormClr(vtx, tris, rgba255);
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
+    nvmesh = new NVMesh(
+      posNormClr,
+      tris,
+      name,
+      colorMap,
+      opacity,
+      visible,
+      furthestVertex,
+      gl
+    );
+  } else {
+    alert("Unable to load buffer properly from mesh");
+  }
+  return nvmesh;
+};
+
+NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
+  let nvmesh = null;
+  let tris = [];
+  let pts = [];
+  let obj = [];
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(name)[1];
+  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
+    if (ext.toUpperCase() === "TCK") obj = this.readTCK(buffer);
+    else obj = this.readTRK(buffer);
+    let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+    let pts = new Float32Array(obj.pts.slice());
+    let furthestVertex = getFurthestVertexFromOrigin(pts);
+    nvmesh = new NVMesh(
+      pts,
+      offsetPt0,
+      name,
+      "*", //colorMap,
+      1.0, //opacity,
+      true, //visible,
+      furthestVertex,
+      gl
+    );
+    return nvmesh;
+  }
+  if (ext.toUpperCase() === "GII") obj = this.readGII(buffer);
+  else if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
+  else if (ext.toUpperCase() === "VTK") obj = this.readVTK(buffer);
+  else if (ext.toUpperCase() === "STL") obj = this.readSTL(buffer);
+  //unknown file extension, try freeSurfer as hail mary
+  else obj = this.readFreeSurfer(buffer);
+  pts = obj.positions.slice();
+  tris = obj.indices.slice();
+  if (obj.colors && obj.colors.length === pts.length) {
+    rgba255 = [];
+    let n = pts.length / 3;
+    let c = 0;
+    for (let i = 0; i < n; i++) {
+      //convert ThreeJS unit RGB to RGBA255
+      rgba255.push(obj.colors[c] * 255); //red
+      rgba255.push(obj.colors[c + 1] * 255); //green
+      rgba255.push(obj.colors[c + 2] * 255); //blue
+      rgba255.push(255); //alpha
+      c += 3;
+    } //for i: each vertex
+  } //obj includes colors
+  let npt = pts.length / 3;
+  let ntri = tris.length / 3;
+  if (ntri < 1 || npt < 3) {
+    alert("Mesh should have at least one triangle and three vertices");
+    return;
+  }
+  if (tris.constructor !== Int32Array) {
+    alert("Expected triangle indices to be of type INT32");
+  }
+  let furthestVertex = getFurthestVertexFromOrigin(pts);
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
+  if (posNormClr) {
+    nvmesh = new NVMesh(
+      posNormClr,
+      tris,
+      name,
+      "yellow", //colorMap,
+      1.0, //opacity,
+      true, //visible,
+      furthestVertex,
+      gl
+    );
   } else {
     alert("Unable to load buffer properly from mesh");
   }
@@ -669,142 +1034,25 @@ NVMesh.loadConnectomeFromJSON = async function (
  * myImage = NVMesh.loadFromUrl('./someURL/mesh.gii') // must be served from a server (local or remote)
  */
 NVMesh.loadFromUrl = async function ({
-  url = '',
-  gl= null,
+  url = "",
+  gl = null,
   name = "",
   colorMap = "yellow",
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
-  visible = true
-	} = {}) {
-	if (url === '') {
-    throw Error('url must not be empty');
-  }
-	if (gl===null) {
-    throw Error('gl context is null');
-  }
+  visible = true,
+} = {}) {
+  if (url === "") throw Error("url must not be empty");
+  if (gl === null) throw Error("gl context is null");
   let response = await fetch(url);
-
   let nvmesh = null;
-  if (!response.ok) {
-    throw Error(response.statusText);
-  }
-
+  if (!response.ok) throw Error(response.statusText);
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   let tris = [];
   var pts = [];
-  var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "STL") {
-    let buffer = await response.arrayBuffer();
-    let obj = this.readSTL(buffer);
-    pts = obj.positions.slice();
-    tris = obj.indices.slice();
-  } else if (ext.toUpperCase() === "VTK") {
-    let buffer = await response.arrayBuffer();
-    let obj = this.readVTK(buffer);
-    pts = obj.positions.slice();
-    tris = obj.indices.slice();
-  } else if (ext.toUpperCase() === "MZ3") {
-    let buffer = await response.arrayBuffer();
-    let obj = this.readMZ3(buffer);
-    pts = obj.positions.slice();
-    tris = obj.indices.slice();
-    if (obj.colors && obj.colors.length === pts.length) {
-      rgba255 = [];
-      let n = pts.length / 3;
-      let c = 0;
-      for (let i = 0; i < n; i++) {
-        //convert ThreeJS unit RGB to RGBA255
-        rgba255.push(obj.colors[c] * 255); //red
-        rgba255.push(obj.colors[c + 1] * 255); //green
-        rgba255.push(obj.colors[c + 2] * 255); //blue
-        rgba255.push(255); //alpha
-        c += 3;
-      }
-    } //colors
-  } else if (ext.toUpperCase() === "OBJ") {
-    //WaveFront OBJ format
-    let txt = await response.text();
-    var lines = txt.split("\n");
-    var n = lines.length;
-    let t = [];
-    for (let i = 0; i < n; i++) {
-      let str = lines[i];
-      if (str[0] === "v" && str[1] === " ") {
-        //'v ' but not 'vt' or 'vn'
-        let items = str.split(" ");
-        pts.push(parseFloat(items[1]));
-        pts.push(parseFloat(items[2]));
-        pts.push(parseFloat(items[3]));
-        //v 0 -0.5 -0
-      }
-      if (str[0] === "f") {
-        let items = str.split(" ");
-        let tn = items[1].split("/");
-        t.push(parseInt(tn - 1));
-        tn = items[2].split("/");
-        t.push(parseInt(tn - 1));
-        tn = items[3].split("/");
-        t.push(parseInt(tn - 1));
-      }
-    } //for all lines
-    tris = new Int32Array(t);
-  } else if (ext.toUpperCase() === "GII") {
-    //GIFTI
-    let xmlStr = await response.text();
-    let gii = gifti.parse(xmlStr);
-    pts = gii.getPointsDataArray().getData();
-    tris = gii.getTrianglesDataArray().getData();
-  } else {
-    //file extension not recognized: assume FreeSurfer
-    let buf = await response.arrayBuffer();
-    const view = new DataView(buf); //ArrayBuffer to dataview
-    //ALWAYS big endian
-    let sig0 = view.getUint32(0, false);
-    let sig1 = view.getUint32(4, false);
-    if (sig0 !== 4294966883 || sig1 !== 1919246708)
-      log.debug(
-        "Unable to recognize file type: does not appear to be FreeSurfer format."
-      );
-    let offset = 0;
-    while (view.getUint8(offset) !== 10) offset++;
-    offset += 2;
-    let nv = view.getUint32(offset, false); //number of vertices
-    offset += 4;
-    let nf = view.getUint32(offset, false); //number of faces
-    offset += 4;
-    nv *= 3; //each vertex has 3 positions: XYZ
-    pts = new Float32Array(nv);
-    for (let i = 0; i < nv; i++) {
-      pts[i] = view.getFloat32(offset, false);
-      offset += 4;
-    }
-    nf *= 3; //each triangle face indexes 3 triangles
-    tris = new Int32Array(nf);
-    for (let i = 0; i < nf; i++) {
-      tris[i] = view.getUint32(offset, false);
-      offset += 4;
-    }
-  } //read file types
-  let npt = pts.length / 3;
-  let ntri = tris.length / 3;
-  if (ntri < 1 || npt < 3) {
-    alert("Mesh should have at least one triangle and three vertices");
-    return;
-  }
-  //console.log('npts ', npt, ' ntri ', ntri)
-  if (tris.constructor !== Int32Array) {
-    alert("Expected triangle indices to be of type INT32");
-  }
-  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, gl);
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  let buffer = await response.arrayBuffer();
+  return this.readMesh(buffer, name, gl, rgba255);
 };
 
 // not included in public docs
@@ -837,36 +1085,25 @@ NVMesh.readFileAsync = function (file) {
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
-NVMesh.loadFromFile = async function (
+NVMesh.loadFromFile = async function ({
   file,
+  gl,
   name = "",
   colorMap = "blue",
   opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
-) {
-  let nvmesh = null;
-  try {
-    let dataBuffer = await this.readFileAsync(file);
-    nvmesh = new NVMesh(
-      dataBuffer,
-      name,
-      colorMap,
-      opacity,
-      trustCalMinMax,
-      percentileFrac,
-      ignoreZeroVoxels,
-      visible
-    );
-  } catch (err) {
-    log.debug(err);
-  }
-  return nvmesh;
+  visible = true,
+} = {}) {
+  let nvmesh = [];
+  let buffer = await this.readFileAsync(file);
+  return this.readMesh(buffer, name, gl, rgba255);
 };
 
 String.prototype.getBytes = function () {
+  //CR??? What does this do?
   let bytes = [];
   for (var i = 0; i < this.length; i++) {
     bytes.push(this.charCodeAt(i));

@@ -7,6 +7,13 @@ import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
 const log = new Log();
 
+function isPlatformLittleEndian() {
+  //inspired by https://github.com/rii-mango/Papaya
+  var buffer = new ArrayBuffer(2);
+  new DataView(buffer).setInt16(0, 256, true);
+  return new Int16Array(buffer)[0] === 256;
+}
+
 /**
  * query all available color maps that can be applied to volumes
  * @param {boolean} [sort=true] whether or not to sort the returned array
@@ -68,6 +75,7 @@ export var NVImage = function (
   this.name = name;
   this.id = uuidv4();
   this.colorMap = colorMap;
+  this.frame4D = 0; //indexed from 0!
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
@@ -98,6 +106,17 @@ export var NVImage = function (
       imgRaw = nifti.readImage(this.hdr, dataBuffer);
     }
   }
+  this.nFrame4D = 1;
+  for (let i = 4; i < 7; i++)
+    if (this.hdr.dims[i] > 1) this.nFrame4D *= this.hdr.dims[i];
+  this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
+  let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
+  if (nVol4D !== this.nFrame4D)
+    console.log(
+      "This header does not match voxel data",
+      this.hdr,
+      imgRaw.byteLength
+    );
   if (
     this.hdr.pixDims[1] === 0.0 ||
     this.hdr.pixDims[2] === 0.0 ||
@@ -202,12 +221,53 @@ export var NVImage = function (
     ];
     this.hdr.affine = affine;
   } //defective affine
+  //swap data if foreign endian:
+  if (
+    this.hdr.datatypeCode !== this.DT_RGB &&
+    this.hdr.datatypeCode !== this.DT_RGBA32 &&
+    this.hdr.littleEndian !== isPlatformLittleEndian() &&
+    this.hdr.numBitsPerVoxel > 8
+  ) {
+    if (this.hdr.numBitsPerVoxel === 16) {
+      //inspired by https://github.com/rii-mango/Papaya
+      var u16 = new Uint16Array(imgRaw);
+      for (let i = 0; i < u16.length; i++) {
+        let val = u16[i];
+        u16[i] = ((((val & 0xff) << 8) | ((val >> 8) & 0xff)) << 16) >> 16; // since JS uses 32-bit  when bit shifting
+      }
+    } else if (this.hdr.numBitsPerVoxel === 32) {
+      //inspired by https://github.com/rii-mango/Papaya
+      var u32 = new Uint32Array(imgRaw);
+      for (let i = 0; i < u32.length; i++) {
+        let val = u32[i];
+        u32[i] =
+          ((val & 0xff) << 24) |
+          ((val & 0xff00) << 8) |
+          ((val >> 8) & 0xff00) |
+          ((val >> 24) & 0xff);
+      }
+    } else if (this.hdr.numBitsPerVoxel === 64) {
+      //inspired by MIT licensed code: https://github.com/rochars/endianness
+      let numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
+      var u8 = new Uint8Array(imgRaw);
+      for (let index = 0; index < u8.length; index += numBytesPerVoxel) {
+        let offset = bytesPer - 1;
+        for (let x = 0; x < offset; x++) {
+          let theByte = u8[index + x];
+          u8[index + x] = u8[index + offset];
+          u8[index + offset] = theByte;
+          offset--;
+        }
+      }
+    } //if 64-bits
+  } //swap byte order
   switch (this.hdr.datatypeCode) {
     case this.DT_UNSIGNED_CHAR:
       this.img = new Uint8Array(imgRaw);
       break;
     case this.DT_SIGNED_SHORT:
       this.img = new Int16Array(imgRaw);
+
       break;
     case this.DT_FLOAT:
       this.img = new Float32Array(imgRaw);
@@ -433,29 +493,35 @@ NVImage.prototype.readMGH = function (dataBuffer) {
   hdr.vox_offset = 284;
   hdr.sform_code = 1;
   let rot44 = mat4.fromValues(
-      xr*hdr.pixDims[1],
-      yr*hdr.pixDims[2],
-      zr*hdr.pixDims[3],
-      0,
-      xa*hdr.pixDims[1],
-      ya*hdr.pixDims[2],
-      za*hdr.pixDims[3],
-      0,
-      xs*hdr.pixDims[1],
-      ys*hdr.pixDims[2],
-      zs*hdr.pixDims[3],
-      0,
-      0,
-      0,
-      0,
-      1
-    );
+    xr * hdr.pixDims[1],
+    yr * hdr.pixDims[2],
+    zr * hdr.pixDims[3],
+    0,
+    xa * hdr.pixDims[1],
+    ya * hdr.pixDims[2],
+    za * hdr.pixDims[3],
+    0,
+    xs * hdr.pixDims[1],
+    ys * hdr.pixDims[2],
+    zs * hdr.pixDims[3],
+    0,
+    0,
+    0,
+    0,
+    1
+  );
   let base = 0.0; //0 or 1: are voxels indexed from 0 or 1?
-  let Pcrs = [ (hdr.dims[1]/2.0)+base, (hdr.dims[2]/2.0)+base, (hdr.dims[3]/2.0)+base, 1];
-  let PxyzOffset = [0,0,0,0];
-  for (var i = 0; i < 3; i++) {//multiply Pcrs * m
-    for (var j = 0; j< 3; j++) {
-      PxyzOffset[i] = PxyzOffset[i] + (rot44[i+(j*4)]*Pcrs[j]);
+  let Pcrs = [
+    hdr.dims[1] / 2.0 + base,
+    hdr.dims[2] / 2.0 + base,
+    hdr.dims[3] / 2.0 + base,
+    1,
+  ];
+  let PxyzOffset = [0, 0, 0, 0];
+  for (var i = 0; i < 3; i++) {
+    //multiply Pcrs * m
+    for (var j = 0; j < 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + rot44[i + j * 4] * Pcrs[j];
     }
   }
   hdr.affine = [
@@ -1182,22 +1248,19 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
  * @example
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
  */
-NVImage.loadFromUrl = async function (
-	{
-  url = '',
-  urlImgData = '',
-  name = '',
+NVImage.loadFromUrl = async function ({
+  url = "",
+  urlImgData = "",
+  name = "",
   colorMap = "gray",
   opacity = 1.0,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
-	} = {}
-	) {
-
-	if (url === '') {
-    throw Error('url must not be empty');
+  visible = true,
+} = {}) {
+  if (url === "") {
+    throw Error("url must not be empty");
   }
 
   let response = await fetch(url);
@@ -1205,29 +1268,29 @@ NVImage.loadFromUrl = async function (
   if (!response.ok) {
     throw Error(response.statusText);
   }
-	var re = /(?:\.([^.]+))?$/;
+  var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(url)[1];
-	if (ext.toUpperCase() === "NHDR") {
-		if (urlImgData === '') {
-		}
+  if (ext.toUpperCase() === "NHDR") {
+    if (urlImgData === "") {
+    }
   } else if (ext.toUpperCase() === "HEAD") {
-		if (urlImgData === ''){
-			urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + "BRIK"
-			console.log(urlImgData)
-		}
-  } 
+    if (urlImgData === "") {
+      urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
+      console.log(urlImgData);
+    }
+  }
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
-		console.log(resp.status)
-		if (resp.status === 404){
-			if (urlImgData.lastIndexOf('BRIK') !== -1){
-				resp = await fetch(urlImgData + '.gz');
-			}
-		}
+    console.log(resp.status);
+    if (resp.status === 404) {
+      if (urlImgData.lastIndexOf("BRIK") !== -1) {
+        resp = await fetch(urlImgData + ".gz");
+      }
+    }
     pairedImgData = await resp.arrayBuffer();
   }
 
@@ -1257,11 +1320,11 @@ NVImage.readFileAsync = function (file) {
     let reader = new FileReader();
 
     reader.onload = () => {
-			if (file.name.lastIndexOf('gz') !== -1){
-				resolve(nifti.decompress(reader.result))
-			} else {
-      	resolve(reader.result);
-			}
+      if (file.name.lastIndexOf("gz") !== -1) {
+        resolve(nifti.decompress(reader.result));
+      } else {
+        resolve(reader.result);
+      }
     };
 
     reader.onerror = reject;
@@ -1285,9 +1348,8 @@ NVImage.readFileAsync = function (file) {
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
-NVImage.loadFromFile = async function (
-	{
-  file=null,
+NVImage.loadFromFile = async function ({
+  file = null,
   name = "",
   colorMap = "gray",
   opacity = 1.0,
@@ -1295,18 +1357,18 @@ NVImage.loadFromFile = async function (
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
-	} = {}) {
+  visible = true,
+} = {}) {
   let nvimage = null;
   try {
     let dataBuffer = await this.readFileAsync(file);
     let pairedImgData = null;
-		console.log('before readimg paired image data!!!!')
-		if (urlImgData) {
-			console.log('reading paired image data!!!!!')
+    console.log("before readimg paired image data!!!!");
+    if (urlImgData) {
+      console.log("reading paired image data!!!!!");
       pairedImgData = await this.readFileAsync(urlImgData);
-		}
-		name = file.name
+    }
+    name = file.name;
     nvimage = new NVImage(
       dataBuffer,
       name,
@@ -1319,10 +1381,10 @@ NVImage.loadFromFile = async function (
       visible
     );
   } catch (err) {
-		console.log(err)
+    console.log(err);
     log.debug(err);
   }
-	console.log(nvimage)
+  console.log(nvimage);
   return nvimage;
 };
 
@@ -1405,18 +1467,27 @@ NVImage.prototype.getImageMetadata = function () {
 /**
  * a factory function to make a zero filled image given a NVImage as a reference
  * @param {NVImage} nvImage an existing NVImage as a reference
+ * @param {dataType} string the output data type. Options: 'same', 'uint8'
  * @returns {NVImage} returns a new NVImage filled with zeros for the image data
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  * newZeroImage = NVImage.zerosLike(myImage)
  */
-NVImage.zerosLike = function (nvImage) {
+NVImage.zerosLike = function (nvImage, dataType='same') {
+	// dataType can be: 'same', 'uint8'
+	// 'same' means that the zeroed image data type is the same as the input image
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
+	if (dataType === 'uint8'){
+		zeroClone.img = Uint8Array.from(zeroClone.img)
+		zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
+		zeroClone.hdr.numBitsPerVoxel = 8
+	}
   return zeroClone;
 };
 
 String.prototype.getBytes = function () {
+  //CR??? What does this do?
   let bytes = [];
   for (var i = 0; i < this.length; i++) {
     bytes.push(this.charCodeAt(i));

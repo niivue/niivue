@@ -23,23 +23,12 @@
       <h1>
         hot reloadable development preview
       </h1>
-      <p>
-      <h3>Controls</h3>
-      <ul>
-        <li>move the crosshairs: left mouse click and drag (or click around)</li>
-        <li>slice scrolling: mouse or touch pad scroll up and down (pinch zoom for mobile)</li>
-        <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
-        <li>reset intensity: left mouse click double click (mobile not supported)</li>
-        <li><b>change the view mode by pressing the "v" key on your keyboard (mobile not supported yet)</b></li>
-        <li><b>cycle through clip planes by pressing the "c" key on your keyboard (mobile not supported yet)</b></li>
-      </ul>
-      </p>
     </section>
 
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
@@ -50,7 +39,7 @@
 
     <!-- <script type="module" src="./index.js">
     </script> -->
-    <script type="module">
+    <script type="module" async>
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -105,26 +94,31 @@
 				show3Dcrosshair: true,
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
-				backColor: [0.2, 0.2, 0.2, 1]
+				backColor: [0.2, 0.2, 0.2, 1],
+				thumbnail: "../demos/images/DoG.png"
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
-			/*
-      nv1.loadMeshes([
-         {url: "../demos/images/motor_4t95mesh.rh.mz3", rgba255 : [0, 0, 255, 255]},
-         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
-      ])
-			*/
+      await nv1.loadVolumes(volumeList1)
+			
+      /*nv1.loadMeshes([
+         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 192, 192, 255]},
+         //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
+      ])*/
+			
       //nv1.loadConnectome(connectome)
       //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
+      //nv1.volumes[0].frame4D = 5;
+
+      //nv1.updateGLVolume()
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-
+        //nv1.volumes[0].frame4D =  Math.floor(Math.random() * 9);
+        //nv1.updateGLVolume()
       })
 
 			nv1.on('imageLoaded', (image) => {
@@ -134,7 +128,6 @@
 			nv1.on('intensityRange', (image) => {
 			 console.log(image.cal_min, image.cal_max)
 			})
-
     </script>
   </div>
 </body>
