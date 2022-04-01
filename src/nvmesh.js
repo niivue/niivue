@@ -44,23 +44,24 @@ export var NVMesh = function (
   this.colorMap = colorMap;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
-
-  if (name.startsWith("*")) {
+  if (colorMap.startsWith("*")) {
     // The tractography kludge!
     //nvmesh = new NVMesh(pts, offsetPt0, '*');
     let pts = posNormClr;
     let offsetPt0 = tris;
     //determine fiber colors
     let npt = pts.length / 3; //each point has three components: X,Y,Z
-    var f32 = new Float32Array(npt * 4); //four 32-bit components X,Y,Z,C
-    var rgba32 = new Uint32Array(f32.buffer); //typecast of our X,Y,Z,C array
+    //Each streamline vertex has color and position attributes
+    //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
+    var posClrF32 = new Float32Array(npt * 4); //four 32-bit components X,Y,Z,C
+    var posClrU32 = new Uint32Array(posClrF32.buffer); //typecast of our X,Y,Z,C array
     //fill XYZ position of XYZC array
     let i3 = 0;
     let i4 = 0;
     for (let i = 0; i < npt; i++) {
-      f32[i4 + 0] = pts[i3 + 0];
-      f32[i4 + 1] = pts[i3 + 1];
-      f32[i4 + 2] = pts[i3 + 2];
+      posClrF32[i4 + 0] = pts[i3 + 0];
+      posClrF32[i4 + 1] = pts[i3 + 1];
+      posClrF32[i4 + 2] = pts[i3 + 2];
       i3 += 3;
       i4 += 4;
     }
@@ -87,18 +88,16 @@ export var NVMesh = function (
       //let RBGA =  (Math.abs(v[0]) * 255) + ((Math.abs(v[1]) *255) << 8) + ((Math.abs(v[2]) *255) << 16) + (0 << 24); //RGBA
       let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
       let vEnd4 = vEnd * 4 + 3;
-      for (let j = vStart4; j <= vEnd4; j += 4) rgba32[j] = RBGA;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RBGA;
     }
-
     //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
     let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
     this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(rgba32), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
     n_count = offsetPt0.length - 1;
     let indices = [];
-    let min_pts = 4;
+    let min_pts = 2;
     for (let i = 0; i < n_count; i++) {
       let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
       if (n_pts < min_pts) continue;
@@ -272,6 +271,8 @@ following conditions are met:
 }
 
 NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
+  //Each streamline vertex has color, normal and position attributes
+  //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
   if (pts.length < 3 || rgba255.length < 4)
     log.error("Catastrophic failure generatePosNormClr()");
   let norms = generateNormals(pts, tris);
@@ -762,7 +763,7 @@ NVMesh.readOBJ = function (buffer) {
     positions,
     indices,
   };
-}; //readOBJ
+}; // readOBJ()
 
 NVMesh.readFreeSurfer = function (buffer) {
   const view = new DataView(buffer); //ArrayBuffer to dataview
@@ -826,7 +827,7 @@ NVMesh.readSTL = function (buffer) {
     positions,
     indices,
   };
-};
+}; // readSTL()
 
 NVMesh.readGII = function (buffer) {
   var enc = new TextDecoder("utf-8");
@@ -838,7 +839,7 @@ NVMesh.readGII = function (buffer) {
     positions,
     indices,
   };
-};
+}; // readGII()
 
 NVMesh.loadConnectomeFromJSON = async function (
   json,
@@ -946,12 +947,31 @@ NVMesh.loadConnectomeFromJSON = async function (
   return nvmesh;
 };
 
-NVMesh.readMesh = function (buffer, name, rgba255 = [255, 255, 255, 255]) {
+NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
+  let nvmesh = null;
   let tris = [];
   let pts = [];
   let obj = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
+  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
+    if (ext.toUpperCase() === "TCK") obj = this.readTCK(buffer);
+    else obj = this.readTRK(buffer);
+    let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+    let pts = new Float32Array(obj.pts.slice());
+    let furthestVertex = getFurthestVertexFromOrigin(pts);
+    nvmesh = new NVMesh(
+      pts,
+      offsetPt0,
+      name,
+      "*", //colorMap,
+      1.0, //opacity,
+      true, //visible,
+      furthestVertex,
+      gl
+    );
+    return nvmesh;
+  }
   if (ext.toUpperCase() === "GII") obj = this.readGII(buffer);
   else if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
   else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
@@ -985,11 +1005,21 @@ NVMesh.readMesh = function (buffer, name, rgba255 = [255, 255, 255, 255]) {
   }
   let furthestVertex = getFurthestVertexFromOrigin(pts);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  return {
-    posNormClr,
-    tris,
-    furthestVertex,
-  };
+  if (posNormClr) {
+    nvmesh = new NVMesh(
+      posNormClr,
+      tris,
+      name,
+      "yellow", //colorMap,
+      1.0, //opacity,
+      true, //visible,
+      furthestVertex,
+      gl
+    );
+  } else {
+    alert("Unable to load buffer properly from mesh");
+  }
+  return nvmesh;
 };
 
 /**
@@ -1019,50 +1049,10 @@ NVMesh.loadFromUrl = async function ({
   if (!response.ok) throw Error(response.statusText);
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
-  //  return this.loadFromArrayBuffer(buffer, gl, name, colorMap, opacity, rgba255, visible);
   let tris = [];
   var pts = [];
   let buffer = await response.arrayBuffer();
-  let obj = [];
-  var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
-    if (ext.toUpperCase() === "TCK") obj = this.readTCK(buffer);
-    else obj = this.readTRK(buffer);
-    let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-    let pts = new Float32Array(obj.pts.slice());
-    let furthestVertex = getFurthestVertexFromOrigin(pts);
-    nvmesh = new NVMesh(
-      pts,
-      offsetPt0,
-      "*",
-      colorMap,
-      opacity,
-      visible,
-      furthestVertex,
-      gl
-    );
-    return nvmesh;
-  }
-  obj = this.readMesh(buffer, name, rgba255);
-  let posNormClr = obj.posNormClr.slice();
-  tris = obj.tris.slice();
-  let furthestVertex = obj.furthestVertex;
-  if (posNormClr) {
-    nvmesh = new NVMesh(
-      posNormClr,
-      tris,
-      name,
-      colorMap,
-      opacity,
-      visible,
-      furthestVertex,
-      gl
-    );
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return this.readMesh(buffer, name, gl, rgba255);
 };
 
 // not included in public docs
@@ -1109,25 +1099,7 @@ NVMesh.loadFromFile = async function ({
 } = {}) {
   let nvmesh = [];
   let buffer = await this.readFileAsync(file);
-  let obj = this.readMesh(buffer, name);
-  let posNormClr = obj.posNormClr.slice();
-  let tris = obj.tris.slice();
-  let furthestVertex = obj.furthestVertex;
-  if (posNormClr) {
-    nvmesh = new NVMesh(
-      posNormClr,
-      tris,
-      name,
-      colorMap,
-      opacity,
-      visible,
-      furthestVertex,
-      gl
-    );
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return this.readMesh(buffer, name, gl, rgba255);
 };
 
 String.prototype.getBytes = function () {

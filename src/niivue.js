@@ -4,7 +4,7 @@ import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
 import { vertLineShader, fragLineShader } from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
-import { vertFontShader, fragFontShader } from "./shader-srcs.js";
+import { vertFontShader, fragFontShader, vertBmpShader, fragBmpShader } from "./shader-srcs.js";
 import {
   vertOrientShader,
   vertPassThroughShader,
@@ -92,6 +92,7 @@ export const Niivue = function (options = {}) {
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
+    thumbnail: "",
   };
 
   this.canvas = null; // the canvas element on the page
@@ -106,6 +107,9 @@ export const Niivue = function (options = {}) {
   this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
+  this.bmpShader = null;
+  this.bmpTexture = null; //thumbnail WebGLTexture object
+  this.bmpTextureWH = 1.0; //thumbnail width/height ratio
   this.passThroughShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
@@ -220,7 +224,6 @@ export const Niivue = function (options = {}) {
   }
 
   this.loadingText = this.opts.loadingText;
-
   log.setLogLevel(this.opts.logging);
 
   // maping of keys (event strings) to rxjs subjects
@@ -336,6 +339,7 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
   this.registerInteractions(); // attach mouse click and touch screen event handlers for the canvas
 
   await this.init();
+
   this.drawScene();
   return this;
 };
@@ -857,7 +861,6 @@ Niivue.prototype.dropListener = async function (e) {
 
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
-  //TODO: handle meshes (obj, mz3, gii, stl, pial, vtk) and volumes (nii, nii.gz, nrrd)
   if (url) {
     let volume = await NVImage.loadFromUrl({ url: url });
     this.setVolume(volume);
@@ -876,6 +879,10 @@ Niivue.prototype.dropListener = async function (e) {
         let ext = re.exec(file.name)[1];
         ext = ext.toUpperCase();
         console.log(ext, "dropped ", file.name);
+        if (ext === "PNG") {
+          this.loadBmpTexture(file);
+          continue;
+        }
         let pairedImageData = "";
         // check for afni HEAD BRIK pair
         if (file.name.lastIndexOf("HEAD") !== -1) {
@@ -903,6 +910,8 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "MZ3" ||
           ext === "OBJ" ||
           ext === "STL" ||
+          ext === "TCK" ||
+          ext === "TRK" ||
           ext === "VTK"
         ) {
           //console.log("mesh loading not yet supported");
@@ -1532,14 +1541,26 @@ Niivue.prototype.requestCORSIfNotSameOrigin = function (img, url) {
 };
 
 // not included in public docs
-Niivue.prototype.loadFontTexture = function (fontUrl) {
+Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
   return new Promise((resolve, reject) => {
     let img = new Image();
     img.onload = () => {
-      let pngTexture = this.gl.createTexture();
-      this.gl.activeTexture(this.gl.TEXTURE3);
+      let pngTexture = [];
+      if (textureNum === 4) {
+        if (this.bmpTexture !== null)
+          this.gl.deleteTexture(this.bmpTexture);
+        this.bmpTexture = this.gl.createTexture();
+        pngTexture = this.bmpTexture;
+        this.bmpTextureWH = img.width / img.height;
+        this.gl.activeTexture(this.gl.TEXTURE4);
+        this.bmpShader.use(this.gl);
+        this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else {
+        this.gl.activeTexture(this.gl.TEXTURE3);
+        this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+        pngTexture = this.gl.createTexture();
+      }
       this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
-      this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
       // Set the parameters so we can render any size image.
       this.gl.texParameteri(
         this.gl.TEXTURE_2D,
@@ -1576,10 +1597,20 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
 
     img.onerror = reject;
 
-    this.requestCORSIfNotSameOrigin(img, fontUrl);
-    img.src = fontUrl;
+    this.requestCORSIfNotSameOrigin(img, pngUrl);
+    img.src = pngUrl;
+
   });
 };
+
+Niivue.prototype.loadFontTexture = function (fontUrl) {
+  this.loadPngAsTexture(fontUrl, 3);
+}
+
+
+Niivue.prototype.loadBmpTexture = function (bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 4);
+}
 
 // not included in public docs
 Niivue.prototype.initFontMets = function () {
@@ -1631,7 +1662,7 @@ Niivue.prototype.loadFont = async function (
   this.initFontMets();
 
   this.fontShader.use(this.gl);
-  this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+  //this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
   this.drawScene();
 };
 
@@ -1648,17 +1679,6 @@ Niivue.prototype.initText = async function () {
   //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
   this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
   this.fontShader.use(this.gl);
-
-  await this.loadDefaultFont();
-  this.drawLoadingText(this.loadingText);
-}; // initText()
-
-Niivue.prototype.initText = async function () {
-  // font shader
-  //multi-channel signed distance font https://github.com/Chlumsky/msdfgen
-  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
-  this.fontShader.use(this.gl);
-
   await this.loadDefaultFont();
   this.drawLoadingText(this.loadingText);
 }; // initText()
@@ -1842,7 +1862,12 @@ Niivue.prototype.init = async function () {
     vertMeshShader,
     this.meshShaders[0].Frag
   );
+  
+  this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
+
   await this.initText();
+  if (this.opts.thumbnail.length > 0)
+    this.loadBmpTexture(this.opts.thumbnail);
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -2412,6 +2437,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posFuture;
 
   this.canvas.focus();
+  if (this.bmpTexture !== null) {
+    this.gl.deleteTexture(this.bmpTexture);
+    this.bmpTexture = null;
+    //the thumbnail is now released, do something profound: actually load the images
+  }
 
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
@@ -3085,7 +3115,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     gl.bindVertexArray(this.meshes[i].vao);
-    if (this.meshes[i].name.startsWith("*")) {
+    if (this.meshes[i].colorMap.startsWith("*")) {
       hasFibers = true;
       continue;
     }
@@ -3106,7 +3136,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     gl.bindVertexArray(this.meshes[i].vao);
-    if (!this.meshes[i].name.startsWith("*")) continue;
+    if (!this.meshes[i].colorMap.startsWith("*")) continue;
     gl.drawElements(
       gl.LINE_STRIP,
       this.meshes[i].indexCount,
@@ -3324,6 +3354,33 @@ Niivue.prototype.scaleSlice = function (w, h) {
   return leftTopWidthHeight;
 }; // scaleSlice()
 
+Niivue.prototype.drawThumbnail = function () {
+  this.bmpShader.use(this.gl);
+  this.gl.uniform2f(
+      this.bmpShader.uniforms["canvasWidthHeight"],
+      this.gl.canvas.width,
+      this.gl.canvas.height
+    );
+  let h = this.gl.canvas.height;
+  let w = this.gl.canvas.height * this.bmpTextureWH;
+  if (w > this.gl.canvas.width) { //constrained by width
+    h = this.gl.canvas.width / this.bmpTextureWH;
+    w = this.gl.canvas.width;
+  }
+  this.gl.uniform4f(
+    this.bmpShader.uniforms["leftTopWidthHeight"],
+    0,
+    0,
+    w,
+    h
+  );
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+
+  console.log('ratioyyy', this.bmpTextureWH);
+}
+
 // not included in public docs
 Niivue.prototype.drawScene = function () {
   if (!this.initialized) {
@@ -3337,6 +3394,10 @@ Niivue.prototype.drawScene = function () {
     this.opts.backColor[3]
   );
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  if (this.bmpTexture) { //draw the thumbnail image and exit
+    this.drawThumbnail();
+    return;
+  }
   let posString = "";
   if (
     this.volumes.length === 0 ||
