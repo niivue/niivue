@@ -95,16 +95,16 @@
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
 				backColor: [0.2, 0.2, 0.2, 1],
-				thumbnail: "../demos/images/DoG.png"
+				//thumbnail: "../demos/images/DoG.png"
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       await nv1.loadVolumes(volumeList1)
 			
-      /*nv1.loadMeshes([
-         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 192, 192, 255]},
+      nv1.loadMeshes([
+         {url: "../demos/images/ColumnMajorOrder.gii", rgba255 : [255, 192, 192, 255]},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
-      ])*/
+      ])
 			
       //nv1.loadConnectome(connectome)
       //nv1.setSliceType(nv1.sliceTypeMultiplanar)

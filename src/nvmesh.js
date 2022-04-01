@@ -835,6 +835,29 @@ NVMesh.readGII = function (buffer) {
   let gii = gifti.parse(xmlStr);
   var positions = gii.getPointsDataArray().getData();
   var indices = gii.getTrianglesDataArray().getData();
+  //next: ColumnMajorOrder https://github.com/rii-mango/GIFTI-Reader-JS/issues/2
+  if (gii.getPointsDataArray().attributes.ArrayIndexingOrder === 'ColumnMajorOrder') {
+    //transpose points, xx..xyy..yzz..z -> xyzxyz.. 
+    let ps = positions.slice();
+    let np = ps.length / 3;
+    let j = 0;
+    for (var p = 0; p < np; p++) 
+      for (var i = 0; i < 3; i++) {
+        positions[j] = ps[(i * np)+p]
+        j++;
+      }
+  }
+  if (gii.getTrianglesDataArray().attributes.ArrayIndexingOrder === 'ColumnMajorOrder') {
+    //transpose indices, xx..xyy..yzz..z -> xyzxyz..
+    let ps = indices.slice();
+    let np = ps.length / 3;
+    let j = 0;
+    for (var p = 0; p < np; p++) 
+      for (var i = 0; i < 3; i++) {
+        indices[j] = ps[(i * np)+p]
+        j++;
+      }
+  }
   return {
     positions,
     indices,
