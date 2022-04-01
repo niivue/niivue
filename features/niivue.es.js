@@ -923,6 +923,31 @@ void main(void) {
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
+var vertBmpShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+out vec2 vUV;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
+	vUV = vec2(pos.x, 1.0 - pos.y);
+}`;
+var fragBmpShader = `#version 300 es
+#line 262
+precision highp int;
+precision highp float;
+uniform highp sampler2D bmpTexture;
+in vec2 vUV;
+out vec4 color;
+void main() {
+	color = texture(bmpTexture, vUV);
+}`;
 var vertFontShader = `#version 300 es
 #line 244
 layout(location=0) in vec3 pos;
@@ -12384,9 +12409,14 @@ NVImage.prototype.getImageMetadata = function() {
     bpv
   };
 };
-NVImage.zerosLike = function(nvImage) {
+NVImage.zerosLike = function(nvImage, dataType = "same") {
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
+  if (dataType === "uint8") {
+    zeroClone.img = Uint8Array.from(zeroClone.img);
+    zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR;
+    zeroClone.hdr.numBitsPerVoxel = 8;
+  }
   return zeroClone;
 };
 String.prototype.getBytes = function() {
@@ -21652,18 +21682,18 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
   this.colorMap = colorMap;
   this.opacity = opacity > 1 ? 1 : opacity;
   this.visible = visible;
-  if (name.startsWith("*")) {
+  if (colorMap.startsWith("*")) {
     let pts = posNormClr;
     let offsetPt0 = tris;
     let npt = pts.length / 3;
-    var f32 = new Float32Array(npt * 4);
-    var rgba32 = new Uint32Array(f32.buffer);
+    var posClrF32 = new Float32Array(npt * 4);
+    var posClrU32 = new Uint32Array(posClrF32.buffer);
     let i3 = 0;
     let i4 = 0;
     for (let i = 0; i < npt; i++) {
-      f32[i4 + 0] = pts[i3 + 0];
-      f32[i4 + 1] = pts[i3 + 1];
-      f32[i4 + 2] = pts[i3 + 2];
+      posClrF32[i4 + 0] = pts[i3 + 0];
+      posClrF32[i4 + 1] = pts[i3 + 1];
+      posClrF32[i4 + 2] = pts[i3 + 2];
       i3 += 3;
       i4 += 4;
     }
@@ -21685,15 +21715,15 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
       let vStart4 = vStart * 4 + 3;
       let vEnd4 = vEnd * 4 + 3;
       for (let j = vStart4; j <= vEnd4; j += 4)
-        rgba32[j] = RBGA;
+        posClrU32[j] = RBGA;
     }
     let primitiveRestart = Math.pow(2, 32) - 1;
     this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(rgba32), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
     n_count = offsetPt0.length - 1;
     let indices = [];
-    let min_pts = 4;
+    let min_pts = 2;
     for (let i = 0; i < n_count; i++) {
       let n_pts = offsetPt0[i + 1] - offsetPt0[i];
       if (n_pts < min_pts)
@@ -22383,12 +22413,24 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
   }
   return nvmesh;
 };
-NVMesh.readMesh = function(buffer, name, rgba255 = [255, 255, 255, 255]) {
+NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
+  let nvmesh = null;
   let tris = [];
   let pts = [];
   let obj = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
+  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
+    if (ext.toUpperCase() === "TCK")
+      obj = this.readTCK(buffer);
+    else
+      obj = this.readTRK(buffer);
+    let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+    let pts2 = new Float32Array(obj.pts.slice());
+    let furthestVertex2 = getFurthestVertexFromOrigin(pts2);
+    nvmesh = new NVMesh(pts2, offsetPt0, name, "*", 1, true, furthestVertex2, gl);
+    return nvmesh;
+  }
   if (ext.toUpperCase() === "GII")
     obj = this.readGII(buffer);
   else if (ext.toUpperCase() === "MZ3")
@@ -22426,11 +22468,12 @@ NVMesh.readMesh = function(buffer, name, rgba255 = [255, 255, 255, 255]) {
   }
   let furthestVertex = getFurthestVertexFromOrigin(pts);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  return {
-    posNormClr,
-    tris,
-    furthestVertex
-  };
+  if (posNormClr) {
+    nvmesh = new NVMesh(posNormClr, tris, name, "yellow", 1, true, furthestVertex, gl);
+  } else {
+    alert("Unable to load buffer properly from mesh");
+  }
+  return nvmesh;
 };
 NVMesh.loadFromUrl = async function({
   url = "",
@@ -22446,37 +22489,12 @@ NVMesh.loadFromUrl = async function({
   if (gl === null)
     throw Error("gl context is null");
   let response = await fetch(url);
-  let nvmesh = null;
   if (!response.ok)
     throw Error(response.statusText);
   let urlParts = url.split("/");
   name = urlParts.slice(-1)[0];
-  let tris = [];
   let buffer = await response.arrayBuffer();
-  let obj = [];
-  var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
-    if (ext.toUpperCase() === "TCK")
-      obj = this.readTCK(buffer);
-    else
-      obj = this.readTRK(buffer);
-    let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-    let pts = new Float32Array(obj.pts.slice());
-    let furthestVertex2 = getFurthestVertexFromOrigin(pts);
-    nvmesh = new NVMesh(pts, offsetPt0, "*", colorMap, opacity, visible, furthestVertex2, gl);
-    return nvmesh;
-  }
-  obj = this.readMesh(buffer, name, rgba255);
-  let posNormClr = obj.posNormClr.slice();
-  tris = obj.tris.slice();
-  let furthestVertex = obj.furthestVertex;
-  if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, furthestVertex, gl);
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return this.readMesh(buffer, name, gl, rgba255);
 };
 NVMesh.readFileAsync = function(file) {
   return new Promise((resolve, reject) => {
@@ -22500,18 +22518,8 @@ NVMesh.loadFromFile = async function({
   ignoreZeroVoxels = false,
   visible = true
 } = {}) {
-  let nvmesh = [];
   let buffer = await this.readFileAsync(file);
-  let obj = this.readMesh(buffer, name);
-  let posNormClr = obj.posNormClr.slice();
-  let tris = obj.tris.slice();
-  let furthestVertex = obj.furthestVertex;
-  if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, furthestVertex, gl);
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return this.readMesh(buffer, name, gl, rgba255);
 };
 String.prototype.getBytes = function() {
   let bytes = [];
@@ -24077,7 +24085,8 @@ const Niivue = function(options = {}) {
     isRadiologicalConvention: false,
     logging: false,
     loadingText: "waiting for images...",
-    dragAndDropEnabled: true
+    dragAndDropEnabled: true,
+    thumbnail: ""
   };
   this.canvas = null;
   this.gl = null;
@@ -24091,6 +24100,9 @@ const Niivue = function(options = {}) {
   this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
+  this.bmpShader = null;
+  this.bmpTexture = null;
+  this.bmpTextureWH = 1;
   this.passThroughShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
@@ -24577,6 +24589,10 @@ Niivue.prototype.dropListener = async function(e) {
         let ext = re.exec(file.name)[1];
         ext = ext.toUpperCase();
         console.log(ext, "dropped ", file.name);
+        if (ext === "PNG") {
+          this.loadBmpTexture(file);
+          continue;
+        }
         let pairedImageData = "";
         if (file.name.lastIndexOf("HEAD") !== -1) {
           for (const pairedFile of files) {
@@ -24592,7 +24608,7 @@ Niivue.prototype.dropListener = async function(e) {
         if (file.name.lastIndexOf("BRIK") !== -1) {
           continue;
         }
-        if (ext === "GII" || ext === "MZ3" || ext === "OBJ" || ext === "STL" || ext === "VTK") {
+        if (ext === "GII" || ext === "MZ3" || ext === "OBJ" || ext === "STL" || ext === "TCK" || ext === "TRK" || ext === "VTK") {
           let mesh = await NVMesh.loadFromFile({
             file,
             gl: this.gl,
@@ -24953,14 +24969,26 @@ Niivue.prototype.requestCORSIfNotSameOrigin = function(img, url) {
     img.crossOrigin = "";
   }
 };
-Niivue.prototype.loadFontTexture = function(fontUrl) {
+Niivue.prototype.loadPngAsTexture = function(pngUrl, textureNum) {
   return new Promise((resolve, reject) => {
     let img = new Image();
     img.onload = () => {
-      let pngTexture = this.gl.createTexture();
-      this.gl.activeTexture(this.gl.TEXTURE3);
+      let pngTexture = [];
+      if (textureNum === 4) {
+        if (this.bmpTexture !== null)
+          this.gl.deleteTexture(this.bmpTexture);
+        this.bmpTexture = this.gl.createTexture();
+        pngTexture = this.bmpTexture;
+        this.bmpTextureWH = img.width / img.height;
+        this.gl.activeTexture(this.gl.TEXTURE4);
+        this.bmpShader.use(this.gl);
+        this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else {
+        this.gl.activeTexture(this.gl.TEXTURE3);
+        this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+        pngTexture = this.gl.createTexture();
+      }
       this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
-      this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
@@ -24969,9 +24997,15 @@ Niivue.prototype.loadFontTexture = function(fontUrl) {
       resolve(pngTexture);
     };
     img.onerror = reject;
-    this.requestCORSIfNotSameOrigin(img, fontUrl);
-    img.src = fontUrl;
+    this.requestCORSIfNotSameOrigin(img, pngUrl);
+    img.src = pngUrl;
   });
+};
+Niivue.prototype.loadFontTexture = function(fontUrl) {
+  this.loadPngAsTexture(fontUrl, 3);
+};
+Niivue.prototype.loadBmpTexture = function(bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 4);
 };
 Niivue.prototype.initFontMets = function() {
   this.fontMets = [];
@@ -25013,19 +25047,12 @@ Niivue.prototype.loadFont = async function(fontSheetUrl = defaultFontPNG, metric
   this.fontMetrics = JSON.parse(jsonText);
   this.initFontMets();
   this.fontShader.use(this.gl);
-  this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
   this.drawScene();
 };
 Niivue.prototype.loadDefaultFont = async function() {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
   this.initFontMets();
-};
-Niivue.prototype.initText = async function() {
-  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
-  this.fontShader.use(this.gl);
-  await this.loadDefaultFont();
-  this.drawLoadingText(this.loadingText);
 };
 Niivue.prototype.initText = async function() {
   this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
@@ -25123,7 +25150,10 @@ Niivue.prototype.init = async function() {
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
+  this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
+  if (this.opts.thumbnail.length > 0)
+    this.loadBmpTexture(this.opts.thumbnail);
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -25398,6 +25428,10 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
   this.canvas.focus();
+  if (this.bmpTexture !== null) {
+    this.gl.deleteTexture(this.bmpTexture);
+    this.bmpTexture = null;
+  }
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0)
       return;
@@ -25838,7 +25872,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
     if (this.meshes[i].indexCount < 3)
       continue;
     gl.bindVertexArray(this.meshes[i].vao);
-    if (this.meshes[i].name.startsWith("*")) {
+    if (this.meshes[i].colorMap.startsWith("*")) {
       hasFibers = true;
       continue;
     }
@@ -25855,7 +25889,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
     if (this.meshes[i].indexCount < 3)
       continue;
     gl.bindVertexArray(this.meshes[i].vao);
-    if (!this.meshes[i].name.startsWith("*"))
+    if (!this.meshes[i].colorMap.startsWith("*"))
       continue;
     gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
     gl.bindVertexArray(this.unusedVAO);
@@ -26005,12 +26039,31 @@ Niivue.prototype.scaleSlice = function(w, h) {
   ];
   return leftTopWidthHeight;
 };
+Niivue.prototype.drawThumbnail = function() {
+  this.bmpShader.use(this.gl);
+  this.gl.uniform2f(this.bmpShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
+  let h = this.gl.canvas.height;
+  let w = this.gl.canvas.height * this.bmpTextureWH;
+  if (w > this.gl.canvas.width) {
+    h = this.gl.canvas.width / this.bmpTextureWH;
+    w = this.gl.canvas.width;
+  }
+  this.gl.uniform4f(this.bmpShader.uniforms["leftTopWidthHeight"], 0, 0, w, h);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
+  console.log("ratioyyy", this.bmpTextureWH);
+};
 Niivue.prototype.drawScene = function() {
   if (!this.initialized) {
     return;
   }
   this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3]);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  if (this.bmpTexture) {
+    this.drawThumbnail();
+    return;
+  }
   let posString = "";
   if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
     if (this.meshes.length > 0)
