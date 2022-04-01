@@ -143,6 +143,44 @@ const NiiVue = ({ imageUrl }) => {
 
 // use as: <NiiVue imageUrl={someUrl}> </NiiVue>
 ```
+## Angular example
+Check our [Angular TypeScript development notes](docs/development-notes/angular-typescript.md) for instructions on building an Angular App with Niivue.
+
+install: `npm i @niivue/niivue`
+
+```ts
+import { Component, OnInit,  ViewChild} from '@angular/core';
+
+import {Niivue} from '@niivue/niivue';
+
+@Component({
+  selector: 'app-niivue-view',
+  templateUrl: './niivue-view.component.html',
+  styleUrls: ['./niivue-view.component.sass']
+})
+export class NiivueViewComponent implements OnInit {
+  @ViewChild('gl') canvas:HTMLCanvasElement|undefined;
+
+  constructor() { }
+
+  ngOnInit(): void {
+    const url = '/assets/mni152.nii.gz';
+    const volumeList = [
+    {
+      url,
+      volume: { hdr: null, img: null },
+      colorMap: 'gray',
+      opacity: 1,
+      visible: true,
+    },
+  ]
+    const niivue = new Niivue();
+    niivue.attachTo('gl');
+    niivue.loadVolumes(volumeList);
+  }
+  
+}
+```
 
 # Core Libraries
 

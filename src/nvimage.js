@@ -1467,14 +1467,22 @@ NVImage.prototype.getImageMetadata = function () {
 /**
  * a factory function to make a zero filled image given a NVImage as a reference
  * @param {NVImage} nvImage an existing NVImage as a reference
+ * @param {dataType} string the output data type. Options: 'same', 'uint8'
  * @returns {NVImage} returns a new NVImage filled with zeros for the image data
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  * newZeroImage = NVImage.zerosLike(myImage)
  */
-NVImage.zerosLike = function (nvImage) {
+NVImage.zerosLike = function (nvImage, dataType='same') {
+	// dataType can be: 'same', 'uint8'
+	// 'same' means that the zeroed image data type is the same as the input image
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
+	if (dataType === 'uint8'){
+		zeroClone.img = Uint8Array.from(zeroClone.img)
+		zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
+		zeroClone.hdr.numBitsPerVoxel = 8
+	}
   return zeroClone;
 };
 

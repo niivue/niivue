@@ -39,7 +39,7 @@
 
     <!-- <script type="module" src="./index.js">
     </script> -->
-    <script type="module">
+    <script type="module" async>
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -99,7 +99,7 @@
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
+      await nv1.loadVolumes(volumeList1)
 			
       /*nv1.loadMeshes([
          {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 192, 192, 255]},
@@ -128,7 +128,6 @@
 			nv1.on('intensityRange', (image) => {
 			 console.log(image.cal_min, image.cal_max)
 			})
-
     </script>
   </div>
 </body>
