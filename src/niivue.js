@@ -99,6 +99,9 @@ export const Niivue = function (options = {}) {
   this.gl = null; // the gl context
   this.colormapTexture = null;
   this.volumeTexture = null;
+  this.drawTexture = null; //the GPU memory storage of the drawing
+  this.drawBitmap = null; //the CPU memory storage of the drawing
+  this.drawOpacity = 0.4;
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -1473,6 +1476,218 @@ Niivue.prototype.loadConnectome = async function (json) {
   return this;
 }; // loadMeshes
 
+//Generate a blank GPU texture and CPU bitmap for drawing
+Niivue.prototype.createEmptyDrawing = function() {
+  let mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3]);
+  if (mn < 1)
+    return; //something is horribly wrong!
+  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+  this.drawBitmap = new Uint8Array(vx);
+  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
+  this.refreshDrawing(false);
+}
+
+Niivue.prototype.drawPt = function(x,y,z, penValue) {
+  x = Math.min(Math.max(x, 0), this.back.dims[1] - 1);
+  y = Math.min(Math.max(y, 0), this.back.dims[2] - 1);
+  z = Math.min(Math.max(z, 0), this.back.dims[3] - 1);
+  console.log('>>',x,y,z,penValue);
+  this.drawBitmap[x + (y * this.back.dims[1]) + (z * this.back.dims[1] * this.back.dims[2])] = penValue;
+}
+
+//https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+// https://www.geeksforgeeks.org/bresenhams-algorithm-for-3-d-line-drawing/
+// ptA, ptB are start and end points of line (each XYZ)
+Niivue.prototype.drawLine = function(ptA, ptB, penValue) {
+  let dx = Math.abs(ptA[0] - ptB[0]);
+  let dy = Math.abs(ptA[1] - ptB[1]);
+  let dz = Math.abs(ptA[2] - ptB[2]);
+  let xs = -1;
+  let ys = -1;
+  let zs = -1;
+  if (ptB[0] > ptA[0])
+      xs = 1;
+  if (ptB[1] > ptA[1])
+      ys = 1;
+  if (ptB[2] > ptA[2])
+      zs = 1
+  let x1 = ptA[0];
+  let y1 = ptA[1];
+  let z1 = ptA[2];
+  let x2 = ptB[0];
+  let y2 = ptB[1];
+  let z2 = ptB[2];
+  
+  if ((dx >= dy) && (dx >= dz)) {
+    //Driving axis is X-axis"
+    let p1 = 2 * dy - dx
+    let p2 = 2 * dz - dx
+    while (x1 != x2) {
+      x1 += xs
+      if (p1 >= 0) {
+        y1 += ys
+        p1 -= 2 * dx
+      }
+      if (p2 >= 0) {
+        z1 += zs;
+        p2 -= 2 * dx;
+      }
+      p1 += 2 * dy;
+      p2 += 2 * dz;
+      this.drawPt(x1, y1, z1, penValue);
+    } //while
+  } else if ((dy >= dx) && (dy >= dz)) {
+    //Driving axis is Y-axis"
+    let p1 = 2 * dx - dy
+    let p2 = 2 * dz - dy
+    while (y1 != y2) {
+      y1 += ys
+      if (p1 >= 0) {
+        x1 += xs
+        p1 -= 2 * dy
+      }
+      if (p2 >= 0) {
+        z1 += zs
+        p2 -= 2 * dy
+      }
+      p1 += 2 * dx
+      p2 += 2 * dz
+      this.drawPt(x1, y1, z1, penValue);
+    } //while
+  } else {
+    //# Driving axis is Z-axis
+    let p1 = 2 * dy - dz
+    let p2 = 2 * dx - dz
+    while (z1 != z2) {
+      z1 += zs
+      if (p1 >= 0) {
+          y1 += ys
+          p1 -= 2 * dz
+      }
+      if (p2 >= 0) {
+          x1 += xs
+          p2 -= 2 * dz
+      }
+      p1 += 2 * dy
+      p2 += 2 * dx
+      this.drawPt(x1, y1, z1, penValue);
+    } //while
+  }
+  
+}
+//Demonstrate how to create drawing
+Niivue.prototype.createRandomDrawing = function() {
+  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+  if (vx !== this.drawBitmap.length)
+    console.log('Epic failure');
+  let ptA = [1, 1, 33];
+  let ptB = [63, 78, 33];
+  this.drawLine(ptA, ptB, 1);
+  ptA = [1, 78, 33];
+  ptB = [63, 1, 33];
+  this.drawLine(ptA, ptB, 3);
+  ptA = [1, 40, 33];
+  ptB = [63, 45, 33];
+  this.drawLine(ptA, ptB, 2);
+
+  this.refreshDrawing(false);
+}
+//release GPU and CPU memory: make sure you have saved any changes before calling this!
+Niivue.prototype.closeDrawing = function() {
+  this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
+  this.drawBitmap = null;
+}
+
+//Copy drawing bitmap from CPU to GPU storage and redraw the screen
+Niivue.prototype.refreshDrawing = function(isForceRedraw = true) {
+  let dims = this.back.dims.slice();
+  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+  if (this.drawBitmap.length === 8) {
+    dims[1] = 2;
+    dims[2] = 2;
+    dims[3] = 2;
+  } else if (vx !== this.drawBitmap.length) {
+    console.log('Drawing bitmap must match the background image');
+    
+  }
+  this.gl.activeTexture(this.gl.TEXTURE7);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
+  this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        this.drawBitmap
+      );
+  if (isForceRedraw)
+    this.drawScene();
+}
+
+// not included in public docs
+Niivue.prototype.r8Tex = function (texID, activeID, dims, isInit = false) {
+  if (texID) this.gl.deleteTexture(texID);
+  texID = this.gl.createTexture();
+  this.gl.activeTexture(activeID);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_MIN_FILTER,
+    this.gl.NEAREST
+  );
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_MAG_FILTER,
+    this.gl.NEAREST
+  );
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_WRAP_R,
+    this.gl.CLAMP_TO_EDGE
+  );
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_WRAP_S,
+    this.gl.CLAMP_TO_EDGE
+  );
+  this.gl.texParameteri(
+    this.gl.TEXTURE_3D,
+    this.gl.TEXTURE_WRAP_T,
+    this.gl.CLAMP_TO_EDGE
+  );
+  this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
+    this.gl.texStorage3D(
+      this.gl.TEXTURE_3D,
+      1,
+      this.gl.R8,
+      dims[1],
+      dims[2],
+      dims[3]
+    ); //output background dimensions
+  if (isInit) {
+      let img8 = new Uint8Array(dims[1] * dims[2] * dims[3] );
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        img8
+      );
+  }
+  return texID;
+}; // r8Tex()
+
 // not included in public docs
 Niivue.prototype.rgbaTex = function (texID, activeID, dims, isInit = false) {
   if (texID) this.gl.deleteTexture(texID);
@@ -1730,8 +1945,9 @@ Niivue.prototype.init = async function () {
   this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
   // register volume and overlay textures
-  this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
-  this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
+  this.volumeTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
+  this.overlayTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
+  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true);
 
   let rectStrip = [
     1,
@@ -1783,7 +1999,8 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
   //this.gl.uniform1i(this.sliceShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
-
+  this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
+  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   // line shader (crosshair)
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
   // render shader (3D)
@@ -2304,6 +2521,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
 
   this.updateInterpolation(layer);
+  this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
+  this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
 }; // refreshLayers()
 
 /**
