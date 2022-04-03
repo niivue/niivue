@@ -30,7 +30,8 @@ export var NVMesh = function (
   rgba255 = [1, 0, 0, 0],
   opacity = 1.0,
   visible = true,
-  gl
+  gl,
+  connectome = null
 ) {
   this.name = name;
   this.id = uuidv4();
@@ -41,6 +42,7 @@ export var NVMesh = function (
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
   this.offsetPt0 = null;
+  this.hasConnectome = false;
   this.pts = pts;
   if (!rgba255) {
     this.fiberLength = 2;
@@ -60,6 +62,13 @@ export var NVMesh = function (
     gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
     return;
   } //if fiber not mesh
+  if (connectome) {
+    this.hasConnectome = true;
+    var keysArray = Object.keys(connectome);
+    for (var i = 0, len = keysArray.length; i < len; i++) {
+      this[keysArray[i]] = connectome[keysArray[i]];
+    }
+  }
   this.rgba255 = rgba255;
   this.tris = tris;
   this.updateMesh(gl);
@@ -148,10 +157,104 @@ NVMesh.prototype.updateFibers = function (gl) {
   );
 };
 
+NVMesh.prototype.updateConnectome = function (gl) {
+  //draw nodes
+  let json = this;
+  //draw nodes
+  let tris = [];
+  let nNode = json.nodes.X.length;
+  let hasEdges = false;
+  if (nNode > 1 && json.hasOwnProperty("edges")) {
+    let nEdges = json.edges.length;
+    if ((nEdges = nNode * nNode)) hasEdges = true;
+    else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
+  }
+  //draw all nodes
+  let pts = [];
+  let rgba255 = [];
+  let lut = cmapper.colormap(json.nodeColormap);
+  let lutNeg = cmapper.colormap(json.nodeColormapNegative);
+  let hasNeg = json.hasOwnProperty("nodeColormapNegative");
+  let min = json.nodeMinColor;
+  let max = json.nodeMaxColor;
+  for (let i = 0; i < nNode; i++) {
+    let radius = json.nodes.Size[i] * json.nodeScale;
+    if (radius <= 0.0) continue;
+    let color = json.nodes.Color[i];
+    let isNeg = false;
+    if (hasNeg && color < 0) {
+      isNeg = true;
+      color = -color;
+    }
+    if (min < max) {
+      if (color < min) continue;
+      color = (color - min) / (max - min);
+    } else color = 1.0;
+    color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+    let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+    if (isNeg)
+      rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+    let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
+    NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
+  }
+  //draw all edges
+  if (hasEdges) {
+    lut = cmapper.colormap(json.edgeColormap);
+    lutNeg = cmapper.colormap(json.edgeColormapNegative);
+    hasNeg = json.hasOwnProperty("edgeColormapNegative");
+    min = json.edgeMin;
+    max = json.edgeMax;
+    for (let i = 0; i < nNode - 1; i++) {
+      for (let j = i + 1; j < nNode; j++) {
+        let color = json.edges[i * nNode + j];
+        let isNeg = false;
+        if (hasNeg && color < 0) {
+          isNeg = true;
+          color = -color;
+        }
+        let radius = color * json.edgeScale;
+        if (radius <= 0) continue;
+        if (min < max) {
+          if (color < min) continue;
+          color = (color - min) / (max - min);
+        } else color = 1.0;
+        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg)
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+
+        let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
+        let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
+        NiivueObject3D.makeColoredCylinder(
+          pts,
+          tris,
+          rgba255,
+          pti,
+          ptj,
+          radius,
+          rgba
+        );
+      } //for j
+    } //for i
+  } //hasEdges
+  console.log(pts.length, "<>", tris.length);
+  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
+  //generate webGL buffers and vao
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
+  this.indexCount = tris.length;
+};
+
 NVMesh.prototype.updateMesh = function (gl) {
   if (this.offsetPt0) {
     this.updateFibers(gl);
     return; //fiber not mesh
+  }
+  if (this.hasConnectome) {
+    this.updateConnectome(gl);
+    return; //connectome not mesh
   }
   if (!this.pts || !this.tris || !this.rgba255) {
     console.log("underspecified mesh");
@@ -905,86 +1008,8 @@ NVMesh.loadConnectomeFromJSON = async function (
   opacity = 1.0,
   visible = true
 ) {
-  let nvmesh = null;
-  let tris = [];
   if (json.hasOwnProperty("name")) name = json.name;
-  //draw nodes
-  let nNode = json.nodes.X.length;
-  let hasEdges = false;
-  if (nNode > 1 && json.hasOwnProperty("edges")) {
-    let nEdges = json.edges.length;
-    if ((nEdges = nNode * nNode)) hasEdges = true;
-    else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
-  }
-  //draw all nodes
-  let pts = [];
-  let rgba255 = [];
-  let lut = cmapper.colormap(json.nodeColormap);
-  let lutNeg = cmapper.colormap(json.nodeColormapNegative);
-  let hasNeg = json.hasOwnProperty("nodeColormapNegative");
-  let min = json.nodeMinColor;
-  let max = json.nodeMaxColor;
-  for (let i = 0; i < nNode; i++) {
-    let radius = json.nodes.Size[i] * json.nodeScale;
-    if (radius <= 0.0) continue;
-    let color = json.nodes.Color[i];
-    let isNeg = false;
-    if (hasNeg && color < 0) {
-      isNeg = true;
-      color = -color;
-    }
-    if (min < max) {
-      if (color < min) continue;
-      color = (color - min) / (max - min);
-    } else color = 1.0;
-    color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-    let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-    if (isNeg)
-      rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-    let pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
-    NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
-  }
-  //draw all edges
-  if (hasEdges) {
-    lut = cmapper.colormap(json.edgeColormap);
-    lutNeg = cmapper.colormap(json.edgeColormapNegative);
-    hasNeg = json.hasOwnProperty("edgeColormapNegative");
-    min = json.edgeMin;
-    max = json.edgeMax;
-    for (let i = 0; i < nNode - 1; i++) {
-      for (let j = i + 1; j < nNode; j++) {
-        let color = json.edges[i * nNode + j];
-        let isNeg = false;
-        if (hasNeg && color < 0) {
-          isNeg = true;
-          color = -color;
-        }
-        let radius = color * json.edgeScale;
-        if (radius <= 0) continue;
-        if (min < max) {
-          if (color < min) continue;
-          color = (color - min) / (max - min);
-        } else color = 1.0;
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-        if (isNeg)
-          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-
-        let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
-        let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
-        NiivueObject3D.makeColoredCylinder(
-          pts,
-          tris,
-          rgba255,
-          pti,
-          ptj,
-          radius,
-          rgba
-        );
-      } //for j
-    } //for i
-  } //hasEdges
-  return new NVMesh(pts, tris, name, rgba255, opacity, visible, gl);
+  return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
 NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
