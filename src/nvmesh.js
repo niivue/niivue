@@ -44,6 +44,10 @@ export var NVMesh = function (
   this.colorMap = colorMap;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
+  this.indexBuffer = gl.createBuffer();
+  this.vertexBuffer = gl.createBuffer();
+  this.vao = gl.createVertexArray();
+
   if (colorMap.startsWith("*")) {
     // The tractography kludge!
     //nvmesh = new NVMesh(pts, offsetPt0, '*');
@@ -92,7 +96,6 @@ export var NVMesh = function (
     }
     //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
     let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
-    this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
     n_count = offsetPt0.length - 1;
@@ -105,14 +108,12 @@ export var NVMesh = function (
       indices.push(primitiveRestart);
     }
     this.indexCount = indices.length;
-    this.indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bufferData(
       gl.ELEMENT_ARRAY_BUFFER,
       new Uint32Array(indices),
       gl.STATIC_DRAW
     );
-    this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -125,19 +126,16 @@ export var NVMesh = function (
 
     gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
     return;
-  }
+  } //fiber not mesh
   this.posNormClr = posNormClr;
   this.tris = tris;
   //generate webGL buffers and vao
-  this.indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
-  this.vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
   this.indexCount = tris.length;
   //the VAO binds the vertices and indices as well as describing the vertex layout
-  this.vao = gl.createVertexArray();
   gl.bindVertexArray(this.vao);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);

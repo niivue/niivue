@@ -101,7 +101,7 @@ export const Niivue = function (options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
-  this.drawOpacity = 0.4;
+  this.drawOpacity = 0.8;
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -935,6 +935,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
     }
   }
+  this.drawScene(); //<- this seems to be required if you drag and drop a mesh, not a volume
 };
 
 Niivue.prototype.setRadiologicalConvention = function (
@@ -1483,19 +1484,20 @@ Niivue.prototype.createEmptyDrawing = function() {
     return; //something is horribly wrong!
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   this.drawBitmap = new Uint8Array(vx);
-  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.volumes[0].hdr.dims, true);
+  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
   this.refreshDrawing(false);
 }
 
 Niivue.prototype.drawPt = function(x,y,z, penValue) {
-	let dx = this.volumes[0].hdr.dims[1]
-	let dy = this.volumes[0].hdr.dims[2]
-	let dz = this.volumes[0].hdr.dims[3]
+  let dx = this.back.dims[1];
+  let dy = this.back.dims[2];
+  let dz = this.back.dims[3];
   x = Math.min(Math.max(x, 0), dx - 1);
   y = Math.min(Math.max(y, 0), dy - 1);
   z = Math.min(Math.max(z, 0), dz - 1);
-  console.log('>>',x,y,z,penValue);
   this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
+  //console.log('>>',x,y,z,penValue);
+//  this.drawBitmap[x + (y * this.back.dims[1]) + (z * this.back.dims[1] * this.back.dims[2])] = penValue;
 }
 
 //https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
@@ -1580,6 +1582,8 @@ Niivue.prototype.drawLine = function(ptA, ptB, penValue) {
 }
 //Demonstrate how to create drawing
 Niivue.prototype.createRandomDrawing = function() {
+  console.log('Background image rasDIMs: ', this.back.dims[1], this.back.dims[2], this.back.dims[3]);
+  console.log(' same as volume 0 dimsRAS: ',this.volumes[0].dimsRAS[1], this.volumes[0].dimsRAS[2], this.volumes[0].dimsRAS[3]);
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (vx !== this.drawBitmap.length)
     console.log('Epic failure');
@@ -1592,7 +1596,18 @@ Niivue.prototype.createRandomDrawing = function() {
   ptA = [1, 40, 33];
   ptB = [63, 45, 33];
   this.drawLine(ptA, ptB, 2);
-
+  //draw one line on each slice
+  let dx = this.back.dims[1]-1;
+  let dy = this.back.dims[2]-1;
+  let dz = this.back.dims[3];
+  ptA = [0, 0, 0];
+  ptB = [dx, dy, 0];
+  
+  for (let i = 0; i < dz; i++) {
+    ptA[2] = i;
+    ptB[2] = i;
+    this.drawLine(ptA, ptB, (i % 3)+1);
+  }
   this.refreshDrawing(false);
 }
 //release GPU and CPU memory: make sure you have saved any changes before calling this!
@@ -1603,7 +1618,7 @@ Niivue.prototype.closeDrawing = function() {
 
 //Copy drawing bitmap from CPU to GPU storage and redraw the screen
 Niivue.prototype.refreshDrawing = function(isForceRedraw = true) {
-  let dims = this.volumes[0].hdr.dims.slice();
+  let dims = this.back.dims.slice();
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (this.drawBitmap.length === 8) {
     dims[1] = 2;
@@ -1631,6 +1646,7 @@ Niivue.prototype.refreshDrawing = function(isForceRedraw = true) {
   if (isForceRedraw)
     this.drawScene();
 }
+
 
 // not included in public docs
 Niivue.prototype.r8Tex = function (texID, activeID, dims, isInit = false) {
@@ -2524,8 +2540,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
 
   this.updateInterpolation(layer);
-  //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
-  //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
+  this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
+  this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
 }; // refreshLayers()
 
 /**
@@ -2725,8 +2741,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture > 1) posFuture = 1;
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
-				//this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
-				//this.refreshDrawing(false)
+        //this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
+        //this.refreshDrawing(false)
         this.drawScene();
         this.scene.location$.next({
           mm: this.frac2mm(this.scene.crosshairPos),
@@ -2753,8 +2769,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
-			this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
-			this.refreshDrawing(false)
+      //this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
+      //this.refreshDrawing(false)
       this.drawScene();
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
@@ -3340,11 +3356,11 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let hasFibers = false;
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
-    gl.bindVertexArray(this.meshes[i].vao);
     if (this.meshes[i].colorMap.startsWith("*")) {
       hasFibers = true;
       continue;
     }
+    gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(
       gl.TRIANGLES,
       this.meshes[i].indexCount,
@@ -3353,16 +3369,22 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     );
     gl.bindVertexArray(this.unusedVAO);
   }
+  
+
   //draw fibers
-  if (!hasFibers) return;
+  if (!hasFibers) {
+    gl.enable(gl.BLEND);
+    gl.depthFunc(gl.ALWAYS);
+    return;
+  }
   let shader = this.fiberShader;
   shader.use(this.gl);
   gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
   gl.uniform1f(shader.uniforms["opacity"], alpha);
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
-    gl.bindVertexArray(this.meshes[i].vao);
     if (!this.meshes[i].colorMap.startsWith("*")) continue;
+    gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(
       gl.LINE_STRIP,
       this.meshes[i].indexCount,
