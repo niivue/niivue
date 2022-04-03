@@ -25,7 +25,7 @@
       </h1>
     </section>
 <div class="slidecontainer">
-  fiber length <input type="range" min="1" max="6" value="3" class="slider" id="fiberLengthSlider">
+  fiber length <input type="range" min="1" max="255" value="192" class="slider" id="fiberLengthSlider">
 </div>
 <div class="slidecontainer">
   fiber dither <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
@@ -46,13 +46,10 @@
     </script> -->
     <script type="module" async>
       var slider = document.getElementById("fiberLengthSlider");
-      //var output = document.getElementById("demo");
       var sliderD = document.getElementById("fiberDitherSlider");
-      //var output = document.getElementById("demo");
-
       // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
+        nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [this.value, 128, 128, 200])
       }
       sliderD.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
@@ -119,8 +116,8 @@
       await nv1.loadVolumes(volumeList1)
 			
       nv1.loadMeshes([
-         {url: "../demos/images/stroke.trk", rgba255 : [255, 192, 192, 255]},
-         //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
+         //{url: "../demos/images/stroke.trk", rgba255 : [255, 192, 192, 255]},
+         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
       ])
 			
       //nv1.loadConnectome(connectome)

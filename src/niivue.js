@@ -3390,7 +3390,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let hasFibers = false;
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
-    if (this.meshes[i].colorMap.startsWith("*")) {
+    if (this.meshes[i].offsetPt0) {
       hasFibers = true;
       continue;
     }
@@ -3416,7 +3416,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   gl.uniform1f(shader.uniforms["opacity"], alpha);
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
-    if (!this.meshes[i].colorMap.startsWith("*")) continue;
+    if (!this.meshes[i].offsetPt0) continue;
     gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(
       gl.LINE_STRIP,

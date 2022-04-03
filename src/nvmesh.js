@@ -24,34 +24,27 @@ const log = new Log();
  * @param {boolean} [visible=true] whether or not this image is to be visible
  */
 export var NVMesh = function (
-  posNormClr,
+  pts,
   tris,
   name = "",
-  colorMap = "green",
+  rgba255 = [1, 0, 0, 0],
   opacity = 1.0,
   visible = true,
-  furthestVertexFromOrigin,
-  gl,
-  //following properties generated when new mesh is created by this function
-  indexCount = 0,
-  vertexBuffer = null,
-  indexBuffer = null,
-  vao = null
+  gl
 ) {
   this.name = name;
   this.id = uuidv4();
-  this.furthestVertexFromOrigin = furthestVertexFromOrigin;
-  this.colorMap = colorMap;
+  this.furthestVertexFromOrigin = getFurthestVertexFromOrigin(pts);
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
   this.indexBuffer = gl.createBuffer();
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
   this.offsetPt0 = null;
-  if (colorMap.startsWith("*")) {
+  this.pts = pts;
+  if (!rgba255) {
     this.fiberLength = 2;
     this.fiberDither = 0.1;
-    this.pts = posNormClr;
     this.offsetPt0 = tris;
     this.updateFibers(gl);
     //define VAO
@@ -66,15 +59,10 @@ export var NVMesh = function (
     gl.vertexAttribPointer(1, 4, gl.UNSIGNED_BYTE, true, 16, 12);
     gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
     return;
-  } //fiber not mesh
-  this.posNormClr = posNormClr;
+  } //if fiber not mesh
+  this.rgba255 = rgba255;
   this.tris = tris;
-  //generate webGL buffers and vao
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
-  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
-  this.indexCount = tris.length;
+  this.updateMesh(gl);
   //the VAO binds the vertices and indices as well as describing the vertex layout
   gl.bindVertexArray(this.vao);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -150,7 +138,6 @@ NVMesh.prototype.updateFibers = function (gl) {
     for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
     indices.push(primitiveRestart);
   }
-  console.log(min_pts, "-->>>", indices.length);
   this.indexCount = indices.length;
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   //glBufferData creates a new data store for the buffer object currently bound to target​. Any pre-existing data store is deleted.
@@ -159,13 +146,28 @@ NVMesh.prototype.updateFibers = function (gl) {
     new Uint32Array(indices),
     gl.STATIC_DRAW
   );
-  //this.indexCount = indices.length;
 };
 
 NVMesh.prototype.updateMesh = function (gl) {
   if (this.offsetPt0) {
     this.updateFibers(gl);
+    return; //fiber not mesh
   }
+  if (!this.pts || !this.tris || !this.rgba255) {
+    console.log("underspecified mesh");
+    return;
+  }
+  let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
+  //generate webGL buffers and vao
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Int32Array(this.tris),
+    gl.STATIC_DRAW
+  );
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
+  this.indexCount = this.tris.length;
 };
 
 NVMesh.prototype.setProperty = function (key, val, gl) {
@@ -295,7 +297,7 @@ following conditions are met:
   return norms;
 }
 
-NVMesh.generatePosNormClr = function (pts, tris, rgba255) {
+NVMesh.prototype.generatePosNormClr = function (pts, tris, rgba255) {
   //Each streamline vertex has color, normal and position attributes
   //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
   if (pts.length < 3 || rgba255.length < 4)
@@ -982,24 +984,8 @@ NVMesh.loadConnectomeFromJSON = async function (
       } //for j
     } //for i
   } //hasEdges
-  let furthestVertex = getFurthestVertexFromOrigin(pts);
-  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  if (posNormClr) {
-    nvmesh = new NVMesh(
-      posNormClr,
-      tris,
-      name,
-      colorMap,
-      opacity,
-      visible,
-      furthestVertex,
-      gl
-    );
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
-};
+  return new NVMesh(pts, tris, name, rgba255, opacity, visible, gl);
+}; //loadConnectomeFromJSON()
 
 NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
   let nvmesh = null;
@@ -1013,19 +999,16 @@ NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
     else obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
-    let furthestVertex = getFurthestVertexFromOrigin(pts);
-    nvmesh = new NVMesh(
+    return new NVMesh(
       pts,
       offsetPt0,
       name,
-      "*", //colorMap,
+      null, //colorMap,
       1.0, //opacity,
       true, //visible,
-      furthestVertex,
       gl
     );
-    return nvmesh;
-  }
+  } //is fibers
   if (ext.toUpperCase() === "GII") obj = this.readGII(buffer);
   else if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
   else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
@@ -1057,23 +1040,15 @@ NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  let furthestVertex = getFurthestVertexFromOrigin(pts);
-  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  if (posNormClr) {
-    nvmesh = new NVMesh(
-      posNormClr,
-      tris,
-      name,
-      "yellow", //colorMap,
-      1.0, //opacity,
-      true, //visible,
-      furthestVertex,
-      gl
-    );
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return new NVMesh(
+    pts,
+    tris,
+    name,
+    rgba255, //colorMap,
+    1.0, //opacity,
+    true, //visible,
+    gl
+  );
 };
 
 /**

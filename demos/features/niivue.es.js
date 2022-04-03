@@ -21717,21 +21717,20 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 };
 const cmapper$1 = new colortables();
 const log$1 = new Log();
-var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true, furthestVertexFromOrigin, gl, indexCount = 0, vertexBuffer = null, indexBuffer = null, vao = null) {
+var NVMesh = function(pts, tris, name = "", rgba255 = [1, 0, 0, 0], opacity = 1, visible = true, gl) {
   this.name = name;
   this.id = v4();
-  this.furthestVertexFromOrigin = furthestVertexFromOrigin;
-  this.colorMap = colorMap;
+  this.furthestVertexFromOrigin = getFurthestVertexFromOrigin(pts);
   this.opacity = opacity > 1 ? 1 : opacity;
   this.visible = visible;
   this.indexBuffer = gl.createBuffer();
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
   this.offsetPt0 = null;
-  if (colorMap.startsWith("*")) {
+  this.pts = pts;
+  if (!rgba255) {
     this.fiberLength = 2;
     this.fiberDither = 0.1;
-    this.pts = posNormClr;
     this.offsetPt0 = tris;
     this.updateFibers(gl);
     gl.bindVertexArray(this.vao);
@@ -21744,13 +21743,9 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
     gl.bindVertexArray(null);
     return;
   }
-  this.posNormClr = posNormClr;
+  this.rgba255 = rgba255;
   this.tris = tris;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
-  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
-  this.indexCount = tris.length;
+  this.updateMesh(gl);
   gl.bindVertexArray(this.vao);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -21813,7 +21808,6 @@ NVMesh.prototype.updateFibers = function(gl) {
       indices.push(j);
     indices.push(primitiveRestart);
   }
-  console.log(min_pts, "-->>>", indices.length);
   this.indexCount = indices.length;
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
@@ -21821,7 +21815,18 @@ NVMesh.prototype.updateFibers = function(gl) {
 NVMesh.prototype.updateMesh = function(gl) {
   if (this.offsetPt0) {
     this.updateFibers(gl);
+    return;
   }
+  if (!this.pts || !this.tris || !this.rgba255) {
+    console.log("underspecified mesh");
+    return;
+  }
+  let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(this.tris), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
+  this.indexCount = this.tris.length;
 };
 NVMesh.prototype.setProperty = function(key, val, gl) {
   if (!this.hasOwnProperty(key)) {
@@ -21893,7 +21898,7 @@ function generateNormals(pts, tris) {
   }
   return norms;
 }
-NVMesh.generatePosNormClr = function(pts, tris, rgba255) {
+NVMesh.prototype.generatePosNormClr = function(pts, tris, rgba255) {
   if (pts.length < 3 || rgba255.length < 4)
     log$1.error("Catastrophic failure generatePosNormClr()");
   let norms = generateNormals(pts, tris);
@@ -22412,7 +22417,6 @@ NVMesh.readGII = function(buffer) {
   };
 };
 NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "", opacity = 1, visible = true) {
-  let nvmesh = null;
   let tris = [];
   if (json.hasOwnProperty("name"))
     name = json.name;
@@ -22488,17 +22492,9 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
       }
     }
   }
-  let furthestVertex = getFurthestVertexFromOrigin(pts);
-  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, colorMap, opacity, visible, furthestVertex, gl);
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return new NVMesh(pts, tris, name, rgba255, opacity, visible, gl);
 };
 NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
-  let nvmesh = null;
   let tris = [];
   let pts = [];
   let obj = [];
@@ -22511,9 +22507,7 @@ NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
       obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts2 = new Float32Array(obj.pts.slice());
-    let furthestVertex2 = getFurthestVertexFromOrigin(pts2);
-    nvmesh = new NVMesh(pts2, offsetPt0, name, "*", 1, true, furthestVertex2, gl);
-    return nvmesh;
+    return new NVMesh(pts2, offsetPt0, name, null, 1, true, gl);
   }
   if (ext.toUpperCase() === "GII")
     obj = this.readGII(buffer);
@@ -22550,14 +22544,7 @@ NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  let furthestVertex = getFurthestVertexFromOrigin(pts);
-  let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-  if (posNormClr) {
-    nvmesh = new NVMesh(posNormClr, tris, name, "yellow", 1, true, furthestVertex, gl);
-  } else {
-    alert("Unable to load buffer properly from mesh");
-  }
-  return nvmesh;
+  return new NVMesh(pts, tris, name, rgba255, 1, true, gl);
 };
 NVMesh.loadFromUrl = async function({
   url = "",
@@ -26125,7 +26112,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3)
       continue;
-    if (this.meshes[i].colorMap.startsWith("*")) {
+    if (this.meshes[i].offsetPt0) {
       hasFibers = true;
       continue;
     }
@@ -26145,7 +26132,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3)
       continue;
-    if (!this.meshes[i].colorMap.startsWith("*"))
+    if (!this.meshes[i].offsetPt0)
       continue;
     gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
