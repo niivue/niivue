@@ -47,73 +47,14 @@ export var NVMesh = function (
   this.indexBuffer = gl.createBuffer();
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
-
+  this.offsetPt0 = null;
   if (colorMap.startsWith("*")) {
-    // The tractography kludge!
-    //nvmesh = new NVMesh(pts, offsetPt0, '*');
-    let pts = posNormClr;
-    let offsetPt0 = tris;
-    //determine fiber colors
-    let npt = pts.length / 3; //each point has three components: X,Y,Z
-    //Each streamline vertex has color and position attributes
-    //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-    var posClrF32 = new Float32Array(npt * 4); //four 32-bit components X,Y,Z,C
-    var posClrU32 = new Uint32Array(posClrF32.buffer); //typecast of our X,Y,Z,C array
-    //fill XYZ position of XYZC array
-    let i3 = 0;
-    let i4 = 0;
-    for (let i = 0; i < npt; i++) {
-      posClrF32[i4 + 0] = pts[i3 + 0];
-      posClrF32[i4 + 1] = pts[i3 + 1];
-      posClrF32[i4 + 2] = pts[i3 + 2];
-      i3 += 3;
-      i4 += 4;
-    }
-    //fill fiber Color
-    let dither = 0.1;
-    let ditherHalf = dither * 0.5;
-    let r = 0.0;
-    let n_count = offsetPt0.length - 1;
-    for (let i = 0; i < n_count; i++) {
-      let vStart = offsetPt0[i]; //line start
-      let vEnd = offsetPt0[i + 1] - 1; //line end
-      let vStart3 = vStart * 3; //pts have 3 components XYZ
-      let vEnd3 = vEnd * 3;
-      let v = vec3.fromValues(
-        pts[vStart3] - pts[vEnd3],
-        pts[vStart3 + 1] - pts[vEnd3 + 1],
-        pts[vStart3 + 2] - pts[vEnd3 + 2]
-      );
-      vec3.normalize(v, v);
-      if (dither > 0.0) r = dither * Math.random() - ditherHalf;
-      for (let j = 0; j < 3; j++)
-        v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
-      let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
-      //let RBGA =  (Math.abs(v[0]) * 255) + ((Math.abs(v[1]) *255) << 8) + ((Math.abs(v[2]) *255) << 16) + (0 << 24); //RGBA
-      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
-      let vEnd4 = vEnd * 4 + 3;
-      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RBGA;
-    }
-    //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
-    let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
-    n_count = offsetPt0.length - 1;
-    let indices = [];
-    let min_pts = 2;
-    for (let i = 0; i < n_count; i++) {
-      let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
-      if (n_pts < min_pts) continue;
-      for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
-      indices.push(primitiveRestart);
-    }
-    this.indexCount = indices.length;
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(
-      gl.ELEMENT_ARRAY_BUFFER,
-      new Uint32Array(indices),
-      gl.STATIC_DRAW
-    );
+    this.fiberLength = 2;
+    this.fiberDither = 0.1;
+    this.pts = posNormClr;
+    this.offsetPt0 = tris;
+    this.updateFibers(gl);
+    //define VAO
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -123,7 +64,6 @@ export var NVMesh = function (
     //vertex color
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 4, gl.UNSIGNED_BYTE, true, 16, 12);
-
     gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
     return;
   } //fiber not mesh
@@ -149,6 +89,93 @@ export var NVMesh = function (
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
+};
+
+NVMesh.prototype.updateFibers = function (gl) {
+  if (!this.offsetPt0 || !this.fiberLength) return;
+  //VERTICES:
+  let pts = this.pts;
+  let offsetPt0 = this.offsetPt0;
+  //determine fiber colors
+  let npt = pts.length / 3; //each point has three components: X,Y,Z
+  //Each streamline vertex has color and position attributes
+  //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
+  var posClrF32 = new Float32Array(npt * 4); //four 32-bit components X,Y,Z,C
+  var posClrU32 = new Uint32Array(posClrF32.buffer); //typecast of our X,Y,Z,C array
+  //fill XYZ position of XYZC array
+  let i3 = 0;
+  let i4 = 0;
+  for (let i = 0; i < npt; i++) {
+    posClrF32[i4 + 0] = pts[i3 + 0];
+    posClrF32[i4 + 1] = pts[i3 + 1];
+    posClrF32[i4 + 2] = pts[i3 + 2];
+    i3 += 3;
+    i4 += 4;
+  }
+  //fill fiber Color
+  let dither = this.fiberDither;
+  let ditherHalf = dither * 0.5;
+  let r = 0.0;
+  let n_count = offsetPt0.length - 1;
+  for (let i = 0; i < n_count; i++) {
+    let vStart = offsetPt0[i]; //line start
+    let vEnd = offsetPt0[i + 1] - 1; //line end
+    let vStart3 = vStart * 3; //pts have 3 components XYZ
+    let vEnd3 = vEnd * 3;
+    let v = vec3.fromValues(
+      pts[vStart3] - pts[vEnd3],
+      pts[vStart3 + 1] - pts[vEnd3 + 1],
+      pts[vStart3 + 2] - pts[vEnd3 + 2]
+    );
+    vec3.normalize(v, v);
+    if (dither > 0.0) r = dither * Math.random() - ditherHalf;
+    for (let j = 0; j < 3; j++)
+      v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
+    let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
+    //let RBGA =  (Math.abs(v[0]) * 255) + ((Math.abs(v[1]) *255) << 8) + ((Math.abs(v[2]) *255) << 16) + (0 << 24); //RGBA
+    let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+    let vEnd4 = vEnd * 4 + 3;
+    for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RBGA;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
+  //INDICES:
+  let min_pts = this.fiberLength;
+  //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
+  let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
+  let indices = [];
+  for (let i = 0; i < n_count; i++) {
+    let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
+    if (n_pts < min_pts) continue;
+    for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
+    indices.push(primitiveRestart);
+  }
+  console.log(min_pts, "-->>>", indices.length);
+  this.indexCount = indices.length;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  //glBufferData creates a new data store for the buffer object currently bound to target​. Any pre-existing data store is deleted.
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint32Array(indices),
+    gl.STATIC_DRAW
+  );
+  //this.indexCount = indices.length;
+};
+
+NVMesh.prototype.updateMesh = function (gl) {
+  if (this.offsetPt0) {
+    this.updateFibers(gl);
+  }
+};
+
+NVMesh.prototype.setProperty = function (key, val, gl) {
+  if (!this.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, this);
+    return;
+  }
+  this[key] = val;
+  console.log(this);
+  this.updateMesh(gl); //apply the new properties...
 };
 
 function getFurthestVertexFromOrigin(pts) {
@@ -834,25 +861,31 @@ NVMesh.readGII = function (buffer) {
   var positions = gii.getPointsDataArray().getData();
   var indices = gii.getTrianglesDataArray().getData();
   //next: ColumnMajorOrder https://github.com/rii-mango/GIFTI-Reader-JS/issues/2
-  if (gii.getPointsDataArray().attributes.ArrayIndexingOrder === 'ColumnMajorOrder') {
-    //transpose points, xx..xyy..yzz..z -> xyzxyz.. 
+  if (
+    gii.getPointsDataArray().attributes.ArrayIndexingOrder ===
+    "ColumnMajorOrder"
+  ) {
+    //transpose points, xx..xyy..yzz..z -> xyzxyz..
     let ps = positions.slice();
     let np = ps.length / 3;
     let j = 0;
-    for (var p = 0; p < np; p++) 
+    for (var p = 0; p < np; p++)
       for (var i = 0; i < 3; i++) {
-        positions[j] = ps[(i * np)+p]
+        positions[j] = ps[i * np + p];
         j++;
       }
   }
-  if (gii.getTrianglesDataArray().attributes.ArrayIndexingOrder === 'ColumnMajorOrder') {
+  if (
+    gii.getTrianglesDataArray().attributes.ArrayIndexingOrder ===
+    "ColumnMajorOrder"
+  ) {
     //transpose indices, xx..xyy..yzz..z -> xyzxyz..
     let ps = indices.slice();
     let np = ps.length / 3;
     let j = 0;
-    for (var p = 0; p < np; p++) 
+    for (var p = 0; p < np; p++)
       for (var i = 0; i < 3; i++) {
-        indices[j] = ps[(i * np)+p]
+        indices[j] = ps[i * np + p];
         j++;
       }
   }

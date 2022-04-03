@@ -4,7 +4,12 @@ import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
 import { vertLineShader, fragLineShader } from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
-import { vertFontShader, fragFontShader, vertBmpShader, fragBmpShader } from "./shader-srcs.js";
+import {
+  vertFontShader,
+  fragFontShader,
+  vertBmpShader,
+  fragBmpShader,
+} from "./shader-srcs.js";
 import {
   vertOrientShader,
   vertPassThroughShader,
@@ -1005,6 +1010,16 @@ Niivue.prototype.getMeshIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
+Niivue.prototype.setMeshProperty = function (id, key, val) {
+  let idx = this.getMeshIndexByID(id);
+  if (idx < 0) {
+    console.log("setMeshProperty() id not loaded", id);
+    return;
+  }
+  this.meshes[idx].setProperty(key, val, this.gl);
+  this.updateGLVolume();
+};
+
 /**
  * get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
  * @param {string} id the id string to search for
@@ -1478,17 +1493,24 @@ Niivue.prototype.loadConnectome = async function (json) {
 }; // loadMeshes
 
 //Generate a blank GPU texture and CPU bitmap for drawing
-Niivue.prototype.createEmptyDrawing = function() {
-  let mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3]);
-  if (mn < 1)
-    return; //something is horribly wrong!
+Niivue.prototype.createEmptyDrawing = function () {
+  let mn = Math.min(
+    Math.min(this.back.dims[1], this.back.dims[2]),
+    this.back.dims[3]
+  );
+  if (mn < 1) return; //something is horribly wrong!
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   this.drawBitmap = new Uint8Array(vx);
-  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
+  this.drawTexture = this.r8Tex(
+    this.drawTexture,
+    this.gl.TEXTURE7,
+    this.back.dims,
+    true
+  );
   this.refreshDrawing(false);
-}
+};
 
-Niivue.prototype.drawPt = function(x,y,z, penValue) {
+Niivue.prototype.drawPt = function (x, y, z, penValue) {
   let dx = this.back.dims[1];
   let dy = this.back.dims[2];
   let dz = this.back.dims[3];
@@ -1497,41 +1519,38 @@ Niivue.prototype.drawPt = function(x,y,z, penValue) {
   z = Math.min(Math.max(z, 0), dz - 1);
   this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
   //console.log('>>',x,y,z,penValue);
-//  this.drawBitmap[x + (y * this.back.dims[1]) + (z * this.back.dims[1] * this.back.dims[2])] = penValue;
-}
+  //  this.drawBitmap[x + (y * this.back.dims[1]) + (z * this.back.dims[1] * this.back.dims[2])] = penValue;
+};
 
 //https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 // https://www.geeksforgeeks.org/bresenhams-algorithm-for-3-d-line-drawing/
 // ptA, ptB are start and end points of line (each XYZ)
-Niivue.prototype.drawLine = function(ptA, ptB, penValue) {
+Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
   let dx = Math.abs(ptA[0] - ptB[0]);
   let dy = Math.abs(ptA[1] - ptB[1]);
   let dz = Math.abs(ptA[2] - ptB[2]);
   let xs = -1;
   let ys = -1;
   let zs = -1;
-  if (ptB[0] > ptA[0])
-      xs = 1;
-  if (ptB[1] > ptA[1])
-      ys = 1;
-  if (ptB[2] > ptA[2])
-      zs = 1
+  if (ptB[0] > ptA[0]) xs = 1;
+  if (ptB[1] > ptA[1]) ys = 1;
+  if (ptB[2] > ptA[2]) zs = 1;
   let x1 = ptA[0];
   let y1 = ptA[1];
   let z1 = ptA[2];
   let x2 = ptB[0];
   let y2 = ptB[1];
   let z2 = ptB[2];
-  
-  if ((dx >= dy) && (dx >= dz)) {
+
+  if (dx >= dy && dx >= dz) {
     //Driving axis is X-axis"
-    let p1 = 2 * dy - dx
-    let p2 = 2 * dz - dx
+    let p1 = 2 * dy - dx;
+    let p2 = 2 * dz - dx;
     while (x1 != x2) {
-      x1 += xs
+      x1 += xs;
       if (p1 >= 0) {
-        y1 += ys
-        p1 -= 2 * dx
+        y1 += ys;
+        p1 -= 2 * dx;
       }
       if (p2 >= 0) {
         z1 += zs;
@@ -1541,52 +1560,60 @@ Niivue.prototype.drawLine = function(ptA, ptB, penValue) {
       p2 += 2 * dz;
       this.drawPt(x1, y1, z1, penValue);
     } //while
-  } else if ((dy >= dx) && (dy >= dz)) {
+  } else if (dy >= dx && dy >= dz) {
     //Driving axis is Y-axis"
-    let p1 = 2 * dx - dy
-    let p2 = 2 * dz - dy
+    let p1 = 2 * dx - dy;
+    let p2 = 2 * dz - dy;
     while (y1 != y2) {
-      y1 += ys
+      y1 += ys;
       if (p1 >= 0) {
-        x1 += xs
-        p1 -= 2 * dy
+        x1 += xs;
+        p1 -= 2 * dy;
       }
       if (p2 >= 0) {
-        z1 += zs
-        p2 -= 2 * dy
+        z1 += zs;
+        p2 -= 2 * dy;
       }
-      p1 += 2 * dx
-      p2 += 2 * dz
+      p1 += 2 * dx;
+      p2 += 2 * dz;
       this.drawPt(x1, y1, z1, penValue);
     } //while
   } else {
     //# Driving axis is Z-axis
-    let p1 = 2 * dy - dz
-    let p2 = 2 * dx - dz
+    let p1 = 2 * dy - dz;
+    let p2 = 2 * dx - dz;
     while (z1 != z2) {
-      z1 += zs
+      z1 += zs;
       if (p1 >= 0) {
-          y1 += ys
-          p1 -= 2 * dz
+        y1 += ys;
+        p1 -= 2 * dz;
       }
       if (p2 >= 0) {
-          x1 += xs
-          p2 -= 2 * dz
+        x1 += xs;
+        p2 -= 2 * dz;
       }
-      p1 += 2 * dy
-      p2 += 2 * dx
+      p1 += 2 * dy;
+      p2 += 2 * dx;
       this.drawPt(x1, y1, z1, penValue);
     } //while
   }
-  
-}
+};
 //Demonstrate how to create drawing
-Niivue.prototype.createRandomDrawing = function() {
-  console.log('Background image rasDIMs: ', this.back.dims[1], this.back.dims[2], this.back.dims[3]);
-  console.log(' same as volume 0 dimsRAS: ',this.volumes[0].dimsRAS[1], this.volumes[0].dimsRAS[2], this.volumes[0].dimsRAS[3]);
+Niivue.prototype.createRandomDrawing = function () {
+  console.log(
+    "Background image rasDIMs: ",
+    this.back.dims[1],
+    this.back.dims[2],
+    this.back.dims[3]
+  );
+  console.log(
+    " same as volume 0 dimsRAS: ",
+    this.volumes[0].dimsRAS[1],
+    this.volumes[0].dimsRAS[2],
+    this.volumes[0].dimsRAS[3]
+  );
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-  if (vx !== this.drawBitmap.length)
-    console.log('Epic failure');
+  if (vx !== this.drawBitmap.length) console.log("Epic failure");
   let ptA = [1, 1, 33];
   let ptB = [63, 78, 33];
   this.drawLine(ptA, ptB, 1);
@@ -1597,27 +1624,27 @@ Niivue.prototype.createRandomDrawing = function() {
   ptB = [63, 45, 33];
   this.drawLine(ptA, ptB, 2);
   //draw one line on each slice
-  let dx = this.back.dims[1]-1;
-  let dy = this.back.dims[2]-1;
+  let dx = this.back.dims[1] - 1;
+  let dy = this.back.dims[2] - 1;
   let dz = this.back.dims[3];
   ptA = [0, 0, 0];
   ptB = [dx, dy, 0];
-  
+
   for (let i = 0; i < dz; i++) {
     ptA[2] = i;
     ptB[2] = i;
-    this.drawLine(ptA, ptB, (i % 3)+1);
+    this.drawLine(ptA, ptB, (i % 3) + 1);
   }
   this.refreshDrawing(false);
-}
+};
 //release GPU and CPU memory: make sure you have saved any changes before calling this!
-Niivue.prototype.closeDrawing = function() {
+Niivue.prototype.closeDrawing = function () {
   this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
   this.drawBitmap = null;
-}
+};
 
 //Copy drawing bitmap from CPU to GPU storage and redraw the screen
-Niivue.prototype.refreshDrawing = function(isForceRedraw = true) {
+Niivue.prototype.refreshDrawing = function (isForceRedraw = true) {
   let dims = this.back.dims.slice();
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (this.drawBitmap.length === 8) {
@@ -1625,28 +1652,25 @@ Niivue.prototype.refreshDrawing = function(isForceRedraw = true) {
     dims[2] = 2;
     dims[3] = 2;
   } else if (vx !== this.drawBitmap.length) {
-    console.log('Drawing bitmap must match the background image');
-    
+    console.log("Drawing bitmap must match the background image");
   }
   this.gl.activeTexture(this.gl.TEXTURE7);
   this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
   this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RED,
-        this.gl.UNSIGNED_BYTE,
-        this.drawBitmap
-      );
-  if (isForceRedraw)
-    this.drawScene();
-}
-
+    this.gl.TEXTURE_3D,
+    0,
+    0,
+    0,
+    0,
+    dims[1],
+    dims[2],
+    dims[3],
+    this.gl.RED,
+    this.gl.UNSIGNED_BYTE,
+    this.drawBitmap
+  );
+  if (isForceRedraw) this.drawScene();
+};
 
 // not included in public docs
 Niivue.prototype.r8Tex = function (texID, activeID, dims, isInit = false) {
@@ -1680,29 +1704,29 @@ Niivue.prototype.r8Tex = function (texID, activeID, dims, isInit = false) {
     this.gl.CLAMP_TO_EDGE
   );
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-    this.gl.texStorage3D(
+  this.gl.texStorage3D(
+    this.gl.TEXTURE_3D,
+    1,
+    this.gl.R8,
+    dims[1],
+    dims[2],
+    dims[3]
+  ); //output background dimensions
+  if (isInit) {
+    let img8 = new Uint8Array(dims[1] * dims[2] * dims[3]);
+    this.gl.texSubImage3D(
       this.gl.TEXTURE_3D,
-      1,
-      this.gl.R8,
+      0,
+      0,
+      0,
+      0,
       dims[1],
       dims[2],
-      dims[3]
-    ); //output background dimensions
-  if (isInit) {
-      let img8 = new Uint8Array(dims[1] * dims[2] * dims[3] );
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RED,
-        this.gl.UNSIGNED_BYTE,
-        img8
-      );
+      dims[3],
+      this.gl.RED,
+      this.gl.UNSIGNED_BYTE,
+      img8
+    );
   }
   return texID;
 }; // r8Tex()
@@ -1781,8 +1805,7 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
     img.onload = () => {
       let pngTexture = [];
       if (textureNum === 4) {
-        if (this.bmpTexture !== null)
-          this.gl.deleteTexture(this.bmpTexture);
+        if (this.bmpTexture !== null) this.gl.deleteTexture(this.bmpTexture);
         this.bmpTexture = this.gl.createTexture();
         pngTexture = this.bmpTexture;
         this.bmpTextureWH = img.width / img.height;
@@ -1833,18 +1856,16 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
 
     this.requestCORSIfNotSameOrigin(img, pngUrl);
     img.src = pngUrl;
-
   });
 };
 
 Niivue.prototype.loadFontTexture = function (fontUrl) {
   this.loadPngAsTexture(fontUrl, 3);
-}
-
+};
 
 Niivue.prototype.loadBmpTexture = function (bmpUrl) {
   this.loadPngAsTexture(bmpUrl, 4);
-}
+};
 
 // not included in public docs
 Niivue.prototype.initFontMets = function () {
@@ -1964,9 +1985,24 @@ Niivue.prototype.init = async function () {
   this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
   // register volume and overlay textures
-  this.volumeTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
-  this.overlayTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
-  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true);
+  this.volumeTexture = this.rgbaTex(
+    this.volumeTexture,
+    this.gl.TEXTURE0,
+    [2, 2, 2, 2],
+    true
+  );
+  this.overlayTexture = this.rgbaTex(
+    this.overlayTexture,
+    this.gl.TEXTURE2,
+    [2, 2, 2, 2],
+    true
+  );
+  this.drawTexture = this.r8Tex(
+    this.drawTexture,
+    this.gl.TEXTURE7,
+    [2, 2, 2, 2],
+    true
+  );
 
   let rectStrip = [
     1,
@@ -2098,12 +2134,11 @@ Niivue.prototype.init = async function () {
     vertMeshShader,
     this.meshShaders[0].Frag
   );
-  
+
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
 
   await this.initText();
-  if (this.opts.thumbnail.length > 0)
-    this.loadBmpTexture(this.opts.thumbnail);
+  if (this.opts.thumbnail.length > 0) this.loadBmpTexture(this.opts.thumbnail);
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -2540,8 +2575,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
 
   this.updateInterpolation(layer);
-  this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
-  this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
+  //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
+  //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
 }; // refreshLayers()
 
 /**
@@ -2571,12 +2606,11 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
 };
 
 Niivue.prototype.setFrame4D = function (id, frame4D) {
-  console.log("setting frame to ");
   let idx = this.getVolumeIndexByID(id);
   console.log(this.volumes[idx]);
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
-  console.log("setting frame to ", frame4D);
+  //console.log("setting frame to ", frame4D);
 };
 
 Niivue.prototype.getFrame4D = function (id) {
@@ -3369,7 +3403,6 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     );
     gl.bindVertexArray(this.unusedVAO);
   }
-  
 
   //draw fibers
   if (!hasFibers) {
@@ -3605,29 +3638,24 @@ Niivue.prototype.scaleSlice = function (w, h) {
 Niivue.prototype.drawThumbnail = function () {
   this.bmpShader.use(this.gl);
   this.gl.uniform2f(
-      this.bmpShader.uniforms["canvasWidthHeight"],
-      this.gl.canvas.width,
-      this.gl.canvas.height
-    );
+    this.bmpShader.uniforms["canvasWidthHeight"],
+    this.gl.canvas.width,
+    this.gl.canvas.height
+  );
   let h = this.gl.canvas.height;
   let w = this.gl.canvas.height * this.bmpTextureWH;
-  if (w > this.gl.canvas.width) { //constrained by width
+  if (w > this.gl.canvas.width) {
+    //constrained by width
     h = this.gl.canvas.width / this.bmpTextureWH;
     w = this.gl.canvas.width;
   }
-  this.gl.uniform4f(
-    this.bmpShader.uniforms["leftTopWidthHeight"],
-    0,
-    0,
-    w,
-    h
-  );
+  this.gl.uniform4f(this.bmpShader.uniforms["leftTopWidthHeight"], 0, 0, w, h);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 
-  console.log('ratioyyy', this.bmpTextureWH);
-}
+  console.log("ratioyyy", this.bmpTextureWH);
+};
 
 // not included in public docs
 Niivue.prototype.drawScene = function () {
@@ -3642,7 +3670,8 @@ Niivue.prototype.drawScene = function () {
     this.opts.backColor[3]
   );
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  if (this.bmpTexture) { //draw the thumbnail image and exit
+  if (this.bmpTexture) {
+    //draw the thumbnail image and exit
     this.drawThumbnail();
     return;
   }

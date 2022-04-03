@@ -62,6 +62,21 @@ if (!Math.hypot)
     }
     return Math.sqrt(y);
   };
+function create$3() {
+  var out = new ARRAY_TYPE(9);
+  if (ARRAY_TYPE != Float32Array) {
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+    out[5] = 0;
+    out[6] = 0;
+    out[7] = 0;
+  }
+  out[0] = 1;
+  out[4] = 1;
+  out[8] = 1;
+  return out;
+}
 function fromValues$3(m00, m01, m02, m10, m11, m12, m20, m21, m22) {
   var out = new ARRAY_TYPE(9);
   out[0] = m00;
@@ -73,6 +88,24 @@ function fromValues$3(m00, m01, m02, m10, m11, m12, m20, m21, m22) {
   out[6] = m20;
   out[7] = m21;
   out[8] = m22;
+  return out;
+}
+function multiply$2(out, a, b) {
+  var a00 = a[0], a01 = a[1], a02 = a[2];
+  var a10 = a[3], a11 = a[4], a12 = a[5];
+  var a20 = a[6], a21 = a[7], a22 = a[8];
+  var b00 = b[0], b01 = b[1], b02 = b[2];
+  var b10 = b[3], b11 = b[4], b12 = b[5];
+  var b20 = b[6], b21 = b[7], b22 = b[8];
+  out[0] = b00 * a00 + b01 * a10 + b02 * a20;
+  out[1] = b00 * a01 + b01 * a11 + b02 * a21;
+  out[2] = b00 * a02 + b01 * a12 + b02 * a22;
+  out[3] = b10 * a00 + b11 * a10 + b12 * a20;
+  out[4] = b10 * a01 + b11 * a11 + b12 * a21;
+  out[5] = b10 * a02 + b11 * a12 + b12 * a22;
+  out[6] = b20 * a00 + b21 * a10 + b22 * a20;
+  out[7] = b20 * a01 + b21 * a11 + b22 * a21;
+  out[8] = b20 * a02 + b21 * a12 + b22 * a22;
   return out;
 }
 function create$2() {
@@ -855,12 +888,13 @@ void main(void) {
 		texPos = vec3(pos.xy, slice);
 }`;
 var fragSliceShader = `#version 300 es
-#line 173
+#line 228
 precision highp int;
 precision highp float;
-uniform highp sampler3D volume, overlay;
+uniform highp sampler3D volume, overlay, drawing;
 uniform float overlays;
 uniform float opacity;
+uniform float drawOpacity;
 in vec3 texPos;
 out vec4 color;
 void main() {
@@ -870,6 +904,18 @@ void main() {
 	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
 	} else {
 		ocolor = texture(overlay, texPos);
+	}
+	float draw = texture(drawing, texPos).r;
+	if (draw > 0.0) {
+		vec3 dcolor = vec3(0.0, 0.0, 0.0);
+		if (draw >= (3.0/255.0))
+			dcolor.b = 1.0;
+		else if (draw >= (2.0/255.0))
+			dcolor.g = 1.0;
+		else
+			dcolor.r = 1.0;
+		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+		color.a = max(drawOpacity, color.a);
 	}
 	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
 	if (aout <= 0.0) return;
@@ -922,6 +968,31 @@ void main(void) {
 	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
+}`;
+var vertBmpShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+out vec2 vUV;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
+	vUV = vec2(pos.x, 1.0 - pos.y);
+}`;
+var fragBmpShader = `#version 300 es
+#line 262
+precision highp int;
+precision highp float;
+uniform highp sampler2D bmpTexture;
+in vec2 vUV;
+out vec4 color;
+void main() {
+	color = texture(bmpTexture, vUV);
 }`;
 var vertFontShader = `#version 300 es
 #line 244
@@ -2155,7 +2226,6 @@ var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = 
   this.sphereIdx = [];
   this.sphereVtx = [];
   this.renderShaders = [];
-  this.pickingShader = null;
   this.isVisible = true;
   this.isPickable = true;
   this.vertexBuffer = vertexBuffer;
@@ -11799,8 +11869,9 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
   let isGz = false;
   let isMicron = false;
   let isDetached = false;
-  let mat = [NaN, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  let rot44 = create$2();
+  let mat33 = fromValues$3(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  let offset = fromValues$1(0, 0, 0);
+  let rot33 = create$3();
   for (let i2 = 1; i2 < n; i2++) {
     let str = lines[i2];
     if (str[0] === "#")
@@ -11891,8 +11962,8 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
       case "sizes":
         let dims = value.split(/[ ,]+/);
         hdr.dims[0] = dims.length;
-        for (var d = 0; d < dims.length; d++)
-          hdr.dims[d + 1] = parseInt(dims[d]);
+        for (let d2 = 0; d2 < dims.length; d2++)
+          hdr.dims[d2 + 1] = parseInt(dims[d2]);
         break;
       case "endian":
         if (value.includes("little"))
@@ -11904,53 +11975,49 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
         let vs = value.split(/[ ,]+/);
         if (vs.length !== 9)
           break;
-        mat[0] = parseFloat(vs[0]);
-        mat[1] = parseFloat(vs[1]);
-        mat[2] = parseFloat(vs[2]);
-        mat[4] = parseFloat(vs[3]);
-        mat[5] = parseFloat(vs[4]);
-        mat[6] = parseFloat(vs[5]);
-        mat[8] = parseFloat(vs[6]);
-        mat[9] = parseFloat(vs[7]);
-        mat[10] = parseFloat(vs[8]);
+        for (var d = 0; d < 9; d++)
+          mat33[d] = parseFloat(vs[d]);
         break;
       case "space origin":
         let ts = value.split(/[ ,]+/);
         if (ts.length !== 3)
           break;
-        mat[3] = parseFloat(ts[0]);
-        mat[7] = parseFloat(ts[1]);
-        mat[11] = parseFloat(ts[2]);
+        offset[0] = parseFloat(ts[0]);
+        offset[1] = parseFloat(ts[1]);
+        offset[2] = parseFloat(ts[2]);
         break;
-      case "space":
+      case "space units":
         if (value.includes("microns"))
           isMicron = true;
         break;
       case "space":
         if (value.includes("right-anterior-superior") || value.includes("RAS"))
-          rot44 = fromValues$2(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+          rot33 = fromValues$3(1, 0, 0, 0, 1, 0, 0, 0, 1);
         else if (value.includes("left-anterior-superior") || value.includes("LAS"))
-          rot44 = fromValues$2(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+          rot33 = fromValues$3(-1, 0, 0, 0, 1, 0, 0, 0, 1);
         else if (value.includes("left-posterior-superior") || value.includes("LPS"))
-          rot44 = fromValues$2(-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+          rot33 = fromValues$3(-1, 0, 0, 0, -1, 0, 0, 0, 1);
         else
           console.log("Unsupported NRRD space value:", value);
         break;
     }
   }
-  if (!isNaN(mat[0])) {
+  if (!isNaN(mat33[0])) {
     this.hdr.sform_code = 2;
     if (isMicron) {
-      multiplyScalar(mat, mat, 1e-3);
-      mat[15] = 1;
+      multiplyScalar(mat33, mat33, 1e-3);
+      offset[0] *= 1e-3;
+      offset[1] *= 1e-3;
+      offset[2] *= 1e-3;
     }
-    if (rot44[0] < 0)
-      mat[3] = -mat[3];
-    if (rot44[5] < 0)
-      mat[7] = -mat[7];
-    if (rot44[10] < 0)
-      mat[11] = -mat[11];
-    multiply$1(mat, mat, rot44);
+    if (rot33[0] < 0)
+      offset[0] = -offset[0];
+    if (rot33[4] < 0)
+      offset[1] = -offset[1];
+    if (rot33[8] < 0)
+      offset[2] = -offset[2];
+    multiply$2(mat33, rot33, mat33);
+    let mat = fromValues$2(mat33[0], mat33[3], mat33[6], offset[0], mat33[1], mat33[4], mat33[7], offset[1], mat33[2], mat33[5], mat33[8], offset[2], 0, 0, 0, 1);
     let mm000 = this.vox2mm([0, 0, 0], mat);
     let mm100 = this.vox2mm([1, 0, 0], mat);
     subtract(mm100, mm100, mm000);
@@ -11975,7 +12042,7 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
   if (isDetached)
     console.log("Missing data: NRRD header describes detached data file but only one URL provided");
   if (isGz)
-    return inflate_1(new Uint8Array(dataBuffer.slice(hdr.vox_offset)));
+    return inflate_1(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer;
   else
     return dataBuffer.slice(hdr.vox_offset);
 };
@@ -12384,9 +12451,14 @@ NVImage.prototype.getImageMetadata = function() {
     bpv
   };
 };
-NVImage.zerosLike = function(nvImage) {
+NVImage.zerosLike = function(nvImage, dataType = "same") {
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
+  if (dataType === "uint8") {
+    zeroClone.img = Uint8Array.from(zeroClone.img);
+    zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR;
+    zeroClone.hdr.numBitsPerVoxel = 8;
+  }
   return zeroClone;
 };
 String.prototype.getBytes = function() {
@@ -21652,61 +21724,16 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
   this.colorMap = colorMap;
   this.opacity = opacity > 1 ? 1 : opacity;
   this.visible = visible;
+  this.indexBuffer = gl.createBuffer();
+  this.vertexBuffer = gl.createBuffer();
+  this.vao = gl.createVertexArray();
+  this.offsetPt0 = null;
   if (colorMap.startsWith("*")) {
-    let pts = posNormClr;
-    let offsetPt0 = tris;
-    let npt = pts.length / 3;
-    var posClrF32 = new Float32Array(npt * 4);
-    var posClrU32 = new Uint32Array(posClrF32.buffer);
-    let i3 = 0;
-    let i4 = 0;
-    for (let i = 0; i < npt; i++) {
-      posClrF32[i4 + 0] = pts[i3 + 0];
-      posClrF32[i4 + 1] = pts[i3 + 1];
-      posClrF32[i4 + 2] = pts[i3 + 2];
-      i3 += 3;
-      i4 += 4;
-    }
-    let dither = 0.1;
-    let ditherHalf = dither * 0.5;
-    let r = 0;
-    let n_count = offsetPt0.length - 1;
-    for (let i = 0; i < n_count; i++) {
-      let vStart = offsetPt0[i];
-      let vEnd = offsetPt0[i + 1] - 1;
-      let vStart3 = vStart * 3;
-      let vEnd3 = vEnd * 3;
-      let v = fromValues$1(pts[vStart3] - pts[vEnd3], pts[vStart3 + 1] - pts[vEnd3 + 1], pts[vStart3 + 2] - pts[vEnd3 + 2]);
-      normalize(v, v);
-      r = dither * Math.random() - ditherHalf;
-      for (let j = 0; j < 3; j++)
-        v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1), 0);
-      let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
-      let vStart4 = vStart * 4 + 3;
-      let vEnd4 = vEnd * 4 + 3;
-      for (let j = vStart4; j <= vEnd4; j += 4)
-        posClrU32[j] = RBGA;
-    }
-    let primitiveRestart = Math.pow(2, 32) - 1;
-    this.vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
-    n_count = offsetPt0.length - 1;
-    let indices = [];
-    let min_pts = 2;
-    for (let i = 0; i < n_count; i++) {
-      let n_pts = offsetPt0[i + 1] - offsetPt0[i];
-      if (n_pts < min_pts)
-        continue;
-      for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++)
-        indices.push(j);
-      indices.push(primitiveRestart);
-    }
-    this.indexCount = indices.length;
-    this.indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
-    this.vao = gl.createVertexArray();
+    this.fiberLength = 2;
+    this.fiberDither = 0.1;
+    this.pts = posNormClr;
+    this.offsetPt0 = tris;
+    this.updateFibers(gl);
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -21719,14 +21746,11 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
   }
   this.posNormClr = posNormClr;
   this.tris = tris;
-  this.indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
-  this.vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
   this.indexCount = tris.length;
-  this.vao = gl.createVertexArray();
   gl.bindVertexArray(this.vao);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -21737,6 +21761,76 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null);
+};
+NVMesh.prototype.updateFibers = function(gl) {
+  if (!this.offsetPt0 || !this.fiberLength)
+    return;
+  let pts = this.pts;
+  let offsetPt0 = this.offsetPt0;
+  let npt = pts.length / 3;
+  var posClrF32 = new Float32Array(npt * 4);
+  var posClrU32 = new Uint32Array(posClrF32.buffer);
+  let i3 = 0;
+  let i4 = 0;
+  for (let i = 0; i < npt; i++) {
+    posClrF32[i4 + 0] = pts[i3 + 0];
+    posClrF32[i4 + 1] = pts[i3 + 1];
+    posClrF32[i4 + 2] = pts[i3 + 2];
+    i3 += 3;
+    i4 += 4;
+  }
+  let dither = this.fiberDither;
+  let ditherHalf = dither * 0.5;
+  let r = 0;
+  let n_count = offsetPt0.length - 1;
+  for (let i = 0; i < n_count; i++) {
+    let vStart = offsetPt0[i];
+    let vEnd = offsetPt0[i + 1] - 1;
+    let vStart3 = vStart * 3;
+    let vEnd3 = vEnd * 3;
+    let v = fromValues$1(pts[vStart3] - pts[vEnd3], pts[vStart3 + 1] - pts[vEnd3 + 1], pts[vStart3 + 2] - pts[vEnd3 + 2]);
+    normalize(v, v);
+    if (dither > 0)
+      r = dither * Math.random() - ditherHalf;
+    for (let j = 0; j < 3; j++)
+      v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1), 0);
+    let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
+    let vStart4 = vStart * 4 + 3;
+    let vEnd4 = vEnd * 4 + 3;
+    for (let j = vStart4; j <= vEnd4; j += 4)
+      posClrU32[j] = RBGA;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
+  let min_pts = this.fiberLength;
+  let primitiveRestart = Math.pow(2, 32) - 1;
+  let indices = [];
+  for (let i = 0; i < n_count; i++) {
+    let n_pts = offsetPt0[i + 1] - offsetPt0[i];
+    if (n_pts < min_pts)
+      continue;
+    for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++)
+      indices.push(j);
+    indices.push(primitiveRestart);
+  }
+  console.log(min_pts, "-->>>", indices.length);
+  this.indexCount = indices.length;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+};
+NVMesh.prototype.updateMesh = function(gl) {
+  if (this.offsetPt0) {
+    this.updateFibers(gl);
+  }
+};
+NVMesh.prototype.setProperty = function(key, val, gl) {
+  if (!this.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, this);
+    return;
+  }
+  this[key] = val;
+  console.log(this);
+  this.updateMesh(gl);
 };
 function getFurthestVertexFromOrigin(pts) {
   let mxDx = 0;
@@ -22292,6 +22386,26 @@ NVMesh.readGII = function(buffer) {
   let gii = giftiReader.exports.parse(xmlStr);
   var positions = gii.getPointsDataArray().getData();
   var indices = gii.getTrianglesDataArray().getData();
+  if (gii.getPointsDataArray().attributes.ArrayIndexingOrder === "ColumnMajorOrder") {
+    let ps = positions.slice();
+    let np = ps.length / 3;
+    let j = 0;
+    for (var p = 0; p < np; p++)
+      for (var i = 0; i < 3; i++) {
+        positions[j] = ps[i * np + p];
+        j++;
+      }
+  }
+  if (gii.getTrianglesDataArray().attributes.ArrayIndexingOrder === "ColumnMajorOrder") {
+    let ps = indices.slice();
+    let np = ps.length / 3;
+    let j = 0;
+    for (var p = 0; p < np; p++)
+      for (var i = 0; i < 3; i++) {
+        indices[j] = ps[i * np + p];
+        j++;
+      }
+  }
   return {
     positions,
     indices
@@ -24055,12 +24169,16 @@ const Niivue = function(options = {}) {
     isRadiologicalConvention: false,
     logging: false,
     loadingText: "waiting for images...",
-    dragAndDropEnabled: true
+    dragAndDropEnabled: true,
+    thumbnail: ""
   };
   this.canvas = null;
   this.gl = null;
   this.colormapTexture = null;
   this.volumeTexture = null;
+  this.drawTexture = null;
+  this.drawBitmap = null;
+  this.drawOpacity = 0.8;
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -24069,6 +24187,9 @@ const Niivue = function(options = {}) {
   this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
+  this.bmpShader = null;
+  this.bmpTexture = null;
+  this.bmpTextureWH = 1;
   this.passThroughShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
@@ -24555,6 +24676,10 @@ Niivue.prototype.dropListener = async function(e) {
         let ext = re.exec(file.name)[1];
         ext = ext.toUpperCase();
         console.log(ext, "dropped ", file.name);
+        if (ext === "PNG") {
+          this.loadBmpTexture(file);
+          continue;
+        }
         let pairedImageData = "";
         if (file.name.lastIndexOf("HEAD") !== -1) {
           for (const pairedFile of files) {
@@ -24588,6 +24713,7 @@ Niivue.prototype.dropListener = async function(e) {
       }
     }
   }
+  this.drawScene();
 };
 Niivue.prototype.setRadiologicalConvention = function(isRadiologicalConvention) {
   this.opts.isRadiologicalConvention = isRadiologicalConvention;
@@ -24626,6 +24752,15 @@ Niivue.prototype.getMeshIndexByID = function(id) {
     }
   }
   return -1;
+};
+Niivue.prototype.setMeshProperty = function(id, key, val) {
+  let idx = this.getMeshIndexByID(id);
+  if (idx < 0) {
+    console.log("setMeshProperty() id not loaded", id);
+    return;
+  }
+  this.meshes[idx].setProperty(key, val, this.gl);
+  this.updateGLVolume();
 };
 Niivue.prototype.getOverlayIndexByID = function(id) {
   let n = this.overlays.length;
@@ -24907,6 +25042,162 @@ Niivue.prototype.loadConnectome = async function(json) {
   this.drawScene();
   return this;
 };
+Niivue.prototype.createEmptyDrawing = function() {
+  let mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3]);
+  if (mn < 1)
+    return;
+  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+  this.drawBitmap = new Uint8Array(vx);
+  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
+  this.refreshDrawing(false);
+};
+Niivue.prototype.drawPt = function(x, y, z, penValue) {
+  let dx = this.back.dims[1];
+  let dy = this.back.dims[2];
+  let dz = this.back.dims[3];
+  x = Math.min(Math.max(x, 0), dx - 1);
+  y = Math.min(Math.max(y, 0), dy - 1);
+  z = Math.min(Math.max(z, 0), dz - 1);
+  this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
+};
+Niivue.prototype.drawLine = function(ptA, ptB, penValue) {
+  let dx = Math.abs(ptA[0] - ptB[0]);
+  let dy = Math.abs(ptA[1] - ptB[1]);
+  let dz = Math.abs(ptA[2] - ptB[2]);
+  let xs = -1;
+  let ys = -1;
+  let zs = -1;
+  if (ptB[0] > ptA[0])
+    xs = 1;
+  if (ptB[1] > ptA[1])
+    ys = 1;
+  if (ptB[2] > ptA[2])
+    zs = 1;
+  let x1 = ptA[0];
+  let y1 = ptA[1];
+  let z1 = ptA[2];
+  let x2 = ptB[0];
+  let y2 = ptB[1];
+  let z2 = ptB[2];
+  if (dx >= dy && dx >= dz) {
+    let p1 = 2 * dy - dx;
+    let p2 = 2 * dz - dx;
+    while (x1 != x2) {
+      x1 += xs;
+      if (p1 >= 0) {
+        y1 += ys;
+        p1 -= 2 * dx;
+      }
+      if (p2 >= 0) {
+        z1 += zs;
+        p2 -= 2 * dx;
+      }
+      p1 += 2 * dy;
+      p2 += 2 * dz;
+      this.drawPt(x1, y1, z1, penValue);
+    }
+  } else if (dy >= dx && dy >= dz) {
+    let p1 = 2 * dx - dy;
+    let p2 = 2 * dz - dy;
+    while (y1 != y2) {
+      y1 += ys;
+      if (p1 >= 0) {
+        x1 += xs;
+        p1 -= 2 * dy;
+      }
+      if (p2 >= 0) {
+        z1 += zs;
+        p2 -= 2 * dy;
+      }
+      p1 += 2 * dx;
+      p2 += 2 * dz;
+      this.drawPt(x1, y1, z1, penValue);
+    }
+  } else {
+    let p1 = 2 * dy - dz;
+    let p2 = 2 * dx - dz;
+    while (z1 != z2) {
+      z1 += zs;
+      if (p1 >= 0) {
+        y1 += ys;
+        p1 -= 2 * dz;
+      }
+      if (p2 >= 0) {
+        x1 += xs;
+        p2 -= 2 * dz;
+      }
+      p1 += 2 * dy;
+      p2 += 2 * dx;
+      this.drawPt(x1, y1, z1, penValue);
+    }
+  }
+};
+Niivue.prototype.createRandomDrawing = function() {
+  console.log("Background image rasDIMs: ", this.back.dims[1], this.back.dims[2], this.back.dims[3]);
+  console.log(" same as volume 0 dimsRAS: ", this.volumes[0].dimsRAS[1], this.volumes[0].dimsRAS[2], this.volumes[0].dimsRAS[3]);
+  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+  if (vx !== this.drawBitmap.length)
+    console.log("Epic failure");
+  let ptA = [1, 1, 33];
+  let ptB = [63, 78, 33];
+  this.drawLine(ptA, ptB, 1);
+  ptA = [1, 78, 33];
+  ptB = [63, 1, 33];
+  this.drawLine(ptA, ptB, 3);
+  ptA = [1, 40, 33];
+  ptB = [63, 45, 33];
+  this.drawLine(ptA, ptB, 2);
+  let dx = this.back.dims[1] - 1;
+  let dy = this.back.dims[2] - 1;
+  let dz = this.back.dims[3];
+  ptA = [0, 0, 0];
+  ptB = [dx, dy, 0];
+  for (let i = 0; i < dz; i++) {
+    ptA[2] = i;
+    ptB[2] = i;
+    this.drawLine(ptA, ptB, i % 3 + 1);
+  }
+  this.refreshDrawing(false);
+};
+Niivue.prototype.closeDrawing = function() {
+  this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
+  this.drawBitmap = null;
+};
+Niivue.prototype.refreshDrawing = function(isForceRedraw = true) {
+  let dims = this.back.dims.slice();
+  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+  if (this.drawBitmap.length === 8) {
+    dims[1] = 2;
+    dims[2] = 2;
+    dims[3] = 2;
+  } else if (vx !== this.drawBitmap.length) {
+    console.log("Drawing bitmap must match the background image");
+  }
+  this.gl.activeTexture(this.gl.TEXTURE7);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
+  this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], this.gl.RED, this.gl.UNSIGNED_BYTE, this.drawBitmap);
+  if (isForceRedraw)
+    this.drawScene();
+};
+Niivue.prototype.r8Tex = function(texID, activeID, dims, isInit = false) {
+  if (texID)
+    this.gl.deleteTexture(texID);
+  texID = this.gl.createTexture();
+  this.gl.activeTexture(activeID);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+  this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
+  this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8, dims[1], dims[2], dims[3]);
+  if (isInit) {
+    let img8 = new Uint8Array(dims[1] * dims[2] * dims[3]);
+    this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], this.gl.RED, this.gl.UNSIGNED_BYTE, img8);
+  }
+  return texID;
+};
 Niivue.prototype.rgbaTex = function(texID, activeID, dims, isInit = false) {
   if (texID)
     this.gl.deleteTexture(texID);
@@ -24931,14 +25222,26 @@ Niivue.prototype.requestCORSIfNotSameOrigin = function(img, url) {
     img.crossOrigin = "";
   }
 };
-Niivue.prototype.loadFontTexture = function(fontUrl) {
+Niivue.prototype.loadPngAsTexture = function(pngUrl, textureNum) {
   return new Promise((resolve, reject) => {
     let img = new Image();
     img.onload = () => {
-      let pngTexture = this.gl.createTexture();
-      this.gl.activeTexture(this.gl.TEXTURE3);
+      let pngTexture = [];
+      if (textureNum === 4) {
+        if (this.bmpTexture !== null)
+          this.gl.deleteTexture(this.bmpTexture);
+        this.bmpTexture = this.gl.createTexture();
+        pngTexture = this.bmpTexture;
+        this.bmpTextureWH = img.width / img.height;
+        this.gl.activeTexture(this.gl.TEXTURE4);
+        this.bmpShader.use(this.gl);
+        this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else {
+        this.gl.activeTexture(this.gl.TEXTURE3);
+        this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+        pngTexture = this.gl.createTexture();
+      }
       this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
-      this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
@@ -24947,9 +25250,15 @@ Niivue.prototype.loadFontTexture = function(fontUrl) {
       resolve(pngTexture);
     };
     img.onerror = reject;
-    this.requestCORSIfNotSameOrigin(img, fontUrl);
-    img.src = fontUrl;
+    this.requestCORSIfNotSameOrigin(img, pngUrl);
+    img.src = pngUrl;
   });
+};
+Niivue.prototype.loadFontTexture = function(fontUrl) {
+  this.loadPngAsTexture(fontUrl, 3);
+};
+Niivue.prototype.loadBmpTexture = function(bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 4);
 };
 Niivue.prototype.initFontMets = function() {
   this.fontMets = [];
@@ -24991,19 +25300,12 @@ Niivue.prototype.loadFont = async function(fontSheetUrl = defaultFontPNG, metric
   this.fontMetrics = JSON.parse(jsonText);
   this.initFontMets();
   this.fontShader.use(this.gl);
-  this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
   this.drawScene();
 };
 Niivue.prototype.loadDefaultFont = async function() {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
   this.initFontMets();
-};
-Niivue.prototype.initText = async function() {
-  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
-  this.fontShader.use(this.gl);
-  await this.loadDefaultFont();
-  this.drawLoadingText(this.loadingText);
 };
 Niivue.prototype.initText = async function() {
   this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
@@ -25046,8 +25348,9 @@ Niivue.prototype.init = async function() {
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
   this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-  this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
-  this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
+  this.volumeTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true);
+  this.overlayTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true);
+  this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true);
   let rectStrip = [
     1,
     1,
@@ -25082,6 +25385,8 @@ Niivue.prototype.init = async function() {
   this.sliceShader.use(this.gl);
   this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
+  this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
+  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
@@ -25101,7 +25406,10 @@ Niivue.prototype.init = async function() {
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
+  this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
+  if (this.opts.thumbnail.length > 0)
+    this.loadBmpTexture(this.opts.thumbnail);
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -25311,12 +25619,10 @@ Niivue.prototype.setColorMap = function(id, colorMap) {
   this.updateGLVolume();
 };
 Niivue.prototype.setFrame4D = function(id, frame4D) {
-  console.log("setting frame to ");
   let idx = this.getVolumeIndexByID(id);
   console.log(this.volumes[idx]);
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
-  console.log("setting frame to ", frame4D);
 };
 Niivue.prototype.getFrame4D = function(id) {
   let idx = this.getVolumeIndexByID(id);
@@ -25376,6 +25682,10 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
   this.canvas.focus();
+  if (this.bmpTexture !== null) {
+    this.gl.deleteTexture(this.bmpTexture);
+    this.bmpTexture = null;
+  }
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0)
       return;
@@ -25815,16 +26125,19 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3)
       continue;
-    gl.bindVertexArray(this.meshes[i].vao);
     if (this.meshes[i].colorMap.startsWith("*")) {
       hasFibers = true;
       continue;
     }
+    gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
     gl.bindVertexArray(this.unusedVAO);
   }
-  if (!hasFibers)
+  if (!hasFibers) {
+    gl.enable(gl.BLEND);
+    gl.depthFunc(gl.ALWAYS);
     return;
+  }
   let shader = this.fiberShader;
   shader.use(this.gl);
   gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
@@ -25832,9 +26145,9 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3)
       continue;
-    gl.bindVertexArray(this.meshes[i].vao);
     if (!this.meshes[i].colorMap.startsWith("*"))
       continue;
+    gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
     gl.bindVertexArray(this.unusedVAO);
   }
@@ -25983,12 +26296,31 @@ Niivue.prototype.scaleSlice = function(w, h) {
   ];
   return leftTopWidthHeight;
 };
+Niivue.prototype.drawThumbnail = function() {
+  this.bmpShader.use(this.gl);
+  this.gl.uniform2f(this.bmpShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
+  let h = this.gl.canvas.height;
+  let w = this.gl.canvas.height * this.bmpTextureWH;
+  if (w > this.gl.canvas.width) {
+    h = this.gl.canvas.width / this.bmpTextureWH;
+    w = this.gl.canvas.width;
+  }
+  this.gl.uniform4f(this.bmpShader.uniforms["leftTopWidthHeight"], 0, 0, w, h);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
+  console.log("ratioyyy", this.bmpTextureWH);
+};
 Niivue.prototype.drawScene = function() {
   if (!this.initialized) {
     return;
   }
   this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3]);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  if (this.bmpTexture) {
+    this.drawThumbnail();
+    return;
+  }
   let posString = "";
   if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
     if (this.meshes.length > 0)

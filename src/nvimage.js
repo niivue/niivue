@@ -657,8 +657,8 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
   let isGz = false;
   let isMicron = false;
   let isDetached = false;
-  let mat33 = mat3.fromValues(NaN, 0, 0,   0, 1, 0,   0, 0, 1);
-  let offset = vec3.fromValues(0,0,0);
+  let mat33 = mat3.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  let offset = vec3.fromValues(0, 0, 0);
   let rot33 = mat3.create();
   for (let i = 1; i < n; i++) {
     let str = lines[i];
@@ -755,8 +755,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       case "space directions":
         let vs = value.split(/[ ,]+/);
         if (vs.length !== 9) break;
-        for (var d = 0; d < 9; d++)
-          mat33[d] = parseFloat(vs[d]);
+        for (var d = 0; d < 9; d++) mat33[d] = parseFloat(vs[d]);
         break;
       case "space origin":
         let ts = value.split(/[ ,]+/);
@@ -781,7 +780,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
 
             0,
             0,
-            1,
+            1
           );
         else if (
           value.includes("left-anterior-superior") ||
@@ -798,7 +797,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
 
             0,
             0,
-            1,
+            1
           );
         else if (
           value.includes("left-posterior-superior") ||
@@ -815,7 +814,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
 
             0,
             0,
-            1,
+            1
           );
         else console.log("Unsupported NRRD space value:", value);
         break;
@@ -826,21 +825,34 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
   if (!isNaN(mat33[0])) {
     //if spatial transform provided
     this.hdr.sform_code = 2;
-    if (isMicron) { //convert micron to mm
+    if (isMicron) {
+      //convert micron to mm
       mat4.multiplyScalar(mat33, mat33, 0.001);
       offset[0] *= 0.001;
       offset[1] *= 0.001;
       offset[2] *= 0.001;
-    }  
+    }
     if (rot33[0] < 0) offset[0] = -offset[0]; //origin L<->R
     if (rot33[4] < 0) offset[1] = -offset[1]; //origin A<->P
     if (rot33[8] < 0) offset[2] = -offset[2]; //origin S<->I
     mat3.multiply(mat33, rot33, mat33);
     let mat = mat4.fromValues(
-      mat33[0],mat33[3],mat33[6],offset[0],
-      mat33[1],mat33[4],mat33[7],offset[1],
-      mat33[2],mat33[5],mat33[8],offset[2],
-      0,0,0,1
+      mat33[0],
+      mat33[3],
+      mat33[6],
+      offset[0],
+      mat33[1],
+      mat33[4],
+      mat33[7],
+      offset[1],
+      mat33[2],
+      mat33[5],
+      mat33[8],
+      offset[2],
+      0,
+      0,
+      0,
+      1
     );
     let mm000 = this.vox2mm([0, 0, 0], mat);
     let mm100 = this.vox2mm([1, 0, 0], mat);
@@ -873,9 +885,9 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       "Missing data: NRRD header describes detached data file but only one URL provided"
     );
   if (isGz)
-    return pako.inflate(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer;
-  else
-    return dataBuffer.slice(hdr.vox_offset);
+    return pako.inflate(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
+      .buffer;
+  else return dataBuffer.slice(hdr.vox_offset);
 }; //readNRRD()
 
 // not included in public docs
@@ -1462,16 +1474,16 @@ NVImage.prototype.getImageMetadata = function () {
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  * newZeroImage = NVImage.zerosLike(myImage)
  */
-NVImage.zerosLike = function (nvImage, dataType='same') {
-	// dataType can be: 'same', 'uint8'
-	// 'same' means that the zeroed image data type is the same as the input image
+NVImage.zerosLike = function (nvImage, dataType = "same") {
+  // dataType can be: 'same', 'uint8'
+  // 'same' means that the zeroed image data type is the same as the input image
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
-	if (dataType === 'uint8'){
-		zeroClone.img = Uint8Array.from(zeroClone.img)
-		zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
-		zeroClone.hdr.numBitsPerVoxel = 8
-	}
+  if (dataType === "uint8") {
+    zeroClone.img = Uint8Array.from(zeroClone.img);
+    zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR;
+    zeroClone.hdr.numBitsPerVoxel = 8;
+  }
   return zeroClone;
 };
 

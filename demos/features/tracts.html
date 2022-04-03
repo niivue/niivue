@@ -23,25 +23,32 @@
       <p>
         NiiVue also supports TCK and TRK format meshes
       </p>
-      <p>
-        <h3>Controls</h3>
-        <ul>
-          <li>rotate: left mouse click and drag (touch and drag on mobile)</li>
-          <li>adjust clip plane: mouse or touch pad scroll wheel (pinch zoom for mobile)</li>
-        </ul>
-      </p>
     </section>
-
+<div class="slidecontainer">
+  fiber length <input type="range" min="1" max="25" value="3" class="slider" id="fiberLengthSlider">
+</div>
+<div class="slidecontainer">
+  fiber dither <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
+</div>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
     <script src="./niivue.umd.js">
     </script>
     <script>
+      var slider = document.getElementById("fiberLengthSlider");
+      var sliderD = document.getElementById("fiberDitherSlider");
+      // Update the current slider value (each time you drag the slider handle)
+      slider.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
+      }
+      sliderD.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
+      }
      var volumeList1 = [
        // first item is background image
          {

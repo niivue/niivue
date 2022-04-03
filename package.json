@@ -42,6 +42,7 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "daikon": "^1.2.42",
     "gifti-reader-js": "^0.4.4",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.5.4",

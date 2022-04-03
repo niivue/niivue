@@ -24,7 +24,12 @@
         hot reloadable development preview
       </h1>
     </section>
-
+<div class="slidecontainer">
+  fiber length <input type="range" min="1" max="6" value="3" class="slider" id="fiberLengthSlider">
+</div>
+<div class="slidecontainer">
+  fiber dither <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
+</div>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:640px;">
@@ -40,6 +45,18 @@
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
+      var slider = document.getElementById("fiberLengthSlider");
+      //var output = document.getElementById("demo");
+      var sliderD = document.getElementById("fiberDitherSlider");
+      //var output = document.getElementById("demo");
+
+      // Update the current slider value (each time you drag the slider handle)
+      slider.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
+      }
+      sliderD.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
+      }
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -101,14 +118,14 @@
       nv1.attachTo('gl1')
       await nv1.loadVolumes(volumeList1)
 			
-      /*nv1.loadMeshes([
-         {url: "../demos/images/ColumnMajorOrder.gii", rgba255 : [255, 192, 192, 255]},
+      nv1.loadMeshes([
+         {url: "../demos/images/stroke.trk", rgba255 : [255, 192, 192, 255]},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [196, 128, 128, 255]},
-      ])*/
+      ])
 			
       //nv1.loadConnectome(connectome)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      //nv1.setSliceType(nv1.sliceTypeRender)
+      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
       //nv1.volumes[0].frame4D = 5;
 
