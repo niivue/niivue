@@ -940,6 +940,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
     }
   }
+	this.createEmptyDrawing()
   this.drawScene(); //<- this seems to be required if you drag and drop a mesh, not a volume
 };
 
@@ -1504,22 +1505,27 @@ Niivue.prototype.createEmptyDrawing = function () {
   this.drawTexture = this.r8Tex(
     this.drawTexture,
     this.gl.TEXTURE7,
-    this.back.dims,
+		this.back.dims,
+    //this.volumes[0].hdr.dims,
     true
   );
   this.refreshDrawing(false);
 };
 
 Niivue.prototype.drawPt = function (x, y, z, penValue) {
-  let dx = this.back.dims[1];
-  let dy = this.back.dims[2];
-  let dz = this.back.dims[3];
+	let dx = this.back.dims[1]
+ 	let dy = this.back.dims[2]
+ 	let dz = this.back.dims[3]
+	/*
+	let dx = this.volumes[0].hdr.dims[1]
+ 	let dy = this.volumes[0].hdr.dims[2]
+ 	let dz = this.volumes[0].hdr.dims[3]
+	*/
   x = Math.min(Math.max(x, 0), dx - 1);
   y = Math.min(Math.max(y, 0), dy - 1);
   z = Math.min(Math.max(z, 0), dz - 1);
-  this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
-  //console.log('>>',x,y,z,penValue);
-  //  this.drawBitmap[x + (y * this.back.dims[1]) + (z * this.back.dims[1] * this.back.dims[2])] = penValue;
+	this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
+  //console.log('>>',x, y, z, penValue);
 };
 
 //https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
@@ -1613,7 +1619,11 @@ Niivue.prototype.createRandomDrawing = function () {
     this.volumes[0].dimsRAS[3]
   );
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-  if (vx !== this.drawBitmap.length) console.log("Epic failure");
+	if (vx !== this.drawBitmap.length) {
+		console.log("Epic failure");
+	}
+
+	/*
   let ptA = [1, 1, 33];
   let ptB = [63, 78, 33];
   this.drawLine(ptA, ptB, 1);
@@ -1623,12 +1633,20 @@ Niivue.prototype.createRandomDrawing = function () {
   ptA = [1, 40, 33];
   ptB = [63, 45, 33];
   this.drawLine(ptA, ptB, 2);
+	*/
+
   //draw one line on each slice
-  let dx = this.back.dims[1] - 1;
+	/*
+  let dx = this.volumes[0].hdr.dims[1] - 1;
+  let dy = this.volumes[0].hdr.dims[2] - 1;
+  let dz = this.volumes[0].hdr.dims[3];
+	*/
+
+	let dx = this.back.dims[1] - 1;
   let dy = this.back.dims[2] - 1;
   let dz = this.back.dims[3];
-  ptA = [0, 0, 0];
-  ptB = [dx, dy, 0];
+  let ptA = [0, 0, 0];
+  let ptB = [dx, dy, 0];
 
   for (let i = 0; i < dz; i++) {
     ptA[2] = i;
@@ -1645,7 +1663,8 @@ Niivue.prototype.closeDrawing = function () {
 
 //Copy drawing bitmap from CPU to GPU storage and redraw the screen
 Niivue.prototype.refreshDrawing = function (isForceRedraw = true) {
-  let dims = this.back.dims.slice();
+	let dims = this.back.dims.slice()
+	//let dims = this.volumes[0].hdr.dims.slice();
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (this.drawBitmap.length === 8) {
     dims[1] = 2;
@@ -2769,14 +2788,13 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.drawScene();
         return;
       }
+			// scrolling... not mouse
       if (posChange !== 0) {
         posNow = this.scene.crosshairPos[2 - axCorSag];
         posFuture = posNow + posChange;
         if (posFuture > 1) posFuture = 1;
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
-        //this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
-        //this.refreshDrawing(false)
         this.drawScene();
         this.scene.location$.next({
           mm: this.frac2mm(this.scene.crosshairPos),
@@ -2803,8 +2821,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
-      //this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
-      //this.refreshDrawing(false)
+      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
+      this.refreshDrawing(false)
       this.drawScene();
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
@@ -3533,9 +3551,9 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
   let vox = [
-    Math.round(frac[0] * this.volumes[volIdx].hdr.dims[1] - 0.5),
-    Math.round(frac[1] * this.volumes[volIdx].hdr.dims[2] - 0.5),
-    Math.round(frac[2] * this.volumes[volIdx].hdr.dims[3] - 0.5),
+    Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims == RAS
+    Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims == RAS
+    Math.round(frac[2] * this.volumes[volIdx].dims[3] - 0.5), // dims == RAS
   ];
   return vox;
 }; // frac2vox()

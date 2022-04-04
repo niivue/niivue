@@ -76,7 +76,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/scaled+tlrc.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../tests/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/scaled+tlrc.BRIK.gz",
@@ -99,6 +99,9 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       await nv1.loadVolumes(volumeList1)
+
+			nv1.createEmptyDrawing()
+			//nv1.createRandomDrawing()
 			
       /*nv1.loadMeshes([
          //{url: "../demos/images/stroke.trk", rgba255 : [255, 192, 192, 255]},
