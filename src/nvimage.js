@@ -38,7 +38,7 @@ function isPlatformLittleEndian() {
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
  */
-export var NVImage = function (
+export function NVImage(
   dataBuffer,
   name = "",
   colorMap = "gray",
@@ -322,7 +322,7 @@ export var NVImage = function (
   }
   this.calculateRAS();
   this.calMinMax();
-};
+}
 
 NVImage.prototype.calculateOblique = function () {
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);

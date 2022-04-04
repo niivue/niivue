@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
-import { mat3, mat4, vec3, vec4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 import { colortables } from "./colortables";
 const cmapper = new colortables();
 const log = new Log();
@@ -23,7 +23,7 @@ const log = new Log();
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
  */
-export var NVMesh = function (
+export function NVMesh(
   pts,
   tris,
   name = "",

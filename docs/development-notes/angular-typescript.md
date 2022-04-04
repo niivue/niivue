@@ -41,7 +41,7 @@ module.exports = {
 
 Use npx and typescript to generate the type info. You can download the source or use the src from the node_modules directory.
 ```console
-foo@bar:~niivue npx -p typescript tsc src/*.js --lib ES7 --declaration --allowJs --emitDeclarationOnly --outDir types
+foo@bar:~niivue$ npx -p typescript tsc src/*.js --lib ES7 --declaration --allowJs --emitDeclarationOnly --outDir types
 ```
 
 ## Create a module to import type info
