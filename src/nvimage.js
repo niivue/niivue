@@ -38,7 +38,7 @@ function isPlatformLittleEndian() {
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
  */
-export var NVImage = function (
+export function NVImage(
   dataBuffer,
   name = "",
   colorMap = "gray",
@@ -322,7 +322,7 @@ export var NVImage = function (
   }
   this.calculateRAS();
   this.calMinMax();
-};
+}
 
 NVImage.prototype.calculateOblique = function () {
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
@@ -1473,16 +1473,16 @@ NVImage.prototype.getImageMetadata = function () {
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  * newZeroImage = NVImage.zerosLike(myImage)
  */
-NVImage.zerosLike = function (nvImage, dataType='same') {
-	// dataType can be: 'same', 'uint8'
-	// 'same' means that the zeroed image data type is the same as the input image
+NVImage.zerosLike = function (nvImage, dataType = "same") {
+  // dataType can be: 'same', 'uint8'
+  // 'same' means that the zeroed image data type is the same as the input image
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
-	if (dataType === 'uint8'){
-		zeroClone.img = Uint8Array.from(zeroClone.img)
-		zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
-		zeroClone.hdr.numBitsPerVoxel = 8
-	}
+  if (dataType === "uint8") {
+    zeroClone.img = Uint8Array.from(zeroClone.img);
+    zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR;
+    zeroClone.hdr.numBitsPerVoxel = 8;
+  }
   return zeroClone;
 };
 

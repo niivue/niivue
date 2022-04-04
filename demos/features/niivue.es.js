@@ -1,4 +1,4 @@
-var Shader = function(gl, vertexSrc, fragmentSrc) {
+function Shader(gl, vertexSrc, fragmentSrc) {
   var self2 = this;
   this.program = compileShader(gl, vertexSrc, fragmentSrc);
   var regexUniform = /uniform[^;]+[ ](\w+);/g;
@@ -21,7 +21,7 @@ var Shader = function(gl, vertexSrc, fragmentSrc) {
   for (var unif in this.uniforms) {
     this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
   }
-};
+}
 Shader.prototype.use = function(gl) {
   gl.useProgram(this.program);
 };
@@ -923,6 +923,31 @@ void main(void) {
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
+var vertBmpShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+out vec2 vUV;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
+	vUV = vec2(pos.x, 1.0 - pos.y);
+}`;
+var fragBmpShader = `#version 300 es
+#line 262
+precision highp int;
+precision highp float;
+uniform highp sampler2D bmpTexture;
+in vec2 vUV;
+out vec4 color;
+void main() {
+	color = texture(bmpTexture, vUV);
+}`;
 var vertFontShader = `#version 300 es
 #line 244
 layout(location=0) in vec3 pos;
@@ -1492,16 +1517,10 @@ function __read(o, n) {
   }
   return ar;
 }
-function __spreadArray(to, from, pack) {
-  if (pack || arguments.length === 2)
-    for (var i = 0, l = from.length, ar; i < l; i++) {
-      if (ar || !(i in from)) {
-        if (!ar)
-          ar = Array.prototype.slice.call(from, 0, i);
-        ar[i] = from[i];
-      }
-    }
-  return to.concat(ar || Array.prototype.slice.call(from));
+function __spreadArray(to, from) {
+  for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
+    to[j] = from[i];
+  return to;
 }
 function isFunction(value) {
   return typeof value === "function";
@@ -1537,7 +1556,7 @@ var Subscription = function() {
     this.initialTeardown = initialTeardown;
     this.closed = false;
     this._parentage = null;
-    this._finalizers = null;
+    this._teardowns = null;
   }
   Subscription2.prototype.unsubscribe = function() {
     var e_1, _a, e_2, _b;
@@ -1568,22 +1587,22 @@ var Subscription = function() {
           _parentage.remove(this);
         }
       }
-      var initialFinalizer = this.initialTeardown;
-      if (isFunction(initialFinalizer)) {
+      var initialTeardown = this.initialTeardown;
+      if (isFunction(initialTeardown)) {
         try {
-          initialFinalizer();
+          initialTeardown();
         } catch (e) {
           errors = e instanceof UnsubscriptionError ? e.errors : [e];
         }
       }
-      var _finalizers = this._finalizers;
-      if (_finalizers) {
-        this._finalizers = null;
+      var _teardowns = this._teardowns;
+      if (_teardowns) {
+        this._teardowns = null;
         try {
-          for (var _finalizers_1 = __values(_finalizers), _finalizers_1_1 = _finalizers_1.next(); !_finalizers_1_1.done; _finalizers_1_1 = _finalizers_1.next()) {
-            var finalizer = _finalizers_1_1.value;
+          for (var _teardowns_1 = __values(_teardowns), _teardowns_1_1 = _teardowns_1.next(); !_teardowns_1_1.done; _teardowns_1_1 = _teardowns_1.next()) {
+            var teardown_1 = _teardowns_1_1.value;
             try {
-              execFinalizer(finalizer);
+              execTeardown(teardown_1);
             } catch (err2) {
               errors = errors !== null && errors !== void 0 ? errors : [];
               if (err2 instanceof UnsubscriptionError) {
@@ -1597,8 +1616,8 @@ var Subscription = function() {
           e_2 = { error: e_2_1 };
         } finally {
           try {
-            if (_finalizers_1_1 && !_finalizers_1_1.done && (_b = _finalizers_1.return))
-              _b.call(_finalizers_1);
+            if (_teardowns_1_1 && !_teardowns_1_1.done && (_b = _teardowns_1.return))
+              _b.call(_teardowns_1);
           } finally {
             if (e_2)
               throw e_2.error;
@@ -1614,7 +1633,7 @@ var Subscription = function() {
     var _a;
     if (teardown && teardown !== this) {
       if (this.closed) {
-        execFinalizer(teardown);
+        execTeardown(teardown);
       } else {
         if (teardown instanceof Subscription2) {
           if (teardown.closed || teardown._hasParent(this)) {
@@ -1622,7 +1641,7 @@ var Subscription = function() {
           }
           teardown._addParent(this);
         }
-        (this._finalizers = (_a = this._finalizers) !== null && _a !== void 0 ? _a : []).push(teardown);
+        (this._teardowns = (_a = this._teardowns) !== null && _a !== void 0 ? _a : []).push(teardown);
       }
     }
   };
@@ -1643,8 +1662,8 @@ var Subscription = function() {
     }
   };
   Subscription2.prototype.remove = function(teardown) {
-    var _finalizers = this._finalizers;
-    _finalizers && arrRemove(_finalizers, teardown);
+    var _teardowns = this._teardowns;
+    _teardowns && arrRemove(_teardowns, teardown);
     if (teardown instanceof Subscription2) {
       teardown._removeParent(this);
     }
@@ -1660,11 +1679,11 @@ var EMPTY_SUBSCRIPTION = Subscription.EMPTY;
 function isSubscription(value) {
   return value instanceof Subscription || value && "closed" in value && isFunction(value.remove) && isFunction(value.add) && isFunction(value.unsubscribe);
 }
-function execFinalizer(finalizer) {
-  if (isFunction(finalizer)) {
-    finalizer();
+function execTeardown(teardown) {
+  if (isFunction(teardown)) {
+    teardown();
   } else {
-    finalizer.unsubscribe();
+    teardown.unsubscribe();
   }
 }
 var config = {
@@ -1675,16 +1694,13 @@ var config = {
   useDeprecatedNextContext: false
 };
 var timeoutProvider = {
-  setTimeout: function(handler, timeout) {
+  setTimeout: function() {
     var args = [];
-    for (var _i = 2; _i < arguments.length; _i++) {
-      args[_i - 2] = arguments[_i];
+    for (var _i = 0; _i < arguments.length; _i++) {
+      args[_i] = arguments[_i];
     }
     var delegate = timeoutProvider.delegate;
-    if (delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) {
-      return delegate.setTimeout.apply(delegate, __spreadArray([handler, timeout], __read(args)));
-    }
-    return setTimeout.apply(void 0, __spreadArray([handler, timeout], __read(args)));
+    return ((delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) || setTimeout).apply(void 0, __spreadArray([], __read(args)));
   },
   clearTimeout: function(handle) {
     var delegate = timeoutProvider.delegate;
@@ -1787,84 +1803,51 @@ var Subscriber = function(_super) {
   };
   return Subscriber2;
 }(Subscription);
-var _bind = Function.prototype.bind;
-function bind(fn, thisArg) {
-  return _bind.call(fn, thisArg);
-}
-var ConsumerObserver = function() {
-  function ConsumerObserver2(partialObserver) {
-    this.partialObserver = partialObserver;
-  }
-  ConsumerObserver2.prototype.next = function(value) {
-    var partialObserver = this.partialObserver;
-    if (partialObserver.next) {
-      try {
-        partialObserver.next(value);
-      } catch (error) {
-        handleUnhandledError(error);
-      }
-    }
-  };
-  ConsumerObserver2.prototype.error = function(err2) {
-    var partialObserver = this.partialObserver;
-    if (partialObserver.error) {
-      try {
-        partialObserver.error(err2);
-      } catch (error) {
-        handleUnhandledError(error);
-      }
-    } else {
-      handleUnhandledError(err2);
-    }
-  };
-  ConsumerObserver2.prototype.complete = function() {
-    var partialObserver = this.partialObserver;
-    if (partialObserver.complete) {
-      try {
-        partialObserver.complete();
-      } catch (error) {
-        handleUnhandledError(error);
-      }
-    }
-  };
-  return ConsumerObserver2;
-}();
 var SafeSubscriber = function(_super) {
   __extends(SafeSubscriber2, _super);
   function SafeSubscriber2(observerOrNext, error, complete) {
     var _this = _super.call(this) || this;
-    var partialObserver;
-    if (isFunction(observerOrNext) || !observerOrNext) {
-      partialObserver = {
-        next: observerOrNext !== null && observerOrNext !== void 0 ? observerOrNext : void 0,
-        error: error !== null && error !== void 0 ? error : void 0,
-        complete: complete !== null && complete !== void 0 ? complete : void 0
-      };
-    } else {
+    var next;
+    if (isFunction(observerOrNext)) {
+      next = observerOrNext;
+    } else if (observerOrNext) {
+      next = observerOrNext.next, error = observerOrNext.error, complete = observerOrNext.complete;
       var context_1;
       if (_this && config.useDeprecatedNextContext) {
         context_1 = Object.create(observerOrNext);
         context_1.unsubscribe = function() {
           return _this.unsubscribe();
         };
-        partialObserver = {
-          next: observerOrNext.next && bind(observerOrNext.next, context_1),
-          error: observerOrNext.error && bind(observerOrNext.error, context_1),
-          complete: observerOrNext.complete && bind(observerOrNext.complete, context_1)
-        };
       } else {
-        partialObserver = observerOrNext;
+        context_1 = observerOrNext;
       }
+      next = next === null || next === void 0 ? void 0 : next.bind(context_1);
+      error = error === null || error === void 0 ? void 0 : error.bind(context_1);
+      complete = complete === null || complete === void 0 ? void 0 : complete.bind(context_1);
     }
-    _this.destination = new ConsumerObserver(partialObserver);
+    _this.destination = {
+      next: next ? wrapForErrorHandling(next) : noop,
+      error: wrapForErrorHandling(error !== null && error !== void 0 ? error : defaultErrorHandler),
+      complete: complete ? wrapForErrorHandling(complete) : noop
+    };
     return _this;
   }
   return SafeSubscriber2;
 }(Subscriber);
-function handleUnhandledError(error) {
-  {
-    reportUnhandledError(error);
-  }
+function wrapForErrorHandling(handler, instance) {
+  return function() {
+    var args = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+      args[_i] = arguments[_i];
+    }
+    try {
+      handler.apply(void 0, __spreadArray([], __read(args)));
+    } catch (err2) {
+      {
+        reportUnhandledError(err2);
+      }
+    }
+  };
 }
 function defaultErrorHandler(err2) {
   throw err2;
@@ -1926,19 +1909,15 @@ var Observable = function() {
     var _this = this;
     promiseCtor = getPromiseCtor(promiseCtor);
     return new promiseCtor(function(resolve, reject) {
-      var subscriber = new SafeSubscriber({
-        next: function(value) {
-          try {
-            next(value);
-          } catch (err2) {
-            reject(err2);
-            subscriber.unsubscribe();
-          }
-        },
-        error: reject,
-        complete: resolve
-      });
-      _this.subscribe(subscriber);
+      var subscription;
+      subscription = _this.subscribe(function(value) {
+        try {
+          next(value);
+        } catch (err2) {
+          reject(err2);
+          subscription === null || subscription === void 0 ? void 0 : subscription.unsubscribe();
+        }
+      }, reject, resolve);
     });
   };
   Observable2.prototype._subscribe = function(subscriber) {
@@ -1996,7 +1975,6 @@ var Subject = function(_super) {
   function Subject2() {
     var _this = _super.call(this) || this;
     _this.closed = false;
-    _this.currentObservers = null;
     _this.observers = [];
     _this.isStopped = false;
     _this.hasError = false;
@@ -2019,20 +1997,18 @@ var Subject = function(_super) {
       var e_1, _a;
       _this._throwIfClosed();
       if (!_this.isStopped) {
-        if (!_this.currentObservers) {
-          _this.currentObservers = Array.from(_this.observers);
-        }
+        var copy2 = _this.observers.slice();
         try {
-          for (var _b = __values(_this.currentObservers), _c = _b.next(); !_c.done; _c = _b.next()) {
-            var observer = _c.value;
+          for (var copy_1 = __values(copy2), copy_1_1 = copy_1.next(); !copy_1_1.done; copy_1_1 = copy_1.next()) {
+            var observer = copy_1_1.value;
             observer.next(value);
           }
         } catch (e_1_1) {
           e_1 = { error: e_1_1 };
         } finally {
           try {
-            if (_c && !_c.done && (_a = _b.return))
-              _a.call(_b);
+            if (copy_1_1 && !copy_1_1.done && (_a = copy_1.return))
+              _a.call(copy_1);
           } finally {
             if (e_1)
               throw e_1.error;
@@ -2070,7 +2046,7 @@ var Subject = function(_super) {
   };
   Subject2.prototype.unsubscribe = function() {
     this.isStopped = this.closed = true;
-    this.observers = this.currentObservers = null;
+    this.observers = null;
   };
   Object.defineProperty(Subject2.prototype, "observed", {
     get: function() {
@@ -2090,17 +2066,10 @@ var Subject = function(_super) {
     return this._innerSubscribe(subscriber);
   };
   Subject2.prototype._innerSubscribe = function(subscriber) {
-    var _this = this;
     var _a = this, hasError = _a.hasError, isStopped = _a.isStopped, observers = _a.observers;
-    if (hasError || isStopped) {
-      return EMPTY_SUBSCRIPTION;
-    }
-    this.currentObservers = null;
-    observers.push(subscriber);
-    return new Subscription(function() {
-      _this.currentObservers = null;
-      arrRemove(observers, subscriber);
-    });
+    return hasError || isStopped ? EMPTY_SUBSCRIPTION : (observers.push(subscriber), new Subscription(function() {
+      return arrRemove(observers, subscriber);
+    }));
   };
   Subject2.prototype._checkFinalizedStatuses = function(subscriber) {
     var _a = this, hasError = _a.hasError, thrownError = _a.thrownError, isStopped = _a.isStopped;
@@ -7286,8 +7255,9 @@ var pako = {
   ungzip: ungzip_1,
   constants: constants_1
 };
-var pako$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+var pako$1 = /* @__PURE__ */ Object.freeze({
   __proto__: null,
+  [Symbol.toStringTag]: "Module",
   Deflate: Deflate_1,
   Inflate: Inflate_1,
   constants: constants_1,
@@ -7298,7 +7268,7 @@ var pako$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty
   inflate: inflate_1,
   inflateRaw: inflateRaw_1,
   ungzip: ungzip_1
-}, Symbol.toStringTag, { value: "Module" }));
+});
 var require$$3 = /* @__PURE__ */ getAugmentedNamespace(pako$1);
 (function(module) {
   var nifti3 = nifti3 || {};
@@ -11187,8 +11157,9 @@ var x_rain = {
   A,
   I
 };
-var cmaps = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+var cmaps = /* @__PURE__ */ Object.freeze({
   __proto__: null,
+  [Symbol.toStringTag]: "Module",
   actc,
   blue,
   blue2red,
@@ -11241,7 +11212,7 @@ var cmaps = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty(
   warm,
   winter,
   x_rain
-}, Symbol.toStringTag, { value: "Module" }));
+});
 const Log = function(logLevel) {
   this.LOGGING_ON = true;
   this.LOGGING_OFF = false;
@@ -11280,7 +11251,7 @@ function isPlatformLittleEndian() {
   new DataView(buffer).setInt16(0, 256, true);
   return new Int16Array(buffer)[0] === 256;
 }
-var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -11524,7 +11495,7 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pa
   }
   this.calculateRAS();
   this.calMinMax();
-};
+}
 NVImage.prototype.calculateOblique = function() {
   let LPI = this.vox2mm([0, 0, 0], this.matRAS);
   let X1mm = this.vox2mm([1 / this.pixDimsRAS[1], 0, 0], this.matRAS);
@@ -12384,9 +12355,14 @@ NVImage.prototype.getImageMetadata = function() {
     bpv
   };
 };
-NVImage.zerosLike = function(nvImage) {
+NVImage.zerosLike = function(nvImage, dataType = "same") {
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
+  if (dataType === "uint8") {
+    zeroClone.img = Uint8Array.from(zeroClone.img);
+    zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR;
+    zeroClone.hdr.numBitsPerVoxel = 8;
+  }
   return zeroClone;
 };
 String.prototype.getBytes = function() {
@@ -21645,7 +21621,7 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 };
 const cmapper$1 = new colortables();
 const log$1 = new Log();
-var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true, furthestVertexFromOrigin, gl, indexCount = 0, vertexBuffer = null, indexBuffer = null, vao = null) {
+function NVMesh(posNormClr, tris, name = "", colorMap = "green", opacity = 1, visible = true, furthestVertexFromOrigin, gl, indexCount = 0, vertexBuffer = null, indexBuffer = null, vao = null) {
   this.name = name;
   this.id = v4();
   this.furthestVertexFromOrigin = furthestVertexFromOrigin;
@@ -21737,7 +21713,7 @@ var NVMesh = function(posNormClr, tris, name = "", colorMap = "green", opacity =
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null);
-};
+}
 function getFurthestVertexFromOrigin(pts) {
   let mxDx = 0;
   for (let i = 0; i < pts.length; i += 3) {
@@ -24034,7 +24010,7 @@ var defaultFontMetrics = {
 };
 const log = new Log();
 const cmapper = new colortables();
-const Niivue = function(options = {}) {
+function Niivue(options = {}) {
   this.opts = {};
   this.defaults = {
     textHeight: 0.06,
@@ -24055,7 +24031,8 @@ const Niivue = function(options = {}) {
     isRadiologicalConvention: false,
     logging: false,
     loadingText: "waiting for images...",
-    dragAndDropEnabled: true
+    dragAndDropEnabled: true,
+    thumbnail: ""
   };
   this.canvas = null;
   this.gl = null;
@@ -24069,6 +24046,9 @@ const Niivue = function(options = {}) {
   this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
+  this.bmpShader = null;
+  this.bmpTexture = null;
+  this.bmpTextureWH = 1;
   this.passThroughShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
@@ -24182,7 +24162,7 @@ const Niivue = function(options = {}) {
     intensityRange: this.intensityRange$
   };
   this.subscriptions = [];
-};
+}
 Niivue.prototype.attachTo = async function(id) {
   await this.attachToCanvas(document.getElementById(id));
   log.debug("attached to element with id: ", id);
@@ -24555,6 +24535,10 @@ Niivue.prototype.dropListener = async function(e) {
         let ext = re.exec(file.name)[1];
         ext = ext.toUpperCase();
         console.log(ext, "dropped ", file.name);
+        if (ext === "PNG") {
+          this.loadBmpTexture(file);
+          continue;
+        }
         let pairedImageData = "";
         if (file.name.lastIndexOf("HEAD") !== -1) {
           for (const pairedFile of files) {
@@ -24931,14 +24915,26 @@ Niivue.prototype.requestCORSIfNotSameOrigin = function(img, url) {
     img.crossOrigin = "";
   }
 };
-Niivue.prototype.loadFontTexture = function(fontUrl) {
+Niivue.prototype.loadPngAsTexture = function(pngUrl, textureNum) {
   return new Promise((resolve, reject) => {
     let img = new Image();
     img.onload = () => {
-      let pngTexture = this.gl.createTexture();
-      this.gl.activeTexture(this.gl.TEXTURE3);
+      let pngTexture = [];
+      if (textureNum === 4) {
+        if (this.bmpTexture !== null)
+          this.gl.deleteTexture(this.bmpTexture);
+        this.bmpTexture = this.gl.createTexture();
+        pngTexture = this.bmpTexture;
+        this.bmpTextureWH = img.width / img.height;
+        this.gl.activeTexture(this.gl.TEXTURE4);
+        this.bmpShader.use(this.gl);
+        this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else {
+        this.gl.activeTexture(this.gl.TEXTURE3);
+        this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
+        pngTexture = this.gl.createTexture();
+      }
       this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
-      this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
@@ -24947,9 +24943,15 @@ Niivue.prototype.loadFontTexture = function(fontUrl) {
       resolve(pngTexture);
     };
     img.onerror = reject;
-    this.requestCORSIfNotSameOrigin(img, fontUrl);
-    img.src = fontUrl;
+    this.requestCORSIfNotSameOrigin(img, pngUrl);
+    img.src = pngUrl;
   });
+};
+Niivue.prototype.loadFontTexture = function(fontUrl) {
+  this.loadPngAsTexture(fontUrl, 3);
+};
+Niivue.prototype.loadBmpTexture = function(bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 4);
 };
 Niivue.prototype.initFontMets = function() {
   this.fontMets = [];
@@ -24991,19 +24993,12 @@ Niivue.prototype.loadFont = async function(fontSheetUrl = defaultFontPNG, metric
   this.fontMetrics = JSON.parse(jsonText);
   this.initFontMets();
   this.fontShader.use(this.gl);
-  this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
   this.drawScene();
 };
 Niivue.prototype.loadDefaultFont = async function() {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
   this.initFontMets();
-};
-Niivue.prototype.initText = async function() {
-  this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
-  this.fontShader.use(this.gl);
-  await this.loadDefaultFont();
-  this.drawLoadingText(this.loadingText);
 };
 Niivue.prototype.initText = async function() {
   this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
@@ -25101,7 +25096,10 @@ Niivue.prototype.init = async function() {
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
+  this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
+  if (this.opts.thumbnail.length > 0)
+    this.loadBmpTexture(this.opts.thumbnail);
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -25376,6 +25374,10 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
   this.canvas.focus();
+  if (this.bmpTexture !== null) {
+    this.gl.deleteTexture(this.bmpTexture);
+    this.bmpTexture = null;
+  }
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0)
       return;
@@ -25983,12 +25985,31 @@ Niivue.prototype.scaleSlice = function(w, h) {
   ];
   return leftTopWidthHeight;
 };
+Niivue.prototype.drawThumbnail = function() {
+  this.bmpShader.use(this.gl);
+  this.gl.uniform2f(this.bmpShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
+  let h = this.gl.canvas.height;
+  let w = this.gl.canvas.height * this.bmpTextureWH;
+  if (w > this.gl.canvas.width) {
+    h = this.gl.canvas.width / this.bmpTextureWH;
+    w = this.gl.canvas.width;
+  }
+  this.gl.uniform4f(this.bmpShader.uniforms["leftTopWidthHeight"], 0, 0, w, h);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
+  console.log("ratioyyy", this.bmpTextureWH);
+};
 Niivue.prototype.drawScene = function() {
   if (!this.initialized) {
     return;
   }
   this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3]);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  if (this.bmpTexture) {
+    this.drawThumbnail();
+    return;
+  }
   let posString = "";
   if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
     if (this.meshes.length > 0)
