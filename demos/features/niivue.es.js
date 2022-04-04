@@ -22264,7 +22264,32 @@ NVMesh.readVTK = function(buffer) {
   line = readStr();
   items = line.split(" ");
   let tris = [];
-  if (items[0].includes("TRIANGLE_STRIPS")) {
+  if (items[0].includes("LINES")) {
+    console.log("boingo", line);
+    let n_count = parseInt(items[1]);
+    let npt = 0;
+    let offsetPt0 = [];
+    let pts = [];
+    offsetPt0.push(npt);
+    offsetPt0 = [];
+    for (let c = 0; c < n_count; c++) {
+      let numPoints = reader.getInt32(pos, false);
+      pos += 4;
+      npt += numPoints;
+      offsetPt0.push(npt);
+      for (let i = 0; i < numPoints; i++) {
+        let idx = reader.getInt32(pos, false) * 3;
+        pos += 4;
+        pts.push(positions[idx + 0]);
+        pts.push(positions[idx + 1]);
+        pts.push(positions[idx + 2]);
+      }
+    }
+    return {
+      pts,
+      offsetPt0
+    };
+  } else if (items[0].includes("TRIANGLE_STRIPS")) {
     let nstrip = parseInt(items[1]);
     for (let i = 0; i < nstrip; i++) {
       let ntri = reader.getInt32(pos, false) - 2;
@@ -22516,7 +22541,7 @@ NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "
     name = json.name;
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 };
-NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
+NVMesh.readMesh = function(buffer, name, gl, opacity = 1, rgba255 = [255, 255, 255, 255], visible = true) {
   let tris = [];
   let pts = [];
   let obj = [];
@@ -22529,7 +22554,7 @@ NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
       obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts2 = new Float32Array(obj.pts.slice());
-    return new NVMesh(pts2, offsetPt0, name, null, 1, true, gl);
+    return new NVMesh(pts2, offsetPt0, name, null, opacity, visible, gl);
   }
   if (ext.toUpperCase() === "GII")
     obj = this.readGII(buffer);
@@ -22537,9 +22562,14 @@ NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
     obj = this.readMZ3(buffer);
   else if (ext.toUpperCase() === "OBJ")
     obj = this.readOBJ(buffer);
-  else if (ext.toUpperCase() === "VTK")
+  else if (ext.toUpperCase() === "FIB" || ext.toUpperCase() === "VTK") {
     obj = this.readVTK(buffer);
-  else if (ext.toUpperCase() === "STL")
+    if (obj.hasOwnProperty("offsetPt0")) {
+      let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+      let pts2 = new Float32Array(obj.pts.slice());
+      return new NVMesh(pts2, offsetPt0, name, null, opacity, visible, gl);
+    }
+  } else if (ext.toUpperCase() === "STL")
     obj = this.readSTL(buffer);
   else
     obj = this.readFreeSurfer(buffer);
@@ -22566,7 +22596,7 @@ NVMesh.readMesh = function(buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  return new NVMesh(pts, tris, name, rgba255, 1, true, gl);
+  return new NVMesh(pts, tris, name, rgba255, opacity, visible, gl);
 };
 NVMesh.loadFromUrl = async function({
   url = "",
@@ -22587,7 +22617,7 @@ NVMesh.loadFromUrl = async function({
   let urlParts = url.split("/");
   name = urlParts.slice(-1)[0];
   let buffer = await response.arrayBuffer();
-  return this.readMesh(buffer, name, gl, rgba255);
+  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
 };
 NVMesh.readFileAsync = function(file) {
   return new Promise((resolve, reject) => {
@@ -22606,13 +22636,10 @@ NVMesh.loadFromFile = async function({
   colorMap = "blue",
   opacity = 1,
   rgba255 = [255, 255, 255, 255],
-  trustCalMinMax = true,
-  percentileFrac = 0.02,
-  ignoreZeroVoxels = false,
   visible = true
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return this.readMesh(buffer, name, gl, rgba255);
+  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
 };
 String.prototype.getBytes = function() {
   let bytes = [];
@@ -24722,6 +24749,7 @@ Niivue.prototype.dropListener = async function(e) {
       }
     }
   }
+  this.createEmptyDrawing();
   this.drawScene();
 };
 Niivue.prototype.setRadiologicalConvention = function(isRadiologicalConvention) {
@@ -25145,22 +25173,14 @@ Niivue.prototype.createRandomDrawing = function() {
   console.log("Background image rasDIMs: ", this.back.dims[1], this.back.dims[2], this.back.dims[3]);
   console.log(" same as volume 0 dimsRAS: ", this.volumes[0].dimsRAS[1], this.volumes[0].dimsRAS[2], this.volumes[0].dimsRAS[3]);
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-  if (vx !== this.drawBitmap.length)
+  if (vx !== this.drawBitmap.length) {
     console.log("Epic failure");
-  let ptA = [1, 1, 33];
-  let ptB = [63, 78, 33];
-  this.drawLine(ptA, ptB, 1);
-  ptA = [1, 78, 33];
-  ptB = [63, 1, 33];
-  this.drawLine(ptA, ptB, 3);
-  ptA = [1, 40, 33];
-  ptB = [63, 45, 33];
-  this.drawLine(ptA, ptB, 2);
+  }
   let dx = this.back.dims[1] - 1;
   let dy = this.back.dims[2] - 1;
   let dz = this.back.dims[3];
-  ptA = [0, 0, 0];
-  ptB = [dx, dy, 0];
+  let ptA = [0, 0, 0];
+  let ptB = [dx, dy, 0];
   for (let i = 0; i < dz; i++) {
     ptA[2] = i;
     ptB[2] = i;
@@ -25774,6 +25794,8 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
+      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1);
+      this.refreshDrawing(false);
       this.drawScene();
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
@@ -26229,9 +26251,9 @@ Niivue.prototype.vox2frac = function(vox, volIdx = 0) {
 };
 Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
   let vox = [
-    Math.round(frac[0] * this.volumes[volIdx].hdr.dims[1] - 0.5),
-    Math.round(frac[1] * this.volumes[volIdx].hdr.dims[2] - 0.5),
-    Math.round(frac[2] * this.volumes[volIdx].hdr.dims[3] - 0.5)
+    Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5),
+    Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5),
+    Math.round(frac[2] * this.volumes[volIdx].dims[3] - 0.5)
   ];
   return vox;
 };

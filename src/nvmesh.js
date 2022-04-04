@@ -703,10 +703,36 @@ NVMesh.readVTK = function (buffer) {
     positions[i] = reader.getFloat32(pos, false);
     pos += 4;
   }
-  line = readStr();
+  line = readStr(); //Type, "LINES 11885 "
   items = line.split(" ");
   let tris = [];
-  if (items[0].includes("TRIANGLE_STRIPS")) {
+  if (items[0].includes("LINES")) {
+    //tractogaphy data
+    console.log("boingo", line);
+    let n_count = parseInt(items[1]);
+    let npt = 0;
+    let offsetPt0 = [];
+    let pts = [];
+    offsetPt0.push(npt); //1st streamline starts at 0
+    offsetPt0 = [];
+    for (let c = 0; c < n_count; c++) {
+      let numPoints = reader.getInt32(pos, false);
+      pos += 4;
+      npt += numPoints;
+      offsetPt0.push(npt);
+      for (let i = 0; i < numPoints; i++) {
+        let idx = reader.getInt32(pos, false) * 3;
+        pos += 4;
+        pts.push(positions[idx + 0]);
+        pts.push(positions[idx + 1]);
+        pts.push(positions[idx + 2]);
+      } //for numPoints: number of segments in streamline
+    } //for n_count: number of streamlines
+    return {
+      pts,
+      offsetPt0,
+    };
+  } else if (items[0].includes("TRIANGLE_STRIPS")) {
     let nstrip = parseInt(items[1]);
     for (let i = 0; i < nstrip; i++) {
       let ntri = reader.getInt32(pos, false) - 2; //-2 as triangle strip is creates pts - 2 faces
@@ -1012,7 +1038,14 @@ NVMesh.loadConnectomeFromJSON = async function (
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
-NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
+NVMesh.readMesh = function (
+  buffer,
+  name,
+  gl,
+  opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
+  visible = true
+) {
   let nvmesh = null;
   let tris = [];
   let pts = [];
@@ -1029,16 +1062,32 @@ NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
       offsetPt0,
       name,
       null, //colorMap,
-      1.0, //opacity,
-      true, //visible,
+      opacity, //opacity,
+      visible, //visible,
       gl
     );
   } //is fibers
   if (ext.toUpperCase() === "GII") obj = this.readGII(buffer);
   else if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
   else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
-  else if (ext.toUpperCase() === "VTK") obj = this.readVTK(buffer);
-  else if (ext.toUpperCase() === "STL") obj = this.readSTL(buffer);
+  else if (ext.toUpperCase() === "FIB" || ext.toUpperCase() === "VTK") {
+    obj = this.readVTK(buffer);
+    if (obj.hasOwnProperty("offsetPt0")) {
+      //VTK files used both for meshes and streamlines
+      let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+      let pts = new Float32Array(obj.pts.slice());
+
+      return new NVMesh(
+        pts,
+        offsetPt0,
+        name,
+        null, //colorMap,
+        opacity, //opacity,
+        visible, //visible,
+        gl
+      );
+    } //if streamlines, not mesh
+  } else if (ext.toUpperCase() === "STL") obj = this.readSTL(buffer);
   //unknown file extension, try freeSurfer as hail mary
   else obj = this.readFreeSurfer(buffer);
   pts = obj.positions.slice();
@@ -1070,8 +1119,8 @@ NVMesh.readMesh = function (buffer, name, gl, rgba255 = [255, 255, 255, 255]) {
     tris,
     name,
     rgba255, //colorMap,
-    1.0, //opacity,
-    true, //visible,
+    opacity, //opacity,
+    visible, //visible,
     gl
   );
 };
@@ -1106,7 +1155,7 @@ NVMesh.loadFromUrl = async function ({
   let tris = [];
   var pts = [];
   let buffer = await response.arrayBuffer();
-  return this.readMesh(buffer, name, gl, rgba255);
+  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
 };
 
 // not included in public docs
@@ -1146,14 +1195,11 @@ NVMesh.loadFromFile = async function ({
   colorMap = "blue",
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
-  trustCalMinMax = true,
-  percentileFrac = 0.02,
-  ignoreZeroVoxels = false,
   visible = true,
 } = {}) {
   let nvmesh = [];
   let buffer = await this.readFileAsync(file);
-  return this.readMesh(buffer, name, gl, rgba255);
+  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
 };
 
 String.prototype.getBytes = function () {

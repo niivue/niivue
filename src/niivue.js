@@ -940,7 +940,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
     }
   }
-	this.createEmptyDrawing()
+  this.createEmptyDrawing();
   this.drawScene(); //<- this seems to be required if you drag and drop a mesh, not a volume
 };
 
@@ -1505,7 +1505,7 @@ Niivue.prototype.createEmptyDrawing = function () {
   this.drawTexture = this.r8Tex(
     this.drawTexture,
     this.gl.TEXTURE7,
-		this.back.dims,
+    this.back.dims,
     //this.volumes[0].hdr.dims,
     true
   );
@@ -1513,10 +1513,10 @@ Niivue.prototype.createEmptyDrawing = function () {
 };
 
 Niivue.prototype.drawPt = function (x, y, z, penValue) {
-	let dx = this.back.dims[1]
- 	let dy = this.back.dims[2]
- 	let dz = this.back.dims[3]
-	/*
+  let dx = this.back.dims[1];
+  let dy = this.back.dims[2];
+  let dz = this.back.dims[3];
+  /*
 	let dx = this.volumes[0].hdr.dims[1]
  	let dy = this.volumes[0].hdr.dims[2]
  	let dz = this.volumes[0].hdr.dims[3]
@@ -1524,7 +1524,7 @@ Niivue.prototype.drawPt = function (x, y, z, penValue) {
   x = Math.min(Math.max(x, 0), dx - 1);
   y = Math.min(Math.max(y, 0), dy - 1);
   z = Math.min(Math.max(z, 0), dz - 1);
-	this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
+  this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
   //console.log('>>',x, y, z, penValue);
 };
 
@@ -1619,11 +1619,11 @@ Niivue.prototype.createRandomDrawing = function () {
     this.volumes[0].dimsRAS[3]
   );
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-	if (vx !== this.drawBitmap.length) {
-		console.log("Epic failure");
-	}
+  if (vx !== this.drawBitmap.length) {
+    console.log("Epic failure");
+  }
 
-	/*
+  /*
   let ptA = [1, 1, 33];
   let ptB = [63, 78, 33];
   this.drawLine(ptA, ptB, 1);
@@ -1636,13 +1636,13 @@ Niivue.prototype.createRandomDrawing = function () {
 	*/
 
   //draw one line on each slice
-	/*
+  /*
   let dx = this.volumes[0].hdr.dims[1] - 1;
   let dy = this.volumes[0].hdr.dims[2] - 1;
   let dz = this.volumes[0].hdr.dims[3];
 	*/
 
-	let dx = this.back.dims[1] - 1;
+  let dx = this.back.dims[1] - 1;
   let dy = this.back.dims[2] - 1;
   let dz = this.back.dims[3];
   let ptA = [0, 0, 0];
@@ -1663,8 +1663,8 @@ Niivue.prototype.closeDrawing = function () {
 
 //Copy drawing bitmap from CPU to GPU storage and redraw the screen
 Niivue.prototype.refreshDrawing = function (isForceRedraw = true) {
-	let dims = this.back.dims.slice()
-	//let dims = this.volumes[0].hdr.dims.slice();
+  let dims = this.back.dims.slice();
+  //let dims = this.volumes[0].hdr.dims.slice();
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (this.drawBitmap.length === 8) {
     dims[1] = 2;
@@ -2788,7 +2788,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.drawScene();
         return;
       }
-			// scrolling... not mouse
+      // scrolling... not mouse
       if (posChange !== 0) {
         posNow = this.scene.crosshairPos[2 - axCorSag];
         posFuture = posNow + posChange;
@@ -2821,8 +2821,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
-      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1)
-      this.refreshDrawing(false)
+      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1);
+      this.refreshDrawing(false);
       this.drawScene();
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
