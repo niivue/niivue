@@ -93,8 +93,28 @@ NVMesh.prototype.updateFibers = function (gl) {
   //VERTICES:
   let pts = this.pts;
   let offsetPt0 = this.offsetPt0;
-  //determine fiber colors
+  let n_count = offsetPt0.length - 1;
   let npt = pts.length / 3; //each point has three components: X,Y,Z
+  //only once: compute length of each streamline
+  if (!this.fiberLengths) {
+    this.fiberLengths = [];
+    for (let i = 0; i < n_count; i++) {
+      //for each streamline
+      let vStart3 = offsetPt0[i] * 3; //first vertex in streamline
+      let vEnd3 = (offsetPt0[i + 1] - 1) * 3; //last vertex in streamline
+      let len = 0;
+      for (let j = vStart3; j < vEnd3; j += 3) {
+        let v = vec3.fromValues(
+          pts[j + 0] - pts[j + 3],
+          pts[j + 1] - pts[j + 4],
+          pts[j + 2] - pts[j + 5]
+        );
+        len += vec3.len(v);
+      }
+      this.fiberLengths.push(len);
+    }
+  } //only once: compute length of each streamline
+  //determine fiber colors
   //Each streamline vertex has color and position attributes
   //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
   var posClrF32 = new Float32Array(npt * 4); //four 32-bit components X,Y,Z,C
@@ -113,10 +133,9 @@ NVMesh.prototype.updateFibers = function (gl) {
   let dither = this.fiberDither;
   let ditherHalf = dither * 0.5;
   let r = 0.0;
-  let n_count = offsetPt0.length - 1;
   for (let i = 0; i < n_count; i++) {
-    let vStart = offsetPt0[i]; //line start
-    let vEnd = offsetPt0[i + 1] - 1; //line end
+    let vStart = offsetPt0[i]; //first vertex in streamline
+    let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
     let vStart3 = vStart * 3; //pts have 3 components XYZ
     let vEnd3 = vEnd * 3;
     let v = vec3.fromValues(
@@ -137,13 +156,13 @@ NVMesh.prototype.updateFibers = function (gl) {
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
   //INDICES:
-  let min_pts = this.fiberLength;
+  let min_mm = this.fiberLength;
   //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
   let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
   let indices = [];
   for (let i = 0; i < n_count; i++) {
-    let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
-    if (n_pts < min_pts) continue;
+    //let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
+    if (this.fiberLengths[i] < min_mm) continue;
     for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
     indices.push(primitiveRestart);
   }
@@ -493,8 +512,22 @@ NVMesh.readTRK = function (buffer) {
   // in practice, always little endian
   var reader = new DataView(buffer);
   var magic = reader.getUint32(0, true); //'TRAC'
+  if (magic !== 1128354388) {
+    //e.g. TRK.gz
+    var raw;
+    if (typeof pako === "object" && typeof pako.deflate === "function") {
+      raw = pako.inflate(new Uint8Array(buffer));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate = new Zlib.Gunzip(new Uint8Array(buffer)); // eslint-disable-line no-undef
+      raw = inflate.decompress();
+    }
+    buffer = raw.buffer;
+    reader = new DataView(buffer);
+    magic = reader.getUint32(0, true); //'TRAC'
+  }
   var vers = reader.getUint32(992, true); //2
   var hdr_sz = reader.getUint32(996, true); //1000
+
   if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388)
     throw new Error("Not a valid TRK file");
   var n_scalars = reader.getInt16(36, true);
@@ -531,24 +564,25 @@ NVMesh.readTRK = function (buffer) {
   mat4.mul(vox2mmMat, mat, zoomMat);
   let i32 = null;
   let f32 = null;
-  if (n_scalars === 0 && n_properties === 0) {
-    //fast reading
-    i32 = new Int32Array(buffer.slice(hdr_sz));
-    f32 = new Float32Array(i32.buffer);
-  } else {
-    console.log("ooops");
+  if (n_scalars !== 0 || n_properties === 0) {
+    console.log("scalars " + n_scalars + " properties " + n_properties);
   }
+  i32 = new Int32Array(buffer.slice(hdr_sz));
+  f32 = new Float32Array(i32.buffer);
+
   let ntracks = i32.length;
   //read and transform vertex positions
   let i = 0;
   let npt = 0;
   let offsetPt0 = [];
   let pts = [];
+  let scalars = [];
+  let properties = [];
   while (i < ntracks) {
     let n_pts = i32[i];
     i = i + 1; // read 1 32-bit integer for number of points in this streamline
     offsetPt0.push(npt); //index of first vertex in this streamline
-    for (var j = 0; j < n_pts; j++) {
+    for (let j = 0; j < n_pts; j++) {
       let ptx = f32[i + 0];
       let pty = f32[i + 1];
       let ptz = f32[i + 2];
@@ -571,9 +605,21 @@ NVMesh.readTRK = function (buffer) {
           ptz * vox2mmMat[10] +
           vox2mmMat[11]
       );
+      if (n_scalars > 0) {
+        for (let s = 0; s < n_scalars; s++) {
+          scalars.push(f32[i]);
+          i++;
+        }
+      }
       npt++;
+    } // for j: each point in streamline
+    if (n_properties > 0) {
+      for (let j = 0; j < n_properties; j++) {
+        properties.push(f32[i]);
+        i++;
+      }
     }
-  } //compute n_count
+  } //for each streamline: while i < n_count
   offsetPt0.push(npt); //add 'first index' as if one more line was added (fence post problem)
   console.log(
     "TRK streamlines (n_count) >>",
@@ -1052,8 +1098,13 @@ NVMesh.readMesh = function (
   let obj = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
-    if (ext.toUpperCase() === "TCK") obj = this.readTCK(buffer);
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+    ext = ext.toUpperCase();
+  }
+  if (ext === "TRK" || ext.toUpperCase() === "TCK") {
+    if (ext === "TCK") obj = this.readTCK(buffer);
     else obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
@@ -1067,10 +1118,10 @@ NVMesh.readMesh = function (
       gl
     );
   } //is fibers
-  if (ext.toUpperCase() === "GII") obj = this.readGII(buffer);
-  else if (ext.toUpperCase() === "MZ3") obj = this.readMZ3(buffer);
-  else if (ext.toUpperCase() === "OBJ") obj = this.readOBJ(buffer);
-  else if (ext.toUpperCase() === "FIB" || ext.toUpperCase() === "VTK") {
+  if (ext === "GII") obj = this.readGII(buffer);
+  else if (ext === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext === "OBJ") obj = this.readOBJ(buffer);
+  else if (ext === "FIB" || ext.toUpperCase() === "VTK") {
     obj = this.readVTK(buffer);
     if (obj.hasOwnProperty("offsetPt0")) {
       //VTK files used both for meshes and streamlines
@@ -1087,7 +1138,7 @@ NVMesh.readMesh = function (
         gl
       );
     } //if streamlines, not mesh
-  } else if (ext.toUpperCase() === "STL") obj = this.readSTL(buffer);
+  } else if (ext === "STL") obj = this.readSTL(buffer);
   //unknown file extension, try freeSurfer as hail mary
   else obj = this.readFreeSurfer(buffer);
   pts = obj.positions.slice();

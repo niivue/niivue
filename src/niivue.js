@@ -886,6 +886,10 @@ Niivue.prototype.dropListener = async function (e) {
         var re = /(?:\.([^.]+))?$/;
         let ext = re.exec(file.name)[1];
         ext = ext.toUpperCase();
+        if (ext === "GZ") {
+          ext = re.exec(file.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+          ext = ext.toUpperCase();
+        }
         console.log(ext, "dropped ", file.name);
         if (ext === "PNG") {
           this.loadBmpTexture(file);

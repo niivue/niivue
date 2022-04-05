@@ -21770,7 +21770,21 @@ NVMesh.prototype.updateFibers = function(gl) {
     return;
   let pts = this.pts;
   let offsetPt0 = this.offsetPt0;
+  let n_count = offsetPt0.length - 1;
   let npt = pts.length / 3;
+  if (!this.fiberLengths) {
+    this.fiberLengths = [];
+    for (let i = 0; i < n_count; i++) {
+      let vStart3 = offsetPt0[i] * 3;
+      let vEnd3 = (offsetPt0[i + 1] - 1) * 3;
+      let len$1 = 0;
+      for (let j = vStart3; j < vEnd3; j += 3) {
+        let v = fromValues$1(pts[j + 0] - pts[j + 3], pts[j + 1] - pts[j + 4], pts[j + 2] - pts[j + 5]);
+        len$1 += len(v);
+      }
+      this.fiberLengths.push(len$1);
+    }
+  }
   var posClrF32 = new Float32Array(npt * 4);
   var posClrU32 = new Uint32Array(posClrF32.buffer);
   let i3 = 0;
@@ -21785,7 +21799,6 @@ NVMesh.prototype.updateFibers = function(gl) {
   let dither = this.fiberDither;
   let ditherHalf = dither * 0.5;
   let r = 0;
-  let n_count = offsetPt0.length - 1;
   for (let i = 0; i < n_count; i++) {
     let vStart = offsetPt0[i];
     let vEnd = offsetPt0[i + 1] - 1;
@@ -21805,12 +21818,11 @@ NVMesh.prototype.updateFibers = function(gl) {
   }
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
-  let min_pts = this.fiberLength;
+  let min_mm = this.fiberLength;
   let primitiveRestart = Math.pow(2, 32) - 1;
   let indices = [];
   for (let i = 0; i < n_count; i++) {
-    let n_pts = offsetPt0[i + 1] - offsetPt0[i];
-    if (n_pts < min_pts)
+    if (this.fiberLengths[i] < min_mm)
       continue;
     for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++)
       indices.push(j);
@@ -22079,6 +22091,18 @@ NVMesh.readTCK = function(buffer) {
 NVMesh.readTRK = function(buffer) {
   var reader = new DataView(buffer);
   var magic = reader.getUint32(0, true);
+  if (magic !== 1128354388) {
+    var raw;
+    if (typeof pako$1 === "object" && typeof deflate_1 === "function") {
+      raw = inflate_1(new Uint8Array(buffer));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate2 = new Zlib.Gunzip(new Uint8Array(buffer));
+      raw = inflate2.decompress();
+    }
+    buffer = raw.buffer;
+    reader = new DataView(buffer);
+    magic = reader.getUint32(0, true);
+  }
   var vers = reader.getUint32(992, true);
   var hdr_sz = reader.getUint32(996, true);
   if (vers > 2 || hdr_sz !== 1e3 || magic !== 1128354388)
@@ -22100,22 +22124,23 @@ NVMesh.readTRK = function(buffer) {
   mul$1(vox2mmMat, mat, zoomMat);
   let i32 = null;
   let f32 = null;
-  if (n_scalars === 0 && n_properties === 0) {
-    i32 = new Int32Array(buffer.slice(hdr_sz));
-    f32 = new Float32Array(i32.buffer);
-  } else {
-    console.log("ooops");
+  if (n_scalars !== 0 || n_properties === 0) {
+    console.log("scalars " + n_scalars + " properties " + n_properties);
   }
+  i32 = new Int32Array(buffer.slice(hdr_sz));
+  f32 = new Float32Array(i32.buffer);
   let ntracks = i32.length;
   let i = 0;
   let npt = 0;
   let offsetPt0 = [];
   let pts = [];
+  let scalars = [];
+  let properties = [];
   while (i < ntracks) {
     let n_pts = i32[i];
     i = i + 1;
     offsetPt0.push(npt);
-    for (var j = 0; j < n_pts; j++) {
+    for (let j = 0; j < n_pts; j++) {
       let ptx = f32[i + 0];
       let pty = f32[i + 1];
       let ptz = f32[i + 2];
@@ -22123,7 +22148,19 @@ NVMesh.readTRK = function(buffer) {
       pts.push(ptx * vox2mmMat[0] + pty * vox2mmMat[1] + ptz * vox2mmMat[2] + vox2mmMat[3]);
       pts.push(ptx * vox2mmMat[4] + pty * vox2mmMat[5] + ptz * vox2mmMat[6] + vox2mmMat[7]);
       pts.push(ptx * vox2mmMat[8] + pty * vox2mmMat[9] + ptz * vox2mmMat[10] + vox2mmMat[11]);
+      if (n_scalars > 0) {
+        for (let s = 0; s < n_scalars; s++) {
+          scalars.push(f32[i]);
+          i++;
+        }
+      }
       npt++;
+    }
+    if (n_properties > 0) {
+      for (let j = 0; j < n_properties; j++) {
+        properties.push(f32[i]);
+        i++;
+      }
     }
   }
   offsetPt0.push(npt);
@@ -22547,8 +22584,13 @@ NVMesh.readMesh = function(buffer, name, gl, opacity = 1, rgba255 = [255, 255, 2
   let obj = [];
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
-  if (ext.toUpperCase() === "TRK" || ext.toUpperCase() === "TCK") {
-    if (ext.toUpperCase() === "TCK")
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(name.slice(0, -3))[1];
+    ext = ext.toUpperCase();
+  }
+  if (ext === "TRK" || ext.toUpperCase() === "TCK") {
+    if (ext === "TCK")
       obj = this.readTCK(buffer);
     else
       obj = this.readTRK(buffer);
@@ -22556,20 +22598,20 @@ NVMesh.readMesh = function(buffer, name, gl, opacity = 1, rgba255 = [255, 255, 2
     let pts2 = new Float32Array(obj.pts.slice());
     return new NVMesh(pts2, offsetPt0, name, null, opacity, visible, gl);
   }
-  if (ext.toUpperCase() === "GII")
+  if (ext === "GII")
     obj = this.readGII(buffer);
-  else if (ext.toUpperCase() === "MZ3")
+  else if (ext === "MZ3")
     obj = this.readMZ3(buffer);
-  else if (ext.toUpperCase() === "OBJ")
+  else if (ext === "OBJ")
     obj = this.readOBJ(buffer);
-  else if (ext.toUpperCase() === "FIB" || ext.toUpperCase() === "VTK") {
+  else if (ext === "FIB" || ext.toUpperCase() === "VTK") {
     obj = this.readVTK(buffer);
     if (obj.hasOwnProperty("offsetPt0")) {
       let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
       let pts2 = new Float32Array(obj.pts.slice());
       return new NVMesh(pts2, offsetPt0, name, null, opacity, visible, gl);
     }
-  } else if (ext.toUpperCase() === "STL")
+  } else if (ext === "STL")
     obj = this.readSTL(buffer);
   else
     obj = this.readFreeSurfer(buffer);
@@ -24711,6 +24753,10 @@ Niivue.prototype.dropListener = async function(e) {
         var re = /(?:\.([^.]+))?$/;
         let ext = re.exec(file.name)[1];
         ext = ext.toUpperCase();
+        if (ext === "GZ") {
+          ext = re.exec(file.name.slice(0, -3))[1];
+          ext = ext.toUpperCase();
+        }
         console.log(ext, "dropped ", file.name);
         if (ext === "PNG") {
           this.loadBmpTexture(file);
@@ -24729,6 +24775,7 @@ Niivue.prototype.dropListener = async function(e) {
           }
         }
         if (file.name.lastIndexOf("BRIK") !== -1) {
+          console.log("Ignoring ", file.name);
           continue;
         }
         if (ext === "GII" || ext === "MZ3" || ext === "OBJ" || ext === "STL" || ext === "TCK" || ext === "TRK" || ext === "VTK") {
