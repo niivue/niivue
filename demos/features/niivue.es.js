@@ -11797,6 +11797,7 @@ NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
           hdr.littleEndian = false;
         break;
       case "BRICK_TYPES":
+        hdr.dims[4] = count;
         let datatype = parseInt(items[0]);
         if (datatype === 0) {
           hdr.numBitsPerVoxel = 8;
@@ -11845,6 +11846,18 @@ NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
     this.THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific);
   else
     this.SetPixDimFromSForm();
+  let nBytes = hdr.numBitsPerVoxel / 8 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
+  if (pairedImgData.byteLength < nBytes) {
+    var raw;
+    if (typeof pako$1 === "object" && typeof deflate_1 === "function") {
+      raw = inflate_1(new Uint8Array(pairedImgData));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate2 = new Zlib.Gunzip(new Uint8Array(pairedImgData));
+      raw = inflate2.decompress();
+    }
+    return raw.buffer;
+  }
+  pairedImgData.slice();
   return pairedImgData.slice();
 };
 NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
@@ -12344,7 +12357,6 @@ NVImage.loadFromUrl = async function({
   else if (ext.toUpperCase() === "HEAD") {
     if (urlImgData === "") {
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
-      console.log(urlImgData);
     }
   }
   let urlParts = url.split("/");
@@ -24775,7 +24787,6 @@ Niivue.prototype.dropListener = async function(e) {
           }
         }
         if (file.name.lastIndexOf("BRIK") !== -1) {
-          console.log("Ignoring ", file.name);
           continue;
         }
         if (ext === "GII" || ext === "MZ3" || ext === "OBJ" || ext === "STL" || ext === "TCK" || ext === "TRK" || ext === "VTK") {

@@ -505,6 +505,9 @@ NVMesh.readTCK = function (buffer) {
   };
 }; //readTCK()
 
+//ToDo: readTRX
+// https://stackoverflow.com/questions/32633585/how-do-you-convert-to-half-floats-in-javascript
+
 NVMesh.readTRK = function (buffer) {
   // http://trackvis.org/docs/?subsect=fileformat
   // http://www.tractometer.org/fiberweb/
@@ -531,6 +534,15 @@ NVMesh.readTRK = function (buffer) {
   if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388)
     throw new Error("Not a valid TRK file");
   var n_scalars = reader.getInt16(36, true);
+  let scalar_names = [];
+  if (n_scalars > 0) {
+    for (let i = 0; i < n_scalars; i++) {
+      let arr = (new Uint8Array(buffer.slice(38+(i*20),58+(i*20))));
+      var str = new TextDecoder().decode(arr).split("\0").shift();;
+      scalar_names.push(str.trim()); //trim: https://github.com/johncolby/along-tract-stats
+    }
+  }
+  //console.log('scalar_names',scalar_names);
   var voxel_sizeX = reader.getFloat32(12, true);
   var voxel_sizeY = reader.getFloat32(16, true);
   var voxel_sizeZ = reader.getFloat32(20, true);
@@ -553,6 +565,15 @@ NVMesh.readTRK = function (buffer) {
     1
   );
   var n_properties = reader.getInt16(238, true);
+  let property_names = [];
+  if (n_properties > 0) {
+    for (let i = 0; i < n_properties; i++) {
+      let arr = (new Uint8Array(buffer.slice(240+(i*20),260+(i*20))));
+      var str = new TextDecoder().decode(arr).split("\0").shift();;
+      property_names.push(str.trim());
+    }
+  }
+  //console.log('property_names',property_names);
   var mat = mat4.create();
   for (let i = 0; i < 16; i++) mat[i] = reader.getFloat32(440 + i * 4, true);
   if (mat[15] === 0.0) {
@@ -564,9 +585,6 @@ NVMesh.readTRK = function (buffer) {
   mat4.mul(vox2mmMat, mat, zoomMat);
   let i32 = null;
   let f32 = null;
-  if (n_scalars !== 0 || n_properties === 0) {
-    console.log("scalars " + n_scalars + " properties " + n_properties);
-  }
   i32 = new Int32Array(buffer.slice(hdr_sz));
   f32 = new Float32Array(i32.buffer);
 

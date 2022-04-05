@@ -20,10 +20,10 @@
 
     <section>
       <h1>
-        4D images: fMRI, DTI, ASL
+        AFNI images
       </h1>
       <p>
-        You can see different volumes in a 4D time series by clicking the forward and back buttons
+        AFNI uses a pair of files (.HEAD, .BRIK) to describe each volume. You can also drag and drop the HEAD/BRIK pair to view this format.
       </p>
     </section>
 
@@ -45,7 +45,8 @@
      var volumeList1 = [
        // first item is background image
          {
-           url: "../images/pcasl.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           url: "../images/example4d+orig.HEAD",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+           urlImgData : "../images/example4d+orig.BRIK.gz",
            colorMap: "gray",
            opacity: 1,
            visible: true,

@@ -944,7 +944,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
     }
   }
-  this.createEmptyDrawing();
+  //this.createEmptyDrawing();
   this.drawScene(); //<- this seems to be required if you drag and drop a mesh, not a volume
 };
 
@@ -1499,6 +1499,7 @@ Niivue.prototype.loadConnectome = async function (json) {
 
 //Generate a blank GPU texture and CPU bitmap for drawing
 Niivue.prototype.createEmptyDrawing = function () {
+  if (!this.back.hasOwnProperty("dims")) return;
   let mn = Math.min(
     Math.min(this.back.dims[1], this.back.dims[2]),
     this.back.dims[3]
@@ -2825,7 +2826,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
-      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1);
+      //this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1);
       this.refreshDrawing(false);
       this.drawScene();
       this.scene.location$.next({

@@ -582,6 +582,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
         else if (items[0].includes("MSB_FIRST")) hdr.littleEndian = false;
         break;
       case "BRICK_TYPES":
+        hdr.dims[4] = count;
         let datatype = parseInt(items[0]);
         if (datatype === 0) {
           hdr.numBitsPerVoxel = 8;
@@ -629,6 +630,25 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   if (!hasIJK_TO_DICOM_REAL)
     this.THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific);
   else this.SetPixDimFromSForm();
+  let nBytes =
+    (hdr.numBitsPerVoxel / 8) *
+    hdr.dims[1] *
+    hdr.dims[2] *
+    hdr.dims[3] *
+    hdr.dims[4];
+  if (pairedImgData.byteLength < nBytes) {
+    //n.b. npm run dev implicitly extracts gz, npm run demo does not!
+    //assume gz compressed
+    var raw;
+    if (typeof pako === "object" && typeof pako.deflate === "function") {
+      raw = pako.inflate(new Uint8Array(pairedImgData));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate = new Zlib.Gunzip(new Uint8Array(pairedImgData)); // eslint-disable-line no-undef
+      raw = inflate.decompress();
+    }
+    return raw.buffer;
+  }
+  let v = pairedImgData.slice();
   return pairedImgData.slice();
 };
 
@@ -1277,7 +1297,6 @@ NVImage.loadFromUrl = async function ({
   } else if (ext.toUpperCase() === "HEAD") {
     if (urlImgData === "") {
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
-      console.log(urlImgData);
     }
   }
   let urlParts = url.split("/"); // split url parts at slash
