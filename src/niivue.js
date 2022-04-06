@@ -924,6 +924,7 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "STL" ||
           ext === "TCK" ||
           ext === "TRK" ||
+          ext === "TRX" ||
           ext === "VTK"
         ) {
           //console.log("mesh loading not yet supported");
