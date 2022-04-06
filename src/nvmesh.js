@@ -16,7 +16,6 @@ const log = new Log();
  * @constructor
  * @param {array} dataBuffer an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
@@ -44,6 +43,7 @@ export var NVMesh = function (
   this.offsetPt0 = null;
   this.hasConnectome = false;
   this.pts = pts;
+  this.layers = [];
   if (!rgba255) {
     this.fiberLength = 2;
     this.fiberDither = 0.1;
@@ -256,7 +256,6 @@ NVMesh.prototype.updateConnectome = function (gl) {
       } //for j
     } //for i
   } //hasEdges
-  console.log(pts.length, "<>", tris.length);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   //generate webGL buffers and vao
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -279,7 +278,40 @@ NVMesh.prototype.updateMesh = function (gl) {
     console.log("underspecified mesh");
     return;
   }
+  console.log("Points " + this.pts.length + " Indices " + this.tris.length);
   let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
+  if (this.layers && this.layers.length > 0) {
+    for (let i = 0; i < this.layers.length; i++) {
+      let layer = this.layers[i];
+      if (layer.opacity <= 0.0 || layer.cal_min >= layer.cal_max) continue;
+      let lut = cmapper.colormap(layer.colorMap);
+      //console.log(layer.colorMap,'++', layer);
+      let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
+      let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
+      var u8 = new Uint8Array(posNormClr.buffer); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
+      let opacity = layer.opacity;
+      function lerp(x, y, a) {
+        //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
+        return x * (1 - a) + y * a;
+      }
+      //blend colors for each voxel
+      for (
+        let j = frame * layer.values.length;
+        j < (frame + 1) * layer.values.length;
+        j++
+      ) {
+        let v255 = Math.round((layer.values[j] - layer.cal_min) * scale255);
+        if (v255 < 0) continue;
+        v255 = Math.min(255.0, v255) * 4;
+        let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+        u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+        u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+        u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+      }
+    }
+  }
+
+  //  console.log(layer.frame4D, '::::', layer.values[0]);
   //generate webGL buffers and vao
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(
@@ -290,15 +322,25 @@ NVMesh.prototype.updateMesh = function (gl) {
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
   this.indexCount = this.tris.length;
+  this.vertexCount = this.pts.length;
 };
 
+NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
+  let layer = this.layers[id];
+  if (!layer.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, layer);
+    return;
+  }
+  layer[key] = val;
+  this.updateMesh(gl); //apply the new properties...
+};
 NVMesh.prototype.setProperty = function (key, val, gl) {
   if (!this.hasOwnProperty(key)) {
     console.log("mesh does not have property ", key, this);
     return;
   }
   this[key] = val;
-  console.log(this);
+  //console.log(this);
   this.updateMesh(gl); //apply the new properties...
 };
 
@@ -537,8 +579,8 @@ NVMesh.readTRK = function (buffer) {
   let scalar_names = [];
   if (n_scalars > 0) {
     for (let i = 0; i < n_scalars; i++) {
-      let arr = (new Uint8Array(buffer.slice(38+(i*20),58+(i*20))));
-      var str = new TextDecoder().decode(arr).split("\0").shift();;
+      let arr = new Uint8Array(buffer.slice(38 + i * 20, 58 + i * 20));
+      var str = new TextDecoder().decode(arr).split("\0").shift();
       scalar_names.push(str.trim()); //trim: https://github.com/johncolby/along-tract-stats
     }
   }
@@ -568,8 +610,8 @@ NVMesh.readTRK = function (buffer) {
   let property_names = [];
   if (n_properties > 0) {
     for (let i = 0; i < n_properties; i++) {
-      let arr = (new Uint8Array(buffer.slice(240+(i*20),260+(i*20))));
-      var str = new TextDecoder().decode(arr).split("\0").shift();;
+      let arr = new Uint8Array(buffer.slice(240 + i * 20, 260 + i * 20));
+      var str = new TextDecoder().decode(arr).split("\0").shift();
       property_names.push(str.trim());
     }
   }
@@ -732,6 +774,35 @@ NVMesh.readTxtVTK = function (buffer) {
   };
 }; // readTxtVTK()
 
+NVMesh.readSTC = function (buffer, n_vert) {
+  //mne STC format
+  //https://github.com/mne-tools/mne-python/blob/main/mne/source_estimate.py#L211-L365
+  //https://github.com/fahsuanlin/fhlin_toolbox/blob/400cb73cda4880d9ad7841d9dd68e4e9762976bf/codes/inverse_read_stc.m
+  let len = buffer.byteLength;
+  var reader = new DataView(buffer);
+  //first 12 bytes are header
+  let epoch_begin_latency = reader.getFloat32(0, false);
+  let sample_period = reader.getFloat32(4, false);
+  let n_vertex = reader.getInt32(8, false);
+  if (n_vertex !== n_vert) {
+    console.log("Overlay has " + n_vertex + " vertices, expected " + n_vert);
+    return;
+  }
+  //next 4*n_vertex bytes are vertex IDS
+  let pos = 12 + n_vertex * 4;
+  //next 4 bytes reports number of volumes/time points
+  let n_time = reader.getUint32(pos, false);
+  pos += 4;
+  let f32 = new Float32Array(n_time * n_vertex);
+  //reading all floats with .slice() would be faster, but lets handle endian-ness
+  for (let i = 0; i < n_time * n_vertex; i++) {
+    f32[i] = reader.getFloat32(pos, false);
+    pos += 4;
+  }
+  return f32;
+  //this.vertexCount = this.pts.length;
+};
+
 NVMesh.readVTK = function (buffer) {
   let len = buffer.byteLength;
   if (len < 20)
@@ -842,7 +913,8 @@ NVMesh.readVTK = function (buffer) {
   };
 }; // readVTK()
 
-NVMesh.readMZ3 = function (buffer) {
+NVMesh.readMZ3 = function (buffer, n_vert = 0) {
+  //ToDo: mz3 always little endian: support big endian? endian https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
   if (buffer.byteLength < 20)
     //76 for raw, not sure of gzip
     throw new Error("File too small to be mz3: bytes = " + buffer.byteLength);
@@ -893,8 +965,12 @@ NVMesh.readMZ3 = function (buffer) {
   var isDOUBLE = attr & 16;
   var isAOMap = attr & 32;
   if (attr > 63) throw new Error("Unsupported future version of MZ3 file");
-  if (!isFace || !isVert || nface < 1 || nvert < 3)
-    throw new Error("Not a mesh MZ3 file (maybe scalar)");
+  if (nvert < 3) throw new Error("Not a mesh MZ3 file (maybe scalar)");
+  if (n_vert > 0 && n_vert !== nvert) {
+    console.log(
+      "Layer has " + nvert + "vertices, but background mesh has " + n_vert
+    );
+  }
   var filepos = 16 + nskip;
   var indices = null;
   if (isFace) {
@@ -923,30 +999,69 @@ NVMesh.readMZ3 = function (buffer) {
       k4++; //skip Alpha
     } //for i
   } //if isRGBA
-  //
-  var uv2 = null;
-  if (!isRGBA && isSCALAR && isAOMap) {
-    var scalars = new Float32Array(_buffer, filepos, nvert, true);
+  let scalars = [];
+  if (!isRGBA && isSCALAR) {
+    let nFrame4D = Math.floor((_buffer.byteLength - filepos) / 4 / nvert);
+    if (nFrame4D < 1) {
+      console.log("MZ3 corrupted");
+      return;
+    }
+    scalars = new Float32Array(_buffer, filepos, nFrame4D * nvert);
     filepos += nvert * 4;
-    /*var mn = scalars[0];
-    var mx = scalars[0];
-    for ( var i = 0; i < nvert; i ++ ) {
-      if (scalars[i] < mn) mn = scalars[i];
-      if (scalars[i] > mx) mx = scalars[i];
-    }
-    console.log("scalar range %g...%g", mn, mx);*/
-    uv2 = new Float32Array(nvert * 2);
-    for (var i = 0; i < nvert; i++) {
-      uv2[i * 2] = uv2[i * 2 + 1] = scalars[i];
-    }
   }
+  console.log(nvert, ":!", n_vert, attr);
+
+  if (n_vert > 0) return scalars;
   return {
     positions,
     indices,
-    uv2,
+    scalars,
     colors,
   };
 }; // readMZ3()
+
+NVMesh.readLayer = function (
+  name,
+  buffer,
+  nvmesh,
+  opacity = 0.5,
+  colorMap = "rocket"
+) {
+  let layer = [];
+  let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
+  if (n_vert < 3) return;
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(name)[1];
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+    ext = ext.toUpperCase();
+  }
+  console.log(name, ":", n_vert, ">>>", buffer);
+  if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
+  else if (ext === "STC") layer.values = this.readSTC(buffer, n_vert);
+  else {
+    console.log("Unknown layer overlay format " + name);
+    return;
+  }
+  if (!layer.values) return;
+  layer.nFrame4D = layer.values.length / n_vert;
+  layer.frame4D = 0;
+  //determine global min..max
+  let mn = layer.values[0];
+  let mx = layer.values[0];
+  for (var i = 0; i < layer.values.length; i++) {
+    mn = Math.min(mn, layer.values[i]);
+    mx = Math.max(mx, layer.values[i]);
+  }
+  layer.global_min = mn;
+  layer.global_max = mx;
+  layer.cal_min = mn;
+  layer.cal_max = mx;
+  layer.opacity = opacity;
+  layer.colorMap = colorMap;
+  nvmesh.layers.push(layer);
+};
 
 NVMesh.readOBJ = function (buffer) {
   //WaveFront OBJ format
@@ -1209,22 +1324,35 @@ NVMesh.loadFromUrl = async function ({
   url = "",
   gl = null,
   name = "",
-  colorMap = "yellow",
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true,
+  layers = [],
 } = {}) {
   if (url === "") throw Error("url must not be empty");
   if (gl === null) throw Error("gl context is null");
   let response = await fetch(url);
-  let nvmesh = null;
   if (!response.ok) throw Error(response.statusText);
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   let tris = [];
   var pts = [];
   let buffer = await response.arrayBuffer();
-  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  let nvmesh = this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  if (!layers || layers.length < 1) return nvmesh;
+  for (let i = 0; i < layers.length; i++) {
+    response = await fetch(layers[i].url);
+    if (!response.ok) throw Error(response.statusText);
+    buffer = await response.arrayBuffer();
+    urlParts = layers[i].url.split("/");
+    let opacity = 0.5;
+    if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
+    let colorMap = "viridis";
+    if (layers[i].hasOwnProperty("colorMap")) colorMap = layers[i].colorMap;
+    this.readLayer(urlParts.slice(-1)[0], buffer, nvmesh, opacity, colorMap);
+  }
+  nvmesh.updateMesh(gl); //apply the new properties...
+  return nvmesh;
 };
 
 // not included in public docs
@@ -1247,7 +1375,6 @@ NVMesh.readFileAsync = function (file) {
  * factory function to load and return a new NVImage instance from a file in the browser
  * @param {string} file the file object
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
@@ -1261,14 +1388,13 @@ NVMesh.loadFromFile = async function ({
   file,
   gl,
   name = "",
-  colorMap = "blue",
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true,
+  layers = [],
 } = {}) {
-  let nvmesh = [];
   let buffer = await this.readFileAsync(file);
-  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  return this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
 };
 
 String.prototype.getBytes = function () {
