@@ -9,6 +9,7 @@ import { mat4, vec3 } from "gl-matrix";
 import { colortables } from "./colortables";
 const cmapper = new colortables();
 const log = new Log();
+
 /**
  * @class NVMesh
  * @type NVMesh
@@ -87,7 +88,7 @@ export function NVMesh(
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
-};
+}
 
 NVMesh.prototype.updateFibers = function (gl) {
   if (!this.offsetPt0 || !this.fiberLength) return;
