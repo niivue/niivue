@@ -97,6 +97,8 @@ export const Niivue = function (options = {}) {
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
+    drawingEnabled: true,
+    penValue: 1, // sets drawing color. see "drawPt"
     thumbnail: "",
   };
 
@@ -1246,6 +1248,16 @@ Niivue.prototype.setCrosshairColor = function (color) {
   this.opts.crosshairColor = color;
   this.drawScene();
 }; // setCrosshairColor()
+
+Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
+  this.opts.drawingEnabled = trueOrFalse;
+  this.drawScene();
+};
+
+Niivue.prototype.setPenValue = function (penValue) {
+  this.opts.penValue = penValue;
+  this.drawScene();
+};
 
 /**
  * set the selection box color. A selection box is drawn when you right click and drag to change image intensity
@@ -2825,8 +2837,13 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
-      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1);
-      this.refreshDrawing(false);
+      if (this.opts.drawingEnabled) {
+        this.drawPt(
+          ...this.frac2vox(this.scene.crosshairPos),
+          this.opts.penValue
+        );
+        this.refreshDrawing(false);
+      }
       this.drawScene();
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
