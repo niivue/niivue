@@ -97,7 +97,7 @@ export const Niivue = function (options = {}) {
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
-    drawingEnabled: true,
+    drawingEnabled: false, // drawing disabled by default
     penValue: 1, // sets drawing color. see "drawPt"
     thumbnail: "",
   };

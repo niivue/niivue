@@ -291,7 +291,8 @@ NVMesh.prototype.updateMesh = function (gl) {
         //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
         return x * (1 - a) + y * a;
       }
-      if (layer.values.constructor === Uint32Array) { //isRGBA!
+      if (layer.values.constructor === Uint32Array) {
+        //isRGBA!
         let rgba8 = new Uint8Array(layer.values.buffer);
         let k = 0;
         for (let j = 0; j < layer.values.length; j++) {
@@ -563,14 +564,14 @@ NVMesh.readTCK = function (buffer) {
 //ToDo: readTRX
 // https://stackoverflow.com/questions/32633585/how-do-you-convert-to-half-floats-in-javascript
 NVMesh.readTRX = function (buf) {
-  console.log('OK', buf); //buffer.byteLength
+  console.log("OK", buf); //buffer.byteLength
   //var zip = new AdmZip.ZipFile(buf);
-/*
+  /*
   for (var i = 0; i < zipEntries.length; i++) {
       if (zipEntries[i].entryName.match(/readme/))
         console.log(zip.readAsText(zipEntries[i]));
   }*/
-}
+};
 
 NVMesh.readTRK = function (buffer) {
   // http://trackvis.org/docs/?subsect=fileformat
@@ -826,9 +827,9 @@ NVMesh.readSTC = function (buffer, n_vert) {
 }; // readSTC()
 
 NVMesh.readCURV = function (buffer, n_vert) {
-//simple format used by Freesurfer  BIG-ENDIAN
-// https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bpial/readPial.m
-// http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
+  //simple format used by Freesurfer  BIG-ENDIAN
+  // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bpial/readPial.m
+  // http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let sig0 = view.getUint8(0);
@@ -836,17 +837,17 @@ NVMesh.readCURV = function (buffer, n_vert) {
   let sig2 = view.getUint8(2);
   let n_vertex = view.getUint32(3, false);
   let num_f = view.getUint32(7, false);
-  let n_time  = view.getUint32(11, false);
-  if ((sig0 !== 255) || (sig1 !== 255) || (sig2 !== 255))
+  let n_time = view.getUint32(11, false);
+  if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255)
     log.debug(
       "Unable to recognize file type: does not appear to be FreeSurfer format."
     );
   if (n_vert !== n_vertex) {
-    console.log('CURV file has different number of vertices than mesh');
+    console.log("CURV file has different number of vertices than mesh");
     return;
   }
-  if (buffer.byteLength < (15+4*n_vertex*n_time)) {
-    console.log('CURV file smaller than specified');
+  if (buffer.byteLength < 15 + 4 * n_vertex * n_time) {
+    console.log("CURV file smaller than specified");
     return;
   }
   let f32 = new Float32Array(n_time * n_vertex);
@@ -863,24 +864,24 @@ NVMesh.readCURV = function (buffer, n_vert) {
     mx = Math.max(mx, f32[i]);
   }
   //normalize and invert then sqrt
-  let scale = 1.0/(mx - mn);
+  let scale = 1.0 / (mx - mn);
   for (var i = 0; i < f32.length; i++)
-    f32[i] = Math.sqrt(1.0 - ((f32[i] - mn) * scale));
+    f32[i] = Math.sqrt(1.0 - (f32[i] - mn) * scale);
   return f32;
 }; // readCURV()
 
 NVMesh.readANNOT = function (buffer, n_vert) {
-//freesurfer Annotation file provides vertex colors
-//  https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
+  //freesurfer Annotation file provides vertex colors
+  //  https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let n_vertex = view.getUint32(0, false);
   if (n_vert !== n_vertex) {
-    console.log('ANNOT file has different number of vertices than mesh');
+    console.log("ANNOT file has different number of vertices than mesh");
     return;
   }
-  if (buffer.byteLength < (4+8*n_vertex)) {
-    console.log('ANNOT file smaller than specified');
+  if (buffer.byteLength < 4 + 8 * n_vertex) {
+    console.log("ANNOT file smaller than specified");
     return;
   }
   let pos = 4;
@@ -893,7 +894,7 @@ NVMesh.readANNOT = function (buffer, n_vert) {
     pos += 4;
   }
   return rgba32;
-} // readANNOT()
+}; // readANNOT()
 
 NVMesh.readVTK = function (buffer) {
   let len = buffer.byteLength;
@@ -1330,7 +1331,7 @@ NVMesh.readMesh = function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  if ((ext === "TCK") || (ext === "TRK") || (ext === "TRX")) {
+  if (ext === "TCK" || ext === "TRK" || ext === "TRX") {
     if (ext === "TCK") obj = this.readTCK(buffer);
     else if (ext === "TRX") obj = this.readTRX(buffer);
     else obj = this.readTRK(buffer);
@@ -1424,8 +1425,7 @@ NVMesh.loadFromUrl = async function ({
   visible = true,
   layers = [],
 } = {}) {
-
-/*if (url.endsWith('trx')) { 
+  /*if (url.endsWith('trx')) { 
   console.log('URL', url);
   JSZip.loadAsync(url).then(function(zip) {
       for(let [filename, file] of Object.entries(zip.files)) {

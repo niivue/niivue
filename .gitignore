@@ -6,6 +6,8 @@ devdocs
 /docs/niivue*.js
 /demos/niivue*.js
 /tests/niivue*.js
+niivue.es.js
+niivue.umd.js
 
 
 # local env files

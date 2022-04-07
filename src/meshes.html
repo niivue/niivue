@@ -24,6 +24,13 @@
         hot reloadable development preview
       </h1>
     </section>
+<div class="slidecontainer">
+  intensity Max <input type="range" min="1" max="12" value="3" class="slider" id="fiberLengthSlider">
+</div>
+<div class="slidecontainer">
+  fiber dither <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
+</div>
+
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:640px;">
@@ -39,6 +46,16 @@
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
+      var slider = document.getElementById("fiberLengthSlider");
+      var sliderD = document.getElementById("fiberDitherSlider");
+      // Update the current slider value (each time you drag the slider handle)
+      slider.oninput = function() {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value)
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_max', this.value + 2)
+      }
+      sliderD.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
+      }
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -46,6 +63,32 @@
 			const params = new URLSearchParams(query);
 			let url = params.get('url')
 			console.log('url is: ',params.get('url'))
+      // console.log(Niivue)
+      let connectome = {
+      "name": "simpleConnectome",
+      "nodeColormap": "viridis",
+      "nodeColormapNegative": "viridis",
+      "nodeMinColor": 2,
+      "nodeMaxColor": 4,
+      "nodeScale": 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+      "edgeColormap": "warm",
+      "edgeColormapNegative": "winter",
+      "edgeMin": 2,
+      "edgeMax": 4,
+      "edgeScale": 1,
+      "nodes": {
+        "names":["RF", "LF", "RP","LP"], //currently unused
+        "X":[40, -40, 40, -40], //Xmm for each node
+        "Y":[40, 40, -40, -40], //Ymm for each node
+        "Z":[30, 20, 50, 50], //Zmm for each node
+        "Color":[2, 2, 3, 4], //Used to interpolate color
+        "Size":[2, 2, 3, 4], //Size of node
+      },
+      "edges": [1, 2, -3, 4,
+                0, 1, 0, 6,
+                0, 0, 1, 0,
+                0, 0, 0, 1,],
+    }
       var volumeList1 = [
         // first item is brackground image
         {
@@ -57,10 +100,10 @@
           opacity: 1,
           visible: true,
         },
-				{
-					url: "../demos/images/hippo.nii.gz",
-					colorMap: 'red'
-				}
+{
+url: "../demos/images/hippo.nii.gz",
+colorMap: 'red'
+}
       ]
 			var nv1 = new Niivue({
 				logging: true,
@@ -72,27 +115,30 @@
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      await nv1.loadVolumes(volumeList1)
-			
-			/*
+      //await nv1.loadVolumes(volumeList1)
+
+//			nv1.createEmptyDrawing()
+
       var meshLayersList1 = [
         {url: "../demos/images/lh.curv", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
-			*/
 
-			/*
+
       nv1.loadMeshes([
          {url: "../demos/images/lh.pial", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
-			*/
 			
+      //nv1.loadConnectome(connectome)
+      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 90, 0])
       nv1.setRenderAzimuthElevation(90,10)
+      //nv1.volumes[0].frame4D = 5;
 
+      //nv1.updateGLVolume()
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
