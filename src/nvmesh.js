@@ -5,10 +5,11 @@ import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
-import { mat3, mat4, vec3, vec4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 import { colortables } from "./colortables";
 const cmapper = new colortables();
 const log = new Log();
+
 /**
  * @class NVMesh
  * @type NVMesh
@@ -23,7 +24,7 @@ const log = new Log();
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
  */
-export var NVMesh = function (
+export function NVMesh(
   pts,
   tris,
   name = "",
@@ -87,7 +88,7 @@ export var NVMesh = function (
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
-};
+}
 
 NVMesh.prototype.updateFibers = function (gl) {
   if (!this.offsetPt0 || !this.fiberLength) return;
