@@ -227,10 +227,11 @@ export var fragSliceShader = `#version 300 es
 #line 228
 precision highp int;
 precision highp float;
-uniform highp sampler3D volume, overlay, drawing;
+uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {

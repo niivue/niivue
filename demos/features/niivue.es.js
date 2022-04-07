@@ -891,10 +891,11 @@ var fragSliceShader = `#version 300 es
 #line 228
 precision highp int;
 precision highp float;
-uniform highp sampler3D volume, overlay, drawing;
+uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {
@@ -11797,6 +11798,7 @@ NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
           hdr.littleEndian = false;
         break;
       case "BRICK_TYPES":
+        hdr.dims[4] = count;
         let datatype = parseInt(items[0]);
         if (datatype === 0) {
           hdr.numBitsPerVoxel = 8;
@@ -11845,6 +11847,18 @@ NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
     this.THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific);
   else
     this.SetPixDimFromSForm();
+  let nBytes = hdr.numBitsPerVoxel / 8 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
+  if (pairedImgData.byteLength < nBytes) {
+    var raw;
+    if (typeof pako$1 === "object" && typeof deflate_1 === "function") {
+      raw = inflate_1(new Uint8Array(pairedImgData));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate2 = new Zlib.Gunzip(new Uint8Array(pairedImgData));
+      raw = inflate2.decompress();
+    }
+    return raw.buffer;
+  }
+  pairedImgData.slice();
   return pairedImgData.slice();
 };
 NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
@@ -12344,7 +12358,6 @@ NVImage.loadFromUrl = async function({
   else if (ext.toUpperCase() === "HEAD") {
     if (urlImgData === "") {
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
-      console.log(urlImgData);
     }
   }
   let urlParts = url.split("/");
@@ -21729,6 +21742,7 @@ var NVMesh = function(pts, tris, name = "", rgba255 = [1, 0, 0, 0], opacity = 1,
   this.offsetPt0 = null;
   this.hasConnectome = false;
   this.pts = pts;
+  this.layers = [];
   if (!rgba255) {
     this.fiberLength = 2;
     this.fiberDither = 0.1;
@@ -21907,7 +21921,6 @@ NVMesh.prototype.updateConnectome = function(gl) {
       }
     }
   }
-  console.log(pts.length, "<>", tris.length);
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
@@ -21928,12 +21941,48 @@ NVMesh.prototype.updateMesh = function(gl) {
     console.log("underspecified mesh");
     return;
   }
+  console.log("Points " + this.pts.length + " Indices " + this.tris.length);
   let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
+  if (this.layers && this.layers.length > 0) {
+    for (let i = 0; i < this.layers.length; i++) {
+      let lerp2 = function(x, y, a) {
+        return x * (1 - a) + y * a;
+      };
+      let layer = this.layers[i];
+      if (layer.opacity <= 0 || layer.cal_min >= layer.cal_max)
+        continue;
+      let lut = cmapper$1.colormap(layer.colorMap);
+      let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
+      let scale255 = 255 / (layer.cal_max - layer.cal_min);
+      var u8 = new Uint8Array(posNormClr.buffer);
+      let opacity = layer.opacity;
+      for (let j = frame * layer.values.length; j < (frame + 1) * layer.values.length; j++) {
+        let v255 = Math.round((layer.values[j] - layer.cal_min) * scale255);
+        if (v255 < 0)
+          continue;
+        v255 = Math.min(255, v255) * 4;
+        let vtx = j * 28 + 24;
+        u8[vtx + 0] = lerp2(u8[vtx + 0], lut[v255 + 0], opacity);
+        u8[vtx + 1] = lerp2(u8[vtx + 1], lut[v255 + 1], opacity);
+        u8[vtx + 2] = lerp2(u8[vtx + 2], lut[v255 + 2], opacity);
+      }
+    }
+  }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(this.tris), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
   this.indexCount = this.tris.length;
+  this.vertexCount = this.pts.length;
+};
+NVMesh.prototype.setLayerProperty = function(id, key, val, gl) {
+  let layer = this.layers[id];
+  if (!layer.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, layer);
+    return;
+  }
+  layer[key] = val;
+  this.updateMesh(gl);
 };
 NVMesh.prototype.setProperty = function(key, val, gl) {
   if (!this.hasOwnProperty(key)) {
@@ -21941,7 +21990,6 @@ NVMesh.prototype.setProperty = function(key, val, gl) {
     return;
   }
   this[key] = val;
-  console.log(this);
   this.updateMesh(gl);
 };
 function getFurthestVertexFromOrigin(pts) {
@@ -22108,11 +22156,27 @@ NVMesh.readTRK = function(buffer) {
   if (vers > 2 || hdr_sz !== 1e3 || magic !== 1128354388)
     throw new Error("Not a valid TRK file");
   var n_scalars = reader.getInt16(36, true);
+  let scalar_names = [];
+  if (n_scalars > 0) {
+    for (let i2 = 0; i2 < n_scalars; i2++) {
+      let arr = new Uint8Array(buffer.slice(38 + i2 * 20, 58 + i2 * 20));
+      var str = new TextDecoder().decode(arr).split("\0").shift();
+      scalar_names.push(str.trim());
+    }
+  }
   var voxel_sizeX = reader.getFloat32(12, true);
   var voxel_sizeY = reader.getFloat32(16, true);
   var voxel_sizeZ = reader.getFloat32(20, true);
   var zoomMat = fromValues$2(1 / voxel_sizeX, 0, 0, -0.5, 0, 1 / voxel_sizeY, 0, -0.5, 0, 0, 1 / voxel_sizeZ, -0.5, 0, 0, 0, 1);
   var n_properties = reader.getInt16(238, true);
+  let property_names = [];
+  if (n_properties > 0) {
+    for (let i2 = 0; i2 < n_properties; i2++) {
+      let arr = new Uint8Array(buffer.slice(240 + i2 * 20, 260 + i2 * 20));
+      var str = new TextDecoder().decode(arr).split("\0").shift();
+      property_names.push(str.trim());
+    }
+  }
   var mat = create$2();
   for (let i2 = 0; i2 < 16; i2++)
     mat[i2] = reader.getFloat32(440 + i2 * 4, true);
@@ -22124,9 +22188,6 @@ NVMesh.readTRK = function(buffer) {
   mul$1(vox2mmMat, mat, zoomMat);
   let i32 = null;
   let f32 = null;
-  if (n_scalars !== 0 || n_properties === 0) {
-    console.log("scalars " + n_scalars + " properties " + n_properties);
-  }
   i32 = new Int32Array(buffer.slice(hdr_sz));
   f32 = new Float32Array(i32.buffer);
   let ntracks = i32.length;
@@ -22257,6 +22318,26 @@ NVMesh.readTxtVTK = function(buffer) {
     indices
   };
 };
+NVMesh.readSTC = function(buffer, n_vert) {
+  buffer.byteLength;
+  var reader = new DataView(buffer);
+  reader.getFloat32(0, false);
+  reader.getFloat32(4, false);
+  let n_vertex = reader.getInt32(8, false);
+  if (n_vertex !== n_vert) {
+    console.log("Overlay has " + n_vertex + " vertices, expected " + n_vert);
+    return;
+  }
+  let pos = 12 + n_vertex * 4;
+  let n_time = reader.getUint32(pos, false);
+  pos += 4;
+  let f32 = new Float32Array(n_time * n_vertex);
+  for (let i = 0; i < n_time * n_vertex; i++) {
+    f32[i] = reader.getFloat32(pos, false);
+    pos += 4;
+  }
+  return f32;
+};
 NVMesh.readVTK = function(buffer) {
   let len2 = buffer.byteLength;
   if (len2 < 20)
@@ -22371,7 +22452,7 @@ NVMesh.readVTK = function(buffer) {
     indices
   };
 };
-NVMesh.readMZ3 = function(buffer) {
+NVMesh.readMZ3 = function(buffer, n_vert = 0) {
   if (buffer.byteLength < 20)
     throw new Error("File too small to be mz3: bytes = " + buffer.byteLength);
   var reader = new DataView(buffer);
@@ -22401,11 +22482,13 @@ NVMesh.readMZ3 = function(buffer) {
   var isVert = attr & 2;
   var isRGBA = attr & 4;
   var isSCALAR = attr & 8;
-  var isAOMap = attr & 32;
   if (attr > 63)
     throw new Error("Unsupported future version of MZ3 file");
-  if (!isFace || !isVert || nface < 1 || nvert < 3)
+  if (nvert < 3)
     throw new Error("Not a mesh MZ3 file (maybe scalar)");
+  if (n_vert > 0 && n_vert !== nvert) {
+    console.log("Layer has " + nvert + "vertices, but background mesh has " + n_vert);
+  }
   var filepos = 16 + nskip;
   var indices = null;
   if (isFace) {
@@ -22433,21 +22516,64 @@ NVMesh.readMZ3 = function(buffer) {
       k4++;
     }
   }
-  var uv2 = null;
-  if (!isRGBA && isSCALAR && isAOMap) {
-    var scalars = new Float32Array(_buffer, filepos, nvert, true);
-    filepos += nvert * 4;
-    uv2 = new Float32Array(nvert * 2);
-    for (var i = 0; i < nvert; i++) {
-      uv2[i * 2] = uv2[i * 2 + 1] = scalars[i];
+  let scalars = [];
+  if (!isRGBA && isSCALAR) {
+    let nFrame4D = Math.floor((_buffer.byteLength - filepos) / 4 / nvert);
+    if (nFrame4D < 1) {
+      console.log("MZ3 corrupted");
+      return;
     }
+    scalars = new Float32Array(_buffer, filepos, nFrame4D * nvert);
+    filepos += nvert * 4;
   }
+  console.log(nvert, ":!", n_vert, attr);
+  if (n_vert > 0)
+    return scalars;
   return {
     positions,
     indices,
-    uv2,
+    scalars,
     colors
   };
+};
+NVMesh.readLayer = function(name, buffer, nvmesh, opacity = 0.5, colorMap = "rocket") {
+  let layer = [];
+  let n_vert = nvmesh.vertexCount / 3;
+  if (n_vert < 3)
+    return;
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(name)[1];
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(name.slice(0, -3))[1];
+    ext = ext.toUpperCase();
+  }
+  console.log(name, ":", n_vert, ">>>", buffer);
+  if (ext === "MZ3")
+    layer.values = this.readMZ3(buffer, n_vert);
+  else if (ext === "STC")
+    layer.values = this.readSTC(buffer, n_vert);
+  else {
+    console.log("Unknown layer overlay format " + name);
+    return;
+  }
+  if (!layer.values)
+    return;
+  layer.nFrame4D = layer.values.length / n_vert;
+  layer.frame4D = 0;
+  let mn = layer.values[0];
+  let mx = layer.values[0];
+  for (var i = 0; i < layer.values.length; i++) {
+    mn = Math.min(mn, layer.values[i]);
+    mx = Math.max(mx, layer.values[i]);
+  }
+  layer.global_min = mn;
+  layer.global_max = mx;
+  layer.cal_min = mn;
+  layer.cal_max = mx;
+  layer.opacity = opacity;
+  layer.colorMap = colorMap;
+  nvmesh.layers.push(layer);
 };
 NVMesh.readOBJ = function(buffer) {
   var enc = new TextDecoder("utf-8");
@@ -22644,10 +22770,10 @@ NVMesh.loadFromUrl = async function({
   url = "",
   gl = null,
   name = "",
-  colorMap = "yellow",
   opacity = 1,
   rgba255 = [255, 255, 255, 255],
-  visible = true
+  visible = true,
+  layers = []
 } = {}) {
   if (url === "")
     throw Error("url must not be empty");
@@ -22659,7 +22785,25 @@ NVMesh.loadFromUrl = async function({
   let urlParts = url.split("/");
   name = urlParts.slice(-1)[0];
   let buffer = await response.arrayBuffer();
-  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  let nvmesh = this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  if (!layers || layers.length < 1)
+    return nvmesh;
+  for (let i = 0; i < layers.length; i++) {
+    response = await fetch(layers[i].url);
+    if (!response.ok)
+      throw Error(response.statusText);
+    buffer = await response.arrayBuffer();
+    urlParts = layers[i].url.split("/");
+    let opacity2 = 0.5;
+    if (layers[i].hasOwnProperty("opacity"))
+      opacity2 = layers[i].opacity;
+    let colorMap = "viridis";
+    if (layers[i].hasOwnProperty("colorMap"))
+      colorMap = layers[i].colorMap;
+    this.readLayer(urlParts.slice(-1)[0], buffer, nvmesh, opacity2, colorMap);
+  }
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 NVMesh.readFileAsync = function(file) {
   return new Promise((resolve, reject) => {
@@ -22675,13 +22819,13 @@ NVMesh.loadFromFile = async function({
   file,
   gl,
   name = "",
-  colorMap = "blue",
   opacity = 1,
   rgba255 = [255, 255, 255, 255],
-  visible = true
+  visible = true,
+  layers = []
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  return this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
 };
 String.prototype.getBytes = function() {
   let bytes = [];
@@ -24775,7 +24919,6 @@ Niivue.prototype.dropListener = async function(e) {
           }
         }
         if (file.name.lastIndexOf("BRIK") !== -1) {
-          console.log("Ignoring ", file.name);
           continue;
         }
         if (ext === "GII" || ext === "MZ3" || ext === "OBJ" || ext === "STL" || ext === "TCK" || ext === "TRK" || ext === "VTK") {
@@ -24796,7 +24939,6 @@ Niivue.prototype.dropListener = async function(e) {
       }
     }
   }
-  this.createEmptyDrawing();
   this.drawScene();
 };
 Niivue.prototype.setRadiologicalConvention = function(isRadiologicalConvention) {
@@ -24845,6 +24987,20 @@ Niivue.prototype.setMeshProperty = function(id, key, val) {
   }
   this.meshes[idx].setProperty(key, val, this.gl);
   this.updateGLVolume();
+};
+Niivue.prototype.setMeshLayerProperty = function(mesh, layer, key, val) {
+  let idx = this.getMeshIndexByID(mesh);
+  if (idx < 0) {
+    console.log("setMeshLayerProperty() id not loaded", mesh);
+    return;
+  }
+  this.meshes[idx].setLayerProperty(layer, key, val, this.gl);
+  this.updateGLVolume();
+};
+Niivue.prototype.setRenderAzimuthElevation = function(a, e) {
+  this.scene.renderAzimuth = a;
+  this.scene.renderElevation = e;
+  this.drawScene();
 };
 Niivue.prototype.getOverlayIndexByID = function(id) {
   let n = this.overlays.length;
@@ -25091,10 +25247,10 @@ Niivue.prototype.loadMeshes = async function(meshList) {
       url: meshList[i].url,
       gl: this.gl,
       name: meshList[i].name,
-      colorMap: meshList[i].colorMap,
       opacity: meshList[i].opacity,
       rgba255: meshList[i].rgba255,
-      visible: meshList[i].visible
+      visible: meshList[i].visible,
+      layers: meshList[i].layers
     });
     this.scene.loading$.next(false);
     this.addMesh(mesh);
@@ -25127,6 +25283,8 @@ Niivue.prototype.loadConnectome = async function(json) {
   return this;
 };
 Niivue.prototype.createEmptyDrawing = function() {
+  if (!this.back.hasOwnProperty("dims"))
+    return;
   let mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3]);
   if (mn < 1)
     return;
@@ -25684,6 +25842,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
   this.sliceShader.use(this.gl);
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
+  this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.updateInterpolation(layer);
 };
 Niivue.prototype.colorMaps = function(sort = true) {
@@ -25841,7 +26001,6 @@ Niivue.prototype.mouseClick = function(x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[1] = fracX;
         this.scene.crosshairPos[2] = fracY;
       }
-      this.drawPt(...this.frac2vox(this.scene.crosshairPos), 1);
       this.refreshDrawing(false);
       this.drawScene();
       this.scene.location$.next({
@@ -26401,11 +26560,15 @@ Niivue.prototype.drawScene = function() {
   }
   let posString = "";
   if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
-    if (this.meshes.length > 0)
+    if (this.meshes.length > 0) {
+      this.sliceType = this.sliceTypeRender;
       return this.draw3D();
+    }
     this.drawLoadingText(this.loadingText);
     return;
   }
+  if (!this.back.hasOwnProperty("dims"))
+    return;
   if (this.sliceType === this.sliceTypeRender) {
     if (this.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       let x = this.dragStart[0] - this.dragEnd[0];

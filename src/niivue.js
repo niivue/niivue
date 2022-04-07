@@ -926,6 +926,7 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "STL" ||
           ext === "TCK" ||
           ext === "TRK" ||
+          ext === "TRX" ||
           ext === "VTK"
         ) {
           //console.log("mesh loading not yet supported");
@@ -946,7 +947,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
     }
   }
-  this.createEmptyDrawing();
+  //this.createEmptyDrawing();
   this.drawScene(); //<- this seems to be required if you drag and drop a mesh, not a volume
 };
 
@@ -1026,6 +1027,22 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
   this.meshes[idx].setProperty(key, val, this.gl);
   this.updateGLVolume();
 };
+
+Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
+  let idx = this.getMeshIndexByID(mesh);
+  if (idx < 0) {
+    console.log("setMeshLayerProperty() id not loaded", mesh);
+    return;
+  }
+  this.meshes[idx].setLayerProperty(layer, key, val, this.gl);
+  this.updateGLVolume();
+};
+
+Niivue.prototype.setRenderAzimuthElevation = function (a, e) {
+  this.scene.renderAzimuth = a;
+  this.scene.renderElevation = e;
+  this.drawScene();
+}; // mouseMove()
 
 /**
  * get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
@@ -1466,10 +1483,10 @@ Niivue.prototype.loadMeshes = async function (meshList) {
       url: meshList[i].url,
       gl: this.gl,
       name: meshList[i].name,
-      colorMap: meshList[i].colorMap,
       opacity: meshList[i].opacity,
       rgba255: meshList[i].rgba255,
       visible: meshList[i].visible,
+      layers: meshList[i].layers,
     });
     this.scene.loading$.next(false);
     this.addMesh(mesh);
@@ -1511,6 +1528,7 @@ Niivue.prototype.loadConnectome = async function (json) {
 
 //Generate a blank GPU texture and CPU bitmap for drawing
 Niivue.prototype.createEmptyDrawing = function () {
+  if (!this.back.hasOwnProperty("dims")) return;
   let mn = Math.min(
     Math.min(this.back.dims[1], this.back.dims[2]),
     this.back.dims[3]
@@ -2608,7 +2626,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   // set overlays for slice shader
   this.sliceShader.use(this.gl);
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
-
+  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
+  this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.updateInterpolation(layer);
   //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
   //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
@@ -3701,7 +3720,6 @@ Niivue.prototype.drawScene = function () {
   if (!this.initialized) {
     return; // do not do anything until we are initialized (init will call drawScene).
   }
-
   this.gl.clearColor(
     this.opts.backColor[0],
     this.opts.backColor[1],
@@ -3719,11 +3737,14 @@ Niivue.prototype.drawScene = function () {
     this.volumes.length === 0 ||
     typeof this.volumes[0].dims === "undefined"
   ) {
-    if (this.meshes.length > 0) return this.draw3D(); //meshes loaded but no volume
+    if (this.meshes.length > 0) {
+      this.sliceType = this.sliceTypeRender; //only meshes loaded: we must use 3D render mode
+      return this.draw3D(); //meshes loaded but no volume
+    }
     this.drawLoadingText(this.loadingText);
     return;
   }
-
+  if (!this.back.hasOwnProperty("dims")) return;
   if (this.sliceType === this.sliceTypeRender) {
     //draw rendering
     if (this.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8) {

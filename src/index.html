@@ -25,7 +25,7 @@
       </h1>
     </section>
 <div class="slidecontainer">
-  fiber length <input type="range" min="1" max="200" value="3" class="slider" id="fiberLengthSlider">
+  intensity Max <input type="range" min="1" max="12" value="3" class="slider" id="fiberLengthSlider">
 </div>
 <div class="slidecontainer">
   fiber dither <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
@@ -50,7 +50,8 @@
       var sliderD = document.getElementById("fiberDitherSlider");
       // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value)
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_max', this.value + 2)
       }
       sliderD.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
@@ -91,43 +92,50 @@
       var volumeList1 = [
         // first item is brackground image
         {
-          //url: url ? url : "../demos/images/scaled+tlrc.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../tests/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
-          //urlImgData : "../demos/images/scaled+tlrc.BRIK.gz",
+          //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
           opacity: 1,
           visible: true,
         },
-				/*{
-					url: "../demos/images/hippo.nii.gz",
-					colorMap: 'red'
-				}*/
+{
+url: "../demos/images/hippo.nii.gz",
+colorMap: 'red'
+}
       ]
 			var nv1 = new Niivue({
 				logging: true,
 				show3Dcrosshair: true,
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
-				backColor: [0.2, 0.2, 0.2, 1],
+				backColor: [0.3, 0.2, 0.4, 1],
 				//thumbnail: "../demos/images/DoG.png"
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      await nv1.loadVolumes(volumeList1)
+      //await nv1.loadVolumes(volumeList1)
 
-			nv1.createEmptyDrawing()
-			//nv1.createRandomDrawing()
-			
+//			nv1.createEmptyDrawing()
+
+      var meshLayersList1 = [
+        {url: "../demos/images/lh.curv", colorMap: "rocket", opacity: 0.7},
+        //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
+      ]
+
+
       nv1.loadMeshes([
-         //{url: "../demos/images/stroke.trk", rgba255 : [255, 192, 192, 255]},
-         {url: "../demos/images/stroke.trk.gz", rgba255 : [196, 128, 128, 255]},
+         {url: "../demos/images/lh.pial", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+         //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+         //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
 			
       //nv1.loadConnectome(connectome)
       //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.setClipPlane([-0.1, 270, 0])
+      nv1.setClipPlane([-0.1, 90, 0])
+      nv1.setRenderAzimuthElevation(90,10)
       //nv1.volumes[0].frame4D = 5;
 
       //nv1.updateGLVolume()
