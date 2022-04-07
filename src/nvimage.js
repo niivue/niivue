@@ -582,6 +582,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
         else if (items[0].includes("MSB_FIRST")) hdr.littleEndian = false;
         break;
       case "BRICK_TYPES":
+        hdr.dims[4] = count;
         let datatype = parseInt(items[0]);
         if (datatype === 0) {
           hdr.numBitsPerVoxel = 8;
@@ -629,6 +630,25 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   if (!hasIJK_TO_DICOM_REAL)
     this.THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific);
   else this.SetPixDimFromSForm();
+  let nBytes =
+    (hdr.numBitsPerVoxel / 8) *
+    hdr.dims[1] *
+    hdr.dims[2] *
+    hdr.dims[3] *
+    hdr.dims[4];
+  if (pairedImgData.byteLength < nBytes) {
+    //n.b. npm run dev implicitly extracts gz, npm run demo does not!
+    //assume gz compressed
+    var raw;
+    if (typeof pako === "object" && typeof pako.deflate === "function") {
+      raw = pako.inflate(new Uint8Array(pairedImgData));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate = new Zlib.Gunzip(new Uint8Array(pairedImgData)); // eslint-disable-line no-undef
+      raw = inflate.decompress();
+    }
+    return raw.buffer;
+  }
+  let v = pairedImgData.slice();
   return pairedImgData.slice();
 };
 
@@ -657,8 +677,9 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
   let isGz = false;
   let isMicron = false;
   let isDetached = false;
-  let mat = [NaN, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  let rot44 = mat4.create();
+  let mat33 = mat3.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  let offset = vec3.fromValues(0, 0, 0);
+  let rot33 = mat3.create();
   for (let i = 1; i < n; i++) {
     let str = lines[i];
     if (str[0] === "#") continue; //comment
@@ -744,7 +765,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       case "sizes":
         let dims = value.split(/[ ,]+/);
         hdr.dims[0] = dims.length;
-        for (var d = 0; d < dims.length; d++)
+        for (let d = 0; d < dims.length; d++)
           hdr.dims[d + 1] = parseInt(dims[d]);
         break;
       case "endian":
@@ -754,42 +775,29 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       case "space directions":
         let vs = value.split(/[ ,]+/);
         if (vs.length !== 9) break;
-        mat[0] = parseFloat(vs[0]);
-        mat[1] = parseFloat(vs[1]);
-        mat[2] = parseFloat(vs[2]);
-        mat[4] = parseFloat(vs[3]);
-        mat[5] = parseFloat(vs[4]);
-        mat[6] = parseFloat(vs[5]);
-        mat[8] = parseFloat(vs[6]);
-        mat[9] = parseFloat(vs[7]);
-        mat[10] = parseFloat(vs[8]);
+        for (var d = 0; d < 9; d++) mat33[d] = parseFloat(vs[d]);
         break;
       case "space origin":
         let ts = value.split(/[ ,]+/);
         if (ts.length !== 3) break;
-        mat[3] = parseFloat(ts[0]);
-        mat[7] = parseFloat(ts[1]);
-        mat[11] = parseFloat(ts[2]);
+        offset[0] = parseFloat(ts[0]);
+        offset[1] = parseFloat(ts[1]);
+        offset[2] = parseFloat(ts[2]);
         break;
-      case "space":
+      case "space units":
         if (value.includes("microns")) isMicron = true;
         break;
       case "space":
         if (value.includes("right-anterior-superior") || value.includes("RAS"))
-          rot44 = mat4.fromValues(
+          rot33 = mat3.fromValues(
             1,
             0,
             0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
+
             0,
             1,
             0,
-            0,
+
             0,
             0,
             1
@@ -798,20 +806,15 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
           value.includes("left-anterior-superior") ||
           value.includes("LAS")
         )
-          rot44 = mat4.fromValues(
+          rot33 = mat3.fromValues(
             -1,
             0,
             0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
+
             0,
             1,
             0,
-            0,
+
             0,
             0,
             1
@@ -820,20 +823,15 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
           value.includes("left-posterior-superior") ||
           value.includes("LPS")
         )
-          rot44 = mat4.fromValues(
+          rot33 = mat3.fromValues(
             -1,
             0,
             0,
-            0,
+
             0,
             -1,
             0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
+
             0,
             0,
             1
@@ -844,17 +842,38 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       //console.log('Unknown:',key);
     } //read line
   } //read all lines
-  if (!isNaN(mat[0])) {
+  if (!isNaN(mat33[0])) {
     //if spatial transform provided
     this.hdr.sform_code = 2;
     if (isMicron) {
-      mat4.multiplyScalar(mat, mat, 0.001);
-      mat[15] = 1.0;
+      //convert micron to mm
+      mat4.multiplyScalar(mat33, mat33, 0.001);
+      offset[0] *= 0.001;
+      offset[1] *= 0.001;
+      offset[2] *= 0.001;
     }
-    if (rot44[0] < 0) mat[3] = -mat[3]; //origin L<->R
-    if (rot44[5] < 0) mat[7] = -mat[7]; //origin A<->P
-    if (rot44[10] < 0) mat[11] = -mat[11]; //origin S<->I
-    mat4.multiply(mat, mat, rot44);
+    if (rot33[0] < 0) offset[0] = -offset[0]; //origin L<->R
+    if (rot33[4] < 0) offset[1] = -offset[1]; //origin A<->P
+    if (rot33[8] < 0) offset[2] = -offset[2]; //origin S<->I
+    mat3.multiply(mat33, rot33, mat33);
+    let mat = mat4.fromValues(
+      mat33[0],
+      mat33[3],
+      mat33[6],
+      offset[0],
+      mat33[1],
+      mat33[4],
+      mat33[7],
+      offset[1],
+      mat33[2],
+      mat33[5],
+      mat33[8],
+      offset[2],
+      0,
+      0,
+      0,
+      1
+    );
     let mm000 = this.vox2mm([0, 0, 0], mat);
     let mm100 = this.vox2mm([1, 0, 0], mat);
     vec3.subtract(mm100, mm100, mm000);
@@ -872,6 +891,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       [0, 0, 0, 1],
     ];
   }
+
   let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   if (isDetached && pairedImgData) {
     //??? .gz files automatically decompressed?
@@ -885,7 +905,8 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       "Missing data: NRRD header describes detached data file but only one URL provided"
     );
   if (isGz)
-    return pako.inflate(new Uint8Array(dataBuffer.slice(hdr.vox_offset)));
+    return pako.inflate(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
+      .buffer;
   else return dataBuffer.slice(hdr.vox_offset);
 }; //readNRRD()
 
@@ -1276,7 +1297,6 @@ NVImage.loadFromUrl = async function ({
   } else if (ext.toUpperCase() === "HEAD") {
     if (urlImgData === "") {
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
-      console.log(urlImgData);
     }
   }
   let urlParts = url.split("/"); // split url parts at slash
@@ -1473,16 +1493,16 @@ NVImage.prototype.getImageMetadata = function () {
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  * newZeroImage = NVImage.zerosLike(myImage)
  */
-NVImage.zerosLike = function (nvImage, dataType='same') {
-	// dataType can be: 'same', 'uint8'
-	// 'same' means that the zeroed image data type is the same as the input image
+NVImage.zerosLike = function (nvImage, dataType = "same") {
+  // dataType can be: 'same', 'uint8'
+  // 'same' means that the zeroed image data type is the same as the input image
   let zeroClone = nvImage.clone();
   zeroClone.zeroImage();
-	if (dataType === 'uint8'){
-		zeroClone.img = Uint8Array.from(zeroClone.img)
-		zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
-		zeroClone.hdr.numBitsPerVoxel = 8
-	}
+  if (dataType === "uint8") {
+    zeroClone.img = Uint8Array.from(zeroClone.img);
+    zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR;
+    zeroClone.hdr.numBitsPerVoxel = 8;
+  }
   return zeroClone;
 };
 

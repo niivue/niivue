@@ -224,12 +224,14 @@ void main(void) {
 }`;
 
 export var fragSliceShader = `#version 300 es
-#line 173
+#line 228
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float opacity;
+uniform float drawOpacity;
+uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {
@@ -239,6 +241,18 @@ void main() {
 	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
 	} else {
 		ocolor = texture(overlay, texPos);
+	}
+	float draw = texture(drawing, texPos).r;
+	if (draw > 0.0) {
+		vec3 dcolor = vec3(0.0, 0.0, 0.0);
+		if (draw >= (3.0/255.0))
+			dcolor.b = 1.0;
+		else if (draw >= (2.0/255.0))
+			dcolor.g = 1.0;
+		else
+			dcolor.r = 1.0;
+		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+		color.a = max(drawOpacity, color.a);
 	}
 	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
 	if (aout <= 0.0) return;

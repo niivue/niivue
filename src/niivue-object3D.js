@@ -5,7 +5,6 @@ import { mat4, vec3 } from "gl-matrix";
  * @type NiivueObject3D
  * @typedef NiivueObject3D
  * @property {Shader[]} renderShaders
- * @property {Shader} pickingShader
  * @property {boolean} isVisible
  * @property {WebGLVertexArrayObject} vertexBuffer
  * @property {number} indexCount
@@ -37,7 +36,6 @@ export var NiivueObject3D = function (
   this.sphereIdx = [];
   this.sphereVtx = [];
   this.renderShaders = [];
-  this.pickingShader = null;
   this.isVisible = true;
   this.isPickable = true;
   this.vertexBuffer = vertexBuffer;
