@@ -8,7 +8,7 @@
  * @param {string} vertexSrc
  * @param {string} fragmentSrc
  */
-export var Shader = function (gl, vertexSrc, fragmentSrc) {
+export function Shader(gl, vertexSrc, fragmentSrc) {
   var self = this;
   this.program = compileShader(gl, vertexSrc, fragmentSrc);
 
@@ -36,7 +36,7 @@ export var Shader = function (gl, vertexSrc, fragmentSrc) {
   for (var unif in this.uniforms) {
     this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
   }
-};
+}
 
 Shader.prototype.use = function (gl) {
   gl.useProgram(this.program);
