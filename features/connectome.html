@@ -18,24 +18,22 @@
 
     <section>
       <h1>
-        Basic 3D
+        Connectomes
       </h1>
-      <p>
-        NiiVue also supports a simple 3D view
-      </p>
-      <p>
-        <h3>Controls</h3>
-        <ul>
-          <li>rotate: left mouse click and drag (touch and drag on mobile)</li>
-          <li>zoom: mouse or touch pad scroll wheel (pinch zoom for mobile)</li>
-        </ul>
-      </p>
+
     </section>
+<div class="slidecontainer">
+  Edge Size <input type="range" min="5" max="30" value="10" class="slider" id="edgeSlider">
+</div>
+<div class="slidecontainer">
+  Node size <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider">
+</div>
+
 
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
@@ -43,6 +41,16 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
+      var sliderE = document.getElementById("edgeSlider");
+      var sliderN = document.getElementById("nodeSlider");
+      // Update the current slider value (each time you drag the slider handle)
+      sliderE.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'edgeScale', this.value * 0.1)
+      }
+      sliderN.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, 'nodeScale', this.value * 0.1)
+      }
+
       let connectome = {
         "name": "simpleConnectome",
         "nodeColormap": "viridis",
