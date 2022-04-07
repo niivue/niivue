@@ -1,4 +1,4 @@
-var Shader = function(gl, vertexSrc, fragmentSrc) {
+function Shader(gl, vertexSrc, fragmentSrc) {
   var self2 = this;
   this.program = compileShader(gl, vertexSrc, fragmentSrc);
   var regexUniform = /uniform[^;]+[ ](\w+);/g;
@@ -21,7 +21,7 @@ var Shader = function(gl, vertexSrc, fragmentSrc) {
   for (var unif in this.uniforms) {
     this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
   }
-};
+}
 Shader.prototype.use = function(gl) {
   gl.useProgram(this.program);
 };
@@ -11351,7 +11351,7 @@ function isPlatformLittleEndian() {
   new DataView(buffer).setInt16(0, 256, true);
   return new Int16Array(buffer)[0] === 256;
 }
-var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -11595,7 +11595,7 @@ var NVImage = function(dataBuffer, name = "", colorMap = "gray", opacity = 1, pa
   }
   this.calculateRAS();
   this.calMinMax();
-};
+}
 NVImage.prototype.calculateOblique = function() {
   let LPI = this.vox2mm([0, 0, 0], this.matRAS);
   let X1mm = this.vox2mm([1 / this.pixDimsRAS[1], 0, 0], this.matRAS);
@@ -24301,7 +24301,7 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 };
 const cmapper$1 = new colortables();
 const log$1 = new Log();
-var NVMesh = function(pts, tris, name = "", rgba255 = [1, 0, 0, 0], opacity = 1, visible = true, gl, connectome = null) {
+function NVMesh(pts, tris, name = "", rgba255 = [1, 0, 0, 0], opacity = 1, visible = true, gl, connectome = null) {
   this.name = name;
   this.id = v4();
   this.furthestVertexFromOrigin = getFurthestVertexFromOrigin(pts);
@@ -24349,7 +24349,7 @@ var NVMesh = function(pts, tris, name = "", rgba255 = [1, 0, 0, 0], opacity = 1,
   gl.enableVertexAttribArray(2);
   gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24);
   gl.bindVertexArray(null);
-};
+}
 NVMesh.prototype.updateFibers = function(gl) {
   if (!this.offsetPt0 || !this.fiberLength)
     return;
@@ -27017,7 +27017,7 @@ var defaultFontMetrics = {
 };
 const log = new Log();
 const cmapper = new colortables();
-const Niivue = function(options = {}) {
+function Niivue(options = {}) {
   this.opts = {};
   this.defaults = {
     textHeight: 0.06,
@@ -27174,7 +27174,7 @@ const Niivue = function(options = {}) {
     intensityRange: this.intensityRange$
   };
   this.subscriptions = [];
-};
+}
 Niivue.prototype.attachTo = async function(id) {
   await this.attachToCanvas(document.getElementById(id));
   log.debug("attached to element with id: ", id);
