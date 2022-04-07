@@ -198,9 +198,9 @@ export class NiivueViewComponent implements OnInit {
 
 NiiVue can open several formats popular with brain imaging:
 
- - Voxel-based formats: [NIfTI](https://brainder.org/2012/09/23/the-nifti-file-format/), [NRRD](http://teem.sourceforge.net/nrrd/format.html), [AFNI HEAD/BRIK](https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html).
- - Mesh-based formats: [FreeSurfer](http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm), [GIfTI](https://www.nitrc.org/projects/gifti/), [MZ3](https://github.com/neurolabusc/surf-ice/tree/master/mz3), [Wavefront OBJ](https://brainder.org/tag/obj/), [STL](https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45), [Legacy VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf).
-
+ - Voxel-based formats: [NIfTI](https://brainder.org/2012/09/23/the-nifti-file-format/), [NRRD](http://teem.sourceforge.net/nrrd/format.html), [AFNI HEAD/BRIK](https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html), [MGH/MGZ](https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat).
+ - Mesh-based formats: [FreeSurfer](http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm), [GIfTI](https://www.nitrc.org/projects/gifti/), [MZ3](https://github.com/neurolabusc/surf-ice/tree/master/mz3), [OFF](https://en.wikipedia.org/wiki/OFF_(file_format)), [Wavefront OBJ](https://brainder.org/tag/obj/), [STL](https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45), [Legacy VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf).
+ - Mesh overlay formats: GIfTI, MZ3, STC, FreeSurfer (CURV/ANNOT)
 # Alternatives
 
 There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is its use of WebGL 2.0, MRIcroGL inspired shaders, and its minimal design. This makes it easy to integrate with existing web pages quicky in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does **not** use [three.js](https://threejs.org). This means the WebGL calls are tuned for voxel display, and the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, niivue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets. However, there are popular UI frameworks such as [Vuetifyjs](https://vuetifyjs.com/en/) that greatly reduce this burden. Since there are numerous free alternatives, you can choose the optimal tool for your task.

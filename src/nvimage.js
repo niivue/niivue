@@ -88,15 +88,14 @@ export var NVImage = function (
   }
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(name)[1];
+  ext = ext.toUpperCase();
   let imgRaw = null;
   this.hdr = null;
-  if (ext.toUpperCase() === "NHDR" || ext.toUpperCase() === "NRRD") {
+  if (ext === "NHDR" || ext === "NRRD") {
     imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
-  } else if (ext.toUpperCase() === "MGH") {
+  } else if (ext === "MGH" || ext === "MGZ") {
     imgRaw = this.readMGH(dataBuffer);
-  } else if (ext.toUpperCase() === "MGZ") {
-    imgRaw = this.readMGH(nifti.decompress(dataBuffer));
-  } else if (ext.toUpperCase() === "HEAD") {
+  } else if (ext === "HEAD") {
     imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
   } else {
     this.hdr = nifti.readHeader(dataBuffer);
@@ -438,12 +437,26 @@ NVImage.prototype.SetPixDimFromSForm = function () {
   this.hdr.pixDims[3] = vec3.length(mm001);
 };
 
-NVImage.prototype.readMGH = function (dataBuffer) {
+NVImage.prototype.readMGH = function (buffer) {
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  var reader = new DataView(dataBuffer);
+  var reader = new DataView(buffer);
+  var raw = buffer;
+  if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
+    if (typeof pako === "object" && typeof pako.deflate === "function") {
+      raw = pako.inflate(new Uint8Array(buffer));
+    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
+      var inflate = new Zlib.Gunzip(new Uint8Array(buffer)); // eslint-disable-line no-undef
+      raw = inflate.decompress();
+    } else
+      alert(
+        "Required script missing: include either pako.min.js or gunzip.min.js"
+      );
+    //console.log("gz->raw %d->%d", buffer.byteLength, raw.length);
+    reader = new DataView(raw.buffer);
+  }
   let version = reader.getInt32(0, false);
   let width = reader.getInt32(4, false);
   let height = reader.getInt32(8, false);
@@ -530,8 +543,14 @@ NVImage.prototype.readMGH = function (dataBuffer) {
     [rot44[8], rot44[9], rot44[10], PxyzOffset[2]],
     [0, 0, 0, 1],
   ];
-  return dataBuffer.slice(hdr.vox_offset);
-};
+  let nBytes =
+    hdr.dims[1] *
+    hdr.dims[2] *
+    hdr.dims[3] *
+    hdr.dims[4] *
+    (hdr.numBitsPerVoxel / 8);
+  return raw.slice(hdr.vox_offset, hdr.vox_offset + nBytes);
+}; // readMGH()
 
 NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   this.hdr = new nifti.NIFTI1();

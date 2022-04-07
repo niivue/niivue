@@ -305,16 +305,16 @@ NVMesh.prototype.updateMesh = function (gl) {
         continue;
       }
       let lut = cmapper.colormap(layer.colorMap);
-      //console.log(layer.colorMap,'++', layer);
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
+      let nvtx = this.pts.length / 3;
+      let frameOffset = nvtx * frame;
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
       //blend colors for each voxel
-      for (
-        let j = frame * layer.values.length;
-        j < (frame + 1) * layer.values.length;
-        j++
-      ) {
-        let v255 = Math.round((layer.values[j] - layer.cal_min) * scale255);
+      let k = 0;
+      for (let j = 0; j < nvtx; j++) {
+        let v255 = Math.round(
+          (layer.values[j + frameOffset] - layer.cal_min) * scale255
+        );
         if (v255 < 0) continue;
         v255 = Math.min(255.0, v255) * 4;
         let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -324,8 +324,6 @@ NVMesh.prototype.updateMesh = function (gl) {
       }
     }
   }
-
-  //  console.log(layer.frame4D, '::::', layer.values[0]);
   //generate webGL buffers and vao
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(
@@ -1033,7 +1031,7 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
         "Required script missing: include either pako.min.js or gunzip.min.js"
       );
     //console.log("gz->raw %d->%d", buffer.byteLength, raw.length);
-    var reader = new DataView(raw.buffer);
+    reader = new DataView(raw.buffer);
     var magic = reader.getUint16(0, true);
     _buffer = raw.buffer;
     //throw new Error( 'Gzip MZ3 file' );
@@ -1102,8 +1100,6 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
     scalars = new Float32Array(_buffer, filepos, nFrame4D * nvert);
     filepos += nvert * 4;
   }
-  console.log(nvert, ":!", n_vert, attr);
-
   if (n_vert > 0) return scalars;
   return {
     positions,
@@ -1133,7 +1129,9 @@ NVMesh.readLayer = function (
   //console.log(name, ":", n_vert, ">>>", buffer);
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
-  else if (ext === "CURV") layer.values = this.readCURV(buffer, n_vert);
+  else if (ext === "CRV" || ext === "CURV")
+    layer.values = this.readCURV(buffer, n_vert);
+  else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
   else if (ext === "STC") layer.values = this.readSTC(buffer, n_vert);
   else {
     console.log("Unknown layer overlay format " + name);
@@ -1157,6 +1155,50 @@ NVMesh.readLayer = function (
   layer.colorMap = colorMap;
   nvmesh.layers.push(layer);
 };
+
+NVMesh.readOFF = function (buffer) {
+  //https://en.wikipedia.org/wiki/OFF_(file_format)
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  //let txt = await response.text();
+  var lines = txt.split("\n");
+  var n = lines.length;
+  let pts = [];
+  let t = [];
+  let i = 0;
+  if (!lines[i].startsWith("OFF")) {
+    console.log("File does not start with OFF");
+  } else i++;
+  let items = lines[i].split(" ");
+  let num_v = parseInt(items[0]);
+  let num_f = parseInt(items[1]);
+  i++;
+  for (let j = 0; j < num_v; j++) {
+    let str = lines[i];
+    items = str.split(" ");
+    pts.push(parseFloat(items[0]));
+    pts.push(parseFloat(items[1]));
+    pts.push(parseFloat(items[2]));
+    i++;
+  }
+  for (let j = 0; j < num_f; j++) {
+    let str = lines[i];
+    items = str.split(" ");
+    let n = parseInt(items[0]);
+    if (n !== 3)
+      console.log("Only able to read OFF files with triangular meshes");
+    t.push(parseInt(items[1]));
+    t.push(parseInt(items[2]));
+    t.push(parseInt(items[3]));
+    i++;
+  }
+  var positions = new Float32Array(pts);
+  var indices = new Int32Array(t);
+  return {
+    positions,
+    indices,
+  };
+}; // readOFF()
 
 NVMesh.readOBJ = function (buffer) {
   //WaveFront OBJ format
@@ -1259,10 +1301,38 @@ NVMesh.readSTL = function (buffer) {
   };
 }; // readSTL()
 
-NVMesh.readGII = function (buffer) {
+NVMesh.readGII = function (buffer, n_vert = 0) {
   var enc = new TextDecoder("utf-8");
   var xmlStr = enc.decode(buffer);
   let gii = gifti.parse(xmlStr);
+  if (n_vert > 0) {
+    //add as overlay layer
+    if (gii.dataArrays.length < 0) {
+      console.log("Not a valid GIfTI overlay");
+    }
+    let scalars = [];
+    for (var i = 0; i < gii.dataArrays.length; i++) {
+      let layer = gii.dataArrays[i];
+      if (n_vert !== layer.getNumElements()) {
+        console.log(
+          "Number of vertices of overlay layer does not match mesh " +
+            n_vert +
+            " vs " +
+            getNumElements()
+        );
+        return;
+      }
+      if (layer.isColors()) console.log("TODO: check color mesh layers");
+      let scalarsI = new Float32Array(layer.getData());
+      scalars.push(...scalarsI);
+    }
+    //console.log('::::',scalars);
+    return scalars;
+  }
+  if (gii.getNumTriangles() === 0 || gii.getNumPoints() === 0) {
+    console.log("Not a GIfTI mesh (perhaps an overlay layer)");
+    return;
+  }
   var positions = gii.getPointsDataArray().getData();
   var indices = gii.getTrianglesDataArray().getData();
   //next: ColumnMajorOrder https://github.com/rii-mango/GIFTI-Reader-JS/issues/2
@@ -1349,14 +1419,14 @@ NVMesh.readMesh = function (
   } //is fibers
   if (ext === "GII") obj = this.readGII(buffer);
   else if (ext === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
-  else if (ext === "FIB" || ext.toUpperCase() === "VTK") {
+  else if (ext === "FIB" || ext === "VTK") {
     obj = this.readVTK(buffer);
     if (obj.hasOwnProperty("offsetPt0")) {
       //VTK files used both for meshes and streamlines
       let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
       let pts = new Float32Array(obj.pts.slice());
-
       return new NVMesh(
         pts,
         offsetPt0,
@@ -1394,7 +1464,8 @@ NVMesh.readMesh = function (
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  return new NVMesh(
+
+  let nvm = new NVMesh(
     pts,
     tris,
     name,
@@ -1403,6 +1474,12 @@ NVMesh.readMesh = function (
     visible, //visible,
     gl
   );
+  if (obj.hasOwnProperty("scalars") && obj.scalars.length > 0) {
+    this.readLayer(name, buffer, nvm, opacity, "gray");
+    nvm.updateMesh(gl);
+  }
+  console.log(nvm);
+  return nvm;
 };
 
 /**

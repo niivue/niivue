@@ -920,9 +920,17 @@ Niivue.prototype.dropListener = async function (e) {
           continue;
         }
         if (
+          ext === "FSM" ||
+          ext === "PIAL" ||
+          ext === "ORIG" ||
+          ext === "INFLATED" ||
+          ext === "SMOOTHWM" ||
+          ext === "SPHERE" ||
+          ext === "WHITE" ||
           ext === "GII" ||
           ext === "MZ3" ||
           ext === "OBJ" ||
+          ext === "OFF" ||
           ext === "STL" ||
           ext === "TCK" ||
           ext === "TRK" ||
@@ -2995,6 +3003,7 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
 Niivue.prototype.drawLoadingText = function (text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.enable(this.gl.CULL_FACE);
+  this.gl.enable(this.gl.BLEND);
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
   this.canvas.focus();
 };
