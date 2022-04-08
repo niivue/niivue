@@ -1,15 +1,16 @@
 import * as gifti from "gifti-reader-js/release/current/gifti-reader";
 import * as pako from "pako";
 import * as JSZip from "jszip";
+//import * as JSZipUtils from "jszip-utils";
+import JSZipUtils from './JsZipUtils';
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
-import { mat4, vec3 } from "gl-matrix";
+import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import { colortables } from "./colortables";
 const cmapper = new colortables();
 const log = new Log();
-
 /**
  * @class NVMesh
  * @type NVMesh
@@ -559,18 +560,6 @@ NVMesh.readTCK = function (buffer) {
     offsetPt0,
   };
 }; //readTCK()
-
-//ToDo: readTRX
-// https://stackoverflow.com/questions/32633585/how-do-you-convert-to-half-floats-in-javascript
-NVMesh.readTRX = function (buf) {
-  console.log("OK", buf); //buffer.byteLength
-  //var zip = new AdmZip.ZipFile(buf);
-  /*
-  for (var i = 0; i < zipEntries.length; i++) {
-      if (zipEntries[i].entryName.match(/readme/))
-        console.log(zip.readAsText(zipEntries[i]));
-  }*/
-};
 
 NVMesh.readTRK = function (buffer) {
   // http://trackvis.org/docs/?subsect=fileformat
@@ -1404,7 +1393,8 @@ NVMesh.readMesh = function (
   }
   if (ext === "TCK" || ext === "TRK" || ext === "TRX") {
     if (ext === "TCK") obj = this.readTCK(buffer);
-    else if (ext === "TRX") obj = this.readTRX(buffer);
+    else if (ext === "TRX")
+      console.log("Not yet"); //obj = this.readTRX(buffer);
     else obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
@@ -1483,6 +1473,111 @@ NVMesh.readMesh = function (
   return nvm;
 };
 
+//https://stackoverflow.com/questions/55798396/how-do-i-make-a-nested-loop-continue-only-after-a-asynchronous-function-has-been
+var pow = Math.pow;
+function decodeFloat16(binary) {
+  "use strict";
+  var exponent = (binary & 0x7c00) >> 10,
+    fraction = binary & 0x03ff;
+  return (
+    (binary >> 15 ? -1 : 1) *
+    (exponent
+      ? exponent === 0x1f
+        ? fraction
+          ? NaN
+          : Infinity
+        : pow(2, exponent - 15) * (1 + fraction / 0x400)
+      : 6.103515625e-5 * (fraction / 0x400))
+  );
+}
+
+NVMesh.readTRX = async function (url) {
+  //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
+  function decodeFloat16(binary) {
+    "use strict";
+    var exponent = (binary & 0x7c00) >> 10,
+      fraction = binary & 0x03ff;
+    return (
+      (binary >> 15 ? -1 : 1) *
+      (exponent
+        ? exponent === 0x1f
+          ? fraction
+            ? NaN
+            : Infinity
+          : Math.pow(2, exponent - 15) * (1 + fraction / 0x400)
+        : 6.103515625e-5 * (fraction / 0x400))
+    );
+  } // decodeFloat16()
+  let pts = [];
+  let offsetPt0 = [];
+  await JSZipUtils.getBinaryContent(url, function (err, data) {
+    if (err) {
+      throw err; // or handle err
+    }
+    //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
+    JSZip.loadAsync(data).then(function (zip) {
+      //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
+      for (let [filename, file] of Object.entries(zip.files)) {
+        if (file.dir) continue;
+        let parts = filename.split("/");
+        let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
+        if (fname.startsWith(".")) continue;
+        let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
+        if (fname.includes("header.json")) continue;
+        if (pname.includes("dpv")) continue;
+        if (pname.includes("dps")) continue;
+        if (fname.startsWith("offsets.")) console.log("found offsets:" + fname);
+        if (fname.startsWith("positions."))
+          console.log("found positions:" + fname);
+        const promises = [];
+        promises.push(zip.file(filename).async("uint8array"));
+        Promise.all(promises).then(function (data) {
+          console.log(fname, "data:", data);
+          if (fname.startsWith("offsets.uint64")) {
+            //javascript does not have 64-bit integers! read lower 32-bits
+            // todo: big endian!
+            let noff = data[0].length / 8; //8 bytes per 64bit input
+            offsetPt0 = new Uint32Array(noff + 1);
+            var u32 = new Uint32Array(data[0].buffer);
+            for (let i = 0; i < noff; i++) offsetPt0[i] = u32[i * 2];
+            offsetPt0[noff] = 32; // TO DO: this must be npt/3, which we may not know yet
+            console.log("offsets", offsetPt0);
+          }
+          if (fname.startsWith("positions.3.float16")) {
+            //javascript does not have 16-bit floats! Convert to 32-bits
+            // todo: big endian!
+            let npt = data[0].length / 2; //2 bytes per 16bit input
+            pts = new Float32Array(npt);
+            var u16 = new Uint16Array(data[0].buffer);
+            for (let i = 0; i < npt; i++) pts[i] = decodeFloat16(u16[i]);
+            console.log("pts", pts);
+          }
+        });
+      }
+    });
+  });
+  console.log("ALMOST ALL DONE: add final value to offsetPt0");
+  return {
+    pts,
+    offsetPt0,
+  };
+};
+
+NVMesh.readTRXw = async function (url, name, gl, opacity, visible) {
+  obj = await this.readTRX(url);
+  let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+  let pts = new Float32Array(obj.pts.slice());
+  return new NVMesh(
+    pts,
+    offsetPt0,
+    name,
+    null, //colorMap,
+    opacity, //opacity,
+    visible, //visible,
+    gl
+  );
+};
+
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -1503,23 +1598,28 @@ NVMesh.loadFromUrl = async function ({
   visible = true,
   layers = [],
 } = {}) {
-  /*if (url.endsWith('trx')) { 
-  console.log('URL', url);
-  JSZip.loadAsync(url).then(function(zip) {
-      for(let [filename, file] of Object.entries(zip.files)) {
-          // TODO Your code goes here
-          console.log(filename);
-      }
-  }).catch(function(err) {
-      console.error("Failed to open", filename, " as ZIP file:", err);
-  })
-}*/
+  let urlParts = url.split("/"); // split url parts at slash
+  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  if (url.endsWith("trx"))
+    return this.readTRXw(url, name, gl, opacity, visible);
+  /*  if (url.endsWith('trx')) { 
+    JSZipUtils.getBinaryContent(url, function(err, data) {
+        if(err) {
+            throw err; // or handle err
+        }
+        JSZip.loadAsync(data).then(function (zip) {
+            for(let [filename, file] of Object.entries(zip.files)) {
+              if (file.dir) continue;
+              if (filename.endsWith('positions.3.float16');
+              console.log('bingo', filename, file);
+          }
+        });
+    });
+  } //handle TRX zip*/
   if (url === "") throw Error("url must not be empty");
   if (gl === null) throw Error("gl context is null");
   let response = await fetch(url);
   if (!response.ok) throw Error(response.statusText);
-  let urlParts = url.split("/"); // split url parts at slash
-  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   let tris = [];
   var pts = [];
   let buffer = await response.arrayBuffer();
