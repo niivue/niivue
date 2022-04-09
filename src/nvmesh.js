@@ -1,8 +1,6 @@
 import * as gifti from "gifti-reader-js/release/current/gifti-reader";
 import * as pako from "pako";
 import * as JSZip from "jszip";
-//import * as JSZipUtils from "jszip-utils";
-import JSZipUtils from './JsZipUtils';
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
@@ -1510,52 +1508,46 @@ NVMesh.readTRX = async function (url) {
   } // decodeFloat16()
   let pts = [];
   let offsetPt0 = [];
-  await JSZipUtils.getBinaryContent(url, function (err, data) {
-    if (err) {
-      throw err; // or handle err
-    }
-    //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
-    JSZip.loadAsync(data).then(function (zip) {
-      //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
-      for (let [filename, file] of Object.entries(zip.files)) {
-        if (file.dir) continue;
-        let parts = filename.split("/");
-        let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
-        if (fname.startsWith(".")) continue;
-        let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
-        if (fname.includes("header.json")) continue;
-        if (pname.includes("dpv")) continue;
-        if (pname.includes("dps")) continue;
-        if (fname.startsWith("offsets.")) console.log("found offsets:" + fname);
-        if (fname.startsWith("positions."))
-          console.log("found positions:" + fname);
-        const promises = [];
-        promises.push(zip.file(filename).async("uint8array"));
-        Promise.all(promises).then(function (data) {
-          console.log(fname, "data:", data);
-          if (fname.startsWith("offsets.uint64")) {
-            //javascript does not have 64-bit integers! read lower 32-bits
-            // todo: big endian!
-            let noff = data[0].length / 8; //8 bytes per 64bit input
-            offsetPt0 = new Uint32Array(noff + 1);
-            var u32 = new Uint32Array(data[0].buffer);
-            for (let i = 0; i < noff; i++) offsetPt0[i] = u32[i * 2];
-            offsetPt0[noff] = 32; // TO DO: this must be npt/3, which we may not know yet
-            console.log("offsets", offsetPt0);
-          }
-          if (fname.startsWith("positions.3.float16")) {
-            //javascript does not have 16-bit floats! Convert to 32-bits
-            // todo: big endian!
-            let npt = data[0].length / 2; //2 bytes per 16bit input
-            pts = new Float32Array(npt);
-            var u16 = new Uint16Array(data[0].buffer);
-            for (let i = 0; i < npt; i++) pts[i] = decodeFloat16(u16[i]);
-            console.log("pts", pts);
-          }
-        });
-      }
-    });
-  });
+	let response = await fetch(url);
+  if (!response.ok) throw Error(response.statusText);
+  let data = await response.arrayBuffer();
+  //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
+	let zip = await JSZip.loadAsync(data)
+	//zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
+	for (let [filename, file] of Object.entries(zip.files)) {
+		if (file.dir) continue;
+		let parts = filename.split("/");
+		let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
+		if (fname.startsWith(".")) continue;
+		let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
+		if (fname.includes("header.json")) continue;
+		if (pname.includes("dpv")) continue;
+		if (pname.includes("dps")) continue;
+		if (fname.startsWith("offsets.")) console.log("found offsets:" + fname);
+		if (fname.startsWith("positions."))
+			console.log("found positions:" + fname);
+		let data = await zip.file(filename).async("uint8array")
+		console.log(fname, "data:", data);
+		if (fname.startsWith("offsets.uint64")) {
+			//javascript does not have 64-bit integers! read lower 32-bits
+			// todo: big endian!
+			let noff = data.length / 8; //8 bytes per 64bit input
+			offsetPt0 = new Uint32Array(noff + 1);
+			var u32 = new Uint32Array(data);
+			for (let i = 0; i < noff; i++) offsetPt0[i] = u32[i * 2];
+			offsetPt0[noff] = 32; // TO DO: this must be npt/3, which we may not know yet
+			console.log("offsets", offsetPt0);
+		}
+		if (fname.startsWith("positions.3.float16")) {
+			//javascript does not have 16-bit floats! Convert to 32-bits
+			// todo: big endian!
+			let npt = data.length / 2; //2 bytes per 16bit input
+			pts = new Float32Array(npt);
+			var u16 = new Uint16Array(data);
+			for (let i = 0; i < npt; i++) pts[i] = decodeFloat16(u16[i]);
+			console.log("pts", pts);
+		}
+	}
   console.log("ALMOST ALL DONE: add final value to offsetPt0");
   return {
     pts,
@@ -1564,7 +1556,7 @@ NVMesh.readTRX = async function (url) {
 };
 
 NVMesh.readTRXw = async function (url, name, gl, opacity, visible) {
-  obj = await this.readTRX(url);
+  let obj = await this.readTRX(url);
   let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
   let pts = new Float32Array(obj.pts.slice());
   return new NVMesh(
