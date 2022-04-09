@@ -1533,7 +1533,7 @@ NVMesh.readTRX = async function (url) {
 			// todo: big endian!
 			let noff = data.length / 8; //8 bytes per 64bit input
 			offsetPt0 = new Uint32Array(noff + 1);
-			var u32 = new Uint32Array(data);
+			var u32 = new Uint32Array(data.buffer);
 			for (let i = 0; i < noff; i++) offsetPt0[i] = u32[i * 2];
 			offsetPt0[noff] = 32; // TO DO: this must be npt/3, which we may not know yet
 			console.log("offsets", offsetPt0);
@@ -1543,8 +1543,9 @@ NVMesh.readTRX = async function (url) {
 			// todo: big endian!
 			let npt = data.length / 2; //2 bytes per 16bit input
 			pts = new Float32Array(npt);
-			var u16 = new Uint16Array(data);
+			var u16 = new Uint16Array(data.buffer);
 			for (let i = 0; i < npt; i++) pts[i] = decodeFloat16(u16[i]);
+			console.log(data)
 			console.log("pts", pts);
 		}
 	}
