@@ -87,7 +87,7 @@ export function NVImage(
     return;
   }
   var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(name)[1];
+  let ext = re.exec(name)[1] || '';
   ext = ext.toUpperCase();
   let imgRaw = null;
   this.hdr = null;
@@ -1426,6 +1426,51 @@ NVImage.loadFromFile = async function ({
   console.log(nvimage);
   return nvimage;
 };
+
+NVImage.loadFromBase64 = async function ({
+  base64 = null,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true,
+} = {}) {
+	//https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+	function base64ToArrayBuffer(base64) {
+		var binary_string = window.atob(base64);
+		var len = binary_string.length;
+		var bytes = new Uint8Array(len);
+		for (var i = 0; i < len; i++) {
+				bytes[i] = binary_string.charCodeAt(i);
+		}
+		return bytes.buffer;
+	}
+
+  let nvimage = null;
+  try {
+    let dataBuffer = base64ToArrayBuffer(base64)
+    let pairedImgData = null;
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colorMap,
+      opacity,
+      pairedImgData,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible
+    );
+  } catch (err) {
+    console.log(err);
+    log.debug(err);
+  }
+  console.log(nvimage);
+  return nvimage;
+};
+
 
 /**
  * make a clone of a NVImage instance and return a new NVImage

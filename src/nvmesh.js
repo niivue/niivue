@@ -1851,6 +1851,30 @@ NVMesh.loadFromFile = async function ({
   return await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
 };
 
+NVMesh.loadFromBase64 = async function ({
+  base64 = null,
+  gl=null,
+  name = "",
+  opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
+  visible = true,
+  layers = [],
+} = {}) {
+	//https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+	function base64ToArrayBuffer(base64) {
+		var binary_string = window.atob(base64);
+		var len = binary_string.length;
+		var bytes = new Uint8Array(len);
+		for (var i = 0; i < len; i++) {
+				bytes[i] = binary_string.charCodeAt(i);
+		}
+		return bytes.buffer;
+	}
+	
+  let buffer = base64ToArrayBuffer(base64);
+  return await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
+};
+
 String.prototype.getBytes = function () {
   //CR??? What does this do?
   let bytes = [];

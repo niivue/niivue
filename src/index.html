@@ -57,10 +57,6 @@
           opacity: 1,
           visible: true,
         },
-				{
-					url: "../demos/images/hippo.nii.gz",
-					colorMap: 'red'
-				}
       ]
 			var nv1 = new Niivue({
 				logging: true,
@@ -113,6 +109,31 @@
 			nv1.on('intensityRange', (image) => {
 			 console.log(image.cal_min, image.cal_max)
 			})
+			
+			// BASE 64 loading test (remove if needed)
+			let resp = await fetch("../demos/images/hippo.nii.gz")
+			let ab = await resp.arrayBuffer()
+			// arrayBuffer to base 64 just to test things work.
+			// in reality, it may be the case that niivue can be bundled in a static html file with base 64 encoded images as variables to load
+			//https://stackoverflow.com/questions/9267899/arraybuffer-to-base64-encoded-string
+			function arrayBufferToBase64( buffer ) {
+				var binary = '';
+				var bytes = new Uint8Array( buffer );
+				var len = bytes.byteLength;
+				for (var i = 0; i < len; i++) {
+						binary += String.fromCharCode( bytes[ i ] );
+				}
+				return window.btoa( binary );
+			}
+			let b64 = arrayBufferToBase64(ab)
+			let b64img = await NVImage.loadFromBase64({base64:b64, colorMap:'red'})
+			nv1.addVolume(b64img)
+			let resp2 = await fetch("../demos/images/BrainMesh_ICBM152.lh.mz3")
+			let meshBuffer = await resp2.arrayBuffer()
+			let meshb64 = arrayBufferToBase64(meshBuffer)
+			let meshFromb64 = await NVMesh.loadFromBase64({base64:meshb64, name:'motor_4t95mesh.rh.mz3', gl:nv1.gl})
+			nv1.addMesh(meshFromb64)
+
     </script>
   </div>
 </body>
