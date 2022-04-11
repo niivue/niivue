@@ -133,26 +133,74 @@ NVMesh.prototype.updateFibers = function (gl) {
   //fill fiber Color
   let dither = this.fiberDither;
   let ditherHalf = dither * 0.5;
-  let r = 0.0;
-  for (let i = 0; i < n_count; i++) {
-    let vStart = offsetPt0[i]; //first vertex in streamline
-    let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
-    let vStart3 = vStart * 3; //pts have 3 components XYZ
-    let vEnd3 = vEnd * 3;
+  function direction2rgb(x1, y1, z1, x2, y2, z2) {
+    //generate color based on direction between two 3D spatial positions
     let v = vec3.fromValues(
-      pts[vStart3] - pts[vEnd3],
-      pts[vStart3 + 1] - pts[vEnd3 + 1],
-      pts[vStart3 + 2] - pts[vEnd3 + 2]
+      Math.abs(x1 - x2),
+      Math.abs(y1 - y2),
+      Math.abs(z1 - z2)
     );
     vec3.normalize(v, v);
+    let r = 0.0;
     if (dither > 0.0) r = dither * Math.random() - ditherHalf;
     for (let j = 0; j < 3; j++)
       v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
-    let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
-    //let RBGA =  (Math.abs(v[0]) * 255) + ((Math.abs(v[1]) *255) << 8) + ((Math.abs(v[2]) *255) << 16) + (0 << 24); //RGBA
-    let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
-    let vEnd4 = vEnd * 4 + 3;
-    for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RBGA;
+    return v[0] + (v[1] << 8) + (v[2] << 16);
+  } // direction2rgb()
+  let isColorIsLocalDirection = true;
+  if (isColorIsLocalDirection) {
+    for (let i = 0; i < n_count; i++) {
+      //for each streamline
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let v3 = vStart * 3; //pts have 3 components XYZ
+      let vEnd3 = vEnd * 3;
+      //for first point, we do not have a prior sample
+      let RGBA = direction2rgb(
+        pts[v3],
+        pts[v3 + 1],
+        pts[v3 + 2],
+        pts[v3 + 4],
+        pts[v3 + 5],
+        pts[v3 + 6]
+      );
+      let v4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      while (v3 < vEnd3) {
+        posClrU32[v4] = RGBA;
+        v4 += 4; //stride is 4 32-bit values: float32 XYZ and 32-bit rgba
+        v3 += 3; //read next vertex
+        //direction estimated based on previous and next vertex
+        RGBA = direction2rgb(
+          pts[v3 - 3],
+          pts[v3 - 2],
+          pts[v3 - 1],
+          pts[v3 + 3],
+          pts[v3 + 4],
+          pts[v3 + 5]
+        );
+      }
+      posClrU32[v4] = posClrU32[v4 - 4];
+    }
+  } else {
+    //if color is local direction, else global
+    for (let i = 0; i < n_count; i++) {
+      //for each streamline
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let vStart3 = vStart * 3; //pts have 3 components XYZ
+      let vEnd3 = vEnd * 3;
+      let RGBA = direction2rgb(
+        pts[vStart3],
+        pts[vStart3 + 1],
+        pts[vStart3 + 2],
+        pts[vEnd3],
+        pts[vEnd3 + 1],
+        pts[vEnd3 + 2]
+      );
+      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      let vEnd4 = vEnd * 4 + 3;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+    }
   }
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
@@ -581,19 +629,22 @@ NVMesh.readTRK = function (buffer) {
   }
   var vers = reader.getUint32(992, true); //2
   var hdr_sz = reader.getUint32(996, true); //1000
-
   if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388)
     throw new Error("Not a valid TRK file");
+  let dps = [];
+  let dpv = [];
   var n_scalars = reader.getInt16(36, true);
-  let scalar_names = [];
   if (n_scalars > 0) {
+    //data_per_vertex
     for (let i = 0; i < n_scalars; i++) {
       let arr = new Uint8Array(buffer.slice(38 + i * 20, 58 + i * 20));
       var str = new TextDecoder().decode(arr).split("\0").shift();
-      scalar_names.push(str.trim()); //trim: https://github.com/johncolby/along-tract-stats
+      dpv.push({
+        id: str.trim(),
+        vals: [],
+      });
     }
   }
-  //console.log('scalar_names',scalar_names);
   var voxel_sizeX = reader.getFloat32(12, true);
   var voxel_sizeY = reader.getFloat32(16, true);
   var voxel_sizeZ = reader.getFloat32(20, true);
@@ -616,15 +667,16 @@ NVMesh.readTRK = function (buffer) {
     1
   );
   var n_properties = reader.getInt16(238, true);
-  let property_names = [];
   if (n_properties > 0) {
     for (let i = 0; i < n_properties; i++) {
       let arr = new Uint8Array(buffer.slice(240 + i * 20, 260 + i * 20));
       var str = new TextDecoder().decode(arr).split("\0").shift();
-      property_names.push(str.trim());
+      dps.push({
+        id: str.trim(),
+        vals: [],
+      });
     }
   }
-  //console.log('property_names',property_names);
   var mat = mat4.create();
   for (let i = 0; i < 16; i++) mat[i] = reader.getFloat32(440 + i * 4, true);
   if (mat[15] === 0.0) {
@@ -645,8 +697,6 @@ NVMesh.readTRK = function (buffer) {
   let npt = 0;
   let offsetPt0 = [];
   let pts = [];
-  let scalars = [];
-  let properties = [];
   while (i < ntracks) {
     let n_pts = i32[i];
     i = i + 1; // read 1 32-bit integer for number of points in this streamline
@@ -676,7 +726,7 @@ NVMesh.readTRK = function (buffer) {
       );
       if (n_scalars > 0) {
         for (let s = 0; s < n_scalars; s++) {
-          scalars.push(f32[i]);
+          dpv[s].vals.push(f32[i]);
           i++;
         }
       }
@@ -684,7 +734,7 @@ NVMesh.readTRK = function (buffer) {
     } // for j: each point in streamline
     if (n_properties > 0) {
       for (let j = 0; j < n_properties; j++) {
-        properties.push(f32[i]);
+        dps[j].vals.push(f32[i]);
         i++;
       }
     }
@@ -699,9 +749,10 @@ NVMesh.readTRK = function (buffer) {
   return {
     pts,
     offsetPt0,
+    dps,
+    dpv,
   };
 }; //readTRK()
-
 NVMesh.readTxtVTK = function (buffer) {
   var enc = new TextDecoder("utf-8");
   var txt = enc.decode(buffer);
@@ -900,30 +951,73 @@ NVMesh.readVTK = function (buffer) {
   if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
   line = readStr(); //2nd line comment
   line = readStr(); //3rd line ASCII/BINARY
-  if (line.startsWith("ASCII")) return this.readTxtVTK(buffer);
+  if (line.startsWith("ASCII")) return this.readTxtVTK(buffer); //from NiiVue
   else if (!line.startsWith("BINARY"))
     alert("Invalid VTK image, expected ASCII or BINARY", line);
   line = readStr(); //5th line "DATASET POLYDATA"
   if (!line.includes("POLYDATA")) alert("Only able to read VTK POLYDATA", line);
   line = readStr(); //6th line "POINTS 10261 float"
-  if (!line.includes("POINTS") || !line.includes("float"))
-    alert("Only able to read VTK float POINTS", line);
+  if (
+    !line.includes("POINTS") ||
+    (!line.includes("double") && !line.includes("float"))
+  )
+    console.log("Only able to read VTK float or double POINTS" + line);
+  let isFloat64 = line.includes("double");
   let items = line.split(" ");
   let nvert = parseInt(items[1]); //POINTS 10261 float
   let nvert3 = nvert * 3;
   var positions = new Float32Array(nvert3);
   var reader = new DataView(buffer);
-  for (let i = 0; i < nvert3; i++) {
-    positions[i] = reader.getFloat32(pos, false);
-    pos += 4;
+  if (isFloat64) {
+    for (let i = 0; i < nvert3; i++) {
+      positions[i] = reader.getFloat64(pos, false);
+      pos += 8;
+    }
+  } else {
+    for (let i = 0; i < nvert3; i++) {
+      positions[i] = reader.getFloat32(pos, false);
+      pos += 4;
+    }
   }
   line = readStr(); //Type, "LINES 11885 "
   items = line.split(" ");
   let tris = [];
   if (items[0].includes("LINES")) {
-    //tractogaphy data
-    console.log("boingo", line);
     let n_count = parseInt(items[1]);
+    //tractogaphy data: detect if borked by DiPy
+    let posOK = pos;
+    line = readStr(); //borked files "OFFSETS vtktypeint64"
+    if (line.startsWith("OFFSETS")) {
+      //console.log("invalid VTK file created by DiPy");
+      let isInt64 = false;
+      if (line.includes("int64")) isInt64 = true;
+      let offsetPt0 = new Uint32Array(n_count);
+      if (isInt64) {
+        let isOverflowInt32 = false;
+        for (let c = 0; c < n_count; c++) {
+          let idx = reader.getInt32(pos, false);
+          if (idx !== 0) isOverflowInt32 = true;
+          pos += 4;
+          idx = reader.getInt32(pos, false);
+          pos += 4;
+          offsetPt0[c] = idx;
+        }
+        if (isOverflowInt32)
+          console.log("int32 overflow: JavaScript does not support int64");
+      } else {
+        for (let c = 0; c < n_count; c++) {
+          let idx = reader.getInt32(pos, false);
+          pos += 4;
+          offsetPt0[c] = idx;
+        }
+      }
+      let pts = positions;
+      return {
+        pts,
+        offsetPt0,
+      };
+    }
+    pos = posOK; //valid VTK file
     let npt = 0;
     let offsetPt0 = [];
     let pts = [];
@@ -1389,10 +1483,8 @@ NVMesh.readMesh = function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  if (ext === "TCK" || ext === "TRK" || ext === "TRX") {
+  if (ext === "TCK" || ext === "TRK") {
     if (ext === "TCK") obj = this.readTCK(buffer);
-    else if (ext === "TRX")
-      console.log("Not yet"); //obj = this.readTRX(buffer);
     else obj = this.readTRK(buffer);
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
@@ -1489,7 +1581,8 @@ function decodeFloat16(binary) {
   );
 }
 
-NVMesh.readTRX = async function (url) {
+NVMesh.readTRX = async function (url, urlIsLocalFile = false) {
+  //Javascript does not support float16, so we convert to float32
   //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
   function decodeFloat16(binary) {
     "use strict";
@@ -1506,58 +1599,142 @@ NVMesh.readTRX = async function (url) {
         : 6.103515625e-5 * (fraction / 0x400))
     );
   } // decodeFloat16()
+  let noff = 0;
+  let npt = 0;
   let pts = [];
   let offsetPt0 = [];
-	let response = await fetch(url);
-  if (!response.ok) throw Error(response.statusText);
-  let data = await response.arrayBuffer();
+  let dpg = [];
+  let dps = [];
+  let dpv = [];
+  let header = [];
+  let isOverflowUint64 = false;
+  let data = [];
+  if (urlIsLocalFile) {
+    data = fs.readFileSync(url);
+  } else {
+    let response = await fetch(url);
+    if (!response.ok) throw Error(response.statusText);
+    data = await response.arrayBuffer();
+  }
   //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
-	let zip = await JSZip.loadAsync(data)
-	//zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
-	for (let [filename, file] of Object.entries(zip.files)) {
-		if (file.dir) continue;
-		let parts = filename.split("/");
-		let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
-		if (fname.startsWith(".")) continue;
-		let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
-		if (fname.includes("header.json")) continue;
-		if (pname.includes("dpv")) continue;
-		if (pname.includes("dps")) continue;
-		if (fname.startsWith("offsets.")) console.log("found offsets:" + fname);
-		if (fname.startsWith("positions."))
-			console.log("found positions:" + fname);
-		let data = await zip.file(filename).async("uint8array")
-		console.log(fname, "data:", data);
-		if (fname.startsWith("offsets.uint64")) {
-			//javascript does not have 64-bit integers! read lower 32-bits
-			// todo: big endian!
-			let noff = data.length / 8; //8 bytes per 64bit input
-			offsetPt0 = new Uint32Array(noff + 1);
-			var u32 = new Uint32Array(data.buffer);
-			for (let i = 0; i < noff; i++) offsetPt0[i] = u32[i * 2];
-			offsetPt0[noff] = 32; // TO DO: this must be npt/3, which we may not know yet
-			console.log("offsets", offsetPt0);
-		}
-		if (fname.startsWith("positions.3.float16")) {
-			//javascript does not have 16-bit floats! Convert to 32-bits
-			// todo: big endian!
-			let npt = data.length / 2; //2 bytes per 16bit input
-			pts = new Float32Array(npt);
-			var u16 = new Uint16Array(data.buffer);
-			for (let i = 0; i < npt; i++) pts[i] = decodeFloat16(u16[i]);
-			console.log(data)
-			console.log("pts", pts);
-		}
-	}
-  console.log("ALMOST ALL DONE: add final value to offsetPt0");
+  let zip = await JSZip.loadAsync(data);
+  //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
+  for (let [filename, file] of Object.entries(zip.files)) {
+    if (file.dir) continue;
+    let parts = filename.split("/");
+    let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
+    if (fname.startsWith(".")) continue;
+    let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
+    let tag = fname.split(".")[0]; // "positions.3.float16 -> "positions"
+    //todo: should tags be censored for invalide characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
+    let data = await zip.file(filename).async("uint8array");
+    //next read header
+    if (fname.includes("header.json")) {
+      let jsonString = new TextDecoder().decode(data);
+      header = JSON.parse(jsonString);
+      continue;
+    }
+    //next read arrays for all possible datatypes: int8/16/32/64 uint8/16/32/64 float16/32/64
+    let nval = 0;
+    let vals = [];
+    if (fname.endsWith(".uint64") || fname.endsWith(".int64")) {
+      //javascript does not have 64-bit integers! read lower 32-bits
+      //note for signed int64 we only read unsigned bytes
+      //for both signed and unsigned, generate an error if any value is out of bounds
+      //one alternative might be to convert to 64-bit double that has a flintmax of 2^53.
+      nval = data.length / 8; //8 bytes per 64bit input
+      vals = new Uint32Array(nval);
+      var u32 = new Uint32Array(data.buffer);
+      let j = 0;
+      for (let i = 0; i < nval; i++) {
+        vals[i] = u32[j];
+        if (u32[j + 1] !== 0) isOverflowUint64 = true;
+        j += 2;
+      }
+    } else if (fname.endsWith(".uint32")) {
+      vals = new Uint32Array(data.buffer);
+    } else if (fname.endsWith(".uint16")) {
+      vals = new Uint16Array(data.buffer);
+    } else if (fname.endsWith(".uint8")) {
+      vals = new Uint8Array(data.buffer);
+    } else if (fname.endsWith(".int32")) {
+      vals = new Int32Array(data.buffer);
+    } else if (fname.endsWith(".int16")) {
+      vals = new Int16Array(data.buffer);
+    } else if (fname.endsWith(".int8")) {
+      vals = new Int8Array(data.buffer);
+    } else if (fname.endsWith(".float64")) {
+      vals = new Float64Array(data.buffer);
+    } else if (fname.endsWith(".float32")) {
+      vals = new Float32Array(data.buffer);
+    } else if (fname.endsWith(".float16")) {
+      //javascript does not have 16-bit floats! Convert to 32-bits
+      nval = data.length / 2; //2 bytes per 16bit input
+      vals = new Float32Array(nval);
+      var u16 = new Uint16Array(data.buffer);
+      for (let i = 0; i < nval; i++) vals[i] = decodeFloat16(u16[i]);
+    } else continue; //not a data array
+    nval = vals.length;
+    //next: read data_per_group
+    if (pname.includes("dpg")) {
+      dpg.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }
+    //next: read data_per_vertex
+    if (pname.includes("dpv")) {
+      dpv.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }
+    //next: read data_per_streamline
+    if (pname.includes("dps")) {
+      dps.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }
+    //Next: read offsets: Always uint64
+    if (fname.startsWith("offsets.")) {
+      //javascript does not have 64-bit integers! read lower 32-bits
+      noff = nval; //8 bytes per 64bit input
+      //we need to solve the fence post problem, so we can not use slice
+      offsetPt0 = new Uint32Array(nval + 1);
+      for (let i = 0; i < nval; i++) offsetPt0[i] = vals[i];
+    }
+    if (fname.startsWith("positions.3.")) {
+      npt = nval; //4 bytes per 32bit input
+      pts = vals.slice();
+    }
+  }
+  if (noff === 0 || npt === 0) alert("Failure reading TRX format");
+  if (isOverflowUint64)
+    alert("Too many vertices: JavaScript does not support 64 bit integers");
+  offsetPt0[noff] = npt / 3; //solve fence post problem, offset for final streamline
   return {
     pts,
     offsetPt0,
+    dpg,
+    dps,
+    dpv,
+    header,
   };
 };
 
-NVMesh.readTRXw = async function (url, name, gl, opacity, visible) {
-  let obj = await this.readTRX(url);
+NVMesh.readTRXw = async function (
+  url,
+  name,
+  gl,
+  opacity,
+  visible,
+  urlIsLocalFile = false
+) {
+  let obj = await this.readTRX(url, urlIsLocalFile);
   let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
   let pts = new Float32Array(obj.pts.slice());
   return new NVMesh(
@@ -1593,24 +1770,11 @@ NVMesh.loadFromUrl = async function ({
 } = {}) {
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
-  if (url.endsWith("trx"))
-    return this.readTRXw(url, name, gl, opacity, visible);
-  /*  if (url.endsWith('trx')) { 
-    JSZipUtils.getBinaryContent(url, function(err, data) {
-        if(err) {
-            throw err; // or handle err
-        }
-        JSZip.loadAsync(data).then(function (zip) {
-            for(let [filename, file] of Object.entries(zip.files)) {
-              if (file.dir) continue;
-              if (filename.endsWith('positions.3.float16');
-              console.log('bingo', filename, file);
-          }
-        });
-    });
-  } //handle TRX zip*/
   if (url === "") throw Error("url must not be empty");
   if (gl === null) throw Error("gl context is null");
+  //TRX format is special (its a zip archive of multiple files)
+  if (url.endsWith("trx"))
+    return this.readTRXw(url, name, gl, opacity, visible);
   let response = await fetch(url);
   if (!response.ok) throw Error(response.statusText);
   let tris = [];
@@ -1671,6 +1835,8 @@ NVMesh.loadFromFile = async function ({
   visible = true,
   layers = [],
 } = {}) {
+  if (file.name.endsWith("trx"))
+    return this.readTRXw(file.name, name, gl, opacity, visible, false);
   let buffer = await this.readFileAsync(file);
   return this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
 };

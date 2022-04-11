@@ -1915,9 +1915,7 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
       );
 
       resolve(pngTexture);
-      if (textureNum !== 4)
-        this.drawScene(); //draw the font
-
+      if (textureNum !== 4) this.drawScene(); //draw the font
     };
 
     img.onerror = reject;
