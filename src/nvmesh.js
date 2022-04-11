@@ -31,7 +31,10 @@ export function NVMesh(
   opacity = 1.0,
   visible = true,
   gl,
-  connectome = null
+  connectome = null,
+  dpg = null,
+  dps = null,
+  dpv = null
 ) {
   this.name = name;
   this.id = uuidv4();
@@ -48,6 +51,11 @@ export function NVMesh(
   if (!rgba255) {
     this.fiberLength = 2;
     this.fiberDither = 0.1;
+    this.fiberColor = "Global";
+    this.colormap = connectome;
+    this.dpg = dpg;
+    this.dps = dps;
+    this.dpv = dpv;
     this.offsetPt0 = tris;
     this.updateFibers(gl);
     //define VAO
@@ -147,8 +155,58 @@ NVMesh.prototype.updateFibers = function (gl) {
       v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
     return v[0] + (v[1] << 8) + (v[2] << 16);
   } // direction2rgb()
-  let isColorIsLocalDirection = true;
-  if (isColorIsLocalDirection) {
+  //Determine color: local, global, dps0, dpv0, etc.
+  let fiberColor = this.fiberColor.toLowerCase();
+  let dps = null;
+  let dpv = null;
+  if (fiberColor.startsWith("dps") && this.dps.length > 0) {
+    let n = parseInt(fiberColor.substring(3));
+    if (n < this.dps.length && this.dps[n].vals.length === n_count)
+      dps = this.dps[n].vals;
+  }
+  if (fiberColor.startsWith("dpv") && this.dpv.length > 0) {
+    let n = parseInt(fiberColor.substring(3));
+    if (n < this.dpv.length && this.dpv[n].vals.length === npt)
+      dpv = this.dpv[n].vals;
+  }
+  if (dpv) {
+    //color per streamline
+    let lut = cmapper.colormap(this.colormap);
+    let mn = dpv[0];
+    let mx = dpv[0];
+    for (let i = 0; i < npt; i++) {
+      mn = Math.min(mn, dpv[i]);
+      mx = Math.max(mx, dpv[i]);
+    }
+    let v4 = 3; //+3: fill 4th component colors: XYZC = 0123
+    for (let i = 0; i < npt; i++) {
+      let color = (dpv[i] - mn) / (mx - mn);
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16);
+      posClrU32[v4] = RGBA;
+      v4 += 4;
+    }
+  } else if (dps) {
+    //color per streamline
+    let lut = cmapper.colormap(this.colormap);
+    let mn = dps[0];
+    let mx = dps[0];
+    for (let i = 0; i < n_count; i++) {
+      mn = Math.min(mn, dps[i]);
+      mx = Math.max(mx, dps[i]);
+    }
+    if (mx === mn) mn -= 1; //avoid divide by zero
+    for (let i = 0; i < n_count; i++) {
+      let color = (dps[i] - mn) / (mx - mn);
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16);
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      let vEnd4 = vEnd * 4 + 3;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+    }
+  } else if (fiberColor.includes("local")) {
     for (let i = 0; i < n_count; i++) {
       //for each streamline
       let vStart = offsetPt0[i]; //first vertex in streamline
@@ -353,12 +411,16 @@ NVMesh.prototype.updateMesh = function (gl) {
         continue;
       }
       let lut = cmapper.colormap(layer.colorMap);
+
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
       let nvtx = this.pts.length / 3;
       let frameOffset = nvtx * frame;
+      if (layer.useNegativeCmap) {
+        layer.cal_min = Math.max(0, layer.cal_min);
+        layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
+      }
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
       //blend colors for each voxel
-      let k = 0;
       for (let j = 0; j < nvtx; j++) {
         let v255 = Math.round(
           (layer.values[j + frameOffset] - layer.cal_min) * scale255
@@ -369,6 +431,20 @@ NVMesh.prototype.updateMesh = function (gl) {
         u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
         u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
         u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+      }
+      if (layer.useNegativeCmap) {
+        let lut = cmapper.colormap(layer.colorMapNegative);
+        for (let j = 0; j < nvtx; j++) {
+          let v255 = Math.round(
+            (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+          );
+          if (v255 < 0) continue;
+          v255 = Math.min(255.0, v255) * 4;
+          let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+          u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+          u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+          u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+        }
       }
     }
   }
@@ -1196,7 +1272,11 @@ NVMesh.readLayer = function (
   buffer,
   nvmesh,
   opacity = 0.5,
-  colorMap = "rocket"
+  colorMap = "warm",
+  colorMapNegative = "winter",
+  useNegativeCmap = false,
+  cal_min = null,
+  cal_max = null
 ) {
   let layer = [];
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
@@ -1231,10 +1311,14 @@ NVMesh.readLayer = function (
   }
   layer.global_min = mn;
   layer.global_max = mx;
-  layer.cal_min = mn;
-  layer.cal_max = mx;
+  layer.cal_min = cal_min;
+  if (!cal_min) layer.cal_min = mn;
+  layer.cal_max = cal_max;
+  if (!cal_max) layer.cal_max = mx;
   layer.opacity = opacity;
   layer.colorMap = colorMap;
+  layer.colorMapNegative = colorMapNegative;
+  layer.useNegativeCmap = useNegativeCmap;
   nvmesh.layers.push(layer);
 };
 
@@ -1483,11 +1567,17 @@ NVMesh.readMesh = async function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  if (ext === "TCK" || ext === "TRK") {
+  if (ext === "TCK" || ext === "TRK" || ext === "TRX") {
     if (ext === "TCK") obj = this.readTCK(buffer);
+    else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
+    //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+    //let pts = new Float32Array(obj.pts.slice());
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
+    if (!obj.hasOwnProperty("dpg")) obj.dpg = null;
+    if (!obj.hasOwnProperty("dps")) obj.dps = null;
+    if (!obj.hasOwnProperty("dpv")) obj.dpv = null;
     return new NVMesh(
       pts,
       offsetPt0,
@@ -1495,26 +1585,16 @@ NVMesh.readMesh = async function (
       null, //colorMap,
       opacity, //opacity,
       visible, //visible,
-      gl
+      gl,
+      "inferno",
+      obj.dpg,
+      obj.dps,
+      obj.dpv
     );
   } //is fibers
   if (ext === "GII") {
-		obj = this.readGII(buffer);
-	} else if (ext === "TRX") {
-		obj = await this.readTRX(buffer)
-		let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-  	let pts = new Float32Array(obj.pts.slice());
-		return new NVMesh(
-			pts,
-			offsetPt0,
-			name,
-			null, //colorMap,
-			opacity, //opacity,
-			visible, //visible,
-			gl
-		);
-	}
-  else if (ext === "MZ3") obj = this.readMZ3(buffer);
+    obj = this.readGII(buffer);
+  } else if (ext === "MZ3") obj = this.readMZ3(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
   else if (ext === "FIB" || ext === "VTK") {
@@ -1530,13 +1610,15 @@ NVMesh.readMesh = async function (
         null, //colorMap,
         opacity, //opacity,
         visible, //visible,
-        gl
+        gl,
+        "inferno"
       );
     } //if streamlines, not mesh
-  } else if (ext === "STL") 
-	{
-		obj = this.readSTL(buffer);
-	} else {obj = this.readFreeSurfer(buffer);} // freesurfer hail mary
+  } else if (ext === "STL") {
+    obj = this.readSTL(buffer);
+  } else {
+    obj = this.readFreeSurfer(buffer);
+  } // freesurfer hail mary
   pts = obj.positions.slice();
   tris = obj.indices.slice();
   if (obj.colors && obj.colors.length === pts.length) {
@@ -1598,7 +1680,7 @@ function decodeFloat16(binary) {
 }
 
 NVMesh.readTRX = async function (buffer) {
-	console.log('READING TRX')
+  console.log("READING TRX");
   //Javascript does not support float16, so we convert to float32
   //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
   function decodeFloat16(binary) {
@@ -1626,10 +1708,10 @@ NVMesh.readTRX = async function (buffer) {
   let header = [];
   let isOverflowUint64 = false;
   let data = [];
-	//let response = await fetch(url);
-	//if (!response.ok) throw Error(response.statusText);
-	//data = await response.arrayBuffer();
-	data = buffer
+  //let response = await fetch(url);
+  //if (!response.ok) throw Error(response.statusText);
+  //data = await response.arrayBuffer();
+  data = buffer;
   //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
   let zip = await JSZip.loadAsync(data);
   //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
@@ -1740,28 +1822,6 @@ NVMesh.readTRX = async function (buffer) {
   };
 };
 
-NVMesh.readTRXw = async function (
-  url,
-  name,
-  gl,
-  opacity,
-  visible,
-  urlIsLocalFile = false
-) {
-  let obj = await this.readTRX(url, urlIsLocalFile);
-  let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-  let pts = new Float32Array(obj.pts.slice());
-  return new NVMesh(
-    pts,
-    offsetPt0,
-    name,
-    null, //colorMap,
-    opacity, //opacity,
-    visible, //visible,
-    gl
-  );
-};
-
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -1801,9 +1861,30 @@ NVMesh.loadFromUrl = async function ({
     urlParts = layers[i].url.split("/");
     let opacity = 0.5;
     if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
-    let colorMap = "viridis";
+    let colorMap = "warm";
     if (layers[i].hasOwnProperty("colorMap")) colorMap = layers[i].colorMap;
-    this.readLayer(urlParts.slice(-1)[0], buffer, nvmesh, opacity, colorMap);
+    let colorMapNegative = "winter";
+    if (layers[i].hasOwnProperty("colorMapNegative"))
+      colorMapNegative = layers[i].colorMapNegative;
+    let useNegativeCmap = false;
+    if (layers[i].hasOwnProperty("useNegativeCmap"))
+      useNegativeCmap = layers[i].useNegativeCmap;
+    let cal_min = null;
+    if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
+    let cal_max = null;
+    if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
+
+    this.readLayer(
+      urlParts.slice(-1)[0],
+      buffer,
+      nvmesh,
+      opacity,
+      colorMap,
+      colorMapNegative,
+      useNegativeCmap,
+      cal_min,
+      cal_max
+    );
   }
   nvmesh.updateMesh(gl); //apply the new properties...
   return nvmesh;
@@ -1848,31 +1929,47 @@ NVMesh.loadFromFile = async function ({
   layers = [],
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
+  return await this.readMesh(
+    buffer,
+    name,
+    gl,
+    opacity,
+    rgba255,
+    visible,
+    layers
+  );
 };
 
 NVMesh.loadFromBase64 = async function ({
   base64 = null,
-  gl=null,
+  gl = null,
   name = "",
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true,
   layers = [],
 } = {}) {
-	//https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
-	function base64ToArrayBuffer(base64) {
-		var binary_string = window.atob(base64);
-		var len = binary_string.length;
-		var bytes = new Uint8Array(len);
-		for (var i = 0; i < len; i++) {
-				bytes[i] = binary_string.charCodeAt(i);
-		}
-		return bytes.buffer;
-	}
-	
+  //https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+  function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
   let buffer = base64ToArrayBuffer(base64);
-  return await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
+  return await this.readMesh(
+    buffer,
+    name,
+    gl,
+    opacity,
+    rgba255,
+    visible,
+    layers
+  );
 };
 
 String.prototype.getBytes = function () {
