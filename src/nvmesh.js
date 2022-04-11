@@ -1464,7 +1464,7 @@ NVMesh.loadConnectomeFromJSON = async function (
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
-NVMesh.readMesh = function (
+NVMesh.readMesh = async function (
   buffer,
   name,
   gl,
@@ -1498,7 +1498,22 @@ NVMesh.readMesh = function (
       gl
     );
   } //is fibers
-  if (ext === "GII") obj = this.readGII(buffer);
+  if (ext === "GII") {
+		obj = this.readGII(buffer);
+	} else if (ext === "TRX") {
+		obj = await this.readTRX(buffer)
+		let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+  	let pts = new Float32Array(obj.pts.slice());
+		return new NVMesh(
+			pts,
+			offsetPt0,
+			name,
+			null, //colorMap,
+			opacity, //opacity,
+			visible, //visible,
+			gl
+		);
+	}
   else if (ext === "MZ3") obj = this.readMZ3(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
@@ -1518,9 +1533,10 @@ NVMesh.readMesh = function (
         gl
       );
     } //if streamlines, not mesh
-  } else if (ext === "STL") obj = this.readSTL(buffer);
-  //unknown file extension, try freeSurfer as hail mary
-  else obj = this.readFreeSurfer(buffer);
+  } else if (ext === "STL") 
+	{
+		obj = this.readSTL(buffer);
+	} else {obj = this.readFreeSurfer(buffer);} // freesurfer hail mary
   pts = obj.positions.slice();
   tris = obj.indices.slice();
   if (obj.colors && obj.colors.length === pts.length) {
@@ -1581,7 +1597,8 @@ function decodeFloat16(binary) {
   );
 }
 
-NVMesh.readTRX = async function (url, urlIsLocalFile = false) {
+NVMesh.readTRX = async function (buffer) {
+	console.log('READING TRX')
   //Javascript does not support float16, so we convert to float32
   //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
   function decodeFloat16(binary) {
@@ -1609,13 +1626,10 @@ NVMesh.readTRX = async function (url, urlIsLocalFile = false) {
   let header = [];
   let isOverflowUint64 = false;
   let data = [];
-  if (urlIsLocalFile) {
-    data = fs.readFileSync(url);
-  } else {
-    let response = await fetch(url);
-    if (!response.ok) throw Error(response.statusText);
-    data = await response.arrayBuffer();
-  }
+	//let response = await fetch(url);
+	//if (!response.ok) throw Error(response.statusText);
+	//data = await response.arrayBuffer();
+	data = buffer
   //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
   let zip = await JSZip.loadAsync(data);
   //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
@@ -1773,14 +1787,12 @@ NVMesh.loadFromUrl = async function ({
   if (url === "") throw Error("url must not be empty");
   if (gl === null) throw Error("gl context is null");
   //TRX format is special (its a zip archive of multiple files)
-  if (url.endsWith("trx"))
-    return this.readTRXw(url, name, gl, opacity, visible);
   let response = await fetch(url);
   if (!response.ok) throw Error(response.statusText);
   let tris = [];
   var pts = [];
   let buffer = await response.arrayBuffer();
-  let nvmesh = this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  let nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible);
   if (!layers || layers.length < 1) return nvmesh;
   for (let i = 0; i < layers.length; i++) {
     response = await fetch(layers[i].url);
@@ -1835,10 +1847,8 @@ NVMesh.loadFromFile = async function ({
   visible = true,
   layers = [],
 } = {}) {
-  if (file.name.endsWith("trx"))
-    return this.readTRXw(file.name, name, gl, opacity, visible, false);
   let buffer = await this.readFileAsync(file);
-  return this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
+  return await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
 };
 
 String.prototype.getBytes = function () {
