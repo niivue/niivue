@@ -52,6 +52,8 @@ export function NVMesh(
     this.fiberLength = 2;
     this.fiberDither = 0.1;
     this.fiberColor = "Global";
+    this.fiberDecimationStride = 1; //e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
+    this.fiberMask = []; //provide method to show/hide specific fibers
     this.colormap = connectome;
     this.dpg = dpg;
     this.dps = dps;
@@ -270,9 +272,12 @@ NVMesh.prototype.updateFibers = function (gl) {
   //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
   let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
   let indices = [];
+  let stride = -1;
   for (let i = 0; i < n_count; i++) {
     //let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
     if (this.fiberLengths[i] < min_mm) continue;
+    stride++;
+    if (stride % this.fiberDecimationStride !== 0) continue; //e.g. if stride is 2 then half culled
     for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
     indices.push(primitiveRestart);
   }
