@@ -896,7 +896,6 @@ Niivue.prototype.dropListener = async function (e) {
           ext = re.exec(file.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
           ext = ext.toUpperCase();
         }
-        console.log(ext, "dropped ", file.name);
         if (ext === "PNG") {
           this.loadBmpTexture(file);
           continue;
@@ -909,13 +908,11 @@ Niivue.prototype.dropListener = async function (e) {
               0,
               file.name.lastIndexOf("HEAD")
             );
-            console.log(pairedFile.name);
             let pairedFileBaseName = pairedFile.name.substring(
               0,
               pairedFile.name.lastIndexOf("BRIK")
             );
             if (fileBaseName === pairedFileBaseName) {
-              console.log("base names match!!!!");
               pairedImageData = pairedFile;
             }
           }
@@ -941,7 +938,6 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "TRX" ||
           ext === "VTK"
         ) {
-          //console.log("mesh loading not yet supported");
           let mesh = await NVMesh.loadFromFile({
             file: file,
             gl: this.gl,
@@ -1033,7 +1029,7 @@ Niivue.prototype.getMeshIndexByID = function (id) {
 Niivue.prototype.setMeshProperty = function (id, key, val) {
   let idx = this.getMeshIndexByID(id);
   if (idx < 0) {
-    console.log("setMeshProperty() id not loaded", id);
+    log.warn("setMeshProperty() id not loaded", id);
     return;
   }
   this.meshes[idx].setProperty(key, val, this.gl);
@@ -1043,7 +1039,7 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
   if (idx < 0) {
-    console.log("setMeshLayerProperty() id not loaded", mesh);
+    log.warn("setMeshLayerProperty() id not loaded", mesh);
     return;
   }
   this.meshes[idx].setLayerProperty(layer, key, val, this.gl);
@@ -1085,7 +1081,6 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   this.volumes.map((v) => {
-    console.log(v);
     log.debug(v.name);
   });
   let numberOfLoadedImages = this.volumes.length;
@@ -1571,7 +1566,6 @@ Niivue.prototype.drawPt = function (x, y, z, penValue) {
   y = Math.min(Math.max(y, 0), dy - 1);
   z = Math.min(Math.max(z, 0), dz - 1);
   this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
-  //console.log('>>',x, y, z, penValue);
 };
 
 //https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
@@ -1652,21 +1646,9 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
 };
 //Demonstrate how to create drawing
 Niivue.prototype.createRandomDrawing = function () {
-  console.log(
-    "Background image rasDIMs: ",
-    this.back.dims[1],
-    this.back.dims[2],
-    this.back.dims[3]
-  );
-  console.log(
-    " same as volume 0 dimsRAS: ",
-    this.volumes[0].dimsRAS[1],
-    this.volumes[0].dimsRAS[2],
-    this.volumes[0].dimsRAS[3]
-  );
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (vx !== this.drawBitmap.length) {
-    console.log("Epic failure");
+    log.error("Epic drawing failure");
   }
 
   /*
@@ -1717,7 +1699,7 @@ Niivue.prototype.refreshDrawing = function (isForceRedraw = true) {
     dims[2] = 2;
     dims[3] = 2;
   } else if (vx !== this.drawBitmap.length) {
-    console.log("Drawing bitmap must match the background image");
+    log.warn("Drawing bitmap must match the background image");
   }
   this.gl.activeTexture(this.gl.TEXTURE7);
   this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
@@ -2674,10 +2656,8 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
 
 Niivue.prototype.setFrame4D = function (id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
-  console.log(this.volumes[idx]);
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
-  //console.log("setting frame to ", frame4D);
 };
 
 Niivue.prototype.getFrame4D = function (id) {
@@ -2927,7 +2907,6 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
 // not included in public docs
 Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) return;
-  //console.log("bar:", leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
   // if (this.opts.crosshairWidth > 0) {
   // 	//gl.disable(gl.DEPTH_TEST);
   // 	this.lineShader.use(this.gl)
@@ -3130,7 +3109,6 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  //console.log(leftTopWidthHeight);
   //gl.uniform4f(sliceShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
   //gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.genericVAO); //set vertex attributes
@@ -3727,7 +3705,6 @@ Niivue.prototype.drawThumbnail = function () {
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 
-  console.log("ratioyyy", this.bmpTextureWH);
 };
 
 // not included in public docs

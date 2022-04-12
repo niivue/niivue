@@ -454,7 +454,6 @@ NVImage.prototype.readMGH = function (buffer) {
       alert(
         "Required script missing: include either pako.min.js or gunzip.min.js"
       );
-    //console.log("gz->raw %d->%d", buffer.byteLength, raw.length);
     reader = new DataView(raw.buffer);
   }
   let version = reader.getInt32(0, false);
@@ -561,7 +560,6 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   let xyzOrigin = [0, 0, 0];
   let xyzDelta = [1, 1, 1];
   let txt = new TextDecoder().decode(dataBuffer);
-  //console.log('>>>', txt);
   var lines = txt.split("\n");
   let nlines = lines.length;
   let i = 0;
@@ -1324,7 +1322,6 @@ NVImage.loadFromUrl = async function ({
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
-    console.log(resp.status);
     if (resp.status === 404) {
       if (urlImgData.lastIndexOf("BRIK") !== -1) {
         resp = await fetch(urlImgData + ".gz");
@@ -1402,9 +1399,7 @@ NVImage.loadFromFile = async function ({
   try {
     let dataBuffer = await this.readFileAsync(file);
     let pairedImgData = null;
-    console.log("before readimg paired image data!!!!");
     if (urlImgData) {
-      console.log("reading paired image data!!!!!");
       pairedImgData = await this.readFileAsync(urlImgData);
     }
     name = file.name;
@@ -1420,10 +1415,8 @@ NVImage.loadFromFile = async function ({
       visible
     );
   } catch (err) {
-    console.log(err);
     log.debug(err);
   }
-  console.log(nvimage);
   return nvimage;
 };
 
@@ -1464,10 +1457,8 @@ NVImage.loadFromBase64 = async function ({
       visible
     );
   } catch (err) {
-    console.log(err);
     log.debug(err);
   }
-  console.log(nvimage);
   return nvimage;
 };
 

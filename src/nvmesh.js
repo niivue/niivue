@@ -385,7 +385,6 @@ NVMesh.prototype.updateMesh = function (gl) {
     console.log("underspecified mesh");
     return;
   }
-  console.log("Points " + this.pts.length + " Indices " + this.tris.length);
   let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
   if (this.layers && this.layers.length > 0) {
     for (let i = 0; i < this.layers.length; i++) {
@@ -476,7 +475,6 @@ NVMesh.prototype.setProperty = function (key, val, gl) {
     return;
   }
   this[key] = val;
-  //console.log(this);
   this.updateMesh(gl); //apply the new properties...
 };
 
@@ -816,12 +814,6 @@ NVMesh.readTRK = function (buffer) {
     }
   } //for each streamline: while i < n_count
   offsetPt0.push(npt); //add 'first index' as if one more line was added (fence post problem)
-  console.log(
-    "TRK streamlines (n_count) >>",
-    offsetPt0.length - 1,
-    " vertices: ",
-    pts.length / 3
-  );
   return {
     pts,
     offsetPt0,
@@ -1188,7 +1180,6 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
       alert(
         "Required script missing: include either pako.min.js or gunzip.min.js"
       );
-    //console.log("gz->raw %d->%d", buffer.byteLength, raw.length);
     reader = new DataView(raw.buffer);
     var magic = reader.getUint16(0, true);
     _buffer = raw.buffer;
@@ -1288,7 +1279,6 @@ NVMesh.readLayer = function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  //console.log(name, ":", n_vert, ">>>", buffer);
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
   else if (ext === "CRV" || ext === "CURV")
@@ -1492,7 +1482,6 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       let scalarsI = new Float32Array(layer.getData());
       scalars.push(...scalarsI);
     }
-    //console.log('::::',scalars);
     return scalars;
   }
   if (gii.getNumTriangles() === 0 || gii.getNumPoints() === 0) {
@@ -1657,7 +1646,6 @@ NVMesh.readMesh = async function (
     this.readLayer(name, buffer, nvm, opacity, "gray");
     nvm.updateMesh(gl);
   }
-  console.log(nvm);
   return nvm;
 };
 
@@ -1680,7 +1668,6 @@ function decodeFloat16(binary) {
 }
 
 NVMesh.readTRX = async function (buffer) {
-  console.log("READING TRX");
   //Javascript does not support float16, so we convert to float32
   //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
   function decodeFloat16(binary) {
