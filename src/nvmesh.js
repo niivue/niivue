@@ -141,7 +141,7 @@ NVMesh.prototype.updateFibers = function (gl) {
   //fill fiber Color
   let dither = this.fiberDither;
   let ditherHalf = dither * 0.5;
-  function direction2rgb(x1, y1, z1, x2, y2, z2) {
+  function direction2rgb(x1, y1, z1, x2, y2, z2, ditherFrac) {
     //generate color based on direction between two 3D spatial positions
     let v = vec3.fromValues(
       Math.abs(x1 - x2),
@@ -149,8 +149,7 @@ NVMesh.prototype.updateFibers = function (gl) {
       Math.abs(z1 - z2)
     );
     vec3.normalize(v, v);
-    let r = 0.0;
-    if (dither > 0.0) r = dither * Math.random() - ditherHalf;
+    let r = ditherFrac - ditherHalf;
     for (let j = 0; j < 3; j++)
       v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
     return v[0] + (v[1] << 8) + (v[2] << 16);
@@ -213,6 +212,7 @@ NVMesh.prototype.updateFibers = function (gl) {
       let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
       let v3 = vStart * 3; //pts have 3 components XYZ
       let vEnd3 = vEnd * 3;
+      let ditherFrac = dither * Math.random(); //same dither amount throughout line
       //for first point, we do not have a prior sample
       let RGBA = direction2rgb(
         pts[v3],
@@ -220,7 +220,8 @@ NVMesh.prototype.updateFibers = function (gl) {
         pts[v3 + 2],
         pts[v3 + 4],
         pts[v3 + 5],
-        pts[v3 + 6]
+        pts[v3 + 6],
+        ditherFrac
       );
       let v4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
       while (v3 < vEnd3) {
@@ -234,7 +235,8 @@ NVMesh.prototype.updateFibers = function (gl) {
           pts[v3 - 1],
           pts[v3 + 3],
           pts[v3 + 4],
-          pts[v3 + 5]
+          pts[v3 + 5],
+          ditherFrac
         );
       }
       posClrU32[v4] = posClrU32[v4 - 4];
@@ -253,7 +255,8 @@ NVMesh.prototype.updateFibers = function (gl) {
         pts[vStart3 + 2],
         pts[vEnd3],
         pts[vEnd3 + 1],
-        pts[vEnd3 + 2]
+        pts[vEnd3 + 2],
+        dither * Math.random()
       );
       let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
       let vEnd4 = vEnd * 4 + 3;
@@ -821,7 +824,8 @@ NVMesh.readTRK = function (buffer) {
     dpv,
   };
 }; //readTRK()
-NVMesh.readTxtVTK = function (buffer) {
+
+function readTxtVTK(buffer) {
   var enc = new TextDecoder("utf-8");
   var txt = enc.decode(buffer);
   var lines = txt.split("\n");
@@ -855,7 +859,66 @@ NVMesh.readTxtVTK = function (buffer) {
   while (lines[pos].length < 1) pos++; //skip blank lines
   items = lines[pos].split(" ");
   pos++;
-  if (items[0].includes("TRIANGLE_STRIPS")) {
+  if (items[0].includes("LINES")) {
+    let n_count = parseInt(items[1]);
+    if (n_count < 1) alert("Corrupted VTK ASCII");
+    let str = lines[pos].trim();
+    let offsetPt0 = [];
+    let pts = [];
+    if (str.startsWith("OFFSETS")) {
+      // 'new' line style https://discourse.vtk.org/t/upcoming-changes-to-vtkcellarray/2066
+      offsetPt0 = new Uint32Array(n_count);
+      pos++;
+      let c = 0;
+      while (c < n_count) {
+        str = lines[pos].trim();
+        pos++;
+        let items = str.split(" ");
+        for (let i = 0; i < items.length; i++) {
+          offsetPt0[c] = parseInt(items[i]);
+          c++;
+          if (c >= n_count) break;
+        } //for each line
+      } //while offset array not filled
+      pts = positions;
+    } else {
+      //classic line style https://www.visitusers.org/index.php?title=ASCII_VTK_Files
+      offsetPt0 = new Uint32Array(n_count + 1);
+      let npt = 0;
+      pts = [];
+      offsetPt0[0] = 0; //1st streamline starts at 0
+      let asciiInts = [];
+      let asciiIntsPos = 0;
+      function lineToInts() {
+        //VTK can save one array across multiple ASCII lines
+        str = lines[pos].trim();
+        let items = str.split(" ");
+        asciiInts = [];
+        for (let i = 0; i < items.length; i++)
+          asciiInts.push(parseInt(items[i]));
+        asciiIntsPos = 0;
+        pos++;
+      }
+      lineToInts();
+      for (let c = 0; c < n_count; c++) {
+        if (asciiIntsPos >= asciiInts.length) lineToInts();
+        let numPoints = asciiInts[asciiIntsPos++];
+        npt += numPoints;
+        offsetPt0[c + 1] = npt;
+        for (let i = 0; i < numPoints; i++) {
+          if (asciiIntsPos >= asciiInts.length) lineToInts();
+          let idx = asciiInts[asciiIntsPos++] * 3;
+          pts.push(positions[idx + 0]); //X
+          pts.push(positions[idx + 1]); //Y
+          pts.push(positions[idx + 2]); //Z
+        } //for numPoints: number of segments in streamline
+      } //for n_count: number of streamlines
+    }
+    return {
+      pts,
+      offsetPt0,
+    };
+  } else if (items[0].includes("TRIANGLE_STRIPS")) {
     let nstrip = parseInt(items[1]);
     for (let i = 0; i < nstrip; i++) {
       let str = lines[pos].trim();
@@ -894,13 +957,13 @@ NVMesh.readTxtVTK = function (buffer) {
         fy = fz;
       }
     }
-  } else alert("Unsupported ASCII VTK datatype ", items[0]);
+  } else alert("Unsupported ASCII VTK datatype " + items[0]);
   var indices = new Int32Array(tris);
   return {
     positions,
     indices,
   };
-}; // readTxtVTK()
+} // readTxtVTK()
 
 NVMesh.readSTC = function (buffer, n_vert) {
   //mne STC format
@@ -1019,7 +1082,7 @@ NVMesh.readVTK = function (buffer) {
   if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
   line = readStr(); //2nd line comment
   line = readStr(); //3rd line ASCII/BINARY
-  if (line.startsWith("ASCII")) return this.readTxtVTK(buffer); //from NiiVue
+  if (line.startsWith("ASCII")) return readTxtVTK(buffer); //from NiiVue
   else if (!line.startsWith("BINARY"))
     alert("Invalid VTK image, expected ASCII or BINARY", line);
   line = readStr(); //5th line "DATASET POLYDATA"
@@ -1090,7 +1153,6 @@ NVMesh.readVTK = function (buffer) {
     let offsetPt0 = [];
     let pts = [];
     offsetPt0.push(npt); //1st streamline starts at 0
-    offsetPt0 = [];
     for (let c = 0; c < n_count; c++) {
       let numPoints = reader.getInt32(pos, false);
       pos += 4;
