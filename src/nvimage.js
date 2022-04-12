@@ -441,8 +441,8 @@ NVImage.prototype.SetPixDimFromSForm = function () {
 };
 
 function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
-//https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/volume/dicom/header-dicom.js#L605
-/*Copyright (c) 2012-2015, RII-UTHSCSA
+  //https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/volume/dicom/header-dicom.js#L605
+  /*Copyright (c) 2012-2015, RII-UTHSCSA
 All rights reserved.
 
 THIS PRODUCT IS NOT FOR CLINICAL USE.
@@ -467,36 +467,61 @@ following conditions are met:
  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-    var cosines = imageDirections,
+  var cosines = imageDirections,
     m = null;
-    if (cosines) {
-        var vs = {colSize: voxelDimensions[0], rowSize: voxelDimensions[1], sliceSize: voxelDimensions[2]};
-        var coord = imagePosition;
-        var cosx = [cosines[0], cosines[1], cosines[2]];
-        var cosy = [cosines[3], cosines[4], cosines[5]];
-        var cosz = [cosx[1] * cosy[2] - cosx[2] * cosy[1],
-            cosx[2] * cosy[0] - cosx[0] * cosy[2],
-            cosx[0] * cosy[1] - cosx[1] * cosy[0]];
-        m = [ [cosx[0] * vs.colSize * -1, cosy[0] * vs.rowSize, cosz[0] * vs.sliceSize, -1 * coord[0]],
-            [cosx[1] * vs.colSize, cosy[1] * vs.rowSize * -1, cosz[1] * vs.sliceSize, -1 * coord[1]],
-            [cosx[2] * vs.colSize, cosy[2] * vs.rowSize, cosz[2] * vs.sliceSize, coord[2]],
-            [0,       0,       0,       1] ];
-    }
-    return m;
-};
+  if (cosines) {
+    var vs = {
+      colSize: voxelDimensions[0],
+      rowSize: voxelDimensions[1],
+      sliceSize: voxelDimensions[2],
+    };
+    var coord = imagePosition;
+    var cosx = [cosines[0], cosines[1], cosines[2]];
+    var cosy = [cosines[3], cosines[4], cosines[5]];
+    var cosz = [
+      cosx[1] * cosy[2] - cosx[2] * cosy[1],
+      cosx[2] * cosy[0] - cosx[0] * cosy[2],
+      cosx[0] * cosy[1] - cosx[1] * cosy[0],
+    ];
+    m = [
+      [
+        cosx[0] * vs.colSize * -1,
+        cosy[0] * vs.rowSize,
+        cosz[0] * vs.sliceSize,
+        -1 * coord[0],
+      ],
+      [
+        cosx[1] * vs.colSize,
+        cosy[1] * vs.rowSize * -1,
+        cosz[1] * vs.sliceSize,
+        -1 * coord[1],
+      ],
+      [
+        cosx[2] * vs.colSize,
+        cosy[2] * vs.rowSize,
+        cosz[2] * vs.sliceSize,
+        coord[2],
+      ],
+      [0, 0, 0, 1],
+    ];
+  }
+  return m;
+}
 
 NVImage.prototype.readDICOM = function (buf) {
   var series = new daikon.Series();
   // parse DICOM file
   var image = daikon.Series.parseImage(new DataView(buf));
   if (image === null) {
-      console.error(daikon.Series.parserError);
+    console.error(daikon.Series.parserError);
   } else if (image.hasPixelData()) {
-      // if it's part of the same series, add it
-      if ((series.images.length === 0) || 
-              (image.getSeriesId() === series.images[0].getSeriesId())) {
-          series.addImage(image);
-      }
+    // if it's part of the same series, add it
+    if (
+      series.images.length === 0 ||
+      image.getSeriesId() === series.images[0].getSeriesId()
+    ) {
+      series.addImage(image);
+    }
   }
   // order the image files, determines number of frames, etc.
   series.buildSeries();
@@ -515,31 +540,29 @@ NVImage.prototype.readDICOM = function (buf) {
   let rc = series.images[0].getPixelSpacing(); //TODO: order?
   hdr.pixDims[1] = rc[0];
   hdr.pixDims[2] = rc[1];
-  hdr.pixDims[3] = Math.max(series.images[0].getSliceGap(), series.images[0].getSliceThickness());
+  hdr.pixDims[3] = Math.max(
+    series.images[0].getSliceGap(),
+    series.images[0].getSliceThickness()
+  );
   hdr.pixDims[4] = series.images[0].getTR() / 1000.0; //msec -> sec
   let dt = series.images[0].getDataType(); //2=int,3=uint,4=float,
   let bpv = series.images[0].getBitsAllocated();
   hdr.numBitsPerVoxel = bpv;
-  if ((bpv === 8) && (dt === 2))
-    hdr.datatypeCode = this.DT_INT8;
-  else if ((bpv === 8) && (dt === 3))
-    hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
-  else if ((bpv === 16) && (dt === 2))
-    hdr.datatypeCode = this.DT_SIGNED_SHORT;
-  else if ((bpv === 16) && (dt === 3))
-    hdr.datatypeCode = this.DT_UINT16;
-  else if ((bpv === 32) && (dt === 2))
-    hdr.datatypeCode = this.DT_SIGNED_INT;
-  else if ((bpv === 32) && (dt === 3))
-    hdr.datatypeCode = this.DT_UINT32;
-  else if ((bpv === 32) && (dt === 4))
-    hdr.datatypeCode = this.DT_FLOAT;
-  else if ((bpv === 64) && (dt === 4))
-    hdr.datatypeCode = this.DT_DOUBLE;
-  else
-    console.log('Unsupported DICOM format: '+dt+' '+bpv);
+  if (bpv === 8 && dt === 2) hdr.datatypeCode = this.DT_INT8;
+  else if (bpv === 8 && dt === 3) hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+  else if (bpv === 16 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_SHORT;
+  else if (bpv === 16 && dt === 3) hdr.datatypeCode = this.DT_UINT16;
+  else if (bpv === 32 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_INT;
+  else if (bpv === 32 && dt === 3) hdr.datatypeCode = this.DT_UINT32;
+  else if (bpv === 32 && dt === 4) hdr.datatypeCode = this.DT_FLOAT;
+  else if (bpv === 64 && dt === 4) hdr.datatypeCode = this.DT_DOUBLE;
+  else console.log("Unsupported DICOM format: " + dt + " " + bpv);
   let voxelDimensions = hdr.pixDims.slice(1, 4);
-  let m = getBestTransform(series.images[0].getImageDirections(), voxelDimensions, series.images[0].getImagePosition())
+  let m = getBestTransform(
+    series.images[0].getImageDirections(),
+    voxelDimensions,
+    series.images[0].getImagePosition()
+  );
   if (m) {
     hdr.sform_code = 1;
     hdr.affine = [
@@ -548,24 +571,25 @@ NVImage.prototype.readDICOM = function (buf) {
       [m[2][0], m[2][1], m[2][2], m[2][3]],
       [0, 0, 0, 1],
     ];
-
   }
-  console.log('DICOM',series.images[0]);
-  console.log('NIfTI',hdr);
+  console.log("DICOM", series.images[0]);
+  console.log("NIfTI", hdr);
   let imgRaw = [];
   let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
   if (true) {
     imgRaw = new Uint8Array(byteLength);
-    for (var i = 1; i < byteLength; i++)
-      imgRaw[i] = i % 255;
-  } else { //TODO
+    for (var i = 1; i < byteLength; i++) imgRaw[i] = i % 255;
+  } else {
+    //TODO
     series.concatenateImageData(null, function (imageData) {
-        console.log("Total image data size is " + imageData.byteLength + " bytes");
-        imgRaw = imageData.slice();
+      console.log(
+        "Total image data size is " + imageData.byteLength + " bytes"
+      );
+      imgRaw = imageData.slice();
     });
   }
   return imgRaw;
-} // readDICOM()
+}; // readDICOM()
 
 NVImage.prototype.readMGH = function (buffer) {
   this.hdr = new nifti.NIFTI1();
