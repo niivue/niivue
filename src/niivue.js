@@ -879,8 +879,9 @@ Niivue.prototype.dropListener = async function (e) {
     let volume = await NVImage.loadFromUrl({ url: url });
     this.setVolume(volume);
   } else {
-    const files = dt.files;
-    if (files.length > 0) {
+    //const files = dt.files;
+		const items = dt.items
+    if (items.length > 0) {
       // adding or replacing
       if (!e.shiftKey) {
         this.volumes = [];
@@ -888,36 +889,39 @@ Niivue.prototype.dropListener = async function (e) {
         this.meshes = [];
       }
 
-      for (const file of files) {
+      for (const item of items) {
+				const entry = item.webkitGetAsEntry()
         var re = /(?:\.([^.]+))?$/;
-        let ext = re.exec(file.name)[1];
+        let ext = re.exec(entry.name)[1];
         ext = ext.toUpperCase();
         if (ext === "GZ") {
-          ext = re.exec(file.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+          ext = re.exec(entry.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
           ext = ext.toUpperCase();
         }
         if (ext === "PNG") {
-          this.loadBmpTexture(file);
+					entry.file(file =>{
+          	this.loadBmpTexture(file);
+					})
           continue;
         }
         let pairedImageData = "";
         // check for afni HEAD BRIK pair
-        if (file.name.lastIndexOf("HEAD") !== -1) {
-          for (const pairedFile of files) {
-            let fileBaseName = file.name.substring(
+        if (entry.name.lastIndexOf("HEAD") !== -1) {
+          for (const pairedItem of items) {
+            let fileBaseName = entry.name.substring(
               0,
-              file.name.lastIndexOf("HEAD")
+              entry.name.lastIndexOf("HEAD")
             );
-            let pairedFileBaseName = pairedFile.name.substring(
+            let pairedItemBaseName = pairedItem.name.substring(
               0,
-              pairedFile.name.lastIndexOf("BRIK")
+              pairedItem.name.lastIndexOf("BRIK")
             );
-            if (fileBaseName === pairedFileBaseName) {
-              pairedImageData = pairedFile;
+            if (fileBaseName === pairedItemBaseName) {
+              pairedImageData = pairedItem;
             }
           }
         }
-        if (file.name.lastIndexOf("BRIK") !== -1) {
+        if (entry.name.lastIndexOf("BRIK") !== -1) {
           continue;
         }
         if (
@@ -938,20 +942,33 @@ Niivue.prototype.dropListener = async function (e) {
           ext === "TRX" ||
           ext === "VTK"
         ) {
-          let mesh = await NVMesh.loadFromFile({
-            file: file,
-            gl: this.gl,
-            name: file.name,
-          });
-          this.scene.loading$.next(false);
-          this.addMesh(mesh);
+					entry.file(async (file) => {
+						let mesh = await NVMesh.loadFromFile({
+							file: file,
+							gl: this.gl,
+							name: file.name,
+          	});
+          	this.scene.loading$.next(false);
+          	this.addMesh(mesh);
+					})
           continue;
         }
-        let volume = await NVImage.loadFromFile({
-          file: file,
-          urlImgData: pairedImageData,
-        });
-        this.addVolume(volume);
+				entry.file(async (file) => {
+					if (pairedImageData !== ''){
+						pairedImageData.file(async (imgfile) => {
+							let volume = await NVImage.loadFromFile({
+          			file: file,
+          			urlImgData: imgfile,
+        			});
+						})
+					} 
+
+					let volume = await NVImage.loadFromFile({
+          	file: file,
+          	urlImgData: pairedImageData,
+        	});
+        	this.addVolume(volume);
+				})
       }
     }
   }
