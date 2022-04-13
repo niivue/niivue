@@ -1,6 +1,5 @@
 import * as gifti from "gifti-reader-js/release/current/gifti-reader";
-import * as pako from "pako";
-import * as JSZip from "jszip";
+import * as fflate from "fflate";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
@@ -698,13 +697,12 @@ NVMesh.readTRK = function (buffer) {
   var magic = reader.getUint32(0, true); //'TRAC'
   if (magic !== 1128354388) {
     //e.g. TRK.gz
-    var raw;
-    if (typeof pako === "object" && typeof pako.deflate === "function") {
-      raw = pako.inflate(new Uint8Array(buffer));
-    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
-      var inflate = new Zlib.Gunzip(new Uint8Array(buffer)); // eslint-disable-line no-undef
-      raw = inflate.decompress();
-    }
+    let raw;
+    if (magic === 4247762216) {
+      //zstd
+      raw = fzstd.decompress(new Uint8Array(buffer));
+      raw = new Uint8Array(raw);
+    } else raw = fflate.decompressSync(new Uint8Array(buffer));
     buffer = raw.buffer;
     reader = new DataView(buffer);
     magic = reader.getUint32(0, true); //'TRAC'
@@ -1232,21 +1230,7 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
   var _buffer = buffer;
   if (magic === 35615 || magic === 8075) {
     //gzip signature 0x1F8B in little and big endian
-    //console.log("detected gzipped mz3");
-    //HTML should source an inflate script:
-    // <script src="https://cdn.jsdelivr.net/pako/1.0.3/pako.min.js"></script>
-    // <script src="js/libs/gunzip.min.js"></script>
-    //for decompression there seems to be little real world difference
-    var raw;
-    if (typeof pako === "object" && typeof pako.deflate === "function") {
-      raw = pako.inflate(new Uint8Array(buffer));
-    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
-      var inflate = new Zlib.Gunzip(new Uint8Array(buffer)); // eslint-disable-line no-undef
-      raw = inflate.decompress();
-    } else
-      alert(
-        "Required script missing: include either pako.min.js or gunzip.min.js"
-      );
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
     reader = new DataView(raw.buffer);
     var magic = reader.getUint16(0, true);
     _buffer = raw.buffer;
@@ -1762,23 +1746,27 @@ NVMesh.readTRX = async function (buffer) {
   let header = [];
   let isOverflowUint64 = false;
   let data = [];
-  //let response = await fetch(url);
-  //if (!response.ok) throw Error(response.statusText);
-  //data = await response.arrayBuffer();
-  data = buffer;
-  //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
-  let zip = await JSZip.loadAsync(data);
-  //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
-  for (let [filename, file] of Object.entries(zip.files)) {
-    if (file.dir) continue;
-    let parts = filename.split("/");
+  /*if (urlIsLocalFile) {
+    data = fs.readFileSync(url);
+  } else {
+    let response = await fetch(url);
+    if (!response.ok) throw Error(response.statusText);
+    data = await response.arrayBuffer();
+  }*/
+  const decompressed = fflate.unzipSync(new Uint8Array(buffer), {
+    filter(file) {
+      return file.originalSize > 0;
+    },
+  });
+  var keys = Object.keys(decompressed);
+  for (var i = 0, len = keys.length; i < len; i++) {
+    let parts = keys[i].split("/");
     let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
     if (fname.startsWith(".")) continue;
     let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
     let tag = fname.split(".")[0]; // "positions.3.float16 -> "positions"
     //todo: should tags be censored for invalide characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
-    let data = await zip.file(filename).async("uint8array");
-    //next read header
+    let data = decompressed[keys[i]];
     if (fname.includes("header.json")) {
       let jsonString = new TextDecoder().decode(data);
       header = JSON.parse(jsonString);
@@ -1874,7 +1862,7 @@ NVMesh.readTRX = async function (buffer) {
     dpv,
     header,
   };
-};
+}; // readTRX()
 
 /**
  * factory function to load and return a new NVMesh instance from a given URL
