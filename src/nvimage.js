@@ -1,4 +1,5 @@
 import nifti from "nifti-reader-js";
+import daikon from "daikon";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import * as cmaps from "./cmaps";
@@ -91,7 +92,9 @@ export function NVImage(
   ext = ext.toUpperCase();
   let imgRaw = null;
   this.hdr = null;
-  if (ext === "NHDR" || ext === "NRRD") {
+  if (ext === "DCM") {
+    imgRaw = this.readDICOM(dataBuffer);
+  } else if (ext === "NHDR" || ext === "NRRD") {
     imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
   } else if (ext === "MGH" || ext === "MGZ") {
     imgRaw = this.readMGH(dataBuffer);
@@ -436,6 +439,157 @@ NVImage.prototype.SetPixDimFromSForm = function () {
   this.hdr.pixDims[2] = vec3.length(mm010);
   this.hdr.pixDims[3] = vec3.length(mm001);
 };
+
+function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
+  //https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/volume/dicom/header-dicom.js#L605
+  /*Copyright (c) 2012-2015, RII-UTHSCSA
+All rights reserved.
+
+THIS PRODUCT IS NOT FOR CLINICAL USE.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+following conditions are met:
+
+ - Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+   disclaimer.
+
+ - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided with the distribution.
+
+ - Neither the name of the RII-UTHSCSA nor the names of its contributors may be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+  var cosines = imageDirections,
+    m = null;
+  if (cosines) {
+    var vs = {
+      colSize: voxelDimensions[0],
+      rowSize: voxelDimensions[1],
+      sliceSize: voxelDimensions[2],
+    };
+    var coord = imagePosition;
+    var cosx = [cosines[0], cosines[1], cosines[2]];
+    var cosy = [cosines[3], cosines[4], cosines[5]];
+    var cosz = [
+      cosx[1] * cosy[2] - cosx[2] * cosy[1],
+      cosx[2] * cosy[0] - cosx[0] * cosy[2],
+      cosx[0] * cosy[1] - cosx[1] * cosy[0],
+    ];
+    m = [
+      [
+        cosx[0] * vs.colSize * -1,
+        cosy[0] * vs.rowSize,
+        cosz[0] * vs.sliceSize,
+        -1 * coord[0],
+      ],
+      [
+        cosx[1] * vs.colSize,
+        cosy[1] * vs.rowSize * -1,
+        cosz[1] * vs.sliceSize,
+        -1 * coord[1],
+      ],
+      [
+        cosx[2] * vs.colSize,
+        cosy[2] * vs.rowSize,
+        cosz[2] * vs.sliceSize,
+        coord[2],
+      ],
+      [0, 0, 0, 1],
+    ];
+  }
+  return m;
+}
+
+NVImage.prototype.readDICOM = function (buf) {
+  var series = new daikon.Series();
+  // parse DICOM file
+  var image = daikon.Series.parseImage(new DataView(buf));
+  if (image === null) {
+    console.error(daikon.Series.parserError);
+  } else if (image.hasPixelData()) {
+    // if it's part of the same series, add it
+    if (
+      series.images.length === 0 ||
+      image.getSeriesId() === series.images[0].getSeriesId()
+    ) {
+      series.addImage(image);
+    }
+  }
+  // order the image files, determines number of frames, etc.
+  series.buildSeries();
+  // output some header info
+  console.log("Number of images read is " + series.images.length);
+  // concat the image data into a single ArrayBuffer
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.scl_inter = series.images[0].getDataScaleIntercept();
+  hdr.scl_slope = series.images[0].getDataScaleSlope();
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims[1] = series.images[0].getCols();
+  hdr.dims[2] = series.images[0].getRows();
+  hdr.dims[3] = series.images[0].getNumberOfFrames();
+  let rc = series.images[0].getPixelSpacing(); //TODO: order?
+  hdr.pixDims[1] = rc[0];
+  hdr.pixDims[2] = rc[1];
+  hdr.pixDims[3] = Math.max(
+    series.images[0].getSliceGap(),
+    series.images[0].getSliceThickness()
+  );
+  hdr.pixDims[4] = series.images[0].getTR() / 1000.0; //msec -> sec
+  let dt = series.images[0].getDataType(); //2=int,3=uint,4=float,
+  let bpv = series.images[0].getBitsAllocated();
+  hdr.numBitsPerVoxel = bpv;
+  if (bpv === 8 && dt === 2) hdr.datatypeCode = this.DT_INT8;
+  else if (bpv === 8 && dt === 3) hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+  else if (bpv === 16 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_SHORT;
+  else if (bpv === 16 && dt === 3) hdr.datatypeCode = this.DT_UINT16;
+  else if (bpv === 32 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_INT;
+  else if (bpv === 32 && dt === 3) hdr.datatypeCode = this.DT_UINT32;
+  else if (bpv === 32 && dt === 4) hdr.datatypeCode = this.DT_FLOAT;
+  else if (bpv === 64 && dt === 4) hdr.datatypeCode = this.DT_DOUBLE;
+  else console.log("Unsupported DICOM format: " + dt + " " + bpv);
+  let voxelDimensions = hdr.pixDims.slice(1, 4);
+  let m = getBestTransform(
+    series.images[0].getImageDirections(),
+    voxelDimensions,
+    series.images[0].getImagePosition()
+  );
+  if (m) {
+    hdr.sform_code = 1;
+    hdr.affine = [
+      [m[0][0], m[0][1], m[0][2], m[0][3]],
+      [m[1][0], m[1][1], m[1][2], m[1][3]],
+      [m[2][0], m[2][1], m[2][2], m[2][3]],
+      [0, 0, 0, 1],
+    ];
+  }
+  console.log("DICOM", series.images[0]);
+  console.log("NIfTI", hdr);
+  let imgRaw = [];
+  let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
+  if (true) {
+    imgRaw = new Uint8Array(byteLength);
+    for (var i = 1; i < byteLength; i++) imgRaw[i] = i % 255;
+  } else {
+    //TODO
+    series.concatenateImageData(null, function (imageData) {
+      console.log(
+        "Total image data size is " + imageData.byteLength + " bytes"
+      );
+      imgRaw = imageData.slice();
+    });
+  }
+  return imgRaw;
+}; // readDICOM()
 
 NVImage.prototype.readMGH = function (buffer) {
   this.hdr = new nifti.NIFTI1();

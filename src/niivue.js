@@ -3721,7 +3721,6 @@ Niivue.prototype.drawThumbnail = function () {
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
-
 };
 
 // not included in public docs

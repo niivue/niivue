@@ -21,7 +21,7 @@
         Tractography support
       </h1>
       <p>
-        NiiVue also supports TCK and TRK format meshes
+        NiiVue features drag and drop support for TCK, TRK, TRX and VTK format streamlines
       </p>
     </section>
 <div class="slidecontainer">
@@ -33,11 +33,22 @@
     <section>
       <div>
         <label for="fiberColor">Choose fiber coloration:</label>
-        <select name="fiberColor" id="fiberColor" onchange="changeFiber()">
+        <select name="fiberColor" id="fiberColor"">
           <option value="Global">Global direction</option>
           <option value="Local">Local direction</option>
           <option value="DPV0">First Per Vertex Type (if available)</option>
           <option value="DPS0">First Per Streamline Type (if available)</option>
+        </select>
+      </div>
+    </section>
+    <section>
+      <div>
+        <label for="fiberDecimation">Fiber reduction:</label>
+        <select name="fiberDecimation" id="fiberDecimation"">
+          <option value="1">100%</option>
+          <option value="2">50%</option>
+          <option value="4">25%</option>
+          <option value="10">10%</option>
         </select>
       </div>
     </section>
@@ -65,6 +76,11 @@
         const colorName = document.getElementById("fiberColor").value;
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', colorName)
       }
+      var dropD = document.getElementById("fiberDecimation");
+      dropD.onchange = function() {
+        const stride = document.getElementById("fiberDecimation").value;
+        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDecimationStride', stride)
+      }
       var volumeList1 = [
        // first item is background image
          {
@@ -86,7 +102,7 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.loadMeshes([
-         {url: "../images/dps.trx", rgba255 : [0, 0, 255, 255]},
+         {url: "../images/dpsv.trx", rgba255 : [0, 0, 255, 255]},
       ])
       nv1.setClipPlane([-0.1, 270, 0])
     </script>
