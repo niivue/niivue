@@ -82,6 +82,7 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.visible = visible;
+	this.series = [] // for concatenating dicom images 
 
   // Added to support zerosLike
   if (!dataBuffer) {
@@ -508,8 +509,8 @@ following conditions are met:
   return m;
 }
 
-NVImage.prototype.readDICOM = function (buf) {
-  var series = new daikon.Series();
+NVImage.prototype.readDICOM = function (buf, existingSeries=new daikon.Series()) {
+  this.series = existingSeries
   // parse DICOM file
   var image = daikon.Series.parseImage(new DataView(buf));
   if (image === null) {
@@ -517,36 +518,36 @@ NVImage.prototype.readDICOM = function (buf) {
   } else if (image.hasPixelData()) {
     // if it's part of the same series, add it
     if (
-      series.images.length === 0 ||
-      image.getSeriesId() === series.images[0].getSeriesId()
+      this.series.images.length === 0 ||
+      image.getSeriesId() === this.series.images[0].getSeriesId()
     ) {
-      series.addImage(image);
+      this.series.addImage(image);
     }
   }
   // order the image files, determines number of frames, etc.
-  series.buildSeries();
+  this.series.buildSeries();
   // output some header info
-  console.log("Number of images read is " + series.images.length);
+  console.log("Number of images read is " + this.series.images.length);
   // concat the image data into a single ArrayBuffer
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
-  hdr.scl_inter = series.images[0].getDataScaleIntercept();
-  hdr.scl_slope = series.images[0].getDataScaleSlope();
+  hdr.scl_inter = this.series.images[0].getDataScaleIntercept();
+  hdr.scl_slope = this.series.images[0].getDataScaleSlope();
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  hdr.dims[1] = series.images[0].getCols();
-  hdr.dims[2] = series.images[0].getRows();
-  hdr.dims[3] = series.images[0].getNumberOfFrames();
-  let rc = series.images[0].getPixelSpacing(); //TODO: order?
+  hdr.dims[1] = this.series.images[0].getCols();
+  hdr.dims[2] = this.series.images[0].getRows();
+  hdr.dims[3] = this.series.images[0].getNumberOfFrames();
+  let rc = this.series.images[0].getPixelSpacing(); //TODO: order?
   hdr.pixDims[1] = rc[0];
   hdr.pixDims[2] = rc[1];
   hdr.pixDims[3] = Math.max(
-    series.images[0].getSliceGap(),
-    series.images[0].getSliceThickness()
+    this.series.images[0].getSliceGap(),
+    this.series.images[0].getSliceThickness()
   );
-  hdr.pixDims[4] = series.images[0].getTR() / 1000.0; //msec -> sec
-  let dt = series.images[0].getDataType(); //2=int,3=uint,4=float,
-  let bpv = series.images[0].getBitsAllocated();
+  hdr.pixDims[4] = this.series.images[0].getTR() / 1000.0; //msec -> sec
+  let dt = this.series.images[0].getDataType(); //2=int,3=uint,4=float,
+  let bpv = this.series.images[0].getBitsAllocated();
   hdr.numBitsPerVoxel = bpv;
   if (bpv === 8 && dt === 2) hdr.datatypeCode = this.DT_INT8;
   else if (bpv === 8 && dt === 3) hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
@@ -559,9 +560,9 @@ NVImage.prototype.readDICOM = function (buf) {
   else console.log("Unsupported DICOM format: " + dt + " " + bpv);
   let voxelDimensions = hdr.pixDims.slice(1, 4);
   let m = getBestTransform(
-    series.images[0].getImageDirections(),
+    this.series.images[0].getImageDirections(),
     voxelDimensions,
-    series.images[0].getImagePosition()
+    this.series.images[0].getImagePosition()
   );
   if (m) {
     hdr.sform_code = 1;
@@ -572,7 +573,7 @@ NVImage.prototype.readDICOM = function (buf) {
       [0, 0, 0, 1],
     ];
   }
-  console.log("DICOM", series.images[0]);
+  console.log("DICOM", this.series.images[0]);
   console.log("NIfTI", hdr);
   let imgRaw = [];
   let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
