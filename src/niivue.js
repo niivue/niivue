@@ -880,7 +880,7 @@ Niivue.prototype.dropListener = async function (e) {
     this.setVolume(volume);
   } else {
     //const files = dt.files;
-		const items = dt.items
+    const items = dt.items;
     if (items.length > 0) {
       // adding or replacing
       if (!e.shiftKey) {
@@ -890,89 +890,89 @@ Niivue.prototype.dropListener = async function (e) {
       }
 
       for (const item of items) {
-				const entry = item.webkitGetAsEntry()
-				if (entry.isFile){
-					var re = /(?:\.([^.]+))?$/;
-					let ext = re.exec(entry.name)[1];
-					ext = ext.toUpperCase();
-					if (ext === "GZ") {
-						ext = re.exec(entry.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
-						ext = ext.toUpperCase();
-					}
-					if (ext === "PNG") {
-						entry.file(file =>{
-							this.loadBmpTexture(file);
-						})
-						continue;
-					}
-					let pairedImageData = "";
-					// check for afni HEAD BRIK pair
-					if (entry.name.lastIndexOf("HEAD") !== -1) {
-						for (const pairedItem of items) {
-							let fileBaseName = entry.name.substring(
-								0,
-								entry.name.lastIndexOf("HEAD")
-							);
-							let pairedItemBaseName = pairedItem.name.substring(
-								0,
-								pairedItem.name.lastIndexOf("BRIK")
-							);
-							if (fileBaseName === pairedItemBaseName) {
-								pairedImageData = pairedItem;
-							}
-						}
-					}
-					if (entry.name.lastIndexOf("BRIK") !== -1) {
-						continue;
-					}
-					if (
-						ext === "FSM" ||
-						ext === "PIAL" ||
-						ext === "ORIG" ||
-						ext === "INFLATED" ||
-						ext === "SMOOTHWM" ||
-						ext === "SPHERE" ||
-						ext === "WHITE" ||
-						ext === "GII" ||
-						ext === "MZ3" ||
-						ext === "OBJ" ||
-						ext === "OFF" ||
-						ext === "STL" ||
-						ext === "TCK" ||
-						ext === "TRK" ||
-						ext === "TRX" ||
-						ext === "VTK"
-					) {
-						entry.file(async (file) => {
-							let mesh = await NVMesh.loadFromFile({
-								file: file,
-								gl: this.gl,
-								name: file.name,
-							});
-							this.scene.loading$.next(false);
-							this.addMesh(mesh);
-						})
-						continue;
-					}
-					entry.file(async (file) => {
-						if (pairedImageData !== ''){
-							pairedImageData.file(async (imgfile) => {
-								let volume = await NVImage.loadFromFile({
-									file: file,
-									urlImgData: imgfile,
-								});
-							})
-						} 
+        const entry = item.webkitGetAsEntry();
+        if (entry.isFile) {
+          var re = /(?:\.([^.]+))?$/;
+          let ext = re.exec(entry.name)[1];
+          ext = ext.toUpperCase();
+          if (ext === "GZ") {
+            ext = re.exec(entry.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+            ext = ext.toUpperCase();
+          }
+          if (ext === "PNG") {
+            entry.file((file) => {
+              this.loadBmpTexture(file);
+            });
+            continue;
+          }
+          let pairedImageData = "";
+          // check for afni HEAD BRIK pair
+          if (entry.name.lastIndexOf("HEAD") !== -1) {
+            for (const pairedItem of items) {
+              let fileBaseName = entry.name.substring(
+                0,
+                entry.name.lastIndexOf("HEAD")
+              );
+              let pairedItemBaseName = pairedItem.name.substring(
+                0,
+                pairedItem.name.lastIndexOf("BRIK")
+              );
+              if (fileBaseName === pairedItemBaseName) {
+                pairedImageData = pairedItem;
+              }
+            }
+          }
+          if (entry.name.lastIndexOf("BRIK") !== -1) {
+            continue;
+          }
+          if (
+            ext === "FSM" ||
+            ext === "PIAL" ||
+            ext === "ORIG" ||
+            ext === "INFLATED" ||
+            ext === "SMOOTHWM" ||
+            ext === "SPHERE" ||
+            ext === "WHITE" ||
+            ext === "GII" ||
+            ext === "MZ3" ||
+            ext === "OBJ" ||
+            ext === "OFF" ||
+            ext === "STL" ||
+            ext === "TCK" ||
+            ext === "TRK" ||
+            ext === "TRX" ||
+            ext === "VTK"
+          ) {
+            entry.file(async (file) => {
+              let mesh = await NVMesh.loadFromFile({
+                file: file,
+                gl: this.gl,
+                name: file.name,
+              });
+              this.scene.loading$.next(false);
+              this.addMesh(mesh);
+            });
+            continue;
+          }
+          entry.file(async (file) => {
+            if (pairedImageData !== "") {
+              pairedImageData.file(async (imgfile) => {
+                let volume = await NVImage.loadFromFile({
+                  file: file,
+                  urlImgData: imgfile,
+                });
+              });
+            }
 
-						let volume = await NVImage.loadFromFile({
-							file: file,
-							urlImgData: pairedImageData,
-						});
-						this.addVolume(volume);
-					})
-				}	else if (entry.isDirectory) {
-					console.log('isDirectory')
-					/* TODO
+            let volume = await NVImage.loadFromFile({
+              file: file,
+              urlImgData: pairedImageData,
+            });
+            this.addVolume(volume);
+          });
+        } else if (entry.isDirectory) {
+          console.log("isDirectory");
+          /* TODO
 					let reader = entry.createReader();
 					let allFilesInDir = []
       		await reader.readEntries(async function(entries) {
@@ -990,7 +990,7 @@ Niivue.prototype.dropListener = async function (e) {
         		})
       		})
 				*/
-				}
+        }
       }
     }
   }

@@ -3,7 +3,7 @@ import daikon from "daikon";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import * as cmaps from "./cmaps";
-import * as pako from "pako";
+import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
 const log = new Log();
@@ -82,7 +82,7 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.visible = visible;
-	this.series = [] // for concatenating dicom images 
+  this.series = []; // for concatenating dicom images
 
   // Added to support zerosLike
   if (!dataBuffer) {
@@ -509,8 +509,11 @@ following conditions are met:
   return m;
 }
 
-NVImage.prototype.readDICOM = function (buf, existingSeries=new daikon.Series()) {
-  this.series = existingSeries
+NVImage.prototype.readDICOM = function (
+  buf,
+  existingSeries = new daikon.Series()
+) {
+  this.series = existingSeries;
   // parse DICOM file
   var image = daikon.Series.parseImage(new DataView(buf));
   if (image === null) {
@@ -600,15 +603,7 @@ NVImage.prototype.readMGH = function (buffer) {
   var reader = new DataView(buffer);
   var raw = buffer;
   if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-    if (typeof pako === "object" && typeof pako.deflate === "function") {
-      raw = pako.inflate(new Uint8Array(buffer));
-    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
-      var inflate = new Zlib.Gunzip(new Uint8Array(buffer)); // eslint-disable-line no-undef
-      raw = inflate.decompress();
-    } else
-      alert(
-        "Required script missing: include either pako.min.js or gunzip.min.js"
-      );
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
     reader = new DataView(raw.buffer);
   }
   let version = reader.getInt32(0, false);
@@ -811,13 +806,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   if (pairedImgData.byteLength < nBytes) {
     //n.b. npm run dev implicitly extracts gz, npm run demo does not!
     //assume gz compressed
-    var raw;
-    if (typeof pako === "object" && typeof pako.deflate === "function") {
-      raw = pako.inflate(new Uint8Array(pairedImgData));
-    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
-      var inflate = new Zlib.Gunzip(new Uint8Array(pairedImgData)); // eslint-disable-line no-undef
-      raw = inflate.decompress();
-    }
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
     return raw.buffer;
   }
   let v = pairedImgData.slice();
@@ -1067,9 +1056,6 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
   let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   if (isDetached && pairedImgData) {
     //??? .gz files automatically decompressed?
-    //if (isGz)
-    //  return pako.inflate(new Uint8Array(pairedImgData.slice()));
-    //else
     return pairedImgData.slice();
   }
   if (isDetached)
@@ -1077,8 +1063,9 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       "Missing data: NRRD header describes detached data file but only one URL provided"
     );
   if (isGz)
-    return pako.inflate(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
-      .buffer;
+    return fflate.decompressSync(
+      new Uint8Array(dataBuffer.slice(hdr.vox_offset))
+    ).buffer;
   else return dataBuffer.slice(hdr.vox_offset);
 }; //readNRRD()
 
