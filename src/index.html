@@ -45,7 +45,6 @@
 			let query = window.location.search
 			const params = new URLSearchParams(query);
 			let url = params.get('url')
-			console.log('url is: ',params.get('url'))
       var volumeList1 = [
         // first item is brackground image
         {
@@ -57,13 +56,9 @@
           opacity: 1,
           visible: true,
         },
-				{
-					url: "../demos/images/hippo.nii.gz",
-					colorMap: 'red'
-				}
       ]
 			var nv1 = new Niivue({
-				logging: true,
+				logging: false,
 				show3Dcrosshair: true,
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
@@ -72,33 +67,29 @@
 			})
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
+
+      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setClipPlane([-0.1, 270, 0])
+      nv1.setRenderAzimuthElevation(90,10)
+
       await nv1.loadVolumes(volumeList1)
 			
-			/*
       var meshLayersList1 = [
-        {url: "../demos/images/lh.curv", colorMap: "rocket", opacity: 0.7},
+        //{url: "../demos/images/PJM-stc-lh.stc", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
-			*/
-
-			/*
-      nv1.loadMeshes([
-         {url: "../demos/images/lh.pial", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+			
+      await nv1.loadMeshes([
+         {url: "../demos/images/dpsv.trx", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+         //{url: "../demos/images/mni152_2009AO.mz3", rgba255 : [255, 255, 255, 255]},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
-			*/
-			
-      nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.setClipPlane([-0.1, 90, 0])
-      nv1.setRenderAzimuthElevation(90,10)
 
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-        //nv1.volumes[0].frame4D =  Math.floor(Math.random() * 9);
-        //nv1.updateGLVolume()
       })
 
 			nv1.on('imageLoaded', (image) => {
@@ -108,7 +99,8 @@
 			nv1.on('intensityRange', (image) => {
 			 console.log(image.cal_min, image.cal_max)
 			})
-    </script>
+			
+		</script>
   </div>
 </body>
 

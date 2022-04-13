@@ -5,11 +5,10 @@ import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
-import { mat4, vec3 } from "gl-matrix";
+import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import { colortables } from "./colortables";
 const cmapper = new colortables();
 const log = new Log();
-
 /**
  * @class NVMesh
  * @type NVMesh
@@ -32,7 +31,10 @@ export function NVMesh(
   opacity = 1.0,
   visible = true,
   gl,
-  connectome = null
+  connectome = null,
+  dpg = null,
+  dps = null,
+  dpv = null
 ) {
   this.name = name;
   this.id = uuidv4();
@@ -49,6 +51,13 @@ export function NVMesh(
   if (!rgba255) {
     this.fiberLength = 2;
     this.fiberDither = 0.1;
+    this.fiberColor = "Global";
+    this.fiberDecimationStride = 1; //e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
+    this.fiberMask = []; //provide method to show/hide specific fibers
+    this.colormap = connectome;
+    this.dpg = dpg;
+    this.dps = dps;
+    this.dpv = dpv;
     this.offsetPt0 = tris;
     this.updateFibers(gl);
     //define VAO
@@ -134,26 +143,127 @@ NVMesh.prototype.updateFibers = function (gl) {
   //fill fiber Color
   let dither = this.fiberDither;
   let ditherHalf = dither * 0.5;
-  let r = 0.0;
-  for (let i = 0; i < n_count; i++) {
-    let vStart = offsetPt0[i]; //first vertex in streamline
-    let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
-    let vStart3 = vStart * 3; //pts have 3 components XYZ
-    let vEnd3 = vEnd * 3;
+  function direction2rgb(x1, y1, z1, x2, y2, z2, ditherFrac) {
+    //generate color based on direction between two 3D spatial positions
     let v = vec3.fromValues(
-      pts[vStart3] - pts[vEnd3],
-      pts[vStart3 + 1] - pts[vEnd3 + 1],
-      pts[vStart3 + 2] - pts[vEnd3 + 2]
+      Math.abs(x1 - x2),
+      Math.abs(y1 - y2),
+      Math.abs(z1 - z2)
     );
     vec3.normalize(v, v);
-    if (dither > 0.0) r = dither * Math.random() - ditherHalf;
+    let r = ditherFrac - ditherHalf;
     for (let j = 0; j < 3; j++)
       v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0);
-    let RBGA = v[0] + (v[1] << 8) + (v[2] << 16);
-    //let RBGA =  (Math.abs(v[0]) * 255) + ((Math.abs(v[1]) *255) << 8) + ((Math.abs(v[2]) *255) << 16) + (0 << 24); //RGBA
-    let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
-    let vEnd4 = vEnd * 4 + 3;
-    for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RBGA;
+    return v[0] + (v[1] << 8) + (v[2] << 16);
+  } // direction2rgb()
+  //Determine color: local, global, dps0, dpv0, etc.
+  let fiberColor = this.fiberColor.toLowerCase();
+  let dps = null;
+  let dpv = null;
+  if (fiberColor.startsWith("dps") && this.dps.length > 0) {
+    let n = parseInt(fiberColor.substring(3));
+    if (n < this.dps.length && this.dps[n].vals.length === n_count)
+      dps = this.dps[n].vals;
+  }
+  if (fiberColor.startsWith("dpv") && this.dpv.length > 0) {
+    let n = parseInt(fiberColor.substring(3));
+    if (n < this.dpv.length && this.dpv[n].vals.length === npt)
+      dpv = this.dpv[n].vals;
+  }
+  if (dpv) {
+    //color per streamline
+    let lut = cmapper.colormap(this.colormap);
+    let mn = dpv[0];
+    let mx = dpv[0];
+    for (let i = 0; i < npt; i++) {
+      mn = Math.min(mn, dpv[i]);
+      mx = Math.max(mx, dpv[i]);
+    }
+    let v4 = 3; //+3: fill 4th component colors: XYZC = 0123
+    for (let i = 0; i < npt; i++) {
+      let color = (dpv[i] - mn) / (mx - mn);
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16);
+      posClrU32[v4] = RGBA;
+      v4 += 4;
+    }
+  } else if (dps) {
+    //color per streamline
+    let lut = cmapper.colormap(this.colormap);
+    let mn = dps[0];
+    let mx = dps[0];
+    for (let i = 0; i < n_count; i++) {
+      mn = Math.min(mn, dps[i]);
+      mx = Math.max(mx, dps[i]);
+    }
+    if (mx === mn) mn -= 1; //avoid divide by zero
+    for (let i = 0; i < n_count; i++) {
+      let color = (dps[i] - mn) / (mx - mn);
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16);
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      let vEnd4 = vEnd * 4 + 3;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+    }
+  } else if (fiberColor.includes("local")) {
+    for (let i = 0; i < n_count; i++) {
+      //for each streamline
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let v3 = vStart * 3; //pts have 3 components XYZ
+      let vEnd3 = vEnd * 3;
+      let ditherFrac = dither * Math.random(); //same dither amount throughout line
+      //for first point, we do not have a prior sample
+      let RGBA = direction2rgb(
+        pts[v3],
+        pts[v3 + 1],
+        pts[v3 + 2],
+        pts[v3 + 4],
+        pts[v3 + 5],
+        pts[v3 + 6],
+        ditherFrac
+      );
+      let v4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      while (v3 < vEnd3) {
+        posClrU32[v4] = RGBA;
+        v4 += 4; //stride is 4 32-bit values: float32 XYZ and 32-bit rgba
+        v3 += 3; //read next vertex
+        //direction estimated based on previous and next vertex
+        RGBA = direction2rgb(
+          pts[v3 - 3],
+          pts[v3 - 2],
+          pts[v3 - 1],
+          pts[v3 + 3],
+          pts[v3 + 4],
+          pts[v3 + 5],
+          ditherFrac
+        );
+      }
+      posClrU32[v4] = posClrU32[v4 - 4];
+    }
+  } else {
+    //if color is local direction, else global
+    for (let i = 0; i < n_count; i++) {
+      //for each streamline
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let vStart3 = vStart * 3; //pts have 3 components XYZ
+      let vEnd3 = vEnd * 3;
+      let RGBA = direction2rgb(
+        pts[vStart3],
+        pts[vStart3 + 1],
+        pts[vStart3 + 2],
+        pts[vEnd3],
+        pts[vEnd3 + 1],
+        pts[vEnd3 + 2],
+        dither * Math.random()
+      );
+      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      let vEnd4 = vEnd * 4 + 3;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+    }
   }
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW);
@@ -162,9 +272,12 @@ NVMesh.prototype.updateFibers = function (gl) {
   //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
   let primitiveRestart = Math.pow(2, 32) - 1; //for gl.UNSIGNED_INT
   let indices = [];
+  let stride = -1;
   for (let i = 0; i < n_count; i++) {
     //let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
     if (this.fiberLengths[i] < min_mm) continue;
+    stride++;
+    if (stride % this.fiberDecimationStride !== 0) continue; //e.g. if stride is 2 then half culled
     for (let j = offsetPt0[i]; j < offsetPt0[i + 1]; j++) indices.push(j);
     indices.push(primitiveRestart);
   }
@@ -280,7 +393,6 @@ NVMesh.prototype.updateMesh = function (gl) {
     console.log("underspecified mesh");
     return;
   }
-  console.log("Points " + this.pts.length + " Indices " + this.tris.length);
   let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
   if (this.layers && this.layers.length > 0) {
     for (let i = 0; i < this.layers.length; i++) {
@@ -306,16 +418,20 @@ NVMesh.prototype.updateMesh = function (gl) {
         continue;
       }
       let lut = cmapper.colormap(layer.colorMap);
-      //console.log(layer.colorMap,'++', layer);
+
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
+      let nvtx = this.pts.length / 3;
+      let frameOffset = nvtx * frame;
+      if (layer.useNegativeCmap) {
+        layer.cal_min = Math.max(0, layer.cal_min);
+        layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
+      }
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
       //blend colors for each voxel
-      for (
-        let j = frame * layer.values.length;
-        j < (frame + 1) * layer.values.length;
-        j++
-      ) {
-        let v255 = Math.round((layer.values[j] - layer.cal_min) * scale255);
+      for (let j = 0; j < nvtx; j++) {
+        let v255 = Math.round(
+          (layer.values[j + frameOffset] - layer.cal_min) * scale255
+        );
         if (v255 < 0) continue;
         v255 = Math.min(255.0, v255) * 4;
         let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -323,10 +439,22 @@ NVMesh.prototype.updateMesh = function (gl) {
         u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
         u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
       }
+      if (layer.useNegativeCmap) {
+        let lut = cmapper.colormap(layer.colorMapNegative);
+        for (let j = 0; j < nvtx; j++) {
+          let v255 = Math.round(
+            (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+          );
+          if (v255 < 0) continue;
+          v255 = Math.min(255.0, v255) * 4;
+          let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+          u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+          u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+          u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+        }
+      }
     }
   }
-
-  //  console.log(layer.frame4D, '::::', layer.values[0]);
   //generate webGL buffers and vao
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(
@@ -355,7 +483,6 @@ NVMesh.prototype.setProperty = function (key, val, gl) {
     return;
   }
   this[key] = val;
-  //console.log(this);
   this.updateMesh(gl); //apply the new properties...
 };
 
@@ -562,18 +689,6 @@ NVMesh.readTCK = function (buffer) {
   };
 }; //readTCK()
 
-//ToDo: readTRX
-// https://stackoverflow.com/questions/32633585/how-do-you-convert-to-half-floats-in-javascript
-NVMesh.readTRX = function (buf) {
-  console.log("OK", buf); //buffer.byteLength
-  //var zip = new AdmZip.ZipFile(buf);
-  /*
-  for (var i = 0; i < zipEntries.length; i++) {
-      if (zipEntries[i].entryName.match(/readme/))
-        console.log(zip.readAsText(zipEntries[i]));
-  }*/
-};
-
 NVMesh.readTRK = function (buffer) {
   // http://trackvis.org/docs/?subsect=fileformat
   // http://www.tractometer.org/fiberweb/
@@ -596,19 +711,22 @@ NVMesh.readTRK = function (buffer) {
   }
   var vers = reader.getUint32(992, true); //2
   var hdr_sz = reader.getUint32(996, true); //1000
-
   if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388)
     throw new Error("Not a valid TRK file");
+  let dps = [];
+  let dpv = [];
   var n_scalars = reader.getInt16(36, true);
-  let scalar_names = [];
   if (n_scalars > 0) {
+    //data_per_vertex
     for (let i = 0; i < n_scalars; i++) {
       let arr = new Uint8Array(buffer.slice(38 + i * 20, 58 + i * 20));
       var str = new TextDecoder().decode(arr).split("\0").shift();
-      scalar_names.push(str.trim()); //trim: https://github.com/johncolby/along-tract-stats
+      dpv.push({
+        id: str.trim(),
+        vals: [],
+      });
     }
   }
-  //console.log('scalar_names',scalar_names);
   var voxel_sizeX = reader.getFloat32(12, true);
   var voxel_sizeY = reader.getFloat32(16, true);
   var voxel_sizeZ = reader.getFloat32(20, true);
@@ -631,15 +749,16 @@ NVMesh.readTRK = function (buffer) {
     1
   );
   var n_properties = reader.getInt16(238, true);
-  let property_names = [];
   if (n_properties > 0) {
     for (let i = 0; i < n_properties; i++) {
       let arr = new Uint8Array(buffer.slice(240 + i * 20, 260 + i * 20));
       var str = new TextDecoder().decode(arr).split("\0").shift();
-      property_names.push(str.trim());
+      dps.push({
+        id: str.trim(),
+        vals: [],
+      });
     }
   }
-  //console.log('property_names',property_names);
   var mat = mat4.create();
   for (let i = 0; i < 16; i++) mat[i] = reader.getFloat32(440 + i * 4, true);
   if (mat[15] === 0.0) {
@@ -660,8 +779,6 @@ NVMesh.readTRK = function (buffer) {
   let npt = 0;
   let offsetPt0 = [];
   let pts = [];
-  let scalars = [];
-  let properties = [];
   while (i < ntracks) {
     let n_pts = i32[i];
     i = i + 1; // read 1 32-bit integer for number of points in this streamline
@@ -691,7 +808,7 @@ NVMesh.readTRK = function (buffer) {
       );
       if (n_scalars > 0) {
         for (let s = 0; s < n_scalars; s++) {
-          scalars.push(f32[i]);
+          dpv[s].vals.push(f32[i]);
           i++;
         }
       }
@@ -699,25 +816,21 @@ NVMesh.readTRK = function (buffer) {
     } // for j: each point in streamline
     if (n_properties > 0) {
       for (let j = 0; j < n_properties; j++) {
-        properties.push(f32[i]);
+        dps[j].vals.push(f32[i]);
         i++;
       }
     }
   } //for each streamline: while i < n_count
   offsetPt0.push(npt); //add 'first index' as if one more line was added (fence post problem)
-  console.log(
-    "TRK streamlines (n_count) >>",
-    offsetPt0.length - 1,
-    " vertices: ",
-    pts.length / 3
-  );
   return {
     pts,
     offsetPt0,
+    dps,
+    dpv,
   };
 }; //readTRK()
 
-NVMesh.readTxtVTK = function (buffer) {
+function readTxtVTK(buffer) {
   var enc = new TextDecoder("utf-8");
   var txt = enc.decode(buffer);
   var lines = txt.split("\n");
@@ -751,7 +864,66 @@ NVMesh.readTxtVTK = function (buffer) {
   while (lines[pos].length < 1) pos++; //skip blank lines
   items = lines[pos].split(" ");
   pos++;
-  if (items[0].includes("TRIANGLE_STRIPS")) {
+  if (items[0].includes("LINES")) {
+    let n_count = parseInt(items[1]);
+    if (n_count < 1) alert("Corrupted VTK ASCII");
+    let str = lines[pos].trim();
+    let offsetPt0 = [];
+    let pts = [];
+    if (str.startsWith("OFFSETS")) {
+      // 'new' line style https://discourse.vtk.org/t/upcoming-changes-to-vtkcellarray/2066
+      offsetPt0 = new Uint32Array(n_count);
+      pos++;
+      let c = 0;
+      while (c < n_count) {
+        str = lines[pos].trim();
+        pos++;
+        let items = str.split(" ");
+        for (let i = 0; i < items.length; i++) {
+          offsetPt0[c] = parseInt(items[i]);
+          c++;
+          if (c >= n_count) break;
+        } //for each line
+      } //while offset array not filled
+      pts = positions;
+    } else {
+      //classic line style https://www.visitusers.org/index.php?title=ASCII_VTK_Files
+      offsetPt0 = new Uint32Array(n_count + 1);
+      let npt = 0;
+      pts = [];
+      offsetPt0[0] = 0; //1st streamline starts at 0
+      let asciiInts = [];
+      let asciiIntsPos = 0;
+      function lineToInts() {
+        //VTK can save one array across multiple ASCII lines
+        str = lines[pos].trim();
+        let items = str.split(" ");
+        asciiInts = [];
+        for (let i = 0; i < items.length; i++)
+          asciiInts.push(parseInt(items[i]));
+        asciiIntsPos = 0;
+        pos++;
+      }
+      lineToInts();
+      for (let c = 0; c < n_count; c++) {
+        if (asciiIntsPos >= asciiInts.length) lineToInts();
+        let numPoints = asciiInts[asciiIntsPos++];
+        npt += numPoints;
+        offsetPt0[c + 1] = npt;
+        for (let i = 0; i < numPoints; i++) {
+          if (asciiIntsPos >= asciiInts.length) lineToInts();
+          let idx = asciiInts[asciiIntsPos++] * 3;
+          pts.push(positions[idx + 0]); //X
+          pts.push(positions[idx + 1]); //Y
+          pts.push(positions[idx + 2]); //Z
+        } //for numPoints: number of segments in streamline
+      } //for n_count: number of streamlines
+    }
+    return {
+      pts,
+      offsetPt0,
+    };
+  } else if (items[0].includes("TRIANGLE_STRIPS")) {
     let nstrip = parseInt(items[1]);
     for (let i = 0; i < nstrip; i++) {
       let str = lines[pos].trim();
@@ -790,13 +962,13 @@ NVMesh.readTxtVTK = function (buffer) {
         fy = fz;
       }
     }
-  } else alert("Unsupported ASCII VTK datatype ", items[0]);
+  } else alert("Unsupported ASCII VTK datatype " + items[0]);
   var indices = new Int32Array(tris);
   return {
     positions,
     indices,
   };
-}; // readTxtVTK()
+} // readTxtVTK()
 
 NVMesh.readSTC = function (buffer, n_vert) {
   //mne STC format
@@ -915,35 +1087,77 @@ NVMesh.readVTK = function (buffer) {
   if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
   line = readStr(); //2nd line comment
   line = readStr(); //3rd line ASCII/BINARY
-  if (line.startsWith("ASCII")) return this.readTxtVTK(buffer);
+  if (line.startsWith("ASCII")) return readTxtVTK(buffer); //from NiiVue
   else if (!line.startsWith("BINARY"))
     alert("Invalid VTK image, expected ASCII or BINARY", line);
   line = readStr(); //5th line "DATASET POLYDATA"
   if (!line.includes("POLYDATA")) alert("Only able to read VTK POLYDATA", line);
   line = readStr(); //6th line "POINTS 10261 float"
-  if (!line.includes("POINTS") || !line.includes("float"))
-    alert("Only able to read VTK float POINTS", line);
+  if (
+    !line.includes("POINTS") ||
+    (!line.includes("double") && !line.includes("float"))
+  )
+    console.log("Only able to read VTK float or double POINTS" + line);
+  let isFloat64 = line.includes("double");
   let items = line.split(" ");
   let nvert = parseInt(items[1]); //POINTS 10261 float
   let nvert3 = nvert * 3;
   var positions = new Float32Array(nvert3);
   var reader = new DataView(buffer);
-  for (let i = 0; i < nvert3; i++) {
-    positions[i] = reader.getFloat32(pos, false);
-    pos += 4;
+  if (isFloat64) {
+    for (let i = 0; i < nvert3; i++) {
+      positions[i] = reader.getFloat64(pos, false);
+      pos += 8;
+    }
+  } else {
+    for (let i = 0; i < nvert3; i++) {
+      positions[i] = reader.getFloat32(pos, false);
+      pos += 4;
+    }
   }
   line = readStr(); //Type, "LINES 11885 "
   items = line.split(" ");
   let tris = [];
   if (items[0].includes("LINES")) {
-    //tractogaphy data
-    console.log("boingo", line);
     let n_count = parseInt(items[1]);
+    //tractogaphy data: detect if borked by DiPy
+    let posOK = pos;
+    line = readStr(); //borked files "OFFSETS vtktypeint64"
+    if (line.startsWith("OFFSETS")) {
+      //console.log("invalid VTK file created by DiPy");
+      let isInt64 = false;
+      if (line.includes("int64")) isInt64 = true;
+      let offsetPt0 = new Uint32Array(n_count);
+      if (isInt64) {
+        let isOverflowInt32 = false;
+        for (let c = 0; c < n_count; c++) {
+          let idx = reader.getInt32(pos, false);
+          if (idx !== 0) isOverflowInt32 = true;
+          pos += 4;
+          idx = reader.getInt32(pos, false);
+          pos += 4;
+          offsetPt0[c] = idx;
+        }
+        if (isOverflowInt32)
+          console.log("int32 overflow: JavaScript does not support int64");
+      } else {
+        for (let c = 0; c < n_count; c++) {
+          let idx = reader.getInt32(pos, false);
+          pos += 4;
+          offsetPt0[c] = idx;
+        }
+      }
+      let pts = positions;
+      return {
+        pts,
+        offsetPt0,
+      };
+    }
+    pos = posOK; //valid VTK file
     let npt = 0;
     let offsetPt0 = [];
     let pts = [];
     offsetPt0.push(npt); //1st streamline starts at 0
-    offsetPt0 = [];
     for (let c = 0; c < n_count; c++) {
       let numPoints = reader.getInt32(pos, false);
       pos += 4;
@@ -1033,8 +1247,7 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
       alert(
         "Required script missing: include either pako.min.js or gunzip.min.js"
       );
-    //console.log("gz->raw %d->%d", buffer.byteLength, raw.length);
-    var reader = new DataView(raw.buffer);
+    reader = new DataView(raw.buffer);
     var magic = reader.getUint16(0, true);
     _buffer = raw.buffer;
     //throw new Error( 'Gzip MZ3 file' );
@@ -1103,8 +1316,6 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
     scalars = new Float32Array(_buffer, filepos, nFrame4D * nvert);
     filepos += nvert * 4;
   }
-  console.log(nvert, ":!", n_vert, attr);
-
   if (n_vert > 0) return scalars;
   return {
     positions,
@@ -1119,7 +1330,11 @@ NVMesh.readLayer = function (
   buffer,
   nvmesh,
   opacity = 0.5,
-  colorMap = "rocket"
+  colorMap = "warm",
+  colorMapNegative = "winter",
+  useNegativeCmap = false,
+  cal_min = null,
+  cal_max = null
 ) {
   let layer = [];
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
@@ -1131,10 +1346,11 @@ NVMesh.readLayer = function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  //console.log(name, ":", n_vert, ">>>", buffer);
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
-  else if (ext === "CURV") layer.values = this.readCURV(buffer, n_vert);
+  else if (ext === "CRV" || ext === "CURV")
+    layer.values = this.readCURV(buffer, n_vert);
+  else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
   else if (ext === "STC") layer.values = this.readSTC(buffer, n_vert);
   else {
     console.log("Unknown layer overlay format " + name);
@@ -1152,12 +1368,60 @@ NVMesh.readLayer = function (
   }
   layer.global_min = mn;
   layer.global_max = mx;
-  layer.cal_min = mn;
-  layer.cal_max = mx;
+  layer.cal_min = cal_min;
+  if (!cal_min) layer.cal_min = mn;
+  layer.cal_max = cal_max;
+  if (!cal_max) layer.cal_max = mx;
   layer.opacity = opacity;
   layer.colorMap = colorMap;
+  layer.colorMapNegative = colorMapNegative;
+  layer.useNegativeCmap = useNegativeCmap;
   nvmesh.layers.push(layer);
 };
+
+NVMesh.readOFF = function (buffer) {
+  //https://en.wikipedia.org/wiki/OFF_(file_format)
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  //let txt = await response.text();
+  var lines = txt.split("\n");
+  var n = lines.length;
+  let pts = [];
+  let t = [];
+  let i = 0;
+  if (!lines[i].startsWith("OFF")) {
+    console.log("File does not start with OFF");
+  } else i++;
+  let items = lines[i].split(" ");
+  let num_v = parseInt(items[0]);
+  let num_f = parseInt(items[1]);
+  i++;
+  for (let j = 0; j < num_v; j++) {
+    let str = lines[i];
+    items = str.split(" ");
+    pts.push(parseFloat(items[0]));
+    pts.push(parseFloat(items[1]));
+    pts.push(parseFloat(items[2]));
+    i++;
+  }
+  for (let j = 0; j < num_f; j++) {
+    let str = lines[i];
+    items = str.split(" ");
+    let n = parseInt(items[0]);
+    if (n !== 3)
+      console.log("Only able to read OFF files with triangular meshes");
+    t.push(parseInt(items[1]));
+    t.push(parseInt(items[2]));
+    t.push(parseInt(items[3]));
+    i++;
+  }
+  var positions = new Float32Array(pts);
+  var indices = new Int32Array(t);
+  return {
+    positions,
+    indices,
+  };
+}; // readOFF()
 
 NVMesh.readOBJ = function (buffer) {
   //WaveFront OBJ format
@@ -1260,10 +1524,37 @@ NVMesh.readSTL = function (buffer) {
   };
 }; // readSTL()
 
-NVMesh.readGII = function (buffer) {
+NVMesh.readGII = function (buffer, n_vert = 0) {
   var enc = new TextDecoder("utf-8");
   var xmlStr = enc.decode(buffer);
   let gii = gifti.parse(xmlStr);
+  if (n_vert > 0) {
+    //add as overlay layer
+    if (gii.dataArrays.length < 0) {
+      console.log("Not a valid GIfTI overlay");
+    }
+    let scalars = [];
+    for (var i = 0; i < gii.dataArrays.length; i++) {
+      let layer = gii.dataArrays[i];
+      if (n_vert !== layer.getNumElements()) {
+        console.log(
+          "Number of vertices of overlay layer does not match mesh " +
+            n_vert +
+            " vs " +
+            getNumElements()
+        );
+        return;
+      }
+      if (layer.isColors()) console.log("TODO: check color mesh layers");
+      let scalarsI = new Float32Array(layer.getData());
+      scalars.push(...scalarsI);
+    }
+    return scalars;
+  }
+  if (gii.getNumTriangles() === 0 || gii.getNumPoints() === 0) {
+    console.log("Not a GIfTI mesh (perhaps an overlay layer)");
+    return;
+  }
   var positions = gii.getPointsDataArray().getData();
   var indices = gii.getTrianglesDataArray().getData();
   //next: ColumnMajorOrder https://github.com/rii-mango/GIFTI-Reader-JS/issues/2
@@ -1313,7 +1604,7 @@ NVMesh.loadConnectomeFromJSON = async function (
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
-NVMesh.readMesh = function (
+NVMesh.readMesh = async function (
   buffer,
   name,
   gl,
@@ -1334,10 +1625,15 @@ NVMesh.readMesh = function (
   }
   if (ext === "TCK" || ext === "TRK" || ext === "TRX") {
     if (ext === "TCK") obj = this.readTCK(buffer);
-    else if (ext === "TRX") obj = this.readTRX(buffer);
+    else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
+    //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
+    //let pts = new Float32Array(obj.pts.slice());
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     let pts = new Float32Array(obj.pts.slice());
+    if (!obj.hasOwnProperty("dpg")) obj.dpg = null;
+    if (!obj.hasOwnProperty("dps")) obj.dps = null;
+    if (!obj.hasOwnProperty("dpv")) obj.dpv = null;
     return new NVMesh(
       pts,
       offsetPt0,
@@ -1345,19 +1641,24 @@ NVMesh.readMesh = function (
       null, //colorMap,
       opacity, //opacity,
       visible, //visible,
-      gl
+      gl,
+      "inferno",
+      obj.dpg,
+      obj.dps,
+      obj.dpv
     );
   } //is fibers
-  if (ext === "GII") obj = this.readGII(buffer);
-  else if (ext === "MZ3") obj = this.readMZ3(buffer);
+  if (ext === "GII") {
+    obj = this.readGII(buffer);
+  } else if (ext === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
-  else if (ext === "FIB" || ext.toUpperCase() === "VTK") {
+  else if (ext === "FIB" || ext === "VTK") {
     obj = this.readVTK(buffer);
     if (obj.hasOwnProperty("offsetPt0")) {
       //VTK files used both for meshes and streamlines
       let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
       let pts = new Float32Array(obj.pts.slice());
-
       return new NVMesh(
         pts,
         offsetPt0,
@@ -1365,12 +1666,15 @@ NVMesh.readMesh = function (
         null, //colorMap,
         opacity, //opacity,
         visible, //visible,
-        gl
+        gl,
+        "inferno"
       );
     } //if streamlines, not mesh
-  } else if (ext === "STL") obj = this.readSTL(buffer);
-  //unknown file extension, try freeSurfer as hail mary
-  else obj = this.readFreeSurfer(buffer);
+  } else if (ext === "STL") {
+    obj = this.readSTL(buffer);
+  } else {
+    obj = this.readFreeSurfer(buffer);
+  } // freesurfer hail mary
   pts = obj.positions.slice();
   tris = obj.indices.slice();
   if (obj.colors && obj.colors.length === pts.length) {
@@ -1395,7 +1699,8 @@ NVMesh.readMesh = function (
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-  return new NVMesh(
+
+  let nvm = new NVMesh(
     pts,
     tris,
     name,
@@ -1404,6 +1709,171 @@ NVMesh.readMesh = function (
     visible, //visible,
     gl
   );
+  if (obj.hasOwnProperty("scalars") && obj.scalars.length > 0) {
+    this.readLayer(name, buffer, nvm, opacity, "gray");
+    nvm.updateMesh(gl);
+  }
+  return nvm;
+};
+
+//https://stackoverflow.com/questions/55798396/how-do-i-make-a-nested-loop-continue-only-after-a-asynchronous-function-has-been
+var pow = Math.pow;
+function decodeFloat16(binary) {
+  "use strict";
+  var exponent = (binary & 0x7c00) >> 10,
+    fraction = binary & 0x03ff;
+  return (
+    (binary >> 15 ? -1 : 1) *
+    (exponent
+      ? exponent === 0x1f
+        ? fraction
+          ? NaN
+          : Infinity
+        : pow(2, exponent - 15) * (1 + fraction / 0x400)
+      : 6.103515625e-5 * (fraction / 0x400))
+  );
+}
+
+NVMesh.readTRX = async function (buffer) {
+  //Javascript does not support float16, so we convert to float32
+  //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
+  function decodeFloat16(binary) {
+    "use strict";
+    var exponent = (binary & 0x7c00) >> 10,
+      fraction = binary & 0x03ff;
+    return (
+      (binary >> 15 ? -1 : 1) *
+      (exponent
+        ? exponent === 0x1f
+          ? fraction
+            ? NaN
+            : Infinity
+          : Math.pow(2, exponent - 15) * (1 + fraction / 0x400)
+        : 6.103515625e-5 * (fraction / 0x400))
+    );
+  } // decodeFloat16()
+  let noff = 0;
+  let npt = 0;
+  let pts = [];
+  let offsetPt0 = [];
+  let dpg = [];
+  let dps = [];
+  let dpv = [];
+  let header = [];
+  let isOverflowUint64 = false;
+  let data = [];
+  //let response = await fetch(url);
+  //if (!response.ok) throw Error(response.statusText);
+  //data = await response.arrayBuffer();
+  data = buffer;
+  //https://stackoverflow.com/questions/54274686/how-to-wait-for-asynchronous-jszip-foreach-call-to-finish-before-running-next
+  let zip = await JSZip.loadAsync(data);
+  //zip uses / for windows and unix. https://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
+  for (let [filename, file] of Object.entries(zip.files)) {
+    if (file.dir) continue;
+    let parts = filename.split("/");
+    let fname = parts.slice(-1)[0]; // my.trx/dpv/fx.float32 -> fx.float32
+    if (fname.startsWith(".")) continue;
+    let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
+    let tag = fname.split(".")[0]; // "positions.3.float16 -> "positions"
+    //todo: should tags be censored for invalide characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
+    let data = await zip.file(filename).async("uint8array");
+    //next read header
+    if (fname.includes("header.json")) {
+      let jsonString = new TextDecoder().decode(data);
+      header = JSON.parse(jsonString);
+      continue;
+    }
+    //next read arrays for all possible datatypes: int8/16/32/64 uint8/16/32/64 float16/32/64
+    let nval = 0;
+    let vals = [];
+    if (fname.endsWith(".uint64") || fname.endsWith(".int64")) {
+      //javascript does not have 64-bit integers! read lower 32-bits
+      //note for signed int64 we only read unsigned bytes
+      //for both signed and unsigned, generate an error if any value is out of bounds
+      //one alternative might be to convert to 64-bit double that has a flintmax of 2^53.
+      nval = data.length / 8; //8 bytes per 64bit input
+      vals = new Uint32Array(nval);
+      var u32 = new Uint32Array(data.buffer);
+      let j = 0;
+      for (let i = 0; i < nval; i++) {
+        vals[i] = u32[j];
+        if (u32[j + 1] !== 0) isOverflowUint64 = true;
+        j += 2;
+      }
+    } else if (fname.endsWith(".uint32")) {
+      vals = new Uint32Array(data.buffer);
+    } else if (fname.endsWith(".uint16")) {
+      vals = new Uint16Array(data.buffer);
+    } else if (fname.endsWith(".uint8")) {
+      vals = new Uint8Array(data.buffer);
+    } else if (fname.endsWith(".int32")) {
+      vals = new Int32Array(data.buffer);
+    } else if (fname.endsWith(".int16")) {
+      vals = new Int16Array(data.buffer);
+    } else if (fname.endsWith(".int8")) {
+      vals = new Int8Array(data.buffer);
+    } else if (fname.endsWith(".float64")) {
+      vals = new Float64Array(data.buffer);
+    } else if (fname.endsWith(".float32")) {
+      vals = new Float32Array(data.buffer);
+    } else if (fname.endsWith(".float16")) {
+      //javascript does not have 16-bit floats! Convert to 32-bits
+      nval = data.length / 2; //2 bytes per 16bit input
+      vals = new Float32Array(nval);
+      var u16 = new Uint16Array(data.buffer);
+      for (let i = 0; i < nval; i++) vals[i] = decodeFloat16(u16[i]);
+    } else continue; //not a data array
+    nval = vals.length;
+    //next: read data_per_group
+    if (pname.includes("dpg")) {
+      dpg.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }
+    //next: read data_per_vertex
+    if (pname.includes("dpv")) {
+      dpv.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }
+    //next: read data_per_streamline
+    if (pname.includes("dps")) {
+      dps.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }
+    //Next: read offsets: Always uint64
+    if (fname.startsWith("offsets.")) {
+      //javascript does not have 64-bit integers! read lower 32-bits
+      noff = nval; //8 bytes per 64bit input
+      //we need to solve the fence post problem, so we can not use slice
+      offsetPt0 = new Uint32Array(nval + 1);
+      for (let i = 0; i < nval; i++) offsetPt0[i] = vals[i];
+    }
+    if (fname.startsWith("positions.3.")) {
+      npt = nval; //4 bytes per 32bit input
+      pts = vals.slice();
+    }
+  }
+  if (noff === 0 || npt === 0) alert("Failure reading TRX format");
+  if (isOverflowUint64)
+    alert("Too many vertices: JavaScript does not support 64 bit integers");
+  offsetPt0[noff] = npt / 3; //solve fence post problem, offset for final streamline
+  return {
+    pts,
+    offsetPt0,
+    dpg,
+    dps,
+    dpv,
+    header,
+  };
 };
 
 /**
@@ -1426,27 +1896,17 @@ NVMesh.loadFromUrl = async function ({
   visible = true,
   layers = [],
 } = {}) {
-  /*if (url.endsWith('trx')) { 
-  console.log('URL', url);
-  JSZip.loadAsync(url).then(function(zip) {
-      for(let [filename, file] of Object.entries(zip.files)) {
-          // TODO Your code goes here
-          console.log(filename);
-      }
-  }).catch(function(err) {
-      console.error("Failed to open", filename, " as ZIP file:", err);
-  })
-}*/
-  if (url === "") throw Error("url must not be empty");
-  if (gl === null) throw Error("gl context is null");
-  let response = await fetch(url);
-  if (!response.ok) throw Error(response.statusText);
   let urlParts = url.split("/"); // split url parts at slash
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  if (url === "") throw Error("url must not be empty");
+  if (gl === null) throw Error("gl context is null");
+  //TRX format is special (its a zip archive of multiple files)
+  let response = await fetch(url);
+  if (!response.ok) throw Error(response.statusText);
   let tris = [];
   var pts = [];
   let buffer = await response.arrayBuffer();
-  let nvmesh = this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+  let nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible);
   if (!layers || layers.length < 1) return nvmesh;
   for (let i = 0; i < layers.length; i++) {
     response = await fetch(layers[i].url);
@@ -1455,9 +1915,30 @@ NVMesh.loadFromUrl = async function ({
     urlParts = layers[i].url.split("/");
     let opacity = 0.5;
     if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
-    let colorMap = "viridis";
+    let colorMap = "warm";
     if (layers[i].hasOwnProperty("colorMap")) colorMap = layers[i].colorMap;
-    this.readLayer(urlParts.slice(-1)[0], buffer, nvmesh, opacity, colorMap);
+    let colorMapNegative = "winter";
+    if (layers[i].hasOwnProperty("colorMapNegative"))
+      colorMapNegative = layers[i].colorMapNegative;
+    let useNegativeCmap = false;
+    if (layers[i].hasOwnProperty("useNegativeCmap"))
+      useNegativeCmap = layers[i].useNegativeCmap;
+    let cal_min = null;
+    if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
+    let cal_max = null;
+    if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
+
+    this.readLayer(
+      urlParts.slice(-1)[0],
+      buffer,
+      nvmesh,
+      opacity,
+      colorMap,
+      colorMapNegative,
+      useNegativeCmap,
+      cal_min,
+      cal_max
+    );
   }
   nvmesh.updateMesh(gl); //apply the new properties...
   return nvmesh;
@@ -1502,7 +1983,47 @@ NVMesh.loadFromFile = async function ({
   layers = [],
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers);
+  return await this.readMesh(
+    buffer,
+    name,
+    gl,
+    opacity,
+    rgba255,
+    visible,
+    layers
+  );
+};
+
+NVMesh.loadFromBase64 = async function ({
+  base64 = null,
+  gl = null,
+  name = "",
+  opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
+  visible = true,
+  layers = [],
+} = {}) {
+  //https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+  function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  let buffer = base64ToArrayBuffer(base64);
+  return await this.readMesh(
+    buffer,
+    name,
+    gl,
+    opacity,
+    rgba255,
+    visible,
+    layers
+  );
 };
 
 String.prototype.getBytes = function () {

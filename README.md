@@ -198,8 +198,10 @@ export class NiivueViewComponent implements OnInit {
 
 NiiVue can open several formats popular with brain imaging:
 
- - Voxel-based formats: [NIfTI](https://brainder.org/2012/09/23/the-nifti-file-format/), [NRRD](http://teem.sourceforge.net/nrrd/format.html), [AFNI HEAD/BRIK](https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html).
- - Mesh-based formats: [FreeSurfer](http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm), [GIfTI](https://www.nitrc.org/projects/gifti/), [MZ3](https://github.com/neurolabusc/surf-ice/tree/master/mz3), [Wavefront OBJ](https://brainder.org/tag/obj/), [STL](https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45), [Legacy VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf).
+ - Voxel-based formats: [NIfTI](https://brainder.org/2012/09/23/the-nifti-file-format/), [NRRD](http://teem.sourceforge.net/nrrd/format.html), [AFNI HEAD/BRIK](https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html), [MGH/MGZ](https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat).
+ - Mesh-based formats: [FreeSurfer](http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm), [GIfTI](https://www.nitrc.org/projects/gifti/), [MZ3](https://github.com/neurolabusc/surf-ice/tree/master/mz3), [OFF](https://en.wikipedia.org/wiki/OFF_(file_format)), [Wavefront OBJ](https://brainder.org/tag/obj/), [STL](https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45), [Legacy VTK](https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf).
+ - Mesh overlay formats: GIfTI, MZ3, STC, FreeSurfer (CURV/ANNOT)
+ - Tractography formats: TCK, TRK, TRX, VTK
 
 # Alternatives
 

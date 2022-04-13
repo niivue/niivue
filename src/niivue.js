@@ -879,8 +879,9 @@ Niivue.prototype.dropListener = async function (e) {
     let volume = await NVImage.loadFromUrl({ url: url });
     this.setVolume(volume);
   } else {
-    const files = dt.files;
-    if (files.length > 0) {
+    //const files = dt.files;
+		const items = dt.items
+    if (items.length > 0) {
       // adding or replacing
       if (!e.shiftKey) {
         this.volumes = [];
@@ -888,66 +889,108 @@ Niivue.prototype.dropListener = async function (e) {
         this.meshes = [];
       }
 
-      for (const file of files) {
-        var re = /(?:\.([^.]+))?$/;
-        let ext = re.exec(file.name)[1];
-        ext = ext.toUpperCase();
-        if (ext === "GZ") {
-          ext = re.exec(file.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
-          ext = ext.toUpperCase();
-        }
-        console.log(ext, "dropped ", file.name);
-        if (ext === "PNG") {
-          this.loadBmpTexture(file);
-          continue;
-        }
-        let pairedImageData = "";
-        // check for afni HEAD BRIK pair
-        if (file.name.lastIndexOf("HEAD") !== -1) {
-          for (const pairedFile of files) {
-            let fileBaseName = file.name.substring(
-              0,
-              file.name.lastIndexOf("HEAD")
-            );
-            console.log(pairedFile.name);
-            let pairedFileBaseName = pairedFile.name.substring(
-              0,
-              pairedFile.name.lastIndexOf("BRIK")
-            );
-            if (fileBaseName === pairedFileBaseName) {
-              console.log("base names match!!!!");
-              pairedImageData = pairedFile;
-            }
-          }
-        }
-        if (file.name.lastIndexOf("BRIK") !== -1) {
-          continue;
-        }
-        if (
-          ext === "GII" ||
-          ext === "MZ3" ||
-          ext === "OBJ" ||
-          ext === "STL" ||
-          ext === "TCK" ||
-          ext === "TRK" ||
-          ext === "TRX" ||
-          ext === "VTK"
-        ) {
-          //console.log("mesh loading not yet supported");
-          let mesh = await NVMesh.loadFromFile({
-            file: file,
-            gl: this.gl,
-            name: file.name,
-          });
-          this.scene.loading$.next(false);
-          this.addMesh(mesh);
-          continue;
-        }
-        let volume = await NVImage.loadFromFile({
-          file: file,
-          urlImgData: pairedImageData,
-        });
-        this.addVolume(volume);
+      for (const item of items) {
+				const entry = item.webkitGetAsEntry()
+				if (entry.isFile){
+					var re = /(?:\.([^.]+))?$/;
+					let ext = re.exec(entry.name)[1];
+					ext = ext.toUpperCase();
+					if (ext === "GZ") {
+						ext = re.exec(entry.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+						ext = ext.toUpperCase();
+					}
+					if (ext === "PNG") {
+						entry.file(file =>{
+							this.loadBmpTexture(file);
+						})
+						continue;
+					}
+					let pairedImageData = "";
+					// check for afni HEAD BRIK pair
+					if (entry.name.lastIndexOf("HEAD") !== -1) {
+						for (const pairedItem of items) {
+							let fileBaseName = entry.name.substring(
+								0,
+								entry.name.lastIndexOf("HEAD")
+							);
+							let pairedItemBaseName = pairedItem.name.substring(
+								0,
+								pairedItem.name.lastIndexOf("BRIK")
+							);
+							if (fileBaseName === pairedItemBaseName) {
+								pairedImageData = pairedItem;
+							}
+						}
+					}
+					if (entry.name.lastIndexOf("BRIK") !== -1) {
+						continue;
+					}
+					if (
+						ext === "FSM" ||
+						ext === "PIAL" ||
+						ext === "ORIG" ||
+						ext === "INFLATED" ||
+						ext === "SMOOTHWM" ||
+						ext === "SPHERE" ||
+						ext === "WHITE" ||
+						ext === "GII" ||
+						ext === "MZ3" ||
+						ext === "OBJ" ||
+						ext === "OFF" ||
+						ext === "STL" ||
+						ext === "TCK" ||
+						ext === "TRK" ||
+						ext === "TRX" ||
+						ext === "VTK"
+					) {
+						entry.file(async (file) => {
+							let mesh = await NVMesh.loadFromFile({
+								file: file,
+								gl: this.gl,
+								name: file.name,
+							});
+							this.scene.loading$.next(false);
+							this.addMesh(mesh);
+						})
+						continue;
+					}
+					entry.file(async (file) => {
+						if (pairedImageData !== ''){
+							pairedImageData.file(async (imgfile) => {
+								let volume = await NVImage.loadFromFile({
+									file: file,
+									urlImgData: imgfile,
+								});
+							})
+						} 
+
+						let volume = await NVImage.loadFromFile({
+							file: file,
+							urlImgData: pairedImageData,
+						});
+						this.addVolume(volume);
+					})
+				}	else if (entry.isDirectory) {
+					console.log('isDirectory')
+					/* TODO
+					let reader = entry.createReader();
+					let allFilesInDir = []
+      		await reader.readEntries(async function(entries) {
+						console.log(entries)
+        		entries.forEach(function(dir, key) {
+							dir.file(function(file) {
+								var re = /(?:\.([^.]+))?$/;
+								let ext = re.exec(file.name)[1];
+								ext = ext.toUpperCase();
+								if (ext === 'DCM'){
+									console.log(file.name)
+									allFilesInDir.push(file)
+								}
+							});
+        		})
+      		})
+				*/
+				}
       }
     }
   }
@@ -1025,7 +1068,7 @@ Niivue.prototype.getMeshIndexByID = function (id) {
 Niivue.prototype.setMeshProperty = function (id, key, val) {
   let idx = this.getMeshIndexByID(id);
   if (idx < 0) {
-    console.log("setMeshProperty() id not loaded", id);
+    log.warn("setMeshProperty() id not loaded", id);
     return;
   }
   this.meshes[idx].setProperty(key, val, this.gl);
@@ -1035,7 +1078,7 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
   if (idx < 0) {
-    console.log("setMeshLayerProperty() id not loaded", mesh);
+    log.warn("setMeshLayerProperty() id not loaded", mesh);
     return;
   }
   this.meshes[idx].setLayerProperty(layer, key, val, this.gl);
@@ -1077,7 +1120,6 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   this.volumes.map((v) => {
-    console.log(v);
     log.debug(v.name);
   });
   let numberOfLoadedImages = this.volumes.length;
@@ -1563,7 +1605,6 @@ Niivue.prototype.drawPt = function (x, y, z, penValue) {
   y = Math.min(Math.max(y, 0), dy - 1);
   z = Math.min(Math.max(z, 0), dz - 1);
   this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
-  //console.log('>>',x, y, z, penValue);
 };
 
 //https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
@@ -1644,21 +1685,9 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
 };
 //Demonstrate how to create drawing
 Niivue.prototype.createRandomDrawing = function () {
-  console.log(
-    "Background image rasDIMs: ",
-    this.back.dims[1],
-    this.back.dims[2],
-    this.back.dims[3]
-  );
-  console.log(
-    " same as volume 0 dimsRAS: ",
-    this.volumes[0].dimsRAS[1],
-    this.volumes[0].dimsRAS[2],
-    this.volumes[0].dimsRAS[3]
-  );
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (vx !== this.drawBitmap.length) {
-    console.log("Epic failure");
+    log.error("Epic drawing failure");
   }
 
   /*
@@ -1709,7 +1738,7 @@ Niivue.prototype.refreshDrawing = function (isForceRedraw = true) {
     dims[2] = 2;
     dims[3] = 2;
   } else if (vx !== this.drawBitmap.length) {
-    console.log("Drawing bitmap must match the background image");
+    log.warn("Drawing bitmap must match the background image");
   }
   this.gl.activeTexture(this.gl.TEXTURE7);
   this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
@@ -1907,6 +1936,7 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
       );
 
       resolve(pngTexture);
+      if (textureNum !== 4) this.drawScene(); //draw the font
     };
 
     img.onerror = reject;
@@ -2665,10 +2695,8 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
 
 Niivue.prototype.setFrame4D = function (id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
-  console.log(this.volumes[idx]);
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
-  //console.log("setting frame to ", frame4D);
 };
 
 Niivue.prototype.getFrame4D = function (id) {
@@ -2918,7 +2946,6 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
 // not included in public docs
 Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) return;
-  //console.log("bar:", leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
   // if (this.opts.crosshairWidth > 0) {
   // 	//gl.disable(gl.DEPTH_TEST);
   // 	this.lineShader.use(this.gl)
@@ -2999,6 +3026,7 @@ Niivue.prototype.drawChar = function (xy, scale, char) {
 Niivue.prototype.drawLoadingText = function (text) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.enable(this.gl.CULL_FACE);
+  this.gl.enable(this.gl.BLEND);
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
   this.canvas.focus();
 };
@@ -3120,7 +3148,6 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  //console.log(leftTopWidthHeight);
   //gl.uniform4f(sliceShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
   //gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.genericVAO); //set vertex attributes
@@ -3716,8 +3743,6 @@ Niivue.prototype.drawThumbnail = function () {
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
-
-  console.log("ratioyyy", this.bmpTextureWH);
 };
 
 // not included in public docs
