@@ -118267,6 +118267,9 @@ function Niivue(options = {}) {
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
   }
+  if (this.opts.drawingEnabled) {
+    this.createEmptyDrawing();
+  }
   this.loadingText = this.opts.loadingText;
   log.setLogLevel(this.opts.logging);
   this.eventsToSubjects = {
@@ -118625,6 +118628,16 @@ Niivue.prototype.dragOverListener = function(e) {
   e.stopPropagation();
   e.preventDefault();
 };
+Niivue.prototype.getFileExt = function(fullname, upperCase = true) {
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(fullname)[1];
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(fullname.slice(0, -3))[1];
+    ext = ext.toUpperCase();
+  }
+  return upperCase ? ext : ext.toLowerCase();
+};
 Niivue.prototype.dropListener = async function(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -118647,13 +118660,7 @@ Niivue.prototype.dropListener = async function(e) {
       for (const item of items) {
         const entry = item.webkitGetAsEntry();
         if (entry.isFile) {
-          var re = /(?:\.([^.]+))?$/;
-          let ext = re.exec(entry.name)[1];
-          ext = ext.toUpperCase();
-          if (ext === "GZ") {
-            ext = re.exec(entry.name.slice(0, -3))[1];
-            ext = ext.toUpperCase();
-          }
+          let ext = this.getFileExt(entry.name);
           if (ext === "PNG") {
             entry.file((file) => {
               this.loadBmpTexture(file);
@@ -118663,10 +118670,11 @@ Niivue.prototype.dropListener = async function(e) {
           let pairedImageData = "";
           if (entry.name.lastIndexOf("HEAD") !== -1) {
             for (const pairedItem of items) {
+              const pairedEntry = pairedItem.webkitGetAsEntry();
               let fileBaseName = entry.name.substring(0, entry.name.lastIndexOf("HEAD"));
-              let pairedItemBaseName = pairedItem.name.substring(0, pairedItem.name.lastIndexOf("BRIK"));
+              let pairedItemBaseName = pairedEntry.name.substring(0, pairedEntry.name.lastIndexOf("BRIK"));
               if (fileBaseName === pairedItemBaseName) {
-                pairedImageData = pairedItem;
+                pairedImageData = pairedEntry;
               }
             }
           }
@@ -118688,17 +118696,20 @@ Niivue.prototype.dropListener = async function(e) {
           entry.file(async (file) => {
             if (pairedImageData !== "") {
               pairedImageData.file(async (imgfile) => {
-                await NVImage.loadFromFile({
+                let volume = await NVImage.loadFromFile({
                   file,
                   urlImgData: imgfile
                 });
+                console.log(volume);
+                this.addVolume(volume);
               });
+            } else {
+              let volume = await NVImage.loadFromFile({
+                file,
+                urlImgData: pairedImageData
+              });
+              this.addVolume(volume);
             }
-            let volume = await NVImage.loadFromFile({
-              file,
-              urlImgData: pairedImageData
-            });
-            this.addVolume(volume);
           });
         } else if (entry.isDirectory) {
           console.log("isDirectory");
@@ -118898,6 +118909,9 @@ Niivue.prototype.setCrosshairColor = function(color) {
 };
 Niivue.prototype.setDrawingEnabled = function(trueOrFalse) {
   this.opts.drawingEnabled = trueOrFalse;
+  if (this.opts.drawingEnabled) {
+    this.createEmptyDrawing();
+  }
   this.drawScene();
 };
 Niivue.prototype.setPenValue = function(penValue) {
