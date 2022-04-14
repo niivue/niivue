@@ -237,6 +237,10 @@ export function Niivue(options = {}) {
       options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
 
+  if (this.opts.drawingEnabled) {
+    this.createEmptyDrawing();
+  }
+
   this.loadingText = this.opts.loadingText;
   log.setLogLevel(this.opts.logging);
 
@@ -864,6 +868,17 @@ Niivue.prototype.dragOverListener = function (e) {
   e.preventDefault();
 };
 
+Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
+  var re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(fullname)[1];
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(fullname.slice(0, -3))[1]; //img.trk.gz -> img.trk
+    ext = ext.toUpperCase();
+  }
+  return upperCase ? ext : ext.toLowerCase(); // developer can choose to have extentions as upper or lower
+}; // getFleExt
+
 // not included in public docs
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
@@ -873,14 +888,18 @@ Niivue.prototype.dropListener = async function (e) {
     return;
   }
 
+  const filesToLoad = [];
+  const urlsToLoad = [];
+
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {
+    urlsToLoad.push(url);
     let volume = await NVImage.loadFromUrl({ url: url });
     this.setVolume(volume);
   } else {
     //const files = dt.files;
-		const items = dt.items
+    const items = dt.items;
     if (items.length > 0) {
       // adding or replacing
       if (!e.shiftKey) {
@@ -888,91 +907,89 @@ Niivue.prototype.dropListener = async function (e) {
         this.overlays = [];
         this.meshes = [];
       }
-
       for (const item of items) {
-				const entry = item.webkitGetAsEntry()
-				if (entry.isFile){
-					var re = /(?:\.([^.]+))?$/;
-					let ext = re.exec(entry.name)[1];
-					ext = ext.toUpperCase();
-					if (ext === "GZ") {
-						ext = re.exec(entry.name.slice(0, -3))[1]; //img.trk.gz -> img.trk
-						ext = ext.toUpperCase();
-					}
-					if (ext === "PNG") {
-						entry.file(file =>{
-							this.loadBmpTexture(file);
-						})
-						continue;
-					}
-					let pairedImageData = "";
-					// check for afni HEAD BRIK pair
-					if (entry.name.lastIndexOf("HEAD") !== -1) {
-						for (const pairedItem of items) {
-							let fileBaseName = entry.name.substring(
-								0,
-								entry.name.lastIndexOf("HEAD")
-							);
-							let pairedItemBaseName = pairedItem.name.substring(
-								0,
-								pairedItem.name.lastIndexOf("BRIK")
-							);
-							if (fileBaseName === pairedItemBaseName) {
-								pairedImageData = pairedItem;
-							}
-						}
-					}
-					if (entry.name.lastIndexOf("BRIK") !== -1) {
-						continue;
-					}
-					if (
-						ext === "FSM" ||
-						ext === "PIAL" ||
-						ext === "ORIG" ||
-						ext === "INFLATED" ||
-						ext === "SMOOTHWM" ||
-						ext === "SPHERE" ||
-						ext === "WHITE" ||
-						ext === "GII" ||
-						ext === "MZ3" ||
-						ext === "OBJ" ||
-						ext === "OFF" ||
-						ext === "STL" ||
-						ext === "TCK" ||
-						ext === "TRK" ||
-						ext === "TRX" ||
-						ext === "VTK"
-					) {
-						entry.file(async (file) => {
-							let mesh = await NVMesh.loadFromFile({
-								file: file,
-								gl: this.gl,
-								name: file.name,
-							});
-							this.scene.loading$.next(false);
-							this.addMesh(mesh);
-						})
-						continue;
-					}
-					entry.file(async (file) => {
-						if (pairedImageData !== ''){
-							pairedImageData.file(async (imgfile) => {
-								let volume = await NVImage.loadFromFile({
-									file: file,
-									urlImgData: imgfile,
-								});
-							})
-						} 
-
-						let volume = await NVImage.loadFromFile({
-							file: file,
-							urlImgData: pairedImageData,
-						});
-						this.addVolume(volume);
-					})
-				}	else if (entry.isDirectory) {
-					console.log('isDirectory')
-					/* TODO
+        const entry = item.webkitGetAsEntry();
+        if (entry.isFile) {
+          let ext = this.getFileExt(entry.name);
+          if (ext === "PNG") {
+            entry.file((file) => {
+              this.loadBmpTexture(file);
+            });
+            continue;
+          }
+          let pairedImageData = "";
+          // check for afni HEAD BRIK pair
+          if (entry.name.lastIndexOf("HEAD") !== -1) {
+            for (const pairedItem of items) {
+              const pairedEntry = pairedItem.webkitGetAsEntry();
+              let fileBaseName = entry.name.substring(
+                0,
+                entry.name.lastIndexOf("HEAD")
+              );
+              let pairedItemBaseName = pairedEntry.name.substring(
+                0,
+                pairedEntry.name.lastIndexOf("BRIK")
+              );
+              if (fileBaseName === pairedItemBaseName) {
+                pairedImageData = pairedEntry;
+              }
+            }
+          }
+          if (entry.name.lastIndexOf("BRIK") !== -1) {
+            continue;
+          }
+          if (
+            ext === "FSM" ||
+            ext === "PIAL" ||
+            ext === "ORIG" ||
+            ext === "INFLATED" ||
+            ext === "SMOOTHWM" ||
+            ext === "SPHERE" ||
+            ext === "WHITE" ||
+            ext === "GII" ||
+            ext === "MZ3" ||
+            ext === "OBJ" ||
+            ext === "OFF" ||
+            ext === "STL" ||
+            ext === "TCK" ||
+            ext === "TRK" ||
+            ext === "TRX" ||
+            ext === "VTK"
+          ) {
+            entry.file(async (file) => {
+              let mesh = await NVMesh.loadFromFile({
+                file: file,
+                gl: this.gl,
+                name: file.name,
+              });
+              this.scene.loading$.next(false);
+              this.addMesh(mesh);
+            });
+            continue;
+          }
+          entry.file(async (file) => {
+            // if we have paired header/img data
+            if (pairedImageData !== "") {
+              pairedImageData.file(async (imgfile) => {
+                let volume = await NVImage.loadFromFile({
+                  file: file,
+                  urlImgData: imgfile,
+                });
+                console.log(volume);
+                this.addVolume(volume);
+              });
+            } else {
+              // else, just a single file to load (not a pair)
+              let volume = await NVImage.loadFromFile({
+                file: file,
+                urlImgData: pairedImageData,
+              });
+              this.addVolume(volume);
+            }
+          });
+        } else if (entry.isDirectory) {
+          console.log("isDirectory");
+          /* TODO directory reading for dicoms
 					let reader = entry.createReader();
 					let allFilesInDir = []
       		await reader.readEntries(async function(entries) {
@@ -990,7 +1007,7 @@ Niivue.prototype.dropListener = async function (e) {
         		})
       		})
 				*/
-				}
+        }
       }
     }
   }
@@ -1314,6 +1331,9 @@ Niivue.prototype.setCrosshairColor = function (color) {
 
 Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
   this.opts.drawingEnabled = trueOrFalse;
+  if (this.opts.drawingEnabled) {
+    this.createEmptyDrawing();
+  }
   this.drawScene();
 };
 

@@ -82,7 +82,7 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.visible = visible;
-	this.series = [] // for concatenating dicom images 
+  this.series = []; // for concatenating dicom images
 
   // Added to support zerosLike
   if (!dataBuffer) {
@@ -509,8 +509,11 @@ following conditions are met:
   return m;
 }
 
-NVImage.prototype.readDICOM = function (buf, existingSeries=new daikon.Series()) {
-  this.series = existingSeries
+NVImage.prototype.readDICOM = function (
+  buf,
+  existingSeries = new daikon.Series()
+) {
+  this.series = existingSeries;
   // parse DICOM file
   var image = daikon.Series.parseImage(new DataView(buf));
   if (image === null) {
