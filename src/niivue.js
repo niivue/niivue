@@ -939,6 +939,7 @@ Niivue.prototype.dropListener = async function (e) {
             continue;
           }
           if (
+            ext === "DFS" ||
             ext === "FSM" ||
             ext === "PIAL" ||
             ext === "ORIG" ||
@@ -950,6 +951,7 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "MZ3" ||
             ext === "OBJ" ||
             ext === "OFF" ||
+            ext === "SRF" ||
             ext === "STL" ||
             ext === "TCK" ||
             ext === "TRK" ||

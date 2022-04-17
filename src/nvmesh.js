@@ -638,8 +638,7 @@ NVMesh.prototype.generatePosNormClr = function (pts, tris, rgba255) {
 NVMesh.readTCK = function (buffer) {
   //https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
   let len = buffer.byteLength;
-  if (len < 20)
-    throw new Error("File too small to be TCK: bytes = " + buffer.byteLength);
+  if (len < 20) throw new Error("File too small to be TCK: bytes = " + len);
   var bytes = new Uint8Array(buffer);
   let pos = 0;
   function readStr() {
@@ -655,7 +654,7 @@ NVMesh.readTCK = function (buffer) {
     console.log("Not a valid TCK file");
     return;
   }
-  while (pos < len && !line.includes("END")) line = readStr();
+  while (pos < len && !line.startsWith("END")) line = readStr();
   var reader = new DataView(buffer);
   //read and transform vertex positions
   let npt = 0;
@@ -1219,6 +1218,46 @@ NVMesh.readVTK = function (buffer) {
   };
 }; // readVTK()
 
+NVMesh.readDFS = function (buffer, n_vert = 0) {
+  //http://brainsuite.org/formats/dfs/
+  //Does not play with other formats: vertex positions do not use Aneterior Commissure as origin
+  var reader = new DataView(buffer);
+  var magic = reader.getUint32(0, true); //"DFS_"
+  var LE = reader.getUint16(4, true); //"LE"
+  if (magic !== 1599292996 || LE !== 17740)
+    console.log("Not a little-endian brainsuite DFS mesh");
+  var hdrBytes = reader.getUint32(12, true);
+  //var mdoffset = reader.getUint32(16, true);
+  //var pdoffset = reader.getUint32(20, true);
+  var nface = reader.getUint32(24, true); //number of triangles
+  var nvert = reader.getUint32(28, true);
+  //var nStrips = reader.getUint32(32, true); //deprecated
+  //var stripSize = reader.getUint32(36, true); //deprecated
+  //var normals = reader.getUint32(40, true);
+  //var uvStart = reader.getUint32(44, true);
+  var vcoffset = reader.getUint32(48, true); //vertexColor offset
+  //var precision = reader.getUint32(52, true);
+  // float64 orientation[4][4]; //4x4 matrix, affine transformation to world coordinates*)
+  let pos = hdrBytes;
+  let indices = new Int32Array(buffer, pos, nface * 3, true);
+  pos += nface * 3 * 4;
+  let positions = new Float32Array(buffer, pos, nvert * 3, true);
+  //oops, triangle winding opposite of CCW convention
+  for (var i = 0; i < nvert * 3; i += 3) {
+    let tmp = positions[i];
+    positions[i] = positions[i + 1];
+    positions[i + 1] = tmp;
+  }
+  var colors = null;
+  if (vcoffset >= 0)
+    colors = new Float32Array(buffer, vcoffset, nvert * 3, true);
+  return {
+    positions,
+    indices,
+    colors,
+  };
+};
+
 NVMesh.readMZ3 = function (buffer, n_vert = 0) {
   //ToDo: mz3 always little endian: support big endian? endian https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
   if (buffer.byteLength < 20)
@@ -1478,6 +1517,61 @@ NVMesh.readFreeSurfer = function (buffer) {
   };
 }; // readFreeSurfer()
 
+NVMesh.readSRF = function (buffer) {
+  //https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
+  var reader = new DataView(buffer);
+  let ver = reader.getFloat32(0, true);
+  let nVert = reader.getUint32(8, true);
+  let nTri = reader.getUint32(12, true);
+  let oriX = reader.getFloat32(16, true);
+  let oriY = reader.getFloat32(20, true);
+  let oriZ = reader.getFloat32(24, true);
+  var positions = new Float32Array(nVert * 3);
+  //BrainVoyager does not use Talairach coordinates for XYZ!
+  //read X component of each vertex
+  let pos = 28;
+  let j = 1; //BrainVoyager X is Talairach Y
+  for (var i = 0; i < nVert; i++) {
+    positions[j] = -reader.getFloat32(pos, true) + oriX;
+    j += 3; //read one of 3 components: XYZ
+    pos += 4; //read one float32
+  }
+  //read Y component of each vertex
+  j = 2; //BrainVoyager Y is Talairach Z
+  for (var i = 0; i < nVert; i++) {
+    positions[j] = -reader.getFloat32(pos, true) + oriY;
+    j += 3; //read one of 3 components: XYZ
+    pos += 4; //read one float32
+  }
+  //read Z component of each vertex
+  j = 0; //BrainVoyager Z is Talairach X
+  for (var i = 0; i < nVert; i++) {
+    positions[j] = -reader.getFloat32(pos, true) + oriZ;
+    j += 3; //read one of 3 components: XYZ
+    pos += 4; //read one float32
+  }
+  //not sure why normals are stored, does bulk up file size
+  pos = 28 + 4 * 6 * nVert; //each vertex has 6 float32s: XYZ for position and normal
+  pos += 8 * 4; //skip 8 floats (RGBA convex/concave)
+  pos += nVert * 4; // MeshColor, sequence of color indices
+  //not sure why nearest neighbors are stored, slower and bigger files
+  for (var i = 0; i < nVert; i++) {
+    let nNearest = reader.getUint32(pos, true);
+    pos += 4 + 4 * nNearest;
+  }
+  var indices = new Int32Array(nTri * 3);
+  for (var i = 0; i < nTri * 3; i++) {
+    indices[i] = reader.getInt32(pos, true);
+    pos += 4;
+  }
+  if (ver !== 4) console.log("Not valid SRF");
+
+  return {
+    positions,
+    indices,
+  };
+}; // readSRF()
+
 NVMesh.readSTL = function (buffer) {
   if (buffer.byteLength < 80 + 4 + 50)
     throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
@@ -1635,6 +1729,7 @@ NVMesh.readMesh = async function (
   if (ext === "GII") {
     obj = this.readGII(buffer);
   } else if (ext === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext === "DFS") obj = this.readDFS(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
   else if (ext === "FIB" || ext === "VTK") {
@@ -1654,6 +1749,8 @@ NVMesh.readMesh = async function (
         "inferno"
       );
     } //if streamlines, not mesh
+  } else if (ext === "SRF") {
+    obj = this.readSRF(buffer);
   } else if (ext === "STL") {
     obj = this.readSTL(buffer);
   } else {
