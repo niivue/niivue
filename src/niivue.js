@@ -188,6 +188,8 @@ export function Niivue(options = {}) {
   this.lastTwoTouchDistance = 0;
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
+  this.pivot3D = [0, 0, 0]; //center for rendering rotation
+  this.furthestFromPivot = 10.0; //most distant point from pivot
   this.intensityRange$ = new Subject(); // an array
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
@@ -2289,6 +2291,7 @@ Niivue.prototype.updateGLVolume = function () {
 
 // not included in public docs
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
+  if (this.volumes.length < 1) return; //e.g. only meshes
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
   if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
@@ -2825,7 +2828,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
 
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
-    if (this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+    //n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
+    if (this.volumeObject3D && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       //clipping mode: change clip plane depth
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
       let depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
@@ -3253,9 +3257,13 @@ Niivue.prototype.calculateMvpMatrix = function () {
     return deg * (Math.PI / 180.0);
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  //pivot from cenet of objects
+  //let scale = this.furthestVertexFromOrigin;
+  //let origin = [0,0,0];
+  let scale = this.furthestFromPivot;
+  let origin = this.pivot3D;
   let projectionMatrix = mat.mat4.create();
-  let scale =
-    (0.7 * this.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  scale = (0.9 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -3281,6 +3289,7 @@ Niivue.prototype.calculateMvpMatrix = function () {
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
   //push the model away from the camera so camera not inside model
+
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
   if (this.position)
@@ -3298,13 +3307,19 @@ Niivue.prototype.calculateMvpMatrix = function () {
     deg2rad(this.scene.renderAzimuth - 180)
   );
   //translate object to be in center of field of view (e.g. CT brain scans where origin is distant table center)
-  if (this.volumeObject3D) {
+  /*if (this.volumeObject3D) {
     mat.mat4.translate(
       modelMatrix,
       modelMatrix,
       this.volumeObject3D.originNegate
     );
-  }
+  }*/
+
+  mat.mat4.translate(modelMatrix, modelMatrix, [
+    -origin[0],
+    -origin[1],
+    -origin[2],
+  ]);
   //
   let iModelMatrix = mat.mat4.create();
   mat.mat4.invert(iModelMatrix, modelMatrix);
@@ -3312,7 +3327,7 @@ Niivue.prototype.calculateMvpMatrix = function () {
   mat.mat4.transpose(normalMatrix, iModelMatrix);
   //this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
 
-  // transpose(out, a) → {mat4}
+  // transpose(out, a) - > {mat4}
   // invert(out, a)
   //  normalMatrix := modelMatrix.Inverse.Transpose;
   let modelViewProjectionMatrix = mat.mat4.create();
@@ -3379,8 +3394,61 @@ Niivue.prototype.calculateRayDirection = function () {
   return rayDir;
 }; // calculateRayDirection
 
+Niivue.prototype.setPivot3D = function () {
+  //compute extents of all volumes and meshes in scene
+  // pivot around center of these.
+  let mn = mat.vec3.fromValues(0, 0, 0);
+  let mx = mat.vec3.fromValues(0, 0, 0);
+  if (this.volumeObject3D) {
+    mn = mat.vec3.fromValues(
+      this.volumeObject3D.extentsMin[0],
+      this.volumeObject3D.extentsMin[1],
+      this.volumeObject3D.extentsMin[2]
+    );
+    mx = mat.vec3.fromValues(
+      this.volumeObject3D.extentsMax[0],
+      this.volumeObject3D.extentsMax[1],
+      this.volumeObject3D.extentsMax[2]
+    );
+  }
+  if (this.meshes.length > 0) {
+    if (!this.volumeObject3D) {
+      mn = mat.vec3.fromValues(
+        this.meshes[0].extentsMin[0],
+        this.meshes[0].extentsMin[1],
+        this.meshes[0].extentsMin[2]
+      );
+      mx = mat.vec3.fromValues(
+        this.meshes[0].extentsMax[0],
+        this.meshes[0].extentsMax[1],
+        this.meshes[0].extentsMax[2]
+      );
+    }
+    for (let i = 0; i < this.meshes.length; i++) {
+      let v = mat.vec3.fromValues(
+        this.meshes[i].extentsMin[0],
+        this.meshes[i].extentsMin[1],
+        this.meshes[i].extentsMin[2]
+      );
+      mat.vec3.min(mn, mn, v);
+      mat.vec3.max(mx, mx, v);
+    }
+  }
+  let pivot = mat.vec3.create();
+  //pivot is half way between min and max:
+  //console.log('scene extents: ', mn, '..', mx);
+  mat.vec3.add(pivot, mn, mx);
+  mat.vec3.scale(pivot, pivot, 0.5);
+  this.pivot3D = [pivot[0], pivot[1], pivot[2]];
+  //console.log('pivot: ', this.pivot3D);
+  //find scale of scene
+  mat.vec3.subtract(pivot, mx, mn);
+  this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
+}; // setPivot3D()
+
 // not included in public docs
 Niivue.prototype.draw3D = function () {
+  this.setPivot3D();
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.enable(gl.DEPTH_TEST);
@@ -3570,8 +3638,8 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
       this.volumeObject3D.extentsMax,
       radius
     );
-    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
-    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    //this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    //this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
     //this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
   }
@@ -3808,8 +3876,8 @@ Niivue.prototype.drawScene = function () {
       depthAziElev[1] = depthAziElev[1] % 360;
       depthAziElev[2] += y;
       //gimbal lock: these next two lines could be changed - when we go over the pole, the Azimuth reverses
-      if (depthAziElev[2] > 90) depthAziElev[2] = 90;
-      if (depthAziElev[2] < -90) depthAziElev[2] = -90;
+      //if (depthAziElev[2] > 90) depthAziElev[2] = 90;
+      //if (depthAziElev[2] < -90) depthAziElev[2] = -90;
       if (
         depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] ||
         depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]

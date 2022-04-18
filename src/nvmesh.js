@@ -37,7 +37,10 @@ export function NVMesh(
 ) {
   this.name = name;
   this.id = uuidv4();
-  this.furthestVertexFromOrigin = getFurthestVertexFromOrigin(pts);
+  let obj = getExtents(pts);
+  this.furthestVertexFromOrigin = obj.mxDx;
+  this.extentsMin = obj.extentsMin;
+  this.extentsMax = obj.extentsMax;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
   this.indexBuffer = gl.createBuffer();
@@ -485,14 +488,20 @@ NVMesh.prototype.setProperty = function (key, val, gl) {
   this.updateMesh(gl); //apply the new properties...
 };
 
-function getFurthestVertexFromOrigin(pts) {
+function getExtents(pts) {
   //each vertex has 3 coordinates: XYZ
   let mxDx = 0.0;
+  let mn = vec3.fromValues(pts[0], pts[1], pts[2]);
+  let mx = vec3.fromValues(pts[0], pts[1], pts[2]);
   for (let i = 0; i < pts.length; i += 3) {
     let v = vec3.fromValues(pts[i], pts[i + 1], pts[i + 2]);
     mxDx = Math.max(mxDx, vec3.len(v));
+    vec3.min(mn, mn, v);
+    vec3.max(mx, mx, v);
   }
-  return mxDx;
+  let extentsMin = [mn[0], mn[1], mn[2]];
+  let extentsMax = [mx[0], mx[1], mx[2]];
+  return { mxDx, extentsMin, extentsMax };
 }
 
 function generateNormals(pts, tris) {
@@ -1519,6 +1528,12 @@ NVMesh.readFreeSurfer = function (buffer) {
 
 NVMesh.readSRF = function (buffer) {
   //https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
+  var bytes = new Uint8Array(buffer);
+  if (bytes[0] === 31 && bytes[1] === 139) {
+    // handle .srf.gz
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    buffer = raw.buffer;
+  }
   var reader = new DataView(buffer);
   let ver = reader.getFloat32(0, true);
   let nVert = reader.getUint32(8, true);
@@ -1552,7 +1567,39 @@ NVMesh.readSRF = function (buffer) {
   }
   //not sure why normals are stored, does bulk up file size
   pos = 28 + 4 * 6 * nVert; //each vertex has 6 float32s: XYZ for position and normal
+  //read concave and convex colors:
+  let rVex = reader.getFloat32(pos, true);
+  let gVex = reader.getFloat32(pos + 4, true);
+  let bVex = reader.getFloat32(pos + 8, true);
+  let rCave = reader.getFloat32(pos + 16, true);
+  let gCave = reader.getFloat32(pos + 20, true);
+  let bCave = reader.getFloat32(pos + 24, true);
   pos += 8 * 4; //skip 8 floats (RGBA convex/concave)
+  //read per-vertex colors
+  let colors = new Float32Array(nVert * 3);
+  let colorsIdx = new Uint32Array(buffer, pos, nVert, true);
+  j = 0; //convert RGBA -> RGB
+  for (var i = 0; i < nVert; i++) {
+    let c = colorsIdx[i];
+    if (c > 1056964608) {
+      colors[j + 0] = ((c >> 16) & 0xff) / 255;
+      colors[j + 1] = ((c >> 8) & 0xff) / 255;
+      colors[j + 2] = (c & 0xff) / 255;
+    }
+    if (c === 0) {
+      //convex
+      colors[j + 0] = rVex;
+      colors[j + 1] = gVex;
+      colors[j + 2] = bVex;
+    }
+    if (c === 1) {
+      //concave
+      colors[j + 0] = rCave;
+      colors[j + 1] = gCave;
+      colors[j + 2] = bCave;
+    }
+    j += 3;
+  }
   pos += nVert * 4; // MeshColor, sequence of color indices
   //not sure why nearest neighbors are stored, slower and bigger files
   for (var i = 0; i < nVert; i++) {
@@ -1569,6 +1616,7 @@ NVMesh.readSRF = function (buffer) {
   return {
     positions,
     indices,
+    colors,
   };
 }; // readSRF()
 
