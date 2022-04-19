@@ -2067,26 +2067,36 @@ function hdrToArrayBuffer(hdr) {
 } // hdrToArrayBuffer()
 
 NVImage.prototype.saveToDisk = async function (fnm) {
-  //bytes = nifti2.toArrayBuffer();aaaa
-  //console.log('..', str);
-  //let bytes = this.hdr.toArrayBuffer();
-
-  //console.log('..', this.hdr.vox_offset);
   let hdrBytes = hdrToArrayBuffer(this.hdr);
-
-  console.log(hdrBytes.length);
   var opad = new Uint8Array(4);
   var odata = new Uint8Array(hdrBytes.length + opad.length + this.img.length);
   odata.set(hdrBytes);
   odata.set(opad, hdrBytes.length);
 
   odata.set(this.img, hdrBytes.length + opad.length);
-  //console.log('..', odata);
-  /*fs.writeFile(fnm, Buffer.from(odata), "binary", function (err) {
-    if (err) {
-      console.log(err);
-    }
-  });*/
+	let saveData=null
+	let compress = fnm.endsWith('.gz') // true if name ends with .gz
+	if (compress) {
+		saveData = fflate.gzipSync(odata, {
+			// GZIP-specific: the filename to use when decompressed
+			filename: fnm,
+			// GZIP-specific: the modification time. Can be a Date, date string,
+			// or Unix timestamp
+			mtime: Date.now(),
+			level: 6 // the default
+		});
+	} else {
+		saveData = odata
+	}
+	let blob = new Blob([saveData.buffer], {type:"application/octet-stream"})
+	let blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+	link.setAttribute('href', blobUrl);
+	link.setAttribute('download', fnm);
+	link.style.visibility = 'hidden';
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
 }; // saveToDisk()
 
 /**
