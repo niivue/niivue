@@ -148,6 +148,7 @@ export function Niivue(options = {}) {
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
   this.syncOpts = {};
+  this.readyForSync = false;
   this.scene.renderAzimuth = 110; //-45;
   this.scene.renderElevation = 10; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
@@ -386,6 +387,9 @@ Niivue.prototype.syncWith = function (
 
 Niivue.prototype.sync = function () {
   if (!this.otherNV || typeof this.otherNV === "undefined") {
+    return;
+  }
+  if (!this.otherNV.readyForSync || !this.readyForSync) {
     return;
   }
   let thisMM = this.frac2mm(this.scene.crosshairPos);
@@ -789,62 +793,58 @@ Niivue.prototype.keyUpListener = function (e) {
       this.setSliceType((this.sliceType + 1) % 5); // 5 total slice types
       this.lastCalled = now;
     }
-	} 
+  }
 };
 
 Niivue.prototype.keyDownListener = function (e) {
-	if (e.code === 'KeyH' && this.sliceType === this.sliceTypeRender){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth - 1,
-			this.scene.renderElevation
-		)
-	}
- 	else if (e.code === 'KeyL' && this.sliceType === this.sliceTypeRender){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth + 1,
-			this.scene.renderElevation
-		)
-	}
-	else if (e.code === 'KeyJ' && this.sliceType === this.sliceTypeRender){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth,
-			this.scene.renderElevation + 1
-		)
-	}
-	else if (e.code === 'KeyK' && this.sliceType === this.sliceTypeRender ){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth,
-			this.scene.renderElevation - 1
-		)
-	}
-	else if (e.code === 'KeyH' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyL' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyU' && this.sliceType !== this.sliceTypeRender && e.ctrlKey){
-		this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyD' && this.sliceType !== this.sliceTypeRender && e.ctrlKey){
-		this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyJ' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyK' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001
-		this.drawScene()
-	}
-	console.log(e.code)
-	console.log(e.ctrlKey)
+  if (e.code === "KeyH" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth - 1,
+      this.scene.renderElevation
+    );
+  } else if (e.code === "KeyL" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth + 1,
+      this.scene.renderElevation
+    );
+  } else if (e.code === "KeyJ" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth,
+      this.scene.renderElevation + 1
+    );
+  } else if (e.code === "KeyK" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth,
+      this.scene.renderElevation - 1
+    );
+  } else if (e.code === "KeyH" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001;
+    this.drawScene();
+  } else if (e.code === "KeyL" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001;
+    this.drawScene();
+  } else if (
+    e.code === "KeyU" &&
+    this.sliceType !== this.sliceTypeRender &&
+    e.ctrlKey
+  ) {
+    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001;
+    this.drawScene();
+  } else if (
+    e.code === "KeyD" &&
+    this.sliceType !== this.sliceTypeRender &&
+    e.ctrlKey
+  ) {
+    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001;
+    this.drawScene();
+  } else if (e.code === "KeyJ" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001;
+    this.drawScene();
+  } else if (e.code === "KeyK" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001;
+    this.drawScene();
+  }
 };
-
 
 // not included in public docs
 // handler for scroll wheel events (slice scrolling)
@@ -911,8 +911,12 @@ Niivue.prototype.registerInteractions = function () {
   this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
   this.canvas.focus();
 
-	// keydown
-	this.canvas.addEventListener("keydown", this.keyDownListener.bind(this), false);
+  // keydown
+  this.canvas.addEventListener(
+    "keydown",
+    this.keyDownListener.bind(this),
+    false
+  );
 };
 
 // not included in public docs
@@ -1036,7 +1040,6 @@ Niivue.prototype.dropListener = async function (e) {
                   file: file,
                   urlImgData: imgfile,
                 });
-                console.log(volume);
                 this.addVolume(volume);
               });
             } else {
@@ -1049,7 +1052,6 @@ Niivue.prototype.dropListener = async function (e) {
             }
           });
         } else if (entry.isDirectory) {
-          console.log("isDirectory");
           /* TODO directory reading for dicoms
 					let reader = entry.createReader();
 					let allFilesInDir = []
@@ -4036,7 +4038,7 @@ Niivue.prototype.drawScene = function () {
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();
-  // temporary event bus mechanism. It uses Vue, but it would be ideal to divorce vue from this gl code.
-  //bus.$emit('crosshair-pos-change', posString);
+
+  this.readyForSync = true; // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
   return posString;
 }; // drawScene()
