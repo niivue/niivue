@@ -2697,11 +2697,11 @@ var utilities$1 = { exports: {} };
   };
   nifti3.Utils.crc32 = function(dataView) {
     var crcTable2 = nifti3.Utils.crcTable || (nifti3.Utils.crcTable = nifti3.Utils.makeCRCTable());
-    var crc = 0 ^ -1;
+    var crc2 = 0 ^ -1;
     for (var i2 = 0; i2 < dataView.byteLength; i2++) {
-      crc = crc >>> 8 ^ crcTable2[(crc ^ dataView.getUint8(i2)) & 255];
+      crc2 = crc2 >>> 8 ^ crcTable2[(crc2 ^ dataView.getUint8(i2)) & 255];
     }
-    return (crc ^ -1) >>> 0;
+    return (crc2 ^ -1) >>> 0;
   };
   if (module2.exports) {
     module2.exports = nifti3.Utils;
@@ -3703,24 +3703,24 @@ const pqdownheap$1 = (s, tree, k) => {
 };
 const compress_block$1 = (s, ltree, dtree) => {
   let dist;
-  let lc;
+  let lc2;
   let lx = 0;
   let code;
   let extra;
   if (s.last_lit !== 0) {
     do {
       dist = s.pending_buf[s.d_buf + lx * 2] << 8 | s.pending_buf[s.d_buf + lx * 2 + 1];
-      lc = s.pending_buf[s.l_buf + lx];
+      lc2 = s.pending_buf[s.l_buf + lx];
       lx++;
       if (dist === 0) {
-        send_code$1(s, lc, ltree);
+        send_code$1(s, lc2, ltree);
       } else {
-        code = _length_code$1[lc];
+        code = _length_code$1[lc2];
         send_code$1(s, code + LITERALS$3 + 1, ltree);
         extra = extra_lbits$1[code];
         if (extra !== 0) {
-          lc -= base_length$1[code];
-          send_bits$1(s, lc, extra);
+          lc2 -= base_length$1[code];
+          send_bits$1(s, lc2, extra);
         }
         dist--;
         code = d_code$1(dist);
@@ -3974,17 +3974,17 @@ const _tr_flush_block$2 = (s, buf, stored_len, last) => {
     bi_windup$1(s);
   }
 };
-const _tr_tally$2 = (s, dist, lc) => {
+const _tr_tally$2 = (s, dist, lc2) => {
   s.pending_buf[s.d_buf + s.last_lit * 2] = dist >>> 8 & 255;
   s.pending_buf[s.d_buf + s.last_lit * 2 + 1] = dist & 255;
-  s.pending_buf[s.l_buf + s.last_lit] = lc & 255;
+  s.pending_buf[s.l_buf + s.last_lit] = lc2 & 255;
   s.last_lit++;
   if (dist === 0) {
-    s.dyn_ltree[lc * 2]++;
+    s.dyn_ltree[lc2 * 2]++;
   } else {
     s.matches++;
     dist--;
-    s.dyn_ltree[(_length_code$1[lc] + LITERALS$3 + 1) * 2]++;
+    s.dyn_ltree[(_length_code$1[lc2] + LITERALS$3 + 1) * 2]++;
     s.dyn_dtree[d_code$1(dist) * 2]++;
   }
   return s.last_lit === s.lit_bufsize - 1;
@@ -4021,14 +4021,14 @@ const makeTable$1 = () => {
   return table;
 };
 const crcTable$1 = new Uint32Array(makeTable$1());
-const crc32$5 = (crc, buf, len2, pos) => {
+const crc32$5 = (crc2, buf, len2, pos) => {
   const t = crcTable$1;
   const end = pos + len2;
-  crc ^= -1;
+  crc2 ^= -1;
   for (let i2 = pos; i2 < end; i2++) {
-    crc = crc >>> 8 ^ t[(crc ^ buf[i2]) & 255];
+    crc2 = crc2 >>> 8 ^ t[(crc2 ^ buf[i2]) & 255];
   }
-  return crc ^ -1;
+  return crc2 ^ -1;
 };
 var crc32_1$1 = crc32$5;
 var messages$1 = {
@@ -7620,11 +7620,11 @@ var utilities = { exports: {} };
   };
   daikon2.Utils.crc32 = function(dataView) {
     var crcTable2 = daikon2.Utils.crcTable || (daikon2.Utils.crcTable = daikon2.Utils.makeCRCTable());
-    var crc = 0 ^ -1;
+    var crc2 = 0 ^ -1;
     for (var i2 = 0; i2 < dataView.byteLength; i2++) {
-      crc = crc >>> 8 ^ crcTable2[(crc ^ dataView.getUint8(i2)) & 255];
+      crc2 = crc2 >>> 8 ^ crcTable2[(crc2 ^ dataView.getUint8(i2)) & 255];
     }
-    return (crc ^ -1) >>> 0;
+    return (crc2 ^ -1) >>> 0;
   };
   daikon2.Utils.createBitMask = function(numBytes, bitsStored, unsigned) {
     var mask = 4294967295;
@@ -12071,11 +12071,11 @@ var utils$7 = { exports: {} };
   jpeg.lossless.Utils.crc32 = function(dataView) {
     var uint8view = new Uint8Array(dataView.buffer);
     var crcTable2 = jpeg.lossless.Utils.crcTable || (jpeg.lossless.Utils.crcTable = jpeg.lossless.Utils.makeCRCTable());
-    var crc = 0 ^ -1;
+    var crc2 = 0 ^ -1;
     for (var i2 = 0; i2 < uint8view.length; i2++) {
-      crc = crc >>> 8 ^ crcTable2[(crc ^ uint8view[i2]) & 255];
+      crc2 = crc2 >>> 8 ^ crcTable2[(crc2 ^ uint8view[i2]) & 255];
     }
-    return (crc ^ -1) >>> 0;
+    return (crc2 ^ -1) >>> 0;
   };
   if (module2.exports) {
     module2.exports = jpeg.lossless.Utils;
@@ -20248,7 +20248,7 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
         a2 = a2 | 0;
         M = a2;
       }
-      function lc() {
+      function lc2() {
         return M | 0;
       }
       function mc(a2, b3, c3, d2, e2) {
@@ -67255,7 +67255,7 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
           f2 = (c3 & 255) >>> 1;
         }
         if ((f2 | 0) == (e2 | 0)) {
-          ln(a2, e2, 1, e2, e2, 0, 0);
+          ln2(a2, e2, 1, e2, e2, 0, 0);
           if (!(i2[a2 >> 0] & 1))
             e2 = 7;
           else
@@ -67317,7 +67317,7 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
         k[l2 + (b3 << 2) >> 2] = 0;
         return;
       }
-      function ln(a2, b3, c3, d2, e2, f2, g2) {
+      function ln2(a2, b3, c3, d2, e2, f2, g2) {
         a2 = a2 | 0;
         b3 = b3 | 0;
         c3 = c3 | 0;
@@ -79393,7 +79393,7 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
         do
           if (h2) {
             if ((e2 - j2 | 0) >>> 0 < h2 >>> 0) {
-              ln(a2, e2, j2 + h2 - e2 | 0, j2, j2, 0, 0);
+              ln2(a2, e2, j2 + h2 - e2 | 0, j2, j2, 0, 0);
               d2 = i2[a2 >> 0] | 0;
             }
             if (!(d2 & 1))
@@ -91920,7 +91920,7 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
       var ac = [Dx, lq, Kq, Et, Ft, vt, wt, Mt, Nt, Ut, Vt, Dx, Dx, Dx, Dx, Dx];
       var bc = [Ex, Kp, Np, Xp, Zp, Ex, Ex, Ex];
       var cc = [Fx, ce, de, $d, ae, qd, Uc, Vc, ad, bd, hd, id, zd, Ad, Gd, Hd, Nd, Od, Ud, Vd, Te, Ue, _e, $e, ff, gf, nf, of, Mj, Nj, Pj, Sn, Dn, Mo, Ro, nc, Jm, Ic, Jc, Kc, Lc, Pc, Qc, Rc, Ne, Oe, Pe, Qe, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx, Fx];
-      return { _jpegls_encode: gj, ___cxa_can_catch: _j, _free: Ql, _jpegls_decode: fj, ___cxa_is_pointer_type: $j, _i64Add: tw, _memmove: xw, _i64Subtract: rw, _memset: sw, _malloc: Pl, _memcpy: vw, _bitshift64Lshr: uw, _bitshift64Shl: ww, __GLOBAL__I_000101: Xl, __GLOBAL__sub_I_jpegls_cpp: Bc, __GLOBAL__sub_I_iostream_cpp: Yl, runPostSets: qw, _emscripten_replace_memory: Hb, stackAlloc: dc, stackSave: ec2, stackRestore: fc, establishStackSpace: gc, setThrew: hc, setTempRet0: kc, getTempRet0: lc, dynCall_iiiiiiii: Hw, dynCall_viiiii: Iw, dynCall_iiiiiid: Jw, dynCall_vi: Kw, dynCall_vii: Lw, dynCall_iiiiiii: Mw, dynCall_ii: Nw, dynCall_iiiiiiiiiiii: Ow, dynCall_iiii: Pw, dynCall_viiiiiiiiiiiiiii: Qw, dynCall_viiiiii: Rw, dynCall_viiiiiii: Sw, dynCall_viiiiiiiiii: Tw, dynCall_iii: Uw, dynCall_iiiiii: Vw, dynCall_diii: Ww, dynCall_i: Xw, dynCall_iiiii: Yw, dynCall_viii: Zw, dynCall_v: _w, dynCall_iiiiiiiii: $w, dynCall_iiiiid: ax, dynCall_viiii: bx };
+      return { _jpegls_encode: gj, ___cxa_can_catch: _j, _free: Ql, _jpegls_decode: fj, ___cxa_is_pointer_type: $j, _i64Add: tw, _memmove: xw, _i64Subtract: rw, _memset: sw, _malloc: Pl, _memcpy: vw, _bitshift64Lshr: uw, _bitshift64Shl: ww, __GLOBAL__I_000101: Xl, __GLOBAL__sub_I_jpegls_cpp: Bc, __GLOBAL__sub_I_iostream_cpp: Yl, runPostSets: qw, _emscripten_replace_memory: Hb, stackAlloc: dc, stackSave: ec2, stackRestore: fc, establishStackSpace: gc, setThrew: hc, setTempRet0: kc, getTempRet0: lc2, dynCall_iiiiiiii: Hw, dynCall_viiiii: Iw, dynCall_iiiiiid: Jw, dynCall_vi: Kw, dynCall_vii: Lw, dynCall_iiiiiii: Mw, dynCall_ii: Nw, dynCall_iiiiiiiiiiii: Ow, dynCall_iiii: Pw, dynCall_viiiiiiiiiiiiiii: Qw, dynCall_viiiiii: Rw, dynCall_viiiiiii: Sw, dynCall_viiiiiiiiii: Tw, dynCall_iii: Uw, dynCall_iiiiii: Vw, dynCall_diii: Ww, dynCall_i: Xw, dynCall_iiiii: Yw, dynCall_viii: Zw, dynCall_v: _w, dynCall_iiiiiiiii: $w, dynCall_iiiiid: ax, dynCall_viiii: bx };
     }(Module.asmGlobalArg, Module.asmLibraryArg, buffer);
     Module["_jpegls_encode"] = asm["_jpegls_encode"];
     Module["___cxa_can_catch"] = asm["___cxa_can_catch"];
@@ -92604,24 +92604,24 @@ function pqdownheap(s, tree, k) {
 }
 function compress_block(s, ltree, dtree) {
   var dist;
-  var lc;
+  var lc2;
   var lx = 0;
   var code;
   var extra;
   if (s.last_lit !== 0) {
     do {
       dist = s.pending_buf[s.d_buf + lx * 2] << 8 | s.pending_buf[s.d_buf + lx * 2 + 1];
-      lc = s.pending_buf[s.l_buf + lx];
+      lc2 = s.pending_buf[s.l_buf + lx];
       lx++;
       if (dist === 0) {
-        send_code(s, lc, ltree);
+        send_code(s, lc2, ltree);
       } else {
-        code = _length_code[lc];
+        code = _length_code[lc2];
         send_code(s, code + LITERALS$1 + 1, ltree);
         extra = extra_lbits[code];
         if (extra !== 0) {
-          lc -= base_length[code];
-          send_bits(s, lc, extra);
+          lc2 -= base_length[code];
+          send_bits(s, lc2, extra);
         }
         dist--;
         code = d_code(dist);
@@ -92875,17 +92875,17 @@ function _tr_flush_block(s, buf, stored_len, last) {
     bi_windup(s);
   }
 }
-function _tr_tally(s, dist, lc) {
+function _tr_tally(s, dist, lc2) {
   s.pending_buf[s.d_buf + s.last_lit * 2] = dist >>> 8 & 255;
   s.pending_buf[s.d_buf + s.last_lit * 2 + 1] = dist & 255;
-  s.pending_buf[s.l_buf + s.last_lit] = lc & 255;
+  s.pending_buf[s.l_buf + s.last_lit] = lc2 & 255;
   s.last_lit++;
   if (dist === 0) {
-    s.dyn_ltree[lc * 2]++;
+    s.dyn_ltree[lc2 * 2]++;
   } else {
     s.matches++;
     dist--;
-    s.dyn_ltree[(_length_code[lc] + LITERALS$1 + 1) * 2]++;
+    s.dyn_ltree[(_length_code[lc2] + LITERALS$1 + 1) * 2]++;
     s.dyn_dtree[d_code(dist) * 2]++;
   }
   return s.last_lit === s.lit_bufsize - 1;
@@ -92922,13 +92922,13 @@ function makeTable() {
   return table;
 }
 var crcTable = makeTable();
-function crc32$2(crc, buf, len2, pos) {
+function crc32$2(crc2, buf, len2, pos) {
   var t = crcTable, end = pos + len2;
-  crc ^= -1;
+  crc2 ^= -1;
   for (var i2 = pos; i2 < end; i2++) {
-    crc = crc >>> 8 ^ t[(crc ^ buf[i2]) & 255];
+    crc2 = crc2 >>> 8 ^ t[(crc2 ^ buf[i2]) & 255];
   }
-  return crc ^ -1;
+  return crc2 ^ -1;
 }
 var crc32_1 = crc32$2;
 var messages = {
@@ -101806,7 +101806,7 @@ var freb = function(eb, start) {
 };
 var _a = freb(fleb, 2), fl = _a[0], revfl = _a[1];
 fl[28] = 258, revfl[258] = 28;
-var _b = freb(fdeb, 0), fd = _b[0];
+var _b = freb(fdeb, 0), fd = _b[0], revfd = _b[1];
 var rev = new u16(32768);
 for (var i = 0; i < 32768; ++i) {
   var x = (i & 43690) >>> 1 | (i & 21845) << 1;
@@ -101862,8 +101862,8 @@ for (var i = 280; i < 288; ++i)
 var fdt = new u8(32);
 for (var i = 0; i < 32; ++i)
   fdt[i] = 5;
-var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
-var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+var fdm = /* @__PURE__ */ hMap(fdt, 5, 0), fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
 var max = function(a) {
   var m = a[0];
   for (var i2 = 1; i2 < a.length; ++i2) {
@@ -102057,7 +102057,321 @@ var inflt = function(dat, buf, st) {
   } while (!final);
   return bt == buf.length ? buf : slc(buf, 0, bt);
 };
+var wbits = function(d, p, v) {
+  v <<= p & 7;
+  var o = p / 8 | 0;
+  d[o] |= v;
+  d[o + 1] |= v >>> 8;
+};
+var wbits16 = function(d, p, v) {
+  v <<= p & 7;
+  var o = p / 8 | 0;
+  d[o] |= v;
+  d[o + 1] |= v >>> 8;
+  d[o + 2] |= v >>> 16;
+};
+var hTree = function(d, mb) {
+  var t = [];
+  for (var i2 = 0; i2 < d.length; ++i2) {
+    if (d[i2])
+      t.push({ s: i2, f: d[i2] });
+  }
+  var s = t.length;
+  var t2 = t.slice();
+  if (!s)
+    return [et, 0];
+  if (s == 1) {
+    var v = new u8(t[0].s + 1);
+    v[t[0].s] = 1;
+    return [v, 1];
+  }
+  t.sort(function(a, b) {
+    return a.f - b.f;
+  });
+  t.push({ s: -1, f: 25001 });
+  var l = t[0], r = t[1], i0 = 0, i1 = 1, i22 = 2;
+  t[0] = { s: -1, f: l.f + r.f, l, r };
+  while (i1 != s - 1) {
+    l = t[t[i0].f < t[i22].f ? i0++ : i22++];
+    r = t[i0 != i1 && t[i0].f < t[i22].f ? i0++ : i22++];
+    t[i1++] = { s: -1, f: l.f + r.f, l, r };
+  }
+  var maxSym = t2[0].s;
+  for (var i2 = 1; i2 < s; ++i2) {
+    if (t2[i2].s > maxSym)
+      maxSym = t2[i2].s;
+  }
+  var tr = new u16(maxSym + 1);
+  var mbt = ln(t[i1 - 1], tr, 0);
+  if (mbt > mb) {
+    var i2 = 0, dt = 0;
+    var lft = mbt - mb, cst = 1 << lft;
+    t2.sort(function(a, b) {
+      return tr[b.s] - tr[a.s] || a.f - b.f;
+    });
+    for (; i2 < s; ++i2) {
+      var i2_1 = t2[i2].s;
+      if (tr[i2_1] > mb) {
+        dt += cst - (1 << mbt - tr[i2_1]);
+        tr[i2_1] = mb;
+      } else
+        break;
+    }
+    dt >>>= lft;
+    while (dt > 0) {
+      var i2_2 = t2[i2].s;
+      if (tr[i2_2] < mb)
+        dt -= 1 << mb - tr[i2_2]++ - 1;
+      else
+        ++i2;
+    }
+    for (; i2 >= 0 && dt; --i2) {
+      var i2_3 = t2[i2].s;
+      if (tr[i2_3] == mb) {
+        --tr[i2_3];
+        ++dt;
+      }
+    }
+    mbt = mb;
+  }
+  return [new u8(tr), mbt];
+};
+var ln = function(n, l, d) {
+  return n.s == -1 ? Math.max(ln(n.l, l, d + 1), ln(n.r, l, d + 1)) : l[n.s] = d;
+};
+var lc = function(c2) {
+  var s = c2.length;
+  while (s && !c2[--s])
+    ;
+  var cl = new u16(++s);
+  var cli = 0, cln = c2[0], cls = 1;
+  var w = function(v) {
+    cl[cli++] = v;
+  };
+  for (var i2 = 1; i2 <= s; ++i2) {
+    if (c2[i2] == cln && i2 != s)
+      ++cls;
+    else {
+      if (!cln && cls > 2) {
+        for (; cls > 138; cls -= 138)
+          w(32754);
+        if (cls > 2) {
+          w(cls > 10 ? cls - 11 << 5 | 28690 : cls - 3 << 5 | 12305);
+          cls = 0;
+        }
+      } else if (cls > 3) {
+        w(cln), --cls;
+        for (; cls > 6; cls -= 6)
+          w(8304);
+        if (cls > 2)
+          w(cls - 3 << 5 | 8208), cls = 0;
+      }
+      while (cls--)
+        w(cln);
+      cls = 1;
+      cln = c2[i2];
+    }
+  }
+  return [cl.subarray(0, cli), s];
+};
+var clen = function(cf, cl) {
+  var l = 0;
+  for (var i2 = 0; i2 < cl.length; ++i2)
+    l += cf[i2] * cl[i2];
+  return l;
+};
+var wfblk = function(out, pos, dat) {
+  var s = dat.length;
+  var o = shft(pos + 2);
+  out[o] = s & 255;
+  out[o + 1] = s >>> 8;
+  out[o + 2] = out[o] ^ 255;
+  out[o + 3] = out[o + 1] ^ 255;
+  for (var i2 = 0; i2 < s; ++i2)
+    out[o + i2 + 4] = dat[i2];
+  return (o + 4 + s) * 8;
+};
+var wblk = function(dat, out, final, syms, lf, df, eb, li, bs, bl, p) {
+  wbits(out, p++, final);
+  ++lf[256];
+  var _a2 = hTree(lf, 15), dlt = _a2[0], mlb = _a2[1];
+  var _b2 = hTree(df, 15), ddt = _b2[0], mdb = _b2[1];
+  var _c = lc(dlt), lclt = _c[0], nlc = _c[1];
+  var _d = lc(ddt), lcdt = _d[0], ndc = _d[1];
+  var lcfreq = new u16(19);
+  for (var i2 = 0; i2 < lclt.length; ++i2)
+    lcfreq[lclt[i2] & 31]++;
+  for (var i2 = 0; i2 < lcdt.length; ++i2)
+    lcfreq[lcdt[i2] & 31]++;
+  var _e = hTree(lcfreq, 7), lct = _e[0], mlcb = _e[1];
+  var nlcc = 19;
+  for (; nlcc > 4 && !lct[clim[nlcc - 1]]; --nlcc)
+    ;
+  var flen = bl + 5 << 3;
+  var ftlen = clen(lf, flt) + clen(df, fdt) + eb;
+  var dtlen = clen(lf, dlt) + clen(df, ddt) + eb + 14 + 3 * nlcc + clen(lcfreq, lct) + (2 * lcfreq[16] + 3 * lcfreq[17] + 7 * lcfreq[18]);
+  if (flen <= ftlen && flen <= dtlen)
+    return wfblk(out, p, dat.subarray(bs, bs + bl));
+  var lm, ll, dm, dl;
+  wbits(out, p, 1 + (dtlen < ftlen)), p += 2;
+  if (dtlen < ftlen) {
+    lm = hMap(dlt, mlb, 0), ll = dlt, dm = hMap(ddt, mdb, 0), dl = ddt;
+    var llm = hMap(lct, mlcb, 0);
+    wbits(out, p, nlc - 257);
+    wbits(out, p + 5, ndc - 1);
+    wbits(out, p + 10, nlcc - 4);
+    p += 14;
+    for (var i2 = 0; i2 < nlcc; ++i2)
+      wbits(out, p + 3 * i2, lct[clim[i2]]);
+    p += 3 * nlcc;
+    var lcts = [lclt, lcdt];
+    for (var it = 0; it < 2; ++it) {
+      var clct = lcts[it];
+      for (var i2 = 0; i2 < clct.length; ++i2) {
+        var len2 = clct[i2] & 31;
+        wbits(out, p, llm[len2]), p += lct[len2];
+        if (len2 > 15)
+          wbits(out, p, clct[i2] >>> 5 & 127), p += clct[i2] >>> 12;
+      }
+    }
+  } else {
+    lm = flm, ll = flt, dm = fdm, dl = fdt;
+  }
+  for (var i2 = 0; i2 < li; ++i2) {
+    if (syms[i2] > 255) {
+      var len2 = syms[i2] >>> 18 & 31;
+      wbits16(out, p, lm[len2 + 257]), p += ll[len2 + 257];
+      if (len2 > 7)
+        wbits(out, p, syms[i2] >>> 23 & 31), p += fleb[len2];
+      var dst = syms[i2] & 31;
+      wbits16(out, p, dm[dst]), p += dl[dst];
+      if (dst > 3)
+        wbits16(out, p, syms[i2] >>> 5 & 8191), p += fdeb[dst];
+    } else {
+      wbits16(out, p, lm[syms[i2]]), p += ll[syms[i2]];
+    }
+  }
+  wbits16(out, p, lm[256]);
+  return p + ll[256];
+};
+var deo = /* @__PURE__ */ new u32([65540, 131080, 131088, 131104, 262176, 1048704, 1048832, 2114560, 2117632]);
 var et = /* @__PURE__ */ new u8(0);
+var dflt = function(dat, lvl, plvl, pre, post, lst) {
+  var s = dat.length;
+  var o = new u8(pre + s + 5 * (1 + Math.ceil(s / 7e3)) + post);
+  var w = o.subarray(pre, o.length - post);
+  var pos = 0;
+  if (!lvl || s < 8) {
+    for (var i2 = 0; i2 <= s; i2 += 65535) {
+      var e = i2 + 65535;
+      if (e >= s) {
+        w[pos >> 3] = lst;
+      }
+      pos = wfblk(w, pos + 1, dat.subarray(i2, e));
+    }
+  } else {
+    var opt = deo[lvl - 1];
+    var n = opt >>> 13, c2 = opt & 8191;
+    var msk_1 = (1 << plvl) - 1;
+    var prev = new u16(32768), head = new u16(msk_1 + 1);
+    var bs1_1 = Math.ceil(plvl / 3), bs2_1 = 2 * bs1_1;
+    var hsh = function(i3) {
+      return (dat[i3] ^ dat[i3 + 1] << bs1_1 ^ dat[i3 + 2] << bs2_1) & msk_1;
+    };
+    var syms = new u32(25e3);
+    var lf = new u16(288), df = new u16(32);
+    var lc_1 = 0, eb = 0, i2 = 0, li = 0, wi = 0, bs = 0;
+    for (; i2 < s; ++i2) {
+      var hv = hsh(i2);
+      var imod = i2 & 32767, pimod = head[hv];
+      prev[imod] = pimod;
+      head[hv] = imod;
+      if (wi <= i2) {
+        var rem = s - i2;
+        if ((lc_1 > 7e3 || li > 24576) && rem > 423) {
+          pos = wblk(dat, w, 0, syms, lf, df, eb, li, bs, i2 - bs, pos);
+          li = lc_1 = eb = 0, bs = i2;
+          for (var j = 0; j < 286; ++j)
+            lf[j] = 0;
+          for (var j = 0; j < 30; ++j)
+            df[j] = 0;
+        }
+        var l = 2, d = 0, ch_1 = c2, dif = imod - pimod & 32767;
+        if (rem > 2 && hv == hsh(i2 - dif)) {
+          var maxn = Math.min(n, rem) - 1;
+          var maxd = Math.min(32767, i2);
+          var ml = Math.min(258, rem);
+          while (dif <= maxd && --ch_1 && imod != pimod) {
+            if (dat[i2 + l] == dat[i2 + l - dif]) {
+              var nl = 0;
+              for (; nl < ml && dat[i2 + nl] == dat[i2 + nl - dif]; ++nl)
+                ;
+              if (nl > l) {
+                l = nl, d = dif;
+                if (nl > maxn)
+                  break;
+                var mmd = Math.min(dif, nl - 2);
+                var md = 0;
+                for (var j = 0; j < mmd; ++j) {
+                  var ti = i2 - dif + j + 32768 & 32767;
+                  var pti = prev[ti];
+                  var cd = ti - pti + 32768 & 32767;
+                  if (cd > md)
+                    md = cd, pimod = ti;
+                }
+              }
+            }
+            imod = pimod, pimod = prev[imod];
+            dif += imod - pimod + 32768 & 32767;
+          }
+        }
+        if (d) {
+          syms[li++] = 268435456 | revfl[l] << 18 | revfd[d];
+          var lin = revfl[l] & 31, din = revfd[d] & 31;
+          eb += fleb[lin] + fdeb[din];
+          ++lf[257 + lin];
+          ++df[din];
+          wi = i2 + l;
+          ++lc_1;
+        } else {
+          syms[li++] = dat[i2];
+          ++lf[dat[i2]];
+        }
+      }
+    }
+    pos = wblk(dat, w, lst, syms, lf, df, eb, li, bs, i2 - bs, pos);
+    if (!lst && pos & 7)
+      pos = wfblk(w, pos + 1, et);
+  }
+  return slc(o, 0, pre + shft(pos) + post);
+};
+var crct = /* @__PURE__ */ function() {
+  var t = new Int32Array(256);
+  for (var i2 = 0; i2 < 256; ++i2) {
+    var c2 = i2, k = 9;
+    while (--k)
+      c2 = (c2 & 1 && -306674912) ^ c2 >>> 1;
+    t[i2] = c2;
+  }
+  return t;
+}();
+var crc = function() {
+  var c2 = -1;
+  return {
+    p: function(d) {
+      var cr = c2;
+      for (var i2 = 0; i2 < d.length; ++i2)
+        cr = crct[cr & 255 ^ d[i2]] ^ cr >>> 8;
+      c2 = cr;
+    },
+    d: function() {
+      return ~c2;
+    }
+  };
+};
+var dopt = function(dat, opt, pre, post, st) {
+  return dflt(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 12 + opt.mem, pre, post, !st);
+};
 var b2 = function(d, b) {
   return d[b] | d[b + 1] << 8;
 };
@@ -102066,6 +102380,21 @@ var b4 = function(d, b) {
 };
 var b8 = function(d, b) {
   return b4(d, b) + b4(d, b + 4) * 4294967296;
+};
+var wbytes = function(d, b, v) {
+  for (; v; ++b)
+    d[b] = v, v >>>= 8;
+};
+var gzh = function(c2, o) {
+  var fn = o.filename;
+  c2[0] = 31, c2[1] = 139, c2[2] = 8, c2[8] = o.level < 2 ? 4 : o.level == 9 ? 2 : 0, c2[9] = 3;
+  if (o.mtime != 0)
+    wbytes(c2, 4, Math.floor(new Date(o.mtime || Date.now()) / 1e3));
+  if (fn) {
+    c2[3] = 8;
+    for (var i2 = 0; i2 <= fn.length; ++i2)
+      c2[i2 + 10] = fn.charCodeAt(i2);
+  }
 };
 var gzs = function(d) {
   if (d[0] != 31 || d[1] != 139 || d[2] != 8)
@@ -102082,6 +102411,9 @@ var gzl = function(d) {
   var l = d.length;
   return (d[l - 4] | d[l - 3] << 8 | d[l - 2] << 16 | d[l - 1] << 24) >>> 0;
 };
+var gzhl = function(o) {
+  return 10 + (o.filename && o.filename.length + 1 || 0);
+};
 var zlv = function(d) {
   if ((d[0] & 15) != 8 || d[0] >>> 4 > 7 || (d[0] << 8 | d[1]) % 31)
     err(6, "invalid zlib data");
@@ -102090,6 +102422,14 @@ var zlv = function(d) {
 };
 function inflateSync(data, out) {
   return inflt(data, out);
+}
+function gzipSync(data, opts) {
+  if (!opts)
+    opts = {};
+  var c2 = crc(), l = data.length;
+  c2.p(data);
+  var d = dopt(data, opts, gzhl(opts), 8), s = d.length;
+  return gzh(d, opts), wbytes(d, s - 8, c2.d()), wbytes(d, s - 4, l), d;
 }
 function gunzipSync(data, out) {
   return inflt(data.subarray(gzs(data), -8), out || new u8(gzl(data)));
@@ -103938,12 +104278,31 @@ function hdrToArrayBuffer(hdr) {
 }
 NVImage.prototype.saveToDisk = async function(fnm) {
   let hdrBytes = hdrToArrayBuffer(this.hdr);
-  console.log(hdrBytes.length);
   var opad = new Uint8Array(4);
   var odata = new Uint8Array(hdrBytes.length + opad.length + this.img.length);
   odata.set(hdrBytes);
   odata.set(opad, hdrBytes.length);
   odata.set(this.img, hdrBytes.length + opad.length);
+  let saveData = null;
+  let compress = fnm.endsWith(".gz");
+  if (compress) {
+    saveData = gzipSync(odata, {
+      filename: fnm,
+      mtime: Date.now(),
+      level: 6
+    });
+  } else {
+    saveData = odata;
+  }
+  let blob = new Blob([saveData.buffer], { type: "application/octet-stream" });
+  let blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", blobUrl);
+  link.setAttribute("download", fnm);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 NVImage.loadFromUrl = async function({
   url = "",
@@ -108119,13 +108478,13 @@ var giftiReader = { exports: {} };
         return table;
       }
       var crcTable2 = makeTable2();
-      function crc322(crc, buf, len2, pos) {
+      function crc322(crc2, buf, len2, pos) {
         var t = crcTable2, end = pos + len2;
-        crc ^= -1;
+        crc2 ^= -1;
         for (var i2 = pos; i2 < end; i2++) {
-          crc = crc >>> 8 ^ t[(crc ^ buf[i2]) & 255];
+          crc2 = crc2 >>> 8 ^ t[(crc2 ^ buf[i2]) & 255];
         }
-        return crc ^ -1;
+        return crc2 ^ -1;
       }
       module3.exports = crc322;
     }, {}], 35: [function(require, module3, exports2) {
@@ -111116,24 +111475,24 @@ var giftiReader = { exports: {} };
       }
       function compress_block2(s, ltree, dtree) {
         var dist;
-        var lc;
+        var lc2;
         var lx = 0;
         var code;
         var extra;
         if (s.last_lit !== 0) {
           do {
             dist = s.pending_buf[s.d_buf + lx * 2] << 8 | s.pending_buf[s.d_buf + lx * 2 + 1];
-            lc = s.pending_buf[s.l_buf + lx];
+            lc2 = s.pending_buf[s.l_buf + lx];
             lx++;
             if (dist === 0) {
-              send_code2(s, lc, ltree);
+              send_code2(s, lc2, ltree);
             } else {
-              code = _length_code2[lc];
+              code = _length_code2[lc2];
               send_code2(s, code + LITERALS2 + 1, ltree);
               extra = extra_lbits2[code];
               if (extra !== 0) {
-                lc -= base_length2[code];
-                send_bits2(s, lc, extra);
+                lc2 -= base_length2[code];
+                send_bits2(s, lc2, extra);
               }
               dist--;
               code = d_code2(dist);
@@ -111387,17 +111746,17 @@ var giftiReader = { exports: {} };
           bi_windup2(s);
         }
       }
-      function _tr_tally2(s, dist, lc) {
+      function _tr_tally2(s, dist, lc2) {
         s.pending_buf[s.d_buf + s.last_lit * 2] = dist >>> 8 & 255;
         s.pending_buf[s.d_buf + s.last_lit * 2 + 1] = dist & 255;
-        s.pending_buf[s.l_buf + s.last_lit] = lc & 255;
+        s.pending_buf[s.l_buf + s.last_lit] = lc2 & 255;
         s.last_lit++;
         if (dist === 0) {
-          s.dyn_ltree[lc * 2]++;
+          s.dyn_ltree[lc2 * 2]++;
         } else {
           s.matches++;
           dist--;
-          s.dyn_ltree[(_length_code2[lc] + LITERALS2 + 1) * 2]++;
+          s.dyn_ltree[(_length_code2[lc2] + LITERALS2 + 1) * 2]++;
           s.dyn_dtree[d_code2(dist) * 2]++;
         }
         return s.last_lit === s.lit_bufsize - 1;
@@ -113305,11 +113664,11 @@ var giftiReader = { exports: {} };
       };
       gifti.Utils.crc32 = function(dataView) {
         var crcTable2 = gifti.Utils.crcTable || (gifti.Utils.crcTable = gifti.Utils.makeCRCTable());
-        var crc = 0 ^ -1;
+        var crc2 = 0 ^ -1;
         for (var i2 = 0; i2 < dataView.byteLength; i2++) {
-          crc = crc >>> 8 ^ crcTable2[(crc ^ dataView.getUint8(i2)) & 255];
+          crc2 = crc2 >>> 8 ^ crcTable2[(crc2 ^ dataView.getUint8(i2)) & 255];
         }
-        return (crc ^ -1) >>> 0;
+        return (crc2 ^ -1) >>> 0;
       };
       var moduleType = typeof module3;
       if (moduleType !== "undefined" && module3.exports) {
