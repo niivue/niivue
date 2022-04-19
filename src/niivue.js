@@ -148,6 +148,7 @@ export function Niivue(options = {}) {
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
   this.syncOpts = {};
+  this.readyForSync = false;
   this.scene.renderAzimuth = 110; //-45;
   this.scene.renderElevation = 10; //-165; //15;
   this.scene.crosshairPos = [0.5, 0.5, 0.5];
@@ -188,6 +189,8 @@ export function Niivue(options = {}) {
   this.lastTwoTouchDistance = 0;
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
+  this.pivot3D = [0, 0, 0]; //center for rendering rotation
+  this.furthestFromPivot = 10.0; //most distant point from pivot
   this.intensityRange$ = new Subject(); // an array
   this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
@@ -384,6 +387,9 @@ Niivue.prototype.syncWith = function (
 
 Niivue.prototype.sync = function () {
   if (!this.otherNV || typeof this.otherNV === "undefined") {
+    return;
+  }
+  if (!this.otherNV.readyForSync || !this.readyForSync) {
     return;
   }
   let thisMM = this.frac2mm(this.scene.crosshairPos);
@@ -787,62 +793,58 @@ Niivue.prototype.keyUpListener = function (e) {
       this.setSliceType((this.sliceType + 1) % 5); // 5 total slice types
       this.lastCalled = now;
     }
-	} 
+  }
 };
 
 Niivue.prototype.keyDownListener = function (e) {
-	if (e.code === 'KeyH' && this.sliceType === this.sliceTypeRender){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth - 1,
-			this.scene.renderElevation
-		)
-	}
- 	else if (e.code === 'KeyL' && this.sliceType === this.sliceTypeRender){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth + 1,
-			this.scene.renderElevation
-		)
-	}
-	else if (e.code === 'KeyJ' && this.sliceType === this.sliceTypeRender){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth,
-			this.scene.renderElevation + 1
-		)
-	}
-	else if (e.code === 'KeyK' && this.sliceType === this.sliceTypeRender ){
-		this.setRenderAzimuthElevation(
-			this.scene.renderAzimuth,
-			this.scene.renderElevation - 1
-		)
-	}
-	else if (e.code === 'KeyH' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyL' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyU' && this.sliceType !== this.sliceTypeRender && e.ctrlKey){
-		this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyD' && this.sliceType !== this.sliceTypeRender && e.ctrlKey){
-		this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyJ' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001
-		this.drawScene()
-	}
-	else if (e.code === 'KeyK' && this.sliceType !== this.sliceTypeRender){
-		this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001
-		this.drawScene()
-	}
-	console.log(e.code)
-	console.log(e.ctrlKey)
+  if (e.code === "KeyH" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth - 1,
+      this.scene.renderElevation
+    );
+  } else if (e.code === "KeyL" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth + 1,
+      this.scene.renderElevation
+    );
+  } else if (e.code === "KeyJ" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth,
+      this.scene.renderElevation + 1
+    );
+  } else if (e.code === "KeyK" && this.sliceType === this.sliceTypeRender) {
+    this.setRenderAzimuthElevation(
+      this.scene.renderAzimuth,
+      this.scene.renderElevation - 1
+    );
+  } else if (e.code === "KeyH" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001;
+    this.drawScene();
+  } else if (e.code === "KeyL" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001;
+    this.drawScene();
+  } else if (
+    e.code === "KeyU" &&
+    this.sliceType !== this.sliceTypeRender &&
+    e.ctrlKey
+  ) {
+    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001;
+    this.drawScene();
+  } else if (
+    e.code === "KeyD" &&
+    this.sliceType !== this.sliceTypeRender &&
+    e.ctrlKey
+  ) {
+    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001;
+    this.drawScene();
+  } else if (e.code === "KeyJ" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001;
+    this.drawScene();
+  } else if (e.code === "KeyK" && this.sliceType !== this.sliceTypeRender) {
+    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001;
+    this.drawScene();
+  }
 };
-
 
 // not included in public docs
 // handler for scroll wheel events (slice scrolling)
@@ -909,8 +911,12 @@ Niivue.prototype.registerInteractions = function () {
   this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
   this.canvas.focus();
 
-	// keydown
-	this.canvas.addEventListener("keydown", this.keyDownListener.bind(this), false);
+  // keydown
+  this.canvas.addEventListener(
+    "keydown",
+    this.keyDownListener.bind(this),
+    false
+  );
 };
 
 // not included in public docs
@@ -996,6 +1002,7 @@ Niivue.prototype.dropListener = async function (e) {
             continue;
           }
           if (
+            ext === "DFS" ||
             ext === "FSM" ||
             ext === "PIAL" ||
             ext === "ORIG" ||
@@ -1007,6 +1014,7 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "MZ3" ||
             ext === "OBJ" ||
             ext === "OFF" ||
+            ext === "SRF" ||
             ext === "STL" ||
             ext === "TCK" ||
             ext === "TRK" ||
@@ -1032,7 +1040,6 @@ Niivue.prototype.dropListener = async function (e) {
                   file: file,
                   urlImgData: imgfile,
                 });
-                console.log(volume);
                 this.addVolume(volume);
               });
             } else {
@@ -1045,7 +1052,6 @@ Niivue.prototype.dropListener = async function (e) {
             }
           });
         } else if (entry.isDirectory) {
-          console.log("isDirectory");
           /* TODO directory reading for dicoms
 					let reader = entry.createReader();
 					let allFilesInDir = []
@@ -1126,6 +1132,11 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
     }
   }
   return -1; // -1 signals that no valid index was found for a volume with the given id
+};
+
+Niivue.prototype.saveImage = async function (fnm) {
+  //console.log('bogo',this.volumes[0]);
+  await this.volumes[0].saveToDisk(fnm);
 };
 
 Niivue.prototype.getMeshIndexByID = function (id) {
@@ -2143,6 +2154,7 @@ Niivue.prototype.init = async function () {
   // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
+  this.gl.clearDepth(0.0);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -2344,6 +2356,7 @@ Niivue.prototype.updateGLVolume = function () {
 
 // not included in public docs
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
+  if (this.volumes.length < 1) return; //e.g. only meshes
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
   if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
@@ -2880,7 +2893,9 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
 
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
-    if (this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+    //n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
+
+    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       //clipping mode: change clip plane depth
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
       let depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
@@ -3308,9 +3323,13 @@ Niivue.prototype.calculateMvpMatrix = function () {
     return deg * (Math.PI / 180.0);
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  //pivot from center of objects
+  //let scale = this.furthestVertexFromOrigin;
+  //let origin = [0,0,0];
+  let scale = this.furthestFromPivot;
+  let origin = this.pivot3D;
   let projectionMatrix = mat.mat4.create();
-  let scale =
-    (0.7 * this.furthestVertexFromOrigin * 1.0) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  scale = (0.8 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -3336,6 +3355,7 @@ Niivue.prototype.calculateMvpMatrix = function () {
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
   //push the model away from the camera so camera not inside model
+
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
   if (this.position)
@@ -3353,13 +3373,19 @@ Niivue.prototype.calculateMvpMatrix = function () {
     deg2rad(this.scene.renderAzimuth - 180)
   );
   //translate object to be in center of field of view (e.g. CT brain scans where origin is distant table center)
-  if (this.volumeObject3D) {
+  /*if (this.volumeObject3D) {
     mat.mat4.translate(
       modelMatrix,
       modelMatrix,
       this.volumeObject3D.originNegate
     );
-  }
+  }*/
+
+  mat.mat4.translate(modelMatrix, modelMatrix, [
+    -origin[0],
+    -origin[1],
+    -origin[2],
+  ]);
   //
   let iModelMatrix = mat.mat4.create();
   mat.mat4.invert(iModelMatrix, modelMatrix);
@@ -3367,7 +3393,7 @@ Niivue.prototype.calculateMvpMatrix = function () {
   mat.mat4.transpose(normalMatrix, iModelMatrix);
   //this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
 
-  // transpose(out, a) → {mat4}
+  // transpose(out, a) - > {mat4}
   // invert(out, a)
   //  normalMatrix := modelMatrix.Inverse.Transpose;
   let modelViewProjectionMatrix = mat.mat4.create();
@@ -3434,16 +3460,69 @@ Niivue.prototype.calculateRayDirection = function () {
   return rayDir;
 }; // calculateRayDirection
 
+Niivue.prototype.setPivot3D = function () {
+  //compute extents of all volumes and meshes in scene
+  // pivot around center of these.
+  let mn = mat.vec3.fromValues(0, 0, 0);
+  let mx = mat.vec3.fromValues(0, 0, 0);
+  if (this.volumes.length > 0) {
+    mn = mat.vec3.fromValues(
+      this.volumeObject3D.extentsMin[0],
+      this.volumeObject3D.extentsMin[1],
+      this.volumeObject3D.extentsMin[2]
+    );
+    mx = mat.vec3.fromValues(
+      this.volumeObject3D.extentsMax[0],
+      this.volumeObject3D.extentsMax[1],
+      this.volumeObject3D.extentsMax[2]
+    );
+  }
+  if (this.meshes.length > 0) {
+    if (this.volumes.length < 1) {
+      mn = mat.vec3.fromValues(
+        this.meshes[0].extentsMin[0],
+        this.meshes[0].extentsMin[1],
+        this.meshes[0].extentsMin[2]
+      );
+      mx = mat.vec3.fromValues(
+        this.meshes[0].extentsMax[0],
+        this.meshes[0].extentsMax[1],
+        this.meshes[0].extentsMax[2]
+      );
+    }
+    for (let i = 0; i < this.meshes.length; i++) {
+      let v = mat.vec3.fromValues(
+        this.meshes[i].extentsMin[0],
+        this.meshes[i].extentsMin[1],
+        this.meshes[i].extentsMin[2]
+      );
+      mat.vec3.min(mn, mn, v);
+      mat.vec3.max(mx, mx, v);
+    }
+  }
+  let pivot = mat.vec3.create();
+  //pivot is half way between min and max:
+  //console.log('scene extents: ', mn, '..', mx);
+  mat.vec3.add(pivot, mn, mx);
+  mat.vec3.scale(pivot, pivot, 0.5);
+  this.pivot3D = [pivot[0], pivot[1], pivot[2]];
+  //find scale of scene
+  mat.vec3.subtract(pivot, mx, mn);
+  this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
+  //console.log('pivot: '+ this.pivot3D +' furthestFromPivot:' + this.furthestFromPivot);
+}; // setPivot3D()
+
 // not included in public docs
 Niivue.prototype.draw3D = function () {
+  this.setPivot3D();
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
+  gl.clearDepth(0.0);
   if (this.volumes.length === 0) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.clearDepth(0.0);
-    this.drawMesh3D(true, 1.0);
+    this.drawMesh3D(true, 1);
     return;
   }
 
@@ -3536,8 +3615,12 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let gl = this.gl;
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.volumeObject3D);
+
   gl.enable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  gl.disable(gl.BLEND);
+  gl.depthFunc(gl.GREATER);
 
   if (isDepthTest) {
     gl.disable(gl.BLEND);
@@ -3555,6 +3638,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
   gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
   let hasFibers = false;
+
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     if (this.meshes[i].offsetPt0) {
@@ -3570,7 +3654,6 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     );
     gl.bindVertexArray(this.unusedVAO);
   }
-
   //draw fibers
   if (!hasFibers) {
     gl.enable(gl.BLEND);
@@ -3625,8 +3708,8 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
       this.volumeObject3D.extentsMax,
       radius
     );
-    this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
-    this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
+    //this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
+    //this.crosshairs3D.maxExtent = this.volumeObject3D.maxExtent;
     this.crosshairs3D.mm = mm;
     //this.crosshairs3D.originNegate = this.volumeObject3D.originNegate;
   }
@@ -3863,8 +3946,8 @@ Niivue.prototype.drawScene = function () {
       depthAziElev[1] = depthAziElev[1] % 360;
       depthAziElev[2] += y;
       //gimbal lock: these next two lines could be changed - when we go over the pole, the Azimuth reverses
-      if (depthAziElev[2] > 90) depthAziElev[2] = 90;
-      if (depthAziElev[2] < -90) depthAziElev[2] = -90;
+      //if (depthAziElev[2] > 90) depthAziElev[2] = 90;
+      //if (depthAziElev[2] < -90) depthAziElev[2] = -90;
       if (
         depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] ||
         depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]
@@ -3955,7 +4038,7 @@ Niivue.prototype.drawScene = function () {
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();
-  // temporary event bus mechanism. It uses Vue, but it would be ideal to divorce vue from this gl code.
-  //bus.$emit('crosshair-pos-change', posString);
+
+  this.readyForSync = true; // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
   return posString;
 }; // drawScene()
