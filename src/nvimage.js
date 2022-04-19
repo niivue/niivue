@@ -1,5 +1,6 @@
 import nifti from "nifti-reader-js";
 import daikon from "daikon";
+import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import * as cmaps from "./cmaps";
@@ -1972,6 +1973,123 @@ NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
   if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
   return raw * hdr.scl_slope + hdr.scl_inter;
 };
+
+function str2Buffer(str) {
+  //emulate node.js Buffer.from
+  var bytes = [];
+  for (var i = 0; i < str.length; i++) {
+    var char = str.charCodeAt(i);
+    bytes.push(char & 0xff);
+  }
+  return bytes;
+}
+
+function hdrToArrayBuffer(hdr) {
+  const SHORT_SIZE = 2;
+  const FLOAT32_SIZE = 4;
+
+  let byteArray = new Uint8Array(348);
+  let view = new DataView(byteArray.buffer);
+  // sizeof_hdr
+  view.setInt32(0, 348, hdr.littleEndian);
+
+  // data_type, db_name, extents, session_error, regular are not used
+
+  // dim_info
+  view.setUint8(39, hdr.dim_info);
+
+  // dims
+  for (let i = 0; i < 8; i++) {
+    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], hdr.littleEndian);
+  }
+
+  // intent_p1, intent_p2, intent_p3
+  view.setFloat32(56, hdr.intent_p1, hdr.littleEndian);
+  view.setFloat32(60, hdr.intent_p2, hdr.littleEndian);
+  view.setFloat32(64, hdr.intent_p3, hdr.littleEndian);
+
+  // intent_code, datatype, bitpix, slice_start
+  view.setInt16(68, hdr.intent_code, hdr.littleEndian);
+  view.setInt16(70, hdr.datatypeCode, hdr.littleEndian);
+  view.setInt16(72, hdr.numBitsPerVoxel, hdr.littleEndian);
+  view.setInt16(74, hdr.slice_start, hdr.littleEndian);
+
+  // pixdim[8], vox_offset, scl_slope, scl_inter
+  for (let i = 0; i < 8; i++) {
+    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], hdr.littleEndian);
+  }
+  view.setFloat32(108, hdr.vox_offset, hdr.littleEndian);
+  view.setFloat32(112, hdr.scl_slope, hdr.littleEndian);
+  view.setFloat32(116, hdr.scl_inter, hdr.littleEndian);
+
+  // slice_end
+  view.setInt16(120, hdr.slice_end, hdr.littleEndian);
+
+  // slice_code, xyzt_units
+  view.setUint8(122, hdr.slice_code);
+  view.setUint8(123, hdr.xyzt_units);
+
+  // cal_max, cal_min, slice_duration, toffset
+  view.setFloat32(124, hdr.cal_max, hdr.littleEndian);
+  view.setFloat32(128, hdr.cal_min, hdr.littleEndian);
+  view.setFloat32(132, hdr.slice_duration, hdr.littleEndian);
+  view.setFloat32(136, hdr.toffset, hdr.littleEndian);
+
+  // glmax, glmin are unused
+
+  // descrip and aux_file
+  //node.js byteArray.set(Buffer.from(hdr.description), 148);
+  byteArray.set(str2Buffer(hdr.description), 148);
+  //node.js: byteArray.set(Buffer.from(hdr.aux_file), 228);
+  byteArray.set(str2Buffer(hdr.aux_file), 228);
+  // qform_code, sform_code
+  view.setInt16(252, hdr.qform_code, hdr.littleEndian);
+  view.setInt16(254, hdr.sform_code, hdr.littleEndian);
+
+  // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
+  view.setFloat32(256, hdr.quatern_b, hdr.littleEndian);
+  view.setFloat32(260, hdr.quatern_c, hdr.littleEndian);
+  view.setFloat32(264, hdr.quatern_d, hdr.littleEndian);
+  view.setFloat32(268, hdr.qoffset_x, hdr.littleEndian);
+  view.setFloat32(272, hdr.qoffset_y, hdr.littleEndian);
+  view.setFloat32(276, hdr.qoffset_z, hdr.littleEndian);
+  const flattened = hdr.affine.flat();
+  // we only want the first three rows
+  for (let i = 0; i < 12; i++) {
+    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i]);
+  }
+  //node.js https://www.w3schools.com/nodejs/met_buffer_from.asp
+  // intent_name and magic
+  //node.js byteArray.set(Buffer.from(hdr.intent_name), 328);
+  byteArray.set(str2Buffer(hdr.intent_name), 328);
+  //node.js byteArray.set(Buffer.from(hdr.magic), 344);
+  byteArray.set(str2Buffer(hdr.magic), 344);
+  return byteArray;
+  //return byteArray.buffer;
+} // hdrToArrayBuffer()
+
+NVImage.prototype.saveToDisk = async function (fnm) {
+  //bytes = nifti2.toArrayBuffer();aaaa
+  //console.log('..', str);
+  //let bytes = this.hdr.toArrayBuffer();
+
+  //console.log('..', this.hdr.vox_offset);
+  let hdrBytes = hdrToArrayBuffer(this.hdr);
+
+  console.log(hdrBytes.length);
+  var opad = new Uint8Array(4);
+  var odata = new Uint8Array(hdrBytes.length + opad.length + this.img.length);
+  odata.set(hdrBytes);
+  odata.set(opad, hdrBytes.length);
+
+  odata.set(this.img, hdrBytes.length + opad.length);
+  //console.log('..', odata);
+  fs.writeFile(fnm, Buffer.from(odata), "binary", function (err) {
+    if (err) {
+      console.log(err);
+    }
+  });
+}; // saveToDisk()
 
 /**
  * factory function to load and return a new NVImage instance from a given URL

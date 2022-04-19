@@ -1075,6 +1075,11 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
+Niivue.prototype.saveImage = async function (fnm) {
+  //console.log('bogo',this.volumes[0]);
+  await this.volumes[0].saveToDisk(fnm);
+};
+
 Niivue.prototype.getMeshIndexByID = function (id) {
   let n = this.meshes.length;
   for (let i = 0; i < n; i++) {
@@ -2090,6 +2095,7 @@ Niivue.prototype.init = async function () {
   // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
+  this.gl.clearDepth(0.0);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
   this.gl.enable(this.gl.BLEND);
@@ -2829,7 +2835,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
     //n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
-    if (this.volumeObject3D && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+
+    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       //clipping mode: change clip plane depth
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
       let depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
@@ -3257,13 +3264,13 @@ Niivue.prototype.calculateMvpMatrix = function () {
     return deg * (Math.PI / 180.0);
   }
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
-  //pivot from cenet of objects
+  //pivot from center of objects
   //let scale = this.furthestVertexFromOrigin;
   //let origin = [0,0,0];
   let scale = this.furthestFromPivot;
   let origin = this.pivot3D;
   let projectionMatrix = mat.mat4.create();
-  scale = (0.9 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  scale = (0.8 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -3399,7 +3406,7 @@ Niivue.prototype.setPivot3D = function () {
   // pivot around center of these.
   let mn = mat.vec3.fromValues(0, 0, 0);
   let mx = mat.vec3.fromValues(0, 0, 0);
-  if (this.volumeObject3D) {
+  if (this.volumes.length > 0) {
     mn = mat.vec3.fromValues(
       this.volumeObject3D.extentsMin[0],
       this.volumeObject3D.extentsMin[1],
@@ -3412,7 +3419,7 @@ Niivue.prototype.setPivot3D = function () {
     );
   }
   if (this.meshes.length > 0) {
-    if (!this.volumeObject3D) {
+    if (this.volumes.length < 1) {
       mn = mat.vec3.fromValues(
         this.meshes[0].extentsMin[0],
         this.meshes[0].extentsMin[1],
@@ -3440,10 +3447,10 @@ Niivue.prototype.setPivot3D = function () {
   mat.vec3.add(pivot, mn, mx);
   mat.vec3.scale(pivot, pivot, 0.5);
   this.pivot3D = [pivot[0], pivot[1], pivot[2]];
-  //console.log('pivot: ', this.pivot3D);
   //find scale of scene
   mat.vec3.subtract(pivot, mx, mn);
   this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
+  //console.log('pivot: '+ this.pivot3D +' furthestFromPivot:' + this.furthestFromPivot);
 }; // setPivot3D()
 
 // not included in public docs
@@ -3453,10 +3460,10 @@ Niivue.prototype.draw3D = function () {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
+  gl.clearDepth(0.0);
   if (this.volumes.length === 0) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.clearDepth(0.0);
-    this.drawMesh3D(true, 1.0);
+    this.drawMesh3D(true, 1);
     return;
   }
 
@@ -3549,8 +3556,12 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   let gl = this.gl;
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.volumeObject3D);
+
   gl.enable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  gl.disable(gl.BLEND);
+  gl.depthFunc(gl.GREATER);
 
   if (isDepthTest) {
     gl.disable(gl.BLEND);
@@ -3568,6 +3579,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
   gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
   let hasFibers = false;
+
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     if (this.meshes[i].offsetPt0) {
@@ -3583,7 +3595,6 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
     );
     gl.bindVertexArray(this.unusedVAO);
   }
-
   //draw fibers
   if (!hasFibers) {
     gl.enable(gl.BLEND);
