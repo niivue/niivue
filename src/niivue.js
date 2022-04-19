@@ -397,6 +397,7 @@ Niivue.prototype.sync = function () {
     this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
   }
   if (this.syncOpts["3d"]) {
+    console.log("3d sync");
     this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
@@ -3605,7 +3606,7 @@ Niivue.prototype.draw3D = function () {
     " elevation: " +
     this.scene.renderElevation.toFixed(0);
   //bus.$emit('crosshair-pos-change', posString);
-
+  this.readyForSync = true;
   this.sync();
   return posString;
 }; // draw3D()
@@ -3678,6 +3679,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   }
   gl.enable(gl.BLEND);
   gl.depthFunc(gl.ALWAYS);
+  this.readyForSync = true;
 }; //drawMesh3D()
 
 Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {

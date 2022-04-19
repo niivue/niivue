@@ -1053,10 +1053,9 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   if (pairedImgData.byteLength < nBytes) {
     //n.b. npm run dev implicitly extracts gz, npm run demo does not!
     //assume gz compressed
-    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    var raw = fflate.decompressSync(new Uint8Array(pairedImgData));
     return raw.buffer;
   }
-  let v = pairedImgData.slice();
   return pairedImgData.slice();
 };
 
