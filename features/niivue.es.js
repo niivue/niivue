@@ -103081,10 +103081,9 @@ NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
     this.SetPixDimFromSForm();
   let nBytes = hdr.numBitsPerVoxel / 8 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
   if (pairedImgData.byteLength < nBytes) {
-    var raw = decompressSync(new Uint8Array(buffer));
+    var raw = decompressSync(new Uint8Array(pairedImgData));
     return raw.buffer;
   }
-  pairedImgData.slice();
   return pairedImgData.slice();
 };
 NVImage.prototype.readMHA = function(buffer2, pairedImgData) {
@@ -116863,6 +116862,7 @@ Niivue.prototype.sync = function() {
     this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
   }
   if (this.syncOpts["3d"]) {
+    console.log("3d sync");
     this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
@@ -118710,6 +118710,7 @@ Niivue.prototype.draw3D = function() {
   this.drawMesh3D(false, 0.02);
   this.drawCrosshairs3D(false, 0.15);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
+  this.readyForSync = true;
   this.sync();
   return posString;
 };
@@ -118768,6 +118769,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1) {
   }
   gl.enable(gl.BLEND);
   gl.depthFunc(gl.ALWAYS);
+  this.readyForSync = true;
 };
 Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
   if (!this.opts.show3Dcrosshair)
