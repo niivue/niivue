@@ -787,8 +787,62 @@ Niivue.prototype.keyUpListener = function (e) {
       this.setSliceType((this.sliceType + 1) % 5); // 5 total slice types
       this.lastCalled = now;
     }
-  }
+	} 
 };
+
+Niivue.prototype.keyDownListener = function (e) {
+	if (e.code === 'KeyH' && this.sliceType === this.sliceTypeRender){
+		this.setRenderAzimuthElevation(
+			this.scene.renderAzimuth - 1,
+			this.scene.renderElevation
+		)
+	}
+ 	else if (e.code === 'KeyL' && this.sliceType === this.sliceTypeRender){
+		this.setRenderAzimuthElevation(
+			this.scene.renderAzimuth + 1,
+			this.scene.renderElevation
+		)
+	}
+	else if (e.code === 'KeyJ' && this.sliceType === this.sliceTypeRender){
+		this.setRenderAzimuthElevation(
+			this.scene.renderAzimuth,
+			this.scene.renderElevation + 1
+		)
+	}
+	else if (e.code === 'KeyK' && this.sliceType === this.sliceTypeRender ){
+		this.setRenderAzimuthElevation(
+			this.scene.renderAzimuth,
+			this.scene.renderElevation - 1
+		)
+	}
+	else if (e.code === 'KeyH' && this.sliceType !== this.sliceTypeRender){
+		this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001
+		this.drawScene()
+	}
+	else if (e.code === 'KeyL' && this.sliceType !== this.sliceTypeRender){
+		this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001
+		this.drawScene()
+	}
+	else if (e.code === 'KeyU' && this.sliceType !== this.sliceTypeRender && e.ctrlKey){
+		this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001
+		this.drawScene()
+	}
+	else if (e.code === 'KeyD' && this.sliceType !== this.sliceTypeRender && e.ctrlKey){
+		this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001
+		this.drawScene()
+	}
+	else if (e.code === 'KeyJ' && this.sliceType !== this.sliceTypeRender){
+		this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001
+		this.drawScene()
+	}
+	else if (e.code === 'KeyK' && this.sliceType !== this.sliceTypeRender){
+		this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001
+		this.drawScene()
+	}
+	console.log(e.code)
+	console.log(e.ctrlKey)
+};
+
 
 // not included in public docs
 // handler for scroll wheel events (slice scrolling)
@@ -854,6 +908,9 @@ Niivue.prototype.registerInteractions = function () {
   this.canvas.setAttribute("tabindex", 0);
   this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
   this.canvas.focus();
+
+	// keydown
+	this.canvas.addEventListener("keydown", this.keyDownListener.bind(this), false);
 };
 
 // not included in public docs

@@ -43,9 +43,9 @@
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
     "daikon": "^1.2.42",
+    "fflate": "^0.7.3",
     "gifti-reader-js": "^0.4.4",
     "gl-matrix": "^3.4.3",
-    "fflate": "^0.7.3",
     "nifti-reader-js": "^0.5.4",
     "rxjs": "^7.4.0",
     "uuid": "^8.3.2"
@@ -54,7 +54,7 @@
     "clean-jsdoc-theme": "^3.3.1",
     "eslint": "^8.4.1",
     "express": "^4.17.1",
-    "http-server": "^14.0.0",
+    "http-server": "^14.1.0",
     "jest": "^27.4.4",
     "jest-image-snapshot": "^4.5.1",
     "jest-puppeteer": "^6.0.2",
