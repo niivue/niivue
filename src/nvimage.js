@@ -1,6 +1,5 @@
 import nifti from "nifti-reader-js";
 import daikon from "daikon";
-import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import * as cmaps from "./cmaps";
@@ -2084,11 +2083,11 @@ NVImage.prototype.saveToDisk = async function (fnm) {
 
   odata.set(this.img, hdrBytes.length + opad.length);
   //console.log('..', odata);
-  fs.writeFile(fnm, Buffer.from(odata), "binary", function (err) {
+  /*fs.writeFile(fnm, Buffer.from(odata), "binary", function (err) {
     if (err) {
       console.log(err);
     }
-  });
+  });*/
 }; // saveToDisk()
 
 /**
