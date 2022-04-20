@@ -373,6 +373,11 @@ NVMesh.prototype.updateConnectome = function (gl) {
       } //for j
     } //for i
   } //hasEdges
+  //calculate spatial extent of connectome: user adjusting node sizes may influence size
+  let obj = getExtents(pts);
+  this.furthestVertexFromOrigin = obj.mxDx;
+  this.extentsMin = obj.extentsMin;
+  this.extentsMax = obj.extentsMax;
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   //generate webGL buffers and vao
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
