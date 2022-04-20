@@ -1148,15 +1148,67 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
       console.log("No drawing open");
       return false;
     }
-    let ras = this.volumes[0].toRAS;
-    if (ras[0] === 1 && ras[5] === 1 && ras[10] === 1) {
+    let perm = this.volumes[0].permRAS;
+    
+    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
       await this.volumes[0].saveToDisk(fnm, this.drawBitmap); // createEmptyDrawing
       return true;
     } else {
-      console.log("Currently only RAS drawing....");
-      return false;
-    }
-  }
+      let dims = this.volumes[0].hdr.dims; //reverse to original
+      //reverse RAS to native space, layout is mrtrix MIF format
+      // for details see NVImage.readMIF()
+      let layout = [0, 0, 0];
+      for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            if ((Math.abs(perm[i]) -1) !== j) continue;
+            layout[j] = i  * Math.sign(perm[i]);
+          }
+      }
+      let stride = 1;
+      let instride = [1, 1, 1];
+      let inflip = [false, false, false];
+      for (let i = 0; i < layout.length; i++) {
+        for (let j = 0; j < layout.length; j++) {
+          let a = Math.abs(layout[j]);
+          if (a != i) continue;
+          instride[j] = stride;
+          //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+          if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+          stride *= dims[j + 1];
+        }
+      }
+      //lookup table for flips and stride offsets:
+      const range = (start, stop, step) =>
+        Array.from(
+          { length: (stop - start) / step + 1 },
+          (_, i) => start + i * step
+        );
+      let xlut = range(0, dims[1] - 1, 1);
+      if (inflip[0]) xlut = range(dims[1] - 1, 0, -1);
+      for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0];
+      let ylut = range(0, dims[2] - 1, 1);
+      if (inflip[1]) ylut = range(dims[2] - 1, 0, -1);
+      for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1];
+      let zlut = range(0, dims[3] - 1, 1);
+      if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
+      for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
+      //convert data
+      
+      let inVs = new Uint8Array(this.drawBitmap);
+      let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
+      let j = 0;
+      for (let z = 0; z < dims[3]; z++) {
+        for (let y = 0; y < dims[2]; y++) {
+          for (let x = 0; x < dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+      await this.volumes[0].saveToDisk(fnm, outVs);
+      return true;
+    } //if native image not RAS
+  } //save bitmap drawing
   await this.volumes[0].saveToDisk(fnm);
   return true;
 };
@@ -1429,6 +1481,13 @@ Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
 
 Niivue.prototype.setPenValue = function (penValue) {
   this.opts.penValue = penValue;
+  this.drawScene();
+};
+
+Niivue.prototype.setDrawOpacity = function (opacity) {
+  this.drawOpacity = opacity;
+  this.sliceShader.use(this.gl);
+  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.drawScene();
 };
 
@@ -1795,30 +1854,12 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
 };
 //Demonstrate how to create drawing
 Niivue.prototype.createRandomDrawing = function () {
+  if (!this.drawBitmap) this.createEmptyDrawing();
+  if (!this.back.hasOwnProperty("dims")) return;
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (vx !== this.drawBitmap.length) {
     log.error("Epic drawing failure");
   }
-
-  /*
-  let ptA = [1, 1, 33];
-  let ptB = [63, 78, 33];
-  this.drawLine(ptA, ptB, 1);
-  ptA = [1, 78, 33];
-  ptB = [63, 1, 33];
-  this.drawLine(ptA, ptB, 3);
-  ptA = [1, 40, 33];
-  ptB = [63, 45, 33];
-  this.drawLine(ptA, ptB, 2);
-	*/
-
-  //draw one line on each slice
-  /*
-  let dx = this.volumes[0].hdr.dims[1] - 1;
-  let dy = this.volumes[0].hdr.dims[2] - 1;
-  let dz = this.volumes[0].hdr.dims[3];
-	*/
-
   let dx = this.back.dims[1] - 1;
   let dy = this.back.dims[2] - 1;
   let dz = this.back.dims[3];
@@ -1830,7 +1871,7 @@ Niivue.prototype.createRandomDrawing = function () {
     ptB[2] = i;
     this.drawLine(ptA, ptB, (i % 3) + 1);
   }
-  this.refreshDrawing(false);
+  this.refreshDrawing(true);
 };
 
 //release GPU and CPU memory: make sure you have saved any changes before calling this!

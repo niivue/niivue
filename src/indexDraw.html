@@ -34,7 +34,11 @@
           <option value="2">Green</option>
           <option value="3">Blue</option>
         </select>
+        <button id="random">random lines</button>
         <button id="save">save drawing</button>
+        <div class="slidecontainer">
+          drawing opacity <input type="range" min="0" max="100" value="100" class="slider" id="drawOpacity">
+        </div>
       </div>
     </section>
     <!-- demo 1 -->
@@ -52,16 +56,26 @@
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
+    
+      document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
+      function doDrawOpacity(){
+        nv1.setDrawOpacity(this.value * 0.01);
+      }
       document.getElementById("drawPen").addEventListener("change", doDrawPen);
-      document.getElementById("save").addEventListener("click", doSave);
       function doDrawPen(){
         const mode = document.getElementById("drawPen").value;
         nv1.setDrawingEnabled(mode >= 0);
         if (mode >= 0)
           nv1.opts.penValue = mode;
       }
+      document.getElementById("random").addEventListener("click", doRandom);
+      function doRandom(){
+        nv1.createRandomDrawing(); 
+      }
+
+      document.getElementById("save").addEventListener("click", doSave);
       function doSave(){
-        nv1.saveImage('test.nii', true) 
+        nv1.saveImage('test.nii', true);
       }
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
@@ -73,7 +87,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/avg152T1_RL_nifti.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
@@ -93,7 +107,6 @@
       nv1.attachTo('gl1')
 
       await nv1.loadVolumes(volumeList1)
-
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}

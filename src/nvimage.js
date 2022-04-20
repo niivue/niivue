@@ -1714,15 +1714,9 @@ NVImage.prototype.calculateRAS = function () {
     }
   }
   let flip = [0, 0, 0];
-  if (R[0] < 0) {
-    flip[0] = 1; //R[0][0]
-  }
-  if (R[5] < 0) {
-    flip[1] = 1; //R[1][1]
-  }
-  if (R[10] < 0) {
-    flip[2] = 1; //R[2][2]
-  }
+  if (R[0] < 0) flip[0] = 1; //R[0][0]
+  if (R[5] < 0) flip[1] = 1; //R[1][1]
+  if (R[10] < 0) flip[2] = 1; //R[2][2]
   this.dimsRAS = [
     header.dims[0],
     header.dims[perm[0]],
@@ -1735,6 +1729,9 @@ NVImage.prototype.calculateRAS = function () {
     header.pixDims[perm[1]],
     header.pixDims[perm[2]],
   ];
+  this.permRAS = perm.slice();
+  for (let i = 0; i < 3; i++)
+    if (flip[i] === 1) this.permRAS[i] = -this.permRAS[i];
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
     this.toRAS = mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
     this.matRAS = mat4.clone(rotM);
