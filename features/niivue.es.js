@@ -104270,7 +104270,7 @@ function hdrToArrayBuffer(hdr) {
   view.setFloat32(276, hdr.qoffset_z, hdr.littleEndian);
   const flattened = hdr.affine.flat();
   for (let i2 = 0; i2 < 12; i2++) {
-    view.setFloat32(280 + FLOAT32_SIZE * i2, flattened[i2]);
+    view.setFloat32(280 + FLOAT32_SIZE * i2, flattened[i2], hdr.littleEndian);
   }
   byteArray.set(str2Buffer(hdr.intent_name), 328);
   byteArray.set(str2Buffer(hdr.magic), 344);
@@ -114001,6 +114001,10 @@ NVMesh.prototype.updateConnectome = function(gl) {
       }
     }
   }
+  let obj = getExtents(pts);
+  this.furthestVertexFromOrigin = obj.mxDx;
+  this.extentsMin = obj.extentsMin;
+  this.extentsMax = obj.extentsMax;
   let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW);
