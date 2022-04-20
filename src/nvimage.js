@@ -40,7 +40,7 @@ function isPlatformLittleEndian() {
  * @param {boolean} [visible=true] whether or not this image is to be visible
  */
 export function NVImage(
-  dataBuffer,
+  dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
   name = "",
   colorMap = "gray",
   opacity = 1.0,
@@ -49,6 +49,7 @@ export function NVImage(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+	isDICOMDIR = false,
   useQFormNotSForm = false
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
@@ -97,9 +98,13 @@ export function NVImage(
   }
   let imgRaw = null;
   this.hdr = null;
+	// if a single dicom image
   if (ext === "DCM") {
     imgRaw = this.readDICOM(dataBuffer);
-  } else if (ext === "MIH" || ext === "MIF") {
+		// if loading a DICOM directory
+	} else if (ext === '' && isDICOMDIR && Array.isArray(dataBuffer)){
+		imgRaw = this.readDICOM(dataBuffer);
+	} else if (ext === "MIH" || ext === "MIF") {
     imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
   } else if (ext === "NHDR" || ext === "NRRD") {
     imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
@@ -554,10 +559,16 @@ following conditions are met:
 
 NVImage.prototype.readDICOM = function (
   buf,
-  existingSeries = new daikon.Series()
 ) {
-  this.series = existingSeries;
+  this.series = new daikon.Series()
   // parse DICOM file
+	if (Array.isArray(buf)){
+		for (let i = 0; i<buf.length; i++){
+			console.log('readDICOM got filebuffer: ',buf[i])
+		}
+	}
+	return
+
   var image = daikon.Series.parseImage(new DataView(buf));
   if (image === null) {
     console.error(daikon.Series.parserError);
@@ -2213,7 +2224,7 @@ NVImage.readFileAsync = function (file) {
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
 NVImage.loadFromFile = async function ({
-  file = null,
+  file = null, // file can be an array of file objects or a single file object
   name = "",
   colorMap = "gray",
   opacity = 1.0,
@@ -2222,10 +2233,18 @@ NVImage.loadFromFile = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+	isDICOMDIR = false
 } = {}) {
   let nvimage = null;
+	let dataBuffer = []
   try {
-    let dataBuffer = await this.readFileAsync(file);
+		if (Array.isArray(file)){
+			for (let i=0; i<file.length; i++){
+				dataBuffer.push(await this.readFileAsync(file[i]));
+			}
+		} else {
+    	dataBuffer = await this.readFileAsync(file);
+		}
     let pairedImgData = null;
     if (urlImgData) {
       pairedImgData = await this.readFileAsync(urlImgData);
@@ -2240,7 +2259,8 @@ NVImage.loadFromFile = async function ({
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
-      visible
+      visible,
+			isDICOMDIR
     );
   } catch (err) {
     log.debug(err);

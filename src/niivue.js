@@ -1053,24 +1053,31 @@ Niivue.prototype.dropListener = async function (e) {
             }
           });
         } else if (entry.isDirectory) {
-          /* TODO directory reading for dicoms
 					let reader = entry.createReader();
 					let allFilesInDir = []
-      		await reader.readEntries(async function(entries) {
-						console.log(entries)
-        		entries.forEach(function(dir, key) {
-							dir.file(function(file) {
+					await reader.readEntries(async (entries) => {
+						//console.log(entries)
+						//entries.forEach((dir, key) => {
+						for (let i = 0; i<entries.length; i++) {
+							await entries[i].file(async (file) => {
 								var re = /(?:\.([^.]+))?$/;
 								let ext = re.exec(file.name)[1];
 								ext = ext.toUpperCase();
 								if (ext === 'DCM'){
-									console.log(file.name)
 									allFilesInDir.push(file)
+									if (i === entries.length -1){
+										console.log('reading dicom')
+										console.log(allFilesInDir)
+										let volume =  await NVImage.loadFromFile({
+											file: allFilesInDir, // an array of file objects
+											urlImgData: null, // nothing
+											isDICOMDIR:true // signify that this is a dicom directory
+										})
+									}
 								}
 							});
-        		})
+        		}
       		})
-				*/
         }
       }
     }
