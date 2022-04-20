@@ -113,6 +113,7 @@ export function Niivue(options = {}) {
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
   this.drawOpacity = 0.8;
+  this.drawPenLocation = [NaN, NaN, NaN];
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -476,6 +477,7 @@ Niivue.prototype.mouseContextMenuListener = function (e) {
 Niivue.prototype.mouseDownListener = function (e) {
   e.preventDefault();
   // var rect = this.canvas.getBoundingClientRect();
+  this.drawPenLocation = [NaN, NaN, NaN];
   this.scene.mousedown = true;
   if (e.button === this.scene.mouseButtonLeft) {
     this.scene.mouseButtonLeftDown = true;
@@ -602,6 +604,7 @@ Niivue.prototype.mouseUpListener = function () {
   this.scene.mousedown = false;
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseButtonLeftDown = false;
+  this.drawPenLocation = [NaN, NaN, NaN];
   if (this.isDragging) {
     this.isDragging = false;
     this.calculateNewRange();
@@ -1135,9 +1138,27 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
-Niivue.prototype.saveImage = async function (fnm) {
-  //console.log('bogo',this.volumes[0]);
+Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
+  if (!this.back.hasOwnProperty("dims")) {
+    console.log("No voxelwise image open");
+    return false;
+  }
+  if (isSaveDrawing) {
+    if (!this.drawBitmap) {
+      console.log("No drawing open");
+      return false;
+    }
+    let ras = this.volumes[0].toRAS;
+    if (ras[0] === 1 && ras[5] === 1 && ras[10] === 1) {
+      await this.volumes[0].saveToDisk(fnm, this.drawBitmap); // createEmptyDrawing
+      return true;
+    } else {
+      console.log("Currently only RAS drawing....");
+      return false;
+    }
+  }
   await this.volumes[0].saveToDisk(fnm);
+  return true;
 };
 
 Niivue.prototype.getMeshIndexByID = function (id) {
@@ -1401,7 +1422,7 @@ Niivue.prototype.setCrosshairColor = function (color) {
 Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
   this.opts.drawingEnabled = trueOrFalse;
   if (this.opts.drawingEnabled) {
-    this.createEmptyDrawing();
+    if (!this.drawBitmap) this.createEmptyDrawing();
   }
   this.drawScene();
 };
@@ -1811,6 +1832,7 @@ Niivue.prototype.createRandomDrawing = function () {
   }
   this.refreshDrawing(false);
 };
+
 //release GPU and CPU memory: make sure you have saved any changes before calling this!
 Niivue.prototype.closeDrawing = function () {
   this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
@@ -2982,10 +3004,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2] = fracY;
       }
       if (this.opts.drawingEnabled) {
-        this.drawPt(
-          ...this.frac2vox(this.scene.crosshairPos),
-          this.opts.penValue
-        );
+        let pt = this.frac2vox(this.scene.crosshairPos);
+        if (isNaN(this.drawPenLocation[0]))
+          this.drawPt(...pt, this.opts.penValue);
+        else this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
+        this.drawPenLocation = pt;
         this.refreshDrawing(false);
       }
       this.drawScene();
