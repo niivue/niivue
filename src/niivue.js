@@ -114,6 +114,7 @@ export function Niivue(options = {}) {
   this.drawBitmap = null; //the CPU memory storage of the drawing
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
+  this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -478,6 +479,7 @@ Niivue.prototype.mouseDownListener = function (e) {
   e.preventDefault();
   // var rect = this.canvas.getBoundingClientRect();
   this.drawPenLocation = [NaN, NaN, NaN];
+  this.drawPenAxCorSag = -1;
   this.scene.mousedown = true;
   if (e.button === this.scene.mouseButtonLeft) {
     this.scene.mouseButtonLeftDown = true;
@@ -605,6 +607,7 @@ Niivue.prototype.mouseUpListener = function () {
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseButtonLeftDown = false;
   this.drawPenLocation = [NaN, NaN, NaN];
+  this.drawPenAxCorSag = -1;
   if (this.isDragging) {
     this.isDragging = false;
     this.calculateNewRange();
@@ -1149,7 +1152,7 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
       return false;
     }
     let perm = this.volumes[0].permRAS;
-    
+
     if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
       await this.volumes[0].saveToDisk(fnm, this.drawBitmap); // createEmptyDrawing
       return true;
@@ -1159,10 +1162,10 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
       // for details see NVImage.readMIF()
       let layout = [0, 0, 0];
       for (let i = 0; i < 3; i++) {
-          for (let j = 0; j < 3; j++) {
-            if ((Math.abs(perm[i]) -1) !== j) continue;
-            layout[j] = i  * Math.sign(perm[i]);
-          }
+        for (let j = 0; j < 3; j++) {
+          if (Math.abs(perm[i]) - 1 !== j) continue;
+          layout[j] = i * Math.sign(perm[i]);
+        }
       }
       let stride = 1;
       let instride = [1, 1, 1];
@@ -1193,7 +1196,7 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
       if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
       for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
       //convert data
-      
+
       let inVs = new Uint8Array(this.drawBitmap);
       let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
       let j = 0;
@@ -2993,6 +2996,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   // https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
   for (let i = 0; i < this.numScreenSlices; i++) {
     var axCorSag = this.screenSlices[i].axCorSag;
+    if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag)
+      continue; //if mouse is drawing on axial slice, ignore any entry to coronal slice
     if (axCorSag > this.sliceTypeSagittal) continue;
     var ltwh = this.screenSlices[i].leftTopWidthHeight;
     let isMirror = false;
@@ -3046,9 +3051,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
-        if (isNaN(this.drawPenLocation[0]))
+        if (isNaN(this.drawPenLocation[0])) {
+          this.drawPenAxCorSag = axCorSag;
           this.drawPt(...pt, this.opts.penValue);
-        else this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
+        } else this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
         this.drawPenLocation = pt;
         this.refreshDrawing(false);
       }
