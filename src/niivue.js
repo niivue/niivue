@@ -1073,6 +1073,7 @@ Niivue.prototype.dropListener = async function (e) {
                       urlImgData: null, // nothing
                       isDICOMDIR: true, // signify that this is a dicom directory
                     });
+                    this.addVolume(volume);
                   }
                 }
               });
