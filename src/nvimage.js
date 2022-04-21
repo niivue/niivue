@@ -98,10 +98,7 @@ export function NVImage(
   }
   let imgRaw = null;
   this.hdr = null;
-  if (ext === "DCM") {
-    imgRaw = this.readDICOM(dataBuffer);
-    // if loading a DICOM directory
-  } else if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
+  if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
     imgRaw = this.readDICOM(dataBuffer);
   } else if (ext === "MIH" || ext === "MIF") {
     imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
@@ -119,7 +116,7 @@ export function NVImage(
     imgRaw = this.readVMR(dataBuffer);
   } else if (ext === "HEAD") {
     imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
-  } else {
+  } else if (ext === "NII") {
     this.hdr = nifti.readHeader(dataBuffer);
     if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
       this.hdr.cal_max = 0.0;
@@ -128,6 +125,9 @@ export function NVImage(
     } else {
       imgRaw = nifti.readImage(this.hdr, dataBuffer);
     }
+  } else { //DICOMs do not always end .dcm, so DICOM is our format of last resort
+    imgRaw = this.readDICOM(dataBuffer);
+    // if loading a DICOM directory
   }
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
