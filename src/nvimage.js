@@ -1236,6 +1236,8 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
 
 NVImage.prototype.readMIF = function (buffer, pairedImgData) {
   //https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
+  //MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
+  //This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
@@ -1331,7 +1333,13 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
         break;
     }
   }
-  let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
+  let ndim = hdr.dims[0];
+  if (ndim > 5) console.log("reader only designed for a maximum of 5 dimensions (XYZTD)");
+  let nvox = 1;
+  for (let i = 0; i < ndim; i++)
+    nvox *= Math.max(hdr.dims[i+1], 1);
+  console.log(nvox);
+  //let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
       //hdr.affine[i][j] *= hdr.pixDims[i + 1];
@@ -1351,7 +1359,6 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
       hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8)
     );
   if (layout.length != hdr.dims[0]) console.log("dims does not match layout");
-  if (hdr.dims[0] > 4) console.log("reader only designed for 4D data (XYZT)");
   //estimate strides:
   let stride = 1;
   let instride = [1, 1, 1, 1, 1];
@@ -1381,6 +1388,12 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
   let zlut = range(0, hdr.dims[3] - 1, 1);
   if (inflip[2]) zlut = range(hdr.dims[3] - 1, 0, -1);
   for (let i = 0; i < hdr.dims[3]; i++) zlut[i] *= instride[2];
+  let tlut = range(0, hdr.dims[4] - 1, 1);
+  if (inflip[3]) tlut = range(hdr.dims[4] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[4]; i++) tlut[i] *= instride[3];
+  let dlut = range(0, hdr.dims[5] - 1, 1);
+  if (inflip[4]) dlut = range(hdr.dims[5] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[5]; i++) dlut[i] *= instride[4];
   //input and output arrays
   let j = 0;
   let inVs = [];
@@ -1401,16 +1414,18 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
     inVs = new BigUint64Array(rawImg);
     outVs = new BigUint64Array(nvox);
   } //64bit
-  for (let t = 0; t < hdr.dims[4]; t++) {
-    for (let z = 0; z < hdr.dims[3]; z++) {
-      for (let y = 0; y < hdr.dims[2]; y++) {
-        for (let x = 0; x < hdr.dims[1]; x++) {
-          outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
-          j++;
-        } //for x
-      } //for y
-    } //for z
-  } //for t
+  for (let d = 0; d < hdr.dims[5]; d++) {
+    for (let t = 0; t < hdr.dims[4]; t++) {
+      for (let z = 0; z < hdr.dims[3]; z++) {
+        for (let y = 0; y < hdr.dims[2]; y++) {
+          for (let x = 0; x < hdr.dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z] + tlut[t] + dlut[d]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+    } //for t (time)
+  } // for d (direction, phase/real, etc)
   return outVs;
 }; // readMIF()
 
