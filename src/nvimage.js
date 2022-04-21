@@ -564,23 +564,20 @@ NVImage.prototype.readDICOM = function (
   // parse DICOM file
 	if (Array.isArray(buf)){
 		for (let i = 0; i<buf.length; i++){
-			console.log('readDICOM got filebuffer: ',buf[i])
-		}
-	}
-	return
-
-  var image = daikon.Series.parseImage(new DataView(buf));
-  if (image === null) {
-    console.error(daikon.Series.parserError);
-  } else if (image.hasPixelData()) {
-    // if it's part of the same series, add it
-    if (
-      this.series.images.length === 0 ||
-      image.getSeriesId() === this.series.images[0].getSeriesId()
-    ) {
-      this.series.addImage(image);
-    }
-  }
+			let image = daikon.Series.parseImage(new DataView(buf[i]));
+			if (image === null) {
+					console.error(daikon.Series.parserError);
+			} else if (image.hasPixelData()) {
+					// if it's part of the same series, add it
+				if (
+					this.series.images.length === 0 ||
+					image.getSeriesId() === this.series.images[0].getSeriesId()
+				) {
+					this.series.addImage(image);
+				}
+			} // if hasPixelData
+		} // for i
+	} // Array.isArray
   // order the image files, determines number of frames, etc.
   this.series.buildSeries();
   // output some header info
@@ -633,19 +630,23 @@ NVImage.prototype.readDICOM = function (
   console.log("DICOM", this.series.images[0]);
   console.log("NIfTI", hdr);
   let imgRaw = [];
-  let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
-  if (true) {
-    imgRaw = new Uint8Array(byteLength);
-    for (var i = 1; i < byteLength; i++) imgRaw[i] = i % 255;
-  } else {
-    //TODO
-    series.concatenateImageData(null, function (imageData) {
-      console.log(
-        "Total image data size is " + imageData.byteLength + " bytes"
-      );
-      imgRaw = imageData.slice();
-    });
-  }
+  //let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
+	let data
+	let length = this.series.validatePixelDataLength(this.series.images[0])
+	let buffer = new Uint8Array(new ArrayBuffer(length * this.series.images.length))	
+	// implementation copied from:
+	// https://github.com/rii-mango/Daikon/blob/bbe08bad9758dfbdf31ca22fb79048c7bad85706/src/series.js#L496
+	for (let i=0; i<this.series.images.length; i++){
+		if (this.series.isMosaic) {
+			data = this.series.getMosaicData(this.series.images[i], this.series.images[i].getPixelDataBytes());
+		} else {
+			data = this.series.images[i].getPixelDataBytes();
+		}
+		length = this.series.validatePixelDataLength(this.series.images[i])
+		this.series.images[i].clearPixelData()
+		buffer.set(new Uint8Array(data, 0, length), length * i)
+	} // for images.length
+	imgRaw = buffer.buffer
   return imgRaw;
 }; // readDICOM()
 
