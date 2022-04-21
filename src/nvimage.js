@@ -626,6 +626,7 @@ NVImage.prototype.readDICOM = function (buf) {
   let dt = this.series.images[0].getDataType(); //2=int,3=uint,4=float,
   let bpv = this.series.images[0].getBitsAllocated();
   hdr.numBitsPerVoxel = bpv;
+  this.hdr.littleEndian = this.series.images[0].littleEndian;
   if (bpv === 8 && dt === 2) hdr.datatypeCode = this.DT_INT8;
   else if (bpv === 8 && dt === 3) hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
   else if (bpv === 16 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_SHORT;
@@ -651,7 +652,7 @@ NVImage.prototype.readDICOM = function (buf) {
     ];
   }
   console.log("DICOM", this.series.images[0]);
-  console.log("num DICOM files", this.series.images.length);
+  console.log("series length DICOM", this.series.images.length);
   console.log("NIfTI", hdr);
   let imgRaw = [];
   //let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
