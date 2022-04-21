@@ -49,7 +49,7 @@ export function NVImage(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-	isDICOMDIR = false,
+  isDICOMDIR = false,
   useQFormNotSForm = false
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
@@ -98,13 +98,12 @@ export function NVImage(
   }
   let imgRaw = null;
   this.hdr = null;
-	// if a single dicom image
   if (ext === "DCM") {
     imgRaw = this.readDICOM(dataBuffer);
-		// if loading a DICOM directory
-	} else if (ext === '' && isDICOMDIR && Array.isArray(dataBuffer)){
-		imgRaw = this.readDICOM(dataBuffer);
-	} else if (ext === "MIH" || ext === "MIF") {
+    // if loading a DICOM directory
+  } else if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
+    imgRaw = this.readDICOM(dataBuffer);
+  } else if (ext === "MIH" || ext === "MIF") {
     imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
   } else if (ext === "NHDR" || ext === "NRRD") {
     imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
@@ -557,27 +556,39 @@ following conditions are met:
   return m;
 }
 
-NVImage.prototype.readDICOM = function (
-  buf,
-) {
-  this.series = new daikon.Series()
+NVImage.prototype.readDICOM = function (buf) {
+  this.series = new daikon.Series();
   // parse DICOM file
-	if (Array.isArray(buf)){
-		for (let i = 0; i<buf.length; i++){
-			let image = daikon.Series.parseImage(new DataView(buf[i]));
-			if (image === null) {
-					console.error(daikon.Series.parserError);
-			} else if (image.hasPixelData()) {
-					// if it's part of the same series, add it
-				if (
-					this.series.images.length === 0 ||
-					image.getSeriesId() === this.series.images[0].getSeriesId()
-				) {
-					this.series.addImage(image);
-				}
-			} // if hasPixelData
-		} // for i
-	} // Array.isArray
+  if (Array.isArray(buf)) {
+    for (let i = 0; i < buf.length; i++) {
+      let image = daikon.Series.parseImage(new DataView(buf[i]));
+      if (image === null) {
+        console.error(daikon.Series.parserError);
+      } else if (image.hasPixelData()) {
+        // if it's part of the same series, add it
+        if (
+          this.series.images.length === 0 ||
+          image.getSeriesId() === this.series.images[0].getSeriesId()
+        ) {
+          this.series.addImage(image);
+        }
+      } // if hasPixelData
+    } // for i
+  } else {
+    // Array.isArray
+    var image = daikon.Series.parseImage(new DataView(buf));
+    if (image === null) {
+      console.error(daikon.Series.parserError);
+    } else if (image.hasPixelData()) {
+      // if it's part of the same series, add it
+      if (
+        this.series.images.length === 0 ||
+        image.getSeriesId() === this.series.images[0].getSeriesId()
+      ) {
+        this.series.addImage(image);
+      }
+    }
+  }
   // order the image files, determines number of frames, etc.
   this.series.buildSeries();
   // output some header info
@@ -585,13 +596,25 @@ NVImage.prototype.readDICOM = function (
   // concat the image data into a single ArrayBuffer
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
-  hdr.scl_inter = this.series.images[0].getDataScaleIntercept();
-  hdr.scl_slope = this.series.images[0].getDataScaleSlope();
+  hdr.scl_inter = 0;
+  hdr.scl_slope = 1;
+  if (this.series.images[0].getDataScaleIntercept())
+    hdr.scl_inter = this.series.images[0].getDataScaleIntercept();
+  if (this.series.images[0].getDataScaleSlope())
+    hdr.scl_slope = this.series.images[0].getDataScaleSlope();
+  if (hdr.scl_slope === 0) hdr.scl_slope;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
   hdr.dims[1] = this.series.images[0].getCols();
   hdr.dims[2] = this.series.images[0].getRows();
   hdr.dims[3] = this.series.images[0].getNumberOfFrames();
+  if (this.series.images.length > 1) {
+    if (hdr.dims[3] > 1)
+      console.log(
+        "To Do: multiple slices per file and multiple files (XA30 DWI)"
+      );
+    hdr.dims[3] = this.series.images.length;
+  }
   let rc = this.series.images[0].getPixelSpacing(); //TODO: order?
   hdr.pixDims[1] = rc[0];
   hdr.pixDims[2] = rc[1];
@@ -628,25 +651,31 @@ NVImage.prototype.readDICOM = function (
     ];
   }
   console.log("DICOM", this.series.images[0]);
+  console.log("num DICOM files", this.series.images.length);
   console.log("NIfTI", hdr);
   let imgRaw = [];
   //let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
-	let data
-	let length = this.series.validatePixelDataLength(this.series.images[0])
-	let buffer = new Uint8Array(new ArrayBuffer(length * this.series.images.length))	
-	// implementation copied from:
-	// https://github.com/rii-mango/Daikon/blob/bbe08bad9758dfbdf31ca22fb79048c7bad85706/src/series.js#L496
-	for (let i=0; i<this.series.images.length; i++){
-		if (this.series.isMosaic) {
-			data = this.series.getMosaicData(this.series.images[i], this.series.images[i].getPixelDataBytes());
-		} else {
-			data = this.series.images[i].getPixelDataBytes();
-		}
-		length = this.series.validatePixelDataLength(this.series.images[i])
-		this.series.images[i].clearPixelData()
-		buffer.set(new Uint8Array(data, 0, length), length * i)
-	} // for images.length
-	imgRaw = buffer.buffer
+  let data;
+  let length = this.series.validatePixelDataLength(this.series.images[0]);
+  let buffer = new Uint8Array(
+    new ArrayBuffer(length * this.series.images.length)
+  );
+  // implementation copied from:
+  // https://github.com/rii-mango/Daikon/blob/bbe08bad9758dfbdf31ca22fb79048c7bad85706/src/series.js#L496
+  for (let i = 0; i < this.series.images.length; i++) {
+    if (this.series.isMosaic) {
+      data = this.series.getMosaicData(
+        this.series.images[i],
+        this.series.images[i].getPixelDataBytes()
+      );
+    } else {
+      data = this.series.images[i].getPixelDataBytes();
+    }
+    length = this.series.validatePixelDataLength(this.series.images[i]);
+    this.series.images[i].clearPixelData();
+    buffer.set(new Uint8Array(data, 0, length), length * i);
+  } // for images.length
+  imgRaw = buffer.buffer;
   return imgRaw;
 }; // readDICOM()
 
@@ -2140,7 +2169,6 @@ NVImage.loadFromUrl = async function ({
   if (url === "") {
     throw Error("url must not be empty");
   }
-
   let response = await fetch(url);
   let nvimage = null;
   if (!response.ok) {
@@ -2234,18 +2262,18 @@ NVImage.loadFromFile = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-	isDICOMDIR = false
+  isDICOMDIR = false,
 } = {}) {
   let nvimage = null;
-	let dataBuffer = []
+  let dataBuffer = [];
   try {
-		if (Array.isArray(file)){
-			for (let i=0; i<file.length; i++){
-				dataBuffer.push(await this.readFileAsync(file[i]));
-			}
-		} else {
-    	dataBuffer = await this.readFileAsync(file);
-		}
+    if (Array.isArray(file)) {
+      for (let i = 0; i < file.length; i++) {
+        dataBuffer.push(await this.readFileAsync(file[i]));
+      }
+    } else {
+      dataBuffer = await this.readFileAsync(file);
+    }
     let pairedImgData = null;
     if (urlImgData) {
       pairedImgData = await this.readFileAsync(urlImgData);
@@ -2261,7 +2289,7 @@ NVImage.loadFromFile = async function ({
       percentileFrac,
       ignoreZeroVoxels,
       visible,
-			isDICOMDIR
+      isDICOMDIR
     );
   } catch (err) {
     log.debug(err);
