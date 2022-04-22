@@ -125,7 +125,8 @@ export function NVImage(
     } else {
       imgRaw = nifti.readImage(this.hdr, dataBuffer);
     }
-  } else { //DICOMs do not always end .dcm, so DICOM is our format of last resort
+  } else {
+    //DICOMs do not always end .dcm, so DICOM is our format of last resort
     imgRaw = this.readDICOM(dataBuffer);
     // if loading a DICOM directory
   }
@@ -534,14 +535,14 @@ following conditions are met:
     m = [
       [
         cosx[0] * vs.colSize * -1,
-        cosy[0] * vs.rowSize,
-        cosz[0] * vs.sliceSize,
+        cosy[0] * vs.rowSize * -1,
+        cosz[0] * vs.sliceSize * -1,
         -1 * coord[0],
       ],
       [
-        cosx[1] * vs.colSize,
+        cosx[1] * vs.colSize * -1,
         cosy[1] * vs.rowSize * -1,
-        cosz[1] * vs.sliceSize,
+        cosz[1] * vs.sliceSize * -1,
         -1 * coord[1],
       ],
       [
@@ -554,7 +555,7 @@ following conditions are met:
     ];
   }
   return m;
-}
+} // getBestTransform()
 
 NVImage.prototype.readDICOM = function (buf) {
   this.series = new daikon.Series();
@@ -592,8 +593,6 @@ NVImage.prototype.readDICOM = function (buf) {
   // order the image files, determines number of frames, etc.
   this.series.buildSeries();
   // output some header info
-  console.log("Number of images read is " + this.series.images.length);
-  // concat the image data into a single ArrayBuffer
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
   hdr.scl_inter = 0;
@@ -637,6 +636,9 @@ NVImage.prototype.readDICOM = function (buf) {
   else if (bpv === 64 && dt === 4) hdr.datatypeCode = this.DT_DOUBLE;
   else console.log("Unsupported DICOM format: " + dt + " " + bpv);
   let voxelDimensions = hdr.pixDims.slice(1, 4);
+  //console.log("dir", this.series.images[0].getImageDirections());
+  //console.log("pos", this.series.images[0].getImagePosition());
+  //console.log("dims", voxelDimensions);
   let m = getBestTransform(
     this.series.images[0].getImageDirections(),
     voxelDimensions,
@@ -652,7 +654,6 @@ NVImage.prototype.readDICOM = function (buf) {
     ];
   }
   console.log("DICOM", this.series.images[0]);
-  console.log("series length DICOM", this.series.images.length);
   console.log("NIfTI", hdr);
   let imgRaw = [];
   //let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
@@ -1334,10 +1335,10 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
     }
   }
   let ndim = hdr.dims[0];
-  if (ndim > 5) console.log("reader only designed for a maximum of 5 dimensions (XYZTD)");
+  if (ndim > 5)
+    console.log("reader only designed for a maximum of 5 dimensions (XYZTD)");
   let nvox = 1;
-  for (let i = 0; i < ndim; i++)
-    nvox *= Math.max(hdr.dims[i+1], 1);
+  for (let i = 0; i < ndim; i++) nvox *= Math.max(hdr.dims[i + 1], 1);
   console.log(nvox);
   //let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
   for (let i = 0; i < 3; i++) {
