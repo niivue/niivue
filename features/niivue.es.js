@@ -102568,7 +102568,7 @@ function isPlatformLittleEndian() {
   new DataView(buffer2).setInt16(0, 256, true);
   return new Int16Array(buffer2)[0] === 256;
 }
-function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, isDICOMDIR = false, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -102611,7 +102611,7 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   }
   let imgRaw = null;
   this.hdr = null;
-  if (ext === "DCM") {
+  if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
     imgRaw = this.readDICOM(dataBuffer);
   } else if (ext === "MIH" || ext === "MIF") {
     imgRaw = this.readMIF(dataBuffer, pairedImgData);
@@ -102629,7 +102629,7 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
     imgRaw = this.readVMR(dataBuffer);
   } else if (ext === "HEAD") {
     imgRaw = this.readHEAD(dataBuffer, pairedImgData);
-  } else {
+  } else if (ext === "NII") {
     this.hdr = nifti.readHeader(dataBuffer);
     if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
       this.hdr.cal_max = 0;
@@ -102638,6 +102638,8 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
     } else {
       imgRaw = nifti.readImage(this.hdr, dataBuffer);
     }
+  } else {
+    imgRaw = this.readDICOM(dataBuffer);
   }
   this.nFrame4D = 1;
   for (let i2 = 4; i2 < 7; i2++)
@@ -102946,14 +102948,14 @@ function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
     m = [
       [
         cosx[0] * vs.colSize * -1,
-        cosy[0] * vs.rowSize,
-        cosz[0] * vs.sliceSize,
+        cosy[0] * vs.rowSize * -1,
+        cosz[0] * vs.sliceSize * -1,
         -1 * coord[0]
       ],
       [
-        cosx[1] * vs.colSize,
+        cosx[1] * vs.colSize * -1,
         cosy[1] * vs.rowSize * -1,
-        cosz[1] * vs.sliceSize,
+        cosz[1] * vs.sliceSize * -1,
         -1 * coord[1]
       ],
       [
@@ -102967,27 +102969,50 @@ function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
   }
   return m;
 }
-NVImage.prototype.readDICOM = function(buf, existingSeries = new daikon.Series()) {
-  this.series = existingSeries;
-  var image2 = daikon.Series.parseImage(new DataView(buf));
-  if (image2 === null) {
-    console.error(daikon.Series.parserError);
-  } else if (image2.hasPixelData()) {
-    if (this.series.images.length === 0 || image2.getSeriesId() === this.series.images[0].getSeriesId()) {
-      this.series.addImage(image2);
+NVImage.prototype.readDICOM = function(buf) {
+  this.series = new daikon.Series();
+  if (Array.isArray(buf)) {
+    for (let i2 = 0; i2 < buf.length; i2++) {
+      let image3 = daikon.Series.parseImage(new DataView(buf[i2]));
+      if (image3 === null) {
+        console.error(daikon.Series.parserError);
+      } else if (image3.hasPixelData()) {
+        if (this.series.images.length === 0 || image3.getSeriesId() === this.series.images[0].getSeriesId()) {
+          this.series.addImage(image3);
+        }
+      }
+    }
+  } else {
+    var image2 = daikon.Series.parseImage(new DataView(buf));
+    if (image2 === null) {
+      console.error(daikon.Series.parserError);
+    } else if (image2.hasPixelData()) {
+      if (this.series.images.length === 0 || image2.getSeriesId() === this.series.images[0].getSeriesId()) {
+        this.series.addImage(image2);
+      }
     }
   }
   this.series.buildSeries();
-  console.log("Number of images read is " + this.series.images.length);
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
-  hdr.scl_inter = this.series.images[0].getDataScaleIntercept();
-  hdr.scl_slope = this.series.images[0].getDataScaleSlope();
+  hdr.scl_inter = 0;
+  hdr.scl_slope = 1;
+  if (this.series.images[0].getDataScaleIntercept())
+    hdr.scl_inter = this.series.images[0].getDataScaleIntercept();
+  if (this.series.images[0].getDataScaleSlope())
+    hdr.scl_slope = this.series.images[0].getDataScaleSlope();
+  if (hdr.scl_slope === 0)
+    hdr.scl_slope;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
   hdr.dims[1] = this.series.images[0].getCols();
   hdr.dims[2] = this.series.images[0].getRows();
   hdr.dims[3] = this.series.images[0].getNumberOfFrames();
+  if (this.series.images.length > 1) {
+    if (hdr.dims[3] > 1)
+      console.log("To Do: multiple slices per file and multiple files (XA30 DWI)");
+    hdr.dims[3] = this.series.images.length;
+  }
   let rc = this.series.images[0].getPixelSpacing();
   hdr.pixDims[1] = rc[0];
   hdr.pixDims[2] = rc[1];
@@ -102996,6 +103021,7 @@ NVImage.prototype.readDICOM = function(buf, existingSeries = new daikon.Series()
   let dt = this.series.images[0].getDataType();
   let bpv = this.series.images[0].getBitsAllocated();
   hdr.numBitsPerVoxel = bpv;
+  this.hdr.littleEndian = this.series.images[0].littleEndian;
   if (bpv === 8 && dt === 2)
     hdr.datatypeCode = this.DT_INT8;
   else if (bpv === 8 && dt === 3)
@@ -103028,12 +103054,20 @@ NVImage.prototype.readDICOM = function(buf, existingSeries = new daikon.Series()
   console.log("DICOM", this.series.images[0]);
   console.log("NIfTI", hdr);
   let imgRaw = [];
-  let byteLength2 = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
-  {
-    imgRaw = new Uint8Array(byteLength2);
-    for (var i2 = 1; i2 < byteLength2; i2++)
-      imgRaw[i2] = i2 % 255;
+  let data;
+  let length2 = this.series.validatePixelDataLength(this.series.images[0]);
+  let buffer2 = new Uint8Array(new ArrayBuffer(length2 * this.series.images.length));
+  for (let i2 = 0; i2 < this.series.images.length; i2++) {
+    if (this.series.isMosaic) {
+      data = this.series.getMosaicData(this.series.images[i2], this.series.images[i2].getPixelDataBytes());
+    } else {
+      data = this.series.images[i2].getPixelDataBytes();
+    }
+    length2 = this.series.validatePixelDataLength(this.series.images[i2]);
+    this.series.images[i2].clearPixelData();
+    buffer2.set(new Uint8Array(data, 0, length2), length2 * i2);
   }
+  imgRaw = buffer2.buffer;
   return imgRaw;
 };
 NVImage.prototype.readECAT = function(buffer2) {
@@ -103668,7 +103702,13 @@ NVImage.prototype.readMIF = function(buffer2, pairedImgData) {
         break;
     }
   }
-  let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
+  let ndim = hdr.dims[0];
+  if (ndim > 5)
+    console.log("reader only designed for a maximum of 5 dimensions (XYZTD)");
+  let nvox = 1;
+  for (let i2 = 0; i2 < ndim; i2++)
+    nvox *= Math.max(hdr.dims[i2 + 1], 1);
+  console.log(nvox);
   for (let i2 = 0; i2 < 3; i2++) {
     for (let j2 = 0; j2 < 3; j2++) {
       hdr.affine[i2][j2] *= hdr.pixDims[j2 + 1];
@@ -103686,8 +103726,6 @@ NVImage.prototype.readMIF = function(buffer2, pairedImgData) {
     rawImg = buffer2.slice(hdr.vox_offset, hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8));
   if (layout.length != hdr.dims[0])
     console.log("dims does not match layout");
-  if (hdr.dims[0] > 4)
-    console.log("reader only designed for 4D data (XYZT)");
   let stride = 1;
   let instride = [1, 1, 1, 1, 1];
   let inflip = [false, false, false, false, false];
@@ -103718,6 +103756,16 @@ NVImage.prototype.readMIF = function(buffer2, pairedImgData) {
     zlut = range(hdr.dims[3] - 1, 0, -1);
   for (let i2 = 0; i2 < hdr.dims[3]; i2++)
     zlut[i2] *= instride[2];
+  let tlut = range(0, hdr.dims[4] - 1, 1);
+  if (inflip[3])
+    tlut = range(hdr.dims[4] - 1, 0, -1);
+  for (let i2 = 0; i2 < hdr.dims[4]; i2++)
+    tlut[i2] *= instride[3];
+  let dlut = range(0, hdr.dims[5] - 1, 1);
+  if (inflip[4])
+    dlut = range(hdr.dims[5] - 1, 0, -1);
+  for (let i2 = 0; i2 < hdr.dims[5]; i2++)
+    dlut[i2] *= instride[4];
   let j = 0;
   let inVs = [];
   let outVs = [];
@@ -103737,12 +103785,14 @@ NVImage.prototype.readMIF = function(buffer2, pairedImgData) {
     inVs = new BigUint64Array(rawImg);
     outVs = new BigUint64Array(nvox);
   }
-  for (let t = 0; t < hdr.dims[4]; t++) {
-    for (let z = 0; z < hdr.dims[3]; z++) {
-      for (let y = 0; y < hdr.dims[2]; y++) {
-        for (let x2 = 0; x2 < hdr.dims[1]; x2++) {
-          outVs[j] = inVs[xlut[x2] + ylut[y] + zlut[z]];
-          j++;
+  for (let d = 0; d < hdr.dims[5]; d++) {
+    for (let t = 0; t < hdr.dims[4]; t++) {
+      for (let z = 0; z < hdr.dims[3]; z++) {
+        for (let y = 0; y < hdr.dims[2]; y++) {
+          for (let x2 = 0; x2 < hdr.dims[1]; x2++) {
+            outVs[j] = inVs[xlut[x2] + ylut[y] + zlut[z] + tlut[t] + dlut[d]];
+            j++;
+          }
         }
       }
     }
@@ -104390,17 +104440,25 @@ NVImage.loadFromFile = async function({
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true
+  visible = true,
+  isDICOMDIR = false
 } = {}) {
   let nvimage = null;
+  let dataBuffer = [];
   try {
-    let dataBuffer = await this.readFileAsync(file);
+    if (Array.isArray(file)) {
+      for (let i2 = 0; i2 < file.length; i2++) {
+        dataBuffer.push(await this.readFileAsync(file[i2]));
+      }
+    } else {
+      dataBuffer = await this.readFileAsync(file);
+    }
     let pairedImgData = null;
     if (urlImgData) {
       pairedImgData = await this.readFileAsync(urlImgData);
     }
     name = file.name;
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, isDICOMDIR);
   } catch (err2) {
     log$2.debug(err2);
   }
@@ -117593,7 +117651,7 @@ Niivue.prototype.dropListener = async function(e) {
         this.meshes = [];
       }
       for (const item of items) {
-        const entry = item.webkitGetAsEntry();
+        const entry = item.getAsEntry || item.webkitGetAsEntry();
         if (entry.isFile) {
           let ext = this.getFileExt(entry.name);
           if (ext === "PNG") {
@@ -117605,7 +117663,7 @@ Niivue.prototype.dropListener = async function(e) {
           let pairedImageData = "";
           if (entry.name.lastIndexOf("HEAD") !== -1) {
             for (const pairedItem of items) {
-              const pairedEntry = pairedItem.webkitGetAsEntry();
+              const pairedEntry = pairedItem.getAsEntry || pairedItem.webkitGetAsEntry();
               let fileBaseName = entry.name.substring(0, entry.name.lastIndexOf("HEAD"));
               let pairedItemBaseName = pairedEntry.name.substring(0, pairedEntry.name.lastIndexOf("BRIK"));
               if (fileBaseName === pairedItemBaseName) {
