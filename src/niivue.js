@@ -1054,6 +1054,7 @@ Niivue.prototype.dropListener = async function (e) {
             }
           });
         } else if (entry.isDirectory) {
+					/*
           let reader = entry.createReader();
           var allFilesInDir = [];
           let n = 0;
@@ -1084,6 +1085,7 @@ Niivue.prototype.dropListener = async function (e) {
             });
           };
           readEntries();
+					*/
         }
       }
     }
