@@ -113,6 +113,8 @@ export function Niivue(options = {}) {
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
   this.drawOpacity = 0.8;
+  this.drawPenLocation = [NaN, NaN, NaN];
+  this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -476,6 +478,8 @@ Niivue.prototype.mouseContextMenuListener = function (e) {
 Niivue.prototype.mouseDownListener = function (e) {
   e.preventDefault();
   // var rect = this.canvas.getBoundingClientRect();
+  this.drawPenLocation = [NaN, NaN, NaN];
+  this.drawPenAxCorSag = -1;
   this.scene.mousedown = true;
   if (e.button === this.scene.mouseButtonLeft) {
     this.scene.mouseButtonLeftDown = true;
@@ -602,6 +606,8 @@ Niivue.prototype.mouseUpListener = function () {
   this.scene.mousedown = false;
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseButtonLeftDown = false;
+  this.drawPenLocation = [NaN, NaN, NaN];
+  this.drawPenAxCorSag = -1;
   if (this.isDragging) {
     this.isDragging = false;
     this.calculateNewRange();
@@ -1135,9 +1141,79 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
-Niivue.prototype.saveImage = async function (fnm) {
-  //console.log('bogo',this.volumes[0]);
+Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
+  if (!this.back.hasOwnProperty("dims")) {
+    console.log("No voxelwise image open");
+    return false;
+  }
+  if (isSaveDrawing) {
+    if (!this.drawBitmap) {
+      console.log("No drawing open");
+      return false;
+    }
+    let perm = this.volumes[0].permRAS;
+
+    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
+      await this.volumes[0].saveToDisk(fnm, this.drawBitmap); // createEmptyDrawing
+      return true;
+    } else {
+      let dims = this.volumes[0].hdr.dims; //reverse to original
+      //reverse RAS to native space, layout is mrtrix MIF format
+      // for details see NVImage.readMIF()
+      let layout = [0, 0, 0];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (Math.abs(perm[i]) - 1 !== j) continue;
+          layout[j] = i * Math.sign(perm[i]);
+        }
+      }
+      let stride = 1;
+      let instride = [1, 1, 1];
+      let inflip = [false, false, false];
+      for (let i = 0; i < layout.length; i++) {
+        for (let j = 0; j < layout.length; j++) {
+          let a = Math.abs(layout[j]);
+          if (a != i) continue;
+          instride[j] = stride;
+          //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+          if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+          stride *= dims[j + 1];
+        }
+      }
+      //lookup table for flips and stride offsets:
+      const range = (start, stop, step) =>
+        Array.from(
+          { length: (stop - start) / step + 1 },
+          (_, i) => start + i * step
+        );
+      let xlut = range(0, dims[1] - 1, 1);
+      if (inflip[0]) xlut = range(dims[1] - 1, 0, -1);
+      for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0];
+      let ylut = range(0, dims[2] - 1, 1);
+      if (inflip[1]) ylut = range(dims[2] - 1, 0, -1);
+      for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1];
+      let zlut = range(0, dims[3] - 1, 1);
+      if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
+      for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
+      //convert data
+
+      let inVs = new Uint8Array(this.drawBitmap);
+      let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
+      let j = 0;
+      for (let z = 0; z < dims[3]; z++) {
+        for (let y = 0; y < dims[2]; y++) {
+          for (let x = 0; x < dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+      await this.volumes[0].saveToDisk(fnm, outVs);
+      return true;
+    } //if native image not RAS
+  } //save bitmap drawing
   await this.volumes[0].saveToDisk(fnm);
+  return true;
 };
 
 Niivue.prototype.getMeshIndexByID = function (id) {
@@ -1401,13 +1477,20 @@ Niivue.prototype.setCrosshairColor = function (color) {
 Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
   this.opts.drawingEnabled = trueOrFalse;
   if (this.opts.drawingEnabled) {
-    this.createEmptyDrawing();
+    if (!this.drawBitmap) this.createEmptyDrawing();
   }
   this.drawScene();
 };
 
 Niivue.prototype.setPenValue = function (penValue) {
   this.opts.penValue = penValue;
+  this.drawScene();
+};
+
+Niivue.prototype.setDrawOpacity = function (opacity) {
+  this.drawOpacity = opacity;
+  this.sliceShader.use(this.gl);
+  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.drawScene();
 };
 
@@ -1774,30 +1857,12 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
 };
 //Demonstrate how to create drawing
 Niivue.prototype.createRandomDrawing = function () {
+  if (!this.drawBitmap) this.createEmptyDrawing();
+  if (!this.back.hasOwnProperty("dims")) return;
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   if (vx !== this.drawBitmap.length) {
     log.error("Epic drawing failure");
   }
-
-  /*
-  let ptA = [1, 1, 33];
-  let ptB = [63, 78, 33];
-  this.drawLine(ptA, ptB, 1);
-  ptA = [1, 78, 33];
-  ptB = [63, 1, 33];
-  this.drawLine(ptA, ptB, 3);
-  ptA = [1, 40, 33];
-  ptB = [63, 45, 33];
-  this.drawLine(ptA, ptB, 2);
-	*/
-
-  //draw one line on each slice
-  /*
-  let dx = this.volumes[0].hdr.dims[1] - 1;
-  let dy = this.volumes[0].hdr.dims[2] - 1;
-  let dz = this.volumes[0].hdr.dims[3];
-	*/
-
   let dx = this.back.dims[1] - 1;
   let dy = this.back.dims[2] - 1;
   let dz = this.back.dims[3];
@@ -1809,8 +1874,9 @@ Niivue.prototype.createRandomDrawing = function () {
     ptB[2] = i;
     this.drawLine(ptA, ptB, (i % 3) + 1);
   }
-  this.refreshDrawing(false);
+  this.refreshDrawing(true);
 };
+
 //release GPU and CPU memory: make sure you have saved any changes before calling this!
 Niivue.prototype.closeDrawing = function () {
   this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
@@ -2930,6 +2996,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   // https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
   for (let i = 0; i < this.numScreenSlices; i++) {
     var axCorSag = this.screenSlices[i].axCorSag;
+    if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag)
+      continue; //if mouse is drawing on axial slice, ignore any entry to coronal slice
     if (axCorSag > this.sliceTypeSagittal) continue;
     var ltwh = this.screenSlices[i].leftTopWidthHeight;
     let isMirror = false;
@@ -2982,10 +3050,12 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2] = fracY;
       }
       if (this.opts.drawingEnabled) {
-        this.drawPt(
-          ...this.frac2vox(this.scene.crosshairPos),
-          this.opts.penValue
-        );
+        let pt = this.frac2vox(this.scene.crosshairPos);
+        if (isNaN(this.drawPenLocation[0])) {
+          this.drawPenAxCorSag = axCorSag;
+          this.drawPt(...pt, this.opts.penValue);
+        } else this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
+        this.drawPenLocation = pt;
         this.refreshDrawing(false);
       }
       this.drawScene();

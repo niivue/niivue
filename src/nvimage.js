@@ -1714,15 +1714,9 @@ NVImage.prototype.calculateRAS = function () {
     }
   }
   let flip = [0, 0, 0];
-  if (R[0] < 0) {
-    flip[0] = 1; //R[0][0]
-  }
-  if (R[5] < 0) {
-    flip[1] = 1; //R[1][1]
-  }
-  if (R[10] < 0) {
-    flip[2] = 1; //R[2][2]
-  }
+  if (R[0] < 0) flip[0] = 1; //R[0][0]
+  if (R[5] < 0) flip[1] = 1; //R[1][1]
+  if (R[10] < 0) flip[2] = 1; //R[2][2]
   this.dimsRAS = [
     header.dims[0],
     header.dims[perm[0]],
@@ -1735,6 +1729,9 @@ NVImage.prototype.calculateRAS = function () {
     header.pixDims[perm[1]],
     header.pixDims[perm[2]],
   ];
+  this.permRAS = perm.slice();
+  for (let i = 0; i < 3; i++)
+    if (flip[i] === 1) this.permRAS[i] = -this.permRAS[i];
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
     this.toRAS = mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
     this.matRAS = mat4.clone(rotM);
@@ -1982,7 +1979,7 @@ function str2Buffer(str) {
   return bytes;
 }
 
-function hdrToArrayBuffer(hdr) {
+function hdrToArrayBuffer(hdr, isDrawing8 = false) {
   const SHORT_SIZE = 2;
   const FLOAT32_SIZE = 4;
 
@@ -2008,8 +2005,13 @@ function hdrToArrayBuffer(hdr) {
 
   // intent_code, datatype, bitpix, slice_start
   view.setInt16(68, hdr.intent_code, hdr.littleEndian);
-  view.setInt16(70, hdr.datatypeCode, hdr.littleEndian);
-  view.setInt16(72, hdr.numBitsPerVoxel, hdr.littleEndian);
+  if (isDrawing8) {
+    view.setInt16(70, 2, hdr.littleEndian); //2 = DT_UNSIGNED_CHAR
+    view.setInt16(72, 8, hdr.littleEndian);
+  } else {
+    view.setInt16(70, hdr.datatypeCode, hdr.littleEndian);
+    view.setInt16(72, hdr.numBitsPerVoxel, hdr.littleEndian);
+  }
   view.setInt16(74, hdr.slice_start, hdr.littleEndian);
 
   // pixdim[8], vox_offset, scl_slope, scl_inter
@@ -2028,8 +2030,13 @@ function hdrToArrayBuffer(hdr) {
   view.setUint8(123, hdr.xyzt_units);
 
   // cal_max, cal_min, slice_duration, toffset
-  view.setFloat32(124, hdr.cal_max, hdr.littleEndian);
-  view.setFloat32(128, hdr.cal_min, hdr.littleEndian);
+  if (isDrawing8) {
+    view.setFloat32(124, 0, hdr.littleEndian);
+    view.setFloat32(128, 0, hdr.littleEndian);
+  } else {
+    view.setFloat32(124, hdr.cal_max, hdr.littleEndian);
+    view.setFloat32(128, hdr.cal_min, hdr.littleEndian);
+  }
   view.setFloat32(132, hdr.slice_duration, hdr.littleEndian);
   view.setFloat32(136, hdr.toffset, hdr.littleEndian);
 
@@ -2066,14 +2073,17 @@ function hdrToArrayBuffer(hdr) {
   //return byteArray.buffer;
 } // hdrToArrayBuffer()
 
-NVImage.prototype.saveToDisk = async function (fnm) {
-  let hdrBytes = hdrToArrayBuffer(this.hdr);
-  var opad = new Uint8Array(4);
-  var odata = new Uint8Array(hdrBytes.length + opad.length + this.img.length);
+NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
+  let isDrawing8 = !(drawing8 == null);
+  let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8);
+  let opad = new Uint8Array(4);
+  let img8 = new Uint8Array(this.img.buffer);
+  if (isDrawing8) img8 = new Uint8Array(drawing8.buffer);
+  var odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
   odata.set(hdrBytes);
   odata.set(opad, hdrBytes.length);
 
-  odata.set(this.img, hdrBytes.length + opad.length);
+  odata.set(img8, hdrBytes.length + opad.length);
   let saveData = null;
   let compress = fnm.endsWith(".gz"); // true if name ends with .gz
   if (compress) {
