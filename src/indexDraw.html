@@ -33,11 +33,21 @@
           <option value="1">Red</option>
           <option value="2">Green</option>
           <option value="3">Blue</option>
+          <option value="8">Filled Erase</option>
+          <option value="9">Filled Red</option>
+          <option value="10">Filled Green</option>
+          <option value="11">Filled Blue</option>
         </select>
-        <button id="random">random lines</button>
+        <button id="left">left</button>
+        <button id="right">right</button>
+        <button id="posterior">posterior</button>
+        <button id="anterior">anterior</button>
+        <button id="inferior">inferior</button>
+        <button id="superior">superior</button>
+
         <button id="save">save drawing</button>
         <div class="slidecontainer">
-          drawing opacity <input type="range" min="0" max="100" value="100" class="slider" id="drawOpacity">
+          drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
       </div>
     </section>
@@ -63,16 +73,35 @@
       }
       document.getElementById("drawPen").addEventListener("change", doDrawPen);
       function doDrawPen(){
-        const mode = document.getElementById("drawPen").value;
+        const mode = parseInt(document.getElementById("drawPen").value);
         nv1.setDrawingEnabled(mode >= 0);
         if (mode >= 0)
-          nv1.opts.penValue = mode;
+          nv1.setPenValue( (mode & 7), mode > 7);
       }
-      document.getElementById("random").addEventListener("click", doRandom);
-      function doRandom(){
-        nv1.createRandomDrawing(); 
+      document.getElementById("left").addEventListener("click", doLeft);
+      function doLeft(){
+        nv1.moveCrosshairInVox(-1, 0, 0);
       }
-
+      document.getElementById("right").addEventListener("click", doRight);
+      function doRight(){
+        nv1.moveCrosshairInVox(1, 0, 0);
+      }
+      document.getElementById("posterior").addEventListener("click", doPosterior);
+      function doPosterior(){
+        nv1.moveCrosshairInVox(0, -1, 0);
+      }
+      document.getElementById("anterior").addEventListener("click", doAnterior);
+      function doAnterior(){
+        nv1.moveCrosshairInVox(0, 1, 0);
+      }
+      document.getElementById("inferior").addEventListener("click", doInferior);
+      function doInferior(){
+        nv1.moveCrosshairInVox(0, 0, -1);
+      }
+      document.getElementById("superior").addEventListener("click", doSuperior);
+      function doSuperior(){
+        nv1.moveCrosshairInVox(0, 0, 1);
+      }
       document.getElementById("save").addEventListener("click", doSave);
       function doSave(){
         nv1.saveImage('test.nii', true);

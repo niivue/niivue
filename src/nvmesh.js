@@ -1362,6 +1362,188 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
   };
 }; // readMZ3()
 
+NVMesh.readPLY = function (buffer) {
+  //https://en.wikipedia.org/wiki/PLY_(file_format)
+  let len = buffer.byteLength;
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr(); //1st line: magic 'ply'
+  if (!line.startsWith("ply")) {
+    console.log("Not a valid PLY file");
+    return;
+  }
+  line = readStr(); //2nd line: format 'format binary_little_endian 1.0'
+  let isAscii = line.includes("ascii");
+  function dataTypeBytes(str) {
+    if (str === "char" || str === "uchar" || str === "int8" || str === "uint8")
+      return 1;
+    if (
+      str === "short" ||
+      str === "ushort" ||
+      str === "int16" ||
+      str === "uint16"
+    )
+      return 2;
+    if (
+      str === "int" ||
+      str === "uint" ||
+      str === "int32" ||
+      str === "uint32" ||
+      str === "float" ||
+      str === "float32"
+    )
+      return 4;
+    if (str === "double") return 8;
+    console.log("Unknown data type: " + str);
+  }
+  let isLittleEndian = line.includes("binary_little_endian");
+  let nvert = 0;
+  let vertIsDouble = false;
+  let vertStride = 0; //e.g. if each vertex stores xyz as float32 and rgb as uint8, stride is 15
+  let indexCountBytes = 0; //if "property list uchar int vertex_index" this is 1 (uchar)
+  let indexBytes = 0; //if "property list uchar int vertex_index" this is 4 (int)
+  let nface = 0;
+  while (pos < len && !line.startsWith("end_header")) {
+    line = readStr();
+    if (line.startsWith("comment")) continue;
+    //line = line.replaceAll('\t', ' '); // ?are tabs valid white space?
+    let items = line.split(/\s/);
+    if (line.startsWith("element vertex")) {
+      nvert = parseInt(items[items.length - 1]);
+      //read vertex properties:
+      line = readStr();
+      items = line.split(/\s/);
+      while (line.startsWith("property")) {
+        let datatype = items[1];
+        if (items[2] === "x" && datatype.startsWith("double"))
+          vertIsDouble = true;
+        else if (items[2] === "x" && !datatype.startsWith("float"))
+          console.log("Error: expect ply xyz to be float or double: " + line);
+        vertStride += dataTypeBytes(datatype);
+        line = readStr();
+        items = line.split(/\s/);
+      }
+    }
+    if (
+      items[items.length - 1] === "vertex_indices" ||
+      items[items.length - 1] === "vertex_index"
+    ) {
+      indexCountBytes = dataTypeBytes(items[2]);
+      indexBytes = dataTypeBytes(items[3]);
+      continue;
+    }
+    if (line.startsWith("element face"))
+      nface = parseInt(items[items.length - 1]);
+  } //while reading all lines of header
+  if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1)
+    console.log("Malformed ply format");
+  if (isAscii) {
+    let positions = new Float32Array(nvert * 3);
+    let v = 0;
+    for (var i = 0; i < nvert; i++) {
+      line = readStr();
+      let items = line.split(/\s/);
+      positions[v] = parseFloat(items[0]);
+      positions[v + 1] = parseFloat(items[1]);
+      positions[v + 2] = parseFloat(items[2]);
+      v += 3;
+    }
+    let indices = new Int32Array(nface * 3);
+    let f = 0;
+    let isTriangular = true;
+    for (var i = 0; i < nface; i++) {
+      line = readStr();
+      let items = line.split(/\s/);
+      if (parseInt(items[0]) > 3) isTriangular = false;
+      indices[f] = parseInt(items[1]);
+      indices[f + 1] = parseInt(items[2]);
+      indices[f + 2] = parseInt(items[3]);
+      f += 3;
+    }
+    if (!isTriangular)
+      console.log("Only able to read PLY meshes limited to triangles.");
+    return {
+      positions,
+      indices,
+    };
+  } //if isAscii
+  var reader = new DataView(buffer);
+  var positions = [];
+  if (vertStride === 12 && isLittleEndian) {
+    //optimization: vertices only store xyz position as float
+    positions = new Float32Array(buffer, pos, nvert * 3);
+    pos += nvert * vertStride;
+  } else {
+    positions = new Float32Array(nvert * 3);
+    let v = 0;
+    for (var i = 0; i < nvert; i++) {
+      if (vertIsDouble) {
+        positions[v] = reader.getFloat64(pos, isLittleEndian);
+        positions[v + 1] = reader.getFloat64(pos + 8, isLittleEndian);
+        positions[v + 2] = reader.getFloat64(pos + 16, isLittleEndian);
+      } else {
+        positions[v] = reader.getFloat32(pos, isLittleEndian);
+        positions[v + 1] = reader.getFloat32(pos + 4, isLittleEndian);
+        positions[v + 2] = reader.getFloat32(pos + 8, isLittleEndian);
+      }
+      v += 3;
+      pos += vertStride;
+    }
+  }
+  var indices = new Int32Array(nface * 3); //assume triangular mesh: pre-allocation optimization
+  let isTriangular = true;
+  let j = 0;
+  if (indexCountBytes === 1 && indexBytes === 4) {
+    for (var i = 0; i < nface; i++) {
+      let nIdx = reader.getUint8(pos);
+      pos += indexCountBytes;
+      if (nIdx !== 3) isTriangular = false;
+      indices[j] = reader.getUint32(pos, isLittleEndian);
+      pos += 4;
+      indices[j + 1] = reader.getUint32(pos, isLittleEndian);
+      pos += 4;
+      indices[j + 2] = reader.getUint32(pos, isLittleEndian);
+      pos += 4;
+      j += 3;
+    }
+  } else {
+    //not 1:4 index data
+    for (var i = 0; i < nface; i++) {
+      let nIdx = 0;
+      if (indexCountBytes === 1) nIdx = reader.getUint8(pos);
+      else if (indexCountBytes === 2)
+        nIdx = reader.getUint16(pos, isLittleEndian);
+      else if (indexCountBytes === 4)
+        nIdx = reader.getUint32(pos, isLittleEndian);
+      pos += indexCountBytes;
+      if (nIdx !== 3) isTriangular = false;
+      for (var k = 0; k < 3; k++) {
+        if (indexBytes === 1) indices[j] = reader.getUint8(pos, isLittleEndian);
+        else if (indexBytes === 2)
+          indices[j] = reader.getUint16(pos, isLittleEndian);
+        else if (indexBytes === 4)
+          indices[j] = reader.getUint32(pos, isLittleEndian);
+        j++;
+        pos += indexBytes;
+      }
+    } //for each face
+  } //if not 1:4 datatype
+  if (!isTriangular)
+    console.log("Only able to read PLY meshes limited to triangles.");
+  return {
+    positions,
+    indices,
+  };
+}; // readPLY()
+
 NVMesh.readLayer = function (
   name,
   buffer,
@@ -1414,7 +1596,7 @@ NVMesh.readLayer = function (
   layer.colorMapNegative = colorMapNegative;
   layer.useNegativeCmap = useNegativeCmap;
   nvmesh.layers.push(layer);
-};
+}; // readLayer()
 
 NVMesh.readOFF = function (buffer) {
   //https://en.wikipedia.org/wiki/OFF_(file_format)
@@ -1785,6 +1967,7 @@ NVMesh.readMesh = async function (
   else if (ext === "DFS") obj = this.readDFS(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
+  else if (ext === "PLY") obj = this.readPLY(buffer);
   else if (ext === "FIB" || ext === "VTK") {
     obj = this.readVTK(buffer);
     if (obj.hasOwnProperty("offsetPt0")) {
