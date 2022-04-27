@@ -117583,6 +117583,10 @@ Niivue.prototype.keyDownListener = function(e) {
   } else if (e.code === "KeyK" && this.sliceType !== this.sliceTypeRender) {
     this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 1e-3;
     this.drawScene();
+  } else if (e.code === "ArrowLeft") {
+    this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1);
+  } else if (e.code === "ArrowRight") {
+    this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
   }
 };
 Niivue.prototype.wheelListener = function(e) {
@@ -118721,6 +118725,12 @@ Niivue.prototype.setColorMap = function(id, colorMap) {
 };
 Niivue.prototype.setFrame4D = function(id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
+  if (frame4D > this.volumes[idx].nFrame4D - 1) {
+    frame4D = this.volumes[idx].nFrame4D;
+  }
+  if (frame4D < 0) {
+    frame4D = 0;
+  }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
 };
