@@ -1,4 +1,4 @@
-import * as gifti from "gifti-reader-js/release/current/gifti-reader";
+//import * as gifti from "gifti-reader-js/release/current/gifti-reader";
 import * as fflate from "fflate";
 import { v4 as uuidv4 } from "uuid";
 import * as cmaps from "./cmaps";
@@ -1838,70 +1838,153 @@ NVMesh.readSTL = function (buffer) {
 }; // readSTL()
 
 NVMesh.readGII = function (buffer, n_vert = 0) {
-  var enc = new TextDecoder("utf-8");
-  var xmlStr = enc.decode(buffer);
-  let gii = gifti.parse(xmlStr);
+  let len = buffer.byteLength;
+  if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStrX() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim();
+  }
+  function readStr() {
+    //concatenate lines to return tag <...>
+    let line = readStrX();
+    if (!line.startsWith("<") || line.endsWith(">")) {
+      return line;
+    }
+    while (pos < len && !line.endsWith(">")) line += readStrX();
+    return line;
+  }
+  let line = readStr(); //1st line: signature 'mrtrix tracks'
+  if (!line.includes("xml version")) console.log("Not a GIfTI image");
+  let positions = [];
+  let indices = [];
+  let scalars = [];
+  let isIdx = false;
+  let isPts = false;
+  let isVectors = false;
+  let isColMajor = false;
+  let Dims = [1, 1, 1];
+  let dataType = 0;
+  let isLittleEndian = true;
+  let isGzip = false;
+  //let isAscii = false;
+  while (pos < len) {
+    line = readStr();
+    if (line.startsWith("<Data>")) {
+      if (isVectors) continue;
+      //Data can be on one to three lines...
+      if (!line.endsWith("</Data>")) line += readStrX();
+      if (!line.endsWith("</Data>")) line += readStrX();
+      let datBin = [];
+      if (typeof Buffer === "undefined") {
+        //raw.gii
+        function base64ToUint8(base64) {
+          var binary_string = atob(base64);
+          var len = binary_string.length;
+          var bytes = new Uint8Array(len);
+          for (var i = 0; i < len; i++) {
+            bytes[i] = binary_string.charCodeAt(i);
+          }
+          return bytes;
+        }
+        if (isGzip) {
+          let datZ = base64ToUint8(line.slice(6, -7));
+          datBin = fflate.decompressSync(new Uint8Array(datZ));
+        } else datBin = base64ToUint8(line.slice(6, -7));
+      } else {
+        //if Buffer not defined
+        if (isGzip) {
+          let datZ = Buffer.from(line.slice(6, -7), "base64");
+          datBin = fflate.decompressSync(new Uint8Array(datZ));
+        } else datBin = Buffer.from(line.slice(6, -7), "base64");
+      }
+      if (isPts) {
+        if (dataType !== 16) console.log("expect positions as FLOAT32");
+        positions = new Float32Array(datBin.buffer);
+        if (isColMajor) {
+          let tmp = positions.slice();
+          let np = tmp.length / 3;
+          let j = 0;
+          for (var p = 0; p < np; p++)
+            for (var i = 0; i < 3; i++) {
+              positions[j] = tmp[i * np + p];
+              j++;
+            }
+        } //isColMajor
+      } else if (isIdx) {
+        if (dataType !== 8) console.log("expect indices as INT32");
+        indices = new Int32Array(datBin.buffer);
+        if (isColMajor) {
+          let tmp = indices.slice();
+          let np = tmp.length / 3;
+          let j = 0;
+          for (var p = 0; p < np; p++)
+            for (var i = 0; i < 3; i++) {
+              indices[j] = tmp[i * np + p];
+              j++;
+            }
+        } //isColMajor
+      } else {
+        //not position or indices: assume scalars NIFTI_INTENT_NONE
+        let nvert = Dims[0] * Dims[1] * Dims[2];
+        if (n_vert !== 0) {
+          if (n_vert % nvert !== 0)
+            console.log(
+              "Number of vertices in scalar overlay (" +
+                nvert +
+                ") does not match mesh (" +
+                n_vert +
+                ")"
+            );
+        }
+        let scalarsNew = [];
+        if (dataType === 2) scalarsNew = new UInt8Array(datBin.buffer);
+        else if (dataType === 8) scalarsNew = new Int32Array(datBin.buffer);
+        else scalarsNew = new Float32Array(datBin.buffer);
+        scalars.push(...scalarsNew);
+      }
+      continue;
+    }
+    if (!line.startsWith("<DataArray")) continue;
+    //read DataArray properties
+    Dims = [1, 1, 1];
+    isGzip = line.includes('Encoding="GZipBase64Binary"');
+    if (line.includes('Encoding="ASCII"'))
+      throw new Error("ASCII GIfTI not supported.");
+    isIdx = line.includes('Intent="NIFTI_INTENT_TRIANGLE"');
+    isPts = line.includes('Intent="NIFTI_INTENT_POINTSET"');
+    isVectors = line.includes('Intent="NIFTI_INTENT_VECTOR"');
+    isColMajor = line.includes('ArrayIndexingOrder="ColumnMajorOrder"');
+    isLittleEndian = line.includes('Endian="LittleEndian"');
+    if (line.includes('DataType="NIFTI_TYPE_UINT8"')) dataType = 2; //DT_UINT8
+    if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8; //DT_INT32
+    if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16; //DT_FLOAT32
+    function readNumericTag(TagName) {
+      //Tag 'Dim1' will return 3 for Dim1="3"
+      let pos = line.indexOf(TagName);
+      if (pos < 0) return 1;
+      let spos = line.indexOf('"', pos) + 1;
+      let epos = line.indexOf('"', spos);
+      let str = line.slice(spos, epos);
+      return parseInt(str);
+    }
+    Dims[0] = readNumericTag("Dim0=");
+    Dims[1] = readNumericTag("Dim1=");
+    Dims[2] = readNumericTag("Dim2=");
+    //console.log(Dims, isIdx, isPts, isVectors);
+  } //for each line
   if (n_vert > 0) {
-    //add as overlay layer
-    if (gii.dataArrays.length < 0) {
-      console.log("Not a valid GIfTI overlay");
-    }
-    let scalars = [];
-    for (var i = 0; i < gii.dataArrays.length; i++) {
-      let layer = gii.dataArrays[i];
-      if (n_vert !== layer.getNumElements()) {
-        console.log(
-          "Number of vertices of overlay layer does not match mesh " +
-            n_vert +
-            " vs " +
-            getNumElements()
-        );
-        return;
-      }
-      if (layer.isColors()) console.log("TODO: check color mesh layers");
-      let scalarsI = new Float32Array(layer.getData());
-      scalars.push(...scalarsI);
-    }
     return scalars;
-  }
-  if (gii.getNumTriangles() === 0 || gii.getNumPoints() === 0) {
-    console.log("Not a GIfTI mesh (perhaps an overlay layer)");
-    return;
-  }
-  var positions = gii.getPointsDataArray().getData();
-  var indices = gii.getTrianglesDataArray().getData();
-  //next: ColumnMajorOrder https://github.com/rii-mango/GIFTI-Reader-JS/issues/2
-  if (
-    gii.getPointsDataArray().attributes.ArrayIndexingOrder ===
-    "ColumnMajorOrder"
-  ) {
-    //transpose points, xx..xyy..yzz..z -> xyzxyz..
-    let ps = positions.slice();
-    let np = ps.length / 3;
-    let j = 0;
-    for (var p = 0; p < np; p++)
-      for (var i = 0; i < 3; i++) {
-        positions[j] = ps[i * np + p];
-        j++;
-      }
-  }
-  if (
-    gii.getTrianglesDataArray().attributes.ArrayIndexingOrder ===
-    "ColumnMajorOrder"
-  ) {
-    //transpose indices, xx..xyy..yzz..z -> xyzxyz..
-    let ps = indices.slice();
-    let np = ps.length / 3;
-    let j = 0;
-    for (var p = 0; p < np; p++)
-      for (var i = 0; i < 3; i++) {
-        indices[j] = ps[i * np + p];
-        j++;
-      }
   }
   return {
     positions,
     indices,
+    scalars,
   };
 }; // readGII()
 
