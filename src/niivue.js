@@ -1013,6 +1013,7 @@ Niivue.prototype.dropListener = async function (e) {
             continue;
           }
           if (
+            ext === "ASC" ||
             ext === "DFS" ||
             ext === "FSM" ||
             ext === "PIAL" ||

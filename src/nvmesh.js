@@ -981,6 +981,122 @@ function readTxtVTK(buffer) {
   };
 } // readTxtVTK()
 
+NVMesh.readSMP = function (buffer, n_vert) {
+  //https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files
+  let len = buffer.byteLength;
+  var reader = new DataView(buffer);
+  let vers = reader.getUint16(0, true);
+  if (vers > 5) {
+    //assume gzip
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    reader = new DataView(raw.buffer);
+    vers = reader.getUint16(0, true);
+    buffer = raw.buffer;
+  }
+  if (vers > 5)
+    console.log("Unsupported or invalud BrainVoyager SMP version " + vers);
+  let nvert = reader.getUint32(2, true);
+  if (nvert !== n_vert)
+    console.log(
+      "SMP file has " + nvert + " vertices, background mesh has " + n_vert
+    );
+  let nMaps = reader.getUint16(6, true);
+  function readStr() {
+    let startPos = pos;
+    while (pos < len && reader.getUint8(pos) !== 0) {
+      pos++;
+    }
+    pos++; //skip null termination
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  } // readStr: read variable length string
+  let scalars = new Float32Array(nvert * nMaps);
+  let maps = [];
+  //read Name of SRF
+  let pos = 9;
+  let filenameSRF = readStr();
+  for (let i = 0; i < nMaps; i++) {
+    let m = [];
+    m.mapType = reader.getUint32(pos, true);
+    pos += 4;
+    //Read additional values only if a lag map
+    if (vers >= 3 && m.mapType === 3) {
+      m.nLags = reader.getUint32(pos, true);
+      pos += 4;
+      m.mnLag = reader.getUint32(pos, true);
+      pos += 4;
+      m.mxLag = reader.getUint32(pos, true);
+      pos += 4;
+      m.ccOverlay = reader.getUint32(pos, true);
+      pos += 4;
+    }
+    m.clusterSize = reader.getUint32(pos, true);
+    pos += 4;
+    m.clusterCheck = reader.getUint8(pos);
+    pos += 1;
+    m.critThresh = reader.getFloat32(pos, true);
+    pos += 4;
+    m.maxThresh = reader.getFloat32(pos, true);
+    pos += 4;
+    if (vers >= 4) {
+      m.includeValuesGreaterThreshMax = reader.getUint32(pos, true);
+      pos += 4;
+    }
+    m.df1 = reader.getUint32(pos, true);
+    pos += 4;
+    m.df2 = reader.getUint32(pos, true);
+    pos += 4;
+    if (vers >= 5) {
+      m.posNegFlag = reader.getUint32(pos, true);
+      pos += 4;
+    } else m.posNegFlag = 3;
+    m.cortexBonferroni = reader.getUint32(pos, true);
+    pos += 4;
+    m.posMinRGB = [0, 0, 0];
+    m.posMaxRGB = [0, 0, 0];
+    m.negMinRGB = [0, 0, 0];
+    m.negMaxRGB = [0, 0, 0];
+    if (vers >= 2) {
+      m.posMinRGB[0] = reader.getUint8(pos);
+      pos++;
+      m.posMinRGB[1] = reader.getUint8(pos);
+      pos++;
+      m.posMinRGB[2] = reader.getUint8(pos);
+      pos++;
+      m.posMaxRGB[0] = reader.getUint8(pos);
+      pos++;
+      m.posMaxRGB[1] = reader.getUint8(pos);
+      pos++;
+      m.posMaxRGB[2] = reader.getUint8(pos);
+      pos++;
+      if (vers >= 4) {
+        m.negMinRGB[0] = reader.getUint8(pos);
+        pos++;
+        m.negMinRGB[1] = reader.getUint8(pos);
+        pos++;
+        m.negMinRGB[2] = reader.getUint8(pos);
+        pos++;
+        m.negMaxRGB[0] = reader.getUint8(pos);
+        pos++;
+        m.negMaxRGB[1] = reader.getUint8(pos);
+        pos++;
+        m.negMaxRGB[2] = reader.getUint8(pos);
+        pos++;
+      } //vers >= 4
+      m.enableSMPColor = reader.getUint8(pos);
+      pos++;
+      if (vers >= 4) m.lut = readStr();
+      m.colorAlpha = reader.getFloat32(pos, true);
+      pos += 4;
+    } //vers >= 2
+    m.name = readStr();
+    let scalarsNew = new Float32Array(buffer, pos, nvert, true);
+    scalars.set(scalarsNew, i * nvert);
+    pos += nvert * 4;
+    maps.push(m);
+  } // for i to nMaps
+  return scalars;
+}; //readSMP()
+
 NVMesh.readSTC = function (buffer, n_vert) {
   //mne STC format
   //https://github.com/mne-tools/mne-python/blob/main/mne/source_estimate.py#L211-L365
@@ -1007,7 +1123,6 @@ NVMesh.readSTC = function (buffer, n_vert) {
     pos += 4;
   }
   return f32;
-  //this.vertexCount = this.pts.length;
 }; // readSTC()
 
 NVMesh.readCURV = function (buffer, n_vert) {
@@ -1079,6 +1194,52 @@ NVMesh.readANNOT = function (buffer, n_vert) {
   }
   return rgba32;
 }; // readANNOT()
+
+NVMesh.readASC = function (buffer) {
+  //SUMA ASCII format https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/demos/Bootcamp/CD.html#cd
+  //http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
+  let len = buffer.byteLength;
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr(); //1st line: '#!ascii version of lh.pial'
+  if (!line.startsWith("#!ascii")) console.log("Invalid ASC mesh");
+  line = readStr(); //1st line: signature
+  let items = line.split(" ");
+  let nvert = parseInt(items[0]); //173404 346804
+  let ntri = parseInt(items[1]);
+  var positions = new Float32Array(nvert * 3);
+  let j = 0;
+  for (let i = 0; i < nvert; i++) {
+    line = readStr(); //1st line: signature
+    items = line.trim().split(/\s+/);
+    positions[j] = parseFloat(items[0]);
+    positions[j + 1] = parseFloat(items[1]);
+    positions[j + 2] = parseFloat(items[2]);
+    j += 3;
+  }
+  var indices = new Int32Array(ntri * 3);
+  j = 0;
+  for (let i = 0; i < ntri; i++) {
+    line = readStr(); //1st line: signature
+    items = line.trim().split(/\s+/);
+    indices[j] = parseInt(items[0]);
+    indices[j + 1] = parseInt(items[1]);
+    indices[j + 2] = parseInt(items[2]);
+    j += 3;
+  }
+  return {
+    positions,
+    indices,
+  };
+}; // readASC()
 
 NVMesh.readVTK = function (buffer) {
   let len = buffer.byteLength;
@@ -1570,6 +1731,7 @@ NVMesh.readLayer = function (
   else if (ext === "CRV" || ext === "CURV")
     layer.values = this.readCURV(buffer, n_vert);
   else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
+  else if (ext === "SMP") layer.values = this.readSMP(buffer, n_vert);
   else if (ext === "STC") layer.values = this.readSTC(buffer, n_vert);
   else {
     console.log("Unknown layer overlay format " + name);
@@ -1872,6 +2034,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
+  let nvert = 0;
   //let isAscii = false;
   while (pos < len) {
     line = readStr();
@@ -1931,7 +2094,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         } //isColMajor
       } else {
         //not position or indices: assume scalars NIFTI_INTENT_NONE
-        let nvert = Dims[0] * Dims[1] * Dims[2];
+        nvert = Dims[0] * Dims[1] * Dims[2];
         if (n_vert !== 0) {
           if (n_vert % nvert !== 0)
             console.log(
@@ -1942,11 +2105,22 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
                 ")"
             );
         }
+        function Float32Concat(first, second) {
+          var firstLength = first.length,
+            result = new Float32Array(firstLength + second.length);
+          result.set(first);
+          result.set(second, firstLength);
+          return result;
+        } // Float32Concat()
         let scalarsNew = [];
-        if (dataType === 2) scalarsNew = new UInt8Array(datBin.buffer);
-        else if (dataType === 8) scalarsNew = new Int32Array(datBin.buffer);
-        else scalarsNew = new Float32Array(datBin.buffer);
-        scalars.push(...scalarsNew);
+        if (dataType === 2) {
+          let scalarsInt = new UInt8Array(datBin.buffer);
+          scalarsNew = Float32Array.from(scalarsInt);
+        } else if (dataType === 8) {
+          let scalarsInt = new Int32Array(datBin.buffer);
+          scalarsNew = Float32Array.from(scalarsInt);
+        } else scalarsNew = new Float32Array(datBin.buffer);
+        scalars = Float32Concat(scalars, scalarsNew);
       }
       continue;
     }
@@ -1976,11 +2150,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[0] = readNumericTag("Dim0=");
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
-    //console.log(Dims, isIdx, isPts, isVectors);
   } //for each line
-  if (n_vert > 0) {
-    return scalars;
-  }
+  if (n_vert > 0) return scalars;
   return {
     positions,
     indices,
@@ -2047,6 +2218,7 @@ NVMesh.readMesh = async function (
   if (ext === "GII") {
     obj = this.readGII(buffer);
   } else if (ext === "MZ3") obj = this.readMZ3(buffer);
+  else if (ext === "ASC") obj = this.readASC(buffer);
   else if (ext === "DFS") obj = this.readDFS(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
