@@ -1030,6 +1030,7 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "SRF" ||
             ext === "STL" ||
             ext === "TCK" ||
+            ext === "TRACT" ||
             ext === "TRK" ||
             ext === "TRX" ||
             ext === "VTK"

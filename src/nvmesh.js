@@ -649,6 +649,76 @@ NVMesh.prototype.generatePosNormClr = function (pts, tris, rgba255) {
   return f32;
 };
 
+NVMesh.readTRACT = function (buffer) {
+  let len = buffer.byteLength;
+  if (len < 20)
+    throw new Error("File too small to be niml.tract: bytes = " + len);
+  var reader = new DataView(buffer);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    //read until right angle bracket ">"
+    while (pos < len && bytes[pos] !== 60) pos++; //start with "<"
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 62) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim();
+  }
+  function readNumericTag(TagName) {
+    //Tag 'Dim1' will return 3 for Dim1="3"
+    let pos = line.indexOf(TagName);
+    if (pos < 0) return 0;
+    let spos = line.indexOf('"', pos) + 1;
+    let epos = line.indexOf('"', spos);
+    let str = line.slice(spos, epos);
+    return parseInt(str);
+  }
+  let line = readStr(); //1st line: signature '<network'
+  let n_tracts = readNumericTag("N_tracts=");
+  if (!line.startsWith("<network") || n_tracts < 1)
+    console.log("This is not a valid niml.tract file " + line);
+  let npt = 0;
+  let offsetPt0 = [];
+  offsetPt0.push(npt); //1st streamline starts at 0
+  let pts = [];
+  let dps = [];
+  dps.push({
+    id: "tract",
+    vals: [],
+  });
+  for (let t = 0; t < n_tracts; t++) {
+    line = readStr(); //<tracts ...
+    let new_tracts = readNumericTag("ni_dimen=");
+    let isLittleEndian = line.includes("binary.lsbfirst");
+    //console.log(new_tracts, pos, isLittleEndian);
+    for (let i = 0; i < new_tracts; i++) {
+      let id = reader.getUint32(pos, isLittleEndian);
+      pos += 4;
+      let new_pts = reader.getUint32(pos, isLittleEndian) / 3;
+      pos += 4;
+      //console.log('offset', pos, 'new', new_pts,'id', id);
+      for (let j = 0; j < new_pts; j++) {
+        pts.push(reader.getFloat32(pos, isLittleEndian));
+        pos += 4;
+        pts.push(-reader.getFloat32(pos, isLittleEndian));
+        pos += 4;
+        pts.push(reader.getFloat32(pos, isLittleEndian));
+        pos += 4;
+      }
+      npt += new_pts;
+      offsetPt0.push(npt);
+      dps[0].vals.push(t); //each streamline associated with tract
+    }
+    line = readStr(); //</tracts>
+  }
+  return {
+    pts,
+    offsetPt0,
+    dps,
+  };
+}; // readTRACT()
+
 NVMesh.readTCK = function (buffer) {
   //https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
   let len = buffer.byteLength;
@@ -2190,8 +2260,9 @@ NVMesh.readMesh = async function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  if (ext === "TCK" || ext === "TRK" || ext === "TRX") {
+  if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
+    if (ext === "TRACT") obj = this.readTRACT(buffer);
     else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
     //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
