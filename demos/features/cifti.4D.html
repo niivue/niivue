@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
+    <title>CIfTI demo</title>
     <style>
       section {
         margin: 20px;
@@ -72,10 +72,10 @@
       nv1.attachTo('gl1')
       //nv1.loadVolumes(volumeList1)
       var meshLHLayersList1 = [
-        {url: "../images/Human.colin.R.FUNCTIONAL.71723.func.gii", colorMap: "rocket", opacity: 0.7},
+        {url: "../images/Conte69.MyelinAndCorrThickness.32k_fs_LR.dtseries.nii", cal_min: 0.01, cal_max: 3.5,colorMap: "magma", colorMap: "rocket", opacity: 0.7},
       ]
       nv1.loadMeshes([
-         {url: "../images/Human.colin.Cerebral.R.VERY_INFLATED.71723.surf.gii", rgba255 : [255, 255, 255, 255], layers : meshLHLayersList1},
+         {url: "../images/Conte69.L.inflated.32k_fs_LR.surf.gii", rgba255 : [255, 255, 255, 255], layers : meshLHLayersList1},
       ])
       nv1.setClipPlane([-0.1, 270, 0])
       let cmaps = nv1.meshShaderNames()

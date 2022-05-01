@@ -690,6 +690,7 @@ NVMesh.readTRACT = function (buffer) {
   for (let t = 0; t < n_tracts; t++) {
     line = readStr(); //<tracts ...
     let new_tracts = readNumericTag("ni_dimen=");
+    let bundleTag = readNumericTag("Bundle_Tag=");
     let isLittleEndian = line.includes("binary.lsbfirst");
     //console.log(new_tracts, pos, isLittleEndian);
     for (let i = 0; i < new_tracts; i++) {
@@ -708,7 +709,7 @@ NVMesh.readTRACT = function (buffer) {
       }
       npt += new_pts;
       offsetPt0.push(npt);
-      dps[0].vals.push(t); //each streamline associated with tract
+      dps[0].vals.push(bundleTag); //each streamline associated with tract
     }
     line = readStr(); //</tracts>
   }
@@ -1801,6 +1802,9 @@ NVMesh.readLayer = function (
   else if (ext === "CRV" || ext === "CURV")
     layer.values = this.readCURV(buffer, n_vert);
   else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
+  else if (ext === "MGH" || ext === "MGZ")
+    layer.values = this.readMGH(buffer, n_vert);
+  else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
   else if (ext === "SMP") layer.values = this.readSMP(buffer, n_vert);
   else if (ext === "STC") layer.values = this.readSTC(buffer, n_vert);
   else {
@@ -1912,6 +1916,10 @@ NVMesh.readOBJ = function (buffer) {
 }; // readOBJ()
 
 NVMesh.readFreeSurfer = function (buffer) {
+  var bytes = new Uint8Array(buffer);
+  if (bytes[0] === 35 && bytes[1] === 33 && bytes[2] === 97) {
+    return this.readASC(buffer); //"#!ascii version"
+  }
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let sig0 = view.getUint32(0, false);
@@ -1948,6 +1956,10 @@ NVMesh.readFreeSurfer = function (buffer) {
 NVMesh.readSRF = function (buffer) {
   //https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
   var bytes = new Uint8Array(buffer);
+  if (bytes[0] === 35 && bytes[1] === 33 && bytes[2] === 97) {
+    //.srf also used for freesurfer https://brainder.org/research/brain-for-blender/
+    return this.readASC(buffer); //"#!ascii version"
+  }
   if (bytes[0] === 31 && bytes[1] === 139) {
     // handle .srf.gz
     var raw = fflate.decompressSync(new Uint8Array(buffer));
@@ -2069,6 +2081,322 @@ NVMesh.readSTL = function (buffer) {
   };
 }; // readSTL()
 
+NVMesh.readNII2 = function (buffer, n_vert = 0) {
+  let scalars = [];
+  let len = buffer.byteLength;
+  let isLittleEndian = true;
+  var reader = new DataView(buffer);
+  var magic = reader.getUint16(0, isLittleEndian);
+  if (magic === 469893120) {
+    isLittleEndian = false;
+    magic = reader.getUint16(0, isLittleEndian);
+  }
+  if (magic !== 540) {
+    console.log("Not a valid NIfTI-2 dataset");
+    return scalars;
+  }
+  let voxoffset = Number(reader.getBigInt64(168, isLittleEndian));
+  let scl_slope = reader.getFloat64(176, isLittleEndian);
+  let scl_inter = reader.getFloat64(184, isLittleEndian);
+  let intent_code = reader.getUint32(504, isLittleEndian);
+  let datatype = reader.getUint16(12, isLittleEndian);
+  if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
+    console.log("Unsupported NIfTI datatype " + datatype);
+    return scalars;
+  }
+  let nvert = 1;
+  let dim = [1, 1, 1, 1, 1, 1, 1, 1];
+  for (var i = 1; i < 8; i++) {
+    dim[i] = Math.max(
+      Number(reader.getBigInt64(16 + i * 8, isLittleEndian)),
+      1
+    );
+    nvert *= dim[i];
+  }
+  if (intent_code >= 3000 && intent_code <= 3099 && voxoffset > 580) {
+    //CIFTI ConnDenseScalar
+    let indexOffset = 0;
+    let indexCount = 0;
+    let surfaceNumberOfVertices = 0;
+    let brainStructure = "";
+    let vertexIndices = [];
+    var bytes = new Uint8Array(buffer);
+    let pos = 552;
+    function readStrX() {
+      while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+      let startPos = pos;
+      while (pos < len && bytes[pos] !== 10) pos++;
+      pos++; //skip EOLN
+      if (pos - startPos < 1) return "";
+      return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim();
+    }
+    function readStr() {
+      //concatenate lines to return tag <...>
+      let line = readStrX();
+      if (!line.startsWith("<") || line.endsWith(">")) {
+        return line;
+      }
+      while (pos < len && !line.endsWith(">")) line += readStrX();
+      return line;
+    }
+    let line = [];
+    function readNumericTag(TagName, asString = false) {
+      //Tag 'Dim1' will return 3 for Dim1="3"
+      let tpos = line.indexOf(TagName);
+      if (tpos < 0) return 1;
+      let spos = line.indexOf('"', tpos) + 1;
+      let epos = line.indexOf('"', spos);
+      let str = line.slice(spos, epos);
+      if (asString) return str;
+      return parseInt(str);
+    } //readNumericTag
+    while (pos < len) {
+      line = readStr();
+      if (line.includes("</CIFTI>")) break;
+      if (line.includes("<BrainModel")) {
+        let nv = readNumericTag("SurfaceNumberOfVertices=");
+        let bStruct = readNumericTag("BrainStructure=", true).toUpperCase();
+        if (nv % n_vert !== 0) continue;
+        //a single CIfTI file can contain multiple structures, but only one structure per mesh
+        //The big kludge: try to find CIfTI structure that matches GIfTI mesh
+        let isMatch = false;
+        if (
+          this.AnatomicalStructurePrimary.includes("CORTEX") &&
+          bStruct.includes("CORTEX")
+        )
+          isMatch = true;
+        //to do: other anatomy: cerebellum
+        if (!isMatch) continue;
+        isMatch = false;
+        if (
+          this.AnatomicalStructurePrimary.includes("LEFT") &&
+          bStruct.includes("LEFT")
+        )
+          isMatch = true;
+        if (
+          this.AnatomicalStructurePrimary.includes("RIGHT") &&
+          bStruct.includes("RIGHT")
+        )
+          isMatch = true;
+        if (!isMatch) continue;
+        surfaceNumberOfVertices = nv;
+        indexOffset = readNumericTag("IndexOffset=");
+        indexCount = readNumericTag("IndexCount=");
+        brainStructure = bStruct;
+        if (!line.includes("<VertexIndices>")) line = readStr();
+        if (
+          !line.startsWith("<VertexIndices>") ||
+          !line.endsWith("</VertexIndices>")
+        ) {
+          console.log("Unable to find CIfTI <VertexIndices>");
+          return scalars;
+        }
+        line = line.slice(15, -16);
+        let items = line.split(" ");
+        if (items.length < indexCount)
+          console.log("Error parsing VertexIndices");
+        vertexIndices = new Int32Array(indexCount);
+        for (let i = 0; i < indexCount; i++)
+          vertexIndices[i] = parseInt(items[i]);
+        //console.log(surfaceNumberOfVertices, brainStructure, indexOffset, indexCount, indexOffset, this.AnatomicalStructurePrimary);
+        //continue;
+      } //read <BrainModel
+    } //while (pos < len) or reached </CIFTI>
+    if (surfaceNumberOfVertices === 0 || vertexIndices.length === 0) {
+      console.log("Unable to find CIfTI structure that matches the mesh.");
+      return scalars;
+    }
+    if (datatype !== 16) {
+      console.log("Only able to read float32 CIfTI (only known datatype).");
+      return scalars;
+    }
+    let nFrame4D = dim[5]; //number of timepoints/frames per vertex
+    let vals = [];
+    if (false) {
+      vals = new Float32Array(
+        buffer,
+        voxoffset + nFrame4D * indexOffset * 4,
+        indexCount * nFrame4D
+      );
+    } else {
+      vals = new Float32Array(indexCount * nFrame4D);
+      let off = voxoffset + nFrame4D * indexOffset * 4;
+      for (var i = 0; i < indexCount * nFrame4D; i++)
+        vals[i] = reader.getFloat32(off + i * 4, isLittleEndian);
+    }
+    let scalars = new Float32Array(n_vert * nFrame4D);
+    let j = 0;
+
+    for (let i = 0; i < indexCount; i++) {
+      for (let f = 0; f < nFrame4D; f++) {
+        scalars[vertexIndices[i] + f * n_vert] = vals[j];
+        j++;
+      }
+    }
+    console.log(
+      "CIfTI diagnostics",
+      surfaceNumberOfVertices,
+      brainStructure,
+      indexOffset,
+      indexCount,
+      indexOffset,
+      this.AnatomicalStructurePrimary
+    );
+    //
+    return scalars;
+  } //is CIfTI
+  if (nvert % n_vert !== 0) {
+    console.log(
+      "Vertices in NIfTI (" +
+        nvert +
+        ") is not a multiple of number of vertices (" +
+        n_vert +
+        ")"
+    );
+    return scalars;
+  }
+  if (isLittleEndian) {
+    //block read native endian
+    if (datatype === 16) scalars = new Float32Array(buffer, voxoffset, nvert);
+    else if (datatype === 8) scalars = new Int32Array(buffer, voxoffset, nvert);
+    else if (datatype === 4) scalars = new Int16Array(buffer, voxoffset, nvert);
+  } else {
+    //if isLittleEndian
+    if (datatype === 16) {
+      scalars = new Float32Array(nvert);
+      for (var i = 0; i < nvert; i++)
+        scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian);
+    } else if (datatype === 8) {
+      scalars = new Int32Array(nvert);
+      for (var i = 0; i < nvert; i++)
+        scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian);
+    } else if (datatype === 4) {
+      scalars = new Int16Array(nvert);
+      for (var i = 0; i < nvert; i++)
+        scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian);
+    }
+  } //if isLittleEndian else big end
+  if (datatype === 2) scalars = new Uint8Array(buffer, voxoffset, nvert);
+  return scalars;
+};
+
+NVMesh.readNII = function (buffer, n_vert = 0) {
+  //https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
+  let scalars = [];
+  let len = buffer.byteLength;
+  let isLittleEndian = true;
+  var reader = new DataView(buffer);
+  var magic = reader.getUint16(0, isLittleEndian);
+  if (magic === 540 || magic === 469893120)
+    return this.readNII2(buffer, n_vert);
+  if (magic === 23553) {
+    isLittleEndian = false;
+    magic = reader.getUint16(0, isLittleEndian);
+  }
+  if (magic !== 348) {
+    //gzip signature 0x1F8B in little and big endian
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    reader = new DataView(raw.buffer);
+    buffer = raw.buffer;
+    var magic = reader.getUint16(0, isLittleEndian);
+    if (magic === 540 || magic === 469893120) return this.readNII2(buffer);
+    if (magic === 23553) {
+      isLittleEndian = false;
+      magic = reader.getUint16(0, isLittleEndian);
+    }
+  }
+  if (magic !== 348) console.log("Not a valid NIfTI image.");
+  let voxoffset = reader.getFloat32(108, isLittleEndian);
+  let scl_slope = reader.getFloat32(112, isLittleEndian);
+  let scl_inter = reader.getFloat32(116, isLittleEndian);
+  let datatype = reader.getUint16(70, isLittleEndian);
+  if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
+    console.log("Unsupported NIfTI datatype " + datatype);
+    return scalars;
+  }
+  let nvert = 1;
+  for (var i = 1; i < 8; i++) {
+    let dim = reader.getUint16(40 + i * 2, isLittleEndian);
+    nvert *= Math.max(dim, 1);
+  }
+  if (nvert % n_vert !== 0) {
+    console.log(
+      "Vertices in NIfTI (" +
+        nvert +
+        ") is not a multiple of number of vertices (" +
+        n_vert +
+        ")"
+    );
+    return scalars;
+  }
+  if (isLittleEndian) {
+    //block read native endian
+    if (datatype === 16) scalars = new Float32Array(buffer, voxoffset, nvert);
+    else if (datatype === 8) scalars = new Int32Array(buffer, voxoffset, nvert);
+    else if (datatype === 4) scalars = new Int16Array(buffer, voxoffset, nvert);
+  } else {
+    //if isLittleEndian
+    if (datatype === 16) {
+      scalars = new Float32Array(nvert);
+      for (var i = 0; i < nvert; i++)
+        scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian);
+    } else if (datatype === 8) {
+      scalars = new Int32Array(nvert);
+      for (var i = 0; i < nvert; i++)
+        scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian);
+    } else if (datatype === 4) {
+      scalars = new Int16Array(nvert);
+      for (var i = 0; i < nvert; i++)
+        scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian);
+    }
+  } //if isLittleEndian else big end
+  if (datatype === 2) scalars = new Uint8Array(buffer, voxoffset, nvert);
+  return scalars;
+}; //readNII();
+
+NVMesh.readMGH = function (buffer, n_vert = 0) {
+  var reader = new DataView(buffer);
+  var raw = buffer;
+  if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    reader = new DataView(raw.buffer);
+  }
+  let version = reader.getInt32(0, false);
+  let width = Math.max(1, reader.getInt32(4, false));
+  let height = Math.max(1, reader.getInt32(8, false));
+  let depth = Math.max(1, reader.getInt32(12, false));
+  let nframes = Math.max(1, reader.getInt32(16, false));
+  let mtype = reader.getInt32(20, false);
+  if (version !== 1 || mtype < 0 || mtype > 4)
+    console.log("Not a valid MGH file");
+  let nvert = width * height * depth * nframes;
+  let scalars = [];
+  if (nvert % n_vert !== 0) {
+    console.log(
+      "Vertices in NIfTI (" +
+        nvert +
+        ") is not a multiple of number of vertices (" +
+        n_vert +
+        ")"
+    );
+    return scalars;
+  }
+  if (mtype === 3) {
+    scalars = new Float32Array(nvert);
+    for (var i = 0; i < nvert; i++)
+      scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian);
+  } else if (mtype === 1) {
+    scalars = new Int32Array(nvert);
+    for (var i = 0; i < nvert; i++)
+      scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian);
+  } else if (mtype === 4) {
+    scalars = new Int16Array(nvert);
+    for (var i = 0; i < nvert; i++)
+      scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian);
+  } else if (mtype === 0) scalars = new Uint8Array(buffer, voxoffset, nvert);
+  return scalars;
+}; // readMGH()
+
 NVMesh.readGII = function (buffer, n_vert = 0) {
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
@@ -2166,7 +2494,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         //not position or indices: assume scalars NIFTI_INTENT_NONE
         nvert = Dims[0] * Dims[1] * Dims[2];
         if (n_vert !== 0) {
-          if (n_vert % nvert !== 0)
+          if (nvert % n_vert !== 0)
             console.log(
               "Number of vertices in scalar overlay (" +
                 nvert +
@@ -2193,6 +2521,23 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         scalars = Float32Concat(scalars, scalarsNew);
       }
       continue;
+    }
+    if (
+      line.startsWith("<Name") &&
+      line.includes("AnatomicalStructurePrimary")
+    ) {
+      //the great kludge: attempt to match GIfTI and CIfTI
+      //unclear how connectome workbench reconciles multiple CIfTI structures with GIfTI mesh
+      if (!line.includes("<Value")) line = readStr();
+      if (!line.includes("CDATA[")) continue;
+      function readBracketTag(TagName) {
+        let pos = line.indexOf(TagName);
+        if (pos < 0) return "";
+        let spos = line.indexOf("[", pos) + 1;
+        let epos = line.indexOf("]", spos);
+        return line.slice(spos, epos);
+      }
+      this.AnatomicalStructurePrimary = readBracketTag("CDATA[").toUpperCase();
     }
     if (!line.startsWith("<DataArray")) continue;
     //read DataArray properties
