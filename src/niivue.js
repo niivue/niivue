@@ -853,6 +853,12 @@ Niivue.prototype.keyDownListener = function (e) {
   } else if (e.code === "KeyK" && this.sliceType !== this.sliceTypeRender) {
     this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001;
     this.drawScene();
+  } else if (e.code === "ArrowLeft") {
+    // only works for background (first loaded image is index 0)
+    this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1);
+  } else if (e.code === "ArrowRight") {
+    // only works for background (first loaded image is index 0)
+    this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
   }
 };
 
@@ -3001,6 +3007,14 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
 
 Niivue.prototype.setFrame4D = function (id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
+  // don't allow indexing timepoints beyond the max number of time points.
+  if (frame4D > this.volumes[idx].nFrame4D - 1) {
+    frame4D = this.volumes[idx].nFrame4D;
+  }
+  // don't allow negative timepoints
+  if (frame4D < 0) {
+    frame4D = 0;
+  }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
 };

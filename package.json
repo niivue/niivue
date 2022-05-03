@@ -1,9 +1,16 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.22.3",
+  "version": "0.23.1",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./src/niivue.js",
   "unpkg": "./dist/niivue.umd.js",
+  "module": "./dist/niivue.es.js",
+  "exports": {
+    ".": {
+      "require": "./dist/niivue.umd.js",
+      "import": "./dist/niivue.es.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "npx prettier --write src/ && npx vite build --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
