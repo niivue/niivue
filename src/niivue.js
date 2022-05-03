@@ -103,6 +103,7 @@ export function Niivue(options = {}) {
     dragAndDropEnabled: true,
     drawingEnabled: false, // drawing disabled by default
     penValue: 1, // sets drawing color. see "drawPt"
+    isFilledPen: false,
     thumbnail: "",
   };
 
@@ -115,6 +116,7 @@ export function Niivue(options = {}) {
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
+  this.drawPenFillPts = []; //store mouse points for filled pen
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
@@ -606,6 +608,7 @@ Niivue.prototype.mouseUpListener = function () {
   this.scene.mousedown = false;
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseButtonLeftDown = false;
+  if (this.drawPenFillPts.length > 0) this.drawPenFilled();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
   if (this.isDragging) {
@@ -1016,6 +1019,7 @@ Niivue.prototype.dropListener = async function (e) {
             continue;
           }
           if (
+            ext === "ASC" ||
             ext === "DFS" ||
             ext === "FSM" ||
             ext === "PIAL" ||
@@ -1028,9 +1032,11 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "MZ3" ||
             ext === "OBJ" ||
             ext === "OFF" ||
+            ext === "PLY" ||
             ext === "SRF" ||
             ext === "STL" ||
             ext === "TCK" ||
+            ext === "TRACT" ||
             ext === "TRK" ||
             ext === "TRX" ||
             ext === "VTK"
@@ -1503,8 +1509,9 @@ Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
   this.drawScene();
 };
 
-Niivue.prototype.setPenValue = function (penValue) {
+Niivue.prototype.setPenValue = function (penValue, isFilledPen = false) {
   this.opts.penValue = penValue;
+  this.opts.isFilledPen = isFilledPen;
   this.drawScene();
 };
 
@@ -1789,11 +1796,6 @@ Niivue.prototype.drawPt = function (x, y, z, penValue) {
   let dx = this.back.dims[1];
   let dy = this.back.dims[2];
   let dz = this.back.dims[3];
-  /*
-	let dx = this.volumes[0].hdr.dims[1]
- 	let dy = this.volumes[0].hdr.dims[2]
- 	let dz = this.volumes[0].hdr.dims[3]
-	*/
   x = Math.min(Math.max(x, 0), dx - 1);
   y = Math.min(Math.max(y, 0), dy - 1);
   z = Math.min(Math.max(z, 0), dz - 1);
@@ -1876,6 +1878,138 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
     } //while
   }
 };
+
+Niivue.prototype.drawPenFilled = function () {
+  let nPts = this.drawPenFillPts.length;
+  if (nPts < 2) {
+    //can not fill single line
+    this.drawPenFillPts = [];
+    return;
+  }
+  //do fill in 2D, based on axial (0), coronal (1) or sagittal drawing (2
+  let axCorSag = this.drawPenAxCorSag;
+  //axial is x(0)*y(1) horizontal*vertical
+  let h = 0;
+  let v = 1;
+  if (axCorSag === 1) v = 2; //coronal is x(0)*z(0)
+  if (axCorSag === 2) {
+    //sagittal is y(1)*z(2)
+    h = 1;
+    v = 2;
+  }
+  let dims2D = [this.back.dims[h + 1], this.back.dims[v + 1]]; //+1: dims indexed from 0!
+  //create bitmap of horizontal*vertical voxels:
+  var img2D = new Uint8Array(dims2D[0] * dims2D[1]);
+  var pen = 1; //do not use this.opts.penValue, as "erase" is zero
+  function drawLine2D(ptA, ptB, penValue) {
+    let dx = Math.abs(ptA[0] - ptB[0]);
+    let dy = Math.abs(ptA[1] - ptB[1]);
+    img2D[ptA[0] + ptA[1] * dims2D[0]] = pen;
+    img2D[ptB[0] + ptB[1] * dims2D[0]] = pen;
+    let xs = -1;
+    let ys = -1;
+    if (ptB[0] > ptA[0]) xs = 1;
+    if (ptB[1] > ptA[1]) ys = 1;
+    let x1 = ptA[0];
+    let y1 = ptA[1];
+    let x2 = ptB[0];
+    let y2 = ptB[1];
+    if (dx >= dy) {
+      //Driving axis is X-axis"
+      let p1 = 2 * dy - dx;
+      while (x1 != x2) {
+        x1 += xs;
+        if (p1 >= 0) {
+          y1 += ys;
+          p1 -= 2 * dx;
+        }
+        p1 += 2 * dy;
+        img2D[x1 + y1 * dims2D[0]] = pen;
+      } //while
+    } else {
+      //Driving axis is Y-axis"
+      let p1 = 2 * dx - dy;
+      while (y1 != y2) {
+        y1 += ys;
+        if (p1 >= 0) {
+          x1 += xs;
+          p1 -= 2 * dy;
+        }
+        p1 += 2 * dx;
+        img2D[x1 + y1 * dims2D[0]] = pen;
+      } //while
+    }
+  }
+  let startPt = [this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]];
+  let prevPt = startPt;
+  for (let i = 1; i < nPts; i++) {
+    let pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]];
+    drawLine2D(prevPt, pt);
+    prevPt = pt;
+  }
+  drawLine2D(startPt, prevPt); //close drawing
+  //flood fill
+  let seeds = [];
+  function setSeed(pt) {
+    if (pt[0] < 0 || pt[1] < 0 || pt[0] >= dims2D[0] || pt[1] >= dims2D[1])
+      return;
+    let pxl = pt[0] + pt[1] * dims2D[0];
+    if (img2D[pxl] !== 0) return; //not blank
+    seeds.push(pt);
+    img2D[pxl] = 2;
+  }
+  // https://en.wikipedia.org/wiki/Flood_fill
+  // first seed all edges
+  //bottom row
+  for (let i = 0; i < dims2D[0]; i++) setSeed([i, 0]);
+  //top row
+  for (let i = 0; i < dims2D[0]; i++) setSeed([i, dims2D[1] - 1]);
+  //left column
+  for (let i = 0; i < dims2D[1]; i++) setSeed([0, i]);
+  //right columns
+  for (let i = 0; i < dims2D[1]; i++) setSeed([dims2D[0] - 1, i]);
+  //now retire first in first out
+  while (seeds.length > 0) {
+    //always remove one seed, plant 0..4 new ones
+    let seed = seeds.shift();
+    setSeed([seed[0] - 1, seed[1]]);
+    setSeed([seed[0] + 1, seed[1]]);
+    setSeed([seed[0], seed[1] - 1]);
+    setSeed([seed[0], seed[1] + 1]);
+  }
+  //all voxels with value of zero have no path to edges
+  //insert surviving pixels from 2D bitmap into 3D bitmap
+  pen = this.opts.penValue;
+  let slice = this.drawPenFillPts[0][3 - (h + v)];
+  if (axCorSag === 0) {
+    //axial
+    let offset = slice * dims2D[0] * dims2D[1];
+    for (let i = 0; i < dims2D[0] * dims2D[1]; i++) {
+      if (img2D[i] !== 2) this.drawBitmap[i + offset] = pen;
+    }
+  } else {
+    let xStride = 1; //coronal: horizontal LR pixels contiguous
+    let yStride = this.back.dims[1] * this.back.dims[2]; //coronal: vertical is slice
+    let zOffset = slice * this.back.dims[1]; //coronal: slice is number of columns
+    if (axCorSag === 2) {
+      //sagittal
+      xStride = this.back.dims[1];
+      zOffset = slice;
+    }
+    let i = 0;
+    for (let y = 0; y < dims2D[1]; y++) {
+      for (let x = 0; x < dims2D[0]; x++) {
+        if (img2D[i] !== 2)
+          this.drawBitmap[x * xStride + y * yStride + zOffset] = pen;
+        i++;
+      } // x column
+    } //y row
+  } //not axial
+  this.drawPenFillPts = [];
+  this.refreshDrawing(false);
+}; // drawPenFilled()
+
+/*
 //Demonstrate how to create drawing
 Niivue.prototype.createRandomDrawing = function () {
   if (!this.drawBitmap) this.createEmptyDrawing();
@@ -1896,7 +2030,7 @@ Niivue.prototype.createRandomDrawing = function () {
     this.drawLine(ptA, ptB, (i % 3) + 1);
   }
   this.refreshDrawing(true);
-};
+};*/
 
 //release GPU and CPU memory: make sure you have saved any changes before calling this!
 Niivue.prototype.closeDrawing = function () {
@@ -3082,9 +3216,20 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         let pt = this.frac2vox(this.scene.crosshairPos);
         if (isNaN(this.drawPenLocation[0])) {
           this.drawPenAxCorSag = axCorSag;
+          this.drawPenFillPts = [];
           this.drawPt(...pt, this.opts.penValue);
-        } else this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
+        } else {
+          if (
+            pt[0] === this.drawPenLocation[0] &&
+            pt[1] === this.drawPenLocation[1] &&
+            pt[2] === this.drawPenLocation[2]
+          )
+            return;
+          this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
+        }
+        //console.log(pt);
         this.drawPenLocation = pt;
+        if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
         this.refreshDrawing(false);
       }
       this.drawScene();
@@ -3872,9 +4017,9 @@ Niivue.prototype.vox2frac = function (vox, volIdx = 0) {
   //convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
   let frac = [
-    (vox[0] + 0.5) / this.volumes[volIdx].hdr.dims[1],
-    (vox[1] + 0.5) / this.volumes[volIdx].hdr.dims[2],
-    (vox[2] + 0.5) / this.volumes[volIdx].hdr.dims[3],
+    (vox[0] + 0.5) / this.volumes[volIdx].dimsRAS[1],
+    (vox[1] + 0.5) / this.volumes[volIdx].dimsRAS[2],
+    (vox[2] + 0.5) / this.volumes[volIdx].dimsRAS[3],
   ];
   return frac;
 }; // vox2frac()
@@ -3890,6 +4035,17 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   ];
   return vox;
 }; // frac2vox()
+
+// not included in public docs
+Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
+  let vox = this.frac2vox(this.scene.crosshairPos);
+  console.log(vox);
+  vox[0] += x;
+  vox[1] += y;
+  vox[2] += z;
+  this.scene.crosshairPos = this.vox2frac(vox);
+  this.drawScene();
+};
 
 // not included in public docs
 Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
