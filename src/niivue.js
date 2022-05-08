@@ -1030,6 +1030,7 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "WHITE" ||
             ext === "GII" ||
             ext === "MZ3" ||
+            ext === "NV" ||
             ext === "OBJ" ||
             ext === "OFF" ||
             ext === "PLY" ||
