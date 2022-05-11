@@ -475,6 +475,18 @@ NVMesh.prototype.updateMesh = function (gl) {
   this.vertexCount = this.pts.length;
 };
 
+NVMesh.prototype.reverseFaces = function (gl) {
+  if (this.offsetPt0) return; //fiber not mesh
+  if (this.hasConnectome) return; //connectome not mesh
+  let tris = this.tris;
+  for (let j = 0; j < tris.length; j += 3) {
+    let tri = tris[j];
+    tris[j] = tris[j + 1];
+    tris[j + 1] = tri;
+  }
+  this.updateMesh(gl); //apply the new properties...
+};
+
 NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   let layer = this.layers[id];
   if (!layer.hasOwnProperty(key)) {
@@ -1288,15 +1300,14 @@ NVMesh.readNV = function (buffer) {
   let indices = [];
   while (pos < len) {
     let line = readStr(); //1st line: '#!ascii version of lh.pial'
-    if (line.startsWith('#'))
-      continue;
+    if (line.startsWith("#")) continue;
     let items = line.split(" ");
     if (nvert < 1) {
       nvert = parseInt(items[0]);
       positions = new Float32Array(nvert * 3);
       continue;
     }
-    if (v < (nvert * 3)) {
+    if (v < nvert * 3) {
       positions[v] = parseFloat(items[0]);
       positions[v + 1] = parseFloat(items[1]);
       positions[v + 2] = parseFloat(items[2]);
@@ -1308,7 +1319,7 @@ NVMesh.readNV = function (buffer) {
       indices = new Int32Array(ntri * 3);
       continue;
     }
-    if (t >= (ntri * 3)) break;
+    if (t >= ntri * 3) break;
     indices[t + 2] = parseInt(items[0]) - 1;
     indices[t + 1] = parseInt(items[1]) - 1;
     indices[t + 0] = parseInt(items[2]) - 1;
@@ -1318,7 +1329,7 @@ NVMesh.readNV = function (buffer) {
     positions,
     indices,
   };
-} // readNV()
+}; // readNV()
 NVMesh.readASC = function (buffer) {
   //SUMA ASCII format https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/demos/Bootcamp/CD.html#cd
   //http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
@@ -2660,7 +2671,7 @@ NVMesh.readMesh = async function (
   }
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
-    if (ext === "TRACT") obj = this.readTRACT(buffer);
+    else if (ext === "TRACT") obj = this.readTRACT(buffer);
     else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
     //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());

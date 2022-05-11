@@ -1,7 +1,11 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
 import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
-import { vertLineShader, fragLineShader } from "./shader-srcs.js";
+import {
+  vertGraphShader,
+  vertLineShader,
+  fragLineShader,
+} from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
@@ -121,6 +125,7 @@ export function Niivue(options = {}) {
   this.overlayTextureID = [];
   this.sliceShader = null;
   this.lineShader = null;
+  this.graphShader = null;
   this.renderShader = null;
   this.pickingShader = null;
   this.colorbarShader = null;
@@ -207,6 +212,9 @@ export function Niivue(options = {}) {
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
+  this.graph = [];
+  this.graph.LTWH = [0, 0, 640, 480];
+  this.graph.opacity = 0.0;
   this.meshShaders = [
     {
       Name: "Phong",
@@ -1265,6 +1273,15 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.reverseFaces = function (mesh) {
+  let idx = this.getMeshIndexByID(mesh);
+  if (idx < 0) {
+    log.warn("reverseFaces() id not loaded", mesh);
+    return;
+  }
+  this.meshes[idx].reverseFaces(this.gl);
+  this.updateGLVolume();
+};
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
   if (idx < 0) {
@@ -2457,6 +2474,7 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   // line shader (crosshair)
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
+  this.graphShader = new Shader(this.gl, vertGraphShader, fragLineShader);
   // render shader (3D)
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
@@ -3370,7 +3388,7 @@ Niivue.prototype.drawLoadingText = function (text) {
 };
 
 // not included in public docs
-Niivue.prototype.drawText = function (xy, str, scale = 1) {
+Niivue.prototype.drawText = function (xy, str, scale = 1, color = null) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
@@ -3385,10 +3403,8 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
     this.gl.canvas.width,
     this.gl.canvas.height
   );
-  this.gl.uniform4fv(
-    this.fontShader.uniforms["fontColor"],
-    this.opts.crosshairColor
-  );
+  if (color === null) color = this.opts.crosshairColor;
+  this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], color);
   let screenPxRange = (size / this.fontMets.size) * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
@@ -3408,12 +3424,22 @@ Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
 }; // drawTextRight()
 
 // not included in public docs
-Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
+Niivue.prototype.drawTextLeft = function (xy, str, scale = 1, color = null) {
+  //to right of x, vertically centered on y
+  if (this.opts.textHeight <= 0) return;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  xy[0] -= this.textWidth(size, str);
+  xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
+  this.drawText(xy, str, scale, color);
+}; // drawTextRight()
+
+// not included in public docs
+Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   //horizontally centered on x, below y
   if (this.opts.textHeight <= 0) return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= 0.5 * this.textWidth(size, str);
-  this.drawText(xy, str, scale);
+  this.drawText(xy, str, scale, color);
 }; // drawTextBelow()
 
 Niivue.prototype.updateInterpolation = function (layer) {
@@ -3758,6 +3784,243 @@ Niivue.prototype.setPivot3D = function () {
   //console.log('pivot: '+ this.pivot3D +' furthestFromPivot:' + this.furthestFromPivot);
 }; // setPivot3D()
 
+Niivue.prototype.drawGraphLine = function (
+  LTRB,
+  color = [1, 0, 0, 0.5],
+  thickness = 2
+) {
+  this.graphShader.use(this.gl);
+  this.gl.uniform4fv(this.graphShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.graphShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform1f(this.graphShader.uniforms["thickness"], thickness);
+  this.gl.uniform4f(
+    this.graphShader.uniforms["leftTopRightBottom"],
+    LTRB[0],
+    LTRB[1],
+    LTRB[2],
+    LTRB[3]
+  );
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+};
+
+Niivue.prototype.drawRect = function (LTWH, color = [1, 0, 0, 0.5]) {
+  this.lineShader.use(this.gl);
+  this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform4f(
+    this.lineShader.uniforms["leftTopWidthHeight"],
+    LTWH[0],
+    LTWH[1],
+    LTWH[2],
+    LTWH[3]
+  );
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+};
+
+function tickSpacing(tickCount, mn, mx) {
+  //https://www.realtimerendering.com/resources/GraphicsGems/gems/Label.c
+  //https://stackoverflow.com/questions/326679/choosing-an-attractive-linear-scale-for-a-graphs-y-axis
+  let range = Math.abs(mx - mn);
+  if (range === 0.0) return [0, 0];
+  let unroundedTickSize = range / (tickCount - 1);
+  let x = Math.ceil(Math.log10(unroundedTickSize) - 1);
+  let pow10x = Math.pow(10, x);
+  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
+  let ticMin = mn;
+  if ((mn / spacing) % 1 !== 0.0)
+    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
+  //if (ticMin > mn) ticMin -= spacing;
+  //let ticMax = Math.ceil(range / spacing) * spacing + ticMin;
+  //if (ticMax < mx) ticMax += spacing;
+
+  return [spacing, ticMin];
+}
+
+Niivue.prototype.drawGraph = function () {
+  let gl = this.gl;
+  let graph = this.graph;
+  if (graph.opacity <= 0.0 || graph.LTWH[2] <= 0 || graph.LTWH[3] <= 0) {
+    return;
+  }
+  graph.backColor = [0.84, 0.84, 0.84, graph.opacity];
+  graph.lineColor = [1, 1, 1, 1];
+  graph.lineThickness = 4;
+  graph.lineAlpha = 0.5;
+  graph.textColor = [0, 0, 0, 1];
+
+  graph.lines = [];
+  graph.lines[0] = [];
+  graph.lines[1] = [];
+  function random32(a) {
+    var t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  for (let j = 0; j < 50; j++) {
+    graph.lines[0].push(0.1 * random32(j));
+    graph.lines[1].push(0.1 * random32(j + 1000));
+  }
+  graph.lineRGB = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+    [1, 1, 0],
+    [1, 0, 1],
+    [0, 1, 1],
+    [1, 1, 1],
+    [0, 0, 0],
+  ];
+  //find min, max, range for all lines
+  let mn = graph.lines[0][0];
+  let mx = graph.lines[0][0];
+  for (let j = 0; j < graph.lines.length; j++)
+    for (let i = 1; i < graph.lines[j].length; i++) {
+      let v = graph.lines[j][i];
+      mn = Math.min(v, mn);
+      mx = Math.max(v, mx);
+    }
+  this.drawRect(graph.LTWH, graph.backColor);
+  let [spacing, ticMin] = tickSpacing(5, mn, mx);
+  //determine font size
+  function humanize(x) {
+    //drop trailing zeros from numerical string
+    return x.toFixed(6).replace(/\.?0*$/, "");
+  }
+  let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
+  let fntScale = 0.1 * (minWH / this.fontMets.size);
+  let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
+  //let fntHeight = fntScale * this.fontMets.size;
+  let maxTextWid = 0;
+  let lineH = ticMin;
+  //determine widest label in vertical axis
+  while (lineH <= mx) {
+    let str = humanize(lineH);
+    let w = this.textWidth(fntSize, str);
+    maxTextWid = Math.max(w, maxTextWid);
+    lineH += spacing;
+  }
+
+  //
+  let margin = 0.05;
+  //frame is the entire region including labels, plot is the inner lines
+  let frameWid = Math.abs(graph.LTWH[2]);
+  let frameHt = Math.abs(graph.LTWH[3]);
+  //plot is region where lines are drawn
+  let plotLTWH = [
+    graph.LTWH[0] + margin * frameWid + maxTextWid,
+    graph.LTWH[1] + margin * frameHt,
+    graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
+    graph.LTWH[3] - fntSize - 2 * margin * frameHt,
+  ];
+  this.drawRect(plotLTWH, [
+    graph.backColor[0],
+    graph.backColor[1],
+    graph.backColor[2],
+    graph.backColor[3] * 2,
+  ]);
+  //draw horizontal lines
+  let rangeH = mx - mn;
+  let scaleH = plotLTWH[3] / rangeH;
+  let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
+  let plotBottom = plotLTWH[1] + plotLTWH[3];
+  //draw thin horizontal lines
+  lineH = ticMin + 0.5 * spacing;
+  let thinColor = graph.lineColor.slice();
+  thinColor[3] = 0.25 * graph.lineColor[3];
+  while (lineH <= mx) {
+    let y = plotBottom - (lineH - mn) * scaleH;
+    this.drawGraphLine(
+      [plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y],
+      thinColor,
+      0.5 * graph.lineThickness
+    );
+    lineH += spacing;
+  }
+  lineH = ticMin;
+  //draw thick horizontal lines
+  while (lineH <= mx) {
+    let y = plotBottom - (lineH - mn) * scaleH;
+    this.drawGraphLine(
+      [plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y],
+      graph.lineColor,
+      graph.lineThickness
+    );
+    //this.drawTextRight(xy, str, scale = 1)
+    let str = humanize(lineH);
+    this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
+    //this.drawTextRight([plotLTWH[0], y], str, fntScale)
+    lineH += spacing;
+  }
+  //draw vertical lines
+  let stride = 1; //e.g. how frequent are vertical lines
+  while (graph.lines[0].length / stride > 20) {
+    stride *= 5;
+  }
+  for (let i = 0; i < graph.lines[0].length; i += stride) {
+    let x = i * scaleW + plotLTWH[0];
+    let thick = graph.lineThickness;
+    if (i % 2 === 1) {
+      thick *= 0.5;
+      this.drawGraphLine(
+        [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+        thinColor,
+        thick
+      );
+    } else if (i > 0) {
+      let str = humanize(i);
+      this.drawTextBelow(
+        [x, 2 + plotLTWH[1] + plotLTWH[3]],
+        str,
+        fntScale,
+        graph.textColor
+      );
+      this.drawGraphLine(
+        [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+        graph.lineColor,
+        thick
+      );
+    } //this.drawTextBelow(xy, str, scale = 1);
+    //this.drawRect([x, plotLTWH[1], 1, plotLTWH[3]], graph.lineColor);
+  }
+  for (let j = 0; j < graph.lines.length; j++) {
+    let lineRGBA = [1, 0, 0, graph.lineAlpha];
+    if (j < graph.lineRGB.length) {
+      lineRGBA = [
+        graph.lineRGB[j][0],
+        graph.lineRGB[j][1],
+        graph.lineRGB[j][2],
+        graph.lineAlpha,
+      ];
+    }
+    for (let i = 1; i < graph.lines[j].length; i++) {
+      let x0 = (i - 1) * scaleW; //
+      let x1 = i * scaleW;
+      let y0 = (graph.lines[j][i - 1] - mn) * scaleH;
+      let y1 = (graph.lines[j][i] - mn) * scaleH;
+      //let LTWH = [plotLTWH[0]+x0, plotLTWH[1]+plotLTWH[3]-y0, plotLTWH[0]+x1, -(y1-y0)];
+      let LTWH = [
+        plotLTWH[0] + x0,
+        plotLTWH[1] + plotLTWH[3] - y0,
+        plotLTWH[0] + x1,
+        plotLTWH[1] + plotLTWH[3] - y1,
+      ];
+      this.drawGraphLine(LTWH, lineRGBA, graph.lineThickness);
+    } //for i: each point
+  } //for j: each line
+};
+
 // not included in public docs
 Niivue.prototype.draw3D = function () {
   this.setPivot3D();
@@ -3850,6 +4113,7 @@ Niivue.prototype.draw3D = function () {
     this.scene.renderAzimuth.toFixed(0) +
     " elevation: " +
     this.scene.renderElevation.toFixed(0);
+  this.drawGraph();
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();

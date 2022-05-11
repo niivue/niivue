@@ -447,6 +447,46 @@ void main() {
 	color = vec4(texture(colormap, vColor).rgb, 1.0);
 }`;
 
+export var vertGraphShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform float thickness;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopRightBottom;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	float ny =  (leftTopRightBottom.x-leftTopRightBottom.z);
+	float nx =  (leftTopRightBottom.y-leftTopRightBottom.w);
+	float len = sqrt((nx*nx)+(ny*ny));
+	if (len > 0.0) {
+		nx = 0.5*thickness*nx/len;
+		ny = 0.5*thickness*ny/len;
+	}
+	vec2 frac;
+	if (pos.y < 0.5)
+		frac.y = leftTopRightBottom.y;
+	else
+		frac.y = leftTopRightBottom.w;
+	if (pos.x < 0.5) {
+		frac.x = leftTopRightBottom.x;
+		frac.y = leftTopRightBottom.y;
+	} else {
+		frac.x = leftTopRightBottom.z;
+		frac.y = leftTopRightBottom.w;
+	}
+	if (pos.y < 0.5) {
+		frac.x += nx;
+		frac.y -= ny;
+	} else {
+		frac.x -= nx;
+		frac.y += ny;
+	}
+	frac.x /= canvasWidthHeight.x;
+	frac.y = 1.0 - (frac.y / canvasWidthHeight.y);
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
+}`;
+
 export var vertLineShader = `#version 300 es
 #line 229
 layout(location=0) in vec3 pos;
