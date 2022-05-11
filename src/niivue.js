@@ -215,6 +215,10 @@ export function Niivue(options = {}) {
   this.graph = [];
   this.graph.LTWH = [0, 0, 640, 480];
   this.graph.opacity = 0.0;
+  //this.graph.selectedColumn = -1;
+  this.graph.vols = [0]; //e.g. timeline for background volume only, e.g. [0,2] for first and third volumes
+  this.graph.autoSizeMultiplanar = true;
+  this.graph.normalizeValues = false;
   this.meshShaders = [
     {
       Name: "Phong",
@@ -3132,14 +3136,33 @@ Niivue.prototype.sliceScale = function () {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
-
   this.canvas.focus();
   if (this.bmpTexture !== null) {
     this.gl.deleteTexture(this.bmpTexture);
     this.bmpTexture = null;
     //the thumbnail is now released, do something profound: actually load the images
   }
-
+  if (
+    this.graph.opacity > 0.0 &&
+    this.volumes[0].nFrame4D > 1 &&
+    this.graph.plotLTWH
+  ) {
+    let pos = [x - this.graph.plotLTWH[0], y - this.graph.plotLTWH[1]];
+    if (
+      pos[0] > 0 &&
+      pos[1] > 0 &&
+      pos[0] <= this.graph.plotLTWH[2] &&
+      pos[1] <= this.graph.plotLTWH[3]
+    ) {
+      let vol = Math.round(
+        (pos[0] / this.graph.plotLTWH[2]) * (this.volumes[0].nFrame4D - 1)
+      );
+      //this.graph.selectedColumn = vol;
+      this.volumes[0].frame4D = vol;
+      this.updateGLVolume();
+      return;
+    }
+  }
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
     //n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
@@ -3429,7 +3452,7 @@ Niivue.prototype.drawTextLeft = function (xy, str, scale = 1, color = null) {
   if (this.opts.textHeight <= 0) return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= this.textWidth(size, str);
-  xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
+  xy[1] -= 0.5 * size;
   this.drawText(xy, str, scale, color);
 }; // drawTextRight()
 
@@ -3849,32 +3872,63 @@ function tickSpacing(tickCount, mn, mx) {
 Niivue.prototype.drawGraph = function () {
   let gl = this.gl;
   let graph = this.graph;
-  if (graph.opacity <= 0.0 || graph.LTWH[2] <= 0 || graph.LTWH[3] <= 0) {
+  if (
+    this.graph.autoSizeMultiplanar &&
+    this.sliceType === this.sliceTypeMultiplanar
+  ) {
+    for (let i = 0; i < this.numScreenSlices; i++) {
+      var axCorSag = this.screenSlices[i].axCorSag;
+      if (axCorSag !== this.sliceTypeSagittal) continue;
+      var ltwh = this.screenSlices[i].leftTopWidthHeight;
+      graph.LTWH[0] = ltwh[0];
+      graph.LTWH[1] = ltwh[1] + ltwh[3];
+      graph.LTWH[2] = ltwh[2];
+      graph.LTWH[3] = ltwh[2];
+    }
+  }
+  if (graph.opacity <= 0.0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
     return;
   }
-  graph.backColor = [0.84, 0.84, 0.84, graph.opacity];
+  graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
   graph.lineColor = [1, 1, 1, 1];
   graph.lineThickness = 4;
   graph.lineAlpha = 0.5;
-  graph.textColor = [0, 0, 0, 1];
-
+  graph.textColor = [1, 1, 1, 1];
   graph.lines = [];
-  graph.lines[0] = [];
-  graph.lines[1] = [];
-  function random32(a) {
-    var t = (a += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  let vols = [];
+  if (graph.vols.length < 1) {
+    if (this.volumes[0] != null) vols.push(0);
+  } else {
+    for (let i = 0; i < graph.vols.length; i++) {
+      let j = graph.vols[i];
+      if (this.volumes[j] == null) continue;
+      let n = this.volumes[j].nFrame4D;
+      if (n < 2) continue;
+      vols.push(j);
+    }
   }
-
-  for (let j = 0; j < 50; j++) {
-    graph.lines[0].push(0.1 * random32(j));
-    graph.lines[1].push(0.1 * random32(j + 1000));
+  if (vols.length < 1) return;
+  //let vols = graph.vols;
+  let maxVols = this.volumes[vols[0]].nFrame4D;
+  this.graph.selectedColumn = this.volumes[vols[0]].frame4D;
+  if (maxVols < 2) {
+    console.log("Unable to generate a graph: Selected volume is 3D not 4D");
+    return;
+  }
+  for (let i = 0; i < vols.length; i++) {
+    graph.lines[i] = [];
+    let vox = this.frac2vox(this.scene.crosshairPos);
+    let v = this.volumes[vols[i]];
+    let n = v.nFrame4D;
+    n = Math.min(n, maxVols);
+    for (let j = 0; j < n; j++) {
+      let val = v.getValue(...vox, j);
+      graph.lines[i].push(val);
+    }
   }
   graph.lineRGB = [
     [1, 0, 0],
-    [0, 1, 0],
+    [0, 0.7, 0],
     [0, 0, 1],
     [1, 1, 0],
     [1, 0, 1],
@@ -3886,12 +3940,32 @@ Niivue.prototype.drawGraph = function () {
   let mn = graph.lines[0][0];
   let mx = graph.lines[0][0];
   for (let j = 0; j < graph.lines.length; j++)
-    for (let i = 1; i < graph.lines[j].length; i++) {
+    for (let i = 0; i < graph.lines[j].length; i++) {
       let v = graph.lines[j][i];
       mn = Math.min(v, mn);
       mx = Math.max(v, mx);
     }
-  this.drawRect(graph.LTWH, graph.backColor);
+  if (graph.normalizeValues && mx > mn) {
+    let range = mx - mn;
+    for (let j = 0; j < graph.lines.length; j++)
+      for (let i = 0; i < graph.lines[j].length; i++) {
+        let v = graph.lines[j][i];
+        graph.lines[j][i] = (v - mn) / range;
+      }
+    mn = 0;
+    mx = 1;
+  }
+  if (mn >= mx) {
+    mx = mn + 1.0;
+  }
+  let dark = 0.9; //make border around graph a bit darker than graph body
+  let borderColor = [
+    dark * graph.backColor[0],
+    dark * graph.backColor[1],
+    dark * graph.backColor[2],
+    graph.backColor[3],
+  ];
+  this.drawRect(graph.LTWH, borderColor);
   let [spacing, ticMin] = tickSpacing(5, mn, mx);
   //determine font size
   function humanize(x) {
@@ -3905,14 +3979,13 @@ Niivue.prototype.drawGraph = function () {
   let maxTextWid = 0;
   let lineH = ticMin;
   //determine widest label in vertical axis
+
   while (lineH <= mx) {
     let str = humanize(lineH);
     let w = this.textWidth(fntSize, str);
     maxTextWid = Math.max(w, maxTextWid);
     lineH += spacing;
   }
-
-  //
   let margin = 0.05;
   //frame is the entire region including labels, plot is the inner lines
   let frameWid = Math.abs(graph.LTWH[2]);
@@ -3924,6 +3997,7 @@ Niivue.prototype.drawGraph = function () {
     graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
     graph.LTWH[3] - fntSize - 2 * margin * frameHt,
   ];
+  this.graph.plotLTWH = plotLTWH;
   this.drawRect(plotLTWH, [
     graph.backColor[0],
     graph.backColor[1],
@@ -3993,6 +4067,19 @@ Niivue.prototype.drawGraph = function () {
       );
     } //this.drawTextBelow(xy, str, scale = 1);
     //this.drawRect([x, plotLTWH[1], 1, plotLTWH[3]], graph.lineColor);
+  }
+  //draw vertical selected line
+  if (
+    graph.selectedColumn >= 0 &&
+    graph.selectedColumn < graph.lines[0].length
+  ) {
+    let x = graph.selectedColumn * scaleW + plotLTWH[0];
+    let color = graph.lineRGB[0];
+    this.drawGraphLine(
+      [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+      [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1],
+      graph.lineThickness
+    );
   }
   for (let j = 0; j < graph.lines.length; j++) {
     let lineRGBA = [1, 0, 0, graph.lineAlpha];
@@ -4508,7 +4595,8 @@ Niivue.prototype.drawScene = function () {
     );
     let wX1 =
       (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
-    if (wX1 > wX) {
+    if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
+      //landscape screen ratio: 3 slices in single row
       let pixScale = wX1 / volScale[0];
       let hY1 = volScale[1] * pixScale;
       let hZ1 = volScale[2] * pixScale;
@@ -4530,16 +4618,17 @@ Niivue.prototype.drawScene = function () {
       this.draw2D([ltwh[0] + wX, ltwh[1], wY, hZ], 2);
       //draw colorbar (optional) // TODO currently only drawing one colorbar, there may be one per overlay + one for the background
       var margin = this.opts.colorBarMargin * hY;
-      this.drawColorbar([
-        ltwh[0] + wX + margin,
-        ltwh[1] + hZ + margin,
-        wY - margin - margin,
-        hY * this.opts.colorbarHeight,
-      ]);
+      if (!this.graph.autoSizeMultiplanar) {
+        this.drawColorbar([
+          ltwh[0] + wX + margin,
+          ltwh[1] + hZ + margin,
+          wY - margin - margin,
+          hY * this.opts.colorbarHeight,
+        ]);
+      }
       // drawTextBelow(gl, [ltwh[0]+ wX + (wY * 0.5), ltwh[1] + hZ + margin + hY * colorbarHeight], "Syzygy"); //DEMO
     }
   }
-
   if (this.isDragging && this.sliceType !== this.sliceTypeRender) {
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
@@ -4557,6 +4646,8 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
+  this.drawGraph();
+
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();

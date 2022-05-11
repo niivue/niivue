@@ -25,12 +25,14 @@
       <p>
         You can see different volumes in a 4D time series by clicking the forward and back buttons
       </p>
+      <input onclick="checkClick(this)" type="checkbox" id="check1" name="check1" value="true">
+      <label for="check1">Normalize graph intensities</label>
     </section>
 
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
@@ -56,6 +58,13 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.graph.autoSizeMultiplanar = true;
+      nv1.graph.normalizeValues = false;
+      nv1.graph.opacity = 1.0;
+      function checkClick(cb) {
+        nv1.graph.normalizeValues = cb.checked;
+        nv1.updateGLVolume();
+      }
       let currentVol = 0
       function prevVolume(){
         currentVol = Math.max(currentVol -1, 0);

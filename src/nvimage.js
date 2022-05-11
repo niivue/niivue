@@ -2474,8 +2474,8 @@ String.prototype.getBytes = function () {
   return bytes;
 };
 
-NVImage.prototype.getValue = function (x, y, z) {
-  const { nx, ny } = this.getImageMetadata();
+NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
+  const { nx, ny, nz } = this.getImageMetadata();
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
     let vx = 4 * (x + y * nx + z * nx * ny);
     //convert rgb to luminance
@@ -2490,7 +2490,8 @@ NVImage.prototype.getValue = function (x, y, z) {
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
-  let i = this.img[x + y * nx + z * nx * ny];
+  let vol = frame4D * nx * ny * nz;
+  let i = this.img[x + y * nx + z * nx * ny + vol];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 
