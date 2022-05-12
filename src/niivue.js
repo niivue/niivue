@@ -217,7 +217,7 @@ export function Niivue(options = {}) {
   this.graph.opacity = 0.0;
   //this.graph.selectedColumn = -1;
   this.graph.vols = [0]; //e.g. timeline for background volume only, e.g. [0,2] for first and third volumes
-  this.graph.autoSizeMultiplanar = true;
+  this.graph.autoSizeMultiplanar = false;
   this.graph.normalizeValues = false;
   this.meshShaders = [
     {
