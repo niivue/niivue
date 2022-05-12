@@ -387,9 +387,7 @@ out vec4 color;
 void main() {
 	color = vec4(texture(volume, texPos).rgb, opacity);
 	vec4 ocolor = vec4(0.0);
-	if (overlays < 1.0) {
-	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
-	} else {
+	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
 	}
 	float draw = texture(drawing, texPos).r;
@@ -406,7 +404,8 @@ void main() {
 	}
 	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
 	if (aout <= 0.0) return;
-	color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
 	color.a = aout;
 }`;
 
@@ -666,8 +665,10 @@ void main(void) {
  //https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
  float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
  FragColor = texture(colormap, vec2(f, y)).rgba;
+ if (layer > 0.7)
+   FragColor.a = step(0.00001, FragColor.a);
  FragColor.a *= opacity;
- if (layer < 2.0) return;
+ if (layer < 1.0) return;
  vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
  vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
  // https://en.wikipedia.org/wiki/Alpha_compositing

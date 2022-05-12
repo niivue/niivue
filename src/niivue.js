@@ -2990,11 +2990,17 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.pickingShader.use(this.gl);
-  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(
+    this.pickingShader.uniforms["overlays"],
+    this.overlays.length
+  );
   this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
   // set overlays for slice shader
   this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(
+    this.sliceShader.uniforms["overlays"],
+    this.overlays.length
+  );
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.updateInterpolation(layer);
@@ -3892,7 +3898,7 @@ Niivue.prototype.drawGraph = function () {
   graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
   graph.lineColor = [1, 1, 1, 1];
   graph.lineThickness = 4;
-  graph.lineAlpha = 0.5;
+  graph.lineAlpha = 1;
   graph.textColor = [1, 1, 1, 1];
   graph.lines = [];
   let vols = [];
@@ -4068,19 +4074,7 @@ Niivue.prototype.drawGraph = function () {
     } //this.drawTextBelow(xy, str, scale = 1);
     //this.drawRect([x, plotLTWH[1], 1, plotLTWH[3]], graph.lineColor);
   }
-  //draw vertical selected line
-  if (
-    graph.selectedColumn >= 0 &&
-    graph.selectedColumn < graph.lines[0].length
-  ) {
-    let x = graph.selectedColumn * scaleW + plotLTWH[0];
-    let color = graph.lineRGB[0];
-    this.drawGraphLine(
-      [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
-      [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1],
-      graph.lineThickness
-    );
-  }
+  //graph the lines for intensity across time
   for (let j = 0; j < graph.lines.length; j++) {
     let lineRGBA = [1, 0, 0, graph.lineAlpha];
     if (j < graph.lineRGB.length) {
@@ -4106,6 +4100,19 @@ Niivue.prototype.drawGraph = function () {
       this.drawGraphLine(LTWH, lineRGBA, graph.lineThickness);
     } //for i: each point
   } //for j: each line
+  //draw vertical line indicating selected volume
+  if (
+    graph.selectedColumn >= 0 &&
+    graph.selectedColumn < graph.lines[0].length
+  ) {
+    let x = graph.selectedColumn * scaleW + plotLTWH[0];
+    let color = graph.lineRGB[0];
+    this.drawGraphLine(
+      [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+      [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1],
+      graph.lineThickness
+    );
+  }
 };
 
 // not included in public docs
