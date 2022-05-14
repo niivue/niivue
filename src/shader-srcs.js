@@ -204,6 +204,7 @@ precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
+uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
@@ -260,7 +261,7 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if ((samplePos.a >= len) && (overlays < 1.0)) {
+	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
 		if (isClip)
 			fColor += clipPlaneColor;
 		return;
@@ -321,6 +322,8 @@ void main() {
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
 	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
+	if (backgroundMasksOverlays > 0)
+		samplePos = firstHit;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
@@ -334,7 +337,11 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (overFirstHit.a < firstHit.a)
+	if (samplePos.a >= len) {
+		if (isClip && (fColor.a == 0.0))
+			fColor += clipPlaneColor;
+		return;
+	}
 	//if (overFirstHit.a < len)
 		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
@@ -378,6 +385,7 @@ export var fragSliceShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
+uniform int backgroundMasksOverlays;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
@@ -385,7 +393,8 @@ uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {
-	color = vec4(texture(volume, texPos).rgb, opacity);
+	vec4 background = texture(volume, texPos);
+	color = vec4(background.rgb, opacity);
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
@@ -402,6 +411,8 @@ void main() {
 		color.rgb = mix(color.rgb, dcolor, drawOpacity);
 		color.a = max(drawOpacity, color.a);
 	}
+	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
+		return;
 	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
 	if (aout <= 0.0) return;
 	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;

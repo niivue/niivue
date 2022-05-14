@@ -149,6 +149,7 @@ export function Niivue(options = {}) {
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
+  this.backgroundMasksOverlays = 0;
   this.sliceTypeAxial = 0;
   this.sliceTypeCoronal = 1;
   this.sliceTypeSagittal = 2;
@@ -1703,6 +1704,8 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       colorMap: volumeList[i].colorMap,
       opacity: volumeList[i].opacity,
       urlImgData: volumeList[i].urlImgData,
+      cal_min: volumeList[i].cal_min,
+      cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
     });
     this.scene.loading$.next(false);
@@ -3523,6 +3526,10 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
     this.sliceShader.uniforms["opacity"],
     this.volumes[0].opacity
   );
+  this.gl.uniform1i(
+    this.sliceShader.uniforms["backgroundMasksOverlays"],
+    this.backgroundMasksOverlays
+  );
   this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceShader.uniforms["slice"], crossXYZ[2]);
   this.gl.uniform2fv(this.sliceShader.uniforms["canvasWidthHeight"], [
@@ -4188,6 +4195,10 @@ Niivue.prototype.draw3D = function () {
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     let shader = this.renderShader; //.use(this.gl);
     shader.use(this.gl);
+    gl.uniform1i(
+      shader.uniforms["backgroundMasksOverlays"],
+      this.backgroundMasksOverlays
+    );
     gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirUniformLoc, rayDir);

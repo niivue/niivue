@@ -45,6 +45,8 @@ export function NVImage(
   colorMap = "gray",
   opacity = 1.0,
   pairedImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -372,6 +374,8 @@ export function NVImage(
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
   this.calculateRAS();
+  if (!isNaN(cal_min)) this.hdr.cal_min = cal_min;
+  if (!isNaN(cal_max)) this.hdr.cal_max = cal_max;
   this.calMinMax();
 }
 
@@ -2188,6 +2192,8 @@ NVImage.loadFromUrl = async function ({
   name = "",
   colorMap = "gray",
   opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -2232,6 +2238,8 @@ NVImage.loadFromUrl = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
@@ -2285,6 +2293,8 @@ NVImage.loadFromFile = async function ({
   colorMap = "gray",
   opacity = 1.0,
   urlImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -2312,6 +2322,8 @@ NVImage.loadFromFile = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
@@ -2329,6 +2341,8 @@ NVImage.loadFromBase64 = async function ({
   name = "",
   colorMap = "gray",
   opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -2355,6 +2369,8 @@ NVImage.loadFromBase64 = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
