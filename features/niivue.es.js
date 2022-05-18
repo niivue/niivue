@@ -728,6 +728,7 @@ precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
+uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
@@ -782,7 +783,7 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if ((samplePos.a >= len) && (overlays < 1.0)) {
+	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
 		if (isClip)
 			fColor += clipPlaneColor;
 		return;
@@ -843,6 +844,8 @@ void main() {
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
 	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
+	if (backgroundMasksOverlays > 0)
+		samplePos = firstHit;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
@@ -856,7 +859,11 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (overFirstHit.a < firstHit.a)
+	if (samplePos.a >= len) {
+		if (isClip && (fColor.a == 0.0))
+			fColor += clipPlaneColor;
+		return;
+	}
 	//if (overFirstHit.a < len)
 		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
@@ -898,6 +905,7 @@ var fragSliceShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
+uniform int backgroundMasksOverlays;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
@@ -905,11 +913,10 @@ uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {
-	color = vec4(texture(volume, texPos).rgb, opacity);
+	vec4 background = texture(volume, texPos);
+	color = vec4(background.rgb, opacity);
 	vec4 ocolor = vec4(0.0);
-	if (overlays < 1.0) {
-	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
-	} else {
+	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
 	}
 	float draw = texture(drawing, texPos).r;
@@ -924,9 +931,12 @@ void main() {
 		color.rgb = mix(color.rgb, dcolor, drawOpacity);
 		color.a = max(drawOpacity, color.a);
 	}
+	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
+		return;
 	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
 	if (aout <= 0.0) return;
-	color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
 	color.a = aout;
 }`;
 var fragLineShader = `#version 300 es
@@ -962,6 +972,45 @@ in vec2 vColor;
 out vec4 color;
 void main() {
 	color = vec4(texture(colormap, vColor).rgb, 1.0);
+}`;
+var vertGraphShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform float thickness;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopRightBottom;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	float ny =  (leftTopRightBottom.x-leftTopRightBottom.z);
+	float nx =  (leftTopRightBottom.y-leftTopRightBottom.w);
+	float len = sqrt((nx*nx)+(ny*ny));
+	if (len > 0.0) {
+		nx = 0.5*thickness*nx/len;
+		ny = 0.5*thickness*ny/len;
+	}
+	vec2 frac;
+	if (pos.y < 0.5)
+		frac.y = leftTopRightBottom.y;
+	else
+		frac.y = leftTopRightBottom.w;
+	if (pos.x < 0.5) {
+		frac.x = leftTopRightBottom.x;
+		frac.y = leftTopRightBottom.y;
+	} else {
+		frac.x = leftTopRightBottom.z;
+		frac.y = leftTopRightBottom.w;
+	}
+	if (pos.y < 0.5) {
+		frac.x += nx;
+		frac.y -= ny;
+	} else {
+		frac.x -= nx;
+		frac.y += ny;
+	}
+	frac.x /= canvasWidthHeight.x;
+	frac.y = 1.0 - (frac.y / canvasWidthHeight.y);
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
 var vertLineShader = `#version 300 es
 #line 229
@@ -1131,8 +1180,10 @@ void main(void) {
  //https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
  float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
  FragColor = texture(colormap, vec2(f, y)).rgba;
+ if (layer > 0.7)
+   FragColor.a = step(0.00001, FragColor.a);
  FragColor.a *= opacity;
- if (layer < 2.0) return;
+ if (layer < 1.0) return;
  vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
  vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
  // https://en.wikipedia.org/wiki/Alpha_compositing
@@ -102568,7 +102619,7 @@ function isPlatformLittleEndian() {
   new DataView(buffer2).setInt16(0, 256, true);
   return new Int16Array(buffer2)[0] === 256;
 }
-function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, isDICOMDIR = false, useQFormNotSForm = false) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, isDICOMDIR = false, useQFormNotSForm = false) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -102855,6 +102906,10 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
   this.calculateRAS();
+  if (!isNaN(cal_min))
+    this.hdr.cal_min = cal_min;
+  if (!isNaN(cal_max))
+    this.hdr.cal_max = cal_max;
   this.calMinMax();
 }
 NVImage.prototype.calculateOblique = function() {
@@ -104375,6 +104430,8 @@ NVImage.loadFromUrl = async function({
   name = "",
   colorMap = "gray",
   opacity = 1,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -104411,7 +104468,7 @@ NVImage.loadFromUrl = async function({
     pairedImgData = await resp.arrayBuffer();
   }
   if (dataBuffer) {
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
   } else {
     alert("Unable to load buffer properly from volume");
   }
@@ -104437,6 +104494,8 @@ NVImage.loadFromFile = async function({
   colorMap = "gray",
   opacity = 1,
   urlImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -104458,7 +104517,7 @@ NVImage.loadFromFile = async function({
       pairedImgData = await this.readFileAsync(urlImgData);
     }
     name = file.name;
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, isDICOMDIR);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, isDICOMDIR);
   } catch (err2) {
     log$2.debug(err2);
   }
@@ -104469,6 +104528,8 @@ NVImage.loadFromBase64 = async function({
   name = "",
   colorMap = "gray",
   opacity = 1,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -104487,7 +104548,7 @@ NVImage.loadFromBase64 = async function({
   try {
     let dataBuffer = base64ToArrayBuffer(base64);
     let pairedImgData = null;
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible);
   } catch (err2) {
     log$2.debug(err2);
   }
@@ -104550,8 +104611,8 @@ String.prototype.getBytes = function() {
   }
   return bytes;
 };
-NVImage.prototype.getValue = function(x2, y, z) {
-  const { nx, ny } = this.getImageMetadata();
+NVImage.prototype.getValue = function(x2, y, z, frame4D = 0) {
+  const { nx, ny, nz } = this.getImageMetadata();
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
     let vx = 4 * (x2 + y * nx + z * nx * ny);
     return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
@@ -104560,7 +104621,8 @@ NVImage.prototype.getValue = function(x2, y, z) {
     let vx = 3 * (x2 + y * nx + z * nx * ny);
     return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
   }
-  let i2 = this.img[x2 + y * nx + z * nx * ny];
+  let vol = frame4D * nx * ny * nz;
+  let i2 = this.img[x2 + y * nx + z * nx * ny + vol];
   return this.hdr.scl_slope * i2 + this.hdr.scl_inter;
 };
 function getExtents$1(positions, forceOriginInVolume = true) {
@@ -105114,6 +105176,19 @@ NVMesh.prototype.updateMesh = function(gl) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
   this.indexCount = this.tris.length;
   this.vertexCount = this.pts.length;
+};
+NVMesh.prototype.reverseFaces = function(gl) {
+  if (this.offsetPt0)
+    return;
+  if (this.hasConnectome)
+    return;
+  let tris = this.tris;
+  for (let j = 0; j < tris.length; j += 3) {
+    let tri = tris[j];
+    tris[j] = tris[j + 1];
+    tris[j + 1] = tri;
+  }
+  this.updateMesh(gl);
 };
 NVMesh.prototype.setLayerProperty = function(id, key2, val, gl) {
   let layer = this.layers[id];
@@ -105782,6 +105857,61 @@ NVMesh.readANNOT = function(buffer2, n_vert) {
     pos += 4;
   }
   return rgba32;
+};
+NVMesh.readNV = function(buffer2) {
+  let len2 = buffer2.byteLength;
+  var bytes = new Uint8Array(buffer2);
+  let pos = 0;
+  function readStr() {
+    while (pos < len2 && bytes[pos] === 10)
+      pos++;
+    let startPos = pos;
+    while (pos < len2 && bytes[pos] !== 10)
+      pos++;
+    pos++;
+    if (pos - startPos < 1)
+      return "";
+    return new TextDecoder().decode(buffer2.slice(startPos, pos - 1));
+  }
+  let nvert = 0;
+  let ntri = 0;
+  let v = 0;
+  let t = 0;
+  let positions = [];
+  let indices = [];
+  while (pos < len2) {
+    let line = readStr();
+    if (line.startsWith("#"))
+      continue;
+    let items = line.split(" ");
+    if (nvert < 1) {
+      nvert = parseInt(items[0]);
+      positions = new Float32Array(nvert * 3);
+      continue;
+    }
+    if (v < nvert * 3) {
+      positions[v] = parseFloat(items[0]);
+      positions[v + 1] = parseFloat(items[1]);
+      positions[v + 2] = parseFloat(items[2]);
+      v += 3;
+      continue;
+    }
+    if (ntri < 1) {
+      ntri = parseInt(items[0]);
+      indices = new Int32Array(ntri * 3);
+      continue;
+    }
+    if (t >= ntri * 3)
+      break;
+    indices[t + 2] = parseInt(items[0]) - 1;
+    indices[t + 1] = parseInt(items[1]) - 1;
+    indices[t + 0] = parseInt(items[2]) - 1;
+    t += 3;
+  }
+  return {
+    positions,
+    indices
+  };
 };
 NVMesh.readASC = function(buffer2) {
   let len2 = buffer2.byteLength;
@@ -107005,7 +107135,7 @@ NVMesh.readMesh = async function(buffer2, name, gl, opacity = 1, rgba255 = [255,
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK")
       obj = this.readTCK(buffer2);
-    if (ext === "TRACT")
+    else if (ext === "TRACT")
       obj = this.readTRACT(buffer2);
     else if (ext === "TRX")
       obj = await this.readTRX(buffer2);
@@ -107031,6 +107161,8 @@ NVMesh.readMesh = async function(buffer2, name, gl, opacity = 1, rgba255 = [255,
     obj = this.readDFS(buffer2);
   else if (ext === "OFF")
     obj = this.readOFF(buffer2);
+  else if (ext === "NV")
+    obj = this.readNV(buffer2);
   else if (ext === "OBJ")
     obj = this.readOBJ(buffer2);
   else if (ext === "PLY")
@@ -108874,6 +109006,7 @@ function Niivue(options = {}) {
   this.overlayTextureID = [];
   this.sliceShader = null;
   this.lineShader = null;
+  this.graphShader = null;
   this.renderShader = null;
   this.pickingShader = null;
   this.colorbarShader = null;
@@ -108896,6 +109029,7 @@ function Niivue(options = {}) {
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG;
   this.DEFAULT_FONT_METRICS = defaultFontMetrics;
   this.fontMets = null;
+  this.backgroundMasksOverlays = 0;
   this.sliceTypeAxial = 0;
   this.sliceTypeCoronal = 1;
   this.sliceTypeSagittal = 2;
@@ -108958,6 +109092,12 @@ function Niivue(options = {}) {
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
+  this.graph = [];
+  this.graph.LTWH = [0, 0, 640, 480];
+  this.graph.opacity = 0;
+  this.graph.vols = [0];
+  this.graph.autoSizeMultiplanar = false;
+  this.graph.normalizeValues = false;
   this.meshShaders = [
     {
       Name: "Phong",
@@ -109446,7 +109586,7 @@ Niivue.prototype.dropListener = async function(e) {
           if (entry.name.lastIndexOf("BRIK") !== -1) {
             continue;
           }
-          if (ext === "ASC" || ext === "DFS" || ext === "FSM" || ext === "PIAL" || ext === "ORIG" || ext === "INFLATED" || ext === "SMOOTHWM" || ext === "SPHERE" || ext === "WHITE" || ext === "GII" || ext === "MZ3" || ext === "OBJ" || ext === "OFF" || ext === "PLY" || ext === "SRF" || ext === "STL" || ext === "TCK" || ext === "TRACT" || ext === "TRK" || ext === "TRX" || ext === "VTK") {
+          if (ext === "ASC" || ext === "DFS" || ext === "FSM" || ext === "PIAL" || ext === "ORIG" || ext === "INFLATED" || ext === "SMOOTHWM" || ext === "SPHERE" || ext === "WHITE" || ext === "GII" || ext === "MZ3" || ext === "NV" || ext === "OBJ" || ext === "OFF" || ext === "PLY" || ext === "SRF" || ext === "STL" || ext === "TCK" || ext === "TRACT" || ext === "TRK" || ext === "TRX" || ext === "VTK") {
             entry.file(async (file) => {
               let mesh = await NVMesh.loadFromFile({
                 file,
@@ -109599,6 +109739,15 @@ Niivue.prototype.setMeshProperty = function(id, key2, val) {
     return;
   }
   this.meshes[idx].setProperty(key2, val, this.gl);
+  this.updateGLVolume();
+};
+Niivue.prototype.reverseFaces = function(mesh) {
+  let idx = this.getMeshIndexByID(mesh);
+  if (idx < 0) {
+    log.warn("reverseFaces() id not loaded", mesh);
+    return;
+  }
+  this.meshes[idx].reverseFaces(this.gl);
   this.updateGLVolume();
 };
 Niivue.prototype.setMeshLayerProperty = function(mesh, layer, key2, val) {
@@ -109850,6 +109999,8 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
       colorMap: volumeList[i2].colorMap,
       opacity: volumeList[i2].opacity,
       urlImgData: volumeList[i2].urlImgData,
+      cal_min: volumeList[i2].cal_min,
+      cal_max: volumeList[i2].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax
     });
     this.scene.loading$.next(false);
@@ -110355,6 +110506,7 @@ Niivue.prototype.init = async function() {
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
+  this.graphShader = new Shader(this.gl, vertGraphShader, fragLineShader);
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
@@ -110573,10 +110725,10 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.pickingShader.use(this.gl);
-  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays.length);
   this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
   this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays.length);
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.updateInterpolation(layer);
@@ -110661,6 +110813,15 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
   if (this.bmpTexture !== null) {
     this.gl.deleteTexture(this.bmpTexture);
     this.bmpTexture = null;
+  }
+  if (this.graph.opacity > 0 && this.volumes[0].nFrame4D > 1 && this.graph.plotLTWH) {
+    let pos = [x2 - this.graph.plotLTWH[0], y - this.graph.plotLTWH[1]];
+    if (pos[0] > 0 && pos[1] > 0 && pos[0] <= this.graph.plotLTWH[2] && pos[1] <= this.graph.plotLTWH[3]) {
+      let vol = Math.round(pos[0] / this.graph.plotLTWH[2] * (this.volumes[0].nFrame4D - 1));
+      this.volumes[0].frame4D = vol;
+      this.updateGLVolume();
+      return;
+    }
   }
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0)
@@ -110838,14 +110999,16 @@ Niivue.prototype.drawLoadingText = function(text) {
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
   this.canvas.focus();
 };
-Niivue.prototype.drawText = function(xy, str, scale2 = 1) {
+Niivue.prototype.drawText = function(xy, str, scale2 = 1, color = null) {
   if (this.opts.textHeight <= 0)
     return;
   this.fontShader.use(this.gl);
   let size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale2;
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(this.fontShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
-  this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], this.opts.crosshairColor);
+  if (color === null)
+    color = this.opts.crosshairColor;
+  this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], color);
   let screenPxRange = size / this.fontMets.size * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1);
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
@@ -110861,12 +111024,20 @@ Niivue.prototype.drawTextRight = function(xy, str, scale2 = 1) {
   xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
   this.drawText(xy, str, scale2);
 };
-Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1) {
+Niivue.prototype.drawTextLeft = function(xy, str, scale2 = 1, color = null) {
+  if (this.opts.textHeight <= 0)
+    return;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale2;
+  xy[0] -= this.textWidth(size, str);
+  xy[1] -= 0.5 * size;
+  this.drawText(xy, str, scale2, color);
+};
+Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1, color = null) {
   if (this.opts.textHeight <= 0)
     return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale2;
   xy[0] -= 0.5 * this.textWidth(size, str);
-  this.drawText(xy, str, scale2);
+  this.drawText(xy, str, scale2, color);
 };
 Niivue.prototype.updateInterpolation = function(layer) {
   let interp = this.gl.LINEAR;
@@ -110916,6 +111087,7 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   let isMirrorLR = this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
   this.sliceShader.use(this.gl);
   this.gl.uniform1f(this.sliceShader.uniforms["opacity"], this.volumes[0].opacity);
+  this.gl.uniform1i(this.sliceShader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
   this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceShader.uniforms["slice"], crossXYZ[2]);
   this.gl.uniform2fv(this.sliceShader.uniforms["canvasWidthHeight"], [
@@ -111060,6 +111232,238 @@ Niivue.prototype.setPivot3D = function() {
   subtract(pivot, mx, mn);
   this.furthestFromPivot = length(pivot) * 0.5;
 };
+Niivue.prototype.drawGraphLine = function(LTRB, color = [1, 0, 0, 0.5], thickness = 2) {
+  this.graphShader.use(this.gl);
+  this.gl.uniform4fv(this.graphShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.graphShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height
+  ]);
+  this.gl.uniform1f(this.graphShader.uniforms["thickness"], thickness);
+  this.gl.uniform4f(this.graphShader.uniforms["leftTopRightBottom"], LTRB[0], LTRB[1], LTRB[2], LTRB[3]);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
+};
+Niivue.prototype.drawRect = function(LTWH, color = [1, 0, 0, 0.5]) {
+  this.lineShader.use(this.gl);
+  this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height
+  ]);
+  this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], LTWH[0], LTWH[1], LTWH[2], LTWH[3]);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO);
+};
+function tickSpacing(tickCount, mn, mx) {
+  let range = Math.abs(mx - mn);
+  if (range === 0)
+    return [0, 0];
+  let unroundedTickSize = range / (tickCount - 1);
+  let x2 = Math.ceil(Math.log10(unroundedTickSize) - 1);
+  let pow10x = Math.pow(10, x2);
+  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
+  let ticMin = mn;
+  if (mn / spacing % 1 !== 0)
+    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
+  return [spacing, ticMin];
+}
+Niivue.prototype.drawGraph = function() {
+  this.gl;
+  let graph = this.graph;
+  if (this.graph.autoSizeMultiplanar && this.sliceType === this.sliceTypeMultiplanar) {
+    for (let i2 = 0; i2 < this.numScreenSlices; i2++) {
+      var axCorSag = this.screenSlices[i2].axCorSag;
+      if (axCorSag !== this.sliceTypeSagittal)
+        continue;
+      var ltwh = this.screenSlices[i2].leftTopWidthHeight;
+      graph.LTWH[0] = ltwh[0];
+      graph.LTWH[1] = ltwh[1] + ltwh[3];
+      graph.LTWH[2] = ltwh[2];
+      graph.LTWH[3] = ltwh[2];
+    }
+  }
+  if (graph.opacity <= 0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
+    return;
+  }
+  graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
+  graph.lineColor = [1, 1, 1, 1];
+  graph.lineThickness = 4;
+  graph.lineAlpha = 1;
+  graph.textColor = [1, 1, 1, 1];
+  graph.lines = [];
+  let vols = [];
+  if (graph.vols.length < 1) {
+    if (this.volumes[0] != null)
+      vols.push(0);
+  } else {
+    for (let i2 = 0; i2 < graph.vols.length; i2++) {
+      let j = graph.vols[i2];
+      if (this.volumes[j] == null)
+        continue;
+      let n = this.volumes[j].nFrame4D;
+      if (n < 2)
+        continue;
+      vols.push(j);
+    }
+  }
+  if (vols.length < 1)
+    return;
+  let maxVols = this.volumes[vols[0]].nFrame4D;
+  this.graph.selectedColumn = this.volumes[vols[0]].frame4D;
+  if (maxVols < 2) {
+    console.log("Unable to generate a graph: Selected volume is 3D not 4D");
+    return;
+  }
+  for (let i2 = 0; i2 < vols.length; i2++) {
+    graph.lines[i2] = [];
+    let vox = this.frac2vox(this.scene.crosshairPos);
+    let v = this.volumes[vols[i2]];
+    let n = v.nFrame4D;
+    n = Math.min(n, maxVols);
+    for (let j = 0; j < n; j++) {
+      let val = v.getValue(...vox, j);
+      graph.lines[i2].push(val);
+    }
+  }
+  graph.lineRGB = [
+    [1, 0, 0],
+    [0, 0.7, 0],
+    [0, 0, 1],
+    [1, 1, 0],
+    [1, 0, 1],
+    [0, 1, 1],
+    [1, 1, 1],
+    [0, 0, 0]
+  ];
+  let mn = graph.lines[0][0];
+  let mx = graph.lines[0][0];
+  for (let j = 0; j < graph.lines.length; j++)
+    for (let i2 = 0; i2 < graph.lines[j].length; i2++) {
+      let v = graph.lines[j][i2];
+      mn = Math.min(v, mn);
+      mx = Math.max(v, mx);
+    }
+  if (graph.normalizeValues && mx > mn) {
+    let range = mx - mn;
+    for (let j = 0; j < graph.lines.length; j++)
+      for (let i2 = 0; i2 < graph.lines[j].length; i2++) {
+        let v = graph.lines[j][i2];
+        graph.lines[j][i2] = (v - mn) / range;
+      }
+    mn = 0;
+    mx = 1;
+  }
+  if (mn >= mx) {
+    mx = mn + 1;
+  }
+  let dark = 0.9;
+  let borderColor = [
+    dark * graph.backColor[0],
+    dark * graph.backColor[1],
+    dark * graph.backColor[2],
+    graph.backColor[3]
+  ];
+  this.drawRect(graph.LTWH, borderColor);
+  let [spacing, ticMin] = tickSpacing(5, mn, mx);
+  function humanize(x2) {
+    return x2.toFixed(6).replace(/\.?0*$/, "");
+  }
+  let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
+  let fntScale = 0.1 * (minWH / this.fontMets.size);
+  let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
+  let maxTextWid = 0;
+  let lineH = ticMin;
+  while (lineH <= mx) {
+    let str = humanize(lineH);
+    let w = this.textWidth(fntSize, str);
+    maxTextWid = Math.max(w, maxTextWid);
+    lineH += spacing;
+  }
+  let margin = 0.05;
+  let frameWid = Math.abs(graph.LTWH[2]);
+  let frameHt = Math.abs(graph.LTWH[3]);
+  let plotLTWH = [
+    graph.LTWH[0] + margin * frameWid + maxTextWid,
+    graph.LTWH[1] + margin * frameHt,
+    graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
+    graph.LTWH[3] - fntSize - 2 * margin * frameHt
+  ];
+  this.graph.plotLTWH = plotLTWH;
+  this.drawRect(plotLTWH, [
+    graph.backColor[0],
+    graph.backColor[1],
+    graph.backColor[2],
+    graph.backColor[3] * 2
+  ]);
+  let rangeH = mx - mn;
+  let scaleH = plotLTWH[3] / rangeH;
+  let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
+  let plotBottom = plotLTWH[1] + plotLTWH[3];
+  lineH = ticMin + 0.5 * spacing;
+  let thinColor = graph.lineColor.slice();
+  thinColor[3] = 0.25 * graph.lineColor[3];
+  while (lineH <= mx) {
+    let y = plotBottom - (lineH - mn) * scaleH;
+    this.drawGraphLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], thinColor, 0.5 * graph.lineThickness);
+    lineH += spacing;
+  }
+  lineH = ticMin;
+  while (lineH <= mx) {
+    let y = plotBottom - (lineH - mn) * scaleH;
+    this.drawGraphLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.lineColor, graph.lineThickness);
+    let str = humanize(lineH);
+    this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
+    lineH += spacing;
+  }
+  let stride = 1;
+  while (graph.lines[0].length / stride > 20) {
+    stride *= 5;
+  }
+  for (let i2 = 0; i2 < graph.lines[0].length; i2 += stride) {
+    let x2 = i2 * scaleW + plotLTWH[0];
+    let thick = graph.lineThickness;
+    if (i2 % 2 === 1) {
+      thick *= 0.5;
+      this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], thinColor, thick);
+    } else if (i2 > 0) {
+      let str = humanize(i2);
+      this.drawTextBelow([x2, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor);
+      this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], graph.lineColor, thick);
+    }
+  }
+  for (let j = 0; j < graph.lines.length; j++) {
+    let lineRGBA = [1, 0, 0, graph.lineAlpha];
+    if (j < graph.lineRGB.length) {
+      lineRGBA = [
+        graph.lineRGB[j][0],
+        graph.lineRGB[j][1],
+        graph.lineRGB[j][2],
+        graph.lineAlpha
+      ];
+    }
+    for (let i2 = 1; i2 < graph.lines[j].length; i2++) {
+      let x0 = (i2 - 1) * scaleW;
+      let x1 = i2 * scaleW;
+      let y0 = (graph.lines[j][i2 - 1] - mn) * scaleH;
+      let y1 = (graph.lines[j][i2] - mn) * scaleH;
+      let LTWH = [
+        plotLTWH[0] + x0,
+        plotLTWH[1] + plotLTWH[3] - y0,
+        plotLTWH[0] + x1,
+        plotLTWH[1] + plotLTWH[3] - y1
+      ];
+      this.drawGraphLine(LTWH, lineRGBA, graph.lineThickness);
+    }
+  }
+  if (graph.selectedColumn >= 0 && graph.selectedColumn < graph.lines[0].length) {
+    let x2 = graph.selectedColumn * scaleW + plotLTWH[0];
+    graph.lineRGB[0];
+    this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1], graph.lineThickness);
+  }
+};
 Niivue.prototype.draw3D = function() {
   this.setPivot3D();
   let gl = this.gl;
@@ -111109,6 +111513,7 @@ Niivue.prototype.draw3D = function() {
     gl.cullFace(gl.FRONT);
     let shader = this.renderShader;
     shader.use(this.gl);
+    gl.uniform1i(shader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
     gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
@@ -111122,6 +111527,7 @@ Niivue.prototype.draw3D = function() {
   this.drawMesh3D(false, 0.02);
   this.drawCrosshairs3D(false, 0.15);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
+  this.drawGraph();
   this.readyForSync = true;
   this.sync();
   return posString;
@@ -111399,7 +111805,7 @@ Niivue.prototype.drawScene = function() {
     let wX = ltwh[2] * volScale[0] / (volScale[0] + volScale[1]);
     let ltwh3x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1], Math.max(volScale[1], volScale[2]));
     let wX1 = ltwh3x1[2] * volScale[0] / (volScale[0] + volScale[0] + volScale[1]);
-    if (wX1 > wX) {
+    if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
       let pixScale = wX1 / volScale[0];
       let hY1 = volScale[1] * pixScale;
       let hZ1 = volScale[2] * pixScale;
@@ -111414,12 +111820,14 @@ Niivue.prototype.drawScene = function() {
       this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
       this.draw2D([ltwh[0] + wX, ltwh[1], wY, hZ], 2);
       var margin = this.opts.colorBarMargin * hY;
-      this.drawColorbar([
-        ltwh[0] + wX + margin,
-        ltwh[1] + hZ + margin,
-        wY - margin - margin,
-        hY * this.opts.colorbarHeight
-      ]);
+      if (!this.graph.autoSizeMultiplanar) {
+        this.drawColorbar([
+          ltwh[0] + wX + margin,
+          ltwh[1] + hZ + margin,
+          wY - margin - margin,
+          hY * this.opts.colorbarHeight
+        ]);
+      }
     }
   }
   if (this.isDragging && this.sliceType !== this.sliceTypeRender) {
@@ -111437,6 +111845,7 @@ Niivue.prototype.drawScene = function() {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2]
   ]);
+  this.drawGraph();
   posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
   this.gl.finish();
   this.readyForSync = true;
