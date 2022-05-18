@@ -475,6 +475,18 @@ NVMesh.prototype.updateMesh = function (gl) {
   this.vertexCount = this.pts.length;
 };
 
+NVMesh.prototype.reverseFaces = function (gl) {
+  if (this.offsetPt0) return; //fiber not mesh
+  if (this.hasConnectome) return; //connectome not mesh
+  let tris = this.tris;
+  for (let j = 0; j < tris.length; j += 3) {
+    let tri = tris[j];
+    tris[j] = tris[j + 1];
+    tris[j + 1] = tri;
+  }
+  this.updateMesh(gl); //apply the new properties...
+};
+
 NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   let layer = this.layers[id];
   if (!layer.hasOwnProperty(key)) {
@@ -1266,6 +1278,58 @@ NVMesh.readANNOT = function (buffer, n_vert) {
   return rgba32;
 }; // readANNOT()
 
+NVMesh.readNV = function (buffer) {
+  //BrainNet viewer format https://www.nitrc.org/projects/bnv/
+  //n.b. clockwise triangle winding, indexed from 1
+  let len = buffer.byteLength;
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let nvert = 0; //173404 346804
+  let ntri = 0;
+  let v = 0;
+  let t = 0;
+  let positions = [];
+  let indices = [];
+  while (pos < len) {
+    let line = readStr(); //1st line: '#!ascii version of lh.pial'
+    if (line.startsWith("#")) continue;
+    let items = line.split(" ");
+    if (nvert < 1) {
+      nvert = parseInt(items[0]);
+      positions = new Float32Array(nvert * 3);
+      continue;
+    }
+    if (v < nvert * 3) {
+      positions[v] = parseFloat(items[0]);
+      positions[v + 1] = parseFloat(items[1]);
+      positions[v + 2] = parseFloat(items[2]);
+      v += 3;
+      continue;
+    }
+    if (ntri < 1) {
+      ntri = parseInt(items[0]);
+      indices = new Int32Array(ntri * 3);
+      continue;
+    }
+    if (t >= ntri * 3) break;
+    indices[t + 2] = parseInt(items[0]) - 1;
+    indices[t + 1] = parseInt(items[1]) - 1;
+    indices[t + 0] = parseInt(items[2]) - 1;
+    t += 3;
+  }
+  return {
+    positions,
+    indices,
+  };
+}; // readNV()
 NVMesh.readASC = function (buffer) {
   //SUMA ASCII format https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/demos/Bootcamp/CD.html#cd
   //http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
@@ -2607,7 +2671,7 @@ NVMesh.readMesh = async function (
   }
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
-    if (ext === "TRACT") obj = this.readTRACT(buffer);
+    else if (ext === "TRACT") obj = this.readTRACT(buffer);
     else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
     //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
@@ -2637,6 +2701,7 @@ NVMesh.readMesh = async function (
   else if (ext === "ASC") obj = this.readASC(buffer);
   else if (ext === "DFS") obj = this.readDFS(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
+  else if (ext === "NV") obj = this.readNV(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
   else if (ext === "PLY") obj = this.readPLY(buffer);
   else if (ext === "FIB" || ext === "VTK") {

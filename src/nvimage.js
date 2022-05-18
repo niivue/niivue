@@ -45,6 +45,8 @@ export function NVImage(
   colorMap = "gray",
   opacity = 1.0,
   pairedImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -372,6 +374,8 @@ export function NVImage(
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
   this.calculateRAS();
+  if (!isNaN(cal_min)) this.hdr.cal_min = cal_min;
+  if (!isNaN(cal_max)) this.hdr.cal_max = cal_max;
   this.calMinMax();
 }
 
@@ -2188,6 +2192,8 @@ NVImage.loadFromUrl = async function ({
   name = "",
   colorMap = "gray",
   opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -2232,6 +2238,8 @@ NVImage.loadFromUrl = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
@@ -2285,6 +2293,8 @@ NVImage.loadFromFile = async function ({
   colorMap = "gray",
   opacity = 1.0,
   urlImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -2312,6 +2322,8 @@ NVImage.loadFromFile = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
@@ -2329,6 +2341,8 @@ NVImage.loadFromBase64 = async function ({
   name = "",
   colorMap = "gray",
   opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
@@ -2355,6 +2369,8 @@ NVImage.loadFromBase64 = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
@@ -2474,8 +2490,8 @@ String.prototype.getBytes = function () {
   return bytes;
 };
 
-NVImage.prototype.getValue = function (x, y, z) {
-  const { nx, ny } = this.getImageMetadata();
+NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
+  const { nx, ny, nz } = this.getImageMetadata();
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
     let vx = 4 * (x + y * nx + z * nx * ny);
     //convert rgb to luminance
@@ -2490,7 +2506,8 @@ NVImage.prototype.getValue = function (x, y, z) {
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
-  let i = this.img[x + y * nx + z * nx * ny];
+  let vol = frame4D * nx * ny * nz;
+  let i = this.img[x + y * nx + z * nx * ny + vol];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 

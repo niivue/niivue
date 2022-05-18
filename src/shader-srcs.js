@@ -204,6 +204,7 @@ precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
+uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
@@ -260,7 +261,7 @@ void main() {
 		if (val > 0.01) break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if ((samplePos.a >= len) && (overlays < 1.0)) {
+	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
 		if (isClip)
 			fColor += clipPlaneColor;
 		return;
@@ -321,6 +322,8 @@ void main() {
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
 	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
+	if (backgroundMasksOverlays > 0)
+		samplePos = firstHit;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
@@ -334,7 +337,11 @@ void main() {
 		if ( colAcc.a > earlyTermination )
 			break;
 	}
-	if (overFirstHit.a < firstHit.a)
+	if (samplePos.a >= len) {
+		if (isClip && (fColor.a == 0.0))
+			fColor += clipPlaneColor;
+		return;
+	}
 	//if (overFirstHit.a < len)
 		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
@@ -378,6 +385,7 @@ export var fragSliceShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
+uniform int backgroundMasksOverlays;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
@@ -385,11 +393,10 @@ uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {
-	color = vec4(texture(volume, texPos).rgb, opacity);
+	vec4 background = texture(volume, texPos);
+	color = vec4(background.rgb, opacity);
 	vec4 ocolor = vec4(0.0);
-	if (overlays < 1.0) {
-	 ocolor = vec4(0.0, 0.0, 0.0, 0.0);
-	} else {
+	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
 	}
 	float draw = texture(drawing, texPos).r;
@@ -404,9 +411,12 @@ void main() {
 		color.rgb = mix(color.rgb, dcolor, drawOpacity);
 		color.a = max(drawOpacity, color.a);
 	}
+	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
+		return;
 	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
 	if (aout <= 0.0) return;
-	color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
 	color.a = aout;
 }`;
 
@@ -445,6 +455,46 @@ in vec2 vColor;
 out vec4 color;
 void main() {
 	color = vec4(texture(colormap, vColor).rgb, 1.0);
+}`;
+
+export var vertGraphShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform float thickness;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopRightBottom;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	float ny =  (leftTopRightBottom.x-leftTopRightBottom.z);
+	float nx =  (leftTopRightBottom.y-leftTopRightBottom.w);
+	float len = sqrt((nx*nx)+(ny*ny));
+	if (len > 0.0) {
+		nx = 0.5*thickness*nx/len;
+		ny = 0.5*thickness*ny/len;
+	}
+	vec2 frac;
+	if (pos.y < 0.5)
+		frac.y = leftTopRightBottom.y;
+	else
+		frac.y = leftTopRightBottom.w;
+	if (pos.x < 0.5) {
+		frac.x = leftTopRightBottom.x;
+		frac.y = leftTopRightBottom.y;
+	} else {
+		frac.x = leftTopRightBottom.z;
+		frac.y = leftTopRightBottom.w;
+	}
+	if (pos.y < 0.5) {
+		frac.x += nx;
+		frac.y -= ny;
+	} else {
+		frac.x -= nx;
+		frac.y += ny;
+	}
+	frac.x /= canvasWidthHeight.x;
+	frac.y = 1.0 - (frac.y / canvasWidthHeight.y);
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
 
 export var vertLineShader = `#version 300 es
@@ -626,8 +676,10 @@ void main(void) {
  //https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
  float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
  FragColor = texture(colormap, vec2(f, y)).rgba;
+ if (layer > 0.7)
+   FragColor.a = step(0.00001, FragColor.a);
  FragColor.a *= opacity;
- if (layer < 2.0) return;
+ if (layer < 1.0) return;
  vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
  vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
  // https://en.wikipedia.org/wiki/Alpha_compositing

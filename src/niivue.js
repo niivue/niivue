@@ -1,7 +1,11 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
 import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
-import { vertLineShader, fragLineShader } from "./shader-srcs.js";
+import {
+  vertGraphShader,
+  vertLineShader,
+  fragLineShader,
+} from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
@@ -121,6 +125,7 @@ export function Niivue(options = {}) {
   this.overlayTextureID = [];
   this.sliceShader = null;
   this.lineShader = null;
+  this.graphShader = null;
   this.renderShader = null;
   this.pickingShader = null;
   this.colorbarShader = null;
@@ -144,6 +149,7 @@ export function Niivue(options = {}) {
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
+  this.backgroundMasksOverlays = 0;
   this.sliceTypeAxial = 0;
   this.sliceTypeCoronal = 1;
   this.sliceTypeSagittal = 2;
@@ -207,6 +213,13 @@ export function Niivue(options = {}) {
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 254;
   this.DISTANCE_FROM_CAMERA = -0.54;
+  this.graph = [];
+  this.graph.LTWH = [0, 0, 640, 480];
+  this.graph.opacity = 0.0;
+  //this.graph.selectedColumn = -1;
+  this.graph.vols = [0]; //e.g. timeline for background volume only, e.g. [0,2] for first and third volumes
+  this.graph.autoSizeMultiplanar = false;
+  this.graph.normalizeValues = false;
   this.meshShaders = [
     {
       Name: "Phong",
@@ -1030,6 +1043,7 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "WHITE" ||
             ext === "GII" ||
             ext === "MZ3" ||
+            ext === "NV" ||
             ext === "OBJ" ||
             ext === "OFF" ||
             ext === "PLY" ||
@@ -1264,6 +1278,15 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.reverseFaces = function (mesh) {
+  let idx = this.getMeshIndexByID(mesh);
+  if (idx < 0) {
+    log.warn("reverseFaces() id not loaded", mesh);
+    return;
+  }
+  this.meshes[idx].reverseFaces(this.gl);
+  this.updateGLVolume();
+};
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
   if (idx < 0) {
@@ -1681,6 +1704,8 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       colorMap: volumeList[i].colorMap,
       opacity: volumeList[i].opacity,
       urlImgData: volumeList[i].urlImgData,
+      cal_min: volumeList[i].cal_min,
+      cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
     });
     this.scene.loading$.next(false);
@@ -2456,6 +2481,7 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   // line shader (crosshair)
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
+  this.graphShader = new Shader(this.gl, vertGraphShader, fragLineShader);
   // render shader (3D)
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
@@ -2967,11 +2993,17 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
   this.pickingShader.use(this.gl);
-  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(
+    this.pickingShader.uniforms["overlays"],
+    this.overlays.length
+  );
   this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
   // set overlays for slice shader
   this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays);
+  this.gl.uniform1f(
+    this.sliceShader.uniforms["overlays"],
+    this.overlays.length
+  );
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.updateInterpolation(layer);
@@ -3113,14 +3145,33 @@ Niivue.prototype.sliceScale = function () {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
-
   this.canvas.focus();
   if (this.bmpTexture !== null) {
     this.gl.deleteTexture(this.bmpTexture);
     this.bmpTexture = null;
     //the thumbnail is now released, do something profound: actually load the images
   }
-
+  if (
+    this.graph.opacity > 0.0 &&
+    this.volumes[0].nFrame4D > 1 &&
+    this.graph.plotLTWH
+  ) {
+    let pos = [x - this.graph.plotLTWH[0], y - this.graph.plotLTWH[1]];
+    if (
+      pos[0] > 0 &&
+      pos[1] > 0 &&
+      pos[0] <= this.graph.plotLTWH[2] &&
+      pos[1] <= this.graph.plotLTWH[3]
+    ) {
+      let vol = Math.round(
+        (pos[0] / this.graph.plotLTWH[2]) * (this.volumes[0].nFrame4D - 1)
+      );
+      //this.graph.selectedColumn = vol;
+      this.volumes[0].frame4D = vol;
+      this.updateGLVolume();
+      return;
+    }
+  }
   if (this.sliceType === this.sliceTypeRender) {
     if (posChange === 0) return;
     //n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
@@ -3369,7 +3420,7 @@ Niivue.prototype.drawLoadingText = function (text) {
 };
 
 // not included in public docs
-Niivue.prototype.drawText = function (xy, str, scale = 1) {
+Niivue.prototype.drawText = function (xy, str, scale = 1, color = null) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
@@ -3384,10 +3435,8 @@ Niivue.prototype.drawText = function (xy, str, scale = 1) {
     this.gl.canvas.width,
     this.gl.canvas.height
   );
-  this.gl.uniform4fv(
-    this.fontShader.uniforms["fontColor"],
-    this.opts.crosshairColor
-  );
+  if (color === null) color = this.opts.crosshairColor;
+  this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], color);
   let screenPxRange = (size / this.fontMets.size) * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1.0); //screenPxRange() must never be lower than 1
   this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
@@ -3407,12 +3456,22 @@ Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
 }; // drawTextRight()
 
 // not included in public docs
-Niivue.prototype.drawTextBelow = function (xy, str, scale = 1) {
+Niivue.prototype.drawTextLeft = function (xy, str, scale = 1, color = null) {
+  //to right of x, vertically centered on y
+  if (this.opts.textHeight <= 0) return;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  xy[0] -= this.textWidth(size, str);
+  xy[1] -= 0.5 * size;
+  this.drawText(xy, str, scale, color);
+}; // drawTextRight()
+
+// not included in public docs
+Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   //horizontally centered on x, below y
   if (this.opts.textHeight <= 0) return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= 0.5 * this.textWidth(size, str);
-  this.drawText(xy, str, scale);
+  this.drawText(xy, str, scale, color);
 }; // drawTextBelow()
 
 Niivue.prototype.updateInterpolation = function (layer) {
@@ -3466,6 +3525,10 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.gl.uniform1f(
     this.sliceShader.uniforms["opacity"],
     this.volumes[0].opacity
+  );
+  this.gl.uniform1i(
+    this.sliceShader.uniforms["backgroundMasksOverlays"],
+    this.backgroundMasksOverlays
   );
   this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceShader.uniforms["slice"], crossXYZ[2]);
@@ -3757,6 +3820,308 @@ Niivue.prototype.setPivot3D = function () {
   //console.log('pivot: '+ this.pivot3D +' furthestFromPivot:' + this.furthestFromPivot);
 }; // setPivot3D()
 
+Niivue.prototype.drawGraphLine = function (
+  LTRB,
+  color = [1, 0, 0, 0.5],
+  thickness = 2
+) {
+  this.graphShader.use(this.gl);
+  this.gl.uniform4fv(this.graphShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.graphShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform1f(this.graphShader.uniforms["thickness"], thickness);
+  this.gl.uniform4f(
+    this.graphShader.uniforms["leftTopRightBottom"],
+    LTRB[0],
+    LTRB[1],
+    LTRB[2],
+    LTRB[3]
+  );
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+};
+
+Niivue.prototype.drawRect = function (LTWH, color = [1, 0, 0, 0.5]) {
+  this.lineShader.use(this.gl);
+  this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform4f(
+    this.lineShader.uniforms["leftTopWidthHeight"],
+    LTWH[0],
+    LTWH[1],
+    LTWH[2],
+    LTWH[3]
+  );
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+};
+
+function tickSpacing(tickCount, mn, mx) {
+  //https://www.realtimerendering.com/resources/GraphicsGems/gems/Label.c
+  //https://stackoverflow.com/questions/326679/choosing-an-attractive-linear-scale-for-a-graphs-y-axis
+  let range = Math.abs(mx - mn);
+  if (range === 0.0) return [0, 0];
+  let unroundedTickSize = range / (tickCount - 1);
+  let x = Math.ceil(Math.log10(unroundedTickSize) - 1);
+  let pow10x = Math.pow(10, x);
+  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
+  let ticMin = mn;
+  if ((mn / spacing) % 1 !== 0.0)
+    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
+  //if (ticMin > mn) ticMin -= spacing;
+  //let ticMax = Math.ceil(range / spacing) * spacing + ticMin;
+  //if (ticMax < mx) ticMax += spacing;
+
+  return [spacing, ticMin];
+}
+
+Niivue.prototype.drawGraph = function () {
+  let gl = this.gl;
+  let graph = this.graph;
+  if (
+    this.graph.autoSizeMultiplanar &&
+    this.sliceType === this.sliceTypeMultiplanar
+  ) {
+    for (let i = 0; i < this.numScreenSlices; i++) {
+      var axCorSag = this.screenSlices[i].axCorSag;
+      if (axCorSag !== this.sliceTypeSagittal) continue;
+      var ltwh = this.screenSlices[i].leftTopWidthHeight;
+      graph.LTWH[0] = ltwh[0];
+      graph.LTWH[1] = ltwh[1] + ltwh[3];
+      graph.LTWH[2] = ltwh[2];
+      graph.LTWH[3] = ltwh[2];
+    }
+  }
+  if (graph.opacity <= 0.0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
+    return;
+  }
+  graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
+  graph.lineColor = [1, 1, 1, 1];
+  graph.lineThickness = 4;
+  graph.lineAlpha = 1;
+  graph.textColor = [1, 1, 1, 1];
+  graph.lines = [];
+  let vols = [];
+  if (graph.vols.length < 1) {
+    if (this.volumes[0] != null) vols.push(0);
+  } else {
+    for (let i = 0; i < graph.vols.length; i++) {
+      let j = graph.vols[i];
+      if (this.volumes[j] == null) continue;
+      let n = this.volumes[j].nFrame4D;
+      if (n < 2) continue;
+      vols.push(j);
+    }
+  }
+  if (vols.length < 1) return;
+  //let vols = graph.vols;
+  let maxVols = this.volumes[vols[0]].nFrame4D;
+  this.graph.selectedColumn = this.volumes[vols[0]].frame4D;
+  if (maxVols < 2) {
+    console.log("Unable to generate a graph: Selected volume is 3D not 4D");
+    return;
+  }
+  for (let i = 0; i < vols.length; i++) {
+    graph.lines[i] = [];
+    let vox = this.frac2vox(this.scene.crosshairPos);
+    let v = this.volumes[vols[i]];
+    let n = v.nFrame4D;
+    n = Math.min(n, maxVols);
+    for (let j = 0; j < n; j++) {
+      let val = v.getValue(...vox, j);
+      graph.lines[i].push(val);
+    }
+  }
+  graph.lineRGB = [
+    [1, 0, 0],
+    [0, 0.7, 0],
+    [0, 0, 1],
+    [1, 1, 0],
+    [1, 0, 1],
+    [0, 1, 1],
+    [1, 1, 1],
+    [0, 0, 0],
+  ];
+  //find min, max, range for all lines
+  let mn = graph.lines[0][0];
+  let mx = graph.lines[0][0];
+  for (let j = 0; j < graph.lines.length; j++)
+    for (let i = 0; i < graph.lines[j].length; i++) {
+      let v = graph.lines[j][i];
+      mn = Math.min(v, mn);
+      mx = Math.max(v, mx);
+    }
+  if (graph.normalizeValues && mx > mn) {
+    let range = mx - mn;
+    for (let j = 0; j < graph.lines.length; j++)
+      for (let i = 0; i < graph.lines[j].length; i++) {
+        let v = graph.lines[j][i];
+        graph.lines[j][i] = (v - mn) / range;
+      }
+    mn = 0;
+    mx = 1;
+  }
+  if (mn >= mx) {
+    mx = mn + 1.0;
+  }
+  let dark = 0.9; //make border around graph a bit darker than graph body
+  let borderColor = [
+    dark * graph.backColor[0],
+    dark * graph.backColor[1],
+    dark * graph.backColor[2],
+    graph.backColor[3],
+  ];
+  this.drawRect(graph.LTWH, borderColor);
+  let [spacing, ticMin] = tickSpacing(5, mn, mx);
+  //determine font size
+  function humanize(x) {
+    //drop trailing zeros from numerical string
+    return x.toFixed(6).replace(/\.?0*$/, "");
+  }
+  let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
+  let fntScale = 0.1 * (minWH / this.fontMets.size);
+  let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
+  //let fntHeight = fntScale * this.fontMets.size;
+  let maxTextWid = 0;
+  let lineH = ticMin;
+  //determine widest label in vertical axis
+
+  while (lineH <= mx) {
+    let str = humanize(lineH);
+    let w = this.textWidth(fntSize, str);
+    maxTextWid = Math.max(w, maxTextWid);
+    lineH += spacing;
+  }
+  let margin = 0.05;
+  //frame is the entire region including labels, plot is the inner lines
+  let frameWid = Math.abs(graph.LTWH[2]);
+  let frameHt = Math.abs(graph.LTWH[3]);
+  //plot is region where lines are drawn
+  let plotLTWH = [
+    graph.LTWH[0] + margin * frameWid + maxTextWid,
+    graph.LTWH[1] + margin * frameHt,
+    graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
+    graph.LTWH[3] - fntSize - 2 * margin * frameHt,
+  ];
+  this.graph.plotLTWH = plotLTWH;
+  this.drawRect(plotLTWH, [
+    graph.backColor[0],
+    graph.backColor[1],
+    graph.backColor[2],
+    graph.backColor[3] * 2,
+  ]);
+  //draw horizontal lines
+  let rangeH = mx - mn;
+  let scaleH = plotLTWH[3] / rangeH;
+  let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
+  let plotBottom = plotLTWH[1] + plotLTWH[3];
+  //draw thin horizontal lines
+  lineH = ticMin + 0.5 * spacing;
+  let thinColor = graph.lineColor.slice();
+  thinColor[3] = 0.25 * graph.lineColor[3];
+  while (lineH <= mx) {
+    let y = plotBottom - (lineH - mn) * scaleH;
+    this.drawGraphLine(
+      [plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y],
+      thinColor,
+      0.5 * graph.lineThickness
+    );
+    lineH += spacing;
+  }
+  lineH = ticMin;
+  //draw thick horizontal lines
+  while (lineH <= mx) {
+    let y = plotBottom - (lineH - mn) * scaleH;
+    this.drawGraphLine(
+      [plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y],
+      graph.lineColor,
+      graph.lineThickness
+    );
+    //this.drawTextRight(xy, str, scale = 1)
+    let str = humanize(lineH);
+    this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
+    //this.drawTextRight([plotLTWH[0], y], str, fntScale)
+    lineH += spacing;
+  }
+  //draw vertical lines
+  let stride = 1; //e.g. how frequent are vertical lines
+  while (graph.lines[0].length / stride > 20) {
+    stride *= 5;
+  }
+  for (let i = 0; i < graph.lines[0].length; i += stride) {
+    let x = i * scaleW + plotLTWH[0];
+    let thick = graph.lineThickness;
+    if (i % 2 === 1) {
+      thick *= 0.5;
+      this.drawGraphLine(
+        [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+        thinColor,
+        thick
+      );
+    } else if (i > 0) {
+      let str = humanize(i);
+      this.drawTextBelow(
+        [x, 2 + plotLTWH[1] + plotLTWH[3]],
+        str,
+        fntScale,
+        graph.textColor
+      );
+      this.drawGraphLine(
+        [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+        graph.lineColor,
+        thick
+      );
+    } //this.drawTextBelow(xy, str, scale = 1);
+    //this.drawRect([x, plotLTWH[1], 1, plotLTWH[3]], graph.lineColor);
+  }
+  //graph the lines for intensity across time
+  for (let j = 0; j < graph.lines.length; j++) {
+    let lineRGBA = [1, 0, 0, graph.lineAlpha];
+    if (j < graph.lineRGB.length) {
+      lineRGBA = [
+        graph.lineRGB[j][0],
+        graph.lineRGB[j][1],
+        graph.lineRGB[j][2],
+        graph.lineAlpha,
+      ];
+    }
+    for (let i = 1; i < graph.lines[j].length; i++) {
+      let x0 = (i - 1) * scaleW; //
+      let x1 = i * scaleW;
+      let y0 = (graph.lines[j][i - 1] - mn) * scaleH;
+      let y1 = (graph.lines[j][i] - mn) * scaleH;
+      //let LTWH = [plotLTWH[0]+x0, plotLTWH[1]+plotLTWH[3]-y0, plotLTWH[0]+x1, -(y1-y0)];
+      let LTWH = [
+        plotLTWH[0] + x0,
+        plotLTWH[1] + plotLTWH[3] - y0,
+        plotLTWH[0] + x1,
+        plotLTWH[1] + plotLTWH[3] - y1,
+      ];
+      this.drawGraphLine(LTWH, lineRGBA, graph.lineThickness);
+    } //for i: each point
+  } //for j: each line
+  //draw vertical line indicating selected volume
+  if (
+    graph.selectedColumn >= 0 &&
+    graph.selectedColumn < graph.lines[0].length
+  ) {
+    let x = graph.selectedColumn * scaleW + plotLTWH[0];
+    let color = graph.lineRGB[0];
+    this.drawGraphLine(
+      [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
+      [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1],
+      graph.lineThickness
+    );
+  }
+};
+
 // not included in public docs
 Niivue.prototype.draw3D = function () {
   this.setPivot3D();
@@ -3830,6 +4195,10 @@ Niivue.prototype.draw3D = function () {
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     let shader = this.renderShader; //.use(this.gl);
     shader.use(this.gl);
+    gl.uniform1i(
+      shader.uniforms["backgroundMasksOverlays"],
+      this.backgroundMasksOverlays
+    );
     gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
@@ -3849,6 +4218,7 @@ Niivue.prototype.draw3D = function () {
     this.scene.renderAzimuth.toFixed(0) +
     " elevation: " +
     this.scene.renderElevation.toFixed(0);
+  this.drawGraph();
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
@@ -4243,7 +4613,8 @@ Niivue.prototype.drawScene = function () {
     );
     let wX1 =
       (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
-    if (wX1 > wX) {
+    if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
+      //landscape screen ratio: 3 slices in single row
       let pixScale = wX1 / volScale[0];
       let hY1 = volScale[1] * pixScale;
       let hZ1 = volScale[2] * pixScale;
@@ -4265,16 +4636,17 @@ Niivue.prototype.drawScene = function () {
       this.draw2D([ltwh[0] + wX, ltwh[1], wY, hZ], 2);
       //draw colorbar (optional) // TODO currently only drawing one colorbar, there may be one per overlay + one for the background
       var margin = this.opts.colorBarMargin * hY;
-      this.drawColorbar([
-        ltwh[0] + wX + margin,
-        ltwh[1] + hZ + margin,
-        wY - margin - margin,
-        hY * this.opts.colorbarHeight,
-      ]);
+      if (!this.graph.autoSizeMultiplanar) {
+        this.drawColorbar([
+          ltwh[0] + wX + margin,
+          ltwh[1] + hZ + margin,
+          wY - margin - margin,
+          hY * this.opts.colorbarHeight,
+        ]);
+      }
       // drawTextBelow(gl, [ltwh[0]+ wX + (wY * 0.5), ltwh[1] + hZ + margin + hY * colorbarHeight], "Syzygy"); //DEMO
     }
   }
-
   if (this.isDragging && this.sliceType !== this.sliceTypeRender) {
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
@@ -4292,6 +4664,8 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
+  this.drawGraph();
+
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();
