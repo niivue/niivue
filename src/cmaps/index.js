@@ -45,6 +45,7 @@ export { default as red } from "./red.json";
 export { default as redyell } from "./redyell.json";
 export { default as rocket } from "./rocket.json";
 export { default as surface } from "./surface.json";
+export { default as turbo } from "./turbo.json";
 export { default as violet } from "./violet.json";
 export { default as viridis } from "./viridis.json";
 export { default as warm } from "./warm.json";

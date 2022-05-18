@@ -2723,10 +2723,14 @@ Niivue.prototype.getDescriptives = function (
   let k = 0;
   let M = 0;
   let S = 0;
+  let mx = Number.NEGATIVE_INFINITY;
+  let mn = Number.POSITIVE_INFINITY;
   for (var i = 0; i < nv; i++) {
     if (mask[i] < 1) continue;
     k += 1;
     let x = img[i];
+    mn = Math.min(x, mx);
+    mx = Math.max(x, mx);
     let Mnext = M + (x - M) / k;
     S = S + (x - M) * (x - Mnext);
     M = Mnext;
@@ -2744,7 +2748,15 @@ Niivue.prototype.getDescriptives = function (
     "\nRobust Max: " +
     this.volumes[layer].robust_max;
   console.log(str);
-  return str;
+  return {
+    mean: M,
+    stdev: stdev,
+    nvox: k,
+    min: mn,
+    max: mx,
+    robust_min: this.volumes[layer].robust_min,
+    robust_max: this.volumes[layer].robust_max,
+  };
 };
 
 // not included in public docs
@@ -2789,7 +2801,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
     this.gl.uniform1i(pickingShader.uniforms["overlay"], 2);
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale);
-    //console.log('OK',mtx);
     log.debug(this.volumeObject3D);
   } else {
     if (this.back.dims === undefined)

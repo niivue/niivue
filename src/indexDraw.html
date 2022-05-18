@@ -102,7 +102,21 @@
       }
       document.getElementById("info").addEventListener("click", doInfo);
       function doInfo(){
-        let str = nv1.getDescriptives(0, false);
+        let obj = nv1.getDescriptives(0, false);
+        let str = "Number of voxels: " +
+            obj.nvox +
+            "\nMin:" +
+            obj.min +
+            "\nMax:" +
+            obj.max +
+            "\nMean:" +
+            obj.mean +
+            "\nStandard deviation: " +
+            obj.stdev +
+            "\nRobust Min: " +
+            obj.robust_min +
+            "\nRobust Max: " +
+            obj.robust_max;
         alert(str);
       }
       document.getElementById("superior").addEventListener("click", doSuperior);
@@ -140,7 +154,7 @@
           url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: url ? url : "../demos/images/mask.nii",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
-          colorMap: "gray",
+          colorMap: "turbo",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
           opacity: 1,
           visible: true,
