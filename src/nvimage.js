@@ -2080,10 +2080,15 @@ function hdrToArrayBuffer(hdr, isDrawing8 = false) {
   for (let i = 0; i < 8; i++) {
     view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], hdr.littleEndian);
   }
-  view.setFloat32(108, hdr.vox_offset, hdr.littleEndian);
-  view.setFloat32(112, hdr.scl_slope, hdr.littleEndian);
-  view.setFloat32(116, hdr.scl_inter, hdr.littleEndian);
-
+  if (isDrawing8) {
+    view.setFloat32(108, 352, hdr.littleEndian);
+    view.setFloat32(112, 1.0, hdr.littleEndian);
+    view.setFloat32(116, 0.0, hdr.littleEndian);
+  } else {
+    view.setFloat32(108, hdr.vox_offset, hdr.littleEndian);
+    view.setFloat32(112, hdr.scl_slope, hdr.littleEndian);
+    view.setFloat32(116, hdr.scl_inter, hdr.littleEndian);
+  }
   // slice_end
   view.setInt16(120, hdr.slice_end, hdr.littleEndian);
 

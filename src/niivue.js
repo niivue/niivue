@@ -1182,6 +1182,86 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
+Niivue.prototype.loadDrawing = async function (fnm) {
+  if (this.drawBitmap) console.log("Overwriting open drawing!");
+  let volume = await NVImage.loadFromUrl({ url: fnm });
+  //let volume = await NVImage.loadFromFile({file: fnm});
+  let dims = volume.hdr.dims; //reverse to original
+  if (
+    dims[1] !== this.back.hdr.dims[1] ||
+    dims[2] !== this.back.hdr.dims[2] ||
+    dims[3] !== this.back.hdr.dims[3]
+  ) {
+    console.log("drawing dimensions do not match background image");
+    return false;
+  }
+  if (volume.img.constructor !== Uint8Array)
+    console.log("Drawings should be UINT8");
+  let perm = volume.permRAS;
+  //if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
+  let vx = dims[1] * dims[2] * dims[3];
+  //this.drawBitmap = new Uint8Array(vx);
+  this.drawBitmap = new Uint8Array(vx);
+  this.drawTexture = this.r8Tex(
+    this.drawTexture,
+    this.gl.TEXTURE7,
+    this.back.dims,
+    //this.volumes[0].hdr.dims,
+    true
+  );
+  let layout = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (Math.abs(perm[i]) - 1 !== j) continue;
+      layout[j] = i * Math.sign(perm[i]);
+    }
+  }
+  let stride = 1;
+  let instride = [1, 1, 1];
+  let inflip = [false, false, false];
+  for (let i = 0; i < layout.length; i++) {
+    for (let j = 0; j < layout.length; j++) {
+      let a = Math.abs(layout[j]);
+      if (a != i) continue;
+      instride[j] = stride;
+      //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+      if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+      stride *= dims[j + 1];
+    }
+  }
+  //lookup table for flips and stride offsets:
+  const range = (start, stop, step) =>
+    Array.from(
+      { length: (stop - start) / step + 1 },
+      (_, i) => start + i * step
+    );
+  let xlut = range(0, dims[1] - 1, 1);
+  if (inflip[0]) xlut = range(dims[1] - 1, 0, -1);
+  for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0];
+  let ylut = range(0, dims[2] - 1, 1);
+  if (inflip[1]) ylut = range(dims[2] - 1, 0, -1);
+  for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1];
+  let zlut = range(0, dims[3] - 1, 1);
+  if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
+  for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
+  //convert data
+  let inVs = volume.img; //new Uint8Array(this.drawBitmap);
+  let outVs = this.drawBitmap;
+  //for (let i = 0; i < vx; i++)
+  //  outVs[i] = i % 3;
+  let j = 0;
+  for (let z = 0; z < dims[3]; z++) {
+    for (let y = 0; y < dims[2]; y++) {
+      for (let x = 0; x < dims[1]; x++) {
+        outVs[xlut[x] + ylut[y] + zlut[z]] = inVs[j];
+        j++;
+      } //for x
+    } //for y
+  } //for z
+  this.refreshDrawing(false);
+  this.drawScene();
+};
+
 Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
   if (!this.back.hasOwnProperty("dims")) {
     console.log("No voxelwise image open");
@@ -1193,7 +1273,6 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
       return false;
     }
     let perm = this.volumes[0].permRAS;
-
     if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
       await this.volumes[0].saveToDisk(fnm, this.drawBitmap); // createEmptyDrawing
       return true;
@@ -2603,6 +2682,84 @@ Niivue.prototype.updateGLVolume = function () {
 }; // updateVolume()
 
 // not included in public docs
+Niivue.prototype.getDescriptives = function (
+  layer = 0,
+  ignoreZeros = false,
+  masks = []
+) {
+  let hdr = this.volumes[layer].hdr;
+  let slope = hdr.scl_slope;
+  if (isNaN(slope)) slope = 1;
+  let inter = hdr.scl_inter;
+  if (isNaN(inter)) inter = 1;
+  let imgRaw = this.volumes[layer].img;
+  let nv = imgRaw.length; //number of voxels
+  //create mask
+  let img = new Float32Array(nv);
+  for (var i = 0; i < nv; i++) img[i] = imgRaw[i] * slope + inter; //assume all voxels survive
+  let mask = new Uint8Array(nv);
+  for (var i = 0; i < nv; i++) mask[i] = 1; //assume all voxels survive
+  if (ignoreZeros) {
+    for (var i = 0; i < nv; i++) if (img[i] === 0) mask[i] = 0;
+  }
+  if (masks.length > 0) {
+    for (var m = 0; m < masks.length; m++) {
+      let imgMask = this.volumes[masks[m]].img;
+      if (imgMask.length !== nv) {
+        console.log(
+          "Mask resolution does not match image. Skipping masking layer " +
+            masks[m]
+        );
+        continue;
+      }
+      for (var i = 0; i < nv; i++) {
+        if (imgMask[i] === 0 || isNaN(imgMask[i])) mask[i] = 0;
+      } //for each voxel in mask
+    } //for each mask
+  } //if masks
+  //Welfords method
+  //https://www.embeddedrelated.com/showarticle/785.php
+  //https://www.johndcook.com/blog/2008/09/26/comparing-three-methods-of-computing-standard-deviation/
+  let k = 0;
+  let M = 0;
+  let S = 0;
+  let mx = Number.NEGATIVE_INFINITY;
+  let mn = Number.POSITIVE_INFINITY;
+  for (var i = 0; i < nv; i++) {
+    if (mask[i] < 1) continue;
+    k += 1;
+    let x = img[i];
+    mn = Math.min(x, mx);
+    mx = Math.max(x, mx);
+    let Mnext = M + (x - M) / k;
+    S = S + (x - M) * (x - Mnext);
+    M = Mnext;
+  }
+  let stdev = Math.sqrt(S / (k - 1));
+  let str =
+    "Number of voxels: " +
+    k +
+    "\nMean:" +
+    M +
+    "\nStandard deviation: " +
+    stdev +
+    "\nRobust Min: " +
+    this.volumes[layer].robust_min +
+    "\nRobust Max: " +
+    this.volumes[layer].robust_max;
+  console.log(str);
+  return {
+    mean: M,
+    stdev: stdev,
+    nvox: k,
+    min: mn,
+    max: mx,
+    robust_min: this.volumes[layer].robust_min,
+    robust_max: this.volumes[layer].robust_max,
+  };
+};
+
+// not included in public docs
 Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   if (this.volumes.length < 1) return; //e.g. only meshes
   let hdr = overlayItem.hdr;
@@ -2644,7 +2801,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
     this.gl.uniform1i(pickingShader.uniforms["overlay"], 2);
     this.gl.uniform3fv(pickingShader.uniforms["volScale"], volScale);
-
     log.debug(this.volumeObject3D);
   } else {
     if (this.back.dims === undefined)
@@ -2658,18 +2814,19 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     f100 = mat.vec3.subtract(f100, f100, f000); // direction of i dimension from origin
     f010 = mat.vec3.subtract(f010, f010, f000); // direction of j dimension from origin
     f001 = mat.vec3.subtract(f001, f001, f000); // direction of k dimension from origin
-
     mtx = mat.mat4.fromValues(
       f100[0],
-      f100[1],
-      f100[2],
-      f000[0],
       f010[0],
-      f010[1],
-      f010[2],
-      f000[1],
       f001[0],
+      f000[0],
+
+      f100[1],
+      f010[1],
       f001[1],
+      f000[1],
+
+      f100[2],
+      f010[2],
       f001[2],
       f000[2],
       0,
@@ -2899,8 +3056,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     overlayItem.calMinMax();
   }
   //blend texture
-  let blendTexture = null;
 
+  let blendTexture = null;
   this.gl.bindVertexArray(this.genericVAO);
   if (layer > 1) {
     //use pass-through shader to copy previous color to temporary 2D texture
@@ -4366,15 +4523,15 @@ Niivue.prototype.mm2frac = function (mm, volIdx = 0) {
   //given mm, return volume fraction
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   let mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
-  let d = this.volumes[volIdx].hdr.dims;
+  let d = this.volumes[volIdx].dimsRAS;
   let frac = [0, 0, 0];
   if (typeof d === "undefined") {
     return frac;
   }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1) return frac;
   let sform = mat.mat4.clone(this.volumes[volIdx].matRAS);
-  mat.mat4.transpose(sform, sform);
   mat.mat4.invert(sform, sform);
+  mat.mat4.transpose(sform, sform);
   mat.vec4.transformMat4(mm4, mm4, sform);
   frac[0] = (mm4[0] + 0.5) / d[1];
   frac[1] = (mm4[1] + 0.5) / d[2];

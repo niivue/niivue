@@ -44,11 +44,13 @@
         <button id="anterior">anterior</button>
         <button id="inferior">inferior</button>
         <button id="superior">superior</button>
-
+        <button id="info">info</button>
         <button id="save">save drawing</button>
+        <input accept="image/nii, image/gz" type="file" name="openDrawing" id="openDrawing">
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
+
       </div>
     </section>
     <!-- demo 1 -->
@@ -62,10 +64,10 @@
     <section>
       <p id="location"></p>
     </section>
-
-    <!-- <script type="module" src="./index.js">
+     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
+    
     
       document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
       function doDrawOpacity(){
@@ -98,6 +100,25 @@
       function doInferior(){
         nv1.moveCrosshairInVox(0, 0, -1);
       }
+      document.getElementById("info").addEventListener("click", doInfo);
+      function doInfo(){
+        let obj = nv1.getDescriptives(0, false);
+        let str = "Number of voxels: " +
+            obj.nvox +
+            "\nMin:" +
+            obj.min +
+            "\nMax:" +
+            obj.max +
+            "\nMean:" +
+            obj.mean +
+            "\nStandard deviation: " +
+            obj.stdev +
+            "\nRobust Min: " +
+            obj.robust_min +
+            "\nRobust Max: " +
+            obj.robust_max;
+        alert(str);
+      }
       document.getElementById("superior").addEventListener("click", doSuperior);
       function doSuperior(){
         nv1.moveCrosshairInVox(0, 0, 1);
@@ -106,6 +127,20 @@
       function doSave(){
         nv1.saveImage('test.nii', true);
       }
+      //<button onclick="document.getElementById('file-input').click();">Open</button>
+      document.getElementById("openDrawing").onchange=function(){
+        var oFile = document.getElementById('openDrawing').files[0];
+        var removeFakePath = this.value.split("\\"); // For the browser that add a fake path
+        var getFileWithExt = removeFakePath[removeFakePath.length - 1];
+        console.log(this.value, '>>', oFile);
+        //nv1.loadDrawing(oFile.name);
+        var fReader = new FileReader();
+        fReader.readAsDataURL(oFile);
+        //var splitExtension = getFileWithExt.split(".");
+        //var filename = splitExtension[0];
+        //var extension = splitExtension[1];
+        //  alert("Filename:" + filename + "\n\rExtension:" + extension);
+      };
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
@@ -117,12 +152,14 @@
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          //url: url ? url : "../demos/images/mask.nii",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
-          colorMap: "gray",
+          colorMap: "turbo",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
           opacity: 1,
           visible: true,
         },
+
       ]
       var nv1 = new Niivue({
         logging: false,
@@ -134,8 +171,10 @@
       })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-
+      //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
+      nv1.getDescriptives(0, false);
+      nv1.loadDrawing("../demos/images/draw.nii.gz");
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
