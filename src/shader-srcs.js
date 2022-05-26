@@ -402,7 +402,9 @@ void main() {
 	float draw = texture(drawing, texPos).r;
 	if (draw > 0.0) {
 		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (3.0/255.0))
+		if (draw >= (4.0/255.0))
+			dcolor.rgb = vec3(draw,0.0,draw);
+		else if (draw >= (3.0/255.0))
 			dcolor.b = 1.0;
 		else if (draw >= (2.0/255.0))
 			dcolor.g = 1.0;
@@ -736,6 +738,61 @@ uniform lowp sampler3D in3D;
 void main(void) {
  FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
 }`;
+
+export var vertGrowCutShader = `#version 300 es
+#line 283
+precision highp int;
+precision highp float;
+in vec3 vPos;
+out vec2 TexCoord;
+void main() {
+    TexCoord = vPos.xy;
+    gl_Position = vec4((vPos.x - 0.5) * 2.0, (vPos.y - 0.5) * 2.0, 0.0, 1.0);
+}`;
+
+//https://github.com/pieper/step/blob/master/src/growcut.js
+// Steve Pieper 2022: Apache License 2.0
+export var fragGrowCutShader = `#version 300 es
+#line 742
+  precision highp float;
+  precision highp int;
+  precision highp isampler3D;
+  layout(location = 0) out int label;
+  layout(location = 1) out int strength;
+  in vec2 TexCoord;
+  //out vec4 FragColor;
+  uniform float coordZ;
+  uniform lowp sampler3D in3D;
+  uniform highp isampler3D inputTexture0; // background
+  uniform highp isampler3D inputTexture1; // label
+  uniform highp isampler3D inputTexture2; // strength
+void main(void) {
+  //int MAX_STRENGTH  = int(255);
+  int MAX_STRENGTH  = int(10000);
+  vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
+  ivec3 size = textureSize(inputTexture0, 0);
+  ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
+  int background = texelFetch(inputTexture0, texelIndex, 0).r;
+  label = texelFetch(inputTexture1, texelIndex, 0).r;
+  strength = texelFetch(inputTexture2, texelIndex, 0).r;
+  for (int k = -1; k <= 1; k++) {
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        if (i != 0 && j != 0 && k != 0) {
+          ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
+          int neighborBackground = texelFetch(inputTexture0, neighborIndex, 0).r;
+          int neighborStrength = texelFetch(inputTexture2, neighborIndex, 0).r;
+          int strengthCost = abs(neighborBackground - background);
+          int takeoverStrength = neighborStrength - strengthCost;
+          if (takeoverStrength > strength) {
+            strength = takeoverStrength;
+            label = texelFetch(inputTexture1, neighborIndex, 0).r;
+          }
+        }
+      }
+    }
+  }
+}`; //inputTexture0
 
 export var vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;

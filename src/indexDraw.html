@@ -50,6 +50,7 @@
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
+        <button id="growcut">grow cut</button>
 
       </div>
     </section>
@@ -123,6 +124,10 @@
       function doSuperior(){
         nv1.moveCrosshairInVox(0, 0, 1);
       }
+      document.getElementById("growcut").addEventListener("click", doGrowCut);
+      function doGrowCut(){
+        nv1.drawGrowCut();
+      }
       document.getElementById("save").addEventListener("click", doSave);
       function doSave(){
         nv1.saveImage('test.nii', true);
@@ -154,7 +159,7 @@
           url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: url ? url : "../demos/images/mask.nii",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
-          colorMap: "turbo",
+          colorMap: "gray",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
           opacity: 1,
           visible: true,
