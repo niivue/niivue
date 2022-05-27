@@ -2138,8 +2138,7 @@ Niivue.prototype.drawGrowCut = function () {
       type,
       slice16
     );
-
-    img16.push(...slice16);
+		img16 = [...img16, ...slice16]
   }
   let mx = img16[0];
   for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i]);
