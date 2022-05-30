@@ -46,11 +46,11 @@
         <button id="superior">superior</button>
         <button id="info">info</button>
         <button id="save">save drawing</button>
-        <input accept="image/nii, image/gz" type="file" name="openDrawing" id="openDrawing">
+        <button id="undo">undo</button>
+        <button id="growcut">grow cut</button>
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
-        <button id="growcut">grow cut</button>
 
       </div>
     </section>
@@ -124,6 +124,10 @@
       function doSuperior(){
         nv1.moveCrosshairInVox(0, 0, 1);
       }
+      document.getElementById("undo").addEventListener("click", doUndo);
+      function doUndo(){
+        nv1.drawUndo();
+      }
       document.getElementById("growcut").addEventListener("click", doGrowCut);
       function doGrowCut(){
         nv1.drawGrowCut();
@@ -132,20 +136,7 @@
       function doSave(){
         nv1.saveImage('test.nii', true);
       }
-      //<button onclick="document.getElementById('file-input').click();">Open</button>
-      document.getElementById("openDrawing").onchange=function(){
-        var oFile = document.getElementById('openDrawing').files[0];
-        var removeFakePath = this.value.split("\\"); // For the browser that add a fake path
-        var getFileWithExt = removeFakePath[removeFakePath.length - 1];
-        console.log(this.value, '>>', oFile);
-        //nv1.loadDrawing(oFile.name);
-        var fReader = new FileReader();
-        fReader.readAsDataURL(oFile);
-        //var splitExtension = getFileWithExt.split(".");
-        //var filename = splitExtension[0];
-        //var extension = splitExtension[1];
-        //  alert("Filename:" + filename + "\n\rExtension:" + extension);
-      };
+
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
@@ -156,7 +147,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: url ? url : "../demos/images/mask.nii",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
@@ -179,7 +170,7 @@
       //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
       nv1.getDescriptives(0, false);
-      nv1.loadDrawing("../demos/images/draw.nii.gz");
+      nv1.loadDrawing("../demos/images/lesion.nii.gz");
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}

@@ -119,6 +119,7 @@ export function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
+  this.drawUndoBitmap = null; //copy of prior drawBitmap
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
@@ -1207,6 +1208,7 @@ Niivue.prototype.loadDrawing = async function (fnm) {
   //if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
   let vx = dims[1] * dims[2] * dims[3];
   //this.drawBitmap = new Uint8Array(vx);
+  this.drawUndoBitmap = null;
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(
     this.drawTexture,
@@ -1898,6 +1900,7 @@ Niivue.prototype.createEmptyDrawing = function () {
   if (mn < 1) return; //something is horribly wrong!
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   this.drawBitmap = new Uint8Array(vx);
+  this.drawUndoBitmap = null;
   this.drawTexture = this.r8Tex(
     this.drawTexture,
     this.gl.TEXTURE7,
@@ -2020,6 +2023,16 @@ function img2ras16(volume) {
   return img16;
 }
 
+Niivue.prototype.drawUndo = function () {
+  let hdr = this.back.hdr;
+  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if ((this.drawUndoBitmap.length !== nv) || (this.drawBitmap.length !== nv)) {
+    console.log("bitmap dims are wrong");
+    return;
+  }
+  this.drawBitmap = this.drawUndoBitmap.slice();
+  this.refreshDrawing(true);
+}
 Niivue.prototype.drawGrowCut = function () {
   let hdr = this.back.hdr;
   let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -2027,6 +2040,7 @@ Niivue.prototype.drawGrowCut = function () {
     console.log("bitmap dims are wrong");
     return;
   }
+  this.drawUndoBitmap = this.drawBitmap.slice();
   let gl = this.gl;
   let fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
@@ -3714,6 +3728,8 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           this.drawPenAxCorSag = axCorSag;
           this.drawPenFillPts = [];
           this.drawPt(...pt, this.opts.penValue);
+          this.drawUndoBitmap = this.drawBitmap.slice();
+          
         } else {
           if (
             pt[0] === this.drawPenLocation[0] &&
