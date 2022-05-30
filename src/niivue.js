@@ -1058,7 +1058,8 @@ Niivue.prototype.dropListener = async function (e) {
             ext === "TRACT" ||
             ext === "TRK" ||
             ext === "TRX" ||
-            ext === "VTK"
+            ext === "VTK" ||
+            ext === "X3D"
           ) {
             entry.file(async (file) => {
               let mesh = await NVMesh.loadFromFile({
@@ -2138,7 +2139,8 @@ Niivue.prototype.drawGrowCut = function () {
       type,
       slice16
     );
-		img16 = [...img16, ...slice16]
+    //img16.push(...slice16); // <- will elicit call stack limit error 
+    img16 = [...img16, ...slice16]
   }
   let mx = img16[0];
   for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i]);
@@ -4086,7 +4088,6 @@ Niivue.prototype.drawMesh3DX = function (
 // not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);
-  //profound okra
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.disable(gl.DEPTH_TEST);
@@ -4224,11 +4225,6 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
-
-  //OKRA
-  //    gl.clear( gl.DEPTH_BUFFER_BIT);
-  //    this.drawMesh3DX(true, 1, leftTopWidthHeight);//okra
-  //    return;
   this.sync();
 }; // draw2D()
 
@@ -4812,7 +4808,6 @@ Niivue.prototype.draw3D = function () {
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(this.unusedVAO);
   }
-  //return; //okra
   this.drawCrosshairs3D(true, 1.0);
   this.drawMesh3D(true, 1.0);
   this.drawMesh3D(false, 0.02);
@@ -4960,7 +4955,7 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   gl.drawElements(
     gl.TRIANGLES,
     this.crosshairs3D.indexCount,
-    gl.UNSIGNED_SHORT,
+    gl.UNSIGNED_INT, //gl.UNSIGNED_SHORT,
     0
   );
   gl.bindVertexArray(this.unusedVAO); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl

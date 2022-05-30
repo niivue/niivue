@@ -121,7 +121,7 @@ NiivueObject3D.generateCrosshairsGeometry = function (
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(
     gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(indices),
+    new Uint32Array(indices),
     gl.STATIC_DRAW
   );
 
@@ -321,7 +321,7 @@ NiivueObject3D.makeCylinder = function (
     num_v += 2;
   }
   let idx0 = Math.floor(vertices.length / 3); //first new vertex will be AFTER previous vertices
-  let idx = new Uint16Array(num_f * 3);
+  let idx = new Uint32Array(num_f * 3);
   let vtx = new Float32Array(num_v * 3);
   function setV(i, vec3) {
     vtx[i * 3 + 0] = vec3[0];

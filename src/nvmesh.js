@@ -2461,6 +2461,230 @@ NVMesh.readMGH = function (buffer, n_vert = 0) {
   return scalars;
 }; // readMGH()
 
+NVMesh.readX3D = function (buffer, n_vert = 0) {
+  // https://en.wikipedia.org/wiki/X3D
+  // n.b. only plain text ".x3d", not binary ".x3db"
+  // beware: The values of XML attributes are delimited by either single or double quotes
+  let len = buffer.byteLength;
+  if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStrX() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim();
+  }
+  function readStr() {
+    //concatenate lines to return tag <...>
+    let line = readStrX();
+    if (!line.startsWith("<") || line.endsWith(">")) {
+      return line;
+    }
+    while (pos < len && !line.endsWith(">")) line += readStrX();
+    return line;
+  }
+  let line = readStr(); //1st line: signature 'mrtrix tracks'
+  function readStringTag(TagName) {
+    //Tag 'DEF' will return l3 for DEF='l3'
+    let fpos = line.indexOf(TagName + "=");
+    if (fpos < 0) return "";
+    let delimiter = line[fpos + TagName.length + 1];
+    let spos = line.indexOf(delimiter, fpos) + 1;
+    let epos = line.indexOf(delimiter, spos);
+    return line.slice(spos, epos);
+  }
+  function readNumericTag(TagName) {
+    //Tag 'Dim1' will return 3 for Dim1="3"
+    let fpos = line.indexOf(TagName + "=");
+    if (fpos < 0) return 1;
+    let delimiter = line[fpos + TagName.length + 1];
+    let spos = line.indexOf(delimiter, fpos) + 1;
+    let epos = line.indexOf(delimiter, spos);
+    let str = line.slice(spos, epos);
+    let items = str.split(" ");
+    if (items.length < 2) return parseFloat(str);
+    let ret = [];
+    for (let i = 0; i < items.length; i++) ret.push(parseFloat(items[i]));
+    return ret;
+  }
+  if (!line.includes("xml version")) console.log("Not a X3D image");
+  let positions = [];
+  let indices = [];
+  let rgba255 = [];
+  let color = [];
+  let translation = [0, 0, 0];
+  let rotation = [0, 0, 0, 0];
+  let rgba = [255, 255, 255, 255];
+  let rgbaGlobal = [255, 255, 255, 255];
+  let appearanceStyles = [];
+  function readAppearance() {
+    if (!line.endsWith("/>")) {
+      while (pos < len && !line.endsWith("/>")) line += readStr();
+    }
+    let ref = readStringTag("USE");
+    if (ref.length > 1) {
+      if (appearanceStyles.hasOwnProperty(ref)) rgba = appearanceStyles[ref];
+      else console.log("Unable to find DEF for " + ref);
+      return;
+    }
+    let diffuseColor = readNumericTag("diffuseColor");
+    if (diffuseColor.length < 3) return;
+    rgba[0] = Math.round(diffuseColor[0] * 255);
+    rgba[1] = Math.round(diffuseColor[1] * 255);
+    rgba[2] = Math.round(diffuseColor[2] * 255);
+    let def = readStringTag("DEF");
+    if (length.def < 1) return;
+    appearanceStyles[def] = rgba;
+  }
+  let globs
+  while (pos < len) {
+    line = readStr();
+    //rgbaGlobal = [255,0,0,255]
+    rgba = rgbaGlobal.slice();
+    if (line.startsWith("<Transform")) {
+      translation = readNumericTag("translation");
+      rotation = readNumericTag("rotation");
+    }
+    if (line.startsWith("<Appearance")) {
+      readAppearance();
+      rgbaGlobal = rgba.slice();
+    }
+    if (line.startsWith("<Shape")) {
+      let radius = 1.0;
+      let height = 1.0;
+      let coordIndex = [];
+      let index = [];
+      let point = [];
+      while (pos < len) {
+        line = readStr();
+        if (line.startsWith("<Appearance")) readAppearance();
+        if (line.startsWith("</Shape")) break;
+        if (line.startsWith("<Sphere")) {
+          radius = readNumericTag("radius");
+          height = -1.0;
+        }
+        if (line.startsWith("<Cylinder")) {
+          radius = readNumericTag("radius");
+          height = readNumericTag("height");
+        }
+        if (line.startsWith("<IndexedFaceSet")) {
+          height = -2;
+          //https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#IndexedFaceSet
+          coordIndex = readNumericTag("coordIndex");
+        }
+        if (line.startsWith("<IndexedTriangleStripSet")) {
+          height = -3;
+          //https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#IndexedFaceSet
+          coordIndex = readNumericTag("index");
+        }
+        if (line.startsWith("<Coordinate")) point = readNumericTag("point"); //Coordinate point
+        if (line.startsWith("<Color")) color = readNumericTag("color"); //Coordinate point
+        if (line.startsWith("<Box")) {
+          height = -4;
+          console.log("Unsupported x3d shape: Box");
+        }
+        if (line.startsWith("<Cone")) {
+          height = -5;
+          console.log("Unsupported x3d shape: Cone");
+        }
+        if (line.startsWith("<ElevationGrid")) {
+          height = -6;
+          console.log("Unsupported x3d shape: ElevationGrid");
+        }
+      } //while not </shape
+      if (height < -3.0) {
+        //cone, box, elevation grid
+        //unsupported
+      } else if (height < -1.0) {
+        //indexed triangle mesh or strip
+        if (coordIndex.length < 1 || point.length < 3)
+          console.log("Indexed mesh must specify indices and points");
+        let idx0 = Math.floor(positions.length / 3); //first new vertex will be AFTER previous vertices
+        let j = 2;
+        while (j < coordIndex.length) {
+          if (coordIndex[j] >= 0) {
+            //new triangle
+            indices.push(coordIndex[j - 2] + idx0);
+            indices.push(coordIndex[j - 1] + idx0);
+            indices.push(coordIndex[j - 0] + idx0);
+            j += 1;
+          } else {
+            //coordIndex[j] == -1, next polygon
+            j += 3;
+          }
+        }
+        //n.b. positions.push(...point) can generate "Maximum call stack size exceeded"
+        positions = [...positions, ...point];
+        let npt = Math.floor(point.length / 3);
+        let rgbas = Array(npt).fill(rgba).flat();
+        if (color.length === npt * 3) {
+          //colors are rgb 0..1, rgbas are RGBA 0..255
+          let c3 = 0;
+          let c4 = 0;
+          for (let i = 0; i < npt; i++) {
+            for (let j = 0; j < 3; j++) {
+              rgbas[c4] = Math.round(color[c3] * 255.0);
+              c3++;
+              c4++;
+            }
+            c4++;
+          }
+        }
+        rgba255 = [...rgba255, ...rgbas];
+      } else if (height < 0.0) {
+        //sphere
+        NiivueObject3D.makeColoredSphere(
+          positions,
+          indices,
+          rgba255,
+          radius,
+          translation,
+          rgba
+        );
+      } else {
+        // https://www.andre-gaschler.com/rotationconverter/
+        let r = mat4.create(); //rotation mat4x4
+        mat4.fromRotation(r, rotation[3], [
+          rotation[0],
+          rotation[1],
+          rotation[2],
+        ]);
+        let t = vec4.fromValues(
+          translation[0],
+          translation[1],
+          translation[2],
+          1
+        );
+        let pti = vec4.fromValues(0, -height * 0.5, 0, 1);
+        let ptj = vec4.fromValues(0, +height * 0.5, 0, 1);
+        vec4.transformMat4(pti, pti, r);
+        vec4.transformMat4(ptj, ptj, r);
+        vec4.add(pti, pti, translation);
+        vec4.add(ptj, ptj, translation);
+        //https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#Cylinder
+        NiivueObject3D.makeColoredCylinder(
+          positions,
+          indices,
+          rgba255,
+          pti,
+          ptj,
+          radius,
+          rgba
+        );
+      }
+    } //while <shape
+  }
+  indices = new Int32Array(indices);
+  return {
+    positions,
+    indices,
+    rgba255,
+  };
+}; // readX3D()
+
 NVMesh.readGII = function (buffer, n_vert = 0) {
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
@@ -2704,6 +2928,7 @@ NVMesh.readMesh = async function (
   else if (ext === "NV") obj = this.readNV(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
   else if (ext === "PLY") obj = this.readPLY(buffer);
+  else if (ext === "X3D") obj = this.readX3D(buffer);
   else if (ext === "FIB" || ext === "VTK") {
     obj = this.readVTK(buffer);
     if (obj.hasOwnProperty("offsetPt0")) {
@@ -2730,6 +2955,9 @@ NVMesh.readMesh = async function (
   } // freesurfer hail mary
   pts = obj.positions.slice();
   tris = obj.indices.slice();
+  if (obj.hasOwnProperty("rgba255") && obj.rgba255.length > 0)
+    //e.g. x3D format
+    rgba255 = obj.rgba255.slice();
   if (obj.colors && obj.colors.length === pts.length) {
     rgba255 = [];
     let n = pts.length / 3;
@@ -2752,7 +2980,6 @@ NVMesh.readMesh = async function (
   if (tris.constructor !== Int32Array) {
     alert("Expected triangle indices to be of type INT32");
   }
-
   let nvm = new NVMesh(
     pts,
     tris,
