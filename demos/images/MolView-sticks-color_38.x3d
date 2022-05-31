@@ -1,0 +1,669 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<X3D version='3.0' profile='Interchange'
+ xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance'
+ xsd:noNamespaceSchemaLocation='http://www.web3d.org/specifications/x3d-3.0.xsd'
+ xmlns:chimera='http://www.cgl.ucsf.edu/chimera/'>
+ <!-- X3D profile limits on number of elements/colors/etc. were ignored -->
+ <head>
+  <meta content='UCSF Chimera 1.15_b42239, http://www.cgl.ucsf.edu/chimera/' name='generator'/>
+  <meta content='2022-05-25T21:37:37Z' name='created'/>
+ </head>
+ <Scene>
+  <NavigationInfo type='"EXAMINE" "ANY"' headlight='false'/>
+  <Background skyColor='1 1 1'/>
+  <chimera:WindowSize width='512' height='512'/>
+  <Viewpoint description='view 0' position='-0.04325 0.0949 39.0143' centerOfRotation='-0.04325 0.0949 -0.1266' fieldOfView='0.436332'/>
+  <chimera:DepthCue range='39.1409 46.0703' color='1 1 1'/>
+
+  <DirectionalLight color='1 1 1' ambientIntensity='0' intensity='0.646154' direction='-0 -0 -1'/>
+  <DirectionalLight color='1 1 1' ambientIntensity='0' intensity='0.361231' direction='-0.911685 -0.341882 -0.227921'/>
+  <DirectionalLight color='1 1 1' ambientIntensity='0' intensity='1' direction='0.408248 0.408248 0.816497'/>
+  <DirectionalLight color='1 1 1' ambientIntensity='0.15' intensity='0.0'/>
+  <Group>
+   <Transform>
+   </Transform>
+   <Transform rotation='0 0 1 0' translation='0 0 0' bboxCenter='-0.04325 0.0949 -0.1266' bboxSize='11.4511 9.866 6.614'>
+    <MetadataString value='"2242"' name='model name'/>
+    <Transform translation='2.8419 -2.3124 0.7393'>
+     <Shape>
+      <Appearance DEF='l0'>
+       <Material ambientIntensity='1' diffuseColor='1 0.0509804 0.0509804' specularColor='0.255 0.255 0.255' shininess='0.484375'/>
+      </Appearance>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.1062 -1.4352 1.207'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.9097 -2.0197 -1.3424'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.2688 0.9045 1.5664'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.4249 2.0704 -0.1912'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.401 -0.9666 -0.2934'>
+     <Shape>
+      <Appearance DEF='l1'>
+       <Material ambientIntensity='1' diffuseColor='0.188235 0.313725 0.972549' specularColor='0.255 0.255 0.255' shininess='0.484375'/>
+      </Appearance>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.8945 -1.9715 -1.7936'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.6892 -1.2689 0.6034'>
+     <Shape>
+      <Appearance DEF='l2'>
+       <Material ambientIntensity='1' diffuseColor='0.565 0.565 0.565' specularColor='0.255 0.255 0.255' shininess='0.484375'/>
+      </Appearance>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.108 -0.0426 1.4279'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.6951 -0.7337 -1.0387'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.6657 1.1043 0.6155'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-1.7293 -1.0779 0.0927'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.8711 -1.8982 -0.1222'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.0455 -0.2423 -0.5167'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.0271 1.1593 0.3682'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.8039 2.0758 0.1351'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.5418 2.2171 -0.3815'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.3186 3.1335 -0.6145'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.8815 1.0339 0.2735'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='2.6875 3.2041 -0.8728'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.9823 -2.934 0.1379'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.3266 -2.0383 1.2979'>
+     <Shape>
+      <Appearance DEF='l3'>
+       <Material ambientIntensity='1' diffuseColor='1 1 1' specularColor='0.255 0.255 0.255' shininess='0.484375'/>
+      </Appearance>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.248 0.3212 2.007'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.8528 -0.3348 2.1804'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.1778 -0.6616 -1.2365'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.2477 0.0262 -1.6897'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.7424 -0.0371 -1.3379'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.5226 -0.9962 0.1227'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.7039 0.4013 0.7506'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.2635 2.0311 0.3314'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-1.9976 -2.3261 -2.1231'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.2913 -2.692 -1.1917'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.6079 2.2729 -0.5812'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.6534 3.9022 -0.997'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.0882 4.0279 -1.4562'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.6814 -3.8381 -0.3996'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.6764 -3.2137 0.9348'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.4848 -2.2323 -0.5348'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.1439 1.7363 2.0711'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Sphere radius='0.8'/>
+     </Shape>
+    </Transform>
+    <Transform translation='2.61437 -2.21532 0.537386' rotation='-0.663747 0 0.747957 1.26189'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.638636' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='2.12897 -2.00822 0.106636' rotation='0.663747 0 -0.747957 1.8797'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.723787' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.10918 -2.45809 0.598347' rotation='-0.466469 0 -0.884538 2.02005'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.670915' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.67938 -2.76889 0.297647' rotation='0.466469 -0 0.884538 1.12154'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.760371' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.01849 -1.35205 0.947697' rotation='-0.94728 0 -0.320407 1.27591'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.572165' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-1.83004 -1.1734 0.390547' rotation='0.94728 -0 0.320407 1.86569'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.657217' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.90072 -1.99143 -1.05845' rotation='0.9995 -0 0.0316184 1.4716'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.570983' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.88142 -1.93068 -0.448354' rotation='-0.9995 0 -0.0316184 1.66999'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.655859' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.17803 0.934828 1.26338' rotation='-0.957943 0 -0.28696 1.47521'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.635556' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.98438 0.999528 0.616927' rotation='0.957942 -0 0.28696 1.66638'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.720297' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.23133 1.15404 1.71781' rotation='0.970717 0 -0.240226 0.558642'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.588555' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.16888 1.56994 1.97016' rotation='-0.970717 0 0.240228 2.58295'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.39237' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.53115 1.8292 -0.0830623' rotation='0.713296 -0 0.700863 2.58045'>
+     <Shape>
+      <Appearance USE='l0'/>
+      <Cylinder radius='0.8' height='0.569772' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.75945 1.31095 0.149288' rotation='-0.713296 0 -0.700863 0.561142'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.654468' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.134598 -1.04047 -0.0742571' rotation='0.63528 0 -0.772282 1.78175'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Cylinder radius='0.8' height='0.705551' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.410502 -1.19162 0.374143' rotation='-0.63528 0 0.772282 1.35984'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.738115' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.725585 -0.993797 -0.199052' rotation='0.27912 -0 0.960256 1.65108'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Cylinder radius='0.8' height='0.678222' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-1.38973 -1.04945 -0.00600226' rotation='-0.27912 0 -0.960256 1.49051'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.709525' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.331914 -0.872195 -0.585312' rotation='-0.973119 0 -0.230304 1.2659'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Cylinder radius='0.8' height='0.62896' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.220314 -0.719695 -1.05686' rotation='0.973119 -0 0.230304 1.87569'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.387052' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.84555 -1.66761 -1.60827' rotation='0.96684 0 -0.255382 0.562751'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Cylinder radius='0.8' height='0.718596' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.74585 -1.04871 -1.23082' rotation='-0.96684 0 0.255382 2.57884'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.744887' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.61592 -2.08164 -1.89594' rotation='-0.344842 0 -0.938661 1.92615'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Cylinder radius='0.8' height='0.633131' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.16747 -2.25894 -2.06069' rotation='0.344842 -0 0.938661 1.21544'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.386056' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.01775 -2.19529 -1.60665' rotation='0.834899 -0 0.550403 2.3559'>
+     <Shape>
+      <Appearance USE='l1'/>
+      <Cylinder radius='0.8' height='0.633165' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.21615 -2.55554 -1.3057' rotation='-0.834899 0 -0.550404 0.785694'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.386076' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.8986 -0.65575 1.01565' rotation='0.891576 0 -0.452871 0.646127'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.53591' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.28015 -1.58355 0.2406' rotation='-0.523196 0 -0.852212 1.99677'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.52296' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.575048 -1.51112 0.822039' rotation='0.886453 -0 0.462819 2.34714'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.691385' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.393748 -1.89582 1.16929' rotation='-0.886453 0 -0.462819 0.794452'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.406697' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.38685 0.53085 1.0217' rotation='-0.824433 0 -0.56596 0.709805'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.51209' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.837259 0.0719296 1.61021' rotation='0.558545 -0 0.829474 1.23333'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.691822' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.407259 0.25383 1.89976' rotation='-0.558545 0 -0.829474 1.90826'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.406954' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.34247 -0.134589 1.6648' rotation='0.710734 0 -0.703461 1.84008'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.691551' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.71487 -0.280689 2.04105' rotation='-0.710734 0 0.703461 1.30152'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.406795' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.2122 -0.9058 -0.473' rotation='0.760574 0 -0.649251 1.79818'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.52686' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.3703 -0.488 -0.7777' rotation='0.360552 -0 0.932739 1.24358'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.5289' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.55425 -0.494472 -1.24364' rotation='-0.824138 0 -0.566389 0.804763'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.690131' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-2.33055 -0.114522 -1.56914' rotation='0.824138 -0 0.566389 2.33683'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.40596' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='2.3464 1.1318 0.49185' rotation='-0.178726 0 -0.983899 1.53107'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.38477' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.2348 1.59005 0.3753' rotation='-0.486899 0 0.873458 0.793136'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.38466' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-3.9635 0.3958 -0.1216' rotation='0.979135 0 -0.203212 0.563886'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.50997' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.26489 -0.1777 -0.775226' rotation='-0.762452 0 0.647045 1.38253'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.690341' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.61334 -0.0751 -1.18583' rotation='0.762452 0 -0.647045 1.75906'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.406083' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.1957 -0.479639 -0.315407' rotation='0.801472 -0 0.598033 2.32792'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.691109' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-4.43425 -0.856589 0.00429258' rotation='-0.801471 0 -0.598033 0.813671'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.406535' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.28445 1.6882 -0.00665' rotation='-0.824411 0 -0.565992 0.710091'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.39496' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.24017 0.92067 0.488585' rotation='0.491922 0 -0.870639 2.34359'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.68362' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.57857 0.54167 0.679785' rotation='-0.491921 0 0.87064 0.798007'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.40213' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.06125 2.60465 -0.2397' rotation='-0.824375 0 -0.566043 0.710093'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.39483' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.467867 2.06173 0.196898' rotation='0.180872 -0 0.983507 1.61196'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.683916' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='-0.0658333 2.03938 0.295048' rotation='-0.180872 0 -0.983507 1.52963'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.402304' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.11465 2.7106 -0.62715' rotation='-0.49853 0 0.866872 0.784636'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.39477' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.87742 2.23467 -0.444369' rotation='-0.184116 0 -0.982905 1.5194'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.683826' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.41047 2.26257 -0.544219' rotation='0.184116 -0 0.982905 1.6222'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.402251' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='2.00305 3.1688 -0.74365' rotation='-0.18542 0 -0.982659 1.52016'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='1.39484' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='1.10919 3.3755 -0.734917' rotation='-0.498481 0 0.866901 0.784507'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.683865' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='0.776585 3.75985 -0.926167' rotation='0.498481 0 -0.866901 2.35709'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.402274' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='2.81365 3.46344 -1.05646' rotation='-0.824297 0 -0.566157 0.709773'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.683826' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.014 3.87534 -1.34816' rotation='0.824297 -0 0.566157 2.43182'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.402251' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.88757 -3.21862 -0.031313' rotation='-0.872575 0 0.48848 2.54351'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.688817' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='3.73712 -3.67067 -0.300063' rotation='0.872575 0 -0.48848 0.598087'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.405186' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.20081 -3.02205 0.388776' rotation='0.75407 0 -0.656795 1.82953'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.688302' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.54786 -3.1619 0.787226' rotation='-0.754069 0 0.656795 1.31206'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.404884' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.14049 -2.71309 -0.0738759' rotation='-0.801156 0 -0.598455 0.874667'>
+     <Shape>
+      <Appearance USE='l2'/>
+      <Cylinder radius='0.8' height='0.688981' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+    <Transform translation='4.39174 -2.36224 -0.410226' rotation='0.801156 -0 0.598455 2.26693'>
+     <Shape>
+      <Appearance USE='l3'/>
+      <Cylinder radius='0.8' height='0.405283' bottom='false' top='false'/>
+     </Shape>
+    </Transform>
+   </Transform>
+  </Group>
+ </Scene>
+</X3D>

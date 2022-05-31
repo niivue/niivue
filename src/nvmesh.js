@@ -2503,7 +2503,7 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
     let delimiter = line[fpos + TagName.length + 1];
     let spos = line.indexOf(delimiter, fpos) + 1;
     let epos = line.indexOf(delimiter, spos);
-    let str = line.slice(spos, epos);
+    let str = line.slice(spos, epos).trim();
     let items = str.split(" ");
     if (items.length < 2) return parseFloat(str);
     let ret = [];
@@ -2522,7 +2522,11 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
   let appearanceStyles = [];
   function readAppearance() {
     if (!line.endsWith("/>")) {
-      while (pos < len && !line.endsWith("/>")) line += readStr();
+      if (line.startsWith("<Appearance>")) {
+        while (pos < len && !line.endsWith("</Appearance>")) line += readStr();
+      } else {
+        while (pos < len && !line.endsWith("/>")) line += readStr();
+      }
     }
     let ref = readStringTag("USE");
     if (ref.length > 1) {
@@ -2600,20 +2604,46 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
         //unsupported
       } else if (height < -1.0) {
         //indexed triangle mesh or strip
-        if (coordIndex.length < 1 || point.length < 3)
+        if (
+          coordIndex.length < 1 ||
+          point.length < 3 ||
+          point.length === undefined
+        ) {
           console.log("Indexed mesh must specify indices and points");
+          break;
+        }
         let idx0 = Math.floor(positions.length / 3); //first new vertex will be AFTER previous vertices
         let j = 2;
-        while (j < coordIndex.length) {
-          if (coordIndex[j] >= 0) {
-            //new triangle
-            indices.push(coordIndex[j - 2] + idx0);
-            indices.push(coordIndex[j - 1] + idx0);
-            indices.push(coordIndex[j - 0] + idx0);
-            j += 1;
-          } else {
-            //coordIndex[j] == -1, next polygon
-            j += 3;
+        if (height === -2) {
+          //if triangles
+          //see Castle engine should_be_manifold.x3d.stl test image
+          let triStart = 0;
+          while (j < coordIndex.length) {
+            if (coordIndex[j] >= 0) {
+              //new triangle
+              indices.push(coordIndex[triStart] + idx0);
+              indices.push(coordIndex[j - 1] + idx0);
+              indices.push(coordIndex[j - 0] + idx0);
+              j += 1;
+            } else {
+              //coordIndex[j] == -1, next polygon
+              j += 3;
+              triStart = j - 2;
+            }
+          }
+        } else {
+          //if triangles else triangle strips
+          while (j < coordIndex.length) {
+            if (coordIndex[j] >= 0) {
+              //new triangle
+              indices.push(coordIndex[j - 2] + idx0);
+              indices.push(coordIndex[j - 1] + idx0);
+              indices.push(coordIndex[j - 0] + idx0);
+              j += 1;
+            } else {
+              //coordIndex[j] == -1, next polygon
+              j += 3;
+            }
           }
         }
         //n.b. positions.push(...point) can generate "Maximum call stack size exceeded"

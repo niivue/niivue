@@ -2616,6 +2616,7 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
         this.bmpShader.use(this.gl);
         this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
       } else {
+        this.fontShader.use(this.gl);
         this.gl.activeTexture(this.gl.TEXTURE3);
         this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
         if (this.fontTexture !== null) this.gl.deleteTexture(this.fontTexture);
