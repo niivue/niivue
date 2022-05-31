@@ -48,6 +48,9 @@
         <button id="save">save drawing</button>
         <button id="undo">undo</button>
         <button id="growcut">grow cut</button>
+      <input type="checkbox" id="check1" name="check1" checked>
+      <label for="check1">fill pen overwrites</label>
+
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
@@ -73,6 +76,11 @@
       document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
       function doDrawOpacity(){
         nv1.setDrawOpacity(this.value * 0.01);
+      }
+      document.getElementById("check1").addEventListener("change", doCheckClick);
+      function doCheckClick() {
+        console.log(this.checked);
+        nv1.drawFillOverwrites = this.checked;
       }
       document.getElementById("drawPen").addEventListener("change", doDrawPen);
       function doDrawPen(){

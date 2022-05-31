@@ -2539,7 +2539,7 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
     if (length.def < 1) return;
     appearanceStyles[def] = rgba;
   }
-  let globs
+  let globs;
   while (pos < len) {
     line = readStr();
     //rgbaGlobal = [255,0,0,255]

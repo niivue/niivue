@@ -123,6 +123,7 @@ export function Niivue(options = {}) {
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
+  this.drawFillOverwrites = true;
   this.drawPenFillPts = []; //store mouse points for filled pen
   this.overlayTexture = null;
   this.overlayTextureID = [];
@@ -2026,13 +2027,13 @@ function img2ras16(volume) {
 Niivue.prototype.drawUndo = function () {
   let hdr = this.back.hdr;
   let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-  if ((this.drawUndoBitmap.length !== nv) || (this.drawBitmap.length !== nv)) {
+  if (this.drawUndoBitmap.length !== nv || this.drawBitmap.length !== nv) {
     console.log("bitmap dims are wrong");
     return;
   }
   this.drawBitmap = this.drawUndoBitmap.slice();
   this.refreshDrawing(true);
-}
+};
 Niivue.prototype.drawGrowCut = function () {
   let hdr = this.back.hdr;
   let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -2153,8 +2154,8 @@ Niivue.prototype.drawGrowCut = function () {
       type,
       slice16
     );
-    //img16.push(...slice16); // <- will elicit call stack limit error 
-    img16 = [...img16, ...slice16]
+    //img16.push(...slice16); // <- will elicit call stack limit error
+    img16 = [...img16, ...slice16];
   }
   let mx = img16[0];
   for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i]);
@@ -2401,6 +2402,16 @@ Niivue.prototype.drawPenFilled = function () {
       } // x column
     } //y row
   } //not axial
+  if (
+    !this.drawFillOverwrites &&
+    this.drawUndoBitmap.length === this.drawBitmap.length
+  ) {
+    let nv = this.drawUndoBitmap.length;
+    for (let i = 0; i < nv; i++) {
+      if (this.drawUndoBitmap[i] === 0) continue;
+      this.drawBitmap[i] = this.drawUndoBitmap[i];
+    }
+  }
   this.drawPenFillPts = [];
   this.refreshDrawing(false);
 }; // drawPenFilled()
@@ -3729,7 +3740,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           this.drawPenFillPts = [];
           this.drawPt(...pt, this.opts.penValue);
           this.drawUndoBitmap = this.drawBitmap.slice();
-          
         } else {
           if (
             pt[0] === this.drawPenLocation[0] &&
