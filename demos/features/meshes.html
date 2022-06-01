@@ -39,6 +39,12 @@
       <p>available mesh shaders:</p>
       <p id="shaders"></p>
     </section>
+    <section>
+      <p>custom shader:</p>
+      <textarea id="customText" name="customText" rows="4" cols="50">#version 300 es&#10;precision highp int;&#10;precision highp float;&#10;uniform float opacity;&#10;in vec4 vClr;&#10;in vec3 vN, vL, vV;&#10;out vec4 color;&#10;void main() {&#10; vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)&#10; float ambient = 0.35;&#10; float diffuse = 0.5;&#10; vec3 n = normalize(vN);&#10; vec3 l = normalize(vec3(0.0, 10.0, -5.0));&#10; float lightNormDot = dot(n, l);&#10; vec3 a = vClr.rgb * ambient;&#10; vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;&#10; color = vec4(a + d, opacity);&#10;}</textarea>
+      <br>
+      <button onclick="customShader()">Use custom shader</button>
+    </section>
 
     <script src="./niivue.umd.js">
     </script>
@@ -83,6 +89,9 @@
           nv1.setMeshShader(cmaps[i])
         }
         cmapEl.appendChild(btn)
+      }
+      function customShader(){
+        nv1.setCustomMeshShader(document.getElementById("customText").value)
       }
     </script>
   </body>

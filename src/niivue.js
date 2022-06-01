@@ -2770,15 +2770,11 @@ Niivue.prototype.setMeshShader = function (meshShaderNameOrNumber = 2) {
 };
 
 Niivue.prototype.setCustomMeshShader = function (fragmentShaderText = "") {
-  if (fragmentShaderText.length < 1) 
+  if (fragmentShaderText.length < 1)
     fragmentShaderText = this.meshShaders[0].Frag;
-  this.meshShader = new Shader(
-    this.gl,
-    vertMeshShader,
-    fragmentShaderText
-  );
+  this.meshShader = new Shader(this.gl, vertMeshShader, fragmentShaderText);
   this.updateGLVolume();
-}
+};
 
 Niivue.prototype.meshShaderNames = function (sort = true) {
   let cm = [];
