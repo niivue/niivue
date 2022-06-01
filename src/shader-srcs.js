@@ -232,6 +232,14 @@ float frac2ndc(vec3 frac) {
 }
 void main() {
 	fColor = vec4(0.0,0.0,0.0,0.0);
+	vec4 clipPlaneColorX = clipPlaneColor;
+	//if (clipPlaneColor.a < 0.0)
+	//	clipPlaneColorX.a = - 1.0;
+	bool isColorPlaneInVolume = false;
+	if (clipPlaneColorX.a < 0.0) {
+		isColorPlaneInVolume = true;
+		clipPlaneColorX.a = 0.0;
+	}
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
@@ -263,7 +271,7 @@ void main() {
 	}
 	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
 		if (isClip)
-			fColor += clipPlaneColor;
+			fColor += clipPlaneColorX;
 		return;
 	}
 	fColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -295,8 +303,10 @@ void main() {
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
-	if (isClip) //CR
-		fColor.rgb = mix(fColor.rgb, clipPlaneColor.rgb, clipPlaneColor.a * 0.15);
+	//if (isClip) //CR
+	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
+		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
 	if (overlays < 1.0) return;
 	//overlay pass
 	len = lenNoClip;
@@ -311,7 +321,7 @@ void main() {
 	}
 	if (samplePos.a >= len) {
 		if (isClip && (fColor.a == 0.0))
-			fColor += clipPlaneColor;
+			fColor += clipPlaneColorX;
 		return;
 	}
 	samplePos -= deltaDirFast;
@@ -339,7 +349,7 @@ void main() {
 	}
 	if (samplePos.a >= len) {
 		if (isClip && (fColor.a == 0.0))
-			fColor += clipPlaneColor;
+			fColor += clipPlaneColorX;
 		return;
 	}
 	//if (overFirstHit.a < len)
@@ -760,15 +770,13 @@ export var fragGrowCutShader = `#version 300 es
   layout(location = 0) out int label;
   layout(location = 1) out int strength;
   in vec2 TexCoord;
-  //out vec4 FragColor;
+  uniform int finalPass;
   uniform float coordZ;
   uniform lowp sampler3D in3D;
   uniform highp isampler3D inputTexture0; // background
   uniform highp isampler3D inputTexture1; // label
   uniform highp isampler3D inputTexture2; // strength
 void main(void) {
-  //int MAX_STRENGTH  = int(255);
-  int MAX_STRENGTH  = int(10000);
   vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
   ivec3 size = textureSize(inputTexture0, 0);
   ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
@@ -792,6 +800,29 @@ void main(void) {
       }
     }
   }
+  if (finalPass < 1)
+    return;
+  int ok = 1;
+  ivec4 labelCount = ivec4(0,0,0,0);
+  for (int k = -1; k <= 1; k++)
+    for (int j = -1; j <= 1; j++)
+      for (int i = -1; i <= 1; i++) {
+        ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
+        int ilabel = texelFetch(inputTexture1, neighborIndex, 0).r;
+        if ((ilabel < 0) || (ilabel > 3))
+          ok = 0;
+        else
+          labelCount[ilabel]++;
+      }
+  if (ok != 1) {
+    return;
+  }
+  int maxIdx = 0;
+  for (int i = 1; i < 4; i++) {
+    if (labelCount[i] > labelCount[maxIdx])
+      maxIdx = i;
+  }
+  label = maxIdx;
 }`; //inputTexture0
 
 export var vertSurfaceShader = `#version 300 es

@@ -1709,6 +1709,11 @@ Niivue.prototype.setScale = function (scale) {
  */
 Niivue.prototype.setClipPlaneColor = function (color) {
   this.opts.clipPlaneColor = color;
+  this.renderShader.use(this.gl);
+  this.gl.uniform4fv(
+    this.renderShader.uniforms["clipPlaneColor"],
+    this.opts.clipPlaneColor
+  );
   this.drawScene();
 }; // setClipPlaneColor()
 
@@ -2054,15 +2059,17 @@ Niivue.prototype.drawGrowCut = function () {
   for (let i = 1; i < nv; i++) img16[i] = this.drawBitmap[i];
   let label0 = this.r16Tex(null, gl.TEXTURE6, this.back.dims, img16);
   let label1 = this.r16Tex(null, gl.TEXTURE7, this.back.dims, img16); //TEXTURE7 = draw Texture
-  for (let i = 1; i < nv; i++) if (img16[i] > 0) img16[i] = 10000;
+  let kMAX_STRENGTH = 10000;
+  for (let i = 1; i < nv; i++) if (img16[i] > 0) img16[i] = kMAX_STRENGTH;
   let strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16);
   let strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16);
   this.gl.bindVertexArray(this.genericVAO);
   let shader = this.growCutShader;
   shader.use(gl);
+  let iterations = 128; //will run 2x this value
+  gl.uniform1i(shader.uniforms["finalPass"], 0);
   gl.uniform1i(shader.uniforms["inputTexture0"], 3); // background is TEXTURE3
-  //for (let j = 0; j < 250; j++) {
-  for (let j = 0; j < 45; j++) {
+  for (let j = 0; j < iterations; j++) {
     gl.uniform1i(shader.uniforms["inputTexture1"], 6); // label0 is TEXTURE6
     gl.uniform1i(shader.uniforms["inputTexture2"], 4); // strength0 is TEXTURE4
     for (let i = 0; i < this.back.dims[3]; i++) {
@@ -2090,6 +2097,7 @@ Niivue.prototype.drawGrowCut = function () {
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     } //for i: each slice
     //reverse order strength1/label1 and strength0/label0 for reading and writing:
+    if (j === iterations - 1) gl.uniform1i(shader.uniforms["finalPass"], 1);
     gl.uniform1i(shader.uniforms["inputTexture1"], 7); // label1 is TEXTURE7
     gl.uniform1i(shader.uniforms["inputTexture2"], 5); // strength1 is TEXTURE5
     for (let i = 0; i < this.back.dims[3]; i++) {
@@ -2118,17 +2126,9 @@ Niivue.prototype.drawGrowCut = function () {
   } //for j: each iteration
   //read data
   gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-  let readAttach = gl.COLOR_ATTACHMENT0;
-  let readTex = label1;
-  let readStrength = false;
-  if (readStrength) {
-    //read strength or label
-    //readAttach = gl.COLOR_ATTACHMENT1;
-    readTex = strength1;
-  }
-  //gl.readBuffer(gl.COLOR_ATTACHMENT1); //strength
+  let readAttach = gl.COLOR_ATTACHMENT1;
+  let readTex = label0;
   gl.readBuffer(readAttach); //label
-
   // assuming a framebuffer is bound with the texture to read attached
   const format = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
   const type = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
@@ -2157,15 +2157,7 @@ Niivue.prototype.drawGrowCut = function () {
     //img16.push(...slice16); // <- will elicit call stack limit error
     img16 = [...img16, ...slice16];
   }
-  let mx = img16[0];
-  for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i]);
-  console.log(">>>", mx);
-  //let img16 = new Int16Array(nv);
-  //gl.readPixels(0, 0, w, h, format, type);
-  //            this.fallbackReadPixelsFormat, this.fallbackReadPixelsType, fallbackSliceView);
-
   for (let i = 1; i < nv; i++) this.drawBitmap[i] = img16[i];
-
   //clean up
   //restore textures
   gl.activeTexture(gl.TEXTURE2);
