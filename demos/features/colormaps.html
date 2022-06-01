@@ -23,15 +23,9 @@
       <p>
         Click the buttons to change the color map 
       </p>
-      <p>
-        <h3>Controls</h3>
-        <ul>
-          <li>move the crosshairs: left mouse click and drag (or click around)</li>
-          <li>slice scrolling: mouse or touch pad scroll up and down (mobile not supported)</li>
-          <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
-          <li>reset intensity: left mouse click double click (mobile not supported)</li>
-        </ul>
-      </p>
+      <div class="slidecontainer">
+        Gamma <input type="range" min="10" max="400" value="100" class="slider" id="gammaSlider">
+      </div>
     </section>
 
     <!-- demo 1 -->
@@ -50,6 +44,11 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
+     var slider = document.getElementById("gammaSlider");
+     // Update the current slider value (each time you drag the slider handle)
+     slider.oninput = function() {
+       nv1.setGamma(this.value * 0.01)
+     }
      var volumeList1 = [
        // first item is background image
          {

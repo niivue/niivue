@@ -2,6 +2,7 @@ import * as cmaps from "./cmaps";
 
 export const colortables = function () {
   this.version = 0.1;
+  this.gamma = 1.0;
 };
 
 colortables.prototype.colorMaps = function (sort = true) {
@@ -68,6 +69,11 @@ colortables.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
       lut[k++] = Bs[i] + f * (Bs[i + 1] - Bs[i]); //Blue
       lut[k++] = As[i] + f * (As[i + 1] - As[i]); //Alpha
     }
+  }
+  if (this.gamma === 1.0) return lut;
+  for (var i = 0; i < 255 * 4; i++) {
+    //lut[i] = ((lut[i] / 255) ^ (1 / this.gamma)) * 255
+    lut[i] = Math.pow(lut[i] / 255, 1 / this.gamma) * 255;
   }
   return lut;
 }; // makeLut()
