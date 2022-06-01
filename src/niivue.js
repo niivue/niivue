@@ -3508,6 +3508,11 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.setGamma = function (gamma = 1.0) {
+  cmapper.gamma = gamma;
+  this.updateGLVolume();
+};
+
 Niivue.prototype.setFrame4D = function (id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
   // don't allow indexing timepoints beyond the max number of time points.
