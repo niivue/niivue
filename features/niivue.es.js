@@ -109424,6 +109424,7 @@ function Niivue(options = {}) {
   this.fontTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null;
+  this.thumbnailVisible = false;
   this.bmpTextureWH = 1;
   this.passThroughShader = null;
   this.growCutShader = null;
@@ -109471,6 +109472,8 @@ function Niivue(options = {}) {
   this.back = {};
   this.overlays = [];
   this.volumes = [];
+  this.deferredVolumes = [];
+  this.deferredMeshes = [];
   this.meshes = [];
   this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1;
@@ -109543,6 +109546,9 @@ function Niivue(options = {}) {
   }
   if (this.opts.drawingEnabled) {
     this.createEmptyDrawing();
+  }
+  if (this.opts.thumbnail.length > 0) {
+    this.thumbnailVisible = true;
   }
   this.loadingText = this.opts.loadingText;
   log.setLogLevel(this.opts.logging);
@@ -109619,7 +109625,6 @@ Niivue.prototype.sync = function() {
     this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
   }
   if (this.syncOpts["3d"]) {
-    console.log("3d sync");
     this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
@@ -110471,8 +110476,10 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
       this.loadingText = this.opts.loadingText;
     }
   });
-  if (!this.initialized)
-    ;
+  if (this.thumbnailVisible) {
+    this.deferredVolumes = volumeList;
+    return this;
+  }
   this.volumes = [];
   this.gl.clearColor(0, 0, 0, 1);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -110503,6 +110510,10 @@ Niivue.prototype.loadMeshes = async function(meshList) {
       this.loadingText = this.opts.loadingText;
     }
   });
+  if (this.thumbnailVisible) {
+    this.deferredMeshes = meshList;
+    return this;
+  }
   if (!this.initialized)
     ;
   this.meshes = [];
@@ -110721,7 +110732,6 @@ Niivue.prototype.drawGrowCut = function() {
   let mx = img16[0];
   for (let i2 = 0; i2 < img16.length; i2++)
     mx = Math.max(mx, img16[i2]);
-  console.log(">>>", mx);
   for (let i2 = 1; i2 < nv; i2++)
     this.drawBitmap[i2] = img16[i2];
   gl.activeTexture(gl.TEXTURE2);
@@ -111054,8 +111064,8 @@ Niivue.prototype.loadPngAsTexture = function(pngUrl, textureNum) {
 Niivue.prototype.loadFontTexture = function(fontUrl) {
   this.loadPngAsTexture(fontUrl, 3);
 };
-Niivue.prototype.loadBmpTexture = function(bmpUrl) {
-  this.loadPngAsTexture(bmpUrl, 4);
+Niivue.prototype.loadBmpTexture = async function(bmpUrl) {
+  await this.loadPngAsTexture(bmpUrl, 4);
 };
 Niivue.prototype.initFontMets = function() {
   this.fontMets = [];
@@ -111214,8 +111224,10 @@ Niivue.prototype.init = async function() {
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
-  if (this.opts.thumbnail.length > 0)
-    this.loadBmpTexture(this.opts.thumbnail);
+  if (this.opts.thumbnail.length > 0) {
+    await this.loadBmpTexture(this.opts.thumbnail);
+    this.thumbnailVisible = true;
+  }
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -111291,8 +111303,7 @@ Niivue.prototype.getDescriptives = function(layer = 0, ignoreZeros = false, mask
     M = Mnext;
   }
   let stdev = Math.sqrt(S / (k - 1));
-  let str = "Number of voxels: " + k + "\nMean:" + M + "\nMin:" + mn + "\nMax:" + mx + "\nStandard deviation: " + stdev + "\nRobust Min: " + this.volumes[layer].robust_min + "\nRobust Max: " + this.volumes[layer].robust_max;
-  console.log(str);
+  "Number of voxels: " + k + "\nMean:" + M + "\nMin:" + mn + "\nMax:" + mx + "\nStandard deviation: " + stdev + "\nRobust Min: " + this.volumes[layer].robust_min + "\nRobust Max: " + this.volumes[layer].robust_max;
   return {
     mean: M,
     stdev,
@@ -111564,9 +111575,13 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
   this.canvas.focus();
-  if (this.bmpTexture !== null) {
+  if (this.thumbnailVisible) {
     this.gl.deleteTexture(this.bmpTexture);
     this.bmpTexture = null;
+    this.thumbnailVisible = false;
+    this.loadVolumes(this.deferredVolumes);
+    this.loadMeshes(this.deferredMeshes);
+    return;
   }
   if (this.graph.opacity > 0 && this.volumes[0].nFrame4D > 1 && this.graph.plotLTWH) {
     let pos = [x2 - this.graph.plotLTWH[0], y - this.graph.plotLTWH[1]];
@@ -111822,10 +111837,8 @@ Niivue.prototype.setInterpolation = function(isNearest) {
 };
 Niivue.prototype.calculateMvpMatrixX = function() {
   let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
-  console.log(">>", this.back.dimsRAS, this.back.matRAS);
   let scale2 = this.furthestFromPivot;
   let origin = [0, 0, 0];
-  console.log("o", scale2);
   let projectionMatrix = create$2();
   if (whratio < 1)
     ortho(projectionMatrix, -scale2, scale2, -scale2 / whratio, scale2 / whratio, 0.01, scale2 * 8);
@@ -112516,7 +112529,6 @@ Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
 };
 Niivue.prototype.moveCrosshairInVox = function(x2, y, z) {
   let vox = this.frac2vox(this.scene.crosshairPos);
-  console.log(vox);
   vox[0] += x2;
   vox[1] += y;
   vox[2] += z;
