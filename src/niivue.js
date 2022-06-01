@@ -187,6 +187,7 @@ export function Niivue(options = {}) {
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.deferredVolumes = [];
+	this.deferredMeshes = []
   this.meshes = [];
   this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1.0;
@@ -1841,6 +1842,11 @@ Niivue.prototype.loadMeshes = async function (meshList) {
       this.loadingText = this.opts.loadingText;
     }
   });
+	if (this.thumbnailVisible) {
+    // defer loading until user clicks on canvas with thumbnail image
+    this.deferredMeshes = meshList
+    return this;
+  }
   if (!this.initialized) {
     //await this.init();
   }
@@ -3644,6 +3650,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     this.thumbnailVisible = false;
     //the thumbnail is now released, do something profound: actually load the images
     this.loadVolumes(this.deferredVolumes);
+		this.loadMeshes(this.deferredMeshes)
     return;
   }
   if (
