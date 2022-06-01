@@ -53,6 +53,7 @@ var compileShader = function(gl, vert, frag) {
   }
   return program;
 };
+var EPSILON = 1e-6;
 var ARRAY_TYPE = typeof Float32Array !== "undefined" ? Float32Array : Array;
 if (!Math.hypot)
   Math.hypot = function() {
@@ -425,6 +426,38 @@ function rotateZ(out, a, rad) {
   out[7] = a13 * c2 - a03 * s;
   return out;
 }
+function fromRotation(out, rad, axis) {
+  var x2 = axis[0], y = axis[1], z = axis[2];
+  var len2 = Math.hypot(x2, y, z);
+  var s, c2, t;
+  if (len2 < EPSILON) {
+    return null;
+  }
+  len2 = 1 / len2;
+  x2 *= len2;
+  y *= len2;
+  z *= len2;
+  s = Math.sin(rad);
+  c2 = Math.cos(rad);
+  t = 1 - c2;
+  out[0] = x2 * x2 * t + c2;
+  out[1] = y * x2 * t + z * s;
+  out[2] = z * x2 * t - y * s;
+  out[3] = 0;
+  out[4] = x2 * y * t - z * s;
+  out[5] = y * y * t + c2;
+  out[6] = z * y * t + x2 * s;
+  out[7] = 0;
+  out[8] = x2 * z * t + y * s;
+  out[9] = y * z * t - x2 * s;
+  out[10] = z * z * t + c2;
+  out[11] = 0;
+  out[12] = 0;
+  out[13] = 0;
+  out[14] = 0;
+  out[15] = 1;
+  return out;
+}
 function orthoNO(out, left, right, bottom, top, near, far) {
   var lr = 1 / (left - right);
   var bt = 1 / (bottom - top);
@@ -484,7 +517,7 @@ function clone(a) {
   out[2] = a[2];
   return out;
 }
-function length(a) {
+function length$1(a) {
   var x2 = a[0];
   var y = a[1];
   var z = a[2];
@@ -576,7 +609,7 @@ function angle(a, b) {
   var ax = a[0], ay = a[1], az = a[2], bx = b[0], by = b[1], bz = b[2], mag1 = Math.sqrt(ax * ax + ay * ay + az * az), mag2 = Math.sqrt(bx * bx + by * by + bz * bz), mag = mag1 * mag2, cosine = mag && dot(a, b) / mag;
   return Math.acos(Math.min(Math.max(cosine, -1), 1));
 }
-var len = length;
+var len = length$1;
 (function() {
   var vec = create$1();
   return function(a, stride, offset, count, fn, arg2) {
@@ -922,7 +955,9 @@ void main() {
 	float draw = texture(drawing, texPos).r;
 	if (draw > 0.0) {
 		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (3.0/255.0))
+		if (draw >= (4.0/255.0))
+			dcolor.rgb = vec3(draw,0.0,draw);
+		else if (draw >= (3.0/255.0))
 			dcolor.b = 1.0;
 		else if (draw >= (2.0/255.0))
 			dcolor.g = 1.0;
@@ -1236,6 +1271,57 @@ uniform float coordZ;
 uniform lowp sampler3D in3D;
 void main(void) {
  FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
+}`;
+var vertGrowCutShader = `#version 300 es
+#line 283
+precision highp int;
+precision highp float;
+in vec3 vPos;
+out vec2 TexCoord;
+void main() {
+    TexCoord = vPos.xy;
+    gl_Position = vec4((vPos.x - 0.5) * 2.0, (vPos.y - 0.5) * 2.0, 0.0, 1.0);
+}`;
+var fragGrowCutShader = `#version 300 es
+#line 742
+  precision highp float;
+  precision highp int;
+  precision highp isampler3D;
+  layout(location = 0) out int label;
+  layout(location = 1) out int strength;
+  in vec2 TexCoord;
+  //out vec4 FragColor;
+  uniform float coordZ;
+  uniform lowp sampler3D in3D;
+  uniform highp isampler3D inputTexture0; // background
+  uniform highp isampler3D inputTexture1; // label
+  uniform highp isampler3D inputTexture2; // strength
+void main(void) {
+  //int MAX_STRENGTH  = int(255);
+  int MAX_STRENGTH  = int(10000);
+  vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
+  ivec3 size = textureSize(inputTexture0, 0);
+  ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
+  int background = texelFetch(inputTexture0, texelIndex, 0).r;
+  label = texelFetch(inputTexture1, texelIndex, 0).r;
+  strength = texelFetch(inputTexture2, texelIndex, 0).r;
+  for (int k = -1; k <= 1; k++) {
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        if (i != 0 && j != 0 && k != 0) {
+          ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
+          int neighborBackground = texelFetch(inputTexture0, neighborIndex, 0).r;
+          int neighborStrength = texelFetch(inputTexture2, neighborIndex, 0).r;
+          int strengthCost = abs(neighborBackground - background);
+          int takeoverStrength = neighborStrength - strengthCost;
+          if (takeoverStrength > strength) {
+            strength = takeoverStrength;
+            label = texelFetch(inputTexture1, neighborIndex, 0).r;
+          }
+        }
+      }
+    }
+  }
 }`;
 var vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
@@ -2328,7 +2414,7 @@ NiivueObject3D.generateCrosshairsGeometry = function(gl, xyzMM, xyzMin, xyzMax, 
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
   let indexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
   let vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -2576,7 +2662,7 @@ NiivueObject3D.makeCylinder = function(vertices, indices, start, dest, radius, s
     num_v += 2;
   }
   let idx0 = Math.floor(vertices.length / 3);
-  let idx = new Uint16Array(num_f * 3);
+  let idx = new Uint32Array(num_f * 3);
   let vtx = new Float32Array(num_v * 3);
   function setV(i2, vec3) {
     vtx[i2 * 3 + 0] = vec3[0];
@@ -103062,9 +103148,9 @@ NVImage.prototype.SetPixDimFromSForm = function() {
   subtract(mm010, mm010, mm000);
   let mm001 = this.vox2mm([0, 0, 1], mat);
   subtract(mm001, mm001, mm000);
-  this.hdr.pixDims[1] = length(mm100);
-  this.hdr.pixDims[2] = length(mm010);
-  this.hdr.pixDims[3] = length(mm001);
+  this.hdr.pixDims[1] = length$1(mm100);
+  this.hdr.pixDims[2] = length$1(mm010);
+  this.hdr.pixDims[3] = length$1(mm001);
 };
 function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
   var cosines = imageDirections, m = null;
@@ -104114,9 +104200,9 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
     subtract(mm010, mm010, mm000);
     let mm001 = this.vox2mm([0, 0, 1], mat);
     subtract(mm001, mm001, mm000);
-    hdr.pixDims[1] = length(mm100);
-    hdr.pixDims[2] = length(mm010);
-    hdr.pixDims[3] = length(mm001);
+    hdr.pixDims[1] = length$1(mm100);
+    hdr.pixDims[2] = length$1(mm010);
+    hdr.pixDims[3] = length$1(mm001);
     hdr.affine = [
       [mat[0], mat[1], mat[2], mat[3]],
       [mat[4], mat[5], mat[6], mat[7]],
@@ -104855,6 +104941,7 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
 };
 const colortables = function() {
   this.version = 0.1;
+  this.gamma = 1;
 };
 colortables.prototype.colorMaps = function(sort = true) {
   let cm = [];
@@ -104897,6 +104984,11 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
       lut[k++] = Bs[i2] + f * (Bs[i2 + 1] - Bs[i2]);
       lut[k++] = As[i2] + f * (As[i2 + 1] - As[i2]);
     }
+  }
+  if (this.gamma === 1)
+    return lut;
+  for (var i2 = 0; i2 < 255 * 4; i2++) {
+    lut[i2] = Math.pow(lut[i2] / 255, 1 / this.gamma) * 255;
   }
   return lut;
 };
@@ -107026,6 +107118,230 @@ NVMesh.readMGH = function(buffer2, n_vert = 0) {
     scalars = new Uint8Array(buffer2, voxoffset, nvert);
   return scalars;
 };
+NVMesh.readX3D = function(buffer2, n_vert = 0) {
+  let len2 = buffer2.byteLength;
+  if (len2 < 20)
+    throw new Error("File too small to be GII: bytes = " + len2);
+  var bytes = new Uint8Array(buffer2);
+  let pos = 0;
+  function readStrX() {
+    while (pos < len2 && bytes[pos] === 10)
+      pos++;
+    let startPos = pos;
+    while (pos < len2 && bytes[pos] !== 10)
+      pos++;
+    pos++;
+    if (pos - startPos < 1)
+      return "";
+    return new TextDecoder().decode(buffer2.slice(startPos, pos - 1)).trim();
+  }
+  function readStr() {
+    let line2 = readStrX();
+    if (!line2.startsWith("<") || line2.endsWith(">")) {
+      return line2;
+    }
+    while (pos < len2 && !line2.endsWith(">"))
+      line2 += readStrX();
+    return line2;
+  }
+  let line = readStr();
+  function readStringTag(TagName) {
+    let fpos = line.indexOf(TagName + "=");
+    if (fpos < 0)
+      return "";
+    let delimiter = line[fpos + TagName.length + 1];
+    let spos = line.indexOf(delimiter, fpos) + 1;
+    let epos = line.indexOf(delimiter, spos);
+    return line.slice(spos, epos);
+  }
+  function readNumericTag(TagName) {
+    let fpos = line.indexOf(TagName + "=");
+    if (fpos < 0)
+      return 1;
+    let delimiter = line[fpos + TagName.length + 1];
+    let spos = line.indexOf(delimiter, fpos) + 1;
+    let epos = line.indexOf(delimiter, spos);
+    let str = line.slice(spos, epos).trim();
+    let items = str.split(" ");
+    if (items.length < 2)
+      return parseFloat(str);
+    let ret = [];
+    for (let i2 = 0; i2 < items.length; i2++)
+      ret.push(parseFloat(items[i2]));
+    return ret;
+  }
+  if (!line.includes("xml version"))
+    console.log("Not a X3D image");
+  let positions = [];
+  let indices = [];
+  let rgba255 = [];
+  let color = [];
+  let translation = [0, 0, 0];
+  let rotation = [0, 0, 0, 0];
+  let rgba = [255, 255, 255, 255];
+  let rgbaGlobal = [255, 255, 255, 255];
+  let appearanceStyles = [];
+  function readAppearance() {
+    if (!line.endsWith("/>")) {
+      if (line.startsWith("<Appearance>")) {
+        while (pos < len2 && !line.endsWith("</Appearance>"))
+          line += readStr();
+      } else {
+        while (pos < len2 && !line.endsWith("/>"))
+          line += readStr();
+      }
+    }
+    let ref = readStringTag("USE");
+    if (ref.length > 1) {
+      if (appearanceStyles.hasOwnProperty(ref))
+        rgba = appearanceStyles[ref];
+      else
+        console.log("Unable to find DEF for " + ref);
+      return;
+    }
+    let diffuseColor = readNumericTag("diffuseColor");
+    if (diffuseColor.length < 3)
+      return;
+    rgba[0] = Math.round(diffuseColor[0] * 255);
+    rgba[1] = Math.round(diffuseColor[1] * 255);
+    rgba[2] = Math.round(diffuseColor[2] * 255);
+    let def = readStringTag("DEF");
+    if (length.def < 1)
+      return;
+    appearanceStyles[def] = rgba;
+  }
+  while (pos < len2) {
+    line = readStr();
+    rgba = rgbaGlobal.slice();
+    if (line.startsWith("<Transform")) {
+      translation = readNumericTag("translation");
+      rotation = readNumericTag("rotation");
+    }
+    if (line.startsWith("<Appearance")) {
+      readAppearance();
+      rgbaGlobal = rgba.slice();
+    }
+    if (line.startsWith("<Shape")) {
+      let radius = 1;
+      let height = 1;
+      let coordIndex = [];
+      let point = [];
+      while (pos < len2) {
+        line = readStr();
+        if (line.startsWith("<Appearance"))
+          readAppearance();
+        if (line.startsWith("</Shape"))
+          break;
+        if (line.startsWith("<Sphere")) {
+          radius = readNumericTag("radius");
+          height = -1;
+        }
+        if (line.startsWith("<Cylinder")) {
+          radius = readNumericTag("radius");
+          height = readNumericTag("height");
+        }
+        if (line.startsWith("<IndexedFaceSet")) {
+          height = -2;
+          coordIndex = readNumericTag("coordIndex");
+        }
+        if (line.startsWith("<IndexedTriangleStripSet")) {
+          height = -3;
+          coordIndex = readNumericTag("index");
+        }
+        if (line.startsWith("<Coordinate"))
+          point = readNumericTag("point");
+        if (line.startsWith("<Color"))
+          color = readNumericTag("color");
+        if (line.startsWith("<Box")) {
+          height = -4;
+          console.log("Unsupported x3d shape: Box");
+        }
+        if (line.startsWith("<Cone")) {
+          height = -5;
+          console.log("Unsupported x3d shape: Cone");
+        }
+        if (line.startsWith("<ElevationGrid")) {
+          height = -6;
+          console.log("Unsupported x3d shape: ElevationGrid");
+        }
+      }
+      if (height < -3)
+        ;
+      else if (height < -1) {
+        if (coordIndex.length < 1 || point.length < 3 || point.length === void 0) {
+          console.log("Indexed mesh must specify indices and points");
+          break;
+        }
+        let idx0 = Math.floor(positions.length / 3);
+        let j = 2;
+        if (height === -2) {
+          let triStart = 0;
+          while (j < coordIndex.length) {
+            if (coordIndex[j] >= 0) {
+              indices.push(coordIndex[triStart] + idx0);
+              indices.push(coordIndex[j - 1] + idx0);
+              indices.push(coordIndex[j - 0] + idx0);
+              j += 1;
+            } else {
+              j += 3;
+              triStart = j - 2;
+            }
+          }
+        } else {
+          while (j < coordIndex.length) {
+            if (coordIndex[j] >= 0) {
+              indices.push(coordIndex[j - 2] + idx0);
+              indices.push(coordIndex[j - 1] + idx0);
+              indices.push(coordIndex[j - 0] + idx0);
+              j += 1;
+            } else {
+              j += 3;
+            }
+          }
+        }
+        positions = [...positions, ...point];
+        let npt = Math.floor(point.length / 3);
+        let rgbas = Array(npt).fill(rgba).flat();
+        if (color.length === npt * 3) {
+          let c3 = 0;
+          let c4 = 0;
+          for (let i2 = 0; i2 < npt; i2++) {
+            for (let j2 = 0; j2 < 3; j2++) {
+              rgbas[c4] = Math.round(color[c3] * 255);
+              c3++;
+              c4++;
+            }
+            c4++;
+          }
+        }
+        rgba255 = [...rgba255, ...rgbas];
+      } else if (height < 0) {
+        NiivueObject3D.makeColoredSphere(positions, indices, rgba255, radius, translation, rgba);
+      } else {
+        let r = create$2();
+        fromRotation(r, rotation[3], [
+          rotation[0],
+          rotation[1],
+          rotation[2]
+        ]);
+        fromValues(translation[0], translation[1], translation[2], 1);
+        let pti = fromValues(0, -height * 0.5, 0, 1);
+        let ptj = fromValues(0, +height * 0.5, 0, 1);
+        transformMat4(pti, pti, r);
+        transformMat4(ptj, ptj, r);
+        add(pti, pti, translation);
+        add(ptj, ptj, translation);
+        NiivueObject3D.makeColoredCylinder(positions, indices, rgba255, pti, ptj, radius, rgba);
+      }
+    }
+  }
+  indices = new Int32Array(indices);
+  return {
+    positions,
+    indices,
+    rgba255
+  };
+};
 NVMesh.readGII = function(buffer2, n_vert = 0) {
   let len2 = buffer2.byteLength;
   if (len2 < 20)
@@ -107255,6 +107571,8 @@ NVMesh.readMesh = async function(buffer2, name, gl, opacity = 1, rgba255 = [255,
     obj = this.readOBJ(buffer2);
   else if (ext === "PLY")
     obj = this.readPLY(buffer2);
+  else if (ext === "X3D")
+    obj = this.readX3D(buffer2);
   else if (ext === "FIB" || ext === "VTK") {
     obj = this.readVTK(buffer2);
     if (obj.hasOwnProperty("offsetPt0")) {
@@ -107271,6 +107589,8 @@ NVMesh.readMesh = async function(buffer2, name, gl, opacity = 1, rgba255 = [255,
   }
   pts = obj.positions.slice();
   tris = obj.indices.slice();
+  if (obj.hasOwnProperty("rgba255") && obj.rgba255.length > 0)
+    rgba255 = obj.rgba255.slice();
   if (obj.colors && obj.colors.length === pts.length) {
     rgba255 = [];
     let n = pts.length / 3;
@@ -109086,9 +109406,11 @@ function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null;
   this.drawBitmap = null;
+  this.drawUndoBitmap = null;
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
+  this.drawFillOverwrites = true;
   this.drawPenFillPts = [];
   this.overlayTexture = null;
   this.overlayTextureID = [];
@@ -109099,10 +109421,12 @@ function Niivue(options = {}) {
   this.pickingShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
+  this.fontTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null;
   this.bmpTextureWH = 1;
   this.passThroughShader = null;
+  this.growCutShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
   this.orientShaderI = null;
@@ -109139,6 +109463,7 @@ function Niivue(options = {}) {
   this.scene.mouseButtonLeftDown = false;
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseDepthPicker = false;
+  this.scene.scale2D = 1;
   this.scene.prevX = 0;
   this.scene.prevY = 0;
   this.scene.currX = 0;
@@ -109674,7 +109999,7 @@ Niivue.prototype.dropListener = async function(e) {
           if (entry.name.lastIndexOf("BRIK") !== -1) {
             continue;
           }
-          if (ext === "ASC" || ext === "DFS" || ext === "FSM" || ext === "PIAL" || ext === "ORIG" || ext === "INFLATED" || ext === "SMOOTHWM" || ext === "SPHERE" || ext === "WHITE" || ext === "GII" || ext === "MZ3" || ext === "NV" || ext === "OBJ" || ext === "OFF" || ext === "PLY" || ext === "SRF" || ext === "STL" || ext === "TCK" || ext === "TRACT" || ext === "TRK" || ext === "TRX" || ext === "VTK") {
+          if (ext === "ASC" || ext === "DFS" || ext === "FSM" || ext === "PIAL" || ext === "ORIG" || ext === "INFLATED" || ext === "SMOOTHWM" || ext === "SPHERE" || ext === "WHITE" || ext === "GII" || ext === "MZ3" || ext === "NV" || ext === "OBJ" || ext === "OFF" || ext === "PLY" || ext === "SRF" || ext === "STL" || ext === "TCK" || ext === "TRACT" || ext === "TRK" || ext === "TRX" || ext === "VTK" || ext === "X3D") {
             entry.file(async (file) => {
               let mesh = await NVMesh.loadFromFile({
                 file,
@@ -109751,6 +110076,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
     console.log("Drawings should be UINT8");
   let perm = volume.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
+  this.drawUndoBitmap = null;
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
   let layout = [0, 0, 0];
@@ -109913,6 +110239,11 @@ Niivue.prototype.setMeshLayerProperty = function(mesh, layer, key2, val) {
   }
   this.meshes[idx].setLayerProperty(layer, key2, val, this.gl);
   this.updateGLVolume();
+};
+Niivue.prototype.setScale2D = function(zoomFactor) {
+  this.scene.scale2D = zoomFactor;
+  console.log("bingo");
+  this.drawScene();
 };
 Niivue.prototype.setRenderAzimuthElevation = function(a, e) {
   this.scene.renderAzimuth = a;
@@ -110227,8 +110558,190 @@ Niivue.prototype.createEmptyDrawing = function() {
     return;
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   this.drawBitmap = new Uint8Array(vx);
+  this.drawUndoBitmap = null;
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
   this.refreshDrawing(false);
+};
+Niivue.prototype.r16Tex = function(texID, activeID, dims, img16 = []) {
+  if (texID)
+    this.gl.deleteTexture(texID);
+  texID = this.gl.createTexture();
+  this.gl.activeTexture(activeID);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+  this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+  this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
+  this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, dims[1], dims[2], dims[3]);
+  let nv = dims[1] * dims[2] * dims[3];
+  if (img16.length !== nv)
+    img16 = new Int16Array(nv);
+  this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], this.gl.RED_INTEGER, this.gl.SHORT, img16);
+  return texID;
+};
+function img2ras16(volume) {
+  let dims = volume.hdr.dims;
+  let perm = volume.permRAS;
+  let vx = dims[1] * dims[2] * dims[3];
+  let img16 = new Int16Array(vx);
+  let layout = [0, 0, 0];
+  for (let i2 = 0; i2 < 3; i2++) {
+    for (let j2 = 0; j2 < 3; j2++) {
+      if (Math.abs(perm[i2]) - 1 !== j2)
+        continue;
+      layout[j2] = i2 * Math.sign(perm[i2]);
+    }
+  }
+  let stride = 1;
+  let instride = [1, 1, 1];
+  let inflip = [false, false, false];
+  for (let i2 = 0; i2 < layout.length; i2++) {
+    for (let j2 = 0; j2 < layout.length; j2++) {
+      let a = Math.abs(layout[j2]);
+      if (a != i2)
+        continue;
+      instride[j2] = stride;
+      if (layout[j2] < 0 || Object.is(layout[j2], -0))
+        inflip[j2] = true;
+      stride *= dims[j2 + 1];
+    }
+  }
+  const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i2) => start + i2 * step);
+  let xlut = range(0, dims[1] - 1, 1);
+  if (inflip[0])
+    xlut = range(dims[1] - 1, 0, -1);
+  for (let i2 = 0; i2 < dims[1]; i2++)
+    xlut[i2] *= instride[0];
+  let ylut = range(0, dims[2] - 1, 1);
+  if (inflip[1])
+    ylut = range(dims[2] - 1, 0, -1);
+  for (let i2 = 0; i2 < dims[2]; i2++)
+    ylut[i2] *= instride[1];
+  let zlut = range(0, dims[3] - 1, 1);
+  if (inflip[2])
+    zlut = range(dims[3] - 1, 0, -1);
+  for (let i2 = 0; i2 < dims[3]; i2++)
+    zlut[i2] *= instride[2];
+  let j = 0;
+  for (let z = 0; z < dims[3]; z++) {
+    for (let y = 0; y < dims[2]; y++) {
+      for (let x2 = 0; x2 < dims[1]; x2++) {
+        img16[xlut[x2] + ylut[y] + zlut[z]] = volume.img[j];
+        j++;
+      }
+    }
+  }
+  return img16;
+}
+Niivue.prototype.drawUndo = function() {
+  let hdr = this.back.hdr;
+  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (this.drawUndoBitmap.length !== nv || this.drawBitmap.length !== nv) {
+    console.log("bitmap dims are wrong");
+    return;
+  }
+  this.drawBitmap = this.drawUndoBitmap.slice();
+  this.refreshDrawing(true);
+};
+Niivue.prototype.drawGrowCut = function() {
+  let hdr = this.back.hdr;
+  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (this.drawBitmap.length !== nv) {
+    console.log("bitmap dims are wrong");
+    return;
+  }
+  this.drawUndoBitmap = this.drawBitmap.slice();
+  let gl = this.gl;
+  let fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.disable(gl.CULL_FACE);
+  gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]);
+  gl.disable(gl.BLEND);
+  let img16 = img2ras16(this.back);
+  let background = this.r16Tex(null, gl.TEXTURE3, this.back.dims, img16);
+  for (let i2 = 1; i2 < nv; i2++)
+    img16[i2] = this.drawBitmap[i2];
+  let label0 = this.r16Tex(null, gl.TEXTURE6, this.back.dims, img16);
+  let label1 = this.r16Tex(null, gl.TEXTURE7, this.back.dims, img16);
+  for (let i2 = 1; i2 < nv; i2++)
+    if (img16[i2] > 0)
+      img16[i2] = 1e4;
+  let strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16);
+  let strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16);
+  this.gl.bindVertexArray(this.genericVAO);
+  let shader = this.growCutShader;
+  shader.use(gl);
+  gl.uniform1i(shader.uniforms["inputTexture0"], 3);
+  for (let j = 0; j < 45; j++) {
+    gl.uniform1i(shader.uniforms["inputTexture1"], 6);
+    gl.uniform1i(shader.uniforms["inputTexture2"], 4);
+    for (let i2 = 0; i2 < this.back.dims[3]; i2++) {
+      let coordZ = 1 / this.back.dims[3] * (i2 + 0.5);
+      this.gl.uniform1f(shader.uniforms["coordZ"], coordZ);
+      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, label1, 0, i2);
+      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength1, 0, i2);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+      let status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status != gl.FRAMEBUFFER_COMPLETE)
+        console.error("Incomplete framebuffer");
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    }
+    gl.uniform1i(shader.uniforms["inputTexture1"], 7);
+    gl.uniform1i(shader.uniforms["inputTexture2"], 5);
+    for (let i2 = 0; i2 < this.back.dims[3]; i2++) {
+      let coordZ = 1 / this.back.dims[3] * (i2 + 0.5);
+      this.gl.uniform1f(shader.uniforms["coordZ"], coordZ);
+      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, label0, 0, i2);
+      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength0, 0, i2);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+      let status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status != gl.FRAMEBUFFER_COMPLETE)
+        console.error("Incomplete framebuffer");
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    }
+  }
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+  let readAttach = gl.COLOR_ATTACHMENT0;
+  let readTex = label1;
+  gl.readBuffer(readAttach);
+  const format = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
+  const type2 = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
+  if (format !== gl.RED_INTEGER || type2 !== gl.SHORT)
+    console.log("readPixels will fail.");
+  img16 = [];
+  let nv2D = this.back.dims[1] * this.back.dims[2];
+  let slice16 = new Int16Array(nv2D);
+  for (let i2 = 0; i2 < this.back.dims[3]; i2++) {
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, readAttach, readTex, 0, i2);
+    gl.readPixels(0, 0, this.back.dims[1], this.back.dims[2], format, type2, slice16);
+    img16 = [...img16, ...slice16];
+  }
+  let mx = img16[0];
+  for (let i2 = 0; i2 < img16.length; i2++)
+    mx = Math.max(mx, img16[i2]);
+  console.log(">>>", mx);
+  for (let i2 = 1; i2 < nv; i2++)
+    this.drawBitmap[i2] = img16[i2];
+  gl.activeTexture(gl.TEXTURE2);
+  gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+  gl.activeTexture(gl.TEXTURE4);
+  gl.bindTexture(gl.TEXTURE_2D, this.bmpTexture);
+  gl.activeTexture(gl.TEXTURE7);
+  gl.bindTexture(gl.TEXTURE_3D, this.drawTexture);
+  gl.deleteTexture(background);
+  gl.deleteTexture(strength0);
+  gl.deleteTexture(strength1);
+  gl.deleteTexture(label0);
+  gl.deleteTexture(label1);
+  gl.bindVertexArray(this.unusedVAO);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.deleteFramebuffer(fb);
+  this.refreshDrawing(true);
 };
 Niivue.prototype.drawPt = function(x2, y, z, penValue) {
   let dx = this.back.dims[1];
@@ -110426,6 +110939,14 @@ Niivue.prototype.drawPenFilled = function() {
       }
     }
   }
+  if (!this.drawFillOverwrites && this.drawUndoBitmap.length === this.drawBitmap.length) {
+    let nv = this.drawUndoBitmap.length;
+    for (let i2 = 0; i2 < nv; i2++) {
+      if (this.drawUndoBitmap[i2] === 0)
+        continue;
+      this.drawBitmap[i2] = this.drawUndoBitmap[i2];
+    }
+  }
   this.drawPenFillPts = [];
   this.refreshDrawing(false);
 };
@@ -110507,9 +111028,13 @@ Niivue.prototype.loadPngAsTexture = function(pngUrl, textureNum) {
         this.bmpShader.use(this.gl);
         this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
       } else {
+        this.fontShader.use(this.gl);
         this.gl.activeTexture(this.gl.TEXTURE3);
         this.gl.uniform1i(this.fontShader.uniforms["fontTexture"], 3);
-        pngTexture = this.gl.createTexture();
+        if (this.fontTexture !== null)
+          this.gl.deleteTexture(this.fontTexture);
+        this.fontTexture = this.gl.createTexture();
+        pngTexture = this.fontTexture;
       }
       this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
@@ -110604,6 +111129,12 @@ Niivue.prototype.setMeshShader = function(meshShaderNameOrNumber = 2) {
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[num].Frag);
   this.updateGLVolume();
 };
+Niivue.prototype.setCustomMeshShader = function(fragmentShaderText = "") {
+  if (fragmentShaderText.length < 1)
+    fragmentShaderText = this.meshShaders[0].Frag;
+  this.meshShader = new Shader(this.gl, vertMeshShader, fragmentShaderText);
+  this.updateGLVolume();
+};
 Niivue.prototype.meshShaderNames = function(sort = true) {
   let cm = [];
   for (var i2 = 0; i2 < this.meshShaders.length; i2++)
@@ -110670,6 +111201,7 @@ Niivue.prototype.init = async function() {
   this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"], this.renderShader.clipPlaneUniformLoc = this.renderShader.uniforms["clipPlane"], this.colorbarShader = new Shader(this.gl, vertColorbarShader, fragColorbarShader);
   this.colorbarShader.use(this.gl);
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
+  this.growCutShader = new Shader(this.gl, vertGrowCutShader, fragGrowCutShader);
   this.passThroughShader = new Shader(this.gl, vertPassThroughShader, fragPassThroughShader);
   this.orientShaderAtlasU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas));
   this.orientShaderU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader));
@@ -110759,7 +111291,7 @@ Niivue.prototype.getDescriptives = function(layer = 0, ignoreZeros = false, mask
     M = Mnext;
   }
   let stdev = Math.sqrt(S / (k - 1));
-  let str = "Number of voxels: " + k + "\nMean:" + M + "\nStandard deviation: " + stdev + "\nRobust Min: " + this.volumes[layer].robust_min + "\nRobust Max: " + this.volumes[layer].robust_max;
+  let str = "Number of voxels: " + k + "\nMean:" + M + "\nMin:" + mn + "\nMax:" + mx + "\nStandard deviation: " + stdev + "\nRobust Min: " + this.volumes[layer].robust_min + "\nRobust Max: " + this.volumes[layer].robust_max;
   console.log(str);
   return {
     mean: M,
@@ -110959,6 +111491,10 @@ Niivue.prototype.setColorMap = function(id, colorMap) {
   this.volumes[idx].colorMap = colorMap;
   this.updateGLVolume();
 };
+Niivue.prototype.setGamma = function(gamma = 1) {
+  cmapper.gamma = gamma;
+  this.updateGLVolume();
+};
 Niivue.prototype.setFrame4D = function(id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
   if (frame4D > this.volumes[idx].nFrame4D - 1) {
@@ -111128,6 +111664,7 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
           this.drawPenAxCorSag = axCorSag;
           this.drawPenFillPts = [];
           this.drawPt(...pt, this.opts.penValue);
+          this.drawUndoBitmap = this.drawBitmap.slice();
         } else {
           if (pt[0] === this.drawPenLocation[0] && pt[1] === this.drawPenLocation[1] && pt[2] === this.drawPenLocation[2])
             return;
@@ -111283,8 +111820,98 @@ Niivue.prototype.setInterpolation = function(isNearest) {
     this.updateInterpolation(1);
   this.drawScene();
 };
+Niivue.prototype.calculateMvpMatrixX = function() {
+  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+  console.log(">>", this.back.dimsRAS, this.back.matRAS);
+  let scale2 = this.furthestFromPivot;
+  let origin = [0, 0, 0];
+  console.log("o", scale2);
+  let projectionMatrix = create$2();
+  if (whratio < 1)
+    ortho(projectionMatrix, -scale2, scale2, -scale2 / whratio, scale2 / whratio, 0.01, scale2 * 8);
+  else
+    ortho(projectionMatrix, -scale2 * whratio, scale2 * whratio, -scale2, scale2, 0.01, scale2 * 8);
+  const modelMatrix = create$2();
+  modelMatrix[0] = -1;
+  let translateVec3 = fromValues$1(0, 0, -scale2 * 1.8);
+  translate(modelMatrix, modelMatrix, translateVec3);
+  if (this.position)
+    translate(modelMatrix, modelMatrix, this.position);
+  translate(modelMatrix, modelMatrix, [
+    -origin[0],
+    -origin[1],
+    -origin[2]
+  ]);
+  let iModelMatrix = create$2();
+  invert(iModelMatrix, modelMatrix);
+  let normalMatrix = create$2();
+  transpose(normalMatrix, iModelMatrix);
+  let modelViewProjectionMatrix = create$2();
+  multiply$1(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+  return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
+};
+Niivue.prototype.drawMesh3DX = function(isDepthTest = true, alpha = 1, leftTopWidthHeight) {
+  if (this.meshes.length < 1)
+    return;
+  let gl = this.gl;
+  let m, modelMtx, normMtx;
+  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(this.volumeObject3D, leftTopWidthHeight);
+  gl.enable(gl.DEPTH_TEST);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.disable(gl.BLEND);
+  gl.depthFunc(gl.GREATER);
+  if (isDepthTest) {
+    gl.disable(gl.BLEND);
+    gl.depthFunc(gl.GREATER);
+  } else {
+    gl.enable(gl.BLEND);
+    gl.depthFunc(gl.ALWAYS);
+  }
+  gl.disable(gl.CULL_FACE);
+  this.meshShader.use(this.gl);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
+  gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
+  gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
+  let hasFibers = false;
+  for (let i2 = 0; i2 < this.meshes.length; i2++) {
+    if (this.meshes[i2].indexCount < 3)
+      continue;
+    if (this.meshes[i2].offsetPt0) {
+      hasFibers = true;
+      continue;
+    }
+    gl.bindVertexArray(this.meshes[i2].vao);
+    gl.drawElements(gl.TRIANGLES, this.meshes[i2].indexCount, gl.UNSIGNED_INT, 0);
+    gl.bindVertexArray(this.unusedVAO);
+  }
+  if (!hasFibers) {
+    gl.enable(gl.BLEND);
+    gl.depthFunc(gl.ALWAYS);
+    return;
+  }
+  let shader = this.fiberShader;
+  shader.use(this.gl);
+  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+  gl.uniform1f(shader.uniforms["opacity"], alpha);
+  for (let i2 = 0; i2 < this.meshes.length; i2++) {
+    if (this.meshes[i2].indexCount < 3)
+      continue;
+    if (!this.meshes[i2].offsetPt0)
+      continue;
+    gl.bindVertexArray(this.meshes[i2].vao);
+    gl.drawElements(gl.LINE_STRIP, this.meshes[i2].indexCount, gl.UNSIGNED_INT, 0);
+    gl.bindVertexArray(this.unusedVAO);
+  }
+  gl.enable(gl.BLEND);
+  gl.depthFunc(gl.ALWAYS);
+  this.readyForSync = true;
+};
 Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);
+  let gl = this.gl;
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.disable(gl.DEPTH_TEST);
   var crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
@@ -111359,6 +111986,13 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
       leftTopWidthHeight[0] + 0.5 * leftTopWidthHeight[2],
       leftTopWidthHeight[1] + 1
     ], "S");
+  if (axCorSag !== this.sliceTypeAxial)
+    return;
+  this.setPivot3D();
+  gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.ALWAYS);
+  gl.clearDepth(0);
   this.sync();
 };
 Niivue.prototype.calculateMvpMatrix = function() {
@@ -111448,7 +112082,7 @@ Niivue.prototype.setPivot3D = function() {
   scale(pivot, pivot, 0.5);
   this.pivot3D = [pivot[0], pivot[1], pivot[2]];
   subtract(pivot, mx, mn);
-  this.furthestFromPivot = length(pivot) * 0.5;
+  this.furthestFromPivot = length$1(pivot) * 0.5;
 };
 Niivue.prototype.drawGraphLine = function(LTRB, color = [1, 0, 0, 0.5], thickness = 2) {
   this.graphShader.use(this.gl);
@@ -111592,9 +112226,11 @@ Niivue.prototype.drawGraph = function() {
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
   let fntScale = 0.1 * (minWH / this.fontMets.size);
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
+  if (fntSize < 16)
+    fntSize = 0;
   let maxTextWid = 0;
   let lineH = ticMin;
-  while (lineH <= mx) {
+  while (fntSize > 0 && lineH <= mx) {
     let str = humanize(lineH);
     let w = this.textWidth(fntSize, str);
     maxTextWid = Math.max(w, maxTextWid);
@@ -111633,7 +112269,8 @@ Niivue.prototype.drawGraph = function() {
     let y = plotBottom - (lineH - mn) * scaleH;
     this.drawGraphLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.lineColor, graph.lineThickness);
     let str = humanize(lineH);
-    this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
+    if (fntSize > 0)
+      this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
     lineH += spacing;
   }
   let stride = 1;
@@ -111648,7 +112285,8 @@ Niivue.prototype.drawGraph = function() {
       this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], thinColor, thick);
     } else if (i2 > 0) {
       let str = humanize(i2);
-      this.drawTextBelow([x2, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor);
+      if (fntSize > 0)
+        this.drawTextBelow([x2, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor);
       this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], graph.lineColor, thick);
     }
   }
@@ -111723,7 +112361,6 @@ Niivue.prototype.draw3D = function() {
       this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x2) => x2 / 255);
     }
   }
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   if (this.volumeObject3D.isVisible) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -111840,7 +112477,7 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1) {
   color[3] = alpha;
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
   gl.bindVertexArray(this.crosshairs3D.vao);
-  gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_INT, 0);
   gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
