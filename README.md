@@ -8,6 +8,14 @@ The NiiVue package is intented to be used by individuals developing interactive 
 
 [click here to go to the docs web page](https://niivue.github.io/niivue/devdocs/)
 
+### Install NiiVue using npm
+
+Installs without the bloat of the development dependencies or testing frameworks
+
+```
+npm install --only=prod @niivue/niivue
+```
+
 # Active Projects
 
 [See our active projects here](https://github.com/orgs/niivue/projects)

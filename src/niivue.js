@@ -137,6 +137,7 @@ export function Niivue(options = {}) {
   this.fontTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
+  this.thumbnailVisible = false;
   this.bmpTextureWH = 1.0; //thumbnail width/height ratio
   this.passThroughShader = null;
   this.growCutShader = null;
@@ -185,6 +186,8 @@ export function Niivue(options = {}) {
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
+  this.deferredVolumes = [];
+	this.deferredMeshes = []
   this.meshes = [];
   this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1.0;
@@ -266,6 +269,10 @@ export function Niivue(options = {}) {
 
   if (this.opts.drawingEnabled) {
     this.createEmptyDrawing();
+  }
+
+  if (this.opts.thumbnail.length > 0) {
+    this.thumbnailVisible = true;
   }
 
   this.loadingText = this.opts.loadingText;
@@ -421,7 +428,6 @@ Niivue.prototype.sync = function () {
     this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
   }
   if (this.syncOpts["3d"]) {
-    console.log("3d sync");
     this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
@@ -1781,8 +1787,11 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       this.loadingText = this.opts.loadingText;
     }
   });
-  if (!this.initialized) {
-    //await this.init();
+
+  if (this.thumbnailVisible) {
+    // defer volume loading until user clicks on canvas with thumbnail image
+    this.deferredVolumes = volumeList;
+    return this;
   }
   this.volumes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -1833,6 +1842,11 @@ Niivue.prototype.loadMeshes = async function (meshList) {
       this.loadingText = this.opts.loadingText;
     }
   });
+	if (this.thumbnailVisible) {
+    // defer loading until user clicks on canvas with thumbnail image
+    this.deferredMeshes = meshList
+    return this;
+  }
   if (!this.initialized) {
     //await this.init();
   }
@@ -2159,7 +2173,6 @@ Niivue.prototype.drawGrowCut = function () {
   }
   let mx = img16[0];
   for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i]);
-  console.log(">>>", mx);
   //let img16 = new Int16Array(nv);
   //gl.readPixels(0, 0, w, h, format, type);
   //            this.fallbackReadPixelsFormat, this.fallbackReadPixelsType, fallbackSliceView);
@@ -2670,8 +2683,8 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
   this.loadPngAsTexture(fontUrl, 3);
 };
 
-Niivue.prototype.loadBmpTexture = function (bmpUrl) {
-  this.loadPngAsTexture(bmpUrl, 4);
+Niivue.prototype.loadBmpTexture = async function (bmpUrl) {
+  await this.loadPngAsTexture(bmpUrl, 4);
 };
 
 // not included in public docs
@@ -2960,7 +2973,10 @@ Niivue.prototype.init = async function () {
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
 
   await this.initText();
-  if (this.opts.thumbnail.length > 0) this.loadBmpTexture(this.opts.thumbnail);
+  if (this.opts.thumbnail.length > 0) {
+    await this.loadBmpTexture(this.opts.thumbnail);
+    this.thumbnailVisible = true;
+  }
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -3070,7 +3086,6 @@ Niivue.prototype.getDescriptives = function (
     this.volumes[layer].robust_min +
     "\nRobust Max: " +
     this.volumes[layer].robust_max;
-  console.log(str);
   return {
     mean: M,
     stdev: stdev,
@@ -3629,10 +3644,14 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
   this.canvas.focus();
-  if (this.bmpTexture !== null) {
+  if (this.thumbnailVisible) {
     this.gl.deleteTexture(this.bmpTexture);
     this.bmpTexture = null;
+    this.thumbnailVisible = false;
     //the thumbnail is now released, do something profound: actually load the images
+    this.loadVolumes(this.deferredVolumes);
+		this.loadMeshes(this.deferredMeshes)
+    return;
   }
   if (
     this.graph.opacity > 0.0 &&
@@ -3762,7 +3781,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
             return;
           this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
         }
-        //console.log(pt);
         this.drawPenLocation = pt;
         if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
         this.refreshDrawing(false);
@@ -3988,11 +4006,8 @@ Niivue.prototype.calculateMvpMatrixX = function () {
   //pivot from center of objects
   //let scale = this.furthestVertexFromOrigin;
   //let origin = [0,0,0];
-  console.log(">>", this.back.dimsRAS, this.back.matRAS);
-
   let scale = this.furthestFromPivot;
   let origin = [0, 0, 0];
-  console.log("o", scale);
   let projectionMatrix = mat.mat4.create();
   //scale = (0.8 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
@@ -4451,14 +4466,12 @@ Niivue.prototype.setPivot3D = function () {
   }
   let pivot = mat.vec3.create();
   //pivot is half way between min and max:
-  //console.log('scene extents: ', mn, '..', mx);
   mat.vec3.add(pivot, mn, mx);
   mat.vec3.scale(pivot, pivot, 0.5);
   this.pivot3D = [pivot[0], pivot[1], pivot[2]];
   //find scale of scene
   mat.vec3.subtract(pivot, mx, mn);
   this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
-  //console.log('pivot: '+ this.pivot3D +' furthestFromPivot:' + this.furthestFromPivot);
 }; // setPivot3D()
 
 Niivue.prototype.drawGraphLine = function (
@@ -5048,7 +5061,6 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
 // not included in public docs
 Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   let vox = this.frac2vox(this.scene.crosshairPos);
-  console.log(vox);
   vox[0] += x;
   vox[1] += y;
   vox[2] += z;
