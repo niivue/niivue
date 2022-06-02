@@ -1754,18 +1754,28 @@ NVMesh.readPLY = function (buffer) {
     }
     let indices = new Int32Array(nface * 3);
     let f = 0;
-    let isTriangular = true;
     for (var i = 0; i < nface; i++) {
       line = readStr();
       let items = line.split(/\s/);
-      if (parseInt(items[0]) > 3) isTriangular = false;
-      indices[f] = parseInt(items[1]);
-      indices[f + 1] = parseInt(items[2]);
-      indices[f + 2] = parseInt(items[3]);
-      f += 3;
+      let nTri = parseInt(items[0]) - 2;
+      if (nTri < 1) break; //error
+      if (f + nTri * 3 > indices.length) {
+        var c = new Int32Array(indices.length + indices.length);
+        c.set(indices);
+        indices = c.slice();
+      }
+      let idx0 = parseInt(items[1]);
+      let idx1 = parseInt(items[2]);
+      for (let j = 0; j < nTri; j++) {
+        let idx2 = parseInt(items[3 + j]);
+        indices[f + 0] = idx0;
+        indices[f + 1] = idx1;
+        indices[f + 2] = idx2;
+        idx1 = idx2;
+        f += 3;
+      }
     }
-    if (!isTriangular)
-      console.log("Only able to read PLY meshes limited to triangles.");
+    if (indices.length !== f) indices = indices.slice(0, f);
     return {
       positions,
       indices,

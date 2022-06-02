@@ -143,8 +143,10 @@ export function NVImage(
       this.hdr,
       imgRaw.byteLength
     );
+  //1007 = NIFTI_INTENT_VECTOR; 2003 = NIFTI_INTENT_RGB_VECTOR
+  // n.b. NIfTI standard says "NIFTI_INTENT_RGB_VECTOR" should be RGBA, but FSL only stores RGB
   if (
-    this.hdr.intent_code === 1007 &&
+    (this.hdr.intent_code === 1007 || this.hdr.intent_code === 2003) &&
     this.nFrame4D === 3 &&
     this.hdr.datatypeCode === this.DT_FLOAT
   ) {
