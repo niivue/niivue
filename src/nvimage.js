@@ -894,11 +894,12 @@ NVImage.prototype.readMGH = function (buffer) {
   let hdr = this.hdr;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  var reader = new DataView(buffer);
   var raw = buffer;
+  var reader = new DataView(raw);
   if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-    var raw = fflate.decompressSync(new Uint8Array(buffer));
-    reader = new DataView(raw.buffer);
+    let raw8 = fflate.decompressSync(new Uint8Array(buffer));
+    raw = raw8.buffer;
+    reader = new DataView(raw);
   }
   let version = reader.getInt32(0, false);
   let width = reader.getInt32(4, false);

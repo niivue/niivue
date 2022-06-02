@@ -2268,6 +2268,37 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
   }
 };
 
+Niivue.prototype.drawFloodFill = function (seedVox, newColor = 0) {
+  //3D "paint bucket" fill:
+  // set all voxels connected to seed point to newColor
+  // https://en.wikipedia.org/wiki/Flood_fill
+  let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
+  if (seedVox[0] < 0 || seedVox[1] < 0 || seedVox[2] < 0) return;
+  if (seedVox[0] >= dims[0] || seedVox[1] >= dims[0] || seedVox[2] >= dims[0])
+    return;
+  let nx = dims[0];
+  let nxy = nx * dims[1];
+  let nxyz = nxy * dims[2];
+  let img = this.drawBitmap.slice();
+  if (img.length !== nxy * dims[2]) return;
+  function pt2img(pt) {
+    //provided an XYZ 3D point, provide address in 1D array
+    return pt[0] + pt[1] * nx + pt[2] * nxy;
+  }
+  let seedColor = img[pt2img(seedVox)];
+  if (seedColor === newColor) {
+    console.log("drawFloodFill selected voxel is already desired color");
+    return;
+  }
+  //img is binary mask with selected color as 1 and all other colors 0
+  for (let i = 1; i < nxyz; i++) {
+    img[i] = 0;
+    if (this.drawBitmap[i] === seedColor) img[i] = 1;
+  }
+  img[pt2img(seedVox)] = 2; //part of cluster
+  //To Do
+}; // drawFloodFill()
+
 Niivue.prototype.drawPenFilled = function () {
   let nPts = this.drawPenFillPts.length;
   if (nPts < 2) {
@@ -3740,6 +3771,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
+        if (this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
+          this.drawFloodFill(pt, Math.abs(this.opts.penValue));
+          return;
+        }
         if (isNaN(this.drawPenLocation[0])) {
           this.drawPenAxCorSag = axCorSag;
           this.drawPenFillPts = [];

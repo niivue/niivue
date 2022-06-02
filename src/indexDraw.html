@@ -37,6 +37,7 @@
           <option value="9">Filled Red</option>
           <option value="10">Filled Green</option>
           <option value="11">Filled Blue</option>
+          <option value="12">Erase Selected Cluster</option>
         </select>
         <button id="left">left</button>
         <button id="right">right</button>
@@ -88,6 +89,8 @@
         nv1.setDrawingEnabled(mode >= 0);
         if (mode >= 0)
           nv1.setPenValue( (mode & 7), mode > 7);
+        if (mode === 12)//erase selected cluster
+          nv1.setPenValue(-0);
       }
       document.getElementById("left").addEventListener("click", doLeft);
       function doLeft(){

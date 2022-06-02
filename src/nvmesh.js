@@ -1966,12 +1966,12 @@ NVMesh.readOBJ = function (buffer) {
       let new_t = items.length - 3; //number of new triangles created
       if (new_t < 1) break; //error
       let tn = items[1].split("/");
-      let t0 = parseInt(tn[0])- 1; //first vertex
+      let t0 = parseInt(tn[0]) - 1; //first vertex
       tn = items[2].split("/");
-      let tprev = parseInt(tn[0])- 1; //previous vertex
+      let tprev = parseInt(tn[0]) - 1; //previous vertex
       for (let j = 0; j < new_t; j++) {
-        tn = items[3+j].split("/");
-        let tcurr = parseInt(tn[0])- 1; //current vertex
+        tn = items[3 + j].split("/");
+        let tcurr = parseInt(tn[0]) - 1; //current vertex
         t.push(t0);
         t.push(tprev);
         t.push(tcurr);
@@ -2612,8 +2612,6 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
         //unsupported
       } else if (height < -1.0) {
         //indexed triangle mesh or strip
-console.log(coordIndex.length,':', point.length);
-
         if (
           coordIndex.length < 1 ||
           point.length < 3 ||
