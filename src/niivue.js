@@ -2268,24 +2268,33 @@ Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
   }
 };
 
-Niivue.prototype.drawFloodFill = function (seedVox, newColor = 0) {
+Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
   //3D "paint bucket" fill:
   // set all voxels connected to seed point to newColor
   // https://en.wikipedia.org/wiki/Flood_fill
+  newColor = Math.abs(newColor);
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
-  if (seedVox[0] < 0 || seedVox[1] < 0 || seedVox[2] < 0) return;
-  if (seedVox[0] >= dims[0] || seedVox[1] >= dims[0] || seedVox[2] >= dims[0])
+  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) return;
+  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[0] || seedXYZ[2] >= dims[0])
     return;
   let nx = dims[0];
   let nxy = nx * dims[1];
   let nxyz = nxy * dims[2];
   let img = this.drawBitmap.slice();
   if (img.length !== nxy * dims[2]) return;
-  function pt2img(pt) {
+  function xyz2vx(pt) {
     //provided an XYZ 3D point, provide address in 1D array
     return pt[0] + pt[1] * nx + pt[2] * nxy;
   }
-  let seedColor = img[pt2img(seedVox)];
+  function vx2xyz(vx) {
+    //provided address in 1D array, return XYZ coordinate
+    let Z = Math.floor(vx / nxy); //slice
+    let Y = Math.floor((vx - (Z * nxy)) / nx); //column
+    let X = Math.floor(vx % nx);
+    return [X, Y, Z];
+  }
+  let seedVx = xyz2vx(seedXYZ);
+  let seedColor = img[seedVx];
   if (seedColor === newColor) {
     console.log("drawFloodFill selected voxel is already desired color");
     return;
@@ -2295,8 +2304,48 @@ Niivue.prototype.drawFloodFill = function (seedVox, newColor = 0) {
     img[i] = 0;
     if (this.drawBitmap[i] === seedColor) img[i] = 1;
   }
-  img[pt2img(seedVox)] = 2; //part of cluster
-  //To Do
+  //1. Set Q to the empty queue or stack.
+  let Q = [];
+  //2. Add node to the end of Q.
+  Q.push(seedVx);
+  img[seedVx] = 2; //part of cluster
+  //3. While Q is not empty:
+  while (Q.length > 0) {
+    //4.   Set n equal to the first element of Q.
+    let vx = Q[0];
+    //5.   Remove first element from Q.
+    Q.shift();
+    //6. Test six neighbors of n (left,right,anterior,posterior,inferior, superior
+    //   If any is is unfound part of cluster (value = 1) set it to found (value 2) and add to Q
+    let xyz = vx2xyz(vx);
+    function testNeighbor(offset) {
+      let xyzN = xyz.slice();
+      xyzN[0] += offset[0];
+      xyzN[1] += offset[1];
+      xyzN[2] += offset[2];
+      if ((xyzN[0] < 0) || (xyzN[1] < 0) || (xyzN[2] < 0))
+        return;
+      if ((xyzN[0] >= dims[0]) || (xyzN[1] >= dims[1]) || (xyzN[2] >= dims[2]))
+        return;
+      let vxT = xyz2vx(xyzN);
+      if (img[vxT] !== 1) return;
+      img[vxT] = 2; //part of cluster
+      Q.push(vxT);
+    }
+    testNeighbor([ 0,  0, -1]); //inferior
+    testNeighbor([ 0,  0,  1]); //superior
+    testNeighbor([ 0, -1,  0]); //posterior
+    testNeighbor([ 0,  1,  0]); //anterior
+    testNeighbor([-1,  0,  0]); //left
+    testNeighbor([ 1,  0,  0]); //right
+    //7. Continue looping until Q is exhausted.
+  }
+  //8. Return
+  this.drawUndoBitmap = this.drawBitmap.slice();
+  for (let i = 1; i < nxyz; i++)
+    if (img[i] === 2) //if part of cluster
+      this.drawBitmap[i] = newColor;
+  this.refreshDrawing(false);
 }; // drawFloodFill()
 
 Niivue.prototype.drawPenFilled = function () {

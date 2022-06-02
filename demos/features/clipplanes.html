@@ -33,8 +33,8 @@
 
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
@@ -54,34 +54,18 @@
            opacity: 1,
            visible: true,
          },
-         {
-           url: "../images/hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "hippo",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
-           colorMap: "Winter",
-           opacity: 1,
-           visible: true,
-         },
-         {
-           url: "../images/hippolr.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "hippolr",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
-           colorMap: "Warm",
-           opacity: 1,
-           visible: true,
-         } 
         ] 
-      var nv1 = new niivue.Niivue()
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: false,
+        backColor: [1, 1, 1, 1]})
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.setClipPlane([0.15, 270, 0])
+      nv1.setClipPlane([0, 180, 40])
+      nv1.setRenderAzimuthElevation(260, 20)
+      nv1.loadMeshes([
+         {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [222, 164, 164, 255]},
+      ])
       function checkClick(cb) {
         let clr = nv1.opts.clipPlaneColor;
         console.log(clr);

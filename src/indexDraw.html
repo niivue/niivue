@@ -80,7 +80,6 @@
       }
       document.getElementById("check1").addEventListener("change", doCheckClick);
       function doCheckClick() {
-        console.log(this.checked);
         nv1.drawFillOverwrites = this.checked;
       }
       document.getElementById("drawPen").addEventListener("change", doDrawPen);
@@ -181,7 +180,7 @@
       //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
       nv1.getDescriptives(0, false);
-      nv1.loadDrawing("../demos/images/lesion.nii.gz");
+      await nv1.loadDrawing("../demos/images/lesion.nii.gz");
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
