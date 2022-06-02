@@ -548,13 +548,13 @@ function subtract(out, a, b) {
   out[2] = a[2] - b[2];
   return out;
 }
-function min$R(out, a, b) {
+function min$S(out, a, b) {
   out[0] = Math.min(a[0], b[0]);
   out[1] = Math.min(a[1], b[1]);
   out[2] = Math.min(a[2], b[2]);
   return out;
 }
-function max$S(out, a, b) {
+function max$T(out, a, b) {
   out[0] = Math.max(a[0], b[0]);
   out[1] = Math.max(a[1], b[1]);
   out[2] = Math.max(a[2], b[2]);
@@ -98117,37 +98117,37 @@ function v4(options, buf, offset) {
   }
   return stringify(rnds);
 }
-const min$Q = 0;
-const max$R = 0;
-const R$Q = [
+const min$R = 0;
+const max$S = 0;
+const R$R = [
   0,
   0,
   24,
   248,
   255
 ];
-const G$Q = [
+const G$R = [
   0,
   0,
   177,
   254,
   0
 ];
-const B$Q = [
+const B$R = [
   0,
   136,
   0,
   0,
   0
 ];
-const A$Q = [
+const A$R = [
   0,
   32,
   64,
   78,
   128
 ];
-const I$Q = [
+const I$R = [
   0,
   64,
   128,
@@ -98155,6 +98155,42 @@ const I$Q = [
   255
 ];
 var actc = {
+  min: min$R,
+  max: max$S,
+  R: R$R,
+  G: G$R,
+  B: B$R,
+  A: A$R,
+  I: I$R
+};
+const min$Q = 0;
+const max$R = 0;
+const R$Q = [
+  0,
+  0,
+  0
+];
+const G$Q = [
+  0,
+  0,
+  0
+];
+const B$Q = [
+  0,
+  128,
+  255
+];
+const A$Q = [
+  0,
+  64,
+  128
+];
+const I$Q = [
+  0,
+  128,
+  255
+];
+var blue = {
   min: min$Q,
   max: max$R,
   R: R$Q,
@@ -98168,29 +98204,44 @@ const max$Q = 0;
 const R$P = [
   0,
   0,
-  0
+  0,
+  0,
+  196,
+  255
 ];
 const G$P = [
   0,
-  0,
-  0
+  32,
+  128,
+  128,
+  128,
+  32
 ];
 const B$P = [
   0,
-  128,
-  255
+  255,
+  196,
+  0,
+  0,
+  0
 ];
 const A$P = [
   0,
+  128,
+  64,
+  64,
   64,
   128
 ];
 const I$P = [
   0,
+  1,
+  64,
   128,
+  192,
   255
 ];
-var blue = {
+var blue2red = {
   min: min$P,
   max: max$Q,
   R: R$P,
@@ -98205,43 +98256,33 @@ const R$O = [
   0,
   0,
   0,
-  0,
-  196,
-  255
+  0
 ];
 const G$O = [
   0,
-  32,
+  1,
   128,
-  128,
-  128,
-  32
+  255
 ];
 const B$O = [
   0,
-  255,
-  196,
-  0,
-  0,
-  0
+  222,
+  127,
+  32
 ];
 const A$O = [
   0,
-  128,
-  64,
-  64,
+  0,
   64,
   128
 ];
 const I$O = [
   0,
   1,
-  64,
   128,
-  192,
   255
 ];
-var blue2red = {
+var bluegrn = {
   min: min$O,
   max: max$P,
   R: R$O,
@@ -98254,35 +98295,30 @@ const min$N = 0;
 const max$O = 0;
 const R$N = [
   0,
-  0,
-  0,
-  0
+  103,
+  255
 ];
 const G$N = [
   0,
-  1,
-  128,
+  126,
   255
 ];
 const B$N = [
   0,
-  222,
-  127,
-  32
+  165,
+  255
 ];
 const A$N = [
   0,
-  0,
-  64,
+  76,
   128
 ];
 const I$N = [
   0,
-  1,
-  128,
+  153,
   255
 ];
-var bluegrn = {
+var bone = {
   min: min$N,
   max: max$O,
   R: R$N,
@@ -98295,30 +98331,45 @@ const min$M = 0;
 const max$N = 0;
 const R$M = [
   0,
+  43,
   103,
+  199,
+  216,
   255
 ];
 const G$M = [
   0,
-  126,
+  0,
+  37,
+  155,
+  213,
   255
 ];
 const B$M = [
   0,
-  165,
+  0,
+  20,
+  97,
+  201,
   255
 ];
 const A$M = [
   0,
-  76,
-  128
+  44,
+  48,
+  54,
+  56,
+  56
 ];
 const I$M = [
   0,
-  153,
+  64,
+  128,
+  196,
+  240,
   255
 ];
-var bone = {
+var bronze = {
   min: min$M,
   max: max$N,
   R: R$M,
@@ -98331,45 +98382,35 @@ const min$L = 0;
 const max$M = 0;
 const R$L = [
   0,
-  43,
-  103,
-  199,
-  216,
+  86,
+  166,
   255
 ];
 const G$L = [
-  0,
-  0,
-  37,
-  155,
-  213,
-  255
+  32,
+  92,
+  156,
+  233
 ];
 const B$L = [
-  0,
-  0,
-  20,
-  97,
-  201,
-  255
+  76,
+  108,
+  117,
+  69
 ];
 const A$L = [
   0,
-  44,
-  48,
-  54,
   56,
-  56
+  80,
+  88
 ];
 const I$L = [
   0,
   64,
-  128,
-  196,
-  240,
+  192,
   255
 ];
-var bronze = {
+var cividis = {
   min: min$L,
   max: max$M,
   R: R$L,
@@ -98382,35 +98423,30 @@ const min$K = 0;
 const max$L = 0;
 const R$K = [
   0,
-  86,
-  166,
-  255
+  0,
+  0
 ];
 const G$K = [
-  32,
-  92,
-  156,
-  233
+  127,
+  196,
+  254
 ];
 const B$K = [
-  76,
-  108,
-  117,
-  69
+  255,
+  255,
+  255
 ];
 const A$K = [
   0,
-  56,
-  80,
-  88
+  64,
+  128
 ];
 const I$K = [
   0,
-  64,
-  192,
+  128,
   255
 ];
-var cividis = {
+var cool = {
   min: min$K,
   max: max$L,
   R: R$K,
@@ -98423,30 +98459,45 @@ const min$J = 0;
 const max$K = 0;
 const R$J = [
   0,
-  0,
-  0
+  61,
+  122,
+  183,
+  244,
+  255
 ];
 const G$J = [
-  127,
-  196,
-  254
+  0,
+  41,
+  81,
+  122,
+  163,
+  203
 ];
 const B$J = [
-  255,
-  255,
-  255
+  0,
+  25,
+  51,
+  76,
+  102,
+  127
 ];
 const A$J = [
   0,
-  64,
+  25,
+  51,
+  71,
+  102,
   128
 ];
 const I$J = [
   0,
-  128,
+  51,
+  102,
+  153,
+  204,
   255
 ];
-var cool = {
+var copper = {
   min: min$J,
   max: max$K,
   R: R$J,
@@ -98471,7 +98522,7 @@ const G$I = [
   81,
   122,
   163,
-  203
+  255
 ];
 const B$I = [
   0,
@@ -98479,7 +98530,7 @@ const B$I = [
   51,
   76,
   102,
-  127
+  255
 ];
 const A$I = [
   0,
@@ -98497,7 +98548,7 @@ const I$I = [
   204,
   255
 ];
-var copper = {
+var copper2 = {
   min: min$I,
   max: max$J,
   R: R$I,
@@ -98506,49 +98557,34 @@ var copper = {
   A: A$I,
   I: I$I
 };
-const min$H = 0;
-const max$I = 0;
+const min$H = -643;
+const max$I = -235;
 const R$H = [
   0,
-  61,
-  122,
-  183,
-  244,
-  255
+  0,
+  0
 ];
 const G$H = [
-  0,
-  41,
-  81,
-  122,
-  163,
-  255
+  154,
+  154,
+  154
 ];
 const B$H = [
-  0,
-  25,
-  51,
-  76,
-  102,
-  255
+  179,
+  179,
+  101
 ];
 const A$H = [
   0,
-  25,
-  51,
-  71,
-  102,
-  128
+  32,
+  0
 ];
 const I$H = [
   0,
-  51,
-  102,
-  153,
-  204,
+  163,
   255
 ];
-var copper2 = {
+var ct_airways = {
   min: min$H,
   max: max$I,
   R: R$H,
@@ -98557,34 +98593,39 @@ var copper2 = {
   A: A$H,
   I: I$H
 };
-const min$G = -643;
-const max$H = -235;
+const min$G = 180;
+const max$H = 600;
 const R$G = [
   0,
   0,
-  0
+  113,
+  255
 ];
 const G$G = [
-  154,
-  154,
-  154
+  0,
+  0,
+  109,
+  250
 ];
 const B$G = [
-  179,
-  179,
-  101
+  0,
+  0,
+  101,
+  245
 ];
 const A$G = [
   0,
-  32,
-  0
+  0,
+  100,
+  160
 ];
 const I$G = [
   0,
-  163,
+  1,
+  128,
   255
 ];
-var ct_airways = {
+var ct_bones = {
   min: min$G,
   max: max$H,
   R: R$G,
@@ -98593,39 +98634,34 @@ var ct_airways = {
   A: A$G,
   I: I$G
 };
-const min$F = 180;
-const max$G = 600;
+const min$F = -10;
+const max$G = 110;
 const R$F = [
   0,
-  0,
-  113,
+  199,
   255
 ];
 const G$F = [
   0,
-  0,
-  109,
-  250
+  127,
+  255
 ];
 const B$F = [
   0,
-  0,
-  101,
-  245
+  127,
+  255
 ];
 const A$F = [
   0,
-  0,
-  100,
-  160
+  48,
+  128
 ];
 const I$F = [
   0,
-  1,
-  128,
+  124,
   255
 ];
-var ct_bones = {
+var ct_brain = {
   min: min$F,
   max: max$G,
   R: R$F,
@@ -98638,7 +98674,7 @@ const min$E = -10;
 const max$F = 110;
 const R$E = [
   0,
-  199,
+  127,
   255
 ];
 const G$E = [
@@ -98661,7 +98697,7 @@ const I$E = [
   124,
   255
 ];
-var ct_brain = {
+var ct_brain_gray = {
   min: min$E,
   max: max$F,
   R: R$E,
@@ -98670,45 +98706,9 @@ var ct_brain = {
   A: A$E,
   I: I$E
 };
-const min$D = -10;
-const max$E = 110;
+const min$D = -80;
+const max$E = 1e3;
 const R$D = [
-  0,
-  127,
-  255
-];
-const G$D = [
-  0,
-  127,
-  255
-];
-const B$D = [
-  0,
-  127,
-  255
-];
-const A$D = [
-  0,
-  48,
-  128
-];
-const I$D = [
-  0,
-  124,
-  255
-];
-var ct_brain_gray = {
-  min: min$D,
-  max: max$E,
-  R: R$D,
-  G: G$D,
-  B: B$D,
-  A: A$D,
-  I: I$D
-};
-const min$C = -80;
-const max$D = 1e3;
-const R$C = [
   0,
   189,
   150,
@@ -98717,7 +98717,7 @@ const R$C = [
   150,
   255
 ];
-const G$C = [
+const G$D = [
   0,
   169,
   54,
@@ -98726,7 +98726,7 @@ const G$C = [
   54,
   240
 ];
-const B$C = [
+const B$D = [
   0,
   153,
   52,
@@ -98735,7 +98735,7 @@ const B$C = [
   52,
   242
 ];
-const A$C = [
+const A$D = [
   0,
   32,
   64,
@@ -98744,7 +98744,7 @@ const A$C = [
   64,
   64
 ];
-const I$C = [
+const I$D = [
   0,
   1,
   82,
@@ -98754,17 +98754,17 @@ const I$C = [
   255
 ];
 var ct_cardiac = {
-  min: min$C,
-  max: max$D,
-  R: R$C,
-  G: G$C,
-  B: B$C,
-  A: A$C,
-  I: I$C
+  min: min$D,
+  max: max$E,
+  R: R$D,
+  G: G$D,
+  B: B$D,
+  A: A$D,
+  I: I$D
 };
-const min$B = -590;
-const max$C = 600;
-const R$B = [
+const min$C = -590;
+const max$D = 600;
+const R$C = [
   0,
   241,
   241,
@@ -98777,7 +98777,7 @@ const R$B = [
   255,
   255
 ];
-const G$B = [
+const G$C = [
   0,
   156,
   156,
@@ -98790,7 +98790,7 @@ const G$B = [
   255,
   255
 ];
-const B$B = [
+const B$C = [
   0,
   130,
   130,
@@ -98803,7 +98803,7 @@ const B$B = [
   255,
   255
 ];
-const A$B = [
+const A$C = [
   0,
   8,
   0,
@@ -98816,7 +98816,7 @@ const A$B = [
   222,
   222
 ];
-const I$B = [
+const I$C = [
   0,
   2,
   3,
@@ -98830,6 +98830,42 @@ const I$B = [
   255
 ];
 var ct_head = {
+  min: min$C,
+  max: max$D,
+  R: R$C,
+  G: G$C,
+  B: B$C,
+  A: A$C,
+  I: I$C
+};
+const min$B = 114;
+const max$C = 302;
+const R$B = [
+  0,
+  255,
+  255
+];
+const G$B = [
+  0,
+  129,
+  255
+];
+const B$B = [
+  0,
+  0,
+  255
+];
+const A$B = [
+  0,
+  88,
+  228
+];
+const I$B = [
+  0,
+  103,
+  255
+];
+var ct_kidneys = {
   min: min$B,
   max: max$C,
   R: R$B,
@@ -98838,34 +98874,44 @@ var ct_head = {
   A: A$B,
   I: I$B
 };
-const min$A = 114;
-const max$B = 302;
+const min$A = -23;
+const max$B = 246;
 const R$A = [
   0,
+  44,
+  255,
   255,
   255
 ];
 const G$A = [
   0,
-  129,
+  128,
+  90,
+  255,
   255
 ];
 const B$A = [
   0,
   0,
+  70,
+  0,
   255
 ];
 const A$A = [
   0,
-  88,
+  0,
+  82,
+  184,
   228
 ];
 const I$A = [
   0,
-  103,
+  64,
+  131,
+  196,
   255
 ];
-var ct_kidneys = {
+var ct_liver = {
   min: min$A,
   max: max$B,
   R: R$A,
@@ -98874,55 +98920,9 @@ var ct_kidneys = {
   A: A$A,
   I: I$A
 };
-const min$z = -23;
+const min$z = -100;
 const max$A = 246;
 const R$z = [
-  0,
-  44,
-  255,
-  255,
-  255
-];
-const G$z = [
-  0,
-  128,
-  90,
-  255,
-  255
-];
-const B$z = [
-  0,
-  0,
-  70,
-  0,
-  255
-];
-const A$z = [
-  0,
-  0,
-  82,
-  184,
-  228
-];
-const I$z = [
-  0,
-  64,
-  131,
-  196,
-  255
-];
-var ct_liver = {
-  min: min$z,
-  max: max$A,
-  R: R$z,
-  G: G$z,
-  B: B$z,
-  A: A$z,
-  I: I$z
-};
-const min$y = -100;
-const max$z = 246;
-const R$y = [
   0,
   128,
   159,
@@ -98931,7 +98931,7 @@ const R$y = [
   255,
   255
 ];
-const G$y = [
+const G$z = [
   0,
   0,
   56,
@@ -98940,7 +98940,7 @@ const G$y = [
   255,
   255
 ];
-const B$y = [
+const B$z = [
   0,
   0,
   41,
@@ -98949,7 +98949,7 @@ const B$y = [
   0,
   255
 ];
-const A$y = [
+const A$z = [
   0,
   63,
   105,
@@ -98958,7 +98958,7 @@ const A$y = [
   184,
   228
 ];
-const I$y = [
+const I$z = [
   0,
   100,
   128,
@@ -98968,17 +98968,17 @@ const I$y = [
   255
 ];
 var ct_muscles = {
-  min: min$y,
-  max: max$z,
-  R: R$y,
-  G: G$y,
-  B: B$y,
-  A: A$y,
-  I: I$y
+  min: min$z,
+  max: max$A,
+  R: R$z,
+  G: G$z,
+  B: B$z,
+  A: A$z,
+  I: I$z
 };
-const min$x = -590;
-const max$y = 600;
-const R$x = [
+const min$y = -590;
+const max$z = 600;
+const R$y = [
   0,
   241,
   241,
@@ -98989,7 +98989,7 @@ const R$x = [
   255,
   255
 ];
-const G$x = [
+const G$y = [
   0,
   156,
   156,
@@ -99000,7 +99000,7 @@ const G$x = [
   255,
   255
 ];
-const B$x = [
+const B$y = [
   0,
   130,
   130,
@@ -99011,7 +99011,7 @@ const B$x = [
   255,
   255
 ];
-const A$x = [
+const A$y = [
   0,
   63,
   105,
@@ -99022,7 +99022,7 @@ const A$x = [
   228,
   228
 ];
-const I$x = [
+const I$y = [
   0,
   1,
   52,
@@ -99034,6 +99034,47 @@ const I$x = [
   255
 ];
 var ct_scalp = {
+  min: min$y,
+  max: max$z,
+  R: R$y,
+  G: G$y,
+  B: B$y,
+  A: A$y,
+  I: I$y
+};
+const min$x = 140;
+const max$y = 1024;
+const R$x = [
+  0,
+  2,
+  113,
+  255
+];
+const G$x = [
+  0,
+  1,
+  109,
+  250
+];
+const B$x = [
+  0,
+  1,
+  101,
+  245
+];
+const A$x = [
+  0,
+  1,
+  96,
+  168
+];
+const I$x = [
+  0,
+  1,
+  128,
+  255
+];
+var ct_skull = {
   min: min$x,
   max: max$y,
   R: R$x,
@@ -99042,60 +99083,19 @@ var ct_scalp = {
   A: A$x,
   I: I$x
 };
-const min$w = 140;
-const max$x = 1024;
+const min$w = -923;
+const max$x = 679;
 const R$w = [
   0,
-  2,
-  113,
+  0,
+  0,
+  0,
+  0,
+  255,
+  255,
   255
 ];
 const G$w = [
-  0,
-  1,
-  109,
-  250
-];
-const B$w = [
-  0,
-  1,
-  101,
-  245
-];
-const A$w = [
-  0,
-  1,
-  96,
-  168
-];
-const I$w = [
-  0,
-  1,
-  128,
-  255
-];
-var ct_skull = {
-  min: min$w,
-  max: max$x,
-  R: R$w,
-  G: G$w,
-  B: B$w,
-  A: A$w,
-  I: I$w
-};
-const min$v = -923;
-const max$w = 679;
-const R$v = [
-  0,
-  0,
-  0,
-  0,
-  0,
-  255,
-  255,
-  255
-];
-const G$v = [
   154,
   154,
   154,
@@ -99105,7 +99105,7 @@ const G$v = [
   254,
   255
 ];
-const B$v = [
+const B$w = [
   179,
   179,
   179,
@@ -99115,7 +99115,7 @@ const B$v = [
   0,
   255
 ];
-const A$v = [
+const A$w = [
   0,
   3,
   8,
@@ -99125,7 +99125,7 @@ const A$v = [
   15,
   20
 ];
-const I$v = [
+const I$w = [
   0,
   30,
   62,
@@ -99136,6 +99136,42 @@ const I$v = [
   255
 ];
 var ct_soft = {
+  min: min$w,
+  max: max$x,
+  R: R$w,
+  G: G$w,
+  B: B$w,
+  A: A$w,
+  I: I$w
+};
+const min$v = -10;
+const max$w = 110;
+const R$v = [
+  0,
+  199,
+  255
+];
+const G$v = [
+  0,
+  127,
+  255
+];
+const B$v = [
+  0,
+  127,
+  255
+];
+const A$v = [
+  0,
+  48,
+  128
+];
+const I$v = [
+  0,
+  124,
+  255
+];
+var ct_soft_tissue = {
   min: min$v,
   max: max$w,
   R: R$v,
@@ -99144,34 +99180,34 @@ var ct_soft = {
   A: A$v,
   I: I$v
 };
-const min$u = -10;
-const max$v = 110;
+const min$u = -600;
+const max$v = 100;
 const R$u = [
   0,
-  199,
+  134,
   255
 ];
 const G$u = [
   0,
-  127,
-  255
+  109,
+  250
 ];
 const B$u = [
   0,
-  127,
-  255
+  101,
+  245
 ];
 const A$u = [
   0,
-  48,
-  128
+  60,
+  148
 ];
 const I$u = [
   0,
-  124,
+  128,
   255
 ];
-var ct_soft_tissue = {
+var ct_surface = {
   min: min$u,
   max: max$v,
   R: R$u,
@@ -99180,34 +99216,34 @@ var ct_soft_tissue = {
   A: A$u,
   I: I$u
 };
-const min$t = -600;
-const max$u = 100;
+const min$t = 114;
+const max$u = 246;
 const R$t = [
   0,
-  134,
+  255,
   255
 ];
 const G$t = [
   0,
-  109,
-  250
+  128,
+  255
 ];
 const B$t = [
-  0,
-  101,
-  245
-];
-const A$t = [
-  0,
-  60,
-  148
-];
-const I$t = [
   0,
   128,
   255
 ];
-var ct_surface = {
+const A$t = [
+  0,
+  64,
+  96
+];
+const I$t = [
+  0,
+  87,
+  255
+];
+var ct_vessels = {
   min: min$t,
   max: max$u,
   R: R$t,
@@ -99216,34 +99252,44 @@ var ct_surface = {
   A: A$t,
   I: I$t
 };
-const min$s = 114;
-const max$t = 246;
+const min$s = 50;
+const max$t = 1e3;
 const R$s = [
-  0,
-  255,
+  98,
+  210,
+  169,
+  128,
   255
 ];
 const G$s = [
-  0,
+  94,
+  26,
+  77,
   128,
   255
 ];
 const B$s = [
-  0,
+  45,
+  21,
+  74,
   128,
   255
 ];
 const A$s = [
   0,
-  64,
-  96
+  25,
+  0,
+  4,
+  168
 ];
 const I$s = [
   0,
+  41,
   87,
+  154,
   255
 ];
-var ct_vessels = {
+var ct_w_contrast = {
   min: min$s,
   max: max$t,
   R: R$s,
@@ -99252,55 +99298,9 @@ var ct_vessels = {
   A: A$s,
   I: I$s
 };
-const min$r = 50;
-const max$s = 1e3;
+const min$r = 0;
+const max$s = 0;
 const R$r = [
-  98,
-  210,
-  169,
-  128,
-  255
-];
-const G$r = [
-  94,
-  26,
-  77,
-  128,
-  255
-];
-const B$r = [
-  45,
-  21,
-  74,
-  128,
-  255
-];
-const A$r = [
-  0,
-  25,
-  0,
-  4,
-  168
-];
-const I$r = [
-  0,
-  41,
-  87,
-  154,
-  255
-];
-var ct_w_contrast = {
-  min: min$r,
-  max: max$s,
-  R: R$r,
-  G: G$r,
-  B: B$r,
-  A: A$r,
-  I: I$r
-};
-const min$q = 0;
-const max$r = 0;
-const R$q = [
   0,
   13,
   21,
@@ -99334,7 +99334,7 @@ const R$q = [
   240,
   255
 ];
-const G$q = [
+const G$r = [
   0,
   5,
   11,
@@ -99368,7 +99368,7 @@ const G$q = [
   251,
   255
 ];
-const B$q = [
+const B$r = [
   0,
   14,
   30,
@@ -99402,7 +99402,7 @@ const B$q = [
   245,
   255
 ];
-const A$q = [
+const A$r = [
   0,
   4,
   8,
@@ -99436,7 +99436,7 @@ const A$q = [
   124,
   128
 ];
-const I$q = [
+const I$r = [
   0,
   8,
   16,
@@ -99471,6 +99471,47 @@ const I$q = [
   255
 ];
 var cubehelix = {
+  min: min$r,
+  max: max$s,
+  R: R$r,
+  G: G$r,
+  B: B$r,
+  A: A$r,
+  I: I$r
+};
+const min$q = 0;
+const max$r = 0;
+const R$q = [
+  0,
+  10,
+  136,
+  255
+];
+const G$q = [
+  0,
+  39,
+  220,
+  255
+];
+const B$q = [
+  0,
+  223,
+  253,
+  255
+];
+const A$q = [
+  0,
+  48,
+  64,
+  70
+];
+const I$q = [
+  0,
+  92,
+  192,
+  255
+];
+var electric_blue = {
   min: min$q,
   max: max$r,
   R: R$q,
@@ -99483,35 +99524,40 @@ const min$p = 0;
 const max$q = 0;
 const R$p = [
   0,
-  10,
-  136,
+  0,
+  128,
+  255,
   255
 ];
 const G$p = [
   0,
-  39,
-  220,
+  128,
+  0,
+  128,
   255
 ];
 const B$p = [
   0,
-  223,
-  253,
+  125,
+  255,
+  0,
   255
 ];
 const A$p = [
   0,
-  48,
+  32,
   64,
-  70
+  96,
+  128
 ];
 const I$p = [
   0,
-  92,
+  63,
+  128,
   192,
   255
 ];
-var electric_blue = {
+var ge_color = {
   min: min$p,
   max: max$q,
   R: R$p,
@@ -99524,40 +99570,35 @@ const min$o = 0;
 const max$p = 0;
 const R$o = [
   0,
-  0,
-  128,
-  255,
+  142,
+  227,
   255
 ];
 const G$o = [
   0,
-  128,
-  0,
-  128,
+  85,
+  170,
   255
 ];
 const B$o = [
   0,
-  125,
-  255,
-  0,
+  14,
+  76,
   255
 ];
 const A$o = [
   0,
-  32,
-  64,
-  96,
+  42,
+  84,
   128
 ];
 const I$o = [
   0,
-  63,
-  128,
-  192,
+  85,
+  170,
   255
 ];
-var ge_color = {
+var gold = {
   min: min$o,
   max: max$p,
   R: R$o,
@@ -99570,35 +99611,25 @@ const min$n = 0;
 const max$o = 0;
 const R$n = [
   0,
-  142,
-  227,
   255
 ];
 const G$n = [
   0,
-  85,
-  170,
   255
 ];
 const B$n = [
   0,
-  14,
-  76,
   255
 ];
 const A$n = [
   0,
-  42,
-  84,
   128
 ];
 const I$n = [
   0,
-  85,
-  170,
   255
 ];
-var gold = {
+var gray = {
   min: min$n,
   max: max$o,
   R: R$n,
@@ -99611,25 +99642,30 @@ const min$m = 0;
 const max$n = 0;
 const R$m = [
   0,
-  255
+  0,
+  0
 ];
 const G$m = [
   0,
+  128,
   255
 ];
 const B$m = [
   0,
-  255
+  0,
+  0
 ];
 const A$m = [
   0,
+  64,
   128
 ];
 const I$m = [
   0,
+  128,
   255
 ];
-var gray = {
+var green = {
   min: min$m,
   max: max$n,
   R: R$m,
@@ -99641,31 +99677,36 @@ var gray = {
 const min$l = 0;
 const max$m = 0;
 const R$l = [
-  0,
-  0,
-  0
+  3,
+  255,
+  255,
+  255
 ];
 const G$l = [
   0,
-  128,
+  0,
+  255,
   255
 ];
 const B$l = [
   0,
   0,
-  0
+  0,
+  255
 ];
 const A$l = [
   0,
-  64,
+  48,
+  96,
   128
 ];
 const I$l = [
   0,
-  128,
+  95,
+  191,
   255
 ];
-var green = {
+var hot = {
   min: min$l,
   max: max$m,
   R: R$l,
@@ -99677,7 +99718,7 @@ var green = {
 const min$k = 0;
 const max$l = 0;
 const R$k = [
-  3,
+  0,
   255,
   255,
   255
@@ -99685,7 +99726,7 @@ const R$k = [
 const G$k = [
   0,
   0,
-  255,
+  126,
   255
 ];
 const B$k = [
@@ -99696,17 +99737,17 @@ const B$k = [
 ];
 const A$k = [
   0,
-  48,
+  64,
   96,
   128
 ];
 const I$k = [
   0,
-  95,
+  128,
   191,
   255
 ];
-var hot = {
+var hotiron = {
   min: min$k,
   max: max$l,
   R: R$k,
@@ -99718,36 +99759,51 @@ var hot = {
 const min$j = 0;
 const max$k = 0;
 const R$j = [
-  0,
   255,
+  255,
+  0,
+  0,
+  0,
   255,
   255
 ];
 const G$j = [
   0,
+  255,
+  255,
+  255,
   0,
-  126,
-  255
+  0,
+  0
 ];
 const B$j = [
   0,
   0,
   0,
-  255
+  255,
+  255,
+  255,
+  0
 ];
 const A$j = [
   0,
-  64,
-  96,
-  128
+  14,
+  28,
+  43,
+  57,
+  71,
+  85
 ];
 const I$j = [
   0,
+  43,
+  85,
   128,
-  191,
+  170,
+  213,
   255
 ];
-var hotiron = {
+var hsv = {
   min: min$j,
   max: max$k,
   R: R$j,
@@ -99759,51 +99815,36 @@ var hotiron = {
 const min$i = 0;
 const max$j = 0;
 const R$i = [
-  255,
-  255,
   0,
-  0,
-  0,
-  255,
-  255
+  120,
+  237,
+  240
 ];
 const G$i = [
   0,
-  255,
-  255,
-  255,
-  0,
-  0,
-  0
+  28,
+  105,
+  249
 ];
 const B$i = [
-  0,
-  0,
-  0,
-  255,
-  255,
-  255,
-  0
+  4,
+  109,
+  37,
+  33
 ];
 const A$i = [
   0,
-  14,
-  28,
-  43,
-  57,
-  71,
-  85
+  56,
+  80,
+  88
 ];
 const I$i = [
   0,
-  43,
-  85,
-  128,
-  170,
-  213,
+  64,
+  192,
   255
 ];
-var hsv = {
+var inferno = {
   min: min$i,
   max: max$j,
   R: R$i,
@@ -99816,35 +99857,40 @@ const min$h = 0;
 const max$i = 0;
 const R$h = [
   0,
-  120,
-  237,
-  240
+  0,
+  127,
+  255,
+  127
 ];
 const G$h = [
   0,
-  28,
-  105,
-  249
+  127,
+  255,
+  127,
+  0
 ];
 const B$h = [
-  4,
-  109,
-  37,
-  33
+  127,
+  255,
+  127,
+  0,
+  0
 ];
 const A$h = [
   0,
-  56,
-  80,
-  88
+  32,
+  64,
+  96,
+  128
 ];
 const I$h = [
   0,
-  64,
+  63,
+  128,
   192,
   255
 ];
-var inferno = {
+var jet = {
   min: min$h,
   max: max$i,
   R: R$h,
@@ -99856,52 +99902,6 @@ var inferno = {
 const min$g = 0;
 const max$h = 0;
 const R$g = [
-  0,
-  0,
-  127,
-  255,
-  127
-];
-const G$g = [
-  0,
-  127,
-  255,
-  127,
-  0
-];
-const B$g = [
-  127,
-  255,
-  127,
-  0,
-  0
-];
-const A$g = [
-  0,
-  32,
-  64,
-  96,
-  128
-];
-const I$g = [
-  0,
-  63,
-  128,
-  192,
-  255
-];
-var jet = {
-  min: min$g,
-  max: max$h,
-  R: R$g,
-  G: G$g,
-  B: B$g,
-  A: A$g,
-  I: I$g
-};
-const min$f = 0;
-const max$g = 0;
-const R$f = [
   94,
   50,
   90,
@@ -99915,7 +99915,7 @@ const R$f = [
   209,
   158
 ];
-const G$f = [
+const G$g = [
   79,
   131,
   186,
@@ -99929,7 +99929,7 @@ const G$f = [
   57,
   1
 ];
-const B$f = [
+const B$g = [
   162,
   189,
   167,
@@ -99943,7 +99943,7 @@ const B$f = [
   79,
   66
 ];
-const A$f = [
+const A$g = [
   0,
   12,
   23,
@@ -99957,7 +99957,7 @@ const A$f = [
   116,
   128
 ];
-const I$f = [
+const I$g = [
   0,
   23,
   46,
@@ -99972,6 +99972,57 @@ const I$f = [
   255
 ];
 var linspecer = {
+  min: min$g,
+  max: max$h,
+  R: R$g,
+  G: G$g,
+  B: B$g,
+  A: A$g,
+  I: I$g
+};
+const min$f = 0;
+const max$g = 0;
+const R$f = [
+  0,
+  148,
+  183,
+  223,
+  247,
+  252
+];
+const G$f = [
+  0,
+  44,
+  55,
+  74,
+  112,
+  253
+];
+const B$f = [
+  4,
+  128,
+  121,
+  104,
+  92,
+  191
+];
+const A$f = [
+  0,
+  44,
+  53,
+  64,
+  75,
+  107
+];
+const I$f = [
+  0,
+  107,
+  128,
+  154,
+  179,
+  255
+];
+var magma = {
   min: min$f,
   max: max$g,
   R: R$f,
@@ -99983,46 +100034,36 @@ var linspecer = {
 const min$e = 0;
 const max$f = 0;
 const R$e = [
-  0,
-  148,
-  183,
-  223,
-  247,
-  252
+  11,
+  59,
+  55,
+  222
 ];
 const G$e = [
-  0,
-  44,
-  55,
-  74,
-  112,
-  253
+  4,
+  45,
+  165,
+  245
 ];
 const B$e = [
-  4,
-  128,
-  121,
-  104,
-  92,
-  191
+  5,
+  91,
+  172,
+  229
 ];
 const A$e = [
   0,
-  44,
-  53,
-  64,
-  75,
+  23,
+  70,
   107
 ];
 const I$e = [
   0,
-  107,
-  128,
-  154,
-  179,
+  56,
+  167,
   255
 ];
-var magma = {
+var mako = {
   min: min$e,
   max: max$f,
   R: R$e,
@@ -100034,47 +100075,6 @@ var magma = {
 const min$d = 0;
 const max$e = 0;
 const R$d = [
-  11,
-  59,
-  55,
-  222
-];
-const G$d = [
-  4,
-  45,
-  165,
-  245
-];
-const B$d = [
-  5,
-  91,
-  172,
-  229
-];
-const A$d = [
-  0,
-  23,
-  70,
-  107
-];
-const I$d = [
-  0,
-  56,
-  167,
-  255
-];
-var mako = {
-  min: min$d,
-  max: max$e,
-  R: R$d,
-  G: G$d,
-  B: B$d,
-  A: A$d,
-  I: I$d
-};
-const min$c = 0;
-const max$d = 0;
-const R$c = [
   0,
   85,
   0,
@@ -100089,7 +100089,7 @@ const R$c = [
   255,
   172
 ];
-const G$c = [
+const G$d = [
   0,
   0,
   0,
@@ -100104,7 +100104,7 @@ const G$c = [
   0,
   0
 ];
-const B$c = [
+const B$d = [
   0,
   170,
   85,
@@ -100119,7 +100119,7 @@ const B$c = [
   0,
   0
 ];
-const A$c = [
+const A$d = [
   0,
   5,
   10,
@@ -100134,7 +100134,7 @@ const A$c = [
   72,
   85
 ];
-const I$c = [
+const I$d = [
   0,
   15,
   31,
@@ -100150,6 +100150,47 @@ const I$c = [
   255
 ];
 var nih = {
+  min: min$d,
+  max: max$e,
+  R: R$d,
+  G: G$d,
+  B: B$d,
+  A: A$d,
+  I: I$d
+};
+const min$c = 0;
+const max$d = 0;
+const R$c = [
+  13,
+  156,
+  237,
+  240
+];
+const G$c = [
+  8,
+  23,
+  121,
+  249
+];
+const B$c = [
+  135,
+  158,
+  83,
+  33
+];
+const A$c = [
+  0,
+  56,
+  80,
+  88
+];
+const I$c = [
+  0,
+  64,
+  192,
+  255
+];
+var plasma = {
   min: min$c,
   max: max$d,
   R: R$c,
@@ -100159,49 +100200,8 @@ var nih = {
   I: I$c
 };
 const min$b = 0;
-const max$c = 0;
+const max$c = 255;
 const R$b = [
-  13,
-  156,
-  237,
-  240
-];
-const G$b = [
-  8,
-  23,
-  121,
-  249
-];
-const B$b = [
-  135,
-  158,
-  83,
-  33
-];
-const A$b = [
-  0,
-  56,
-  80,
-  88
-];
-const I$b = [
-  0,
-  64,
-  192,
-  255
-];
-var plasma = {
-  min: min$b,
-  max: max$c,
-  R: R$b,
-  G: G$b,
-  B: B$b,
-  A: A$b,
-  I: I$b
-};
-const min$a = 0;
-const max$b = 255;
-const R$a = [
   208,
   71,
   33,
@@ -100459,7 +100459,7 @@ const R$a = [
   242,
   248
 ];
-const G$a = [
+const G$b = [
   182,
   46,
   78,
@@ -100717,7 +100717,7 @@ const G$a = [
   140,
   21
 ];
-const B$a = [
+const B$b = [
   191,
   154,
   43,
@@ -100975,7 +100975,7 @@ const B$a = [
   108,
   77
 ];
-const A$a = [
+const A$b = [
   0,
   64,
   64,
@@ -101233,7 +101233,7 @@ const A$a = [
   64,
   64
 ];
-const I$a = [
+const I$b = [
   0,
   1,
   2,
@@ -101492,6 +101492,42 @@ const I$a = [
   255
 ];
 var random = {
+  min: min$b,
+  max: max$c,
+  R: R$b,
+  G: G$b,
+  B: B$b,
+  A: A$b,
+  I: I$b
+};
+const min$a = 0;
+const max$b = 0;
+const R$a = [
+  0,
+  128,
+  255
+];
+const G$a = [
+  0,
+  0,
+  0
+];
+const B$a = [
+  0,
+  0,
+  0
+];
+const A$a = [
+  0,
+  64,
+  128
+];
+const I$a = [
+  0,
+  128,
+  255
+];
+var red = {
   min: min$a,
   max: max$b,
   R: R$a,
@@ -101503,14 +101539,14 @@ var random = {
 const min$9 = 0;
 const max$a = 0;
 const R$9 = [
-  0,
-  128,
+  192,
+  224,
   255
 ];
 const G$9 = [
-  0,
-  0,
-  0
+  1,
+  128,
+  255
 ];
 const B$9 = [
   0,
@@ -101523,11 +101559,11 @@ const A$9 = [
   128
 ];
 const I$9 = [
-  0,
+  1,
   128,
   255
 ];
-var red = {
+var redyell = {
   min: min$9,
   max: max$a,
   R: R$9,
@@ -101539,31 +101575,51 @@ var red = {
 const min$8 = 0;
 const max$9 = 0;
 const R$8 = [
-  192,
-  224,
+  3,
+  112,
+  144,
+  188,
+  236,
+  246,
   255
 ];
 const G$8 = [
-  1,
-  128,
-  255
+  5,
+  31,
+  29,
+  22,
+  76,
+  158,
+  250
 ];
 const B$8 = [
-  0,
-  0,
-  0
+  26,
+  87,
+  91,
+  86,
+  62,
+  117,
+  235
 ];
 const A$8 = [
   0,
-  64,
-  128
+  30,
+  38,
+  49,
+  67,
+  85,
+  107
 ];
 const I$8 = [
-  1,
-  128,
+  0,
+  73,
+  92,
+  118,
+  160,
+  205,
   255
 ];
-var redyell = {
+var rocket = {
   min: min$8,
   max: max$9,
   R: R$8,
@@ -101575,51 +101631,31 @@ var redyell = {
 const min$7 = 0;
 const max$8 = 0;
 const R$7 = [
-  3,
-  112,
-  144,
-  188,
-  236,
-  246,
+  1,
+  240,
   255
 ];
 const G$7 = [
-  5,
-  31,
-  29,
-  22,
-  76,
-  158,
-  250
+  1,
+  128,
+  255
 ];
 const B$7 = [
-  26,
-  87,
-  91,
-  86,
-  62,
-  117,
-  235
+  1,
+  128,
+  255
 ];
 const A$7 = [
   0,
-  30,
-  38,
-  49,
-  67,
-  85,
-  107
+  76,
+  128
 ];
 const I$7 = [
   0,
-  73,
-  92,
-  118,
-  160,
-  205,
+  153,
   255
 ];
-var rocket = {
+var surface = {
   min: min$7,
   max: max$8,
   R: R$7,
@@ -101631,42 +101667,6 @@ var rocket = {
 const min$6 = 0;
 const max$7 = 0;
 const R$6 = [
-  1,
-  240,
-  255
-];
-const G$6 = [
-  1,
-  128,
-  255
-];
-const B$6 = [
-  1,
-  128,
-  255
-];
-const A$6 = [
-  0,
-  76,
-  128
-];
-const I$6 = [
-  0,
-  153,
-  255
-];
-var surface = {
-  min: min$6,
-  max: max$7,
-  R: R$6,
-  G: G$6,
-  B: B$6,
-  A: A$6,
-  I: I$6
-};
-const min$5 = 0;
-const max$6 = 0;
-const R$5 = [
   48,
   48,
   64,
@@ -101680,7 +101680,7 @@ const R$5 = [
   218,
   122
 ];
-const G$5 = [
+const G$6 = [
   18,
   18,
   64,
@@ -101694,7 +101694,7 @@ const G$5 = [
   57,
   4
 ];
-const B$5 = [
+const B$6 = [
   59,
   59,
   162,
@@ -101708,7 +101708,7 @@ const B$5 = [
   7,
   3
 ];
-const A$5 = [
+const A$6 = [
   0,
   22,
   26,
@@ -101722,7 +101722,7 @@ const A$5 = [
   77,
   86
 ];
-const I$5 = [
+const I$6 = [
   0,
   1,
   16,
@@ -101737,6 +101737,42 @@ const I$5 = [
   255
 ];
 var turbo = {
+  min: min$6,
+  max: max$7,
+  R: R$6,
+  G: G$6,
+  B: B$6,
+  A: A$6,
+  I: I$6
+};
+const min$5 = 0;
+const max$6 = 0;
+const R$5 = [
+  0,
+  128,
+  255
+];
+const G$5 = [
+  0,
+  0,
+  0
+];
+const B$5 = [
+  0,
+  128,
+  255
+];
+const A$5 = [
+  0,
+  64,
+  128
+];
+const I$5 = [
+  0,
+  128,
+  255
+];
+var violet = {
   min: min$5,
   max: max$6,
   R: R$5,
@@ -101748,31 +101784,36 @@ var turbo = {
 const min$4 = 0;
 const max$5 = 0;
 const R$4 = [
-  0,
-  128,
-  255
+  68,
+  49,
+  53,
+  253
 ];
 const G$4 = [
-  0,
-  0,
-  0
+  1,
+  104,
+  183,
+  231
 ];
 const B$4 = [
-  0,
-  128,
-  255
+  84,
+  142,
+  121,
+  37
 ];
 const A$4 = [
   0,
-  64,
-  128
+  56,
+  80,
+  88
 ];
 const I$4 = [
   0,
-  128,
+  64,
+  192,
   255
 ];
-var violet = {
+var viridis = {
   min: min$4,
   max: max$5,
   R: R$4,
@@ -101784,36 +101825,31 @@ var violet = {
 const min$3 = 0;
 const max$4 = 0;
 const R$3 = [
-  68,
-  49,
-  53,
-  253
+  255,
+  255,
+  255
 ];
 const G$3 = [
-  1,
-  104,
-  183,
-  231
+  127,
+  196,
+  254
 ];
 const B$3 = [
-  84,
-  142,
-  121,
-  37
+  0,
+  0,
+  0
 ];
 const A$3 = [
   0,
-  56,
-  80,
-  88
+  64,
+  128
 ];
 const I$3 = [
   0,
-  64,
-  192,
+  128,
   255
 ];
-var viridis = {
+var warm = {
   min: min$3,
   max: max$4,
   R: R$3,
@@ -101825,19 +101861,19 @@ var viridis = {
 const min$2 = 0;
 const max$3 = 0;
 const R$2 = [
-  255,
-  255,
-  255
-];
-const G$2 = [
-  127,
-  196,
-  254
-];
-const B$2 = [
   0,
   0,
   0
+];
+const G$2 = [
+  0,
+  128,
+  255
+];
+const B$2 = [
+  255,
+  196,
+  128
 ];
 const A$2 = [
   0,
@@ -101849,7 +101885,7 @@ const I$2 = [
   128,
   255
 ];
-var warm = {
+var winter = {
   min: min$2,
   max: max$3,
   R: R$2,
@@ -101861,42 +101897,6 @@ var warm = {
 const min$1 = 0;
 const max$2 = 0;
 const R$1 = [
-  0,
-  0,
-  0
-];
-const G$1 = [
-  0,
-  128,
-  255
-];
-const B$1 = [
-  255,
-  196,
-  128
-];
-const A$1 = [
-  0,
-  64,
-  128
-];
-const I$1 = [
-  0,
-  128,
-  255
-];
-var winter = {
-  min: min$1,
-  max: max$2,
-  R: R$1,
-  G: G$1,
-  B: B$1,
-  A: A$1,
-  I: I$1
-};
-const min = 0;
-const max$1 = 0;
-const R = [
   3,
   64,
   0,
@@ -101905,7 +101905,7 @@ const R = [
   255,
   255
 ];
-const G = [
+const G$1 = [
   0,
   0,
   0,
@@ -101914,7 +101914,7 @@ const G = [
   192,
   3
 ];
-const B = [
+const B$1 = [
   0,
   32,
   48,
@@ -101923,7 +101923,7 @@ const B = [
   96,
   128
 ];
-const A = [
+const A$1 = [
   0,
   8,
   16,
@@ -101932,7 +101932,7 @@ const A = [
   52,
   80
 ];
-const I = [
+const I$1 = [
   0,
   32,
   64,
@@ -101942,6 +101942,277 @@ const I = [
   255
 ];
 var x_rain = {
+  min: min$1,
+  max: max$2,
+  R: R$1,
+  G: G$1,
+  B: B$1,
+  A: A$1,
+  I: I$1
+};
+const min = 0;
+const max$1 = 255;
+const R = [
+  0,
+  245,
+  205,
+  120,
+  196,
+  220,
+  230,
+  0,
+  122,
+  236,
+  12,
+  204,
+  42,
+  119,
+  220,
+  103,
+  60,
+  255,
+  165,
+  160,
+  0,
+  245,
+  205,
+  120,
+  196,
+  220,
+  230,
+  0,
+  122,
+  236,
+  13,
+  220,
+  103,
+  255,
+  165,
+  160,
+  0,
+  120,
+  200,
+  255,
+  255,
+  164,
+  164,
+  164,
+  234,
+  0,
+  0,
+  0,
+  0,
+  0
+];
+const G = [
+  0,
+  245,
+  62,
+  18,
+  58,
+  248,
+  148,
+  118,
+  186,
+  13,
+  48,
+  182,
+  204,
+  159,
+  216,
+  255,
+  60,
+  165,
+  42,
+  32,
+  200,
+  245,
+  62,
+  18,
+  58,
+  248,
+  148,
+  118,
+  186,
+  13,
+  48,
+  216,
+  255,
+  165,
+  42,
+  32,
+  200,
+  190,
+  70,
+  148,
+  148,
+  108,
+  108,
+  108,
+  169,
+  0,
+  0,
+  0,
+  0,
+  0
+];
+const B = [
+  0,
+  245,
+  78,
+  134,
+  250,
+  164,
+  34,
+  14,
+  220,
+  176,
+  255,
+  142,
+  164,
+  176,
+  20,
+  255,
+  60,
+  0,
+  42,
+  240,
+  200,
+  245,
+  78,
+  134,
+  250,
+  164,
+  34,
+  14,
+  220,
+  176,
+  255,
+  20,
+  255,
+  0,
+  42,
+  240,
+  221,
+  150,
+  255,
+  10,
+  10,
+  226,
+  226,
+  226,
+  30,
+  64,
+  112,
+  160,
+  208,
+  255
+];
+const A = [
+  0,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64,
+  64
+];
+const I = [
+  0,
+  2,
+  3,
+  4,
+  5,
+  7,
+  8,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  24,
+  26,
+  28,
+  30,
+  31,
+  41,
+  42,
+  43,
+  44,
+  46,
+  47,
+  49,
+  50,
+  51,
+  52,
+  53,
+  54,
+  58,
+  60,
+  62,
+  63,
+  72,
+  77,
+  78,
+  79,
+  80,
+  81,
+  82,
+  85,
+  251,
+  252,
+  253,
+  254,
+  255
+];
+var freesurfer = {
   min,
   max: max$1,
   R,
@@ -102004,7 +102275,8 @@ var cmaps = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty(
   viridis,
   warm,
   winter,
-  x_rain
+  x_rain,
+  freesurfer
 }, Symbol.toStringTag, { value: "Module" }));
 var u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array;
 var fleb = new u8([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0, 0]);
@@ -104816,8 +105088,8 @@ function getExtents$1(positions, forceOriginInVolume = true) {
         copy(mn, v);
         copy(mx, v);
       }
-      min$R(mn, mn, v);
-      max$S(mx, mx, v);
+      min$S(mn, mn, v);
+      max$T(mx, mx, v);
       subtract(v, v, origin);
       let dx = len(v);
       mxDx = Math.max(mxDx, dx);
@@ -105394,8 +105666,8 @@ function getExtents(pts) {
   for (let i2 = 0; i2 < pts.length; i2 += 3) {
     let v = fromValues$1(pts[i2], pts[i2 + 1], pts[i2 + 2]);
     mxDx = Math.max(mxDx, len(v));
-    min$R(mn, mn, v);
-    max$S(mx, mx, v);
+    min$S(mn, mn, v);
+    max$T(mx, mx, v);
   }
   let extentsMin = [mn[0], mn[1], mn[2]];
   let extentsMax = [mx[0], mx[1], mx[2]];
@@ -112086,8 +112358,8 @@ Niivue.prototype.setPivot3D = function() {
     }
     for (let i2 = 0; i2 < this.meshes.length; i2++) {
       let v = fromValues$1(this.meshes[i2].extentsMin[0], this.meshes[i2].extentsMin[1], this.meshes[i2].extentsMin[2]);
-      min$R(mn, mn, v);
-      max$S(mx, mx, v);
+      min$S(mn, mn, v);
+      max$T(mx, mx, v);
     }
   }
   let pivot = create$1();
