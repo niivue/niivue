@@ -1963,12 +1963,20 @@ NVMesh.readOBJ = function (buffer) {
     }
     if (str[0] === "f") {
       let items = str.split(" ");
+      let new_t = items.length - 3; //number of new triangles created
+      if (new_t < 1) break; //error
       let tn = items[1].split("/");
-      t.push(parseInt(tn - 1));
+      let t0 = parseInt(tn[0])- 1; //first vertex
       tn = items[2].split("/");
-      t.push(parseInt(tn - 1));
-      tn = items[3].split("/");
-      t.push(parseInt(tn - 1));
+      let tprev = parseInt(tn[0])- 1; //previous vertex
+      for (let j = 0; j < new_t; j++) {
+        tn = items[3+j].split("/");
+        let tcurr = parseInt(tn[0])- 1; //current vertex
+        t.push(t0);
+        t.push(tprev);
+        t.push(tcurr);
+        tprev = tcurr;
+      }
     }
   } //for all lines
   var positions = new Float32Array(pts);
@@ -2604,6 +2612,8 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
         //unsupported
       } else if (height < -1.0) {
         //indexed triangle mesh or strip
+console.log(coordIndex.length,':', point.length);
+
         if (
           coordIndex.length < 1 ||
           point.length < 3 ||
