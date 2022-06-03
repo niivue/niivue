@@ -486,11 +486,19 @@ Niivue.prototype.subscribeToServer = function (
           break;
 
         case "create":
-          this.isInSession = true;
-          this.sessionKey = msg["key"];
-          this.setUpdateInterval();
+          console.log(msg);
+          if (!msg["isError"]) {
+            this.isInSession = true;
+            this.sessionKey = msg["key"];
+            this.setUpdateInterval();
+          }
           if (sessionCreatedCallback) {
-            sessionCreatedCallback(msg["message"], msg["url"], msg["key"]);
+            sessionCreatedCallback(
+              msg["message"],
+              msg["url"],
+              msg["key"],
+              msg["isError"]
+            );
           }
           break;
 
@@ -520,7 +528,8 @@ Niivue.prototype.subscribeToServer = function (
  * Create a multiuser session
  * @param {string} wsServerUrl e.g. ws://localhost:3000
  * @param {string} sessionName
- * @param {function(string, string, string):void} sessionCreatedCallback callback after session has been created with message, session url and session key
+ * @param {function(string, string, string, boolean):void} sessionCreatedCallback callback after session has been created with message, session url, session key
+ * if there was no error.
  */
 Niivue.prototype.createSession = function (
   wsServerUrl,

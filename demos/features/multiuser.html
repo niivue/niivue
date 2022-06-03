@@ -58,8 +58,20 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.createSession('ws://localhost:3000', 'niivue', (msg, url, key) => {
-        alert(`message:${msg} url:${url} key:${key}`);
+      nv1.createSession('ws://localhost:3000', 'niivue', (msg, url, key, isError) => {
+        if(isError) {
+          // check if session has been duplicated
+          if(msg === 'duplicate session') {
+            console.log('session already created, joining as viewer');
+            // try to join the session instead
+            nv1.joinSession('ws://localhost:3000', 'niivue', (msg, url, isController) => {
+              console.log(`Result: ${msg} connected to ${url}. Is controller: ${isController}.`);
+            });
+          }
+        }
+        else {
+          console.log(`message:${msg} url:${url} key:${key}`);
+        }
       });
 
     </script>
