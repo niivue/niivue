@@ -119,7 +119,9 @@ export function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
-  this.drawUndoBitmap = null; //copy of prior drawBitmap
+  this.maxDrawUndoBitmaps = 8; //analogy: number of bullets in revolver, we will cycle these
+  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
+  this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
@@ -629,6 +631,7 @@ Niivue.prototype.mouseUpListener = function () {
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseButtonLeftDown = false;
   if (this.drawPenFillPts.length > 0) this.drawPenFilled();
+  else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
   if (this.isDragging) {
@@ -1190,8 +1193,178 @@ Niivue.prototype.getVolumeIndexByID = function (id) {
   return -1; // -1 signals that no valid index was found for a volume with the given id
 };
 
+//inputs
+// data: Uint8Array to compress
+//output
+// returns rle compressed Uint8Array
+
+function encodeRLE(data) {
+  //https://en.wikipedia.org/wiki/PackBits
+  //run length encoding
+  // input and output are Uint8Array
+  // Will compress data with long runs up to x64
+  // Worst case encoded size is ~1% larger than input
+  let dl = data.length; //input length
+  let dp = 0; //input position
+  //worst case: run length encoding (1+1/127) times larger than input
+  let r = new Uint8Array(dl + Math.ceil(0.01 * dl));
+  let rI = new Int8Array(r.buffer); //typecast as header can be negative
+  let rp = 0; //run length position
+  while (dp < dl) {
+    //for each byte in input
+    let v = data[dp];
+    dp++;
+    let rl = 1; //run length
+    while (rl < 129 && dp < dl && data[dp] === v) {
+      dp++;
+      rl++;
+    } //count run length
+    if (rl > 1) {
+      //header
+      rI[rp] = -rl + 1;
+      rp++;
+      r[rp] = v;
+      rp++;
+      continue;
+    }
+    //count literal length
+    while (dp < dl) {
+      if (rl > 127) break;
+      if (dp + 2 < dl) {
+        //console.log(':', v, data[dp], data[dp+1]);
+        if (
+          v !== data[dp] &&
+          data[dp + 2] === data[dp] &&
+          data[dp + 1] === data[dp]
+        )
+          break;
+      }
+      v = data[dp];
+      dp++;
+      rl++;
+    }
+    //write header
+    r[rp] = rl - 1;
+    rp++;
+    for (let i = 0; i < rl; i++) {
+      r[rp] = data[dp - rl + i];
+      rp++;
+    }
+  }
+  log.info("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
+  console.log("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
+
+  return r.slice(0, rp);
+} // encodeRLE()
+
+//inputs
+// rle: packbits compressed stream
+// decodedlen: size of uncompressed data
+//output
+// returns Uint8Array of decodedlen bytes
+function decodeRLE(rle, decodedlen) {
+  let r = new Uint8Array(rle.buffer);
+  let rI = new Int8Array(r.buffer); //typecast as header can be negative
+  let rp = 0; //input position in rle array
+  //d: output uncompressed data array
+  let d = new Uint8Array(decodedlen);
+  let dp = 0; //output position in decoded array
+  while (rp < r.length) {
+    //read header
+    let hdr = rI[rp];
+    rp++;
+    if (hdr < 0) {
+      //write run
+      let v = rI[rp];
+      rp++;
+      for (let i = 0; i < 1 - hdr; i++) {
+        d[dp] = v;
+        dp++;
+      }
+    } else {
+      //write literal
+      for (let i = 0; i < hdr + 1; i++) {
+        d[dp] = rI[rp];
+        rp++;
+        dp++;
+      }
+    } //if run else literal
+  } //while rp < r.length
+  return d;
+} // decodeRLE()
+
+/*Niivue.prototype.testRLE = function() {
+  //Demo to test encodeRLE/decodeRLE
+  let len = 256*256*256;
+  let data = new Uint8Array(len);
+  for (let i = 0; i < len; i++)
+    data[i] = ((Math.random() > 0.30) ? 1 : 0);
+  console.log(data);
+  let rle = encodeRLE(data);
+  let ddata = decodeRLE(rle, len);
+  let ok = true;
+  for (let i = 0; i < len; i++)
+    if (data[i] !== ddata[i])
+      ok = false;
+  console.log('decoded correctly:', ok);
+} // testRLE()*/
+
+Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
+  if (!this.drawBitmap || this.drawBitmap.length < 1) {
+    console.log("drawAddUndoBitmap error: No drawing open");
+    return false;
+  }
+  //let rle = encodeRLE(this.drawBitmap);
+  //the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
+  this.currentDrawUndoBitmap++;
+  if (this.currentDrawUndoBitmap >= this.maxDrawUndoBitmaps)
+    this.currentDrawUndoBitmap = 0;
+  this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap);
+}; // drawAddUndoBitmap()
+
+Niivue.prototype.drawClearAllUndoBitmaps = async function () {
+  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //next add will be cylinder 0
+  if (this.drawUndoBitmaps.length < 1) return;
+  for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) array[i] = [];
+}; // drawClearAllUndoBitmaps()
+
+Niivue.prototype.drawUndo = function () {
+  if (this.drawUndoBitmaps.length < 1) {
+    console.log("undo bitmaps not loaded");
+    return;
+  }
+  //let dims = this.back.hdr.dims;
+  //let nv = dims[1] * dims[2] * dims[3];
+  this.currentDrawUndoBitmap--;
+  if (this.currentDrawUndoBitmap < 0)
+    this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1;
+  if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length)
+    this.currentDrawUndoBitmap = 0;
+  if (this.drawUndoBitmaps[this.currentDrawUndoBitmap].length < 2) {
+    console.log("drawUndo is misbehaving");
+    return;
+  }
+  this.drawBitmap = decodeRLE(
+    this.drawUndoBitmaps[this.currentDrawUndoBitmap],
+    this.drawBitmap.length
+  );
+  this.refreshDrawing(true);
+};
+
+/*Niivue.prototype.drawUndo = function () {
+  let hdr = this.back.hdr;
+  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (this.drawUndoBitmap.length !== nv || this.drawBitmap.length !== nv) {
+    console.log("bitmap dims are wrong");
+    return;
+  }
+  this.drawBitmap = this.drawUndoBitmap.slice();
+  this.refreshDrawing(true);
+};*/
+
 Niivue.prototype.loadDrawing = async function (fnm) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
+  this.drawClearAllUndoBitmaps();
   let volume = await NVImage.loadFromUrl({ url: fnm });
   //let volume = await NVImage.loadFromFile({file: fnm});
   let dims = volume.hdr.dims; //reverse to original
@@ -1209,7 +1382,7 @@ Niivue.prototype.loadDrawing = async function (fnm) {
   //if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
   let vx = dims[1] * dims[2] * dims[3];
   //this.drawBitmap = new Uint8Array(vx);
-  this.drawUndoBitmap = null;
+  //this.drawUndoBitmap = null;
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(
     this.drawTexture,
@@ -1267,6 +1440,7 @@ Niivue.prototype.loadDrawing = async function (fnm) {
       } //for x
     } //for y
   } //for z
+  this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
 };
@@ -1906,7 +2080,9 @@ Niivue.prototype.createEmptyDrawing = function () {
   if (mn < 1) return; //something is horribly wrong!
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   this.drawBitmap = new Uint8Array(vx);
-  this.drawUndoBitmap = null;
+  this.drawClearAllUndoBitmaps();
+  this.drawAddUndoBitmap();
+  //this.drawUndoBitmap = null;
   this.drawTexture = this.r8Tex(
     this.drawTexture,
     this.gl.TEXTURE7,
@@ -2029,16 +2205,6 @@ function img2ras16(volume) {
   return img16;
 }
 
-Niivue.prototype.drawUndo = function () {
-  let hdr = this.back.hdr;
-  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-  if (this.drawUndoBitmap.length !== nv || this.drawBitmap.length !== nv) {
-    console.log("bitmap dims are wrong");
-    return;
-  }
-  this.drawBitmap = this.drawUndoBitmap.slice();
-  this.refreshDrawing(true);
-};
 Niivue.prototype.drawGrowCut = function () {
   let hdr = this.back.hdr;
   let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -2046,7 +2212,7 @@ Niivue.prototype.drawGrowCut = function () {
     console.log("bitmap dims are wrong");
     return;
   }
-  this.drawUndoBitmap = this.drawBitmap.slice();
+  //this.drawUndoBitmap = this.drawBitmap.slice();
   let gl = this.gl;
   let fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
@@ -2178,6 +2344,7 @@ Niivue.prototype.drawGrowCut = function () {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.deleteFramebuffer(fb);
+  this.drawAddUndoBitmap();
   this.refreshDrawing(true);
 };
 
@@ -2289,7 +2456,7 @@ Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
   function vx2xyz(vx) {
     //provided address in 1D array, return XYZ coordinate
     let Z = Math.floor(vx / nxy); //slice
-    let Y = Math.floor((vx - (Z * nxy)) / nx); //column
+    let Y = Math.floor((vx - Z * nxy) / nx); //column
     let X = Math.floor(vx % nx);
     return [X, Y, Z];
   }
@@ -2323,28 +2490,29 @@ Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
       xyzN[0] += offset[0];
       xyzN[1] += offset[1];
       xyzN[2] += offset[2];
-      if ((xyzN[0] < 0) || (xyzN[1] < 0) || (xyzN[2] < 0))
-        return;
-      if ((xyzN[0] >= dims[0]) || (xyzN[1] >= dims[1]) || (xyzN[2] >= dims[2]))
+      if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0) return;
+      if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2])
         return;
       let vxT = xyz2vx(xyzN);
       if (img[vxT] !== 1) return;
       img[vxT] = 2; //part of cluster
       Q.push(vxT);
     }
-    testNeighbor([ 0,  0, -1]); //inferior
-    testNeighbor([ 0,  0,  1]); //superior
-    testNeighbor([ 0, -1,  0]); //posterior
-    testNeighbor([ 0,  1,  0]); //anterior
-    testNeighbor([-1,  0,  0]); //left
-    testNeighbor([ 1,  0,  0]); //right
+    testNeighbor([0, 0, -1]); //inferior
+    testNeighbor([0, 0, 1]); //superior
+    testNeighbor([0, -1, 0]); //posterior
+    testNeighbor([0, 1, 0]); //anterior
+    testNeighbor([-1, 0, 0]); //left
+    testNeighbor([1, 0, 0]); //right
     //7. Continue looping until Q is exhausted.
   }
   //8. Return
-  this.drawUndoBitmap = this.drawBitmap.slice();
+  //this.drawUndoBitmap = this.drawBitmap.slice();
   for (let i = 1; i < nxyz; i++)
-    if (img[i] === 2) //if part of cluster
+    if (img[i] === 2)
+      //if part of cluster
       this.drawBitmap[i] = newColor;
+  this.drawAddUndoBitmap();
   this.refreshDrawing(false);
 }; // drawFloodFill()
 
@@ -2474,17 +2642,21 @@ Niivue.prototype.drawPenFilled = function () {
       } // x column
     } //y row
   } //not axial
+  //this.drawUndoBitmaps[this.currentDrawUndoBitmap]
+  console.log();
   if (
     !this.drawFillOverwrites &&
-    this.drawUndoBitmap.length === this.drawBitmap.length
+    this.drawUndoBitmaps[this.currentDrawUndoBitmap].length > 0
   ) {
-    let nv = this.drawUndoBitmap.length;
+    let nv = this.drawBitmap.length;
+    let bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], nv);
     for (let i = 0; i < nv; i++) {
-      if (this.drawUndoBitmap[i] === 0) continue;
-      this.drawBitmap[i] = this.drawUndoBitmap[i];
+      if (bmp[i] === 0) continue;
+      this.drawBitmap[i] = bmp[i];
     }
   }
   this.drawPenFillPts = [];
+  this.drawAddUndoBitmap();
   this.refreshDrawing(false);
 }; // drawPenFilled()
 
@@ -3828,7 +4000,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           this.drawPenAxCorSag = axCorSag;
           this.drawPenFillPts = [];
           this.drawPt(...pt, this.opts.penValue);
-          this.drawUndoBitmap = this.drawBitmap.slice();
         } else {
           if (
             pt[0] === this.drawPenLocation[0] &&
@@ -3841,6 +4012,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         //console.log(pt);
         this.drawPenLocation = pt;
         if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
+        //xxxxxx
         this.refreshDrawing(false);
       }
       this.drawScene();
