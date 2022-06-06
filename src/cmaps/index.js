@@ -51,4 +51,4 @@ export { default as viridis } from "./viridis.json";
 export { default as warm } from "./warm.json";
 export { default as winter } from "./winter.json";
 export { default as x_rain } from "./x_rain.json";
-export { default as freesurfer } from "./freesurfer.json"
+export { default as freesurfer } from "./freesurfer.json";
