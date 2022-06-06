@@ -1252,8 +1252,6 @@ function encodeRLE(data) {
     }
   }
   log.info("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
-  console.log("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
-
   return r.slice(0, rp);
 } // encodeRLE()
 
@@ -4231,14 +4229,21 @@ Niivue.prototype.setInterpolation = function (isNearest) {
   this.drawScene();
 }; // setInterpolation()
 
-Niivue.prototype.calculateMvpMatrixX = function () {
-  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+Niivue.prototype.calculateMvpMatrixX = function (leftTopWidthHeight) {
+  let gl = this.gl;
+  gl.viewport(
+    leftTopWidthHeight[0],
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[2],
+    leftTopWidthHeight[3]
+  );
+  let whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3];
   //pivot from center of objects
   //let scale = this.furthestVertexFromOrigin;
   //let origin = [0,0,0];
   console.log(">>", this.back.dimsRAS, this.back.matRAS);
 
-  let scale = this.furthestFromPivot;
+  let scale = this.furthestFromPivot * 0.5;
   let origin = [0, 0, 0];
   console.log("o", scale);
   let projectionMatrix = mat.mat4.create();
@@ -4292,7 +4297,7 @@ Niivue.prototype.calculateMvpMatrixX = function () {
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
-}; // calculateMvpMatrix
+}; // calculateMvpMatrixX
 
 Niivue.prototype.drawMesh3DX = function (
   isDepthTest = true,
@@ -4302,10 +4307,7 @@ Niivue.prototype.drawMesh3DX = function (
   if (this.meshes.length < 1) return;
   let gl = this.gl;
   let m, modelMtx, normMtx;
-  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(
-    this.volumeObject3D,
-    leftTopWidthHeight
-  );
+  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(leftTopWidthHeight);
 
   gl.enable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -4370,6 +4372,7 @@ Niivue.prototype.drawMesh3DX = function (
   gl.enable(gl.BLEND);
   gl.depthFunc(gl.ALWAYS);
   this.readyForSync = true;
+  //gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 }; //drawMesh3D()
 
 // not included in public docs
@@ -4378,7 +4381,16 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.disable(gl.DEPTH_TEST);
+  /* issue56
+if (axCorSag === this.sliceTypeAxial) {
+gl.clearDepth(0.0);
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+gl.clear(gl.COLOR_BUFFER_BIT);
 
+    this.drawMesh3DX(true,1.0,leftTopWidthHeight);
+      this.setPivot3D();
+  return;
+}*/
   var crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
@@ -4500,9 +4512,8 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
       ],
       "S"
     );
+
   if (axCorSag !== this.sliceTypeAxial) return;
-  //  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  this.setPivot3D();
   gl.viewport(
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
@@ -4512,6 +4523,7 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
+
   this.sync();
 }; // draw2D()
 
