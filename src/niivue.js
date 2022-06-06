@@ -2440,7 +2440,7 @@ Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
   newColor = Math.abs(newColor);
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) return;
-  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[0] || seedXYZ[2] >= dims[0])
+  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2])
     return;
   let nx = dims[0];
   let nxy = nx * dims[1];
@@ -2641,7 +2641,6 @@ Niivue.prototype.drawPenFilled = function () {
     } //y row
   } //not axial
   //this.drawUndoBitmaps[this.currentDrawUndoBitmap]
-  console.log();
   if (
     !this.drawFillOverwrites &&
     this.drawUndoBitmaps[this.currentDrawUndoBitmap].length > 0
