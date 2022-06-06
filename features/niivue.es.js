@@ -1672,6 +1672,18 @@ function __extends(d, b) {
   }
   d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 }
+var __assign = function() {
+  __assign = Object.assign || function __assign2(t) {
+    for (var s, i2 = 1, n = arguments.length; i2 < n; i2++) {
+      s = arguments[i2];
+      for (var p in s)
+        if (Object.prototype.hasOwnProperty.call(s, p))
+          t[p] = s[p];
+    }
+    return t;
+  };
+  return __assign.apply(this, arguments);
+};
 function __values(o) {
   var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i2 = 0;
   if (m)
@@ -1916,6 +1928,22 @@ function reportUnhandledError(err2) {
 }
 function noop() {
 }
+var COMPLETE_NOTIFICATION = function() {
+  return createNotification("C", void 0, void 0);
+}();
+function errorNotification(error) {
+  return createNotification("E", void 0, error);
+}
+function nextNotification(value2) {
+  return createNotification("N", value2, void 0);
+}
+function createNotification(kind, value2, error) {
+  return {
+    kind,
+    value: value2,
+    error
+  };
+}
 var context = null;
 function errorContext(cb) {
   if (config.useDeprecatedSynchronousErrorHandling) {
@@ -1954,24 +1982,24 @@ var Subscriber = function(_super) {
     return new SafeSubscriber(next, error, complete);
   };
   Subscriber2.prototype.next = function(value2) {
-    if (this.isStopped)
-      ;
-    else {
+    if (this.isStopped) {
+      handleStoppedNotification(nextNotification(value2), this);
+    } else {
       this._next(value2);
     }
   };
   Subscriber2.prototype.error = function(err2) {
-    if (this.isStopped)
-      ;
-    else {
+    if (this.isStopped) {
+      handleStoppedNotification(errorNotification(err2), this);
+    } else {
       this.isStopped = true;
       this._error(err2);
     }
   };
   Subscriber2.prototype.complete = function() {
-    if (this.isStopped)
-      ;
-    else {
+    if (this.isStopped) {
+      handleStoppedNotification(COMPLETE_NOTIFICATION, this);
+    } else {
       this.isStopped = true;
       this._complete();
     }
@@ -2083,6 +2111,12 @@ function handleUnhandledError(error) {
 }
 function defaultErrorHandler(err2) {
   throw err2;
+}
+function handleStoppedNotification(notification, subscriber) {
+  var onStoppedNotification = config.onStoppedNotification;
+  onStoppedNotification && timeoutProvider.setTimeout(function() {
+    return onStoppedNotification(notification, subscriber);
+  });
 }
 var EMPTY_OBSERVER = {
   closed: true,
@@ -2361,6 +2395,289 @@ var AnonymousSubject = function(_super) {
   };
   return AnonymousSubject2;
 }(Subject);
+var dateTimestampProvider = {
+  now: function() {
+    return (dateTimestampProvider.delegate || Date).now();
+  },
+  delegate: void 0
+};
+var ReplaySubject = function(_super) {
+  __extends(ReplaySubject2, _super);
+  function ReplaySubject2(_bufferSize, _windowTime, _timestampProvider) {
+    if (_bufferSize === void 0) {
+      _bufferSize = Infinity;
+    }
+    if (_windowTime === void 0) {
+      _windowTime = Infinity;
+    }
+    if (_timestampProvider === void 0) {
+      _timestampProvider = dateTimestampProvider;
+    }
+    var _this = _super.call(this) || this;
+    _this._bufferSize = _bufferSize;
+    _this._windowTime = _windowTime;
+    _this._timestampProvider = _timestampProvider;
+    _this._buffer = [];
+    _this._infiniteTimeWindow = true;
+    _this._infiniteTimeWindow = _windowTime === Infinity;
+    _this._bufferSize = Math.max(1, _bufferSize);
+    _this._windowTime = Math.max(1, _windowTime);
+    return _this;
+  }
+  ReplaySubject2.prototype.next = function(value2) {
+    var _a2 = this, isStopped = _a2.isStopped, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow, _timestampProvider = _a2._timestampProvider, _windowTime = _a2._windowTime;
+    if (!isStopped) {
+      _buffer.push(value2);
+      !_infiniteTimeWindow && _buffer.push(_timestampProvider.now() + _windowTime);
+    }
+    this._trimBuffer();
+    _super.prototype.next.call(this, value2);
+  };
+  ReplaySubject2.prototype._subscribe = function(subscriber) {
+    this._throwIfClosed();
+    this._trimBuffer();
+    var subscription = this._innerSubscribe(subscriber);
+    var _a2 = this, _infiniteTimeWindow = _a2._infiniteTimeWindow, _buffer = _a2._buffer;
+    var copy2 = _buffer.slice();
+    for (var i2 = 0; i2 < copy2.length && !subscriber.closed; i2 += _infiniteTimeWindow ? 1 : 2) {
+      subscriber.next(copy2[i2]);
+    }
+    this._checkFinalizedStatuses(subscriber);
+    return subscription;
+  };
+  ReplaySubject2.prototype._trimBuffer = function() {
+    var _a2 = this, _bufferSize = _a2._bufferSize, _timestampProvider = _a2._timestampProvider, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow;
+    var adjustedBufferSize = (_infiniteTimeWindow ? 1 : 2) * _bufferSize;
+    _bufferSize < Infinity && adjustedBufferSize < _buffer.length && _buffer.splice(0, _buffer.length - adjustedBufferSize);
+    if (!_infiniteTimeWindow) {
+      var now = _timestampProvider.now();
+      var last = 0;
+      for (var i2 = 1; i2 < _buffer.length && _buffer[i2] <= now; i2 += 2) {
+        last = i2;
+      }
+      last && _buffer.splice(0, last + 1);
+    }
+  };
+  return ReplaySubject2;
+}(Subject);
+var Action = function(_super) {
+  __extends(Action2, _super);
+  function Action2(scheduler, work) {
+    return _super.call(this) || this;
+  }
+  Action2.prototype.schedule = function(state, delay) {
+    return this;
+  };
+  return Action2;
+}(Subscription);
+var intervalProvider = {
+  setInterval: function(handler, timeout) {
+    var args = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+      args[_i - 2] = arguments[_i];
+    }
+    var delegate = intervalProvider.delegate;
+    if (delegate === null || delegate === void 0 ? void 0 : delegate.setInterval) {
+      return delegate.setInterval.apply(delegate, __spreadArray([handler, timeout], __read(args)));
+    }
+    return setInterval.apply(void 0, __spreadArray([handler, timeout], __read(args)));
+  },
+  clearInterval: function(handle) {
+    var delegate = intervalProvider.delegate;
+    return ((delegate === null || delegate === void 0 ? void 0 : delegate.clearInterval) || clearInterval)(handle);
+  },
+  delegate: void 0
+};
+var AsyncAction = function(_super) {
+  __extends(AsyncAction2, _super);
+  function AsyncAction2(scheduler, work) {
+    var _this = _super.call(this, scheduler, work) || this;
+    _this.scheduler = scheduler;
+    _this.work = work;
+    _this.pending = false;
+    return _this;
+  }
+  AsyncAction2.prototype.schedule = function(state, delay) {
+    if (delay === void 0) {
+      delay = 0;
+    }
+    if (this.closed) {
+      return this;
+    }
+    this.state = state;
+    var id = this.id;
+    var scheduler = this.scheduler;
+    if (id != null) {
+      this.id = this.recycleAsyncId(scheduler, id, delay);
+    }
+    this.pending = true;
+    this.delay = delay;
+    this.id = this.id || this.requestAsyncId(scheduler, this.id, delay);
+    return this;
+  };
+  AsyncAction2.prototype.requestAsyncId = function(scheduler, _id, delay) {
+    if (delay === void 0) {
+      delay = 0;
+    }
+    return intervalProvider.setInterval(scheduler.flush.bind(scheduler, this), delay);
+  };
+  AsyncAction2.prototype.recycleAsyncId = function(_scheduler, id, delay) {
+    if (delay === void 0) {
+      delay = 0;
+    }
+    if (delay != null && this.delay === delay && this.pending === false) {
+      return id;
+    }
+    intervalProvider.clearInterval(id);
+    return void 0;
+  };
+  AsyncAction2.prototype.execute = function(state, delay) {
+    if (this.closed) {
+      return new Error("executing a cancelled action");
+    }
+    this.pending = false;
+    var error = this._execute(state, delay);
+    if (error) {
+      return error;
+    } else if (this.pending === false && this.id != null) {
+      this.id = this.recycleAsyncId(this.scheduler, this.id, null);
+    }
+  };
+  AsyncAction2.prototype._execute = function(state, _delay) {
+    var errored = false;
+    var errorValue;
+    try {
+      this.work(state);
+    } catch (e) {
+      errored = true;
+      errorValue = e ? e : new Error("Scheduled action threw falsy error");
+    }
+    if (errored) {
+      this.unsubscribe();
+      return errorValue;
+    }
+  };
+  AsyncAction2.prototype.unsubscribe = function() {
+    if (!this.closed) {
+      var _a2 = this, id = _a2.id, scheduler = _a2.scheduler;
+      var actions = scheduler.actions;
+      this.work = this.state = this.scheduler = null;
+      this.pending = false;
+      arrRemove(actions, this);
+      if (id != null) {
+        this.id = this.recycleAsyncId(scheduler, id, null);
+      }
+      this.delay = null;
+      _super.prototype.unsubscribe.call(this);
+    }
+  };
+  return AsyncAction2;
+}(Action);
+var Scheduler = function() {
+  function Scheduler2(schedulerActionCtor, now) {
+    if (now === void 0) {
+      now = Scheduler2.now;
+    }
+    this.schedulerActionCtor = schedulerActionCtor;
+    this.now = now;
+  }
+  Scheduler2.prototype.schedule = function(work, delay, state) {
+    if (delay === void 0) {
+      delay = 0;
+    }
+    return new this.schedulerActionCtor(this, work).schedule(state, delay);
+  };
+  Scheduler2.now = dateTimestampProvider.now;
+  return Scheduler2;
+}();
+var AsyncScheduler = function(_super) {
+  __extends(AsyncScheduler2, _super);
+  function AsyncScheduler2(SchedulerAction, now) {
+    if (now === void 0) {
+      now = Scheduler.now;
+    }
+    var _this = _super.call(this, SchedulerAction, now) || this;
+    _this.actions = [];
+    _this._active = false;
+    _this._scheduled = void 0;
+    return _this;
+  }
+  AsyncScheduler2.prototype.flush = function(action) {
+    var actions = this.actions;
+    if (this._active) {
+      actions.push(action);
+      return;
+    }
+    var error;
+    this._active = true;
+    do {
+      if (error = action.execute(action.state, action.delay)) {
+        break;
+      }
+    } while (action = actions.shift());
+    this._active = false;
+    if (error) {
+      while (action = actions.shift()) {
+        action.unsubscribe();
+      }
+      throw error;
+    }
+  };
+  return AsyncScheduler2;
+}(Scheduler);
+var asyncScheduler = new AsyncScheduler(AsyncAction);
+var async = asyncScheduler;
+function isScheduler(value2) {
+  return value2 && isFunction(value2.schedule);
+}
+function isValidDate(value2) {
+  return value2 instanceof Date && !isNaN(value2);
+}
+function timer(dueTime, intervalOrScheduler, scheduler) {
+  if (dueTime === void 0) {
+    dueTime = 0;
+  }
+  if (scheduler === void 0) {
+    scheduler = async;
+  }
+  var intervalDuration = -1;
+  if (intervalOrScheduler != null) {
+    if (isScheduler(intervalOrScheduler)) {
+      scheduler = intervalOrScheduler;
+    } else {
+      intervalDuration = intervalOrScheduler;
+    }
+  }
+  return new Observable(function(subscriber) {
+    var due = isValidDate(dueTime) ? +dueTime - scheduler.now() : dueTime;
+    if (due < 0) {
+      due = 0;
+    }
+    var n = 0;
+    return scheduler.schedule(function() {
+      if (!subscriber.closed) {
+        subscriber.next(n++);
+        if (0 <= intervalDuration) {
+          this.schedule(void 0, intervalDuration);
+        } else {
+          subscriber.complete();
+        }
+      }
+    }, due);
+  });
+}
+function interval(period, scheduler) {
+  if (period === void 0) {
+    period = 0;
+  }
+  if (scheduler === void 0) {
+    scheduler = asyncScheduler;
+  }
+  if (period < 0) {
+    period = 0;
+  }
+  return timer(period, period, scheduler);
+}
 var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = null, vao = null) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
@@ -109643,6 +109960,219 @@ var defaultFontMetrics = {
   glyphs,
   kerning
 };
+var DEFAULT_WEBSOCKET_CONFIG = {
+  url: "",
+  deserializer: function(e) {
+    return JSON.parse(e.data);
+  },
+  serializer: function(value2) {
+    return JSON.stringify(value2);
+  }
+};
+var WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }";
+var WebSocketSubject = function(_super) {
+  __extends(WebSocketSubject2, _super);
+  function WebSocketSubject2(urlConfigOrSource, destination) {
+    var _this = _super.call(this) || this;
+    _this._socket = null;
+    if (urlConfigOrSource instanceof Observable) {
+      _this.destination = destination;
+      _this.source = urlConfigOrSource;
+    } else {
+      var config2 = _this._config = __assign({}, DEFAULT_WEBSOCKET_CONFIG);
+      _this._output = new Subject();
+      if (typeof urlConfigOrSource === "string") {
+        config2.url = urlConfigOrSource;
+      } else {
+        for (var key2 in urlConfigOrSource) {
+          if (urlConfigOrSource.hasOwnProperty(key2)) {
+            config2[key2] = urlConfigOrSource[key2];
+          }
+        }
+      }
+      if (!config2.WebSocketCtor && WebSocket) {
+        config2.WebSocketCtor = WebSocket;
+      } else if (!config2.WebSocketCtor) {
+        throw new Error("no WebSocket constructor can be found");
+      }
+      _this.destination = new ReplaySubject();
+    }
+    return _this;
+  }
+  WebSocketSubject2.prototype.lift = function(operator) {
+    var sock = new WebSocketSubject2(this._config, this.destination);
+    sock.operator = operator;
+    sock.source = this;
+    return sock;
+  };
+  WebSocketSubject2.prototype._resetState = function() {
+    this._socket = null;
+    if (!this.source) {
+      this.destination = new ReplaySubject();
+    }
+    this._output = new Subject();
+  };
+  WebSocketSubject2.prototype.multiplex = function(subMsg, unsubMsg, messageFilter) {
+    var self2 = this;
+    return new Observable(function(observer) {
+      try {
+        self2.next(subMsg());
+      } catch (err2) {
+        observer.error(err2);
+      }
+      var subscription = self2.subscribe({
+        next: function(x2) {
+          try {
+            if (messageFilter(x2)) {
+              observer.next(x2);
+            }
+          } catch (err2) {
+            observer.error(err2);
+          }
+        },
+        error: function(err2) {
+          return observer.error(err2);
+        },
+        complete: function() {
+          return observer.complete();
+        }
+      });
+      return function() {
+        try {
+          self2.next(unsubMsg());
+        } catch (err2) {
+          observer.error(err2);
+        }
+        subscription.unsubscribe();
+      };
+    });
+  };
+  WebSocketSubject2.prototype._connectSocket = function() {
+    var _this = this;
+    var _a2 = this._config, WebSocketCtor = _a2.WebSocketCtor, protocol = _a2.protocol, url = _a2.url, binaryType = _a2.binaryType;
+    var observer = this._output;
+    var socket = null;
+    try {
+      socket = protocol ? new WebSocketCtor(url, protocol) : new WebSocketCtor(url);
+      this._socket = socket;
+      if (binaryType) {
+        this._socket.binaryType = binaryType;
+      }
+    } catch (e) {
+      observer.error(e);
+      return;
+    }
+    var subscription = new Subscription(function() {
+      _this._socket = null;
+      if (socket && socket.readyState === 1) {
+        socket.close();
+      }
+    });
+    socket.onopen = function(evt) {
+      var _socket = _this._socket;
+      if (!_socket) {
+        socket.close();
+        _this._resetState();
+        return;
+      }
+      var openObserver = _this._config.openObserver;
+      if (openObserver) {
+        openObserver.next(evt);
+      }
+      var queue = _this.destination;
+      _this.destination = Subscriber.create(function(x2) {
+        if (socket.readyState === 1) {
+          try {
+            var serializer = _this._config.serializer;
+            socket.send(serializer(x2));
+          } catch (e) {
+            _this.destination.error(e);
+          }
+        }
+      }, function(err2) {
+        var closingObserver = _this._config.closingObserver;
+        if (closingObserver) {
+          closingObserver.next(void 0);
+        }
+        if (err2 && err2.code) {
+          socket.close(err2.code, err2.reason);
+        } else {
+          observer.error(new TypeError(WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT));
+        }
+        _this._resetState();
+      }, function() {
+        var closingObserver = _this._config.closingObserver;
+        if (closingObserver) {
+          closingObserver.next(void 0);
+        }
+        socket.close();
+        _this._resetState();
+      });
+      if (queue && queue instanceof ReplaySubject) {
+        subscription.add(queue.subscribe(_this.destination));
+      }
+    };
+    socket.onerror = function(e) {
+      _this._resetState();
+      observer.error(e);
+    };
+    socket.onclose = function(e) {
+      if (socket === _this._socket) {
+        _this._resetState();
+      }
+      var closeObserver = _this._config.closeObserver;
+      if (closeObserver) {
+        closeObserver.next(e);
+      }
+      if (e.wasClean) {
+        observer.complete();
+      } else {
+        observer.error(e);
+      }
+    };
+    socket.onmessage = function(e) {
+      try {
+        var deserializer = _this._config.deserializer;
+        observer.next(deserializer(e));
+      } catch (err2) {
+        observer.error(err2);
+      }
+    };
+  };
+  WebSocketSubject2.prototype._subscribe = function(subscriber) {
+    var _this = this;
+    var source = this.source;
+    if (source) {
+      return source.subscribe(subscriber);
+    }
+    if (!this._socket) {
+      this._connectSocket();
+    }
+    this._output.subscribe(subscriber);
+    subscriber.add(function() {
+      var _socket = _this._socket;
+      if (_this._output.observers.length === 0) {
+        if (_socket && (_socket.readyState === 1 || _socket.readyState === 0)) {
+          _socket.close();
+        }
+        _this._resetState();
+      }
+    });
+    return subscriber;
+  };
+  WebSocketSubject2.prototype.unsubscribe = function() {
+    var _socket = this._socket;
+    if (_socket && (_socket.readyState === 1 || _socket.readyState === 0)) {
+      _socket.close();
+    }
+    this._resetState();
+    _super.prototype.unsubscribe.call(this);
+  };
+  return WebSocketSubject2;
+}(AnonymousSubject);
+function webSocket(urlConfigOrSource) {
+  return new WebSocketSubject(urlConfigOrSource);
+}
 const log = new Log();
 const cmapper = new colortables();
 function Niivue(options = {}) {
@@ -109812,6 +110342,12 @@ function Niivue(options = {}) {
       Frag: fragMeshToonShader
     }
   ];
+  this.isController = false;
+  this.isInSession = false;
+  this.sessionKey = "";
+  this.sessionUrl = "";
+  this.serverConnection$ = null;
+  this.interval$ = null;
   this.initialized = false;
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
@@ -109901,6 +110437,85 @@ Niivue.prototype.sync = function() {
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
   this.otherNV.drawScene();
+};
+Niivue.prototype.connectToServer = function(wsServerUrl, sessionName) {
+  const url = new URL(wsServerUrl);
+  url.pathname = "websockets";
+  url.search = "?session=" + sessionName;
+  this.serverConnection$ = webSocket(url.href);
+  console.log(url.href);
+};
+Niivue.prototype.setUpdateInterval = function() {
+  this.interval$ = interval(300);
+  this.interval$.subscribe(() => {
+    this.serverConnection$.next({
+      op: "update",
+      azimuth: this.scene.renderAzimuth,
+      elevation: this.scene.renderElevation,
+      clipPlane: this.scene.clipPlane,
+      zoom: this.volScaleMultiplier,
+      key: this.sessionKey
+    });
+  });
+};
+Niivue.prototype.subscribeToServer = function(sessionCreatedCallback, sessionJoinedCallback) {
+  this.serverConnection$.subscribe({
+    next: (msg2) => {
+      switch (msg2["op"]) {
+        case "update":
+          this.scene.renderAzimuth = msg2["azimuth"];
+          this.scene.renderElevation = msg2["elevation"];
+          this.volScaleMultiplier = msg2["zoom"];
+          this.scene.clipPlane = msg2["clipPlane"];
+          this.drawScene();
+          break;
+        case "create":
+          console.log(msg2);
+          if (!msg2["isError"]) {
+            this.isInSession = true;
+            this.sessionKey = msg2["key"];
+            this.setUpdateInterval();
+          }
+          if (sessionCreatedCallback) {
+            sessionCreatedCallback(msg2["message"], msg2["url"], msg2["key"], msg2["isError"]);
+          }
+          break;
+        case "join":
+          this.isInSession = true;
+          this.isController = msg2["isController"];
+          if (this.isController) {
+            this.setUpdateInterval();
+          }
+          if (sessionJoinedCallback) {
+            sessionJoinedCallback(msg2["message"], msg2["url"], msg2["isController"]);
+          }
+          break;
+      }
+    },
+    error: (err2) => console.log(err2),
+    complete: () => console.log("complete")
+  });
+};
+Niivue.prototype.createSession = function(wsServerUrl, sessionName, sessionCreatedCallback) {
+  this.connectToServer(wsServerUrl, sessionName);
+  this.subscribeToServer(sessionCreatedCallback);
+  this.serverConnection$.next({
+    op: "create"
+  });
+};
+Niivue.prototype.joinSession = function(wsServerUrl, sessionName, key2, sessionJoinedCallback) {
+  this.connectToServer(wsServerUrl, sessionName);
+  this.subscribeToServer(null, sessionJoinedCallback);
+  this.serverConnection$.next({
+    op: "join",
+    key: key2
+  });
+};
+Niivue.prototype.closeSession = function() {
+  this.interval$.complete();
+  this.serverConnection$.complete();
+  this.isInSession = false;
+  this.isController = false;
 };
 Niivue.prototype.arrayEquals = function(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
