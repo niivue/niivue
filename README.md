@@ -8,6 +8,14 @@ The NiiVue package is intented to be used by individuals developing interactive 
 
 [click here to go to the docs web page](https://niivue.github.io/niivue/devdocs/)
 
+### Install NiiVue using npm
+
+Installs without the bloat of the development dependencies or testing frameworks
+
+```
+npm install --only=prod @niivue/niivue
+```
+
 # Active Projects
 
 [See our active projects here](https://github.com/orgs/niivue/projects)
@@ -38,7 +46,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## existing html page
 ```html
-<script src="https://unpkg.com/@niivue/niivue@0.23.1/dist/niivue.umd.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.24.2/dist/niivue.umd.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 
@@ -47,11 +55,6 @@ We host many NiiVue examples via github pages. These are updated and deployed au
     // first object in array is background image
       {
         url: "./some_image.nii.gz",
-        volume: {hdr: null, img: null},
-        name: "some_image",
-        colorMap: "gray",
-        opacity: 1,
-        visible: true,
       }
    ]
 
@@ -84,10 +87,6 @@ export default {
       volumeList: [
         {
           url: "./mni152.nii.gz",
-          volume: {hdr: null, img: null},
-          colorMap: "gray",
-          opacity: 1,
-          visible: true,
         }
       ]
 
@@ -125,10 +124,6 @@ const NiiVue = ({ imageUrl }) => {
     const volumeList = [
       {
         url: imageUrl,
-        volume: { hdr: null, img: null },
-        colorMap: 'gray',
-        opacity: 1,
-        visible: true,
       },
     ]
     const nv = new Niivue()
@@ -168,10 +163,6 @@ export class NiivueViewComponent implements OnInit {
     const volumeList = [
     {
       url,
-      volume: { hdr: null, img: null },
-      colorMap: 'gray',
-      opacity: 1,
-      visible: true,
     },
   ]
     const niivue = new Niivue();

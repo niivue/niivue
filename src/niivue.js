@@ -51,6 +51,9 @@ import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
+import { webSocket } from "rxjs/webSocket";
+import { interval } from "rxjs";
+
 const log = new Log();
 const cmapper = new colortables();
 
@@ -139,6 +142,7 @@ export function Niivue(options = {}) {
   this.fontTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
+  this.thumbnailVisible = false;
   this.bmpTextureWH = 1.0; //thumbnail width/height ratio
   this.passThroughShader = null;
   this.growCutShader = null;
@@ -187,6 +191,8 @@ export function Niivue(options = {}) {
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
+  this.deferredVolumes = [];
+  this.deferredMeshes = [];
   this.meshes = [];
   this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1.0;
@@ -256,6 +262,14 @@ export function Niivue(options = {}) {
     },
   ];
 
+  // multiuser
+  this.isController = false;
+  this.isInSession = false;
+  this.sessionKey = "";
+  this.sessionUrl = "";
+  this.serverConnection$ = null;
+  this.interval$ = null;
+
   this.initialized = false;
   // loop through known Niivue properties
   // if the user supplied opts object has a
@@ -268,6 +282,10 @@ export function Niivue(options = {}) {
 
   if (this.opts.drawingEnabled) {
     this.createEmptyDrawing();
+  }
+
+  if (this.opts.thumbnail.length > 0) {
+    this.thumbnailVisible = true;
   }
 
   this.loadingText = this.opts.loadingText;
@@ -423,11 +441,146 @@ Niivue.prototype.sync = function () {
     this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
   }
   if (this.syncOpts["3d"]) {
-    console.log("3d sync");
     this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
   this.otherNV.drawScene();
+};
+
+// Internal function to connect to web socket server
+Niivue.prototype.connectToServer = function (wsServerUrl, sessionName) {
+  const url = new URL(wsServerUrl);
+  url.pathname = "websockets";
+  url.search = "?session=" + sessionName;
+  this.serverConnection$ = webSocket(url.href);
+  console.log(url.href);
+};
+
+// Internal function to schedule updates to the server
+Niivue.prototype.setUpdateInterval = function () {
+  this.interval$ = interval(300);
+  this.interval$.subscribe(() => {
+    this.serverConnection$.next({
+      op: "update",
+      azimuth: this.scene.renderAzimuth,
+      elevation: this.scene.renderElevation,
+      clipPlane: this.scene.clipPlane,
+      zoom: this.volScaleMultiplier,
+      key: this.sessionKey,
+    });
+  });
+};
+
+// Internal function called after a connection with the server has been made
+Niivue.prototype.subscribeToServer = function (
+  sessionCreatedCallback,
+  sessionJoinedCallback
+) {
+  this.serverConnection$.subscribe({
+    next: (msg) => {
+      switch (msg["op"]) {
+        case "update":
+          this.scene.renderAzimuth = msg["azimuth"];
+          this.scene.renderElevation = msg["elevation"];
+          this.volScaleMultiplier = msg["zoom"];
+          this.scene.clipPlane = msg["clipPlane"];
+          this.drawScene();
+          break;
+
+        case "create":
+          console.log(msg);
+          if (!msg["isError"]) {
+            this.isInSession = true;
+            this.sessionKey = msg["key"];
+            this.setUpdateInterval();
+          }
+          if (sessionCreatedCallback) {
+            sessionCreatedCallback(
+              msg["message"],
+              msg["url"],
+              msg["key"],
+              msg["isError"]
+            );
+          }
+          break;
+
+        case "join":
+          this.isInSession = true;
+          this.isController = msg["isController"];
+          if (this.isController) {
+            this.setUpdateInterval();
+          }
+
+          if (sessionJoinedCallback) {
+            sessionJoinedCallback(
+              msg["message"],
+              msg["url"],
+              msg["isController"]
+            );
+          }
+          break;
+      }
+    }, // Called whenever there is a message from the server.
+    error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
+    complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
+  });
+};
+
+/**
+ * Create a multiuser session
+ * @param {string} wsServerUrl e.g. ws://localhost:3000
+ * @param {string} sessionName
+ * @param {function(string, string, string, boolean):void} sessionCreatedCallback callback after session has been created with message, session url, session key
+ * if there was no error.
+ */
+Niivue.prototype.createSession = function (
+  wsServerUrl,
+  sessionName,
+  sessionCreatedCallback
+) {
+  this.connectToServer(wsServerUrl, sessionName);
+
+  // subscribe to any messages from the server
+  this.subscribeToServer(sessionCreatedCallback);
+
+  // tell the server we want to create a sesion
+  this.serverConnection$.next({
+    op: "create",
+  });
+};
+
+/**
+ * Join a multiuser session
+ * @param {string} wsServerUrl e.g. ws://localhost:3000
+ * @param {string} sessionName
+ * @param {function(string, string, boolean):void} sessionJoinedCallback callback after session has been joined with message, session url and session key
+ */
+Niivue.prototype.joinSession = function (
+  wsServerUrl,
+  sessionName,
+  key,
+  sessionJoinedCallback
+) {
+  this.connectToServer(wsServerUrl, sessionName);
+
+  // subscribe to any messages from the server
+  this.subscribeToServer(null, sessionJoinedCallback);
+
+  // tell the server we want to create a sesion
+  this.serverConnection$.next({
+    op: "join",
+    key: key,
+  });
+};
+
+/**
+ * Close a multiuser session
+ */
+Niivue.prototype.closeSession = function () {
+  this.interval$.complete();
+  this.serverConnection$.complete();
+  this.isInSession = false;
+  this.isController = false;
 };
 
 /* Not documented publicly for now
@@ -1958,8 +2111,11 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       this.loadingText = this.opts.loadingText;
     }
   });
-  if (!this.initialized) {
-    //await this.init();
+
+  if (this.thumbnailVisible) {
+    // defer volume loading until user clicks on canvas with thumbnail image
+    this.deferredVolumes = volumeList;
+    return this;
   }
   this.volumes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -2010,6 +2166,11 @@ Niivue.prototype.loadMeshes = async function (meshList) {
       this.loadingText = this.opts.loadingText;
     }
   });
+  if (this.thumbnailVisible) {
+    // defer loading until user clicks on canvas with thumbnail image
+    this.deferredMeshes = meshList;
+    return this;
+  }
   if (!this.initialized) {
     //await this.init();
   }
@@ -2321,6 +2482,8 @@ Niivue.prototype.drawGrowCut = function () {
     //img16.push(...slice16); // <- will elicit call stack limit error
     img16 = [...img16, ...slice16];
   }
+  let mx = img16[0];
+  for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i]);
   for (let i = 1; i < nv; i++) this.drawBitmap[i] = img16[i];
   //clean up
   //restore textures
@@ -2911,8 +3074,8 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
   this.loadPngAsTexture(fontUrl, 3);
 };
 
-Niivue.prototype.loadBmpTexture = function (bmpUrl) {
-  this.loadPngAsTexture(bmpUrl, 4);
+Niivue.prototype.loadBmpTexture = async function (bmpUrl) {
+  await this.loadPngAsTexture(bmpUrl, 4);
 };
 
 // not included in public docs
@@ -3201,7 +3364,10 @@ Niivue.prototype.init = async function () {
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
 
   await this.initText();
-  if (this.opts.thumbnail.length > 0) this.loadBmpTexture(this.opts.thumbnail);
+  if (this.opts.thumbnail.length > 0) {
+    await this.loadBmpTexture(this.opts.thumbnail);
+    this.thumbnailVisible = true;
+  }
   this.updateGLVolume();
   this.initialized = true;
   this.drawScene();
@@ -3311,7 +3477,6 @@ Niivue.prototype.getDescriptives = function (
     this.volumes[layer].robust_min +
     "\nRobust Max: " +
     this.volumes[layer].robust_max;
-  console.log(str);
   return {
     mean: M,
     stdev: stdev,
@@ -3870,10 +4035,14 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
   this.canvas.focus();
-  if (this.bmpTexture !== null) {
+  if (this.thumbnailVisible) {
     this.gl.deleteTexture(this.bmpTexture);
     this.bmpTexture = null;
+    this.thumbnailVisible = false;
     //the thumbnail is now released, do something profound: actually load the images
+    this.loadVolumes(this.deferredVolumes);
+    this.loadMeshes(this.deferredMeshes);
+    return;
   }
   if (
     this.graph.opacity > 0.0 &&
@@ -4006,7 +4175,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
             return;
           this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
         }
-        //console.log(pt);
         this.drawPenLocation = pt;
         if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
         //xxxxxx
@@ -4243,8 +4411,8 @@ Niivue.prototype.calculateMvpMatrixX = function (leftTopWidthHeight) {
   console.log(">>", this.back.dimsRAS, this.back.matRAS);
 
   let scale = this.furthestFromPivot * 0.5;
+
   let origin = [0, 0, 0];
-  console.log("o", scale);
   let projectionMatrix = mat.mat4.create();
   //scale = (0.8 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
@@ -4710,14 +4878,12 @@ Niivue.prototype.setPivot3D = function () {
   }
   let pivot = mat.vec3.create();
   //pivot is half way between min and max:
-  //console.log('scene extents: ', mn, '..', mx);
   mat.vec3.add(pivot, mn, mx);
   mat.vec3.scale(pivot, pivot, 0.5);
   this.pivot3D = [pivot[0], pivot[1], pivot[2]];
   //find scale of scene
   mat.vec3.subtract(pivot, mx, mn);
   this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
-  //console.log('pivot: '+ this.pivot3D +' furthestFromPivot:' + this.furthestFromPivot);
 }; // setPivot3D()
 
 Niivue.prototype.drawGraphLine = function (
@@ -5307,7 +5473,6 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
 // not included in public docs
 Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   let vox = this.frac2vox(this.scene.crosshairPos);
-  console.log(vox);
   vox[0] += x;
   vox[1] += y;
   vox[2] += z;
