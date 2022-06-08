@@ -40,6 +40,7 @@
       <div>
         <button onclick="prevVolume()">back</button>
         <button onclick="nextVolume()">forward</button>
+        &nbsp;<button onclick="animateVolume()">animate</button>
         <p id="volume">volume: 0</p>
       </div>
     </section>
@@ -76,6 +77,21 @@
         currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1)
         nv1.setFrame4D(nv1.volumes[0].id, currentVol)
         document.getElementById('volume').innerHTML = 'volume '+currentVol
+      }
+      var animationTimer = null;
+      function doAnimate() {
+        currentVol ++;
+        if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id))
+          currentVol = 0;
+        nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+      }
+      function animateVolume() {
+        if (animationTimer == null)
+          animationTimer = setInterval(doAnimate, 100);
+        else {
+          clearInterval(animationTimer);
+          animationTimer = null;
+        }
       }
     </script>
   </body>

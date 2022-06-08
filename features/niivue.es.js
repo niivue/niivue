@@ -787,6 +787,14 @@ float frac2ndc(vec3 frac) {
 }
 void main() {
 	fColor = vec4(0.0,0.0,0.0,0.0);
+	vec4 clipPlaneColorX = clipPlaneColor;
+	//if (clipPlaneColor.a < 0.0)
+	//	clipPlaneColorX.a = - 1.0;
+	bool isColorPlaneInVolume = false;
+	if (clipPlaneColorX.a < 0.0) {
+		isColorPlaneInVolume = true;
+		clipPlaneColorX.a = 0.0;
+	}
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
@@ -818,7 +826,7 @@ void main() {
 	}
 	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
 		if (isClip)
-			fColor += clipPlaneColor;
+			fColor += clipPlaneColorX;
 		return;
 	}
 	fColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -850,8 +858,10 @@ void main() {
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
-	if (isClip) //CR
-		fColor.rgb = mix(fColor.rgb, clipPlaneColor.rgb, clipPlaneColor.a * 0.15);
+	//if (isClip) //CR
+	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
+		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
 	if (overlays < 1.0) return;
 	//overlay pass
 	len = lenNoClip;
@@ -866,7 +876,7 @@ void main() {
 	}
 	if (samplePos.a >= len) {
 		if (isClip && (fColor.a == 0.0))
-			fColor += clipPlaneColor;
+			fColor += clipPlaneColorX;
 		return;
 	}
 	samplePos -= deltaDirFast;
@@ -894,7 +904,7 @@ void main() {
 	}
 	if (samplePos.a >= len) {
 		if (isClip && (fColor.a == 0.0))
-			fColor += clipPlaneColor;
+			fColor += clipPlaneColorX;
 		return;
 	}
 	//if (overFirstHit.a < len)
@@ -1290,15 +1300,13 @@ var fragGrowCutShader = `#version 300 es
   layout(location = 0) out int label;
   layout(location = 1) out int strength;
   in vec2 TexCoord;
-  //out vec4 FragColor;
+  uniform int finalPass;
   uniform float coordZ;
   uniform lowp sampler3D in3D;
   uniform highp isampler3D inputTexture0; // background
   uniform highp isampler3D inputTexture1; // label
   uniform highp isampler3D inputTexture2; // strength
 void main(void) {
-  //int MAX_STRENGTH  = int(255);
-  int MAX_STRENGTH  = int(10000);
   vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
   ivec3 size = textureSize(inputTexture0, 0);
   ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
@@ -1322,6 +1330,29 @@ void main(void) {
       }
     }
   }
+  if (finalPass < 1)
+    return;
+  int ok = 1;
+  ivec4 labelCount = ivec4(0,0,0,0);
+  for (int k = -1; k <= 1; k++)
+    for (int j = -1; j <= 1; j++)
+      for (int i = -1; i <= 1; i++) {
+        ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
+        int ilabel = texelFetch(inputTexture1, neighborIndex, 0).r;
+        if ((ilabel < 0) || (ilabel > 3))
+          ok = 0;
+        else
+          labelCount[ilabel]++;
+      }
+  if (ok != 1) {
+    return;
+  }
+  int maxIdx = 0;
+  for (int i = 1; i < 4; i++) {
+    if (labelCount[i] > labelCount[maxIdx])
+      maxIdx = i;
+  }
+  label = maxIdx;
 }`;
 var vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
@@ -3102,12 +3133,12 @@ var utilities$1 = { exports: {} };
     return data.getFloat64(start, littleEndian);
   };
   nifti3.Utils.getLongAt = function(data, start, littleEndian) {
-    var ctr, array = [], value2 = 0;
+    var ctr, array2 = [], value2 = 0;
     for (ctr = 0; ctr < 8; ctr += 1) {
-      array[ctr] = nifti3.Utils.getByteAt(data, start + ctr, littleEndian);
+      array2[ctr] = nifti3.Utils.getByteAt(data, start + ctr, littleEndian);
     }
-    for (ctr = array.length - 1; ctr >= 0; ctr--) {
-      value2 = value2 * 256 + array[ctr];
+    for (ctr = array2.length - 1; ctr >= 0; ctr--) {
+      value2 = value2 * 256 + array2[ctr];
     }
     return value2;
   };
@@ -7991,24 +8022,24 @@ var utilities = { exports: {} };
     }
     return tmp.buffer;
   };
-  daikon2.Utils.fillBuffer = function(array, buffer2, offset, numBytes) {
+  daikon2.Utils.fillBuffer = function(array2, buffer2, offset, numBytes) {
     var ctr;
     if (numBytes === 1) {
-      for (ctr = 0; ctr < array.length; ctr += 1) {
-        buffer2.setUint8(offset + ctr, array[ctr]);
+      for (ctr = 0; ctr < array2.length; ctr += 1) {
+        buffer2.setUint8(offset + ctr, array2[ctr]);
       }
     } else if (numBytes === 2) {
-      for (ctr = 0; ctr < array.length; ctr += 1) {
-        buffer2.setUint16(offset + ctr * 2, array[ctr], true);
+      for (ctr = 0; ctr < array2.length; ctr += 1) {
+        buffer2.setUint16(offset + ctr * 2, array2[ctr], true);
       }
     }
   };
-  daikon2.Utils.fillBufferRGB = function(array, buffer2, offset) {
-    var r, g, b, ctr, numElements = parseInt(array.length / 3);
+  daikon2.Utils.fillBufferRGB = function(array2, buffer2, offset) {
+    var r, g, b, ctr, numElements = parseInt(array2.length / 3);
     for (ctr = 0; ctr < numElements; ctr += 1) {
-      r = array[ctr * 3];
-      g = array[ctr * 3 + 1];
-      b = array[ctr * 3 + 2];
+      r = array2[ctr * 3];
+      g = array2[ctr * 3 + 1];
+      b = array2[ctr * 3 + 2];
       buffer2.setUint8(offset + ctr, parseInt((r + b + g) / 3), true);
     }
   };
@@ -14083,9 +14114,9 @@ var jpegBaseline = { exports: {} };
         }
         function readDataBlock() {
           var length2 = readUint16();
-          var array = data.subarray(offset, offset + length2 - 2);
-          offset += array.length;
-          return array;
+          var array2 = data.subarray(offset, offset + length2 - 2);
+          offset += array2.length;
+          return array2;
         }
         function prepareComponents(frame2) {
           var mcusPerLine = Math.ceil(frame2.samplesPerLine / 8 / frame2.maxH);
@@ -18793,10 +18824,10 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
       return u8array;
     }
     Module["intArrayFromString"] = intArrayFromString;
-    function intArrayToString(array) {
+    function intArrayToString(array2) {
       var ret = [];
-      for (var i2 = 0; i2 < array.length; i2++) {
-        var chr = array[i2];
+      for (var i2 = 0; i2 < array2.length; i2++) {
+        var chr = array2[i2];
         if (chr > 255) {
           chr &= 255;
         }
@@ -18806,18 +18837,18 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
     }
     Module["intArrayToString"] = intArrayToString;
     function writeStringToMemory(string, buffer2, dontAddNull) {
-      var array = intArrayFromString(string, dontAddNull);
+      var array2 = intArrayFromString(string, dontAddNull);
       var i2 = 0;
-      while (i2 < array.length) {
-        var chr = array[i2];
+      while (i2 < array2.length) {
+        var chr = array2[i2];
         HEAP8[buffer2 + i2 >> 0] = chr;
         i2 = i2 + 1;
       }
     }
     Module["writeStringToMemory"] = writeStringToMemory;
-    function writeArrayToMemory(array, buffer2) {
-      for (var i2 = 0; i2 < array.length; i2++) {
-        HEAP8[buffer2++ >> 0] = array[i2];
+    function writeArrayToMemory(array2, buffer2) {
+      for (var i2 = 0; i2 < array2.length; i2++) {
+        HEAP8[buffer2++ >> 0] = array2[i2];
       }
     }
     Module["writeArrayToMemory"] = writeArrayToMemory;
@@ -18991,9 +19022,9 @@ var require$$1 = /* @__PURE__ */ getAugmentedNamespace(__viteBrowserExternal$1);
     function __isLeapYear(year) {
       return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
     }
-    function __arraySum(array, index) {
+    function __arraySum(array2, index) {
       var sum = 0;
-      for (var i2 = 0; i2 <= index; sum += array[i2++])
+      for (var i2 = 0; i2 <= index; sum += array2[i2++])
         ;
       return sum;
     }
@@ -103457,7 +103488,7 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
   if (nVol4D !== this.nFrame4D)
     console.log("This header does not match voxel data", this.hdr, imgRaw.byteLength);
-  if (this.hdr.intent_code === 1007 && this.nFrame4D === 3 && this.hdr.datatypeCode === this.DT_FLOAT) {
+  if ((this.hdr.intent_code === 1007 || this.hdr.intent_code === 2003) && this.nFrame4D === 3 && this.hdr.datatypeCode === this.DT_FLOAT) {
     let tmp = new Float32Array(imgRaw);
     let f32 = tmp.slice();
     this.hdr.datatypeCode = this.DT_RGB;
@@ -104085,11 +104116,12 @@ NVImage.prototype.readMGH = function(buffer2) {
   let hdr = this.hdr;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  var reader = new DataView(buffer2);
   var raw = buffer2;
+  var reader = new DataView(raw);
   if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-    var raw = decompressSync(new Uint8Array(buffer2));
-    reader = new DataView(raw.buffer);
+    let raw8 = decompressSync(new Uint8Array(buffer2));
+    raw = raw8.buffer;
+    reader = new DataView(raw);
   }
   let version = reader.getInt32(0, false);
   let width = reader.getInt32(4, false);
@@ -107070,19 +107102,30 @@ NVMesh.readPLY = function(buffer2) {
     }
     let indices2 = new Int32Array(nface * 3);
     let f = 0;
-    let isTriangular2 = true;
     for (var i2 = 0; i2 < nface; i2++) {
       line = readStr();
       let items = line.split(/\s/);
-      if (parseInt(items[0]) > 3)
-        isTriangular2 = false;
-      indices2[f] = parseInt(items[1]);
-      indices2[f + 1] = parseInt(items[2]);
-      indices2[f + 2] = parseInt(items[3]);
-      f += 3;
+      let nTri = parseInt(items[0]) - 2;
+      if (nTri < 1)
+        break;
+      if (f + nTri * 3 > indices2.length) {
+        var c2 = new Int32Array(indices2.length + indices2.length);
+        c2.set(indices2);
+        indices2 = c2.slice();
+      }
+      let idx0 = parseInt(items[1]);
+      let idx1 = parseInt(items[2]);
+      for (let j2 = 0; j2 < nTri; j2++) {
+        let idx2 = parseInt(items[3 + j2]);
+        indices2[f + 0] = idx0;
+        indices2[f + 1] = idx1;
+        indices2[f + 2] = idx2;
+        idx1 = idx2;
+        f += 3;
+      }
     }
-    if (!isTriangular2)
-      console.log("Only able to read PLY meshes limited to triangles.");
+    if (indices2.length !== f)
+      indices2 = indices2.slice(0, f);
     return {
       positions: positions2,
       indices: indices2
@@ -107273,12 +107316,21 @@ NVMesh.readOBJ = function(buffer2) {
     }
     if (str[0] === "f") {
       let items = str.split(" ");
+      let new_t = items.length - 3;
+      if (new_t < 1)
+        break;
       let tn = items[1].split("/");
-      t.push(parseInt(tn - 1));
+      let t0 = parseInt(tn[0]) - 1;
       tn = items[2].split("/");
-      t.push(parseInt(tn - 1));
-      tn = items[3].split("/");
-      t.push(parseInt(tn - 1));
+      let tprev = parseInt(tn[0]) - 1;
+      for (let j = 0; j < new_t; j++) {
+        tn = items[3 + j].split("/");
+        let tcurr = parseInt(tn[0]) - 1;
+        t.push(t0);
+        t.push(tprev);
+        t.push(tcurr);
+        tprev = tcurr;
+      }
     }
   }
   var positions = new Float32Array(pts);
@@ -110208,7 +110260,9 @@ function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null;
   this.drawBitmap = null;
-  this.drawUndoBitmap = null;
+  this.maxDrawUndoBitmaps = 8;
+  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps;
+  this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
@@ -110571,13 +110625,13 @@ Niivue.prototype.mouseRightButtonHandler = function(e) {
   this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
-Niivue.prototype.calculateMinMaxVoxIdx = function(array) {
-  if (array.length > 2) {
+Niivue.prototype.calculateMinMaxVoxIdx = function(array2) {
+  if (array2.length > 2) {
     throw new Error("array must not contain more than two values");
   }
   return [
-    Math.floor(Math.min(array[0], array[1])),
-    Math.floor(Math.max(array[0], array[1]))
+    Math.floor(Math.min(array2[0], array2[1])),
+    Math.floor(Math.max(array2[0], array2[1]))
   ];
 };
 function intensityRaw2Scaled(hdr, raw) {
@@ -110642,6 +110696,8 @@ Niivue.prototype.mouseUpListener = function() {
   this.scene.mouseButtonLeftDown = false;
   if (this.drawPenFillPts.length > 0)
     this.drawPenFilled();
+  else if (this.drawPenAxCorSag >= 0)
+    this.drawAddUndoBitmap();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
   if (this.isDragging) {
@@ -110955,9 +111011,112 @@ Niivue.prototype.getVolumeIndexByID = function(id) {
   }
   return -1;
 };
+function encodeRLE(data) {
+  let dl = data.length;
+  let dp = 0;
+  let r = new Uint8Array(dl + Math.ceil(0.01 * dl));
+  let rI = new Int8Array(r.buffer);
+  let rp = 0;
+  while (dp < dl) {
+    let v = data[dp];
+    dp++;
+    let rl = 1;
+    while (rl < 129 && dp < dl && data[dp] === v) {
+      dp++;
+      rl++;
+    }
+    if (rl > 1) {
+      rI[rp] = -rl + 1;
+      rp++;
+      r[rp] = v;
+      rp++;
+      continue;
+    }
+    while (dp < dl) {
+      if (rl > 127)
+        break;
+      if (dp + 2 < dl) {
+        if (v !== data[dp] && data[dp + 2] === data[dp] && data[dp + 1] === data[dp])
+          break;
+      }
+      v = data[dp];
+      dp++;
+      rl++;
+    }
+    r[rp] = rl - 1;
+    rp++;
+    for (let i2 = 0; i2 < rl; i2++) {
+      r[rp] = data[dp - rl + i2];
+      rp++;
+    }
+  }
+  log.info("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
+  return r.slice(0, rp);
+}
+function decodeRLE(rle2, decodedlen) {
+  let r = new Uint8Array(rle2.buffer);
+  let rI = new Int8Array(r.buffer);
+  let rp = 0;
+  let d = new Uint8Array(decodedlen);
+  let dp = 0;
+  while (rp < r.length) {
+    let hdr = rI[rp];
+    rp++;
+    if (hdr < 0) {
+      let v = rI[rp];
+      rp++;
+      for (let i2 = 0; i2 < 1 - hdr; i2++) {
+        d[dp] = v;
+        dp++;
+      }
+    } else {
+      for (let i2 = 0; i2 < hdr + 1; i2++) {
+        d[dp] = rI[rp];
+        rp++;
+        dp++;
+      }
+    }
+  }
+  return d;
+}
+Niivue.prototype.drawAddUndoBitmap = async function(fnm) {
+  if (!this.drawBitmap || this.drawBitmap.length < 1) {
+    console.log("drawAddUndoBitmap error: No drawing open");
+    return false;
+  }
+  this.currentDrawUndoBitmap++;
+  if (this.currentDrawUndoBitmap >= this.maxDrawUndoBitmaps)
+    this.currentDrawUndoBitmap = 0;
+  this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap);
+};
+Niivue.prototype.drawClearAllUndoBitmaps = async function() {
+  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps;
+  if (this.drawUndoBitmaps.length < 1)
+    return;
+  for (let i2 = this.drawUndoBitmaps.length - 1; i2 >= 0; i2--)
+    array[i2] = [];
+};
+Niivue.prototype.drawUndo = function() {
+  if (this.drawUndoBitmaps.length < 1) {
+    console.log("undo bitmaps not loaded");
+    return;
+  }
+  this.currentDrawUndoBitmap--;
+  if (this.currentDrawUndoBitmap < 0)
+    this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1;
+  if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length)
+    this.currentDrawUndoBitmap = 0;
+  if (this.drawUndoBitmaps[this.currentDrawUndoBitmap].length < 2) {
+    console.log("drawUndo is misbehaving");
+    return;
+  }
+  this.drawBitmap = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], this.drawBitmap.length);
+  this.refreshDrawing(true);
+};
 Niivue.prototype.loadDrawing = async function(fnm) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
+  this.drawClearAllUndoBitmaps();
   let volume = await NVImage.loadFromUrl({ url: fnm });
   let dims = volume.hdr.dims;
   if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
@@ -110968,7 +111127,6 @@ Niivue.prototype.loadDrawing = async function(fnm) {
     console.log("Drawings should be UINT8");
   let perm = volume.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
-  this.drawUndoBitmap = null;
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
   let layout = [0, 0, 0];
@@ -111020,6 +111178,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
       }
     }
   }
+  this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
 };
@@ -111313,6 +111472,8 @@ Niivue.prototype.setScale = function(scale2) {
 };
 Niivue.prototype.setClipPlaneColor = function(color) {
   this.opts.clipPlaneColor = color;
+  this.renderShader.use(this.gl);
+  this.gl.uniform4fv(this.renderShader.uniforms["clipPlaneColor"], this.opts.clipPlaneColor);
   this.drawScene();
 };
 Niivue.prototype.overlayRGBA = function(volume) {
@@ -111456,7 +111617,8 @@ Niivue.prototype.createEmptyDrawing = function() {
     return;
   let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
   this.drawBitmap = new Uint8Array(vx);
-  this.drawUndoBitmap = null;
+  this.drawClearAllUndoBitmaps();
+  this.drawAddUndoBitmap();
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
   this.refreshDrawing(false);
 };
@@ -111533,16 +111695,6 @@ function img2ras16(volume) {
   }
   return img16;
 }
-Niivue.prototype.drawUndo = function() {
-  let hdr = this.back.hdr;
-  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-  if (this.drawUndoBitmap.length !== nv || this.drawBitmap.length !== nv) {
-    console.log("bitmap dims are wrong");
-    return;
-  }
-  this.drawBitmap = this.drawUndoBitmap.slice();
-  this.refreshDrawing(true);
-};
 Niivue.prototype.drawGrowCut = function() {
   let hdr = this.back.hdr;
   let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
@@ -111550,7 +111702,6 @@ Niivue.prototype.drawGrowCut = function() {
     console.log("bitmap dims are wrong");
     return;
   }
-  this.drawUndoBitmap = this.drawBitmap.slice();
   let gl = this.gl;
   let fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
@@ -111563,16 +111714,19 @@ Niivue.prototype.drawGrowCut = function() {
     img16[i2] = this.drawBitmap[i2];
   let label0 = this.r16Tex(null, gl.TEXTURE6, this.back.dims, img16);
   let label1 = this.r16Tex(null, gl.TEXTURE7, this.back.dims, img16);
+  let kMAX_STRENGTH = 1e4;
   for (let i2 = 1; i2 < nv; i2++)
     if (img16[i2] > 0)
-      img16[i2] = 1e4;
+      img16[i2] = kMAX_STRENGTH;
   let strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16);
   let strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16);
   this.gl.bindVertexArray(this.genericVAO);
   let shader = this.growCutShader;
   shader.use(gl);
+  let iterations = 128;
+  gl.uniform1i(shader.uniforms["finalPass"], 0);
   gl.uniform1i(shader.uniforms["inputTexture0"], 3);
-  for (let j = 0; j < 45; j++) {
+  for (let j = 0; j < iterations; j++) {
     gl.uniform1i(shader.uniforms["inputTexture1"], 6);
     gl.uniform1i(shader.uniforms["inputTexture2"], 4);
     for (let i2 = 0; i2 < this.back.dims[3]; i2++) {
@@ -111586,6 +111740,8 @@ Niivue.prototype.drawGrowCut = function() {
         console.error("Incomplete framebuffer");
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
+    if (j === iterations - 1)
+      gl.uniform1i(shader.uniforms["finalPass"], 1);
     gl.uniform1i(shader.uniforms["inputTexture1"], 7);
     gl.uniform1i(shader.uniforms["inputTexture2"], 5);
     for (let i2 = 0; i2 < this.back.dims[3]; i2++) {
@@ -111601,8 +111757,8 @@ Niivue.prototype.drawGrowCut = function() {
     }
   }
   gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-  let readAttach = gl.COLOR_ATTACHMENT0;
-  let readTex = label1;
+  let readAttach = gl.COLOR_ATTACHMENT1;
+  let readTex = label0;
   gl.readBuffer(readAttach);
   const format = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
   const type2 = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
@@ -111638,6 +111794,7 @@ Niivue.prototype.drawGrowCut = function() {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.deleteFramebuffer(fb);
+  this.drawAddUndoBitmap();
   this.refreshDrawing(true);
 };
 Niivue.prototype.drawPt = function(x2, y, z, penValue) {
@@ -111720,6 +111877,74 @@ Niivue.prototype.drawLine = function(ptA, ptB, penValue) {
       this.drawPt(x1, y1, z1, penValue);
     }
   }
+};
+Niivue.prototype.drawFloodFill = function(seedXYZ, newColor = 0) {
+  newColor = Math.abs(newColor);
+  let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
+  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0)
+    return;
+  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2])
+    return;
+  let nx = dims[0];
+  let nxy = nx * dims[1];
+  let nxyz = nxy * dims[2];
+  let img = this.drawBitmap.slice();
+  if (img.length !== nxy * dims[2])
+    return;
+  function xyz2vx(pt) {
+    return pt[0] + pt[1] * nx + pt[2] * nxy;
+  }
+  function vx2xyz(vx) {
+    let Z = Math.floor(vx / nxy);
+    let Y = Math.floor((vx - Z * nxy) / nx);
+    let X = Math.floor(vx % nx);
+    return [X, Y, Z];
+  }
+  let seedVx = xyz2vx(seedXYZ);
+  let seedColor = img[seedVx];
+  if (seedColor === newColor) {
+    console.log("drawFloodFill selected voxel is already desired color");
+    return;
+  }
+  for (let i2 = 1; i2 < nxyz; i2++) {
+    img[i2] = 0;
+    if (this.drawBitmap[i2] === seedColor)
+      img[i2] = 1;
+  }
+  let Q = [];
+  Q.push(seedVx);
+  img[seedVx] = 2;
+  while (Q.length > 0) {
+    let testNeighbor = function(offset) {
+      let xyzN = xyz.slice();
+      xyzN[0] += offset[0];
+      xyzN[1] += offset[1];
+      xyzN[2] += offset[2];
+      if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0)
+        return;
+      if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2])
+        return;
+      let vxT = xyz2vx(xyzN);
+      if (img[vxT] !== 1)
+        return;
+      img[vxT] = 2;
+      Q.push(vxT);
+    };
+    let vx = Q[0];
+    Q.shift();
+    let xyz = vx2xyz(vx);
+    testNeighbor([0, 0, -1]);
+    testNeighbor([0, 0, 1]);
+    testNeighbor([0, -1, 0]);
+    testNeighbor([0, 1, 0]);
+    testNeighbor([-1, 0, 0]);
+    testNeighbor([1, 0, 0]);
+  }
+  for (let i2 = 1; i2 < nxyz; i2++)
+    if (img[i2] === 2)
+      this.drawBitmap[i2] = newColor;
+  this.drawAddUndoBitmap();
+  this.refreshDrawing(false);
 };
 Niivue.prototype.drawPenFilled = function() {
   let nPts = this.drawPenFillPts.length;
@@ -111836,15 +112061,17 @@ Niivue.prototype.drawPenFilled = function() {
       }
     }
   }
-  if (!this.drawFillOverwrites && this.drawUndoBitmap.length === this.drawBitmap.length) {
-    let nv = this.drawUndoBitmap.length;
+  if (!this.drawFillOverwrites && this.drawUndoBitmaps[this.currentDrawUndoBitmap].length > 0) {
+    let nv = this.drawBitmap.length;
+    let bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], nv);
     for (let i2 = 0; i2 < nv; i2++) {
-      if (this.drawUndoBitmap[i2] === 0)
+      if (bmp[i2] === 0)
         continue;
-      this.drawBitmap[i2] = this.drawUndoBitmap[i2];
+      this.drawBitmap[i2] = bmp[i2];
     }
   }
   this.drawPenFillPts = [];
+  this.drawAddUndoBitmap();
   this.refreshDrawing(false);
 };
 Niivue.prototype.closeDrawing = function() {
@@ -112562,11 +112789,14 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
       }
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
+        if (this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
+          this.drawFloodFill(pt, Math.abs(this.opts.penValue));
+          return;
+        }
         if (isNaN(this.drawPenLocation[0])) {
           this.drawPenAxCorSag = axCorSag;
           this.drawPenFillPts = [];
           this.drawPt(...pt, this.opts.penValue);
-          this.drawUndoBitmap = this.drawBitmap.slice();
         } else {
           if (pt[0] === this.drawPenLocation[0] && pt[1] === this.drawPenLocation[1] && pt[2] === this.drawPenLocation[2])
             return;
@@ -112722,9 +112952,12 @@ Niivue.prototype.setInterpolation = function(isNearest) {
     this.updateInterpolation(1);
   this.drawScene();
 };
-Niivue.prototype.calculateMvpMatrixX = function() {
-  let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
-  let scale2 = this.furthestFromPivot;
+Niivue.prototype.calculateMvpMatrixX = function(leftTopWidthHeight) {
+  let gl = this.gl;
+  gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  let whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3];
+  console.log(">>", this.back.dimsRAS, this.back.matRAS);
+  let scale2 = this.furthestFromPivot * 0.5;
   let origin = [0, 0, 0];
   let projectionMatrix = create$2();
   if (whratio < 1)
@@ -112755,7 +112988,7 @@ Niivue.prototype.drawMesh3DX = function(isDepthTest = true, alpha = 1, leftTopWi
     return;
   let gl = this.gl;
   let m, modelMtx, normMtx;
-  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(this.volumeObject3D, leftTopWidthHeight);
+  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(leftTopWidthHeight);
   gl.enable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.disable(gl.BLEND);
@@ -112888,7 +113121,6 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag) {
     ], "S");
   if (axCorSag !== this.sliceTypeAxial)
     return;
-  this.setPivot3D();
   gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
