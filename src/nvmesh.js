@@ -1394,7 +1394,8 @@ NVMesh.readVTK = function (buffer) {
   if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
   line = readStr(); //2nd line comment
   line = readStr(); //3rd line ASCII/BINARY
-  if (line.startsWith("ASCII")) return readTxtVTK(buffer); //from NiiVue
+  if (line.startsWith("ASCII")) return readTxtVTK(buffer);
+  //from NiiVue
   else if (!line.startsWith("BINARY"))
     alert("Invalid VTK image, expected ASCII or BINARY", line);
   line = readStr(); //5th line "DATASET POLYDATA"
@@ -1754,18 +1755,28 @@ NVMesh.readPLY = function (buffer) {
     }
     let indices = new Int32Array(nface * 3);
     let f = 0;
-    let isTriangular = true;
     for (var i = 0; i < nface; i++) {
       line = readStr();
       let items = line.split(/\s/);
-      if (parseInt(items[0]) > 3) isTriangular = false;
-      indices[f] = parseInt(items[1]);
-      indices[f + 1] = parseInt(items[2]);
-      indices[f + 2] = parseInt(items[3]);
-      f += 3;
+      let nTri = parseInt(items[0]) - 2;
+      if (nTri < 1) break; //error
+      if (f + nTri * 3 > indices.length) {
+        var c = new Int32Array(indices.length + indices.length);
+        c.set(indices);
+        indices = c.slice();
+      }
+      let idx0 = parseInt(items[1]);
+      let idx1 = parseInt(items[2]);
+      for (let j = 0; j < nTri; j++) {
+        let idx2 = parseInt(items[3 + j]);
+        indices[f + 0] = idx0;
+        indices[f + 1] = idx1;
+        indices[f + 2] = idx2;
+        idx1 = idx2;
+        f += 3;
+      }
     }
-    if (!isTriangular)
-      console.log("Only able to read PLY meshes limited to triangles.");
+    if (indices.length !== f) indices = indices.slice(0, f);
     return {
       positions,
       indices,
@@ -1963,12 +1974,20 @@ NVMesh.readOBJ = function (buffer) {
     }
     if (str[0] === "f") {
       let items = str.split(" ");
+      let new_t = items.length - 3; //number of new triangles created
+      if (new_t < 1) break; //error
       let tn = items[1].split("/");
-      t.push(parseInt(tn - 1));
+      let t0 = parseInt(tn[0]) - 1; //first vertex
       tn = items[2].split("/");
-      t.push(parseInt(tn - 1));
-      tn = items[3].split("/");
-      t.push(parseInt(tn - 1));
+      let tprev = parseInt(tn[0]) - 1; //previous vertex
+      for (let j = 0; j < new_t; j++) {
+        tn = items[3 + j].split("/");
+        let tcurr = parseInt(tn[0]) - 1; //current vertex
+        t.push(t0);
+        t.push(tprev);
+        t.push(tcurr);
+        tprev = tcurr;
+      }
     }
   } //for all lines
   var positions = new Float32Array(pts);

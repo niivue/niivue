@@ -71,6 +71,8 @@
     </section>
      <!-- <script type="module" src="./index.js">
     </script> -->
+    <script src="./niivue.umd.js">
+    </script>
     <script type="module" async>
     
     
@@ -147,9 +149,6 @@
         nv1.saveImage('test.nii', true);
       }
 
-      import { Niivue } from './niivue.js'
-      import {NVImage} from './nvimage.js'
-      import {NVMesh} from './nvmesh.js'
       let query = window.location.search
       const params = new URLSearchParams(query);
       let url = params.get('url')
@@ -157,7 +156,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: url ? url : "../demos/images/mask.nii",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
@@ -167,7 +166,7 @@
         },
 
       ]
-      var nv1 = new Niivue({
+      var nv1 = new niivue.Niivue({
         logging: false,
         show3Dcrosshair: true,
         loadingText: 'there are no images',
@@ -177,10 +176,11 @@
       })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
+      //
       //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
       nv1.getDescriptives(0, false);
-      await nv1.loadDrawing("../demos/images/lesion.nii.gz");
+      await nv1.loadDrawing("../images/lesion.nii.gz");
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
