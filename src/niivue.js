@@ -1,6 +1,6 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
-import { vertSliceShader, fragSliceShader } from "./shader-srcs.js";
+import { vertSliceMMShader, fragSliceMMShader, vertSliceShader, fragSliceShader } from "./shader-srcs.js";
 import {
   vertGraphShader,
   vertLineShader,
@@ -130,6 +130,7 @@ export function Niivue(options = {}) {
   this.overlayTexture = null;
   this.overlayTextureID = [];
   this.sliceShader = null;
+  this.sliceMMShader = null;
   this.lineShader = null;
   this.graphShader = null;
   this.renderShader = null;
@@ -3108,11 +3109,21 @@ Niivue.prototype.init = async function () {
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
   this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
-  //this.gl.uniform1i(this.sliceShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
+  console.log(this.sliceShader);
+  // slice mm shader
+  this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader);
+  this.sliceMMShader.use(this.gl);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["volume"], 0);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["overlay"], 2);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
+  this.gl.uniform1f(this.sliceMMShader.uniforms["drawOpacity"], this.drawOpacity);
+
   // line shader (crosshair)
+
+
   this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
   this.graphShader = new Shader(this.gl, vertGraphShader, fragLineShader);
   // render shader (3D)
@@ -4228,47 +4239,32 @@ Niivue.prototype.setInterpolation = function (isNearest) {
   this.drawScene();
 }; // setInterpolation()
 
-Niivue.prototype.calculateMvpMatrixX = function (leftTopWidthHeight) {
+Niivue.prototype.calculateMvpMatrixX = function (leftTopWidthHeight, mn, mx, axCorSag) {
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180.0);
+  }
   let gl = this.gl;
-  gl.viewport(
+gl.viewport(
     leftTopWidthHeight[0],
-    leftTopWidthHeight[1],
+    this.gl.canvas.clientHeight - (leftTopWidthHeight[1]+leftTopWidthHeight[3]),//lower numbers near bottom
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  let whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3];
-  //pivot from center of objects
-  //let scale = this.furthestVertexFromOrigin;
-  //let origin = [0,0,0];
-  console.log(">>", this.back.dimsRAS, this.back.matRAS);
 
   let scale = this.furthestFromPivot * 0.5;
   let origin = [0, 0, 0];
-  console.log("o", scale);
+  //console.log("o", scale);
   let projectionMatrix = mat.mat4.create();
-  //scale = (0.8 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
-  if (whratio < 1)
-    //tall window: "portrait" mode, width constrains
-    mat.mat4.ortho(
-      projectionMatrix,
-      -scale,
-      scale,
-      -scale / whratio,
-      scale / whratio,
-      0.01,
-      scale * 8.0
-    );
-  //Wide window: "landscape" mode, height constrains
-  else
-    mat.mat4.ortho(
-      projectionMatrix,
-      -scale * whratio,
-      scale * whratio,
-      -scale,
-      scale,
-      0.01,
-      scale * 8.0
-    );
+  //ortho(out, left, right, bottom, top, near, far)
+  mat.mat4.ortho(
+    projectionMatrix,
+    mn[0],
+    mx[0],
+    mn[1],
+    mx[1],
+    0.01,
+    scale * 8.0
+  );
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
   //push the model away from the camera so camera not inside model
@@ -4277,6 +4273,80 @@ Niivue.prototype.calculateMvpMatrixX = function (leftTopWidthHeight) {
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
   if (this.position)
     mat.mat4.translate(modelMatrix, modelMatrix, this.position);
+  let elev = 0;
+  let azi = 0;
+  if (axCorSag == 0) //axial
+    elev = 90;
+    //azi = 0;
+  else if (axCorSag == 2) //sagittal
+    azi = 90;
+  if (this.opts.isRadiologicalConvention) {
+    mat.mat4.rotateY(
+      modelMatrix,
+      modelMatrix,
+      deg2rad(180)
+    );
+  }
+  mat.mat4.rotateX(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(270 - elev)
+  );
+  //apply azimuth
+  mat.mat4.rotateZ(
+    modelMatrix,
+    modelMatrix,
+    deg2rad(azi - 180)
+  );
+  /*
+  let rotX = 0;
+  let rotY = 0;
+  if (axCorSag < 2) {
+    if (axCorSag == 1) { //coronal
+      if (this.opts.isRadiologicalConvention)
+        rotX = -90;
+      else {
+        rotY = 180
+        rotX = 90
+      }
+    } else{ //axial
+      if (!this.opts.isRadiologicalConvention) 
+        rotY = 180;
+    }
+    mat.mat4.rotateX(
+      modelMatrix,
+      modelMatrix,
+      deg2rad(rotX)
+    );
+    mat.mat4.rotateY(
+      modelMatrix,
+      modelMatrix,
+      deg2rad(rotY)
+    );
+  } else { //sagittal
+    rotX = 270;
+    if (this.opts.isRadiologicalConvention)
+      rotY = -90
+    else
+      rotY = 90    
+    mat.mat4.rotateY(
+      modelMatrix,
+      modelMatrix,
+      deg2rad(rotY)
+    );
+    mat.mat4.rotateX(
+      modelMatrix,
+      modelMatrix,
+      deg2rad(rotX)
+    );
+  }*/
+/*
+  if (axCorSag == 0) { //axial
+    if (!this.opts.isRadiologicalConvention) 
+      rotY = 180;
+  }*/
+
+
 
   mat.mat4.translate(modelMatrix, modelMatrix, [
     -origin[0],
@@ -4301,19 +4371,94 @@ Niivue.prototype.calculateMvpMatrixX = function (leftTopWidthHeight) {
 Niivue.prototype.drawMesh3DX = function (
   isDepthTest = true,
   alpha = 1.0,
-  leftTopWidthHeight
+  leftTopWidthHeight,
+  axCorSag
 ) {
-  if (this.meshes.length < 1) return;
+  let sliceFrac = this.scene.crosshairPos[2];
+  let v00z = this.frac2mm([0, 0, sliceFrac]);
+  let v01z = this.frac2mm([0, 1, sliceFrac]);
+  let v10z = this.frac2mm([1, 0, sliceFrac]);
+  let v11z = this.frac2mm([1, 1, sliceFrac]);
+  if (axCorSag === this.sliceTypeCoronal) {
+    sliceFrac = this.scene.crosshairPos[1];
+    v00z = this.frac2mm([0, sliceFrac, 0]);
+    v01z = this.frac2mm([0, sliceFrac, 1]);
+    v10z = this.frac2mm([1, sliceFrac, 0]);
+    v11z = this.frac2mm([1, sliceFrac, 1]);
+  }
+  if (axCorSag === this.sliceTypeSagittal) {
+    sliceFrac = this.scene.crosshairPos[0];
+    v00z = this.frac2mm([sliceFrac, 0,1]);
+    v01z = this.frac2mm([sliceFrac, 0,1]);
+    v10z = this.frac2mm([sliceFrac, 1, 0]);
+    v11z = this.frac2mm([sliceFrac, 1, 1]);
+  }
+  let mn = mat.vec4.clone(v00z);
+  mat.vec4.min(mn, mn, v01z);
+  mat.vec4.min(mn, mn, v10z);
+  mat.vec4.min(mn, mn, v11z);
+
+  let mx = mat.vec4.clone(v00z);
+  mat.vec4.max(mx, mx, v01z);
+  mat.vec4.max(mx, mx, v10z);
+  mat.vec4.max(mx, mx, v11z);
+  if (axCorSag === this.sliceTypeCoronal) {
+    mn[1] = mn[2];
+    mx[1] = mx[2];
+  }
+  if (axCorSag === this.sliceTypeSagittal) {
+    if (this.opts.isRadiologicalConvention) {
+      //flip nose left or nose right 
+      mn[0] = mn[1];
+      mx[0] = mx[1];
+    } else {
+      mn[0] = -mn[1];
+      mx[0] = -mx[1];
+    }
+    mn[1] = mn[2];
+    mx[1] = mx[2];
+  }
   let gl = this.gl;
   let m, modelMtx, normMtx;
-  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(leftTopWidthHeight);
+  [m, modelMtx, normMtx] = this.calculateMvpMatrixX(leftTopWidthHeight, mn, mx, axCorSag);
+
+
 
   gl.enable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+  //draw the slice
+  //OKRA
   gl.disable(gl.BLEND);
   gl.depthFunc(gl.GREATER);
 
+
+  if (true) {
+    gl.disable(gl.BLEND);
+    gl.depthFunc(gl.GREATER);
+  } else {
+    gl.enable(gl.BLEND);
+    gl.depthFunc(gl.ALWAYS);
+  }
+  gl.disable(gl.CULL_FACE); //show front and back faces
+
+  this.sliceMMShader.use(this.gl);
+  //console.log(':!',this.sliceMMShader);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["axCorSag"], axCorSag);
+  this.gl.uniform1f(this.sliceMMShader.uniforms["slice"], sliceFrac);
+  this.gl.uniformMatrix4fv(this.sliceMMShader.uniforms["frac2mm"], false, this.volumes[0].frac2mm);
+  this.gl.uniformMatrix4fv(this.sliceMMShader.uniforms["mvpMtx"], false, m);
+  this.gl.bindVertexArray(this.genericVAO); //set vertex attributes
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+
+  gl.disable(gl.BLEND);
+  gl.depthFunc(gl.GREATER);
+  this.drawCrosshairs3D(true, 1.0, m);
+
+
+if (this.meshes.length < 1) return;
+  
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
@@ -4322,6 +4467,9 @@ Niivue.prototype.drawMesh3DX = function (
     gl.depthFunc(gl.ALWAYS);
   }
   gl.disable(gl.CULL_FACE); //show front and back faces
+
+
+
   //Draw the mesh
   this.meshShader.use(this.gl); // set Shader
   //set shader uniforms
@@ -4346,30 +4494,43 @@ Niivue.prototype.drawMesh3DX = function (
     );
     gl.bindVertexArray(this.unusedVAO);
   }
+  
+  //OKRA
+  /*
+  this.gl.cullFace(this.gl.FRONT);
+  this.gl.disable(gl.DEPTH_TEST);
+  this.sliceMMShader.use(this.gl);
+  //console.log(':!',this.sliceMMShader);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["axCorSag"], 0);
+  this.gl.uniform1f(this.sliceMMShader.uniforms["slice"], this.scene.crosshairPos[2]);
+  this.gl.uniformMatrix4fv(this.sliceMMShader.uniforms["frac2mm"], false, this.volumes[0].frac2mm);
+  this.gl.uniformMatrix4fv(this.sliceMMShader.uniforms["mvpMtx"], false, m);
+  this.gl.bindVertexArray(this.genericVAO); //set vertex attributes
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+*/
   //draw fibers
-  if (!hasFibers) {
-    gl.enable(gl.BLEND);
-    gl.depthFunc(gl.ALWAYS);
-    return;
-  }
-  let shader = this.fiberShader;
-  shader.use(this.gl);
-  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
-  gl.uniform1f(shader.uniforms["opacity"], alpha);
-  for (let i = 0; i < this.meshes.length; i++) {
-    if (this.meshes[i].indexCount < 3) continue;
-    if (!this.meshes[i].offsetPt0) continue;
-    gl.bindVertexArray(this.meshes[i].vao);
-    gl.drawElements(
-      gl.LINE_STRIP,
-      this.meshes[i].indexCount,
-      gl.UNSIGNED_INT,
-      0
-    );
-    gl.bindVertexArray(this.unusedVAO);
+  if (hasFibers) {
+    let shader = this.fiberShader;
+    shader.use(this.gl);
+    gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+    gl.uniform1f(shader.uniforms["opacity"], alpha);
+    for (let i = 0; i < this.meshes.length; i++) {
+      if (this.meshes[i].indexCount < 3) continue;
+      if (!this.meshes[i].offsetPt0) continue;
+      gl.bindVertexArray(this.meshes[i].vao);
+      gl.drawElements(
+        gl.LINE_STRIP,
+        this.meshes[i].indexCount,
+        gl.UNSIGNED_INT,
+        0
+      );
+      gl.bindVertexArray(this.unusedVAO);
+    }
   }
   gl.enable(gl.BLEND);
   gl.depthFunc(gl.ALWAYS);
+  this.drawCrosshairs3D(false, 0.15, m);
   this.readyForSync = true;
   //gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 }; //drawMesh3D()
@@ -4380,16 +4541,24 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.disable(gl.DEPTH_TEST);
-  /* issue56
-if (axCorSag === this.sliceTypeAxial) {
-gl.clearDepth(0.0);
-gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-gl.clear(gl.COLOR_BUFFER_BIT);
+  // issue56
+  if (true) {
+  //if (axCorSag < this.sliceTypeSagittal) {
+  if (axCorSag !== this.sliceTypeCoronal) {
+  //if (axCorSag === this.sliceTypeAxial) {
+    //console.log('..',leftTopWidthHeight);
+    //if (true) { //okra
 
-    this.drawMesh3DX(true,1.0,leftTopWidthHeight);
+      gl.clearDepth(0.0);
+      //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      //gl.clear(gl.COLOR_BUFFER_BIT);
+      this.drawMesh3DX(true,1.0,leftTopWidthHeight, axCorSag);
+      //this.drawMesh3DX(true,1.0,leftTopWidthHeight, axCorSag);
       this.setPivot3D();
-  return;
-}*/
+      return;
+    }
+  }
   var crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
@@ -5194,7 +5363,7 @@ Niivue.prototype.drawMesh3D = function (isDepthTest = true, alpha = 1.0) {
   this.readyForSync = true;
 }; //drawMesh3D()
 
-Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
+Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0, mvpMtx = null) {
   if (!this.opts.show3Dcrosshair) return;
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
@@ -5231,8 +5400,9 @@ Niivue.prototype.drawCrosshairs3D = function (isDepthTest = true, alpha = 1.0) {
   crosshairsShader.use(this.gl);
   let m, modelMtx, normMtx;
   // eslint-disable-next-line no-unused-vars
-  [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
-  gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, m);
+  if (mvpMtx  == null)
+    [mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D);
+  gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, mvpMtx);
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
 
@@ -5315,6 +5485,13 @@ Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   this.drawScene();
 };
 
+Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
+  let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
+  mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
+  return pos;
+}
+
+/*
 // not included in public docs
 Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to object space in millimeters
@@ -5334,6 +5511,7 @@ Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   mat.vec4.transformMat4(pos, pos, sform);
   return pos;
 }; // frac2mm()
+*/
 
 // not included in public docs
 Niivue.prototype.canvasPos2frac = function (canvasPos) {

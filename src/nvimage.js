@@ -414,6 +414,28 @@ NVImage.prototype.calculateOblique = function () {
   let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
     log.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+  //compute a matrix to transform vectors from factional space to mm:
+  let dim = vec4.fromValues(
+    this.dimsRAS[1],
+    this.dimsRAS[2],
+    this.dimsRAS[3],
+    1,
+  );
+  let sform = mat4.clone(this.matRAS);
+  mat4.transpose(sform, sform);
+  let shim = vec4.fromValues(-0.5, -0.5, -0.5, 0); //bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
+  mat4.translate(sform, sform, shim);
+  //mat.mat4.scale(sform, sform, dim);
+  sform[0] *= dim[0];
+  sform[1] *= dim[0];
+  sform[2] *= dim[0];
+  sform[4] *= dim[1];
+  sform[5] *= dim[1];
+  sform[6] *= dim[1];
+  sform[8] *= dim[2];
+  sform[9] *= dim[2];
+  sform[10] *= dim[2];
+  this.frac2mm = mat4.clone(sform);
 };
 
 NVImage.prototype.THD_daxes_to_NIFTI = function (

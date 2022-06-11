@@ -188,6 +188,7 @@ export class NiivueViewComponent implements OnInit {
 - [Daikon](https://github.com/rii-mango/Daikon)
 - [NIFTI-Reader-JS source](https://github.com/rii-mango/NIFTI-Reader-JS)
 - [glMatrix](https://glmatrix.net/)
+- [fflate](https://github.com/101arrowz/fflate)
 
 # Funding
 
