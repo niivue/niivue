@@ -104,6 +104,7 @@ export function Niivue(options = {}) {
     isNearestInterpolation: false,
     isAtlasOutline: false,
     isRadiologicalConvention: false,
+    isSliceMM: false,
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
@@ -180,6 +181,7 @@ export function Niivue(options = {}) {
   this.scene.mouseButtonLeftDown = false;
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseDepthPicker = false;
+  this.scene.pan2Dxyzmm = [0,0,0];
   this.scene.scale2D = 1.0;
   this.scene.prevX = 0;
   this.scene.prevY = 0;
@@ -1142,7 +1144,18 @@ Niivue.prototype.setRadiologicalConvention = function (
   isRadiologicalConvention
 ) {
   this.opts.isRadiologicalConvention = isRadiologicalConvention;
+  this.updateGLVolume();
 };
+
+Niivue.prototype.setSliceMM = function (
+  isSliceMM
+) {
+  this.opts.isSliceMM = isSliceMM;
+  console.log('SliceMM feature is experimental');
+  this.updateGLVolume();
+};
+
+ 
 
 Niivue.prototype.getRadiologicalConvention = function () {
   return this.opts.isRadiologicalConvention;
@@ -1548,6 +1561,7 @@ Niivue.prototype.reverseFaces = function (mesh) {
   this.meshes[idx].reverseFaces(this.gl);
   this.updateGLVolume();
 };
+
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
   if (idx < 0) {
@@ -1557,6 +1571,13 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   this.meshes[idx].setLayerProperty(layer, key, val, this.gl);
   this.updateGLVolume();
 };
+
+
+Niivue.prototype.setPan2Dxyzmm = function (xyzmm) {
+  this.scene.pan2Dxyzmm = xyzmm;
+  console.log("okra");
+  this.drawScene();
+}
 
 Niivue.prototype.setScale2D = function (zoomFactor) {
   this.scene.scale2D = zoomFactor;
@@ -3112,7 +3133,6 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
-  console.log(this.sliceShader);
   // slice mm shader
   this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader);
   this.sliceMMShader.use(this.gl);
@@ -3873,7 +3893,7 @@ Niivue.prototype.sliceScale = function () {
     dims[3] / longestAxis,
   ];
   var vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
-  return { volScale, vox };
+  return { volScale, vox, longestAxis };
 }; // sliceScale()
 
 // not included in public docs
@@ -4250,8 +4270,11 @@ gl.viewport(
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-
-  let scale = this.furthestFromPivot * 0.5;
+  let furthestFromPivot = this.furthestFromPivot;
+  furthestFromPivot = Math.max(Math.abs(mx[2]), furthestFromPivot);
+  furthestFromPivot = Math.max(Math.abs(mn[2]), furthestFromPivot);
+  let scale = furthestFromPivot ;
+  
   let origin = [0, 0, 0];
   //console.log("o", scale);
   let projectionMatrix = mat.mat4.create();
@@ -4368,6 +4391,24 @@ gl.viewport(
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
 }; // calculateMvpMatrixX
 
+function swizzleVec4(vec, order = [0,1,2,3]) {
+  let vout = mat.vec4.create();
+  vout[0] = vec[order[0]];
+  vout[1] = vec[order[1]];
+  vout[2] = vec[order[2]];
+  vout[3] = vec[order[3]];
+  return vout;
+}
+
+Niivue.prototype.draw2DX = function (
+  leftTopWidthHeight = [0,0,0,0], //pixels
+  axCorSag = 0, //0,1,2 for axial, coronal, sagittal
+  
+
+) {
+
+}
+
 Niivue.prototype.drawMesh3DX = function (
   isDepthTest = true,
   alpha = 1.0,
@@ -4388,7 +4429,7 @@ Niivue.prototype.drawMesh3DX = function (
   }
   if (axCorSag === this.sliceTypeSagittal) {
     sliceFrac = this.scene.crosshairPos[0];
-    v00z = this.frac2mm([sliceFrac, 0,1]);
+    v00z = this.frac2mm([sliceFrac, 0,0]);
     v01z = this.frac2mm([sliceFrac, 0,1]);
     v10z = this.frac2mm([sliceFrac, 1, 0]);
     v11z = this.frac2mm([sliceFrac, 1, 1]);
@@ -4402,25 +4443,43 @@ Niivue.prototype.drawMesh3DX = function (
   mat.vec4.max(mx, mx, v01z);
   mat.vec4.max(mx, mx, v10z);
   mat.vec4.max(mx, mx, v11z);
+  if (axCorSag === this.sliceTypeAxial) {
+    mn[0] -= this.scene.pan2Dxyzmm[0];
+    mx[0] -= this.scene.pan2Dxyzmm[0];
+    mn[1] -= this.scene.pan2Dxyzmm[1];
+    mx[1] -= this.scene.pan2Dxyzmm[1];
+  }
   if (axCorSag === this.sliceTypeCoronal) {
-    mn[1] = mn[2];
-    mx[1] = mx[2];
-  }
+    console.log('!!',mn,mx);
+    mn = swizzleVec4(mn, [0,2,1,3]);
+    mx = swizzleVec4(mx, [0,2,1,3]);
+    console.log('!!',mn,mx);
+    mn[0] -= this.scene.pan2Dxyzmm[0];
+    mx[0] -= this.scene.pan2Dxyzmm[0];
+    mn[1] -= this.scene.pan2Dxyzmm[2];
+    mx[1] -= this.scene.pan2Dxyzmm[2];
+    //mn[1] = mn[2];
+    //mx[1] = mx[2];
+    console.log('??',mn,mx);
+  }//issue56
   if (axCorSag === this.sliceTypeSagittal) {
-    if (this.opts.isRadiologicalConvention) {
-      //flip nose left or nose right 
-      mn[0] = mn[1];
-      mx[0] = mx[1];
-    } else {
-      mn[0] = -mn[1];
-      mx[0] = -mx[1];
+    mn = swizzleVec4(mn, [1,2,0,3]);
+    mx = swizzleVec4(mx, [1,2,0,3]);
+    mn[0] -= this.scene.pan2Dxyzmm[1];
+    mx[0] -= this.scene.pan2Dxyzmm[1];
+    mn[1] -= this.scene.pan2Dxyzmm[2];
+    mx[1] -= this.scene.pan2Dxyzmm[2];
+    if (!this.opts.isRadiologicalConvention) {
+      //let tmp = mn[0];
+      mn[0] = -mn[0];
+      mx[0] = -mx[0];
     }
-    mn[1] = mn[2];
-    mx[1] = mx[2];
   }
+
   let gl = this.gl;
   let m, modelMtx, normMtx;
   [m, modelMtx, normMtx] = this.calculateMvpMatrixX(leftTopWidthHeight, mn, mx, axCorSag);
+
 
 
 
@@ -4441,6 +4500,7 @@ Niivue.prototype.drawMesh3DX = function (
     gl.depthFunc(gl.ALWAYS);
   }
   gl.disable(gl.CULL_FACE); //show front and back faces
+
 
   this.sliceMMShader.use(this.gl);
   //console.log(':!',this.sliceMMShader);
@@ -4542,14 +4602,14 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.disable(gl.DEPTH_TEST);
   // issue56
-  if (true) {
+  if (this.opts.isSliceMM ) {
   //if (axCorSag < this.sliceTypeSagittal) {
-  if (axCorSag !== this.sliceTypeCoronal) {
-  //if (axCorSag === this.sliceTypeAxial) {
+    //if (axCorSag !== this.sliceTypeCoronal) {
+    //if (axCorSag === this.sliceTypeAxial) {
     //console.log('..',leftTopWidthHeight);
-    //if (true) { //okra
+    if (true) { //okra
 
-      gl.clearDepth(0.0);
+      //gl.clearDepth(0.0);
       //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.clear(gl.DEPTH_BUFFER_BIT);
       //gl.clear(gl.COLOR_BUFFER_BIT);
@@ -5661,7 +5721,11 @@ Niivue.prototype.drawScene = function () {
     }
     return this.draw3D();
   }
-  let { volScale } = this.sliceScale();
+  let { volScale, vox, longestAxis } = this.sliceScale();
+  if (true) {
+    let leftTopWidthHeight = this.scaleSlice(1, 1);
+    //this.draw2Dz(leftTopWidthHeight, 0);
+  }
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.numScreenSlices = 0;
   if (this.sliceType === this.sliceTypeAxial) {

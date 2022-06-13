@@ -466,6 +466,7 @@ uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
 void main() {
+	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
 	vec4 ocolor = vec4(0.0);
@@ -488,11 +489,11 @@ void main() {
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
 		return;
-	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-	if (aout <= 0.0) return;
+	//float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
+	//if (aout <= 0.0) return;
 	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	color.a = aout;
+	color.a = 1.0;
 }`;
 
 export var fragLineShader = `#version 300 es
