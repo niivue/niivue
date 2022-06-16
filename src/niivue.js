@@ -4565,14 +4565,14 @@ Niivue.prototype.drawSliceOrientationText = function (
     ],
     leftText
   );
-
+  /*
   this.gl.viewport(
     leftTopWidthHeight[0],
     this.gl.canvas.clientHeight -
       (leftTopWidthHeight[1] + leftTopWidthHeight[3]), //lower numbers near bottom
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
-  );
+  );*/
 };
 
 Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
@@ -4630,7 +4630,6 @@ Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
   //record screenSlices to detect mouse click positions
-  console.log(this.numScreenSlices, "::::", this.screenSlices);
   this.screenSlices[this.numScreenSlices].leftTopWidthHeight =
     leftTopWidthHeight;
   this.screenSlices[this.numScreenSlices].axCorSag = axCorSag;
@@ -4651,17 +4650,18 @@ Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
     );
   this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix);
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  //gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.readyForSync = true;
 }; //drawSliceMM()
 
 // not included in public docs
 Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   this.gl.cullFace(this.gl.FRONT);
+  let ltwh = leftTopWidthHeight.slice();
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.disable(gl.DEPTH_TEST);
-  crossXYZ = [
+  let crossXYZ = [
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
@@ -4749,52 +4749,11 @@ Niivue.prototype.draw2D = function (leftTopWidthHeight, axCorSag) {
   );
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
-
   this.gl.enable(this.gl.CULL_FACE);
-  if (isMirrorLR)
-    this.drawTextRight(
-      [
-        leftTopWidthHeight[0] + leftTopWidthHeight[2] + 1,
-        leftTopWidthHeight[1] + 0.5 * leftTopWidthHeight[3],
-      ],
-      "R"
-    );
-  else if (axCorSag < this.sliceTypeSagittal)
-    this.drawTextRight(
-      [
-        leftTopWidthHeight[0] + 1,
-        leftTopWidthHeight[1] + 0.5 * leftTopWidthHeight[3],
-      ],
-      "L"
-    );
-  if (axCorSag === this.sliceTypeAxial)
-    this.drawTextBelow(
-      [
-        leftTopWidthHeight[0] + 0.5 * leftTopWidthHeight[2],
-        leftTopWidthHeight[1] + 1,
-      ],
-      "A"
-    );
-  if (axCorSag > this.sliceTypeAxial)
-    this.drawTextBelow(
-      [
-        leftTopWidthHeight[0] + 0.5 * leftTopWidthHeight[2],
-        leftTopWidthHeight[1] + 1,
-      ],
-      "S"
-    );
-
-  if (axCorSag !== this.sliceTypeAxial) return;
-  gl.viewport(
-    leftTopWidthHeight[0],
-    leftTopWidthHeight[1],
-    leftTopWidthHeight[2],
-    leftTopWidthHeight[3]
-  );
+  this.drawSliceOrientationText(ltwh, axCorSag);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
-
   this.sync();
 }; // draw2D()
 
@@ -5843,7 +5802,6 @@ Niivue.prototype.drawScene = function () {
             hY * this.opts.colorbarHeight,
           ]);
         }
-        // drawTextBelow(gl, [ltwh[0]+ wX + (wY * 0.5), ltwh[1] + hZ + margin + hY * colorbarHeight], "Syzygy"); //DEMO
       } //if landscape else portrait
     } //if multiplanar
   } else {
