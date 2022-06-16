@@ -419,7 +419,7 @@ NVImage.prototype.calculateOblique = function () {
     this.dimsRAS[1],
     this.dimsRAS[2],
     this.dimsRAS[3],
-    1,
+    1
   );
   let sform = mat4.clone(this.matRAS);
   mat4.transpose(sform, sform);
@@ -2734,7 +2734,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     indexBuffer,
     vao
   );
-
   const extents = getExtents([
     ...LPS,
     ...RPS,
