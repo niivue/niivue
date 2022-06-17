@@ -37,6 +37,7 @@ import {
   fragMeshOutlineShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
+  fragMeshDepthShader,
   fragMeshShaderSHBlue,
   vertFiberShader,
   fragFiberShader,
@@ -264,6 +265,10 @@ export function Niivue(options = {}) {
     {
       Name: "Toon",
       Frag: fragMeshToonShader,
+    },
+    {
+      Name: "Depth",
+      Frag: fragMeshDepthShader,
     },
   ];
 
@@ -4391,84 +4396,6 @@ Niivue.prototype.calculateMvpMatrix2D = function (
   return { modelViewProjectionMatrix, modelMatrix, normalMatrix };
 }; // calculateMvpMatrix2D
 
-/*Niivue.prototype.calculateMvpMatrix2DXX = function (leftTopWidthHeight, mn, mx, axCorSag) {
-  function deg2rad(deg) {
-    return deg * (Math.PI / 180.0);
-  }
-  let gl = this.gl;
-gl.viewport(
-    leftTopWidthHeight[0],
-    this.gl.canvas.clientHeight - (leftTopWidthHeight[1]+leftTopWidthHeight[3]),//lower numbers near bottom
-    leftTopWidthHeight[2],
-    leftTopWidthHeight[3]
-  );
-  let scale = Math.max(Math.abs(mn[2]), Math.abs(mx[2])); //3rd dimension is near/far from camera
-  let origin = [0, 0, 0];
-  //console.log("o", scale);
-  let projectionMatrix = mat.mat4.create();
-  let isFlipLR = !this.opts.isRadiologicalConvention;
-  if (axCorSag === this.sliceTypeSagittal) {
-    //isFlipLR = !isFlipLR;
-    isFlipLR = this.opts.sagittalNoseRight;
-    console.log(this.opts.isRadiologicalConvention, '>>',leftTopWidthHeight[0], mn[0], mx[0]);
-  }
-  let left = (isFlipLR ? mn[0] : mx[0]);
-  let right = (isFlipLR ? mx[0] : mn[0]);
-  mat.mat4.ortho(
-    projectionMatrix,
-    left,
-    right,
-    mn[1],
-    mx[1],
-    0.01,
-    scale * 8.0
-  );
-
-  const modelMatrix = mat.mat4.create();
-  //if ((axCorSag !== this.sliceTypeSagittal) || (!this.opts.isRadiologicalConvention))
-  if ((axCorSag !== this.sliceTypeSagittal) || (!this.opts.isRadiologicalConvention))
-    modelMatrix[0] = -1; //mirror X coordinate
-  //push the model away from the camera so camera not inside model
-
-  let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
-  mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
-  if (this.position)
-    mat.mat4.translate(modelMatrix, modelMatrix, this.position);
-  let elev = 0;
-  let azi = 0;
-  if (axCorSag == this.sliceTypeAxial) //axial
-    elev = 90;
-  else if (axCorSag == this.sliceTypeSagittal) {//sagittal
-    if (this.opts.isRadiologicalConvention)
-      azi = 90
-    else
-      azi = 270;
-  }
-  mat.mat4.rotateX(
-    modelMatrix,
-    modelMatrix,
-    deg2rad(270 - elev)
-  );
-  mat.mat4.rotateZ(
-    modelMatrix,
-    modelMatrix,
-    deg2rad(azi - 180)
-  );
-
-  mat.mat4.translate(modelMatrix, modelMatrix, [
-    -origin[0],
-    -origin[1],
-    -origin[2],
-  ]);
-  let iModelMatrix = mat.mat4.create();
-  mat.mat4.invert(iModelMatrix, modelMatrix);
-  let normalMatrix = mat.mat4.create();
-  mat.mat4.transpose(normalMatrix, iModelMatrix);
-  let modelViewProjectionMatrix = mat.mat4.create();
-  mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
-  return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
-}; // calculateMvpMatrix2D
-*/
 Niivue.prototype.screenFieldOfViewMM = function (axCorSag = 0) {
   //extent of volume/mesh (in millimeters) in screen space
   let v = this.volumeObject3D;
@@ -4525,7 +4452,6 @@ Niivue.prototype.screenFieldOfViewMM = function (axCorSag = 0) {
       0,
       1
     );
-  //rotation = mat.mat4.fromValues(0,1,0,0, 0,0,1,0, 1,0,0,0, 0,0,0,1);
   mat.vec4.transformMat4(mnMM, mnMM, rotation);
   mat.vec4.transformMat4(mxMM, mxMM, rotation);
   let fovMM = mat.vec4.create();
@@ -4590,11 +4516,53 @@ Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
   screen.mnMM[1] /= this.scene.pan2Dxyzmm[2];
   screen.mxMM[1] /= this.scene.pan2Dxyzmm[2];
 
-  let sliceFrac = this.scene.crosshairPos[2];
-  if (axCorSag === this.sliceTypeCoronal)
-    sliceFrac = this.scene.crosshairPos[1];
-  if (axCorSag === this.sliceTypeSagittal)
-    sliceFrac = this.scene.crosshairPos[0];
+  let sliceDim = 2; //axial depth is NIfTI k dimension
+  if (axCorSag === this.sliceTypeCoronal) sliceDim = 1; //sagittal depth is NIfTI j dimension
+  if (axCorSag === this.sliceTypeSagittal) sliceDim = 0; //sagittal depth is NIfTI i dimension
+  let sliceFrac = this.scene.crosshairPos[sliceDim];
+
+  //given screen x and y we need to get x/y/z in mm
+  //tricky as for oblique data 2D plane is not at consistent depth (z)
+  //https://math.stackexchange.com/questions/28043/finding-the-z-value-on-a-plane-with-x-y-values
+  if (axCorSag === 1) {
+    let a = [0, 0, 0];
+    let b = [1, 1, 0];
+    let c = [1, 0, 1];
+    a[sliceDim] = sliceFrac;
+    b[sliceDim] = sliceFrac;
+    c[sliceDim] = sliceFrac;
+    console.log(a);
+    console.log(b);
+    console.log(c);
+
+    a = this.frac2mm(a);
+    b = this.frac2mm(b);
+    c = this.frac2mm(c);
+    console.log(";", a);
+    console.log(";", b);
+    console.log(";", c);
+
+    //console.log('a',a);
+    //console.log('b',b);
+    //console.log('c',c);
+    let v1 = mat.vec3.create();
+    mat.vec4.subtract(v1, a, b);
+    let v2 = mat.vec3.create();
+    mat.vec4.subtract(v2, a, c);
+    //console.log('v1',v1);
+    //console.log('v2',v2);
+    let rst = mat.vec3.create(); //surface normal
+    mat.vec3.cross(rst, v1, v2);
+    //console.log('cross=',rst);
+    let rstk = mat.vec4.fromValues(rst[0], rst[1], rst[2], 0);
+    rstk[3] = a[0] * rst[0] + b[1] * rst[1] + c[2] * rst[2];
+    //console.log('rstk=',rstk);
+
+    let xyz = mat.vec3.fromValues(30, 30, 0);
+    xyz[2] = (1 / rstk[2]) * (rstk[3] + rstk[0] * xyz[0] + rstk[1] * xyz[1]);
+    console.log(axCorSag + "z=", xyz[2]);
+  }
+
   let gl = this.gl;
   gl.clear(gl.DEPTH_BUFFER_BIT);
   let obj = this.calculateMvpMatrix2D(

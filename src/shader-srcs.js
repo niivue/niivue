@@ -944,6 +944,25 @@ void main(void) {
 	vClr = clr;
 }`;
 
+//report depth for fragment
+// https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/viewer/screensurface.js#L89
+export var fragMeshDepthShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+out vec4 color;
+vec4 packFloatToVec4i(const float value) {
+	//this Papaya function uses BSD 3-clause license Copyright (c) 2012-2015, RII-UTHSCSA
+	const vec4 bitSh = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
+	const vec4 bitMsk = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
+	vec4 res = fract(value * bitSh);
+	res -= res.xxyz * bitMsk;
+	return res;
+}
+void main() {
+	color = packFloatToVec4i(gl_FragCoord.z);
+}`;
+
 //ToonShader https://prideout.net/blog/old/blog/index.html@tag=toon-shader.html
 export var fragMeshToonShader = `#version 300 es
 precision highp int;
