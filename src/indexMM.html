@@ -110,7 +110,6 @@
       nv1.setRadiologicalConvention(false)
       nv1.setSliceMM(true);
       nv1.attachTo('gl1')
-
       //nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(90,10)
@@ -121,7 +120,7 @@
         //{url: "../demos/images/PJM-stc-lh.stc", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
-			
+
       await nv1.loadMeshes([
          {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255], layers : meshLayersList1},
          {url: "../demos/images/dpsv.trx", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},

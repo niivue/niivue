@@ -174,6 +174,8 @@ export function Niivue(options = {}) {
   this.sliceTypeSagittal = 2;
   this.sliceTypeMultiplanar = 3;
   this.sliceTypeRender = 4;
+  //this.sliceTypeMosaic = 5; //kava
+  this.sliceMosaicString = "";
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
   this.scene = {};
   this.syncOpts = {};
@@ -748,13 +750,22 @@ Niivue.prototype.mouseMoveListener = function (e) {
 // note: should update this to accept a volume index to reset a selected volume rather than only the background (TODO)
 // reset brightness and contrast to global min and max
 // note: no test yet
-Niivue.prototype.resetBriCon = function () {
+Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
 
   // don't reset bri/con if the user is in 3D mode and double clicks
+  let isRender = false;
   if (this.sliceType === this.sliceTypeRender) {
+    isRender = true;
+  }
+  if (msg !== null) {
+    // test if render is one of the tiles
+    if (this.inRenderTile(msg.clientX, msg.clientY) >= 0) isRender = true;
+  }
+  if (isRender) {
     this.scene.mouseDepthPicker = true;
+    this.drawScene();
     this.drawScene();
     return;
   }
@@ -824,9 +835,9 @@ Niivue.prototype.handlePinchZoom = function (e) {
 // handler for keyboard shortcuts
 Niivue.prototype.keyUpListener = function (e) {
   if (e.code === this.opts.clipPlaneHotKey) {
-    if (this.sliceType != this.sliceTypeRender) {
+    /*if (this.sliceType != this.sliceTypeRender) {
       return;
-    }
+    }*/ //bravo
     let now = new Date().getTime();
     let elapsed = now - this.lastCalled;
     if (elapsed > this.opts.keyDebounceTime) {
@@ -1186,6 +1197,12 @@ Niivue.prototype.setRadiologicalConvention = function (
 
 Niivue.prototype.setShowMeshOn2D = function (isShowMeshOn2D) {
   this.opts.isShowMeshOn2D = isShowMeshOn2D;
+  this.updateGLVolume();
+};
+
+Niivue.prototype.setSliceMosaicString = function (str) {
+  this.sliceMosaicString = str;
+  console.log("Mosaic lightbox feature is experimental");
   this.updateGLVolume();
 };
 
@@ -1831,7 +1848,7 @@ Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   );
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
-  if (this.sliceType != this.sliceTypeRender) return;
+  //if (this.sliceType != this.sliceTypeRender) return;
   this.drawScene();
 }; // setClipPlane()
 
@@ -4567,7 +4584,6 @@ Niivue.prototype.drawSliceOrientationText = function (
   }
   if (axCorSag === this.sliceTypeSagittal)
     leftText = this.opts.sagittalNoseLeft ? "A" : "P";
-  //if (axCorSag !== sliceTypeSagittal)
   this.drawTextBelow(
     [
       leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5,
@@ -4582,14 +4598,6 @@ Niivue.prototype.drawSliceOrientationText = function (
     ],
     leftText
   );
-  /*
-  this.gl.viewport(
-    leftTopWidthHeight[0],
-    this.gl.canvas.clientHeight -
-      (leftTopWidthHeight[1] + leftTopWidthHeight[3]), //lower numbers near bottom
-    leftTopWidthHeight[2],
-    leftTopWidthHeight[3]
-  );*/
 };
 
 Niivue.prototype.screenMM2DepthMMXForm = function (axCorSag, sliceFrac) {
@@ -4646,7 +4654,11 @@ Niivue.prototype.screenMM2DepthMMXForm = function (axCorSag, sliceFrac) {
   return rstk;
 };
 
-Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
+Niivue.prototype.drawSliceMM = function (
+  leftTopWidthHeight,
+  axCorSag,
+  customMM = NaN
+) {
   let screen = this.screenFieldOfViewMM(axCorSag);
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)
     //use full screen
@@ -4665,6 +4677,12 @@ Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
   if (axCorSag === this.sliceTypeCoronal) sliceDim = 1; //sagittal depth is NIfTI j dimension
   if (axCorSag === this.sliceTypeSagittal) sliceDim = 0; //sagittal depth is NIfTI i dimension
   let sliceFrac = this.scene.crosshairPos[sliceDim];
+  if (!isNaN(customMM)) {
+    let mm = this.frac2mm([0.5, 0.5, 0.5]);
+    mm[sliceDim] = customMM;
+    let frac = this.mm2frac(mm);
+    sliceFrac = frac[sliceDim];
+  }
   let gl = this.gl;
   gl.clear(gl.DEPTH_BUFFER_BIT);
   let obj = this.calculateMvpMatrix2D(
@@ -4700,28 +4718,20 @@ Niivue.prototype.drawSliceMM = function (leftTopWidthHeight, axCorSag) {
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
   //record screenSlices to detect mouse click positions
-  this.screenSlices[this.numScreenSlices].leftTopWidthHeight =
-    leftTopWidthHeight;
-  this.screenSlices[this.numScreenSlices].axCorSag = axCorSag;
-  this.screenSlices[this.numScreenSlices].rstk = this.screenMM2DepthMMXForm(
-    axCorSag,
-    sliceFrac
-  );
-  this.screenSlices[this.numScreenSlices].leftTopMM = obj.leftTopMM;
-  //this.screenSlices[this.numScreenSlices].fovMM = obj.fovMM;
-
-  //this.screenSlices[this.numScreenSlices].leftTopMM = screen.mnMM;
-  //let fovMM = mat.vec3.create(); //screen.fov may be influenced by zoom
-  //mat.vec3.subtract(fovMM, screen.mxMM, screen.mnMM);
-  this.screenSlices[this.numScreenSlices].fovMM = obj.fovMM;
-  /*if (axCorSag === 0 ) {
-console.log('fov', fovMM, obj.fovMM);
-console.log('leftTop', screen.mnMM, obj.leftTopMM);
-}*/
-  this.numScreenSlices += 1;
-
-  //draw crosshairs
-  this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix);
+  if (isNaN(customMM)) {
+    this.screenSlices[this.numScreenSlices].leftTopWidthHeight =
+      leftTopWidthHeight;
+    this.screenSlices[this.numScreenSlices].axCorSag = axCorSag;
+    this.screenSlices[this.numScreenSlices].rstk = this.screenMM2DepthMMXForm(
+      axCorSag,
+      sliceFrac
+    );
+    this.screenSlices[this.numScreenSlices].leftTopMM = obj.leftTopMM;
+    this.screenSlices[this.numScreenSlices].fovMM = obj.fovMM;
+    this.numScreenSlices += 1;
+    //draw crosshairs
+    this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix);
+  }
   if (this.opts.isShowMeshOn2D)
     this.drawMesh3D(
       true,
@@ -4730,7 +4740,9 @@ console.log('leftTop', screen.mnMM, obj.leftTopMM);
       obj.modelMatrix,
       obj.normalMatrix
     );
-  this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix);
+  if (isNaN(customMM))
+    //no crossbars for mosaic view
+    this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix);
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   //gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.readyForSync = true;
@@ -5795,6 +5807,103 @@ Niivue.prototype.drawThumbnail = function () {
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 };
 
+Niivue.prototype.drawMosaic = function (mosaicStr) {
+  let axi = this.screenFieldOfViewMM(this.sliceTypeAxial);
+  let xMM = axi.fovMM[0];
+  let yMM = axi.fovMM[1];
+  let zMM = axi.fovMM[2];
+  //let mosaicStr = 'A -52 -12 C 8 ; S 28 48 66'
+  let mxMM = Math.max(Math.max(xMM, yMM), zMM);
+  let mxRow = 1;
+  mosaicStr = mosaicStr.replaceAll(";", " ;").trim();
+  console.log(mosaicStr);
+  let items = mosaicStr.split(/\s+/);
+  let scale = 1.0; //e.g. if 1.0 1mm per pixel
+  let labelSize = this.opts.textHeight;
+  for (let pass = 0; pass < 2; pass++) {
+    //two pass: first determine dimensions, second draw items
+    let row = 0;
+    let rowHt = 0;
+    let left = 0;
+    let top = 0;
+    let w = 0;
+    let h = 0;
+    let mxRowWid = 0;
+    let isLabel = false;
+    let sliceType = this.sliceTypeAxial;
+    for (let i = 0; i < items.length; i++) {
+      let item = items[i];
+      if (item.includes("X")) continue;
+      if (item.includes("L")) {
+        isLabel = !item.includes("-");
+        continue;
+      }
+      if (item.includes("V") || item.includes("H")) {
+        i++; //skip numeric value for vertical/horizontal overlap
+        continue;
+      }
+      if (item.includes("A")) sliceType = this.sliceTypeAxial;
+      if (item.includes("C")) sliceType = this.sliceTypeCoronal;
+      if (item.includes("S")) sliceType = this.sliceTypeSagittal;
+      if (item.includes("R")) sliceType = this.sliceTypeRender;
+      if (item.includes(";")) {
+        //EOLN
+        top += rowHt;
+        mxRowWid = Math.max(mxRowWid, left);
+        rowHt = 0;
+        left = 0;
+      }
+      let sliceMM = parseFloat(item, NaN);
+      if (isNaN(sliceMM)) continue;
+      //draw the slice
+      w = mxMM;
+      h = mxMM;
+      if (
+        sliceType === this.sliceTypeAxial ||
+        sliceType === this.sliceTypeCoronal
+      )
+        w = xMM;
+      if (sliceType === this.sliceTypeSagittal) w = yMM;
+      if (sliceType === this.sliceTypeAxial) h = yMM;
+      if (
+        sliceType === this.sliceTypeCoronal ||
+        sliceType === this.sliceTypeSagittal
+      )
+        h = zMM;
+      let leftTopWidthHeight = [left, top, w, h];
+      if (pass === 1) {
+        //draw yaje
+        log.debug(
+          "LTWH " +
+            left +
+            "," +
+            top +
+            "," +
+            w +
+            "," +
+            h +
+            " type" +
+            sliceType +
+            " : " +
+            item
+        );
+        let ltwh = [scale * left, scale * top, scale * w, scale * h];
+        this.opts.textHeight = isLabel ? labelSize : 0;
+        this.drawSliceMM(ltwh, sliceType, sliceMM, isLabel);
+      }
+      left += w;
+      rowHt = Math.max(rowHt, h);
+    } //for each item in string
+    top += rowHt;
+    mxRowWid = Math.max(mxRowWid, left);
+    if (mxRowWid <= 0 || top <= 0) break;
+    let scaleW = this.gl.canvas.width / mxRowWid;
+    let scaleH = this.gl.canvas.height / top;
+    scale = Math.min(scaleW, scaleH);
+  } //for pass 0 and 1
+  this.opts.textHeight = labelSize;
+}; // drawMosaic()
+
 // not included in public docs
 Niivue.prototype.drawScene = function () {
   if (!this.initialized) {
@@ -5826,11 +5935,7 @@ Niivue.prototype.drawScene = function () {
     return;
   }
   if (!this.back.hasOwnProperty("dims")) return;
-  //if (this.sliceType === this.sliceTypeRender) {
-  if (
-    this.isDragging &&
-    this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0
-  ) {
+  if (this.sliceType === this.sliceTypeRender) {
     //draw rendering
     if (this.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       //if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
@@ -5854,6 +5959,12 @@ Niivue.prototype.drawScene = function () {
     this.numScreenSlices = 0;
     return this.draw3D();
   }
+  //if (this.sliceType = this.sliceTypeMosaic) {
+  if (this.sliceMosaicString.length > 0) {
+    this.drawMosaic(this.sliceMosaicString);
+    return;
+  } // if sliceTypeMosaic
+
   if (this.opts.isSliceMM) {
     // issue56
     this.numScreenSlices = 0;
@@ -5981,7 +6092,7 @@ Niivue.prototype.drawScene = function () {
         if (!this.graph.autoSizeMultiplanar)
           this.draw3D([ltwh[0] + wX, ltwh[1] + hZ, wY, hY]);
         //draw colorbar (optional) // TODO currently only drawing one colorbar, there may be one per overlay + one for the background
-        var margin = this.opts.colorBarMargin * hY;
+        /*var margin = this.opts.colorBarMargin * hY;
         if (!this.graph.autoSizeMultiplanar) {
           this.drawColorbar([
             ltwh[0] + wX + margin,
@@ -5989,7 +6100,7 @@ Niivue.prototype.drawScene = function () {
             wY - margin - margin,
             hY * this.opts.colorbarHeight,
           ]);
-        }
+        }*/
         // drawTextBelow(gl, [ltwh[0]+ wX + (wY * 0.5), ltwh[1] + hZ + margin + hY * colorbarHeight], "Syzygy"); //DEMO
       } //if landscape else portrait
     } //if multiplanar
