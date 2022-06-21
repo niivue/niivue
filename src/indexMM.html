@@ -40,8 +40,8 @@
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:98%; height:800px;">
-        <canvas id="gl1" height=800 width=800>
+      <div id="demo1" style="width:98%; height:480px;">
+        <canvas id="gl1" height=480 width=480>
         </canvas>
       </div>
     </section>
@@ -90,7 +90,7 @@
         // first item is brackground image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
@@ -128,7 +128,7 @@
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
-
+//nv1.setSliceMosaicString('A 0 20 32');
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
