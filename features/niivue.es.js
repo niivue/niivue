@@ -786,6 +786,10 @@ float frac2ndc(vec3 frac) {
 	
 }
 void main() {
+  if (fColor.x > 2.0) {
+    fColor = vec4(1.0, 0.0, 0.0, 0.5);
+    return;
+  }
 	fColor = vec4(0.0,0.0,0.0,0.0);
 	vec4 clipPlaneColorX = clipPlaneColor;
 	//if (clipPlaneColor.a < 0.0)
