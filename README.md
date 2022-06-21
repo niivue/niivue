@@ -29,7 +29,7 @@ The primary aim of NiiVue is to translate the features of the widely used native
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
 - [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
 
-# Live View 
+# Live View
 
 We host many NiiVue examples via github pages. These are updated and deployed automatically. All live views reflect the capabilities of the NiiVue version in the main branch.
 
