@@ -270,19 +270,23 @@ void main() {
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(volume, samplePos.xyz).a;
-		if (val > 0.01) break;
+    if (val > 0.01) {
+      break;
+    }
 		samplePos += deltaDirFast; //advance ray position
 	}
 	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
-		if (isClip)
+    if (isClip){
 			fColor += clipPlaneColorX;
+    }
 		return;
 	}
 	fColor = vec4(1.0, 1.0, 1.0, 1.0);
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
-	if (samplePos.a < 0.0)
+  if (samplePos.a < 0.0){
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+  }
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
 	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * lenNoClip);
@@ -293,25 +297,32 @@ void main() {
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
-		if (colorSample.a < 0.01) continue;
-		if (firstHit.a > lenNoClip)
+    if (colorSample.a < 0.01){
+      continue;
+    }
+    if (firstHit.a > lenNoClip){
 			firstHit = samplePos;
+    }
 		backNearest = min(backNearest, samplePos.a);
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
 		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
-		if ( colAcc.a > earlyTermination )
+    if ( colAcc.a > earlyTermination ){
 			break;
+    }
 	}
-	if (firstHit.a < len)
+  if (firstHit.a < len){
 		gl_FragDepth = frac2ndc(firstHit.xyz);
+  }
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	//if (isClip) //CR
 	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
 		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
 		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
-	if (overlays < 1.0) return;
+  if (overlays < 1.0) {
+    return;
+  }
 	//overlay pass
 	len = lenNoClip;
 	samplePos = vec4(start.xyz, 0.0); //ray position
@@ -320,48 +331,59 @@ void main() {
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(overlay, samplePos.xyz).a;
-		if (val > 0.01) break;
+    if (val > 0.01) {
+      break;
+    }
 		samplePos += deltaDirFast; //advance ray position
 	}
 	if (samplePos.a >= len) {
-		if (isClip && (fColor.a == 0.0))
+    if (isClip && (fColor.a == 0.0)) {
 			fColor += clipPlaneColorX;
+    }
 		return;
 	}
 	samplePos -= deltaDirFast;
-	if (samplePos.a < 0.0)
+  if (samplePos.a < 0.0){
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+  }
 	//end: fast pass
 	float overFarthest = len;
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
 	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
-	if (backgroundMasksOverlays > 0)
+  if (backgroundMasksOverlays > 0){
 		samplePos = firstHit;
+  }
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
-		if (colorSample.a < 0.01) continue;
-		if (overFirstHit.a > len)
+    if (colorSample.a < 0.01) {
+      continue;
+    }
+    if (overFirstHit.a > len){
 			overFirstHit = samplePos;
+    }
 		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 		colorSample.rgb *= colorSample.a;
 		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 		overFarthest = samplePos.a;
-		if ( colAcc.a > earlyTermination )
+    if ( colAcc.a > earlyTermination ){
 			break;
+    }
 	}
 	if (samplePos.a >= len) {
-		if (isClip && (fColor.a == 0.0))
+    if (isClip && (fColor.a == 0.0)){
 			fColor += clipPlaneColorX;
+    }
 		return;
 	}
 	//if (overFirstHit.a < len)
-		gl_FragDepth = frac2ndc(overFirstHit.xyz);
+	gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
-	if (fColor.a <= 0.0)
+  if (fColor.a <= 0.0){
 			overMix = 1.0;
+  }
 	else if (((overFarthest) > backNearest)) {
 		float dx = (overFarthest - backNearest)/1.73;
 		dx = fColor.a * pow(dx, overlayDepth);
