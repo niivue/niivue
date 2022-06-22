@@ -51,19 +51,11 @@
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../tests/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
-          colorMap: "gray",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
-          opacity: 1,
-          visible: true,
         },
-				{
-					url:'../tests/images/hippo.nii.gz',
-					colorMap: "winter"
-				}
       ]
 			var nv1 = new Niivue({
-				logging: false,
-				show3Dcrosshair: true,
+				logging: true,
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
 				backColor: [0.3, 0.2, 0.4, 1],
@@ -82,13 +74,15 @@
         //{url: "../demos/images/PJM-stc-lh.stc", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
-			
+	
+			/*
       await nv1.loadMeshes([
          {url: "../demos/images/dpsv.trx", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/mni152_2009AO.mz3", rgba255 : [255, 255, 255, 255]},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
+			*/
 
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {

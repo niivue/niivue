@@ -1394,7 +1394,8 @@ NVMesh.readVTK = function (buffer) {
   if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
   line = readStr(); //2nd line comment
   line = readStr(); //3rd line ASCII/BINARY
-  if (line.startsWith("ASCII")) return readTxtVTK(buffer); //from NiiVue
+  if (line.startsWith("ASCII")) return readTxtVTK(buffer);
+  //from NiiVue
   else if (!line.startsWith("BINARY"))
     alert("Invalid VTK image, expected ASCII or BINARY", line);
   line = readStr(); //5th line "DATASET POLYDATA"
