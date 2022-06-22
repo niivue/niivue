@@ -130,12 +130,13 @@ void main() {
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
-		if (colorSample.a < 0.01) continue;
-		if (firstHit.a > lenNoClip)
-			firstHit = samplePos;
-		backNearest = min(backNearest, samplePos.a);
-		if (colorSample.a > colAcc.a) //ties generate errors for TT_desai_dd_mpm
-			colAcc = vec4(colorSample.rgb, colorSample.a+0.00001);
+		if (colorSample.a >= 0.01) {
+			if (firstHit.a > lenNoClip)
+				firstHit = samplePos;
+			backNearest = min(backNearest, samplePos.a);
+			if (colorSample.a > colAcc.a) //ties generate errors for TT_desai_dd_mpm
+				colAcc = vec4(colorSample.rgb, colorSample.a+0.00001);
+		}
 	}
 	if (firstHit.a < len)
 		gl_FragDepth = frac2ndc(firstHit.xyz);
@@ -171,15 +172,16 @@ void main() {
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
-		if (colorSample.a < 0.01) continue;
-		if (overFirstHit.a > len)
-			overFirstHit = samplePos;
-		colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-		colorSample.rgb *= colorSample.a;
-		colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
-		overFarthest = samplePos.a;
-		if ( colAcc.a > earlyTermination )
-			break;
+		if (colorSample.a >= 0.01) {
+			if (overFirstHit.a > len)
+				overFirstHit = samplePos;
+			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			colorSample.rgb *= colorSample.a;
+			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+			overFarthest = samplePos.a;
+			if ( colAcc.a > earlyTermination )
+				break;
+		}
 	}
 	if (overFirstHit.a < firstHit.a)
 	//if (overFirstHit.a < len)
