@@ -4870,6 +4870,8 @@ Niivue.prototype.drawSliceOrientationText = function (
   let topText = "S";
   if (axCorSag === this.sliceTypeAxial) topText = "A";
   let leftText = this.opts.isRadiologicalConvention ? "R" : "L";
+  if (axCorSag === this.sliceTypeSagittal)
+    leftText = this.opts.sagittalNoseLeft ? "A" : "P";
   if (this.opts.isCornerOrientationText) {
     this.drawTextRightBelow(
       [leftTopWidthHeight[0], leftTopWidthHeight[1]],
@@ -4877,8 +4879,6 @@ Niivue.prototype.drawSliceOrientationText = function (
     );
     return;
   }
-  if (axCorSag === this.sliceTypeSagittal)
-    leftText = this.opts.sagittalNoseLeft ? "A" : "P";
   this.drawTextBelow(
     [
       leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5,
