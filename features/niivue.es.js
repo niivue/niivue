@@ -110426,6 +110426,28 @@ function Niivue(options = {}) {
   };
   this.subscriptions = [];
 }
+Niivue.prototype.saveScene = function(filename = "") {
+  function saveBlob(blob, name) {
+    const a = document.createElement("a");
+    document.body.appendChild(a);
+    a.style.display = "none";
+    const url = window.URL.createObjectURL(blob);
+    a.href = url;
+    a.download = name;
+    a.click();
+    a.remove();
+  }
+  let canvas = this.canvas;
+  this.drawScene();
+  canvas.toBlob((blob) => {
+    if (filename === "") {
+      filename = `niivue-screenshot-${new Date().toString()}.png`;
+      filename = filename.replace(/\s/g, "_");
+    }
+    console.log(filename);
+    saveBlob(blob, filename);
+  });
+};
 Niivue.prototype.attachTo = async function(id) {
   await this.attachToCanvas(document.getElementById(id));
   log.debug("attached to element with id: ", id);
