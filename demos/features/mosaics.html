@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Mosaics</title>
+    <style>
+      section {
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body style="font-family: sans-serif;">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+
+    <section>
+      <h1>
+        Mosaic (Lightbox) View
+      </h1>
+      <label for="name">Mosaic string:</label>
+      <input type="text" id="str" name="str" onKeyUp="return bar()" value="A -16 0 16; C -16 0 24; S -32 0 32" required minlength="2" maxlength="80" size="80">
+    </section>
+
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
+        </canvas>
+      </div>
+    </section>
+
+    <script src="./niivue.umd.js">
+    </script>
+    <script>
+     var volumeList1 = [
+     {
+           url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "mni152",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "gray",
+           opacity: 1,
+           visible: true,
+         },
+        ] 
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: false,
+        backColor: [0, 0, 0, 1]})
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeList1)
+      var txt = document.getElementById("str");
+      nv1.setSliceType(nv1.sliceTypeAxial)
+      nv1.setSliceMosaicString(txt.value);
+       function bar() {
+            console.log(txt.value)//do stuff
+            nv1.setSliceMosaicString(txt.value);
+       }
+    </script>
+  </body>
+</html>

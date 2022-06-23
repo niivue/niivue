@@ -272,19 +272,23 @@ void main() {
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(volume, samplePos.xyz).a;
-		if (val > 0.01) break;
+    if (val > 0.01) {
+      break;
+    }
 		samplePos += deltaDirFast; //advance ray position
 	}
 	if ((samplePos.a >= len) && ((overlays < 1.0) || (backgroundMasksOverlays > 0))) {
-		if (isClip)
+    if (isClip){
 			fColor += clipPlaneColorX;
+    }
 		return;
 	}
 	fColor = vec4(1.0, 1.0, 1.0, 1.0);
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
-	if (samplePos.a < 0.0)
+  if (samplePos.a < 0.0){
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+  }
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
 	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * lenNoClip);
@@ -306,15 +310,18 @@ void main() {
 				break;
 		}
 	}
-	if (firstHit.a < len)
+  if (firstHit.a < len){
 		gl_FragDepth = frac2ndc(firstHit.xyz);
+  }
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	//if (isClip) //CR
 	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
 		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
 		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
-	if (overlays < 1.0) return;
+  if (overlays < 1.0) {
+    return;
+  }
 	//overlay pass
 	len = lenNoClip;
 	samplePos = vec4(start.xyz, 0.0); //ray position
@@ -323,24 +330,29 @@ void main() {
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(overlay, samplePos.xyz).a;
-		if (val > 0.01) break;
+    if (val > 0.01) {
+      break;
+    }
 		samplePos += deltaDirFast; //advance ray position
 	}
 	if (samplePos.a >= len) {
-		if (isClip && (fColor.a == 0.0))
+    if (isClip && (fColor.a == 0.0)) {
 			fColor += clipPlaneColorX;
+    }
 		return;
 	}
 	samplePos -= deltaDirFast;
-	if (samplePos.a < 0.0)
+  if (samplePos.a < 0.0){
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+  }
 	//end: fast pass
 	float overFarthest = len;
 	colAcc = vec4(0.0, 0.0, 0.0, 0.0);
 	samplePos += deltaDir * ran; //jitter ray
 	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
-	if (backgroundMasksOverlays > 0)
+  if (backgroundMasksOverlays > 0){
 		samplePos = firstHit;
+  }
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
@@ -356,16 +368,18 @@ void main() {
 		}
 	}
 	if (samplePos.a >= len) {
-		if (isClip && (fColor.a == 0.0))
+    if (isClip && (fColor.a == 0.0)){
 			fColor += clipPlaneColorX;
+    }
 		return;
 	}
 	//if (overFirstHit.a < len)
-		gl_FragDepth = frac2ndc(overFirstHit.xyz);
+	gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
-	if (fColor.a <= 0.0)
+  if (fColor.a <= 0.0){
 			overMix = 1.0;
+  }
 	else if (((overFarthest) > backNearest)) {
 		float dx = (overFarthest - backNearest)/1.73;
 		dx = fColor.a * pow(dx, overlayDepth);
@@ -438,6 +452,70 @@ void main() {
 	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
 	color.a = aout;
+}`;
+
+export var vertSliceMMShader = `#version 300 es
+#line 4
+layout(location=0) in vec3 pos;
+uniform int axCorSag;
+uniform mat4 mvpMtx;
+uniform mat4 frac2mm;
+uniform float slice;
+out vec3 texPos;
+void main(void) {
+	texPos = vec3(pos.x, pos.y, slice);
+	if (axCorSag > 1)
+		texPos = vec3(slice, pos.x, pos.y);
+  else if (axCorSag > 0)
+		texPos = vec3(pos.x, slice, pos.y);
+	//vec4 mm = vec4(50.0 * (pos.x - 0.5), 50.0 * (pos.y - 0.5), 0.0, 1.0);
+	vec4 mm = frac2mm * vec4(texPos, 1.0);
+	//vec4 mm =  vec4(texPos, 1.0) * frac2mm;
+	gl_Position = mvpMtx * mm;
+	//gl_Position = mm;
+}`;
+
+export var fragSliceMMShader = `#version 300 es
+#line 228
+precision highp int;
+precision highp float;
+uniform highp sampler3D volume, overlay;
+uniform int backgroundMasksOverlays;
+uniform float overlays;
+uniform float opacity;
+uniform float drawOpacity;
+uniform highp sampler3D drawing;
+in vec3 texPos;
+out vec4 color;
+void main() {
+	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
+	vec4 background = texture(volume, texPos);
+	color = vec4(background.rgb, opacity);
+	vec4 ocolor = vec4(0.0);
+	if (overlays > 0.0) {
+		ocolor = texture(overlay, texPos);
+	}
+	float draw = texture(drawing, texPos).r;
+	if (draw > 0.0) {
+		vec3 dcolor = vec3(0.0, 0.0, 0.0);
+		if (draw >= (4.0/255.0))
+			dcolor.rgb = vec3(draw,0.0,draw);
+		else if (draw >= (3.0/255.0))
+			dcolor.b = 1.0;
+		else if (draw >= (2.0/255.0))
+			dcolor.g = 1.0;
+		else
+			dcolor.r = 1.0;
+		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+		color.a = max(drawOpacity, color.a);
+	}
+	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
+		return;
+	//float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
+	//if (aout <= 0.0) return;
+	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
+	color.a = 1.0;
 }`;
 
 export var fragLineShader = `#version 300 es
@@ -886,6 +964,25 @@ void main(void) {
 	vL = normalize(lightPosition);
 	vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
+}`;
+
+//report depth for fragment
+// https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/viewer/screensurface.js#L89
+export var fragMeshDepthShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+out vec4 color;
+vec4 packFloatToVec4i(const float value) {
+	//this Papaya function uses BSD 3-clause license Copyright (c) 2012-2015, RII-UTHSCSA
+	const vec4 bitSh = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
+	const vec4 bitMsk = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
+	vec4 res = fract(value * bitSh);
+	res -= res.xxyz * bitMsk;
+	return res;
+}
+void main() {
+	color = packFloatToVec4i(gl_FragCoord.z);
 }`;
 
 //ToonShader https://prideout.net/blog/old/blog/index.html@tag=toon-shader.html
