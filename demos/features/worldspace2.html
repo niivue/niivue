@@ -31,7 +31,7 @@
       Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zSlider">
     </div>
     <div class="slidecontainer">
-      Zoom <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
+      Mesh clipping <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
     </div>
     <input type="checkbox" id="check1" name="check1" unchecked>
     <label for="check1">Radiological</label>
@@ -96,7 +96,7 @@
             backColor: [0.3, 0.2, 0.4, 1],
             show3Dcrosshair: true,
         })
-      nv1.setSliceMM(true);
+      nv1.setSliceMM(true)
       nv1.attachTo('gl1')
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(120,10)

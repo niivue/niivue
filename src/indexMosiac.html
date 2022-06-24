@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>NiiVue</title>
+  <style>
+    section {
+      margin: 20px;
+    }
+  </style>
+</head>
+
+<body style="font-family: sans-serif;">
+  <div id="app">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+
+    <section>
+      <h1>
+        hot reloadable development preview
+      </h1>
+    </section>
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:90%; height:420px;">
+        <canvas id="gl1" height=420 width=640>
+        </canvas>
+      </div>
+    </section>
+
+    <section>
+      <p id="location"></p>
+    </section>
+
+    <!-- <script type="module" src="./index.js">
+    </script> -->
+    <script type="module" async>
+      import { Niivue } from './niivue.js'
+			import {NVImage} from './nvimage.js'
+			import {NVMesh} from './nvmesh.js'
+			let query = window.location.search
+			const params = new URLSearchParams(query);
+			let url = params.get('url')
+      var volumeList1 = [
+        // first item is brackground image
+        {
+          //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/AIL.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          //url: "./mni152.nii.gz",
+          //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
+        },
+      ]
+			var nv1 = new Niivue({
+				logging: true,
+        show3Dcrosshair: true,
+				loadingText: 'there are no images',
+				dragAndDropEnabled: true,
+				backColor: [0.3, 0.2, 0.4, 1],
+				//thumbnail: "../demos/images/DoG.png"
+			})
+      nv1.setRadiologicalConvention(false)
+      nv1.attachTo('gl1')
+nv1.setSliceMM(true)
+      //nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setSliceMosaicString('S 50 C 10  50 A -60 -50 0 A X 20');
+      //nv1.setClipPlane([-0.1, 270, 0])
+      nv1.setRenderAzimuthElevation(90,10)
+
+      await nv1.loadVolumes(volumeList1)
+			
+      var meshLayersList1 = [
+        //{url: "../demos/images/PJM-stc-lh.stc", colorMap: "rocket", opacity: 0.7},
+        //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
+      ]
+	
+			/*
+      await nv1.loadMeshes([
+         {url: "../demos/images/dpsv.trx", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+         //{url: "../demos/images/mni152_2009AO.mz3", rgba255 : [255, 255, 255, 255]},
+         //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+         //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+      ])
+			*/
+
+      // example of using the 'location' change event with a callback function
+      nv1.on('location', (data) => {
+        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
+      })
+
+			nv1.on('imageLoaded', (image) => {
+				console.log('imageLoaded', image.name)
+			})
+
+			nv1.on('intensityRange', (image) => {
+			 console.log(image.cal_min, image.cal_max)
+			})
+
+			setTimeout(() => {
+				//nv1.saveScene('test.png') // if no filename, then will use date string
+			}, 2000)
+			
+		</script>
+  </div>
+</body>
+
+</html>
