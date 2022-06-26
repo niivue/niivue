@@ -468,7 +468,6 @@ void main(void) {
 		texPos = vec3(slice, pos.x, pos.y);
   else if (axCorSag > 0)
 		texPos = vec3(pos.x, slice, pos.y);
-	//vec4 mm = vec4(50.0 * (pos.x - 0.5), 50.0 * (pos.y - 0.5), 0.0, 1.0);
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
 	//vec4 mm =  vec4(texPos, 1.0) * frac2mm;
 	gl_Position = mvpMtx * mm;

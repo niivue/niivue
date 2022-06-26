@@ -381,7 +381,36 @@ export function NVImage(
   this.calMinMax();
 }
 
+NVImage.prototype.computeObliqueAngle = function (mtx44) {
+  //https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
+  let mtx = mat4.clone(mtx44);
+  mat4.transpose(mtx, mtx44);
+  let dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2]);
+  let xmax =
+    Math.max(Math.max(Math.abs(mtx[0]), Math.abs(mtx[1])), Math.abs(mtx[2])) /
+    dxtmp;
+  let dytmp = Math.sqrt(mtx[4] * mtx[4] + mtx[5] * mtx[5] + mtx[6] * mtx[6]);
+  let ymax =
+    Math.max(Math.max(Math.abs(mtx[4]), Math.abs(mtx[5])), Math.abs(mtx[6])) /
+    dytmp;
+  let dztmp = Math.sqrt(mtx[8] * mtx[8] + mtx[9] * mtx[9] + mtx[10] * mtx[10]);
+  let zmax =
+    Math.max(Math.max(Math.abs(mtx[8]), Math.abs(mtx[9])), Math.abs(mtx[10])) /
+    dztmp;
+  let fig_merit = Math.min(Math.min(xmax, ymax), zmax);
+  let oblique_angle = Math.abs((Math.acos(fig_merit) * 180.0) / 3.141592653);
+  if (oblique_angle > 0.01)
+    console.log(
+      "Warning voxels not aligned with world space: " +
+        oblique_angle +
+        " degrees from plumb.\n"
+    );
+  else oblique_angle = 0.0;
+  return oblique_angle;
+};
+
 NVImage.prototype.calculateOblique = function () {
+  this.oblique_angle = this.computeObliqueAngle(this.matRAS);
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
   let X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
   let Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS);
