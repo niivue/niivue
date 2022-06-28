@@ -1,7 +1,7 @@
 ## Introduction
 
 There are [several approaches to render text in WebGL](https://stackoverflow.com/questions/25956272/better-quality-text-in-webgl). NiiVue uses 
-Viktor Chlumský's [multi-channel signed distance field](https://github.com/Chlumsky/msdfgen). The default font supplied with NiiVue is [Roboto](https://fonts.google.com/specimen/Roboto?preview.text_type=custom), created with [msdf-atlas-gen](https://github.com/Chlumsky/msdf-atlas-gen) using the command:
+[multi-channel signed distance field](https://github.com/Chlumsky/msdfgen). The default font supplied with NiiVue is [Roboto](https://fonts.google.com/specimen/Roboto?preview.text_type=custom), created with [msdf-atlas-gen](https://github.com/Chlumsky/msdf-atlas-gen) using the command:
 
 ```
 msdf-atlas-gen.exe -font Roboto-Regular.ttf -charset chars.txt -pxrange 2 -dimensions 512 256 -format png -json fnt.json -imageout fnt.png

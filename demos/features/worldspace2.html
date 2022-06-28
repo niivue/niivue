@@ -28,7 +28,10 @@
       Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
     </div>
     <div class="slidecontainer">
-      Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zSlider">
+      Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
+    </div>
+    <div class="slidecontainer">
+      Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
     </div>
     <div class="slidecontainer">
       Mesh clipping <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
@@ -37,7 +40,8 @@
     <label for="check1">Radiological</label>
     <input type="checkbox" id="check2" name="check2" unchecked>
     <label for="check2">Corner text</label>
-
+    <input type="checkbox" id="check3" name="check3" checked>
+    <label for="check2">World space</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:800px;">
@@ -56,11 +60,16 @@
       function doCheck2Click() {
         nv1.setCornerOrientationText(this.checked);
       }
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked);
+      }
       function doSlider() {
         var sx = document.getElementById("xSlider");
         var sy = document.getElementById("ySlider");
         var sz =document.getElementById("zSlider");
-        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), 0.1 * parseInt(sz.value)])
+        var sZoom =document.getElementById("zoomSlider");
+        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), parseInt(sz.value), 0.1 * parseInt(sZoom.value)])
       }
       var xslider = document.getElementById("xSlider");
       xslider.oninput = function() {
@@ -72,6 +81,10 @@
       }
       var zslider = document.getElementById("zSlider");
       zslider.oninput = function() {
+        doSlider()
+      }
+      var zoomslider = document.getElementById("zoomSlider");
+      zoomslider.oninput = function() {
         doSlider()
       }
       var dxslider = document.getElementById("dxSlider");

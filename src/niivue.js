@@ -196,7 +196,7 @@ export function Niivue(options = {}) {
   this.scene.mouseButtonLeftDown = false;
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseDepthPicker = false;
-  this.scene.pan2Dxyzmm = [0, 0, 1];
+  this.scene.pan2Dxyzmm = [0, 0, 0, 1];
   this.scene.scale2D = 1.0;
   this.scene.prevX = 0;
   this.scene.prevY = 0;
@@ -762,9 +762,10 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
     return;
   // calculate our box
   let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
+  if (frac[0] < 0) return;
   let startVox = this.frac2vox(frac, volIdx);
-
   frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
+  if (frac[0] < 0) return;
   let endVox = this.frac2vox(frac, volIdx);
 
   let hi = -Number.MAX_VALUE,
@@ -1782,8 +1783,8 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   this.updateGLVolume();
 };
 
-Niivue.prototype.setPan2Dxyzmm = function (xyzmm) {
-  this.scene.pan2Dxyzmm = xyzmm;
+Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
+  this.scene.pan2Dxyzmm = xyzmmZoom;
   this.drawScene();
 };
 
@@ -2598,7 +2599,7 @@ Niivue.prototype.drawPt = function (x, y, z, penValue) {
 //https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 // https://www.geeksforgeeks.org/bresenhams-algorithm-for-3-d-line-drawing/
 // ptA, ptB are start and end points of line (each XYZ)
-Niivue.prototype.drawLine = function (ptA, ptB, penValue) {
+Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   let dx = Math.abs(ptA[0] - ptB[0]);
   let dy = Math.abs(ptA[1] - ptB[1]);
   let dz = Math.abs(ptA[2] - ptB[2]);
@@ -4105,20 +4106,15 @@ Niivue.prototype.refreshColormaps = function () {
 
 // not included in public docs
 Niivue.prototype.sliceScale = function () {
-  var dims = [
-    1.0,
-    this.back.dims[1] * this.back.pixDims[1],
-    this.back.dims[2] * this.back.pixDims[2],
-    this.back.dims[3] * this.back.pixDims[3],
-  ];
-  var longestAxis = Math.max(dims[1], Math.max(dims[2], dims[3]));
+  let dimsMM = this.screenFieldOfViewMM(this.sliceTypeAxial);
+  var longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]));
   var volScale = [
-    dims[1] / longestAxis,
-    dims[2] / longestAxis,
-    dims[3] / longestAxis,
+    dimsMM[0] / longestAxis,
+    dimsMM[1] / longestAxis,
+    dimsMM[2] / longestAxis,
   ];
   var vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
-  return { volScale, vox, longestAxis };
+  return { volScale, vox, longestAxis, dimsMM };
 }; // sliceScale()
 
 function swizzleVec3(vec, order = [0, 1, 2]) {
@@ -4168,7 +4164,6 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
   this.drawScene();
 };
 
-// not included in public docs
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posNow;
   var posFuture;
@@ -4224,17 +4219,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag)
       continue; //if mouse is drawing on axial slice, ignore any entry to coronal slice
     if (axCorSag > this.sliceTypeSagittal) continue;
-    var ltwh = this.screenSlices[i].leftTopWidthHeight;
-    let isMirror = false;
-    if (ltwh[2] < 0) {
-      isMirror = true;
-      ltwh[0] += ltwh[2];
-      ltwh[2] = -ltwh[2];
-    }
-    var fracX = (x - ltwh[0]) / ltwh[2];
-    if (isMirror) fracX = 1.0 - fracX;
-    var fracY = 1.0 - (y - ltwh[1]) / ltwh[3];
-    if (fracX >= 0.0 && fracX < 1.0 && fracY >= 0.0 && fracY < 1.0) {
+    let texFrac = this.screenXY2TextureFrac(x, y, i);
+    if (texFrac[0] < 0) continue; //click not on slice i
+
+    if (true) {
       //user clicked on slice i
       if (!isDelta) {
         this.scene.crosshairPos[2 - axCorSag] = posChange;
@@ -4262,39 +4250,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         });
         return;
       }
-      if (this.screenSlices[i].AxyzMxy.length > 4) {
-        let xyzMM = [0, 0, 0];
-        xyzMM[0] =
-          this.screenSlices[i].leftTopMM[0] +
-          fracX * this.screenSlices[i].fovMM[0];
-        xyzMM[1] =
-          this.screenSlices[i].leftTopMM[1] +
-          fracY * this.screenSlices[i].fovMM[1];
-        // let xyz = mat.vec3.fromValues(30, 30, 0);
-        let v = this.screenSlices[i].AxyzMxy;
-        xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-        if (axCorSag === this.sliceTypeCoronal)
-          xyzMM = swizzleVec3(xyzMM, [0, 2, 1]); //screen RSA to NIfTI RAS
-        if (axCorSag === this.sliceTypeSagittal)
-          xyzMM = swizzleVec3(xyzMM, [2, 0, 1]); //screen ASR to NIfTI RAS
-        let xyz = this.mm2frac(xyzMM);
-        this.scene.crosshairPos[0] = xyz[0];
-        this.scene.crosshairPos[1] = xyz[1];
-        this.scene.crosshairPos[2] = xyz[2];
-      } else {
-        if (axCorSag === this.sliceTypeAxial) {
-          this.scene.crosshairPos[0] = fracX;
-          this.scene.crosshairPos[1] = fracY;
-        }
-        if (axCorSag === this.sliceTypeCoronal) {
-          this.scene.crosshairPos[0] = fracX;
-          this.scene.crosshairPos[2] = fracY;
-        }
-        if (axCorSag === this.sliceTypeSagittal) {
-          this.scene.crosshairPos[1] = fracX;
-          this.scene.crosshairPos[2] = fracY;
-        }
-      }
+      this.scene.crosshairPos = texFrac.slice();
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
         if (this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
@@ -4312,7 +4268,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
             pt[2] === this.drawPenLocation[2]
           )
             return;
-          this.drawLine(pt, this.drawPenLocation, this.opts.penValue);
+          this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue);
         }
         this.drawPenLocation = pt;
         if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
@@ -4553,7 +4509,7 @@ Niivue.prototype.setInterpolation = function (isNearest) {
 
 function deg2rad(deg) {
   return deg * (Math.PI / 180.0);
-}
+} // deg2rad()
 
 Niivue.prototype.calculateMvpMatrix2D = function (
   leftTopWidthHeight,
@@ -4623,66 +4579,47 @@ Niivue.prototype.calculateMvpMatrix2D = function (
   };
 }; // calculateMvpMatrix2D
 
-Niivue.prototype.screenFieldOfViewMM = function (axCorSag = 0) {
-  //extent of volume/mesh (in millimeters) in screen space
-  let v = this.volumeObject3D;
-  let mnMM = mat.vec4.fromValues(
-    v.extentsMin[0],
-    v.extentsMin[1],
-    v.extentsMin[2],
-    1
-  );
-  let mxMM = mat.vec4.fromValues(
-    v.extentsMax[0],
-    v.extentsMax[1],
-    v.extentsMax[2],
-    1
-  );
-  let rotation = mat.mat4.create(); //identity matrix: 2D axial screenXYZ = nifti [i,j,k]
-  if (axCorSag === this.sliceTypeCoronal)
+Niivue.prototype.swizzleVec3MM = function (v3, axCorSag) {
+  // change order of vector components
+  if (axCorSag === this.sliceTypeCoronal) {
     //2D coronal screenXYZ = nifti [i,k,j]
-    rotation = mat.mat4.fromValues(
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1
-    );
-  if (axCorSag === this.sliceTypeSagittal)
+    v3 = swizzleVec3(v3, [0, 2, 1]);
+  } else if (axCorSag === this.sliceTypeSagittal) {
     //2D sagittal screenXYZ = nifti [j,k,i]
-    rotation = mat.mat4.fromValues(
-      0,
-      0,
-      1,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1
-    );
-  mat.vec4.transformMat4(mnMM, mnMM, rotation);
-  mat.vec4.transformMat4(mxMM, mxMM, rotation);
-  let fovMM = mat.vec4.create();
-  mat.vec4.subtract(fovMM, mxMM, mnMM);
+    v3 = swizzleVec3(v3, [1, 2, 0]);
+  }
+  return v3;
+}; // swizzleVec3MM()
+
+Niivue.prototype.screenFieldOfViewMM = function (
+  axCorSag = 0,
+  forceSliceMM = false
+) {
+  //extent of volume/mesh (in millimeters) in screen space
+  if (!forceSliceMM && !this.opts.isSliceMM) {
+    //return voxel space
+    let fov = this.volumeObject3D.fieldOfViewDeObliqueMM.slice();
+    return this.swizzleVec3MM(fov, axCorSag);
+  }
+  let mnMM = this.volumeObject3D.extentsMin.slice();
+  let mxMM = this.volumeObject3D.extentsMax.slice();
+  let rotation = mat.mat4.create(); //identity matrix: 2D axial screenXYZ = nifti [i,j,k]
+  mnMM = this.swizzleVec3MM(mnMM, axCorSag);
+  mxMM = this.swizzleVec3MM(mxMM, axCorSag);
+  let fovMM = mat.vec3.create();
+  mat.vec3.subtract(fovMM, mxMM, mnMM);
+  return fovMM;
+};
+
+Niivue.prototype.screenFieldOfViewExtendedMM = function (axCorSag = 0) {
+  //extent of volume/mesh (in millimeters) in screen space
+  let mnMM = this.volumeObject3D.extentsMin.slice();
+  let mxMM = this.volumeObject3D.extentsMax.slice();
+  let rotation = mat.mat4.create(); //identity matrix: 2D axial screenXYZ = nifti [i,j,k]
+  mnMM = this.swizzleVec3MM(mnMM, axCorSag);
+  mxMM = this.swizzleVec3MM(mxMM, axCorSag);
+  let fovMM = mat.vec3.create();
+  mat.vec3.subtract(fovMM, mxMM, mnMM);
   return { mnMM, mxMM, rotation, fovMM };
 };
 
@@ -4692,6 +4629,7 @@ Niivue.prototype.drawSliceOrientationText = function (
 ) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   let topText = "S";
+
   if (axCorSag === this.sliceTypeAxial) topText = "A";
   let leftText = this.opts.isRadiologicalConvention ? "R" : "L";
   if (axCorSag === this.sliceTypeSagittal)
@@ -4710,6 +4648,7 @@ Niivue.prototype.drawSliceOrientationText = function (
     ],
     topText
   );
+
   this.drawTextRight(
     [
       leftTopWidthHeight[0],
@@ -4728,24 +4667,16 @@ Niivue.prototype.xyMM2xyzMM = function (axCorSag, sliceFrac) {
   let a = [0, 0, 0];
   let b = [1, 1, 0];
   let c = [1, 0, 1];
+
   a[sliceDim] = sliceFrac;
   b[sliceDim] = sliceFrac;
   c[sliceDim] = sliceFrac;
   a = this.frac2mm(a);
   b = this.frac2mm(b);
   c = this.frac2mm(c);
-  if (axCorSag === this.sliceTypeCoronal) {
-    //coronal screen X,Y,Z is R,S,A for so 0,2,1 for RAS
-    a = swizzleVec3(a, [0, 2, 1]);
-    b = swizzleVec3(b, [0, 2, 1]);
-    c = swizzleVec3(c, [0, 2, 1]);
-  }
-  if (axCorSag === this.sliceTypeSagittal) {
-    //coronal screen X,Y,Z is A,S,R for so 1,2,0 for RAS
-    a = swizzleVec3(a, [1, 2, 0]);
-    b = swizzleVec3(b, [1, 2, 0]);
-    c = swizzleVec3(c, [1, 2, 0]);
-  }
+  a = this.swizzleVec3MM(a, axCorSag);
+  b = this.swizzleVec3MM(b, axCorSag);
+  c = this.swizzleVec3MM(c, axCorSag);
   let denom = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
   let yMult = (b[0] - a[0]) * (c[2] - a[2]) - (c[0] - a[0]) * (b[2] - a[2]);
   yMult /= denom;
@@ -4765,13 +4696,14 @@ Niivue.prototype.draw2DMM = function (
   axCorSag,
   customMM = NaN
 ) {
-  let screen = this.screenFieldOfViewMM(axCorSag);
+  let screen = this.screenFieldOfViewExtendedMM(axCorSag);
   let isRadiolgical =
     this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
   if (customMM === Infinity || customMM === -Infinity) {
     isRadiolgical = customMM !== Infinity;
     if (axCorSag === this.sliceTypeCoronal) isRadiolgical = !isRadiolgical;
-  }
+  } else if (this.opts.sagittalNoseLeft && axCorSag === this.sliceTypeSagittal)
+    isRadiolgical = !isRadiolgical;
   let elevation = 0;
   let azimuth = 0;
   if (axCorSag === this.sliceTypeSagittal) {
@@ -4785,14 +4717,17 @@ Niivue.prototype.draw2DMM = function (
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)
     //use full screen
     leftTopWidthHeight = this.scaleSlice(screen.fovMM[0], screen.fovMM[1]);
-  screen.mnMM[0] += this.scene.pan2Dxyzmm[0];
-  screen.mxMM[0] += this.scene.pan2Dxyzmm[0];
-  screen.mnMM[1] += this.scene.pan2Dxyzmm[1];
-  screen.mxMM[1] += this.scene.pan2Dxyzmm[1];
-  screen.mnMM[0] /= this.scene.pan2Dxyzmm[2];
-  screen.mxMM[0] /= this.scene.pan2Dxyzmm[2];
-  screen.mnMM[1] /= this.scene.pan2Dxyzmm[2];
-  screen.mxMM[1] /= this.scene.pan2Dxyzmm[2];
+  if (isNaN(customMM)) {
+    let panXY = this.swizzleVec3MM(this.scene.pan2Dxyzmm, axCorSag);
+    screen.mnMM[0] -= panXY[0];
+    screen.mxMM[0] -= panXY[0];
+    screen.mnMM[1] -= panXY[1];
+    screen.mxMM[1] -= panXY[1];
+    screen.mnMM[0] /= this.scene.pan2Dxyzmm[3];
+    screen.mxMM[0] /= this.scene.pan2Dxyzmm[3];
+    screen.mnMM[1] /= this.scene.pan2Dxyzmm[3];
+    screen.mxMM[1] /= this.scene.pan2Dxyzmm[3];
+  }
   let sliceDim = 2; //axial depth is NIfTI k dimension
   if (axCorSag === this.sliceTypeCoronal) sliceDim = 1; //sagittal depth is NIfTI j dimension
   if (axCorSag === this.sliceTypeSagittal) sliceDim = 0; //sagittal depth is NIfTI i dimension
@@ -4902,10 +4837,16 @@ Niivue.prototype.draw2DVox = function (
   axCorSag,
   customMM = NaN
 ) {
+  if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
+    //use full screen
+    let fovMM = this.screenFieldOfViewMM(axCorSag);
+    leftTopWidthHeight = this.scaleSlice(fovMM[0], fovMM[1]);
+  }
   this.gl.cullFace(this.gl.FRONT);
   let ltwh = leftTopWidthHeight.slice();
   let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  //gl.viewport(ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
   gl.disable(gl.DEPTH_TEST);
   let sliceDim = 2;
   let crossXYZ = [
@@ -4966,11 +4907,8 @@ Niivue.prototype.draw2DVox = function (
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  //gl.uniform4f(sliceShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  //gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.genericVAO); //set vertex attributes
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-
   //record screenSlices to detect mouse click positions
   this.screenSlices.push({
     leftTopWidthHeight: leftTopWidthHeight,
@@ -4980,8 +4918,11 @@ Niivue.prototype.draw2DVox = function (
     leftTopMM: [],
     fovMM: [],
   });
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  this.drawSliceOrientationText(ltwh, axCorSag);
   if (!isNaN(customMM)) return;
   if (this.opts.crosshairWidth <= 0.0) return;
+  this.gl.bindVertexArray(this.genericVAO);
   this.lineShader.use(this.gl);
   this.gl.uniform4fv(
     this.lineShader.uniforms["lineColor"],
@@ -5014,12 +4955,11 @@ Niivue.prototype.draw2DVox = function (
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
   this.gl.enable(this.gl.CULL_FACE);
-  this.drawSliceOrientationText(ltwh, axCorSag);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
   this.sync();
-}; // draw2D()
+}; // draw2DVox()
 
 Niivue.prototype.draw2D = function (
   leftTopWidthHeight,
@@ -5763,10 +5703,12 @@ Niivue.prototype.drawCrosshairs3D = function (
       gl.deleteBuffer(this.crosshairs3D.indexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
       gl.deleteBuffer(this.crosshairs3D.vertexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
     }
-    let radius = Math.min(
-      Math.min(this.back.pixDims[1], this.back.pixDims[2]),
-      this.back.pixDims[3]
-    );
+    let radius =
+      0.5 *
+      Math.min(
+        Math.min(this.back.pixDims[1], this.back.pixDims[2]),
+        this.back.pixDims[3]
+      );
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(
       this.gl,
       1,
@@ -5878,60 +5820,73 @@ Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   return pos;
 };
 
-// not included in public docs
-Niivue.prototype.canvasPos2frac = function (canvasPos) {
-  let x, y, z;
-
-  // convert canvas pos to normalized texture space
-  for (let i = 0; i < this.screenSlices.length; i++) {
-    var axCorSag = this.screenSlices[i].axCorSag;
-    if (axCorSag > this.sliceTypeSagittal) continue;
-
-    var ltwh = this.screenSlices[i].leftTopWidthHeight;
-    let isMirror = false;
-    if (ltwh[2] < 0) {
-      isMirror = true;
-      ltwh[0] += ltwh[2];
-      ltwh[2] = -ltwh[2];
+Niivue.prototype.screenXY2TextureFrac = function (x, y, i) {
+  let texFrac = [-1, -1, -1]; //texture 0..1 so -1 is out of bounds
+  var axCorSag = this.screenSlices[i].axCorSag;
+  if (axCorSag > this.sliceTypeSagittal) return texFrac;
+  var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
+  let isMirror = false;
+  if (ltwh[2] < 0) {
+    isMirror = true;
+    ltwh[0] += ltwh[2];
+    ltwh[2] = -ltwh[2];
+  }
+  var fracX = (x - ltwh[0]) / ltwh[2];
+  if (isMirror) fracX = 1.0 - fracX;
+  var fracY = 1.0 - (y - ltwh[1]) / ltwh[3];
+  if (fracX < 0.0 || fracX > 1.0 || fracY < 0.0 || fracY > 1.0) return texFrac;
+  if (this.screenSlices[i].AxyzMxy.length > 4) {
+    let xyzMM = [0, 0, 0];
+    xyzMM[0] =
+      this.screenSlices[i].leftTopMM[0] + fracX * this.screenSlices[i].fovMM[0];
+    xyzMM[1] =
+      this.screenSlices[i].leftTopMM[1] + fracY * this.screenSlices[i].fovMM[1];
+    // let xyz = mat.vec3.fromValues(30, 30, 0);
+    let v = this.screenSlices[i].AxyzMxy;
+    xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+    if (axCorSag === this.sliceTypeCoronal)
+      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]); //screen RSA to NIfTI RAS
+    if (axCorSag === this.sliceTypeSagittal)
+      xyzMM = swizzleVec3(xyzMM, [2, 0, 1]); //screen ASR to NIfTI RAS
+    let xyz = this.mm2frac(xyzMM);
+    if (
+      xyz[0] < 0 ||
+      xyz[0] > 1 ||
+      xyz[1] < 0 ||
+      xyz[1] > 1 ||
+      xyz[2] < 0 ||
+      xyz[2] > 1
+    )
+      return texFrac;
+    texFrac[0] = xyz[0];
+    texFrac[1] = xyz[1];
+    texFrac[2] = xyz[2];
+  } else {
+    texFrac = this.scene.crosshairPos.slice();
+    if (axCorSag === this.sliceTypeAxial) {
+      texFrac[0] = fracX;
+      texFrac[1] = fracY;
     }
-
-    var fracX = (canvasPos[0] - ltwh[0]) / ltwh[2];
-    if (isMirror) {
-      fracX = 1.0 - fracX;
+    if (axCorSag === this.sliceTypeCoronal) {
+      texFrac[0] = fracX;
+      texFrac[2] = fracY;
     }
-
-    var fracY = 1.0 - (canvasPos[1] - ltwh[1]) / ltwh[3];
-    if (fracX >= 0.0 && fracX < 1.0 && fracY >= 0.0 && fracY < 1.0) {
-      // this is the slice the user right clicked in
-      switch (axCorSag) {
-        case this.sliceTypeAxial:
-          break;
-        case this.sliceTypeCoronal:
-          break;
-        default:
-      }
-
-      if (axCorSag === this.sliceTypeAxial) {
-        x = fracX;
-        y = fracY;
-        z = this.scene.crosshairPos[2];
-      }
-      if (axCorSag === this.sliceTypeCoronal) {
-        x = fracX;
-        y = this.scene.crosshairPos[1];
-        z = fracY;
-      }
-      if (axCorSag === this.sliceTypeSagittal) {
-        x = this.scene.crosshairPos[0];
-        y = fracX;
-        z = fracY;
-      }
-      break;
+    if (axCorSag === this.sliceTypeSagittal) {
+      texFrac[1] = fracX;
+      texFrac[2] = fracY;
     }
   }
+  return texFrac;
+}; // screenXY2TextureFrac()
 
-  return [x, y, z];
-}; // canvas2frac
+// not included in public docs
+Niivue.prototype.canvasPos2frac = function (canvasPos) {
+  for (let i = 0; i < this.screenSlices.length; i++) {
+    let texFrac = this.screenXY2TextureFrac(canvasPos[0], canvasPos[1], i);
+    if (texFrac[0] >= 0) return texFrac;
+  }
+  return [-1, -1, -1]; //texture 0..1 so -1 is out of bounds
+};
 
 // not included in public docs
 // note: we also have a "sliceScale" method, which could be confusing
@@ -6062,12 +6017,12 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
     return;
   }
   this.screenSlices = [];
-  let axi = this.screenFieldOfViewMM(this.sliceTypeAxial);
-  let xMM = axi.fovMM[0];
-  let yMM = axi.fovMM[1];
-  let zMM = axi.fovMM[2];
+  //render always in world space
+  let fovRenderMM = this.screenFieldOfViewMM(this.sliceTypeAxial, true);
+  //2d slices might be in world space or voxel space
+  let fovSliceMM = this.screenFieldOfViewMM(this.sliceTypeAxial);
+  //fovRender and fovSlice will only be different if scans are oblique and shown in voxel space
   //let mosaicStr = 'A -52 -12 C 8 ; S 28 48 66'
-  let mxMM = Math.max(Math.max(xMM, yMM), zMM);
   let mxRow = 1;
   mosaicStr = mosaicStr.replaceAll(";", " ;").trim();
   let axiMM = [];
@@ -6086,8 +6041,6 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
     let rowHt = 0;
     let left = 0;
     let top = 0;
-    let w = 0;
-    let h = 0;
     let mxRowWid = 0;
     let isLabel = false;
     let axCorSag = this.sliceTypeAxial;
@@ -6118,24 +6071,19 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
       }
       let sliceMM = parseFloat(item, NaN);
       if (isNaN(sliceMM)) continue;
+      let w = 0;
+      let h = 0;
+      let fov = fovSliceMM;
+      if (isRender) fov = fovRenderMM;
       //draw the slice
-      w = mxMM;
-      h = mxMM;
-      if (
-        axCorSag === this.sliceTypeAxial ||
-        axCorSag === this.sliceTypeCoronal
-      )
-        w = xMM;
-      if (axCorSag === this.sliceTypeSagittal) w = yMM;
-      if (axCorSag === this.sliceTypeAxial) h = yMM;
-      if (
-        axCorSag === this.sliceTypeCoronal ||
-        axCorSag === this.sliceTypeSagittal
-      )
-        h = zMM;
+      if (axCorSag === this.sliceTypeSagittal) w = fov[1];
+      else w = fov[0];
+      if (axCorSag === this.sliceTypeAxial) h = fov[1];
+      else h = fov[2];
+      //console.log("w" + w + " h" + h + "::", fov);
       let leftTopWidthHeight = [left, top, w, h];
       if (pass === 0) {
-        //1st pass: record
+        //1st pass: record slice locations in world space
         if (!isRender) {
           if (axCorSag === this.sliceTypeAxial) axiMM.push(sliceMM);
           if (axCorSag === this.sliceTypeCoronal) corMM.push(sliceMM);
@@ -6250,23 +6198,17 @@ Niivue.prototype.drawScene = function () {
     this.drawMosaic(this.sliceMosaicString);
   } else {
     // issue56 is use mm else use voxel
-    let { volScale, vox, longestAxis } = this.sliceScale();
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
     this.screenSlices = []; // empty array
     if (this.sliceType === this.sliceTypeAxial) {
-      //draw axial
-      let leftTopWidthHeight = this.scaleSlice(volScale[0], volScale[1]);
-      this.draw2D(leftTopWidthHeight, 0);
+      this.draw2D([0, 0, 0, 0], 0);
     } else if (this.sliceType === this.sliceTypeCoronal) {
-      //draw coronal
-      let leftTopWidthHeight = this.scaleSlice(volScale[0], volScale[2]);
-      this.draw2D(leftTopWidthHeight, 1);
+      this.draw2D([0, 0, 0, 0], 1);
     } else if (this.sliceType === this.sliceTypeSagittal) {
-      //draw sagittal
-      let leftTopWidthHeight = this.scaleSlice(volScale[1], volScale[2]);
-      this.draw2D(leftTopWidthHeight, 2);
+      this.draw2D([0, 0, 0, 0], 2);
     } else {
       //sliceTypeMultiplanar
+      let { volScale, vox, longestAxis } = this.sliceScale();
       let ltwh = this.scaleSlice(
         volScale[0] + volScale[1],
         volScale[1] + volScale[2]

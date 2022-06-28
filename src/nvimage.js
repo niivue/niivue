@@ -2640,27 +2640,23 @@ function getExtents(positions, forceOriginInVolume = true) {
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
   //cube has 8 vertices: left/right, posterior/anterior, inferior/superior
-  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-  //TODO: ray direction needs to be corrected for oblique rotations
-  let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
-  let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let LAS = this.vox2mm(
-    [0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
-  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
-  let RAI = this.vox2mm(
-    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0],
-    this.matRAS
-  );
-  let RPS = this.vox2mm(
-    [this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
-  let RAS = this.vox2mm(
-    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
+  //n.b. voxel coordinates are from VOXEL centers
+  // add/subtract 0.5 to get full image field of view
+  let L = -0.5;
+  let P = -0.5;
+  let I = -0.5;
+  let R = this.dimsRAS[1] - 1 + 0.5;
+  let A = this.dimsRAS[2] - 1 + 0.5;
+  let S = this.dimsRAS[3] - 1 + 0.5;
+
+  let LPI = this.vox2mm([L, P, I], this.matRAS);
+  let LAI = this.vox2mm([L, A, I], this.matRAS);
+  let LPS = this.vox2mm([L, P, S], this.matRAS);
+  let LAS = this.vox2mm([L, A, S], this.matRAS);
+  let RPI = this.vox2mm([R, P, I], this.matRAS);
+  let RAI = this.vox2mm([R, A, I], this.matRAS);
+  let RPS = this.vox2mm([R, P, S], this.matRAS);
+  let RAS = this.vox2mm([R, A, S], this.matRAS);
 
   let posTex = [
     //spatial position (XYZ), texture coordinates UVW
@@ -2773,10 +2769,56 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     ...RAI,
     ...RPI,
   ]);
-  obj3D.extentsMin = extents.min;
-  obj3D.extentsMax = extents.max;
+  obj3D.extentsMin = extents.min.slice();
+  obj3D.extentsMax = extents.max.slice();
+
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   obj3D.originNegate = vec3.clone(extents.origin);
   vec3.negate(obj3D.originNegate, obj3D.originNegate);
+  /*
+  let matDeOblique = mat4.fromValues(
+    this.pixDimsRAS[1],
+    0,
+    0,
+    this.matRAS[3],
+    0,
+    this.pixDimsRAS[2],
+    0,
+    this.matRAS[7],
+    0,
+    0,
+    this.pixDimsRAS[3],
+    this.matRAS[11],
+    0,
+    0,
+    0,
+    1
+  );
+  LPI = this.vox2mm([L,P,I], matDeOblique);
+  LAI = this.vox2mm([L,A,I], matDeOblique);
+  LPS = this.vox2mm([L,P,S], matDeOblique);
+  LAS = this.vox2mm([L,A,S], matDeOblique);
+  RPI = this.vox2mm([R,P,I], matDeOblique);
+  RAI = this.vox2mm([R,A,I], matDeOblique);
+  RPS = this.vox2mm([R,P,S], matDeOblique);
+  RAS = this.vox2mm([R,A,S], matDeOblique);
+  const extentsDeOblique = getExtents([
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI,
+  ]);
+  obj3D.extentsDeObliqueMin = extentsDeOblique.min.slice();
+  obj3D.extentsDeObliqueMax = extentsDeOblique.max.slice();
+*/
+  obj3D.fieldOfViewDeObliqueMM = [
+    this.dimsRAS[1] * this.pixDimsRAS[1],
+    this.dimsRAS[2] * this.pixDimsRAS[2],
+    this.dimsRAS[3] * this.pixDimsRAS[3],
+  ];
   return obj3D;
 };
