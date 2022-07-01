@@ -524,7 +524,7 @@ void main() {
 	color.a = 1.0;
 }`;
 
-export var fragLineShader = `#version 300 es
+export var fragRectShader = `#version 300 es
 #line 189
 precision highp int;
 precision highp float;
@@ -601,7 +601,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
 
-export var vertLineShader = `#version 300 es
+export var vertRectShader = `#version 300 es
 #line 229
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -613,6 +613,21 @@ void main(void) {
 	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
+}`;
+
+export var vertLineShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float thickness;
+uniform vec4 startXYendXY;
+void main(void) {
+	vec2 posXY = mix(startXYendXY.xy, startXYendXY.zw, pos.x);
+	vec2 dir = normalize(startXYendXY.xy - startXYendXY.zw);
+	posXY += vec2(-dir.y, dir.x) * thickness * (pos.y - 0.5);
+	posXY.x = (posXY.x) / canvasWidthHeight.x; //0..1
+	posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y); //1..0
+	gl_Position = vec4((posXY * 2.0) - 1.0, 0.0, 1.0);
 }`;
 
 export var vertBmpShader = `#version 300 es

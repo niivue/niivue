@@ -30,7 +30,10 @@
   Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
 </div>
       <div class="slidecontainer">
-  Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zSlider">
+  Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
+</div>
+      <div class="slidecontainer">
+  Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
 </div>
       <div class="slidecontainer">
   Mesh Visibility <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
@@ -39,11 +42,20 @@
       <label for="check1">Radiological</label>
       <input type="checkbox" id="check2" name="check2" unchecked>
       <label for="check2">Corner text</label>
+      <input type="checkbox" id="check3" name="check3" checked>
+      <label for="check3">World space</label>
+      <input type="checkbox" id="check4" name="check4" unchecked>
+      <label for="check4">Drag measurement</label>
+      <input type="checkbox" id="check5" name="check5" unchecked>
+      <label for="check5">Ruler</label>
+      <input type="checkbox" id="check6" name="check6" unchecked>
+      <label for="check6">Nose left</label>
+
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:98%; height:800px;">
-        <canvas id="gl1" height=800 width=480>
+      <div id="demo1" style="width:98%; height:480px;">
+        <canvas id="gl1" height=480 width=480>
         </canvas>
       </div>
     </section>
@@ -59,7 +71,9 @@
         var sx = document.getElementById("xSlider");
         var sy = document.getElementById("ySlider");
         var sz =document.getElementById("zSlider");
-        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), 0.1 * parseInt(sz.value)])
+        var szoom =document.getElementById("zoomSlider");
+
+        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), parseInt(sz.value), 0.1 * parseInt(szoom.value)])
       }
       var xslider = document.getElementById("xSlider");
       xslider.oninput = function() {
@@ -71,6 +85,10 @@
       }
       var zslider = document.getElementById("zSlider");
       zslider.oninput = function() {
+        doSlider()
+      }
+      var zoomslider = document.getElementById("zoomSlider");
+      zoomslider.oninput = function() {
         doSlider()
       }
       var dxslider = document.getElementById("dxSlider");
@@ -88,6 +106,24 @@
       function doCheck2Click() {
         nv1.setCornerOrientationText(this.checked);
       }
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked);
+      }
+      document.getElementById("check4").addEventListener("change", doCheck4Click);
+      function doCheck4Click() {
+        nv1.opts.isDragShowsMeasurementTool = this.checked;
+      }      
+      document.getElementById("check5").addEventListener("change", doCheck5Click);
+      function doCheck5Click() {
+        nv1.opts.isRuler = this.checked;
+        nv1.drawScene();
+      }
+      document.getElementById("check6").addEventListener("change", doCheck6Click);
+      function doCheck6Click() {
+        nv1.opts.sagittalNoseLeft = this.checked;
+        nv1.drawScene();
+      } 
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -97,8 +133,8 @@
       var volumeList1 = [
         // first item is brackground image
         {
-          //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          //url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
@@ -112,7 +148,7 @@
 				show3Dcrosshair: true,
 				loadingText: 'there are no images',
 				dragAndDropEnabled: true,
-				backColor: [0, 0, 0, 1],
+				backColor: [0, 0.2, 0.3, 1],
 				//thumbnail: "../demos/images/DoG.png"
 			})
       nv1.setRadiologicalConvention(false)
@@ -127,15 +163,16 @@
         //{url: "../demos/images/PJM-stc-lh.stc", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
-
+/*nv1.opts.isDragShowsMeasurementTool = this.checked;
       await nv1.loadMeshes([
          {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255], layers : meshLayersList1},
          {url: "../demos/images/dpsv.trx", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/mni152_2009AO.mz3", rgba255 : [255, 255, 255, 255]},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
-      ])
-//nv1.setSliceMosaicString('A 0 20 32');
+      ])*/
+//nv1.setSliceMosaicString('C -50 -76 L- A -50 16 32 S -36 -30 S X -30');
+//nv1.opts.isDragShowsMeasurementTool = true;
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Mosaics</title>
+    <style>
+      section {
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body style="font-family: sans-serif;">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+
+    <section>
+      <h1>
+        Advanced mosaic (Lightbox, Montage) View
+      </h1>
+      <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).</p>
+      <label for="name">Mosaic string:</label>
+      <input type="text" id="str" name="str" onKeyUp="return bar()" value="A -4 0 16 C -70 -50 20 S X -30" required minlength="2" maxlength="128" size="128">
+    <input type="checkbox" id="check3" name="check3" unchecked>
+    <label for="check3">World space</label>
+    <input type="checkbox" id="check4" name="check4" unchecked>
+    <label for="check4">Drag measurement</label>
+    <input type="checkbox" id="check5" name="check5" unchecked>
+    <label for="check5">Ruler</label>
+    <input type="checkbox" id="check6" name="check6" unchecked>
+    <label for="check6">Nose left</label>
+    </section>
+
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:90%; height:640px;">
+        <canvas id="gl1" height=640 width=640>
+        </canvas>
+      </div>
+    </section>
+
+    <script src="./niivue.umd.js">
+    </script>
+    <script>
+     document.getElementById("check3").addEventListener("change", doCheck3Click);
+     function doCheck3Click() {
+       nv1.setSliceMM(this.checked);
+     }
+     document.getElementById("check4").addEventListener("change", doCheck4Click);
+     function doCheck4Click() {
+       nv1.opts.isDragShowsMeasurementTool = this.checked;
+     }      
+     document.getElementById("check5").addEventListener("change", doCheck5Click);
+     function doCheck5Click() {
+       nv1.opts.isRuler = this.checked;
+       nv1.drawScene();
+     }
+     document.getElementById("check6").addEventListener("change", doCheck6Click);
+     function doCheck6Click() {
+       nv1.opts.sagittalNoseLeft = this.checked;
+       nv1.drawScene();
+     }
+     var volumeList1 = [
+     {
+           url: "../images/FLAIR.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           volume: {hdr: null, img: null},
+           name: "mni152",
+           intensityMin: 0, // not used yet
+           intensityMax: 100, // not used yet
+           intensityRange:[0, 100], // not used yet
+           colorMap: "gray",
+           opacity: 1,
+           visible: true,
+         },
+        ] 
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: false,
+        backColor: [0, 0.3, 0.4, 1]})
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeList1)
+      var txt = document.getElementById("str");
+      nv1.setSliceType(nv1.sliceTypeAxial)
+      nv1.setSliceMosaicString(txt.value);
+       function bar() {
+            console.log(txt.value)//do stuff
+            nv1.setSliceMosaicString(txt.value);
+       }
+    </script>
+  </body>
+</html>

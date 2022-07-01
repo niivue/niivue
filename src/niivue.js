@@ -8,8 +8,9 @@ import {
 } from "./shader-srcs.js";
 import {
   vertGraphShader,
+  vertRectShader,
   vertLineShader,
-  fragLineShader,
+  fragRectShader,
 } from "./shader-srcs.js";
 import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
@@ -100,11 +101,13 @@ export function Niivue(options = {}) {
     textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
     crosshairWidth: 1, // 0 for no crosshairs
+    rulerWidth: 4,
     show3Dcrosshair: false,
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 0, 0, 1],
     selectionBoxColor: [1, 1, 1, 0.5],
     clipPlaneColor: [0.7, 0, 0.7, 0.5],
+    rulerColor: [1, 0, 0, 0.8],
     colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
@@ -112,8 +115,10 @@ export function Niivue(options = {}) {
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isNearestInterpolation: false,
     isAtlasOutline: false,
+    isRuler: false,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
+    isDragShowsMeasurementTool: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
     isSliceMM: false,
@@ -144,7 +149,7 @@ export function Niivue(options = {}) {
   this.overlayTextureID = [];
   this.sliceShader = null;
   this.sliceMMShader = null;
-  this.lineShader = null;
+  this.rectShader = null;
   this.graphShader = null;
   this.renderShader = null;
   this.pickingShader = null;
@@ -829,6 +834,7 @@ Niivue.prototype.mouseUpListener = function () {
 
   if (this.isDragging) {
     this.isDragging = false;
+    if (this.opts.isDragShowsMeasurementTool) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
@@ -912,7 +918,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   }
   if (msg !== null) {
     // test if render is one of the tiles
-    if (this.inRenderTile(msg.clientX, msg.clientY) >= 0) isRender = true;
+    if (this.inRenderTile(msg.offsetX, msg.offsetY) >= 0) isRender = true;
   }
   if (isRender) {
     this.scene.mouseDepthPicker = true;
@@ -3365,11 +3371,11 @@ Niivue.prototype.init = async function () {
     this.sliceMMShader.uniforms["drawOpacity"],
     this.drawOpacity
   );
-
-  // line shader (crosshair)
-
-  this.lineShader = new Shader(this.gl, vertLineShader, fragLineShader);
-  this.graphShader = new Shader(this.gl, vertGraphShader, fragLineShader);
+  // rect shader (crosshair): horizontal and vertical lines only
+  this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader);
+  // line shader: diagonal lines
+  this.lineShader = new Shader(this.gl, vertLineShader, fragRectShader);
+  this.graphShader = new Shader(this.gl, vertGraphShader, fragRectShader);
   // render shader (3D)
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
@@ -4300,20 +4306,143 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   } //for i: each slice on screen
 }; // mouseClick()
 
-// not included in public docs
-Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
+Niivue.prototype.drawRuler = function () {
+  let fovMM = [];
+  let ltwh = [];
+  //leftTopWidthHeight
+  for (let i = 0; i < this.screenSlices.length; i++) {
+    console.log(i, "i", this.screenSlices[i]); //fovMM
+
+    if (this.screenSlices[i].axCorSag === this.sliceTypeRender) continue;
+    //let ltwh = this.screenSlices[i].leftTopWidthHeight;
+    if (this.screenSlices[i].fovMM.length > 1) {
+      ltwh = this.screenSlices[i].leftTopWidthHeight;
+      fovMM = this.screenSlices[i].fovMM;
+      break;
+    }
+  }
+  if (ltwh.length < 4) return;
+  let frac10cm = 100.0 / fovMM[0];
+  let pix10cm = frac10cm * ltwh[2];
+  let pixLeft = ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm;
+  let pixTop = ltwh[1] + ltwh[3] - 2 * this.opts.rulerWidth;
+  let startXYendXY = [pixLeft, pixTop, pixLeft + pix10cm, pixTop];
+  this.drawRuler10cm(startXYendXY);
+};
+
+Niivue.prototype.drawRuler10cm = function (startXYendXY) {
+  this.gl.bindVertexArray(this.genericVAO);
   this.lineShader.use(this.gl);
-  this.gl.enable(this.gl.BLEND);
   this.gl.uniform4fv(
     this.lineShader.uniforms["lineColor"],
-    this.opts.selectionBoxColor
+    this.opts.rulerColor
   );
   this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
+  //draw Line
+  this.gl.uniform1f(
+    this.lineShader.uniforms["thickness"],
+    this.opts.rulerWidth
+  );
+  this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  //draw tick marks
+  let w1cm = 0.1 * Math.abs(startXYendXY[0] - startXYendXY[2]);
+  let b = startXYendXY[1];
+  let t = b - 2 * this.opts.rulerWidth;
+  let t2 = b - 4 * this.opts.rulerWidth;
+  for (let i = 0; i < 11; i++) {
+    let l = startXYendXY[0] + i * w1cm;
+    let xyxy = [l, b, l, t];
+    if (i % 5 === 0) xyxy[3] = t2;
+    this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], xyxy);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+};
+
+Niivue.prototype.drawMeasurementTool = function (startXYendXY) {
+  let gl = this.gl;
+  gl.bindVertexArray(this.genericVAO);
+
+  gl.depthFunc(gl.ALWAYS);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  this.lineShader.use(this.gl);
+  gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.rulerColor);
+  gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+    gl.canvas.width,
+    gl.canvas.height,
+  ]);
+  //draw Line
+  gl.uniform1f(this.lineShader.uniforms["thickness"], this.opts.rulerWidth);
+  gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  //draw startCap
+  let c = this.opts.rulerColor;
+  c[3] = 1.0; //opaque
+  gl.uniform4fv(this.lineShader.uniforms["lineColor"], c);
+  let w = this.opts.rulerWidth;
+  gl.uniform1f(this.lineShader.uniforms["thickness"], w * 2);
+  let sXYeXY = [
+    startXYendXY[0],
+    startXYendXY[1] - w,
+    startXYendXY[0],
+    startXYendXY[1] + w,
+  ];
+  gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], sXYeXY);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  //end cap
+  sXYeXY = [
+    startXYendXY[2],
+    startXYendXY[3] - w,
+    startXYendXY[2],
+    startXYendXY[3] + w,
+  ];
+  gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], sXYeXY);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  //distance between start and stop
+  let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]]);
+  let endXY = this.canvasPos2frac([startXYendXY[2], startXYendXY[3]]);
+  if (startXY[0] >= 0 && endXY[0] >= 0) {
+    startXY = this.frac2mm(startXY);
+    endXY = this.frac2mm(endXY);
+    let v = mat.vec3.create();
+    mat.vec3.sub(v, startXY, endXY);
+    let lenMM = mat.vec3.len(v);
+    let decimals = 2;
+    if (lenMM > 9) decimals = 1;
+    if (lenMM > 99) decimals = 0;
+    let stringMM = lenMM.toFixed(decimals);
+    this.drawTextBetween(startXYendXY, stringMM);
+  }
+  gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+};
+
+// not included in public docs
+Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
+  let startXYendXY = [
+    leftTopWidthHeight[0],
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[0] + leftTopWidthHeight[2],
+    leftTopWidthHeight[1] + leftTopWidthHeight[3],
+  ];
+  this.rectShader.use(this.gl);
+  this.gl.enable(this.gl.BLEND);
+  this.gl.uniform4fv(
+    this.rectShader.uniforms["lineColor"],
+    this.opts.selectionBoxColor
+  );
+  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
   this.gl.uniform4f(
-    this.lineShader.uniforms["leftTopWidthHeight"],
+    this.rectShader.uniforms["leftTopWidthHeight"],
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
     leftTopWidthHeight[2],
@@ -4329,11 +4458,11 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) return;
   // if (this.opts.crosshairWidth > 0) {
   // 	//gl.disable(gl.DEPTH_TEST);
-  // 	this.lineShader.use(this.gl)
-  // 	this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.crosshairColor);
-  // 	this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
+  // 	this.rectShader.use(this.gl)
+  // 	this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], this.opts.crosshairColor);
+  // 	this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
   // 	let ltwh = [leftTopWidthHeight[0]-1, leftTopWidthHeight[1]-1, leftTopWidthHeight[2]+2, leftTopWidthHeight[3]+2];
-  // 	this.gl.uniform4f(this.lineShader.uniforms["leftTopWidthHeight"], ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
+  // 	this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
   // 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   // }
   this.colorbarShader.use(this.gl);
@@ -4472,6 +4601,32 @@ Niivue.prototype.drawTextRightBelow = function (
   //xy[1] -= 0.5 * size;
   this.drawText(xy, str, scale, color);
 }; // drawTextLeftBelow()
+
+// not included in public docs
+Niivue.prototype.drawTextBetween = function (
+  startXYendXY,
+  str,
+  scale = 1,
+  color = null
+) {
+  //horizontally centered on x, below y
+  if (this.opts.textHeight <= 0) return;
+  let xy = [
+    (startXYendXY[0] + startXYendXY[2]) * 0.5,
+    (startXYendXY[1] + startXYendXY[3]) * 0.5,
+  ];
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let w = this.textWidth(size, str);
+  xy[0] -= 0.5 * w;
+  xy[1] -= 0.5 * size;
+  let LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2];
+  let clr = color;
+  if (clr === null) clr = this.opts.crosshairColor;
+  if (clr[0] + clr[1] + clr[2] > 0.8) clr = [0, 0, 0, 0.5];
+  else clr = [1, 1, 1, 0.5];
+  this.drawRect(LTWH, clr);
+  this.drawText(xy, str, scale, color);
+}; // drawTextBetween()
 
 // not included in public docs
 Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
@@ -4794,7 +4949,7 @@ Niivue.prototype.draw2DMM = function (
   this.screenSlices.push({
     leftTopWidthHeight: leftTopWidthHeight,
     axCorSag: axCorSag,
-    sliceFrac: 0,
+    sliceFrac: sliceFrac,
     AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
     leftTopMM: obj.leftTopMM,
     fovMM: obj.fovMM,
@@ -4823,6 +4978,7 @@ Niivue.prototype.draw2DMM = function (
       obj.normalMatrix
     );
   }
+
   if (isNaN(customMM))
     //no crossbars for mosaic view
     this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix);
@@ -4837,9 +4993,9 @@ Niivue.prototype.draw2DVox = function (
   axCorSag,
   customMM = NaN
 ) {
+  let fovMM = this.screenFieldOfViewMM(axCorSag);
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
     //use full screen
-    let fovMM = this.screenFieldOfViewMM(axCorSag);
     leftTopWidthHeight = this.scaleSlice(fovMM[0], fovMM[1]);
   }
   this.gl.cullFace(this.gl.FRONT);
@@ -4916,26 +5072,26 @@ Niivue.prototype.draw2DVox = function (
     sliceFrac: crossXYZ[2],
     AxyzMxy: [],
     leftTopMM: [],
-    fovMM: [],
+    fovMM: [fovMM[0], fovMM[1]],
   });
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawSliceOrientationText(ltwh, axCorSag);
   if (!isNaN(customMM)) return;
   if (this.opts.crosshairWidth <= 0.0) return;
   this.gl.bindVertexArray(this.genericVAO);
-  this.lineShader.use(this.gl);
+  this.rectShader.use(this.gl);
   this.gl.uniform4fv(
-    this.lineShader.uniforms["lineColor"],
+    this.rectShader.uniforms["lineColor"],
     this.opts.crosshairColor
   );
-  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
   //vertical line of crosshair:
   var xleft = leftTopWidthHeight[0] + leftTopWidthHeight[2] * crossXYZ[0];
   this.gl.uniform4f(
-    this.lineShader.uniforms["leftTopWidthHeight"],
+    this.rectShader.uniforms["leftTopWidthHeight"],
     xleft - 0.5 * this.opts.crosshairWidth,
     leftTopWidthHeight[1],
     this.opts.crosshairWidth,
@@ -4946,7 +5102,7 @@ Niivue.prototype.draw2DVox = function (
   var xtop =
     leftTopWidthHeight[1] + leftTopWidthHeight[3] * (1.0 - crossXYZ[1]);
   this.gl.uniform4f(
-    this.lineShader.uniforms["leftTopWidthHeight"],
+    this.rectShader.uniforms["leftTopWidthHeight"],
     leftTopWidthHeight[0],
     xtop - 0.5 * this.opts.crosshairWidth,
     leftTopWidthHeight[2],
@@ -5171,14 +5327,14 @@ Niivue.prototype.drawGraphLine = function (
 };
 
 Niivue.prototype.drawRect = function (LTWH, color = [1, 0, 0, 0.5]) {
-  this.lineShader.use(this.gl);
-  this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], color);
-  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+  this.rectShader.use(this.gl);
+  this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], color);
+  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
   this.gl.uniform4f(
-    this.lineShader.uniforms["leftTopWidthHeight"],
+    this.rectShader.uniforms["leftTopWidthHeight"],
     LTWH[0],
     LTWH[1],
     LTWH[2],
@@ -5735,7 +5891,6 @@ Niivue.prototype.drawCrosshairs3D = function (
   gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, mvpMtx);
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
-
   gl.enable(gl.DEPTH_TEST);
   let color = [...this.opts.crosshairColor];
   if (isDepthTest) {
@@ -5747,6 +5902,7 @@ Niivue.prototype.drawCrosshairs3D = function (
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
+
   color[3] = alpha;
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
   gl.bindVertexArray(this.crosshairs3D.vao);
@@ -5929,18 +6085,18 @@ Niivue.prototype.drawThumbnail = function () {
 
 Niivue.prototype.drawLine = function (leftTopWidthHeight) {
   this.gl.enable(this.gl.BLEND);
-  this.lineShader.use(this.gl);
+  this.rectShader.use(this.gl);
   this.gl.uniform4fv(
-    this.lineShader.uniforms["lineColor"],
+    this.rectShader.uniforms["lineColor"],
     this.opts.crosshairColor
   );
-  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
   //vertical line of crosshair:
   this.gl.uniform4f(
-    this.lineShader.uniforms["leftTopWidthHeight"],
+    this.rectShader.uniforms["leftTopWidthHeight"],
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
     leftTopWidthHeight[2],
@@ -5951,7 +6107,25 @@ Niivue.prototype.drawLine = function (leftTopWidthHeight) {
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 };
 
-Niivue.prototype.drawCrossLines = function (
+Niivue.prototype.drawLine2DX = function (startXYendXY, thickness = 1) {
+  this.gl.bindVertexArray(this.genericVAO);
+  this.lineShader.use(this.gl);
+  this.gl.uniform4fv(
+    this.lineShader.uniforms["lineColor"],
+    this.opts.crosshairColor
+  );
+  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  //draw Line
+  this.gl.uniform1f(this.lineShader.uniforms["thickness"], thickness);
+  this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+};
+
+Niivue.prototype.drawCrossLinesMM = function (
   sliceIndex,
   axCorSag,
   axiMM,
@@ -5962,6 +6136,144 @@ Niivue.prototype.drawCrossLines = function (
   let tile = this.screenSlices[sliceIndex];
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
+  let thick = Math.max(1, this.opts.crosshairWidth);
+  if (axCorSag === this.sliceTypeCoronal) linesH = axiMM.slice();
+  if (axCorSag === this.sliceTypeSagittal) {
+    linesH = axiMM.slice();
+    linesV = corMM.slice();
+  }
+  function mm2screen(mm) {
+    let screenXY = [0, 0];
+    screenXY[0] =
+      tile.leftTopWidthHeight[0] +
+      ((mm[0] - tile.leftTopMM[0]) / tile.fovMM[0]) *
+        tile.leftTopWidthHeight[2];
+    screenXY[1] =
+      tile.leftTopWidthHeight[1] +
+      tile.leftTopWidthHeight[3] -
+      ((mm[1] - tile.leftTopMM[1]) / tile.fovMM[1]) *
+        tile.leftTopWidthHeight[3];
+    return screenXY;
+  }
+  if (linesH.length > 0 && axCorSag === 0) {
+    let fracZ = tile.sliceFrac;
+    let dimV = 1;
+    for (let i = 0; i < linesH.length; i++) {
+      let mmV = this.frac2mm([0.5, 0.5, 0.5]);
+      mmV[dimV] = linesH[i];
+      let fracY = this.mm2frac(mmV);
+      fracY = fracY[dimV];
+      let left = this.frac2mm([0.0, fracY, fracZ]);
+      left = swizzleVec3(left, [0, 1, 2]);
+      let right = this.frac2mm([1.0, fracY, fracZ]);
+      right = swizzleVec3(right, [0, 1, 2]);
+      left = mm2screen(left);
+      right = mm2screen(right);
+      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+    }
+  }
+  if (linesH.length > 0 && axCorSag === 1) {
+    let fracH = tile.sliceFrac;
+    let mm = this.frac2mm([0.5, fracH, 0.5]);
+    let dimV = 2;
+    for (let i = 0; i < linesH.length; i++) {
+      let mmV = this.frac2mm([0.5, 0.5, 0.5]);
+      mmV[dimV] = linesH[i];
+      let fracV = this.mm2frac(mmV);
+      fracV = fracV[dimV];
+      let left = this.frac2mm([0.0, fracH, fracV]);
+      left = swizzleVec3(left, [0, 2, 1]);
+      let right = this.frac2mm([1.0, fracH, fracV]);
+      right = swizzleVec3(right, [0, 2, 1]);
+      left = mm2screen(left);
+      right = mm2screen(right);
+      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+    }
+  }
+  if (linesH.length > 0 && axCorSag === 2) {
+    let fracX = tile.sliceFrac;
+    let dimV = 2;
+    for (let i = 0; i < linesH.length; i++) {
+      let mmV = this.frac2mm([0.5, 0.5, 0.5]);
+      mmV[dimV] = linesH[i];
+      let fracZ = this.mm2frac(mmV);
+      fracZ = fracZ[dimV];
+      let left = this.frac2mm([fracX, 0, fracZ]);
+      left = swizzleVec3(left, [1, 2, 0]);
+      let right = this.frac2mm([fracX, 1, fracZ]);
+      right = swizzleVec3(right, [1, 2, 0]);
+      left = mm2screen(left);
+      right = mm2screen(right);
+      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+    }
+  }
+  if (linesV.length > 0 && axCorSag === 0) {
+    let fracZ = tile.sliceFrac;
+    let dimH = 0;
+    for (let i = 0; i < linesV.length; i++) {
+      let mm = this.frac2mm([0.5, 0.5, 0.5]);
+      mm[dimH] = linesV[i];
+      let frac = this.mm2frac(mm);
+      frac = frac[dimH];
+      let left = this.frac2mm([frac, 0, fracZ]);
+      left = swizzleVec3(left, [0, 1, 2]);
+      let right = this.frac2mm([frac, 1, fracZ]);
+      right = swizzleVec3(right, [0, 1, 2]);
+      left = mm2screen(left);
+      right = mm2screen(right);
+      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+    }
+  } //if vertical lines
+  if (linesV.length > 0 && axCorSag === 1) {
+    let fracY = tile.sliceFrac;
+    let dimH = 0;
+    for (let i = 0; i < linesV.length; i++) {
+      let mm = this.frac2mm([0.5, 0.5, 0.5]);
+      mm[dimH] = linesV[i];
+      let frac = this.mm2frac(mm);
+      frac = frac[dimH];
+      let left = this.frac2mm([frac, fracY, 0]);
+      left = swizzleVec3(left, [0, 2, 1]);
+      let right = this.frac2mm([frac, fracY, 1]);
+      right = swizzleVec3(right, [0, 2, 1]);
+      left = mm2screen(left);
+      right = mm2screen(right);
+      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+    }
+  } //if vertical lines
+  if (linesV.length > 0 && axCorSag === 2) {
+    let fracX = tile.sliceFrac;
+    let dimH = 1;
+    for (let i = 0; i < linesV.length; i++) {
+      let mm = this.frac2mm([0.5, 0.5, 0.5]);
+      mm[dimH] = linesV[i];
+      let frac = this.mm2frac(mm);
+      frac = frac[dimH];
+      let left = this.frac2mm([fracX, frac, 0]);
+      left = swizzleVec3(left, [1, 2, 0]);
+      let right = this.frac2mm([fracX, frac, 1]);
+      right = swizzleVec3(right, [1, 2, 0]);
+      left = mm2screen(left);
+      right = mm2screen(right);
+      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+    }
+  } //if vertical lines
+};
+
+Niivue.prototype.drawCrossLines = function (
+  sliceIndex,
+  axCorSag,
+  axiMM,
+  corMM,
+  sagMM
+) {
+  if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
+  if (this.opts.isSliceMM)
+    return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
+  let tile = this.screenSlices[sliceIndex];
+  let linesH = corMM.slice();
+  let linesV = sagMM.slice();
+  let thick = Math.max(1, this.opts.crosshairWidth);
   if (axCorSag === this.sliceTypeCoronal) linesH = axiMM.slice();
   if (axCorSag === this.sliceTypeSagittal) {
     linesH = axiMM.slice();
@@ -6121,12 +6433,12 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
     let scaleH = this.gl.canvas.height / top;
     scale = Math.min(scaleW, scaleH);
   } //for pass 0 and 1
-  if (isCrossLinesUsed && this.back.oblique_angle > 0)
+  /*if (isCrossLinesUsed && this.back.oblique_angle > 0)
     console.log(
       "Cross lines not precise: voxels not aligned with world space: " +
         this.back.oblique_angle +
         " degrees from plumb.\n"
-    );
+    );*/
   this.opts.textHeight = labelSize;
 }; // drawMosaic()
 
@@ -6271,7 +6583,17 @@ Niivue.prototype.drawScene = function () {
       } //if landscape else portrait
     } //if multiplanar
   } //if mosaic not 2D
+  if (this.opts.isRuler) this.drawRuler();
   if (this.isDragging) {
+    if (this.opts.isDragShowsMeasurementTool) {
+      this.drawMeasurementTool([
+        this.dragStart[0],
+        this.dragStart[1],
+        this.dragEnd[0],
+        this.dragEnd[1],
+      ]);
+      return;
+    }
     if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0) return;
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
@@ -6282,7 +6604,6 @@ Niivue.prototype.drawScene = function () {
       height,
     ]);
   }
-
   const pos = this.frac2mm([
     this.scene.crosshairPos[0],
     this.scene.crosshairPos[1],
