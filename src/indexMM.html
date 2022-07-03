@@ -50,6 +50,8 @@
       <label for="check5">Ruler</label>
       <input type="checkbox" id="check6" name="check6" unchecked>
       <label for="check6">Nose left</label>
+      <input type="checkbox" id="check7" name="check7" checked>
+      <label for="check7">Colorbar</label>
 
     </section>
     <!-- demo 1 -->
@@ -123,7 +125,12 @@
       function doCheck6Click() {
         nv1.opts.sagittalNoseLeft = this.checked;
         nv1.drawScene();
-      } 
+      }
+      document.getElementById("check7").addEventListener("change", doCheck7Click);
+      function doCheck7Click() {
+        nv1.opts.isColorbar = this.checked;
+        nv1.drawScene();
+      }
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -133,15 +140,30 @@
       var volumeList1 = [
         // first item is brackground image
         {
-          url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          //url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          //url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: url ? url : "../demos/images/fslmean.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           //url: "./mni152.nii.gz",
           colorMap: "gray",
           //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
           opacity: 1,
           visible: true,
         },
-
+        {
+          url: url ? url : "../demos/images/fslt.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "warm",
+          opacity: 1,
+          cal_min: 1,
+           cal_max: 6,
+          visible: true,
+        },
+        {
+          url: url ? url : "../demos/images/fslt.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "winter",
+          opacity: 1,
+          cal_min: 3,
+           cal_max: 7,
+          visible: true,
+        },
       ]
 			var nv1 = new Niivue({
 				logging: false,

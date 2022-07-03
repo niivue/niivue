@@ -31,6 +31,8 @@
     <label for="check5">Ruler</label>
     <input type="checkbox" id="check6" name="check6" unchecked>
     <label for="check6">Nose left</label>
+    <input type="checkbox" id="check7" name="check7" checked>
+    <label for="check7">Colorbar</label>
     </section>
 
     <!-- demo 1 -->
@@ -62,9 +64,14 @@
        nv1.opts.sagittalNoseLeft = this.checked;
        nv1.drawScene();
      }
+     document.getElementById("check7").addEventListener("change", doCheck7Click);
+     function doCheck7Click() {
+       nv1.opts.isColorbar = this.checked;
+       nv1.drawScene();
+     }
      var volumeList1 = [
      {
-           url: "../images/FLAIR.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           url: "../images/fslmean.nii.gz",
            volume: {hdr: null, img: null},
            name: "mni152",
            intensityMin: 0, // not used yet
@@ -72,6 +79,14 @@
            intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
+           visible: true,
+         },
+         {
+           url: "../images/fslt.nii.gz",
+           colorMap: "warm",
+           opacity: 1,
+           cal_min: 1,
+            cal_max: 6,
            visible: true,
          },
         ] 

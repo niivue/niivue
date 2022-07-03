@@ -116,6 +116,7 @@ export function Niivue(options = {}) {
     isNearestInterpolation: false,
     isAtlasOutline: false,
     isRuler: false,
+    isColorbar: true,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     isDragShowsMeasurementTool: false,
@@ -141,6 +142,7 @@ export function Niivue(options = {}) {
   this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
   this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
+  this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
   this.drawFillOverwrites = true;
@@ -3980,6 +3982,17 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.overlays.length
   );
   this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
+  // set overlays for sliceMM shader mokra sliceMMShader
+  this.sliceMMShader.use(this.gl);
+  this.gl.uniform1f(
+    this.sliceMMShader.uniforms["overlays"],
+    this.overlays.length
+  );
+  this.gl.uniform1f(
+    this.sliceMMShader.uniforms["drawOpacity"],
+    this.drawOpacity
+  );
+  this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
   // set overlays for slice shader
   this.sliceShader.use(this.gl);
   this.gl.uniform1f(
@@ -4278,7 +4291,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         }
         this.drawPenLocation = pt;
         if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
-        //xxxxxx
         this.refreshDrawing(false);
       }
       this.drawScene();
@@ -4311,8 +4323,6 @@ Niivue.prototype.drawRuler = function () {
   let ltwh = [];
   //leftTopWidthHeight
   for (let i = 0; i < this.screenSlices.length; i++) {
-    console.log(i, "i", this.screenSlices[i]); //fovMM
-
     if (this.screenSlices[i].axCorSag === this.sliceTypeRender) continue;
     //let ltwh = this.screenSlices[i].leftTopWidthHeight;
     if (this.screenSlices[i].fovMM.length > 1) {
@@ -4349,7 +4359,7 @@ Niivue.prototype.drawRuler10cm = function (startXYendXY) {
   this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   //draw tick marks
-  let w1cm = 0.1 * Math.abs(startXYendXY[0] - startXYendXY[2]);
+  let w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2]);
   let b = startXYendXY[1];
   let t = b - 2 * this.opts.rulerWidth;
   let t2 = b - 4 * this.opts.rulerWidth;
@@ -4424,19 +4434,13 @@ Niivue.prototype.drawMeasurementTool = function (startXYendXY) {
 };
 
 // not included in public docs
-Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
-  let startXYendXY = [
-    leftTopWidthHeight[0],
-    leftTopWidthHeight[1],
-    leftTopWidthHeight[0] + leftTopWidthHeight[2],
-    leftTopWidthHeight[1] + leftTopWidthHeight[3],
-  ];
+Niivue.prototype.drawBox = function (
+  leftTopWidthHeight,
+  lineColor = [1, 0, 0, 1]
+) {
   this.rectShader.use(this.gl);
   this.gl.enable(this.gl.BLEND);
-  this.gl.uniform4fv(
-    this.rectShader.uniforms["lineColor"],
-    this.opts.selectionBoxColor
-  );
+  this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], lineColor);
   this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
@@ -4453,18 +4457,103 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 };
 
-// not included in public docs
-Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
+Niivue.prototype.drawSelectionBox = function (
+  leftTopWidthHeight,
+  lineColor = [1, 0, 0, 1]
+) {
+  this.drawBox(leftTopWidthHeight, this.opts.selectionBoxColor);
+};
+
+function tickSpacingX(tickCount, mn, mx) {
+  //https://www.realtimerendering.com/resources/GraphicsGems/gems/Label.c
+  //https://stackoverflow.com/questions/326679/choosing-an-attractive-linear-scale-for-a-graphs-y-axis
+  let range = Math.abs(mx - mn);
+  if (range === 0.0) return [0, 0];
+  let unroundedTickSize = range / (tickCount - 1);
+  let x = Math.ceil(Math.log10(unroundedTickSize) - 1);
+  let pow10x = Math.pow(10, x);
+  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
+  let ticMin = mn;
+  if (ticMin % spacing !== 0.0 && range % spacing !== 0.0)
+    ticMin = Math.floor((mn + spacing) / spacing) * spacing;
+  if ((mn / spacing) % 1 !== 0.0)
+    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
+  return [spacing, ticMin];
+}
+
+function tickSpacing(mn, mx) {
+  let range = Math.abs(mx - mn);
+  let [spacing, ticMin] = tickSpacingX(5, mn, mx);
+  if (range % spacing === 0) return [spacing, ticMin];
+  //[spacing, ticMin] = tickSpacingX(6, mn, mx);
+  //if ((range % spacing) === 0) return [spacing, ticMin];
+  [spacing, ticMin] = tickSpacingX(4, mn, mx);
+  if (range % spacing === 0) return [spacing, ticMin];
+  [spacing, ticMin] = tickSpacingX(5, mn, mx);
+  return [spacing, ticMin];
+}
+
+Niivue.prototype.effectiveCanvasHeight = function () {
+  //available canvas height differs from actual height if bottom colorbar is shown
+  return this.gl.canvas.height - this.colorbarHeight;
+};
+
+Niivue.prototype.reserveColorbarPanel = function () {
+  let txtHt = Math.max(this.opts.textHeight, 0.01);
+  txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
+  let margin = txtHt;
+  let fullHt = 3 * txtHt;
+  let leftTopWidthHeight = [
+    0,
+    this.gl.canvas.height - fullHt,
+    this.gl.canvas.width,
+    fullHt,
+  ];
+  this.colorbarHeight = leftTopWidthHeight[3] + 1;
+  return leftTopWidthHeight;
+};
+
+Niivue.prototype.drawColorbarCore = function (
+  layer = 0,
+  leftTopWidthHeight = [0, 0, 0, 0]
+) {
+  if (this.volumes.length < 1) return;
+  if (layer >= this.volumes.length) layer = 0;
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) return;
-  // if (this.opts.crosshairWidth > 0) {
-  // 	//gl.disable(gl.DEPTH_TEST);
-  // 	this.rectShader.use(this.gl)
-  // 	this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], this.opts.crosshairColor);
-  // 	this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [this.gl.canvas.width, this.gl.canvas.height]);
-  // 	let ltwh = [leftTopWidthHeight[0]-1, leftTopWidthHeight[1]-1, leftTopWidthHeight[2]+2, leftTopWidthHeight[3]+2];
-  // 	this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
-  // 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-  // }
+  let txtHt = Math.max(this.opts.textHeight, 0.01);
+  txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
+  let margin = txtHt;
+  let fullHt = 3 * txtHt;
+  let barHt = txtHt;
+  if (leftTopWidthHeight[3] < fullHt) {
+    //no space for text
+    if (leftTopWidthHeight[3] < 3) return;
+    margin = 1;
+    barHt = leftTopWidthHeight[3] - 2;
+  }
+  this.gl.disable(this.gl.DEPTH_TEST);
+  this.colorbarHeight = leftTopWidthHeight[3] + 1;
+  let clr = [
+    this.opts.backColor[0],
+    this.opts.backColor[1],
+    this.opts.backColor[2],
+    0.5,
+  ];
+  //this.drawBox(leftTopWidthHeight, clr);
+  let top = leftTopWidthHeight[1];
+  let barLTWH = [
+    leftTopWidthHeight[0] + margin,
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[2] - 2 * margin,
+    barHt,
+  ];
+  let rimLTWH = [
+    barLTWH[0] - 1,
+    barLTWH[1] - 1,
+    barLTWH[2] + 2,
+    barLTWH[3] + 2,
+  ];
+  this.drawBox(rimLTWH, this.opts.crosshairColor);
   this.colorbarShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
@@ -4478,16 +4567,14 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
     this.gl.TEXTURE_MAG_FILTER,
     this.gl.NEAREST
   );
+  this.gl.uniform1f(this.colorbarShader.uniforms["layer"], layer);
   this.gl.uniform2fv(this.colorbarShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
-  this.gl.uniform4f(
+  this.gl.uniform4fv(
     this.colorbarShader.uniforms["leftTopWidthHeight"],
-    leftTopWidthHeight[0],
-    leftTopWidthHeight[1],
-    leftTopWidthHeight[2],
-    leftTopWidthHeight[3]
+    barLTWH
   );
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
@@ -4502,8 +4589,52 @@ Niivue.prototype.drawColorbar = function (leftTopWidthHeight) {
     this.gl.TEXTURE_MAG_FILTER,
     this.gl.LINEAR
   );
-  //gl.enable(gl.DEPTH_TEST);
-}; // drawColorbar()
+  let min = this.volumes[layer].cal_min;
+  let max = this.volumes[layer].cal_max;
+  if (min >= max || txtHt < 1) return;
+  let range = max - min;
+  let [spacing, ticMin] = tickSpacing(min, max);
+  //determine font size
+  function humanize(x) {
+    //drop trailing zeros from numerical string
+    return x.toFixed(6).replace(/\.?0*$/, "");
+  }
+  let tic = ticMin;
+  let ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75];
+  let txtTop = ticLTWH[1] + ticLTWH[3];
+  while (tic <= max) {
+    ticLTWH[0] = barLTWH[0] + ((tic - min) / range) * barLTWH[2];
+    this.drawBox(ticLTWH);
+    let str = humanize(tic);
+    //if (fntSize > 0)
+    this.drawTextBelow([ticLTWH[0], txtTop], str);
+    //this.drawTextRight([plotLTWH[0], y], str, fntScale)
+    tic += spacing;
+  }
+};
+
+Niivue.prototype.drawColorbar = function () {
+  let nlayers = this.volumes.length;
+  if (nlayers < 1) return;
+  let leftTopWidthHeight = this.reserveColorbarPanel();
+  if (nlayers < 2) {
+    this.drawColorbarCore(0, leftTopWidthHeight);
+    return;
+  }
+  let txtHt = Math.max(this.opts.textHeight, 0.01);
+  txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
+  let fullHt = 3 * txtHt;
+  let wid = leftTopWidthHeight[2] / nlayers;
+  if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
+    wid = this.gl.canvas.width / nlayers;
+    leftTopWidthHeight = [0, this.gl.canvas.height - fullHt, wid, fullHt];
+  }
+  leftTopWidthHeight[2] = wid;
+  for (let i = 0; i < nlayers; i++) {
+    this.drawColorbarCore(i, leftTopWidthHeight);
+    leftTopWidthHeight[0] += wid;
+  }
+};
 
 // not included in public docs
 Niivue.prototype.textWidth = function (scale, str) {
@@ -4930,6 +5061,11 @@ Niivue.prototype.draw2DMM = function (
     this.sliceMMShader.uniforms["backgroundMasksOverlays"],
     this.backgroundMasksOverlays
   );
+  this.gl.uniform1f(
+    this.sliceMMShader.uniforms["opacity"],
+    this.volumes[0].opacity
+  );
+  //mokra
   this.gl.uniform1i(this.sliceMMShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceMMShader.uniforms["slice"], sliceFrac);
   this.gl.uniformMatrix4fv(
@@ -5345,21 +5481,6 @@ Niivue.prototype.drawRect = function (LTWH, color = [1, 0, 0, 0.5]) {
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 };
 
-function tickSpacing(tickCount, mn, mx) {
-  //https://www.realtimerendering.com/resources/GraphicsGems/gems/Label.c
-  //https://stackoverflow.com/questions/326679/choosing-an-attractive-linear-scale-for-a-graphs-y-axis
-  let range = Math.abs(mx - mn);
-  if (range === 0.0) return [0, 0];
-  let unroundedTickSize = range / (tickCount - 1);
-  let x = Math.ceil(Math.log10(unroundedTickSize) - 1);
-  let pow10x = Math.pow(10, x);
-  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
-  let ticMin = mn;
-  if ((mn / spacing) % 1 !== 0.0)
-    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
-  return [spacing, ticMin];
-}
-
 Niivue.prototype.drawGraph = function () {
   let gl = this.gl;
   let graph = this.graph;
@@ -5457,7 +5578,7 @@ Niivue.prototype.drawGraph = function () {
     graph.backColor[3],
   ];
   this.drawRect(graph.LTWH, borderColor);
-  let [spacing, ticMin] = tickSpacing(5, mn, mx);
+  let [spacing, ticMin] = tickSpacing(mn, mx);
   //determine font size
   function humanize(x) {
     //drop trailing zeros from numerical string
@@ -6048,14 +6169,14 @@ Niivue.prototype.canvasPos2frac = function (canvasPos) {
 // note: we also have a "sliceScale" method, which could be confusing
 Niivue.prototype.scaleSlice = function (w, h) {
   let scalePix = this.gl.canvas.clientWidth / w;
-  if (h * scalePix > this.gl.canvas.clientHeight)
-    scalePix = this.gl.canvas.clientHeight / h;
+  if (h * scalePix > this.effectiveCanvasHeight())
+    scalePix = this.effectiveCanvasHeight() / h;
   //canvas space is 0,0...w,h with origin at upper left
   let wPix = w * scalePix;
   let hPix = h * scalePix;
   let leftTopWidthHeight = [
     (this.gl.canvas.clientWidth - wPix) * 0.5,
-    (this.gl.canvas.clientHeight - hPix) * 0.5,
+    (this.effectiveCanvasHeight() - hPix) * 0.5,
     wPix,
     hPix,
   ];
@@ -6430,7 +6551,8 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
     mxRowWid = Math.max(mxRowWid, left);
     if (mxRowWid <= 0 || top <= 0) break;
     let scaleW = this.gl.canvas.width / mxRowWid;
-    let scaleH = this.gl.canvas.height / top;
+    let scaleH = this.effectiveCanvasHeight() / top;
+    console.log(">>>", this.effectiveCanvasHeight());
     scale = Math.min(scaleW, scaleH);
   } //for pass 0 and 1
   /*if (isCrossLinesUsed && this.back.oblique_angle > 0)
@@ -6447,6 +6569,7 @@ Niivue.prototype.drawScene = function () {
   if (!this.initialized) {
     return; // do not do anything until we are initialized (init will call drawScene).
   }
+  this.colorbarHeight = 0;
   this.gl.clearColor(
     this.opts.backColor[0],
     this.opts.backColor[1],
@@ -6505,7 +6628,7 @@ Niivue.prototype.drawScene = function () {
     return this.draw3D();
     return;
   }
-  //if (this.sliceType = this.sliceTypeMosaic) {
+  if (this.opts.isColorbar) this.reserveColorbarPanel();
   if (this.sliceMosaicString.length > 0) {
     this.drawMosaic(this.sliceMosaicString);
   } else {
@@ -6584,6 +6707,8 @@ Niivue.prototype.drawScene = function () {
     } //if multiplanar
   } //if mosaic not 2D
   if (this.opts.isRuler) this.drawRuler();
+  if (this.opts.isColorbar) this.drawColorbar();
+
   if (this.isDragging) {
     if (this.opts.isDragShowsMeasurementTool) {
       this.drawMeasurementTool([
