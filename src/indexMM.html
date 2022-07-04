@@ -24,20 +24,23 @@
         hot reloadable development preview
       </h1>
       <div class="slidecontainer">
-  X Pan <input type="range" min="-30" max="30" value="0" class="slider" id="xSlider">
-</div>
+        X Pan <input type="range" min="-30" max="30" value="0" class="slider" id="xSlider">
+      </div>
       <div class="slidecontainer">
-  Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
-</div>
+        Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
+      </div>
       <div class="slidecontainer">
-  Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
-</div>
+        Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
+      </div>
       <div class="slidecontainer">
-  Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
-</div>
+        Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
+      </div>
       <div class="slidecontainer">
-  Mesh Visibility <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
-</div>
+        Mesh Visibility <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
+      </div>
+      <div class="slidecontainer">
+          gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
+      </div>
       <input type="checkbox" id="check1" name="check1" unchecked>
       <label for="check1">Radiological</label>
       <input type="checkbox" id="check2" name="check2" unchecked>
@@ -52,7 +55,8 @@
       <label for="check6">Nose left</label>
       <input type="checkbox" id="check7" name="check7" checked>
       <label for="check7">Colorbar</label>
-
+      <input type="checkbox" id="check8" name="check8" checked>
+      <label for="check8">Negative colors</label>
     </section>
     <!-- demo 1 -->
     <section>
@@ -69,6 +73,10 @@
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
+     var slider = document.getElementById("gamma");
+      slider.oninput = function() {
+        nv1.setGamma(0.1 * this.value)
+      }
       function doSlider() {
         var sx = document.getElementById("xSlider");
         var sy = document.getElementById("ySlider");
@@ -131,6 +139,14 @@
         nv1.opts.isColorbar = this.checked;
         nv1.drawScene();
       }
+     document.getElementById("check8").addEventListener("change", doCheck8Click);
+     function doCheck8Click() {
+       if (this.checked)
+        nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
+       else
+        nv1.setColorMapNegative(nv1.volumes[1].id,"");
+       nv1.drawScene();
+     }
       import { Niivue } from './niivue.js'
 			import {NVImage} from './nvimage.js'
 			import {NVMesh} from './nvmesh.js'
@@ -151,17 +167,10 @@
         {
           url: url ? url : "../demos/images/fslt.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           colorMap: "warm",
+          colorMapNegative: "winter",
           opacity: 1,
           cal_min: 1,
-           cal_max: 6,
-          visible: true,
-        },
-        {
-          url: url ? url : "../demos/images/fslt.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          colorMap: "winter",
-          opacity: 1,
-          cal_min: 3,
-           cal_max: 7,
+          cal_max: 6,
           visible: true,
         },
       ]
@@ -174,7 +183,7 @@
 				//thumbnail: "../demos/images/DoG.png"
 			})
       nv1.setRadiologicalConvention(false)
-      nv1.setSliceMM(true);
+      nv1.setSliceMM(true)
       nv1.attachTo('gl1')
       //nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])

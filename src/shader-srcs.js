@@ -728,7 +728,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-uniform float numLayers;
+//uniform float numLayers;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform float opacity;
@@ -758,7 +758,9 @@ void main(void) {
  }
  idx = ((idx - uint(1)) % uint(100))+uint(1);
  float fx = (float(idx)+0.5) / 256.0;
- float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
+ float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
+ float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+ //float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
  FragColor = texture(colormap, vec2(fx, y)).rgba;
  FragColor.a *= opacity;
  if (layer < 2.0) return;
@@ -778,7 +780,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-uniform float numLayers;
+//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
@@ -790,14 +792,25 @@ uniform mat4 mtx;
 void main(void) {
  vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
  float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
+ bool isNegative = (f < 0.0);
  float r = max(0.00001, abs(cal_max - cal_min));
  float mn = min(cal_min, cal_max);
- f = mix(0.0, 1.0, (f - mn) / r);
- //float y = 1.0 / numLayers;
- //y = ((layer + 0.5) * y);
+ float txl = mix(0.0, 1.0, (f - mn) / r);
  //https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
- float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
- FragColor = texture(colormap, vec2(f, y)).rgba;
+ float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
+ float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+ FragColor = texture(colormap, vec2(txl, y)).rgba;
+ if (isNegative) {
+   y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
+   //select texels at positions 0 and 1 of lookup table: 
+   vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
+   vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
+   txl = mix(0.0, 1.0, (- f - mn) / r);
+   //detect bogus color: negative color slot not used than
+   // v0 = 1,1,1,0 and v1 = 0,0,0,1
+   if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
+     FragColor = texture(colormap, vec2(txl, y));
+ }
  if (layer > 0.7)
    FragColor.a = step(0.00001, FragColor.a);
  FragColor.a *= opacity;
@@ -818,7 +831,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-uniform float numLayers;
+//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;

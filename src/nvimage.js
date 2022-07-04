@@ -52,7 +52,8 @@ export function NVImage(
   ignoreZeroVoxels = false,
   visible = true,
   isDICOMDIR = false,
-  useQFormNotSForm = false
+  useQFormNotSForm = false,
+  colorMapNegative = ""
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -84,6 +85,7 @@ export function NVImage(
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
+  this.colorMapNegative = colorMapNegative;
   this.visible = visible;
   this.series = []; // for concatenating dicom images
 
@@ -2257,6 +2259,7 @@ NVImage.loadFromUrl = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  colorMapNegative = "",
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
@@ -2302,7 +2305,10 @@ NVImage.loadFromUrl = async function ({
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
-      visible
+      visible,
+      false,
+      false,
+      colorMapNegative
     );
   } else {
     alert("Unable to load buffer properly from volume");

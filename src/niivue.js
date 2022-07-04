@@ -1366,7 +1366,6 @@ Niivue.prototype.setMeshThicknessOn2D = function (meshThicknessOn2D) {
 
 Niivue.prototype.setSliceMosaicString = function (str) {
   this.sliceMosaicString = str;
-  console.log("Mosaic lightbox feature is experimental");
   this.updateGLVolume();
 };
 
@@ -1581,17 +1580,6 @@ Niivue.prototype.drawUndo = function () {
   );
   this.refreshDrawing(true);
 };
-
-/*Niivue.prototype.drawUndo = function () {
-  let hdr = this.back.hdr;
-  let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-  if (this.drawUndoBitmap.length !== nv || this.drawBitmap.length !== nv) {
-    console.log("bitmap dims are wrong");
-    return;
-  }
-  this.drawBitmap = this.drawUndoBitmap.slice();
-  this.refreshDrawing(true);
-};*/
 
 Niivue.prototype.loadDrawing = async function (fnm) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
@@ -2214,6 +2202,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       url: volumeList[i].url,
       name: volumeList[i].name,
       colorMap: volumeList[i].colorMap,
+      colorMapNegative: volumeList[i].colorMapNegative,
       opacity: volumeList[i].opacity,
       urlImgData: volumeList[i].urlImgData,
       cal_min: volumeList[i].cal_min,
@@ -3919,7 +3908,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
   this.gl.uniform1i(orientShader.uniforms["colormap"], 1);
   this.gl.uniform1f(orientShader.uniforms["layer"], layer);
-  this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
+  //this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
   this.gl.uniform1f(orientShader.uniforms["scl_inter"], hdr.scl_inter);
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
@@ -3982,7 +3971,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.overlays.length
   );
   this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
-  // set overlays for sliceMM shader mokra sliceMMShader
   this.sliceMMShader.use(this.gl);
   this.gl.uniform1f(
     this.sliceMMShader.uniforms["overlays"],
@@ -4032,6 +4020,12 @@ Niivue.prototype.setColorMap = function (id, colorMap) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
+  let idx = this.getVolumeIndexByID(id);
+  this.volumes[idx].colorMapNegative = colorMapNegative;
+  this.updateGLVolume();
+};
+
 Niivue.prototype.setGamma = function (gamma = 1.0) {
   cmapper.gamma = gamma;
   this.updateGLVolume();
@@ -4075,7 +4069,7 @@ Niivue.prototype.refreshColormaps = function () {
   this.colormapTexture = this.gl.createTexture();
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer);
+  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer * 2);
   this.gl.texParameteri(
     this.gl.TEXTURE_2D,
     this.gl.TEXTURE_MIN_FILTER,
@@ -4100,22 +4094,38 @@ Niivue.prototype.refreshColormaps = function () {
   );
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
   let luts = this.colormap(this.volumes[0].colorMap);
-  if (nLayer > 1) {
-    for (let i = 1; i < nLayer; i++) {
-      let lut = this.colormap(this.volumes[i].colorMap);
-      let c = new Uint8ClampedArray(luts.length + lut.length);
-      c.set(luts);
-      c.set(lut, luts.length);
-      luts = c;
-    } //colorMap
+  function addColormap(lut) {
+    let c = new Uint8ClampedArray(luts.length + lut.length);
+    c.set(luts);
+    c.set(lut, luts.length);
+    luts = c;
   }
+  for (let i = 1; i < nLayer; i++)
+    addColormap(this.colormap(this.volumes[i].colorMap));
+  //slots for (optional) negative colorMaps
+  let bogusLut = new Uint8ClampedArray(1024);
+  //bogus LUT key - allow shader to discriminate slots used for colorMapNegative
+  bogusLut[0] = 255; //R
+  bogusLut[1] = 255; //G
+  bogusLut[2] = 255; //B
+  bogusLut[3] = 0; //A
+  bogusLut[4] = 0; //R
+  bogusLut[5] = 0; //G
+  bogusLut[6] = 0; //B
+  bogusLut[7] = 255; //A
+  for (let i = 0; i < nLayer; i++) {
+    let lut = bogusLut.slice();
+    if (this.volumes[i].colorMapNegative.length > 0)
+      lut = this.colormap(this.volumes[i].colorMapNegative);
+    addColormap(lut);
+  } //each layer
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,
     0,
     0,
     0,
     256,
-    nLayer,
+    nLayer * 2,
     this.gl.RGBA,
     this.gl.UNSIGNED_BYTE,
     luts
@@ -4515,7 +4525,8 @@ Niivue.prototype.reserveColorbarPanel = function () {
 
 Niivue.prototype.drawColorbarCore = function (
   layer = 0,
-  leftTopWidthHeight = [0, 0, 0, 0]
+  leftTopWidthHeight = [0, 0, 0, 0],
+  isNegativeColor = false
 ) {
   if (this.volumes.length < 1) return;
   if (layer >= this.volumes.length) layer = 0;
@@ -4539,7 +4550,6 @@ Niivue.prototype.drawColorbarCore = function (
     this.opts.backColor[2],
     0.5,
   ];
-  //this.drawBox(leftTopWidthHeight, clr);
   let top = leftTopWidthHeight[1];
   let barLTWH = [
     leftTopWidthHeight[0] + margin,
@@ -4567,7 +4577,9 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.TEXTURE_MAG_FILTER,
     this.gl.NEAREST
   );
-  this.gl.uniform1f(this.colorbarShader.uniforms["layer"], layer);
+  let lx = layer;
+  if (isNegativeColor) lx += this.volumes.length;
+  this.gl.uniform1f(this.colorbarShader.uniforms["layer"], lx);
   this.gl.uniform2fv(this.colorbarShader.uniforms["canvasWidthHeight"], [
     this.gl.canvas.width,
     this.gl.canvas.height,
@@ -4606,6 +4618,7 @@ Niivue.prototype.drawColorbarCore = function (
     ticLTWH[0] = barLTWH[0] + ((tic - min) / range) * barLTWH[2];
     this.drawBox(ticLTWH);
     let str = humanize(tic);
+    if (isNegativeColor) str = "-" + str;
     //if (fntSize > 0)
     this.drawTextBelow([ticLTWH[0], txtTop], str);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
@@ -4616,15 +4629,14 @@ Niivue.prototype.drawColorbarCore = function (
 Niivue.prototype.drawColorbar = function () {
   let nlayers = this.volumes.length;
   if (nlayers < 1) return;
+  let ncolorMapNegative = 0;
+  for (let i = 0; i < nlayers; i++)
+    if (this.volumes[i].colorMapNegative.length > 0) ncolorMapNegative++;
   let leftTopWidthHeight = this.reserveColorbarPanel();
-  if (nlayers < 2) {
-    this.drawColorbarCore(0, leftTopWidthHeight);
-    return;
-  }
   let txtHt = Math.max(this.opts.textHeight, 0.01);
   txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
   let fullHt = 3 * txtHt;
-  let wid = leftTopWidthHeight[2] / nlayers;
+  let wid = leftTopWidthHeight[2] / (nlayers + ncolorMapNegative);
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
     wid = this.gl.canvas.width / nlayers;
     leftTopWidthHeight = [0, this.gl.canvas.height - fullHt, wid, fullHt];
@@ -4632,6 +4644,9 @@ Niivue.prototype.drawColorbar = function () {
   leftTopWidthHeight[2] = wid;
   for (let i = 0; i < nlayers; i++) {
     this.drawColorbarCore(i, leftTopWidthHeight);
+    leftTopWidthHeight[0] += wid;
+    if (this.volumes[i].colorMapNegative.length === 0) continue;
+    this.drawColorbarCore(i, leftTopWidthHeight, true);
     leftTopWidthHeight[0] += wid;
   }
 };
@@ -4834,8 +4849,6 @@ Niivue.prototype.calculateMvpMatrix2D = function (
     if (elevation === 0 && (azimuth === 0 || azimuth === 180)) r = !r;
     let dx = scale * 1.8 - clipDepth;
     if (!r) dx = scale * 1.8 + clipDepth;
-    //near = (scale-clipDepth) * 1.8;
-    //far = (scale+clipDepth) * 1.8;
     near = dx - clipTolerance;
     far = dx + clipTolerance;
   }
@@ -5065,7 +5078,6 @@ Niivue.prototype.draw2DMM = function (
     this.sliceMMShader.uniforms["opacity"],
     this.volumes[0].opacity
   );
-  //mokra
   this.gl.uniform1i(this.sliceMMShader.uniforms["axCorSag"], axCorSag);
   this.gl.uniform1f(this.sliceMMShader.uniforms["slice"], sliceFrac);
   this.gl.uniformMatrix4fv(
@@ -6552,15 +6564,8 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
     if (mxRowWid <= 0 || top <= 0) break;
     let scaleW = this.gl.canvas.width / mxRowWid;
     let scaleH = this.effectiveCanvasHeight() / top;
-    console.log(">>>", this.effectiveCanvasHeight());
     scale = Math.min(scaleW, scaleH);
   } //for pass 0 and 1
-  /*if (isCrossLinesUsed && this.back.oblique_angle > 0)
-    console.log(
-      "Cross lines not precise: voxels not aligned with world space: " +
-        this.back.oblique_angle +
-        " degrees from plumb.\n"
-    );*/
   this.opts.textHeight = labelSize;
 }; // drawMosaic()
 
@@ -6625,7 +6630,8 @@ Niivue.prototype.drawScene = function () {
     this.sliceType === this.sliceTypeRender
   ) {
     this.screenSlices = []; // empty array
-    return this.draw3D();
+    this.draw3D();
+    if (this.opts.isColorbar) this.drawColorbar();
     return;
   }
   if (this.opts.isColorbar) this.reserveColorbarPanel();
@@ -6692,17 +6698,6 @@ Niivue.prototype.drawScene = function () {
         this.draw2D([ltwh[0] + wX, ltwh[1], wY, hZ], 2);
         if (!this.graph.autoSizeMultiplanar)
           this.draw3D([ltwh[0] + wX, ltwh[1] + hZ, wY, hY]);
-        //draw colorbar (optional) // TODO currently only drawing one colorbar, there may be one per overlay + one for the background
-        /*var margin = this.opts.colorBarMargin * hY;
-        if (!this.graph.autoSizeMultiplanar) {
-          this.drawColorbar([
-            ltwh[0] + wX + margin,
-            ltwh[1] + hZ + margin,
-            wY - margin - margin,
-            hY * this.opts.colorbarHeight,
-          ]);
-        }*/
-        // drawTextBelow(gl, [ltwh[0]+ wX + (wY * 0.5), ltwh[1] + hZ + margin + hY * colorbarHeight], "Syzygy"); //DEMO
       } //if landscape else portrait
     } //if multiplanar
   } //if mosaic not 2D
