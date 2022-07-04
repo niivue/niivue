@@ -116,7 +116,7 @@ export function Niivue(options = {}) {
     isNearestInterpolation: false,
     isAtlasOutline: false,
     isRuler: false,
-    isColorbar: true,
+    isColorbar: false,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     isDragShowsMeasurementTool: false,
