@@ -395,15 +395,22 @@ layout(location=0) in vec3 pos;
 uniform int axCorSag;
 uniform float slice;
 uniform vec2 canvasWidthHeight;
+uniform vec3 panXYscale;
 uniform vec4 leftTopWidthHeight;
 out vec3 texPos;
 void main(void) {
 	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
 	vec2 frac;
-	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
-	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	vec3 vpos = pos;
+	frac.x = (leftTopWidthHeight.x + (vpos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - vpos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	//frac.x = pos.x; //0..1
+	//frac.y = pos.y; //1..0
+
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
+	gl_Position.x += panXYscale.x;
+	gl_Position.y += panXYscale.y;
 	if (axCorSag == 1)
 		texPos = vec3(pos.x, slice, pos.y);
 	else if (axCorSag == 2)
@@ -468,7 +475,6 @@ void main(void) {
 		texPos = vec3(slice, pos.x, pos.y);
   else if (axCorSag > 0)
 		texPos = vec3(pos.x, slice, pos.y);
-	//vec4 mm = vec4(50.0 * (pos.x - 0.5), 50.0 * (pos.y - 0.5), 0.0, 1.0);
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
 	//vec4 mm =  vec4(texPos, 1.0) * frac2mm;
 	gl_Position = mvpMtx * mm;
@@ -518,7 +524,7 @@ void main() {
 	color.a = 1.0;
 }`;
 
-export var fragLineShader = `#version 300 es
+export var fragRectShader = `#version 300 es
 #line 189
 precision highp int;
 precision highp float;
@@ -549,10 +555,13 @@ export var fragColorbarShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler2D colormap;
+uniform float layer;
 in vec2 vColor;
 out vec4 color;
 void main() {
-	color = vec4(texture(colormap, vColor).rgb, 1.0);
+	float nlayer = float(textureSize(colormap, 0).y);
+	float fmap = (0.5 + layer) / nlayer;
+	color = vec4(texture(colormap, vec2(vColor.x, fmap)).rgb, 1.0);
 }`;
 
 export var vertGraphShader = `#version 300 es
@@ -595,7 +604,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`;
 
-export var vertLineShader = `#version 300 es
+export var vertRectShader = `#version 300 es
 #line 229
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -607,6 +616,21 @@ void main(void) {
 	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
+}`;
+
+export var vertLineShader = `#version 300 es
+#line 229
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float thickness;
+uniform vec4 startXYendXY;
+void main(void) {
+	vec2 posXY = mix(startXYendXY.xy, startXYendXY.zw, pos.x);
+	vec2 dir = normalize(startXYendXY.xy - startXYendXY.zw);
+	posXY += vec2(-dir.y, dir.x) * thickness * (pos.y - 0.5);
+	posXY.x = (posXY.x) / canvasWidthHeight.x; //0..1
+	posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y); //1..0
+	gl_Position = vec4((posXY * 2.0) - 1.0, 0.0, 1.0);
 }`;
 
 export var vertBmpShader = `#version 300 es
@@ -704,7 +728,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-uniform float numLayers;
+//uniform float numLayers;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform float opacity;
@@ -734,7 +758,9 @@ void main(void) {
  }
  idx = ((idx - uint(1)) % uint(100))+uint(1);
  float fx = (float(idx)+0.5) / 256.0;
- float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
+ float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
+ float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+ //float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
  FragColor = texture(colormap, vec2(fx, y)).rgba;
  FragColor.a *= opacity;
  if (layer < 2.0) return;
@@ -754,7 +780,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-uniform float numLayers;
+//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
@@ -766,14 +792,25 @@ uniform mat4 mtx;
 void main(void) {
  vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
  float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
+ bool isNegative = (f < 0.0);
  float r = max(0.00001, abs(cal_max - cal_min));
  float mn = min(cal_min, cal_max);
- f = mix(0.0, 1.0, (f - mn) / r);
- //float y = 1.0 / numLayers;
- //y = ((layer + 0.5) * y);
+ float txl = mix(0.0, 1.0, (f - mn) / r);
  //https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
- float y = (2.0 * layer + 1.0)/(2.0 * numLayers);
- FragColor = texture(colormap, vec2(f, y)).rgba;
+ float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
+ float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+ FragColor = texture(colormap, vec2(txl, y)).rgba;
+ if (isNegative) {
+   y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
+   //select texels at positions 0 and 1 of lookup table: 
+   vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
+   vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
+   txl = mix(0.0, 1.0, (- f - mn) / r);
+   //detect bogus color: negative color slot not used than
+   // v0 = 1,1,1,0 and v1 = 0,0,0,1
+   if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
+     FragColor = texture(colormap, vec2(txl, y));
+ }
  if (layer > 0.7)
    FragColor.a = step(0.00001, FragColor.a);
  FragColor.a *= opacity;
@@ -794,7 +831,7 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-uniform float numLayers;
+//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;

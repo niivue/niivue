@@ -72,7 +72,7 @@ colortables.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
   }
   if (this.gamma === 1.0) return lut;
   for (var i = 0; i < 255 * 4; i++) {
-    //lut[i] = ((lut[i] / 255) ^ (1 / this.gamma)) * 255
+    if (i % 4 === 3) continue; //gamma changes RGB, not Alpha
     lut[i] = Math.pow(lut[i] / 255, 1 / this.gamma) * 255;
   }
   return lut;
