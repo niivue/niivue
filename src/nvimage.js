@@ -87,6 +87,7 @@ export function NVImage(
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
   this.visible = visible;
+  this.modulationImage = null;
   this.series = []; // for concatenating dicom images
 
   // Added to support zerosLike
