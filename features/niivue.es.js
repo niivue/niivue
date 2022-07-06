@@ -1312,6 +1312,8 @@ uniform float cal_max;
 uniform float cal_min;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
+uniform int modulation;
+uniform highp sampler3D modulationVol;
 uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
@@ -1338,6 +1340,8 @@ void main(void) {
  }
  if (layer > 0.7)
    FragColor.a = step(0.00001, FragColor.a);
+ if (modulation > 0)
+   FragColor.rgb *= texture(modulationVol, vx.xyz).r;
  FragColor.a *= opacity;
  if (layer < 1.0) return;
  vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
@@ -1365,10 +1369,14 @@ uniform lowp sampler3D blend3D;
 uniform float opacity;
 uniform mat4 mtx;
 uniform bool hasAlpha;
+uniform int modulation;
+uniform highp sampler3D modulationVol;
 void main(void) {
  vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
  uvec4 aColor = texture(intensityVol, vx.xyz);
  FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
+ if (modulation > 0)
+   FragColor.rgb *= texture(modulationVol, vx.xyz).r;
  if (!hasAlpha)
    FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
  FragColor.a *= opacity;
@@ -103565,6 +103573,7 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
   this.visible = visible;
+  this.modulationImage = null;
   this.series = [];
   if (!dataBuffer) {
     return;
@@ -112810,6 +112819,51 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_inter"], hdr.scl_inter);
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
+  this.gl.uniform1i(orientShader.uniforms["modulationVol"], 7);
+  let modulateTexture = null;
+  if (overlayItem.modulationImage && overlayItem.modulationImage >= 0 && overlayItem.modulationImage < this.volumes.length) {
+    console.log(this.volumes);
+    let mhdr = this.volumes[overlayItem.modulationImage].hdr;
+    if (mhdr.dims[1] === hdr.dims[1] && mhdr.dims[2] === hdr.dims[2] && mhdr.dims[3] === hdr.dims[3]) {
+      this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
+      modulateTexture = this.r8Tex(modulateTexture, this.gl.TEXTURE7, hdr.dims, true);
+      this.gl.activeTexture(this.gl.TEXTURE7);
+      this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
+      let vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+      let modulateVolume = new Uint8Array(vx);
+      let mn = mhdr.cal_min;
+      let scale2 = 255 / (mhdr.cal_max - mhdr.cal_min);
+      let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
+      let img2 = new Uint8Array(imgRaw);
+      switch (mhdr.datatypeCode) {
+        case overlayItem.DT_SIGNED_SHORT:
+          img2 = new Int16Array(imgRaw);
+          break;
+        case overlayItem.DT_FLOAT:
+          img2 = new Float32Array(imgRaw);
+          break;
+        case overlayItem.DT_DOUBLE:
+          img2 = new Float64Array(imgRaw);
+          break;
+        case overlayItem.DT_RGB:
+          img2 = new Uint8Array(imgRaw);
+          break;
+        case overlayItem.DT_UINT16:
+          img2 = new Uint16Array(imgRaw);
+          break;
+      }
+      console.log(this.volumes[overlayItem.modulationImage]);
+      for (let i2 = 0; i2 < vx; i2++) {
+        let v = img2[i2] * mhdr.scl_slope + mhdr.scl_inter;
+        v = (v - mn) * scale2;
+        v = Math.min(Math.max(v, 0), 255);
+        modulateVolume[i2] = v;
+      }
+      this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], this.gl.RED, this.gl.UNSIGNED_BYTE, modulateVolume);
+    } else
+      console.log("Modulation image dimensions do not match target");
+  } else
+    this.gl.uniform1i(orientShader.uniforms["modulation"], 0);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
   if (hdr.intent_code === 1002) {
     let x2 = 1 / this.back.dims[1];
@@ -112830,6 +112884,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   }
   this.gl.bindVertexArray(this.unusedVAO);
   this.gl.deleteTexture(tempTex3D);
+  this.gl.deleteTexture(modulateTexture);
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
@@ -112855,6 +112910,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays.length);
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
+  this.gl.activeTexture(this.gl.TEXTURE7);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
   this.updateInterpolation(layer);
 };
 Niivue.prototype.colorMaps = function(sort = true) {
@@ -112868,6 +112925,13 @@ Niivue.prototype.setColorMap = function(id, colorMap) {
 Niivue.prototype.setColorMapNegative = function(id, colorMapNegative) {
   let idx = this.getVolumeIndexByID(id);
   this.volumes[idx].colorMapNegative = colorMapNegative;
+  this.updateGLVolume();
+};
+Niivue.prototype.setModulationImage = function(idTarget, idModulation) {
+  let idxTarget = this.getVolumeIndexByID(idTarget);
+  let idxModulation = null;
+  idxModulation = this.getVolumeIndexByID(idModulation);
+  this.volumes[idxTarget].modulationImage = idxModulation;
   this.updateGLVolume();
 };
 Niivue.prototype.setGamma = function(gamma = 1) {
