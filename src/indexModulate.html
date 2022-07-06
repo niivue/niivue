@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>NiiVue</title>
+  <style>
+    section {
+      margin: 20px;
+    }
+  </style>
+</head>
+
+<body style="font-family: sans-serif;">
+  <div id="app">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+
+    <section>
+      <h1>
+        hot reloadable development preview
+      </h1>
+      <div class="slidecontainer">
+        X Pan <input type="range" min="-30" max="30" value="0" class="slider" id="xSlider">
+      </div>
+      <div class="slidecontainer">
+        Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
+      </div>
+      <div class="slidecontainer">
+        Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
+      </div>
+      <div class="slidecontainer">
+        Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
+      </div>
+      <div class="slidecontainer">
+        Mesh Visibility <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
+      </div>
+      <div class="slidecontainer">
+          gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
+      </div>
+      <input type="checkbox" id="check1" name="check1" unchecked>
+      <label for="check1">Radiological</label>
+      <input type="checkbox" id="check2" name="check2" unchecked>
+      <label for="check2">Corner text</label>
+      <input type="checkbox" id="check3" name="check3" checked>
+      <label for="check3">World space</label>
+      <input type="checkbox" id="check4" name="check4" unchecked>
+      <label for="check4">Drag measurement</label>
+      <input type="checkbox" id="check5" name="check5" unchecked>
+      <label for="check5">Ruler</label>
+      <input type="checkbox" id="check6" name="check6" unchecked>
+      <label for="check6">Nose left</label>
+      <input type="checkbox" id="check7" name="check7" checked>
+      <label for="check7">Colorbar</label>
+      <input type="checkbox" id="check8" name="check8" checked>
+      <label for="check8">Negative colors</label>
+
+        <label for="mode">Display:</label>
+        <select name="mode" id="mode">
+          <option value="FA">FA</option>
+          <option value="V1">V1</option>
+          <option value="MV1">V1 modulated by FA</option>
+        </select>
+
+    </section>
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:98%; height:480px;">
+        <canvas id="gl1" height=480 width=480>
+        </canvas>
+      </div>
+    </section>
+
+    <section>
+      <p id="location"></p>
+    </section>
+
+    <!-- <script type="module" src="./index.js">
+    </script> -->
+    <script type="module" async>
+     var slider = document.getElementById("gamma");
+      slider.oninput = function() {
+        nv1.setGamma(0.1 * this.value)
+      }
+      function doSlider() {
+        var sx = document.getElementById("xSlider");
+        var sy = document.getElementById("ySlider");
+        var sz =document.getElementById("zSlider");
+        var szoom =document.getElementById("zoomSlider");
+
+        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), parseInt(sz.value), 0.1 * parseInt(szoom.value)])
+      }
+      var xslider = document.getElementById("xSlider");
+      xslider.oninput = function() {
+        doSlider()
+      }
+      var yslider = document.getElementById("ySlider");
+      yslider.oninput = function() {
+        doSlider()
+      }
+      var zslider = document.getElementById("zSlider");
+      zslider.oninput = function() {
+        doSlider()
+      }
+      var zoomslider = document.getElementById("zoomSlider");
+      zoomslider.oninput = function() {
+        doSlider()
+      }
+      var dxslider = document.getElementById("dxSlider");
+      dxslider.oninput = function() {
+        let dx = parseFloat(this.value);
+        if (dx > 10)
+          dx = Infinity;
+        nv1.setMeshThicknessOn2D(dx);
+      }
+      document.getElementById("check1").addEventListener("change", doCheckClick);
+      function doCheckClick() {
+        nv1.setRadiologicalConvention(this.checked);
+      }
+      document.getElementById("check2").addEventListener("change", doCheck2Click);
+      function doCheck2Click() {
+        nv1.setCornerOrientationText(this.checked);
+      }
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked);
+      }
+      document.getElementById("check4").addEventListener("change", doCheck4Click);
+      function doCheck4Click() {
+        nv1.opts.isDragShowsMeasurementTool = this.checked;
+      }      
+      document.getElementById("check5").addEventListener("change", doCheck5Click);
+      function doCheck5Click() {
+        nv1.opts.isRuler = this.checked;
+        nv1.drawScene();
+      }
+      document.getElementById("check6").addEventListener("change", doCheck6Click);
+      function doCheck6Click() {
+        nv1.opts.sagittalNoseLeft = this.checked;
+        nv1.drawScene();
+      }
+      document.getElementById("check7").addEventListener("change", doCheck7Click);
+      function doCheck7Click() {
+        nv1.opts.isColorbar = this.checked;
+        nv1.drawScene();
+      }
+     document.getElementById("check8").addEventListener("change", doCheck8Click);
+     function doCheck8Click() {
+       if (this.checked)
+        nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
+       else
+        nv1.setColorMapNegative(nv1.volumes[1].id,"");
+       nv1.drawScene();
+     }
+      var drop = document.getElementById("mode");
+      drop.onchange = function() {
+        let mode = document.getElementById("mode").selectedIndex;
+        if (mode === 0) 
+          nv1.setOpacity(1, 1.0);
+        else
+          nv1.setOpacity(1, 0.0)
+
+        if (mode === 2) 
+          nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
+        else
+          nv1.setModulationImage(nv1.volumes[0].id, null);
+      }
+      import { Niivue } from './niivue.js'
+      import {NVImage} from './nvimage.js'
+      import {NVMesh} from './nvmesh.js'
+      let query = window.location.search
+      const params = new URLSearchParams(query);
+      let url = params.get('url')
+      var volumeList1 = [
+        {
+          url: url ? url : "../demos/images/V1.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          opacity: 1,
+          visible: false,
+        },
+        {
+          url: url ? url : "../demos/images/FA.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "gray",
+          opacity: 1.0,
+          visible: false,
+        },
+      ]
+      var nv1 = new Niivue({
+       logging: false,
+       show3Dcrosshair: true,
+       loadingText: 'there are no images',
+       dragAndDropEnabled: true,
+       backColor: [0, 0.2, 0.3, 1],
+       //thumbnail: "../demos/images/DoG.png"
+      })
+      nv1.setRadiologicalConvention(false)
+      nv1.setSliceMM(true)
+      nv1.attachTo('gl1')
+      //nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setClipPlane([-0.1, 270, 0])
+      nv1.setRenderAzimuthElevation(90,10)
+      await nv1.loadVolumes(volumeList1);
+      nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
+      
+      nv1.on('location', (data) => {
+        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
+      })
+   nv1.on('intensityRange', (image) => {
+    console.log(image.cal_min, image.cal_max)
+   })
+
+   setTimeout(() => {
+    //nv1.saveImage('test.nii.gz') 
+   }, 2000)
+  
+  </script>
+  </div>
+</body>
+
+</html>

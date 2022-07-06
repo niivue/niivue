@@ -3912,6 +3912,77 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   this.gl.uniform1f(orientShader.uniforms["scl_inter"], hdr.scl_inter);
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
+
+  this.gl.uniform1i(orientShader.uniforms["modulationVol"], 7);
+  let modulateTexture = null;
+  if (
+    overlayItem.modulationImage &&
+    overlayItem.modulationImage >= 0 &&
+    overlayItem.modulationImage < this.volumes.length
+  ) {
+    console.log(this.volumes);
+    let mhdr = this.volumes[overlayItem.modulationImage].hdr;
+    if (
+      mhdr.dims[1] === hdr.dims[1] &&
+      mhdr.dims[2] === hdr.dims[2] &&
+      mhdr.dims[3] === hdr.dims[3]
+    ) {
+      this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
+
+      //r8Tex(texID, activeID, dims, isInit = false)
+      modulateTexture = this.r8Tex(
+        modulateTexture,
+        this.gl.TEXTURE7,
+        hdr.dims,
+        true
+      );
+      this.gl.activeTexture(this.gl.TEXTURE7);
+      this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
+      let vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+      let modulateVolume = new Uint8Array(vx);
+      let mn = mhdr.cal_min;
+      let scale = 255.0 / (mhdr.cal_max - mhdr.cal_min);
+      let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
+      let img = new Uint8Array(imgRaw);
+      switch (mhdr.datatypeCode) {
+        case overlayItem.DT_SIGNED_SHORT:
+          img = new Int16Array(imgRaw);
+          break;
+        case overlayItem.DT_FLOAT:
+          img = new Float32Array(imgRaw);
+          break;
+        case overlayItem.DT_DOUBLE:
+          img = new Float64Array(imgRaw);
+          break;
+        case overlayItem.DT_RGB:
+          img = new Uint8Array(imgRaw);
+          break;
+        case overlayItem.DT_UINT16:
+          img = new Uint16Array(imgRaw);
+          break;
+      }
+      console.log(this.volumes[overlayItem.modulationImage]);
+      for (let i = 0; i < vx; i++) {
+        let v = img[i] * mhdr.scl_slope + mhdr.scl_inter;
+        v = (v - mn) * scale;
+        v = Math.min(Math.max(v, 0.0), 255.0);
+        modulateVolume[i] = v;
+      }
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        hdr.dims[1],
+        hdr.dims[2],
+        hdr.dims[3],
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        modulateVolume
+      );
+    } else console.log("Modulation image dimensions do not match target");
+  } else this.gl.uniform1i(orientShader.uniforms["modulation"], 0);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
   if (hdr.intent_code === 1002) {
     let x = 1.0 / this.back.dims[1];
@@ -3939,6 +4010,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   }
   this.gl.bindVertexArray(this.unusedVAO);
   this.gl.deleteTexture(tempTex3D);
+  this.gl.deleteTexture(modulateTexture);
   this.gl.deleteTexture(blendTexture);
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
@@ -3989,6 +4061,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   );
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
+  this.gl.activeTexture(this.gl.TEXTURE7);
+  this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
   this.updateInterpolation(layer);
   //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
   //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
@@ -4026,6 +4100,18 @@ Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.setModulationImage = function (idTarget, idModulation) {
+  //to set:
+  // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
+  //to clear:
+  // nv1.setModulationImage(nv1.volumes[0].id, null);
+  let idxTarget = this.getVolumeIndexByID(idTarget);
+  let idxModulation = null;
+  //if (idModulation)
+  idxModulation = this.getVolumeIndexByID(idModulation);
+  this.volumes[idxTarget].modulationImage = idxModulation;
+  this.updateGLVolume();
+};
 Niivue.prototype.setGamma = function (gamma = 1.0) {
   cmapper.gamma = gamma;
   this.updateGLVolume();

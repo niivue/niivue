@@ -787,6 +787,8 @@ uniform float cal_max;
 uniform float cal_min;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
+uniform int modulation;
+uniform highp sampler3D modulationVol;
 uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
@@ -813,6 +815,8 @@ void main(void) {
  }
  if (layer > 0.7)
    FragColor.a = step(0.00001, FragColor.a);
+ if (modulation > 0)
+   FragColor.rgb *= texture(modulationVol, vx.xyz).r;
  FragColor.a *= opacity;
  if (layer < 1.0) return;
  vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
@@ -841,10 +845,14 @@ uniform lowp sampler3D blend3D;
 uniform float opacity;
 uniform mat4 mtx;
 uniform bool hasAlpha;
+uniform int modulation;
+uniform highp sampler3D modulationVol;
 void main(void) {
  vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
  uvec4 aColor = texture(intensityVol, vx.xyz);
  FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
+ if (modulation > 0)
+   FragColor.rgb *= texture(modulationVol, vx.xyz).r;
  if (!hasAlpha)
    FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
  FragColor.a *= opacity;

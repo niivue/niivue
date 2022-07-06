@@ -42,6 +42,8 @@
     <label for="check2">Corner text</label>
     <input type="checkbox" id="check3" name="check3" checked>
     <label for="check3">World space</label>
+    <input type="checkbox" id="check7" name="check7" unchecked>
+    <label for="check7">Colorbar</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:800px;">
@@ -94,6 +96,11 @@
           dx = Infinity;
         nv1.setMeshThicknessOn2D(dx);
       }
+     document.getElementById("check7").addEventListener("change", doCheck7Click);
+     function doCheck7Click() {
+       nv1.opts.isColorbar = this.checked;
+       nv1.drawScene();
+     }
      var volumeList1 = [
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
