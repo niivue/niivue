@@ -130,6 +130,7 @@ export function Niivue(options = {}) {
     penValue: 1, // sets drawing color. see "drawPt"
     isFilledPen: false,
     thumbnail: "",
+    onLocationChange: ()=>{}
   };
 
   this.canvas = null; // the canvas element on the page
@@ -4352,6 +4353,18 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
+        this.opts.onLocationChange({
+          mm: this.frac2mm(this.scene.crosshairPos),
+          vox: this.frac2vox(this.scene.crosshairPos),
+          frac: this.scene.crosshairPos,
+          xy: [x, y],
+          values: this.volumes.map((v) => {
+            let mm = this.frac2mm(this.scene.crosshairPos);
+            let vox = v.mm2vox(mm);
+            let val = v.getValue(...vox);
+            return { name: v.name, value: val, id: v.id };
+          })
+        })
         this.scene.location$.next({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
@@ -4361,7 +4374,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
-            return { name: v.name, value: val, id: v.id};
+            return { name: v.name, value: val, id: v.id };
           }),
         });
         return;
@@ -4391,6 +4404,18 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
+      this.opts.onLocationChange({
+          mm: this.frac2mm(this.scene.crosshairPos),
+          vox: this.frac2vox(this.scene.crosshairPos),
+          frac: this.scene.crosshairPos,
+          xy: [x, y],
+          values: this.volumes.map((v) => {
+            let mm = this.frac2mm(this.scene.crosshairPos);
+            let vox = v.mm2vox(mm);
+            let val = v.getValue(...vox);
+            return { name: v.name, value: val, id: v.id };
+          })
+        })
       this.scene.location$.next({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
@@ -4400,7 +4425,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
-          return { name: v.name, value: val, id: v.id};
+          return { name: v.name, value: val, id: v.id };
         }),
       });
       return;
