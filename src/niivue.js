@@ -131,8 +131,8 @@ export function Niivue(options = {}) {
     isFilledPen: false,
     thumbnail: "",
     onLocationChange: () => {},
-    onIntensityChange: ()=> {},
-    onImageLoaded: ()=> {}
+    onIntensityChange: () => {},
+    onImageLoaded: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -813,7 +813,7 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.opts.onIntensityChange(this.volumes[volIdx])
+  this.opts.onIntensityChange(this.volumes[volIdx]);
 };
 
 // not included in public docs
@@ -924,7 +924,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
-  this.opts.onIntensityChange(this.volumes[0])
+  this.opts.onIntensityChange(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -1384,7 +1384,7 @@ Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
-  this.opts.onImageLoaded(volume)
+  this.opts.onImageLoaded(volume);
 };
 
 /**
@@ -1398,7 +1398,7 @@ Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
   let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
   this.setMesh(mesh, idx);
-  this.opts.onImageLoaded(mesh)
+  this.opts.onImageLoaded(mesh);
 };
 
 /**
@@ -4355,7 +4355,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
-            return { name: v.name, value: val, id: v.id };
+            return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
           }),
         });
         return;
@@ -4394,7 +4394,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
-          return { name: v.name, value: val, id: v.id };
+          return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
         }),
       });
       return;
