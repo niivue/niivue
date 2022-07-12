@@ -6215,7 +6215,7 @@ Niivue.prototype.drawCrosshairs3D = function (
           Math.min(this.back.pixDims[1], this.back.pixDims[2]),
           this.back.pixDims[3]
         );
-    else if (range[0] < 10 || range[0] > 1000) radius = range[0] * 0.02; //2% of first dimension
+    else if (range[0] < 50 || range[0] > 1000) radius = range[0] * 0.02; //2% of first dimension
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(
       this.gl,
       1,
