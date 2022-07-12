@@ -4361,7 +4361,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
-            return val;
+            return {name: v.name, value: val}
           }),
         });
         return;
@@ -4400,7 +4400,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
-          return val;
+          return {name: v.name, value: val}
         }),
       });
       return;
