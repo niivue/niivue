@@ -110445,7 +110445,13 @@ function Niivue(options = {}) {
     drawingEnabled: false,
     penValue: 1,
     isFilledPen: false,
-    thumbnail: ""
+    thumbnail: "",
+    onLocationChange: () => {
+    },
+    onIntensityChange: () => {
+    },
+    onImageLoaded: () => {
+    }
   };
   this.canvas = null;
   this.gl = null;
@@ -110543,10 +110549,7 @@ function Niivue(options = {}) {
   this.volumeObject3D = null;
   this.pivot3D = [0, 0, 0];
   this.furthestFromPivot = 10;
-  this.intensityRange$ = new Subject();
-  this.scene.location$ = new Subject();
   this.scene.loading$ = new Subject();
-  this.imageLoaded$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -110610,10 +110613,7 @@ function Niivue(options = {}) {
   this.loadingText = this.opts.loadingText;
   log.setLogLevel(this.opts.logging);
   this.eventsToSubjects = {
-    location: this.scene.location$,
-    loading: this.scene.loading$,
-    imageLoaded: this.imageLoaded$,
-    intensityRange: this.intensityRange$
+    loading: this.scene.loading$
   };
   this.subscriptions = [];
 }
@@ -110909,7 +110909,7 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.intensityRange$.next(this.volumes[volIdx]);
+  this.opts.onIntensityChange(this.volumes[volIdx]);
 };
 Niivue.prototype.mouseUpListener = function() {
   this.scene.mousedown = false;
@@ -110984,7 +110984,7 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
-  this.intensityRange$.next(this.volumes[0]);
+  this.opts.onIntensityChange(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -111240,13 +111240,13 @@ Niivue.prototype.addVolume = function(volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
-  this.imageLoaded$.next(volume);
+  this.opts.onImageLoaded(volume);
 };
 Niivue.prototype.addMesh = function(mesh) {
   this.meshes.push(mesh);
   let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
   this.setMesh(mesh, idx);
-  this.imageLoaded$.next(mesh);
+  this.opts.onImageLoaded(mesh);
 };
 Niivue.prototype.getVolumeIndexByID = function(id) {
   let n = this.volumes.length;
@@ -113102,15 +113102,16 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
           posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.scene.location$.next({
+        this.opts.onLocationChange({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
+          xy: [x2, y],
           values: this.volumes.map((v) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
-            return val;
+            return { name: v.name, value: val, id: v.id, mm, vox };
           })
         });
         return;
@@ -113137,15 +113138,16 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.scene.location$.next({
+      this.opts.onLocationChange({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
+        xy: [x2, y],
         values: this.volumes.map((v) => {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
-          return val;
+          return { name: v.name, value: val, id: v.id, mm, vox };
         })
       });
       return;
