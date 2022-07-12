@@ -4356,6 +4356,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
+          xy: [x, y],
           values: this.volumes.map((v) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
@@ -4394,6 +4395,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
+        xy: [x, y],
         values: this.volumes.map((v) => {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
