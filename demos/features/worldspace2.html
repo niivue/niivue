@@ -44,6 +44,10 @@
     <label for="check3">World space</label>
     <input type="checkbox" id="check7" name="check7" unchecked>
     <label for="check7">Colorbar</label>
+    <input type="checkbox" id="check8" name="check8" unchecked>
+    <label for="check8">Cube</label>
+    <input type="checkbox" id="check9" name="check9" unchecked>
+    <label for="check9">Pad</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:800px;">
@@ -101,6 +105,18 @@
        nv1.opts.isColorbar = this.checked;
        nv1.drawScene();
      }
+      document.getElementById("check8").addEventListener("change", doCheck8Click);
+      function doCheck8Click() {
+        nv1.opts.isOrientCube = this.checked;
+        nv1.drawScene();
+      }
+      document.getElementById("check9").addEventListener("change", doCheck9Click);
+      function doCheck9Click() {
+        let pad = 0;
+        if (this.checked) pad = 5;
+        nv1.opts.multiplanarPadPixels = pad;
+        nv1.drawScene();
+      }
      var volumeList1 = [
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",

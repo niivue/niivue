@@ -46,7 +46,20 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isCl
 		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
 	}
 	return samplePos;
-}`;
+}
+float frac2ndc(vec3 frac) {
+//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
+	vec4 pos = vec4(frac.xyz, 1.0); //fraction
+	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
+	pos = pos * dim;
+	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
+	pos += shim;
+	vec4 mm = transpose(matRAS) * pos;
+	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
+	return (z_ndc + 1.0) / 2.0;
+	
+}
+`;
 export var fragRenderShaderMIP =
   `#version 300 es
 #line 14
@@ -66,20 +79,7 @@ in vec3 vColor;
 out vec4 fColor;
 ` +
   kRenderFunc +
-  `
-float frac2ndc(vec3 frac) {
-//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
-	vec4 pos = vec4(frac.xyz, 1.0); //fraction
-	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
-	pos = pos * dim;
-	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
-	pos += shim;
-	vec4 mm = transpose(matRAS) * pos;
-	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
-	return (z_ndc + 1.0) / 2.0;
-	
-}
-void main() {
+  `void main() {
 	fColor = vec4(0.0,0.0,0.0,0.0);
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	vec3 start = vColor;
@@ -219,20 +219,7 @@ in vec3 vColor;
 out vec4 fColor;
 ` +
   kRenderFunc +
-  `
-float frac2ndc(vec3 frac) {
-//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
-	vec4 pos = vec4(frac.xyz, 1.0); //fraction
-	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
-	pos = pos * dim;
-	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
-	pos += shim;
-	vec4 mm = transpose(matRAS) * pos;
-	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
-	return (z_ndc + 1.0) / 2.0;
-	
-}
-void main() {
+  `void main() {
   if (fColor.x > 2.0) {
     fColor = vec4(1.0, 0.0, 0.0, 0.5);
     return;
@@ -1019,7 +1006,6 @@ precision highp float;
 uniform float opacity;
 out vec4 color;
 vec4 packFloatToVec4i(const float value) {
-	//this Papaya function uses BSD 3-clause license Copyright (c) 2012-2015, RII-UTHSCSA
 	const vec4 bitSh = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
 	const vec4 bitMsk = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
 	vec4 res = fract(value * bitSh);
@@ -1236,16 +1222,6 @@ void main() {
 	color = vec4(a + d + s, opacity);
 }`;
 
-export var fragDepthPickingShader = `#version 300 es
-precision highp int;
-precision highp float;
-uniform int id;
-in vec3 vColor;
-out vec4 color;
-void main() {
-	color = vec4(vColor, float(id & 255) / 255.0);
-}`;
-
 export var fragVolumePickingShader =
   `#version 300 es
 #line 506
@@ -1257,14 +1233,17 @@ uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
-uniform int id;
+uniform mat4 matRAS;
+uniform mat4 mvpMtx;
 in vec3 vColor;
 out vec4 fColor;
 ` +
   kRenderFunc +
   `
 void main() {
+	int id = 254;
 	vec3 start = vColor;
+	gl_FragDepth = 0.0;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
 	float fid = float(id & 255)/ 255.0;
 	vec3 backPosition = GetBackPosition(start);
@@ -1288,6 +1267,7 @@ void main() {
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) {
 			fColor = vec4(samplePos.rgb, fid);
+			gl_FragDepth = frac2ndc(samplePos.xyz);
 			break;
 		}
 		samplePos += deltaDirFast; //advance ray position
@@ -1304,6 +1284,7 @@ void main() {
 		float val = texture(overlay, samplePos.xyz).a;
 		if (val > 0.01) {
 			fColor = vec4(samplePos.rgb, fid);
+			gl_FragDepth = frac2ndc(samplePos.xyz);
 			return;
 		}
 		samplePos += deltaDirFast; //advance ray position
@@ -1311,3 +1292,33 @@ void main() {
 	//if (fColor.a == 0.0) discard; //no hit in either background or overlays
 	//you only get here if there is a hit with the background that is closer than any overlay
 }`;
+
+export var vertOrientCubeShader = `#version 300 es
+// an attribute is an input (in) to a vertex shader.
+// It will receive data from a buffer
+layout(location=0)  in vec3 a_position;
+layout(location=1)  in vec3 a_color;
+// A matrix to transform the positions by
+uniform mat4 u_matrix;
+out vec3 vColor;
+// all shaders have a main function
+void main() {
+  // Multiply the position by the matrix.
+  vec4 pos = vec4(a_position, 1.0);
+  gl_Position = u_matrix * vec4(pos);
+  vColor = a_color;
+}
+`;
+
+export var fragOrientCubeShader = `#version 300 es
+precision highp float;
+
+uniform vec4 u_color;
+in vec3 vColor;
+// we need to declare an output for the fragment shader
+out vec4 outColor;
+
+void main() {
+  outColor = vec4(vColor, 1.0);
+}
+`;

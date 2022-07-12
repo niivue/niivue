@@ -6,23 +6,20 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>NiiVue</title>
-  <style>
-    section {
-      margin: 20px;
-    }
-  </style>
 </head>
 
-<body style="font-family: sans-serif;">
-  <div id="app">
+<body style="font-family: sans-serif; margin:0;">
+  <div style="background-color:rgb(16, 0, 32); 
+  padding:4px;">
+       <h1 style="color:rgb(255, 255, 255); margin:2px;">
+        hot reloadable development preview
+      </h1>
+  </div>
+  <div id="app" style="padding:10px;">
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
-      <h1>
-        hot reloadable development preview
-      </h1>
       <div class="slidecontainer">
         X Pan <input type="range" min="-30" max="30" value="0" class="slider" id="xSlider">
       </div>
@@ -55,13 +52,15 @@
       <label for="check6">Nose left</label>
       <input type="checkbox" id="check7" name="check7" unchecked>
       <label for="check7">Colorbar</label>
-      <input type="checkbox" id="check8" name="check8" checked>
-      <label for="check8">Negative colors</label>
+      <input type="checkbox" id="check8" name="check8" unchecked>
+      <label for="check8">Cube</label>
+      <input type="checkbox" id="check9" name="check9" unchecked>
+      <label for="check9">Pad</label>
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:98%; height:480px;">
-        <canvas id="gl1" height=480 width=480>
+      <div id="demo1" style="width:98%; height:320px;">
+        <canvas id="gl1" height=320 width=480>
         </canvas>
       </div>
     </section>
@@ -139,90 +138,68 @@
         nv1.opts.isColorbar = this.checked;
         nv1.drawScene();
       }
-     document.getElementById("check8").addEventListener("change", doCheck8Click);
-     function doCheck8Click() {
-       if (this.checked)
-        nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
-       else
-        nv1.setColorMapNegative(nv1.volumes[1].id,"");
-       nv1.drawScene();
-     }
+      document.getElementById("check8").addEventListener("change", doCheck8Click);
+      function doCheck8Click() {
+        nv1.opts.isOrientCube = this.checked;
+        nv1.drawScene();
+      }
+      document.getElementById("check9").addEventListener("change", doCheck9Click);
+      function doCheck9Click() {
+        let pad = 0;
+        if (this.checked) pad = 5;
+        nv1.opts.multiplanarPadPixels = pad;
+        nv1.drawScene();
+      }
       import { Niivue } from './niivue.js'
-			import {NVImage} from './nvimage.js'
-			import {NVMesh} from './nvmesh.js'
-			let query = window.location.search
-			const params = new URLSearchParams(query);
-			let url = params.get('url')
+      import {NVImage} from './nvimage.js'
+      import {NVMesh} from './nvmesh.js'
+      let query = window.location.search
+      const params = new URLSearchParams(query);
+      let url = params.get('url')
       var volumeList1 = [
-        // first item is brackground image
         {
-          //url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          url: url ? url : "../demos/images/fslmean.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          //url: "./mni152.nii.gz",
+          url: url ? url : "../demos/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           colorMap: "gray",
-          //urlImgData : "../demos/images/example4d+orig.BRIK.gz",
           opacity: 1,
-          visible: true,
-        },
-        {
-          url: url ? url : "../demos/images/fslt.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          colorMap: "warm",
-          colorMapNegative: "winter",
-          opacity: 1,
-          cal_min: 1,
-          cal_max: 6,
           visible: true,
         },
       ]
-			var nv1 = new Niivue({
-				logging: false,
-				show3Dcrosshair: true,
-				loadingText: 'there are no images',
-				dragAndDropEnabled: true,
-				backColor: [0, 0.2, 0.3, 1],
-				//thumbnail: "../demos/images/DoG.png"
-			})
+      var nv1 = new Niivue({
+       logging: false,
+       show3Dcrosshair: true,
+       loadingText: 'there are no images',
+       dragAndDropEnabled: true,
+       backColor: [0, 0.2, 0.3, 1],
+       //thumbnail: "../demos/images/DoG.png"
+      })
       nv1.setRadiologicalConvention(false)
       nv1.setSliceMM(true)
       nv1.attachTo('gl1')
       //nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
-      nv1.setRenderAzimuthElevation(90,10)
+      nv1.setRenderAzimuthElevation(120,40)
+      nv1.opts.isOrientCube = true;
+      //nv1.opts.isOrientCube = true;
       await nv1.loadVolumes(volumeList1)
-			
-      var meshLayersList1 = [
-        //{url: "../demos/images/PJM-stc-lh.stc", colorMap: "rocket", opacity: 0.7},
-        //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
-      ]
-/*nv1.opts.isDragShowsMeasurementTool = this.checked;
-      await nv1.loadMeshes([
-         {url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255], layers : meshLayersList1},
-         {url: "../demos/images/dpsv.trx", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
-         //{url: "../demos/images/mni152_2009AO.mz3", rgba255 : [255, 255, 255, 255]},
-         //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
-         //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
-      ])*/
-//nv1.setSliceMosaicString('C -50 -76 L- A -50 16 32 S -36 -30 S X -30');
-//nv1.opts.isDragShowsMeasurementTool = true;
+      await nv1.loadMeshes([{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [222, 200, 255, 255]}])
+      //nv1.setMeshShader("Depth")
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
       })
+    nv1.on('imageLoaded', (image) => {
+     console.log('imageLoaded', image.name)
+    })
 
-			nv1.on('imageLoaded', (image) => {
-				console.log('imageLoaded', image.name)
-			})
+    nv1.on('intensityRange', (image) => {
+     console.log(image.cal_min, image.cal_max)
+    })
 
-			nv1.on('intensityRange', (image) => {
-			 console.log(image.cal_min, image.cal_max)
-			})
-
-			setTimeout(() => {
-				//nv1.saveImage('test.nii.gz') 
-			}, 2000)
-			
-		</script>
+    setTimeout(() => {
+     //nv1.saveImage('test.nii.gz') 
+    }, 2000)
+    </script>
   </div>
 </body>
 
