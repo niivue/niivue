@@ -130,6 +130,9 @@ export function Niivue(options = {}) {
     penValue: 1, // sets drawing color. see "drawPt"
     isFilledPen: false,
     thumbnail: "",
+    onLocationChange: () => {},
+    onIntensityChange: () => {},
+    onImageLoaded: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -230,10 +233,7 @@ export function Niivue(options = {}) {
   this.volumeObject3D = null;
   this.pivot3D = [0, 0, 0]; //center for rendering rotation
   this.furthestFromPivot = 10.0; //most distant point from pivot
-  this.intensityRange$ = new Subject(); // an array
-  this.scene.location$ = new Subject(); // object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
   this.scene.loading$ = new Subject(); // whether or not the scene is loading
-  this.imageLoaded$ = new Subject();
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
   this.multiTouchGesture = false;
@@ -311,10 +311,7 @@ export function Niivue(options = {}) {
 
   // maping of keys (event strings) to rxjs subjects
   this.eventsToSubjects = {
-    location: this.scene.location$,
     loading: this.scene.loading$,
-    imageLoaded: this.imageLoaded$,
-    intensityRange: this.intensityRange$,
   };
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
@@ -375,9 +372,6 @@ Niivue.prototype.attachTo = async function (id) {
  *    // data has the shape {mm: [N, N, N], vox: [N, N, N], frac: [N, N, N], values: this.volumes.map(v => {return val})}
  *    //...
  * }
- * niivue.on('location', doSomethingWithLocationData)
- * niivue.on('intensityRange', callback)
- * niivue.on('imageLoaded', callback)
  */
 Niivue.prototype.on = function (event, callback) {
   let knownEvents = Object.keys(this.eventsToSubjects);
@@ -819,7 +813,7 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.intensityRange$.next(this.volumes[volIdx]); //reference to volume to access cal_min and cal_max
+  this.opts.onIntensityChange(this.volumes[volIdx]);
 };
 
 // not included in public docs
@@ -930,7 +924,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
-  this.intensityRange$.next(this.volumes[0]);
+  this.opts.onIntensityChange(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -1390,7 +1384,7 @@ Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
-  this.imageLoaded$.next(volume); // pass reference to the loaded NVImage (the volume)
+  this.opts.onImageLoaded(volume);
 };
 
 /**
@@ -1404,7 +1398,7 @@ Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
   let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
   this.setMesh(mesh, idx);
-  this.imageLoaded$.next(mesh); // pass reference to the loaded NVImage (the volume)
+  this.opts.onImageLoaded(mesh);
 };
 
 /**
@@ -4352,15 +4346,16 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.scene.location$.next({
+        this.opts.onLocationChange({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
+          xy: [x, y],
           values: this.volumes.map((v) => {
             let mm = this.frac2mm(this.scene.crosshairPos);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
-            return val;
+            return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
           }),
         });
         return;
@@ -4390,15 +4385,16 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.scene.location$.next({
+      this.opts.onLocationChange({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
+        xy: [x, y],
         values: this.volumes.map((v) => {
           let mm = this.frac2mm(this.scene.crosshairPos);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
-          return val;
+          return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
         }),
       });
       return;
