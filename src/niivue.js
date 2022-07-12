@@ -5979,13 +5979,17 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
   }
 }; // drawImage3D()
 
-Niivue.prototype.drawOrientationCube = function (leftTopWidthHeight) {
+Niivue.prototype.drawOrientationCube = function (
+  leftTopWidthHeight,
+  azimuth = 0,
+  elevation = 0
+) {
   if (!this.opts.isOrientCube) return;
   let sz = 0.05 * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3]);
   if (sz < 5) return;
   let gl = this.gl;
   gl.enable(gl.CULL_FACE);
-  gl.cullFace(gl.FRONT);
+  gl.cullFace(gl.BACK);
   this.orientCubeShader.use(this.gl);
   gl.bindVertexArray(this.orientCubeShaderVAO);
   function deg2rad(deg) {
@@ -6010,19 +6014,11 @@ Niivue.prototype.drawOrientationCube = function (leftTopWidthHeight) {
     0,
   ]);
   mat.mat4.scale(modelMatrix, modelMatrix, [sz, sz, sz]);
-  modelMatrix[5] *= -1; //reverse determinant
+  //modelMatrix[5] *= -1; //reverse determinant
   //apply elevation
-  mat.mat4.rotateX(
-    modelMatrix,
-    modelMatrix,
-    deg2rad(this.scene.renderElevation + 90)
-  );
+  mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
   //apply azimuth
-  mat.mat4.rotateZ(
-    modelMatrix,
-    modelMatrix,
-    deg2rad(this.scene.renderAzimuth - 180)
-  );
+  mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth));
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix);
@@ -6095,7 +6091,7 @@ Niivue.prototype.draw3D = function (
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  this.drawOrientationCube(leftTopWidthHeight);
+  this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
