@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.24.2",
+  "version": "0.27.0",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./src/niivue.js",
   "unpkg": "./dist/niivue.umd.js",
@@ -20,7 +20,7 @@
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
     "copy-demo": "cp -r ./dist/* ./demos/features/",
-    "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\niivue.umd.js",
+    "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
     "docs": "npx jsdoc --readme ./README.md -d devdocs -t ./node_modules/clean-jsdoc-theme/ src/",

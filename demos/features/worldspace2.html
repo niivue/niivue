@@ -28,16 +28,26 @@
       Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
     </div>
     <div class="slidecontainer">
-      Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zSlider">
+      Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
     </div>
     <div class="slidecontainer">
-      Zoom <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
+      Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
+    </div>
+    <div class="slidecontainer">
+      Mesh clipping <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
     </div>
     <input type="checkbox" id="check1" name="check1" unchecked>
     <label for="check1">Radiological</label>
     <input type="checkbox" id="check2" name="check2" unchecked>
     <label for="check2">Corner text</label>
-
+    <input type="checkbox" id="check3" name="check3" checked>
+    <label for="check3">World space</label>
+    <input type="checkbox" id="check7" name="check7" unchecked>
+    <label for="check7">Colorbar</label>
+    <input type="checkbox" id="check8" name="check8" unchecked>
+    <label for="check8">Cube</label>
+    <input type="checkbox" id="check9" name="check9" unchecked>
+    <label for="check9">Pad</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:800px;">
@@ -56,11 +66,16 @@
       function doCheck2Click() {
         nv1.setCornerOrientationText(this.checked);
       }
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked);
+      }
       function doSlider() {
         var sx = document.getElementById("xSlider");
         var sy = document.getElementById("ySlider");
         var sz =document.getElementById("zSlider");
-        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), 0.1 * parseInt(sz.value)])
+        var sZoom =document.getElementById("zoomSlider");
+        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), parseInt(sz.value), 0.1 * parseInt(sZoom.value)])
       }
       var xslider = document.getElementById("xSlider");
       xslider.oninput = function() {
@@ -74,12 +89,33 @@
       zslider.oninput = function() {
         doSlider()
       }
+      var zoomslider = document.getElementById("zoomSlider");
+      zoomslider.oninput = function() {
+        doSlider()
+      }
       var dxslider = document.getElementById("dxSlider");
       dxslider.oninput = function() {
         let dx = parseFloat(this.value);
         if (dx > 10)
           dx = Infinity;
         nv1.setMeshThicknessOn2D(dx);
+      }
+     document.getElementById("check7").addEventListener("change", doCheck7Click);
+     function doCheck7Click() {
+       nv1.opts.isColorbar = this.checked;
+       nv1.drawScene();
+     }
+      document.getElementById("check8").addEventListener("change", doCheck8Click);
+      function doCheck8Click() {
+        nv1.opts.isOrientCube = this.checked;
+        nv1.drawScene();
+      }
+      document.getElementById("check9").addEventListener("change", doCheck9Click);
+      function doCheck9Click() {
+        let pad = 0;
+        if (this.checked) pad = 5;
+        nv1.opts.multiplanarPadPixels = pad;
+        nv1.drawScene();
       }
      var volumeList1 = [
          {
@@ -96,7 +132,7 @@
             backColor: [0.3, 0.2, 0.4, 1],
             show3Dcrosshair: true,
         })
-      nv1.setSliceMM(true);
+      nv1.setSliceMM(true)
       nv1.attachTo('gl1')
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(120,10)

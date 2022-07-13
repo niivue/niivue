@@ -87,7 +87,8 @@
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
-        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
+        //document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
+        document.getElementById('location').innerHTML = data.xy
       })
 
 			nv1.on('imageLoaded', (image) => {

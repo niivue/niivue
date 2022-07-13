@@ -51,6 +51,8 @@
         <button id="growcut">grow cut</button>
       <input type="checkbox" id="check1" name="check1" checked>
       <label for="check1">fill pen overwrites</label>
+      <input type="checkbox" id="check3" name="check3" unchecked>
+      <label for="check3">World space</label>
 
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
@@ -72,8 +74,10 @@
      <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
-    
-    
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked);
+      }
       document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
       function doDrawOpacity(){
         nv1.setDrawOpacity(this.value * 0.01);
@@ -177,6 +181,7 @@
       })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
+      nv1.setSliceMM(true);
       //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
       nv1.getDescriptives(0, false);

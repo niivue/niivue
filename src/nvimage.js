@@ -52,7 +52,8 @@ export function NVImage(
   ignoreZeroVoxels = false,
   visible = true,
   isDICOMDIR = false,
-  useQFormNotSForm = false
+  useQFormNotSForm = false,
+  colorMapNegative = ""
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -84,7 +85,9 @@ export function NVImage(
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
+  this.colorMapNegative = colorMapNegative;
   this.visible = visible;
+  this.modulationImage = null;
   this.series = []; // for concatenating dicom images
 
   // Added to support zerosLike
@@ -381,7 +384,36 @@ export function NVImage(
   this.calMinMax();
 }
 
+NVImage.prototype.computeObliqueAngle = function (mtx44) {
+  //https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
+  let mtx = mat4.clone(mtx44);
+  mat4.transpose(mtx, mtx44);
+  let dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2]);
+  let xmax =
+    Math.max(Math.max(Math.abs(mtx[0]), Math.abs(mtx[1])), Math.abs(mtx[2])) /
+    dxtmp;
+  let dytmp = Math.sqrt(mtx[4] * mtx[4] + mtx[5] * mtx[5] + mtx[6] * mtx[6]);
+  let ymax =
+    Math.max(Math.max(Math.abs(mtx[4]), Math.abs(mtx[5])), Math.abs(mtx[6])) /
+    dytmp;
+  let dztmp = Math.sqrt(mtx[8] * mtx[8] + mtx[9] * mtx[9] + mtx[10] * mtx[10]);
+  let zmax =
+    Math.max(Math.max(Math.abs(mtx[8]), Math.abs(mtx[9])), Math.abs(mtx[10])) /
+    dztmp;
+  let fig_merit = Math.min(Math.min(xmax, ymax), zmax);
+  let oblique_angle = Math.abs((Math.acos(fig_merit) * 180.0) / 3.141592653);
+  if (oblique_angle > 0.01)
+    console.log(
+      "Warning voxels not aligned with world space: " +
+        oblique_angle +
+        " degrees from plumb.\n"
+    );
+  else oblique_angle = 0.0;
+  return oblique_angle;
+};
+
 NVImage.prototype.calculateOblique = function () {
+  this.oblique_angle = this.computeObliqueAngle(this.matRAS);
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
   let X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
   let Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS);
@@ -2228,6 +2260,7 @@ NVImage.loadFromUrl = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  colorMapNegative = "",
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
@@ -2273,7 +2306,10 @@ NVImage.loadFromUrl = async function ({
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
-      visible
+      visible,
+      false,
+      false,
+      colorMapNegative
     );
   } else {
     alert("Unable to load buffer properly from volume");
@@ -2611,27 +2647,23 @@ function getExtents(positions, forceOriginInVolume = true) {
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
   //cube has 8 vertices: left/right, posterior/anterior, inferior/superior
-  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-  //TODO: ray direction needs to be corrected for oblique rotations
-  let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
-  let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let LAS = this.vox2mm(
-    [0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
-  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
-  let RAI = this.vox2mm(
-    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0],
-    this.matRAS
-  );
-  let RPS = this.vox2mm(
-    [this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
-  let RAS = this.vox2mm(
-    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
+  //n.b. voxel coordinates are from VOXEL centers
+  // add/subtract 0.5 to get full image field of view
+  let L = -0.5;
+  let P = -0.5;
+  let I = -0.5;
+  let R = this.dimsRAS[1] - 1 + 0.5;
+  let A = this.dimsRAS[2] - 1 + 0.5;
+  let S = this.dimsRAS[3] - 1 + 0.5;
+
+  let LPI = this.vox2mm([L, P, I], this.matRAS);
+  let LAI = this.vox2mm([L, A, I], this.matRAS);
+  let LPS = this.vox2mm([L, P, S], this.matRAS);
+  let LAS = this.vox2mm([L, A, S], this.matRAS);
+  let RPI = this.vox2mm([R, P, I], this.matRAS);
+  let RAI = this.vox2mm([R, A, I], this.matRAS);
+  let RPS = this.vox2mm([R, P, S], this.matRAS);
+  let RAS = this.vox2mm([R, A, S], this.matRAS);
 
   let posTex = [
     //spatial position (XYZ), texture coordinates UVW
@@ -2744,10 +2776,56 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     ...RAI,
     ...RPI,
   ]);
-  obj3D.extentsMin = extents.min;
-  obj3D.extentsMax = extents.max;
+  obj3D.extentsMin = extents.min.slice();
+  obj3D.extentsMax = extents.max.slice();
+
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   obj3D.originNegate = vec3.clone(extents.origin);
   vec3.negate(obj3D.originNegate, obj3D.originNegate);
+  /*
+  let matDeOblique = mat4.fromValues(
+    this.pixDimsRAS[1],
+    0,
+    0,
+    this.matRAS[3],
+    0,
+    this.pixDimsRAS[2],
+    0,
+    this.matRAS[7],
+    0,
+    0,
+    this.pixDimsRAS[3],
+    this.matRAS[11],
+    0,
+    0,
+    0,
+    1
+  );
+  LPI = this.vox2mm([L,P,I], matDeOblique);
+  LAI = this.vox2mm([L,A,I], matDeOblique);
+  LPS = this.vox2mm([L,P,S], matDeOblique);
+  LAS = this.vox2mm([L,A,S], matDeOblique);
+  RPI = this.vox2mm([R,P,I], matDeOblique);
+  RAI = this.vox2mm([R,A,I], matDeOblique);
+  RPS = this.vox2mm([R,P,S], matDeOblique);
+  RAS = this.vox2mm([R,A,S], matDeOblique);
+  const extentsDeOblique = getExtents([
+    ...LPS,
+    ...RPS,
+    ...RAS,
+    ...LAS,
+    ...LPI,
+    ...LAI,
+    ...RAI,
+    ...RPI,
+  ]);
+  obj3D.extentsDeObliqueMin = extentsDeOblique.min.slice();
+  obj3D.extentsDeObliqueMax = extentsDeOblique.max.slice();
+*/
+  obj3D.fieldOfViewDeObliqueMM = [
+    this.dimsRAS[1] * this.pixDimsRAS[1],
+    this.dimsRAS[2] * this.pixDimsRAS[2],
+    this.dimsRAS[3] * this.pixDimsRAS[3],
+  ];
   return obj3D;
 };

@@ -18,10 +18,11 @@
 
     <section>
       <h1>
-        Mosaic (Lightbox) View
+        Mosaic (Lightbox, Montage) View
       </h1>
+      <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).</p>
       <label for="name">Mosaic string:</label>
-      <input type="text" id="str" name="str" onKeyUp="return bar()" value="A -16 0 16; C -16 0 24; S -32 0 32" required minlength="2" maxlength="80" size="80">
+      <input type="text" id="str" name="str" onKeyUp="return bar()" value="A -10 0 20 L+ C -10 0 20 L- S -10 0 20; A R X 0 R X -0 C R X 0 R X -0 S R X 0 R X -0" required minlength="2" maxlength="128" size="128">
     </section>
 
     <!-- demo 1 -->
