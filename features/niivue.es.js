@@ -111497,6 +111497,7 @@ function Niivue(options = {}) {
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
     isSliceMM: false,
+    isHighResolutionCapable: false,
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
@@ -111866,8 +111867,12 @@ Niivue.prototype.arrayEquals = function(a, b) {
 Niivue.prototype.resizeListener = function() {
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
-  this.canvas.width = this.canvas.offsetWidth;
-  this.canvas.height = this.canvas.offsetHeight;
+  let dpr = 1;
+  if (this.opts.isHighResolutionCapable)
+    dpr = window.devicePixelRatio || 1;
+  this.canvas.width = this.canvas.offsetWidth * dpr;
+  this.canvas.height = this.canvas.offsetHeight * dpr;
+  console.log("RESIZE" + dpr);
   this.drawScene();
 };
 Niivue.prototype.getRelativeMousePosition = function(event, target) {
@@ -112073,6 +112078,8 @@ Niivue.prototype.mouseMoveListener = function(e) {
   }
 };
 Niivue.prototype.resetBriCon = function(msg2 = null) {
+  if (this.isDragging)
+    return;
   let isRender = false;
   if (this.sliceType === this.sliceTypeRender)
     isRender = true;
@@ -112110,6 +112117,7 @@ Niivue.prototype.touchMoveListener = function(e) {
     if (this.doubleTouch && this.isDragging) {
       this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
       this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      this.drawScene();
       return;
     }
     this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
@@ -112359,6 +112367,12 @@ Niivue.prototype.setSliceMM = function(isSliceMM) {
 };
 Niivue.prototype.getRadiologicalConvention = function() {
   return this.opts.isRadiologicalConvention;
+};
+Niivue.prototype.setHighResolutionCapable = function(isHighResolutionCapable) {
+  this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  console.log("HighDPI feature is experimental");
+  this.resizeListener();
+  this.drawScene();
 };
 Niivue.prototype.addVolume = function(volume) {
   this.volumes.push(volume);
@@ -113739,6 +113753,8 @@ Niivue.prototype.init = async function() {
   }
   this.updateGLVolume();
   this.initialized = true;
+  if (this.opts.isHighResolutionCapable)
+    this.resizeListener();
   this.drawScene();
   return this;
 };
@@ -114683,7 +114699,7 @@ function deg2rad(deg) {
 }
 Niivue.prototype.calculateMvpMatrix2D = function(leftTopWidthHeight, mn, mx, clipTolerance = Infinity, clipDepth = 0, azimuth = null, elevation = null, isRadiolgical) {
   let gl = this.gl;
-  gl.viewport(leftTopWidthHeight[0], this.gl.canvas.clientHeight - (leftTopWidthHeight[1] + leftTopWidthHeight[3]), leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  gl.viewport(leftTopWidthHeight[0], this.gl.canvas.height - (leftTopWidthHeight[1] + leftTopWidthHeight[3]), leftTopWidthHeight[2], leftTopWidthHeight[3]);
   let left = mn[0];
   let right = mx[0];
   let leftTopMM = [left, mn[1]];
@@ -115712,7 +115728,7 @@ Niivue.prototype.canvasPos2frac = function(canvasPos) {
   return [-1, -1, -1];
 };
 Niivue.prototype.scaleSlice = function(w, h, widthPadPixels = 0, heightPadPixels = 0) {
-  let canvasW = this.gl.canvas.clientWidth - widthPadPixels;
+  let canvasW = this.canvas.width - widthPadPixels;
   let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
   let scalePix = canvasW / w;
   if (h * scalePix > canvasH)

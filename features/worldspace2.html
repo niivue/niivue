@@ -48,6 +48,8 @@
     <label for="check8">Cube</label>
     <input type="checkbox" id="check9" name="check9" unchecked>
     <label for="check9">Pad</label>
+    <input type="checkbox" id="check10" name="check10" unchecked>
+    <label for="check10">HighDPI</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:800px;">
@@ -116,6 +118,10 @@
         if (this.checked) pad = 5;
         nv1.opts.multiplanarPadPixels = pad;
         nv1.drawScene();
+      }
+      document.getElementById("check10").addEventListener("change", doCheck10Click);
+      function doCheck10Click() {
+        nv1.setHighResolutionCapable(this.checked);
       }
      var volumeList1 = [
          {
