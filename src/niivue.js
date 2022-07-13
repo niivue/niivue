@@ -966,6 +966,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
+  if (this.isDragging) return
   let isRender = false;
   if (this.sliceType === this.sliceTypeRender) isRender = true;
   let x = 0;
@@ -1011,6 +1012,7 @@ Niivue.prototype.touchMoveListener = function (e) {
         e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
       this.dragEnd[1] =
         e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      this.drawScene();
       return;
     }
     this.mouseClick(
