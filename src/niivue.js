@@ -1,6 +1,8 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
 import {
+  vertOrientCubeShader,
+  fragOrientCubeShader,
   vertSliceMMShader,
   fragSliceMMShader,
   vertSliceShader,
@@ -44,10 +46,10 @@ import {
   fragFiberShader,
   vertSurfaceShader,
   fragSurfaceShader,
-  fragDepthPickingShader,
   fragVolumePickingShader,
 } from "./shader-srcs.js";
 import { Subject } from "rxjs";
+import { orientCube } from "./orientCube.js";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NiivueShader3D } from "./niivue-shader3D";
 import { NVImage } from "./nvimage.js";
@@ -112,14 +114,19 @@ export function Niivue(options = {}) {
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
+    doubleTouchTimeout: 500,
+    longTouchTimeout: 1000,
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isNearestInterpolation: false,
     isAtlasOutline: false,
     isRuler: false,
     isColorbar: false,
+    isOrientCube: false,
+    multiplanarPadPixels: 0,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     isDragShowsMeasurementTool: false,
+    isDepthPickMesh: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
     isSliceMM: false,
@@ -130,9 +137,14 @@ export function Niivue(options = {}) {
     penValue: 1, // sets drawing color. see "drawPt"
     isFilledPen: false,
     thumbnail: "",
+    maxDrawUndoBitmaps: 8,
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
+    onError: ()=>{},
+    onInfo: ()=>{},
+    onWarn: ()=>{},
+    onDebug: ()=>{}
   };
 
   this.canvas = null; // the canvas element on the page
@@ -141,8 +153,6 @@ export function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
-  this.maxDrawUndoBitmaps = 8; //analogy: number of bullets in revolver, we will cycle these
-  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
   this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
@@ -154,10 +164,13 @@ export function Niivue(options = {}) {
   this.overlayTextureID = [];
   this.sliceShader = null;
   this.sliceMMShader = null;
+  this.orientCubeShader = null;
+  this.orientCubeShaderVAO = null;
   this.rectShader = null;
   this.graphShader = null;
   this.renderShader = null;
-  this.pickingShader = null;
+  this.pickingMeshShader = null;
+  this.pickingImageShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
@@ -177,8 +190,6 @@ export function Niivue(options = {}) {
   this.genericVAO = null; //used for 2D slices, 2D lines, 2D Fonts
   this.unusedVAO = null;
   this.crosshairs3D = null;
-  this.pickingSurfaceShader = null;
-
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG; //"/fonts/Roboto-Regular.png";
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
@@ -212,6 +223,10 @@ export function Niivue(options = {}) {
   this.scene.prevY = 0;
   this.scene.currX = 0;
   this.scene.currY = 0;
+  this.currentTouchTime = 0
+  this.lastTouchTime = 0
+  this.touchTimer = null
+  this.doubleTouch = false
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
@@ -297,6 +312,9 @@ export function Niivue(options = {}) {
     this.opts[prop] =
       options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
+
+  // now that opts have been parsed, set the current undo to max undo
+  this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
 
   if (this.opts.drawingEnabled) {
     this.createEmptyDrawing();
@@ -857,7 +875,29 @@ Niivue.prototype.checkMultitouch = function (e) {
 // note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
+  if (!this.touchTimer) {
+    this.touchTimer = setTimeout(()=>{
+      //this.drawScene()
+      this.resetBriCon(e)
+    }, this.opts.longTouchTimeout)
+  }
   this.scene.touchdown = true;
+  this.currentTouchTime = new Date().getTime()
+  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime
+  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0){
+    this.doubleTouch = true
+    this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
+    this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+    this.resetBriCon(e) 
+    this.lastTouchTime = this.currentTouchTime
+    return
+  } else {
+    // reset values to be ready for next touch
+    this.doubleTouch = false
+    this.dragStart = [0, 0]
+    this.dragEnd = [0, 0]
+    this.lastTouchTime = this.currentTouchTime
+  }
   if (this.scene.touchdown && e.touches.length < 2) {
     this.multiTouchGesture = false;
   } else {
@@ -870,10 +910,22 @@ Niivue.prototype.touchStartListener = function (e) {
 // not included in public docs
 // handler for touchend (finger lift off screen)
 // note: no test yet
-Niivue.prototype.touchEndListener = function () {
+Niivue.prototype.touchEndListener = function (e) {
+  e.preventDefault()
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
   this.multiTouchGesture = false;
+  if (this.touchTimer) {
+    clearTimeout(this.touchTimer)
+    this.touchTimer = null
+  }
+  if (this.isDragging) {
+    this.isDragging = false;
+    if (this.opts.isDragShowsMeasurementTool) return;
+    this.calculateNewRange();
+    this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+  }
+  this.drawScene();
 };
 
 // not included in public docs
@@ -906,22 +958,32 @@ Niivue.prototype.mouseMoveListener = function (e) {
 Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
-
   // don't reset bri/con if the user is in 3D mode and double clicks
   let isRender = false;
-  if (this.sliceType === this.sliceTypeRender) {
-    isRender = true;
-  }
+  if (this.sliceType === this.sliceTypeRender) isRender = true;
+  let x = 0
+  let y = 0
   if (msg !== null) {
+    // if a touch event
+    if (msg.targetTouches !== undefined){
+      x = msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left
+      y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top
+    } else {
+      // if a mouse event
+      x = msg.offsetX
+      y = msg.offsetY
+    }
     // test if render is one of the tiles
-    if (this.inRenderTile(msg.offsetX, msg.offsetY) >= 0) isRender = true;
+    if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
+
   if (isRender) {
     this.scene.mouseDepthPicker = true;
     this.drawScene();
-    this.drawScene();
+    this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
+  if (this.doubleTouch) return
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.opts.onIntensityChange(this.volumes[0]);
@@ -935,6 +997,12 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
+    this.isDragging = true
+    if (this.doubleTouch && this.isDragging) {
+      this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
+      this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+      return
+    }
     this.mouseClick(
       e.touches[0].clientX - rect.left,
       e.touches[0].clientY - rect.top
@@ -1096,6 +1164,10 @@ Niivue.prototype.wheelListener = function (e) {
   // scroll 2D slices
   e.preventDefault();
   e.stopPropagation();
+  // if thumbnailVisible this do not activate a canvas interaction when scrolling
+  if (this.thumbnailVisible){
+    return
+  }
   var rect = this.canvas.getBoundingClientRect();
   if (e.deltaY < 0) {
     this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top);
@@ -1541,13 +1613,13 @@ Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
   //let rle = encodeRLE(this.drawBitmap);
   //the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
   this.currentDrawUndoBitmap++;
-  if (this.currentDrawUndoBitmap >= this.maxDrawUndoBitmaps)
+  if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps)
     this.currentDrawUndoBitmap = 0;
   this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap);
 }; // drawAddUndoBitmap()
 
 Niivue.prototype.drawClearAllUndoBitmaps = async function () {
-  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //next add will be cylinder 0
+  this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //next add will be cylinder 0
   if (this.drawUndoBitmaps.length < 1) return;
   for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) array[i] = [];
 }; // drawClearAllUndoBitmaps()
@@ -3322,19 +3394,27 @@ Niivue.prototype.init = async function () {
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
-  this.pickingShader = new Shader(
+
+  this.pickingMeshShader = new Shader(
+    this.gl,
+    vertMeshShader,
+    fragMeshDepthShader
+  );
+  this.pickingImageShader = new Shader(
     this.gl,
     vertRenderShader,
     fragVolumePickingShader
   );
-  this.pickingShader.use(this.gl);
-  this.gl.uniform1i(this.pickingShader.uniforms["volume"], 0);
+  this.pickingImageShader.use(this.gl);
+  this.gl.uniform1i(this.pickingImageShader.uniforms["volume"], 0);
   //this.gl.uniform1i(pickingShader.uniforms["colormap"], 1); //orient shader applies colormap
-  this.gl.uniform1i(this.pickingShader.uniforms["overlay"], 2);
-  this.pickingShader.mvpUniformLoc = this.pickingShader.uniforms["mvpMtx"];
-  this.pickingShader.rayDirUniformLoc = this.pickingShader.uniforms["rayDir"];
-  this.pickingShader.clipPlaneUniformLoc =
-    this.pickingShader.uniforms["clipPlane"];
+  this.gl.uniform1i(this.pickingImageShader.uniforms["overlay"], 2);
+  this.pickingImageShader.mvpUniformLoc =
+    this.pickingImageShader.uniforms["mvpMtx"];
+  this.pickingImageShader.rayDirUniformLoc =
+    this.pickingImageShader.uniforms["rayDir"];
+  this.pickingImageShader.clipPlaneUniformLoc =
+    this.pickingImageShader.uniforms["clipPlane"];
   // slice shader
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
@@ -3356,6 +3436,29 @@ Niivue.prototype.init = async function () {
     this.sliceMMShader.uniforms["drawOpacity"],
     this.drawOpacity
   );
+  //orient cube
+  this.orientCubeShader = new Shader(
+    this.gl,
+    vertOrientCubeShader,
+    fragOrientCubeShader
+  );
+  let gl = this.gl;
+  this.orientCubeShaderVAO = gl.createVertexArray();
+  gl.bindVertexArray(this.orientCubeShaderVAO);
+  let program = this.orientCubeShader.program;
+  this.orientCubeMtxLoc = gl.getUniformLocation(program, "u_matrix");
+  // Create a buffer
+  var positionBuffer = gl.createBuffer();
+  gl.enableVertexAttribArray(0);
+  gl.enableVertexAttribArray(1);
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, orientCube, gl.STATIC_DRAW);
+  //XYZ position: (three floats)
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+  //RGB color: (also three floats)
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+  gl.bindVertexArray(this.unusedVAO);
   // rect shader (crosshair): horizontal and vertical lines only
   this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader);
   // line shader: diagonal lines
@@ -3420,13 +3523,6 @@ Niivue.prototype.init = async function () {
     vertOrientShader,
     fragOrientShaderU.concat(fragRGBOrientShader)
   );
-
-  this.pickingSurfaceShader = new Shader(
-    this.gl,
-    vertRenderShader,
-    fragDepthPickingShader
-  );
-
   // 3D crosshair cylinder
   this.surfaceShader = new Shader(
     this.gl,
@@ -3606,8 +3702,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
     // add shader to object
-    let volumeRenderShader = this.renderShader;
-    let pickingShader = this.pickingShader;
+    let pickingShader = this.pickingImageShader;
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -4031,12 +4126,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
   );
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
-  this.pickingShader.use(this.gl);
+  this.pickingImageShader.use(this.gl);
   this.gl.uniform1f(
-    this.pickingShader.uniforms["overlays"],
+    this.pickingImageShader.uniforms["overlays"],
     this.overlays.length
   );
-  this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
+  this.gl.uniform3fv(this.pickingImageShader.uniforms["texVox"], vox);
   this.sliceMMShader.use(this.gl);
   this.gl.uniform1f(
     this.sliceMMShader.uniforms["overlays"],
@@ -4577,8 +4672,6 @@ function tickSpacing(mn, mx) {
   let range = Math.abs(mx - mn);
   let [spacing, ticMin] = tickSpacingX(5, mn, mx);
   if (range % spacing === 0) return [spacing, ticMin];
-  //[spacing, ticMin] = tickSpacingX(6, mn, mx);
-  //if ((range % spacing) === 0) return [spacing, ticMin];
   [spacing, ticMin] = tickSpacingX(4, mn, mx);
   if (range % spacing === 0) return [spacing, ticMin];
   [spacing, ticMin] = tickSpacingX(5, mn, mx);
@@ -4706,7 +4799,7 @@ Niivue.prototype.drawColorbarCore = function (
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
     tic += spacing;
   }
-};
+}; // drawColorbarCore()
 
 Niivue.prototype.drawColorbar = function () {
   let nlayers = this.volumes.length;
@@ -5480,9 +5573,7 @@ Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
   return rayDir;
 }; // calculateRayDirection
 
-Niivue.prototype.setPivot3D = function () {
-  //compute extents of all volumes and meshes in scene
-  // pivot around center of these.
+Niivue.prototype.sceneExtentsMinMax = function () {
   let mn = mat.vec3.fromValues(0, 0, 0);
   let mx = mat.vec3.fromValues(0, 0, 0);
   if (this.volumes.length > 0) {
@@ -5520,6 +5611,15 @@ Niivue.prototype.setPivot3D = function () {
       mat.vec3.max(mx, mx, v);
     }
   }
+  let range = mat.vec3.create();
+  mat.vec3.subtract(range, mx, mn);
+  return [mn, mx, range];
+};
+
+Niivue.prototype.setPivot3D = function () {
+  //compute extents of all volumes and meshes in scene
+  // pivot around center of these.
+  let [mn, mx] = this.sceneExtentsMinMax();
   let pivot = mat.vec3.create();
   //pivot is half way between min and max:
   mat.vec3.add(pivot, mn, mx);
@@ -5712,6 +5812,7 @@ Niivue.prototype.drawGraph = function () {
     graph.backColor[3] * 2,
   ]);
   //draw horizontal lines
+  //  let [spacing, ticMin] = tickSpacing(mn, mx);
   let rangeH = mx - mn;
   let scaleH = plotLTWH[3] / rangeH;
   let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
@@ -5759,7 +5860,7 @@ Niivue.prototype.drawGraph = function () {
         thinColor,
         thick
       );
-    } else if (i > 0) {
+    } else {
       let str = humanize(i);
       if (fntSize > 0)
         this.drawTextBelow(
@@ -5824,6 +5925,172 @@ function isRadiological(mtx) {
   return vRotated[0];
 } //n.b. ambiguous for pure sagittal views
 
+//function unProject(winX, winY, winZ, model, proj, view) {
+function unProject(winX, winY, winZ, mvpMatrix) {
+  //https://github.com/bringhurst/webgl-unproject
+  let inp = mat.vec4.fromValues(winX, winY, winZ, 1.0);
+  let finalMatrix = mat.mat4.clone(mvpMatrix);
+  //mat.mat4.multiply(finalMatrix, model, proj);
+  mat.mat4.invert(finalMatrix, finalMatrix);
+  //view is leftTopWidthHeight
+  /* Map to range -1 to 1 */
+  inp[0] = inp[0] * 2 - 1;
+  inp[1] = inp[1] * 2 - 1;
+  inp[2] = inp[2] * 2 - 1;
+  let out = mat.vec4.create();
+  mat.vec4.transformMat4(out, inp, finalMatrix);
+  if (out[3] === 0.0) return out; //error
+  out[0] /= out[3];
+  out[1] /= out[3];
+  out[2] /= out[3];
+  return out;
+}
+
+function unpackFloatFromVec4i(val) {
+  //Convert 32-bit rgba to float32
+  //https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/viewer/screensurface.js#L552
+  var bitSh = [
+    1.0 / (256.0 * 256.0 * 256.0),
+    1.0 / (256.0 * 256.0),
+    1.0 / 256.0,
+    1.0,
+  ];
+  return (
+    (val[0] * bitSh[0] +
+      val[1] * bitSh[1] +
+      val[2] * bitSh[2] +
+      val[3] * bitSh[3]) /
+    255.0
+  );
+}
+
+Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
+  //use color of screen pixel to infer X,Y,Z coordinates
+  if (!this.scene.mouseDepthPicker) return;
+  //start PICKING: picking shader and reading values is slow
+  this.scene.mouseDepthPicker = false;
+  let gl = this.gl;
+  const pixelX =
+    (this.mousePos[0] * leftTopWidthHeight[2]) / leftTopWidthHeight[2];
+  const pixelY =
+    gl.canvas.height -
+    (this.mousePos[1] * leftTopWidthHeight[3]) / leftTopWidthHeight[3] -
+    1;
+  console.log(pixelX + "/" + pixelY);
+  const rgbaPixel = new Uint8Array(4);
+  gl.readPixels(
+    pixelX, // x
+    pixelY, // y
+    1, // width
+    1, // height
+    gl.RGBA, // format
+    gl.UNSIGNED_BYTE, // type
+    rgbaPixel
+  ); // typed array to hold result
+  this.selectedObjectId = rgbaPixel[3];
+  if (this.selectedObjectId === this.VOLUME_ID) {
+    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
+      (x) => x / 255.0
+    );
+    return;
+  }
+  let depthZ = unpackFloatFromVec4i(rgbaPixel);
+  if (depthZ > 1.0) return;
+  let fracX =
+    (this.mousePos[0] - leftTopWidthHeight[0]) / leftTopWidthHeight[2];
+  let fracY =
+    (gl.canvas.height - this.mousePos[1] - leftTopWidthHeight[1]) /
+    leftTopWidthHeight[3];
+  //todo: check when top is not zero: leftTopWidthHeight[1]
+  let mm = unProject(fracX, fracY, depthZ, mvpMatrix);
+  let frac = this.mm2frac(mm);
+  if (
+    frac[0] < 0 ||
+    frac[0] > 1 ||
+    frac[1] < 0 ||
+    frac[1] > 1 ||
+    frac[2] < 0 ||
+    frac[2] > 1
+  )
+    return;
+  this.scene.crosshairPos = this.mm2frac(mm);
+}; // depthPicker()
+
+Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
+  if (this.volumes.length === 0) return;
+  let gl = this.gl;
+  const rayDir = this.calculateRayDirection(azimuth, elevation);
+  let object3D = this.volumeObject3D;
+  if (object3D) {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+    let shader = this.renderShader;
+    //shader = this.pickingImageShader;
+    if (this.scene.mouseDepthPicker) shader = this.pickingImageShader;
+    shader.use(this.gl);
+    gl.uniform1i(
+      shader.uniforms["backgroundMasksOverlays"],
+      this.backgroundMasksOverlays
+    );
+    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
+    gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
+    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
+    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
+    gl.bindVertexArray(object3D.vao);
+    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+    gl.bindVertexArray(this.unusedVAO);
+  }
+}; // drawImage3D()
+
+Niivue.prototype.drawOrientationCube = function (
+  leftTopWidthHeight,
+  azimuth = 0,
+  elevation = 0
+) {
+  if (!this.opts.isOrientCube) return;
+  let sz = 0.05 * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  if (sz < 5) return;
+  let gl = this.gl;
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  this.orientCubeShader.use(this.gl);
+  gl.bindVertexArray(this.orientCubeShaderVAO);
+  function deg2rad(deg) {
+    return deg * (Math.PI / 180.0);
+  }
+  let modelMatrix = mat.mat4.create();
+  let projectionMatrix = mat.mat4.create();
+  //ortho(out, left, right, bottom, top, near, far)
+  mat.mat4.ortho(
+    projectionMatrix,
+    0,
+    gl.canvas.width,
+    0,
+    gl.canvas.height,
+    -10 * sz,
+    10 * sz
+  );
+  //translate position left and right
+  mat.mat4.translate(modelMatrix, modelMatrix, [
+    1.8 * sz + leftTopWidthHeight[0],
+    1.8 * sz + leftTopWidthHeight[1],
+    0,
+  ]);
+  mat.mat4.scale(modelMatrix, modelMatrix, [sz, sz, sz]);
+  //modelMatrix[5] *= -1; //reverse determinant
+  //apply elevation
+  mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
+  //apply azimuth
+  mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth));
+  let modelViewProjectionMatrix = mat.mat4.create();
+  mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+  gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 168);
+  gl.bindVertexArray(this.unusedVAO);
+}; // drawOrientationCube()
+
 // not included in public docs
 Niivue.prototype.draw3D = function (
   leftTopWidthHeight = [0, 0, 0, 0],
@@ -5879,88 +6146,17 @@ Niivue.prototype.draw3D = function (
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
-
-  if (this.volumes.length === 0) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    this.drawMesh3D(true, 1, mvpMatrix, modelMatrix, normalMatrix);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    return;
-  }
-  // mvp matrix and ray direction can now be a constant because of world space
-  const rayDir = this.calculateRayDirection(azimuth, elevation);
-
-  let object3D = this.volumeObject3D;
-  // render picking surfaces
-  if (this.scene.mouseDepthPicker) {
-    //start PICKING: picking shader and reading values is slow
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    this.scene.mouseDepthPicker = false;
-    if (object3D.isVisible && object3D.isPickable) {
-      let shader = this.pickingShader;
-      shader.use(this.gl);
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-      gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
-      gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
-      gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
-      gl.uniform1i(shader.uniforms["id"], object3D.id);
-      gl.bindVertexArray(object3D.vao);
-      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
-      gl.bindVertexArray(this.unusedVAO);
-    }
-    //check if we have a selected object
-    const pixelX =
-      (this.mousePos[0] * leftTopWidthHeight[2]) / leftTopWidthHeight[2];
-    const pixelY =
-      gl.canvas.height -
-      (this.mousePos[1] * leftTopWidthHeight[3]) / leftTopWidthHeight[3] -
-      1;
-    const rgbaPixel = new Uint8Array(4);
-    gl.readPixels(
-      pixelX, // x
-      pixelY, // y
-      1, // width
-      1, // height
-      gl.RGBA, // format
-      gl.UNSIGNED_BYTE, // type
-      rgbaPixel
-    ); // typed array to hold result
-
-    this.selectedObjectId = rgbaPixel[3];
-    if (this.selectedObjectId === this.VOLUME_ID) {
-      this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
-        (x) => x / 255.0
-      );
-    }
-    //if (253 === rgbaPixel[3]) { ... clip plane clicked
-  } //end PICKING
-
-  //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  if (this.volumeObject3D.isVisible) {
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-    let shader = this.renderShader; //.use(this.gl);
-    shader.use(this.gl);
-    gl.uniform1i(
-      shader.uniforms["backgroundMasksOverlays"],
-      this.backgroundMasksOverlays
-    );
-    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
-    gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
-    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
-    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
-    gl.bindVertexArray(object3D.vao);
-    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
-    gl.bindVertexArray(this.unusedVAO);
-  }
+  if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
   if (!isMosaic) this.drawCrosshairs3D(true, 1.0, mvpMatrix);
   this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix);
+  if (this.scene.mouseDepthPicker) {
+    this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
+    return;
+  }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
-  //  this.drawMesh3D(true, 1.0);
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
   let posString =
     "azimuth: " +
     this.scene.renderAzimuth.toFixed(0) +
@@ -6004,14 +6200,15 @@ Niivue.prototype.drawMesh3D = function (
   }
   gl.disable(gl.CULL_FACE); //show front and back faces
   //Draw the mesh
-  this.meshShader.use(this.gl); // set Shader
+  let shader = this.meshShader;
+  if (this.scene.mouseDepthPicker) shader = this.pickingMeshShader;
+  shader.use(this.gl); // set Shader
   //set shader uniforms
-  gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-  gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
-  gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
-  gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
+  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
+  gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
+  gl.uniform1f(shader.uniforms["opacity"], alpha);
   let hasFibers = false;
-
   for (let i = 0; i < this.meshes.length; i++) {
     if (this.meshes[i].indexCount < 3) continue;
     if (this.meshes[i].offsetPt0) {
@@ -6033,7 +6230,7 @@ Niivue.prototype.drawMesh3D = function (
     gl.depthFunc(gl.ALWAYS);
     return;
   }
-  let shader = this.fiberShader;
+  shader = this.fiberShader;
   shader.use(this.gl);
   gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
   gl.uniform1f(shader.uniforms["opacity"], alpha);
@@ -6074,18 +6271,22 @@ Niivue.prototype.drawCrosshairs3D = function (
       gl.deleteBuffer(this.crosshairs3D.indexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
       gl.deleteBuffer(this.crosshairs3D.vertexBuffer); //TODO: handle in nvimage.js: create once, update with bufferSubData
     }
-    let radius =
-      0.5 *
-      Math.min(
-        Math.min(this.back.pixDims[1], this.back.pixDims[2]),
-        this.back.pixDims[3]
-      );
+    let [mn, mx, range] = this.sceneExtentsMinMax();
+    let radius = 1;
+    if (this.volumes.length > 0)
+      radius =
+        0.5 *
+        Math.min(
+          Math.min(this.back.pixDims[1], this.back.pixDims[2]),
+          this.back.pixDims[3]
+        );
+    else if (range[0] < 50 || range[0] > 1000) radius = range[0] * 0.02; //2% of first dimension
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(
       this.gl,
       1,
       mm,
-      this.volumeObject3D.extentsMin,
-      this.volumeObject3D.extentsMax,
+      mn,
+      mx,
       radius
     );
     //this.crosshairs3D.minExtent = this.volumeObject3D.minExtent;
@@ -6117,7 +6318,6 @@ Niivue.prototype.drawCrosshairs3D = function (
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(gl.ALWAYS);
   }
-
   color[3] = alpha;
   gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
   gl.bindVertexArray(this.crosshairs3D.vao);
@@ -6133,6 +6333,14 @@ Niivue.prototype.drawCrosshairs3D = function (
 // not included in public docs
 Niivue.prototype.mm2frac = function (mm, volIdx = 0) {
   //given mm, return volume fraction
+  if (this.volumes.length < 1) {
+    let frac = [0.1, 0.5, 0.5];
+    let [mn, mx, range] = this.sceneExtentsMinMax();
+    frac[0] = (mm[0] - mn[0]) / range[0];
+    frac[1] = (mm[1] - mn[1]) / range[1];
+    frac[2] = (mm[2] - mn[2]) / range[2];
+    return frac;
+  }
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
   let mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1);
   let d = this.volumes[volIdx].dimsRAS;
@@ -6187,7 +6395,15 @@ Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
 
 Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
-  mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
+  if (this.volumes.length > 0)
+    mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
+  else {
+    let [mn, mx] = this.sceneExtentsMinMax();
+    const lerp = (x, y, a) => x * (1 - a) + y * a;
+    pos[0] = lerp(mn[0], mx[0], frac[0]);
+    pos[1] = lerp(mn[1], mx[1], frac[1]);
+    pos[2] = lerp(mn[2], mx[2], frac[2]);
+  }
   return pos;
 };
 
@@ -6261,20 +6477,25 @@ Niivue.prototype.canvasPos2frac = function (canvasPos) {
 
 // not included in public docs
 // note: we also have a "sliceScale" method, which could be confusing
-Niivue.prototype.scaleSlice = function (w, h) {
-  let scalePix = this.gl.canvas.clientWidth / w;
-  if (h * scalePix > this.effectiveCanvasHeight())
-    scalePix = this.effectiveCanvasHeight() / h;
+Niivue.prototype.scaleSlice = function (
+  w,
+  h,
+  widthPadPixels = 0,
+  heightPadPixels = 0
+) {
+  let canvasW = this.gl.canvas.clientWidth - widthPadPixels;
+  let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
+  let scalePix = canvasW / w;
+  if (h * scalePix > canvasH) scalePix = canvasH / h;
   //canvas space is 0,0...w,h with origin at upper left
   let wPix = w * scalePix;
   let hPix = h * scalePix;
   let leftTopWidthHeight = [
-    (this.gl.canvas.clientWidth - wPix) * 0.5,
-    (this.effectiveCanvasHeight() - hPix) * 0.5,
+    (canvasW - wPix) * 0.5,
+    (canvasH - hPix) * 0.5,
     wPix,
     hPix,
   ];
-  //let leftTopWidthHeight = [(gl.canvas.clientWidth-wPix) * 0.5, 80, wPix, hPix];
   return leftTopWidthHeight;
 }; // scaleSlice()
 
@@ -6663,7 +6884,8 @@ Niivue.prototype.drawScene = function () {
     this.opts.backColor[2],
     this.opts.backColor[3]
   );
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+  //this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   if (this.bmpTexture) {
     //draw the thumbnail image and exit
     this.drawThumbnail();
@@ -6732,19 +6954,28 @@ Niivue.prototype.drawScene = function () {
     } else {
       //sliceTypeMultiplanar
       let { volScale, vox, longestAxis } = this.sliceScale();
+      //scaleSlice(w, h, widthPadPixels, heightPadPixels) {
+      let pad = this.opts.multiplanarPadPixels;
+      // size for 2 rows, 2 columns
       let ltwh = this.scaleSlice(
         volScale[0] + volScale[1],
-        volScale[1] + volScale[2]
+        volScale[1] + volScale[2],
+        pad * 1,
+        pad * 1
       );
       let wX = (ltwh[2] * volScale[0]) / (volScale[0] + volScale[1]);
+      // size for 1 row, 3 columns
       let ltwh3x1 = this.scaleSlice(
         volScale[0] + volScale[0] + volScale[1],
-        Math.max(volScale[1], volScale[2])
+        Math.max(volScale[1], volScale[2]),
+        pad * 2
       );
       let mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0]);
+      // size for 1 row, 4 columns
       let ltwh4x1 = this.scaleSlice(
         volScale[0] + volScale[0] + volScale[1] + mx,
-        mx
+        mx,
+        pad * 3
       );
       let wX1 =
         (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
@@ -6756,7 +6987,7 @@ Niivue.prototype.drawScene = function () {
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
           this.draw3D([
-            ltwh3x1[0] + wX1 + wX1 + hY1,
+            ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
             ltwh3x1[1],
             ltwh4x1[3],
             ltwh4x1[3],
@@ -6765,21 +6996,24 @@ Niivue.prototype.drawScene = function () {
         //draw axial
         this.draw2D([ltwh3x1[0], ltwh3x1[1], wX1, hY1], 0);
         //draw coronal
-        this.draw2D([ltwh3x1[0] + wX1, ltwh3x1[1], wX1, hZ1], 1);
+        this.draw2D([ltwh3x1[0] + wX1 + pad, ltwh3x1[1], wX1, hZ1], 1);
         //draw sagittal
-        this.draw2D([ltwh3x1[0] + wX1 + wX1, ltwh3x1[1], hY1, hZ1], 2);
+        this.draw2D(
+          [ltwh3x1[0] + wX1 + wX1 + pad * 2, ltwh3x1[1], hY1, hZ1],
+          2
+        );
       } else {
         let wY = ltwh[2] - wX;
         let hY = (ltwh[3] * volScale[1]) / (volScale[1] + volScale[2]);
         let hZ = ltwh[3] - hY;
         //draw axial
-        this.draw2D([ltwh[0], ltwh[1] + hZ, wX, hY], 0);
+        this.draw2D([ltwh[0], ltwh[1] + hZ + pad, wX, hY], 0);
         //draw coronal
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
         //draw sagittal
-        this.draw2D([ltwh[0] + wX, ltwh[1], wY, hZ], 2);
+        this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
         if (!this.graph.autoSizeMultiplanar)
-          this.draw3D([ltwh[0] + wX, ltwh[1] + hZ, wY, hY]);
+          this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       } //if landscape else portrait
     } //if multiplanar
   } //if mosaic not 2D

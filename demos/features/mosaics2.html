@@ -22,7 +22,8 @@
      </h1>
      <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).</p>
      <label for="name">Mosaic string:</label>
-     <input type="text" id="str" name="str" onKeyUp="return bar()" value="A 0 50 L+ 60 C -10 0 60 S X -30" required minlength="2" maxlength="128" size="128">
+     <input type="text" id="str" name="str" onKeyUp="return bar()" value="A 0 50 L+ 60; C -10 0 S X 40; R A 0 R S 0 R C 0 " required minlength="2" maxlength="90" size="90">
+     <p>
      <input type="checkbox" id="check1" name="check1" unchecked>
      <label for="check1">Radiological</label>
      <input type="checkbox" id="check3" name="check3" unchecked>
@@ -37,6 +38,8 @@
      <label for="check7">Colorbar</label>
      <input type="checkbox" id="check8" name="check8" checked>
      <label for="check8">Negative colors</label>
+      <input type="checkbox" id="check9" name="check9" unchecked>
+      <label for="check9">Cube</label>
      <div class="slidecontainer">
       gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
      </div>
@@ -90,6 +93,11 @@
         nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
        else
         nv1.setColorMapNegative(nv1.volumes[1].id,"");
+       nv1.drawScene();
+     }
+     document.getElementById("check9").addEventListener("change", doCheck9Click);
+     function doCheck9Click() {
+       nv1.opts.isOrientCube = this.checked;
        nv1.drawScene();
      }
      var volumeList1 = [
