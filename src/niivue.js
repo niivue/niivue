@@ -136,9 +136,14 @@ export function Niivue(options = {}) {
     penValue: 1, // sets drawing color. see "drawPt"
     isFilledPen: false,
     thumbnail: "",
+    maxDrawUndoBitmaps: 8,
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
+    onError: ()=>{},
+    onInfo: ()=>{},
+    onWarn: ()=>{},
+    onDebug: ()=>{}
   };
 
   this.canvas = null; // the canvas element on the page
@@ -147,8 +152,6 @@ export function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawBitmap = null; //the CPU memory storage of the drawing
-  this.maxDrawUndoBitmaps = 8; //analogy: number of bullets in revolver, we will cycle these
-  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
   this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
@@ -306,6 +309,9 @@ export function Niivue(options = {}) {
     this.opts[prop] =
       options[prop] === undefined ? this.defaults[prop] : options[prop];
   }
+
+  // now that opts have been parsed, set the current undo to max undo
+  this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
 
   if (this.opts.drawingEnabled) {
     this.createEmptyDrawing();
@@ -1573,13 +1579,13 @@ Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
   //let rle = encodeRLE(this.drawBitmap);
   //the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
   this.currentDrawUndoBitmap++;
-  if (this.currentDrawUndoBitmap >= this.maxDrawUndoBitmaps)
+  if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps)
     this.currentDrawUndoBitmap = 0;
   this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap);
 }; // drawAddUndoBitmap()
 
 Niivue.prototype.drawClearAllUndoBitmaps = async function () {
-  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps; //next add will be cylinder 0
+  this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //next add will be cylinder 0
   if (this.drawUndoBitmaps.length < 1) return;
   for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) array[i] = [];
 }; // drawClearAllUndoBitmaps()
