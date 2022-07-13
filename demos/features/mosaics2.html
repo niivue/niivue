@@ -40,6 +40,8 @@
      <label for="check8">Negative colors</label>
       <input type="checkbox" id="check9" name="check9" unchecked>
       <label for="check9">Cube</label>
+      <input type="checkbox" id="check10" name="check10" unchecked>
+      <label for="check10">HighDPI</label>
      <div class="slidecontainer">
       gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
      </div>
@@ -99,6 +101,10 @@
      function doCheck9Click() {
        nv1.opts.isOrientCube = this.checked;
        nv1.drawScene();
+     }
+     document.getElementById("check10").addEventListener("change", doCheck10Click);
+     function doCheck10Click() {
+       nv1.setHighResolutionCapable(this.checked);
      }
      var volumeList1 = [
      {

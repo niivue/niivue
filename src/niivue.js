@@ -130,6 +130,7 @@ export function Niivue(options = {}) {
     isCornerOrientationText: false,
     sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
     isSliceMM: false,
+    isHighResolutionCapable: false,
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
@@ -141,10 +142,10 @@ export function Niivue(options = {}) {
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
-    onError: ()=>{},
-    onInfo: ()=>{},
-    onWarn: ()=>{},
-    onDebug: ()=>{}
+    onError: () => {},
+    onInfo: () => {},
+    onWarn: () => {},
+    onDebug: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -223,10 +224,10 @@ export function Niivue(options = {}) {
   this.scene.prevY = 0;
   this.scene.currX = 0;
   this.scene.currY = 0;
-  this.currentTouchTime = 0
-  this.lastTouchTime = 0
-  this.touchTimer = null
-  this.doubleTouch = false
+  this.currentTouchTime = 0;
+  this.lastTouchTime = 0;
+  this.touchTimer = null;
+  this.doubleTouch = false;
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
@@ -657,9 +658,13 @@ Niivue.prototype.arrayEquals = function (a, b) {
 Niivue.prototype.resizeListener = function () {
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
-  this.canvas.width = this.canvas.offsetWidth;
-  this.canvas.height = this.canvas.offsetHeight;
-
+  let dpr = 1;
+  //https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+  //https://www.khronos.org/webgl/wiki/HandlingHighDPI
+  if (this.opts.isHighResolutionCapable) dpr = window.devicePixelRatio || 1;
+  this.canvas.width = this.canvas.offsetWidth * dpr;
+  this.canvas.height = this.canvas.offsetHeight * dpr;
+  console.log("RESIZE" + dpr);
   this.drawScene();
 };
 
@@ -876,27 +881,29 @@ Niivue.prototype.checkMultitouch = function (e) {
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
   if (!this.touchTimer) {
-    this.touchTimer = setTimeout(()=>{
+    this.touchTimer = setTimeout(() => {
       //this.drawScene()
-      this.resetBriCon(e)
-    }, this.opts.longTouchTimeout)
+      this.resetBriCon(e);
+    }, this.opts.longTouchTimeout);
   }
   this.scene.touchdown = true;
-  this.currentTouchTime = new Date().getTime()
-  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime
-  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0){
-    this.doubleTouch = true
-    this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
-    this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-    this.resetBriCon(e) 
-    this.lastTouchTime = this.currentTouchTime
-    return
+  this.currentTouchTime = new Date().getTime();
+  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
+  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
+    this.doubleTouch = true;
+    this.dragStart[0] =
+      e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
+    this.dragStart[1] =
+      e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+    this.resetBriCon(e);
+    this.lastTouchTime = this.currentTouchTime;
+    return;
   } else {
     // reset values to be ready for next touch
-    this.doubleTouch = false
-    this.dragStart = [0, 0]
-    this.dragEnd = [0, 0]
-    this.lastTouchTime = this.currentTouchTime
+    this.doubleTouch = false;
+    this.dragStart = [0, 0];
+    this.dragEnd = [0, 0];
+    this.lastTouchTime = this.currentTouchTime;
   }
   if (this.scene.touchdown && e.touches.length < 2) {
     this.multiTouchGesture = false;
@@ -911,13 +918,13 @@ Niivue.prototype.touchStartListener = function (e) {
 // handler for touchend (finger lift off screen)
 // note: no test yet
 Niivue.prototype.touchEndListener = function (e) {
-  e.preventDefault()
+  e.preventDefault();
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
   this.multiTouchGesture = false;
   if (this.touchTimer) {
-    clearTimeout(this.touchTimer)
-    this.touchTimer = null
+    clearTimeout(this.touchTimer);
+    this.touchTimer = null;
   }
   if (this.isDragging) {
     this.isDragging = false;
@@ -961,17 +968,18 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   // don't reset bri/con if the user is in 3D mode and double clicks
   let isRender = false;
   if (this.sliceType === this.sliceTypeRender) isRender = true;
-  let x = 0
-  let y = 0
+  let x = 0;
+  let y = 0;
   if (msg !== null) {
     // if a touch event
-    if (msg.targetTouches !== undefined){
-      x = msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left
-      y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top
+    if (msg.targetTouches !== undefined) {
+      x =
+        msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left;
+      y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top;
     } else {
       // if a mouse event
-      x = msg.offsetX
-      y = msg.offsetY
+      x = msg.offsetX;
+      y = msg.offsetY;
     }
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
@@ -983,7 +991,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
     this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
-  if (this.doubleTouch) return
+  if (this.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.opts.onIntensityChange(this.volumes[0]);
@@ -997,11 +1005,13 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
-    this.isDragging = true
+    this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
-      this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
-      this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-      return
+      this.dragEnd[0] =
+        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
+      this.dragEnd[1] =
+        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      return;
     }
     this.mouseClick(
       e.touches[0].clientX - rect.left,
@@ -1165,8 +1175,8 @@ Niivue.prototype.wheelListener = function (e) {
   e.preventDefault();
   e.stopPropagation();
   // if thumbnailVisible this do not activate a canvas interaction when scrolling
-  if (this.thumbnailVisible){
-    return
+  if (this.thumbnailVisible) {
+    return;
   }
   var rect = this.canvas.getBoundingClientRect();
   if (e.deltaY < 0) {
@@ -1443,6 +1453,13 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
 
 Niivue.prototype.getRadiologicalConvention = function () {
   return this.opts.isRadiologicalConvention;
+};
+
+Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
+  this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  console.log("HighDPI feature is experimental");
+  this.resizeListener(); // test isHighResolutionCapable
+  this.drawScene();
 };
 
 /**
@@ -3549,6 +3566,7 @@ Niivue.prototype.init = async function () {
   }
   this.updateGLVolume();
   this.initialized = true;
+  if (this.opts.isHighResolutionCapable) this.resizeListener();
   this.drawScene();
   return this;
 }; // init()
@@ -5000,8 +5018,7 @@ Niivue.prototype.calculateMvpMatrix2D = function (
   let gl = this.gl;
   gl.viewport(
     leftTopWidthHeight[0],
-    this.gl.canvas.clientHeight -
-      (leftTopWidthHeight[1] + leftTopWidthHeight[3]), //lower numbers near bottom
+    this.gl.canvas.height - (leftTopWidthHeight[1] + leftTopWidthHeight[3]), //lower numbers near bottom
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
@@ -5512,11 +5529,6 @@ Niivue.prototype.calculateMvpMatrix = function (
   mat.mat4.invert(iModelMatrix, modelMatrix);
   let normalMatrix = mat.mat4.create();
   mat.mat4.transpose(normalMatrix, iModelMatrix);
-  //this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-
-  // transpose(out, a) - > {mat4}
-  // invert(out, a)
-  //  normalMatrix := modelMatrix.Inverse.Transpose;
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
@@ -6079,7 +6091,6 @@ Niivue.prototype.drawOrientationCube = function (
     0,
   ]);
   mat.mat4.scale(modelMatrix, modelMatrix, [sz, sz, sz]);
-  //modelMatrix[5] *= -1; //reverse determinant
   //apply elevation
   mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
   //apply azimuth
@@ -6483,7 +6494,7 @@ Niivue.prototype.scaleSlice = function (
   widthPadPixels = 0,
   heightPadPixels = 0
 ) {
-  let canvasW = this.gl.canvas.clientWidth - widthPadPixels;
+  let canvasW = this.canvas.width - widthPadPixels;
   let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
   let scalePix = canvasW / w;
   if (h * scalePix > canvasH) scalePix = canvasH / h;
@@ -6918,9 +6929,6 @@ Niivue.prototype.drawScene = function () {
     depthAziElev[1] -= x;
     depthAziElev[1] = depthAziElev[1] % 360;
     depthAziElev[2] += y;
-    //gimbal lock: these next two lines could be changed - when we go over the pole, the Azimuth reverses
-    //if (depthAziElev[2] > 90) depthAziElev[2] = 90;
-    //if (depthAziElev[2] < -90) depthAziElev[2] = -90;
     if (
       depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] ||
       depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]
