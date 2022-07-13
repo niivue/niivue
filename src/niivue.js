@@ -115,6 +115,7 @@ export function Niivue(options = {}) {
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
     doubleTouchTimeout: 500,
+    longTouchTimeout: 1000,
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isNearestInterpolation: false,
     isAtlasOutline: false,
@@ -224,6 +225,8 @@ export function Niivue(options = {}) {
   this.scene.currY = 0;
   this.currentTouchTime = 0
   this.lastTouchTime = 0
+  this.touchTimer = null
+  this.doubleTouch = false
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
@@ -872,14 +875,27 @@ Niivue.prototype.checkMultitouch = function (e) {
 // note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
+  if (!this.touchTimer) {
+    this.touchTimer = setTimeout(()=>{
+      //this.drawScene()
+      this.resetBriCon(e)
+    }, this.opts.longTouchTimeout)
+  }
   this.scene.touchdown = true;
   this.currentTouchTime = new Date().getTime()
   let timeSinceTouch = this.currentTouchTime - this.lastTouchTime
   if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0){
-    this.resetBriCon(e) 
+    this.doubleTouch = true
+    this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
+    this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+    //this.resetBriCon(e) 
     this.lastTouchTime = this.currentTouchTime
     return
   } else {
+    // reset values to be ready for next touch
+    this.doubleTouch = false
+    this.dragStart = [0, 0]
+    this.dragEnd = [0, 0]
     this.lastTouchTime = this.currentTouchTime
   }
   if (this.scene.touchdown && e.touches.length < 2) {
@@ -899,6 +915,17 @@ Niivue.prototype.touchEndListener = function (e) {
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
   this.multiTouchGesture = false;
+  if (this.touchTimer) {
+    clearTimeout(this.touchTimer)
+    this.touchTimer = null
+  }
+  if (this.isDragging) {
+    this.isDragging = false;
+    if (this.opts.isDragShowsMeasurementTool) return;
+    this.calculateNewRange();
+    this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+  }
+  this.drawScene();
 };
 
 // not included in public docs
@@ -969,6 +996,11 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
+    this.isDragging = true
+    if (this.doubleTouch && this.isDragging) {
+      this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
+      this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+    }
     this.mouseClick(
       e.touches[0].clientX - rect.left,
       e.touches[0].clientY - rect.top
