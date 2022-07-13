@@ -141,10 +141,10 @@ export function Niivue(options = {}) {
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
-    onError: ()=>{},
-    onInfo: ()=>{},
-    onWarn: ()=>{},
-    onDebug: ()=>{}
+    onError: () => {},
+    onInfo: () => {},
+    onWarn: () => {},
+    onDebug: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -223,10 +223,10 @@ export function Niivue(options = {}) {
   this.scene.prevY = 0;
   this.scene.currX = 0;
   this.scene.currY = 0;
-  this.currentTouchTime = 0
-  this.lastTouchTime = 0
-  this.touchTimer = null
-  this.doubleTouch = false
+  this.currentTouchTime = 0;
+  this.lastTouchTime = 0;
+  this.touchTimer = null;
+  this.doubleTouch = false;
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
@@ -876,27 +876,29 @@ Niivue.prototype.checkMultitouch = function (e) {
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
   if (!this.touchTimer) {
-    this.touchTimer = setTimeout(()=>{
+    this.touchTimer = setTimeout(() => {
       //this.drawScene()
-      this.resetBriCon(e)
-    }, this.opts.longTouchTimeout)
+      this.resetBriCon(e);
+    }, this.opts.longTouchTimeout);
   }
   this.scene.touchdown = true;
-  this.currentTouchTime = new Date().getTime()
-  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime
-  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0){
-    this.doubleTouch = true
-    this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
-    this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-    this.resetBriCon(e) 
-    this.lastTouchTime = this.currentTouchTime
-    return
+  this.currentTouchTime = new Date().getTime();
+  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
+  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
+    this.doubleTouch = true;
+    this.dragStart[0] =
+      e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
+    this.dragStart[1] =
+      e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+    this.resetBriCon(e);
+    this.lastTouchTime = this.currentTouchTime;
+    return;
   } else {
     // reset values to be ready for next touch
-    this.doubleTouch = false
-    this.dragStart = [0, 0]
-    this.dragEnd = [0, 0]
-    this.lastTouchTime = this.currentTouchTime
+    this.doubleTouch = false;
+    this.dragStart = [0, 0];
+    this.dragEnd = [0, 0];
+    this.lastTouchTime = this.currentTouchTime;
   }
   if (this.scene.touchdown && e.touches.length < 2) {
     this.multiTouchGesture = false;
@@ -911,13 +913,13 @@ Niivue.prototype.touchStartListener = function (e) {
 // handler for touchend (finger lift off screen)
 // note: no test yet
 Niivue.prototype.touchEndListener = function (e) {
-  e.preventDefault()
+  e.preventDefault();
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
   this.multiTouchGesture = false;
   if (this.touchTimer) {
-    clearTimeout(this.touchTimer)
-    this.touchTimer = null
+    clearTimeout(this.touchTimer);
+    this.touchTimer = null;
   }
   if (this.isDragging) {
     this.isDragging = false;
@@ -961,17 +963,18 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   // don't reset bri/con if the user is in 3D mode and double clicks
   let isRender = false;
   if (this.sliceType === this.sliceTypeRender) isRender = true;
-  let x = 0
-  let y = 0
+  let x = 0;
+  let y = 0;
   if (msg !== null) {
     // if a touch event
-    if (msg.targetTouches !== undefined){
-      x = msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left
-      y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top
+    if (msg.targetTouches !== undefined) {
+      x =
+        msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left;
+      y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top;
     } else {
       // if a mouse event
-      x = msg.offsetX
-      y = msg.offsetY
+      x = msg.offsetX;
+      y = msg.offsetY;
     }
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
@@ -983,7 +986,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
     this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
-  if (this.doubleTouch) return
+  if (this.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.opts.onIntensityChange(this.volumes[0]);
@@ -997,11 +1000,13 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
-    this.isDragging = true
+    this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
-      this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
-      this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-      return
+      this.dragEnd[0] =
+        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
+      this.dragEnd[1] =
+        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      return;
     }
     this.mouseClick(
       e.touches[0].clientX - rect.left,
@@ -1165,8 +1170,8 @@ Niivue.prototype.wheelListener = function (e) {
   e.preventDefault();
   e.stopPropagation();
   // if thumbnailVisible this do not activate a canvas interaction when scrolling
-  if (this.thumbnailVisible){
-    return
+  if (this.thumbnailVisible) {
+    return;
   }
   var rect = this.canvas.getBoundingClientRect();
   if (e.deltaY < 0) {
