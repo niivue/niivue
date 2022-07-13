@@ -131,6 +131,7 @@ export function Niivue(options = {}) {
     isCornerOrientationText: false,
     sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
     isSliceMM: false,
+    isHighResolutionCapable: false,
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
@@ -658,9 +659,13 @@ Niivue.prototype.arrayEquals = function (a, b) {
 Niivue.prototype.resizeListener = function () {
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
-  this.canvas.width = this.canvas.offsetWidth;
-  this.canvas.height = this.canvas.offsetHeight;
-
+  let dpr = 1;
+  //https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+  //https://www.khronos.org/webgl/wiki/HandlingHighDPI
+  if (this.opts.isHighResolutionCapable) dpr = window.devicePixelRatio || 1;
+  this.canvas.width = this.canvas.offsetWidth * dpr;
+  this.canvas.height = this.canvas.offsetHeight * dpr;
+  console.log("RESIZE" + dpr);
   this.drawScene();
 };
 
@@ -962,6 +967,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
+  if (this.isDragging) return
   let isRender = false;
   if (this.sliceType === this.sliceTypeRender) isRender = true;
   let x = 0;
@@ -1007,6 +1013,7 @@ Niivue.prototype.touchMoveListener = function (e) {
         e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
       this.dragEnd[1] =
         e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      this.drawScene();
       return;
     }
     this.mouseClick(
@@ -1449,6 +1456,13 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
 
 Niivue.prototype.getRadiologicalConvention = function () {
   return this.opts.isRadiologicalConvention;
+};
+
+Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
+  this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  console.log("HighDPI feature is experimental");
+  this.resizeListener(); // test isHighResolutionCapable
+  this.drawScene();
 };
 
 /**
@@ -3555,6 +3569,7 @@ Niivue.prototype.init = async function () {
   }
   this.updateGLVolume();
   this.initialized = true;
+  if (this.opts.isHighResolutionCapable) this.resizeListener();
   this.drawScene();
   return this;
 }; // init()
@@ -5006,8 +5021,7 @@ Niivue.prototype.calculateMvpMatrix2D = function (
   let gl = this.gl;
   gl.viewport(
     leftTopWidthHeight[0],
-    this.gl.canvas.clientHeight -
-      (leftTopWidthHeight[1] + leftTopWidthHeight[3]), //lower numbers near bottom
+    this.gl.canvas.height - (leftTopWidthHeight[1] + leftTopWidthHeight[3]), //lower numbers near bottom
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
@@ -5518,11 +5532,6 @@ Niivue.prototype.calculateMvpMatrix = function (
   mat.mat4.invert(iModelMatrix, modelMatrix);
   let normalMatrix = mat.mat4.create();
   mat.mat4.transpose(normalMatrix, iModelMatrix);
-  //this.gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-
-  // transpose(out, a) - > {mat4}
-  // invert(out, a)
-  //  normalMatrix := modelMatrix.Inverse.Transpose;
   let modelViewProjectionMatrix = mat.mat4.create();
   mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
@@ -6085,7 +6094,6 @@ Niivue.prototype.drawOrientationCube = function (
     0,
   ]);
   mat.mat4.scale(modelMatrix, modelMatrix, [sz, sz, sz]);
-  //modelMatrix[5] *= -1; //reverse determinant
   //apply elevation
   mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
   //apply azimuth
@@ -6489,7 +6497,7 @@ Niivue.prototype.scaleSlice = function (
   widthPadPixels = 0,
   heightPadPixels = 0
 ) {
-  let canvasW = this.gl.canvas.clientWidth - widthPadPixels;
+  let canvasW = this.canvas.width - widthPadPixels;
   let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
   let scalePix = canvasW / w;
   if (h * scalePix > canvasH) scalePix = canvasH / h;
@@ -6924,9 +6932,6 @@ Niivue.prototype.drawScene = function () {
     depthAziElev[1] -= x;
     depthAziElev[1] = depthAziElev[1] % 360;
     depthAziElev[2] += y;
-    //gimbal lock: these next two lines could be changed - when we go over the pole, the Azimuth reverses
-    //if (depthAziElev[2] > 90) depthAziElev[2] = 90;
-    //if (depthAziElev[2] < -90) depthAziElev[2] = -90;
     if (
       depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] ||
       depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]

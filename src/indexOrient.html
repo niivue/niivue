@@ -56,11 +56,13 @@
       <label for="check8">Cube</label>
       <input type="checkbox" id="check9" name="check9" unchecked>
       <label for="check9">Pad</label>
+      <input type="checkbox" id="check10" name="check10" checked>
+      <label for="check10">HighDPI</label>
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:98%; height:320px;">
-        <canvas id="gl1" height=320 width=480>
+      <div id="demo1" style="width:98%; height:640px;">
+        <canvas id="gl1" height=640 width=480>
         </canvas>
       </div>
     </section>
@@ -150,6 +152,10 @@
         nv1.opts.multiplanarPadPixels = pad;
         nv1.drawScene();
       }
+      document.getElementById("check10").addEventListener("change", doCheck10Click);
+      function doCheck10Click() {
+        nv1.setHighResolutionCapable(this.checked);
+      }
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
@@ -169,13 +175,16 @@
        show3Dcrosshair: true,
        loadingText: 'there are no images',
        dragAndDropEnabled: true,
-       backColor: [0, 0.2, 0.3, 1],
+       backColor: [1, 1, 1, 1],
        //thumbnail: "../demos/images/DoG.png"
       })
       nv1.setRadiologicalConvention(false)
       nv1.setSliceMM(true)
       nv1.attachTo('gl1')
+      nv1.setHighResolutionCapable(true);
+      nv1.setSliceType(nv1.sliceTypeAxial)
       //nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setMeshShader('Outline')
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(120,40)
       nv1.opts.isOrientCube = true;
