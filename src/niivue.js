@@ -888,7 +888,7 @@ Niivue.prototype.touchStartListener = function (e) {
     this.doubleTouch = true
     this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
     this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-    //this.resetBriCon(e) 
+    this.resetBriCon(e) 
     this.lastTouchTime = this.currentTouchTime
     return
   } else {
@@ -983,6 +983,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
     this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
+  if (this.doubleTouch) return
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.opts.onIntensityChange(this.volumes[0]);
@@ -1000,6 +1001,7 @@ Niivue.prototype.touchMoveListener = function (e) {
     if (this.doubleTouch && this.isDragging) {
       this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left
       this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+      return
     }
     this.mouseClick(
       e.touches[0].clientX - rect.left,
