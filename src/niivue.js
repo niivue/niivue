@@ -114,6 +114,7 @@ export function Niivue(options = {}) {
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
+    doubleTouchTimeout: 500,
     keyDebounceTime: 50, // default debounce time used in keyup listeners
     isNearestInterpolation: false,
     isAtlasOutline: false,
@@ -215,6 +216,8 @@ export function Niivue(options = {}) {
   this.scene.prevY = 0;
   this.scene.currX = 0;
   this.scene.currY = 0;
+  this.currentTouchTime = 0
+  this.lastTouchTime = 0
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
@@ -870,6 +873,15 @@ Niivue.prototype.checkMultitouch = function (e) {
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
   this.scene.touchdown = true;
+  this.currentTouchTime = new Date().getTime()
+  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime
+  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0){
+    this.resetBriCon(e) 
+    this.lastTouchTime = this.currentTouchTime
+    return
+  } else {
+    this.lastTouchTime = this.currentTouchTime
+  }
   if (this.scene.touchdown && e.touches.length < 2) {
     this.multiTouchGesture = false;
   } else {
@@ -882,7 +894,8 @@ Niivue.prototype.touchStartListener = function (e) {
 // not included in public docs
 // handler for touchend (finger lift off screen)
 // note: no test yet
-Niivue.prototype.touchEndListener = function () {
+Niivue.prototype.touchEndListener = function (e) {
+  e.preventDefault()
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
   this.multiTouchGesture = false;
@@ -921,14 +934,26 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   // don't reset bri/con if the user is in 3D mode and double clicks
   let isRender = false;
   if (this.sliceType === this.sliceTypeRender) isRender = true;
+  let x = 0
+  let y = 0
   if (msg !== null) {
+    // if a touch event
+    if (msg.targetTouches !== undefined){
+      x = msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left
+      y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top
+    } else {
+      // if a mouse event
+      x = msg.offsetX
+      y = msg.offsetY
+    }
     // test if render is one of the tiles
-    if (this.inRenderTile(msg.offsetX, msg.offsetY) >= 0) isRender = true;
+    if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
+
   if (isRender) {
     this.scene.mouseDepthPicker = true;
     this.drawScene();
-    this.drawScene();
+    this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
   this.volumes[0].cal_min = this.volumes[0].robust_min;
@@ -1105,6 +1130,10 @@ Niivue.prototype.wheelListener = function (e) {
   // scroll 2D slices
   e.preventDefault();
   e.stopPropagation();
+  // if thumbnailVisible this do not activate a canvas interaction when scrolling
+  if (this.thumbnailVisible){
+    return
+  }
   var rect = this.canvas.getBoundingClientRect();
   if (e.deltaY < 0) {
     this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top);
