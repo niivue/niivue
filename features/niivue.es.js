@@ -364,6 +364,26 @@ function translate(out, a, v) {
   }
   return out;
 }
+function scale$1(out, a, v) {
+  var x2 = v[0], y = v[1], z = v[2];
+  out[0] = a[0] * x2;
+  out[1] = a[1] * x2;
+  out[2] = a[2] * x2;
+  out[3] = a[3] * x2;
+  out[4] = a[4] * y;
+  out[5] = a[5] * y;
+  out[6] = a[6] * y;
+  out[7] = a[7] * y;
+  out[8] = a[8] * z;
+  out[9] = a[9] * z;
+  out[10] = a[10] * z;
+  out[11] = a[11] * z;
+  out[12] = a[12];
+  out[13] = a[13];
+  out[14] = a[14];
+  out[15] = a[15];
+  return out;
+}
 function rotateX(out, a, rad) {
   var s = Math.sin(rad);
   var c2 = Math.cos(rad);
@@ -747,7 +767,20 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isCl
 		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
 	}
 	return samplePos;
-}`;
+}
+float frac2ndc(vec3 frac) {
+//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
+	vec4 pos = vec4(frac.xyz, 1.0); //fraction
+	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
+	pos = pos * dim;
+	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
+	pos += shim;
+	vec4 mm = transpose(matRAS) * pos;
+	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
+	return (z_ndc + 1.0) / 2.0;
+	
+}
+`;
 var fragRenderShader = `#version 300 es
 #line 14
 precision highp int;
@@ -765,20 +798,7 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 in vec3 vColor;
 out vec4 fColor;
-` + kRenderFunc + `
-float frac2ndc(vec3 frac) {
-//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
-	vec4 pos = vec4(frac.xyz, 1.0); //fraction
-	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
-	pos = pos * dim;
-	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
-	pos += shim;
-	vec4 mm = transpose(matRAS) * pos;
-	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
-	return (z_ndc + 1.0) / 2.0;
-	
-}
-void main() {
+` + kRenderFunc + `void main() {
   if (fColor.x > 2.0) {
     fColor = vec4(1.0, 0.0, 0.0, 0.5);
     return;
@@ -1529,7 +1549,6 @@ precision highp float;
 uniform float opacity;
 out vec4 color;
 vec4 packFloatToVec4i(const float value) {
-	//this Papaya function uses BSD 3-clause license Copyright (c) 2012-2015, RII-UTHSCSA
 	const vec4 bitSh = vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0);
 	const vec4 bitMsk = vec4(0.0, 1.0/256.0, 1.0/256.0, 1.0/256.0);
 	vec4 res = fract(value * bitSh);
@@ -1734,15 +1753,6 @@ void main() {
 	vec3 d = vClr.rgb * diffuse * SH(-reflect(n, vec3(l.x, l.y, -l.z)) );
 	color = vec4(a + d + s, opacity);
 }`;
-var fragDepthPickingShader = `#version 300 es
-precision highp int;
-precision highp float;
-uniform int id;
-in vec3 vColor;
-out vec4 color;
-void main() {
-	color = vec4(vColor, float(id & 255) / 255.0);
-}`;
 var fragVolumePickingShader = `#version 300 es
 #line 506
 //precision highp int;
@@ -1753,12 +1763,15 @@ uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
-uniform int id;
+uniform mat4 matRAS;
+uniform mat4 mvpMtx;
 in vec3 vColor;
 out vec4 fColor;
 ` + kRenderFunc + `
 void main() {
+	int id = 254;
 	vec3 start = vColor;
+	gl_FragDepth = 0.0;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
 	float fid = float(id & 255)/ 255.0;
 	vec3 backPosition = GetBackPosition(start);
@@ -1782,6 +1795,7 @@ void main() {
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) {
 			fColor = vec4(samplePos.rgb, fid);
+			gl_FragDepth = frac2ndc(samplePos.xyz);
 			break;
 		}
 		samplePos += deltaDirFast; //advance ray position
@@ -1798,6 +1812,7 @@ void main() {
 		float val = texture(overlay, samplePos.xyz).a;
 		if (val > 0.01) {
 			fColor = vec4(samplePos.rgb, fid);
+			gl_FragDepth = frac2ndc(samplePos.xyz);
 			return;
 		}
 		samplePos += deltaDirFast; //advance ray position
@@ -1805,6 +1820,34 @@ void main() {
 	//if (fColor.a == 0.0) discard; //no hit in either background or overlays
 	//you only get here if there is a hit with the background that is closer than any overlay
 }`;
+var vertOrientCubeShader = `#version 300 es
+// an attribute is an input (in) to a vertex shader.
+// It will receive data from a buffer
+layout(location=0)  in vec3 a_position;
+layout(location=1)  in vec3 a_color;
+// A matrix to transform the positions by
+uniform mat4 u_matrix;
+out vec3 vColor;
+// all shaders have a main function
+void main() {
+  // Multiply the position by the matrix.
+  vec4 pos = vec4(a_position, 1.0);
+  gl_Position = u_matrix * vec4(pos);
+  vColor = a_color;
+}
+`;
+var fragOrientCubeShader = `#version 300 es
+precision highp float;
+
+uniform vec4 u_color;
+in vec3 vColor;
+// we need to declare an output for the fragment shader
+out vec4 outColor;
+
+void main() {
+  outColor = vec4(vColor, 1.0);
+}
+`;
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -2844,6 +2887,1016 @@ function interval(period, scheduler) {
   }
   return timer(period, period, scheduler);
 }
+const orientCube = new Float32Array([
+  -1,
+  -1,
+  -1,
+  0.28,
+  0.28,
+  0.28,
+  -1,
+  -1,
+  -1,
+  0.28,
+  0.28,
+  0.28,
+  -1,
+  1,
+  -1,
+  0.28,
+  0.28,
+  0.28,
+  1,
+  -1,
+  -1,
+  0.28,
+  0.28,
+  0.28,
+  1,
+  1,
+  -1,
+  0.28,
+  0.28,
+  0.28,
+  1,
+  1,
+  -1,
+  0.28,
+  0.28,
+  0.28,
+  -1,
+  -1,
+  1,
+  0.8,
+  0.8,
+  0.8,
+  -1,
+  -1,
+  1,
+  0.8,
+  0.8,
+  0.8,
+  1,
+  -1,
+  1,
+  0.8,
+  0.8,
+  0.8,
+  -1,
+  1,
+  1,
+  0.8,
+  0.8,
+  0.8,
+  1,
+  1,
+  1,
+  0.8,
+  0.8,
+  0.8,
+  1,
+  1,
+  1,
+  0.8,
+  0.8,
+  0.8,
+  -1,
+  1,
+  -1,
+  0,
+  0,
+  0.74,
+  -1,
+  1,
+  -1,
+  0,
+  0,
+  0.74,
+  -1,
+  1,
+  1,
+  0,
+  0,
+  0.74,
+  1,
+  1,
+  -1,
+  0,
+  0,
+  0.74,
+  1,
+  1,
+  1,
+  0,
+  0,
+  0.74,
+  1,
+  1,
+  1,
+  0,
+  0,
+  0.74,
+  -1,
+  -1,
+  -1,
+  0.42,
+  0,
+  0.42,
+  -1,
+  -1,
+  -1,
+  0.42,
+  0,
+  0.42,
+  1,
+  -1,
+  -1,
+  0.42,
+  0,
+  0.42,
+  -1,
+  -1,
+  1,
+  0.42,
+  0,
+  0.42,
+  1,
+  -1,
+  1,
+  0.42,
+  0,
+  0.42,
+  1,
+  -1,
+  1,
+  0.42,
+  0,
+  0.42,
+  -1,
+  -1,
+  -1,
+  0.64,
+  0,
+  0,
+  -1,
+  -1,
+  -1,
+  0.64,
+  0,
+  0,
+  -1,
+  -1,
+  1,
+  0.64,
+  0,
+  0,
+  -1,
+  1,
+  -1,
+  0.64,
+  0,
+  0,
+  -1,
+  1,
+  1,
+  0.64,
+  0,
+  0,
+  -1,
+  1,
+  1,
+  0.64,
+  0,
+  0,
+  1,
+  -1,
+  -1,
+  0,
+  0.5,
+  0,
+  1,
+  -1,
+  -1,
+  0,
+  0.5,
+  0,
+  1,
+  1,
+  -1,
+  0,
+  0.5,
+  0,
+  1,
+  -1,
+  1,
+  0,
+  0.5,
+  0,
+  1,
+  1,
+  1,
+  0,
+  0.5,
+  0,
+  1,
+  1,
+  1,
+  0,
+  0.5,
+  0,
+  -0.45,
+  1,
+  -0.8,
+  0,
+  0,
+  0,
+  -0.45,
+  1,
+  -0.8,
+  0,
+  0,
+  0,
+  -0.45,
+  1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  -0.8,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  0.6,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  0.6,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  0.8,
+  0,
+  0,
+  0,
+  0.45,
+  1,
+  0.6,
+  0,
+  0,
+  0,
+  0.25,
+  1,
+  0.8,
+  0,
+  0,
+  0,
+  0.25,
+  1,
+  0.8,
+  0,
+  0,
+  0,
+  0.25,
+  1,
+  0.1,
+  0,
+  0,
+  0,
+  0.25,
+  1,
+  0.1,
+  0,
+  0,
+  0,
+  0.25,
+  1,
+  0.6,
+  0,
+  0,
+  0,
+  0.45,
+  1,
+  0.1,
+  0,
+  0,
+  0,
+  0.45,
+  1,
+  0.6,
+  0,
+  0,
+  0,
+  0.45,
+  1,
+  0.6,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  -0.1,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  -0.1,
+  0,
+  0,
+  0,
+  -0.25,
+  1,
+  0.1,
+  0,
+  0,
+  0,
+  0.25,
+  1,
+  -0.1,
+  0,
+  0,
+  0,
+  0.45,
+  1,
+  0.1,
+  0,
+  0,
+  0,
+  0.45,
+  1,
+  0.1,
+  0,
+  0,
+  0,
+  0.45,
+  -1,
+  -0.8,
+  0,
+  0,
+  0,
+  0.45,
+  -1,
+  -0.8,
+  0,
+  0,
+  0,
+  0.05,
+  -1,
+  0.8,
+  0,
+  0,
+  0,
+  0.25,
+  -1,
+  -0.8,
+  0,
+  0,
+  0,
+  -0.15,
+  -1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.15,
+  -1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.25,
+  -1,
+  -0.8,
+  0,
+  0,
+  0,
+  -0.25,
+  -1,
+  -0.8,
+  0,
+  0,
+  0,
+  0.05,
+  -1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.45,
+  -1,
+  -0.8,
+  0,
+  0,
+  0,
+  -0.15,
+  -1,
+  0.8,
+  0,
+  0,
+  0,
+  -0.15,
+  -1,
+  0.8,
+  0,
+  0,
+  0,
+  0.13,
+  -1,
+  -0.3,
+  0,
+  0,
+  0,
+  0.13,
+  -1,
+  -0.3,
+  0,
+  0,
+  0,
+  0.07,
+  -1,
+  -0.1,
+  0,
+  0,
+  0,
+  -0.33,
+  -1,
+  -0.3,
+  0,
+  0,
+  0,
+  -0.27,
+  -1,
+  -0.1,
+  0,
+  0,
+  0,
+  -0.27,
+  -1,
+  -0.1,
+  0,
+  0,
+  0,
+  -0.45,
+  0.6,
+  1,
+  0,
+  0,
+  0,
+  -0.45,
+  0.6,
+  1,
+  0,
+  0,
+  0,
+  -0.45,
+  0.4,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.8,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.4,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.4,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.8,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.8,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.6,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  0.8,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  0.6,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  0.6,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  0.8,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  0.8,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  0.6,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  0.1,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.45,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  0.1,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.45,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.45,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.45,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  -0.1,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  -0.8,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  -0.8,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  -0.25,
+  -0.8,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.8,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.8,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.4,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.4,
+  1,
+  0,
+  0,
+  0,
+  0.25,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  -0.4,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  0.45,
+  -0.6,
+  1,
+  0,
+  0,
+  0,
+  -0.1,
+  -0.8,
+  -1,
+  0,
+  0,
+  0,
+  -0.1,
+  -0.8,
+  -1,
+  0,
+  0,
+  0,
+  -0.1,
+  0.8,
+  -1,
+  0,
+  0,
+  0,
+  0.1,
+  -0.8,
+  -1,
+  0,
+  0,
+  0,
+  0.1,
+  0.8,
+  -1,
+  0,
+  0,
+  0,
+  0.1,
+  0.8,
+  -1,
+  0,
+  0,
+  0,
+  -1,
+  -0.45,
+  -0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.45,
+  -0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.45,
+  0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.25,
+  -0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.25,
+  0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.25,
+  0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.25,
+  -0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.25,
+  -0.8,
+  0,
+  0,
+  0,
+  -1,
+  -0.25,
+  -0.6,
+  0,
+  0,
+  0,
+  -1,
+  0.45,
+  -0.8,
+  0,
+  0,
+  0,
+  -1,
+  0.45,
+  -0.6,
+  0,
+  0,
+  0,
+  -1,
+  0.45,
+  -0.6,
+  0,
+  0,
+  0,
+  1,
+  0.45,
+  -0.8,
+  0,
+  0,
+  0,
+  1,
+  0.45,
+  -0.8,
+  0,
+  0,
+  0,
+  1,
+  0.45,
+  0.8,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  -0.8,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  0.8,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  0.8,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  0.6,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  0.6,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  0.8,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  0.6,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  0.8,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  0.8,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  0.6,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  0.6,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  0.6,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  -0.1,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  -0.1,
+  0,
+  0,
+  0,
+  1,
+  0.25,
+  0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  -0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  -0.8,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  -0.8,
+  0,
+  0,
+  0,
+  1,
+  -0.05,
+  -0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.45,
+  -0.8,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  -0.1,
+  0,
+  0,
+  0,
+  1,
+  -0.25,
+  -0.1,
+  0,
+  0,
+  0
+]);
 var NiivueObject3D = function(id, vertexBuffer, mode, indexCount, indexBuffer = null, vao = null) {
   this.BLEND = 1;
   this.CULL_FACE = 2;
@@ -110428,14 +111481,19 @@ function Niivue(options = {}) {
     trustCalMinMax: true,
     clipPlaneHotKey: "KeyC",
     viewModeHotKey: "KeyV",
+    doubleTouchTimeout: 500,
+    longTouchTimeout: 1e3,
     keyDebounceTime: 50,
     isNearestInterpolation: false,
     isAtlasOutline: false,
     isRuler: false,
     isColorbar: false,
+    isOrientCube: false,
+    multiplanarPadPixels: 0,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     isDragShowsMeasurementTool: false,
+    isDepthPickMesh: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
     isSliceMM: false,
@@ -110446,11 +111504,20 @@ function Niivue(options = {}) {
     penValue: 1,
     isFilledPen: false,
     thumbnail: "",
+    maxDrawUndoBitmaps: 8,
     onLocationChange: () => {
     },
     onIntensityChange: () => {
     },
     onImageLoaded: () => {
+    },
+    onError: () => {
+    },
+    onInfo: () => {
+    },
+    onWarn: () => {
+    },
+    onDebug: () => {
     }
   };
   this.canvas = null;
@@ -110459,8 +111526,6 @@ function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null;
   this.drawBitmap = null;
-  this.maxDrawUndoBitmaps = 8;
-  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps;
   this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0;
@@ -110472,10 +111537,13 @@ function Niivue(options = {}) {
   this.overlayTextureID = [];
   this.sliceShader = null;
   this.sliceMMShader = null;
+  this.orientCubeShader = null;
+  this.orientCubeShaderVAO = null;
   this.rectShader = null;
   this.graphShader = null;
   this.renderShader = null;
-  this.pickingShader = null;
+  this.pickingMeshShader = null;
+  this.pickingImageShader = null;
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
@@ -110495,7 +111563,6 @@ function Niivue(options = {}) {
   this.genericVAO = null;
   this.unusedVAO = null;
   this.crosshairs3D = null;
-  this.pickingSurfaceShader = null;
   this.DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG;
   this.DEFAULT_FONT_METRICS = defaultFontMetrics;
   this.fontMets = null;
@@ -110528,6 +111595,10 @@ function Niivue(options = {}) {
   this.scene.prevY = 0;
   this.scene.currX = 0;
   this.scene.currY = 0;
+  this.currentTouchTime = 0;
+  this.lastTouchTime = 0;
+  this.touchTimer = null;
+  this.doubleTouch = false;
   this.back = {};
   this.overlays = [];
   this.volumes = [];
@@ -110604,6 +111675,7 @@ function Niivue(options = {}) {
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
   }
+  this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps;
   if (this.opts.drawingEnabled) {
     this.createEmptyDrawing();
   }
@@ -110939,7 +112011,27 @@ Niivue.prototype.checkMultitouch = function(e) {
 };
 Niivue.prototype.touchStartListener = function(e) {
   e.preventDefault();
+  if (!this.touchTimer) {
+    this.touchTimer = setTimeout(() => {
+      this.resetBriCon(e);
+    }, this.opts.longTouchTimeout);
+  }
   this.scene.touchdown = true;
+  this.currentTouchTime = new Date().getTime();
+  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
+  if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
+    this.doubleTouch = true;
+    this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
+    this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+    this.resetBriCon(e);
+    this.lastTouchTime = this.currentTouchTime;
+    return;
+  } else {
+    this.doubleTouch = false;
+    this.dragStart = [0, 0];
+    this.dragEnd = [0, 0];
+    this.lastTouchTime = this.currentTouchTime;
+  }
   if (this.scene.touchdown && e.touches.length < 2) {
     this.multiTouchGesture = false;
   } else {
@@ -110947,10 +112039,23 @@ Niivue.prototype.touchStartListener = function(e) {
   }
   setTimeout(this.checkMultitouch.bind(this), 1, e);
 };
-Niivue.prototype.touchEndListener = function() {
+Niivue.prototype.touchEndListener = function(e) {
+  e.preventDefault();
   this.scene.touchdown = false;
   this.lastTwoTouchDistance = 0;
   this.multiTouchGesture = false;
+  if (this.touchTimer) {
+    clearTimeout(this.touchTimer);
+    this.touchTimer = null;
+  }
+  if (this.isDragging) {
+    this.isDragging = false;
+    if (this.opts.isDragShowsMeasurementTool)
+      return;
+    this.calculateNewRange();
+    this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+  }
+  this.drawScene();
 };
 Niivue.prototype.mouseMoveListener = function(e) {
   if (this.scene.mousedown) {
@@ -110969,11 +112074,19 @@ Niivue.prototype.mouseMoveListener = function(e) {
 };
 Niivue.prototype.resetBriCon = function(msg2 = null) {
   let isRender = false;
-  if (this.sliceType === this.sliceTypeRender) {
+  if (this.sliceType === this.sliceTypeRender)
     isRender = true;
-  }
+  let x2 = 0;
+  let y = 0;
   if (msg2 !== null) {
-    if (this.inRenderTile(msg2.offsetX, msg2.offsetY) >= 0)
+    if (msg2.targetTouches !== void 0) {
+      x2 = msg2.targetTouches[0].clientX - msg2.target.getBoundingClientRect().left;
+      y = msg2.targetTouches[0].clientY - msg2.target.getBoundingClientRect().top;
+    } else {
+      x2 = msg2.offsetX;
+      y = msg2.offsetY;
+    }
+    if (this.inRenderTile(x2, y) >= 0)
       isRender = true;
   }
   if (isRender) {
@@ -110982,6 +112095,8 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
     this.drawScene();
     return;
   }
+  if (this.doubleTouch)
+    return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.opts.onIntensityChange(this.volumes[0]);
@@ -110991,6 +112106,12 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
 Niivue.prototype.touchMoveListener = function(e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
+    this.isDragging = true;
+    if (this.doubleTouch && this.isDragging) {
+      this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
+      this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      return;
+    }
     this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
     this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
   } else {
@@ -111090,6 +112211,9 @@ Niivue.prototype.keyDownListener = function(e) {
 Niivue.prototype.wheelListener = function(e) {
   e.preventDefault();
   e.stopPropagation();
+  if (this.thumbnailVisible) {
+    return;
+  }
   var rect = this.canvas.getBoundingClientRect();
   if (e.deltaY < 0) {
     this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top);
@@ -111332,12 +112456,12 @@ Niivue.prototype.drawAddUndoBitmap = async function(fnm) {
     return false;
   }
   this.currentDrawUndoBitmap++;
-  if (this.currentDrawUndoBitmap >= this.maxDrawUndoBitmaps)
+  if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps)
     this.currentDrawUndoBitmap = 0;
   this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap);
 };
 Niivue.prototype.drawClearAllUndoBitmaps = async function() {
-  this.currentDrawUndoBitmap = this.maxDrawUndoBitmaps;
+  this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps;
   if (this.drawUndoBitmaps.length < 1)
     return;
   for (let i2 = this.drawUndoBitmaps.length - 1; i2 >= 0; i2--)
@@ -112551,13 +113675,14 @@ Niivue.prototype.init = async function() {
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.bindVertexArray(this.unusedVAO);
-  this.pickingShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
-  this.pickingShader.use(this.gl);
-  this.gl.uniform1i(this.pickingShader.uniforms["volume"], 0);
-  this.gl.uniform1i(this.pickingShader.uniforms["overlay"], 2);
-  this.pickingShader.mvpUniformLoc = this.pickingShader.uniforms["mvpMtx"];
-  this.pickingShader.rayDirUniformLoc = this.pickingShader.uniforms["rayDir"];
-  this.pickingShader.clipPlaneUniformLoc = this.pickingShader.uniforms["clipPlane"];
+  this.pickingMeshShader = new Shader(this.gl, vertMeshShader, fragMeshDepthShader);
+  this.pickingImageShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
+  this.pickingImageShader.use(this.gl);
+  this.gl.uniform1i(this.pickingImageShader.uniforms["volume"], 0);
+  this.gl.uniform1i(this.pickingImageShader.uniforms["overlay"], 2);
+  this.pickingImageShader.mvpUniformLoc = this.pickingImageShader.uniforms["mvpMtx"];
+  this.pickingImageShader.rayDirUniformLoc = this.pickingImageShader.uniforms["rayDir"];
+  this.pickingImageShader.clipPlaneUniformLoc = this.pickingImageShader.uniforms["clipPlane"];
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
   this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
@@ -112570,6 +113695,21 @@ Niivue.prototype.init = async function() {
   this.gl.uniform1i(this.sliceMMShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
   this.gl.uniform1f(this.sliceMMShader.uniforms["drawOpacity"], this.drawOpacity);
+  this.orientCubeShader = new Shader(this.gl, vertOrientCubeShader, fragOrientCubeShader);
+  let gl = this.gl;
+  this.orientCubeShaderVAO = gl.createVertexArray();
+  gl.bindVertexArray(this.orientCubeShaderVAO);
+  let program = this.orientCubeShader.program;
+  this.orientCubeMtxLoc = gl.getUniformLocation(program, "u_matrix");
+  var positionBuffer = gl.createBuffer();
+  gl.enableVertexAttribArray(0);
+  gl.enableVertexAttribArray(1);
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, orientCube, gl.STATIC_DRAW);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+  gl.bindVertexArray(this.unusedVAO);
   this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader);
   this.lineShader = new Shader(this.gl, vertLineShader, fragRectShader);
   this.graphShader = new Shader(this.gl, vertGraphShader, fragRectShader);
@@ -112588,7 +113728,6 @@ Niivue.prototype.init = async function() {
   this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
   this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
   this.orientShaderRGBU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
-  this.pickingSurfaceShader = new Shader(this.gl, vertRenderShader, fragDepthPickingShader);
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
@@ -112711,8 +113850,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
     this.renderShader.use(this.gl);
     this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox2);
     this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale2);
-    this.renderShader;
-    let pickingShader = this.pickingShader;
+    let pickingShader = this.pickingImageShader;
     pickingShader.use(this.gl);
     this.gl.uniform1i(pickingShader.uniforms["volume"], 0);
     this.gl.uniform1i(pickingShader.uniforms["colormap"], 1);
@@ -112899,9 +114037,9 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   this.gl.uniform4fv(this.renderShader.uniforms["clipPlane"], this.scene.clipPlane);
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
   this.gl.uniform3fv(this.renderShader.uniforms["volScale"], volScale);
-  this.pickingShader.use(this.gl);
-  this.gl.uniform1f(this.pickingShader.uniforms["overlays"], this.overlays.length);
-  this.gl.uniform3fv(this.pickingShader.uniforms["texVox"], vox);
+  this.pickingImageShader.use(this.gl);
+  this.gl.uniform1f(this.pickingImageShader.uniforms["overlays"], this.overlays.length);
+  this.gl.uniform3fv(this.pickingImageShader.uniforms["texVox"], vox);
   this.sliceMMShader.use(this.gl);
   this.gl.uniform1f(this.sliceMMShader.uniforms["overlays"], this.overlays.length);
   this.gl.uniform1f(this.sliceMMShader.uniforms["drawOpacity"], this.drawOpacity);
@@ -113925,7 +115063,7 @@ Niivue.prototype.calculateRayDirection = function(azimuth, elevation) {
     rayDir[2] = tiny;
   return rayDir;
 };
-Niivue.prototype.setPivot3D = function() {
+Niivue.prototype.sceneExtentsMinMax = function() {
   let mn = fromValues$1(0, 0, 0);
   let mx = fromValues$1(0, 0, 0);
   if (this.volumes.length > 0) {
@@ -113943,6 +115081,12 @@ Niivue.prototype.setPivot3D = function() {
       max$T(mx, mx, v);
     }
   }
+  let range = create$1();
+  subtract(range, mx, mn);
+  return [mn, mx, range];
+};
+Niivue.prototype.setPivot3D = function() {
+  let [mn, mx] = this.sceneExtentsMinMax();
   let pivot = create$1();
   add$1(pivot, mn, mx);
   scale(pivot, pivot, 0.5);
@@ -114138,7 +115282,7 @@ Niivue.prototype.drawGraph = function() {
     if (i2 % 2 === 1) {
       thick *= 0.5;
       this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], thinColor, thick);
-    } else if (i2 > 0) {
+    } else {
       let str = humanize(i2);
       if (fntSize > 0)
         this.drawTextBelow([x2, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor);
@@ -114181,6 +115325,113 @@ function isRadiological(mtx) {
   transformMat4(vRotated, vRight, mtx);
   return vRotated[0];
 }
+function unProject(winX, winY, winZ, mvpMatrix) {
+  let inp = fromValues(winX, winY, winZ, 1);
+  let finalMatrix = clone$1(mvpMatrix);
+  invert(finalMatrix, finalMatrix);
+  inp[0] = inp[0] * 2 - 1;
+  inp[1] = inp[1] * 2 - 1;
+  inp[2] = inp[2] * 2 - 1;
+  let out = create();
+  transformMat4(out, inp, finalMatrix);
+  if (out[3] === 0)
+    return out;
+  out[0] /= out[3];
+  out[1] /= out[3];
+  out[2] /= out[3];
+  return out;
+}
+function unpackFloatFromVec4i(val) {
+  var bitSh = [
+    1 / (256 * 256 * 256),
+    1 / (256 * 256),
+    1 / 256,
+    1
+  ];
+  return (val[0] * bitSh[0] + val[1] * bitSh[1] + val[2] * bitSh[2] + val[3] * bitSh[3]) / 255;
+}
+Niivue.prototype.depthPicker = function(leftTopWidthHeight, mvpMatrix) {
+  if (!this.scene.mouseDepthPicker)
+    return;
+  this.scene.mouseDepthPicker = false;
+  let gl = this.gl;
+  const pixelX = this.mousePos[0] * leftTopWidthHeight[2] / leftTopWidthHeight[2];
+  const pixelY = gl.canvas.height - this.mousePos[1] * leftTopWidthHeight[3] / leftTopWidthHeight[3] - 1;
+  console.log(pixelX + "/" + pixelY);
+  const rgbaPixel = new Uint8Array(4);
+  gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgbaPixel);
+  this.selectedObjectId = rgbaPixel[3];
+  if (this.selectedObjectId === this.VOLUME_ID) {
+    this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x2) => x2 / 255);
+    return;
+  }
+  let depthZ = unpackFloatFromVec4i(rgbaPixel);
+  if (depthZ > 1)
+    return;
+  let fracX = (this.mousePos[0] - leftTopWidthHeight[0]) / leftTopWidthHeight[2];
+  let fracY = (gl.canvas.height - this.mousePos[1] - leftTopWidthHeight[1]) / leftTopWidthHeight[3];
+  let mm = unProject(fracX, fracY, depthZ, mvpMatrix);
+  let frac = this.mm2frac(mm);
+  if (frac[0] < 0 || frac[0] > 1 || frac[1] < 0 || frac[1] > 1 || frac[2] < 0 || frac[2] > 1)
+    return;
+  this.scene.crosshairPos = this.mm2frac(mm);
+};
+Niivue.prototype.drawImage3D = function(mvpMatrix, azimuth, elevation) {
+  if (this.volumes.length === 0)
+    return;
+  let gl = this.gl;
+  const rayDir = this.calculateRayDirection(azimuth, elevation);
+  let object3D = this.volumeObject3D;
+  if (object3D) {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.FRONT);
+    let shader = this.renderShader;
+    if (this.scene.mouseDepthPicker)
+      shader = this.pickingImageShader;
+    shader.use(this.gl);
+    gl.uniform1i(shader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
+    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
+    gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
+    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
+    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
+    gl.bindVertexArray(object3D.vao);
+    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+    gl.bindVertexArray(this.unusedVAO);
+  }
+};
+Niivue.prototype.drawOrientationCube = function(leftTopWidthHeight, azimuth = 0, elevation = 0) {
+  if (!this.opts.isOrientCube)
+    return;
+  let sz = 0.05 * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  if (sz < 5)
+    return;
+  let gl = this.gl;
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  this.orientCubeShader.use(this.gl);
+  gl.bindVertexArray(this.orientCubeShaderVAO);
+  function deg2rad2(deg) {
+    return deg * (Math.PI / 180);
+  }
+  let modelMatrix = create$2();
+  let projectionMatrix = create$2();
+  ortho(projectionMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -10 * sz, 10 * sz);
+  translate(modelMatrix, modelMatrix, [
+    1.8 * sz + leftTopWidthHeight[0],
+    1.8 * sz + leftTopWidthHeight[1],
+    0
+  ]);
+  scale$1(modelMatrix, modelMatrix, [sz, sz, sz]);
+  rotateX(modelMatrix, modelMatrix, deg2rad2(270 - elevation));
+  rotateZ(modelMatrix, modelMatrix, deg2rad2(-azimuth));
+  let modelViewProjectionMatrix = create$2();
+  multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
+  gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 168);
+  gl.bindVertexArray(this.unusedVAO);
+};
 Niivue.prototype.draw3D = function(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix = null, modelMatrix, normalMatrix, azimuth = null, elevation) {
   let isMosaic = azimuth !== null;
   this.setPivot3D();
@@ -114216,62 +115467,20 @@ Niivue.prototype.draw3D = function(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0);
-  if (this.volumes.length === 0) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    this.drawMesh3D(true, 1, mvpMatrix, modelMatrix, normalMatrix);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    return;
-  }
-  const rayDir = this.calculateRayDirection(azimuth, elevation);
-  let object3D = this.volumeObject3D;
-  if (this.scene.mouseDepthPicker) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    this.scene.mouseDepthPicker = false;
-    if (object3D.isVisible && object3D.isPickable) {
-      let shader = this.pickingShader;
-      shader.use(this.gl);
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.FRONT);
-      gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
-      gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
-      gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
-      gl.uniform1i(shader.uniforms["id"], object3D.id);
-      gl.bindVertexArray(object3D.vao);
-      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
-      gl.bindVertexArray(this.unusedVAO);
-    }
-    const pixelX = this.mousePos[0] * leftTopWidthHeight[2] / leftTopWidthHeight[2];
-    const pixelY = gl.canvas.height - this.mousePos[1] * leftTopWidthHeight[3] / leftTopWidthHeight[3] - 1;
-    const rgbaPixel = new Uint8Array(4);
-    gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgbaPixel);
-    this.selectedObjectId = rgbaPixel[3];
-    if (this.selectedObjectId === this.VOLUME_ID) {
-      this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x2) => x2 / 255);
-    }
-  }
-  if (this.volumeObject3D.isVisible) {
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.FRONT);
-    let shader = this.renderShader;
-    shader.use(this.gl);
-    gl.uniform1i(shader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
-    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
-    gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
-    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
-    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
-    gl.bindVertexArray(object3D.vao);
-    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
-    gl.bindVertexArray(this.unusedVAO);
-  }
+  if (this.volumes.length > 0)
+    this.drawImage3D(mvpMatrix, azimuth, elevation);
   if (!isMosaic)
     this.drawCrosshairs3D(true, 1, mvpMatrix);
   this.drawMesh3D(true, 1, mvpMatrix, modelMatrix, normalMatrix);
+  if (this.scene.mouseDepthPicker) {
+    this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
+    return;
+  }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
   if (!isMosaic)
     this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
   this.drawGraph();
   this.readyForSync = true;
@@ -114296,11 +115505,14 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
     gl.depthFunc(gl.ALWAYS);
   }
   gl.disable(gl.CULL_FACE);
-  this.meshShader.use(this.gl);
-  gl.uniformMatrix4fv(this.meshShader.uniforms["mvpMtx"], false, m);
-  gl.uniformMatrix4fv(this.meshShader.uniforms["modelMtx"], false, modelMtx);
-  gl.uniformMatrix4fv(this.meshShader.uniforms["normMtx"], false, normMtx);
-  gl.uniform1f(this.meshShader.uniforms["opacity"], alpha);
+  let shader = this.meshShader;
+  if (this.scene.mouseDepthPicker)
+    shader = this.pickingMeshShader;
+  shader.use(this.gl);
+  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
+  gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
+  gl.uniform1f(shader.uniforms["opacity"], alpha);
   let hasFibers = false;
   for (let i2 = 0; i2 < this.meshes.length; i2++) {
     if (this.meshes[i2].indexCount < 3)
@@ -114318,7 +115530,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
     gl.depthFunc(gl.ALWAYS);
     return;
   }
-  let shader = this.fiberShader;
+  shader = this.fiberShader;
   shader.use(this.gl);
   gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
   gl.uniform1f(shader.uniforms["opacity"], alpha);
@@ -114345,8 +115557,13 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpM
       gl.deleteBuffer(this.crosshairs3D.indexBuffer);
       gl.deleteBuffer(this.crosshairs3D.vertexBuffer);
     }
-    let radius = 0.5 * Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3]);
-    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, this.volumeObject3D.extentsMin, this.volumeObject3D.extentsMax, radius);
+    let [mn, mx, range] = this.sceneExtentsMinMax();
+    let radius = 1;
+    if (this.volumes.length > 0)
+      radius = 0.5 * Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3]);
+    else if (range[0] < 50 || range[0] > 1e3)
+      radius = range[0] * 0.02;
+    this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius);
     this.crosshairs3D.mm = mm;
   }
   let crosshairsShader = this.surfaceShader;
@@ -114373,6 +115590,14 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpM
   gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
+  if (this.volumes.length < 1) {
+    let frac2 = [0.1, 0.5, 0.5];
+    let [mn, mx, range] = this.sceneExtentsMinMax();
+    frac2[0] = (mm[0] - mn[0]) / range[0];
+    frac2[1] = (mm[1] - mn[1]) / range[1];
+    frac2[2] = (mm[2] - mn[2]) / range[2];
+    return frac2;
+  }
   let mm4 = fromValues(mm[0], mm[1], mm[2], 1);
   let d = this.volumes[volIdx].dimsRAS;
   let frac = [0, 0, 0];
@@ -114416,7 +115641,15 @@ Niivue.prototype.moveCrosshairInVox = function(x2, y, z) {
 };
 Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
   let pos = fromValues(frac[0], frac[1], frac[2], 1);
-  transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
+  if (this.volumes.length > 0)
+    transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
+  else {
+    let [mn, mx] = this.sceneExtentsMinMax();
+    const lerp2 = (x2, y, a) => x2 * (1 - a) + y * a;
+    pos[0] = lerp2(mn[0], mx[0], frac[0]);
+    pos[1] = lerp2(mn[1], mx[1], frac[1]);
+    pos[2] = lerp2(mn[2], mx[2], frac[2]);
+  }
   return pos;
 };
 Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2) {
@@ -114478,15 +115711,17 @@ Niivue.prototype.canvasPos2frac = function(canvasPos) {
   }
   return [-1, -1, -1];
 };
-Niivue.prototype.scaleSlice = function(w, h) {
-  let scalePix = this.gl.canvas.clientWidth / w;
-  if (h * scalePix > this.effectiveCanvasHeight())
-    scalePix = this.effectiveCanvasHeight() / h;
+Niivue.prototype.scaleSlice = function(w, h, widthPadPixels = 0, heightPadPixels = 0) {
+  let canvasW = this.gl.canvas.clientWidth - widthPadPixels;
+  let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
+  let scalePix = canvasW / w;
+  if (h * scalePix > canvasH)
+    scalePix = canvasH / h;
   let wPix = w * scalePix;
   let hPix = h * scalePix;
   let leftTopWidthHeight = [
-    (this.gl.canvas.clientWidth - wPix) * 0.5,
-    (this.effectiveCanvasHeight() - hPix) * 0.5,
+    (canvasW - wPix) * 0.5,
+    (canvasH - hPix) * 0.5,
     wPix,
     hPix
   ];
@@ -114825,7 +116060,7 @@ Niivue.prototype.drawScene = function() {
   }
   this.colorbarHeight = 0;
   this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3]);
-  this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+  this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   if (this.bmpTexture) {
     this.drawThumbnail();
     return;
@@ -114876,11 +116111,12 @@ Niivue.prototype.drawScene = function() {
       this.draw2D([0, 0, 0, 0], 2);
     } else {
       let { volScale, vox, longestAxis } = this.sliceScale();
-      let ltwh = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2]);
+      let pad = this.opts.multiplanarPadPixels;
+      let ltwh = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1);
       let wX = ltwh[2] * volScale[0] / (volScale[0] + volScale[1]);
-      let ltwh3x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1], Math.max(volScale[1], volScale[2]));
+      let ltwh3x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1], Math.max(volScale[1], volScale[2]), pad * 2);
       let mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0]);
-      let ltwh4x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1] + mx, mx);
+      let ltwh4x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1] + mx, mx, pad * 3);
       let wX1 = ltwh3x1[2] * volScale[0] / (volScale[0] + volScale[0] + volScale[1]);
       if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
         let pixScale = wX1 / volScale[0];
@@ -114889,24 +116125,24 @@ Niivue.prototype.drawScene = function() {
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
           this.draw3D([
-            ltwh3x1[0] + wX1 + wX1 + hY1,
+            ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
             ltwh3x1[1],
             ltwh4x1[3],
             ltwh4x1[3]
           ]);
         }
         this.draw2D([ltwh3x1[0], ltwh3x1[1], wX1, hY1], 0);
-        this.draw2D([ltwh3x1[0] + wX1, ltwh3x1[1], wX1, hZ1], 1);
-        this.draw2D([ltwh3x1[0] + wX1 + wX1, ltwh3x1[1], hY1, hZ1], 2);
+        this.draw2D([ltwh3x1[0] + wX1 + pad, ltwh3x1[1], wX1, hZ1], 1);
+        this.draw2D([ltwh3x1[0] + wX1 + wX1 + pad * 2, ltwh3x1[1], hY1, hZ1], 2);
       } else {
         let wY = ltwh[2] - wX;
         let hY = ltwh[3] * volScale[1] / (volScale[1] + volScale[2]);
         let hZ = ltwh[3] - hY;
-        this.draw2D([ltwh[0], ltwh[1] + hZ, wX, hY], 0);
+        this.draw2D([ltwh[0], ltwh[1] + hZ + pad, wX, hY], 0);
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
-        this.draw2D([ltwh[0] + wX, ltwh[1], wY, hZ], 2);
+        this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
         if (!this.graph.autoSizeMultiplanar)
-          this.draw3D([ltwh[0] + wX, ltwh[1] + hZ, wY, hY]);
+          this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       }
     }
   }
