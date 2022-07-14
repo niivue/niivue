@@ -663,8 +663,10 @@ Niivue.prototype.resizeListener = function () {
   //https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
   //https://www.khronos.org/webgl/wiki/HandlingHighDPI
   if (this.opts.isHighResolutionCapable) dpr = window.devicePixelRatio || 1;
-  this.canvas.width = this.canvas.offsetWidth * dpr;
-  this.canvas.height = this.canvas.offsetHeight * dpr;
+  //this.canvas.width = this.canvas.offsetWidth * dpr;
+  //this.canvas.height = this.canvas.offsetHeight * dpr;
+  this.canvas.width = this.canvas.parentElement.width * dpr;
+  this.canvas.height = this.canvas.parentElement.height * dpr;
   this.drawScene();
 };
 
