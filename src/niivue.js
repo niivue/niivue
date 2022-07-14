@@ -60,7 +60,7 @@ import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
-export {colortables} from './colortables'
+export { colortables } from "./colortables";
 import { webSocket } from "rxjs/webSocket";
 import { interval } from "rxjs";
 
