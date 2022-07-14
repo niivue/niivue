@@ -55,6 +55,8 @@
       <label for="check2">Radiological</label>
       <input type="checkbox" id="check3" name="check3" checked>
       <label for="check3">World space</label>
+      <input type="checkbox" id="check10" name="check10" checked>
+      <label for="check10">HighDPI</label>
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
@@ -92,6 +94,10 @@
       document.getElementById("check1").addEventListener("change", doCheckClick);
       function doCheckClick() {
         nv1.drawFillOverwrites = this.checked;
+      }
+      document.getElementById("check10").addEventListener("change", doCheck10Click);
+      function doCheck10Click() {
+        nv1.setHighResolutionCapable(this.checked);
       }
       document.getElementById("drawPen").addEventListener("change", doDrawPen);
       function doDrawPen(){
@@ -186,7 +192,7 @@
       nv1.setSliceMM(true)
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      //
+      nv1.setHighResolutionCapable(true)
       //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
       nv1.getDescriptives(0, false);
