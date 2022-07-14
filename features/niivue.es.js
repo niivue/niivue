@@ -106818,7 +106818,7 @@ colortables.prototype.colormap = function(lutName = "") {
   return this.makeLut(cmaps[defaultLutName].R, cmaps[defaultLutName].G, cmaps[defaultLutName].B, cmaps[defaultLutName].A, cmaps[defaultLutName].I);
 };
 colortables.prototype.colormapFromKey = function(name) {
-  let availMaps = luts.colorMaps();
+  let availMaps = this.colorMaps();
   for (let i2 = 0; i2 < availMaps.length; i2++) {
     let key2 = availMaps[i2];
     if (name.toLowerCase() === key2.toLowerCase()) {
@@ -114128,12 +114128,12 @@ Niivue.prototype.refreshColormaps = function() {
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-  let luts2 = this.colormap(this.volumes[0].colorMap);
+  let luts = this.colormap(this.volumes[0].colorMap);
   function addColormap(lut) {
-    let c2 = new Uint8ClampedArray(luts2.length + lut.length);
-    c2.set(luts2);
-    c2.set(lut, luts2.length);
-    luts2 = c2;
+    let c2 = new Uint8ClampedArray(luts.length + lut.length);
+    c2.set(luts);
+    c2.set(lut, luts.length);
+    luts = c2;
   }
   for (let i2 = 1; i2 < nLayer; i2++)
     addColormap(this.colormap(this.volumes[i2].colorMap));
@@ -114152,7 +114152,7 @@ Niivue.prototype.refreshColormaps = function() {
       lut = this.colormap(this.volumes[i2].colorMapNegative);
     addColormap(lut);
   }
-  this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nLayer * 2, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts2);
+  this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nLayer * 2, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts);
   return this;
 };
 Niivue.prototype.sliceScale = function() {
@@ -116198,4 +116198,4 @@ Niivue.prototype.drawScene = function() {
   this.readyForSync = true;
   return posString;
 };
-export { NVImage, NVMesh, Niivue };
+export { NVImage, NVMesh, Niivue, colortables };
