@@ -111872,7 +111872,6 @@ Niivue.prototype.resizeListener = function() {
     dpr = window.devicePixelRatio || 1;
   this.canvas.width = this.canvas.offsetWidth * dpr;
   this.canvas.height = this.canvas.offsetHeight * dpr;
-  console.log("RESIZE" + dpr);
   this.drawScene();
 };
 Niivue.prototype.getRelativeMousePosition = function(event, target) {
@@ -112812,6 +112811,11 @@ Niivue.prototype.setClipPlane = function(depthAzimuthElevation) {
 };
 Niivue.prototype.setCrosshairColor = function(color) {
   this.opts.crosshairColor = color;
+  this.drawScene();
+};
+Niivue.prototype.setCrosshairWidth = function(crosshairWidth) {
+  this.opts.crosshairWidth = crosshairWidth;
+  this.crosshairs3D.mm[0] = NaN;
   this.drawScene();
 };
 Niivue.prototype.setDrawingEnabled = function(trueOrFalse) {
@@ -114906,7 +114910,7 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
     fovMM: obj.fovMM
   });
   if (isNaN(customMM)) {
-    this.drawCrosshairs3D(true, 1, obj.modelViewProjectionMatrix);
+    this.drawCrosshairs3D(true, 1, obj.modelViewProjectionMatrix, true);
   }
   if (this.opts.meshThicknessOn2D > 0) {
     if (this.opts.meshThicknessOn2D !== Infinity)
@@ -114914,7 +114918,7 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
     this.drawMesh3D(true, 1, obj.modelViewProjectionMatrix, obj.modelMatrix, obj.normalMatrix);
   }
   if (isNaN(customMM))
-    this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix);
+    this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true);
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 };
@@ -115563,8 +115567,10 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
   gl.depthFunc(gl.ALWAYS);
   this.readyForSync = true;
 };
-Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpMtx = null) {
-  if (!this.opts.show3Dcrosshair)
+Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpMtx = null, is2DView = false) {
+  if (!this.opts.show3Dcrosshair && !is2DView)
+    return;
+  if (this.opts.crosshairWidth <= 0 && is2DView)
     return;
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos);
@@ -115579,6 +115585,7 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpM
       radius = 0.5 * Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3]);
     else if (range[0] < 50 || range[0] > 1e3)
       radius = range[0] * 0.02;
+    radius *= this.opts.crosshairWidth;
     this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius);
     this.crosshairs3D.mm = mm;
   }
@@ -116127,7 +116134,9 @@ Niivue.prototype.drawScene = function() {
       this.draw2D([0, 0, 0, 0], 2);
     } else {
       let { volScale, vox, longestAxis } = this.sliceScale();
-      let pad = this.opts.multiplanarPadPixels;
+      if (typeof this.opts.multiplanarPadPixels !== "number")
+        console.log("multiplanarPadPixels must be numeric");
+      let pad = parseFloat(this.opts.multiplanarPadPixels);
       let ltwh = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1);
       let wX = ltwh[2] * volScale[0] / (volScale[0] + volScale[1]);
       let ltwh3x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1], Math.max(volScale[1], volScale[2]), pad * 2);
