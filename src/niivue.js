@@ -2105,7 +2105,7 @@ Niivue.prototype.setCrosshairWidth = function (crosshairWidth) {
   this.opts.crosshairWidth = crosshairWidth;
   //this.opts.crosshairWidth = crosshairWidth;
   this.crosshairs3D.mm[0] = NaN; //force redraw
-  this.drawScene(); //okra
+  this.drawScene();
 }; // setCrosshairColor()
 
 Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
@@ -2407,7 +2407,6 @@ Niivue.prototype.createEmptyDrawing = function () {
   this.drawBitmap = new Uint8Array(vx);
   this.drawClearAllUndoBitmaps();
   this.drawAddUndoBitmap();
-  //this.drawUndoBitmap = null;
   this.drawTexture = this.r8Tex(
     this.drawTexture,
     this.gl.TEXTURE7,
@@ -3435,6 +3434,7 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.pickingImageShader.uniforms["volume"], 0);
   //this.gl.uniform1i(pickingShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.pickingImageShader.uniforms["overlay"], 2);
+  this.gl.uniform1i(this.pickingImageShader.uniforms["drawing"], 7);
   this.pickingImageShader.mvpUniformLoc =
     this.pickingImageShader.uniforms["mvpMtx"];
   this.pickingImageShader.rayDirUniformLoc =
@@ -3496,6 +3496,7 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
   //this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1); //orient shader applies colormap
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
+  this.gl.uniform1i(this.renderShader.uniforms["drawing"], 7);
   (this.renderShader.mvpUniformLoc = this.renderShader.uniforms["mvpMtx"]),
     (this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"]);
   (this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"]),
@@ -6048,13 +6049,15 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     let shader = this.renderShader;
-    //shader = this.pickingImageShader;
     if (this.scene.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);
     gl.uniform1i(
       shader.uniforms["backgroundMasksOverlays"],
       this.backgroundMasksOverlays
     );
+    if (this.drawBitmap && this.drawBitmap.length > 8)
+      gl.uniform1f(shader.uniforms["drawOpacity"], this.drawOpacity);
+    else gl.uniform1f(shader.uniforms["drawOpacity"], 0.0);
     gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
