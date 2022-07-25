@@ -43,7 +43,7 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
-      var slider = document.getElementById("meshSlider");
+      var slider = document.getElementById("meshSlider")
       slider.oninput = function() {
         nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'frame4D', this.value)
       }

@@ -12,13 +12,11 @@
     }
   </style>
 </head>
-
 <body style="font-family: sans-serif;">
   <div id="app">
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         hot reloadable development preview
@@ -57,14 +55,12 @@
       <label for="check7">Colorbar</label>
       <input type="checkbox" id="check8" name="check8" checked>
       <label for="check8">Negative colors</label>
-
         <label for="mode">Display:</label>
         <select name="mode" id="mode">
           <option value="FA">FA</option>
           <option value="V1">V1</option>
           <option value="MV1">V1 modulated by FA</option>
         </select>
-
     </section>
     <!-- demo 1 -->
     <section>
@@ -73,106 +69,102 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p id="location"></p>
     </section>
-
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
-     var slider = document.getElementById("gamma");
+     var slider = document.getElementById("gamma")
       slider.oninput = function() {
         nv1.setGamma(0.1 * this.value)
       }
       function doSlider() {
-        var sx = document.getElementById("xSlider");
-        var sy = document.getElementById("ySlider");
-        var sz =document.getElementById("zSlider");
-        var szoom =document.getElementById("zoomSlider");
-
+        var sx = document.getElementById("xSlider")
+        var sy = document.getElementById("ySlider")
+        var sz =document.getElementById("zSlider")
+        var szoom =document.getElementById("zoomSlider")
         nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), parseInt(sz.value), 0.1 * parseInt(szoom.value)])
       }
-      var xslider = document.getElementById("xSlider");
+      var xslider = document.getElementById("xSlider")
       xslider.oninput = function() {
         doSlider()
       }
-      var yslider = document.getElementById("ySlider");
+      var yslider = document.getElementById("ySlider")
       yslider.oninput = function() {
         doSlider()
       }
-      var zslider = document.getElementById("zSlider");
+      var zslider = document.getElementById("zSlider")
       zslider.oninput = function() {
         doSlider()
       }
-      var zoomslider = document.getElementById("zoomSlider");
+      var zoomslider = document.getElementById("zoomSlider")
       zoomslider.oninput = function() {
         doSlider()
       }
-      var dxslider = document.getElementById("dxSlider");
+      var dxslider = document.getElementById("dxSlider")
       dxslider.oninput = function() {
-        let dx = parseFloat(this.value);
+        let dx = parseFloat(this.value)
         if (dx > 10)
-          dx = Infinity;
-        nv1.setMeshThicknessOn2D(dx);
+          dx = Infinity
+        nv1.setMeshThicknessOn2D(dx)
       }
-      document.getElementById("check1").addEventListener("change", doCheckClick);
+      document.getElementById("check1").addEventListener("change", doCheckClick)
       function doCheckClick() {
-        nv1.setRadiologicalConvention(this.checked);
+        nv1.setRadiologicalConvention(this.checked)
       }
-      document.getElementById("check2").addEventListener("change", doCheck2Click);
+      document.getElementById("check2").addEventListener("change", doCheck2Click)
       function doCheck2Click() {
-        nv1.setCornerOrientationText(this.checked);
+        nv1.setCornerOrientationText(this.checked)
       }
-      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      document.getElementById("check3").addEventListener("change", doCheck3Click)
       function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
+        nv1.setSliceMM(this.checked)
       }
-      document.getElementById("check4").addEventListener("change", doCheck4Click);
+      document.getElementById("check4").addEventListener("change", doCheck4Click)
       function doCheck4Click() {
-        nv1.opts.isDragShowsMeasurementTool = this.checked;
+        nv1.opts.isDragShowsMeasurementTool = this.checked
       }      
-      document.getElementById("check5").addEventListener("change", doCheck5Click);
+      document.getElementById("check5").addEventListener("change", doCheck5Click)
       function doCheck5Click() {
-        nv1.opts.isRuler = this.checked;
-        nv1.drawScene();
+        nv1.opts.isRuler = this.checked
+        nv1.drawScene()
       }
-      document.getElementById("check6").addEventListener("change", doCheck6Click);
+      document.getElementById("check6").addEventListener("change", doCheck6Click)
       function doCheck6Click() {
-        nv1.opts.sagittalNoseLeft = this.checked;
-        nv1.drawScene();
+        nv1.opts.sagittalNoseLeft = this.checked
+        nv1.drawScene()
       }
-      document.getElementById("check7").addEventListener("change", doCheck7Click);
+      document.getElementById("check7").addEventListener("change", doCheck7Click)
       function doCheck7Click() {
-        nv1.opts.isColorbar = this.checked;
-        nv1.drawScene();
+        nv1.opts.isColorbar = this.checked
+        nv1.drawScene()
       }
-     document.getElementById("check8").addEventListener("change", doCheck8Click);
+     document.getElementById("check8").addEventListener("change", doCheck8Click)
      function doCheck8Click() {
        if (this.checked)
-        nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
+        nv1.setColorMapNegative(nv1.volumes[1].id,"winter")
        else
-        nv1.setColorMapNegative(nv1.volumes[1].id,"");
-       nv1.drawScene();
+        nv1.setColorMapNegative(nv1.volumes[1].id,"")
+       nv1.drawScene()
      }
-      var drop = document.getElementById("mode");
+      var drop = document.getElementById("mode")
       drop.onchange = function() {
-        let mode = document.getElementById("mode").selectedIndex;
+        let mode = document.getElementById("mode").selectedIndex
         if (mode === 0) 
-          nv1.setOpacity(1, 1.0);
+          nv1.setOpacity(1, 1.0)
         else
           nv1.setOpacity(1, 0.0)
-
         if (mode === 2) 
-          nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
+          nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id)
         else
-          nv1.setModulationImage(nv1.volumes[0].id, null);
+          nv1.setModulationImage(nv1.volumes[0].id, null)
       }
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
       let query = window.location.search
-      const params = new URLSearchParams(query);
+      const params = new URLSearchParams(query)
       let url = params.get('url')
       var volumeList1 = [
         {
@@ -201,9 +193,8 @@
       //nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(90,10)
-      await nv1.loadVolumes(volumeList1);
-      nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
-      
+      await nv1.loadVolumes(volumeList1)
+      nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id)
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
         document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
@@ -211,11 +202,6 @@
    nv1.on('intensityRange', (image) => {
     console.log(image.cal_min, image.cal_max)
    })
-
-   setTimeout(() => {
-    //nv1.saveImage('test.nii.gz') 
-   }, 2000)
-  
   </script>
   </div>
 </body>

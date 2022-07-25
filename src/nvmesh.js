@@ -1,32 +1,36 @@
 //import * as gifti from "gifti-reader-js/release/current/gifti-reader";
 import * as fflate from "fflate";
 import { v4 as uuidv4 } from "uuid";
-import * as cmaps from "./cmaps";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
-import { mat3, mat4, vec3, vec4 } from "gl-matrix";
+import { mat4, vec3, vec4 } from "gl-matrix";
 import { colortables } from "./colortables";
 const cmapper = new colortables();
 const log = new Log();
+
 /**
  * @class NVMesh
  * @type NVMesh
  * @description
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  * @constructor
- * @param {array} dataBuffer an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
+ * @param {array} pts a 3xN array of vertex positions (X,Y,Z coordinates).
+ * @param {array} tris a 3xN array of triangle indices (I,J,K; indexed from zero). Each triangle generated from three vertices.
  * @param {string} [name=''] a name for this image. Default is an empty string
+ * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
- * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
- * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
- * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @param {WebGLRenderingContext} gl - WebGL rendering context
+ * @param {JSON structure} connectome specify connectome edges and nodes. Default is null (not a connectome).
+ * @property {array} dpg Data per group for tractography, see TRK format. Default is null (not tractograpgy)
+ * @property {array} dps  Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
+ * @property {array} dpv Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
  */
 export function NVMesh(
   pts,
   tris,
   name = "",
-  rgba255 = [1, 0, 0, 0],
+  rgba255 = [255, 255, 255, 255],
   opacity = 1.0,
   visible = true,
   gl,
@@ -101,9 +105,10 @@ export function NVMesh(
   gl.bindVertexArray(null); // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
 }
 
+// not included in public docs
+// internal function filters tractogram to identify which color and visibility of streamlines
 NVMesh.prototype.updateFibers = function (gl) {
   if (!this.offsetPt0 || !this.fiberLength) return;
-  //VERTICES:
   let pts = this.pts;
   let offsetPt0 = this.offsetPt0;
   let n_count = offsetPt0.length - 1;
@@ -293,6 +298,8 @@ NVMesh.prototype.updateFibers = function (gl) {
   );
 };
 
+// not included in public docs
+// internal function filters connectome to identify which color, size and visibility of nodes and edges
 NVMesh.prototype.updateConnectome = function (gl) {
   //draw nodes
   let json = this;
@@ -387,6 +394,8 @@ NVMesh.prototype.updateConnectome = function (gl) {
   this.indexCount = tris.length;
 };
 
+// not included in public docs
+// internal function filters mesh to identify which color of triangulated mesh vertices
 NVMesh.prototype.updateMesh = function (gl) {
   if (this.offsetPt0) {
     this.updateFibers(gl);
@@ -475,6 +484,8 @@ NVMesh.prototype.updateMesh = function (gl) {
   this.vertexCount = this.pts.length;
 };
 
+// not included in public docs
+// reverse triangle winding of mesh (swap front and back faces). invoked by niivue.reverseFaces()
 NVMesh.prototype.reverseFaces = function (gl) {
   if (this.offsetPt0) return; //fiber not mesh
   if (this.hasConnectome) return; //connectome not mesh
@@ -487,6 +498,8 @@ NVMesh.prototype.reverseFaces = function (gl) {
   this.updateMesh(gl); //apply the new properties...
 };
 
+// not included in public docs
+// adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
 NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   let layer = this.layers[id];
   if (!layer.hasOwnProperty(key)) {
@@ -496,6 +509,9 @@ NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   layer[key] = val;
   this.updateMesh(gl); //apply the new properties...
 };
+
+// not included in public docs
+// adjust mesh attributes. invoked by niivue.setMeshProperty(()
 NVMesh.prototype.setProperty = function (key, val, gl) {
   if (!this.hasOwnProperty(key)) {
     console.log("mesh does not have property ", key, this);
@@ -505,6 +521,8 @@ NVMesh.prototype.setProperty = function (key, val, gl) {
   this.updateMesh(gl); //apply the new properties...
 };
 
+// not included in public docs
+// return spatial extremes for vertices
 function getExtents(pts) {
   //each vertex has 3 coordinates: XYZ
   let mxDx = 0.0;
@@ -521,6 +539,9 @@ function getExtents(pts) {
   return { mxDx, extentsMin, extentsMax };
 }
 
+// not included in public docs
+// determine vector orthogonal to plane defined by triangle
+// triangle winding determines front/back face
 function generateNormals(pts, tris) {
   //from https://github.com/rii-mango/Papaya
   /*
@@ -553,7 +574,7 @@ following conditions are met:
     p2 = [],
     p3 = [],
     normal = [],
-    nn = [],
+    //nn = [],
     ctr,
     normalsDataLength = pts.length,
     numIndices,
@@ -628,9 +649,10 @@ following conditions are met:
   return norms;
 }
 
+// not included in public docs
+// Each streamline vertex has color, normal and position attributes
+// Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
 NVMesh.prototype.generatePosNormClr = function (pts, tris, rgba255) {
-  //Each streamline vertex has color, normal and position attributes
-  //Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
   if (pts.length < 3 || rgba255.length < 4)
     log.error("Catastrophic failure generatePosNormClr()");
   let norms = generateNormals(pts, tris);
@@ -661,6 +683,8 @@ NVMesh.prototype.generatePosNormClr = function (pts, tris, rgba255) {
   return f32;
 };
 
+// not included in public docs
+// read undocumented AFNI tract.niml format streamlines
 NVMesh.readTRACT = function (buffer) {
   let len = buffer.byteLength;
   if (len < 20)
@@ -706,7 +730,7 @@ NVMesh.readTRACT = function (buffer) {
     let isLittleEndian = line.includes("binary.lsbfirst");
     //console.log(new_tracts, pos, isLittleEndian);
     for (let i = 0; i < new_tracts; i++) {
-      let id = reader.getUint32(pos, isLittleEndian);
+      //let id = reader.getUint32(pos, isLittleEndian);
       pos += 4;
       let new_pts = reader.getUint32(pos, isLittleEndian) / 3;
       pos += 4;
@@ -732,8 +756,10 @@ NVMesh.readTRACT = function (buffer) {
   };
 }; // readTRACT()
 
+// not included in public docs
+// read mrtrix tck format streamlines
+// https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
 NVMesh.readTCK = function (buffer) {
-  //https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be TCK: bytes = " + len);
   var bytes = new Uint8Array(buffer);
@@ -784,8 +810,10 @@ NVMesh.readTCK = function (buffer) {
   };
 }; //readTCK()
 
+// not included in public docs
+// read trackvis trk format streamlines
+// http://trackvis.org/docs/?subsect=fileformat
 NVMesh.readTRK = function (buffer) {
-  // http://trackvis.org/docs/?subsect=fileformat
   // http://www.tractometer.org/fiberweb/
   // https://github.com/xtk/X/tree/master/io
   // in practice, always little endian
@@ -924,6 +952,8 @@ NVMesh.readTRK = function (buffer) {
   };
 }; //readTRK()
 
+// not included in public docs
+// read legacy VTK text format file
 function readTxtVTK(buffer) {
   var enc = new TextDecoder("utf-8");
   var txt = enc.decode(buffer);
@@ -1064,8 +1094,10 @@ function readTxtVTK(buffer) {
   };
 } // readTxtVTK()
 
+// not included in public docs
+// read brainvoyager smp format file
+// https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files
 NVMesh.readSMP = function (buffer, n_vert) {
-  //https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files
   let len = buffer.byteLength;
   var reader = new DataView(buffer);
   let vers = reader.getUint16(0, true);
@@ -1180,15 +1212,16 @@ NVMesh.readSMP = function (buffer, n_vert) {
   return scalars;
 }; //readSMP()
 
+// not included in public docs
+// read mne stc format file, not to be confused with brainvoyager stc format
+// https://github.com/mne-tools/mne-python/blob/main/mne/source_estimate.py#L211-L365
 NVMesh.readSTC = function (buffer, n_vert) {
-  //mne STC format
-  //https://github.com/mne-tools/mne-python/blob/main/mne/source_estimate.py#L211-L365
   //https://github.com/fahsuanlin/fhlin_toolbox/blob/400cb73cda4880d9ad7841d9dd68e4e9762976bf/codes/inverse_read_stc.m
-  let len = buffer.byteLength;
+  //let len = buffer.byteLength;
   var reader = new DataView(buffer);
   //first 12 bytes are header
-  let epoch_begin_latency = reader.getFloat32(0, false);
-  let sample_period = reader.getFloat32(4, false);
+  //let epoch_begin_latency = reader.getFloat32(0, false);
+  //let sample_period = reader.getFloat32(4, false);
   let n_vertex = reader.getInt32(8, false);
   if (n_vertex !== n_vert) {
     console.log("Overlay has " + n_vertex + " vertices, expected " + n_vert);
@@ -1208,17 +1241,18 @@ NVMesh.readSTC = function (buffer, n_vert) {
   return f32;
 }; // readSTC()
 
+// not included in public docs
+// read freesurfer curv big-endian format
+// https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bpial/readPial.m
+// http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
 NVMesh.readCURV = function (buffer, n_vert) {
-  //simple format used by Freesurfer  BIG-ENDIAN
-  // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bpial/readPial.m
-  // http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let sig0 = view.getUint8(0);
   let sig1 = view.getUint8(1);
   let sig2 = view.getUint8(2);
   let n_vertex = view.getUint32(3, false);
-  let num_f = view.getUint32(7, false);
+  //let num_f = view.getUint32(7, false);
   let n_time = view.getUint32(11, false);
   if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255)
     log.debug(
@@ -1252,9 +1286,10 @@ NVMesh.readCURV = function (buffer, n_vert) {
   return f32;
 }; // readCURV()
 
+// not included in public docs
+// read freesurfer Annotation file provides vertex colors
+// https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
 NVMesh.readANNOT = function (buffer, n_vert) {
-  //freesurfer Annotation file provides vertex colors
-  //  https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let n_vertex = view.getUint32(0, false);
@@ -1278,8 +1313,10 @@ NVMesh.readANNOT = function (buffer, n_vert) {
   return rgba32;
 }; // readANNOT()
 
+// not included in public docs
+// read BrainNet viewer format
+// https://www.nitrc.org/projects/bnv/
 NVMesh.readNV = function (buffer) {
-  //BrainNet viewer format https://www.nitrc.org/projects/bnv/
   //n.b. clockwise triangle winding, indexed from 1
   let len = buffer.byteLength;
   var bytes = new Uint8Array(buffer);
@@ -1330,9 +1367,12 @@ NVMesh.readNV = function (buffer) {
     indices,
   };
 }; // readNV()
+
+// not included in public docs
+// read ASCII Patch File format
+// https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/demos/Bootcamp/CD.html#cd
+// http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
 NVMesh.readASC = function (buffer) {
-  //SUMA ASCII format https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/demos/Bootcamp/CD.html#cd
-  //http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
   let len = buffer.byteLength;
   var bytes = new Uint8Array(buffer);
   let pos = 0;
@@ -1376,6 +1416,8 @@ NVMesh.readASC = function (buffer) {
   };
 }; // readASC()
 
+// not included in public docs
+// read legacy VTK format
 NVMesh.readVTK = function (buffer) {
   let len = buffer.byteLength;
   if (len < 20)
@@ -1529,8 +1571,10 @@ NVMesh.readVTK = function (buffer) {
   };
 }; // readVTK()
 
+// not included in public docs
+// read brainsuite DFS format
+// http://brainsuite.org/formats/dfs/
 NVMesh.readDFS = function (buffer, n_vert = 0) {
-  //http://brainsuite.org/formats/dfs/
   //Does not play with other formats: vertex positions do not use Aneterior Commissure as origin
   var reader = new DataView(buffer);
   var magic = reader.getUint32(0, true); //"DFS_"
@@ -1569,6 +1613,9 @@ NVMesh.readDFS = function (buffer, n_vert = 0) {
   };
 };
 
+// not included in public docs
+// read surfice MZ3 format
+// https://github.com/neurolabusc/surf-ice/tree/master/mz3
 NVMesh.readMZ3 = function (buffer, n_vert = 0) {
   //ToDo: mz3 always little endian: support big endian? endian https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
   if (buffer.byteLength < 20)
@@ -1603,8 +1650,8 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
   var isVert = attr & 2;
   var isRGBA = attr & 4;
   var isSCALAR = attr & 8;
-  var isDOUBLE = attr & 16;
-  var isAOMap = attr & 32;
+  //var isDOUBLE = attr & 16;
+  //var isAOMap = attr & 32;
   if (attr > 63) throw new Error("Unsupported future version of MZ3 file");
   if (nvert < 3) throw new Error("Not a mesh MZ3 file (maybe scalar)");
   if (n_vert > 0 && n_vert !== nvert) {
@@ -1659,8 +1706,10 @@ NVMesh.readMZ3 = function (buffer, n_vert = 0) {
   };
 }; // readMZ3()
 
+// not included in public docs
+// read PLY format
+// https://en.wikipedia.org/wiki/PLY_(file_format)
 NVMesh.readPLY = function (buffer) {
-  //https://en.wikipedia.org/wiki/PLY_(file_format)
   let len = buffer.byteLength;
   var bytes = new Uint8Array(buffer);
   let pos = 0;
@@ -1851,6 +1900,8 @@ NVMesh.readPLY = function (buffer) {
   };
 }; // readPLY()
 
+// not included in public docs
+// read mesh overlay to influence vertex colors
 NVMesh.readLayer = function (
   name,
   buffer,
@@ -1909,13 +1960,15 @@ NVMesh.readLayer = function (
   nvmesh.layers.push(layer);
 }; // readLayer()
 
+// not included in public docs
+// read OFF format
+// https://en.wikipedia.org/wiki/OFF_(file_format)
 NVMesh.readOFF = function (buffer) {
-  //https://en.wikipedia.org/wiki/OFF_(file_format)
   var enc = new TextDecoder("utf-8");
   var txt = enc.decode(buffer);
   //let txt = await response.text();
   var lines = txt.split("\n");
-  var n = lines.length;
+  //var n = lines.length;
   let pts = [];
   let t = [];
   let i = 0;
@@ -1998,13 +2051,14 @@ NVMesh.readOBJ = function (buffer) {
   };
 }; // readOBJ()
 
+// not included in public docs
+// read FreeSurfer big endian format
 NVMesh.readFreeSurfer = function (buffer) {
   var bytes = new Uint8Array(buffer);
   if (bytes[0] === 35 && bytes[1] === 33 && bytes[2] === 97) {
     return this.readASC(buffer); //"#!ascii version"
   }
   const view = new DataView(buffer); //ArrayBuffer to dataview
-  //ALWAYS big endian
   let sig0 = view.getUint32(0, false);
   let sig1 = view.getUint32(4, false);
   if (sig0 !== 4294966883 || sig1 !== 1919246708)
@@ -2036,8 +2090,10 @@ NVMesh.readFreeSurfer = function (buffer) {
   };
 }; // readFreeSurfer()
 
+// not included in public docs
+// read brainvoyager SRF format
+// https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
 NVMesh.readSRF = function (buffer) {
-  //https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
   var bytes = new Uint8Array(buffer);
   if (bytes[0] === 35 && bytes[1] === 33 && bytes[2] === 97) {
     //.srf also used for freesurfer https://brainder.org/research/brain-for-blender/
@@ -2134,6 +2190,9 @@ NVMesh.readSRF = function (buffer) {
   };
 }; // readSRF()
 
+// not included in public docs
+// read STL format, nb this format does not reuse vertices
+// https://en.wikipedia.org/wiki/STL_(file_format)
 NVMesh.readSTL = function (buffer) {
   if (buffer.byteLength < 80 + 4 + 50)
     throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
@@ -2164,6 +2223,10 @@ NVMesh.readSTL = function (buffer) {
   };
 }; // readSTL()
 
+// not included in public docs
+// read NIfTI2 format with embedded CIfTI
+// this variation very specific to connectome workbench
+// https://brainder.org/2015/04/03/the-nifti-2-file-format/
 NVMesh.readNII2 = function (buffer, n_vert = 0) {
   let scalars = [];
   let len = buffer.byteLength;
@@ -2181,6 +2244,8 @@ NVMesh.readNII2 = function (buffer, n_vert = 0) {
   let voxoffset = Number(reader.getBigInt64(168, isLittleEndian));
   let scl_slope = reader.getFloat64(176, isLittleEndian);
   let scl_inter = reader.getFloat64(184, isLittleEndian);
+  if (scl_slope !== 1 || scl_inter !== 0)
+    console.log("ignoring scale slope and intercept");
   let intent_code = reader.getUint32(504, isLittleEndian);
   let datatype = reader.getUint16(12, isLittleEndian);
   if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
@@ -2363,10 +2428,11 @@ NVMesh.readNII2 = function (buffer, n_vert = 0) {
   return scalars;
 };
 
+// not included in public docs
+// read NIfTI1/2 as vertex colors
+// https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
 NVMesh.readNII = function (buffer, n_vert = 0) {
-  //https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
   let scalars = [];
-  let len = buffer.byteLength;
   let isLittleEndian = true;
   var reader = new DataView(buffer);
   var magic = reader.getUint16(0, isLittleEndian);
@@ -2392,6 +2458,8 @@ NVMesh.readNII = function (buffer, n_vert = 0) {
   let voxoffset = reader.getFloat32(108, isLittleEndian);
   let scl_slope = reader.getFloat32(112, isLittleEndian);
   let scl_inter = reader.getFloat32(116, isLittleEndian);
+  if (scl_slope !== 1 || scl_inter !== 0)
+    console.log("ignoring scale slope and intercept");
   let datatype = reader.getUint16(70, isLittleEndian);
   if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
     console.log("Unsupported NIfTI datatype " + datatype);
@@ -2437,6 +2505,9 @@ NVMesh.readNII = function (buffer, n_vert = 0) {
   return scalars;
 }; //readNII();
 
+// not included in public docs
+// read MGH format as vertex colors (not voxel-based image)
+// https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
 NVMesh.readMGH = function (buffer, n_vert = 0) {
   var reader = new DataView(buffer);
   var raw = buffer;
@@ -2480,8 +2551,10 @@ NVMesh.readMGH = function (buffer, n_vert = 0) {
   return scalars;
 }; // readMGH()
 
+// not included in public docs
+// read X3D format mesh
+// https://en.wikipedia.org/wiki/X3D
 NVMesh.readX3D = function (buffer, n_vert = 0) {
-  // https://en.wikipedia.org/wiki/X3D
   // n.b. only plain text ".x3d", not binary ".x3db"
   // beware: The values of XML attributes are delimited by either single or double quotes
   let len = buffer.byteLength;
@@ -2562,7 +2635,7 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
     if (length.def < 1) return;
     appearanceStyles[def] = rgba;
   }
-  let globs;
+  //let globs;
   while (pos < len) {
     line = readStr();
     //rgbaGlobal = [255,0,0,255]
@@ -2579,7 +2652,7 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
       let radius = 1.0;
       let height = 1.0;
       let coordIndex = [];
-      let index = [];
+      //let index = [];
       let point = [];
       while (pos < len) {
         line = readStr();
@@ -2701,12 +2774,6 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
           rotation[1],
           rotation[2],
         ]);
-        let t = vec4.fromValues(
-          translation[0],
-          translation[1],
-          translation[2],
-          1
-        );
         let pti = vec4.fromValues(0, -height * 0.5, 0, 1);
         let ptj = vec4.fromValues(0, +height * 0.5, 0, 1);
         vec4.transformMat4(pti, pti, r);
@@ -2734,6 +2801,9 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
   };
 }; // readX3D()
 
+// not included in public docs
+// read GIfTI format mesh
+// https://www.nitrc.org/projects/gifti/
 NVMesh.readGII = function (buffer, n_vert = 0) {
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
@@ -2911,6 +2981,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   };
 }; // readGII()
 
+// not included in public docs
+// read connectome saved as JSON
 NVMesh.loadConnectomeFromJSON = async function (
   json,
   gl,
@@ -2923,6 +2995,8 @@ NVMesh.loadConnectomeFromJSON = async function (
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
+// not included in public docs
+// wrapper to read meshes, tractograms and connectomes regardless of format
 NVMesh.readMesh = async function (
   buffer,
   name,
@@ -2931,7 +3005,6 @@ NVMesh.readMesh = async function (
   rgba255 = [255, 255, 255, 255],
   visible = true
 ) {
-  let nvmesh = null;
   let tris = [];
   let pts = [];
   let obj = [];
@@ -3045,24 +3118,9 @@ NVMesh.readMesh = async function (
   return nvm;
 };
 
-//https://stackoverflow.com/questions/55798396/how-do-i-make-a-nested-loop-continue-only-after-a-asynchronous-function-has-been
-var pow = Math.pow;
-function decodeFloat16(binary) {
-  "use strict";
-  var exponent = (binary & 0x7c00) >> 10,
-    fraction = binary & 0x03ff;
-  return (
-    (binary >> 15 ? -1 : 1) *
-    (exponent
-      ? exponent === 0x1f
-        ? fraction
-          ? NaN
-          : Infinity
-        : pow(2, exponent - 15) * (1 + fraction / 0x400)
-      : 6.103515625e-5 * (fraction / 0x400))
-  );
-}
-
+// not included in public docs
+// read TRX format tractogram
+// https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
 NVMesh.readTRX = async function (buffer) {
   //Javascript does not support float16, so we convert to float32
   //https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
@@ -3090,7 +3148,7 @@ NVMesh.readTRX = async function (buffer) {
   let dpv = [];
   let header = [];
   let isOverflowUint64 = false;
-  let data = [];
+
   /*if (urlIsLocalFile) {
     data = fs.readFileSync(url);
   } else {
@@ -3236,8 +3294,8 @@ NVMesh.loadFromUrl = async function ({
   //TRX format is special (its a zip archive of multiple files)
   let response = await fetch(url);
   if (!response.ok) throw Error(response.statusText);
-  let tris = [];
-  var pts = [];
+  //let tris = [];
+  //var pts = [];
   let buffer = await response.arrayBuffer();
   let nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible);
   if (!layers || layers.length < 1) return nvmesh;
@@ -3294,17 +3352,15 @@ NVMesh.readFileAsync = function (file) {
 };
 
 /**
- * factory function to load and return a new NVImage instance from a file in the browser
+ * factory function to load and return a new NVMesh instance from a file in the browser
  * @param {string} file the file object
+ * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
- * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
- * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
- * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
+ * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @returns {NVImage} returns a NVImage intance
- * @example
- * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+ * @returns {NVMesh} returns a NVMesh intance
  */
 NVMesh.loadFromFile = async function ({
   file,
@@ -3327,6 +3383,17 @@ NVMesh.loadFromFile = async function ({
   );
 };
 
+/**
+ * load and return a new NVMesh instance from a file in the browser
+ * @param {string} file the file object
+ * @param {WebGLRenderingContext} gl - WebGL rendering context
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
+ * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @returns {NVMesh} returns a NVMesh intance
+ */
 NVMesh.loadFromBase64 = async function ({
   base64 = null,
   gl = null,
@@ -3359,12 +3426,12 @@ NVMesh.loadFromBase64 = async function ({
   );
 };
 
+// not included in public docs
 String.prototype.getBytes = function () {
   //CR??? What does this do?
   let bytes = [];
   for (var i = 0; i < this.length; i++) {
     bytes.push(this.charCodeAt(i));
   }
-
   return bytes;
 };

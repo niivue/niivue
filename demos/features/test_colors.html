@@ -10,7 +10,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <!-- demo 1 -->
     <div id="demo1" style="width:90%; height:400px; margin:20px;">
       <canvas id="gl1" height=480 width=640>
@@ -54,15 +53,12 @@
            opacity: 1,
            visible: true,
          }
-
-
       ]
-
       var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeListA)
       nv1.setSliceType(nv1.sliceTypeMultiPlanar)
-      nv1.setSelectionBoxColor([0, 0, 1, .5]);
+      nv1.setSelectionBoxColor([0, 0, 1, .5])
     </script>
   </body>
 </html>

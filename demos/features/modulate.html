@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Image Intensity Modulation
@@ -29,7 +28,6 @@
         </select>
       </div>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -40,18 +38,17 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
-      var drop = document.getElementById("mode");
+      var drop = document.getElementById("mode")
       drop.onchange = function() {
-        let mode = document.getElementById("mode").selectedIndex;
+        let mode = document.getElementById("mode").selectedIndex
         if (mode === 0) 
-          nv1.setOpacity(1, 1.0);
+          nv1.setOpacity(1, 1.0)
         else
           nv1.setOpacity(1, 0.0)
-
         if (mode === 2) 
-          nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
+          nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id)
         else
-          nv1.setModulationImage(nv1.volumes[0].id, null);
+          nv1.setModulationImage(nv1.volumes[0].id, null)
       }
       var volumeList1 = [
         {
@@ -71,7 +68,6 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-
     </script>
   </body>
 </html>

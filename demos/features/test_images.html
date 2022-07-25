@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Test images
@@ -32,7 +31,6 @@
         </ul>
       </p>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -40,7 +38,6 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p>available test images:</p>
       <p id="images"></p>
@@ -82,7 +79,6 @@
           let img = root + imgs[i] + '.nii.gz'
           console.log("Loading: "+img)
           volumeList1[0].url = img
-          console.log(volumeList1);
           nv1.loadVolumes(volumeList1)
           nv1.updateGLVolume()
         }

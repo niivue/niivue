@@ -51,11 +51,13 @@
         <button id="growcut">grow cut</button>
       <input type="checkbox" id="check1" name="check1" checked>
       <label for="check1">fill pen overwrites</label>
-      <input type="checkbox" id="check3" name="check3" unchecked>
+      <input type="checkbox" id="check3" name="check3" checked>
       <label for="check3">World space</label>
+      <input type="checkbox" id="check10" name="check10" checked>
+      <label for="check10">HighDPI</label>
 
         <div class="slidecontainer">
-          drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
+          drawing opacity <input type="range" min="0" max="100" value="100" class="slider" id="drawOpacity">
         </div>
 
       </div>
@@ -67,57 +69,56 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p id="location"></p>
     </section>
      <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
-      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      document.getElementById("check3").addEventListener("change", doCheck3Click)
       function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
+        nv1.setSliceMM(this.checked)
       }
-      document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
+      document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity)
       function doDrawOpacity(){
-        nv1.setDrawOpacity(this.value * 0.01);
+        nv1.setDrawOpacity(this.value * 0.01)
       }
-      document.getElementById("check1").addEventListener("change", doCheckClick);
+      document.getElementById("check1").addEventListener("change", doCheckClick)
       function doCheckClick() {
-        nv1.drawFillOverwrites = this.checked;
+        nv1.drawFillOverwrites = this.checked
       }
-      document.getElementById("drawPen").addEventListener("change", doDrawPen);
+      document.getElementById("drawPen").addEventListener("change", doDrawPen)
       function doDrawPen(){
-        const mode = parseInt(document.getElementById("drawPen").value);
-        nv1.setDrawingEnabled(mode >= 0);
+        const mode = parseInt(document.getElementById("drawPen").value)
+        nv1.setDrawingEnabled(mode >= 0)
         if (mode >= 0)
-          nv1.setPenValue( (mode & 7), mode > 7);
+          nv1.setPenValue( (mode & 7), mode > 7)
         if (mode === 12)//erase selected cluster
-          nv1.setPenValue(-0);
+          nv1.setPenValue(-0)
       }
-      document.getElementById("left").addEventListener("click", doLeft);
+      document.getElementById("left").addEventListener("click", doLeft)
       function doLeft(){
-        nv1.moveCrosshairInVox(-1, 0, 0);
+        nv1.moveCrosshairInVox(-1, 0, 0)
       }
-      document.getElementById("right").addEventListener("click", doRight);
+      document.getElementById("right").addEventListener("click", doRight)
       function doRight(){
-        nv1.moveCrosshairInVox(1, 0, 0);
+        nv1.moveCrosshairInVox(1, 0, 0)
       }
-      document.getElementById("posterior").addEventListener("click", doPosterior);
+      document.getElementById("posterior").addEventListener("click", doPosterior)
       function doPosterior(){
-        nv1.moveCrosshairInVox(0, -1, 0);
+        nv1.moveCrosshairInVox(0, -1, 0)
       }
-      document.getElementById("anterior").addEventListener("click", doAnterior);
+      document.getElementById("anterior").addEventListener("click", doAnterior)
       function doAnterior(){
-        nv1.moveCrosshairInVox(0, 1, 0);
+        nv1.moveCrosshairInVox(0, 1, 0)
       }
-      document.getElementById("inferior").addEventListener("click", doInferior);
+      document.getElementById("inferior").addEventListener("click", doInferior)
       function doInferior(){
-        nv1.moveCrosshairInVox(0, 0, -1);
+        nv1.moveCrosshairInVox(0, 0, -1)
       }
-      document.getElementById("info").addEventListener("click", doInfo);
+      document.getElementById("info").addEventListener("click", doInfo)
       function doInfo(){
-        let obj = nv1.getDescriptives(0, false);
+        let obj = nv1.getDescriptives(0, false)
         let str = "Number of voxels: " +
             obj.nvox +
             "\nMin:" +
@@ -131,34 +132,38 @@
             "\nRobust Min: " +
             obj.robust_min +
             "\nRobust Max: " +
-            obj.robust_max;
-        alert(str);
+            obj.robust_max
+        alert(str)
       }
-      document.getElementById("superior").addEventListener("click", doSuperior);
+      document.getElementById("superior").addEventListener("click", doSuperior)
       function doSuperior(){
-        nv1.moveCrosshairInVox(0, 0, 1);
+        nv1.moveCrosshairInVox(0, 0, 1)
       }
-      document.getElementById("undo").addEventListener("click", doUndo);
+      document.getElementById("undo").addEventListener("click", doUndo)
       function doUndo(){
-        nv1.drawUndo();
+        nv1.drawUndo()
       }
-      document.getElementById("growcut").addEventListener("click", doGrowCut);
+      document.getElementById("growcut").addEventListener("click", doGrowCut)
       function doGrowCut(){
-        nv1.drawGrowCut();
+        nv1.drawGrowCut()
       }
-      document.getElementById("save").addEventListener("click", doSave);
+      document.getElementById("save").addEventListener("click", doSave)
       function doSave(){
-        nv1.saveImage('test.nii', true);
+        nv1.saveImage('test.nii', true)
+      }
+      document.getElementById("check10").addEventListener("change", doCheck10Click)
+      function doCheck10Click() {
+        nv1.setHighResolutionCapable(this.checked)
       }
 
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
       let query = window.location.search
-      const params = new URLSearchParams(query);
+      const params = new URLSearchParams(query)
       let url = params.get('url')
       var volumeList1 = [
-        // first item is brackground image
+        // first item is background image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../demos/images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
@@ -181,11 +186,10 @@
       })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      nv1.setSliceMM(true);
-      //nv1.setInterpolation(1);
+      nv1.setHighResolutionCapable(true)
       await nv1.loadVolumes(volumeList1)
-      nv1.getDescriptives(0, false);
-      await nv1.loadDrawing("../demos/images/lesion.nii.gz");
+      nv1.getDescriptives(0, false)
+      await nv1.loadDrawing("../demos/images/lesion.nii.gz")
       // example of using the 'location' change event with a callback function
       nv1.on('location', (data) => {
         // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}

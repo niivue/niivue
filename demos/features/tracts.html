@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Tractography support
@@ -62,8 +61,8 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
-      var slider = document.getElementById("fiberLengthSlider");
-      var sliderD = document.getElementById("fiberDitherSlider");
+      var slider = document.getElementById("fiberLengthSlider")
+      var sliderD = document.getElementById("fiberDitherSlider")
       // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
@@ -71,14 +70,14 @@
       sliderD.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
       }
-      var drop = document.getElementById("fiberColor");
+      var drop = document.getElementById("fiberColor")
       drop.onchange = function() {
-        const colorName = document.getElementById("fiberColor").value;
+        const colorName = document.getElementById("fiberColor").value
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', colorName)
       }
-      var dropD = document.getElementById("fiberDecimation");
+      var dropD = document.getElementById("fiberDecimation")
       dropD.onchange = function() {
-        const stride = document.getElementById("fiberDecimation").value;
+        const stride = document.getElementById("fiberDecimation").value
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDecimationStride', stride)
       }
       var volumeList1 = [
