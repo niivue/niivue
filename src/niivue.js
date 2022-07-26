@@ -690,10 +690,10 @@ Niivue.prototype.resizeListener = function () {
     dpr = window.devicePixelRatio || 1;
     console.log("devicePixelRatio: " + dpr);
   }
-  //this.canvas.width = this.canvas.offsetWidth * dpr;
-  //this.canvas.height = this.canvas.offsetHeight * dpr;
-  this.canvas.width = this.canvas.parentElement.width * dpr;
-  this.canvas.height = this.canvas.parentElement.height * dpr;
+  this.canvas.width = this.canvas.offsetWidth * dpr;
+  this.canvas.height = this.canvas.offsetHeight * dpr;
+  //this.canvas.width = this.canvas.parentElement.width * dpr;
+  //this.canvas.height = this.canvas.parentElement.height * dpr;
   this.drawScene();
 };
 
@@ -705,7 +705,6 @@ Niivue.prototype.resizeListener = function () {
 Niivue.prototype.getRelativeMousePosition = function (event, target) {
   target = target || event.target;
   var rect = target.getBoundingClientRect();
-
   return {
     x: event.clientX - rect.left,
     y: event.clientY - rect.top,
@@ -821,15 +820,11 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   if (frac[0] < 0) return;
   let endVox = this.frac2vox(frac, volIdx);
 
-  let hi = -Number.MAX_VALUE,
-    lo = Number.MAX_VALUE;
-  let xrange;
-  let yrange;
-  let zrange;
-
-  xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]]);
-  yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]]);
-  zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]]);
+  let hi = -Number.MAX_VALUE;
+  let lo = Number.MAX_VALUE;
+  let xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]]);
+  let yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]]);
+  let zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]]);
 
   // for our constant dimension we add one so that the for loop runs at least once
   if (startVox[0] - endVox[0] === 0) {

@@ -478,7 +478,7 @@ void main(void) {
 	else if (axCorSag > 0)
 		texPos = vec3(pos.x, slice, pos.y);
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
-	//vec4 mm =  vec4(texPos, 1.0) * frac2mm;
+	//vec4 mm = vec4(texPos, 1.0) * frac2mm;
 	gl_Position = mvpMtx * mm;
 	//gl_Position = mm;
 }`;
@@ -1013,7 +1013,7 @@ void main() {
 	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
 	vec3 l = normalize(lightPosition);
 	float df = max(0.0, dot(n, l));
-	float sf =  pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float sf = pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	const float A = 0.1;
 	const float B = 0.3;
 	const float C = 0.6;
@@ -1057,11 +1057,10 @@ void main() {
 	vec3 l = normalize(lightPosition);
 	float lightNormDot = dot(n, l);
 	float view = abs(dot(n,r)); //with respect to viewer
-
 	if (PenWidth < view) discard;
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
 }`;
@@ -1086,7 +1085,7 @@ void main() {
 	float lightNormDot = dot(n, l);
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`;
 
@@ -1099,7 +1098,6 @@ in vec4 vClr;
 in vec3 vN, vL, vV;
 out vec4 color;
 void main() {
-	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
 	float ambient = 0.35;
 	float diffuse = 0.6;
 	vec3 n = normalize(vN);
@@ -1136,7 +1134,7 @@ void main() {
 	vec3 a = vClr.rgb * ambient;
 	a *= mix(downClr, upClr, ax);
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`;
 
@@ -1169,8 +1167,7 @@ const vec3 L21  = vec3(-0.0572703, -0.0502192, -0.0363410);
 const vec3 L22  = vec3( 0.0203348, -0.0044201, -0.0452180);
 vec3 SH(vec3 vNormal) {
 	vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
-	//vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
-	vec3 diffuseColor =  C1 * L22 * (vNormal.x * vNormal.x - vNormal.y * vNormal.y) +
+	vec3 diffuseColor = C1 * L22 * (vNormal.x * vNormal.x - vNormal.y * vNormal.y) +
 	C3 * L20 * vNormal.z * vNormal.z +
 	C4 * L00 -
 	C5 * L20 +
@@ -1191,7 +1188,7 @@ void main() {
 	vec3 n = normalize(vN);
 	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
 	vec3 l = normalize(lightPosition);
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = vClr.rgb * diffuse * SH(-reflect(n, vec3(l.x, l.y, -l.z)) );
 	color = vec4(a + d + s, opacity);
