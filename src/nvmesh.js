@@ -21,7 +21,7 @@ const log = new Log();
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {WebGLRenderingContext} gl - WebGL rendering context
- * @param {JSON structure} connectome specify connectome edges and nodes. Default is null (not a connectome).
+ * @param {object} connectome specify connectome edges and nodes. Default is null (not a connectome).
  * @property {array} dpg Data per group for tractography, see TRK format. Default is null (not tractograpgy)
  * @property {array} dps  Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
  * @property {array} dpv Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
