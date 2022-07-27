@@ -47,6 +47,7 @@ export function NVMesh(
   this.extentsMax = obj.extentsMax;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
+  this.meshShaderIndex = 0;
   this.indexBuffer = gl.createBuffer();
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
