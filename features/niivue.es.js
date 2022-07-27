@@ -778,7 +778,6 @@ float frac2ndc(vec3 frac) {
 	vec4 mm = transpose(matRAS) * pos;
 	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
 	return (z_ndc + 1.0) / 2.0;
-	
 }
 vec4 drawColor(float scalar) {
 	vec4 dcolor = vec4(0.0, 0.0, 0.0, 0.0);
@@ -793,8 +792,7 @@ vec4 drawColor(float scalar) {
 	else
 		dcolor.r = 1.0;
 	return dcolor;
-}
-`;
+}`;
 var fragRenderShader = `#version 300 es
 #line 14
 precision highp int;
@@ -815,10 +813,10 @@ uniform highp sampler3D drawing;
 in vec3 vColor;
 out vec4 fColor;
 ` + kRenderFunc + `void main() {
-  if (fColor.x > 2.0) {
-    fColor = vec4(1.0, 0.0, 0.0, 0.5);
-    return;
-  }
+	if (fColor.x > 2.0) {
+		fColor = vec4(1.0, 0.0, 0.0, 0.5);
+		return;
+	}
 	fColor = vec4(0.0,0.0,0.0,0.0);
 	vec4 clipPlaneColorX = clipPlaneColor;
 	//if (clipPlaneColor.a < 0.0)
@@ -1050,10 +1048,10 @@ void main(void) {
 	texPos = vec3(pos.x, pos.y, slice);
 	if (axCorSag > 1)
 		texPos = vec3(slice, pos.x, pos.y);
-  else if (axCorSag > 0)
+	else if (axCorSag > 0)
 		texPos = vec3(pos.x, slice, pos.y);
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
-	//vec4 mm =  vec4(texPos, 1.0) * frac2mm;
+	//vec4 mm = vec4(texPos, 1.0) * frac2mm;
 	gl_Position = mvpMtx * mm;
 	//gl_Position = mm;
 }`;
@@ -1136,45 +1134,6 @@ void main() {
 	float fmap = (0.5 + layer) / nlayer;
 	color = vec4(texture(colormap, vec2(vColor.x, fmap)).rgb, 1.0);
 }`;
-var vertGraphShader = `#version 300 es
-#line 229
-layout(location=0) in vec3 pos;
-uniform float thickness;
-uniform vec2 canvasWidthHeight;
-uniform vec4 leftTopRightBottom;
-void main(void) {
-	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
-	float ny =  (leftTopRightBottom.x-leftTopRightBottom.z);
-	float nx =  (leftTopRightBottom.y-leftTopRightBottom.w);
-	float len = sqrt((nx*nx)+(ny*ny));
-	if (len > 0.0) {
-		nx = 0.5*thickness*nx/len;
-		ny = 0.5*thickness*ny/len;
-	}
-	vec2 frac;
-	if (pos.y < 0.5)
-		frac.y = leftTopRightBottom.y;
-	else
-		frac.y = leftTopRightBottom.w;
-	if (pos.x < 0.5) {
-		frac.x = leftTopRightBottom.x;
-		frac.y = leftTopRightBottom.y;
-	} else {
-		frac.x = leftTopRightBottom.z;
-		frac.y = leftTopRightBottom.w;
-	}
-	if (pos.y < 0.5) {
-		frac.x += nx;
-		frac.y -= ny;
-	} else {
-		frac.x -= nx;
-		frac.y += ny;
-	}
-	frac.x /= canvasWidthHeight.x;
-	frac.y = 1.0 - (frac.y / canvasWidthHeight.y);
-	frac = (frac * 2.0) - 1.0;
-	gl_Position = vec4(frac, 0.0, 1.0);
-}`;
 var vertRectShader = `#version 300 es
 #line 229
 layout(location=0) in vec3 pos;
@@ -1253,13 +1212,13 @@ uniform float screenPxRange;
 in vec2 vUV;
 out vec4 color;
 float median(float r, float g, float b) {
-    return max(min(r, g), min(max(r, g), b));
+	return max(min(r, g), min(max(r, g), b));
 }
 void main() {
 	vec3 msd = texture(fontTexture, vUV).rgb;
 	float sd = median(msd.r, msd.g, msd.b);
-    float screenPxDistance = screenPxRange*(sd - 0.5);
-    float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+	float screenPxDistance = screenPxRange*(sd - 0.5);
+	float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 	color = vec4(fontColor.rgb , fontColor.a * opacity);
 }`;
 var vertOrientShader = `#version 300 es
@@ -1269,8 +1228,8 @@ precision highp float;
 in vec3 vPos;
 out vec2 TexCoord;
 void main() {
-    TexCoord = vPos.xy;
-    gl_Position = vec4( (vPos.xy-vec2(0.5,0.5)) * 2.0, 0.0, 1.0);
+	TexCoord = vPos.xy;
+	gl_Position = vec4( (vPos.xy-vec2(0.5,0.5)) * 2.0, 0.0, 1.0);
 }`;
 var fragOrientShaderU = `#version 300 es
 uniform highp usampler3D intensityVol;
@@ -1295,42 +1254,42 @@ uniform float opacity;
 uniform vec3 xyzFrac;
 uniform mat4 mtx;
 void main(void) {
- vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
- uint idx = texture(intensityVol, vx.xyz).r;
- FragColor = vec4(0.0, 0.0, 0.0, 0.0);
- if (idx == uint(0))
-   return;
- if (xyzFrac.x > 0.0) { //outline
-   vx = vec4(TexCoord.x+xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-   uint R = texture(intensityVol, vx.xyz).r;
-   vx = vec4(TexCoord.x-xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-   uint L = texture(intensityVol, vx.xyz).r;
-   vx = vec4(TexCoord.x, TexCoord.y+xyzFrac.y, coordZ, 1.0) * mtx;
-   uint A = texture(intensityVol, vx.xyz).r;
-   vx = vec4(TexCoord.x, TexCoord.y-xyzFrac.y, coordZ, 1.0) * mtx;
-   uint P = texture(intensityVol, vx.xyz).r;
-   vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzFrac.z, 1.0) * mtx;
-   uint S = texture(intensityVol, vx.xyz).r;
-   vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzFrac.z, 1.0) * mtx;
-   uint I = texture(intensityVol, vx.xyz).r;
-   if ((idx == R) && (idx == L) && (idx == A) && (idx == P) && (idx == S) && (idx == I))
-     return;
- }
- idx = ((idx - uint(1)) % uint(100))+uint(1);
- float fx = (float(idx)+0.5) / 256.0;
- float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
- float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
- //float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
- FragColor = texture(colormap, vec2(fx, y)).rgba;
- FragColor.a *= opacity;
- if (layer < 2.0) return;
- vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
- vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
- // https://en.wikipedia.org/wiki/Alpha_compositing
- float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
- if (aout <= 0.0) return;
- FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
- FragColor.a = aout;
+	vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
+	uint idx = texture(intensityVol, vx.xyz).r;
+	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+	if (idx == uint(0))
+		return;
+	if (xyzFrac.x > 0.0) { //outline
+		vx = vec4(TexCoord.x+xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+		uint R = texture(intensityVol, vx.xyz).r;
+		vx = vec4(TexCoord.x-xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+		uint L = texture(intensityVol, vx.xyz).r;
+		vx = vec4(TexCoord.x, TexCoord.y+xyzFrac.y, coordZ, 1.0) * mtx;
+		uint A = texture(intensityVol, vx.xyz).r;
+		vx = vec4(TexCoord.x, TexCoord.y-xyzFrac.y, coordZ, 1.0) * mtx;
+		uint P = texture(intensityVol, vx.xyz).r;
+		vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzFrac.z, 1.0) * mtx;
+		uint S = texture(intensityVol, vx.xyz).r;
+		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzFrac.z, 1.0) * mtx;
+		uint I = texture(intensityVol, vx.xyz).r;
+		if ((idx == R) && (idx == L) && (idx == A) && (idx == P) && (idx == S) && (idx == I))
+			return;
+	}
+	idx = ((idx - uint(1)) % uint(100))+uint(1);
+	float fx = (float(idx)+0.5) / 256.0;
+	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
+	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+	//float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
+	FragColor = texture(colormap, vec2(fx, y)).rgba;
+	FragColor.a *= opacity;
+	if (layer < 2.0) return;
+	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
+	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	// https://en.wikipedia.org/wiki/Alpha_compositing
+	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+	if (aout <= 0.0) return;
+	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	FragColor.a = aout;
 }`;
 var fragOrientShader = `#line 309
 precision highp int;
@@ -1351,40 +1310,40 @@ uniform highp sampler3D modulationVol;
 uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
- vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
- float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
- bool isNegative = (f < 0.0);
- float r = max(0.00001, abs(cal_max - cal_min));
- float mn = min(cal_min, cal_max);
- float txl = mix(0.0, 1.0, (f - mn) / r);
- //https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
- float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
- float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
- FragColor = texture(colormap, vec2(txl, y)).rgba;
- if (isNegative) {
-   y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
-   //select texels at positions 0 and 1 of lookup table: 
-   vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
-   vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-   txl = mix(0.0, 1.0, (- f - mn) / r);
-   //detect bogus color: negative color slot not used than
-   // v0 = 1,1,1,0 and v1 = 0,0,0,1
-   if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
-     FragColor = texture(colormap, vec2(txl, y));
- }
- if (layer > 0.7)
-   FragColor.a = step(0.00001, FragColor.a);
- if (modulation > 0)
-   FragColor.rgb *= texture(modulationVol, vx.xyz).r;
- FragColor.a *= opacity;
- if (layer < 1.0) return;
- vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
- vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
- // https://en.wikipedia.org/wiki/Alpha_compositing
- float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
- if (aout <= 0.0) return;
- FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
- FragColor.a = aout;
+	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
+	bool isNegative = (f < 0.0);
+	float r = max(0.00001, abs(cal_max - cal_min));
+	float mn = min(cal_min, cal_max);
+	float txl = mix(0.0, 1.0, (f - mn) / r);
+	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
+	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
+	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+	FragColor = texture(colormap, vec2(txl, y)).rgba;
+	if (isNegative) {
+		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
+		//select texels at positions 0 and 1 of lookup table: 
+		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
+		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
+		txl = mix(0.0, 1.0, (- f - mn) / r);
+		//detect bogus color: negative color slot not used than
+		// v0 = 1,1,1,0 and v1 = 0,0,0,1
+		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
+			FragColor = texture(colormap, vec2(txl, y));
+	}
+	if (layer > 0.7)
+		FragColor.a = step(0.00001, FragColor.a);
+	if (modulation > 0)
+		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	FragColor.a *= opacity;
+	if (layer < 1.0) return;
+	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
+	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	// https://en.wikipedia.org/wiki/Alpha_compositing
+	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+	if (aout <= 0.0) return;
+	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	FragColor.a = aout;
 }`;
 var fragRGBOrientShader = `#line 309
 precision highp int;
@@ -1406,14 +1365,14 @@ uniform bool hasAlpha;
 uniform int modulation;
 uniform highp sampler3D modulationVol;
 void main(void) {
- vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
- uvec4 aColor = texture(intensityVol, vx.xyz);
- FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
- if (modulation > 0)
-   FragColor.rgb *= texture(modulationVol, vx.xyz).r;
- if (!hasAlpha)
-   FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
- FragColor.a *= opacity;
+	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	uvec4 aColor = texture(intensityVol, vx.xyz);
+	FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
+	if (modulation > 0)
+		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	if (!hasAlpha)
+		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
+	FragColor.a *= opacity;
 }`;
 var vertPassThroughShader = `#version 300 es
 #line 283
@@ -1422,8 +1381,8 @@ precision highp float;
 in vec3 vPos;
 out vec2 TexCoord;
 void main() {
-    TexCoord = vPos.xy;
-    gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
+	TexCoord = vPos.xy;
+	gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
 }`;
 var fragPassThroughShader = `#version 300 es
 precision highp int;
@@ -1442,70 +1401,70 @@ precision highp float;
 in vec3 vPos;
 out vec2 TexCoord;
 void main() {
-    TexCoord = vPos.xy;
-    gl_Position = vec4((vPos.x - 0.5) * 2.0, (vPos.y - 0.5) * 2.0, 0.0, 1.0);
+	TexCoord = vPos.xy;
+	gl_Position = vec4((vPos.x - 0.5) * 2.0, (vPos.y - 0.5) * 2.0, 0.0, 1.0);
 }`;
 var fragGrowCutShader = `#version 300 es
 #line 742
-  precision highp float;
-  precision highp int;
-  precision highp isampler3D;
-  layout(location = 0) out int label;
-  layout(location = 1) out int strength;
-  in vec2 TexCoord;
-  uniform int finalPass;
-  uniform float coordZ;
-  uniform lowp sampler3D in3D;
-  uniform highp isampler3D inputTexture0; // background
-  uniform highp isampler3D inputTexture1; // label
-  uniform highp isampler3D inputTexture2; // strength
+	precision highp float;
+	precision highp int;
+	precision highp isampler3D;
+	layout(location = 0) out int label;
+	layout(location = 1) out int strength;
+	in vec2 TexCoord;
+	uniform int finalPass;
+	uniform float coordZ;
+	uniform lowp sampler3D in3D;
+	uniform highp isampler3D inputTexture0; // background
+	uniform highp isampler3D inputTexture1; // label
+	uniform highp isampler3D inputTexture2; // strength
 void main(void) {
-  vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
-  ivec3 size = textureSize(inputTexture0, 0);
-  ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
-  int background = texelFetch(inputTexture0, texelIndex, 0).r;
-  label = texelFetch(inputTexture1, texelIndex, 0).r;
-  strength = texelFetch(inputTexture2, texelIndex, 0).r;
-  for (int k = -1; k <= 1; k++) {
-    for (int j = -1; j <= 1; j++) {
-      for (int i = -1; i <= 1; i++) {
-        if (i != 0 && j != 0 && k != 0) {
-          ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
-          int neighborBackground = texelFetch(inputTexture0, neighborIndex, 0).r;
-          int neighborStrength = texelFetch(inputTexture2, neighborIndex, 0).r;
-          int strengthCost = abs(neighborBackground - background);
-          int takeoverStrength = neighborStrength - strengthCost;
-          if (takeoverStrength > strength) {
-            strength = takeoverStrength;
-            label = texelFetch(inputTexture1, neighborIndex, 0).r;
-          }
-        }
-      }
-    }
-  }
-  if (finalPass < 1)
-    return;
-  int ok = 1;
-  ivec4 labelCount = ivec4(0,0,0,0);
-  for (int k = -1; k <= 1; k++)
-    for (int j = -1; j <= 1; j++)
-      for (int i = -1; i <= 1; i++) {
-        ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
-        int ilabel = texelFetch(inputTexture1, neighborIndex, 0).r;
-        if ((ilabel < 0) || (ilabel > 3))
-          ok = 0;
-        else
-          labelCount[ilabel]++;
-      }
-  if (ok != 1) {
-    return;
-  }
-  int maxIdx = 0;
-  for (int i = 1; i < 4; i++) {
-    if (labelCount[i] > labelCount[maxIdx])
-      maxIdx = i;
-  }
-  label = maxIdx;
+	vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
+	ivec3 size = textureSize(inputTexture0, 0);
+	ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
+	int background = texelFetch(inputTexture0, texelIndex, 0).r;
+	label = texelFetch(inputTexture1, texelIndex, 0).r;
+	strength = texelFetch(inputTexture2, texelIndex, 0).r;
+	for (int k = -1; k <= 1; k++) {
+		for (int j = -1; j <= 1; j++) {
+			for (int i = -1; i <= 1; i++) {
+				if (i != 0 && j != 0 && k != 0) {
+					ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
+					int neighborBackground = texelFetch(inputTexture0, neighborIndex, 0).r;
+					int neighborStrength = texelFetch(inputTexture2, neighborIndex, 0).r;
+					int strengthCost = abs(neighborBackground - background);
+					int takeoverStrength = neighborStrength - strengthCost;
+					if (takeoverStrength > strength) {
+						strength = takeoverStrength;
+						label = texelFetch(inputTexture1, neighborIndex, 0).r;
+					}
+				}
+			}
+		}
+	}
+	if (finalPass < 1)
+		return;
+	int ok = 1;
+	ivec4 labelCount = ivec4(0,0,0,0);
+	for (int k = -1; k <= 1; k++)
+		for (int j = -1; j <= 1; j++)
+			for (int i = -1; i <= 1; i++) {
+				ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
+				int ilabel = texelFetch(inputTexture1, neighborIndex, 0).r;
+				if ((ilabel < 0) || (ilabel > 3))
+					ok = 0;
+				else
+					labelCount[ilabel]++;
+			}
+	if (ok != 1) {
+		return;
+	}
+	int maxIdx = 0;
+	for (int i = 1; i < 4; i++) {
+		if (labelCount[i] > labelCount[maxIdx])
+			maxIdx = i;
+	}
+	label = maxIdx;
 }`;
 var vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
@@ -1593,7 +1552,7 @@ void main() {
 	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
 	vec3 l = normalize(lightPosition);
 	float df = max(0.0, dot(n, l));
-	float sf =  pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float sf = pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	const float A = 0.1;
 	const float B = 0.3;
 	const float C = 0.6;
@@ -1635,11 +1594,10 @@ void main() {
 	vec3 l = normalize(lightPosition);
 	float lightNormDot = dot(n, l);
 	float view = abs(dot(n,r)); //with respect to viewer
-
 	if (PenWidth < view) discard;
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
 }`;
@@ -1662,7 +1620,7 @@ void main() {
 	float lightNormDot = dot(n, l);
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`;
 var fragMeshMatteShader = `#version 300 es
@@ -1673,7 +1631,6 @@ in vec4 vClr;
 in vec3 vN, vL, vV;
 out vec4 color;
 void main() {
-	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
 	float ambient = 0.35;
 	float diffuse = 0.6;
 	vec3 n = normalize(vN);
@@ -1708,7 +1665,7 @@ void main() {
 	vec3 a = vClr.rgb * ambient;
 	a *= mix(downClr, upClr, ax);
 	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`;
 var fragMeshShaderSHBlue = `#version 300 es
@@ -1740,8 +1697,7 @@ const vec3 L21  = vec3(-0.0572703, -0.0502192, -0.0363410);
 const vec3 L22  = vec3( 0.0203348, -0.0044201, -0.0452180);
 vec3 SH(vec3 vNormal) {
 	vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
-	//vNormal = vec3(vNormal.x,vNormal.z,vNormal.y);
-	vec3 diffuseColor =  C1 * L22 * (vNormal.x * vNormal.x - vNormal.y * vNormal.y) +
+	vec3 diffuseColor = C1 * L22 * (vNormal.x * vNormal.x - vNormal.y * vNormal.y) +
 	C3 * L20 * vNormal.z * vNormal.z +
 	C4 * L00 -
 	C5 * L20 +
@@ -1762,7 +1718,7 @@ void main() {
 	vec3 n = normalize(vN);
 	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
 	vec3 l = normalize(lightPosition);
-	float s =   specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = vClr.rgb * diffuse * SH(-reflect(n, vec3(l.x, l.y, -l.z)) );
 	color = vec4(a + d + s, opacity);
@@ -1846,24 +1802,21 @@ uniform mat4 u_matrix;
 out vec3 vColor;
 // all shaders have a main function
 void main() {
-  // Multiply the position by the matrix.
-  vec4 pos = vec4(a_position, 1.0);
-  gl_Position = u_matrix * vec4(pos);
-  vColor = a_color;
+	// Multiply the position by the matrix.
+	vec4 pos = vec4(a_position, 1.0);
+	gl_Position = u_matrix * vec4(pos);
+	vColor = a_color;
 }
 `;
 var fragOrientCubeShader = `#version 300 es
 precision highp float;
-
 uniform vec4 u_color;
 in vec3 vColor;
 // we need to declare an output for the fragment shader
 out vec4 outColor;
-
 void main() {
-  outColor = vec4(vColor, 1.0);
-}
-`;
+	outColor = vec4(vColor, 1.0);
+}`;
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -105284,30 +105237,6 @@ NVImage.prototype.readVMR = function(buffer2) {
   let nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   if (version >= 4) {
     let pos = 8 + nBytes;
-    reader.getUint16(pos, true);
-    reader.getUint16(pos + 2, true);
-    reader.getUint16(pos + 4, true);
-    reader.getUint16(pos + 6, true);
-    reader.getUint32(pos + 8, true);
-    reader.getUint32(pos + 12, true);
-    reader.getFloat32(pos + 16, true);
-    reader.getFloat32(pos + 20, true);
-    reader.getFloat32(pos + 24, true);
-    reader.getFloat32(pos + 28, true);
-    reader.getFloat32(pos + 32, true);
-    reader.getFloat32(pos + 36, true);
-    reader.getFloat32(pos + 40, true);
-    reader.getFloat32(pos + 44, true);
-    reader.getFloat32(pos + 48, true);
-    reader.getFloat32(pos + 52, true);
-    reader.getFloat32(pos + 56, true);
-    reader.getFloat32(pos + 60, true);
-    reader.getUint32(pos + 64, true);
-    reader.getUint32(pos + 68, true);
-    reader.getFloat32(pos + 72, true);
-    reader.getFloat32(pos + 76, true);
-    reader.getFloat32(pos + 80, true);
-    reader.getFloat32(pos + 84, true);
     let nSpatialTransforms = reader.getUint32(pos + 88, true);
     pos = pos + 92;
     if (nSpatialTransforms > 0) {
@@ -105316,7 +105245,6 @@ NVImage.prototype.readVMR = function(buffer2) {
         while (pos < len2 && reader.getUint8(pos) !== 0)
           pos++;
         pos++;
-        reader.getUint32(pos, true);
         pos += 4;
         while (pos < len2 && reader.getUint8(pos) !== 0)
           pos++;
@@ -105327,16 +105255,9 @@ NVImage.prototype.readVMR = function(buffer2) {
           pos += 4;
       }
     }
-    reader.getUint8(pos);
-    reader.getUint8(pos + 1);
     hdr.pixDims[1] = reader.getFloat32(pos + 2, true);
     hdr.pixDims[2] = reader.getFloat32(pos + 6, true);
     hdr.pixDims[3] = reader.getFloat32(pos + 10, true);
-    reader.getUint8(pos + 14);
-    reader.getUint8(pos + 15);
-    reader.getInt32(pos + 16, true);
-    reader.getInt32(pos + 20, true);
-    reader.getInt32(pos + 24, true);
   }
   console.log("Warning: VMR spatial transform not implemented");
   hdr.affine = [
@@ -105368,8 +105289,6 @@ NVImage.prototype.readMGH = function(buffer2) {
   let depth = reader.getInt32(12, false);
   let nframes = reader.getInt32(16, false);
   let mtype = reader.getInt32(20, false);
-  reader.getInt32(24, false);
-  reader.getInt16(28, false);
   let spacingX = reader.getFloat32(30, false);
   let spacingY = reader.getFloat32(34, false);
   let spacingZ = reader.getFloat32(38, false);
@@ -105382,9 +105301,6 @@ NVImage.prototype.readMGH = function(buffer2) {
   let zr = reader.getFloat32(66, false);
   let za = reader.getFloat32(70, false);
   let zs = reader.getFloat32(74, false);
-  reader.getFloat32(78, false);
-  reader.getFloat32(82, false);
-  reader.getFloat32(86, false);
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   if (mtype === 0) {
@@ -106070,7 +105986,6 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
       [0, 0, 0, 1]
     ];
   }
-  hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   if (isDetached && pairedImgData) {
     return pairedImgData.slice();
   }
@@ -106868,7 +106783,7 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 };
 const cmapper$1 = new colortables();
 const log$1 = new Log();
-function NVMesh(pts, tris, name = "", rgba255 = [1, 0, 0, 0], opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null) {
+function NVMesh(pts, tris, name = "", rgba255 = [255, 255, 255, 255], opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null) {
   this.name = name;
   this.id = v4();
   let obj = getExtents(pts);
@@ -107405,7 +107320,6 @@ NVMesh.readTRACT = function(buffer2) {
     let bundleTag = readNumericTag("Bundle_Tag=");
     let isLittleEndian2 = line.includes("binary.lsbfirst");
     for (let i2 = 0; i2 < new_tracts; i2++) {
-      reader.getUint32(pos, isLittleEndian2);
       pos += 4;
       let new_pts = reader.getUint32(pos, isLittleEndian2) / 3;
       pos += 4;
@@ -107837,10 +107751,7 @@ NVMesh.readSMP = function(buffer2, n_vert) {
   return scalars;
 };
 NVMesh.readSTC = function(buffer2, n_vert) {
-  buffer2.byteLength;
   var reader = new DataView(buffer2);
-  reader.getFloat32(0, false);
-  reader.getFloat32(4, false);
   let n_vertex = reader.getInt32(8, false);
   if (n_vertex !== n_vert) {
     console.log("Overlay has " + n_vertex + " vertices, expected " + n_vert);
@@ -107862,7 +107773,6 @@ NVMesh.readCURV = function(buffer2, n_vert) {
   let sig1 = view.getUint8(1);
   let sig2 = view.getUint8(2);
   let n_vertex = view.getUint32(3, false);
-  view.getUint32(7, false);
   let n_time = view.getUint32(11, false);
   if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255)
     log$1.debug("Unable to recognize file type: does not appear to be FreeSurfer format.");
@@ -108514,7 +108424,6 @@ NVMesh.readOFF = function(buffer2) {
   var enc = new TextDecoder("utf-8");
   var txt = enc.decode(buffer2);
   var lines = txt.split("\n");
-  lines.length;
   let pts = [];
   let t = [];
   let i2 = 0;
@@ -108757,8 +108666,10 @@ NVMesh.readNII2 = function(buffer2, n_vert = 0) {
     return scalars;
   }
   let voxoffset2 = Number(reader.getBigInt64(168, isLittleEndian2));
-  reader.getFloat64(176, isLittleEndian2);
-  reader.getFloat64(184, isLittleEndian2);
+  let scl_slope = reader.getFloat64(176, isLittleEndian2);
+  let scl_inter = reader.getFloat64(184, isLittleEndian2);
+  if (scl_slope !== 1 || scl_inter !== 0)
+    console.log("ignoring scale slope and intercept");
   let intent_code = reader.getUint32(504, isLittleEndian2);
   let datatype = reader.getUint16(12, isLittleEndian2);
   if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
@@ -108908,7 +108819,6 @@ NVMesh.readNII2 = function(buffer2, n_vert = 0) {
 };
 NVMesh.readNII = function(buffer2, n_vert = 0) {
   let scalars = [];
-  buffer2.byteLength;
   let isLittleEndian2 = true;
   var reader = new DataView(buffer2);
   var magic = reader.getUint16(0, isLittleEndian2);
@@ -108933,8 +108843,10 @@ NVMesh.readNII = function(buffer2, n_vert = 0) {
   if (magic !== 348)
     console.log("Not a valid NIfTI image.");
   let voxoffset2 = reader.getFloat32(108, isLittleEndian2);
-  reader.getFloat32(112, isLittleEndian2);
-  reader.getFloat32(116, isLittleEndian2);
+  let scl_slope = reader.getFloat32(112, isLittleEndian2);
+  let scl_inter = reader.getFloat32(116, isLittleEndian2);
+  if (scl_slope !== 1 || scl_inter !== 0)
+    console.log("ignoring scale slope and intercept");
   let datatype = reader.getUint16(70, isLittleEndian2);
   if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
     console.log("Unsupported NIfTI datatype " + datatype);
@@ -109218,7 +109130,6 @@ NVMesh.readX3D = function(buffer2, n_vert = 0) {
           rotation[1],
           rotation[2]
         ]);
-        fromValues(translation[0], translation[1], translation[2], 1);
         let pti = fromValues(0, -height * 0.5, 0, 1);
         let ptj = fromValues(0, +height * 0.5, 0, 1);
         transformMat4(pti, pti, r);
@@ -111513,7 +111424,7 @@ function Niivue(options = {}) {
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
     isSliceMM: false,
-    isHighResolutionCapable: false,
+    isHighResolutionCapable: true,
     logging: false,
     loadingText: "waiting for images...",
     dragAndDropEnabled: true,
@@ -111557,7 +111468,6 @@ function Niivue(options = {}) {
   this.orientCubeShader = null;
   this.orientCubeShaderVAO = null;
   this.rectShader = null;
-  this.graphShader = null;
   this.renderShader = null;
   this.pickingMeshShader = null;
   this.pickingImageShader = null;
@@ -111607,7 +111517,6 @@ function Niivue(options = {}) {
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseDepthPicker = false;
   this.scene.pan2Dxyzmm = [0, 0, 0, 1];
-  this.scene.scale2D = 1;
   this.scene.prevX = 0;
   this.scene.prevY = 0;
   this.scene.currX = 0;
@@ -111676,10 +111585,6 @@ function Niivue(options = {}) {
     {
       Name: "Toon",
       Frag: fragMeshToonShader
-    },
-    {
-      Name: "Depth",
-      Frag: fragMeshDepthShader
     }
   ];
   this.isController = false;
@@ -111964,13 +111869,11 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
   if (frac[0] < 0)
     return;
   let endVox = this.frac2vox(frac, volIdx);
-  let hi = -Number.MAX_VALUE, lo = Number.MAX_VALUE;
-  let xrange;
-  let yrange;
-  let zrange;
-  xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]]);
-  yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]]);
-  zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]]);
+  let hi = -Number.MAX_VALUE;
+  let lo = Number.MAX_VALUE;
+  let xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]]);
+  let yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]]);
+  let zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]]);
   if (startVox[0] - endVox[0] === 0) {
     xrange[1] = startVox[0] + 1;
   } else if (startVox[1] - endVox[1] === 0) {
@@ -112109,6 +112012,11 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
     } else {
       x2 = msg2.offsetX;
       y = msg2.offsetY;
+    }
+    if (this.opts.isHighResolutionCapable) {
+      let dpr = window.devicePixelRatio || 1;
+      x2 *= dpr;
+      y *= dpr;
     }
     if (this.inRenderTile(x2, y) >= 0)
       isRender = true;
@@ -112697,10 +112605,6 @@ Niivue.prototype.setPan2Dxyzmm = function(xyzmmZoom) {
   this.scene.pan2Dxyzmm = xyzmmZoom;
   this.drawScene();
 };
-Niivue.prototype.setScale2D = function(zoomFactor) {
-  this.scene.scale2D = zoomFactor;
-  this.drawScene();
-};
 Niivue.prototype.setRenderAzimuthElevation = function(a, e) {
   this.scene.renderAzimuth = a;
   this.scene.renderElevation = e;
@@ -112851,14 +112755,17 @@ Niivue.prototype.setPenValue = function(penValue, isFilledPen = false) {
 };
 Niivue.prototype.setDrawOpacity = function(opacity) {
   this.drawOpacity = opacity;
-  this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.drawScene();
 };
 Niivue.prototype.setSelectionBoxColor = function(color) {
   this.opts.selectionBoxColor = color;
 };
 Niivue.prototype.sliceScroll2D = function(posChange, x2, y, isDelta = true) {
+  if (this.opts.isHighResolutionCapable) {
+    let dpr = window.devicePixelRatio || 1;
+    x2 *= dpr;
+    y *= dpr;
+  }
   this.mouseClick(x2, y, posChange, isDelta);
 };
 Niivue.prototype.setSliceType = function(st) {
@@ -112881,7 +112788,7 @@ Niivue.prototype.setScale = function(scale2) {
 Niivue.prototype.setClipPlaneColor = function(color) {
   this.opts.clipPlaneColor = color;
   this.renderShader.use(this.gl);
-  this.gl.uniform4fv(this.renderShader.uniforms["clipPlaneColor"], this.opts.clipPlaneColor);
+  this.gl.uniform4fv(this.renderShader.clipPlaneClrLoc, this.opts.clipPlaneColor);
   this.drawScene();
 };
 Niivue.prototype.overlayRGBA = function(volume) {
@@ -113640,6 +113547,11 @@ Niivue.prototype.loadDefaultFont = async function() {
 Niivue.prototype.initText = async function() {
   this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader);
   this.fontShader.use(this.gl);
+  this.fontShader.screenPxRangeLoc = this.fontShader.uniforms["screenPxRange"];
+  this.fontShader.fontColorLoc = this.fontShader.uniforms["fontColor"];
+  this.fontShader.canvasWidthHeightLoc = this.fontShader.uniforms["canvasWidthHeight"];
+  this.fontShader.leftTopWidthHeightLoc = this.fontShader.uniforms["leftTopWidthHeight"];
+  this.fontShader.uvLeftTopWidthHeightLoc = this.fontShader.uniforms["uvLeftTopWidthHeight"];
   await this.loadDefaultFont();
   this.drawLoadingText(this.loadingText);
 };
@@ -113660,12 +113572,16 @@ Niivue.prototype.setMeshShader = function(meshShaderNameOrNumber = 2) {
   num = Math.min(num, this.meshShaders.length - 1);
   num = Math.max(num, 0);
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[num].Frag);
+  this.meshShader.use(this.gl);
+  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
   this.updateGLVolume();
 };
 Niivue.prototype.setCustomMeshShader = function(fragmentShaderText = "") {
   if (fragmentShaderText.length < 1)
     fragmentShaderText = this.meshShaders[0].Frag;
   this.meshShader = new Shader(this.gl, vertMeshShader, fragmentShaderText);
+  this.meshShader.use(this.gl);
+  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
   this.updateGLVolume();
 };
 Niivue.prototype.meshShaderNames = function(sort = true) {
@@ -113712,22 +113628,41 @@ Niivue.prototype.init = async function() {
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.bindVertexArray(this.unusedVAO);
   this.pickingMeshShader = new Shader(this.gl, vertMeshShader, fragMeshDepthShader);
+  this.pickingMeshShader.use(this.gl);
+  this.pickingMeshShader.mvpLoc = this.pickingMeshShader.uniforms["mvpMtx"];
   this.pickingImageShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader);
   this.pickingImageShader.use(this.gl);
+  this.pickingImageShader.drawOpacityLoc = this.pickingImageShader.uniforms["drawOpacity"];
+  this.pickingImageShader.backgroundMasksOverlaysLoc = this.pickingImageShader.uniforms["backgroundMasksOverlays"];
+  this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
   this.gl.uniform1i(this.pickingImageShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.pickingImageShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.pickingImageShader.uniforms["drawing"], 7);
-  this.pickingImageShader.mvpUniformLoc = this.pickingImageShader.uniforms["mvpMtx"];
-  this.pickingImageShader.rayDirUniformLoc = this.pickingImageShader.uniforms["rayDir"];
-  this.pickingImageShader.clipPlaneUniformLoc = this.pickingImageShader.uniforms["clipPlane"];
+  this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
+  this.pickingImageShader.rayDirLoc = this.pickingImageShader.uniforms["rayDir"];
+  this.pickingImageShader.clipPlaneLoc = this.pickingImageShader.uniforms["clipPlane"];
   this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
   this.sliceShader.use(this.gl);
+  this.sliceShader.drawOpacityLoc = this.sliceShader.uniforms["drawOpacity"];
+  this.sliceShader.opacityLoc = this.sliceShader.uniforms["opacity"];
+  this.sliceShader.backgroundMasksOverlaysLoc = this.sliceShader.uniforms["backgroundMasksOverlays"];
+  this.sliceShader.axCorSagLoc = this.sliceShader.uniforms["axCorSag"];
+  this.sliceShader.sliceLoc = this.sliceShader.uniforms["slice"];
+  this.sliceShader.canvasWidthHeightLoc = this.sliceShader.uniforms["canvasWidthHeight"];
+  this.sliceShader.leftTopWidthHeightLoc = this.sliceShader.uniforms["leftTopWidthHeight"];
   this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader);
   this.sliceMMShader.use(this.gl);
+  this.sliceMMShader.drawOpacityLoc = this.sliceMMShader.uniforms["drawOpacity"];
+  this.sliceMMShader.backgroundMasksOverlaysLoc = this.sliceMMShader.uniforms["backgroundMasksOverlays"];
+  this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
+  this.sliceMMShader.axCorSagLoc = this.sliceMMShader.uniforms["axCorSag"];
+  this.sliceMMShader.sliceLoc = this.sliceMMShader.uniforms["slice"];
+  this.sliceMMShader.frac2mmLoc = this.sliceMMShader.uniforms["frac2mm"];
+  this.sliceMMShader.mvpLoc = this.sliceMMShader.uniforms["mvpMtx"];
   this.gl.uniform1i(this.sliceMMShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.sliceMMShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
@@ -113748,16 +113683,33 @@ Niivue.prototype.init = async function() {
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
   gl.bindVertexArray(this.unusedVAO);
   this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader);
+  this.rectShader.use(this.gl);
+  this.rectShader.lineColorLoc = this.rectShader.uniforms["lineColor"];
+  this.rectShader.canvasWidthHeightLoc = this.rectShader.uniforms["canvasWidthHeight"];
+  this.rectShader.leftTopWidthHeightLoc = this.rectShader.uniforms["leftTopWidthHeight"];
   this.lineShader = new Shader(this.gl, vertLineShader, fragRectShader);
-  this.graphShader = new Shader(this.gl, vertGraphShader, fragRectShader);
+  this.lineShader.use(this.gl);
+  this.lineShader.lineColorLoc = this.lineShader.uniforms["lineColor"];
+  this.lineShader.canvasWidthHeightLoc = this.lineShader.uniforms["canvasWidthHeight"];
+  this.lineShader.thicknessLoc = this.lineShader.uniforms["thickness"];
+  this.lineShader.startXYendXYLoc = this.lineShader.uniforms["startXYendXY"];
   this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
   this.renderShader.use(this.gl);
+  this.renderShader.drawOpacityLoc = this.renderShader.uniforms["drawOpacity"];
+  this.renderShader.backgroundMasksOverlaysLoc = this.renderShader.uniforms["backgroundMasksOverlays"];
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.renderShader.uniforms["drawing"], 7);
-  this.renderShader.mvpUniformLoc = this.renderShader.uniforms["mvpMtx"], this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"];
-  this.renderShader.rayDirUniformLoc = this.renderShader.uniforms["rayDir"], this.renderShader.clipPlaneUniformLoc = this.renderShader.uniforms["clipPlane"], this.colorbarShader = new Shader(this.gl, vertColorbarShader, fragColorbarShader);
+  this.renderShader.mvpLoc = this.renderShader.uniforms["mvpMtx"];
+  this.renderShader.clipPlaneClrLoc = this.renderShader.uniforms["clipPlaneColor"];
+  this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"];
+  this.renderShader.rayDirLoc = this.renderShader.uniforms["rayDir"];
+  this.renderShader.clipPlaneLoc = this.renderShader.uniforms["clipPlane"];
+  this.colorbarShader = new Shader(this.gl, vertColorbarShader, fragColorbarShader);
   this.colorbarShader.use(this.gl);
+  this.colorbarShader.layerLoc = this.colorbarShader.uniforms["layer"];
+  this.colorbarShader.canvasWidthHeightLoc = this.colorbarShader.uniforms["canvasWidthHeight"];
+  this.colorbarShader.leftTopWidthHeightLoc = this.colorbarShader.uniforms["leftTopWidthHeight"];
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
   this.growCutShader = new Shader(this.gl, vertGrowCutShader, fragGrowCutShader);
   this.passThroughShader = new Shader(this.gl, vertPassThroughShader, fragPassThroughShader);
@@ -113767,8 +113719,15 @@ Niivue.prototype.init = async function() {
   this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
   this.orientShaderRGBU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
   this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader);
+  this.surfaceShader.use(this.gl);
+  this.surfaceShader.mvpLoc = this.surfaceShader.uniforms["mvpMtx"];
+  this.surfaceShader.colorLoc = this.surfaceShader.uniforms["surfaceColor"];
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
+  this.pickingImageShader.use(this.gl);
+  this.fiberShader.mvpLoc = this.fiberShader.uniforms["mvpMtx"];
   this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
+  this.meshShader.use(this.gl);
+  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
   if (this.opts.thumbnail.length > 0) {
@@ -113852,7 +113811,6 @@ Niivue.prototype.getDescriptives = function(layer = 0, ignoreZeros = false, mask
     M = Mnext;
   }
   let stdev = Math.sqrt(S / (k - 1));
-  "Number of voxels: " + k + "\nMean:" + M + "\nMin:" + mn + "\nMax:" + mx + "\nStandard deviation: " + stdev + "\nRobust Min: " + this.volumes[layer].robust_min + "\nRobust Max: " + this.volumes[layer].robust_max;
   return {
     mean: M,
     stdev,
@@ -114072,7 +114030,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
   let vox = slicescl.vox;
   let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
-  this.gl.uniform4fv(this.renderShader.uniforms["clipPlaneColor"], this.opts.clipPlaneColor);
+  this.gl.uniform4fv(this.renderShader.clipPlaneClrLoc, this.opts.clipPlaneColor);
   this.gl.uniform1f(this.renderShader.uniforms["backOpacity"], this.volumes[0].opacity);
   this.gl.uniform4fv(this.renderShader.uniforms["clipPlane"], this.scene.clipPlane);
   this.gl.uniform3fv(this.renderShader.uniforms["texVox"], vox);
@@ -114356,13 +114314,13 @@ Niivue.prototype.drawRuler = function() {
 Niivue.prototype.drawRuler10cm = function(startXYendXY) {
   this.gl.bindVertexArray(this.genericVAO);
   this.lineShader.use(this.gl);
-  this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.rulerColor);
-  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+  this.gl.uniform4fv(this.lineShader.lineColorLoc, this.opts.rulerColor);
+  this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
     this.gl.canvas.width,
     this.gl.canvas.height
   ]);
-  this.gl.uniform1f(this.lineShader.uniforms["thickness"], this.opts.rulerWidth);
-  this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
+  this.gl.uniform1f(this.lineShader.thicknessLoc, this.opts.rulerWidth);
+  this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   let w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2]);
   let b = startXYendXY[1];
@@ -114373,7 +114331,7 @@ Niivue.prototype.drawRuler10cm = function(startXYendXY) {
     let xyxy = [l, b, l, t];
     if (i2 % 5 === 0)
       xyxy[3] = t2;
-    this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], xyxy);
+    this.gl.uniform4fv(this.lineShader.startXYendXYLoc, xyxy);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   }
   this.gl.bindVertexArray(this.unusedVAO);
@@ -114385,26 +114343,26 @@ Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   this.lineShader.use(this.gl);
-  gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.rulerColor);
-  gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
+  gl.uniform4fv(this.lineShader.lineColorLoc, this.opts.rulerColor);
+  gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
     gl.canvas.width,
     gl.canvas.height
   ]);
-  gl.uniform1f(this.lineShader.uniforms["thickness"], this.opts.rulerWidth);
-  gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
+  gl.uniform1f(this.lineShader.thicknessLoc, this.opts.rulerWidth);
+  gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   let c2 = this.opts.rulerColor;
   c2[3] = 1;
-  gl.uniform4fv(this.lineShader.uniforms["lineColor"], c2);
+  gl.uniform4fv(this.lineShader.lineColorLoc, c2);
   let w = this.opts.rulerWidth;
-  gl.uniform1f(this.lineShader.uniforms["thickness"], w * 2);
+  gl.uniform1f(this.lineShader.thicknessLoc, w * 2);
   let sXYeXY = [
     startXYendXY[0],
     startXYendXY[1] - w,
     startXYendXY[0],
     startXYendXY[1] + w
   ];
-  gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], sXYeXY);
+  gl.uniform4fv(this.lineShader.startXYendXYLoc, sXYeXY);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   sXYeXY = [
     startXYendXY[2],
@@ -114412,7 +114370,7 @@ Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
     startXYendXY[2],
     startXYendXY[3] + w
   ];
-  gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], sXYeXY);
+  gl.uniform4fv(this.lineShader.startXYendXYLoc, sXYeXY);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]]);
   let endXY = this.canvasPos2frac([startXYendXY[2], startXYendXY[3]]);
@@ -114432,21 +114390,23 @@ Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
   }
   gl.bindVertexArray(this.unusedVAO);
 };
-Niivue.prototype.drawBox = function(leftTopWidthHeight, lineColor = [1, 0, 0, 1]) {
+Niivue.prototype.drawRect = function(leftTopWidthHeight, lineColor = [1, 0, 0, -1]) {
+  if (lineColor[3] < 0)
+    lineColor = this.opts.crosshairColor;
   this.rectShader.use(this.gl);
   this.gl.enable(this.gl.BLEND);
-  this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], lineColor);
-  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
+  this.gl.uniform4fv(this.rectShader.lineColorLoc, lineColor);
+  this.gl.uniform2fv(this.rectShader.canvasWidthHeightLoc, [
     this.gl.canvas.width,
     this.gl.canvas.height
   ]);
-  this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  this.gl.uniform4f(this.rectShader.leftTopWidthHeightLoc, leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO);
 };
-Niivue.prototype.drawSelectionBox = function(leftTopWidthHeight, lineColor = [1, 0, 0, 1]) {
-  this.drawBox(leftTopWidthHeight, this.opts.selectionBoxColor);
+Niivue.prototype.drawSelectionBox = function(leftTopWidthHeight) {
+  this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor);
 };
 function tickSpacingX(tickCount, mn, mx) {
   let range = Math.abs(mx - mn);
@@ -114463,13 +114423,22 @@ function tickSpacingX(tickCount, mn, mx) {
     ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
   return [spacing, ticMin];
 }
+function isDivisible(num, denom) {
+  return Math.abs(num - Math.round(num / denom) * (denom / num)) < 1e-5;
+}
 function tickSpacing(mn, mx) {
   let range = Math.abs(mx - mn);
   let [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  if (range % spacing === 0)
+  if (isDivisible(range, spacing))
     return [spacing, ticMin];
   [spacing, ticMin] = tickSpacingX(4, mn, mx);
-  if (range % spacing === 0)
+  if (isDivisible(range, spacing))
+    return [spacing, ticMin];
+  [spacing, ticMin] = tickSpacingX(6, mn, mx);
+  if (isDivisible(range, spacing))
+    return [spacing, ticMin];
+  [spacing, ticMin] = tickSpacingX(7, mn, mx);
+  if (isDivisible(range, spacing))
     return [spacing, ticMin];
   [spacing, ticMin] = tickSpacingX(5, mn, mx);
   return [spacing, ticMin];
@@ -114510,13 +114479,6 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   }
   this.gl.disable(this.gl.DEPTH_TEST);
   this.colorbarHeight = leftTopWidthHeight[3] + 1;
-  [
-    this.opts.backColor[0],
-    this.opts.backColor[1],
-    this.opts.backColor[2],
-    0.5
-  ];
-  leftTopWidthHeight[1];
   let barLTWH = [
     leftTopWidthHeight[0] + margin,
     leftTopWidthHeight[1],
@@ -114529,7 +114491,7 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
     barLTWH[2] + 2,
     barLTWH[3] + 2
   ];
-  this.drawBox(rimLTWH, this.opts.crosshairColor);
+  this.drawRect(rimLTWH, this.opts.crosshairColor);
   this.colorbarShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
@@ -114538,12 +114500,12 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   let lx = layer;
   if (isNegativeColor)
     lx += this.volumes.length;
-  this.gl.uniform1f(this.colorbarShader.uniforms["layer"], lx);
-  this.gl.uniform2fv(this.colorbarShader.uniforms["canvasWidthHeight"], [
+  this.gl.uniform1f(this.colorbarShader.layerLoc, lx);
+  this.gl.uniform2fv(this.colorbarShader.canvasWidthHeightLoc, [
     this.gl.canvas.width,
     this.gl.canvas.height
   ]);
-  this.gl.uniform4fv(this.colorbarShader.uniforms["leftTopWidthHeight"], barLTWH);
+  this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO);
@@ -114563,7 +114525,7 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   let txtTop = ticLTWH[1] + ticLTWH[3];
   while (tic <= max2) {
     ticLTWH[0] = barLTWH[0] + (tic - min2) / range * barLTWH[2];
-    this.drawBox(ticLTWH);
+    this.drawRect(ticLTWH);
     let str = humanize(tic);
     if (isNegativeColor)
       str = "-" + str;
@@ -114612,8 +114574,8 @@ Niivue.prototype.drawChar = function(xy, scale2, char) {
   let w = scale2 * metrics2.lbwh[2];
   let h = scale2 * metrics2.lbwh[3];
   let t = xy[1] + (b - h) + scale2;
-  this.gl.uniform4f(this.fontShader.uniforms["leftTopWidthHeight"], l, t, w, h);
-  this.gl.uniform4fv(this.fontShader.uniforms["uvLeftTopWidthHeight"], metrics2.uv_lbwh);
+  this.gl.uniform4f(this.fontShader.leftTopWidthHeightLoc, l, t, w, h);
+  this.gl.uniform4fv(this.fontShader.uvLeftTopWidthHeightLoc, metrics2.uv_lbwh);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   return scale2 * metrics2.xadv;
 };
@@ -114630,13 +114592,13 @@ Niivue.prototype.drawText = function(xy, str, scale2 = 1, color = null) {
   this.fontShader.use(this.gl);
   let size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale2;
   this.gl.enable(this.gl.BLEND);
-  this.gl.uniform2f(this.fontShader.uniforms["canvasWidthHeight"], this.gl.canvas.width, this.gl.canvas.height);
+  this.gl.uniform2f(this.fontShader.canvasWidthHeightLoc, this.gl.canvas.width, this.gl.canvas.height);
   if (color === null)
     color = this.opts.crosshairColor;
-  this.gl.uniform4fv(this.fontShader.uniforms["fontColor"], color);
+  this.gl.uniform4fv(this.fontShader.fontColorLoc, color);
   let screenPxRange = size / this.fontMets.size * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1);
-  this.gl.uniform1f(this.fontShader.uniforms["screenPxRange"], screenPxRange);
+  this.gl.uniform1f(this.fontShader.screenPxRangeLoc, screenPxRange);
   var bytes = new TextEncoder().encode(str);
   this.gl.bindVertexArray(this.genericVAO);
   for (let i2 = 0; i2 < str.length; i2++)
@@ -114660,7 +114622,6 @@ Niivue.prototype.drawTextLeft = function(xy, str, scale2 = 1, color = null) {
 Niivue.prototype.drawTextRightBelow = function(xy, str, scale2 = 1, color = null) {
   if (this.opts.textHeight <= 0)
     return;
-  this.opts.textHeight * this.gl.canvas.height * scale2;
   this.drawText(xy, str, scale2, color);
 };
 Niivue.prototype.drawTextBetween = function(startXYendXY, str, scale2 = 1, color = null) {
@@ -114784,7 +114745,6 @@ Niivue.prototype.screenFieldOfViewMM = function(axCorSag = 0, forceSliceMM = fal
   }
   let mnMM = this.volumeObject3D.extentsMin.slice();
   let mxMM = this.volumeObject3D.extentsMax.slice();
-  create$2();
   mnMM = this.swizzleVec3MM(mnMM, axCorSag);
   mxMM = this.swizzleVec3MM(mxMM, axCorSag);
   let fovMM = create$1();
@@ -114912,15 +114872,16 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   gl.depthFunc(gl.GREATER);
   gl.disable(gl.CULL_FACE);
   this.sliceMMShader.use(this.gl);
-  this.gl.uniform1i(this.sliceMMShader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
-  this.gl.uniform1f(this.sliceMMShader.uniforms["opacity"], this.volumes[0].opacity);
-  this.gl.uniform1i(this.sliceMMShader.uniforms["axCorSag"], axCorSag);
-  this.gl.uniform1f(this.sliceMMShader.uniforms["slice"], sliceFrac);
-  this.gl.uniformMatrix4fv(this.sliceMMShader.uniforms["frac2mm"], false, this.volumes[0].frac2mm);
-  this.gl.uniformMatrix4fv(this.sliceMMShader.uniforms["mvpMtx"], false, obj.modelViewProjectionMatrix.slice());
-  this.gl.bindVertexArray(this.genericVAO);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-  this.gl.bindVertexArray(this.unusedVAO);
+  gl.uniform1i(this.sliceMMShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
+  gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
+  gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity);
+  gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag);
+  gl.uniform1f(this.sliceMMShader.sliceLoc, sliceFrac);
+  gl.uniformMatrix4fv(this.sliceMMShader.frac2mmLoc, false, this.volumes[0].frac2mm);
+  gl.uniformMatrix4fv(this.sliceMMShader.mvpLoc, false, obj.modelViewProjectionMatrix.slice());
+  gl.bindVertexArray(this.genericVAO);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.bindVertexArray(this.unusedVAO);
   this.screenSlices.push({
     leftTopWidthHeight,
     axCorSag,
@@ -114943,13 +114904,13 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   this.readyForSync = true;
 };
 Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
+  let gl = this.gl;
   let fovMM = this.screenFieldOfViewMM(axCorSag);
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
     leftTopWidthHeight = this.scaleSlice(fovMM[0], fovMM[1]);
   }
-  this.gl.cullFace(this.gl.FRONT);
+  gl.cullFace(gl.FRONT);
   let ltwh = leftTopWidthHeight.slice();
-  let gl = this.gl;
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.disable(gl.DEPTH_TEST);
   let sliceDim = 2;
@@ -114984,22 +114945,23 @@ Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = N
   if (this.opts.sagittalNoseLeft && axCorSag === this.sliceTypeSagittal)
     isMirrorLR = !isMirrorLR;
   this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["opacity"], this.volumes[0].opacity);
-  this.gl.uniform1i(this.sliceShader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
-  this.gl.uniform1i(this.sliceShader.uniforms["axCorSag"], axCorSag);
-  this.gl.uniform1f(this.sliceShader.uniforms["slice"], crossXYZ[2]);
-  this.gl.uniform2fv(this.sliceShader.uniforms["canvasWidthHeight"], [
-    this.gl.canvas.width,
-    this.gl.canvas.height
+  gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
+  gl.uniform1f(this.sliceShader.opacityLoc, this.volumes[0].opacity);
+  gl.uniform1i(this.sliceShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
+  gl.uniform1i(this.sliceShader.axCorSagLoc, axCorSag);
+  gl.uniform1f(this.sliceShader.sliceLoc, crossXYZ[2]);
+  gl.uniform2fv(this.sliceShader.canvasWidthHeightLoc, [
+    gl.canvas.width,
+    gl.canvas.height
   ]);
   if (isMirrorLR) {
-    this.gl.disable(this.gl.CULL_FACE);
+    gl.disable(gl.CULL_FACE);
     leftTopWidthHeight[2] = -leftTopWidthHeight[2];
     leftTopWidthHeight[0] = leftTopWidthHeight[0] - leftTopWidthHeight[2];
   }
-  this.gl.uniform4f(this.sliceShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  this.gl.bindVertexArray(this.genericVAO);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  gl.uniform4f(this.sliceShader.leftTopWidthHeightLoc, leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+  gl.bindVertexArray(this.genericVAO);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   this.screenSlices.push({
     leftTopWidthHeight,
     axCorSag,
@@ -115014,21 +114976,21 @@ Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = N
     return;
   if (this.opts.crosshairWidth <= 0)
     return;
-  this.gl.bindVertexArray(this.genericVAO);
+  gl.bindVertexArray(this.genericVAO);
   this.rectShader.use(this.gl);
-  this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], this.opts.crosshairColor);
-  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
-    this.gl.canvas.width,
-    this.gl.canvas.height
+  gl.uniform4fv(this.rectShader.lineColorLoc, this.opts.crosshairColor);
+  gl.uniform2fv(this.rectShader.canvasWidthHeightLoc, [
+    gl.canvas.width,
+    gl.canvas.height
   ]);
   var xleft = leftTopWidthHeight[0] + leftTopWidthHeight[2] * crossXYZ[0];
-  this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], xleft - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[1], this.opts.crosshairWidth, leftTopWidthHeight[3]);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  gl.uniform4f(this.rectShader.leftTopWidthHeightLoc, xleft - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[1], this.opts.crosshairWidth, leftTopWidthHeight[3]);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   var xtop = leftTopWidthHeight[1] + leftTopWidthHeight[3] * (1 - crossXYZ[1]);
-  this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], xtop - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[2], this.opts.crosshairWidth);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-  this.gl.bindVertexArray(this.unusedVAO);
-  this.gl.enable(this.gl.CULL_FACE);
+  gl.uniform4f(this.rectShader.leftTopWidthHeightLoc, leftTopWidthHeight[0], xtop - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[2], this.opts.crosshairWidth);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.bindVertexArray(this.unusedVAO);
+  gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0);
@@ -115074,13 +115036,10 @@ Niivue.prototype.calculateMvpMatrix = function(unused, leftTopWidthHeight = [0, 
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
 };
 Niivue.prototype.calculateRayDirection = function(azimuth, elevation) {
-  function deg2rad2(deg) {
-    return deg * (Math.PI / 180);
-  }
   const modelMatrix = create$2();
   modelMatrix[0] = -1;
-  rotateX(modelMatrix, modelMatrix, deg2rad2(270 - elevation));
-  rotateZ(modelMatrix, modelMatrix, deg2rad2(azimuth - 180));
+  rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
+  rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180));
   if (this.back.obliqueRAS) {
     let oblique = clone$1(this.back.obliqueRAS);
     multiply(modelMatrix, modelMatrix, oblique);
@@ -115136,33 +115095,7 @@ Niivue.prototype.setPivot3D = function() {
   this.extentsMax = mx;
   this.furthestFromPivot = length$1(pivot) * 0.5;
 };
-Niivue.prototype.drawGraphLine = function(LTRB, color = [1, 0, 0, 0.5], thickness = 2) {
-  this.graphShader.use(this.gl);
-  this.gl.uniform4fv(this.graphShader.uniforms["lineColor"], color);
-  this.gl.uniform2fv(this.graphShader.uniforms["canvasWidthHeight"], [
-    this.gl.canvas.width,
-    this.gl.canvas.height
-  ]);
-  this.gl.uniform1f(this.graphShader.uniforms["thickness"], thickness);
-  this.gl.uniform4f(this.graphShader.uniforms["leftTopRightBottom"], LTRB[0], LTRB[1], LTRB[2], LTRB[3]);
-  this.gl.bindVertexArray(this.genericVAO);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-  this.gl.bindVertexArray(this.unusedVAO);
-};
-Niivue.prototype.drawRect = function(LTWH, color = [1, 0, 0, 0.5]) {
-  this.rectShader.use(this.gl);
-  this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], color);
-  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
-    this.gl.canvas.width,
-    this.gl.canvas.height
-  ]);
-  this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], LTWH[0], LTWH[1], LTWH[2], LTWH[3]);
-  this.gl.bindVertexArray(this.genericVAO);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-  this.gl.bindVertexArray(this.unusedVAO);
-};
 Niivue.prototype.drawGraph = function() {
-  this.gl;
   let graph = this.graph;
   if (this.graph.autoSizeMultiplanar && this.sliceType === this.sliceTypeMultiplanar) {
     for (let i2 = 0; i2 < this.screenSlices.length; i2++) {
@@ -115300,13 +115233,13 @@ Niivue.prototype.drawGraph = function() {
   thinColor[3] = 0.25 * graph.lineColor[3];
   while (lineH <= mx) {
     let y = plotBottom - (lineH - mn) * scaleH;
-    this.drawGraphLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], thinColor, 0.5 * graph.lineThickness);
+    this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], 0.5 * graph.lineThickness, thinColor);
     lineH += spacing;
   }
   lineH = ticMin;
   while (lineH <= mx) {
     let y = plotBottom - (lineH - mn) * scaleH;
-    this.drawGraphLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.lineColor, graph.lineThickness);
+    this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.lineThickness, graph.lineColor);
     let str = humanize(lineH);
     if (fntSize > 0)
       this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
@@ -115321,12 +115254,12 @@ Niivue.prototype.drawGraph = function() {
     let thick = graph.lineThickness;
     if (i2 % 2 === 1) {
       thick *= 0.5;
-      this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], thinColor, thick);
+      this.drawLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], thick, thinColor);
     } else {
       let str = humanize(i2);
       if (fntSize > 0)
         this.drawTextBelow([x2, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor);
-      this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], graph.lineColor, thick);
+      this.drawLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], thick, graph.lineColor);
     }
   }
   for (let j = 0; j < graph.lines.length; j++) {
@@ -115350,13 +115283,12 @@ Niivue.prototype.drawGraph = function() {
         plotLTWH[0] + x1,
         plotLTWH[1] + plotLTWH[3] - y1
       ];
-      this.drawGraphLine(LTWH, lineRGBA, graph.lineThickness);
+      this.drawLine(LTWH, graph.lineThickness, lineRGBA);
     }
   }
   if (graph.selectedColumn >= 0 && graph.selectedColumn < graph.lines[0].length) {
     let x2 = graph.selectedColumn * scaleW + plotLTWH[0];
-    graph.lineRGB[0];
-    this.drawGraphLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1], graph.lineThickness);
+    this.drawLine([x2, plotLTWH[1], x2, plotLTWH[1] + plotLTWH[3]], graph.lineThickness, [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1]);
   }
 };
 function isRadiological(mtx) {
@@ -115397,7 +115329,6 @@ Niivue.prototype.depthPicker = function(leftTopWidthHeight, mvpMatrix) {
   let gl = this.gl;
   const pixelX = this.mousePos[0] * leftTopWidthHeight[2] / leftTopWidthHeight[2];
   const pixelY = gl.canvas.height - this.mousePos[1] * leftTopWidthHeight[3] / leftTopWidthHeight[3] - 1;
-  console.log(pixelX + "/" + pixelY);
   const rgbaPixel = new Uint8Array(4);
   gl.readPixels(pixelX, pixelY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgbaPixel);
   this.selectedObjectId = rgbaPixel[3];
@@ -115431,15 +115362,15 @@ Niivue.prototype.drawImage3D = function(mvpMatrix, azimuth, elevation) {
     if (this.scene.mouseDepthPicker)
       shader = this.pickingImageShader;
     shader.use(this.gl);
-    gl.uniform1i(shader.uniforms["backgroundMasksOverlays"], this.backgroundMasksOverlays);
+    gl.uniform1i(shader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
     if (this.drawBitmap && this.drawBitmap.length > 8)
-      gl.uniform1f(shader.uniforms["drawOpacity"], this.drawOpacity);
+      gl.uniform1f(shader.drawOpacityLoc, this.drawOpacity);
     else
-      gl.uniform1f(shader.uniforms["drawOpacity"], 0);
-    gl.uniformMatrix4fv(shader.mvpUniformLoc, false, mvpMatrix);
+      gl.uniform1f(shader.drawOpacityLoc, 0);
+    gl.uniformMatrix4fv(shader.mvpLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
-    gl.uniform3fv(shader.rayDirUniformLoc, rayDir);
-    gl.uniform4fv(shader.clipPlaneUniformLoc, this.scene.clipPlane);
+    gl.uniform3fv(shader.rayDirLoc, rayDir);
+    gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane);
     gl.bindVertexArray(object3D.vao);
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(this.unusedVAO);
@@ -115456,25 +115387,26 @@ Niivue.prototype.drawOrientationCube = function(leftTopWidthHeight, azimuth = 0,
   gl.cullFace(gl.BACK);
   this.orientCubeShader.use(this.gl);
   gl.bindVertexArray(this.orientCubeShaderVAO);
-  function deg2rad2(deg) {
-    return deg * (Math.PI / 180);
-  }
   let modelMatrix = create$2();
   let projectionMatrix = create$2();
   ortho(projectionMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -10 * sz, 10 * sz);
+  let translateUpForColorbar = 0;
+  if (leftTopWidthHeight[1] === 0)
+    translateUpForColorbar = gl.canvas.height - this.effectiveCanvasHeight();
   translate(modelMatrix, modelMatrix, [
     1.8 * sz + leftTopWidthHeight[0],
-    1.8 * sz + leftTopWidthHeight[1],
+    translateUpForColorbar + 1.8 * sz + leftTopWidthHeight[1],
     0
   ]);
   scale$1(modelMatrix, modelMatrix, [sz, sz, sz]);
-  rotateX(modelMatrix, modelMatrix, deg2rad2(270 - elevation));
-  rotateZ(modelMatrix, modelMatrix, deg2rad2(-azimuth));
+  rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
+  rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth));
   let modelViewProjectionMatrix = create$2();
   multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
   gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 168);
   gl.bindVertexArray(this.unusedVAO);
+  this.gl.disable(this.gl.CULL_FACE);
 };
 Niivue.prototype.draw3D = function(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix = null, modelMatrix, normalMatrix, azimuth = null, elevation) {
   let isMosaic = azimuth !== null;
@@ -115553,7 +115485,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
   if (this.scene.mouseDepthPicker)
     shader = this.pickingMeshShader;
   shader.use(this.gl);
-  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(shader.mvpLoc, false, m);
   gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
   gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
   gl.uniform1f(shader.uniforms["opacity"], alpha);
@@ -115576,7 +115508,7 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
   }
   shader = this.fiberShader;
   shader.use(this.gl);
-  gl.uniformMatrix4fv(shader.uniforms["mvpMtx"], false, m);
+  gl.uniformMatrix4fv(shader.mvpLoc, false, m);
   gl.uniform1f(shader.uniforms["opacity"], alpha);
   for (let i2 = 0; i2 < this.meshes.length; i2++) {
     if (this.meshes[i2].indexCount < 3)
@@ -115618,7 +115550,7 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpM
   let modelMtx, normMtx;
   if (mvpMtx == null)
     [mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(this.crosshairs3D, this.scene.renderAzimuth, this.scene.renderElevation);
-  gl.uniformMatrix4fv(crosshairsShader.uniforms["mvpMtx"], false, mvpMtx);
+  gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer);
   gl.enable(gl.DEPTH_TEST);
   let color = [...this.opts.crosshairColor];
@@ -115631,7 +115563,7 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpM
     gl.depthFunc(gl.ALWAYS);
   }
   color[3] = alpha;
-  gl.uniform4fv(crosshairsShader.uniforms["surfaceColor"], color);
+  gl.uniform4fv(crosshairsShader.colorLoc, color);
   gl.bindVertexArray(this.crosshairs3D.vao);
   gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_INT, 0);
   gl.bindVertexArray(this.unusedVAO);
@@ -115788,31 +115720,23 @@ Niivue.prototype.drawThumbnail = function() {
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO);
 };
-Niivue.prototype.drawLine = function(leftTopWidthHeight) {
-  this.gl.enable(this.gl.BLEND);
-  this.rectShader.use(this.gl);
-  this.gl.uniform4fv(this.rectShader.uniforms["lineColor"], this.opts.crosshairColor);
-  this.gl.uniform2fv(this.rectShader.uniforms["canvasWidthHeight"], [
+Niivue.prototype.drawLine = function(startXYendXY, thickness = 1, lineColor = [1, 0, 0, -1]) {
+  this.gl.bindVertexArray(this.genericVAO);
+  this.lineShader.use(this.gl);
+  if (lineColor[3] < 0)
+    lineColor = this.opts.crosshairColor;
+  this.gl.uniform4fv(this.lineShader.lineColorLoc, lineColor);
+  this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
     this.gl.canvas.width,
     this.gl.canvas.height
   ]);
-  this.gl.uniform4f(this.rectShader.uniforms["leftTopWidthHeight"], leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
+  this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO);
 };
-Niivue.prototype.drawLine2DX = function(startXYendXY, thickness = 1) {
-  this.gl.bindVertexArray(this.genericVAO);
-  this.lineShader.use(this.gl);
-  this.gl.uniform4fv(this.lineShader.uniforms["lineColor"], this.opts.crosshairColor);
-  this.gl.uniform2fv(this.lineShader.uniforms["canvasWidthHeight"], [
-    this.gl.canvas.width,
-    this.gl.canvas.height
-  ]);
-  this.gl.uniform1f(this.lineShader.uniforms["thickness"], thickness);
-  this.gl.uniform4fv(this.lineShader.uniforms["startXYendXY"], startXYendXY);
-  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-  this.gl.bindVertexArray(this.unusedVAO);
+Niivue.prototype.drawGraphLine = function(LTRB, color = [1, 0, 0, 0.5], thickness = 2) {
+  this.drawLine(LTRB, thickness, color);
 };
 Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM, sagMM) {
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex)
@@ -115847,12 +115771,11 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
       right = swizzleVec3(right, [0, 1, 2]);
       left = mm2screen(left);
       right = mm2screen(right);
-      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+      this.drawLine([left[0], left[1], right[0], right[1]], thick);
     }
   }
   if (linesH.length > 0 && axCorSag === 1) {
     let fracH = tile.sliceFrac;
-    this.frac2mm([0.5, fracH, 0.5]);
     let dimV = 2;
     for (let i2 = 0; i2 < linesH.length; i2++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -115865,7 +115788,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
       right = swizzleVec3(right, [0, 2, 1]);
       left = mm2screen(left);
       right = mm2screen(right);
-      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+      this.drawLine([left[0], left[1], right[0], right[1]], thick);
     }
   }
   if (linesH.length > 0 && axCorSag === 2) {
@@ -115882,7 +115805,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
       right = swizzleVec3(right, [1, 2, 0]);
       left = mm2screen(left);
       right = mm2screen(right);
-      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+      this.drawLine([left[0], left[1], right[0], right[1]], thick);
     }
   }
   if (linesV.length > 0 && axCorSag === 0) {
@@ -115899,7 +115822,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
       right = swizzleVec3(right, [0, 1, 2]);
       left = mm2screen(left);
       right = mm2screen(right);
-      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+      this.drawLine([left[0], left[1], right[0], right[1]], thick);
     }
   }
   if (linesV.length > 0 && axCorSag === 1) {
@@ -115916,7 +115839,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
       right = swizzleVec3(right, [0, 2, 1]);
       left = mm2screen(left);
       right = mm2screen(right);
-      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+      this.drawLine([left[0], left[1], right[0], right[1]], thick);
     }
   }
   if (linesV.length > 0 && axCorSag === 2) {
@@ -115933,7 +115856,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
       right = swizzleVec3(right, [1, 2, 0]);
       left = mm2screen(left);
       right = mm2screen(right);
-      this.drawLine2DX([left[0], left[1], right[0], right[1]], thick);
+      this.drawLine([left[0], left[1], right[0], right[1]], thick);
     }
   }
 };
@@ -115945,7 +115868,6 @@ Niivue.prototype.drawCrossLines = function(sliceIndex, axCorSag, axiMM, corMM, s
   let tile = this.screenSlices[sliceIndex];
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
-  Math.max(1, this.opts.crosshairWidth);
   if (axCorSag === this.sliceTypeCoronal)
     linesH = axiMM.slice();
   if (axCorSag === this.sliceTypeSagittal) {
@@ -115959,7 +115881,7 @@ Niivue.prototype.drawCrossLines = function(sliceIndex, axCorSag, axiMM, corMM, s
     for (let i2 = 0; i2 < linesH.length; i2++) {
       mm[sliceDim] = linesH[i2];
       let frac = this.mm2frac(mm);
-      this.drawLine([
+      this.drawRect([
         LTWH[0],
         LTWH[1] + LTWH[3] - frac[sliceDim] * LTWH[3],
         LTWH[2],
@@ -115978,14 +115900,14 @@ Niivue.prototype.drawCrossLines = function(sliceIndex, axCorSag, axiMM, corMM, s
       mm[sliceDim] = linesV[i2];
       let frac = this.mm2frac(mm);
       if (isRadiolgical)
-        this.drawLine([
+        this.drawRect([
           LTWH[0] + (LTWH[2] - frac[sliceDim] * LTWH[2]),
           LTWH[1],
           1,
           LTWH[3]
         ]);
       else
-        this.drawLine([
+        this.drawRect([
           LTWH[0] + frac[sliceDim] * LTWH[2],
           LTWH[1],
           1,
@@ -116137,6 +116059,8 @@ Niivue.prototype.drawScene = function() {
     }
   }
   if (this.sliceMosaicString.length < 1 && this.sliceType === this.sliceTypeRender) {
+    if (this.opts.isColorbar)
+      this.reserveColorbarPanel();
     this.screenSlices = [];
     this.draw3D();
     if (this.opts.isColorbar)
@@ -116157,7 +116081,7 @@ Niivue.prototype.drawScene = function() {
     } else if (this.sliceType === this.sliceTypeSagittal) {
       this.draw2D([0, 0, 0, 0], 2);
     } else {
-      let { volScale, vox, longestAxis } = this.sliceScale();
+      let { volScale } = this.sliceScale();
       if (typeof this.opts.multiplanarPadPixels !== "number")
         console.log("multiplanarPadPixels must be numeric");
       let pad = parseFloat(this.opts.multiplanarPadPixels);

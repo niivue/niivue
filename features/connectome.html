@@ -15,12 +15,10 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Connectomes
       </h1>
-
     </section>
 <div class="slidecontainer">
   Edge Size <input type="range" min="5" max="30" value="10" class="slider" id="edgeSlider">
@@ -28,8 +26,6 @@
 <div class="slidecontainer">
   Node size <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider">
 </div>
-
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:640px;">
@@ -37,7 +33,6 @@
         </canvas>
       </div>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
@@ -50,7 +45,6 @@
       sliderN.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'nodeScale', this.value * 0.1)
       }
-
       let connectome = {
         "name": "simpleConnectome",
         "nodeColormap": "viridis",
