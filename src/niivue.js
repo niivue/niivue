@@ -705,6 +705,16 @@ Niivue.prototype.resizeListener = function () {
     this.canvas.width = this.canvas.offsetWidth * this.scene.dpr;
     this.canvas.height = this.canvas.offsetHeight * this.scene.dpr;
   }
+<<<<<<< HEAD
+=======
+  if (this.canvas.parentElement.hasOwnProperty("width")) {
+    this.canvas.width = this.canvas.parentElement.width * dpr;
+    this.canvas.height = this.canvas.parentElement.height * dpr;
+  } else {
+    this.canvas.width = this.canvas.offsetWidth * dpr;
+    this.canvas.height = this.canvas.offsetHeight * dpr;
+  }
+>>>>>>> Allow mesh shader to be independently set for each mesh
   this.drawScene();
 };
 
