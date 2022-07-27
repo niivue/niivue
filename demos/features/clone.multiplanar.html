@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Basic multiplanar cloned image
@@ -33,7 +32,6 @@
         </ul>
       </p>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -48,10 +46,8 @@
         </canvas>
       </div>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
-    
     <script>
      const volumeList1 = [
        // first item is background image
@@ -66,25 +62,19 @@
            opacity: 1,
            visible: true,
          },
-        ] 
-      
+        ]
       async function load() {
         var nv1 = new niivue.Niivue()
         await nv1.attachTo('gl1')
         await nv1.loadVolumes(volumeList1)
         nv1.setSliceType(nv1.sliceTypeMultiplanar)
-
-        var nv2 = new niivue.Niivue();
-        await nv2.attachTo('gl2');
+        var nv2 = new niivue.Niivue()
+        await nv2.attachTo('gl2')
         nv2.setSliceType(nv2.sliceTypeMultiplanar)
         nv2.volumes.push(nv1.volumes[0].clone());
         nv2.updateGLVolume();
-      } 
-
-      load();
-      
-
-      
+      }
+      load()
     </script>
   </body>
 </html>

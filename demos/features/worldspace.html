@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         World space
@@ -26,7 +25,6 @@
       <input type="checkbox" id="check3" name="check3" checked>
       <label for="check2">World space</label>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -37,9 +35,9 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
-      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      document.getElementById("check3").addEventListener("change", doCheck3Click)
       function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
+        nv1.setSliceMM(this.checked)
       }
      var volumeList1 = [
        // first item is background image
@@ -57,12 +55,11 @@
             backColor: [0.3, 0.2, 0.4, 1],
             show3Dcrosshair: true,
         })
-      nv1.setSliceMM(true);
+      nv1.setSliceMM(true)
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-
     </script>
   </body>
 </html>

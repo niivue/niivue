@@ -64,7 +64,7 @@
     "jest": "^27.4.4",
     "jest-image-snapshot": "^4.5.1",
     "jest-puppeteer": "^6.0.2",
-    "jsdoc": "^3.6.7",
+    "jsdoc": "^3.6.11",
     "prettier": "^2.5.1",
     "puppeteer": "^9.1.1",
     "vite": "^2.8.4"

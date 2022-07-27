@@ -15,10 +15,9 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
      <h1>
-       Advanced mosaic (Lightbox, Montage) View
+       Advanced Mosaic (Lightbox, Montage) View
      </h1>
      <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).</p>
      <label for="name">Mosaic string:</label>
@@ -40,13 +39,12 @@
      <label for="check8">Negative colors</label>
       <input type="checkbox" id="check9" name="check9" unchecked>
       <label for="check9">Cube</label>
-      <input type="checkbox" id="check10" name="check10" unchecked>
+      <input type="checkbox" id="check10" name="check10" checked>
       <label for="check10">HighDPI</label>
      <div class="slidecontainer">
       gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
      </div>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:640px;">
@@ -54,7 +52,6 @@
         </canvas>
       </div>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
@@ -64,24 +61,24 @@
      }
      document.getElementById("check1").addEventListener("change", doCheckClick);
      function doCheckClick() {
-       nv1.setRadiologicalConvention(this.checked);
+       nv1.setRadiologicalConvention(this.checked)
      }
      document.getElementById("check3").addEventListener("change", doCheck3Click);
      function doCheck3Click() {
-       nv1.setSliceMM(this.checked);
+       nv1.setSliceMM(this.checked)
      }
      document.getElementById("check4").addEventListener("change", doCheck4Click);
      function doCheck4Click() {
-       nv1.opts.isDragShowsMeasurementTool = this.checked;
+       nv1.opts.isDragShowsMeasurementTool = this.checked
      }      
      document.getElementById("check5").addEventListener("change", doCheck5Click);
      function doCheck5Click() {
-       nv1.opts.isRuler = this.checked;
+       nv1.opts.isRuler = this.checked
        nv1.drawScene();
      }
      document.getElementById("check6").addEventListener("change", doCheck6Click);
      function doCheck6Click() {
-       nv1.opts.sagittalNoseLeft = this.checked;
+       nv1.opts.sagittalNoseLeft = this.checked
        nv1.drawScene();
      }
      document.getElementById("check7").addEventListener("change", doCheck7Click);
@@ -94,17 +91,17 @@
        if (this.checked)
         nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
        else
-        nv1.setColorMapNegative(nv1.volumes[1].id,"");
-       nv1.drawScene();
+        nv1.setColorMapNegative(nv1.volumes[1].id,"")
+       nv1.drawScene()
      }
      document.getElementById("check9").addEventListener("change", doCheck9Click);
      function doCheck9Click() {
-       nv1.opts.isOrientCube = this.checked;
+       nv1.opts.isOrientCube = this.checked
        nv1.drawScene();
      }
      document.getElementById("check10").addEventListener("change", doCheck10Click);
      function doCheck10Click() {
-       nv1.setHighResolutionCapable(this.checked);
+       nv1.setHighResolutionCapable(this.checked)
      }
      var volumeList1 = [
      {
@@ -124,7 +121,7 @@
            colorMapNegative: "winter",
            opacity: 1,
            cal_min: 1,
-            cal_max: 6,
+           cal_max: 6,
            visible: true,
          },
         ] 
@@ -133,12 +130,13 @@
         backColor: [0, 0.3, 0.4, 1]})
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
-      var txt = document.getElementById("str");
+      var txt = document.getElementById("str")
       nv1.setSliceType(nv1.sliceTypeAxial)
-      nv1.setSliceMosaicString(txt.value);
+      nv1.setSliceMosaicString(txt.value)
+      nv1.setHighResolutionCapable(true)
        function bar() {
             console.log(txt.value)//do stuff
-            nv1.setSliceMosaicString(txt.value);
+            nv1.setSliceMosaicString(txt.value)
        }
     </script>
   </body>
