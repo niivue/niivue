@@ -432,6 +432,16 @@ NVImage.prototype.calculateOblique = function () {
   vec3.subtract(X1mm, X1mm, LPI);
   vec3.subtract(Y1mm, Y1mm, LPI);
   vec3.subtract(Z1mm, Z1mm, LPI);
+  // convert degrees to radians
+  function rad2deg(rad) {
+    return rad * (180.0 / Math.PI);
+  } // deg2rad()
+  let xyDeg = Math.abs(90 - rad2deg(vec3.angle(X1mm, Y1mm)));
+  let xzDeg = Math.abs(90 - rad2deg(vec3.angle(X1mm, Z1mm)));
+  let yzDeg = Math.abs(90 - rad2deg(vec3.angle(Y1mm, Z1mm)));
+  this.maxShearDeg = Math.max(Math.max(xyDeg, xzDeg), yzDeg);
+  if (this.maxShearDeg > 0.1)
+    log.debug("Warning: shear detected (gantry tilt) of %f degrees", this.maxShearDeg);
   let oblique = mat4.fromValues(
     X1mm[0],
     X1mm[1],
@@ -456,7 +466,7 @@ NVImage.prototype.calculateOblique = function () {
   let YZ = Math.abs(90 - vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
   let maxShear = Math.max(Math.max(XY, XZ), YZ);
   if (maxShear > 0.1)
-    log.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+    log.debug("Warning: voxels rotated relative to world space %f degrees from plumb.", maxShear);
   //compute a matrix to transform vectors from factional space to mm:
   let dim = vec4.fromValues(
     this.dimsRAS[1],
