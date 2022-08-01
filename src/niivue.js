@@ -2716,12 +2716,8 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
     let options = meshList[i];
-    console.log(options);
-    let mesh = await this.loadMeshFromUrl(options);
+    await this.addMeshFromUrl(options);
     this.scene.loading$.next(false);
-    this.addMesh(mesh);
-    //this.meshes.push(mesh);
-    //this.updateGLVolume();
   } // for
   this.drawScene();
   return this;
