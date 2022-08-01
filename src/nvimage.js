@@ -26,6 +26,58 @@ function isPlatformLittleEndian() {
  */
 
 /**
+ * NVImageFromUrlOptions
+ * @typedef  NVImageFromUrlOptions
+ * @type {object}
+ * @property {string} url - the resolvable URL pointing to a nifti image to load
+ * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+ * @property {string} [name=''] a name for this image. Default is an empty string
+ * @property {string} [colorMap='gray'] a color map to use. default is gray
+ * @property {number} [opacity=1.0] the opacity for this image. default is 1
+ * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
+ * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
+ * @property {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @property {boolean} [visible=true] whether or not this image is to be visible
+ * @property {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ */
+
+/**
+ *
+ * @constructor
+ * @returns {NVImageFromUrlOptions}
+ */
+export function NVImageFromUrlOptions(
+  url,
+  urlImageData = "",
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true,
+  colorMapNegative = ""
+) {
+  return {
+    url,
+    urlImageData,
+    name,
+    colorMap,
+    opacity,
+    cal_min,
+    cal_max,
+    trustCalMinMax,
+    percentileFrac,
+    ignoreZeroVoxels,
+    visible,
+    colorMapNegative,
+  };
+}
+
+/**
  * @class NVImage
  * @type NVImage
  * @description
@@ -2283,18 +2335,7 @@ NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
 /**
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
- * @param {string} url the resolvable URL pointing to a nifti image to load
- * @param {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
- * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
- * @param {number} [opacity=1.0] the opacity for this image. default is 1
- * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
- * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
- * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
- * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
- * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
- * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @param {NVImageOptions} options
  * @returns {NVImage} returns a NVImage intance
  * @example
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
