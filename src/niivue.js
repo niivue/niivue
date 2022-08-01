@@ -2317,6 +2317,17 @@ Niivue.prototype.removeVolumeByIndex = function (index) {
 };
 
 /**
+ * Remove a volume by index
+ * @param {number} index of volume to remove
+ */
+Niivue.prototype.removeVolumeByIndex = function (index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
+};
+
+/**
  * Remove a triangulated mesh, connectome or tractogram
  * @param {NVMesh} mesh mesh to delete
  * @example
