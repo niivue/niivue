@@ -803,16 +803,6 @@ Niivue.prototype.resizeListener = function () {
     this.canvas.width = this.canvas.offsetWidth * this.scene.dpr;
     this.canvas.height = this.canvas.offsetHeight * this.scene.dpr;
   }
-<<<<<<< HEAD
-=======
-  if (this.canvas.parentElement.hasOwnProperty("width")) {
-    this.canvas.width = this.canvas.parentElement.width * dpr;
-    this.canvas.height = this.canvas.parentElement.height * dpr;
-  } else {
-    this.canvas.width = this.canvas.offsetWidth * dpr;
-    this.canvas.height = this.canvas.offsetHeight * dpr;
-  }
->>>>>>> Allow mesh shader to be independently set for each mesh
   this.drawScene();
 };
 
@@ -2234,6 +2224,17 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     } else {
       this.overlays = [];
     }
+    // check if we have a url for this volume
+    if (this.mediaUrlMap.has(volume)) {
+      // notify subscribers
+      let url = this.mediaUrlMap.get(volume);
+      if (this.isInSession) {
+        this.serverConnection$.next(
+          new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey)
+        );
+      }
+      this.mediaUrlMap.delete(volume);
+    }
   } else {
     this.volumes.splice(volIndex, 1);
     this.volumes.splice(toIndex, 0, volume);
@@ -2291,6 +2292,17 @@ Niivue.prototype.removeVolume = function (volume, notifySubscribers = true) {
     }
     this.mediaUrlMap.delete(volume);
   }
+};
+
+/**
+ * Remove a volume by index
+ * @param {number} index of volume to remove
+ */
+Niivue.prototype.removeVolumeByIndex = function (index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
 };
 
 /**
