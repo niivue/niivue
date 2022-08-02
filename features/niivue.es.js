@@ -1281,7 +1281,10 @@ void main(void) {
 	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
 	//float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	FragColor.a *= opacity;
+	//FragColor.a *= opacity;
+	FragColor.a = opacity;
+	return;
+
 	if (layer < 2.0) return;
 	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
 	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
@@ -104890,9 +104893,9 @@ NVImage.prototype.calculateOblique = function() {
   let XY = Math.abs(90 - angle(X1mm, Y1mm) * (180 / Math.PI));
   let XZ = Math.abs(90 - angle(X1mm, Z1mm) * (180 / Math.PI));
   let YZ = Math.abs(90 - angle(Y1mm, Z1mm) * (180 / Math.PI));
-  let maxShear = Math.max(Math.max(XY, XZ), YZ);
-  if (maxShear > 0.1)
-    log$2.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+  this.maxShearDeg = Math.max(Math.max(XY, XZ), YZ);
+  if (this.maxShearDeg > 0.1)
+    console.log("Warning: voxels are rhomboidal, maximum shear is %f degrees.", this.maxShearDeg);
   let dim = fromValues(this.dimsRAS[1], this.dimsRAS[2], this.dimsRAS[3], 1);
   let sform = clone$1(this.matRAS);
   transpose(sform, sform);
@@ -106792,6 +106795,7 @@ function NVMesh(pts, tris, name = "", rgba255 = [255, 255, 255, 255], opacity = 
   this.extentsMax = obj.extentsMax;
   this.opacity = opacity > 1 ? 1 : opacity;
   this.visible = visible;
+  this.meshShaderIndex = 0;
   this.indexBuffer = gl.createBuffer();
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
@@ -107069,6 +107073,45 @@ NVMesh.prototype.updateConnectome = function(gl) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW);
   this.indexCount = tris.length;
 };
+function getClusterBoundaryU8(u82, faces) {
+  const border = new Array(u82.length).fill(false);
+  const binary = new Array(u82.length).fill(false);
+  for (let i2 = 0; i2 < u82.length; i2++)
+    if (u82[i2] > 0)
+      binary[i2] = true;
+  let nTri = faces.length / 3;
+  let j = 0;
+  for (let i2 = 0; i2 < nTri; i2++) {
+    let v0 = faces[j];
+    let v1 = faces[j + 1];
+    let v2 = faces[j + 2];
+    j += 3;
+    if (binary[v0] === binary[v1] && binary[v0] === binary[v2] && binary[v1] === binary[v2])
+      continue;
+    border[v0] = true;
+    border[v1] = true;
+    border[v2] = true;
+  }
+  return border;
+}
+function getClusterBoundary(rgba8, faces) {
+  var rgba32 = new Uint32Array(rgba8.buffer);
+  const border = new Array(rgba32.length).fill(false);
+  let nTri = faces.length / 3;
+  let j = 0;
+  for (let i2 = 0; i2 < nTri; i2++) {
+    let v0 = faces[j];
+    let v1 = faces[j + 1];
+    let v2 = faces[j + 2];
+    j += 3;
+    if (rgba32[v0] === rgba32[v1] && rgba32[v0] === rgba32[v2] && rgba32[v1] === rgba32[v2])
+      continue;
+    border[v0] = true;
+    border[v1] = true;
+    border[v2] = true;
+  }
+  return border;
+}
 NVMesh.prototype.updateMesh = function(gl) {
   if (this.offsetPt0) {
     this.updateFibers(gl);
@@ -107088,16 +107131,25 @@ NVMesh.prototype.updateMesh = function(gl) {
       let lerp2 = function(x2, y, a) {
         return x2 * (1 - a) + y * a;
       };
+      let nvtx = this.pts.length / 3;
       let layer = this.layers[i2];
-      if (layer.opacity <= 0 || layer.cal_min >= layer.cal_max)
+      if (layer.opacity <= 0 || layer.cal_min > layer.cal_max)
         continue;
       let opacity = layer.opacity;
       var u82 = new Uint8Array(posNormClr.buffer);
       if (layer.values.constructor === Uint32Array) {
         let rgba8 = new Uint8Array(layer.values.buffer);
+        let opaque = new Array(nvtx).fill(true);
+        if (layer.isOutlineBorder)
+          opaque = getClusterBoundary(rgba8, this.tris);
         let k = 0;
         for (let j = 0; j < layer.values.length; j++) {
           let vtx = j * 28 + 24;
+          if (!opaque[j]) {
+            u82[vtx + 3] = 0;
+            k += 4;
+            continue;
+          }
           u82[vtx + 0] = lerp2(u82[vtx + 0], rgba8[k + 0], opacity);
           u82[vtx + 1] = lerp2(u82[vtx + 1], rgba8[k + 1], opacity);
           u82[vtx + 2] = lerp2(u82[vtx + 2], rgba8[k + 2], opacity);
@@ -107107,34 +107159,76 @@ NVMesh.prototype.updateMesh = function(gl) {
       }
       let lut = cmapper$1.colormap(layer.colorMap);
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
-      let nvtx = this.pts.length / 3;
       let frameOffset = nvtx * frame;
       if (layer.useNegativeCmap) {
         layer.cal_min = Math.max(0, layer.cal_min);
         layer.cal_max = Math.max(layer.cal_min + 1e-6, layer.cal_max);
       }
       let scale255 = 255 / (layer.cal_max - layer.cal_min);
-      for (let j = 0; j < nvtx; j++) {
-        let v255 = Math.round((layer.values[j + frameOffset] - layer.cal_min) * scale255);
-        if (v255 < 0)
-          continue;
-        v255 = Math.min(255, v255) * 4;
-        let vtx = j * 28 + 24;
-        u82[vtx + 0] = lerp2(u82[vtx + 0], lut[v255 + 0], opacity);
-        u82[vtx + 1] = lerp2(u82[vtx + 1], lut[v255 + 1], opacity);
-        u82[vtx + 2] = lerp2(u82[vtx + 2], lut[v255 + 2], opacity);
-      }
-      if (layer.useNegativeCmap) {
-        let lut2 = cmapper$1.colormap(layer.colorMapNegative);
+      if (!layer.isOutlineBorder) {
         for (let j = 0; j < nvtx; j++) {
-          let v255 = Math.round((-layer.values[j + frameOffset] - layer.cal_min) * scale255);
+          let v255 = Math.round((layer.values[j + frameOffset] - layer.cal_min) * scale255);
           if (v255 < 0)
             continue;
           v255 = Math.min(255, v255) * 4;
           let vtx = j * 28 + 24;
-          u82[vtx + 0] = lerp2(u82[vtx + 0], lut2[v255 + 0], opacity);
-          u82[vtx + 1] = lerp2(u82[vtx + 1], lut2[v255 + 1], opacity);
-          u82[vtx + 2] = lerp2(u82[vtx + 2], lut2[v255 + 2], opacity);
+          u82[vtx + 0] = lerp2(u82[vtx + 0], lut[v255 + 0], opacity);
+          u82[vtx + 1] = lerp2(u82[vtx + 1], lut[v255 + 1], opacity);
+          u82[vtx + 2] = lerp2(u82[vtx + 2], lut[v255 + 2], opacity);
+        }
+      } else {
+        let v255s = new Uint8Array(nvtx);
+        for (let j = 0; j < nvtx; j++) {
+          let v255 = Math.round((layer.values[j + frameOffset] - layer.cal_min) * scale255);
+          if (v255 < 0)
+            continue;
+          v255 = Math.min(255, v255);
+          v255s[j] = v255;
+        }
+        let opaque = getClusterBoundaryU8(v255s, this.tris);
+        for (let j = 0; j < nvtx; j++) {
+          let v255 = 255;
+          if (!opaque[j])
+            continue;
+          v255 = Math.min(255, v255) * 4;
+          let vtx = j * 28 + 24;
+          u82[vtx + 0] = lerp2(u82[vtx + 0], lut[v255 + 0], opacity);
+          u82[vtx + 1] = lerp2(u82[vtx + 1], lut[v255 + 1], opacity);
+          u82[vtx + 2] = lerp2(u82[vtx + 2], lut[v255 + 2], opacity);
+        }
+      }
+      if (layer.useNegativeCmap) {
+        let lut2 = cmapper$1.colormap(layer.colorMapNegative);
+        if (!layer.isOutlineBorder) {
+          for (let j = 0; j < nvtx; j++) {
+            let v255 = Math.round((-layer.values[j + frameOffset] - layer.cal_min) * scale255);
+            if (v255 < 0)
+              continue;
+            v255 = Math.min(255, v255) * 4;
+            let vtx = j * 28 + 24;
+            u82[vtx + 0] = lerp2(u82[vtx + 0], lut2[v255 + 0], opacity);
+            u82[vtx + 1] = lerp2(u82[vtx + 1], lut2[v255 + 1], opacity);
+            u82[vtx + 2] = lerp2(u82[vtx + 2], lut2[v255 + 2], opacity);
+          }
+        } else {
+          let v255s = new Uint8Array(nvtx);
+          for (let j = 0; j < nvtx; j++) {
+            let v255 = Math.round((-layer.values[j + frameOffset] - layer.cal_min) * scale255);
+            if (v255 < 0)
+              continue;
+            v255s[j] = Math.min(255, v255);
+          }
+          let opaque = getClusterBoundaryU8(v255s, this.tris);
+          for (let j = 0; j < nvtx; j++) {
+            let v255 = 255;
+            if (!opaque[j])
+              continue;
+            v255 = Math.min(255, v255) * 4;
+            let vtx = j * 28 + 24;
+            u82[vtx + 0] = lerp2(u82[vtx + 0], lut2[v255 + 0], opacity);
+            u82[vtx + 1] = lerp2(u82[vtx + 1], lut2[v255 + 1], opacity);
+            u82[vtx + 2] = lerp2(u82[vtx + 2], lut2[v255 + 2], opacity);
+          }
         }
       }
     }
@@ -108364,7 +108458,7 @@ NVMesh.readPLY = function(buffer2) {
     indices
   };
 };
-NVMesh.readLayer = function(name, buffer2, nvmesh, opacity = 0.5, colorMap = "warm", colorMapNegative = "winter", useNegativeCmap = false, cal_min = null, cal_max = null) {
+NVMesh.readLayer = function(name, buffer2, nvmesh, opacity = 0.5, colorMap = "warm", colorMapNegative = "winter", useNegativeCmap = false, cal_min = null, cal_max = null, isOutlineBorder = false) {
   let layer = [];
   let n_vert = nvmesh.vertexCount / 3;
   if (n_vert < 3)
@@ -108400,6 +108494,7 @@ NVMesh.readLayer = function(name, buffer2, nvmesh, opacity = 0.5, colorMap = "wa
     return;
   layer.nFrame4D = layer.values.length / n_vert;
   layer.frame4D = 0;
+  layer.isOutlineBorder = isOutlineBorder;
   let mn = layer.values[0];
   let mx = layer.values[0];
   for (var i2 = 0; i2 < layer.values.length; i2++) {
@@ -111486,7 +111581,6 @@ function Niivue(options = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
-  this.meshShader = null;
   this.genericVAO = null;
   this.unusedVAO = null;
   this.crosshairs3D = null;
@@ -111793,8 +111887,13 @@ Niivue.prototype.resizeListener = function() {
     dpr = window.devicePixelRatio || 1;
     console.log("devicePixelRatio: " + dpr);
   }
-  this.canvas.width = this.canvas.offsetWidth * dpr;
-  this.canvas.height = this.canvas.offsetHeight * dpr;
+  if (this.canvas.parentElement.hasOwnProperty("width")) {
+    this.canvas.width = this.canvas.parentElement.width * dpr;
+    this.canvas.height = this.canvas.parentElement.height * dpr;
+  } else {
+    this.canvas.width = this.canvas.offsetWidth * dpr;
+    this.canvas.height = this.canvas.offsetHeight * dpr;
+  }
   this.drawScene();
 };
 Niivue.prototype.getRelativeMousePosition = function(event, target) {
@@ -112565,6 +112664,8 @@ Niivue.prototype.saveImage = async function(fnm, isSaveDrawing = false) {
   return true;
 };
 Niivue.prototype.getMeshIndexByID = function(id) {
+  if (typeof id === "number")
+    return id;
   let n = this.meshes.length;
   for (let i2 = 0; i2 < n; i2++) {
     let id_i = this.meshes[i2].id;
@@ -113555,34 +113656,45 @@ Niivue.prototype.initText = async function() {
   await this.loadDefaultFont();
   this.drawLoadingText(this.loadingText);
 };
-Niivue.prototype.setMeshShader = function(meshShaderNameOrNumber = 2) {
-  this.gl.deleteProgram(this.meshShader.program);
+Niivue.prototype.meshShaderNameToNumber = function(meshShaderName = "Phong") {
+  let name = meshShaderName.toLowerCase();
+  for (var i2 = 0; i2 < this.meshShaders.length; i2++) {
+    if (this.meshShaders[i2].Name.toLowerCase() === name)
+      return i2;
+  }
+  i2 = -1;
+};
+Niivue.prototype.setMeshShader = function(id, meshShaderNameOrNumber = 2) {
   let num = 0;
   if (typeof meshShaderNameOrNumber === "number")
     num = meshShaderNameOrNumber;
   else {
-    let name = meshShaderNameOrNumber.toLowerCase();
-    for (var i2 = 0; i2 < this.meshShaders.length; i2++) {
-      if (this.meshShaders[i2].Name.toLowerCase() === name) {
-        num = i2;
-        break;
-      }
-    }
+    num = this.meshShaderNameToNumber(meshShaderNameOrNumber);
   }
   num = Math.min(num, this.meshShaders.length - 1);
   num = Math.max(num, 0);
-  this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[num].Frag);
-  this.meshShader.use(this.gl);
-  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
+  let idx = this.getMeshIndexByID(id);
+  if (idx >= this.meshes.length) {
+    console.log("Unable to change shader until mesh is loaded (maybe you need async)");
+    return;
+  }
+  this.meshes[idx].meshShaderIndex = num;
   this.updateGLVolume();
 };
-Niivue.prototype.setCustomMeshShader = function(fragmentShaderText = "") {
-  if (fragmentShaderText.length < 1)
-    fragmentShaderText = this.meshShaders[0].Frag;
-  this.meshShader = new Shader(this.gl, vertMeshShader, fragmentShaderText);
-  this.meshShader.use(this.gl);
-  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
-  this.updateGLVolume();
+Niivue.prototype.setCustomMeshShader = function(fragmentShaderText = "", name = "Custom") {
+  let num = this.meshShaderNameToNumber(name);
+  if (num >= 0) {
+    this.gl.deleteProgram(this.meshShaders[num].shader.program);
+    this.meshShaders.splice(num, 1);
+  }
+  let m = [];
+  m.Name = name;
+  m.Frag = fragmentShaderText;
+  m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+  m.shader.use(this.gl);
+  m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  this.meshShaders.push(m);
+  return this.meshShaders.length - 1;
 };
 Niivue.prototype.meshShaderNames = function(sort = true) {
   let cm = [];
@@ -113725,9 +113837,12 @@ Niivue.prototype.init = async function() {
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
   this.pickingImageShader.use(this.gl);
   this.fiberShader.mvpLoc = this.fiberShader.uniforms["mvpMtx"];
-  this.meshShader = new Shader(this.gl, vertMeshShader, this.meshShaders[0].Frag);
-  this.meshShader.use(this.gl);
-  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
+  for (var i2 = 0; i2 < this.meshShaders.length; i2++) {
+    let m = this.meshShaders[i2];
+    m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+    m.shader.use(this.gl);
+    m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  }
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
   if (this.opts.thumbnail.length > 0) {
@@ -115481,16 +115596,17 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
     gl.depthFunc(gl.ALWAYS);
   }
   gl.disable(gl.CULL_FACE);
-  let shader = this.meshShader;
-  if (this.scene.mouseDepthPicker)
-    shader = this.pickingMeshShader;
-  shader.use(this.gl);
-  gl.uniformMatrix4fv(shader.mvpLoc, false, m);
-  gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
-  gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
-  gl.uniform1f(shader.uniforms["opacity"], alpha);
+  let shader = this.meshShaders[0];
   let hasFibers = false;
   for (let i2 = 0; i2 < this.meshes.length; i2++) {
+    shader = this.meshShaders[this.meshes[i2].meshShaderIndex].shader;
+    if (this.scene.mouseDepthPicker)
+      shader = this.pickingMeshShader;
+    shader.use(this.gl);
+    gl.uniformMatrix4fv(shader.mvpLoc, false, m);
+    gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
+    gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
+    gl.uniform1f(shader.uniforms["opacity"], alpha);
     if (this.meshes[i2].indexCount < 3)
       continue;
     if (this.meshes[i2].offsetPt0) {

@@ -41,7 +41,7 @@
     </section>
     <script src="./niivue.umd.js">
     </script>
-    <script>
+    <script type="module" async>
       document.getElementById("check10").addEventListener("change", doCheck10Click);
       function doCheck10Click() {
         nv1.setHighResolutionCapable(this.checked);
@@ -49,20 +49,21 @@
       var nv1 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
       nv1.attachTo('gl1')
       nv1.setHighResolutionCapable(false)
-      nv1.setMeshShader('Outline')
       nv1.opts.isOrientCube = true
-      nv1.loadMeshes([
+      await nv1.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3"},
       ])
+      nv1.setMeshShader(0, 'Outline')
       nv1.setSliceType(nv1.sliceTypeRender)
       var nv2 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
       nv2.attachTo('gl2')
       nv2.setHighResolutionCapable(true)
-      nv2.setMeshShader('Outline')
+      //nv2.setMeshShader(1, 'Outline')
       nv2.opts.isOrientCube = true
-      nv2.loadMeshes([
+      await nv2.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3"},
       ])
+      nv2.setMeshShader(0, 'Outline')
       nv2.setSliceType(nv2.sliceTypeRender)
       nv1.syncWith(nv2, {'3d':true, '2d':false})
     </script>
