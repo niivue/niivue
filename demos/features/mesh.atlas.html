@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Meshes</title>
+    <title>Mesh Atlas</title>
     <style>
       section {
         margin: 20px;
@@ -18,15 +18,13 @@
 
     <section>
       <h1>
-        Mesh support (GIfTI, MZ3, FreeSurfer, OBJ)
+        Mesh-based Atlas
       </h1>
-      <p>
-        NiiVue also supports a simple 3D view
-      </p>
+
 
     </section>
 <div class="slidecontainer">
-  Mesh Color <input type="range" min="0" max="255" value="128" class="slider" id="meshSlider">
+  Atlas transparency <input type="range" min="0" max="255" value="255" class="slider" id="meshSlider">
 </div>
     <!-- demo 1 -->
     <section>
@@ -45,14 +43,15 @@
       <br>
       <button id="customShader">Use custom shader</button>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script type="module" async>
       var slider = document.getElementById("meshSlider");
       // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [this.value, 164, 164, 255])
+        //nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [this.value, 164, 164, 255])
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, 'opacity', this.value / 255.0)
+
       }
 
      var volumeList1 = [
@@ -74,13 +73,15 @@
         backColor: [1, 1, 1, 1]}))
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.attachTo('gl1')
-      //nv1.loadVolumes(volumeList1)
+      var meshLayersList1 = [
+        {url: "../images/lh.curv", colorMap: "rocket", opacity: 0.7},
+        {url: "../images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
+      ]
       await nv1.loadMeshes([
-         {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [222, 164, 164, 255]},
-         {url: "../images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
+         {url: "../images/lh.pial", rgba255 : [222, 164, 164, 255], layers : meshLayersList1},
+         //{url: "../images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
       ])
       nv1.setClipPlane([-0.1, 270, 0])
-      nv1.setMeshShader(nv1.meshes[0].id, "Outline")
       let cmaps = nv1.meshShaderNames()
       let cmapEl = document.getElementById('shaders')
       for (let i=0; i<cmaps.length; i++) {
