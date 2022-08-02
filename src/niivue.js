@@ -658,10 +658,11 @@ Niivue.prototype.handleMessage = function (msg) {
       break;
 
     case ADD_MESH_URL:
+      this.addMeshFromUrl(msg["urlMeshOptions"], false)
       break;
 
     case ADD_VOLUME_URL:
-      this.addVolumeFromUrl(msg["urlImageOptions"]);
+      this.addVolumeFromUrl(msg["urlImageOptions"], false);
       break;
 
     case REMOVE_VOLUME_URL:
@@ -1455,14 +1456,14 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
  * @param {NVImageOptions} imageOptions
  * @returns
  */
-Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
+Niivue.prototype.addVolumeFromUrl = async function (imageOptions, notifySubscribers = true) {
   let volume = await this.loadVolumeFromUrl(imageOptions);
   this.addVolume(volume);
   if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
     this.mediaUrlMap.set(volume, imageOptions.url);
     // notify subscribers
     // if we are in session let our subscribers know
-    if (this.isInSession) {
+    if (this.isInSession && notifySubscribers) {
       this.serverConnection$.next(
         new NVMessage(ADD_VOLUME_URL, imageOptions, this.sessionKey)
       );
@@ -2683,14 +2684,14 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
  * @param {NVImageOptions} meshOptions
  * @returns
  */
-Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
+Niivue.prototype.addMeshFromUrl = async function (meshOptions, notifySubscribers = true) {
   let mesh = await this.loadMeshFromUrl(meshOptions);
   this.addMesh(mesh);
   if (!this.mediaUrlMap.has(mesh) && meshOptions.url) {
     this.mediaUrlMap.set(mesh, meshOptions.url);
     // notify subscribers
     // if we are in session let our subscribers know
-    if (this.isInSession) {
+    if (this.isInSession && notifySubscribers) {
       this.serverConnection$.next(
         new NVMessage(ADD_MESH_URL, meshOptions, this.sessionKey)
       );
