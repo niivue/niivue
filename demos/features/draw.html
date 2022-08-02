@@ -158,12 +158,16 @@
         },
 
       ]
+      function handleLocationChange(data){ 
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values[0].value
+      }
       var nv1 = new niivue.Niivue({
         logging: false,
         show3Dcrosshair: true,
         loadingText: 'there are no images',
         dragAndDropEnabled: true,
         backColor: [0.3, 0.2, 0.4, 1],
+        onLocationChange: handleLocationChange
         //thumbnail: "../demos/images/DoG.png"
       })
       nv1.setRadiologicalConvention(false)
@@ -171,11 +175,6 @@
       await nv1.loadVolumes(volumeList1)
       nv1.getDescriptives(0, false)
       await nv1.loadDrawing("../images/lesion.nii.gz")
-      // example of using the 'location' change event with a callback function
-      nv1.on('location', (data) => {
-        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
-        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-      })
     </script>
   </div>
 </body>
