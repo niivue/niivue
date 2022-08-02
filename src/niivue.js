@@ -559,7 +559,8 @@ Niivue.prototype.setUpdateInterval = function () {
           this.scene.renderElevation,
           this.scene.clipPlane,
           this.volScaleMultiplier
-        )
+        ),
+        this.sessionKey
       )
     );
   });
@@ -618,14 +619,12 @@ Niivue.prototype.subscribeToServer = function (
           break;
 
         case ADD_VOLUME_URL:
+          this.addVolumeFromUrl(msg["urlImageOptions"]);
           break;
 
         case REMOVE_VOLUME_URL:
           {
-            let volume = [...this.mediaUrlMap.entries()]
-              .filter((v) => v[1] == msg["url"])
-              .map((v) => v[0])
-              .pop();
+            let volume = this.getMediaByUrl(msg["url"]);
             if (volume) {
               this.removeVolume(volume);
             }
@@ -633,10 +632,7 @@ Niivue.prototype.subscribeToServer = function (
           break;
         case REMOVE_MESH_URL:
           {
-            let mesh = [...this.mediaUrlMap.entries()]
-              .filter((v) => v[1] == msg["url"])
-              .map((v) => v[0])
-              .pop();
+            let mesh = this.getMediaByUrl(msg["url"]);
             if (mesh) {
               this.removeMesh(mesh);
             }
@@ -1370,6 +1366,30 @@ Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   }
   return volume;
 };
+
+/**
+ * Find media by url
+ * @param {string} url -
+ * @returns {(NVImage|NVMesh)}
+ */
+Niivue.prototype.getMediaByUrl = function (url) {
+  return [...this.mediaUrlMap.entries()]
+    .filter((v) => v[1] == url)
+    .map((v) => v[0])
+    .pop();
+};
+
+/**
+ * Remove volume by url
+ * @param {string} url - Volume added by url to remove
+ */
+Niivue.prototype.removeVolumeByUrl = function (url) {
+  let volume = this.getMediaByUrl(url);
+  if (volume) {
+    this.removeVolume(volume);
+  }
+};
+
 // not included in public docs
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
