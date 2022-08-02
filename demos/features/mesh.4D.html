@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
+    <title>Mesh Layers</title>
     <style>
       section {
         margin: 20px;
@@ -81,7 +81,7 @@
         let btn = document.createElement("button")
         btn.innerHTML = cmaps[i]
         btn.onclick = function() {
-          nv1.setMeshShader(cmaps[i])
+          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
         }
         cmapEl.appendChild(btn)
       }

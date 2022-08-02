@@ -214,7 +214,6 @@ export function Niivue(options = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
-  this.meshShader = null;
   this.genericVAO = null; //used for 2D slices, 2D lines, 2D Fonts
   this.unusedVAO = null;
   this.crosshairs3D = null;
@@ -690,10 +689,13 @@ Niivue.prototype.resizeListener = function () {
     dpr = window.devicePixelRatio || 1;
     console.log("devicePixelRatio: " + dpr);
   }
-  this.canvas.width = this.canvas.offsetWidth * dpr;
-  this.canvas.height = this.canvas.offsetHeight * dpr;
-  //this.canvas.width = this.canvas.parentElement.width * dpr;
-  //this.canvas.height = this.canvas.parentElement.height * dpr;
+  if (this.canvas.parentElement.hasOwnProperty("width")) {
+    this.canvas.width = this.canvas.parentElement.width * dpr;
+    this.canvas.height = this.canvas.parentElement.height * dpr;
+  } else {
+    this.canvas.width = this.canvas.offsetWidth * dpr;
+    this.canvas.height = this.canvas.offsetHeight * dpr;
+  }
   this.drawScene();
 };
 
@@ -1915,6 +1917,7 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
 
 // not included in public docs
 Niivue.prototype.getMeshIndexByID = function (id) {
+  if (typeof id === "number") return id;
   let n = this.meshes.length;
   for (let i = 0; i < n; i++) {
     let id_i = this.meshes[i].id;
@@ -3503,50 +3506,66 @@ Niivue.prototype.initText = async function () {
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
+// not included in public docs
+Niivue.prototype.meshShaderNameToNumber = function (meshShaderName = "Phong") {
+  let name = meshShaderName.toLowerCase();
+  for (var i = 0; i < this.meshShaders.length; i++) {
+    if (this.meshShaders[i].Name.toLowerCase() === name) return i;
+  }
+  i = -1;
+};
+
 /**
- * select new shader for triangulated meshes and connectomes
+ * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
+ * @param {number} id identity of mesh to change
  * @param {string | number} meshShaderNameOrNumber identify shader for usage
  * @example niivue.setMeshShader('toon');
  * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
-Niivue.prototype.setMeshShader = function (meshShaderNameOrNumber = 2) {
-  //Niivue.prototype.setMeshShader = function (name) {
-  this.gl.deleteProgram(this.meshShader.program);
+Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
   let num = 0;
   if (typeof meshShaderNameOrNumber === "number") num = meshShaderNameOrNumber;
   else {
-    let name = meshShaderNameOrNumber.toLowerCase();
-    for (var i = 0; i < this.meshShaders.length; i++) {
-      if (this.meshShaders[i].Name.toLowerCase() === name) {
-        num = i;
-        break;
-      }
-    }
+    num = this.meshShaderNameToNumber(meshShaderNameOrNumber);
   }
   num = Math.min(num, this.meshShaders.length - 1);
   num = Math.max(num, 0);
-  this.meshShader = new Shader(
-    this.gl,
-    vertMeshShader,
-    this.meshShaders[num].Frag
-  );
-  this.meshShader.use(this.gl);
-  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
+  let idx = this.getMeshIndexByID(id);
+  if (idx >= this.meshes.length) {
+    console.log(
+      "Unable to change shader until mesh is loaded (maybe you need async)"
+    );
+    return;
+  }
+  this.meshes[idx].meshShaderIndex = num;
   this.updateGLVolume();
 };
 
 /**
  * control whether drawing is tansparent (0), opaque (1) or translucent (between 0 and 1).
  * @param {string} fragmentShaderText custom fragment shader.
+ * @param {string} name title for new shader.
+ * @returns {number} index of the new shader (for setMeshShader)
  * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
-Niivue.prototype.setCustomMeshShader = function (fragmentShaderText = "") {
-  if (fragmentShaderText.length < 1)
-    fragmentShaderText = this.meshShaders[0].Frag;
-  this.meshShader = new Shader(this.gl, vertMeshShader, fragmentShaderText);
-  this.meshShader.use(this.gl);
-  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
-  this.updateGLVolume();
+Niivue.prototype.setCustomMeshShader = function (
+  fragmentShaderText = "",
+  name = "Custom"
+) {
+  let num = this.meshShaderNameToNumber(name);
+  if (num >= 0) {
+    //prior shader uses this name: delete it!
+    this.gl.deleteProgram(this.meshShaders[num].shader.program);
+    this.meshShaders.splice(num, 1);
+  }
+  let m = [];
+  m.Name = name;
+  m.Frag = fragmentShaderText;
+  m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+  m.shader.use(this.gl);
+  m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  this.meshShaders.push(m);
+  return this.meshShaders.length - 1;
 };
 
 /**
@@ -3630,7 +3649,6 @@ Niivue.prototype.init = async function () {
   this.gl.enableVertexAttribArray(0);
   this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
-
   this.pickingMeshShader = new Shader(
     this.gl,
     vertMeshShader,
@@ -3638,7 +3656,6 @@ Niivue.prototype.init = async function () {
   );
   this.pickingMeshShader.use(this.gl);
   this.pickingMeshShader.mvpLoc = this.pickingMeshShader.uniforms["mvpMtx"];
-
   this.pickingImageShader = new Shader(
     this.gl,
     vertRenderShader,
@@ -3820,18 +3837,15 @@ Niivue.prototype.init = async function () {
   this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader);
   this.pickingImageShader.use(this.gl);
   this.fiberShader.mvpLoc = this.fiberShader.uniforms["mvpMtx"];
-
-  //mesh
-  this.meshShader = new Shader(
-    this.gl,
-    vertMeshShader,
-    this.meshShaders[0].Frag
-  );
-  this.meshShader.use(this.gl);
-  this.meshShader.mvpLoc = this.meshShader.uniforms["mvpMtx"];
+  //compile all mesh shaders
+  for (var i = 0; i < this.meshShaders.length; i++) {
+    let m = this.meshShaders[i];
+    m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+    m.shader.use(this.gl);
+    m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  }
 
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
-
   await this.initText();
   if (this.opts.thumbnail.length > 0) {
     await this.loadBmpTexture(this.opts.thumbnail);
@@ -6506,16 +6520,19 @@ Niivue.prototype.drawMesh3D = function (
   }
   gl.disable(gl.CULL_FACE); //show front and back faces
   //Draw the mesh
-  let shader = this.meshShader;
-  if (this.scene.mouseDepthPicker) shader = this.pickingMeshShader;
-  shader.use(this.gl); // set Shader
-  //set shader uniforms
-  gl.uniformMatrix4fv(shader.mvpLoc, false, m);
-  gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
-  gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
-  gl.uniform1f(shader.uniforms["opacity"], alpha);
+  let shader = this.meshShaders[0];
+  //this.meshShaderIndex
   let hasFibers = false;
   for (let i = 0; i < this.meshes.length; i++) {
+    shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader;
+    if (this.scene.mouseDepthPicker) shader = this.pickingMeshShader;
+    shader.use(this.gl); // set Shader
+    //set shader uniforms
+    gl.uniformMatrix4fv(shader.mvpLoc, false, m);
+    gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
+    gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
+    gl.uniform1f(shader.uniforms["opacity"], alpha);
+
     if (this.meshes[i].indexCount < 3) continue;
     if (this.meshes[i].offsetPt0) {
       hasFibers = true;

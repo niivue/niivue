@@ -454,9 +454,12 @@ NVImage.prototype.calculateOblique = function () {
   let XY = Math.abs(90 - vec3.angle(X1mm, Y1mm) * (180 / Math.PI));
   let XZ = Math.abs(90 - vec3.angle(X1mm, Z1mm) * (180 / Math.PI));
   let YZ = Math.abs(90 - vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
-  let maxShear = Math.max(Math.max(XY, XZ), YZ);
-  if (maxShear > 0.1)
-    log.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+  this.maxShearDeg = Math.max(Math.max(XY, XZ), YZ);
+  if (this.maxShearDeg > 0.1)
+    console.log(
+      "Warning: voxels are rhomboidal, maximum shear is %f degrees.",
+      this.maxShearDeg
+    );
   //compute a matrix to transform vectors from factional space to mm:
   let dim = vec4.fromValues(
     this.dimsRAS[1],
@@ -2164,7 +2167,6 @@ function hdrToArrayBuffer(hdr, isDrawing8 = false) {
   view.setFloat32(56, hdr.intent_p1, hdr.littleEndian);
   view.setFloat32(60, hdr.intent_p2, hdr.littleEndian);
   view.setFloat32(64, hdr.intent_p3, hdr.littleEndian);
-
   // intent_code, datatype, bitpix, slice_start
   view.setInt16(68, hdr.intent_code, hdr.littleEndian);
   if (isDrawing8) {

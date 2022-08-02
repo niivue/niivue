@@ -724,7 +724,10 @@ void main(void) {
 	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
 	//float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	FragColor.a *= opacity;
+	//FragColor.a *= opacity;
+	FragColor.a = opacity;
+	return;
+
 	if (layer < 2.0) return;
 	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
 	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
@@ -1063,6 +1066,19 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
+}`;
+
+//discard if alpha is 0
+export var fragMeshOutline = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	if (vClr.a == 0.0) discard;
+	color = vClr;
 }`;
 
 //Phong: default
