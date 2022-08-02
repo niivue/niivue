@@ -20,12 +20,17 @@
       <h1>
         Mesh-based Atlas
       </h1>
-
-
     </section>
-<div class="slidecontainer">
-  Atlas transparency <input type="range" min="0" max="255" value="255" class="slider" id="meshSlider">
-</div>
+    <div class="slidecontainer">
+      Atlas transparency <input type="range" min="0" max="255" value="127" class="slider" id="meshSlider">
+    </div>
+    <div class="slidecontainer">
+      Statistical transparency <input type="range" min="0" max="255" value="255" class="slider" id="meshSlider2">
+    </div>
+    <input type="checkbox" id="check1" unchecked>
+    <label for="check1">Atlas outline</label>
+    <input type="checkbox" id="check2" unchecked>
+    <label for="check2">Statistical outline</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:320px;">
@@ -47,13 +52,21 @@
     </script>
     <script type="module" async>
       var slider = document.getElementById("meshSlider");
-      // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
-        //nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [this.value, 164, 164, 255])
         nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, 'opacity', this.value / 255.0)
-
       }
-
+      var slider2 = document.getElementById("meshSlider2");
+      slider2.oninput = function() {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, 'opacity', this.value / 255.0)
+      }
+      document.getElementById("check1").addEventListener("change", doCheck1Click)
+      function doCheck1Click() {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, 'isOutlineBorder', this.checked)
+      }
+      document.getElementById("check2").addEventListener("change", doCheck2Click)
+      function doCheck2Click() {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, 'isOutlineBorder', this.checked)
+      }
      var volumeList1 = [
        // first item is background image
          {
@@ -74,11 +87,13 @@
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.attachTo('gl1')
       var meshLayersList1 = [
-        {url: "../images/lh.curv", colorMap: "rocket", opacity: 0.7},
-        {url: "../images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
+        {url: "../images/lh.curv", colorMap: "rocket", opacity: 0.2},
+        {url: "../images/boggle.lh.annot", colorMap: "rocket", opacity: 0.5},
+        {url: "../images/pval.LH.nii.gz", cal_min: 25, cal_max: 35.0, opacity: 0.9},
+
       ]
       await nv1.loadMeshes([
-         {url: "../images/lh.pial", rgba255 : [222, 164, 164, 255], layers : meshLayersList1},
+         {url: "../images/lh.pial", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
       ])
       nv1.setClipPlane([-0.1, 270, 0])
