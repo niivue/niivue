@@ -724,7 +724,10 @@ void main(void) {
 	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
 	//float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	FragColor.a *= opacity;
+	//FragColor.a *= opacity;
+	FragColor.a = opacity;
+	return;
+
 	if (layer < 2.0) return;
 	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
 	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
