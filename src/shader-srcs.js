@@ -1068,6 +1068,19 @@ void main() {
 	color.a = opacity;
 }`;
 
+//discard if alpha is 0
+export var fragMeshOutline = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	if (vClr.a == 0.0) discard;
+	color = vClr;
+}`;
+
 //Phong: default
 export var fragMeshShader = `#version 300 es
 precision highp int;
