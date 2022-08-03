@@ -64,6 +64,7 @@ import { interval } from "rxjs";
 import {
   NVMessage,
   NVMesssageUpdateData,
+  NVMessageSet4DVolumeIndexData,
   UPDATE,
   CREATE,
   JOIN,
@@ -71,6 +72,7 @@ import {
   REMOVE_VOLUME_URL,
   ADD_MESH_URL,
   REMOVE_MESH_URL,
+  SET_4D_VOL_INDEX,
 } from "./nvmessage.js";
 
 const log = new Log();
@@ -637,11 +639,17 @@ Niivue.prototype.subscribeToServer = function (
             }
           }
           break;
-        case REMOVE_MESH_URL:
+        case REMOVE_MESH_URL: {
+          let mesh = this.getMediaByUrl(msg["url"]);
+          if (mesh) {
+            this.removeMesh(mesh);
+          }
+        }
+        case SET_4D_VOL_INDEX:
           {
-            let mesh = this.getMediaByUrl(msg["url"]);
-            if (mesh) {
-              this.removeMesh(mesh);
+            let volume = this.getMediaByUrl(msg["url"]);
+            if (volume) {
+              this.setFrame4D(volume.id, msg["index"]);
             }
           }
           break;
@@ -4701,6 +4709,16 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
+  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
+    let url = this.mediaUrlMap.get(this.volumes[idx]);
+    this.serverConnection$.next(
+      new NVMessage(
+        SET_4D_VOL_INDEX,
+        new NVMessageSet4DVolumeIndexData(url, frame4D),
+        this.sessionKey
+      )
+    );
+  }
 };
 
 /**
