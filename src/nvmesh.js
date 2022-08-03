@@ -47,6 +47,7 @@ export function NVMesh(
   this.extentsMax = obj.extentsMax;
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.visible = visible;
+  this.meshShaderIndex = 0;
   this.indexBuffer = gl.createBuffer();
   this.vertexBuffer = gl.createBuffer();
   this.vao = gl.createVertexArray();
@@ -365,7 +366,6 @@ NVMesh.prototype.updateConnectome = function (gl) {
         let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
         if (isNeg)
           rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-
         let pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]];
         let ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]];
         NiivueObject3D.makeColoredCylinder(
@@ -394,6 +394,59 @@ NVMesh.prototype.updateConnectome = function (gl) {
   this.indexCount = tris.length;
 };
 
+function getClusterBoundaryU8(u8, faces) {
+  //assume all vertices are not near a border
+  const border = new Array(u8.length).fill(false);
+  const binary = new Array(u8.length).fill(false);
+  for (let i = 0; i < u8.length; i++) if (u8[i] > 0) binary[i] = true;
+  let nTri = faces.length / 3;
+  let j = 0;
+  //interior: a triangle where all three vertices are the same color
+  //else, all three vertices are on a border
+  for (let i = 0; i < nTri; i++) {
+    let v0 = faces[j];
+    let v1 = faces[j + 1];
+    let v2 = faces[j + 2];
+    j += 3;
+    if (
+      binary[v0] === binary[v1] &&
+      binary[v0] === binary[v2] &&
+      binary[v1] === binary[v2]
+    )
+      continue;
+    border[v0] = true;
+    border[v1] = true;
+    border[v2] = true;
+  }
+  return border;
+}
+
+function getClusterBoundary(rgba8, faces) {
+  var rgba32 = new Uint32Array(rgba8.buffer);
+  //assume all vertices are not near a border
+  const border = new Array(rgba32.length).fill(false);
+  let nTri = faces.length / 3;
+  let j = 0;
+  //interior: a triangle where all three vertices are the same color
+  //else, all three vertices are on a border
+  for (let i = 0; i < nTri; i++) {
+    let v0 = faces[j];
+    let v1 = faces[j + 1];
+    let v2 = faces[j + 2];
+    j += 3;
+    if (
+      rgba32[v0] === rgba32[v1] &&
+      rgba32[v0] === rgba32[v2] &&
+      rgba32[v1] === rgba32[v2]
+    )
+      continue;
+    border[v0] = true;
+    border[v1] = true;
+    border[v2] = true;
+  }
+  return border;
+}
+
 // not included in public docs
 // internal function filters mesh to identify which color of triangulated mesh vertices
 NVMesh.prototype.updateMesh = function (gl) {
@@ -412,8 +465,9 @@ NVMesh.prototype.updateMesh = function (gl) {
   let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
   if (this.layers && this.layers.length > 0) {
     for (let i = 0; i < this.layers.length; i++) {
+      let nvtx = this.pts.length / 3;
       let layer = this.layers[i];
-      if (layer.opacity <= 0.0 || layer.cal_min >= layer.cal_max) continue;
+      if (layer.opacity <= 0.0 || layer.cal_min > layer.cal_max) continue;
       let opacity = layer.opacity;
       var u8 = new Uint8Array(posNormClr.buffer); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
       function lerp(x, y, a) {
@@ -421,11 +475,18 @@ NVMesh.prototype.updateMesh = function (gl) {
         return x * (1 - a) + y * a;
       }
       if (layer.values.constructor === Uint32Array) {
-        //isRGBA!
         let rgba8 = new Uint8Array(layer.values.buffer);
+        let opaque = new Array(nvtx).fill(true);
+        if (layer.isOutlineBorder)
+          opaque = getClusterBoundary(rgba8, this.tris);
         let k = 0;
         for (let j = 0; j < layer.values.length; j++) {
           let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+          if (!opaque[j]) {
+            u8[vtx + 3] = 0;
+            k += 4;
+            continue;
+          }
           u8[vtx + 0] = lerp(u8[vtx + 0], rgba8[k + 0], opacity);
           u8[vtx + 1] = lerp(u8[vtx + 1], rgba8[k + 1], opacity);
           u8[vtx + 2] = lerp(u8[vtx + 2], rgba8[k + 2], opacity);
@@ -434,32 +495,18 @@ NVMesh.prototype.updateMesh = function (gl) {
         continue;
       }
       let lut = cmapper.colormap(layer.colorMap);
-
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
-      let nvtx = this.pts.length / 3;
       let frameOffset = nvtx * frame;
       if (layer.useNegativeCmap) {
         layer.cal_min = Math.max(0, layer.cal_min);
         layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
       }
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
-      //blend colors for each voxel
-      for (let j = 0; j < nvtx; j++) {
-        let v255 = Math.round(
-          (layer.values[j + frameOffset] - layer.cal_min) * scale255
-        );
-        if (v255 < 0) continue;
-        v255 = Math.min(255.0, v255) * 4;
-        let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
-        u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
-        u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
-        u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
-      }
-      if (layer.useNegativeCmap) {
-        let lut = cmapper.colormap(layer.colorMapNegative);
+      if (!layer.isOutlineBorder) {
+        //blend colors for each voxel
         for (let j = 0; j < nvtx; j++) {
           let v255 = Math.round(
-            (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+            (layer.values[j + frameOffset] - layer.cal_min) * scale255
           );
           if (v255 < 0) continue;
           v255 = Math.min(255.0, v255) * 4;
@@ -467,6 +514,63 @@ NVMesh.prototype.updateMesh = function (gl) {
           u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
           u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
           u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+        }
+      } else {
+        //isOutlineBorder
+        let v255s = new Uint8Array(nvtx);
+        for (let j = 0; j < nvtx; j++) {
+          let v255 = Math.round(
+            (layer.values[j + frameOffset] - layer.cal_min) * scale255
+          );
+          if (v255 < 0) continue;
+          v255 = Math.min(255.0, v255);
+          v255s[j] = v255;
+        }
+        let opaque = getClusterBoundaryU8(v255s, this.tris);
+        for (let j = 0; j < nvtx; j++) {
+          let v255 = 255; //v255s[j];
+          if (!opaque[j]) continue;
+          v255 = Math.min(255.0, v255) * 4;
+          let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+          u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+          u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+          u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+        }
+      }
+      if (layer.useNegativeCmap) {
+        let lut = cmapper.colormap(layer.colorMapNegative);
+        if (!layer.isOutlineBorder) {
+          for (let j = 0; j < nvtx; j++) {
+            let v255 = Math.round(
+              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+            );
+            if (v255 < 0) continue;
+            v255 = Math.min(255.0, v255) * 4;
+            let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+            u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+            u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+            u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+          }
+        } else {
+          // isOutlineBorder
+          let v255s = new Uint8Array(nvtx);
+          for (let j = 0; j < nvtx; j++) {
+            let v255 = Math.round(
+              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+            );
+            if (v255 < 0) continue;
+            v255s[j] = Math.min(255.0, v255);
+          }
+          let opaque = getClusterBoundaryU8(v255s, this.tris);
+          for (let j = 0; j < nvtx; j++) {
+            let v255 = 255; //v255s[j];
+            if (!opaque[j]) continue;
+            v255 = Math.min(255.0, v255) * 4;
+            let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+            u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+            u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+            u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+          }
         }
       }
     }
@@ -1911,7 +2015,8 @@ NVMesh.readLayer = function (
   colorMapNegative = "winter",
   useNegativeCmap = false,
   cal_min = null,
-  cal_max = null
+  cal_max = null,
+  isOutlineBorder = false
 ) {
   let layer = [];
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
@@ -1940,6 +2045,7 @@ NVMesh.readLayer = function (
   if (!layer.values) return;
   layer.nFrame4D = layer.values.length / n_vert;
   layer.frame4D = 0;
+  layer.isOutlineBorder = isOutlineBorder;
   //determine global min..max
   let mn = layer.values[0];
   let mx = layer.values[0];

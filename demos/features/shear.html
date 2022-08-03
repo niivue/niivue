@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>world space</title>
+    <title>Shear</title>
     <style>
       section {
         margin: 20px;
@@ -17,18 +17,18 @@
     </noscript>
     <section>
       <h1>
-        World space
+        Shear
       </h1>
       <p>
-        Volumes can be displayed in world space. Each slice is a discrete image from the volume avoiding <a href="https://github.com/rordenlab/dcm2niix/issues/595"> artifacts</a>. 
+        CT scans often have include gantry tilt to reduce artifacts from teeth fillings and radiation dose to the eyeballs. This creates rhomboidal voxels. Viewing 2D slices in world space reveals this shear. Note that 3D renderings are always in world space (so meshes and other objects align nicely).
       </p>
       <input type="checkbox" id="check3" name="check3" checked>
       <label for="check3">World space</label>
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
+      <div id="demo1" style="width:480px; height:480px;">
+        <canvas id="gl1" height=480 width=480>
         </canvas>
       </div>
     </section>
@@ -40,8 +40,9 @@
         nv1.setSliceMM(this.checked)
       }
      var volumeList1 = [
+       // first item is background image
          {
-           url: "../images/FLAIR.nii.gz",
+           url: "../images/shear.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
            volume: {hdr: null, img: null},
            name: "mni152",
            colorMap: "gray",
