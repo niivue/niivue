@@ -73,6 +73,7 @@ import {
   ADD_MESH_URL,
   REMOVE_MESH_URL,
   SET_4D_VOL_INDEX,
+  UPDATE_IMAGE_OPTIONS,
 } from "./nvmessage.js";
 
 const log = new Log();
@@ -653,6 +654,13 @@ Niivue.prototype.subscribeToServer = function (
             }
           }
           break;
+        case UPDATE_IMAGE_OPTIONS: {
+          let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
+          if (volume) {
+            volume.applyOptionsUpdate(msg["urlImageOptions"]);
+            this.updateGLVolume();
+          }
+        }
       }
     }, // Called whenever there is a message from the server.
     error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
@@ -1383,6 +1391,21 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
   return volume;
+};
+
+/** Notify subscribers of image option chage */
+Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
+  if (this.isInSession) {
+    if (this.mediaUrlMap.has(volume)) {
+      let imageOptions = volume.getImageOptions();
+      // add our url
+      imageOptions.url = this.mediaUrlMap.get(volume);
+      this.serverConnection$.next(
+        new NVMessage(UPDATE_IMAGE_OPTIONS, imageOptions, this.sessionKey)
+      );
+      console.log("update called");
+    }
+  }
 };
 
 /**
@@ -4136,7 +4159,7 @@ Niivue.prototype.getDescriptives = function (
 
 // not included in public docs
 // apply slow computations when image properties have changed
-Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
+Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   if (this.volumes.length < 1) return; //e.g. only meshes
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
@@ -4588,6 +4611,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.renderShader.uniforms["backOpacity"],
     this.volumes[0].opacity
   );
+
   this.gl.uniform4fv(
     this.renderShader.uniforms["clipPlane"],
     this.scene.clipPlane
