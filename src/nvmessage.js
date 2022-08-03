@@ -6,6 +6,7 @@ export const REMOVE_VOLUME_URL = "remove volume media";
 export const ADD_MESH_URL = "add mesh url";
 export const REMOVE_MESH_URL = "remove mesh media";
 export const SET_4D_VOL_INDEX = "set 4d vol index";
+export const UPDATE_IMAGE_OPTIONS = "update image options";
 
 /**
  * @class NVMessageUpdateData
@@ -62,6 +63,7 @@ export function NVMessage(messageType, messageData = "", sessionKey = "") {
     case UPDATE:
       Object.assign(message, messageData);
       break;
+    case UPDATE_IMAGE_OPTIONS:
     case ADD_VOLUME_URL:
       message.urlImageOptions = messageData;
       break;
