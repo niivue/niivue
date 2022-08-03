@@ -2890,3 +2890,40 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   ];
   return obj3D;
 };
+
+/**
+ * Update options for image
+ * @param {NVImageFromUrlOptions} options
+ */
+NVImage.prototype.applyOptionsUpdate = function (options) {
+  this.hdr.cal_min = options.cal_min;
+  this.hdr.cal_max = options.cal_max;
+  delete options["url"];
+  delete options["urlImageData"];
+  delete options["cal_min"];
+  delete options["cal_max"];
+  Object.assign(this, options);
+};
+
+NVImage.prototype.getImageOptions = function () {
+  let options = null;
+  try {
+    options = new NVImageFromUrlOptions(
+      "", // url,
+      "", // urlImageData
+      this.name, // name
+      this.colorMap, // colorMap
+      this.opacity, // opacity
+      this.hdr.cal_min, // cal_min
+      this.hdr.cal_max, // cal_max
+      this.trustCalMinMax, // trustCalMinMax,
+      this.percentileFrac, // percentileFrac
+      this.ignoreZeroVoxels, // ignoreZeroVoxels
+      this.visible, // visible
+      this.colorMapNegative // colorMapNegative
+    );
+  } catch (e) {
+    console.log(e);
+  }
+  return options;
+};
