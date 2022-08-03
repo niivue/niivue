@@ -6,10 +6,7 @@ export const REMOVE_VOLUME_URL = "remove volume media";
 export const ADD_MESH_URL = "add mesh url";
 export const REMOVE_MESH_URL = "remove mesh media";
 export const SET_4D_VOL_INDEX = "set 4d vol index";
-<<<<<<< HEAD
 export const UPDATE_IMAGE_OPTIONS = "update image options";
-=======
->>>>>>> Added timeseries control
 
 /**
  * @class NVMessageUpdateData
@@ -58,11 +55,7 @@ export function NVMessageSet4DVolumeIndexData(url, index) {
  * NVMessage can be used to synchronize a session actions
  * @constructor
  * @param {string} messageType
-<<<<<<< HEAD
  * @param {(string|NVMesssageUpdateData|NVImageFromUrlOptions|NVMeshFromUrlOptions|NVMessageSet4DVolumeIndex)} messageData
-=======
- * @param {(string|NVMesssageUpdateData|NVImageFromUrlOptions|NVMessageSet4DVolumeIndex)} messageData
->>>>>>> Added timeseries control
  * @param {string} sessionKey
  */
 export function NVMessage(messageType, messageData = "", sessionKey = "") {
