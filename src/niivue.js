@@ -2727,7 +2727,6 @@ Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
   };
 
   let mesh = await NVMesh.loadFromUrl(options);
-
   return mesh;
 };
 
