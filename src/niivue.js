@@ -1506,6 +1506,8 @@ Niivue.prototype.dropListener = async function (e) {
     urlsToLoad.push(url);
     let imageOptions = new NVImageFromUrlOptions(url);
     let ext = this.getFileExt(url);
+    console.log("dropped ext");
+    console.log(ext);
     if (MESH_EXTENSIONS.includes(ext)) {
       this.addMeshFromUrl({ url });
     } else {
