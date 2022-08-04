@@ -1511,8 +1511,10 @@ Niivue.prototype.dropListener = async function (e) {
     urlsToLoad.push(url);
     let imageOptions = new NVImageFromUrlOptions(url);
     let ext = this.getFileExt(url);
+    console.log("dropped ext");
+    console.log(ext);
     if (MESH_EXTENSIONS.includes(ext)) {
-      // this.
+      this.addMeshFromUrl({ url });
     } else {
       this.addVolumeFromUrl(imageOptions);
     }
@@ -2677,6 +2679,27 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
 }; // loadVolumes()
 
 /**
+ * Add mesh and notify subscribers
+ * @param {NVImageOptions} meshOptions
+ * @returns
+ */
+Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
+  let mesh = await this.loadMeshFromUrl(meshOptions);
+  this.addMesh(mesh);
+  if (!this.mediaUrlMap.has(mesh) && meshOptions.url) {
+    this.mediaUrlMap.set(mesh, meshOptions.url);
+    // notify subscribers
+    // if we are in session let our subscribers know
+    if (this.isInSession) {
+      this.serverConnection$.next(
+        new NVMessage(ADD_MESH_URL, meshOptions, this.sessionKey)
+      );
+    }
+  }
+  return mesh;
+};
+
+/**
  * Loads mesh from a url
  * @param {NVMeshFromUrlOptions} meshOptions
  * @returns {NVMesh}
@@ -2689,13 +2712,7 @@ Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
   };
 
   let mesh = await NVMesh.loadFromUrl(options);
-  this.mediaUrlMap.set(mesh, meshOptions.url);
-  // if we are in session let our subscribers know
-  if (this.isInSession) {
-    this.serverConnection$.next(
-      new NVMessage(ADD_MESH_URL, meshOptions.url, this.sessionKey)
-    );
-  }
+
   return mesh;
 };
 
