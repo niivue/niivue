@@ -45,13 +45,17 @@ export function NVMessageSet4DVolumeIndexData(url, index) {
  */
 
 /**
+ * @typedef { import('./nvmesh').NVMeshFromUrlOptions } NVMeshFromUrlOptions
+ */
+
+/**
  * @class NVMessage
  * @type NVMessage
  * @description
  * NVMessage can be used to synchronize a session actions
  * @constructor
  * @param {string} messageType
- * @param {(string|NVMesssageUpdateData|NVImageFromUrlOptions|NVMessageSet4DVolumeIndex)} messageData
+ * @param {(string|NVMesssageUpdateData|NVImageFromUrlOptions|NVMeshFromUrlOptions|NVMessageSet4DVolumeIndex)} messageData
  * @param {string} sessionKey
  */
 export function NVMessage(messageType, messageData = "", sessionKey = "") {
@@ -67,13 +71,19 @@ export function NVMessage(messageType, messageData = "", sessionKey = "") {
     case ADD_VOLUME_URL:
       message.urlImageOptions = messageData;
       break;
+    case ADD_MESH_URL:
+      message.urlMeshOptions = messageData;
+      break;
     case REMOVE_VOLUME_URL:
+    case REMOVE_MESH_URL:
       message.url = messageData;
       break;
     case SET_4D_VOL_INDEX:
       message.url = messageData.url;
       message.index = messageData.index;
       break;
+
+
   }
 
   return message;
