@@ -82,8 +82,6 @@ export function NVMessage(messageType, messageData = "", sessionKey = "") {
       message.url = messageData.url;
       message.index = messageData.index;
       break;
-
-
   }
 
   return message;
