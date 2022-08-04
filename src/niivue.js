@@ -695,89 +695,7 @@ Niivue.prototype.subscribeToServer = function (
 ) {
   this.serverConnection$.subscribe({
     next: (msg) => {
-<<<<<<< HEAD
       this.handleMessage(msg);
-=======
-      switch (msg["op"]) {
-        case UPDATE:
-          this.scene.renderAzimuth = msg["azimuth"];
-          this.scene.renderElevation = msg["elevation"];
-          this.volScaleMultiplier = msg["zoom"];
-          this.scene.clipPlane = msg["clipPlane"];
-          this.drawScene();
-          break;
-
-        case CREATE:
-          console.log(msg);
-          if (!msg["isError"]) {
-            this.isInSession = true;
-            this.sessionKey = msg["key"];
-            this.setUpdateInterval();
-          }
-          if (sessionCreatedCallback) {
-            sessionCreatedCallback(
-              msg["message"],
-              msg["url"],
-              msg["key"],
-              msg["isError"]
-            );
-          }
-          break;
-
-        case JOIN:
-          this.isInSession = true;
-          this.isController = msg["isController"];
-          if (this.isController) {
-            this.setUpdateInterval();
-          }
-
-          if (sessionJoinedCallback) {
-            sessionJoinedCallback(
-              msg["message"],
-              msg["url"],
-              msg["isController"]
-            );
-          }
-          break;
-
-        case ADD_MESH_URL:
-          break;
-
-        case ADD_VOLUME_URL:
-          this.addVolumeFromUrl(msg["urlImageOptions"]);
-          break;
-
-        case REMOVE_VOLUME_URL:
-          {
-            let volume = this.getMediaByUrl(msg["url"]);
-            if (volume) {
-              this.removeVolume(volume);
-            }
-          }
-          break;
-        case REMOVE_MESH_URL: {
-          let mesh = this.getMediaByUrl(msg["url"]);
-          if (mesh) {
-            this.removeMesh(mesh);
-          }
-        }
-        case SET_4D_VOL_INDEX:
-          {
-            let volume = this.getMediaByUrl(msg["url"]);
-            if (volume) {
-              this.setFrame4D(volume.id, msg["index"]);
-            }
-          }
-          break;
-        case UPDATE_IMAGE_OPTIONS: {
-          let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
-          if (volume) {
-            volume.applyOptionsUpdate(msg["urlImageOptions"]);
-            this.updateGLVolume();
-          }
-        }
-      }
->>>>>>> 90dd7a69444cb8f12d2108a572fb70081bf7ec7b
     }, // Called whenever there is a message from the server.
     error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
     complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
@@ -1480,11 +1398,7 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 
 /**
  * Load a volume from url and notify subscribers
-<<<<<<< HEAD
  * @param {NVImageFromUrlOptions} imageOptions
-=======
- * @param {NVImageOptions} imageOptions
->>>>>>> 90dd7a69444cb8f12d2108a572fb70081bf7ec7b
  * @returns {NVImage}
  */
 Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
@@ -1567,7 +1481,6 @@ Niivue.prototype.dropListener = async function (e) {
   if (url) {
     urlsToLoad.push(url);
     let imageOptions = new NVImageFromUrlOptions(url);
-<<<<<<< HEAD
     let ext = this.getFileExt(url);
     console.log("dropped ext");
     console.log(ext);
@@ -1576,9 +1489,6 @@ Niivue.prototype.dropListener = async function (e) {
     } else {
       this.addVolumeFromUrl(imageOptions);
     }
-=======
-    this.addVolumeFromUrl(imageOptions);
->>>>>>> 90dd7a69444cb8f12d2108a572fb70081bf7ec7b
   } else {
     //const files = dt.files;
     const items = dt.items;
@@ -2805,28 +2715,9 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-<<<<<<< HEAD
     let options = meshList[i];
     console.log(options);
     let mesh = await this.loadMeshFromUrl(options);
-=======
-    let mesh = await NVMesh.loadFromUrl({
-      url: meshList[i].url,
-      gl: this.gl,
-      name: meshList[i].name,
-      opacity: meshList[i].opacity,
-      rgba255: meshList[i].rgba255,
-      visible: meshList[i].visible,
-      layers: meshList[i].layers,
-    });
-    this.mediaUrlMap.set(mesh, meshList[i].url);
-    // if we are in session let our subscribers know
-    if (this.isInSession) {
-      this.serverConnection$.next(
-        new NVMessage(ADD_MESH_URL, meshList[i].url, this.sessionKey)
-      );
-    }
->>>>>>> 90dd7a69444cb8f12d2108a572fb70081bf7ec7b
     this.scene.loading$.next(false);
     this.addMesh(mesh);
     //this.meshes.push(mesh);
