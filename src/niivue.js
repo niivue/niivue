@@ -2224,17 +2224,6 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     } else {
       this.overlays = [];
     }
-    // check if we have a url for this volume
-    if (this.mediaUrlMap.has(volume)) {
-      // notify subscribers
-      let url = this.mediaUrlMap.get(volume);
-      if (this.isInSession) {
-        this.serverConnection$.next(
-          new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey)
-        );
-      }
-      this.mediaUrlMap.delete(volume);
-    }
   } else {
     this.volumes.splice(volIndex, 1);
     this.volumes.splice(toIndex, 0, volume);
