@@ -103,6 +103,15 @@ const MESH_EXTENSIONS = [
   "VTK",
   "X3D",
 ];
+const DEFAULT_MESH_FROM_URL_OPTIONS = {
+  url: "",
+  gl: null,
+  name: "",
+  opacity: 1.0,
+  rgba255: [255, 255, 255, 255],
+  visible: true,
+  layers: [],
+};
 
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
@@ -2639,14 +2648,21 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
  * @returns {NVMesh}
  */
 Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
-  let mesh = await NVMesh.loadFromUrl(meshOptions);
-  this.mediaUrlMap.set(mesh, meshList[i].url);
+  let options = {
+    ...DEFAULT_MESH_FROM_URL_OPTIONS,
+    ...meshOptions,
+    gl: this.gl,
+  };
+
+  let mesh = await NVMesh.loadFromUrl(options);
+  this.mediaUrlMap.set(mesh, meshOptions.url);
   // if we are in session let our subscribers know
   if (this.isInSession) {
     this.serverConnection$.next(
-      new NVMessage(ADD_MESH_URL, meshList[i].url, this.sessionKey)
+      new NVMessage(ADD_MESH_URL, meshOptions.url, this.sessionKey)
     );
   }
+  return mesh;
 };
 
 /**
@@ -2682,7 +2698,9 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = this.loadMeshFromUrl(meshList[i]);
+    let options = meshList[i];
+    console.log(options);
+    let mesh = await this.loadMeshFromUrl(options);
     this.scene.loading$.next(false);
     this.addMesh(mesh);
     //this.meshes.push(mesh);
