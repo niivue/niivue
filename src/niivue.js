@@ -610,7 +610,11 @@ Niivue.prototype.setUpdateInterval = function () {
   });
 };
 
-Niivue.prototype.handleMessage = function (msg) {
+Niivue.prototype.handleMessage = function (
+  msg,
+  sessionCreatedCallback,
+  sessionJoinedCallback
+) {
   switch (msg["op"]) {
     case UPDATE:
       this.scene.renderAzimuth = msg["azimuth"];
@@ -661,14 +665,14 @@ Niivue.prototype.handleMessage = function (msg) {
       {
         let volume = this.getMediaByUrl(msg["url"]);
         if (volume) {
-          this.removeVolume(volume);
+          this.removeVolume(volume, false);
         }
       }
       break;
     case REMOVE_MESH_URL: {
       let mesh = this.getMediaByUrl(msg["url"]);
       if (mesh) {
-        this.removeMesh(mesh);
+        this.removeMesh(mesh, false);
       }
     }
     case SET_4D_VOL_INDEX:
@@ -696,7 +700,7 @@ Niivue.prototype.subscribeToServer = function (
 ) {
   this.serverConnection$.subscribe({
     next: (msg) => {
-      this.handleMessage(msg);
+      this.handleMessage(msg, sessionCreatedCallback, sessionJoinedCallback);
     }, // Called whenever there is a message from the server.
     error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
     complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
@@ -1595,7 +1599,7 @@ Niivue.prototype.dropListener = async function (e) {
             });
           };
           readEntries();
-					*/
+          */
         }
       }
     }
@@ -2198,17 +2202,6 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     } else {
       this.overlays = [];
     }
-    // check if we have a url for this volume
-    if (this.mediaUrlMap.has(volume)) {
-      // notify subscribers
-      let url = this.mediaUrlMap.get(volume);
-      if (this.isInSession) {
-        this.serverConnection$.next(
-          new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey)
-        );
-      }
-      this.mediaUrlMap.delete(volume);
-    }
   } else {
     this.volumes.splice(volIndex, 1);
     this.volumes.splice(toIndex, 0, volume);
@@ -2253,8 +2246,19 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
  */
-Niivue.prototype.removeVolume = function (volume) {
+Niivue.prototype.removeVolume = function (volume, notifySubscribers = true) {
   this.setVolume(volume, -1);
+  // check if we have a url for this volume
+  if (this.mediaUrlMap.has(volume)) {
+    // notify subscribers
+    let url = this.mediaUrlMap.get(volume);
+    if (notifySubscribers && this.isInSession) {
+      this.serverConnection$.next(
+        new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey)
+      );
+    }
+    this.mediaUrlMap.delete(volume);
+  }
 };
 
 /**
@@ -2275,12 +2279,12 @@ Niivue.prototype.removeVolumeByIndex = function (index) {
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
  */
-Niivue.prototype.removeMesh = function (mesh) {
+Niivue.prototype.removeMesh = function (mesh, notifySubscribers = true) {
   this.setMesh(mesh, -1);
   let url = this.mediaUrlMap.get(mesh);
   if (url) {
     this.mediaUrlMap.delete(mesh);
-    if (this.isInSession) {
+    if (notifySubscribers && this.isInSession) {
       this.serverConnection$.next(
         new NVMessage(REMOVE_MESH_URL, url, this.sessionKey)
       );
@@ -2716,8 +2720,7 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let options = meshList[i];
-    await this.addMeshFromUrl(options);
+    await this.addMeshFromUrl(meshList[i]);
     this.scene.loading$.next(false);
   } // for
   this.drawScene();
