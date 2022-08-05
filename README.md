@@ -28,6 +28,8 @@ The primary aim of NiiVue is to translate the features of the widely used native
 
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
 - [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- [OpenNeuro.org](https://openneuro.org)
+- [BrainLife.io](https://brainlife.io/about/)
 
 # Live View
 

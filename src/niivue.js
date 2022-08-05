@@ -357,6 +357,11 @@ export function Niivue(options = {}) {
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
   this.subscriptions = [];
+  if (this.opts.isHighResolutionCapable) {
+    this.scene.dpr = window.devicePixelRatio || 1;
+  } else {
+    this.scene.dpr = 1;
+  }
 }
 
 /**
@@ -685,19 +690,20 @@ Niivue.prototype.arrayEquals = function (a, b) {
 Niivue.prototype.resizeListener = function () {
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
-  let dpr = 1;
   //https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
   //https://www.khronos.org/webgl/wiki/HandlingHighDPI
   if (this.opts.isHighResolutionCapable) {
-    dpr = window.devicePixelRatio || 1;
-    console.log("devicePixelRatio: " + dpr);
+    this.scene.dpr = window.devicePixelRatio || 1;
+    console.log("devicePixelRatio: " + this.scene.dpr);
+  } else {
+    this.scene.dpr = 1;
   }
   if (this.canvas.parentElement.hasOwnProperty("width")) {
-    this.canvas.width = this.canvas.parentElement.width * dpr;
-    this.canvas.height = this.canvas.parentElement.height * dpr;
+    this.canvas.width = this.canvas.parentElement.width * this.scene.dpr;
+    this.canvas.height = this.canvas.parentElement.height * this.scene.dpr;
   } else {
-    this.canvas.width = this.canvas.offsetWidth * dpr;
-    this.canvas.height = this.canvas.offsetHeight * dpr;
+    this.canvas.width = this.canvas.offsetWidth * this.scene.dpr;
+    this.canvas.height = this.canvas.offsetHeight * this.scene.dpr;
   }
   this.drawScene();
 };
@@ -780,8 +786,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
-  this.dragStart[0] = pos.x;
-  this.dragStart[1] = pos.y;
+  this.setDragStart(pos.x, pos.y);
   if (!this.isDragging)
     this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
   this.isDragging = true;
@@ -924,18 +929,18 @@ Niivue.prototype.touchStartListener = function (e) {
   let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
   if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
     this.doubleTouch = true;
-    this.dragStart[0] =
-      e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
-    this.dragStart[1] =
-      e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+    this.setDragStart(
+      e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
+      e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+    );
     this.resetBriCon(e);
     this.lastTouchTime = this.currentTouchTime;
     return;
   } else {
     // reset values to be ready for next touch
     this.doubleTouch = false;
-    this.dragStart = [0, 0];
-    this.dragEnd = [0, 0];
+    this.setDragStart(0, 0);
+    this.setDragEnd(0, 0);
     this.lastTouchTime = this.currentTouchTime;
   }
   if (this.scene.touchdown && e.touches.length < 2) {
@@ -1015,13 +1020,8 @@ Niivue.prototype.resetBriCon = function (msg = null) {
       x = msg.offsetX;
       y = msg.offsetY;
     }
-    if (this.opts.isHighResolutionCapable) {
-      //kludge: required by highDPI devices that call wheelListener()
-      //TODO: check this works with highDPI devices that call handlePinchZoom()
-      let dpr = window.devicePixelRatio || 1;
-      x *= dpr;
-      y *= dpr;
-    }
+    x *= this.scene.dpr;
+    y *= this.scene.dpr;
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
@@ -1040,6 +1040,16 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   this.drawScene();
 };
 
+Niivue.prototype.setDragStart = function (x, y) {
+  this.dragStart[0] = x;
+  this.dragStart[1] = y;
+};
+
+Niivue.prototype.setDragEnd = function (x, y) {
+  this.dragEnd[0] = x;
+  this.dragEnd[1] = y;
+};
+
 // not included in public docs
 // handler for touch move (moving finger on screen)
 // note: no test yet
@@ -1050,10 +1060,10 @@ Niivue.prototype.touchMoveListener = function (e) {
       this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
     this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
-      this.dragEnd[0] =
-        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
-      this.dragEnd[1] =
-        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      this.setDragEnd(
+        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
+        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+      );
       this.drawScene();
       return;
     }
@@ -1542,6 +1552,9 @@ Niivue.prototype.getRadiologicalConvention = function () {
  */
 Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  if (!this.opts.isHighResolutionCapable) {
+    this.scene.dpr = 1;
+  }
   console.log("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
   this.drawScene();
@@ -2313,13 +2326,8 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
     this.drawScene();
     return;
   }
-  if (this.opts.isHighResolutionCapable) {
-    //kludge: required by highDPI devices that call wheelListener()
-    //TODO: check this works with highDPI devices that call handlePinchZoom()
-    let dpr = window.devicePixelRatio || 1;
-    x *= dpr;
-    y *= dpr;
-  }
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.mouseClick(x, y, posChange, isDelta);
 }; // sliceScroll2D()
 
@@ -3869,7 +3877,7 @@ Niivue.prototype.init = async function () {
   }
   this.updateGLVolume();
   this.initialized = true;
-  if (this.opts.isHighResolutionCapable) this.resizeListener();
+  this.resizeListener();
   this.drawScene();
   return this;
 }; // init()
