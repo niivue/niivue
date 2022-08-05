@@ -1450,7 +1450,10 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
  * @param {NVImageOptions} imageOptions
  * @returns
  */
-Niivue.prototype.addVolumeFromUrl = async function (imageOptions, notifySubscribers = true) {
+Niivue.prototype.addVolumeFromUrl = async function (
+  imageOptions,
+  notifySubscribers = true
+) {
   let volume = await this.loadVolumeFromUrl(imageOptions);
   this.addVolume(volume);
   if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
@@ -2700,7 +2703,10 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
  * @param {NVMeshFromUrlOptions} meshOptions
  * @returns
  */
-Niivue.prototype.addMeshFromUrl = async function (meshOptions, notifySubscribers = true) {
+Niivue.prototype.addMeshFromUrl = async function (
+  meshOptions,
+  notifySubscribers = true
+) {
   let mesh = await this.loadMeshFromUrl(meshOptions);
   this.addMesh(mesh);
   if (!this.mediaUrlMap.has(mesh) && meshOptions.url) {
