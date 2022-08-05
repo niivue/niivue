@@ -662,7 +662,7 @@ Niivue.prototype.handleMessage = function (
       break;
 
     case ADD_MESH_URL:
-      this.addMeshFromUrl(msg["urlMeshOptions"], false)
+      this.addMeshFromUrl(msg["urlMeshOptions"], false);
       break;
 
     case ADD_VOLUME_URL:
@@ -2685,7 +2685,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
 
 /**
  * Add mesh and notify subscribers
- * @param {NVImageOptions} meshOptions
+ * @param {NVMeshFromUrlOptions} meshOptions
  * @returns
  */
 Niivue.prototype.addMeshFromUrl = async function (meshOptions, notifySubscribers = true) {
