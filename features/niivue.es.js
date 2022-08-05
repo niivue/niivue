@@ -111706,6 +111706,11 @@ function Niivue(options = {}) {
     loading: this.scene.loading$
   };
   this.subscriptions = [];
+  if (this.opts.isHighResolutionCapable) {
+    this.scene.dpr = window.devicePixelRatio || 1;
+  } else {
+    this.scene.dpr = 1;
+  }
 }
 Niivue.prototype.saveScene = function(filename = "") {
   function saveBlob(blob, name) {
@@ -111884,17 +111889,18 @@ Niivue.prototype.arrayEquals = function(a, b) {
 Niivue.prototype.resizeListener = function() {
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
-  let dpr = 1;
   if (this.opts.isHighResolutionCapable) {
-    dpr = window.devicePixelRatio || 1;
-    console.log("devicePixelRatio: " + dpr);
+    this.scene.dpr = window.devicePixelRatio || 1;
+    console.log("devicePixelRatio: " + this.scene.dpr);
+  } else {
+    this.scene.dpr = 1;
   }
   if (this.canvas.parentElement.hasOwnProperty("width")) {
-    this.canvas.width = this.canvas.parentElement.width * dpr;
-    this.canvas.height = this.canvas.parentElement.height * dpr;
+    this.canvas.width = this.canvas.parentElement.width * this.scene.dpr;
+    this.canvas.height = this.canvas.parentElement.height * this.scene.dpr;
   } else {
-    this.canvas.width = this.canvas.offsetWidth * dpr;
-    this.canvas.height = this.canvas.offsetHeight * dpr;
+    this.canvas.width = this.canvas.offsetWidth * this.scene.dpr;
+    this.canvas.height = this.canvas.offsetHeight * this.scene.dpr;
   }
   this.drawScene();
 };
@@ -111936,8 +111942,7 @@ Niivue.prototype.mouseLeftButtonHandler = function(e) {
 };
 Niivue.prototype.mouseRightButtonHandler = function(e) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-  this.dragStart[0] = pos.x;
-  this.dragStart[1] = pos.y;
+  this.setDragStart(pos.x, pos.y);
   if (!this.isDragging)
     this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
   this.isDragging = true;
@@ -112051,15 +112056,14 @@ Niivue.prototype.touchStartListener = function(e) {
   let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
   if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
     this.doubleTouch = true;
-    this.dragStart[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
-    this.dragStart[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+    this.setDragStart(e.targetTouches[0].clientX - e.target.getBoundingClientRect().left, e.targetTouches[0].clientY - e.target.getBoundingClientRect().top);
     this.resetBriCon(e);
     this.lastTouchTime = this.currentTouchTime;
     return;
   } else {
     this.doubleTouch = false;
-    this.dragStart = [0, 0];
-    this.dragEnd = [0, 0];
+    this.setDragStart(0, 0);
+    this.setDragEnd(0, 0);
     this.lastTouchTime = this.currentTouchTime;
   }
   if (this.scene.touchdown && e.touches.length < 2) {
@@ -112118,11 +112122,8 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
       x2 = msg2.offsetX;
       y = msg2.offsetY;
     }
-    if (this.opts.isHighResolutionCapable) {
-      let dpr = window.devicePixelRatio || 1;
-      x2 *= dpr;
-      y *= dpr;
-    }
+    x2 *= this.scene.dpr;
+    y *= this.scene.dpr;
     if (this.inRenderTile(x2, y) >= 0)
       isRender = true;
   }
@@ -112140,6 +112141,14 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
+Niivue.prototype.setDragStart = function(x2, y) {
+  this.dragStart[0] = x2;
+  this.dragStart[1] = y;
+};
+Niivue.prototype.setDragEnd = function(x2, y) {
+  this.dragEnd[0] = x2;
+  this.dragEnd[1] = y;
+};
 Niivue.prototype.touchMoveListener = function(e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
@@ -112147,8 +112156,7 @@ Niivue.prototype.touchMoveListener = function(e) {
       this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
     this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
-      this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
-      this.dragEnd[1] = e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      this.setDragEnd(e.targetTouches[0].clientX - e.target.getBoundingClientRect().left, e.targetTouches[0].clientY - e.target.getBoundingClientRect().top);
       this.drawScene();
       return;
     }
@@ -112402,6 +112410,9 @@ Niivue.prototype.getRadiologicalConvention = function() {
 };
 Niivue.prototype.setHighResolutionCapable = function(isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  if (!this.opts.isHighResolutionCapable) {
+    this.scene.dpr = 1;
+  }
   console.log("HighDPI feature is experimental");
   this.resizeListener();
   this.drawScene();
@@ -112877,11 +112888,8 @@ Niivue.prototype.sliceScroll2D = function(posChange, x2, y, isDelta = true) {
     this.drawScene();
     return;
   }
-  if (this.opts.isHighResolutionCapable) {
-    let dpr = window.devicePixelRatio || 1;
-    x2 *= dpr;
-    y *= dpr;
-  }
+  x2 *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.mouseClick(x2, y, posChange, isDelta);
 };
 Niivue.prototype.setSliceType = function(st) {
@@ -113866,8 +113874,7 @@ Niivue.prototype.init = async function() {
   }
   this.updateGLVolume();
   this.initialized = true;
-  if (this.opts.isHighResolutionCapable)
-    this.resizeListener();
+  this.resizeListener();
   this.drawScene();
   return this;
 };
