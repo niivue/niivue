@@ -357,10 +357,10 @@ export function Niivue(options = {}) {
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
   this.subscriptions = [];
-  if (this.opts.isHighResolutionCapable){
-    this.scene.dpr = window.devicePixelRatio || 1
+  if (this.opts.isHighResolutionCapable) {
+    this.scene.dpr = window.devicePixelRatio || 1;
   } else {
-    this.scene.dpr = 1
+    this.scene.dpr = 1;
   }
 }
 
@@ -694,9 +694,9 @@ Niivue.prototype.resizeListener = function () {
   //https://www.khronos.org/webgl/wiki/HandlingHighDPI
   if (this.opts.isHighResolutionCapable) {
     this.scene.dpr = window.devicePixelRatio || 1;
-    console.log("devicePixelRatio: " + dpr);
+    console.log("devicePixelRatio: " + this.scene.dpr);
   } else {
-    this.scene.dpr = 1
+    this.scene.dpr = 1;
   }
   if (this.canvas.parentElement.hasOwnProperty("width")) {
     this.canvas.width = this.canvas.parentElement.width * this.scene.dpr;
@@ -786,7 +786,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
-  this.setDragStart(pos.x, pos.y)
+  this.setDragStart(pos.x, pos.y);
   if (!this.isDragging)
     this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
   this.isDragging = true;
@@ -932,15 +932,15 @@ Niivue.prototype.touchStartListener = function (e) {
     this.setDragStart(
       e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
       e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-    )
+    );
     this.resetBriCon(e);
     this.lastTouchTime = this.currentTouchTime;
     return;
   } else {
     // reset values to be ready for next touch
     this.doubleTouch = false;
-    this.setDragStart(0,0)
-    this.setDragEnd(0,0)
+    this.setDragStart(0, 0);
+    this.setDragEnd(0, 0);
     this.lastTouchTime = this.currentTouchTime;
   }
   if (this.scene.touchdown && e.touches.length < 2) {
@@ -1040,16 +1040,15 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   this.drawScene();
 };
 
+Niivue.prototype.setDragStart = function (x, y) {
+  this.dragStart[0] = x;
+  this.dragStart[1] = y;
+};
 
-Niivue.prototype.setDragStart = function(x,y){
-  this.dragStart[0] = x
-  this.dragStart[1] = y
-}
-
-Niivue.prototype.setDragEnd = function(x, y){
-  this.dragEnd[0] = x
-  this.dragEnd[1] = y
-}
+Niivue.prototype.setDragEnd = function (x, y) {
+  this.dragEnd[0] = x;
+  this.dragEnd[1] = y;
+};
 
 // not included in public docs
 // handler for touch move (moving finger on screen)
@@ -1064,7 +1063,7 @@ Niivue.prototype.touchMoveListener = function (e) {
       this.setDragEnd(
         e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
         e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-      )
+      );
       this.drawScene();
       return;
     }
@@ -1553,8 +1552,8 @@ Niivue.prototype.getRadiologicalConvention = function () {
  */
 Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
-  if (!this.opts.isHighResolutionCapable){
-    this.scene.dpr = 1
+  if (!this.opts.isHighResolutionCapable) {
+    this.scene.dpr = 1;
   }
   console.log("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
