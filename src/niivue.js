@@ -97,7 +97,8 @@ const cmapper = new colortables();
  * @property {boolean} [options.isDragShowsMeasurementTool=false] Does dragging on 2D slice display distance (otherwise, adjust contrast)
  * @property {number} [options.multiplanarPadPixels=0] spacing between tiles of a multiplanar view
  * @property {number} [options.meshThicknessOn2D=Infinity] 2D slice views can show meshes within this range. Meshes only visible in sliceMM (world space) mode
- * @property {boolean} [options.isDepthPickMesh=false] when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
+ * @property {boolean} [options.isDragShowsMeasurementTool=false] dragging shows distance between start and end point
+ * @property {boolean} [options.isDragForPanZoom=false] dragging pans 2D image (must be in world space)
  * @property {boolean} [options.isDepthPickMesh=false] when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
  * @property {boolean} [options.isCornerOrientationText=false] should slice text be shown in the upper right corner instead of the center of left and top axes?
  * @property {boolean} [options.sagittalNoseLeft=false] should 2D sagittal slices show the anterior direction toward the left or right?
@@ -154,6 +155,7 @@ export function Niivue(options = {}) {
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     isDragShowsMeasurementTool: false,
+    isDragForPanZoom: false,
     isDepthPickMesh: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
@@ -244,6 +246,7 @@ export function Niivue(options = {}) {
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseDepthPicker = false;
   this.scene.pan2Dxyzmm = [0, 0, 0, 1];
+  this.scene.pan2DxyzmmAtMouseDown = [0, 0, 0, 1];
   this.scene.prevX = 0;
   this.scene.prevY = 0;
   this.scene.currX = 0;
@@ -778,12 +781,15 @@ Niivue.prototype.mouseLeftButtonHandler = function (e) {
 // handler for mouse right button down
 // note: no test yet
 Niivue.prototype.mouseRightButtonHandler = function (e) {
-  this.isDragging = true;
+  //this.isDragging = true;
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
     e,
     this.gl.canvas
   );
   this.setDragStart(pos.x, pos.y)
+  if (!this.isDragging)
+    this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
+  this.isDragging = true;
   this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
@@ -884,6 +890,7 @@ Niivue.prototype.mouseUpListener = function () {
 
   if (this.isDragging) {
     this.isDragging = false;
+    if (this.opts.isDragForPanZoom) return;
     if (this.opts.isDragShowsMeasurementTool) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -1050,6 +1057,8 @@ Niivue.prototype.setDragEnd = function(x, y){
 Niivue.prototype.touchMoveListener = function (e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
+    if (!this.isDragging)
+      this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
     this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
       this.setDragEnd(
@@ -2311,6 +2320,15 @@ Niivue.prototype.setSelectionBoxColor = function (color) {
 
 // not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
+  if (posChange !== 0 && this.opts.isDragForPanZoom) {
+    let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
+    zoom = Math.round(zoom * 10) / 10;
+    this.scene.pan2Dxyzmm[3] = zoom;
+    this.drawScene();
+    return;
+  }
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.mouseClick(x, y, posChange, isDelta);
 }; // sliceScroll2D()
 
@@ -4901,6 +4919,44 @@ Niivue.prototype.drawRuler10cm = function (startXYendXY) {
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 };
 
+Niivue.prototype.screenXY2mm = function (x, y, forceSlice = -1) {
+  for (let s = 0; s < this.screenSlices.length; s++) {
+    let i = s;
+    if (forceSlice >= 0) i = forceSlice;
+    var axCorSag = this.screenSlices[i].axCorSag;
+    if (axCorSag > this.sliceTypeSagittal) continue;
+    let ltwh = this.screenSlices[i].leftTopWidthHeight;
+    if (
+      x < ltwh[0] ||
+      y < ltwh[1] ||
+      x > ltwh[0] + ltwh[2] ||
+      y > ltwh[1] + ltwh[3]
+    )
+      continue;
+    console.log(this.screenSlices[i].leftTopWidthHeight, x, y);
+    let texFrac = this.screenXY2TextureFrac(x, y, i, false);
+    if (forceSlice < 0 && texFrac[0] < 0.0) continue;
+    let mm = this.frac2mm(texFrac);
+    return [mm[0], mm[1], mm[2], i];
+  }
+  return [NaN, NaN, NaN, NaN];
+};
+
+//dragForPanZoom
+Niivue.prototype.dragForPanZoom = function (startXYendXY) {
+  let endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
+  if (isNaN(endMM[0])) return;
+  let startMM = this.screenXY2mm(startXYendXY[0], startXYendXY[1], endMM[3]);
+  if (isNaN(startMM[0]) || isNaN(endMM[0]) || endMM[3] !== endMM[3]) {
+    return;
+  }
+  let v = mat.vec3.create();
+  mat.vec3.sub(v, endMM, startMM);
+  this.scene.pan2Dxyzmm[0] = this.scene.pan2DxyzmmAtMouseDown[0] + v[0];
+  this.scene.pan2Dxyzmm[1] = this.scene.pan2DxyzmmAtMouseDown[1] + v[1];
+  this.scene.pan2Dxyzmm[2] = this.scene.pan2DxyzmmAtMouseDown[2] + v[2];
+};
+
 // not included in public docs
 // draw line between start/end points and text to report length
 Niivue.prototype.drawMeasurementTool = function (startXYendXY) {
@@ -6741,7 +6797,12 @@ Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
 }; // frac2mm()
 
 // not included in public docs
-Niivue.prototype.screenXY2TextureFrac = function (x, y, i) {
+Niivue.prototype.screenXY2TextureFrac = function (
+  x,
+  y,
+  i,
+  restrict0to1 = true
+) {
   let texFrac = [-1, -1, -1]; //texture 0..1 so -1 is out of bounds
   var axCorSag = this.screenSlices[i].axCorSag;
   if (axCorSag > this.sliceTypeSagittal) return texFrac;
@@ -6770,15 +6831,17 @@ Niivue.prototype.screenXY2TextureFrac = function (x, y, i) {
     if (axCorSag === this.sliceTypeSagittal)
       xyzMM = swizzleVec3(xyzMM, [2, 0, 1]); //screen ASR to NIfTI RAS
     let xyz = this.mm2frac(xyzMM);
-    if (
-      xyz[0] < 0 ||
-      xyz[0] > 1 ||
-      xyz[1] < 0 ||
-      xyz[1] > 1 ||
-      xyz[2] < 0 ||
-      xyz[2] > 1
-    )
-      return texFrac;
+    if (restrict0to1) {
+      if (
+        xyz[0] < 0 ||
+        xyz[0] > 1 ||
+        xyz[1] < 0 ||
+        xyz[1] > 1 ||
+        xyz[2] < 0 ||
+        xyz[2] > 1
+      )
+        return texFrac;
+    }
     texFrac[0] = xyz[0];
     texFrac[1] = xyz[1];
     texFrac[2] = xyz[2];
@@ -7352,6 +7415,15 @@ Niivue.prototype.drawScene = function () {
   if (this.opts.isColorbar) this.drawColorbar();
 
   if (this.isDragging) {
+    if (this.opts.isDragForPanZoom) {
+      this.dragForPanZoom([
+        this.dragStart[0],
+        this.dragStart[1],
+        this.dragEnd[0],
+        this.dragEnd[1],
+      ]);
+      return;
+    }
     if (this.opts.isDragShowsMeasurementTool) {
       this.drawMeasurementTool([
         this.dragStart[0],
