@@ -111515,6 +111515,7 @@ function Niivue(options = {}) {
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     isDragShowsMeasurementTool: false,
+    isDragForPanZoom: false,
     isDepthPickMesh: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
@@ -111611,6 +111612,7 @@ function Niivue(options = {}) {
   this.scene.mouseButtonRightDown = false;
   this.scene.mouseDepthPicker = false;
   this.scene.pan2Dxyzmm = [0, 0, 0, 1];
+  this.scene.pan2DxyzmmAtMouseDown = [0, 0, 0, 1];
   this.scene.prevX = 0;
   this.scene.prevY = 0;
   this.scene.currX = 0;
@@ -111933,10 +111935,12 @@ Niivue.prototype.mouseLeftButtonHandler = function(e) {
   this.mouseDown(pos.x, pos.y);
 };
 Niivue.prototype.mouseRightButtonHandler = function(e) {
-  this.isDragging = true;
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
   this.dragStart[0] = pos.x;
   this.dragStart[1] = pos.y;
+  if (!this.isDragging)
+    this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
+  this.isDragging = true;
   this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
@@ -112019,6 +112023,8 @@ Niivue.prototype.mouseUpListener = function() {
   this.drawPenAxCorSag = -1;
   if (this.isDragging) {
     this.isDragging = false;
+    if (this.opts.isDragForPanZoom)
+      return;
     if (this.opts.isDragShowsMeasurementTool)
       return;
     this.calculateNewRange();
@@ -112137,6 +112143,8 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
 Niivue.prototype.touchMoveListener = function(e) {
   if (this.scene.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
+    if (!this.isDragging)
+      this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
     this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
       this.dragEnd[0] = e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
@@ -112862,6 +112870,13 @@ Niivue.prototype.setSelectionBoxColor = function(color) {
   this.opts.selectionBoxColor = color;
 };
 Niivue.prototype.sliceScroll2D = function(posChange, x2, y, isDelta = true) {
+  if (posChange !== 0 && this.opts.isDragForPanZoom) {
+    let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * posChange);
+    zoom = Math.round(zoom * 10) / 10;
+    this.scene.pan2Dxyzmm[3] = zoom;
+    this.drawScene();
+    return;
+  }
   if (this.opts.isHighResolutionCapable) {
     let dpr = window.devicePixelRatio || 1;
     x2 *= dpr;
@@ -114451,6 +114466,40 @@ Niivue.prototype.drawRuler10cm = function(startXYendXY) {
   }
   this.gl.bindVertexArray(this.unusedVAO);
 };
+Niivue.prototype.screenXY2mm = function(x2, y, forceSlice = -1) {
+  for (let s = 0; s < this.screenSlices.length; s++) {
+    let i2 = s;
+    if (forceSlice >= 0)
+      i2 = forceSlice;
+    var axCorSag = this.screenSlices[i2].axCorSag;
+    if (axCorSag > this.sliceTypeSagittal)
+      continue;
+    let ltwh = this.screenSlices[i2].leftTopWidthHeight;
+    if (x2 < ltwh[0] || y < ltwh[1] || x2 > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3])
+      continue;
+    console.log(this.screenSlices[i2].leftTopWidthHeight, x2, y);
+    let texFrac = this.screenXY2TextureFrac(x2, y, i2, false);
+    if (forceSlice < 0 && texFrac[0] < 0)
+      continue;
+    let mm = this.frac2mm(texFrac);
+    return [mm[0], mm[1], mm[2], i2];
+  }
+  return [NaN, NaN, NaN, NaN];
+};
+Niivue.prototype.dragForPanZoom = function(startXYendXY) {
+  let endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
+  if (isNaN(endMM[0]))
+    return;
+  let startMM = this.screenXY2mm(startXYendXY[0], startXYendXY[1], endMM[3]);
+  if (isNaN(startMM[0]) || isNaN(endMM[0]) || endMM[3] !== endMM[3]) {
+    return;
+  }
+  let v = create$1();
+  sub(v, endMM, startMM);
+  this.scene.pan2Dxyzmm[0] = this.scene.pan2DxyzmmAtMouseDown[0] + v[0];
+  this.scene.pan2Dxyzmm[1] = this.scene.pan2DxyzmmAtMouseDown[1] + v[1];
+  this.scene.pan2Dxyzmm[2] = this.scene.pan2DxyzmmAtMouseDown[2] + v[2];
+};
 Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
   let gl = this.gl;
   gl.bindVertexArray(this.genericVAO);
@@ -115747,7 +115796,7 @@ Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
   }
   return pos;
 };
-Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2) {
+Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2, restrict0to1 = true) {
   let texFrac = [-1, -1, -1];
   var axCorSag = this.screenSlices[i2].axCorSag;
   if (axCorSag > this.sliceTypeSagittal)
@@ -115776,8 +115825,10 @@ Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2) {
     if (axCorSag === this.sliceTypeSagittal)
       xyzMM = swizzleVec3(xyzMM, [2, 0, 1]);
     let xyz = this.mm2frac(xyzMM);
-    if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1)
-      return texFrac;
+    if (restrict0to1) {
+      if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1)
+        return texFrac;
+    }
     texFrac[0] = xyz[0];
     texFrac[1] = xyz[1];
     texFrac[2] = xyz[2];
@@ -116240,6 +116291,15 @@ Niivue.prototype.drawScene = function() {
   if (this.opts.isColorbar)
     this.drawColorbar();
   if (this.isDragging) {
+    if (this.opts.isDragForPanZoom) {
+      this.dragForPanZoom([
+        this.dragStart[0],
+        this.dragStart[1],
+        this.dragEnd[0],
+        this.dragEnd[1]
+      ]);
+      return;
+    }
     if (this.opts.isDragShowsMeasurementTool) {
       this.drawMeasurementTool([
         this.dragStart[0],

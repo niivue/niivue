@@ -49,6 +49,8 @@
     <label for="check9">Pad</label>
     <input type="checkbox" id="check10" name="check10" checked>
     <label for="check10">HighDPI</label>
+    <input type="checkbox" id="check11" name="check11" unchecked>
+    <label for="check11">Drag Pan Zoom</label>
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:800px;">
@@ -121,6 +123,10 @@
       document.getElementById("check10").addEventListener("change", doCheck10Click)
       function doCheck10Click() {
         nv1.setHighResolutionCapable(this.checked)
+      }
+      document.getElementById("check11").addEventListener("change", doCheck11Click)
+      function doCheck11Click() {
+        nv1.opts.isDragForPanZoom = this.checked
       }
      var volumeList1 = [
          {
