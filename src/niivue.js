@@ -644,7 +644,8 @@ Niivue.prototype.handleMessage = function (
           msg["message"],
           msg["url"],
           msg["key"],
-          msg["isError"]
+          msg["isError"],
+          msg["userKey"]
         );
       }
       break;
@@ -657,7 +658,12 @@ Niivue.prototype.handleMessage = function (
       }
 
       if (sessionJoinedCallback) {
-        sessionJoinedCallback(msg["message"], msg["url"], msg["isController"]);
+        sessionJoinedCallback(
+          msg["message"],
+          msg["url"],
+          msg["isController"],
+          msg["userKey"]
+        );
       }
       break;
 
@@ -1448,7 +1454,7 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
 /**
  * Add an image and notify subscribers
  * @param {NVImageOptions} imageOptions
- * @returns
+ * @returns {NVImage}
  */
 Niivue.prototype.addVolumeFromUrl = async function (
   imageOptions,
@@ -2701,7 +2707,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
 /**
  * Add mesh and notify subscribers
  * @param {NVMeshFromUrlOptions} meshOptions
- * @returns
+ * @returns {NVMesh}
  */
 Niivue.prototype.addMeshFromUrl = async function (
   meshOptions,
@@ -5973,6 +5979,8 @@ Niivue.prototype.draw2DMM = function (
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 }; // draw2DMM()
+
+Niivue.prototype.drawCro;
 
 // not included in public docs
 // draw 2D tile in voxel space
