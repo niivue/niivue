@@ -2717,7 +2717,10 @@ Niivue.prototype.addMeshFromUrl = async function (
  * @returns {NVMesh}
  */
 Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
-  let mesh = await NVMesh.loadFromUrl(new NVMeshFromUrlOptions(...meshOptions));
+  let options = new NVMeshFromUrlOptions();
+  options.gl = this.gl;
+  Object.assign(options, meshOptions);
+  let mesh = await NVMesh.loadFromUrl(options);
   return mesh;
 };
 
