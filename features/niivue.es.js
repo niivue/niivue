@@ -104567,6 +104567,22 @@ function isPlatformLittleEndian() {
   new DataView(buffer2).setInt16(0, 256, true);
   return new Int16Array(buffer2)[0] === 256;
 }
+function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, colorMapNegative = "") {
+  return {
+    url,
+    urlImageData,
+    name,
+    colorMap,
+    opacity,
+    cal_min,
+    cal_max,
+    trustCalMinMax,
+    percentileFrac,
+    ignoreZeroVoxels,
+    visible,
+    colorMapNegative
+  };
+}
 function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, isDICOMDIR = false, useQFormNotSForm = false, colorMapNegative = "") {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
@@ -106729,6 +106745,24 @@ NVImage.prototype.toNiivueObject3D = function(id, gl) {
   ];
   return obj3D;
 };
+NVImage.prototype.applyOptionsUpdate = function(options) {
+  this.hdr.cal_min = options.cal_min;
+  this.hdr.cal_max = options.cal_max;
+  delete options["url"];
+  delete options["urlImageData"];
+  delete options["cal_min"];
+  delete options["cal_max"];
+  Object.assign(this, options);
+};
+NVImage.prototype.getImageOptions = function() {
+  let options = null;
+  try {
+    options = new NVImageFromUrlOptions("", "", this.name, this.colorMap, this.opacity, this.hdr.cal_min, this.hdr.cal_max, this.trustCalMinMax, this.percentileFrac, this.ignoreZeroVoxels, this.visible, this.colorMapNegative);
+  } catch (e) {
+    console.log(e);
+  }
+  return options;
+};
 const colortables = function() {
   this.version = 0.1;
   this.gamma = 1;
@@ -106786,6 +106820,17 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 };
 const cmapper$1 = new colortables();
 const log$1 = new Log();
+function NVMeshFromUrlOptions(url = "", gl = null, name = "", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true, layers = []) {
+  return {
+    url,
+    gl,
+    name,
+    opacity,
+    rgba255,
+    visible,
+    layers
+  };
+}
 function NVMesh(pts, tris, name = "", rgba255 = [255, 255, 255, 255], opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null) {
   this.name = name;
   this.id = v4();
@@ -111484,8 +111529,82 @@ var WebSocketSubject = function(_super) {
 function webSocket(urlConfigOrSource) {
   return new WebSocketSubject(urlConfigOrSource);
 }
+const UPDATE = "update";
+const CREATE = "create";
+const JOIN = "join";
+const ADD_VOLUME_URL = "add volume url";
+const REMOVE_VOLUME_URL = "remove volume media";
+const ADD_MESH_URL = "add mesh url";
+const REMOVE_MESH_URL = "remove mesh media";
+const SET_4D_VOL_INDEX = "set 4d vol index";
+const UPDATE_IMAGE_OPTIONS = "update image options";
+function NVMesssageUpdateData(azimuth, elevation, clipPlane, zoom) {
+  return {
+    azimuth,
+    elevation,
+    clipPlane,
+    zoom
+  };
+}
+function NVMessageSet4DVolumeIndexData(url, index) {
+  return {
+    url,
+    index
+  };
+}
+function NVMessage(messageType, messageData = "", sessionKey = "") {
+  let message = {};
+  message.key = sessionKey;
+  message.op = messageType;
+  switch (messageType) {
+    case UPDATE:
+      Object.assign(message, messageData);
+      break;
+    case UPDATE_IMAGE_OPTIONS:
+    case ADD_VOLUME_URL:
+      message.urlImageOptions = messageData;
+      break;
+    case ADD_MESH_URL:
+      message.urlMeshOptions = messageData;
+      break;
+    case REMOVE_VOLUME_URL:
+    case REMOVE_MESH_URL:
+      message.url = messageData;
+      break;
+    case SET_4D_VOL_INDEX:
+      message.url = messageData.url;
+      message.index = messageData.index;
+      break;
+  }
+  return message;
+}
 const log = new Log();
 const cmapper = new colortables();
+const MESH_EXTENSIONS = [
+  "ASC",
+  "DFS",
+  "FSM",
+  "PIAL",
+  "ORIG",
+  "INFLATED",
+  "SMOOTHWM",
+  "SPHERE",
+  "WHITE",
+  "GII",
+  "MZ3",
+  "NV",
+  "OBJ",
+  "OFF",
+  "PLY",
+  "SRF",
+  "STL",
+  "TCK",
+  "TRACT",
+  "TRK",
+  "TRX",
+  "VTK",
+  "X3D"
+];
 function Niivue(options = {}) {
   this.opts = {};
   this.defaults = {
@@ -111689,6 +111808,7 @@ function Niivue(options = {}) {
   this.sessionUrl = "";
   this.serverConnection$ = null;
   this.interval$ = null;
+  this.mediaUrlMap = /* @__PURE__ */ new Map();
   this.initialized = false;
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
@@ -111814,49 +111934,80 @@ Niivue.prototype.connectToServer = function(wsServerUrl, sessionName) {
 Niivue.prototype.setUpdateInterval = function() {
   this.interval$ = interval(300);
   this.interval$.subscribe(() => {
-    this.serverConnection$.next({
-      op: "update",
-      azimuth: this.scene.renderAzimuth,
-      elevation: this.scene.renderElevation,
-      clipPlane: this.scene.clipPlane,
-      zoom: this.volScaleMultiplier,
-      key: this.sessionKey
-    });
+    this.serverConnection$.next(new NVMessage(UPDATE, new NVMesssageUpdateData(this.scene.renderAzimuth, this.scene.renderElevation, this.scene.clipPlane, this.volScaleMultiplier), this.sessionKey));
   });
+};
+Niivue.prototype.handleMessage = function(msg2, sessionCreatedCallback, sessionJoinedCallback) {
+  switch (msg2["op"]) {
+    case UPDATE:
+      this.scene.renderAzimuth = msg2["azimuth"];
+      this.scene.renderElevation = msg2["elevation"];
+      this.volScaleMultiplier = msg2["zoom"];
+      this.scene.clipPlane = msg2["clipPlane"];
+      this.drawScene();
+      break;
+    case CREATE:
+      console.log(msg2);
+      if (!msg2["isError"]) {
+        this.isInSession = true;
+        this.sessionKey = msg2["key"];
+        this.setUpdateInterval();
+      }
+      if (sessionCreatedCallback) {
+        sessionCreatedCallback(msg2["message"], msg2["url"], msg2["key"], msg2["isError"], msg2["userKey"]);
+      }
+      break;
+    case JOIN:
+      this.isInSession = true;
+      this.isController = msg2["isController"];
+      if (this.isController) {
+        this.setUpdateInterval();
+      }
+      if (sessionJoinedCallback) {
+        sessionJoinedCallback(msg2["message"], msg2["url"], msg2["isController"], msg2["userKey"]);
+      }
+      break;
+    case ADD_MESH_URL:
+      this.addMeshFromUrl(msg2["urlMeshOptions"], false);
+      break;
+    case ADD_VOLUME_URL:
+      this.addVolumeFromUrl(msg2["urlImageOptions"], false);
+      break;
+    case REMOVE_VOLUME_URL:
+      {
+        let volume = this.getMediaByUrl(msg2["url"]);
+        if (volume) {
+          this.removeVolume(volume, false);
+        }
+      }
+      break;
+    case REMOVE_MESH_URL: {
+      let mesh = this.getMediaByUrl(msg2["url"]);
+      if (mesh) {
+        this.removeMesh(mesh, false);
+      }
+    }
+    case SET_4D_VOL_INDEX:
+      {
+        let volume = this.getMediaByUrl(msg2["url"]);
+        if (volume) {
+          this.setFrame4D(volume.id, msg2["index"]);
+        }
+      }
+      break;
+    case UPDATE_IMAGE_OPTIONS: {
+      let volume = this.getMediaByUrl(msg2["urlImageOptions"].url);
+      if (volume) {
+        volume.applyOptionsUpdate(msg2["urlImageOptions"]);
+        this.updateGLVolume();
+      }
+    }
+  }
 };
 Niivue.prototype.subscribeToServer = function(sessionCreatedCallback, sessionJoinedCallback) {
   this.serverConnection$.subscribe({
     next: (msg2) => {
-      switch (msg2["op"]) {
-        case "update":
-          this.scene.renderAzimuth = msg2["azimuth"];
-          this.scene.renderElevation = msg2["elevation"];
-          this.volScaleMultiplier = msg2["zoom"];
-          this.scene.clipPlane = msg2["clipPlane"];
-          this.drawScene();
-          break;
-        case "create":
-          console.log(msg2);
-          if (!msg2["isError"]) {
-            this.isInSession = true;
-            this.sessionKey = msg2["key"];
-            this.setUpdateInterval();
-          }
-          if (sessionCreatedCallback) {
-            sessionCreatedCallback(msg2["message"], msg2["url"], msg2["key"], msg2["isError"]);
-          }
-          break;
-        case "join":
-          this.isInSession = true;
-          this.isController = msg2["isController"];
-          if (this.isController) {
-            this.setUpdateInterval();
-          }
-          if (sessionJoinedCallback) {
-            sessionJoinedCallback(msg2["message"], msg2["url"], msg2["isController"]);
-          }
-          break;
-      }
+      this.handleMessage(msg2, sessionCreatedCallback, sessionJoinedCallback);
     },
     error: (err2) => console.log(err2),
     complete: () => console.log("complete")
@@ -111865,17 +112016,12 @@ Niivue.prototype.subscribeToServer = function(sessionCreatedCallback, sessionJoi
 Niivue.prototype.createSession = function(wsServerUrl, sessionName, sessionCreatedCallback) {
   this.connectToServer(wsServerUrl, sessionName);
   this.subscribeToServer(sessionCreatedCallback);
-  this.serverConnection$.next({
-    op: "create"
-  });
+  this.serverConnection$.next(new NVMessage(CREATE));
 };
 Niivue.prototype.joinSession = function(wsServerUrl, sessionName, key2, sessionJoinedCallback) {
   this.connectToServer(wsServerUrl, sessionName);
   this.subscribeToServer(null, sessionJoinedCallback);
-  this.serverConnection$.next({
-    op: "join",
-    key: key2
-  });
+  this.serverConnection$.next(new NVMessage(JOIN, key2));
 };
 Niivue.prototype.closeSession = function() {
   this.interval$.complete();
@@ -112305,6 +112451,40 @@ Niivue.prototype.getFileExt = function(fullname, upperCase = true) {
   }
   return upperCase ? ext : ext.toLowerCase();
 };
+Niivue.prototype.loadVolumeFromUrl = async function(imageOptions) {
+  let volume = await NVImage.loadFromUrl(imageOptions);
+  return volume;
+};
+Niivue.prototype.notifySubscribersOfOptionChange = function(volume) {
+  if (this.isInSession) {
+    if (this.mediaUrlMap.has(volume)) {
+      let imageOptions = volume.getImageOptions();
+      imageOptions.url = this.mediaUrlMap.get(volume);
+      this.serverConnection$.next(new NVMessage(UPDATE_IMAGE_OPTIONS, imageOptions, this.sessionKey));
+      console.log("update called");
+    }
+  }
+};
+Niivue.prototype.addVolumeFromUrl = async function(imageOptions, notifySubscribers = true) {
+  let volume = await this.loadVolumeFromUrl(imageOptions);
+  this.addVolume(volume);
+  if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
+    this.mediaUrlMap.set(volume, imageOptions.url);
+    if (this.isInSession && notifySubscribers) {
+      this.serverConnection$.next(new NVMessage(ADD_VOLUME_URL, imageOptions, this.sessionKey));
+    }
+  }
+  return volume;
+};
+Niivue.prototype.getMediaByUrl = function(url) {
+  return [...this.mediaUrlMap.entries()].filter((v) => v[1] == url).map((v) => v[0]).pop();
+};
+Niivue.prototype.removeVolumeByUrl = function(url) {
+  let volume = this.getMediaByUrl(url);
+  if (volume) {
+    this.removeVolume(volume);
+  }
+};
 Niivue.prototype.dropListener = async function(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -112314,8 +112494,15 @@ Niivue.prototype.dropListener = async function(e) {
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {
-    let volume = await NVImage.loadFromUrl({ url });
-    this.setVolume(volume);
+    let imageOptions = new NVImageFromUrlOptions(url);
+    let ext = this.getFileExt(url);
+    console.log("dropped ext");
+    console.log(ext);
+    if (MESH_EXTENSIONS.includes(ext)) {
+      this.addMeshFromUrl({ url });
+    } else {
+      this.addVolumeFromUrl(imageOptions);
+    }
   } else {
     const items = dt.items;
     if (items.length > 0) {
@@ -112348,7 +112535,7 @@ Niivue.prototype.dropListener = async function(e) {
           if (entry.name.lastIndexOf("BRIK") !== -1) {
             continue;
           }
-          if (ext === "ASC" || ext === "DFS" || ext === "FSM" || ext === "PIAL" || ext === "ORIG" || ext === "INFLATED" || ext === "SMOOTHWM" || ext === "SPHERE" || ext === "WHITE" || ext === "GII" || ext === "MZ3" || ext === "NV" || ext === "OBJ" || ext === "OFF" || ext === "PLY" || ext === "SRF" || ext === "STL" || ext === "TCK" || ext === "TRACT" || ext === "TRK" || ext === "TRX" || ext === "VTK" || ext === "X3D") {
+          if (MESH_EXTENSIONS.includes(ext)) {
             entry.file(async (file) => {
               let mesh = await NVMesh.loadFromFile({
                 file,
@@ -112545,7 +112732,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl({ url: fnm });
+  let volume = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
   let dims = volume.hdr.dims;
   if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
     console.log("drawing dimensions do not match background image");
@@ -112796,11 +112983,43 @@ Niivue.prototype.setMesh = function(mesh, toIndex = 0) {
     log.debug(m.name);
   });
 };
-Niivue.prototype.removeVolume = function(volume) {
+Niivue.prototype.removeVolume = function(volume, notifySubscribers = true) {
   this.setVolume(volume, -1);
+  if (this.mediaUrlMap.has(volume)) {
+    let url = this.mediaUrlMap.get(volume);
+    if (notifySubscribers && this.isInSession) {
+      this.serverConnection$.next(new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey));
+    }
+    this.mediaUrlMap.delete(volume);
+  }
 };
-Niivue.prototype.removeMesh = function(mesh) {
+Niivue.prototype.removeVolumeByIndex = function(index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
+};
+Niivue.prototype.removeVolumeByIndex = function(index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
+};
+Niivue.prototype.removeVolumeByIndex = function(index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
+};
+Niivue.prototype.removeMesh = function(mesh, notifySubscribers = true) {
   this.setMesh(mesh, -1);
+  let url = this.mediaUrlMap.get(mesh);
+  if (url) {
+    this.mediaUrlMap.delete(mesh);
+    if (notifySubscribers && this.isInSession) {
+      this.serverConnection$.next(new NVMessage(REMOVE_MESH_URL, url, this.sessionKey));
+    }
+  }
 };
 Niivue.prototype.moveVolumeToBottom = function(volume) {
   this.setVolume(volume, 0);
@@ -112973,7 +113192,7 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
   this.scene.loading$.next(false);
   for (let i2 = 0; i2 < volumeList.length; i2++) {
     this.scene.loading$.next(true);
-    let volume = await NVImage.loadFromUrl({
+    let imageOptions = {
       url: volumeList[i2].url,
       name: volumeList[i2].name,
       colorMap: volumeList[i2].colorMap,
@@ -112983,11 +113202,29 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
       cal_min: volumeList[i2].cal_min,
       cal_max: volumeList[i2].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax
-    });
+    };
+    await this.addVolumeFromUrl(imageOptions);
     this.scene.loading$.next(false);
-    this.addVolume(volume);
   }
   return this;
+};
+Niivue.prototype.addMeshFromUrl = async function(meshOptions, notifySubscribers = true) {
+  let mesh = await this.loadMeshFromUrl(meshOptions);
+  this.addMesh(mesh);
+  if (!this.mediaUrlMap.has(mesh) && meshOptions.url) {
+    this.mediaUrlMap.set(mesh, meshOptions.url);
+    if (this.isInSession && notifySubscribers) {
+      this.serverConnection$.next(new NVMessage(ADD_MESH_URL, meshOptions, this.sessionKey));
+    }
+  }
+  return mesh;
+};
+Niivue.prototype.loadMeshFromUrl = async function(meshOptions) {
+  let options = new NVMeshFromUrlOptions();
+  options.gl = this.gl;
+  Object.assign(options, meshOptions);
+  let mesh = await NVMesh.loadFromUrl(options);
+  return mesh;
 };
 Niivue.prototype.loadMeshes = async function(meshList) {
   this.on("loading", (isLoading) => {
@@ -113010,17 +113247,8 @@ Niivue.prototype.loadMeshes = async function(meshList) {
   this.scene.loading$.next(false);
   for (let i2 = 0; i2 < meshList.length; i2++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl({
-      url: meshList[i2].url,
-      gl: this.gl,
-      name: meshList[i2].name,
-      opacity: meshList[i2].opacity,
-      rgba255: meshList[i2].rgba255,
-      visible: meshList[i2].visible,
-      layers: meshList[i2].layers
-    });
+    await this.addMeshFromUrl(meshList[i2]);
     this.scene.loading$.next(false);
-    this.addMesh(mesh);
   }
   this.drawScene();
   return this;
@@ -113034,8 +113262,6 @@ Niivue.prototype.loadConnectome = async function(json) {
       this.loadingText = this.opts.loadingText;
     }
   });
-  if (!this.initialized)
-    ;
   this.meshes = [];
   this.gl.clearColor(0, 0, 0, 1);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -113958,7 +114184,7 @@ Niivue.prototype.getDescriptives = function(layer = 0, ignoreZeros = false, mask
     robust_max: this.volumes[layer].robust_max
   };
 };
-Niivue.prototype.refreshLayers = function(overlayItem, layer, numLayers) {
+Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   if (this.volumes.length < 1)
     return;
   let hdr = overlayItem.hdr;
@@ -114221,6 +114447,10 @@ Niivue.prototype.setFrame4D = function(id, frame4D) {
   }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
+  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
+    let url = this.mediaUrlMap.get(this.volumes[idx]);
+    this.serverConnection$.next(new NVMessage(SET_4D_VOL_INDEX, new NVMessageSet4DVolumeIndexData(url, frame4D), this.sessionKey));
+  }
 };
 Niivue.prototype.getFrame4D = function(id) {
   let idx = this.getVolumeIndexByID(id);
@@ -115074,6 +115304,7 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 };
+Niivue.prototype.drawCro;
 Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
   let gl = this.gl;
   let fovMM = this.screenFieldOfViewMM(axCorSag);
@@ -116338,4 +116569,4 @@ Niivue.prototype.drawScene = function() {
   this.readyForSync = true;
   return posString;
 };
-export { NVImage, NVMesh, Niivue, colortables };
+export { NVImage, NVImageFromUrlOptions, NVMesh, NVMeshFromUrlOptions, Niivue, colortables };
