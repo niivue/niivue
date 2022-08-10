@@ -31,6 +31,39 @@ const log = new Log();
  */
 
 /**
+ *
+ * @constructor
+ * @param {string} url - url mesh will be loaded from
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} name
+ * @param {number} opacity
+ * @param {number[]} rgba255
+ * @param {boolean} visible
+ * @param {NVMeshLayer[]} layers
+ * @returns {NVMeshFromUrlOptions}
+ *
+ */
+export function NVMeshFromUrlOptions(
+  url = "",
+  gl = null,
+  name = "",
+  opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
+  visible = true,
+  layers = []
+) {
+  return {
+    url,
+    gl,
+    name,
+    opacity,
+    rgba255,
+    visible,
+    layers,
+  };
+}
+
+/**
  * @class NVMesh
  * @type NVMesh
  * @description

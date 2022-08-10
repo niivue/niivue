@@ -51,8 +51,8 @@ import { Subject } from "rxjs";
 import { orientCube } from "./orientCube.js";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NVImage, NVImageFromUrlOptions } from "./nvimage.js";
-import { NVMesh } from "./nvmesh.js";
-export { NVMesh } from "./nvmesh.js";
+import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
+export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
@@ -103,15 +103,6 @@ const MESH_EXTENSIONS = [
   "VTK",
   "X3D",
 ];
-const DEFAULT_MESH_FROM_URL_OPTIONS = {
-  url: "",
-  gl: null,
-  name: "",
-  opacity: 1.0,
-  rgba255: [255, 255, 255, 255],
-  visible: true,
-  layers: [],
-};
 
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
@@ -161,14 +152,6 @@ const DEFAULT_MESH_FROM_URL_OPTIONS = {
  * niivue.opts.isColorbar = true;
  * niivue.updateGLVolume()
  * @see {@link https://niivue.github.io/niivue/features/mosaics2.html|live demo usage}
- */
-
-/**
- * @typedef { import('./nvimage').NVImageFromUrlOptions } NVImageFromUrlOptions
- */
-
-/**
- * @typedef { import('./nvmesh').NVMeshFromUrlOptions } NVMeshFromUrlOptions
  */
 
 /**
@@ -644,7 +627,8 @@ Niivue.prototype.handleMessage = function (
           msg["message"],
           msg["url"],
           msg["key"],
-          msg["isError"]
+          msg["isError"],
+          msg["userKey"]
         );
       }
       break;
@@ -657,7 +641,12 @@ Niivue.prototype.handleMessage = function (
       }
 
       if (sessionJoinedCallback) {
-        sessionJoinedCallback(msg["message"], msg["url"], msg["isController"]);
+        sessionJoinedCallback(
+          msg["message"],
+          msg["url"],
+          msg["isController"],
+          msg["userKey"]
+        );
       }
       break;
 
@@ -1448,7 +1437,7 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
 /**
  * Add an image and notify subscribers
  * @param {NVImageOptions} imageOptions
- * @returns
+ * @returns {NVImage}
  */
 Niivue.prototype.addVolumeFromUrl = async function (
   imageOptions,
@@ -2701,7 +2690,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
 /**
  * Add mesh and notify subscribers
  * @param {NVMeshFromUrlOptions} meshOptions
- * @returns
+ * @returns {NVMesh}
  */
 Niivue.prototype.addMeshFromUrl = async function (
   meshOptions,
@@ -2728,12 +2717,9 @@ Niivue.prototype.addMeshFromUrl = async function (
  * @returns {NVMesh}
  */
 Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
-  let options = {
-    ...DEFAULT_MESH_FROM_URL_OPTIONS,
-    ...meshOptions,
-    gl: this.gl,
-  };
-
+  let options = new NVMeshFromUrlOptions();
+  options.gl = this.gl;
+  Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
   return mesh;
 };
@@ -5973,6 +5959,8 @@ Niivue.prototype.draw2DMM = function (
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 }; // draw2DMM()
+
+Niivue.prototype.drawCro;
 
 // not included in public docs
 // draw 2D tile in voxel space

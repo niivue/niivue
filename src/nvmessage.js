@@ -1,3 +1,9 @@
+// Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
+// eslint-disable-next-line no-unused-vars
+import { NVImageFromUrlOptions } from "./nvimage";
+// eslint-disable-next-line no-unused-vars
+import { NVMeshFromUrlOptions } from "./nvmesh";
+
 export const UPDATE = "update";
 export const CREATE = "create";
 export const JOIN = "join";
@@ -39,14 +45,6 @@ export function NVMessageSet4DVolumeIndexData(url, index) {
     index,
   };
 }
-
-/**
- * @typedef { import('./nvimage').NVImageFromUrlOptions } NVImageFromUrlOptions
- */
-
-/**
- * @typedef { import('./nvmesh').NVMeshFromUrlOptions } NVMeshFromUrlOptions
- */
 
 /**
  * @class NVMessage
