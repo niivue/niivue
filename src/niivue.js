@@ -819,8 +819,8 @@ Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function (
   target = target || event.target;
   var pos = this.getRelativeMousePosition(event, target);
 
-  pos.x = (pos.x * target.width) / target.clientWidth;
-  pos.y = (pos.y * target.height) / target.clientHeight;
+  //pos.x = (pos.x * target.width) / target.clientWidth;
+  //pos.y = (pos.y * target.height) / target.clientHeight;
 
   return pos;
 };
@@ -1074,8 +1074,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
     } else if (this.scene.mouseButtonRightDown) {
-      this.dragEnd[0] = pos.x;
-      this.dragEnd[1] = pos.y;
+      this.setDragEnd(pos.x, pos.y)
     }
     this.drawScene();
     this.scene.prevX = this.scene.currX;
@@ -1128,11 +1127,15 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 };
 
 Niivue.prototype.setDragStart = function (x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   this.dragStart[0] = x;
   this.dragStart[1] = y;
 };
 
 Niivue.prototype.setDragEnd = function (x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   this.dragEnd[0] = x;
   this.dragEnd[1] = y;
 };
@@ -2378,6 +2381,8 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
 }; // mouseDown()
@@ -2385,6 +2390,8 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 // not included in public docs
 // note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   if (this.inRenderTile(x, y) < 0) return;
   this.scene.renderAzimuth += x - this.mousePos[0];
   this.scene.renderElevation += y - this.mousePos[1];
@@ -2521,8 +2528,8 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
     this.drawScene();
     return;
   }
-  x *= this.scene.dpr;
-  y *= this.scene.dpr;
+  //x *= this.scene.dpr;
+  //y *= this.scene.dpr;
   this.mouseClick(x, y, posChange, isDelta);
 }; // sliceScroll2D()
 
@@ -4960,6 +4967,8 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 // not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   var posNow;
   var posFuture;
   this.canvas.focus();
