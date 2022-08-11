@@ -112061,8 +112061,6 @@ Niivue.prototype.getRelativeMousePosition = function(event, target) {
 Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function(event, target) {
   target = target || event.target;
   var pos = this.getRelativeMousePosition(event, target);
-  pos.x = pos.x * target.width / target.clientWidth;
-  pos.y = pos.y * target.height / target.clientHeight;
   return pos;
 };
 Niivue.prototype.mouseContextMenuListener = function(e) {
@@ -112244,8 +112242,7 @@ Niivue.prototype.mouseMoveListener = function(e) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
     } else if (this.scene.mouseButtonRightDown) {
-      this.dragEnd[0] = pos.x;
-      this.dragEnd[1] = pos.y;
+      this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
     this.scene.prevX = this.scene.currX;
@@ -112288,10 +112285,14 @@ Niivue.prototype.resetBriCon = function(msg2 = null) {
   this.drawScene();
 };
 Niivue.prototype.setDragStart = function(x2, y) {
+  x2 *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.dragStart[0] = x2;
   this.dragStart[1] = y;
 };
 Niivue.prototype.setDragEnd = function(x2, y) {
+  x2 *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.dragEnd[0] = x2;
   this.dragEnd[1] = y;
 };
@@ -113036,11 +113037,15 @@ Niivue.prototype.moveVolumeToTop = function(volume) {
   this.setVolume(volume, this.volumes.length - 1);
 };
 Niivue.prototype.mouseDown = function mouseDown(x2, y) {
+  x2 *= this.scene.dpr;
+  y *= this.scene.dpr;
   if (this.inRenderTile(x2, y) < 0)
     return;
   this.mousePos = [x2, y];
 };
 Niivue.prototype.mouseMove = function mouseMove(x2, y) {
+  x2 *= this.scene.dpr;
+  y *= this.scene.dpr;
   if (this.inRenderTile(x2, y) < 0)
     return;
   this.scene.renderAzimuth += x2 - this.mousePos[0];
@@ -113107,8 +113112,6 @@ Niivue.prototype.sliceScroll2D = function(posChange, x2, y, isDelta = true) {
     this.drawScene();
     return;
   }
-  x2 *= this.scene.dpr;
-  y *= this.scene.dpr;
   this.mouseClick(x2, y, posChange, isDelta);
 };
 Niivue.prototype.setSliceType = function(st) {
@@ -114554,6 +114557,8 @@ Niivue.prototype.sliceScroll3D = function(posChange = 0) {
   this.drawScene();
 };
 Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
+  x2 *= this.scene.dpr;
+  y *= this.scene.dpr;
   var posNow;
   var posFuture;
   this.canvas.focus();
