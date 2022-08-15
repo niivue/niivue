@@ -9,6 +9,61 @@ const cmapper = new colortables();
 const log = new Log();
 
 /**
+ * @typedef {Object} NVMeshLayer
+ * @property {string} url
+ * @property {number} opacity
+ * @property {string} colorMap
+ * @property {string} colorMapNegative
+ * @property {boolean} useNegativeCmap
+ * @property {number} cal_min
+ * @property {number} cal_max
+ */
+
+/**
+ * @typedef {Object} NVMeshFromUrlOptions
+ * @property {string} url
+ * @property {WebGL2RenderingContext} gl
+ * @property {string} name
+ * @property {number} opacity
+ * @property {number[]} rgba255
+ * @property {boolean} visible
+ * @property {NVMeshLayer[]} layers
+ */
+
+/**
+ *
+ * @constructor
+ * @param {string} url - url mesh will be loaded from
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} name
+ * @param {number} opacity
+ * @param {number[]} rgba255
+ * @param {boolean} visible
+ * @param {NVMeshLayer[]} layers
+ * @returns {NVMeshFromUrlOptions}
+ *
+ */
+export function NVMeshFromUrlOptions(
+  url = "",
+  gl = null,
+  name = "",
+  opacity = 1.0,
+  rgba255 = [255, 255, 255, 255],
+  visible = true,
+  layers = []
+) {
+  return {
+    url,
+    gl,
+    name,
+    opacity,
+    rgba255,
+    visible,
+    layers,
+  };
+}
+
+/**
  * @class NVMesh
  * @type NVMesh
  * @description
@@ -3380,6 +3435,7 @@ NVMesh.readTRX = async function (buffer) {
  * @param {string} [colorMap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @param {NVMeshLayer[]} [layers=[]] layers of the mesh to load
  * @returns {NVMesh} returns a NVImage intance
  * @example
  * myImage = NVMesh.loadFromUrl('./someURL/mesh.gii') // must be served from a server (local or remote)

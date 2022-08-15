@@ -50,10 +50,10 @@ import {
 import { Subject } from "rxjs";
 import { orientCube } from "./orientCube.js";
 import { NiivueObject3D } from "./niivue-object3D.js";
-import { NVImage } from "./nvimage.js";
-import { NVMesh } from "./nvmesh.js";
-export { NVMesh } from "./nvmesh.js";
-export { NVImage } from "./nvimage";
+import { NVImage, NVImageFromUrlOptions } from "./nvimage.js";
+import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
+export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
+export { NVImage, NVImageFromUrlOptions } from "./nvimage";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
@@ -61,9 +61,48 @@ import { colortables } from "./colortables";
 export { colortables } from "./colortables";
 import { webSocket } from "rxjs/webSocket";
 import { interval } from "rxjs";
+import {
+  NVMessage,
+  NVMesssageUpdateData,
+  NVMessageSet4DVolumeIndexData,
+  UPDATE,
+  CREATE,
+  JOIN,
+  ADD_VOLUME_URL,
+  REMOVE_VOLUME_URL,
+  ADD_MESH_URL,
+  REMOVE_MESH_URL,
+  SET_4D_VOL_INDEX,
+  UPDATE_IMAGE_OPTIONS,
+} from "./nvmessage.js";
 
 const log = new Log();
 const cmapper = new colortables();
+const MESH_EXTENSIONS = [
+  "ASC",
+  "DFS",
+  "FSM",
+  "PIAL",
+  "ORIG",
+  "INFLATED",
+  "SMOOTHWM",
+  "SPHERE",
+  "WHITE",
+  "GII",
+  "MZ3",
+  "NV",
+  "OBJ",
+  "OFF",
+  "PLY",
+  "SRF",
+  "STL",
+  "TCK",
+  "TRACT",
+  "TRK",
+  "TRX",
+  "VTK",
+  "X3D",
+];
 
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
@@ -325,6 +364,7 @@ export function Niivue(options = {}) {
   this.sessionUrl = "";
   this.serverConnection$ = null;
   this.interval$ = null;
+  this.mediaUrlMap = new Map();
 
   this.initialized = false;
   // loop through known Niivue properties
@@ -357,6 +397,11 @@ export function Niivue(options = {}) {
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
   this.subscriptions = [];
+  if (this.opts.isHighResolutionCapable) {
+    this.scene.dpr = window.devicePixelRatio || 1;
+  } else {
+    this.scene.dpr = 1;
+  }
 }
 
 /**
@@ -541,15 +586,108 @@ Niivue.prototype.connectToServer = function (wsServerUrl, sessionName) {
 Niivue.prototype.setUpdateInterval = function () {
   this.interval$ = interval(300);
   this.interval$.subscribe(() => {
-    this.serverConnection$.next({
-      op: "update",
-      azimuth: this.scene.renderAzimuth,
-      elevation: this.scene.renderElevation,
-      clipPlane: this.scene.clipPlane,
-      zoom: this.volScaleMultiplier,
-      key: this.sessionKey,
-    });
+    this.serverConnection$.next(
+      new NVMessage(
+        UPDATE,
+        new NVMesssageUpdateData(
+          this.scene.renderAzimuth,
+          this.scene.renderElevation,
+          this.scene.clipPlane,
+          this.volScaleMultiplier
+        ),
+        this.sessionKey
+      )
+    );
   });
+};
+
+Niivue.prototype.handleMessage = function (
+  msg,
+  sessionCreatedCallback,
+  sessionJoinedCallback
+) {
+  switch (msg["op"]) {
+    case UPDATE:
+      this.scene.renderAzimuth = msg["azimuth"];
+      this.scene.renderElevation = msg["elevation"];
+      this.volScaleMultiplier = msg["zoom"];
+      this.scene.clipPlane = msg["clipPlane"];
+      this.drawScene();
+      break;
+
+    case CREATE:
+      console.log(msg);
+      if (!msg["isError"]) {
+        this.isInSession = true;
+        this.sessionKey = msg["key"];
+        this.setUpdateInterval();
+      }
+      if (sessionCreatedCallback) {
+        sessionCreatedCallback(
+          msg["message"],
+          msg["url"],
+          msg["key"],
+          msg["isError"],
+          msg["userKey"]
+        );
+      }
+      break;
+
+    case JOIN:
+      this.isInSession = true;
+      this.isController = msg["isController"];
+      if (this.isController) {
+        this.setUpdateInterval();
+      }
+
+      if (sessionJoinedCallback) {
+        sessionJoinedCallback(
+          msg["message"],
+          msg["url"],
+          msg["isController"],
+          msg["userKey"]
+        );
+      }
+      break;
+
+    case ADD_MESH_URL:
+      this.addMeshFromUrl(msg["urlMeshOptions"], false);
+      break;
+
+    case ADD_VOLUME_URL:
+      this.addVolumeFromUrl(msg["urlImageOptions"], false);
+      break;
+
+    case REMOVE_VOLUME_URL:
+      {
+        let volume = this.getMediaByUrl(msg["url"]);
+        if (volume) {
+          this.removeVolume(volume, false);
+        }
+      }
+      break;
+    case REMOVE_MESH_URL: {
+      let mesh = this.getMediaByUrl(msg["url"]);
+      if (mesh) {
+        this.removeMesh(mesh, false);
+      }
+    }
+    case SET_4D_VOL_INDEX:
+      {
+        let volume = this.getMediaByUrl(msg["url"]);
+        if (volume) {
+          this.setFrame4D(volume.id, msg["index"]);
+        }
+      }
+      break;
+    case UPDATE_IMAGE_OPTIONS: {
+      let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
+      if (volume) {
+        volume.applyOptionsUpdate(msg["urlImageOptions"]);
+        this.updateGLVolume();
+      }
+    }
+  }
 };
 
 // Internal function called after a connection with the server has been made
@@ -559,48 +697,7 @@ Niivue.prototype.subscribeToServer = function (
 ) {
   this.serverConnection$.subscribe({
     next: (msg) => {
-      switch (msg["op"]) {
-        case "update":
-          this.scene.renderAzimuth = msg["azimuth"];
-          this.scene.renderElevation = msg["elevation"];
-          this.volScaleMultiplier = msg["zoom"];
-          this.scene.clipPlane = msg["clipPlane"];
-          this.drawScene();
-          break;
-
-        case "create":
-          console.log(msg);
-          if (!msg["isError"]) {
-            this.isInSession = true;
-            this.sessionKey = msg["key"];
-            this.setUpdateInterval();
-          }
-          if (sessionCreatedCallback) {
-            sessionCreatedCallback(
-              msg["message"],
-              msg["url"],
-              msg["key"],
-              msg["isError"]
-            );
-          }
-          break;
-
-        case "join":
-          this.isInSession = true;
-          this.isController = msg["isController"];
-          if (this.isController) {
-            this.setUpdateInterval();
-          }
-
-          if (sessionJoinedCallback) {
-            sessionJoinedCallback(
-              msg["message"],
-              msg["url"],
-              msg["isController"]
-            );
-          }
-          break;
-      }
+      this.handleMessage(msg, sessionCreatedCallback, sessionJoinedCallback);
     }, // Called whenever there is a message from the server.
     error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
     complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
@@ -625,9 +722,7 @@ Niivue.prototype.createSession = function (
   this.subscribeToServer(sessionCreatedCallback);
 
   // tell the server we want to create a sesion
-  this.serverConnection$.next({
-    op: "create",
-  });
+  this.serverConnection$.next(new NVMessage(CREATE));
 };
 
 /**
@@ -648,10 +743,7 @@ Niivue.prototype.joinSession = function (
   this.subscribeToServer(null, sessionJoinedCallback);
 
   // tell the server we want to create a sesion
-  this.serverConnection$.next({
-    op: "join",
-    key: key,
-  });
+  this.serverConnection$.next(new NVMessage(JOIN, key));
 };
 
 /**
@@ -685,19 +777,20 @@ Niivue.prototype.arrayEquals = function (a, b) {
 Niivue.prototype.resizeListener = function () {
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
-  let dpr = 1;
   //https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
   //https://www.khronos.org/webgl/wiki/HandlingHighDPI
   if (this.opts.isHighResolutionCapable) {
-    dpr = window.devicePixelRatio || 1;
-    console.log("devicePixelRatio: " + dpr);
+    this.scene.dpr = window.devicePixelRatio || 1;
+    console.log("devicePixelRatio: " + this.scene.dpr);
+  } else {
+    this.scene.dpr = 1;
   }
   if (this.canvas.parentElement.hasOwnProperty("width")) {
-    this.canvas.width = this.canvas.parentElement.width * dpr;
-    this.canvas.height = this.canvas.parentElement.height * dpr;
+    this.canvas.width = this.canvas.parentElement.width * this.scene.dpr;
+    this.canvas.height = this.canvas.parentElement.height * this.scene.dpr;
   } else {
-    this.canvas.width = this.canvas.offsetWidth * dpr;
-    this.canvas.height = this.canvas.offsetHeight * dpr;
+    this.canvas.width = this.canvas.offsetWidth * this.scene.dpr;
+    this.canvas.height = this.canvas.offsetHeight * this.scene.dpr;
   }
   this.drawScene();
 };
@@ -726,8 +819,8 @@ Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function (
   target = target || event.target;
   var pos = this.getRelativeMousePosition(event, target);
 
-  pos.x = (pos.x * target.width) / target.clientWidth;
-  pos.y = (pos.y * target.height) / target.clientHeight;
+  //pos.x = (pos.x * target.width) / target.clientWidth;
+  //pos.y = (pos.y * target.height) / target.clientHeight;
 
   return pos;
 };
@@ -780,8 +873,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
-  this.dragStart[0] = pos.x;
-  this.dragStart[1] = pos.y;
+  this.setDragStart(pos.x, pos.y);
   if (!this.isDragging)
     this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
   this.isDragging = true;
@@ -924,18 +1016,18 @@ Niivue.prototype.touchStartListener = function (e) {
   let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
   if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
     this.doubleTouch = true;
-    this.dragStart[0] =
-      e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
-    this.dragStart[1] =
-      e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+    this.setDragStart(
+      e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
+      e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+    );
     this.resetBriCon(e);
     this.lastTouchTime = this.currentTouchTime;
     return;
   } else {
     // reset values to be ready for next touch
     this.doubleTouch = false;
-    this.dragStart = [0, 0];
-    this.dragEnd = [0, 0];
+    this.setDragStart(0, 0);
+    this.setDragEnd(0, 0);
     this.lastTouchTime = this.currentTouchTime;
   }
   if (this.scene.touchdown && e.touches.length < 2) {
@@ -982,8 +1074,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
     } else if (this.scene.mouseButtonRightDown) {
-      this.dragEnd[0] = pos.x;
-      this.dragEnd[1] = pos.y;
+      this.setDragEnd(pos.x, pos.y)
     }
     this.drawScene();
     this.scene.prevX = this.scene.currX;
@@ -1015,13 +1106,8 @@ Niivue.prototype.resetBriCon = function (msg = null) {
       x = msg.offsetX;
       y = msg.offsetY;
     }
-    if (this.opts.isHighResolutionCapable) {
-      //kludge: required by highDPI devices that call wheelListener()
-      //TODO: check this works with highDPI devices that call handlePinchZoom()
-      let dpr = window.devicePixelRatio || 1;
-      x *= dpr;
-      y *= dpr;
-    }
+    x *= this.scene.dpr;
+    y *= this.scene.dpr;
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
@@ -1040,6 +1126,20 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   this.drawScene();
 };
 
+Niivue.prototype.setDragStart = function (x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
+  this.dragStart[0] = x;
+  this.dragStart[1] = y;
+};
+
+Niivue.prototype.setDragEnd = function (x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
+  this.dragEnd[0] = x;
+  this.dragEnd[1] = y;
+};
+
 // not included in public docs
 // handler for touch move (moving finger on screen)
 // note: no test yet
@@ -1050,10 +1150,10 @@ Niivue.prototype.touchMoveListener = function (e) {
       this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
     this.isDragging = true;
     if (this.doubleTouch && this.isDragging) {
-      this.dragEnd[0] =
-        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left;
-      this.dragEnd[1] =
-        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top;
+      this.setDragEnd(
+        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
+        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+      );
       this.drawScene();
       return;
     }
@@ -1312,6 +1412,78 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
   return upperCase ? ext : ext.toLowerCase(); // developer can choose to have extentions as upper or lower
 }; // getFleExt
 
+/**
+ * Load a volume from url and notify subscribers
+ * @param {NVImageFromUrlOptions} imageOptions
+ * @returns {NVImage}
+ */
+Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
+  let volume = await NVImage.loadFromUrl(imageOptions);
+  return volume;
+};
+
+/** Notify subscribers of image option chage */
+Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
+  if (this.isInSession) {
+    if (this.mediaUrlMap.has(volume)) {
+      let imageOptions = volume.getImageOptions();
+      // add our url
+      imageOptions.url = this.mediaUrlMap.get(volume);
+      this.serverConnection$.next(
+        new NVMessage(UPDATE_IMAGE_OPTIONS, imageOptions, this.sessionKey)
+      );
+      console.log("update called");
+    }
+  }
+};
+
+/**
+ * Add an image and notify subscribers
+ * @param {NVImageOptions} imageOptions
+ * @returns {NVImage}
+ */
+Niivue.prototype.addVolumeFromUrl = async function (
+  imageOptions,
+  notifySubscribers = true
+) {
+  let volume = await this.loadVolumeFromUrl(imageOptions);
+  this.addVolume(volume);
+  if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
+    this.mediaUrlMap.set(volume, imageOptions.url);
+    // notify subscribers
+    // if we are in session let our subscribers know
+    if (this.isInSession && notifySubscribers) {
+      this.serverConnection$.next(
+        new NVMessage(ADD_VOLUME_URL, imageOptions, this.sessionKey)
+      );
+    }
+  }
+  return volume;
+};
+
+/**
+ * Find media by url
+ * @param {string} url -
+ * @returns {(NVImage|NVMesh)}
+ */
+Niivue.prototype.getMediaByUrl = function (url) {
+  return [...this.mediaUrlMap.entries()]
+    .filter((v) => v[1] == url)
+    .map((v) => v[0])
+    .pop();
+};
+
+/**
+ * Remove volume by url
+ * @param {string} url - Volume added by url to remove
+ */
+Niivue.prototype.removeVolumeByUrl = function (url) {
+  let volume = this.getMediaByUrl(url);
+  if (volume) {
+    this.removeVolume(volume);
+  }
+};
+
 // not included in public docs
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
@@ -1327,8 +1499,15 @@ Niivue.prototype.dropListener = async function (e) {
   const url = dt.getData("text/uri-list");
   if (url) {
     urlsToLoad.push(url);
-    let volume = await NVImage.loadFromUrl({ url: url });
-    this.setVolume(volume);
+    let imageOptions = new NVImageFromUrlOptions(url);
+    let ext = this.getFileExt(url);
+    console.log("dropped ext");
+    console.log(ext);
+    if (MESH_EXTENSIONS.includes(ext)) {
+      this.addMeshFromUrl({ url });
+    } else {
+      this.addVolumeFromUrl(imageOptions);
+    }
   } else {
     //const files = dt.files;
     const items = dt.items;
@@ -1371,31 +1550,7 @@ Niivue.prototype.dropListener = async function (e) {
           if (entry.name.lastIndexOf("BRIK") !== -1) {
             continue;
           }
-          if (
-            ext === "ASC" ||
-            ext === "DFS" ||
-            ext === "FSM" ||
-            ext === "PIAL" ||
-            ext === "ORIG" ||
-            ext === "INFLATED" ||
-            ext === "SMOOTHWM" ||
-            ext === "SPHERE" ||
-            ext === "WHITE" ||
-            ext === "GII" ||
-            ext === "MZ3" ||
-            ext === "NV" ||
-            ext === "OBJ" ||
-            ext === "OFF" ||
-            ext === "PLY" ||
-            ext === "SRF" ||
-            ext === "STL" ||
-            ext === "TCK" ||
-            ext === "TRACT" ||
-            ext === "TRK" ||
-            ext === "TRX" ||
-            ext === "VTK" ||
-            ext === "X3D"
-          ) {
+          if (MESH_EXTENSIONS.includes(ext)) {
             entry.file(async (file) => {
               let mesh = await NVMesh.loadFromFile({
                 file: file,
@@ -1458,7 +1613,7 @@ Niivue.prototype.dropListener = async function (e) {
             });
           };
           readEntries();
-					*/
+          */
         }
       }
     }
@@ -1542,6 +1697,9 @@ Niivue.prototype.getRadiologicalConvention = function () {
  */
 Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  if (!this.opts.isHighResolutionCapable) {
+    this.scene.dpr = 1;
+  }
   console.log("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
   this.drawScene();
@@ -1767,8 +1925,7 @@ Niivue.prototype.drawUndo = function () {
 Niivue.prototype.loadDrawing = async function (fnm) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl({ url: fnm });
-  //let volume = await NVImage.loadFromFile({file: fnm});
+  let volume = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
   let dims = volume.hdr.dims; //reverse to original
   if (
     dims[1] !== this.back.hdr.dims[1] ||
@@ -2045,6 +2202,7 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
   if (toIndex > numberOfLoadedImages) {
     return;
   }
+
   let volIndex = this.getVolumeIndexByID(volume.id);
   if (toIndex === 0) {
     this.volumes.splice(volIndex, 1);
@@ -2105,8 +2263,52 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
  */
-Niivue.prototype.removeVolume = function (volume) {
+Niivue.prototype.removeVolume = function (volume, notifySubscribers = true) {
   this.setVolume(volume, -1);
+  // check if we have a url for this volume
+  if (this.mediaUrlMap.has(volume)) {
+    // notify subscribers
+    let url = this.mediaUrlMap.get(volume);
+    if (notifySubscribers && this.isInSession) {
+      this.serverConnection$.next(
+        new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey)
+      );
+    }
+    this.mediaUrlMap.delete(volume);
+  }
+};
+
+/**
+ * Remove a volume by index
+ * @param {number} index of volume to remove
+ */
+Niivue.prototype.removeVolumeByIndex = function (index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
+};
+
+/**
+ * Remove a volume by index
+ * @param {number} index of volume to remove
+ */
+Niivue.prototype.removeVolumeByIndex = function (index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
+};
+
+/**
+ * Remove a volume by index
+ * @param {number} index of volume to remove
+ */
+Niivue.prototype.removeVolumeByIndex = function (index) {
+  if (index >= this.volumes.length) {
+    throw "Index of volume out of bounds";
+  }
+  this.removeVolume(this.volumes[index]);
 };
 
 /**
@@ -2116,8 +2318,17 @@ Niivue.prototype.removeVolume = function (volume) {
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
  */
-Niivue.prototype.removeMesh = function (mesh) {
+Niivue.prototype.removeMesh = function (mesh, notifySubscribers = true) {
   this.setMesh(mesh, -1);
+  let url = this.mediaUrlMap.get(mesh);
+  if (url) {
+    this.mediaUrlMap.delete(mesh);
+    if (notifySubscribers && this.isInSession) {
+      this.serverConnection$.next(
+        new NVMessage(REMOVE_MESH_URL, url, this.sessionKey)
+      );
+    }
+  }
 };
 
 /**
@@ -2170,6 +2381,8 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
 }; // mouseDown()
@@ -2177,6 +2390,8 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 // not included in public docs
 // note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   if (this.inRenderTile(x, y) < 0) return;
   this.scene.renderAzimuth += x - this.mousePos[0];
   this.scene.renderElevation += y - this.mousePos[1];
@@ -2313,13 +2528,8 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
     this.drawScene();
     return;
   }
-  if (this.opts.isHighResolutionCapable) {
-    //kludge: required by highDPI devices that call wheelListener()
-    //TODO: check this works with highDPI devices that call handlePinchZoom()
-    let dpr = window.devicePixelRatio || 1;
-    x *= dpr;
-    y *= dpr;
-  }
+  //x *= this.scene.dpr;
+  //y *= this.scene.dpr;
   this.mouseClick(x, y, posChange, isDelta);
 }; // sliceScroll2D()
 
@@ -2467,7 +2677,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     this.scene.loading$.next(true);
-    let volume = await NVImage.loadFromUrl({
+    let imageOptions = {
       url: volumeList[i].url,
       name: volumeList[i].name,
       colorMap: volumeList[i].colorMap,
@@ -2477,12 +2687,49 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       cal_min: volumeList[i].cal_min,
       cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
-    });
+    };
+    await this.addVolumeFromUrl(imageOptions);
     this.scene.loading$.next(false);
-    this.addVolume(volume);
   } // for
   return this;
 }; // loadVolumes()
+
+/**
+ * Add mesh and notify subscribers
+ * @param {NVMeshFromUrlOptions} meshOptions
+ * @returns {NVMesh}
+ */
+Niivue.prototype.addMeshFromUrl = async function (
+  meshOptions,
+  notifySubscribers = true
+) {
+  let mesh = await this.loadMeshFromUrl(meshOptions);
+  this.addMesh(mesh);
+  if (!this.mediaUrlMap.has(mesh) && meshOptions.url) {
+    this.mediaUrlMap.set(mesh, meshOptions.url);
+    // notify subscribers
+    // if we are in session let our subscribers know
+    if (this.isInSession && notifySubscribers) {
+      this.serverConnection$.next(
+        new NVMessage(ADD_MESH_URL, meshOptions, this.sessionKey)
+      );
+    }
+  }
+  return mesh;
+};
+
+/**
+ * Loads mesh from a url
+ * @param {NVMeshFromUrlOptions} meshOptions
+ * @returns {NVMesh}
+ */
+Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
+  let options = new NVMeshFromUrlOptions();
+  options.gl = this.gl;
+  Object.assign(options, meshOptions);
+  let mesh = await NVMesh.loadFromUrl(options);
+  return mesh;
+};
 
 /**
  * load an array of meshes
@@ -2517,19 +2764,8 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
     this.scene.loading$.next(true);
-    let mesh = await NVMesh.loadFromUrl({
-      url: meshList[i].url,
-      gl: this.gl,
-      name: meshList[i].name,
-      opacity: meshList[i].opacity,
-      rgba255: meshList[i].rgba255,
-      visible: meshList[i].visible,
-      layers: meshList[i].layers,
-    });
+    await this.addMeshFromUrl(meshList[i]);
     this.scene.loading$.next(false);
-    this.addMesh(mesh);
-    //this.meshes.push(mesh);
-    //this.updateGLVolume();
   } // for
   this.drawScene();
   return this;
@@ -2549,9 +2785,7 @@ Niivue.prototype.loadConnectome = async function (json) {
       this.loadingText = this.opts.loadingText;
     }
   });
-  if (!this.initialized) {
-    //await this.init();
-  }
+
   this.meshes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -3869,7 +4103,7 @@ Niivue.prototype.init = async function () {
   }
   this.updateGLVolume();
   this.initialized = true;
-  if (this.opts.isHighResolutionCapable) this.resizeListener();
+  this.resizeListener();
   this.drawScene();
   return this;
 }; // init()
@@ -3983,7 +4217,7 @@ Niivue.prototype.getDescriptives = function (
 
 // not included in public docs
 // apply slow computations when image properties have changed
-Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
+Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   if (this.volumes.length < 1) return; //e.g. only meshes
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
@@ -4435,6 +4669,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer, numLayers) {
     this.renderShader.uniforms["backOpacity"],
     this.volumes[0].opacity
   );
+
   this.gl.uniform4fv(
     this.renderShader.uniforms["clipPlane"],
     this.scene.clipPlane
@@ -4556,6 +4791,16 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
+  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
+    let url = this.mediaUrlMap.get(this.volumes[idx]);
+    this.serverConnection$.next(
+      new NVMessage(
+        SET_4D_VOL_INDEX,
+        new NVMessageSet4DVolumeIndexData(url, frame4D),
+        this.sessionKey
+      )
+    );
+  }
 };
 
 /**
@@ -4722,6 +4967,8 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 // not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
+  x *= this.scene.dpr
+  y *= this.scene.dpr
   var posNow;
   var posFuture;
   this.canvas.focus();
@@ -5721,6 +5968,8 @@ Niivue.prototype.draw2DMM = function (
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 }; // draw2DMM()
+
+Niivue.prototype.drawCro;
 
 // not included in public docs
 // draw 2D tile in voxel space
