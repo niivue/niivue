@@ -1491,6 +1491,46 @@ Niivue.prototype.removeVolumeByUrl = function (url) {
   }
 };
 
+Niivue.prototype.readDirectory = function (directory){
+  let reader = directory.createReader();
+  let allEntiresInDir = [];
+  let getFileObjects = async (fileSystemEntries)=>{
+    let allFileObects = []
+    //https://stackoverflow.com/a/53113059
+    async function getFile(fileEntry) {
+      try {
+        return await new Promise((resolve, reject) => fileEntry.file(resolve, reject));
+      } catch (err) {
+        console.log(err);
+      }
+    }
+    for (let i=0; i< fileSystemEntries.length; i++){
+      allFileObects.push(await getFile(fileSystemEntries[i]))
+
+    }
+    return allFileObects
+  }
+  let readEntries = () => {
+    reader.readEntries(async (entries) => {
+      if (entries.length) {
+        allEntiresInDir = allEntiresInDir.concat(entries)
+        readEntries();
+      } else {
+        let allFileObects = await getFileObjects(allEntiresInDir)
+        let volume = await NVImage.loadFromFile({
+          file: allFileObects, // an array of file objects
+          name: directory.name,
+          urlImgData: null, // nothing
+          isDICOMDIR: true, // signify that this is a dicom directory
+        })
+        this.addVolume(volume);
+      }
+    })
+  };
+  readEntries()
+  return allEntiresInDir
+}
+
 // not included in public docs
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
@@ -1589,38 +1629,7 @@ Niivue.prototype.dropListener = async function (e) {
             }
           });
         } else if (entry.isDirectory) {
-          /*
-          let reader = entry.createReader();
-          var allFilesInDir = [];
-          let n = 0;
-          let readEntries = () => {
-            n = n + 1;
-            //console.log('called ', n, ' times')
-            reader.readEntries(async (entries) => {
-              //console.log(entries)
-              if (!entries.length) {
-                let volume = await NVImage.loadFromFile({
-                  file: allFilesInDir, // an array of file objects
-                  urlImgData: null, // nothing
-                  isDICOMDIR: true, // signify that this is a dicom directory
-                });
-                this.addVolume(volume);
-              } else {
-                for (let i = 0; i < entries.length; i++) {
-                  if (!entries[i].isFile) continue;
-                  if (entries[i].size < 256) continue;
-                  if (entries[i].name.startsWith(".")) continue; //hidden, e.g. .DS_Store
-                  console.log("adding " + entries[i].name);
-                  entries[i].file((file) => {
-                    allFilesInDir.push(file);
-                  });
-                }
-                readEntries();
-              }
-            });
-          };
-          readEntries();
-          */
+          this.readDirectory(entry)
         }
       }
     }
