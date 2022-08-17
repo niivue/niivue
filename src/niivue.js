@@ -104,6 +104,13 @@ const MESH_EXTENSIONS = [
   "X3D",
 ];
 
+export const dragModes = Object.freeze({
+  none: 0,
+  contrast: 1,
+  measurement: 2,
+  pan: 3,
+});
+
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
  * @typedef {Object} NiivueOptions
@@ -133,11 +140,9 @@ const MESH_EXTENSIONS = [
  * @property {boolean} [options.isRuler=false] whether a 10cm ruler is displayed
  * @property {boolean} [options.isColorbar=false] whether colorbar(s) are shown illustrating values for color maps
  * @property {boolean} [options.isOrientCube=false] whether orientation cube is shown for 3D renderings
- * @property {boolean} [options.isDragShowsMeasurementTool=false] Does dragging on 2D slice display distance (otherwise, adjust contrast)
  * @property {number} [options.multiplanarPadPixels=0] spacing between tiles of a multiplanar view
  * @property {number} [options.meshThicknessOn2D=Infinity] 2D slice views can show meshes within this range. Meshes only visible in sliceMM (world space) mode
- * @property {boolean} [options.isDragShowsMeasurementTool=false] dragging shows distance between start and end point
- * @property {boolean} [options.isDragForPanZoom=false] dragging pans 2D image (must be in world space)
+ * @property {dragModes} [options.dragMode=contrast] behavior for dragging (none, contrast, measurement, pan)
  * @property {boolean} [options.isDepthPickMesh=false] when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
  * @property {boolean} [options.isCornerOrientationText=false] should slice text be shown in the upper right corner instead of the center of left and top axes?
  * @property {boolean} [options.sagittalNoseLeft=false] should 2D sagittal slices show the anterior direction toward the left or right?
@@ -167,6 +172,7 @@ const MESH_EXTENSIONS = [
  */
 export function Niivue(options = {}) {
   this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
+  this.dragModes = dragModes;
   this.defaults = {
     textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
     colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
@@ -193,8 +199,7 @@ export function Niivue(options = {}) {
     multiplanarPadPixels: 0,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
-    isDragShowsMeasurementTool: false,
-    isDragForPanZoom: false,
+    dragMode: dragModes.contrast,
     isDepthPickMesh: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
@@ -873,6 +878,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
+  if (this.opts.dragMode === dragModes.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.isDragging)
     this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
@@ -977,8 +983,8 @@ Niivue.prototype.mouseUpListener = function () {
 
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.isDragForPanZoom) return;
-    if (this.opts.isDragShowsMeasurementTool) return;
+    if (this.opts.dragMode === dragModes.contrast) console.log("Poko");
+    if (this.opts.dragMode !== dragModes.contrast) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
@@ -1053,7 +1059,8 @@ Niivue.prototype.touchEndListener = function (e) {
   }
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.isDragShowsMeasurementTool) return;
+    //if (this.opts.isDragShowsMeasurementTool) return;
+    if (this.opts.dragMode !== dragModes.contrast) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
@@ -1074,7 +1081,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
     } else if (this.scene.mouseButtonRightDown) {
-      this.setDragEnd(pos.x, pos.y)
+      this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
     this.scene.prevX = this.scene.currX;
@@ -1127,15 +1134,15 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 };
 
 Niivue.prototype.setDragStart = function (x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.dragStart[0] = x;
   this.dragStart[1] = y;
 };
 
 Niivue.prototype.setDragEnd = function (x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.dragEnd[0] = x;
   this.dragEnd[1] = y;
 };
@@ -2381,8 +2388,8 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
 }; // mouseDown()
@@ -2390,8 +2397,8 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 // not included in public docs
 // note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   if (this.inRenderTile(x, y) < 0) return;
   this.scene.renderAzimuth += x - this.mousePos[0];
   this.scene.renderElevation += y - this.mousePos[1];
@@ -2521,7 +2528,8 @@ Niivue.prototype.setSelectionBoxColor = function (color) {
 
 // not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
-  if (posChange !== 0 && this.opts.isDragForPanZoom) {
+  //if (posChange !== 0 && this.opts.isDragForPanZoom) {
+  if (posChange !== 0 && this.opts.dragMode === dragModes.pan) {
     let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
     zoom = Math.round(zoom * 10) / 10;
     this.scene.pan2Dxyzmm[3] = zoom;
@@ -4967,8 +4975,8 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 // not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   var posNow;
   var posFuture;
   this.canvas.focus();
@@ -7655,7 +7663,8 @@ Niivue.prototype.drawScene = function () {
   if (this.opts.isColorbar) this.drawColorbar();
 
   if (this.isDragging) {
-    if (this.opts.isDragForPanZoom) {
+    //if (this.opts.isDragForPanZoom) {
+    if (this.opts.dragMode === dragModes.pan) {
       this.dragForPanZoom([
         this.dragStart[0],
         this.dragStart[1],
@@ -7664,7 +7673,8 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
-    if (this.opts.isDragShowsMeasurementTool) {
+    if (this.opts.dragMode === dragModes.measurement) {
+      //if (this.opts.isDragShowsMeasurementTool) {
       this.drawMeasurementTool([
         this.dragStart[0],
         this.dragStart[1],
@@ -7673,6 +7683,12 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
+    console.log(
+      this.opts.dragMode === dragModes.measurement,
+      ">>",
+      this.opts.dragMode,
+      dragModes.measurement
+    );
     if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0) return;
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
