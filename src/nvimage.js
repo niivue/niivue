@@ -192,7 +192,6 @@ export function NVImage(
   } else {
     //DICOMs do not always end .dcm, so DICOM is our format of last resort
     imgRaw = this.readDICOM(dataBuffer);
-    // if loading a DICOM directory
   }
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
@@ -787,8 +786,8 @@ NVImage.prototype.readDICOM = function (buf) {
       [0, 0, 0, 1],
     ];
   }
-  console.log("DICOM", this.series.images[0]);
-  console.log("NIfTI", hdr);
+  //console.log("DICOM", this.series.images[0]);
+  //console.log("NIfTI", hdr);
   let imgRaw = [];
   //let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
   let data;
@@ -2415,7 +2414,6 @@ NVImage.loadFromUrl = async function ({
 NVImage.readFileAsync = function (file) {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
-
     reader.onload = () => {
       if (file.name.lastIndexOf("gz") !== -1) {
         resolve(nifti.decompress(reader.result));
@@ -2472,12 +2470,12 @@ NVImage.loadFromFile = async function ({
       }
     } else {
       dataBuffer = await this.readFileAsync(file);
+      name = file.name;
     }
     let pairedImgData = null;
     if (urlImgData) {
       pairedImgData = await this.readFileAsync(urlImgData);
     }
-    name = file.name;
     nvimage = new NVImage(
       dataBuffer,
       name,
@@ -2493,6 +2491,7 @@ NVImage.loadFromFile = async function ({
       isDICOMDIR
     );
   } catch (err) {
+    console.log(err)
     log.debug(err);
   }
   return nvimage;
