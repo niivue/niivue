@@ -105105,8 +105105,6 @@ NVImage.prototype.readDICOM = function(buf) {
       [0, 0, 0, 1]
     ];
   }
-  console.log("DICOM", this.series.images[0]);
-  console.log("NIfTI", hdr);
   let imgRaw = [];
   let data;
   let length2 = this.series.validatePixelDataLength(this.series.images[0]);
@@ -106480,14 +106478,15 @@ NVImage.loadFromFile = async function({
       }
     } else {
       dataBuffer = await this.readFileAsync(file);
+      name = file.name;
     }
     let pairedImgData = null;
     if (urlImgData) {
       pairedImgData = await this.readFileAsync(urlImgData);
     }
-    name = file.name;
     nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, isDICOMDIR);
   } catch (err2) {
+    console.log(err2);
     log$2.debug(err2);
   }
   return nvimage;
@@ -112494,6 +112493,43 @@ Niivue.prototype.removeVolumeByUrl = function(url) {
     this.removeVolume(volume);
   }
 };
+Niivue.prototype.readDirectory = function(directory) {
+  let reader = directory.createReader();
+  let allEntiresInDir = [];
+  let getFileObjects = async (fileSystemEntries) => {
+    let allFileObects = [];
+    async function getFile(fileEntry) {
+      try {
+        return await new Promise((resolve, reject) => fileEntry.file(resolve, reject));
+      } catch (err2) {
+        console.log(err2);
+      }
+    }
+    for (let i2 = 0; i2 < fileSystemEntries.length; i2++) {
+      allFileObects.push(await getFile(fileSystemEntries[i2]));
+    }
+    return allFileObects;
+  };
+  let readEntries = () => {
+    reader.readEntries(async (entries) => {
+      if (entries.length) {
+        allEntiresInDir = allEntiresInDir.concat(entries);
+        readEntries();
+      } else {
+        let allFileObects = await getFileObjects(allEntiresInDir);
+        let volume = await NVImage.loadFromFile({
+          file: allFileObects,
+          name: directory.name,
+          urlImgData: null,
+          isDICOMDIR: true
+        });
+        this.addVolume(volume);
+      }
+    });
+  };
+  readEntries();
+  return allEntiresInDir;
+};
 Niivue.prototype.dropListener = async function(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -112573,8 +112609,9 @@ Niivue.prototype.dropListener = async function(e) {
               this.addVolume(volume);
             }
           });
-        } else if (entry.isDirectory)
-          ;
+        } else if (entry.isDirectory) {
+          this.readDirectory(entry);
+        }
       }
     }
   }
