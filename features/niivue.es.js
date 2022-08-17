@@ -111605,8 +111605,15 @@ const MESH_EXTENSIONS = [
   "VTK",
   "X3D"
 ];
+const dragModes = Object.freeze({
+  none: 0,
+  contrast: 1,
+  measurement: 2,
+  pan: 3
+});
 function Niivue(options = {}) {
   this.opts = {};
+  this.dragModes = dragModes;
   this.defaults = {
     textHeight: 0.06,
     colorbarHeight: 0.05,
@@ -111633,8 +111640,7 @@ function Niivue(options = {}) {
     multiplanarPadPixels: 0,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
-    isDragShowsMeasurementTool: false,
-    isDragForPanZoom: false,
+    dragMode: dragModes.contrast,
     isDepthPickMesh: false,
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
@@ -112086,6 +112092,8 @@ Niivue.prototype.mouseLeftButtonHandler = function(e) {
 };
 Niivue.prototype.mouseRightButtonHandler = function(e) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+  if (this.opts.dragMode === dragModes.none)
+    return;
   this.setDragStart(pos.x, pos.y);
   if (!this.isDragging)
     this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
@@ -112172,9 +112180,9 @@ Niivue.prototype.mouseUpListener = function() {
   this.drawPenAxCorSag = -1;
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.isDragForPanZoom)
-      return;
-    if (this.opts.isDragShowsMeasurementTool)
+    if (this.opts.dragMode === dragModes.contrast)
+      console.log("Poko");
+    if (this.opts.dragMode !== dragModes.contrast)
       return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -112228,7 +112236,7 @@ Niivue.prototype.touchEndListener = function(e) {
   }
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.isDragShowsMeasurementTool)
+    if (this.opts.dragMode !== dragModes.contrast)
       return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -113105,7 +113113,7 @@ Niivue.prototype.setSelectionBoxColor = function(color) {
   this.opts.selectionBoxColor = color;
 };
 Niivue.prototype.sliceScroll2D = function(posChange, x2, y, isDelta = true) {
-  if (posChange !== 0 && this.opts.isDragForPanZoom) {
+  if (posChange !== 0 && this.opts.dragMode === dragModes.pan) {
     let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * posChange);
     zoom = Math.round(zoom * 10) / 10;
     this.scene.pan2Dxyzmm[3] = zoom;
@@ -116534,7 +116542,7 @@ Niivue.prototype.drawScene = function() {
   if (this.opts.isColorbar)
     this.drawColorbar();
   if (this.isDragging) {
-    if (this.opts.isDragForPanZoom) {
+    if (this.opts.dragMode === dragModes.pan) {
       this.dragForPanZoom([
         this.dragStart[0],
         this.dragStart[1],
@@ -116543,7 +116551,7 @@ Niivue.prototype.drawScene = function() {
       ]);
       return;
     }
-    if (this.opts.isDragShowsMeasurementTool) {
+    if (this.opts.dragMode === dragModes.measurement) {
       this.drawMeasurementTool([
         this.dragStart[0],
         this.dragStart[1],
@@ -116552,6 +116560,7 @@ Niivue.prototype.drawScene = function() {
       ]);
       return;
     }
+    console.log(this.opts.dragMode === dragModes.measurement, ">>", this.opts.dragMode, dragModes.measurement);
     if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0)
       return;
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
@@ -116574,4 +116583,4 @@ Niivue.prototype.drawScene = function() {
   this.readyForSync = true;
   return posString;
 };
-export { NVImage, NVImageFromUrlOptions, NVMesh, NVMeshFromUrlOptions, Niivue, colortables };
+export { NVImage, NVImageFromUrlOptions, NVMesh, NVMeshFromUrlOptions, Niivue, colortables, dragModes };
