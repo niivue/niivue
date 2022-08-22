@@ -695,7 +695,8 @@ NVImage.prototype.readDICOM = function (buf) {
   // parse DICOM file
   if (Array.isArray(buf)) {
     for (let i = 0; i < buf.length; i++) {
-      let image = daikon.Series.parseImage(new DataView(buf[i]));
+      const dataview = new DataView(buf[i]);
+      let image = daikon.Series.parseImage(dataview);
       if (image === null) {
         console.error(daikon.Series.parserError);
       } else if (image.hasPixelData()) {
@@ -709,7 +710,7 @@ NVImage.prototype.readDICOM = function (buf) {
       } // if hasPixelData
     } // for i
   } else {
-    // Array.isArray
+    // not a dicom folder drop
     var image = daikon.Series.parseImage(new DataView(buf));
     if (image === null) {
       console.error(daikon.Series.parserError);
@@ -2491,7 +2492,7 @@ NVImage.loadFromFile = async function ({
       isDICOMDIR
     );
   } catch (err) {
-    console.log(err)
+    console.log(err);
     log.debug(err);
   }
   return nvimage;

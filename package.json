@@ -57,6 +57,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.2",
     "clean-jsdoc-theme": "^3.3.1",
     "eslint": "^8.4.1",
     "express": "^4.17.1",

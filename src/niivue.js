@@ -1074,7 +1074,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
     } else if (this.scene.mouseButtonRightDown) {
-      this.setDragEnd(pos.x, pos.y)
+      this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
     this.scene.prevX = this.scene.currX;
@@ -1127,15 +1127,15 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 };
 
 Niivue.prototype.setDragStart = function (x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.dragStart[0] = x;
   this.dragStart[1] = y;
 };
 
 Niivue.prototype.setDragEnd = function (x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   this.dragEnd[0] = x;
   this.dragEnd[1] = y;
 };
@@ -1484,45 +1484,46 @@ Niivue.prototype.removeVolumeByUrl = function (url) {
   }
 };
 
-Niivue.prototype.readDirectory = function (directory){
+Niivue.prototype.readDirectory = function (directory) {
   let reader = directory.createReader();
   let allEntiresInDir = [];
-  let getFileObjects = async (fileSystemEntries)=>{
-    let allFileObects = []
+  let getFileObjects = async (fileSystemEntries) => {
+    let allFileObects = [];
     //https://stackoverflow.com/a/53113059
     async function getFile(fileEntry) {
       try {
-        return await new Promise((resolve, reject) => fileEntry.file(resolve, reject));
+        return await new Promise((resolve, reject) =>
+          fileEntry.file(resolve, reject)
+        );
       } catch (err) {
         console.log(err);
       }
     }
-    for (let i=0; i< fileSystemEntries.length; i++){
-      allFileObects.push(await getFile(fileSystemEntries[i]))
-
+    for (let i = 0; i < fileSystemEntries.length; i++) {
+      allFileObects.push(await getFile(fileSystemEntries[i]));
     }
-    return allFileObects
-  }
+    return allFileObects;
+  };
   let readEntries = () => {
     reader.readEntries(async (entries) => {
       if (entries.length) {
-        allEntiresInDir = allEntiresInDir.concat(entries)
+        allEntiresInDir = allEntiresInDir.concat(entries);
         readEntries();
       } else {
-        let allFileObects = await getFileObjects(allEntiresInDir)
+        let allFileObects = await getFileObjects(allEntiresInDir);
         let volume = await NVImage.loadFromFile({
           file: allFileObects, // an array of file objects
           name: directory.name,
           urlImgData: null, // nothing
           isDICOMDIR: true, // signify that this is a dicom directory
-        })
+        });
         this.addVolume(volume);
       }
-    })
+    });
   };
-  readEntries()
-  return allEntiresInDir
-}
+  readEntries();
+  return allEntiresInDir;
+};
 
 // not included in public docs
 Niivue.prototype.dropListener = async function (e) {
@@ -1560,6 +1561,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
       for (const item of items) {
         const entry = item.getAsEntry || item.webkitGetAsEntry();
+        console.log(entry);
         if (entry.isFile) {
           let ext = this.getFileExt(entry.name);
           if (ext === "PNG") {
@@ -1622,7 +1624,7 @@ Niivue.prototype.dropListener = async function (e) {
             }
           });
         } else if (entry.isDirectory) {
-          this.readDirectory(entry)
+          this.readDirectory(entry);
         }
       }
     }
@@ -2390,8 +2392,8 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
 }; // mouseDown()
@@ -2399,8 +2401,8 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 // not included in public docs
 // note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   if (this.inRenderTile(x, y) < 0) return;
   this.scene.renderAzimuth += x - this.mousePos[0];
   this.scene.renderElevation += y - this.mousePos[1];
@@ -4976,8 +4978,8 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 // not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
-  x *= this.scene.dpr
-  y *= this.scene.dpr
+  x *= this.scene.dpr;
+  y *= this.scene.dpr;
   var posNow;
   var posFuture;
   this.canvas.focus();

@@ -1,6 +1,7 @@
 // vite.config.js
 const path = require('path')
 const { defineConfig } = require('vite')
+import commonjs from '@rollup/plugin-commonjs';
 
 module.exports = defineConfig({
     root: '.',
@@ -18,5 +19,8 @@ module.exports = defineConfig({
             name: 'niivue',
             fileName: (format) => `niivue.${format}.js`
         },
+      commonjsOptions: {
+        strictRequires: false
+      }
     }
 })
