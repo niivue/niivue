@@ -12,6 +12,9 @@ module.exports = defineConfig({
 				allow: ['..']
     	}
   	},
+  plugins: [
+    commonjs()
+  ],
     build: {
         outDir: './dist',
         lib: {
@@ -19,8 +22,5 @@ module.exports = defineConfig({
             name: 'niivue',
             fileName: (format) => `niivue.${format}.js`
         },
-      commonjsOptions: {
-        strictRequires: false
-      }
     }
 })
