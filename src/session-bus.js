@@ -76,8 +76,6 @@ export function SessionBus(
     throw "Local storage unavailable";
   }
 
-  this.sceneMap = new Map();
-
   this.onMessageCallBack = onMessageCallback;
   this.userId = uuidv4();
   this.userKey = uuidv4();
@@ -97,7 +95,7 @@ export function SessionBus(
   };
 
   // local
-  this.userQueueName = `client-${this.userId}-q`;
+  this.userQueueName = `user-${this.userId}-q`;
   this.userListName = `${sessionName}-user-list`;
 
   // remote
@@ -150,9 +148,10 @@ export function SessionBus(
           cliplane: [0, 0, 0, 0],
           key: this.sessionKey,
         };
-
+        console.log("session scene");
+        console.log(this.sessionScene);
         // create scene
-        this.lockAndSetItem(this.sessionSceneName, this.sessionScene);
+        this.lockSetAndUnlockItem(this.sessionSceneName, this.sessionScene);
         this.isController = true;
         this.unlockItem(this.sessionSceneName);
 
@@ -202,11 +201,8 @@ SessionBus.prototype.sendSessionMessage = function (message) {
 
 // Local
 SessionBus.prototype.lockItem = function (itemName) {
-  console.log("locking item " + itemName);
   let mutexName = `${itemName}-mutex`;
-  console.log("mutex");
   let mutexString = localStorage.getItem(mutexName);
-  console.log(new String(mutexString));
   let mutex = JSON.parse(mutexString);
 
   console.log(mutex);
@@ -242,14 +238,12 @@ SessionBus.prototype.unlockItem = function (itemName) {
   localStorage.setItem(mutexName, JSON.stringify(mutex));
 };
 
-SessionBus.prototype.lockAndSetItem = async function (itemName, value) {
+SessionBus.prototype.lockSetAndUnlockItem = async function (itemName, value) {
   let lockObtained = this.lockItem(itemName);
   while (!lockObtained) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     lockObtained = this.lockItem(itemName);
   }
-  console.log("item set " + itemName);
-  console.log(value);
 
   localStorage.setItem(itemName, JSON.stringify(value));
   this.unlockItem(itemName);
@@ -290,20 +284,26 @@ SessionBus.prototype.assignUser = function (message) {
 
 SessionBus.prototype.sendOtherClientsMessage = function (message) {
   // add the message for each client
+  console.log("send other clients message");
+  console.log(this.userList);
   for (const user of this.userList) {
     if (user.id === this.userId) {
       continue;
     }
-    this.lockAndGetItem(this.userQueueName).then((messageQ) => {
+    console.log("sending message to " + user.id);
+    let userQueueName = `user-${user.id}-q`;
+    this.lockAndGetItem(userQueueName).then((messageQ) => {
       messageQ.push(message);
-      localStorage.setItem(this.userQueueName, JSON.stringify(messageQ));
-      this.unlockItem(this.userQueueName);
+      localStorage.setItem(userQueueName, JSON.stringify(messageQ));
+      this.unlockItem(userQueueName);
     });
   }
 };
 
 SessionBus.prototype.sendLocalMessage = function (message) {
   let scene = JSON.parse(localStorage.getItem(this.sessionSceneName));
+  console.log("session scene from local storage");
+  console.log(scene);
   let res = {
     message: "OK",
     op: SessionBus.MESSAGE.ACK,
@@ -312,20 +312,34 @@ SessionBus.prototype.sendLocalMessage = function (message) {
   // create a unique id, update map of connected users
   switch (message.op) {
     case SessionBus.MESSAGE.UPDATE_SCENE_STATE:
-      delete message.op;
-      console.log("update scene msg");
-      console.log(message);
-      this.lockAndSetItem(this.sessionSceneName, message);
+      if (scene.key === this.sessionKey) {
+        delete message.op;
+        this.lockSetAndUnlockItem(this.sessionSceneName, {
+          ...message,
+          key: scene.key,
+        });
+      } else {
+        console.log(
+          "keys " + scene.key + " and " + this.sessionKey + " don't match"
+        );
+      }
       break;
 
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS:
     case SessionBus.MESSAGE.ADD_VOLUME_URL:
+      console.log("updating image options");
+      console.log(message);
       if (scene.key === this.sessionKey) {
         let msg = {
           op: message.op,
           urlImageOptions: message.urlImageOptions,
         };
+        console.log(msg);
         this.sendOtherClientsMessage(msg);
+      } else {
+        console.log(
+          "keys " + scene.key + " and " + this.sessionKey + " don't match"
+        );
       }
       break;
     case SessionBus.MESSAGE.REMOVE_VOLUME_URL:
@@ -334,6 +348,10 @@ SessionBus.prototype.sendLocalMessage = function (message) {
           op: REMOVE_VOLUME_URL,
           url: message.url,
         });
+      } else {
+        console.log(
+          "keys " + scene.key + " and " + this.sessionKey + " don't match"
+        );
       }
       break;
     case SessionBus.MESSAGE.SET_4D_VOL_INDEX:
@@ -408,12 +426,15 @@ SessionBus.prototype.sendLocalMessage = function (message) {
 };
 
 SessionBus.prototype.localStorageEventListener = function (e) {
-  console.log("storage event");
-  console.log(e);
+  if (e.key.indexOf(this.userId) >= 0) {
+    console.log(e);
+  }
   // is this message for us?
   switch (e.key) {
     case this.userListName:
+      console.log("user has joined");
       this.userList = JSON.parse(e.newValue);
+      console.log(this.userList);
       // compare new and old values
       let newUsers = JSON.parse(e.newValue).filter(
         (u) =>
@@ -429,17 +450,15 @@ SessionBus.prototype.localStorageEventListener = function (e) {
       }
       break;
     case this.userQueueName:
-      this.lockItem().then(() => {
-        let messages = JSON.parse(e.newValue);
-        for (const message of messages) {
-          if (this.onMessageCallBack) {
-            this.onMessageCallBack(message);
-          }
+      let messages = JSON.parse(e.newValue);
+      console.log(messages);
+      for (const message of messages) {
+        if (this.onMessageCallBack) {
+          this.onMessageCallBack(message);
         }
+      }
 
-        localStorage.setItem(this.userQueueName, JSON.stringify([]));
-      });
-      this.unlockItem(this.userQueueName);
+      this.lockSetAndUnlockItem(this.userQueueName, []);
       break;
     case this.sessionSceneName:
       console.log("scene updated");

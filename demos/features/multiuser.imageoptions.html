@@ -23,10 +23,7 @@
       </h1>
       <p>
         Click the buttons to change the color map 
-      </p>      
-      <div class="slidecontainer">
-        Opacity <input type="range" min="0.0" max="1.0" value="1.0" step="0.1" class="slider" id="opacitySlider">
-      </div>
+      </p>            
       <div class="slidecontainer">
         Opacity <input type="range" min="0.0" max="1.0" value="1.0" step="0.1" class="slider" id="opacitySlider">
       </div>
@@ -71,21 +68,11 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      nv1.createSession('ws://localhost:3000', 'niivue-image-options', (msg, url, key, isError) => {
-            if (isError) {
-                // check if session has been duplicated
-                if (msg === 'duplicate session') {
-                    console.log('session already created, joining as viewer');
-                    // try to join the session instead
-                    nv1.joinSession('ws://localhost:3000', 'niivue', (msg, url, isController) => {
-                        console.log(`Result: ${msg} connected to ${url}. Is controller: ${isController}.`)
-                    });
-                }
-            }
-            else {
+      nv1.createSession('', 'niivue-image-options', (msg, url, key, isError) => {
+            
                 console.log(`message:${msg} url:${url} key:${key}`);
-            }
-        })
+            
+        });
       cmaps = nv1.colorMaps()
       cmapEl = document.getElementById('colormaps')
       for (let i=0; i<cmaps.length; i++) {

@@ -684,6 +684,7 @@ Niivue.prototype.handleMessage = function (msg) {
       }
       break;
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS: {
+      console.log("received options update");
       let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
       if (volume) {
         volume.applyOptionsUpdate(msg["urlImageOptions"]);
@@ -1419,10 +1420,11 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
       let imageOptions = volume.getImageOptions();
       // add our url
       imageOptions.url = this.mediaUrlMap.get(volume);
-
+      console.log("option change");
+      console.log(imageOptions);
       this.sessionBus.sendSessionMessage({
         op: SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS,
-        ...imageOptions,
+        urlImageOptions: imageOptions,
       });
 
       console.log("update called");
