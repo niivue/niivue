@@ -62,6 +62,8 @@ export { colortables } from "./colortables";
 import { webSocket } from "rxjs/webSocket";
 import { SessionBus } from "./session-bus.js";
 
+import { SessionBus } from "./session-bus.js";
+
 const log = new Log();
 const cmapper = new colortables();
 const MESH_EXTENSIONS = [
@@ -649,7 +651,6 @@ Niivue.prototype.handleMessage = function (msg) {
       }
       break;
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS: {
-      console.log("received options update");
       let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
       if (volume) {
         volume.applyOptionsUpdate(msg["urlImageOptions"]);
@@ -1383,14 +1384,11 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
       let imageOptions = volume.getImageOptions();
       // add our url
       imageOptions.url = this.mediaUrlMap.get(volume);
-      console.log("option change");
-      console.log(imageOptions);
+      
       this.sessionBus.sendSessionMessage({
         op: SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS,
         urlImageOptions: imageOptions,
       });
-
-      console.log("update called");
     }
   }
 };
