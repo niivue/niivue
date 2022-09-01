@@ -567,7 +567,6 @@ Niivue.prototype.connectToServer = function (wsServerUrl, sessionName) {
   url.pathname = "websockets";
   url.search = "?session=" + sessionName;
   this.serverConnection$ = webSocket(url.href);
-  console.log(url.href);
 };
 
 Niivue.prototype.sendSessionMessage = function (message) {
@@ -585,13 +584,11 @@ Niivue.prototype.handleMessage = function (msg) {
       break;
 
     case SessionBus.MESSAGE.SESSION_CREATED:
-      console.log(msg);
       if (!msg["isError"]) {
         this.isInSession = true;
         this.sessionKey = msg["key"];
       }
       if (this.sessionCreatedCallback) {
-        console.log("calling user defined callback");
         this.sessionCreatedCallback(
           msg["message"],
           msg["url"],
@@ -648,7 +645,6 @@ Niivue.prototype.handleMessage = function (msg) {
       }
       break;
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS: {
-      console.log("received options update");
       let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
       if (volume) {
         volume.applyOptionsUpdate(msg["urlImageOptions"]);
@@ -1381,9 +1377,7 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
     if (this.mediaUrlMap.has(volume)) {
       let imageOptions = volume.getImageOptions();
       // add our url
-      imageOptions.url = this.mediaUrlMap.get(volume);
-      console.log("option change");
-      console.log(imageOptions);
+      imageOptions.url = this.mediaUrlMap.get(volume);      
       this.sessionBus.sendSessionMessage({
         op: SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS,
         urlImageOptions: imageOptions,
