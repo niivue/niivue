@@ -62,7 +62,6 @@ export { colortables } from "./colortables";
 import { webSocket } from "rxjs/webSocket";
 import { SessionBus } from "./session-bus.js";
 
-import { SessionBus } from "./session-bus.js";
 
 const log = new Log();
 const cmapper = new colortables();
