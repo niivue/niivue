@@ -301,8 +301,7 @@ SessionBus.prototype.sendOtherClientsMessage = function (message) {
   for (const user of this.userList) {
     if (user.id === this.userId) {
       continue;
-    }
-    console.log("sending message to " + user.id);
+    }    
     let userQueueName = `user-${user.id}-q`;
     this.lockAndGetItem(userQueueName).then((messageQ) => {
       messageQ.push(message);
@@ -324,15 +323,15 @@ SessionBus.prototype.sendLocalMessage = function (message) {
     case SessionBus.MESSAGE.UPDATE_SCENE_STATE:
       if (scene.key === this.sessionKey) {
         delete message.op;
-        this.lockSetAndUnlockItem(this.sessionSceneName, {
-          ...message,
-          key: scene.key,
-        });
-      } else {
-        console.log(
-          "keys " + scene.key + " and " + this.sessionKey + " don't match"
+        // this.lockSetAndUnlockItem(this.sessionSceneName, {
+        //   ...message,
+        //   key: scene.key,
+        // });
+        localStorage.setItem(
+          this.sessionSceneName,
+          JSON.stringify({ ...message, key: scene.key })
         );
-      }
+      } 
       break;
 
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS:
@@ -343,11 +342,7 @@ SessionBus.prototype.sendLocalMessage = function (message) {
           urlImageOptions: message.urlImageOptions,
         };
         this.sendOtherClientsMessage(msg);
-      } else {
-        console.log(
-          "keys " + scene.key + " and " + this.sessionKey + " don't match"
-        );
-      }
+      } 
       break;
     case SessionBus.MESSAGE.REMOVE_VOLUME_URL:
       if (scene.key === this.sessionKey) {
@@ -355,11 +350,7 @@ SessionBus.prototype.sendLocalMessage = function (message) {
           op: REMOVE_VOLUME_URL,
           url: message.url,
         });
-      } else {
-        console.log(
-          "keys " + scene.key + " and " + this.sessionKey + " don't match"
-        );
-      }
+      } 
       break;
     case SessionBus.MESSAGE.SET_4D_VOL_INDEX:
       if (scene.key === this.sessionKey) {
