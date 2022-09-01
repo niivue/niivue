@@ -60,22 +60,6 @@ import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
 export { colortables } from "./colortables";
 import { webSocket } from "rxjs/webSocket";
-import { interval } from "rxjs";
-import {
-  NVMessage,
-  NVMesssageUpdateData,
-  NVMessageSet4DVolumeIndexData,
-  UPDATE,
-  CREATE,
-  JOIN,
-  ADD_VOLUME_URL,
-  REMOVE_VOLUME_URL,
-  ADD_MESH_URL,
-  REMOVE_MESH_URL,
-  SET_4D_VOL_INDEX,
-  UPDATE_IMAGE_OPTIONS,
-} from "./nvmessage.js";
-
 import { SessionBus } from "./session-bus.js";
 
 const log = new Log();
@@ -369,8 +353,6 @@ export function Niivue(options = {}) {
   this.isInSession = false;
   this.sessionKey = "";
   this.sessionUrl = "";
-  this.serverConnection$ = null;
-  this.interval$ = null;
   this.mediaUrlMap = new Map();
 
   this.initialized = false;
@@ -592,21 +574,6 @@ Niivue.prototype.sendSessionMessage = function (message) {
   this.sessionBus.sendSessionMessage(message);
 };
 
-// not included in public docs
-// Internal function to schedule updates to the server
-Niivue.prototype.setUpdateInterval = function () {
-  this.interval$ = interval(300);
-  this.interval$.subscribe(() => {
-    this.sendSessionMessage({
-      op: SessionBus.MESSAGE.UPDATE_SCENE_STATE,
-      azimuth: this.scene.renderAzimuth,
-      elevation: this.scene.renderElevation,
-      clipPlane: this.scene.clipPlane,
-      zoom: this.volScaleMultiplier,
-    });
-  });
-};
-
 Niivue.prototype.handleMessage = function (msg) {
   switch (msg["op"]) {
     case SessionBus.MESSAGE.SCENE_STATE_UPDATED:
@@ -622,7 +589,6 @@ Niivue.prototype.handleMessage = function (msg) {
       if (!msg["isError"]) {
         this.isInSession = true;
         this.sessionKey = msg["key"];
-        this.setUpdateInterval();
       }
       if (this.sessionCreatedCallback) {
         console.log("calling user defined callback");
@@ -634,14 +600,12 @@ Niivue.prototype.handleMessage = function (msg) {
           msg["userKey"]
         );
       }
+      this.isController = this.sessionBus.isController;
       break;
 
     case SessionBus.MESSAGE.SESSION_JOINED:
       this.isInSession = true;
       this.isController = msg["isController"];
-      if (this.isController) {
-        this.setUpdateInterval();
-      }
 
       if (this.sessionJoinedCallback) {
         this.sessionJoinedCallback(
@@ -739,8 +703,6 @@ Niivue.prototype.joinSession = function (
  * Close a multiuser session
  */
 Niivue.prototype.closeSession = function () {
-  this.interval$.complete();
-  this.serverConnection$.complete();
   this.isInSession = false;
   this.isController = false;
 };
@@ -4807,7 +4769,8 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
     let url = this.mediaUrlMap.get(this.volumes[idx]);
     this.sessionBus.sendSessionMessage({
       op: SessionBus.MESSAGE.SET_4D_VOL_INDEX,
-      ...new NVMessageSet4DVolumeIndexData(url, frame4D),
+      index: frame4D,
+      url,
     });
   }
 };
@@ -7521,6 +7484,26 @@ Niivue.prototype.drawScene = function () {
   if (!this.initialized) {
     return; // do not do anything until we are initialized (init will call drawScene).
   }
+
+  if (this.isInSession && this.sessionBus.isController) {
+    let sceneState = {
+      azimuth: this.scene.renderAzimuth,
+      elevation: this.scene.renderElevation,
+      clipPlane: this.scene.clipPlane,
+      zoom: this.volScaleMultiplier,
+    };
+
+    let sceneStateString = JSON.stringify(sceneState);
+
+    if (this.updatedSceneStateString != sceneStateString) {
+      this.updatedSceneStateString = sceneStateString;
+      this.sessionBus.sendSessionMessage({
+        op: SessionBus.MESSAGE.UPDATE_SCENE_STATE,
+        ...sceneState,
+      });
+    }
+  }
+
   this.colorbarHeight = 0;
   this.gl.clearColor(
     this.opts.backColor[0],
