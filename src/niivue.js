@@ -4782,16 +4782,6 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   this.updateGLVolume();
   this.notifySubscribersOf4DIndexChange(this.volumes[idx], frame4D);
   this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
-
-  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
-    let url = this.mediaUrlMap.get(this.volumes[idx]);
-    this.sessionBus.sendSessionMessage({
-      op: SessionBus.MESSAGE.SET_4D_VOL_INDEX,
-      index: frame4D,
-      url,
-    });
-  }
-  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
 };
 
 /**
