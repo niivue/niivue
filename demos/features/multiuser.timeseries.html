@@ -75,11 +75,7 @@
         nv1.graph.autoSizeMultiplanar = true
         nv1.graph.normalizeValues = false
         nv1.graph.opacity = 1.0
-<<<<<<< HEAD
         nv1.createSession(serverUrl, 'niivue-timeseries', (msg, url, key, isError) => {
-=======
-        nv1.createSession('', 'niivue-timeseries', (msg, url, key, isError) => {
->>>>>>> 9302a90 (Updated multiuser to work with session bus)
             if (isError) {
                 // check if session has been duplicated
                 if (msg === 'duplicate session') {
