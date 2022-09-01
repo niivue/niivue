@@ -111,8 +111,6 @@ export function SessionBus(
     localStorage.setItem(this.userQueueName, JSON.stringify([]));
     this.lockAndGetItem(this.userListName).then((userList) => {
       this.userList = userList;
-      console.log("user list for " + this.sessionName);
-      console.log(this.userList);
       if (this.userList) {
         this.userList.push(this.user);
       } else {
@@ -148,8 +146,6 @@ export function SessionBus(
           cliplane: [0, 0, 0, 0],
           key: this.sessionKey,
         };
-        console.log("session scene");
-        console.log(this.sessionScene);
         // create scene
         this.lockSetAndUnlockItem(this.sessionSceneName, this.sessionScene);
         this.isController = true;
@@ -205,7 +201,6 @@ SessionBus.prototype.lockItem = function (itemName) {
   let mutexString = localStorage.getItem(mutexName);
   let mutex = JSON.parse(mutexString);
 
-  console.log(mutex);
   let lockObtained = false;
   if (!Array.isArray(mutex)) {
     mutex = {
@@ -250,15 +245,12 @@ SessionBus.prototype.lockSetAndUnlockItem = async function (itemName, value) {
 };
 
 SessionBus.prototype.lockAndGetItem = async function (itemName) {
-  console.log("locking and getting item " + itemName);
   let lockObtained = this.lockItem(itemName);
   while (!lockObtained) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     lockObtained = this.lockItem(itemName);
   }
-  console.log("item locked");
   let itemString = localStorage.getItem(itemName);
-  console.log("item string: " + itemString);
   return itemString ? JSON.parse(itemString) : null;
 };
 
@@ -284,8 +276,6 @@ SessionBus.prototype.assignUser = function (message) {
 
 SessionBus.prototype.sendOtherClientsMessage = function (message) {
   // add the message for each client
-  console.log("send other clients message");
-  console.log(this.userList);
   for (const user of this.userList) {
     if (user.id === this.userId) {
       continue;
@@ -302,8 +292,6 @@ SessionBus.prototype.sendOtherClientsMessage = function (message) {
 
 SessionBus.prototype.sendLocalMessage = function (message) {
   let scene = JSON.parse(localStorage.getItem(this.sessionSceneName));
-  console.log("session scene from local storage");
-  console.log(scene);
   let res = {
     message: "OK",
     op: SessionBus.MESSAGE.ACK,
@@ -327,14 +315,11 @@ SessionBus.prototype.sendLocalMessage = function (message) {
 
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS:
     case SessionBus.MESSAGE.ADD_VOLUME_URL:
-      console.log("updating image options");
-      console.log(message);
       if (scene.key === this.sessionKey) {
         let msg = {
           op: message.op,
           urlImageOptions: message.urlImageOptions,
         };
-        console.log(msg);
         this.sendOtherClientsMessage(msg);
       } else {
         console.log(
@@ -426,15 +411,10 @@ SessionBus.prototype.sendLocalMessage = function (message) {
 };
 
 SessionBus.prototype.localStorageEventListener = function (e) {
-  if (e.key.indexOf(this.userId) >= 0) {
-    console.log(e);
-  }
   // is this message for us?
   switch (e.key) {
     case this.userListName:
-      console.log("user has joined");
       this.userList = JSON.parse(e.newValue);
-      console.log(this.userList);
       // compare new and old values
       let newUsers = JSON.parse(e.newValue).filter(
         (u) =>
@@ -451,7 +431,6 @@ SessionBus.prototype.localStorageEventListener = function (e) {
       break;
     case this.userQueueName:
       let messages = JSON.parse(e.newValue);
-      console.log(messages);
       for (const message of messages) {
         if (this.onMessageCallBack) {
           this.onMessageCallBack(message);
@@ -461,7 +440,6 @@ SessionBus.prototype.localStorageEventListener = function (e) {
       this.lockSetAndUnlockItem(this.userQueueName, []);
       break;
     case this.sessionSceneName:
-      console.log("scene updated");
       let scene = JSON.parse(e.newValue);
       this.onMessageCallBack({
         op: SessionBus.MESSAGE.SCENE_STATE_UPDATED,
