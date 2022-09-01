@@ -342,7 +342,7 @@ SessionBus.prototype.sendLocalMessage = function (message) {
     case SessionBus.MESSAGE.SET_4D_VOL_INDEX:
       if (scene.key === this.sessionKey) {
         this.sendOtherClientsMessage({
-          op: SET_4D_VOL_INDEX,
+          op: message.op,
           url: message.url,
           index: message.index,
         });

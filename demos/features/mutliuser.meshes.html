@@ -23,7 +23,9 @@
             Mesh support (GIfTI, MZ3, FreeSurfer, OBJ)
         </h1>
         <p>
-            NiiVue also supports a simple 3D view
+            NiiVue also supports a simple 3D view. Open two instances of this page to see multiuser
+            syncronization. This is also compatible with Niivue-Server. Clone and run the <a href="https://github.com/niivue/niivue-server"
+              target="_blank">niivue-server</a> to see this to work. 
         </p>
 
     </section>
@@ -88,13 +90,13 @@
         ])
         nv1.setClipPlane([-0.1, 270, 0])
         nv1.setMeshShader(nv1.meshes[0].id, "Outline")
-        nv1.createSession('ws://localhost:3000', 'niivue-mesh', (msg, url, key, isError) => {
+        nv1.createSession('', 'niivue-mesh', (msg, url, key, isError) => {
             if (isError) {
                 // check if session has been duplicated
                 if (msg === 'duplicate session') {
                     console.log('session already created, joining as viewer');
                     // try to join the session instead
-                    nv1.joinSession('ws://localhost:3000', 'niivue', (msg, url, isController) => {
+                    nv1.joinSession('', 'niivue', (msg, url, isController) => {
                         console.log(`Result: ${msg} connected to ${url}. Is controller: ${isController}.`);
                     });
                 }

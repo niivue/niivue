@@ -1408,10 +1408,11 @@ Niivue.prototype.addVolumeFromUrl = async function (
   if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
     this.mediaUrlMap.set(volume, imageOptions.url);
     // notify subscribers
+    console.log(imageOptions);
     // if we are in session let our subscribers know
     if (this.isInSession && notifySubscribers) {
       let imageOptionsMessage = {
-        ...imageOptions,
+        urlImageOptions: imageOptions,
         op: SessionBus.MESSAGE.ADD_VOLUME_URL,
       };
       this.sessionBus.sendSessionMessage(imageOptionsMessage);
@@ -4746,6 +4747,21 @@ Niivue.prototype.setGamma = function (gamma = 1.0) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.notifySubscribersOf4DIndexChange = function (volume, index) {
+  if (
+    this.isInSession &&
+    this.sessionBus.isController &&
+    this.mediaUrlMap.has(volume)
+  ) {
+    let url = this.mediaUrlMap.get(volume);
+    this.sessionBus.sendSessionMessage({
+      op: SessionBus.MESSAGE.SET_4D_VOL_INDEX,
+      index: index,
+      url,
+    });
+  }
+};
+
 /**
  * show desired 3D volume from 4D time series
  * @param {string} id the ID of the 4D NVImage
@@ -4765,14 +4781,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
-  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
-    let url = this.mediaUrlMap.get(this.volumes[idx]);
-    this.sessionBus.sendSessionMessage({
-      op: SessionBus.MESSAGE.SET_4D_VOL_INDEX,
-      index: frame4D,
-      url,
-    });
-  }
+  this.notifySubscribersOf4DIndexChange(this.volumes[idx], frame4D);
 };
 
 /**
@@ -4965,12 +4974,13 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       pos[0] <= this.graph.plotLTWH[2] &&
       pos[1] <= this.graph.plotLTWH[3]
     ) {
-      let vol = Math.round(
+      let index = Math.round(
         (pos[0] / this.graph.plotLTWH[2]) * (this.volumes[0].nFrame4D - 1)
       );
       //this.graph.selectedColumn = vol;
-      this.volumes[0].frame4D = vol;
+      this.volumes[0].frame4D = index;
       this.updateGLVolume();
+      this.notifySubscribersOf4DIndexChange(this.volumes[0], index);
       return;
     }
   }
