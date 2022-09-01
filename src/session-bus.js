@@ -103,9 +103,12 @@ export function SessionBus(
 
   if (serverURL) {
     this.connectToServer(serverURL, sessionName);
+    this.subscribeToServer();
     this.isConnectedToServer = true;
-
-    // TODO(cdrake): add code to send create message to server
+    this.serverConnection$.next({
+      op: SessionBus.MESSAGE.CREATE,
+      key: this.sessionKey,
+    });
   } else {
     // create our message queue
     localStorage.setItem(this.userQueueName, JSON.stringify([]));
@@ -190,8 +193,15 @@ SessionBus.MESSAGE = Object.freeze({
 });
 
 SessionBus.prototype.sendSessionMessage = function (message) {
-  //TODO(cdrake): add remote send message
-  this.sendLocalMessage(message);
+  if (this.isConnectedToServer) {
+    this.serverConnection$.next({
+      ...message,
+      key: this.sessionKey,
+      userKey: this.userKey,
+    });
+  } else {
+    this.sendLocalMessage(message);
+  }
 };
 
 // Local
@@ -301,7 +311,7 @@ SessionBus.prototype.sendOtherClientsMessage = function (message) {
   for (const user of this.userList) {
     if (user.id === this.userId) {
       continue;
-    }    
+    }
     let userQueueName = `user-${user.id}-q`;
     this.lockAndGetItem(userQueueName).then((messageQ) => {
       messageQ.push(message);
@@ -331,7 +341,7 @@ SessionBus.prototype.sendLocalMessage = function (message) {
           this.sessionSceneName,
           JSON.stringify({ ...message, key: scene.key })
         );
-      } 
+      }
       break;
 
     case SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS:
@@ -342,7 +352,7 @@ SessionBus.prototype.sendLocalMessage = function (message) {
           urlImageOptions: message.urlImageOptions,
         };
         this.sendOtherClientsMessage(msg);
-      } 
+      }
       break;
     case SessionBus.MESSAGE.REMOVE_VOLUME_URL:
       if (scene.key === this.sessionKey) {
@@ -350,7 +360,7 @@ SessionBus.prototype.sendLocalMessage = function (message) {
           op: REMOVE_VOLUME_URL,
           url: message.url,
         });
-      } 
+      }
       break;
     case SessionBus.MESSAGE.SET_4D_VOL_INDEX:
       if (scene.key === this.sessionKey) {
@@ -471,4 +481,15 @@ SessionBus.prototype.connectToServer = function (serverURL, sessionName) {
   url.search = "?session=" + sessionName;
   this.serverConnection$ = webSocket(url.href);
   console.log(url.href);
+};
+
+// Internal function called after a connection with the server has been made
+SessionBus.prototype.subscribeToServer = function () {
+  this.serverConnection$.subscribe({
+    next: (msg) => {
+      this.onMessageCallBack(msg);
+    }, // Called whenever there is a message from the server.
+    error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
+    complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
+  });
 };

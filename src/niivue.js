@@ -597,7 +597,8 @@ Niivue.prototype.handleMessage = function (msg) {
           msg["userKey"]
         );
       }
-      this.isController = this.sessionBus.isController;
+      this.isController = msg["isController"];
+      console.log(msg);
       break;
 
     case SessionBus.MESSAGE.SESSION_JOINED:
@@ -1377,7 +1378,7 @@ Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
     if (this.mediaUrlMap.has(volume)) {
       let imageOptions = volume.getImageOptions();
       // add our url
-      imageOptions.url = this.mediaUrlMap.get(volume);      
+      imageOptions.url = this.mediaUrlMap.get(volume);
       this.sessionBus.sendSessionMessage({
         op: SessionBus.MESSAGE.UPDATE_IMAGE_OPTIONS,
         urlImageOptions: imageOptions,
@@ -4742,11 +4743,7 @@ Niivue.prototype.setGamma = function (gamma = 1.0) {
 };
 
 Niivue.prototype.notifySubscribersOf4DIndexChange = function (volume, index) {
-  if (
-    this.isInSession &&
-    this.sessionBus.isController &&
-    this.mediaUrlMap.has(volume)
-  ) {
+  if (this.isInSession && this.isController && this.mediaUrlMap.has(volume)) {
     let url = this.mediaUrlMap.get(volume);
     this.sessionBus.sendSessionMessage({
       op: SessionBus.MESSAGE.SET_4D_VOL_INDEX,
@@ -7489,7 +7486,7 @@ Niivue.prototype.drawScene = function () {
     return; // do not do anything until we are initialized (init will call drawScene).
   }
 
-  if (this.isInSession && this.sessionBus.isController) {
+  if (this.isInSession && this.isController) {
     let sceneState = {
       azimuth: this.scene.renderAzimuth,
       elevation: this.scene.renderElevation,
