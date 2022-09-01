@@ -51,10 +51,17 @@
         <button id="customShader">Use custom shader</button>
         <button id="toggleMeshButton">Add CIT168.mz3</button>
     </section>
+    <section>
+        <button onclick="setCurrentInstanceAsController()">Set current instance as controller</button>
+    </section>
 
     <script src="./niivue.umd.js">
     </script>
     <script type="module" async>
+        function setCurrentInstanceAsController() {
+            nv1.sessionBus.setUserAsControllerOnLocalSession();
+        }
+        
         const meshOptions = { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] };
         let isMeshShowing = false;
 

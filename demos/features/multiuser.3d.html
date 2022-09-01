@@ -41,10 +41,15 @@
       </canvas>
     </div>
   </section>
+  <section>
+    <button onclick="setCurrentInstanceAsController()">Set current instance as controller</button>
+  </section>
+
   <button id="toggleHippoButton" onclick="toggleHippo()">Add Hippocampus</button>
   <script src="./niivue.umd.js">
   </script>
-  <script>
+  <script>    
+    
 
     function toggleHippo() {
       let buttonElem = document.getElementById('toggleHippoButton');      
@@ -92,6 +97,10 @@
         console.log(`message:${msg} url:${url} key:${key}, userKey:${userKey}`);
       }
     })
+
+    function setCurrentInstanceAsController() {
+      nv1.sessionBus.setUserAsControllerOnLocalSession();
+    }
   </script>
 </body>
 

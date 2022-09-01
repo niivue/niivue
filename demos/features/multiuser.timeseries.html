@@ -45,7 +45,14 @@
             <p id="volume">volume: 0</p>
         </div>
     </section>
+    <section>
+        <button onclick="setCurrentInstanceAsController()">Set current instance as controller</button>
+    </section>
     <script>
+        function setCurrentInstanceAsController() {
+            nv1.sessionBus.setUserAsControllerOnLocalSession();
+        }
+
         var volumeList1 = [
             // first item is background image
             {

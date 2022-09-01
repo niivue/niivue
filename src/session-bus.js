@@ -149,7 +149,6 @@ export function SessionBus(
         // create scene
         this.lockSetAndUnlockItem(this.sessionSceneName, this.sessionScene);
         this.isController = true;
-        this.unlockItem(this.sessionSceneName);
 
         onMessageCallback({
           op: SessionBus.MESSAGE.SESSION_CREATED,
@@ -252,6 +251,29 @@ SessionBus.prototype.lockAndGetItem = async function (itemName) {
   }
   let itemString = localStorage.getItem(itemName);
   return itemString ? JSON.parse(itemString) : null;
+};
+
+/**
+ * Sets the user as the sole controller of the session
+ */
+SessionBus.prototype.setUserAsControllerOnLocalSession = function () {
+  let sessionScene = {
+    elevation: 0,
+    azimuth: 0,
+    zoom: 1.0,
+    cliplane: [0, 0, 0, 0],
+    key: this.sessionKey,
+  };
+
+  this.lockSetAndUnlockItem(this.sessionSceneName, sessionScene);
+  this.isController = true;
+};
+
+/**
+ * Clears all sessions
+ */
+SessionBus.prototype.clearAllLocalSesions = function () {
+  localStorage.clear();
 };
 
 /**
@@ -448,11 +470,6 @@ SessionBus.prototype.localStorageEventListener = function (e) {
       break;
   }
 };
-
-// call our callback
-
-// lock up after you're done
-// remove the message if all users acknowledged the message
 
 // Remote
 // not included in public docs
