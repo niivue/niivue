@@ -71,11 +71,13 @@
            visible: true,
          },
         ] 
+
+      var serverUrl = ''  // use 'ws://localhost:3000' with niivue-server
       var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      nv1.createSession('', 'niivue-image-options', (msg, url, key, isError) => {
+      nv1.createSession(serverUrl, 'niivue-image-options', (msg, url, key, isError) => {
             
                 console.log(`message:${msg} url:${url} key:${key}`);
             

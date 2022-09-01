@@ -62,6 +62,7 @@
                 visible: true,
             },
         ]
+        var serverUrl = ''  // use 'ws://localhost:3000' with niivue-server
         var nv1 = new niivue.Niivue()
         nv1.setRadiologicalConvention(false)
         nv1.attachTo('gl1')
@@ -70,7 +71,7 @@
         nv1.graph.autoSizeMultiplanar = true
         nv1.graph.normalizeValues = false
         nv1.graph.opacity = 1.0
-        nv1.createSession('', 'niivue-timeseries', (msg, url, key, isError) => {
+        nv1.createSession(serverUrl, 'niivue-timeseries', (msg, url, key, isError) => {
             if (isError) {
                 // check if session has been duplicated
                 if (msg === 'duplicate session') {
