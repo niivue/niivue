@@ -68,6 +68,8 @@
           onFrameChange: updateFrameValue
         }
       )
+        var serverUrl = ''  // use 'ws://localhost:3000' with niivue-server
+        var nv1 = new niivue.Niivue()
         nv1.setRadiologicalConvention(false)
         nv1.attachTo('gl1')
         nv1.loadVolumes(volumeList1)
