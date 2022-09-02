@@ -1,6 +1,7 @@
 // vite.config.js
 const path = require('path')
 const { defineConfig } = require('vite')
+import commonjs from '@rollup/plugin-commonjs';
 
 module.exports = defineConfig({
     root: '.',
@@ -11,6 +12,9 @@ module.exports = defineConfig({
 				allow: ['..']
     	}
   	},
+  plugins: [
+    commonjs()
+  ],
     build: {
         outDir: './dist',
         lib: {
