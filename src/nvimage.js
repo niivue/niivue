@@ -2382,7 +2382,9 @@ NVImage.loadFromUrl = async function ({
     urlParts = url.split("/");
   }
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
-  name = name.slice(0, name.indexOf("?")); //remove query string if any
+  if (name.indexOf("?") > -1) {
+    name = name.slice(0, name.indexOf("?")); //remove query string if any
+  }
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
