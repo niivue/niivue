@@ -2358,7 +2358,6 @@ NVImage.loadFromUrl = async function ({
     throw Error("url must not be empty");
   }
   let response = await fetch(url);
-  console.log(url);
   let nvimage = null;
   if (!response.ok) {
     throw Error(response.statusText);
@@ -2384,7 +2383,6 @@ NVImage.loadFromUrl = async function ({
   }
   name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
   name = name.slice(0, name.indexOf("?")); //remove query string if any
-  console.log(name);
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
