@@ -2358,6 +2358,7 @@ NVImage.loadFromUrl = async function ({
     throw Error("url must not be empty");
   }
   let response = await fetch(url);
+  console.log(url);
   let nvimage = null;
   if (!response.ok) {
     throw Error(response.statusText);
@@ -2372,8 +2373,18 @@ NVImage.loadFromUrl = async function ({
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
     }
   }
-  let urlParts = url.split("/"); // split url parts at slash
-  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  let urlParts;
+  try {
+    // if a full url like https://domain/path/file.nii.gz?query=filter
+    // parse the url and get the pathname component without the query
+    urlParts = new URL(url).pathname.split("/");
+  } catch (e) {
+    // if a relative url then parse the path (assuming no query)
+    urlParts = url.split("/");
+  }
+  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
+  name = name.slice(0, name.indexOf("?")); //remove query string if any
+  console.log(name);
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
