@@ -106869,8 +106869,16 @@ NVImage.loadFromUrl = async function({
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
     }
   }
-  let urlParts = url.split("/");
+  let urlParts;
+  try {
+    urlParts = new URL(url).pathname.split("/");
+  } catch (e) {
+    urlParts = url.split("/");
+  }
   name = urlParts.slice(-1)[0];
+  if (name.indexOf("?") > -1) {
+    name = name.slice(0, name.indexOf("?"));
+  }
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
