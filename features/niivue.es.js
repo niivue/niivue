@@ -1095,7 +1095,7 @@ void main() {
 	//if (aout <= 0.0) return;
 	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	color.a = 1.0;
+	//color.a = 1.0;
 }`;
 var fragRectShader = `#version 300 es
 #line 189
@@ -115782,6 +115782,8 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   this.sliceMMShader.use(this.gl);
   gl.uniform1i(this.sliceMMShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
   gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag);
   gl.uniform1f(this.sliceMMShader.sliceLoc, sliceFrac);
@@ -115811,7 +115813,6 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 };
-Niivue.prototype.drawCro;
 Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
   let gl = this.gl;
   let fovMM = this.screenFieldOfViewMM(axCorSag);
@@ -115855,6 +115856,8 @@ Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = N
     isMirrorLR = !isMirrorLR;
   this.sliceShader.use(this.gl);
   gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(this.sliceShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
   gl.uniform1i(this.sliceShader.axCorSagLoc, axCorSag);
