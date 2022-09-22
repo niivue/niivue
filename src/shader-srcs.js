@@ -523,7 +523,7 @@ void main() {
 	//if (aout <= 0.0) return;
 	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	color.a = 1.0;
+	//color.a = 1.0;
 }`;
 
 export var fragRectShader = `#version 300 es
