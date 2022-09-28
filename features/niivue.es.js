@@ -106861,7 +106861,12 @@ NVImage.loadFromUrl = async function({
     throw Error(response.statusText);
   }
   var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(url)[1];
+  let ext = "";
+  if (name === "") {
+    ext = re.exec(url)[1];
+  } else {
+    ext = re.exec(name)[1];
+  }
   if (ext.toUpperCase() === "NHDR")
     ;
   else if (ext.toUpperCase() === "HEAD") {
@@ -106870,14 +106875,16 @@ NVImage.loadFromUrl = async function({
     }
   }
   let urlParts;
-  try {
-    urlParts = new URL(url).pathname.split("/");
-  } catch (e) {
-    urlParts = url.split("/");
-  }
-  name = urlParts.slice(-1)[0];
-  if (name.indexOf("?") > -1) {
-    name = name.slice(0, name.indexOf("?"));
+  if (name === "") {
+    try {
+      urlParts = new URL(url).pathname.split("/");
+    } catch (e) {
+      urlParts = url.split("/");
+    }
+    name = urlParts.slice(-1)[0];
+    if (name.indexOf("?") > -1) {
+      name = name.slice(0, name.indexOf("?"));
+    }
   }
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
@@ -112115,6 +112122,8 @@ function Niivue(options = {}) {
     },
     onImageLoaded: () => {
     },
+    onFrameChange: () => {
+    },
     onError: () => {
     },
     onInfo: () => {
@@ -112436,9 +112445,9 @@ Niivue.prototype.handleMessage = function(msg, sessionCreatedCallback, sessionJo
       break;
     case REMOVE_VOLUME_URL:
       {
-        let volume = this.getMediaByUrl(msg["url"]);
-        if (volume) {
-          this.removeVolume(volume, false);
+        let volume2 = this.getMediaByUrl(msg["url"]);
+        if (volume2) {
+          this.removeVolume(volume2, false);
         }
       }
       break;
@@ -112450,16 +112459,16 @@ Niivue.prototype.handleMessage = function(msg, sessionCreatedCallback, sessionJo
     }
     case SET_4D_VOL_INDEX:
       {
-        let volume = this.getMediaByUrl(msg["url"]);
-        if (volume) {
-          this.setFrame4D(volume.id, msg["index"]);
+        let volume2 = this.getMediaByUrl(msg["url"]);
+        if (volume2) {
+          this.setFrame4D(volume2.id, msg["index"]);
         }
       }
       break;
     case UPDATE_IMAGE_OPTIONS: {
-      let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
-      if (volume) {
-        volume.applyOptionsUpdate(msg["urlImageOptions"]);
+      let volume2 = this.getMediaByUrl(msg["urlImageOptions"].url);
+      if (volume2) {
+        volume2.applyOptionsUpdate(msg["urlImageOptions"]);
         this.updateGLVolume();
       }
     }
@@ -112916,37 +112925,37 @@ Niivue.prototype.getFileExt = function(fullname, upperCase = true) {
   return upperCase ? ext : ext.toLowerCase();
 };
 Niivue.prototype.loadVolumeFromUrl = async function(imageOptions) {
-  let volume = await NVImage.loadFromUrl(imageOptions);
-  return volume;
+  let volume2 = await NVImage.loadFromUrl(imageOptions);
+  return volume2;
 };
-Niivue.prototype.notifySubscribersOfOptionChange = function(volume) {
+Niivue.prototype.notifySubscribersOfOptionChange = function(volume2) {
   if (this.isInSession) {
-    if (this.mediaUrlMap.has(volume)) {
-      let imageOptions = volume.getImageOptions();
-      imageOptions.url = this.mediaUrlMap.get(volume);
+    if (this.mediaUrlMap.has(volume2)) {
+      let imageOptions = volume2.getImageOptions();
+      imageOptions.url = this.mediaUrlMap.get(volume2);
       this.serverConnection$.next(new NVMessage(UPDATE_IMAGE_OPTIONS, imageOptions, this.sessionKey));
       console.log("update called");
     }
   }
 };
 Niivue.prototype.addVolumeFromUrl = async function(imageOptions, notifySubscribers = true) {
-  let volume = await this.loadVolumeFromUrl(imageOptions);
-  this.addVolume(volume);
-  if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
-    this.mediaUrlMap.set(volume, imageOptions.url);
+  let volume2 = await this.loadVolumeFromUrl(imageOptions);
+  this.addVolume(volume2);
+  if (!this.mediaUrlMap.has(volume2) && imageOptions.url) {
+    this.mediaUrlMap.set(volume2, imageOptions.url);
     if (this.isInSession && notifySubscribers) {
       this.serverConnection$.next(new NVMessage(ADD_VOLUME_URL, imageOptions, this.sessionKey));
     }
   }
-  return volume;
+  return volume2;
 };
 Niivue.prototype.getMediaByUrl = function(url) {
   return [...this.mediaUrlMap.entries()].filter((v) => v[1] == url).map((v) => v[0]).pop();
 };
 Niivue.prototype.removeVolumeByUrl = function(url) {
-  let volume = this.getMediaByUrl(url);
-  if (volume) {
-    this.removeVolume(volume);
+  let volume2 = this.getMediaByUrl(url);
+  if (volume2) {
+    this.removeVolume(volume2);
   }
 };
 Niivue.prototype.readDirectory = function(directory) {
@@ -112973,13 +112982,13 @@ Niivue.prototype.readDirectory = function(directory) {
         readEntries();
       } else {
         let allFileObects = await getFileObjects(allEntiresInDir);
-        let volume = await NVImage.loadFromFile({
+        let volume2 = await NVImage.loadFromFile({
           file: allFileObects,
           name: directory.name,
           urlImgData: null,
           isDICOMDIR: true
         });
-        this.addVolume(volume);
+        this.addVolume(volume2);
       }
     });
   };
@@ -113052,18 +113061,18 @@ Niivue.prototype.dropListener = async function(e) {
           entry.file(async (file) => {
             if (pairedImageData !== "") {
               pairedImageData.file(async (imgfile) => {
-                let volume = await NVImage.loadFromFile({
+                let volume2 = await NVImage.loadFromFile({
                   file,
                   urlImgData: imgfile
                 });
-                this.addVolume(volume);
+                this.addVolume(volume2);
               });
             } else {
-              let volume = await NVImage.loadFromFile({
+              let volume2 = await NVImage.loadFromFile({
                 file,
                 urlImgData: pairedImageData
               });
-              this.addVolume(volume);
+              this.addVolume(volume2);
             }
           });
         } else if (entry.isDirectory) {
@@ -113107,11 +113116,11 @@ Niivue.prototype.setHighResolutionCapable = function(isHighResolutionCapable) {
   this.resizeListener();
   this.drawScene();
 };
-Niivue.prototype.addVolume = function(volume) {
-  this.volumes.push(volume);
+Niivue.prototype.addVolume = function(volume2) {
+  this.volumes.push(volume2);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
-  this.setVolume(volume, idx);
-  this.opts.onImageLoaded(volume);
+  this.setVolume(volume2, idx);
+  this.opts.onImageLoaded(volume2);
 };
 Niivue.prototype.addMesh = function(mesh) {
   this.meshes.push(mesh);
@@ -113235,15 +113244,15 @@ Niivue.prototype.loadDrawing = async function(fnm) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
-  let dims = volume.hdr.dims;
+  let volume2 = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
+  let dims = volume2.hdr.dims;
   if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
     console.log("drawing dimensions do not match background image");
     return false;
   }
-  if (volume.img.constructor !== Uint8Array)
+  if (volume2.img.constructor !== Uint8Array)
     console.log("Drawings should be UINT8");
-  let perm = volume.permRAS;
+  let perm = volume2.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
@@ -113285,7 +113294,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
     zlut = range(dims[3] - 1, 0, -1);
   for (let i2 = 0; i2 < dims[3]; i2++)
     zlut[i2] *= instride[2];
-  let inVs = volume.img;
+  let inVs = volume2.img;
   let outVs = this.drawBitmap;
   let j = 0;
   for (let z = 0; z < dims[3]; z++) {
@@ -113430,7 +113439,7 @@ Niivue.prototype.getOverlayIndexByID = function(id) {
   }
   return -1;
 };
-Niivue.prototype.setVolume = function(volume, toIndex = 0) {
+Niivue.prototype.setVolume = function(volume2, toIndex = 0) {
   this.volumes.map((v) => {
     log.debug(v.name);
   });
@@ -113438,14 +113447,14 @@ Niivue.prototype.setVolume = function(volume, toIndex = 0) {
   if (toIndex > numberOfLoadedImages) {
     return;
   }
-  let volIndex = this.getVolumeIndexByID(volume.id);
+  let volIndex = this.getVolumeIndexByID(volume2.id);
   if (toIndex === 0) {
     this.volumes.splice(volIndex, 1);
-    this.volumes.unshift(volume);
+    this.volumes.unshift(volume2);
     this.back = this.volumes[0];
     this.overlays = this.volumes.slice(1);
   } else if (toIndex < 0) {
-    this.volumes.splice(this.getVolumeIndexByID(volume.id), 1);
+    this.volumes.splice(this.getVolumeIndexByID(volume2.id), 1);
     this.back = this.volumes[0];
     if (this.volumes.length > 1) {
       this.overlays = this.volumes.slice(1);
@@ -113454,7 +113463,7 @@ Niivue.prototype.setVolume = function(volume, toIndex = 0) {
     }
   } else {
     this.volumes.splice(volIndex, 1);
-    this.volumes.splice(toIndex, 0, volume);
+    this.volumes.splice(toIndex, 0, volume2);
     this.overlays = this.volumes.slice(1);
     this.back = this.volumes[0];
   }
@@ -113486,14 +113495,14 @@ Niivue.prototype.setMesh = function(mesh, toIndex = 0) {
     log.debug(m.name);
   });
 };
-Niivue.prototype.removeVolume = function(volume, notifySubscribers = true) {
-  this.setVolume(volume, -1);
-  if (this.mediaUrlMap.has(volume)) {
-    let url = this.mediaUrlMap.get(volume);
+Niivue.prototype.removeVolume = function(volume2, notifySubscribers = true) {
+  this.setVolume(volume2, -1);
+  if (this.mediaUrlMap.has(volume2)) {
+    let url = this.mediaUrlMap.get(volume2);
     if (notifySubscribers && this.isInSession) {
       this.serverConnection$.next(new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey));
     }
-    this.mediaUrlMap.delete(volume);
+    this.mediaUrlMap.delete(volume2);
   }
 };
 Niivue.prototype.removeVolumeByIndex = function(index) {
@@ -113524,19 +113533,19 @@ Niivue.prototype.removeMesh = function(mesh, notifySubscribers = true) {
     }
   }
 };
-Niivue.prototype.moveVolumeToBottom = function(volume) {
-  this.setVolume(volume, 0);
+Niivue.prototype.moveVolumeToBottom = function(volume2) {
+  this.setVolume(volume2, 0);
 };
-Niivue.prototype.moveVolumeUp = function(volume) {
-  let volIdx = this.getVolumeIndexByID(volume.id);
-  this.setVolume(volume, volIdx + 1);
+Niivue.prototype.moveVolumeUp = function(volume2) {
+  let volIdx = this.getVolumeIndexByID(volume2.id);
+  this.setVolume(volume2, volIdx + 1);
 };
-Niivue.prototype.moveVolumeDown = function(volume) {
-  let volIdx = this.getVolumeIndexByID(volume.id);
-  this.setVolume(volume, volIdx - 1);
+Niivue.prototype.moveVolumeDown = function(volume2) {
+  let volIdx = this.getVolumeIndexByID(volume2.id);
+  this.setVolume(volume2, volIdx - 1);
 };
-Niivue.prototype.moveVolumeToTop = function(volume) {
-  this.setVolume(volume, this.volumes.length - 1);
+Niivue.prototype.moveVolumeToTop = function(volume2) {
+  this.setVolume(volume2, this.volumes.length - 1);
 };
 Niivue.prototype.mouseDown = function mouseDown(x2, y) {
   x2 *= this.scene.dpr;
@@ -113639,8 +113648,8 @@ Niivue.prototype.setClipPlaneColor = function(color) {
   this.gl.uniform4fv(this.renderShader.clipPlaneClrLoc, this.opts.clipPlaneColor);
   this.drawScene();
 };
-Niivue.prototype.overlayRGBA = function(volume) {
-  let hdr = volume.hdr;
+Niivue.prototype.overlayRGBA = function(volume2) {
+  let hdr = volume2.hdr;
   let vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   let imgRGBA = new Uint8ClampedArray(vox * 4);
   let radius = 0.2 * Math.min(Math.min(hdr.dims[1], hdr.dims[2]), hdr.dims[3]);
@@ -113812,9 +113821,9 @@ Niivue.prototype.r16Tex = function(texID, activeID, dims, img16 = []) {
   this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], this.gl.RED_INTEGER, this.gl.SHORT, img16);
   return texID;
 };
-function img2ras16(volume) {
-  let dims = volume.hdr.dims;
-  let perm = volume.permRAS;
+function img2ras16(volume2) {
+  let dims = volume2.hdr.dims;
+  let perm = volume2.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   let img16 = new Int16Array(vx);
   let layout = [0, 0, 0];
@@ -113859,7 +113868,7 @@ function img2ras16(volume) {
   for (let z = 0; z < dims[3]; z++) {
     for (let y = 0; y < dims[2]; y++) {
       for (let x2 = 0; x2 < dims[1]; x2++) {
-        img16[xlut[x2] + ylut[y] + zlut[z]] = volume.img[j];
+        img16[xlut[x2] + ylut[y] + zlut[z]] = volume2.img[j];
         j++;
       }
     }
@@ -114956,6 +114965,7 @@ Niivue.prototype.setFrame4D = function(id, frame4D) {
     let url = this.mediaUrlMap.get(this.volumes[idx]);
     this.serverConnection$.next(new NVMessage(SET_4D_VOL_INDEX, new NVMessageSet4DVolumeIndexData(url, frame4D), this.sessionKey));
   }
+  this.opts.onFrameChange({ volume, frame4D });
 };
 Niivue.prototype.getFrame4D = function(id) {
   let idx = this.getVolumeIndexByID(id);
@@ -115076,8 +115086,7 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
     let pos = [x2 - this.graph.plotLTWH[0], y - this.graph.plotLTWH[1]];
     if (pos[0] > 0 && pos[1] > 0 && pos[0] <= this.graph.plotLTWH[2] && pos[1] <= this.graph.plotLTWH[3]) {
       let vol = Math.round(pos[0] / this.graph.plotLTWH[2] * (this.volumes[0].nFrame4D - 1));
-      this.volumes[0].frame4D = vol;
-      this.updateGLVolume();
+      this.setFrame4D(this.volumes[0].id, vol);
       return;
     }
   }
