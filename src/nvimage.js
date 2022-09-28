@@ -2363,7 +2363,12 @@ NVImage.loadFromUrl = async function ({
     throw Error(response.statusText);
   }
   var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(url)[1];
+  let ext = "";
+  if (name === "") {
+    ext = re.exec(url)[1];
+  } else {
+    ext = re.exec(name)[1];
+  }
   if (ext.toUpperCase() === "NHDR") {
     if (urlImgData === "") {
     }
@@ -2373,18 +2378,21 @@ NVImage.loadFromUrl = async function ({
     }
   }
   let urlParts;
-  try {
-    // if a full url like https://domain/path/file.nii.gz?query=filter
-    // parse the url and get the pathname component without the query
-    urlParts = new URL(url).pathname.split("/");
-  } catch (e) {
-    // if a relative url then parse the path (assuming no query)
-    urlParts = url.split("/");
+  if (name === "") {
+    try {
+      // if a full url like https://domain/path/file.nii.gz?query=filter
+      // parse the url and get the pathname component without the query
+      urlParts = new URL(url).pathname.split("/");
+    } catch (e) {
+      // if a relative url then parse the path (assuming no query)
+      urlParts = url.split("/");
+    }
+    name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
+    if (name.indexOf("?") > -1) {
+      name = name.slice(0, name.indexOf("?")); //remove query string if any
+    }
   }
-  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
-  if (name.indexOf("?") > -1) {
-    name = name.slice(0, name.indexOf("?")); //remove query string if any
-  }
+
   let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
