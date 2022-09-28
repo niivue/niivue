@@ -202,6 +202,7 @@ export function Niivue(options = {}) {
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
+    onFrameChange: () => {},
     onError: () => {},
     onInfo: () => {},
     onWarn: () => {},
@@ -4773,6 +4774,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
   this.notifySubscribersOf4DIndexChange(this.volumes[idx], frame4D);
+  this.opts.onFrameChange({volume: volume, frame4D: frame4D});
 };
 
 /**
@@ -4969,9 +4971,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         (pos[0] / this.graph.plotLTWH[2]) * (this.volumes[0].nFrame4D - 1)
       );
       //this.graph.selectedColumn = vol;
-      this.volumes[0].frame4D = index;
-      this.updateGLVolume();
-      this.notifySubscribersOf4DIndexChange(this.volumes[0], index);
+      this.setFrame4D(this.volumes[0].id, index);
       return;
     }
   }
