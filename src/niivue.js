@@ -4781,7 +4781,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
   this.notifySubscribersOf4DIndexChange(this.volumes[idx], frame4D);
-  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
+  this.opts.onFrameChange({volume: volume, frame4D: frame4D});
 };
 
 /**
