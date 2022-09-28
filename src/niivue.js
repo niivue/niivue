@@ -5933,6 +5933,8 @@ Niivue.prototype.draw2DMM = function (
     this.backgroundMasksOverlays
   );
   gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
+  gl.enable(gl.BLEND); 
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag);
   gl.uniform1f(this.sliceMMShader.sliceLoc, sliceFrac);
@@ -5989,8 +5991,6 @@ Niivue.prototype.draw2DMM = function (
   this.readyForSync = true;
 }; // draw2DMM()
 
-Niivue.prototype.drawCro;
-
 // not included in public docs
 // draw 2D tile in voxel space
 Niivue.prototype.draw2DVox = function (
@@ -6043,6 +6043,8 @@ Niivue.prototype.draw2DVox = function (
     isMirrorLR = !isMirrorLR;
   this.sliceShader.use(this.gl);
   gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
+  gl.enable(gl.BLEND); 
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(
     this.sliceShader.backgroundMasksOverlaysLoc,
