@@ -53,7 +53,11 @@
                 visible: true,
             },
         ]
-        var nv1 = new niivue.Niivue()
+        var nv1 = new niivue.Niivue(
+        {
+          onFrameChange: updateFrameValue
+        }
+      )
         nv1.setRadiologicalConvention(false)
         nv1.attachTo('gl1')
         nv1.loadVolumes(volumeList1)
@@ -92,6 +96,10 @@
             currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1)
             nv1.setFrame4D(nv1.volumes[0].id, currentVol)
             document.getElementById('volume').innerHTML = 'volume ' + currentVol
+        }
+        function updateFrameValue(newValue){
+            document.getElementById('volume').innerHTML = 'volume '+newValue.frame4D
+            currentVol = newValue.frame4D
         }
         var animationTimer = null
         function doAnimate() {
