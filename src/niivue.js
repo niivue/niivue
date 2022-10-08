@@ -4773,8 +4773,22 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   }
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
+<<<<<<< HEAD
   this.notifySubscribersOf4DIndexChange(this.volumes[idx], frame4D);
   this.opts.onFrameChange({volume: volume, frame4D: frame4D});
+=======
+  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
+    let url = this.mediaUrlMap.get(this.volumes[idx]);
+    this.serverConnection$.next(
+      new NVMessage(
+        SET_4D_VOL_INDEX,
+        new NVMessageSet4DVolumeIndexData(url, frame4D),
+        this.sessionKey
+      )
+    );
+  }
+  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
+>>>>>>> cbd56a0 (remove name key when not necessary; update time series handling)
 };
 
 /**
@@ -5886,7 +5900,7 @@ Niivue.prototype.draw2DMM = function (
     this.backgroundMasksOverlays
   );
   gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
-  gl.enable(gl.BLEND); 
+  gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag);
@@ -5996,7 +6010,7 @@ Niivue.prototype.draw2DVox = function (
     isMirrorLR = !isMirrorLR;
   this.sliceShader.use(this.gl);
   gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
-  gl.enable(gl.BLEND); 
+  gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(
