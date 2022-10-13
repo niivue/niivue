@@ -62,7 +62,6 @@ export { colortables } from "./colortables";
 import { webSocket } from "rxjs/webSocket";
 import { SessionBus } from "./session-bus.js";
 
-
 const log = new Log();
 const cmapper = new colortables();
 const MESH_EXTENSIONS = [
@@ -4784,7 +4783,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   this.volumes[idx].frame4D = frame4D;
   this.updateGLVolume();
   this.notifySubscribersOf4DIndexChange(this.volumes[idx], frame4D);
-  this.opts.onFrameChange({volume: volume, frame4D: frame4D});
+  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
 
   if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
     let url = this.mediaUrlMap.get(this.volumes[idx]);
