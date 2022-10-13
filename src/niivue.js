@@ -216,6 +216,7 @@ export function Niivue(options = {}) {
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
+    onFrameChange: () => {},
     onError: () => {},
     onInfo: () => {},
     onWarn: () => {},
@@ -4820,6 +4821,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
       )
     );
   }
+  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
 };
 
 /**
@@ -5016,8 +5018,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         (pos[0] / this.graph.plotLTWH[2]) * (this.volumes[0].nFrame4D - 1)
       );
       //this.graph.selectedColumn = vol;
-      this.volumes[0].frame4D = vol;
-      this.updateGLVolume();
+      this.setFrame4D(this.volumes[0].id, vol);
       return;
     }
   }
@@ -5932,7 +5933,7 @@ Niivue.prototype.draw2DMM = function (
     this.backgroundMasksOverlays
   );
   gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
-  gl.enable(gl.BLEND); 
+  gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag);
@@ -6042,7 +6043,7 @@ Niivue.prototype.draw2DVox = function (
     isMirrorLR = !isMirrorLR;
   this.sliceShader.use(this.gl);
   gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
-  gl.enable(gl.BLEND); 
+  gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.uniform1f(this.sliceShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(
