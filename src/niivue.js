@@ -5913,6 +5913,7 @@ Niivue.prototype.draw2DMM = function (
   );
   if (customMM === Infinity || customMM === -Infinity) {
     //draw rendering
+    let ltwh = leftTopWidthHeight.slice();
     this.draw3D(
       leftTopWidthHeight,
       obj.modelViewProjectionMatrix,
@@ -5921,6 +5922,14 @@ Niivue.prototype.draw2DMM = function (
       azimuth,
       elevation
     );
+    let tile = this.screenSlices[this.screenSlices.length - 1];
+    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, 0.5);
+    tile.leftTopWidthHeight = ltwh;
+    tile.axCorSag = axCorSag;
+    tile.sliceFrac = Infinity; //use infinity to denote this is a rendering, not slice: not one depth
+    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, sliceFrac);
+    tile.leftTopMM = obj.leftTopMM;
+    tile.fovMM = obj.fovMM;
     return;
   }
   gl.enable(gl.DEPTH_TEST);
@@ -7223,9 +7232,13 @@ Niivue.prototype.drawCrossLinesMM = function (
 ) {
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   let tile = this.screenSlices[sliceIndex];
-  let isRender = (tile.AxyzMxy.length <= 4);
+  let sliceFrac = tile.sliceFrac;
+  let isRender = (sliceFrac === Infinity);
   if (isRender)
-    log.warn('Cross lines not shown on rendering when in world view mode (hint: setSliceMM(false))');
+    log.warn('Rendering approximate cross lines in world view mode');
+  if (sliceFrac === Infinity)
+    sliceFrac = 0.5;
+  console.log('>>>',tile);
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
   let thick = Math.max(1, this.opts.crosshairWidth);
@@ -7248,7 +7261,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     return screenXY;
   }
   if (linesH.length > 0 && axCorSag === 0) {
-    let fracZ = tile.sliceFrac;
+    let fracZ = sliceFrac;
     let dimV = 1;
     for (let i = 0; i < linesH.length; i++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7265,7 +7278,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   }
   if (linesH.length > 0 && axCorSag === 1) {
-    let fracH = tile.sliceFrac;
+    let fracH = sliceFrac;
 
     let dimV = 2;
     for (let i = 0; i < linesH.length; i++) {
@@ -7283,7 +7296,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   }
   if (linesH.length > 0 && axCorSag === 2) {
-    let fracX = tile.sliceFrac;
+    let fracX = sliceFrac;
     let dimV = 2;
     for (let i = 0; i < linesH.length; i++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7300,7 +7313,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   }
   if (linesV.length > 0 && axCorSag === 0) {
-    let fracZ = tile.sliceFrac;
+    let fracZ = sliceFrac;
     let dimH = 0;
     for (let i = 0; i < linesV.length; i++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7317,7 +7330,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   } //if vertical lines
   if (linesV.length > 0 && axCorSag === 1) {
-    let fracY = tile.sliceFrac;
+    let fracY = sliceFrac;
     let dimH = 0;
     for (let i = 0; i < linesV.length; i++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7334,7 +7347,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   } //if vertical lines
   if (linesV.length > 0 && axCorSag === 2) {
-    let fracX = tile.sliceFrac;
+    let fracX = sliceFrac;
     let dimH = 1;
     for (let i = 0; i < linesV.length; i++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
