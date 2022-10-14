@@ -141,6 +141,7 @@ export const dragModes = Object.freeze({
  * @property {boolean} [options.isColorbar=false] whether colorbar(s) are shown illustrating values for color maps
  * @property {boolean} [options.isOrientCube=false] whether orientation cube is shown for 3D renderings
  * @property {number} [options.multiplanarPadPixels=0] spacing between tiles of a multiplanar view
+ * @property {boolean} [options.multiplanarForceRender=false] always show rendering in multiplanar view
  * @property {number} [options.meshThicknessOn2D=Infinity] 2D slice views can show meshes within this range. Meshes only visible in sliceMM (world space) mode
  * @property {dragModes} [options.dragMode=contrast] behavior for dragging (none, contrast, measurement, pan)
  * @property {boolean} [options.isDepthPickMesh=false] when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
@@ -197,6 +198,7 @@ export function Niivue(options = {}) {
     isColorbar: false,
     isOrientCube: false,
     multiplanarPadPixels: 0,
+    multiplanarForceRender: false,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     dragMode: dragModes.contrast,
@@ -1944,7 +1946,7 @@ Niivue.prototype.drawUndo = function () {
 Niivue.prototype.loadDrawing = async function (fnm) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
+  let volume = await this.loadVolumeFromUrl(new NVImageFromUrlOptions(fnm));
   let dims = volume.hdr.dims; //reverse to original
   if (
     dims[1] !== this.back.hdr.dims[1] ||
@@ -7620,7 +7622,7 @@ Niivue.prototype.drawScene = function () {
         pad * 1
       );
       let wX = (ltwh[2] * volScale[0]) / (volScale[0] + volScale[1]);
-      // size for 1 row, 3 columns
+      // size for 1 row, 3 columns 
       let ltwh3x1 = this.scaleSlice(
         volScale[0] + volScale[0] + volScale[1],
         Math.max(volScale[1], volScale[2]),
@@ -7633,8 +7635,13 @@ Niivue.prototype.drawScene = function () {
         mx,
         pad * 3
       );
-      let wX1 =
+      let wX1 = 
         (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
+      if (this.opts.multiplanarForceRender) { //issue404
+        ltwh3x1 = ltwh4x1;
+        wX1 = 
+          (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1] + mx);
+      }
       if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
         //landscape screen ratio: 3 slices in single row
         let pixScale = wX1 / volScale[0];
