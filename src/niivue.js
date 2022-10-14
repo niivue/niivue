@@ -7223,6 +7223,9 @@ Niivue.prototype.drawCrossLinesMM = function (
 ) {
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   let tile = this.screenSlices[sliceIndex];
+  let isRender = (tile.AxyzMxy.length <= 4);
+  if (isRender)
+    log.warn('Cross lines not shown on rendering when in world view mode (hint: setSliceMM(false))');
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
   let thick = Math.max(1, this.opts.crosshairWidth);
@@ -7372,7 +7375,9 @@ Niivue.prototype.drawCrossLines = function (
   if (linesH.length > 0) {
     //draw horizontal lines
     let LTWH = tile.leftTopWidthHeight.slice();
-    let sliceDim = 2; //
+    let sliceDim = 2; //vertical axis is Zmm
+    if (axCorSag === this.sliceTypeAxial)
+      sliceDim = 1; //vertical axis is Ymm
     let mm = this.frac2mm([0.5, 0.5, 0.5]);
     for (let i = 0; i < linesH.length; i++) {
       mm[sliceDim] = linesH[i];
@@ -7704,12 +7709,6 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
-    console.log(
-      this.opts.dragMode === dragModes.measurement,
-      ">>",
-      this.opts.dragMode,
-      dragModes.measurement
-    );
     if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0) return;
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
