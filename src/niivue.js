@@ -7233,12 +7233,10 @@ Niivue.prototype.drawCrossLinesMM = function (
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   let tile = this.screenSlices[sliceIndex];
   let sliceFrac = tile.sliceFrac;
-  let isRender = (sliceFrac === Infinity);
+  let isRender = sliceFrac === Infinity;
   if (isRender)
-    log.warn('Rendering approximate cross lines in world view mode');
-  if (sliceFrac === Infinity)
-    sliceFrac = 0.5;
-  console.log('>>>',tile);
+    log.warn("Rendering approximate cross lines in world view mode");
+  if (sliceFrac === Infinity) sliceFrac = 0.5;
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
   let thick = Math.max(1, this.opts.crosshairWidth);
@@ -7376,6 +7374,8 @@ Niivue.prototype.drawCrossLines = function (
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   if (this.opts.isSliceMM)
     return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
+  if (this.screenSlices[sliceIndex].sliceFrac === Infinity) //render views always world space
+    return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
   let tile = this.screenSlices[sliceIndex];
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
@@ -7389,8 +7389,7 @@ Niivue.prototype.drawCrossLines = function (
     //draw horizontal lines
     let LTWH = tile.leftTopWidthHeight.slice();
     let sliceDim = 2; //vertical axis is Zmm
-    if (axCorSag === this.sliceTypeAxial)
-      sliceDim = 1; //vertical axis is Ymm
+    if (axCorSag === this.sliceTypeAxial) sliceDim = 1; //vertical axis is Ymm
     let mm = this.frac2mm([0.5, 0.5, 0.5]);
     for (let i = 0; i < linesH.length; i++) {
       mm[sliceDim] = linesH[i];
@@ -7640,7 +7639,7 @@ Niivue.prototype.drawScene = function () {
         pad * 1
       );
       let wX = (ltwh[2] * volScale[0]) / (volScale[0] + volScale[1]);
-      // size for 1 row, 3 columns 
+      // size for 1 row, 3 columns
       let ltwh3x1 = this.scaleSlice(
         volScale[0] + volScale[0] + volScale[1],
         Math.max(volScale[1], volScale[2]),
@@ -7653,12 +7652,14 @@ Niivue.prototype.drawScene = function () {
         mx,
         pad * 3
       );
-      let wX1 = 
+      let wX1 =
         (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
-      if (this.opts.multiplanarForceRender) { //issue404
+      if (this.opts.multiplanarForceRender) {
+        //issue404
         ltwh3x1 = ltwh4x1;
-        wX1 = 
-          (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1] + mx);
+        wX1 =
+          (ltwh3x1[2] * volScale[0]) /
+          (volScale[0] + volScale[0] + volScale[1] + mx);
       }
       if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
         //landscape screen ratio: 3 slices in single row
