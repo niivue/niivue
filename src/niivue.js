@@ -59,22 +59,6 @@ import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
 export { colortables } from "./colortables";
-import { webSocket } from "rxjs/webSocket";
-import { interval } from "rxjs";
-import {
-  NVMessage,
-  NVMesssageUpdateData,
-  NVMessageSet4DVolumeIndexData,
-  UPDATE,
-  CREATE,
-  JOIN,
-  ADD_VOLUME_URL,
-  REMOVE_VOLUME_URL,
-  ADD_MESH_URL,
-  REMOVE_MESH_URL,
-  SET_4D_VOL_INDEX,
-  UPDATE_IMAGE_OPTIONS,
-} from "./nvmessage.js";
 
 const log = new Log();
 const cmapper = new colortables();
@@ -221,6 +205,10 @@ export function Niivue(options = {}) {
     onInfo: () => {},
     onWarn: () => {},
     onDebug: () => {},
+    onVolumeAdded: () => {},
+    onVolumeRemoved: () => {},
+    onMeshAdded: () => {},
+    onMeshRemoved: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -363,13 +351,6 @@ export function Niivue(options = {}) {
     },
   ];
 
-  // multiuser
-  this.isController = false;
-  this.isInSession = false;
-  this.sessionKey = "";
-  this.sessionUrl = "";
-  this.serverConnection$ = null;
-  this.interval$ = null;
   this.mediaUrlMap = new Map();
 
   this.initialized = false;
@@ -575,191 +556,6 @@ Niivue.prototype.sync = function () {
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
   this.otherNV.drawScene();
-};
-
-// not included in public docs
-// Internal function to connect to web socket server
-Niivue.prototype.connectToServer = function (wsServerUrl, sessionName) {
-  const url = new URL(wsServerUrl);
-  url.pathname = "websockets";
-  url.search = "?session=" + sessionName;
-  this.serverConnection$ = webSocket(url.href);
-  console.log(url.href);
-};
-
-// not included in public docs
-// Internal function to schedule updates to the server
-Niivue.prototype.setUpdateInterval = function () {
-  this.interval$ = interval(300);
-  this.interval$.subscribe(() => {
-    this.serverConnection$.next(
-      new NVMessage(
-        UPDATE,
-        new NVMesssageUpdateData(
-          this.scene.renderAzimuth,
-          this.scene.renderElevation,
-          this.scene.clipPlane,
-          this.volScaleMultiplier
-        ),
-        this.sessionKey
-      )
-    );
-  });
-};
-
-Niivue.prototype.handleMessage = function (
-  msg,
-  sessionCreatedCallback,
-  sessionJoinedCallback
-) {
-  switch (msg["op"]) {
-    case UPDATE:
-      this.scene.renderAzimuth = msg["azimuth"];
-      this.scene.renderElevation = msg["elevation"];
-      this.volScaleMultiplier = msg["zoom"];
-      this.scene.clipPlane = msg["clipPlane"];
-      this.drawScene();
-      break;
-
-    case CREATE:
-      console.log(msg);
-      if (!msg["isError"]) {
-        this.isInSession = true;
-        this.sessionKey = msg["key"];
-        this.setUpdateInterval();
-      }
-      if (sessionCreatedCallback) {
-        sessionCreatedCallback(
-          msg["message"],
-          msg["url"],
-          msg["key"],
-          msg["isError"],
-          msg["userKey"]
-        );
-      }
-      break;
-
-    case JOIN:
-      this.isInSession = true;
-      this.isController = msg["isController"];
-      if (this.isController) {
-        this.setUpdateInterval();
-      }
-
-      if (sessionJoinedCallback) {
-        sessionJoinedCallback(
-          msg["message"],
-          msg["url"],
-          msg["isController"],
-          msg["userKey"]
-        );
-      }
-      break;
-
-    case ADD_MESH_URL:
-      this.addMeshFromUrl(msg["urlMeshOptions"], false);
-      break;
-
-    case ADD_VOLUME_URL:
-      this.addVolumeFromUrl(msg["urlImageOptions"], false);
-      break;
-
-    case REMOVE_VOLUME_URL:
-      {
-        let volume = this.getMediaByUrl(msg["url"]);
-        if (volume) {
-          this.removeVolume(volume, false);
-        }
-      }
-      break;
-    case REMOVE_MESH_URL: {
-      let mesh = this.getMediaByUrl(msg["url"]);
-      if (mesh) {
-        this.removeMesh(mesh, false);
-      }
-    }
-    case SET_4D_VOL_INDEX:
-      {
-        let volume = this.getMediaByUrl(msg["url"]);
-        if (volume) {
-          this.setFrame4D(volume.id, msg["index"]);
-        }
-      }
-      break;
-    case UPDATE_IMAGE_OPTIONS: {
-      let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
-      if (volume) {
-        volume.applyOptionsUpdate(msg["urlImageOptions"]);
-        this.updateGLVolume();
-      }
-    }
-  }
-};
-
-// Internal function called after a connection with the server has been made
-Niivue.prototype.subscribeToServer = function (
-  sessionCreatedCallback,
-  sessionJoinedCallback
-) {
-  this.serverConnection$.subscribe({
-    next: (msg) => {
-      this.handleMessage(msg, sessionCreatedCallback, sessionJoinedCallback);
-    }, // Called whenever there is a message from the server.
-    error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
-    complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
-  });
-};
-
-/**
- * Create a multiuser session
- * @param {string} wsServerUrl e.g. ws://localhost:3000
- * @param {string} sessionName
- * @param {function(string, string, string, boolean):void} sessionCreatedCallback callback after session has been created with message, session url, session key
- * if there was no error.
- */
-Niivue.prototype.createSession = function (
-  wsServerUrl,
-  sessionName,
-  sessionCreatedCallback
-) {
-  this.connectToServer(wsServerUrl, sessionName);
-
-  // subscribe to any messages from the server
-  this.subscribeToServer(sessionCreatedCallback);
-
-  // tell the server we want to create a sesion
-  this.serverConnection$.next(new NVMessage(CREATE));
-};
-
-/**
- * Join a multiuser session
- * @param {string} wsServerUrl e.g. ws://localhost:3000
- * @param {string} sessionName
- * @param {function(string, string, boolean):void} sessionJoinedCallback callback after session has been joined with message, session url and session key
- */
-Niivue.prototype.joinSession = function (
-  wsServerUrl,
-  sessionName,
-  key,
-  sessionJoinedCallback
-) {
-  this.connectToServer(wsServerUrl, sessionName);
-
-  // subscribe to any messages from the server
-  this.subscribeToServer(null, sessionJoinedCallback);
-
-  // tell the server we want to create a sesion
-  this.serverConnection$.next(new NVMessage(JOIN, key));
-};
-
-/**
- * Close a multiuser session
- */
-Niivue.prototype.closeSession = function () {
-  this.interval$.complete();
-  this.serverConnection$.complete();
-  this.isInSession = false;
-  this.isController = false;
 };
 
 /* Not documented publicly for now
@@ -1430,41 +1226,16 @@ Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
   return volume;
 };
 
-/** Notify subscribers of image option chage */
-Niivue.prototype.notifySubscribersOfOptionChange = function (volume) {
-  if (this.isInSession) {
-    if (this.mediaUrlMap.has(volume)) {
-      let imageOptions = volume.getImageOptions();
-      // add our url
-      imageOptions.url = this.mediaUrlMap.get(volume);
-      this.serverConnection$.next(
-        new NVMessage(UPDATE_IMAGE_OPTIONS, imageOptions, this.sessionKey)
-      );
-      console.log("update called");
-    }
-  }
-};
-
 /**
  * Add an image and notify subscribers
  * @param {NVImageOptions} imageOptions
  * @returns {NVImage}
  */
-Niivue.prototype.addVolumeFromUrl = async function (
-  imageOptions,
-  notifySubscribers = true
-) {
+Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await this.loadVolumeFromUrl(imageOptions);
   this.addVolume(volume);
-  if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
-    this.mediaUrlMap.set(volume, imageOptions.url);
-    // notify subscribers
-    // if we are in session let our subscribers know
-    if (this.isInSession && notifySubscribers) {
-      this.serverConnection$.next(
-        new NVMessage(ADD_VOLUME_URL, imageOptions, this.sessionKey)
-      );
-    }
+  if (this.onVolumeAdded) {
+    this.onVolumeAdded(imageOptions);
   }
   return volume;
 };
@@ -2719,22 +2490,10 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
  * @param {NVMeshFromUrlOptions} meshOptions
  * @returns {NVMesh}
  */
-Niivue.prototype.addMeshFromUrl = async function (
-  meshOptions,
-  notifySubscribers = true
-) {
+Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
   let mesh = await this.loadMeshFromUrl(meshOptions);
   this.addMesh(mesh);
-  if (!this.mediaUrlMap.has(mesh) && meshOptions.url) {
-    this.mediaUrlMap.set(mesh, meshOptions.url);
-    // notify subscribers
-    // if we are in session let our subscribers know
-    if (this.isInSession && notifySubscribers) {
-      this.serverConnection$.next(
-        new NVMessage(ADD_MESH_URL, meshOptions, this.sessionKey)
-      );
-    }
-  }
+
   return mesh;
 };
 
@@ -2748,6 +2507,9 @@ Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
   options.gl = this.gl;
   Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
+  if (this.onMeshAdded) {
+    this.onMeshAdded(options);
+  }
   return mesh;
 };
 
