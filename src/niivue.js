@@ -7374,7 +7374,8 @@ Niivue.prototype.drawCrossLines = function (
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   if (this.opts.isSliceMM)
     return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
-  if (this.screenSlices[sliceIndex].sliceFrac === Infinity) //render views always world space
+  if (this.screenSlices[sliceIndex].sliceFrac === Infinity)
+    //render views always world space
     return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
   let tile = this.screenSlices[sliceIndex];
   let linesH = corMM.slice();
