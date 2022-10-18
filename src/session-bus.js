@@ -16,10 +16,10 @@ export function SessionUser(
   userKey = undefined,
   userProperties = undefined
 ) {
-  this.userId = userId || uuidv4();
-  this.displayName = displayName || `user-${this.userId}`;
-  this.userKey = userKey || uuidv4();
-  this.userProperties = userProperties || new Map();
+  this.id = userId || uuidv4();
+  this.displayName = displayName || `user-${this.id}`;
+  this.key = userKey || uuidv4();
+  this.properties = userProperties || new Map();
 }
 
 /**
@@ -71,17 +71,10 @@ export function SessionBus(
   serverURL = "",
   sessionKey = ""
 ) {
-  if (!storageAvailable("localStorage")) {
-    throw "Local storage unavailable";
-  }
-
-  let sessionUser = user || new SessionUser("anonymous");
+  this.userList = [];
+  this.user = user || new SessionUser("anonymous");
 
   this.onMessageCallBack = onMessageCallback;
-
-  this.userId = sessionUser.userId;
-  this.userKey = sessionUser.userKey;
-  this.displayName = sessionUser.displayName;
 
   this.isConnectedToServer = false;
   this.isController = false;
@@ -92,21 +85,9 @@ export function SessionBus(
   this.sessionName = name;
   this.sessionSceneName = `session-${name}-scene`;
 
-  this.user = {
-    id: this.userId,
-    displayName: this.displayName,
-    crosshairPos: [0.0, 0.0, 0.0],
-    userKey: this.userKey,
-  };
-
-  // local
-  this.userQueueName = `user-${this.userId}-q`;
-  this.userListName = `${name}-user-list`;
-
-  // remote
-  this.serverConnection$ = null;
-
   if (serverURL) {
+    // remote
+    this.serverConnection$ = null;
     this.connectToServer(serverURL, name);
     this.subscribeToServer();
     this.isConnectedToServer = true;
@@ -115,11 +96,27 @@ export function SessionBus(
       key: this.sessionKey,
     });
   } else {
+    // local
+    if (!storageAvailable("localStorage")) {
+      throw "Local storage unavailable";
+    }
+
+    this.userQueueName = `user-${this.user.id}-q`;
+    this.userListName = `${name}-user-list`;
+
+    // add our user to the list
+    this.userList = JSON.parse(localStorage.getItem(this.userListName) || "[]");
+    this.userList.push(this.user);
+    localStorage.setItem(this.userListName, JSON.stringify(this.userList));
+
     // create our message queue
     localStorage.setItem(this.userQueueName, JSON.stringify([]));
-  }
 
-  window.addEventListener("storage", this.localStorageEventListener.bind(this));
+    window.addEventListener(
+      "storage",
+      this.localStorageEventListener.bind(this)
+    );
+  }
 }
 
 SessionBus.prototype.sendSessionMessage = function (message) {
@@ -154,4 +151,50 @@ SessionBus.prototype.subscribeToServer = function () {
     error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
     complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
   });
+};
+
+SessionBus.prototype.sendLocalMessage = function (message) {
+  // add the message for each client
+  for (const user of this.userList) {
+    if (user.id === this.userId) {
+      continue;
+    }
+    let userQueueName = `user-${user.id}-q`;
+    let userQueue = localStorage.getItem(JSON.parse(userQueueName));
+    userQueue.push(message);
+    localStorage.setItem(userQueueName, JSON.stringify(userQueue));
+  }
+};
+
+SessionBus.prototype.localStorageEventListener = function (e) {
+  // is this message for us?
+  console.log(e);
+  switch (e.key) {
+    case this.userListName:
+      this.userList = JSON.parse(e.newValue);
+      // compare new and old values
+      let newUsers = JSON.parse(e.newValue).filter(
+        (u) =>
+          !JSON.parse(e.oldValue)
+            .map((o) => o.id)
+            .includes(u.id)
+      );
+      for (const newUser of newUsers) {
+        this.onMessageCallBack({
+          op: "user joined",
+          user: newUser,
+        });
+      }
+      break;
+    case this.userQueueName:
+      let messages = JSON.parse(e.newValue);
+      for (const message of messages) {
+        if (this.onMessageCallBack) {
+          this.onMessageCallBack(message);
+        }
+      }
+      // reset our message queue
+      localStorage.setItem(this.userQueueName, []);
+      break;
+  }
 };

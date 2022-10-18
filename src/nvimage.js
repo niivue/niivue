@@ -97,6 +97,7 @@ export function NVImageFromUrlOptions(
  * @param {boolean} [isDICOMDIR=true] input is DICOM folder, not a single file
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
  * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @param {function} [onColorMapChange=()=>{}] callback for color map change
  */
 export function NVImage(
   dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
@@ -112,7 +113,8 @@ export function NVImage(
   visible = true,
   isDICOMDIR = false,
   useQFormNotSForm = false,
-  colorMapNegative = ""
+  colorMapNegative = "",
+  onColorMapChange = () => {}
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -138,7 +140,7 @@ export function NVImage(
 
   this.name = name;
   this.id = uuidv4();
-  this.colorMap = colorMap;
+  this._colorMap = colorMap;
   this.frame4D = 0; //indexed from 0!
   this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
@@ -148,6 +150,8 @@ export function NVImage(
   this.visible = visible;
   this.modulationImage = null;
   this.series = []; // for concatenating dicom images
+
+  this.onColorMapChange = onColorMapChange;
 
   // Added to support zerosLike
   if (!dataBuffer) {
@@ -2025,19 +2029,31 @@ NVImage.prototype.colorMaps = function (sort = true) {
 NVImage.prototype.setColorMap = function (cm) {
   let allColorMaps = this.colorMaps();
   if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
-    this.colorMap = cm.toLowerCase();
+    this._colorMap = cm.toLowerCase();
     this.calMinMax();
+    if (this.onColorMapChange) {
+      this.onColorMapChange(this);
+    }
   } else {
     log.warn(`color map ${cm} is not a valid color map`);
   }
 };
+
+Object.defineProperty(NVImage.prototype, "colorMap", {
+  get: function () {
+    return this._colorMap;
+  },
+  set: function (colorMap) {
+    this.setColorMap(colorMap);
+  },
+});
 
 // not included in public docs
 // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
 NVImage.prototype.calMinMax = function () {
-  let cm = this.colorMap;
+  let cm = this._colorMap;
   let allColorMaps = this.colorMaps();
   let cmMin = 0;
   let cmMax = 0;
@@ -2335,7 +2351,7 @@ NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
 /**
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
- * @param {NVImageOptions} options
+ * @param {NVImageFromUrlOptions} options
  * @returns {NVImage} returns a NVImage intance
  * @example
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
@@ -2931,7 +2947,7 @@ NVImage.prototype.getImageOptions = function () {
       "", // url,
       "", // urlImageData
       this.name, // name
-      this.colorMap, // colorMap
+      this._colorMap, // colorMap
       this.opacity, // opacity
       this.hdr.cal_min, // cal_min
       this.hdr.cal_max, // cal_max

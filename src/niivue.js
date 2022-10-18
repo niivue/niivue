@@ -54,6 +54,7 @@ import { NVImage, NVImageFromUrlOptions } from "./nvimage.js";
 import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
+export { NVController } from "./nvcontroller";
 import { Log } from "./logger";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
@@ -207,6 +208,7 @@ export function Niivue(options = {}) {
     onDebug: () => {},
     onVolumeAdded: () => {},
     onVolumeRemoved: () => {},
+    onVolumeUpdated: () => {},
     onMeshAdded: () => {},
     onMeshRemoved: () => {},
   };
@@ -1223,20 +1225,22 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
  */
 Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
+  volume.onColorMapChange = this.onColorMapChange;
+  this.mediaUrlMap.set(volume, imageOptions.url);
+  if (this.opts.onVolumeAdded) {
+    this.opts.onVolumeAdded(imageOptions);
+  }
   return volume;
 };
 
 /**
  * Add an image and notify subscribers
- * @param {NVImageOptions} imageOptions
+ * @param {NVImageFromUrlOptions} imageOptions
  * @returns {NVImage}
  */
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await this.loadVolumeFromUrl(imageOptions);
   this.addVolume(volume);
-  if (this.onVolumeAdded) {
-    this.onVolumeAdded(imageOptions);
-  }
   return volume;
 };
 
@@ -1260,6 +1264,8 @@ Niivue.prototype.removeVolumeByUrl = function (url) {
   let volume = this.getMediaByUrl(url);
   if (volume) {
     this.removeVolume(volume);
+  } else {
+    throw "No volume with URL present";
   }
 };
 
@@ -2053,19 +2059,20 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
  */
-Niivue.prototype.removeVolume = function (volume, notifySubscribers = true) {
+Niivue.prototype.removeVolume = function (volume) {
   this.setVolume(volume, -1);
+
+  // notify subscribers that we are about to remove a volume
+  if (this.opts.onVolumeRemoved) {
+    this.opts.onVolumeRemoved(volume);
+  }
+
   // check if we have a url for this volume
   if (this.mediaUrlMap.has(volume)) {
-    // notify subscribers
-    let url = this.mediaUrlMap.get(volume);
-    if (notifySubscribers && this.isInSession) {
-      this.serverConnection$.next(
-        new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey)
-      );
-    }
     this.mediaUrlMap.delete(volume);
   }
+
+  this.drawScene();
 };
 
 /**
@@ -3920,6 +3927,10 @@ Niivue.prototype.updateGLVolume = function () {
         this.furthestVertexFromOrigin,
         this.meshes[i].furthestVertexFromOrigin
       );
+
+  if (this.opts.onVolumeUpdated) {
+    this.opts.onVolumeUpdated();
+  }
   this.drawScene();
 }; // updateVolume()
 
