@@ -201,16 +201,21 @@ export function Niivue(options = {}) {
     onLocationChange: () => {},
     onIntensityChange: () => {},
     onImageLoaded: () => {},
+    onMeshLoaded: () => {},
     onFrameChange: () => {},
     onError: () => {},
     onInfo: () => {},
     onWarn: () => {},
     onDebug: () => {},
-    onVolumeAdded: () => {},
+    onVolumeLoadedByUrl: () => {},
     onVolumeRemoved: () => {},
     onVolumeUpdated: () => {},
+    onMeshLoadedByUrl: () => {},
     onMeshAdded: () => {},
     onMeshRemoved: () => {},
+    onZoom3DChange: () => {},
+    onAzimuthElevationChange: () => {},
+    onClipPlaneChange: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -265,7 +270,34 @@ export function Niivue(options = {}) {
   this.sliceTypeRender = 4;
   this.sliceMosaicString = "";
   this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
-  this.scene = {};
+  this.scene = {
+    get renderAzimuth() {
+      return this._azimuth;
+    },
+    /**
+     * @param {number} azimuth
+     */
+    set renderAzimuth(azimuth) {
+      this._azimuth = azimuth;
+      if (this.onAzimuthElevationChange) {
+        this.onAzimuthElevationChange(this._azimuth, this._elevation);
+      }
+    },
+
+    get renderElevation() {
+      return this._elevation;
+    },
+
+    /**
+     * @param {number} elevation
+     */
+    set renderElevation(elevation) {
+      this._elevation = elevation;
+      if (this.onAzimuthElevationChange) {
+        this.onAzimuthElevationChange(this._azimuth, this._elevation);
+      }
+    },
+  };
   this.syncOpts = {};
   this.readyForSync = false;
   this.scene.renderAzimuth = 110; //-45;
@@ -1227,8 +1259,8 @@ Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
-  if (this.opts.onVolumeAdded) {
-    this.opts.onVolumeAdded(imageOptions);
+  if (this.opts.onVolumeLoadedByUrl) {
+    this.opts.onVolumeLoadedByUrl(imageOptions);
   }
   return volume;
 };
@@ -1526,7 +1558,7 @@ Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
   let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
   this.setMesh(mesh, idx);
-  this.opts.onImageLoaded(mesh);
+  this.opts.onMeshLoaded(mesh);
 };
 
 /**
@@ -1960,6 +1992,7 @@ Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
 Niivue.prototype.setRenderAzimuthElevation = function (a, e) {
   this.scene.renderAzimuth = a;
   this.scene.renderElevation = e;
+  this.opts.onAzimuthElevationChange(a, e);
   this.drawScene();
 }; // setRenderAzimuthElevation()
 
@@ -2242,6 +2275,7 @@ Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   );
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
+  this.opts.onClipPlaneChange(this.scene.clipPlane);
   //if (this.sliceType != this.sliceTypeRender) return;
   this.drawScene();
 }; // setClipPlane()
@@ -2372,9 +2406,21 @@ Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
  * niivue.setScale(2) // zoom some
  */
 Niivue.prototype.setScale = function (scale) {
-  this.volScaleMultiplier = scale;
+  this._volScaleMultiplier = scale;
+  if (this.opts.onZoom3DChange) {
+    this.opts.onZoom3DChange(scale);
+  }
   this.drawScene();
 }; // setScale()
+
+Object.defineProperty(Niivue.prototype, "volScaleMultiplier", {
+  get: function () {
+    return this._volScaleMultiplier;
+  },
+  set: function (scale) {
+    this.setScale(scale);
+  },
+});
 
 /**
  * set the color of the 3D clip plane
@@ -2514,9 +2560,7 @@ Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
   options.gl = this.gl;
   Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
-  if (this.onMeshAdded) {
-    this.onMeshAdded(options);
-  }
+  this.onMeshLoadedByUrl(options);
   return mesh;
 };
 
@@ -4568,7 +4612,7 @@ Niivue.prototype.setGamma = function (gamma = 1.0) {
 /**
  * show desired 3D volume from 4D time series
  * @param {string} id the ID of the 4D NVImage
- * @param {number} volume to display (indexed from zero)
+ * @param {number} frame4D to display (indexed from zero)
  * @example nv1.setFrame4D(nv1.volumes[0].id, 42);
  * @see {@link https://niivue.github.io/niivue/features/timeseries.html|live demo usage}
  */
@@ -4582,19 +4626,11 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   if (frame4D < 0) {
     frame4D = 0;
   }
-  this.volumes[idx].frame4D = frame4D;
+  let volume = this.volumes[idx];
+  volume.frame4D = frame4D;
   this.updateGLVolume();
-  if (this.isInSession && this.mediaUrlMap.has(this.volumes[idx])) {
-    let url = this.mediaUrlMap.get(this.volumes[idx]);
-    this.serverConnection$.next(
-      new NVMessage(
-        SET_4D_VOL_INDEX,
-        new NVMessageSet4DVolumeIndexData(url, frame4D),
-        this.sessionKey
-      )
-    );
-  }
-  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
+
+  this.opts.onFrameChange(volume, frame4D);
 };
 
 /**

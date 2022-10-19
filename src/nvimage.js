@@ -98,6 +98,7 @@ export function NVImageFromUrlOptions(
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
  * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
  * @param {function} [onColorMapChange=()=>{}] callback for color map change
+ * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
 export function NVImage(
   dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
@@ -114,7 +115,8 @@ export function NVImage(
   isDICOMDIR = false,
   useQFormNotSForm = false,
   colorMapNegative = "",
-  onColorMapChange = () => {}
+  onColorMapChange = () => {},
+  onOpacityChange = () => {}
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -142,7 +144,7 @@ export function NVImage(
   this.id = uuidv4();
   this._colorMap = colorMap;
   this.frame4D = 0; //indexed from 0!
-  this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
+  this._opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
@@ -152,6 +154,7 @@ export function NVImage(
   this.series = []; // for concatenating dicom images
 
   this.onColorMapChange = onColorMapChange;
+  this.onOpacityChange = onOpacityChange;
 
   // Added to support zerosLike
   if (!dataBuffer) {
@@ -2045,6 +2048,16 @@ Object.defineProperty(NVImage.prototype, "colorMap", {
   },
   set: function (colorMap) {
     this.setColorMap(colorMap);
+  },
+});
+
+Object.defineProperty(NVImage.prototype, "opacity", {
+  get: function () {
+    return this._opacity;
+  },
+  set: function (opacity) {
+    this._opacity = opacity;
+    this.onOpacityChange(this);
   },
 });
 

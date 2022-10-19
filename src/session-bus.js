@@ -171,30 +171,34 @@ SessionBus.prototype.localStorageEventListener = function (e) {
   console.log(e);
   switch (e.key) {
     case this.userListName:
-      this.userList = JSON.parse(e.newValue);
-      // compare new and old values
-      let newUsers = JSON.parse(e.newValue).filter(
-        (u) =>
-          !JSON.parse(e.oldValue)
-            .map((o) => o.id)
-            .includes(u.id)
-      );
-      for (const newUser of newUsers) {
-        this.onMessageCallBack({
-          op: "user joined",
-          user: newUser,
-        });
+      {
+        this.userList = JSON.parse(e.newValue);
+        // compare new and old values
+        let newUsers = JSON.parse(e.newValue).filter(
+          (u) =>
+            !JSON.parse(e.oldValue)
+              .map((o) => o.id)
+              .includes(u.id)
+        );
+        for (const newUser of newUsers) {
+          this.onMessageCallBack({
+            op: "user joined",
+            user: newUser,
+          });
+        }
       }
       break;
     case this.userQueueName:
-      let messages = JSON.parse(e.newValue);
-      for (const message of messages) {
-        if (this.onMessageCallBack) {
-          this.onMessageCallBack(message);
+      {
+        let messages = JSON.parse(e.newValue);
+        for (const message of messages) {
+          if (this.onMessageCallBack) {
+            this.onMessageCallBack(message);
+          }
         }
+        // reset our message queue
+        localStorage.setItem(this.userQueueName, []);
       }
-      // reset our message queue
-      localStorage.setItem(this.userQueueName, []);
       break;
   }
 };

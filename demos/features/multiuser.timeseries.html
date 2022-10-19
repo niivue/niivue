@@ -53,11 +53,7 @@
                 visible: true,
             },
         ]
-        var nv1 = new niivue.Niivue(
-        {
-          onFrameChange: updateFrameValue
-        }
-      )
+        var nv1 = new niivue.Niivue()
         nv1.setRadiologicalConvention(false)
         nv1.attachTo('gl1')
         nv1.loadVolumes(volumeList1)
@@ -65,22 +61,10 @@
         nv1.graph.autoSizeMultiplanar = true
         nv1.graph.normalizeValues = false
         nv1.graph.opacity = 1.0
-        nv1.createSession('ws://localhost:3000', 'niivue-timeseries', (msg, url, key, isError) => {
-            if (isError) {
-                // check if session has been duplicated
-                if (msg === 'duplicate session') {
-                    console.log('session already created, joining as viewer');
-                    // try to join the session instead
-                    nv1.joinSession('ws://localhost:3000', 'niivue', (msg, url, isController) => {
-                        console.log(`Result: ${msg} connected to ${url}. Is controller: ${isController}.`);
-                    });
-                }
-            }
-            else {
-                console.log(`message:${msg} url:${url} key:${key}`);
-            }
-        });
 
+        var controller = new niivue.NVController(nv1);
+        controller.onFrameChange = updateFrameValue;
+        
         function checkClick(cb) {
             nv1.graph.normalizeValues = cb.checked
             nv1.updateGLVolume()
@@ -97,9 +81,9 @@
             nv1.setFrame4D(nv1.volumes[0].id, currentVol)
             document.getElementById('volume').innerHTML = 'volume ' + currentVol
         }
-        function updateFrameValue(newValue){
-            document.getElementById('volume').innerHTML = 'volume '+newValue.frame4D
-            currentVol = newValue.frame4D
+        function updateFrameValue(volume, index){
+            document.getElementById('volume').innerHTML = 'volume '+index
+            currentVol = index
         }
         var animationTimer = null
         function doAnimate() {
