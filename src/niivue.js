@@ -114,7 +114,7 @@ export const dragModes = Object.freeze({
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
  * @typedef {Object} NiivueOptions
- * @property {number} [options.textHeight=0.3] the text height for orientation labels (0 to 1). Zero for no text labels
+ * @property {number} [options.textHeight=0.06] the text height for orientation labels (0 to 1). Zero for no text labels
  * @property {number} [options.colorbarHeight=0.05] size of colorbar. 0 for no colorbars, fraction of Nifti j dimension
  * @property {number} [options.colorBarMargin=0.05] padding around colorbar when displayed
  * @property {number} [options.crosshairWidth=1] crosshair size. Zero for no crosshair
@@ -132,7 +132,7 @@ export const dragModes = Object.freeze({
  * @property {number} [options.doubleTouchTimeout=500] the maximum time in milliseconds for a double touch to be detected. The default is 500 ms
  * @property {number} [options.longTouchTimeout=1000] the minimum time in milliseconds for a touch to count as long touch. The default is 1000 ms
  * @property {boolean} [options.isRadiologicalConvention=false] whether or not to use radiological convention in the display
- * @property {string} [options.logging=false] turn on logging or not (true/false)
+ * @property {boolean} [options.logging=false] turn on logging or not (true/false)
  * @property {string} [options.loadingText="waiting on images..."] the loading text to display when there is a blank canvas and no images
  * @property {boolean} [options.dragAndDropEnabled=true] whether or not to allow file and url drag and drop on the canvas
  * @property {boolean} [options.isNearestInterpolation=false] whether nearest neighbor interpolation is used, else linear interpolation
@@ -185,7 +185,7 @@ export function Niivue(options = {}) {
     selectionBoxColor: [1, 1, 1, 0.5],
     clipPlaneColor: [0.7, 0, 0.7, 0.5],
     rulerColor: [1, 0, 0, 0.8],
-    colorBarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
+    colorbarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
     trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
     clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
     viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
