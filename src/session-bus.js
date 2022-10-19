@@ -154,13 +154,17 @@ SessionBus.prototype.subscribeToServer = function () {
 };
 
 SessionBus.prototype.sendLocalMessage = function (message) {
+  console.log("send local message");
+  console.log(message);
   // add the message for each client
   for (const user of this.userList) {
     if (user.id === this.userId) {
       continue;
     }
     let userQueueName = `user-${user.id}-q`;
-    let userQueue = localStorage.getItem(JSON.parse(userQueueName));
+    let userQueueText = localStorage.getItem(userQueueName);
+    console.log(userQueueText);
+    let userQueue = userQueueText ? JSON.parse(userQueueText) : [];
     userQueue.push(message);
     localStorage.setItem(userQueueName, JSON.stringify(userQueue));
   }

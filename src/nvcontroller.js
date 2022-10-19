@@ -29,6 +29,8 @@ export class NVController {
     this.mediaUrlMap = new Map();
     this.volumesLoadedByUrl = new Map();
 
+    this.isInSession = false;
+
     // events for external consumers
     this.onFrameChange = () => {};
 
@@ -69,7 +71,21 @@ export class NVController {
   }
 
   onNewMessage(msg) {
+    console.log("local mesage received");
     console.log(msg);
+    switch (msg.op) {
+      case "zoom":
+        this.niivue._volScaleMultiplier = msg.zoom;
+        break;
+      case "clipPlane":
+        this.niivue.clipPlane = msg.clipPlane;
+        break;
+      case "ae":
+        this.niivue.scene._elevation = msg.elevation;
+        this.niivue.scene._azimuth = msg.azimuth;
+        break;
+    }
+    this.niivue.drawScene();
   }
 
   /**
@@ -87,7 +103,8 @@ export class NVController {
     sessionKey = undefined
   ) {
     this.user = user || new SessionUser();
-
+    console.log("session user");
+    console.log(this.user.id);
     this.sessionBus = new SessionBus(
       sessionName,
       this.user,
@@ -95,6 +112,7 @@ export class NVController {
       serverBaseUrl,
       sessionKey
     );
+    this.isInSession = true;
   }
 
   /**
@@ -104,6 +122,13 @@ export class NVController {
   onZoom3DChangeHandler(zoom) {
     console.log("zoom has changed");
     console.log(zoom);
+
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "zoom",
+        zoom,
+      });
+    }
   }
 
   /**
@@ -113,6 +138,14 @@ export class NVController {
    */
   onAzimuthElevationChangeHandler(azimuth, elevation) {
     console.log("a or e has changed: " + azimuth + " " + elevation);
+
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "ae",
+        azimuth,
+        elevation,
+      });
+    }
   }
 
   /**
@@ -122,6 +155,12 @@ export class NVController {
   onClipPlaneChangeHandler(clipPlane) {
     console.log("clip plane has changed");
     console.log(clipPlane);
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "clipPlane",
+        clipPlane,
+      });
+    }
   }
 
   /**
