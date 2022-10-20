@@ -207,7 +207,7 @@ export function Niivue(options = {}) {
     onInfo: () => {},
     onWarn: () => {},
     onDebug: () => {},
-    onVolumeLoadedByUrl: () => {},
+    onVolumeAddedFromUrl: () => {},
     onVolumeRemoved: () => {},
     onVolumeUpdated: () => {},
     onMeshLoadedByUrl: () => {},
@@ -1251,27 +1251,17 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 }; // getFleExt
 
 /**
- * Load a volume from url and notify subscribers
- * @param {NVImageFromUrlOptions} imageOptions
- * @returns {NVImage}
- */
-Niivue.prototype.loadVolumeFromUrl = async function (imageOptions) {
-  let volume = await NVImage.loadFromUrl(imageOptions);
-  volume.onColorMapChange = this.onColorMapChange;
-  this.mediaUrlMap.set(volume, imageOptions.url);
-  if (this.opts.onVolumeLoadedByUrl) {
-    this.opts.onVolumeLoadedByUrl(imageOptions);
-  }
-  return volume;
-};
-
-/**
  * Add an image and notify subscribers
  * @param {NVImageFromUrlOptions} imageOptions
  * @returns {NVImage}
  */
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
-  let volume = await this.loadVolumeFromUrl(imageOptions);
+  let volume = await NVImage.loadFromUrl(imageOptions);
+  volume.onColorMapChange = this.onColorMapChange;
+  this.mediaUrlMap.set(volume, imageOptions.url);
+  if (this.opts.onVolumeAddedFromUrl) {
+    this.opts.onVolumeAddedFromUrl(imageOptions, volume);
+  }
   this.addVolume(volume);
   return volume;
 };

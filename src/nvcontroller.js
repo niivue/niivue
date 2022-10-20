@@ -24,8 +24,6 @@ export class NVController {
   constructor(niivue) {
     this.niivue = niivue;
     this.mediaUrlMap = new Map();
-    this.volumesLoadedByUrl = new Map();
-    this.volumeUrlsWaitingToBeAdded = [];
     this.isInSession = false;
 
     // events for external consumers
@@ -44,9 +42,9 @@ export class NVController {
       this.onClipPlaneChangeHandler.bind(this);
 
     // volume handlers
-    this.niivue.opts.onImageLoaded = this.onImageLoadedHandler.bind(this);
-    this.niivue.opts.onVolumeLoadedByUrl =
-      this.onVolumeLoadedByUrlHandler.bind(this);
+    // this.niivue.opts.onImageLoaded = this.onImageLoadedHandler.bind(this);
+    this.niivue.opts.onVolumeAddedFromUrl =
+      this.onVolumeAddedFromUrlHandler.bind(this);
     this.niivue.opts.onVolumeRemoved = this.onVolumeRemovedHandler.bind(this);
 
     // mesh handlers
@@ -97,34 +95,15 @@ export class NVController {
           }
         }
         break;
-      case "volume loaded by url":
-        // NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
-        //   this.volumesLoadedByUrl.set(msg.imageOptions.url, volume);
-        //   if (
-        //     this.volumeUrlsWaitingToBeAdded.includes(msg.imageOptions.url) &&
-    console.log(clipPlane);
-    //     !this.niivue.getMediaByUrl()
-        //   ) {
-        //     this.addVolume(volume, msg.imageOptions.url);
-        //     this.volumeUrlsWaitingToBeAdded =
-        //       this.volumeUrlsWaitingToBeAdded.filter(
-        //         (u) => u != msg.imageOptions.url
-        //       ) || [];
-        //   }
-        // });
-        break;
-      case "volume with url added":
-        // {
-        //   if (this.volumesLoadedByUrl.has(msg.url)) {
-        //     let volume = this.volumesLoadedByUrl.get(msg.url);
-        //     if (!this.niivue.getMediaByUrl(msg.url)) {
-        //       console.log("volume added by remote");
-        //       this.addVolume(volume, msg.url);
-        //     }
-        //   } else {
-        //     this.volumeUrlsWaitingToBeAdded.push(msg.url);
-        //   }
-        // }
+      case "volume added from url":
+        {
+          console.log("vol added from url");
+          console.log(msg.imageOptions);
+          if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
+            console.log("volume added by remote");
+            this.niivue.addVolumeFromUrl(msg.imageOptions);
+          }
+        }
         break;
       case "media with url removed":
         {
@@ -214,15 +193,18 @@ export class NVController {
    * Add an image and notify subscribers
    * @param {NVImageFromUrlOptions} imageOptions
    */
-  onVolumeLoadedByUrlHandler(imageOptions) {
-    console.log("volume loaded by url");
+  onVolumeAddedFromUrlHandler(imageOptions, volume) {
+    console.log("volume added from url");
     console.log(imageOptions);
     if (this.isInSession) {
+      console.log(imageOptions);
       this.sessionBus.sendSessionMessage({
-        op: "volume loaded by url",
+        op: "volume added from url",
         imageOptions,
       });
     }
+    volume.onColorMapChange = this.onColorMapChangeHandler.bind(this);
+    volume.onOpacityChange = this.onOpacityChangeHandler.bind(this);
   }
 
   /**
