@@ -208,14 +208,16 @@ export function Niivue(options = {}) {
     onWarn: () => {},
     onDebug: () => {},
     onVolumeAddedFromUrl: () => {},
-    onVolumeRemoved: () => {},
+    onVolumeWithUrlRemoved: () => {},
     onVolumeUpdated: () => {},
-    onMeshLoadedByUrl: () => {},
+    onMeshAddedFromUrl: () => {},
     onMeshAdded: () => {},
-    onMeshRemoved: () => {},
+    onMeshWithUrlRemoved: () => {},
     onZoom3DChange: () => {},
     onAzimuthElevationChange: () => {},
     onClipPlaneChange: () => {},
+    onCustomMeshShaderAdded: () => {},
+    onMeshShaderChanged: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -2080,18 +2082,17 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * @param {NVImage} volume volume to delete
  * @example
  * niivue = new Niivue()
- * niivue.removeMesh(this.meshes[3])
+ * niivue.removeVolume(this.volumes[3])
  */
 Niivue.prototype.removeVolume = function (volume) {
   this.setVolume(volume, -1);
 
-  // notify subscribers that we are about to remove a volume
-  if (this.opts.onVolumeRemoved) {
-    this.opts.onVolumeRemoved(volume);
-  }
-
   // check if we have a url for this volume
   if (this.mediaUrlMap.has(volume)) {
+    let url = this.mediaUrlMap.get(volume);
+    // notify subscribers that we are about to remove a volume
+    this.opts.onVolumeWithUrlRemoved(url);
+
     this.mediaUrlMap.delete(volume);
   }
 
@@ -2138,16 +2139,27 @@ Niivue.prototype.removeVolumeByIndex = function (index) {
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
  */
-Niivue.prototype.removeMesh = function (mesh, notifySubscribers = true) {
+Niivue.prototype.removeMesh = function (mesh) {
   this.setMesh(mesh, -1);
-  let url = this.mediaUrlMap.get(mesh);
-  if (url) {
+  if (this.mediaUrlMap.has(mesh)) {
+    let url = this.mediaUrlMap.get(mesh);
+    this.opts.onMeshWithUrlRemoved(url);
     this.mediaUrlMap.delete(mesh);
-    if (notifySubscribers && this.isInSession) {
-      this.serverConnection$.next(
-        new NVMessage(REMOVE_MESH_URL, url, this.sessionKey)
-      );
-    }
+  }
+};
+
+/**
+ * Remove a triangulated mesh, connectome or tractogram
+ * @param {string} url URL of mesh to delete
+ * @example
+ * niivue.removeMeshByUrl('./images/cit168.mz3')
+ */
+Niivue.prototype.removeMeshByUrl = function (url) {
+  let mesh = this.getMediaByUrl(url);
+  if (mesh) {
+    this.removeMesh(mesh);
+    this.mediaUrlMap.delete(mesh);
+    this.opts.onMeshWithUrlRemoved(url);
   }
 };
 
@@ -2534,23 +2546,14 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
  * @returns {NVMesh}
  */
 Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
-  let mesh = await this.loadMeshFromUrl(meshOptions);
-  this.addMesh(mesh);
-
-  return mesh;
-};
-
-/**
- * Loads mesh from a url
- * @param {NVMeshFromUrlOptions} meshOptions
- * @returns {NVMesh}
- */
-Niivue.prototype.loadMeshFromUrl = async function (meshOptions) {
   let options = new NVMeshFromUrlOptions();
   options.gl = this.gl;
   Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
-  this.onMeshLoadedByUrl(options);
+  this.mediaUrlMap.set(mesh, options.url);
+  this.opts.onMeshAddedFromUrl(options);
+  this.addMesh(mesh);
+
   return mesh;
 };
 
@@ -3638,6 +3641,8 @@ Niivue.prototype.setCustomMeshShader = function (
   m.shader.use(this.gl);
   m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
   this.meshShaders.push(m);
+
+  this.opts.onCustomMeshShaderAdded(fragmentShaderText, name);
   return this.meshShaders.length - 1;
 };
 

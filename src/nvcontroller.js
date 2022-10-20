@@ -1,12 +1,9 @@
 import { SessionBus, SessionUser } from "./session-bus";
 import { NVImage } from "./nvimage";
+import { NVMesh } from "./nvmesh";
 
 /**
  * @typedef {import("./nvimage").NVImageFromUrlOptions} NVImageFromUrlOptions
- */
-
-/**
- * @typedef {import("./nvmesh").NVMesh} NVMesh
  */
 
 /**
@@ -44,13 +41,18 @@ export class NVController {
     // volume handlers
     this.niivue.opts.onVolumeAddedFromUrl =
       this.onVolumeAddedFromUrlHandler.bind(this);
-    this.niivue.opts.onVolumeRemoved = this.onVolumeRemovedHandler.bind(this);
+    this.niivue.opts.onVolumeWithUrlRemoved =
+      this.onVolumeWithUrlRemovedHandler.bind(this);
 
     // mesh handlers
-    this.niivue.opts.onMeshLoadedByUrl =
-      this.onMeshLoadedByUrlHandler.bind(this);
-    this.niivue.opts.onMeshLoaded = this.onMeshLoadedHandler.bind(this);
+    this.niivue.opts.onMeshAddedFromUrl =
+      this.onMeshAddedFromUrlHandler.bind(this);
+    this.niivue.opts.onMeshWithUrlRemoved =
+      this.onMeshWithUrlRemovedHandler.bind(this);
+    this.niivue.opts.onCustomMeshShaderAdded =
+      this.onCustomMeshShaderAddedHandler.bind(this);
 
+    // 4D
     this.niivue.opts.onFrameChange = this.onFrameChangeHandler.bind(this);
 
     // volume specific handlers
@@ -70,6 +72,14 @@ export class NVController {
       this.niivue.volumes.length === 1 ? 0 : this.niivue.volumes.length - 1;
     this.niivue.setVolume(volume, idx);
     this.niivue.mediaUrlMap.set(volume, url);
+  }
+
+  addMesh(mesh, url) {
+    this.niivue.meshes.push(mesh);
+    let idx =
+      this.niivue.meshes.length === 1 ? 0 : this.niivue.meshes.length - 1;
+    this.niivue.setMesh(mesh, idx);
+    this.niivue.mediaUrlMap.set(mesh, url);
   }
 
   onNewMessage(msg) {
@@ -99,12 +109,12 @@ export class NVController {
           if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
             console.log("volume added by remote");
             NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
-              this.addVolume(volume);
+              this.addVolume(volume, msg.imageOptions.url);
             });
           }
         }
         break;
-      case "media with url removed":
+      case "volume with url removed":
         {
           let volume = this.niivue.getMediaByUrl(msg.url);
           if (volume) {
@@ -112,6 +122,29 @@ export class NVController {
             this.niivue.mediaUrlMap.delete(volume);
           }
         }
+        break;
+
+      case "mesh added from url":
+        if (!this.niivue.getMediaByUrl(msg.meshOptions.url)) {
+          msg.meshOptions.gl = this.niivue.gl;
+          NVMesh.loadFromUrl(msg.meshOptions).then((mesh) => {
+            this.addMesh(mesh, msg.meshOptions.url);
+          });
+        }
+        break;
+      case "mesh with url removed": {
+        let mesh = this.niivue.getMediaByUrl(msg.url);
+        if (mesh) {
+          this.niivue.setMesh(mesh, -1);
+          this.niivue.mediaUrlMap.delete(mesh);
+        }
+      }
+      break;
+      case "custom shader added":
+        this.niivue.setCustomMeshShader(msg.fragmentShaderText, msg.name);
+        break;
+
+      case "":
         break;
     }
     this.niivue.drawScene();
@@ -219,13 +252,12 @@ export class NVController {
 
   /**
    * Notifies other users that a volume has been removed
-   * @param {NVImage} volume
+   * @param {string} url
    */
-  async onVolumeRemovedHandler(volume) {
-    if (this.niivue.mediaUrlMap.has(volume) && this.isInSession) {
-      let url = this.niivue.mediaUrlMap.get(volume);
+  async onVolumeWithUrlRemovedHandler(url) {
+    if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "media with url removed",
+        op: "volume with url removed",
         url,
       });
     }
@@ -233,11 +265,17 @@ export class NVController {
 
   /**
    * Notifies that a mesh has been loaded by URL
-   * @param {NVMeshFromUrlOptions} options
+   * @param {NVMeshFromUrlOptions} meshOptions
    */
-  async onMeshLoadedByUrlHandler(options) {
-    console.log("mesh loaded by url");
-    console.log(options);
+  async onMeshAddedFromUrlHandler(meshOptions) {
+    console.log("mesh loaded from url");
+    console.log(meshOptions);
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "mesh added from url",
+        meshOptions,
+      });
+    }
   }
 
   /**
@@ -248,6 +286,16 @@ export class NVController {
     console.log("mesh has been added");
     console.log(mesh);
   }
+
+  async onMeshWithUrlRemovedHandler(url) {
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "mesh with url removed",
+        url,
+      });
+    }
+  }
+
   /**
    *
    * @param {NVImage} volume volume that has changed color maps
@@ -281,5 +329,15 @@ export class NVController {
       });
     }
     this.onFrameChange(volume, index);
+  }
+
+  onCustomMeshShaderAddedHandler(fragmentShaderText, name) {
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "custom shader added",
+        fragmentShaderText,
+        name,
+      });
+    }
   }
 }
