@@ -64,6 +64,7 @@
 
         var controller = new niivue.NVController(nv1);
         controller.onFrameChange = updateFrameValue;
+        controller.connectToSession("timeseries");
         
         function checkClick(cb) {
             nv1.graph.normalizeValues = cb.checked

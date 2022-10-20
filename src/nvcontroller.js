@@ -84,6 +84,11 @@ export class NVController {
         this.niivue.scene._elevation = msg.elevation;
         this.niivue.scene._azimuth = msg.azimuth;
         break;
+      case "frame changed":
+        let volume = this.niivue.getMediaByUrl(msg.url);
+        if (volume) {
+          volume.frame4D = msg.index;
+        }
     }
     this.niivue.drawScene();
   }
@@ -244,6 +249,14 @@ export class NVController {
   onFrameChangeHandler(volume, index) {
     console.log("frame has changed to " + index);
     console.log(volume);
+    if (this.niivue.mediaUrlMap.has(volume) && this.isInSession) {
+      let url = this.niivue.mediaUrlMap.get(volume);
+      this.sessionBus.sendSessionMessage({
+        op: "frame changed",
+        url,
+        index,
+      });
+    }
     this.onFrameChange(volume, index);
   }
 }
