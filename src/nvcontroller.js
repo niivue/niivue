@@ -1,8 +1,5 @@
 import { SessionBus, SessionUser } from "./session-bus";
-
-/**
- * @typedef {import("./nvimage".NVImage)} NVImage
- */
+import { NVImage } from "./nvimage";
 
 /**
  * @typedef {import("./nvimage").NVImageFromUrlOptions} NVImageFromUrlOptions
@@ -28,7 +25,7 @@ export class NVController {
     this.niivue = niivue;
     this.mediaUrlMap = new Map();
     this.volumesLoadedByUrl = new Map();
-
+    this.volumeUrlsWaitingToBeAdded = [];
     this.isInSession = false;
 
     // events for external consumers
@@ -70,9 +67,17 @@ export class NVController {
     console.log(location);
   }
 
+  addVolume(volume, url) {
+    this.niivue.volumes.push(volume);
+    let idx =
+      this.niivue.volumes.length === 1 ? 0 : this.niivue.volumes.length - 1;
+    this.niivue.setVolume(volume, idx);
+    this.niivue.mediaUrlMap.set(volume, url);
+  }
+
   onNewMessage(msg) {
-    console.log("local mesage received");
-    console.log(msg);
+    // console.log("local mesage received");
+    // console.log(msg);
     switch (msg.op) {
       case "zoom":
         this.niivue._volScaleMultiplier = msg.zoom;
@@ -85,10 +90,51 @@ export class NVController {
         this.niivue.scene._azimuth = msg.azimuth;
         break;
       case "frame changed":
-        let volume = this.niivue.getMediaByUrl(msg.url);
-        if (volume) {
-          volume.frame4D = msg.index;
+        {
+          let volume = this.niivue.getMediaByUrl(msg.url);
+          if (volume) {
+            volume.frame4D = msg.index;
+          }
         }
+        break;
+      case "volume loaded by url":
+        // NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
+        //   this.volumesLoadedByUrl.set(msg.imageOptions.url, volume);
+        //   if (
+        //     this.volumeUrlsWaitingToBeAdded.includes(msg.imageOptions.url) &&
+    console.log(clipPlane);
+    //     !this.niivue.getMediaByUrl()
+        //   ) {
+        //     this.addVolume(volume, msg.imageOptions.url);
+        //     this.volumeUrlsWaitingToBeAdded =
+        //       this.volumeUrlsWaitingToBeAdded.filter(
+        //         (u) => u != msg.imageOptions.url
+        //       ) || [];
+        //   }
+        // });
+        break;
+      case "volume with url added":
+        // {
+        //   if (this.volumesLoadedByUrl.has(msg.url)) {
+        //     let volume = this.volumesLoadedByUrl.get(msg.url);
+        //     if (!this.niivue.getMediaByUrl(msg.url)) {
+        //       console.log("volume added by remote");
+        //       this.addVolume(volume, msg.url);
+        //     }
+        //   } else {
+        //     this.volumeUrlsWaitingToBeAdded.push(msg.url);
+        //   }
+        // }
+        break;
+      case "media with url removed":
+        {
+          let volume = this.niivue.getMediaByUrl(msg.url);
+          if (volume) {
+            this.niivue.setVolume(volume, -1);
+            this.niivue.mediaUrlMap.delete(volume);
+          }
+        }
+        break;
     }
     this.niivue.drawScene();
   }
@@ -142,8 +188,6 @@ export class NVController {
    * @param {number} elevation
    */
   onAzimuthElevationChangeHandler(azimuth, elevation) {
-    console.log("a or e has changed: " + azimuth + " " + elevation);
-
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
         op: "ae",
@@ -158,8 +202,6 @@ export class NVController {
    * @param {number[]} clipPlane
    */
   onClipPlaneChangeHandler(clipPlane) {
-    console.log("clip plane has changed");
-    console.log(clipPlane);
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
         op: "clipPlane",
@@ -175,6 +217,12 @@ export class NVController {
   onVolumeLoadedByUrlHandler(imageOptions) {
     console.log("volume loaded by url");
     console.log(imageOptions);
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "volume loaded by url",
+        imageOptions,
+      });
+    }
   }
 
   /**
@@ -184,6 +232,13 @@ export class NVController {
   onImageLoadedHandler(volume) {
     volume.onColorMapChange = this.onColorMapChangeHandler.bind(this);
     volume.onOpacityChange = this.onOpacityChangeHandler.bind(this);
+    if (this.isInSession && this.niivue.mediaUrlMap.has(volume)) {
+      let url = this.niivue.mediaUrlMap.get(volume);
+      this.sessionBus.sendSessionMessage({
+        op: "volume with url added",
+        url,
+      });
+    }
   }
 
   /**
@@ -199,12 +254,12 @@ export class NVController {
    * @param {NVImage} volume
    */
   onVolumeRemovedHandler(volume) {
-    console.log("volume removed");
-    if (this.niivue.mediaUrlMap.has(volume)) {
+    if (this.niivue.mediaUrlMap.has(volume) && this.isInSession) {
       let url = this.niivue.mediaUrlMap.get(volume);
-      console.log("url of volume removed is " + url);
-    } else {
-      console.log("url for volume not found");
+      this.sessionBus.sendSessionMessage({
+        op: "media with url removed",
+        url,
+      });
     }
   }
 
