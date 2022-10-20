@@ -78,7 +78,7 @@ export class NVController {
         this.niivue._volScaleMultiplier = msg.zoom;
         break;
       case "clipPlane":
-        this.niivue.clipPlane = msg.clipPlane;
+        this.niivue.scene.clipPlane = msg.clipPlane;
         break;
       case "ae":
         this.niivue.scene._elevation = msg.elevation;
