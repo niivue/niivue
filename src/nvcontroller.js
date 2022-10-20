@@ -42,7 +42,6 @@ export class NVController {
       this.onClipPlaneChangeHandler.bind(this);
 
     // volume handlers
-    // this.niivue.opts.onImageLoaded = this.onImageLoadedHandler.bind(this);
     this.niivue.opts.onVolumeAddedFromUrl =
       this.onVolumeAddedFromUrlHandler.bind(this);
     this.niivue.opts.onVolumeRemoved = this.onVolumeRemovedHandler.bind(this);
@@ -97,11 +96,11 @@ export class NVController {
         break;
       case "volume added from url":
         {
-          console.log("vol added from url");
-          console.log(msg.imageOptions);
           if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
             console.log("volume added by remote");
-            this.niivue.addVolumeFromUrl(msg.imageOptions);
+            NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
+              this.addVolume(volume);
+            });
           }
         }
         break;
@@ -149,10 +148,7 @@ export class NVController {
    * Zoom level has changed
    * @param {number} zoom
    */
-  onZoom3DChangeHandler(zoom) {
-    console.log("zoom has changed");
-    console.log(zoom);
-
+  async onZoom3DChangeHandler(zoom) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
         op: "zoom",
@@ -166,7 +162,7 @@ export class NVController {
    * @param {number} azimuth
    * @param {number} elevation
    */
-  onAzimuthElevationChangeHandler(azimuth, elevation) {
+  async onAzimuthElevationChangeHandler(azimuth, elevation) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
         op: "ae",
@@ -180,7 +176,7 @@ export class NVController {
    * Clip plane has changed
    * @param {number[]} clipPlane
    */
-  onClipPlaneChangeHandler(clipPlane) {
+  async onClipPlaneChangeHandler(clipPlane) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
         op: "clipPlane",
@@ -193,9 +189,7 @@ export class NVController {
    * Add an image and notify subscribers
    * @param {NVImageFromUrlOptions} imageOptions
    */
-  onVolumeAddedFromUrlHandler(imageOptions, volume) {
-    console.log("volume added from url");
-    console.log(imageOptions);
+  async onVolumeAddedFromUrlHandler(imageOptions, volume) {
     if (this.isInSession) {
       console.log(imageOptions);
       this.sessionBus.sendSessionMessage({
@@ -211,7 +205,7 @@ export class NVController {
    * A volume has been added
    * @param {NVImage} volume
    */
-  onImageLoadedHandler(volume) {
+  async onImageLoadedHandler(volume) {
     volume.onColorMapChange = this.onColorMapChangeHandler.bind(this);
     volume.onOpacityChange = this.onOpacityChangeHandler.bind(this);
     if (this.isInSession && this.niivue.mediaUrlMap.has(volume)) {
@@ -224,18 +218,10 @@ export class NVController {
   }
 
   /**
-   *
-   * @param {NVImageFromUrlOptions} imageOptions
-   */
-  onVolumeUpdated(imageOptions) {
-    console.log(imageOptions);
-  }
-
-  /**
    * Notifies other users that a volume has been removed
    * @param {NVImage} volume
    */
-  onVolumeRemovedHandler(volume) {
+  async onVolumeRemovedHandler(volume) {
     if (this.niivue.mediaUrlMap.has(volume) && this.isInSession) {
       let url = this.niivue.mediaUrlMap.get(volume);
       this.sessionBus.sendSessionMessage({
@@ -249,7 +235,7 @@ export class NVController {
    * Notifies that a mesh has been loaded by URL
    * @param {NVMeshFromUrlOptions} options
    */
-  onMeshLoadedByUrlHandler(options) {
+  async onMeshLoadedByUrlHandler(options) {
     console.log("mesh loaded by url");
     console.log(options);
   }
@@ -258,7 +244,7 @@ export class NVController {
    * Notifies that a mesh has been added
    * @param {NVMesh} mesh
    */
-  onMeshLoadedHandler(mesh) {
+  async onMeshLoadedHandler(mesh) {
     console.log("mesh has been added");
     console.log(mesh);
   }
@@ -266,7 +252,7 @@ export class NVController {
    *
    * @param {NVImage} volume volume that has changed color maps
    */
-  onColorMapChangeHandler(volume) {
+  async onColorMapChangeHandler(volume) {
     console.log("color map has changed");
     console.log(volume);
   }
@@ -274,7 +260,7 @@ export class NVController {
   /**
    * @param {NVImage} volume volume that has changed opacity
    */
-  onOpacityChangeHandler(volume) {
+  async onOpacityChangeHandler(volume) {
     console.log("opacity has changed");
     console.log(volume);
   }
