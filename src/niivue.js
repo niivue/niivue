@@ -116,7 +116,7 @@ export const dragModes = Object.freeze({
  * @typedef {Object} NiivueOptions
  * @property {number} [options.textHeight=0.06] the text height for orientation labels (0 to 1). Zero for no text labels
  * @property {number} [options.colorbarHeight=0.05] size of colorbar. 0 for no colorbars, fraction of Nifti j dimension
- * @property {number} [options.colorBarMargin=0.05] padding around colorbar when displayed
+ * @property {number} [options.colorbarMargin=0.05] padding around colorbar when displayed
  * @property {number} [options.crosshairWidth=1] crosshair size. Zero for no crosshair
  * @property {number} [options.rulerWidth=4] ruler size. Zero (or isRuler is false) for no ruler
  * @property {array}  [options.backColor=[0,0,0,1]] the background color. RGBA values from 0 to 1. Default is black
@@ -4823,7 +4823,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
       )
     );
   }
-  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
+  this.opts.onFrameChange({ volume: this.volumes[idx], frame4D: frame4D });
 };
 
 /**
@@ -6321,20 +6321,38 @@ Niivue.prototype.setPivot3D = function () {
   this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
 }; // setPivot3D()
 
+Niivue.prototype.getMaxVols = function () {
+  if (this.volumes.length < 1) return 0;
+  let maxVols = 0;
+  for (let i = 0; i < this.volumes.length; i++)
+    maxVols = Math.max(maxVols, this.volumes[i].nFrame4D);
+  return maxVols;
+};
+
 // not included in public docs
 // draw graph for 4D NVImage: time across horizontal, intensity is vertical
 Niivue.prototype.drawGraph = function () {
+  if (this.getMaxVols() < 2) return;
   let graph = this.graph;
+  let axialTop = 0;
   if (
     this.graph.autoSizeMultiplanar &&
     this.sliceType === this.sliceTypeMultiplanar
   ) {
     for (let i = 0; i < this.screenSlices.length; i++) {
       var axCorSag = this.screenSlices[i].axCorSag;
+      if (axCorSag === this.sliceTypeAxial)
+        axialTop = this.screenSlices[i].leftTopWidthHeight[1];
       if (axCorSag !== this.sliceTypeSagittal) continue;
-      var ltwh = this.screenSlices[i].leftTopWidthHeight;
-      graph.LTWH[0] = ltwh[0];
-      graph.LTWH[1] = ltwh[1] + ltwh[3];
+      var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
+      console.log(">>>", ltwh[1], axialTop);
+      if (ltwh[1] === axialTop) {
+        graph.LTWH[0] = ltwh[0] + ltwh[2];
+        graph.LTWH[1] = ltwh[1];
+      } else {
+        graph.LTWH[0] = ltwh[0];
+        graph.LTWH[1] = ltwh[1] + ltwh[3];
+      }
       graph.LTWH[2] = ltwh[2];
       graph.LTWH[3] = ltwh[2];
     }
@@ -6361,7 +6379,6 @@ Niivue.prototype.drawGraph = function () {
     }
   }
   if (vols.length < 1) return;
-  //let vols = graph.vols;
   let maxVols = this.volumes[vols[0]].nFrame4D;
   this.graph.selectedColumn = this.volumes[vols[0]].frame4D;
   if (maxVols < 2) {
@@ -6816,7 +6833,7 @@ Niivue.prototype.draw3D = function (
     this.scene.renderAzimuth.toFixed(0) +
     " elevation: " +
     this.scene.renderElevation.toFixed(0);
-  this.drawGraph();
+  //this.drawGraph();
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
@@ -7614,6 +7631,7 @@ Niivue.prototype.drawScene = function () {
     return;
   }
   if (this.opts.isColorbar) this.reserveColorbarPanel();
+  let maxVols = this.getMaxVols();
   if (this.sliceMosaicString.length > 0) {
     this.drawMosaic(this.sliceMosaicString);
   } else {
@@ -7662,19 +7680,21 @@ Niivue.prototype.drawScene = function () {
           (ltwh3x1[2] * volScale[0]) /
           (volScale[0] + volScale[0] + volScale[1] + mx);
       }
-      if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
+      if (wX1 > wX) {
         //landscape screen ratio: 3 slices in single row
         let pixScale = wX1 / volScale[0];
         let hY1 = volScale[1] * pixScale;
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          this.draw3D([
-            ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
-            ltwh3x1[1],
-            ltwh4x1[3],
-            ltwh4x1[3],
-          ]);
+          if (maxVols < 2 || !this.graph.autoSizeMultiplanar) {
+            this.draw3D([
+              ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
+              ltwh3x1[1],
+              ltwh4x1[3],
+              ltwh4x1[3],
+            ]);
+          }
         }
         //draw axial
         this.draw2D([ltwh3x1[0], ltwh3x1[1], wX1, hY1], 0);
@@ -7695,7 +7715,7 @@ Niivue.prototype.drawScene = function () {
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
         //draw sagittal
         this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
-        if (!this.graph.autoSizeMultiplanar)
+        if (maxVols < 2 || !this.graph.autoSizeMultiplanar)
           this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       } //if landscape else portrait
     } //if multiplanar
@@ -7739,7 +7759,7 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
-  this.drawGraph();
+  if (maxVols > 1) this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();
