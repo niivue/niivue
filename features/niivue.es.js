@@ -112100,6 +112100,7 @@ function Niivue(options = {}) {
     isColorbar: false,
     isOrientCube: false,
     multiplanarPadPixels: 0,
+    multiplanarForceRender: false,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     dragMode: dragModes.contrast,
@@ -112445,9 +112446,9 @@ Niivue.prototype.handleMessage = function(msg, sessionCreatedCallback, sessionJo
       break;
     case REMOVE_VOLUME_URL:
       {
-        let volume2 = this.getMediaByUrl(msg["url"]);
-        if (volume2) {
-          this.removeVolume(volume2, false);
+        let volume = this.getMediaByUrl(msg["url"]);
+        if (volume) {
+          this.removeVolume(volume, false);
         }
       }
       break;
@@ -112459,16 +112460,16 @@ Niivue.prototype.handleMessage = function(msg, sessionCreatedCallback, sessionJo
     }
     case SET_4D_VOL_INDEX:
       {
-        let volume2 = this.getMediaByUrl(msg["url"]);
-        if (volume2) {
-          this.setFrame4D(volume2.id, msg["index"]);
+        let volume = this.getMediaByUrl(msg["url"]);
+        if (volume) {
+          this.setFrame4D(volume.id, msg["index"]);
         }
       }
       break;
     case UPDATE_IMAGE_OPTIONS: {
-      let volume2 = this.getMediaByUrl(msg["urlImageOptions"].url);
-      if (volume2) {
-        volume2.applyOptionsUpdate(msg["urlImageOptions"]);
+      let volume = this.getMediaByUrl(msg["urlImageOptions"].url);
+      if (volume) {
+        volume.applyOptionsUpdate(msg["urlImageOptions"]);
         this.updateGLVolume();
       }
     }
@@ -112925,37 +112926,37 @@ Niivue.prototype.getFileExt = function(fullname, upperCase = true) {
   return upperCase ? ext : ext.toLowerCase();
 };
 Niivue.prototype.loadVolumeFromUrl = async function(imageOptions) {
-  let volume2 = await NVImage.loadFromUrl(imageOptions);
-  return volume2;
+  let volume = await NVImage.loadFromUrl(imageOptions);
+  return volume;
 };
-Niivue.prototype.notifySubscribersOfOptionChange = function(volume2) {
+Niivue.prototype.notifySubscribersOfOptionChange = function(volume) {
   if (this.isInSession) {
-    if (this.mediaUrlMap.has(volume2)) {
-      let imageOptions = volume2.getImageOptions();
-      imageOptions.url = this.mediaUrlMap.get(volume2);
+    if (this.mediaUrlMap.has(volume)) {
+      let imageOptions = volume.getImageOptions();
+      imageOptions.url = this.mediaUrlMap.get(volume);
       this.serverConnection$.next(new NVMessage(UPDATE_IMAGE_OPTIONS, imageOptions, this.sessionKey));
       console.log("update called");
     }
   }
 };
 Niivue.prototype.addVolumeFromUrl = async function(imageOptions, notifySubscribers = true) {
-  let volume2 = await this.loadVolumeFromUrl(imageOptions);
-  this.addVolume(volume2);
-  if (!this.mediaUrlMap.has(volume2) && imageOptions.url) {
-    this.mediaUrlMap.set(volume2, imageOptions.url);
+  let volume = await this.loadVolumeFromUrl(imageOptions);
+  this.addVolume(volume);
+  if (!this.mediaUrlMap.has(volume) && imageOptions.url) {
+    this.mediaUrlMap.set(volume, imageOptions.url);
     if (this.isInSession && notifySubscribers) {
       this.serverConnection$.next(new NVMessage(ADD_VOLUME_URL, imageOptions, this.sessionKey));
     }
   }
-  return volume2;
+  return volume;
 };
 Niivue.prototype.getMediaByUrl = function(url) {
   return [...this.mediaUrlMap.entries()].filter((v) => v[1] == url).map((v) => v[0]).pop();
 };
 Niivue.prototype.removeVolumeByUrl = function(url) {
-  let volume2 = this.getMediaByUrl(url);
-  if (volume2) {
-    this.removeVolume(volume2);
+  let volume = this.getMediaByUrl(url);
+  if (volume) {
+    this.removeVolume(volume);
   }
 };
 Niivue.prototype.readDirectory = function(directory) {
@@ -112982,13 +112983,13 @@ Niivue.prototype.readDirectory = function(directory) {
         readEntries();
       } else {
         let allFileObects = await getFileObjects(allEntiresInDir);
-        let volume2 = await NVImage.loadFromFile({
+        let volume = await NVImage.loadFromFile({
           file: allFileObects,
           name: directory.name,
           urlImgData: null,
           isDICOMDIR: true
         });
-        this.addVolume(volume2);
+        this.addVolume(volume);
       }
     });
   };
@@ -113061,18 +113062,18 @@ Niivue.prototype.dropListener = async function(e) {
           entry.file(async (file) => {
             if (pairedImageData !== "") {
               pairedImageData.file(async (imgfile) => {
-                let volume2 = await NVImage.loadFromFile({
+                let volume = await NVImage.loadFromFile({
                   file,
                   urlImgData: imgfile
                 });
-                this.addVolume(volume2);
+                this.addVolume(volume);
               });
             } else {
-              let volume2 = await NVImage.loadFromFile({
+              let volume = await NVImage.loadFromFile({
                 file,
                 urlImgData: pairedImageData
               });
-              this.addVolume(volume2);
+              this.addVolume(volume);
             }
           });
         } else if (entry.isDirectory) {
@@ -113116,11 +113117,11 @@ Niivue.prototype.setHighResolutionCapable = function(isHighResolutionCapable) {
   this.resizeListener();
   this.drawScene();
 };
-Niivue.prototype.addVolume = function(volume2) {
-  this.volumes.push(volume2);
+Niivue.prototype.addVolume = function(volume) {
+  this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
-  this.setVolume(volume2, idx);
-  this.opts.onImageLoaded(volume2);
+  this.setVolume(volume, idx);
+  this.opts.onImageLoaded(volume);
 };
 Niivue.prototype.addMesh = function(mesh) {
   this.meshes.push(mesh);
@@ -113244,15 +113245,15 @@ Niivue.prototype.loadDrawing = async function(fnm) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume2 = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
-  let dims = volume2.hdr.dims;
+  let volume = await this.loadVolumeFromUrl(new NVImageFromUrlOptions(fnm));
+  let dims = volume.hdr.dims;
   if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
     console.log("drawing dimensions do not match background image");
     return false;
   }
-  if (volume2.img.constructor !== Uint8Array)
+  if (volume.img.constructor !== Uint8Array)
     console.log("Drawings should be UINT8");
-  let perm = volume2.permRAS;
+  let perm = volume.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
@@ -113294,7 +113295,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
     zlut = range(dims[3] - 1, 0, -1);
   for (let i2 = 0; i2 < dims[3]; i2++)
     zlut[i2] *= instride[2];
-  let inVs = volume2.img;
+  let inVs = volume.img;
   let outVs = this.drawBitmap;
   let j = 0;
   for (let z = 0; z < dims[3]; z++) {
@@ -113439,7 +113440,7 @@ Niivue.prototype.getOverlayIndexByID = function(id) {
   }
   return -1;
 };
-Niivue.prototype.setVolume = function(volume2, toIndex = 0) {
+Niivue.prototype.setVolume = function(volume, toIndex = 0) {
   this.volumes.map((v) => {
     log.debug(v.name);
   });
@@ -113447,14 +113448,14 @@ Niivue.prototype.setVolume = function(volume2, toIndex = 0) {
   if (toIndex > numberOfLoadedImages) {
     return;
   }
-  let volIndex = this.getVolumeIndexByID(volume2.id);
+  let volIndex = this.getVolumeIndexByID(volume.id);
   if (toIndex === 0) {
     this.volumes.splice(volIndex, 1);
-    this.volumes.unshift(volume2);
+    this.volumes.unshift(volume);
     this.back = this.volumes[0];
     this.overlays = this.volumes.slice(1);
   } else if (toIndex < 0) {
-    this.volumes.splice(this.getVolumeIndexByID(volume2.id), 1);
+    this.volumes.splice(this.getVolumeIndexByID(volume.id), 1);
     this.back = this.volumes[0];
     if (this.volumes.length > 1) {
       this.overlays = this.volumes.slice(1);
@@ -113463,7 +113464,7 @@ Niivue.prototype.setVolume = function(volume2, toIndex = 0) {
     }
   } else {
     this.volumes.splice(volIndex, 1);
-    this.volumes.splice(toIndex, 0, volume2);
+    this.volumes.splice(toIndex, 0, volume);
     this.overlays = this.volumes.slice(1);
     this.back = this.volumes[0];
   }
@@ -113495,14 +113496,14 @@ Niivue.prototype.setMesh = function(mesh, toIndex = 0) {
     log.debug(m.name);
   });
 };
-Niivue.prototype.removeVolume = function(volume2, notifySubscribers = true) {
-  this.setVolume(volume2, -1);
-  if (this.mediaUrlMap.has(volume2)) {
-    let url = this.mediaUrlMap.get(volume2);
+Niivue.prototype.removeVolume = function(volume, notifySubscribers = true) {
+  this.setVolume(volume, -1);
+  if (this.mediaUrlMap.has(volume)) {
+    let url = this.mediaUrlMap.get(volume);
     if (notifySubscribers && this.isInSession) {
       this.serverConnection$.next(new NVMessage(REMOVE_VOLUME_URL, url, this.sessionKey));
     }
-    this.mediaUrlMap.delete(volume2);
+    this.mediaUrlMap.delete(volume);
   }
 };
 Niivue.prototype.removeVolumeByIndex = function(index) {
@@ -113533,19 +113534,19 @@ Niivue.prototype.removeMesh = function(mesh, notifySubscribers = true) {
     }
   }
 };
-Niivue.prototype.moveVolumeToBottom = function(volume2) {
-  this.setVolume(volume2, 0);
+Niivue.prototype.moveVolumeToBottom = function(volume) {
+  this.setVolume(volume, 0);
 };
-Niivue.prototype.moveVolumeUp = function(volume2) {
-  let volIdx = this.getVolumeIndexByID(volume2.id);
-  this.setVolume(volume2, volIdx + 1);
+Niivue.prototype.moveVolumeUp = function(volume) {
+  let volIdx = this.getVolumeIndexByID(volume.id);
+  this.setVolume(volume, volIdx + 1);
 };
-Niivue.prototype.moveVolumeDown = function(volume2) {
-  let volIdx = this.getVolumeIndexByID(volume2.id);
-  this.setVolume(volume2, volIdx - 1);
+Niivue.prototype.moveVolumeDown = function(volume) {
+  let volIdx = this.getVolumeIndexByID(volume.id);
+  this.setVolume(volume, volIdx - 1);
 };
-Niivue.prototype.moveVolumeToTop = function(volume2) {
-  this.setVolume(volume2, this.volumes.length - 1);
+Niivue.prototype.moveVolumeToTop = function(volume) {
+  this.setVolume(volume, this.volumes.length - 1);
 };
 Niivue.prototype.mouseDown = function mouseDown(x2, y) {
   x2 *= this.scene.dpr;
@@ -113648,8 +113649,8 @@ Niivue.prototype.setClipPlaneColor = function(color) {
   this.gl.uniform4fv(this.renderShader.clipPlaneClrLoc, this.opts.clipPlaneColor);
   this.drawScene();
 };
-Niivue.prototype.overlayRGBA = function(volume2) {
-  let hdr = volume2.hdr;
+Niivue.prototype.overlayRGBA = function(volume) {
+  let hdr = volume.hdr;
   let vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   let imgRGBA = new Uint8ClampedArray(vox * 4);
   let radius = 0.2 * Math.min(Math.min(hdr.dims[1], hdr.dims[2]), hdr.dims[3]);
@@ -113821,9 +113822,9 @@ Niivue.prototype.r16Tex = function(texID, activeID, dims, img16 = []) {
   this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], this.gl.RED_INTEGER, this.gl.SHORT, img16);
   return texID;
 };
-function img2ras16(volume2) {
-  let dims = volume2.hdr.dims;
-  let perm = volume2.permRAS;
+function img2ras16(volume) {
+  let dims = volume.hdr.dims;
+  let perm = volume.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   let img16 = new Int16Array(vx);
   let layout = [0, 0, 0];
@@ -113868,7 +113869,7 @@ function img2ras16(volume2) {
   for (let z = 0; z < dims[3]; z++) {
     for (let y = 0; y < dims[2]; y++) {
       for (let x2 = 0; x2 < dims[1]; x2++) {
-        img16[xlut[x2] + ylut[y] + zlut[z]] = volume2.img[j];
+        img16[xlut[x2] + ylut[y] + zlut[z]] = volume.img[j];
         j++;
       }
     }
@@ -114965,7 +114966,7 @@ Niivue.prototype.setFrame4D = function(id, frame4D) {
     let url = this.mediaUrlMap.get(this.volumes[idx]);
     this.serverConnection$.next(new NVMessage(SET_4D_VOL_INDEX, new NVMessageSet4DVolumeIndexData(url, frame4D), this.sessionKey));
   }
-  this.opts.onFrameChange({ volume, frame4D });
+  this.opts.onFrameChange({ volume: this.volumes[idx], frame4D });
 };
 Niivue.prototype.getFrame4D = function(id) {
   let idx = this.getVolumeIndexByID(id);
@@ -115780,7 +115781,16 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   gl.clear(gl.DEPTH_BUFFER_BIT);
   let obj = this.calculateMvpMatrix2D(leftTopWidthHeight, screen2.mnMM, screen2.mxMM, Infinity, 0, azimuth, elevation, isRadiolgical);
   if (customMM === Infinity || customMM === -Infinity) {
+    let ltwh = leftTopWidthHeight.slice();
     this.draw3D(leftTopWidthHeight, obj.modelViewProjectionMatrix, obj.modelMatrix, obj.normalMatrix, azimuth, elevation);
+    let tile = this.screenSlices[this.screenSlices.length - 1];
+    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, 0.5);
+    tile.leftTopWidthHeight = ltwh;
+    tile.axCorSag = axCorSag;
+    tile.sliceFrac = Infinity;
+    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, sliceFrac);
+    tile.leftTopMM = obj.leftTopMM;
+    tile.fovMM = obj.fovMM;
     return;
   }
   gl.enable(gl.DEPTH_TEST);
@@ -116016,16 +116026,34 @@ Niivue.prototype.setPivot3D = function() {
   this.extentsMax = mx;
   this.furthestFromPivot = length$1(pivot) * 0.5;
 };
+Niivue.prototype.getMaxVols = function() {
+  if (this.volumes.length < 1)
+    return 0;
+  let maxVols = 0;
+  for (let i2 = 0; i2 < this.volumes.length; i2++)
+    maxVols = Math.max(maxVols, this.volumes[i2].nFrame4D);
+  return maxVols;
+};
 Niivue.prototype.drawGraph = function() {
+  if (this.getMaxVols() < 2)
+    return;
   let graph = this.graph;
+  let axialTop = 0;
   if (this.graph.autoSizeMultiplanar && this.sliceType === this.sliceTypeMultiplanar) {
     for (let i2 = 0; i2 < this.screenSlices.length; i2++) {
       var axCorSag = this.screenSlices[i2].axCorSag;
+      if (axCorSag === this.sliceTypeAxial)
+        axialTop = this.screenSlices[i2].leftTopWidthHeight[1];
       if (axCorSag !== this.sliceTypeSagittal)
         continue;
-      var ltwh = this.screenSlices[i2].leftTopWidthHeight;
-      graph.LTWH[0] = ltwh[0];
-      graph.LTWH[1] = ltwh[1] + ltwh[3];
+      var ltwh = this.screenSlices[i2].leftTopWidthHeight.slice();
+      if (ltwh[1] === axialTop) {
+        graph.LTWH[0] = ltwh[0] + ltwh[2];
+        graph.LTWH[1] = ltwh[1];
+      } else {
+        graph.LTWH[0] = ltwh[0];
+        graph.LTWH[1] = ltwh[1] + ltwh[3];
+      }
       graph.LTWH[2] = ltwh[2];
       graph.LTWH[3] = ltwh[2];
     }
@@ -116117,7 +116145,7 @@ Niivue.prototype.drawGraph = function() {
     return x2.toFixed(6).replace(/\.?0*$/, "");
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
-  let fntScale = 0.1 * (minWH / this.fontMets.size);
+  let fntScale = 0.1 * (minWH / (this.fontMets.size * this.scene.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16)
     fntSize = 0;
@@ -116379,7 +116407,6 @@ Niivue.prototype.draw3D = function(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix 
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
   let posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
-  this.drawGraph();
   this.readyForSync = true;
   this.sync();
   return posString;
@@ -116666,6 +116693,12 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex)
     return;
   let tile = this.screenSlices[sliceIndex];
+  let sliceFrac = tile.sliceFrac;
+  let isRender = sliceFrac === Infinity;
+  if (isRender)
+    log.warn("Rendering approximate cross lines in world view mode");
+  if (sliceFrac === Infinity)
+    sliceFrac = 0.5;
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
   let thick = Math.max(1, this.opts.crosshairWidth);
@@ -116682,7 +116715,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
     return screenXY;
   }
   if (linesH.length > 0 && axCorSag === 0) {
-    let fracZ = tile.sliceFrac;
+    let fracZ = sliceFrac;
     let dimV = 1;
     for (let i2 = 0; i2 < linesH.length; i2++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -116699,7 +116732,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
     }
   }
   if (linesH.length > 0 && axCorSag === 1) {
-    let fracH = tile.sliceFrac;
+    let fracH = sliceFrac;
     let dimV = 2;
     for (let i2 = 0; i2 < linesH.length; i2++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -116716,7 +116749,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
     }
   }
   if (linesH.length > 0 && axCorSag === 2) {
-    let fracX = tile.sliceFrac;
+    let fracX = sliceFrac;
     let dimV = 2;
     for (let i2 = 0; i2 < linesH.length; i2++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -116733,7 +116766,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
     }
   }
   if (linesV.length > 0 && axCorSag === 0) {
-    let fracZ = tile.sliceFrac;
+    let fracZ = sliceFrac;
     let dimH = 0;
     for (let i2 = 0; i2 < linesV.length; i2++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -116750,7 +116783,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
     }
   }
   if (linesV.length > 0 && axCorSag === 1) {
-    let fracY = tile.sliceFrac;
+    let fracY = sliceFrac;
     let dimH = 0;
     for (let i2 = 0; i2 < linesV.length; i2++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -116767,7 +116800,7 @@ Niivue.prototype.drawCrossLinesMM = function(sliceIndex, axCorSag, axiMM, corMM,
     }
   }
   if (linesV.length > 0 && axCorSag === 2) {
-    let fracX = tile.sliceFrac;
+    let fracX = sliceFrac;
     let dimH = 1;
     for (let i2 = 0; i2 < linesV.length; i2++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -116789,6 +116822,8 @@ Niivue.prototype.drawCrossLines = function(sliceIndex, axCorSag, axiMM, corMM, s
     return;
   if (this.opts.isSliceMM)
     return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
+  if (this.screenSlices[sliceIndex].sliceFrac === Infinity)
+    return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
   let tile = this.screenSlices[sliceIndex];
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
@@ -116801,6 +116836,8 @@ Niivue.prototype.drawCrossLines = function(sliceIndex, axCorSag, axiMM, corMM, s
   if (linesH.length > 0) {
     let LTWH = tile.leftTopWidthHeight.slice();
     let sliceDim = 2;
+    if (axCorSag === this.sliceTypeAxial)
+      sliceDim = 1;
     let mm = this.frac2mm([0.5, 0.5, 0.5]);
     for (let i2 = 0; i2 < linesH.length; i2++) {
       mm[sliceDim] = linesH[i2];
@@ -116993,6 +117030,7 @@ Niivue.prototype.drawScene = function() {
   }
   if (this.opts.isColorbar)
     this.reserveColorbarPanel();
+  let maxVols = this.getMaxVols();
   if (this.sliceMosaicString.length > 0) {
     this.drawMosaic(this.sliceMosaicString);
   } else {
@@ -117015,18 +117053,24 @@ Niivue.prototype.drawScene = function() {
       let mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0]);
       let ltwh4x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1] + mx, mx, pad * 3);
       let wX1 = ltwh3x1[2] * volScale[0] / (volScale[0] + volScale[0] + volScale[1]);
-      if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
+      if (this.opts.multiplanarForceRender) {
+        ltwh3x1 = ltwh4x1;
+        wX1 = ltwh3x1[2] * volScale[0] / (volScale[0] + volScale[0] + volScale[1] + mx);
+      }
+      if (wX1 > wX) {
         let pixScale = wX1 / volScale[0];
         let hY1 = volScale[1] * pixScale;
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          this.draw3D([
-            ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
-            ltwh3x1[1],
-            ltwh4x1[3],
-            ltwh4x1[3]
-          ]);
+          if (maxVols < 2 || !this.graph.autoSizeMultiplanar) {
+            this.draw3D([
+              ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
+              ltwh3x1[1],
+              ltwh4x1[3],
+              ltwh4x1[3]
+            ]);
+          }
         }
         this.draw2D([ltwh3x1[0], ltwh3x1[1], wX1, hY1], 0);
         this.draw2D([ltwh3x1[0] + wX1 + pad, ltwh3x1[1], wX1, hZ1], 1);
@@ -117038,7 +117082,7 @@ Niivue.prototype.drawScene = function() {
         this.draw2D([ltwh[0], ltwh[1] + hZ + pad, wX, hY], 0);
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
         this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
-        if (!this.graph.autoSizeMultiplanar)
+        if (maxVols < 2 || !this.graph.autoSizeMultiplanar)
           this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       }
     }
@@ -117066,7 +117110,6 @@ Niivue.prototype.drawScene = function() {
       ]);
       return;
     }
-    console.log(this.opts.dragMode === dragModes.measurement, ">>", this.opts.dragMode, dragModes.measurement);
     if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0)
       return;
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
@@ -117083,7 +117126,8 @@ Niivue.prototype.drawScene = function() {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2]
   ]);
-  this.drawGraph();
+  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1)
+    this.drawGraph();
   posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
   this.gl.finish();
   this.readyForSync = true;
