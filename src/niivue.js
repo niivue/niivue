@@ -986,7 +986,6 @@ Niivue.prototype.mouseUpListener = function () {
 
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.dragMode === dragModes.contrast) console.log("Poko");
     if (this.opts.dragMode !== dragModes.contrast) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -5351,7 +5350,8 @@ function loose_label(min, max, ntick = 4) {
 // "Nice Numbers for Graph Labels", Graphics Gems, pp 61-63
 // https://github.com/cenfun/nice-ticks/blob/master/docs/Nice-Numbers-for-Graph-Labels.pdf
 function tickSpacing(mn, mx) {
-  let v = loose_label(mn, mx, 5);
+  let v = loose_label(mn, mx, 3);
+  if (!v[3]) v = loose_label(mn, mx, 5);
   if (!v[3]) v = loose_label(mn, mx, 4);
   if (!v[3]) v = loose_label(mn, mx, 3);
   if (!v[3]) v = loose_label(mn, mx, 5);
@@ -5456,7 +5456,7 @@ Niivue.prototype.drawColorbarCore = function (
   if (min >= max || txtHt < 1) return;
   let range = max - min;
   let [spacing, ticMin] = tickSpacing(min, max);
-  if (ticMin < min) ticMin + spacing;
+  if (ticMin < min) ticMin += spacing;
   //determine font size
   function humanize(x) {
     //drop trailing zeros from numerical string
@@ -6450,7 +6450,7 @@ Niivue.prototype.drawGraph = function () {
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
   //n.b. dpr encodes retina displays
-  let fntScale = 0.1 * (minWH / (this.fontMets.size * this.scene.dpr));
+  let fntScale = 0.07 * (minWH / (this.fontMets.size * this.scene.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16) fntSize = 0;
   let maxTextWid = 0;
@@ -7764,7 +7764,11 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
-  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1)
+  if (
+    this.sliceType === this.sliceTypeMultiplanar &&
+    maxVols > 1 &&
+    this.graph.autoSizeMultiplanar
+  )
     this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
