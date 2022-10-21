@@ -218,6 +218,7 @@ export function Niivue(options = {}) {
     onClipPlaneChange: () => {},
     onCustomMeshShaderAdded: () => {},
     onMeshShaderChanged: () => {},
+    onMeshPropertyChanged: () => {},
   };
 
   this.canvas = null; // the canvas element on the page
@@ -1929,6 +1930,7 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
   }
   this.meshes[idx].setProperty(key, val, this.gl);
   this.updateGLVolume();
+  this.opts.onMeshPropertyChanged(idx, key, val);
 };
 
 /**
@@ -3593,28 +3595,59 @@ Niivue.prototype.meshShaderNameToNumber = function (meshShaderName = "Phong") {
 
 /**
  * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
- * @param {number} id identity of mesh to change
+ * @param {number} id id of mesh to change
  * @param {string | number} meshShaderNameOrNumber identify shader for usage
  * @example niivue.setMeshShader('toon');
  * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
 Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
-  let num = 0;
-  if (typeof meshShaderNameOrNumber === "number") num = meshShaderNameOrNumber;
+  let shaderIndex = 0;
+  if (typeof meshShaderNameOrNumber === "number")
+    shaderIndex = meshShaderNameOrNumber;
   else {
-    num = this.meshShaderNameToNumber(meshShaderNameOrNumber);
+    shaderIndex = this.meshShaderNameToNumber(meshShaderNameOrNumber);
   }
-  num = Math.min(num, this.meshShaders.length - 1);
-  num = Math.max(num, 0);
-  let idx = this.getMeshIndexByID(id);
-  if (idx >= this.meshes.length) {
+  shaderIndex = Math.min(shaderIndex, this.meshShaders.length - 1);
+  shaderIndex = Math.max(shaderIndex, 0);
+  let index = this.getMeshIndexByID(id);
+  if (index >= this.meshes.length) {
     console.log(
       "Unable to change shader until mesh is loaded (maybe you need async)"
     );
     return;
   }
-  this.meshes[idx].meshShaderIndex = num;
+  this.meshes[index].meshShaderIndex = shaderIndex;
   this.updateGLVolume();
+  this.opts.onMeshShaderChanged(index, shaderIndex);
+};
+
+/**
+ *
+ * @param {string} fragmentShaderText custom fragment shader.
+ * @param {string} name title for new shader.
+ * @returns {Shader} created custom mesh shader
+ */
+Niivue.prototype.createCustomMeshShader = function (
+  fragmentShaderText,
+  name = "Custom"
+) {
+  if (!fragmentShaderText) {
+    throw "Need frament shader";
+  }
+
+  let num = this.meshShaderNameToNumber(name);
+  if (num >= 0) {
+    //prior shader uses this name: delete it!
+    this.gl.deleteProgram(this.meshShaders[num].shader.program);
+    this.meshShaders.splice(num, 1);
+  }
+  let m = [];
+  m.Name = name;
+  m.Frag = fragmentShaderText;
+  m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+  m.shader.use(this.gl);
+  m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  return m;
 };
 
 /**
@@ -3628,18 +3661,7 @@ Niivue.prototype.setCustomMeshShader = function (
   fragmentShaderText = "",
   name = "Custom"
 ) {
-  let num = this.meshShaderNameToNumber(name);
-  if (num >= 0) {
-    //prior shader uses this name: delete it!
-    this.gl.deleteProgram(this.meshShaders[num].shader.program);
-    this.meshShaders.splice(num, 1);
-  }
-  let m = [];
-  m.Name = name;
-  m.Frag = fragmentShaderText;
-  m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
-  m.shader.use(this.gl);
-  m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  let m = this.createCustomMeshShader(fragmentShaderText, name);
   this.meshShaders.push(m);
 
   this.opts.onCustomMeshShaderAdded(fragmentShaderText, name);

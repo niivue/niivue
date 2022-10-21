@@ -51,6 +51,9 @@ export class NVController {
       this.onMeshWithUrlRemovedHandler.bind(this);
     this.niivue.opts.onCustomMeshShaderAdded =
       this.onCustomMeshShaderAddedHandler.bind(this);
+    this.niivue.opts.onMeshShaderChanged = this.onMeshShaderChanged.bind(this);
+    this.niivue.opts.onMeshPropertyChanged =
+      this.onMeshPropertyChanged.bind(this);
 
     // 4D
     this.niivue.opts.onFrameChange = this.onFrameChangeHandler.bind(this);
@@ -83,8 +86,6 @@ export class NVController {
   }
 
   onNewMessage(msg) {
-    // console.log("local mesage received");
-    // console.log(msg);
     switch (msg.op) {
       case "zoom":
         this.niivue._volScaleMultiplier = msg.zoom;
@@ -107,7 +108,6 @@ export class NVController {
       case "volume added from url":
         {
           if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
-            console.log("volume added by remote");
             NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
               this.addVolume(volume, msg.imageOptions.url);
             });
@@ -132,19 +132,36 @@ export class NVController {
           });
         }
         break;
-      case "mesh with url removed": {
-        let mesh = this.niivue.getMediaByUrl(msg.url);
-        if (mesh) {
-          this.niivue.setMesh(mesh, -1);
-          this.niivue.mediaUrlMap.delete(mesh);
+      case "mesh with url removed":
+        {
+          let mesh = this.niivue.getMediaByUrl(msg.url);
+          if (mesh) {
+            this.niivue.setMesh(mesh, -1);
+            this.niivue.mediaUrlMap.delete(mesh);
+          }
         }
-      }
-      break;
+        break;
       case "custom shader added":
-        this.niivue.setCustomMeshShader(msg.fragmentShaderText, msg.name);
+        {
+          let shader = this.niivue.createCustomMeshShader(
+            msg.fragmentShaderText,
+            msg.name
+          );
+          this.niivue.meshShaders.push(shader);
+        }
         break;
 
-      case "":
+      case "mesh shader changed":
+        this.niivue.meshes[msg.meshIndex].meshShaderIndex = msg.shaderIndex;
+        this.niivue.updateGLVolume();
+        break;
+
+      case "mesh property changed":
+        this.niivue.meshes[msg.meshIndex].setProperty(
+          msg.key,
+          msg.val,
+          this.niivue.gl
+        );
         break;
     }
     this.niivue.drawScene();
@@ -337,6 +354,28 @@ export class NVController {
         op: "custom shader added",
         fragmentShaderText,
         name,
+      });
+    }
+  }
+
+  onMeshShaderChanged(meshIndex, shaderIndex) {
+    if (this.isInSession) {
+      this.sessionBus.sendSessionMessage({
+        op: "mesh shader changed",
+        meshIndex,
+        shaderIndex,
+      });
+    }
+  }
+
+  onMeshPropertyChanged(meshIndex, key, val) {
+    if (this.isInSession) {
+      console.log("mesh property changed");
+      this.sessionBus.sendSessionMessage({
+        op: "mesh property changed",
+        meshIndex,
+        key,
+        val,
       });
     }
   }
