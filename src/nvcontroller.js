@@ -11,6 +11,27 @@ import { NVMesh } from "./nvmesh";
  */
 
 /**
+ * Enum for sync operations
+ * @readonly
+ * @enum {number}
+ */
+const NVMESSAGE = Object.freeze({
+  ZOOM: 1, // "zoom",
+  CLIP_PLANE: 2, //"clipPlane",
+  AZIMUTH_ELEVATION: 3, // "ae",
+  FRAME_CHANGED: 4, // "frame changed",
+  VOLUME_ADDED_FROM_URL: 5, // "volume added from url",
+  VOLUME_WITH_URL_REMOVED: 6, //"volume with url removed",
+  COLOR_MAP_CHANGED: 7, // "color map has changed",
+  OPACITY_CHANGED: 8, //"opacity has changed",
+  MESH_FROM_URL_ADDED: 9, //"mesh added from url",
+  MESH_WITH_URL_REMOVED: 10, //"mesh with url removed",
+  CUSTOM_SHADER_ADDED: 11, // "custom shader added",
+  SHADER_CHANGED: 12, //"mesh shader changed",
+  MESH_PROPERTY_CHANGED: 13, // "mesh property changed",
+});
+
+/**
  * @class SessionBus
  * @type SessionBus
  * @description SessionBus is for synchonizing both remote and local instances
@@ -87,17 +108,17 @@ export class NVController {
 
   onNewMessage(msg) {
     switch (msg.op) {
-      case "zoom":
+      case NVMESSAGE.ZOOM:
         this.niivue._volScaleMultiplier = msg.zoom;
         break;
-      case "clipPlane":
+      case NVMESSAGE.CLIP_PLANE:
         this.niivue.scene.clipPlane = msg.clipPlane;
         break;
-      case "ae":
+      case NVMESSAGE.AZIMUTH_ELEVATION:
         this.niivue.scene._elevation = msg.elevation;
         this.niivue.scene._azimuth = msg.azimuth;
         break;
-      case "frame changed":
+      case NVMESSAGE.FRAME_CHANGED:
         {
           let volume = this.niivue.getMediaByUrl(msg.url);
           if (volume) {
@@ -105,7 +126,7 @@ export class NVController {
           }
         }
         break;
-      case "volume added from url":
+      case NVMESSAGE.VOLUME_ADDED_FROM_URL:
         {
           if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
             NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
@@ -114,7 +135,7 @@ export class NVController {
           }
         }
         break;
-      case "volume with url removed":
+      case NVMESSAGE.VOLUME_WITH_URL_REMOVED:
         {
           let volume = this.niivue.getMediaByUrl(msg.url);
           if (volume) {
@@ -123,7 +144,7 @@ export class NVController {
           }
         }
         break;
-      case "color map has changed":
+      case NVMESSAGE.COLORMAP_CHANGED:
         {
           let volume = this.niivue.getMediaByUrl(msg.url);
           volume._colorMap = msg.colorMap;
@@ -131,14 +152,14 @@ export class NVController {
         }
         break;
 
-      case "opacity has changed":
+      case NVMESSAGE.OPACITY_CHANGED:
         {
           let volume = this.niivue.getMediaByUrl(msg.url);
           volume._opacity = msg.opacity;
           this.niivue.updateGLVolume();
         }
         break;
-      case "mesh added from url":
+      case NVMESSAGE.MESH_FROM_URL_ADDED:
         if (!this.niivue.getMediaByUrl(msg.meshOptions.url)) {
           msg.meshOptions.gl = this.niivue.gl;
           NVMesh.loadFromUrl(msg.meshOptions).then((mesh) => {
@@ -146,7 +167,7 @@ export class NVController {
           });
         }
         break;
-      case "mesh with url removed":
+      case NVMESSAGE.MESH_WITH_URL_REMOVED:
         {
           let mesh = this.niivue.getMediaByUrl(msg.url);
           if (mesh) {
@@ -155,7 +176,7 @@ export class NVController {
           }
         }
         break;
-      case "custom shader added":
+      case NVMESSAGE.CUSTOM_SHADER_ADDED:
         {
           let shader = this.niivue.createCustomMeshShader(
             msg.fragmentShaderText,
@@ -165,12 +186,12 @@ export class NVController {
         }
         break;
 
-      case "mesh shader changed":
+      case NVMESSAGE.MESH_SHADER_CHANGED:
         this.niivue.meshes[msg.meshIndex].meshShaderIndex = msg.shaderIndex;
         this.niivue.updateGLVolume();
         break;
 
-      case "mesh property changed":
+      case NVMESSAGE.MESH_PROPERTY_CHANGED:
         this.niivue.meshes[msg.meshIndex].setProperty(
           msg.key,
           msg.val,
@@ -195,7 +216,7 @@ export class NVController {
     serverBaseUrl = undefined,
     sessionKey = undefined
   ) {
-    this.user = user || new SessionUser();    
+    this.user = user || new SessionUser();
     this.sessionBus = new SessionBus(
       sessionName,
       this.user,
@@ -213,7 +234,7 @@ export class NVController {
   async onZoom3DChangeHandler(zoom) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "zoom",
+        op: NVMESSAGE.ZOOM,
         zoom,
       });
     }
@@ -227,7 +248,7 @@ export class NVController {
   async onAzimuthElevationChangeHandler(azimuth, elevation) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "ae",
+        op: NVMESSAGE.AZIMUTH_ELEVATION,
         azimuth,
         elevation,
       });
@@ -241,7 +262,7 @@ export class NVController {
   async onClipPlaneChangeHandler(clipPlane) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "clipPlane",
+        op: NVMESSAGE.CLIP_PLANE,
         clipPlane,
       });
     }
@@ -255,7 +276,7 @@ export class NVController {
     if (this.isInSession) {
       console.log(imageOptions);
       this.sessionBus.sendSessionMessage({
-        op: "volume added from url",
+        op: NVMESSAGE.VOLUME_ADDED_FROM_URL,
         imageOptions,
       });
     }
@@ -286,7 +307,7 @@ export class NVController {
   async onVolumeWithUrlRemovedHandler(url) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "volume with url removed",
+        op: NVMESSAGE.VOLUME_WITH_URL_REMOVED,
         url,
       });
     }
@@ -301,7 +322,7 @@ export class NVController {
     console.log(meshOptions);
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "mesh added from url",
+        op: NVMESSAGE.MESH_FROM_URL_ADDED,
         meshOptions,
       });
     }
@@ -319,7 +340,7 @@ export class NVController {
   async onMeshWithUrlRemovedHandler(url) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "mesh with url removed",
+        op: NVMESSAGE.MESH_WITH_URL_REMOVED,
         url,
       });
     }
@@ -334,7 +355,7 @@ export class NVController {
       let url = this.niivue.mediaUrlMap.get(volume);
       let colorMap = volume.colorMap;
       this.sessionBus.sendSessionMessage({
-        op: "color map has changed",
+        op: NVMESSAGE.COLORMAP_CHANGED,
         url,
         colorMap,
       });
@@ -349,7 +370,7 @@ export class NVController {
       let url = this.niivue.mediaUrlMap.get(volume);
       let opacity = volume.opacity;
       this.sessionBus.sendSessionMessage({
-        op: "opacity has changed",
+        op: NVMESSAGE.OPACITY_CHANGED,
         url,
         opacity,
       });
@@ -357,6 +378,7 @@ export class NVController {
   }
 
   /**
+   * Frame for 4D image has changed
    * @param {NVImage} volume
    * @param {number} index
    */
@@ -366,7 +388,7 @@ export class NVController {
     if (this.niivue.mediaUrlMap.has(volume) && this.isInSession) {
       let url = this.niivue.mediaUrlMap.get(volume);
       this.sessionBus.sendSessionMessage({
-        op: "frame changed",
+        op: NVMESSAGE.FRAME_CHANGED,
         url,
         index,
       });
@@ -374,31 +396,47 @@ export class NVController {
     this.onFrameChange(volume, index);
   }
 
+  /**
+   * Custom mesh shader has been added
+   * @param {string} fragmentShaderText shader code to be compiled
+   * @param {string} name name of shader, can be used as index
+   */
   onCustomMeshShaderAddedHandler(fragmentShaderText, name) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "custom shader added",
+        op: NVMESSAGE.CUSTOM_SHADER_ADDED,
         fragmentShaderText,
         name,
       });
     }
   }
 
+  /**
+   * Mesh shader has changed
+   * @param {number} meshIndex index of mesh
+   * @param {number} shaderIndex index of shader
+   */
   onMeshShaderChanged(meshIndex, shaderIndex) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: "mesh shader changed",
+        op: NVMESSAGE.MESH_SHADER_CHANGED,
         meshIndex,
         shaderIndex,
       });
     }
   }
 
+  /**
+   * Mesh property has been changed
+   * @param {number} meshIndex index of mesh
+   * @param {any} key property index
+   * @param {any} val property value
+   */
   onMeshPropertyChanged(meshIndex, key, val) {
     if (this.isInSession) {
-      console.log("mesh property changed");
+      console.log(NVMESSAGE.MESH_PROPERTY_CHANGED);
       this.sessionBus.sendSessionMessage({
-        op: "mesh property changed",
+        op: NVMESSAGE.MESH_PROPERTY_CHANGED,
         meshIndex,
         key,
         val,
