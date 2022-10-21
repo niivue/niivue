@@ -5311,48 +5311,52 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
   this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor);
 };
 
-// not included in public docs
-// determine pretty spacing for graph ticks
-function tickSpacingX(tickCount, mn, mx) {
-  //https://www.realtimerendering.com/resources/GraphicsGems/gems/Label.c
-  //https://stackoverflow.com/questions/326679/choosing-an-attractive-linear-scale-for-a-graphs-y-axis
-  let range = Math.abs(mx - mn);
-  if (range === 0.0) return [0, 0];
-  let unroundedTickSize = range / (tickCount - 1);
-  let x = Math.ceil(Math.log10(unroundedTickSize) - 1);
-  let pow10x = Math.pow(10, x);
-  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
-  let ticMin = mn;
-  if (ticMin % spacing !== 0.0 && range % spacing !== 0.0)
-    ticMin = Math.floor((mn + spacing) / spacing) * spacing;
-  if ((mn / spacing) % 1 !== 0.0)
-    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
-  return [spacing, ticMin];
+function nice(x, round) {
+  var exp = Math.floor(Math.log(x) / Math.log(10));
+  var f = x / Math.pow(10, exp);
+  var nf;
+  if (round) {
+    if (f < 1.5) {
+      nf = 1;
+    } else if (f < 3) {
+      nf = 2;
+    } else if (f < 7) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  } else {
+    if (f <= 1) {
+      nf = 1;
+    } else if (f <= 2) {
+      nf = 2;
+    } else if (f <= 5) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  }
+  return nf * Math.pow(10, exp);
 }
 
-// not included in public docs
-//returns true if numerator is evenly divisible by denominator
-function isDivisible(num, denom) {
-  //avoids rounding errors of (range % spacing === 0)
-  return Math.abs(num - Math.round(num / denom) * (denom / num)) < 0.00001;
+function loose_label(min, max, ntick = 4) {
+  let range = nice(max - min, false);
+  let d = nice(range / (ntick - 1), true);
+  let graphmin = Math.floor(min / d) * d;
+  let graphmax = Math.ceil(max / d) * d;
+  let perfect = graphmin === min && graphmax === max;
+  return [d, graphmin, graphmax, perfect];
 }
 
-// not included in public docs
-// determine pretty spacing for graph ticks
+// "Nice Numbers for Graph Labels", Graphics Gems, pp 61-63
+// https://github.com/cenfun/nice-ticks/blob/master/docs/Nice-Numbers-for-Graph-Labels.pdf
 function tickSpacing(mn, mx) {
-  let range = Math.abs(mx - mn);
-  let [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(4, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(6, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(7, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  return [spacing, ticMin];
+  let v = loose_label(mn, mx, 5);
+  if (!v[3]) v = loose_label(mn, mx, 4);
+  if (!v[3]) v = loose_label(mn, mx, 3);
+  if (!v[3]) v = loose_label(mn, mx, 5);
+  return [v[0], v[1], v[2]];
 }
-
 // not included in public docs
 // return canvas pixels available for tiles (e.g without colorbar)
 Niivue.prototype.effectiveCanvasHeight = function () {
@@ -5452,6 +5456,7 @@ Niivue.prototype.drawColorbarCore = function (
   if (min >= max || txtHt < 1) return;
   let range = max - min;
   let [spacing, ticMin] = tickSpacing(min, max);
+  if (ticMin < min) ticMin + spacing;
   //determine font size
   function humanize(x) {
     //drop trailing zeros from numerical string
@@ -6435,7 +6440,9 @@ Niivue.prototype.drawGraph = function () {
     graph.backColor[3],
   ];
   this.drawRect(graph.LTWH, borderColor);
-  let [spacing, ticMin] = tickSpacing(mn, mx);
+  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);
+  mn = Math.min(ticMin, mn);
+  mx = Math.max(ticMax, mx);
   //determine font size
   function humanize(x) {
     //drop trailing zeros from numerical string
@@ -6474,7 +6481,6 @@ Niivue.prototype.drawGraph = function () {
     graph.backColor[3] * 2,
   ]);
   //draw horizontal lines
-  //  let [spacing, ticMin] = tickSpacing(mn, mx);
   let rangeH = mx - mn;
   let scaleH = plotLTWH[3] / rangeH;
   let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
