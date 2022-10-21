@@ -6345,7 +6345,6 @@ Niivue.prototype.drawGraph = function () {
         axialTop = this.screenSlices[i].leftTopWidthHeight[1];
       if (axCorSag !== this.sliceTypeSagittal) continue;
       var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
-      console.log(">>>", ltwh[1], axialTop);
       if (ltwh[1] === axialTop) {
         graph.LTWH[0] = ltwh[0] + ltwh[2];
         graph.LTWH[1] = ltwh[1];
@@ -6443,13 +6442,13 @@ Niivue.prototype.drawGraph = function () {
     return x.toFixed(6).replace(/\.?0*$/, "");
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
-  let fntScale = 0.1 * (minWH / this.fontMets.size);
+  //n.b. dpr encodes retina displays
+  let fntScale = 0.1 * (minWH / (this.fontMets.size * this.scene.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16) fntSize = 0;
   let maxTextWid = 0;
   let lineH = ticMin;
   //determine widest label in vertical axis
-
   while (fntSize > 0 && lineH <= mx) {
     let str = humanize(lineH);
     let w = this.textWidth(fntSize, str);
@@ -7759,7 +7758,8 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
-  if (maxVols > 1) this.drawGraph();
+  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1)
+    this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();
