@@ -123,7 +123,21 @@ export class NVController {
           }
         }
         break;
+      case "color map has changed":
+        {
+          let volume = this.niivue.getMediaByUrl(msg.url);
+          volume._colorMap = msg.colorMap;
+          this.niivue.updateGLVolume();
+        }
+        break;
 
+      case "opacity has changed":
+        {
+          let volume = this.niivue.getMediaByUrl(msg.url);
+          volume._opacity = msg.opacity;
+          this.niivue.updateGLVolume();
+        }
+        break;
       case "mesh added from url":
         if (!this.niivue.getMediaByUrl(msg.meshOptions.url)) {
           msg.meshOptions.gl = this.niivue.gl;
@@ -181,9 +195,7 @@ export class NVController {
     serverBaseUrl = undefined,
     sessionKey = undefined
   ) {
-    this.user = user || new SessionUser();
-    console.log("session user");
-    console.log(this.user.id);
+    this.user = user || new SessionUser();    
     this.sessionBus = new SessionBus(
       sessionName,
       this.user,
@@ -318,16 +330,30 @@ export class NVController {
    * @param {NVImage} volume volume that has changed color maps
    */
   async onColorMapChangeHandler(volume) {
-    console.log("color map has changed");
-    console.log(volume);
+    if (this.isInSession && this.niivue.mediaUrlMap.has(volume)) {
+      let url = this.niivue.mediaUrlMap.get(volume);
+      let colorMap = volume.colorMap;
+      this.sessionBus.sendSessionMessage({
+        op: "color map has changed",
+        url,
+        colorMap,
+      });
+    }
   }
 
   /**
    * @param {NVImage} volume volume that has changed opacity
    */
   async onOpacityChangeHandler(volume) {
-    console.log("opacity has changed");
-    console.log(volume);
+    if (this.isInSession && this.niivue.mediaUrlMap.has(volume)) {
+      let url = this.niivue.mediaUrlMap.get(volume);
+      let opacity = volume.opacity;
+      this.sessionBus.sendSessionMessage({
+        op: "opacity has changed",
+        url,
+        opacity,
+      });
+    }
   }
 
   /**
