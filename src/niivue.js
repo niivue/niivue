@@ -116,7 +116,7 @@ export const dragModes = Object.freeze({
  * @typedef {Object} NiivueOptions
  * @property {number} [options.textHeight=0.06] the text height for orientation labels (0 to 1). Zero for no text labels
  * @property {number} [options.colorbarHeight=0.05] size of colorbar. 0 for no colorbars, fraction of Nifti j dimension
- * @property {number} [options.colorBarMargin=0.05] padding around colorbar when displayed
+ * @property {number} [options.colorbarMargin=0.05] padding around colorbar when displayed
  * @property {number} [options.crosshairWidth=1] crosshair size. Zero for no crosshair
  * @property {number} [options.rulerWidth=4] ruler size. Zero (or isRuler is false) for no ruler
  * @property {array}  [options.backColor=[0,0,0,1]] the background color. RGBA values from 0 to 1. Default is black
@@ -141,6 +141,7 @@ export const dragModes = Object.freeze({
  * @property {boolean} [options.isColorbar=false] whether colorbar(s) are shown illustrating values for color maps
  * @property {boolean} [options.isOrientCube=false] whether orientation cube is shown for 3D renderings
  * @property {number} [options.multiplanarPadPixels=0] spacing between tiles of a multiplanar view
+ * @property {boolean} [options.multiplanarForceRender=false] always show rendering in multiplanar view
  * @property {number} [options.meshThicknessOn2D=Infinity] 2D slice views can show meshes within this range. Meshes only visible in sliceMM (world space) mode
  * @property {dragModes} [options.dragMode=contrast] behavior for dragging (none, contrast, measurement, pan)
  * @property {boolean} [options.isDepthPickMesh=false] when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
@@ -197,6 +198,7 @@ export function Niivue(options = {}) {
     isColorbar: false,
     isOrientCube: false,
     multiplanarPadPixels: 0,
+    multiplanarForceRender: false,
     isRadiologicalConvention: false,
     meshThicknessOn2D: Infinity,
     dragMode: dragModes.contrast,
@@ -1944,7 +1946,7 @@ Niivue.prototype.drawUndo = function () {
 Niivue.prototype.loadDrawing = async function (fnm) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await this.addVolumeFromUrl(new NVImageFromUrlOptions(fnm));
+  let volume = await this.loadVolumeFromUrl(new NVImageFromUrlOptions(fnm));
   let dims = volume.hdr.dims; //reverse to original
   if (
     dims[1] !== this.back.hdr.dims[1] ||
@@ -4821,7 +4823,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
       )
     );
   }
-  this.opts.onFrameChange({ volume: volume, frame4D: frame4D });
+  this.opts.onFrameChange({ volume: this.volumes[idx], frame4D: frame4D });
 };
 
 /**
@@ -5911,6 +5913,7 @@ Niivue.prototype.draw2DMM = function (
   );
   if (customMM === Infinity || customMM === -Infinity) {
     //draw rendering
+    let ltwh = leftTopWidthHeight.slice();
     this.draw3D(
       leftTopWidthHeight,
       obj.modelViewProjectionMatrix,
@@ -5919,6 +5922,14 @@ Niivue.prototype.draw2DMM = function (
       azimuth,
       elevation
     );
+    let tile = this.screenSlices[this.screenSlices.length - 1];
+    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, 0.5);
+    tile.leftTopWidthHeight = ltwh;
+    tile.axCorSag = axCorSag;
+    tile.sliceFrac = Infinity; //use infinity to denote this is a rendering, not slice: not one depth
+    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, sliceFrac);
+    tile.leftTopMM = obj.leftTopMM;
+    tile.fovMM = obj.fovMM;
     return;
   }
   gl.enable(gl.DEPTH_TEST);
@@ -6310,20 +6321,37 @@ Niivue.prototype.setPivot3D = function () {
   this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
 }; // setPivot3D()
 
+Niivue.prototype.getMaxVols = function () {
+  if (this.volumes.length < 1) return 0;
+  let maxVols = 0;
+  for (let i = 0; i < this.volumes.length; i++)
+    maxVols = Math.max(maxVols, this.volumes[i].nFrame4D);
+  return maxVols;
+};
+
 // not included in public docs
 // draw graph for 4D NVImage: time across horizontal, intensity is vertical
 Niivue.prototype.drawGraph = function () {
+  if (this.getMaxVols() < 2) return;
   let graph = this.graph;
+  let axialTop = 0;
   if (
     this.graph.autoSizeMultiplanar &&
     this.sliceType === this.sliceTypeMultiplanar
   ) {
     for (let i = 0; i < this.screenSlices.length; i++) {
       var axCorSag = this.screenSlices[i].axCorSag;
+      if (axCorSag === this.sliceTypeAxial)
+        axialTop = this.screenSlices[i].leftTopWidthHeight[1];
       if (axCorSag !== this.sliceTypeSagittal) continue;
-      var ltwh = this.screenSlices[i].leftTopWidthHeight;
-      graph.LTWH[0] = ltwh[0];
-      graph.LTWH[1] = ltwh[1] + ltwh[3];
+      var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
+      if (ltwh[1] === axialTop) {
+        graph.LTWH[0] = ltwh[0] + ltwh[2];
+        graph.LTWH[1] = ltwh[1];
+      } else {
+        graph.LTWH[0] = ltwh[0];
+        graph.LTWH[1] = ltwh[1] + ltwh[3];
+      }
       graph.LTWH[2] = ltwh[2];
       graph.LTWH[3] = ltwh[2];
     }
@@ -6350,7 +6378,6 @@ Niivue.prototype.drawGraph = function () {
     }
   }
   if (vols.length < 1) return;
-  //let vols = graph.vols;
   let maxVols = this.volumes[vols[0]].nFrame4D;
   this.graph.selectedColumn = this.volumes[vols[0]].frame4D;
   if (maxVols < 2) {
@@ -6415,13 +6442,13 @@ Niivue.prototype.drawGraph = function () {
     return x.toFixed(6).replace(/\.?0*$/, "");
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
-  let fntScale = 0.1 * (minWH / this.fontMets.size);
+  //n.b. dpr encodes retina displays
+  let fntScale = 0.1 * (minWH / (this.fontMets.size * this.scene.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16) fntSize = 0;
   let maxTextWid = 0;
   let lineH = ticMin;
   //determine widest label in vertical axis
-
   while (fntSize > 0 && lineH <= mx) {
     let str = humanize(lineH);
     let w = this.textWidth(fntSize, str);
@@ -6805,7 +6832,7 @@ Niivue.prototype.draw3D = function (
     this.scene.renderAzimuth.toFixed(0) +
     " elevation: " +
     this.scene.renderElevation.toFixed(0);
-  this.drawGraph();
+  //this.drawGraph();
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
@@ -7221,6 +7248,11 @@ Niivue.prototype.drawCrossLinesMM = function (
 ) {
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   let tile = this.screenSlices[sliceIndex];
+  let sliceFrac = tile.sliceFrac;
+  let isRender = sliceFrac === Infinity;
+  if (isRender)
+    log.warn("Rendering approximate cross lines in world view mode");
+  if (sliceFrac === Infinity) sliceFrac = 0.5;
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
   let thick = Math.max(1, this.opts.crosshairWidth);
@@ -7243,7 +7275,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     return screenXY;
   }
   if (linesH.length > 0 && axCorSag === 0) {
-    let fracZ = tile.sliceFrac;
+    let fracZ = sliceFrac;
     let dimV = 1;
     for (let i = 0; i < linesH.length; i++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7260,7 +7292,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   }
   if (linesH.length > 0 && axCorSag === 1) {
-    let fracH = tile.sliceFrac;
+    let fracH = sliceFrac;
 
     let dimV = 2;
     for (let i = 0; i < linesH.length; i++) {
@@ -7278,7 +7310,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   }
   if (linesH.length > 0 && axCorSag === 2) {
-    let fracX = tile.sliceFrac;
+    let fracX = sliceFrac;
     let dimV = 2;
     for (let i = 0; i < linesH.length; i++) {
       let mmV = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7295,7 +7327,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   }
   if (linesV.length > 0 && axCorSag === 0) {
-    let fracZ = tile.sliceFrac;
+    let fracZ = sliceFrac;
     let dimH = 0;
     for (let i = 0; i < linesV.length; i++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7312,7 +7344,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   } //if vertical lines
   if (linesV.length > 0 && axCorSag === 1) {
-    let fracY = tile.sliceFrac;
+    let fracY = sliceFrac;
     let dimH = 0;
     for (let i = 0; i < linesV.length; i++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7329,7 +7361,7 @@ Niivue.prototype.drawCrossLinesMM = function (
     }
   } //if vertical lines
   if (linesV.length > 0 && axCorSag === 2) {
-    let fracX = tile.sliceFrac;
+    let fracX = sliceFrac;
     let dimH = 1;
     for (let i = 0; i < linesV.length; i++) {
       let mm = this.frac2mm([0.5, 0.5, 0.5]);
@@ -7358,6 +7390,9 @@ Niivue.prototype.drawCrossLines = function (
   if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return;
   if (this.opts.isSliceMM)
     return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
+  if (this.screenSlices[sliceIndex].sliceFrac === Infinity)
+    //render views always world space
+    return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
   let tile = this.screenSlices[sliceIndex];
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
@@ -7370,7 +7405,8 @@ Niivue.prototype.drawCrossLines = function (
   if (linesH.length > 0) {
     //draw horizontal lines
     let LTWH = tile.leftTopWidthHeight.slice();
-    let sliceDim = 2; //
+    let sliceDim = 2; //vertical axis is Zmm
+    if (axCorSag === this.sliceTypeAxial) sliceDim = 1; //vertical axis is Ymm
     let mm = this.frac2mm([0.5, 0.5, 0.5]);
     for (let i = 0; i < linesH.length; i++) {
       mm[sliceDim] = linesH[i];
@@ -7594,6 +7630,7 @@ Niivue.prototype.drawScene = function () {
     return;
   }
   if (this.opts.isColorbar) this.reserveColorbarPanel();
+  let maxVols = this.getMaxVols();
   if (this.sliceMosaicString.length > 0) {
     this.drawMosaic(this.sliceMosaicString);
   } else {
@@ -7635,19 +7672,28 @@ Niivue.prototype.drawScene = function () {
       );
       let wX1 =
         (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
-      if (wX1 > wX && !this.graph.autoSizeMultiplanar) {
+      if (this.opts.multiplanarForceRender) {
+        //issue404
+        ltwh3x1 = ltwh4x1;
+        wX1 =
+          (ltwh3x1[2] * volScale[0]) /
+          (volScale[0] + volScale[0] + volScale[1] + mx);
+      }
+      if (wX1 > wX) {
         //landscape screen ratio: 3 slices in single row
         let pixScale = wX1 / volScale[0];
         let hY1 = volScale[1] * pixScale;
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          this.draw3D([
-            ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
-            ltwh3x1[1],
-            ltwh4x1[3],
-            ltwh4x1[3],
-          ]);
+          if (maxVols < 2 || !this.graph.autoSizeMultiplanar) {
+            this.draw3D([
+              ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
+              ltwh3x1[1],
+              ltwh4x1[3],
+              ltwh4x1[3],
+            ]);
+          }
         }
         //draw axial
         this.draw2D([ltwh3x1[0], ltwh3x1[1], wX1, hY1], 0);
@@ -7668,7 +7714,7 @@ Niivue.prototype.drawScene = function () {
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
         //draw sagittal
         this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
-        if (!this.graph.autoSizeMultiplanar)
+        if (maxVols < 2 || !this.graph.autoSizeMultiplanar)
           this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       } //if landscape else portrait
     } //if multiplanar
@@ -7697,12 +7743,6 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
-    console.log(
-      this.opts.dragMode === dragModes.measurement,
-      ">>",
-      this.opts.dragMode,
-      dragModes.measurement
-    );
     if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0) return;
     let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
     let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
@@ -7718,7 +7758,8 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
-  this.drawGraph();
+  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1)
+    this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();

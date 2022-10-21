@@ -19,9 +19,9 @@
      <h1>
        Advanced Mosaic (Lightbox, Montage) View
      </h1>
-     <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).</p>
+     <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X), labels (L), and renderings (R).</p>
      <label for="name">Mosaic string:</label>
-     <input type="text" id="str" name="str" onKeyUp="return bar()" value="A 0 50 L+ 60; C -10 0 S X 40; R A 0 R S 0 R C 0 " required minlength="2" maxlength="90" size="90">
+     <input type="text" id="str" name="str" onKeyUp="return bar()" value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0" required minlength="2" maxlength="90" size="90">
      <p>
      <input type="checkbox" id="check1" name="check1" unchecked>
      <label for="check1">Radiological</label>
@@ -51,8 +51,8 @@
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:640px;">
-        <canvas id="gl1" height=640 width=640>
+      <div id="demo1" style="width:90%; height:800px;">
+        <canvas id="gl1" height=800 width=640>
         </canvas>
       </div>
     </section>
