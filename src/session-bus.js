@@ -120,6 +120,7 @@ export function SessionBus(
 }
 
 SessionBus.prototype.sendSessionMessage = function (message) {
+  message.from = this.userId;
   if (this.isConnectedToServer) {
     this.serverConnection$.next({
       ...message,
@@ -153,7 +154,7 @@ SessionBus.prototype.subscribeToServer = function () {
   });
 };
 
-SessionBus.prototype.sendLocalMessage = function (message) {
+SessionBus.prototype.sendLocalMessage = function (message) {  
   // add the message for each client
   for (const user of this.userList) {
     if (user.id === this.userId) {
