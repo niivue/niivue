@@ -14,7 +14,6 @@
             width: 100%;
             background: #202020;
         }
-
         ul {
             list-style-type: none;
             margin: 0;
@@ -22,7 +21,6 @@
             overflow: hidden;
             background-color: #202020;
         }
-
         li {
             float: left;
         }
@@ -32,7 +30,7 @@
             display: inline-block;
             color: white;
             text-align: center;
-            padding: 14px 16px;
+            padding: 4px 8px;
             text-decoration: none;
         }
         canvas:focus {
@@ -42,45 +40,38 @@
         .dropdown:hover .dropbtn {
             background-color: #44ABDA;
         }
-
         li.dropdown {
             display: inline-block;
             font-family: Arial, Helvetica, sans-serif;
         }
-
         .dropdown-content {
             font-family: Arial, Helvetica, sans-serif;
             display: none;
             position: absolute;
             background-color: #f9f9f9;
             min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+            box-shadow: 0px 6px 6px 0px rgba(0, 0, 0, 0.2);
             z-index: 1;
         }
-
         .dropdown-content a {
             /* menu items */
             color: black;
-            padding: 12px 16px;
+            padding: 6px 16px;
             text-decoration: none;
             display: block;
             text-align: left;
         }
-
         .dropdown-content a:hover {
             background-color: #f1f1f1
         }
-
         .dropdown:hover .dropdown-content {
             display: block;
         }
-
         .divider,
         .linker,
         .overlay {
             border-top: 1px solid grey;
         }
-
         canvas {
           display: block;  /* prevents scrollbar */
           border: 0;
@@ -102,7 +93,6 @@
          }
     </style>
 </head>
-
 <body>
     <div id="menu-container">
         <input id="file-input" type="file" name="name" style="display: none;" />
@@ -174,7 +164,7 @@
         var HEIGHT = 640
         function onWindowResize(isInit = false) {
          WIDTH = canvas.clientWidth
-         HEIGHT = canvas.clientHeight;//menuHeight
+         HEIGHT = canvas.clientHeight
         // Check if the canvas is not the same size.
          if (canvas.width  != WIDTH || canvas.height != HEIGHT) {
            // Make the canvas the same size
@@ -206,7 +196,6 @@
         nv1.attachTo('gl1')
         nv1.setClipPlane([0.3, 270, 0])
         nv1.setRenderAzimuthElevation(120,10)
-
         nv1.setSliceType(nv1.sliceTypeMultiplanar)
         nv1.setSliceMM(true)
         nv1.opts.multiplanarForceRender = true
@@ -248,7 +237,7 @@
                 return
             }
             if (event.target.id === "Crosshair") {
-                nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair;
+                nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair
                 event.srcElement.classList.toggle("dropdown-item-checked")
                 nv1.drawScene()
             }
@@ -260,7 +249,6 @@
                 nv1.drawScene()
                 return
             }
-            
             if (event.target.id.charAt(0) === '!') { // set color scheme
                 nv1.volumes[0].colorMap = event.target.id.substr(1)
                 nv1.updateGLVolume()
@@ -322,7 +310,7 @@
                 ])
                 toggleGroup(event.target.id)
             } else if(event.target.id.charAt(0) === '_') { //example image
-                nv1.meshes = []; //close open meshes
+                nv1.meshes = [] //close open meshes
                 let root = '../images/'
                 let s = event.target.id.substr(1)
                 let img = root + s + '.nii.gz'
@@ -340,5 +328,4 @@
         for (let i = 0; i < buttons.length; i++)
             buttons[i].addEventListener("click", onButtonClick, false)
     </script>
-
 </html>

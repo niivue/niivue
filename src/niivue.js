@@ -6366,7 +6366,10 @@ Niivue.prototype.drawGraph = function () {
   }
   graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
   graph.lineColor = [1, 1, 1, 1];
-  if ((this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2]) > 1.5) {
+  if (
+    this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2] >
+    1.5
+  ) {
     graph.backColor = [0.95, 0.95, 0.95, graph.opacity];
     graph.lineColor = [0, 0, 0, 1];
   }
@@ -6438,7 +6441,7 @@ Niivue.prototype.drawGraph = function () {
   }
   let dark = 0.9; //make border around graph a bit darker than graph body
   this.drawRect(graph.LTWH, graph.backColor);
-  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);;
+  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);
   let digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)));
   mn = Math.min(ticMin, mn);
   mx = Math.max(ticMax, mx);
@@ -6473,7 +6476,7 @@ Niivue.prototype.drawGraph = function () {
     graph.LTWH[3] - fntSize - 2 * margin * frameHt,
   ];
   this.graph.plotLTWH = plotLTWH;
-  this.drawRect(plotLTWH, this.opts.backColor);//this.opts.backColor
+  this.drawRect(plotLTWH, this.opts.backColor); //this.opts.backColor
   //draw horizontal lines
   let rangeH = mx - mn;
   let scaleH = plotLTWH[3] / rangeH;
@@ -6498,11 +6501,16 @@ Niivue.prototype.drawGraph = function () {
   while (lineH <= mx) {
     let y = plotBottom - (lineH - mn) * scaleH;
     this.drawLine(
-      [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.lineThickness, y],
+      [
+        plotLTWH[0] - halfThick,
+        y,
+        plotLTWH[0] + plotLTWH[2] + graph.lineThickness,
+        y,
+      ],
       graph.lineThickness,
       graph.lineColor
     );
-    let str =lineH.toFixed(digits);
+    let str = lineH.toFixed(digits);
     if (fntSize > 0)
       this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
