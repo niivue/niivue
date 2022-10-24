@@ -2281,7 +2281,7 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * @param {NVImage} volume volume to delete
  * @example
  * niivue = new Niivue()
- * niivue.removeMesh(this.meshes[3])
+ * niivue.removeVolume(this.volume[3])
  */
 Niivue.prototype.removeVolume = function (volume, notifySubscribers = true) {
   this.setVolume(volume, -1);
@@ -6366,9 +6366,13 @@ Niivue.prototype.drawGraph = function () {
   }
   graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
   graph.lineColor = [1, 1, 1, 1];
+  if ((this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2]) > 1.5) {
+    graph.backColor = [0.95, 0.95, 0.95, graph.opacity];
+    graph.lineColor = [0, 0, 0, 1];
+  }
+  graph.textColor = graph.lineColor.slice();
   graph.lineThickness = 4;
   graph.lineAlpha = 1;
-  graph.textColor = [1, 1, 1, 1];
   graph.lines = [];
   let vols = [];
   if (graph.vols.length < 1) {
@@ -6433,14 +6437,9 @@ Niivue.prototype.drawGraph = function () {
     mx = mn + 1.0;
   }
   let dark = 0.9; //make border around graph a bit darker than graph body
-  let borderColor = [
-    dark * graph.backColor[0],
-    dark * graph.backColor[1],
-    dark * graph.backColor[2],
-    graph.backColor[3],
-  ];
-  this.drawRect(graph.LTWH, borderColor);
-  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);
+  this.drawRect(graph.LTWH, graph.backColor);
+  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);;
+  let digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)));
   mn = Math.min(ticMin, mn);
   mx = Math.max(ticMax, mx);
   //determine font size
@@ -6457,7 +6456,7 @@ Niivue.prototype.drawGraph = function () {
   let lineH = ticMin;
   //determine widest label in vertical axis
   while (fntSize > 0 && lineH <= mx) {
-    let str = humanize(lineH);
+    let str = lineH.toFixed(digits);
     let w = this.textWidth(fntSize, str);
     maxTextWid = Math.max(w, maxTextWid);
     lineH += spacing;
@@ -6474,12 +6473,7 @@ Niivue.prototype.drawGraph = function () {
     graph.LTWH[3] - fntSize - 2 * margin * frameHt,
   ];
   this.graph.plotLTWH = plotLTWH;
-  this.drawRect(plotLTWH, [
-    graph.backColor[0],
-    graph.backColor[1],
-    graph.backColor[2],
-    graph.backColor[3] * 2,
-  ]);
+  this.drawRect(plotLTWH, this.opts.backColor);//this.opts.backColor
   //draw horizontal lines
   let rangeH = mx - mn;
   let scaleH = plotLTWH[3] / rangeH;
@@ -6500,14 +6494,15 @@ Niivue.prototype.drawGraph = function () {
   }
   lineH = ticMin;
   //draw thick horizontal lines
+  let halfThick = 0.5 * graph.lineThickness;
   while (lineH <= mx) {
     let y = plotBottom - (lineH - mn) * scaleH;
     this.drawLine(
-      [plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y],
+      [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.lineThickness, y],
       graph.lineThickness,
       graph.lineColor
     );
-    let str = humanize(lineH);
+    let str =lineH.toFixed(digits);
     if (fntSize > 0)
       this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
@@ -6576,14 +6571,13 @@ Niivue.prototype.drawGraph = function () {
     graph.selectedColumn < graph.lines[0].length
   ) {
     let x = graph.selectedColumn * scaleW + plotLTWH[0];
-
     this.drawLine(
       [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
       graph.lineThickness,
       [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1]
     );
   }
-};
+}; // drawGraph()
 
 // not included in public docs
 // return boolean is 2D slice view is radiological
