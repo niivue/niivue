@@ -2997,7 +2997,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let isVectors = false;
   let isColMajor = false;
   let Dims = [1, 1, 1];
-  let FreeSurferTranlate = [0,0,0]; //https://gist.github.com/alexisthual/f0b2f9eb2a67b8f61798f2c138dda981
+  let FreeSurferTranlate = [0, 0, 0]; //https://gist.github.com/alexisthual/f0b2f9eb2a67b8f61798f2c138dda981
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
@@ -3098,10 +3098,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       let epos = line.indexOf("]", spos);
       return line.slice(spos, epos);
     }
-    if (
-      line.startsWith("<Name") &&
-      line.includes("VolGeom")
-    ) {
+    if (line.startsWith("<Name") && line.includes("VolGeom")) {
       //the great kludge: attempt to match GIfTI and CIfTI
       let e = -1;
       if (line.includes("VolGeomC_R")) e = 0;
@@ -3109,8 +3106,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (line.includes("VolGeomC_S")) e = 2;
       if (!line.includes("<Value")) line = readStr();
       if (!line.includes("CDATA[")) continue;
-      if (e >= 0)
-        FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+      if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
     if (
       line.startsWith("<Name") &&
@@ -3150,7 +3146,12 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
   if (n_vert > 0) return scalars;
-  if ((positions.length > 2) && ((FreeSurferTranlate[0] != 0) || (FreeSurferTranlate[1] != 0) || (FreeSurferTranlate[2] != 0))) {
+  if (
+    positions.length > 2 &&
+    (FreeSurferTranlate[0] != 0 ||
+      FreeSurferTranlate[1] != 0 ||
+      FreeSurferTranlate[2] != 0)
+  ) {
     nvert = Math.floor(positions.length / 3);
     let i = 0;
     for (var v = 0; v < nvert; v++) {
