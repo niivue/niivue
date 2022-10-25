@@ -819,7 +819,6 @@ Niivue.prototype.mouseUpListener = function () {
 
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.dragMode === dragModes.contrast) console.log("Poko");
     if (this.opts.dragMode !== dragModes.contrast) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -5138,48 +5137,53 @@ Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
   this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor);
 };
 
-// not included in public docs
-// determine pretty spacing for graph ticks
-function tickSpacingX(tickCount, mn, mx) {
-  //https://www.realtimerendering.com/resources/GraphicsGems/gems/Label.c
-  //https://stackoverflow.com/questions/326679/choosing-an-attractive-linear-scale-for-a-graphs-y-axis
-  let range = Math.abs(mx - mn);
-  if (range === 0.0) return [0, 0];
-  let unroundedTickSize = range / (tickCount - 1);
-  let x = Math.ceil(Math.log10(unroundedTickSize) - 1);
-  let pow10x = Math.pow(10, x);
-  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
-  let ticMin = mn;
-  if (ticMin % spacing !== 0.0 && range % spacing !== 0.0)
-    ticMin = Math.floor((mn + spacing) / spacing) * spacing;
-  if ((mn / spacing) % 1 !== 0.0)
-    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
-  return [spacing, ticMin];
+function nice(x, round) {
+  var exp = Math.floor(Math.log(x) / Math.log(10));
+  var f = x / Math.pow(10, exp);
+  var nf;
+  if (round) {
+    if (f < 1.5) {
+      nf = 1;
+    } else if (f < 3) {
+      nf = 2;
+    } else if (f < 7) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  } else {
+    if (f <= 1) {
+      nf = 1;
+    } else if (f <= 2) {
+      nf = 2;
+    } else if (f <= 5) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  }
+  return nf * Math.pow(10, exp);
 }
 
-// not included in public docs
-//returns true if numerator is evenly divisible by denominator
-function isDivisible(num, denom) {
-  //avoids rounding errors of (range % spacing === 0)
-  return Math.abs(num - Math.round(num / denom) * (denom / num)) < 0.00001;
+function loose_label(min, max, ntick = 4) {
+  let range = nice(max - min, false);
+  let d = nice(range / (ntick - 1), true);
+  let graphmin = Math.floor(min / d) * d;
+  let graphmax = Math.ceil(max / d) * d;
+  let perfect = graphmin === min && graphmax === max;
+  return [d, graphmin, graphmax, perfect];
 }
 
-// not included in public docs
-// determine pretty spacing for graph ticks
+// "Nice Numbers for Graph Labels", Graphics Gems, pp 61-63
+// https://github.com/cenfun/nice-ticks/blob/master/docs/Nice-Numbers-for-Graph-Labels.pdf
 function tickSpacing(mn, mx) {
-  let range = Math.abs(mx - mn);
-  let [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(4, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(6, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(7, mn, mx);
-  if (isDivisible(range, spacing)) return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  return [spacing, ticMin];
+  let v = loose_label(mn, mx, 3);
+  if (!v[3]) v = loose_label(mn, mx, 5);
+  if (!v[3]) v = loose_label(mn, mx, 4);
+  if (!v[3]) v = loose_label(mn, mx, 3);
+  if (!v[3]) v = loose_label(mn, mx, 5);
+  return [v[0], v[1], v[2]];
 }
-
 // not included in public docs
 // return canvas pixels available for tiles (e.g without colorbar)
 Niivue.prototype.effectiveCanvasHeight = function () {
@@ -5279,6 +5283,7 @@ Niivue.prototype.drawColorbarCore = function (
   if (min >= max || txtHt < 1) return;
   let range = max - min;
   let [spacing, ticMin] = tickSpacing(min, max);
+  if (ticMin < min) ticMin += spacing;
   //determine font size
   function humanize(x) {
     //drop trailing zeros from numerical string
@@ -6188,9 +6193,16 @@ Niivue.prototype.drawGraph = function () {
   }
   graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
   graph.lineColor = [1, 1, 1, 1];
+  if (
+    this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2] >
+    1.5
+  ) {
+    graph.backColor = [0.95, 0.95, 0.95, graph.opacity];
+    graph.lineColor = [0, 0, 0, 1];
+  }
+  graph.textColor = graph.lineColor.slice();
   graph.lineThickness = 4;
   graph.lineAlpha = 1;
-  graph.textColor = [1, 1, 1, 1];
   graph.lines = [];
   let vols = [];
   if (graph.vols.length < 1) {
@@ -6255,14 +6267,11 @@ Niivue.prototype.drawGraph = function () {
     mx = mn + 1.0;
   }
   let dark = 0.9; //make border around graph a bit darker than graph body
-  let borderColor = [
-    dark * graph.backColor[0],
-    dark * graph.backColor[1],
-    dark * graph.backColor[2],
-    graph.backColor[3],
-  ];
-  this.drawRect(graph.LTWH, borderColor);
-  let [spacing, ticMin] = tickSpacing(mn, mx);
+  this.drawRect(graph.LTWH, graph.backColor);
+  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);
+  let digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)));
+  mn = Math.min(ticMin, mn);
+  mx = Math.max(ticMax, mx);
   //determine font size
   function humanize(x) {
     //drop trailing zeros from numerical string
@@ -6270,14 +6279,14 @@ Niivue.prototype.drawGraph = function () {
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
   //n.b. dpr encodes retina displays
-  let fntScale = 0.1 * (minWH / (this.fontMets.size * this.scene.dpr));
+  let fntScale = 0.07 * (minWH / (this.fontMets.size * this.scene.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16) fntSize = 0;
   let maxTextWid = 0;
   let lineH = ticMin;
   //determine widest label in vertical axis
   while (fntSize > 0 && lineH <= mx) {
-    let str = humanize(lineH);
+    let str = lineH.toFixed(digits);
     let w = this.textWidth(fntSize, str);
     maxTextWid = Math.max(w, maxTextWid);
     lineH += spacing;
@@ -6294,14 +6303,8 @@ Niivue.prototype.drawGraph = function () {
     graph.LTWH[3] - fntSize - 2 * margin * frameHt,
   ];
   this.graph.plotLTWH = plotLTWH;
-  this.drawRect(plotLTWH, [
-    graph.backColor[0],
-    graph.backColor[1],
-    graph.backColor[2],
-    graph.backColor[3] * 2,
-  ]);
+  this.drawRect(plotLTWH, this.opts.backColor); //this.opts.backColor
   //draw horizontal lines
-  //  let [spacing, ticMin] = tickSpacing(mn, mx);
   let rangeH = mx - mn;
   let scaleH = plotLTWH[3] / rangeH;
   let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
@@ -6321,14 +6324,20 @@ Niivue.prototype.drawGraph = function () {
   }
   lineH = ticMin;
   //draw thick horizontal lines
+  let halfThick = 0.5 * graph.lineThickness;
   while (lineH <= mx) {
     let y = plotBottom - (lineH - mn) * scaleH;
     this.drawLine(
-      [plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y],
+      [
+        plotLTWH[0] - halfThick,
+        y,
+        plotLTWH[0] + plotLTWH[2] + graph.lineThickness,
+        y,
+      ],
       graph.lineThickness,
       graph.lineColor
     );
-    let str = humanize(lineH);
+    let str = lineH.toFixed(digits);
     if (fntSize > 0)
       this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
@@ -6397,14 +6406,13 @@ Niivue.prototype.drawGraph = function () {
     graph.selectedColumn < graph.lines[0].length
   ) {
     let x = graph.selectedColumn * scaleW + plotLTWH[0];
-
     this.drawLine(
       [x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]],
       graph.lineThickness,
       [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1]
     );
   }
-};
+}; // drawGraph()
 
 // not included in public docs
 // return boolean is 2D slice view is radiological
@@ -7585,7 +7593,11 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
-  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1)
+  if (
+    this.sliceType === this.sliceTypeMultiplanar &&
+    maxVols > 1 &&
+    this.graph.autoSizeMultiplanar
+  )
     this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);

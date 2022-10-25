@@ -2997,6 +2997,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let isVectors = false;
   let isColMajor = false;
   let Dims = [1, 1, 1];
+  let FreeSurferTranlate = [0, 0, 0]; //https://gist.github.com/alexisthual/f0b2f9eb2a67b8f61798f2c138dda981
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
@@ -3090,6 +3091,23 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       }
       continue;
     }
+    function readBracketTag(TagName) {
+      let pos = line.indexOf(TagName);
+      if (pos < 0) return "";
+      let spos = line.indexOf("[", pos) + 1;
+      let epos = line.indexOf("]", spos);
+      return line.slice(spos, epos);
+    }
+    if (line.startsWith("<Name") && line.includes("VolGeom")) {
+      //the great kludge: attempt to match GIfTI and CIfTI
+      let e = -1;
+      if (line.includes("VolGeomC_R")) e = 0;
+      if (line.includes("VolGeomC_A")) e = 1;
+      if (line.includes("VolGeomC_S")) e = 2;
+      if (!line.includes("<Value")) line = readStr();
+      if (!line.includes("CDATA[")) continue;
+      if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+    }
     if (
       line.startsWith("<Name") &&
       line.includes("AnatomicalStructurePrimary")
@@ -3098,13 +3116,6 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       //unclear how connectome workbench reconciles multiple CIfTI structures with GIfTI mesh
       if (!line.includes("<Value")) line = readStr();
       if (!line.includes("CDATA[")) continue;
-      function readBracketTag(TagName) {
-        let pos = line.indexOf(TagName);
-        if (pos < 0) return "";
-        let spos = line.indexOf("[", pos) + 1;
-        let epos = line.indexOf("]", spos);
-        return line.slice(spos, epos);
-      }
       this.AnatomicalStructurePrimary = readBracketTag("CDATA[").toUpperCase();
     }
     if (!line.startsWith("<DataArray")) continue;
@@ -3135,6 +3146,23 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
   if (n_vert > 0) return scalars;
+  if (
+    positions.length > 2 &&
+    (FreeSurferTranlate[0] != 0 ||
+      FreeSurferTranlate[1] != 0 ||
+      FreeSurferTranlate[2] != 0)
+  ) {
+    nvert = Math.floor(positions.length / 3);
+    let i = 0;
+    for (var v = 0; v < nvert; v++) {
+      positions[i] += FreeSurferTranlate[0];
+      i++;
+      positions[i] += FreeSurferTranlate[1];
+      i++;
+      positions[i] += FreeSurferTranlate[2];
+      i++;
+    }
+  } //issue416: apply FreeSurfer translation
   return {
     positions,
     indices,
