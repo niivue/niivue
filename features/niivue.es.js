@@ -109786,11 +109786,19 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
   let isVectors = false;
   let isColMajor = false;
   let Dims = [1, 1, 1];
+  let FreeSurferTranlate = [0, 0, 0];
   let dataType = 0;
   let isGzip = false;
   let nvert = 0;
   while (pos < len2) {
-    let readNumericTag = function(TagName) {
+    let readBracketTag = function(TagName) {
+      let pos2 = line.indexOf(TagName);
+      if (pos2 < 0)
+        return "";
+      let spos = line.indexOf("[", pos2) + 1;
+      let epos = line.indexOf("]", spos);
+      return line.slice(spos, epos);
+    }, readNumericTag = function(TagName) {
       let pos2 = line.indexOf(TagName);
       if (pos2 < 0)
         return 1;
@@ -109883,15 +109891,22 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
       }
       continue;
     }
+    if (line.startsWith("<Name") && line.includes("VolGeom")) {
+      let e = -1;
+      if (line.includes("VolGeomC_R"))
+        e = 0;
+      if (line.includes("VolGeomC_A"))
+        e = 1;
+      if (line.includes("VolGeomC_S"))
+        e = 2;
+      if (!line.includes("<Value"))
+        line = readStr();
+      if (!line.includes("CDATA["))
+        continue;
+      if (e >= 0)
+        FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+    }
     if (line.startsWith("<Name") && line.includes("AnatomicalStructurePrimary")) {
-      let readBracketTag = function(TagName) {
-        let pos2 = line.indexOf(TagName);
-        if (pos2 < 0)
-          return "";
-        let spos = line.indexOf("[", pos2) + 1;
-        let epos = line.indexOf("]", spos);
-        return line.slice(spos, epos);
-      };
       if (!line.includes("<Value"))
         line = readStr();
       if (!line.includes("CDATA["))
@@ -109921,6 +109936,18 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
   }
   if (n_vert > 0)
     return scalars;
+  if (positions.length > 2 && (FreeSurferTranlate[0] != 0 || FreeSurferTranlate[1] != 0 || FreeSurferTranlate[2] != 0)) {
+    nvert = Math.floor(positions.length / 3);
+    let i3 = 0;
+    for (var v = 0; v < nvert; v++) {
+      positions[i3] += FreeSurferTranlate[0];
+      i3++;
+      positions[i3] += FreeSurferTranlate[1];
+      i3++;
+      positions[i3] += FreeSurferTranlate[2];
+      i3++;
+    }
+  }
   return {
     positions,
     indices,
@@ -112645,8 +112672,6 @@ Niivue.prototype.mouseUpListener = function() {
   this.drawPenAxCorSag = -1;
   if (this.isDragging) {
     this.isDragging = false;
-    if (this.opts.dragMode === dragModes.contrast)
-      console.log("Poko");
     if (this.opts.dragMode !== dragModes.contrast)
       return;
     this.calculateNewRange();
@@ -115326,40 +115351,52 @@ Niivue.prototype.drawRect = function(leftTopWidthHeight, lineColor = [1, 0, 0, -
 Niivue.prototype.drawSelectionBox = function(leftTopWidthHeight) {
   this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor);
 };
-function tickSpacingX(tickCount, mn, mx) {
-  let range = Math.abs(mx - mn);
-  if (range === 0)
-    return [0, 0];
-  let unroundedTickSize = range / (tickCount - 1);
-  let x2 = Math.ceil(Math.log10(unroundedTickSize) - 1);
-  let pow10x = Math.pow(10, x2);
-  let spacing = Math.ceil(unroundedTickSize / pow10x) * pow10x;
-  let ticMin = mn;
-  if (ticMin % spacing !== 0 && range % spacing !== 0)
-    ticMin = Math.floor((mn + spacing) / spacing) * spacing;
-  if (mn / spacing % 1 !== 0)
-    ticMin = Math.sign(ticMin) * Math.round(Math.abs(ticMin));
-  return [spacing, ticMin];
+function nice(x2, round) {
+  var exp = Math.floor(Math.log(x2) / Math.log(10));
+  var f = x2 / Math.pow(10, exp);
+  var nf;
+  if (round) {
+    if (f < 1.5) {
+      nf = 1;
+    } else if (f < 3) {
+      nf = 2;
+    } else if (f < 7) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  } else {
+    if (f <= 1) {
+      nf = 1;
+    } else if (f <= 2) {
+      nf = 2;
+    } else if (f <= 5) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  }
+  return nf * Math.pow(10, exp);
 }
-function isDivisible(num, denom) {
-  return Math.abs(num - Math.round(num / denom) * (denom / num)) < 1e-5;
+function loose_label(min2, max2, ntick = 4) {
+  let range = nice(max2 - min2, false);
+  let d = nice(range / (ntick - 1), true);
+  let graphmin = Math.floor(min2 / d) * d;
+  let graphmax = Math.ceil(max2 / d) * d;
+  let perfect = graphmin === min2 && graphmax === max2;
+  return [d, graphmin, graphmax, perfect];
 }
 function tickSpacing(mn, mx) {
-  let range = Math.abs(mx - mn);
-  let [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  if (isDivisible(range, spacing))
-    return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(4, mn, mx);
-  if (isDivisible(range, spacing))
-    return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(6, mn, mx);
-  if (isDivisible(range, spacing))
-    return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(7, mn, mx);
-  if (isDivisible(range, spacing))
-    return [spacing, ticMin];
-  [spacing, ticMin] = tickSpacingX(5, mn, mx);
-  return [spacing, ticMin];
+  let v = loose_label(mn, mx, 3);
+  if (!v[3])
+    v = loose_label(mn, mx, 5);
+  if (!v[3])
+    v = loose_label(mn, mx, 4);
+  if (!v[3])
+    v = loose_label(mn, mx, 3);
+  if (!v[3])
+    v = loose_label(mn, mx, 5);
+  return [v[0], v[1], v[2]];
 }
 Niivue.prototype.effectiveCanvasHeight = function() {
   return this.gl.canvas.height - this.colorbarHeight;
@@ -115435,6 +115472,8 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
     return;
   let range = max2 - min2;
   let [spacing, ticMin] = tickSpacing(min2, max2);
+  if (ticMin < min2)
+    ticMin += spacing;
   function humanize(x2) {
     return x2.toFixed(6).replace(/\.?0*$/, "");
   }
@@ -116063,9 +116102,13 @@ Niivue.prototype.drawGraph = function() {
   }
   graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
   graph.lineColor = [1, 1, 1, 1];
+  if (this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2] > 1.5) {
+    graph.backColor = [0.95, 0.95, 0.95, graph.opacity];
+    graph.lineColor = [0, 0, 0, 1];
+  }
+  graph.textColor = graph.lineColor.slice();
   graph.lineThickness = 4;
   graph.lineAlpha = 1;
-  graph.textColor = [1, 1, 1, 1];
   graph.lines = [];
   let vols = [];
   if (graph.vols.length < 1) {
@@ -116132,27 +116175,23 @@ Niivue.prototype.drawGraph = function() {
   if (mn >= mx) {
     mx = mn + 1;
   }
-  let dark = 0.9;
-  let borderColor = [
-    dark * graph.backColor[0],
-    dark * graph.backColor[1],
-    dark * graph.backColor[2],
-    graph.backColor[3]
-  ];
-  this.drawRect(graph.LTWH, borderColor);
-  let [spacing, ticMin] = tickSpacing(mn, mx);
+  this.drawRect(graph.LTWH, graph.backColor);
+  let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);
+  let digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)));
+  mn = Math.min(ticMin, mn);
+  mx = Math.max(ticMax, mx);
   function humanize(x2) {
     return x2.toFixed(6).replace(/\.?0*$/, "");
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
-  let fntScale = 0.1 * (minWH / (this.fontMets.size * this.scene.dpr));
+  let fntScale = 0.07 * (minWH / (this.fontMets.size * this.scene.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16)
     fntSize = 0;
   let maxTextWid = 0;
   let lineH = ticMin;
   while (fntSize > 0 && lineH <= mx) {
-    let str = humanize(lineH);
+    let str = lineH.toFixed(digits);
     let w = this.textWidth(fntSize, str);
     maxTextWid = Math.max(w, maxTextWid);
     lineH += spacing;
@@ -116167,12 +116206,7 @@ Niivue.prototype.drawGraph = function() {
     graph.LTWH[3] - fntSize - 2 * margin * frameHt
   ];
   this.graph.plotLTWH = plotLTWH;
-  this.drawRect(plotLTWH, [
-    graph.backColor[0],
-    graph.backColor[1],
-    graph.backColor[2],
-    graph.backColor[3] * 2
-  ]);
+  this.drawRect(plotLTWH, this.opts.backColor);
   let rangeH = mx - mn;
   let scaleH = plotLTWH[3] / rangeH;
   let scaleW = plotLTWH[2] / (graph.lines[0].length - 1);
@@ -116186,10 +116220,16 @@ Niivue.prototype.drawGraph = function() {
     lineH += spacing;
   }
   lineH = ticMin;
+  let halfThick = 0.5 * graph.lineThickness;
   while (lineH <= mx) {
     let y = plotBottom - (lineH - mn) * scaleH;
-    this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.lineThickness, graph.lineColor);
-    let str = humanize(lineH);
+    this.drawLine([
+      plotLTWH[0] - halfThick,
+      y,
+      plotLTWH[0] + plotLTWH[2] + graph.lineThickness,
+      y
+    ], graph.lineThickness, graph.lineColor);
+    let str = lineH.toFixed(digits);
     if (fntSize > 0)
       this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor);
     lineH += spacing;
@@ -117126,7 +117166,7 @@ Niivue.prototype.drawScene = function() {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2]
   ]);
-  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1)
+  if (this.sliceType === this.sliceTypeMultiplanar && maxVols > 1 && this.graph.autoSizeMultiplanar)
     this.drawGraph();
   posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
   this.gl.finish();
