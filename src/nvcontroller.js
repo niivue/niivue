@@ -2,11 +2,15 @@ import { SessionBus, SessionUser } from "./session-bus";
 import { NVImage } from "./nvimage";
 import { NVMesh } from "./nvmesh";
 
-/**
+/*
+ * @typedef {import("./niivue").Niivue} Niivue
+ */
+
+/*
  * @typedef {import("./nvimage").NVImageFromUrlOptions} NVImageFromUrlOptions
  */
 
-/**
+/*
  * @typedef {import("./nvmesh").NVMeshFromUrlOptions} NVMeshFromUrlOptions
  */
 
@@ -32,11 +36,11 @@ const NVMESSAGE = Object.freeze({
 });
 
 /**
- * @class SessionBus
- * @type SessionBus
- * @description SessionBus is for synchonizing both remote and local instances
+ * @class NVController
+ * @type NVController
+ * @description NVController is for synchronizing both remote and local instances of Niivue
  * @constructor
- * @param {import("./niivue").Niivue} niivue  Niivue object to conttrol
+ * @param {Niivue} niivue  Niivue object to conttrol
  */
 export class NVController {
   constructor(niivue) {

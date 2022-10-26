@@ -4648,7 +4648,6 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   volume.frame4D = frame4D;
   this.updateGLVolume();
 
-
   this.opts.onFrameChange(volume, frame4D);
 };
 
