@@ -60,6 +60,7 @@ import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
 export { colortables } from "./colortables";
+import { NVDocument } from "./nvdocument.js";
 
 const log = new Log();
 const cmapper = new colortables();
@@ -2495,6 +2496,38 @@ Niivue.prototype.vox2mm = function (XYZ, mtx) {
 Niivue.prototype.cloneVolume = function (index) {
   return this.volumes[index].clone();
 };
+
+/**
+ * 
+ * @param {string} url URL of NVDocumet
+ */
+Niivue.prototype.loadDocumentFromUrl = async function(url) {
+  let document = await NVDocument.loadFromUrl(url);
+  this.loadDocument(document);
+}
+
+/**
+ * Loads an NVDocument
+ * @param {NVDocument} document 
+ * @returns {Niivue} returns the Niivue instance
+ */
+Niivue.prototype.loadDocument = async function(document) {
+  this.scene.renderAzimuth = document.renderAzimuth;
+  this.scene.renderElevation = document.renderElevation;
+  this.scene.clipPlane = document.clipPlane;
+  this.scene.crosshairPos = document.crosshairPos;
+
+  // load our images and meshes
+  for(const imageOption of document.imageOptions) {
+
+  }
+
+  for(const meshOption of document.meshOptions) {
+
+  }
+
+  return this;
+}
 
 /**
  * load an array of volume objects

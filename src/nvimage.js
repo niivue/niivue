@@ -25,6 +25,18 @@ function isPlatformLittleEndian() {
  * colormaps = niivue.colorMaps()
  */
 
+
+/**
+ * Enum for supported image types
+ * @readonly
+ * @enum {number}
+ */
+const NVIMAGE_TYPE = Object.freeze({
+  NIFTI: 1,
+  DICOM: 2,
+  DICOM_MANIFEST: 3
+});
+
 /**
  * NVImageFromUrlOptions
  * @typedef  NVImageFromUrlOptions
@@ -40,6 +52,7 @@ function isPlatformLittleEndian() {
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
  * @property {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.NIFTI] image type being loaded
  */
 
 /**
