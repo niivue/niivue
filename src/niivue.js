@@ -97,6 +97,8 @@ export const dragModes = Object.freeze({
   pan: 3,
 });
 
+
+
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
  * @typedef {Object} NiivueOptions
@@ -2516,6 +2518,8 @@ Niivue.prototype.loadDocument = async function(document) {
   this.scene.renderElevation = document.renderElevation;
   this.scene.clipPlane = document.clipPlane;
   this.scene.crosshairPos = document.crosshairPos;
+
+  this.setSliceType(document.sliceType);
 
   // load our images and meshes
   for(const imageOption of document.imageOptions) {

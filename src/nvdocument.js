@@ -1,3 +1,21 @@
+/**
+ * Slice Type
+ * @enum
+ * @readonly
+ */
+ const SLICE_TYPE = Object.freeze({
+    AXIAL: 0,
+    CORONAL: 1,
+    SAGITTAL: 2,
+    MULTIPLANAR: 3,
+    RENDER: 4,
+  })
+
+/**
+ * @class NVDocument
+ * @type NVDocument
+ * @constructor
+ */
 export class NVDocument {
     contructor() {
         this.data.title = "Untitled document";
@@ -5,7 +23,7 @@ export class NVDocument {
         this.data.renderElevation = 10; //-165; //15;
         this.data.crosshairPos = [0.5, 0.5, 0.5];
         this.data.clipPlane = [0, 0, 0, 0];
-
+        this.data.sliceType = SLICE_TYPE.AXIAL;
         this.data.imageOptions = [];
         this.data.meshOptions = [];
     }
@@ -60,7 +78,13 @@ export class NVDocument {
         this.data.clipPlane = plane;
     }
 
+    get sliceType() {
+        return this.data.sliceType;
+    }
 
+    set sliceType(sliceType) {
+        this.data.sliceType = sliceType;
+    }
 
     /**
      * Factory method to return an instance of NVDocument
