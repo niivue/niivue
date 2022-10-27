@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
+    <title>X3D Meshes</title>
     <style>
       section {
         margin: 20px;
@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         x3d Mesh support <a href="https://3dprint.nih.gov/discover/3dpx-017206">NIH 3D Print Exchange</a>
@@ -23,7 +22,6 @@
       <p>
         NiiVue also supports a simple 3D view
       </p>
-
     </section>
     <!-- demo 1 -->
     <section>
@@ -36,7 +34,6 @@
       <p>available mesh shaders:</p>
       <p id="shaders"></p>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
@@ -54,7 +51,7 @@
         let btn = document.createElement("button")
         btn.innerHTML = cmaps[i]
         btn.onclick = function() {
-          nv1.setMeshShader(cmaps[i])
+          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
         }
         cmapEl.appendChild(btn)
       }

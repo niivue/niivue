@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
+    <title>Tractography</title>
     <style>
       section {
         margin: 20px;
@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Tractography support
@@ -62,8 +61,8 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
-      var slider = document.getElementById("fiberLengthSlider");
-      var sliderD = document.getElementById("fiberDitherSlider");
+      var slider = document.getElementById("fiberLengthSlider")
+      var sliderD = document.getElementById("fiberDitherSlider")
       // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
@@ -71,25 +70,20 @@
       sliderD.oninput = function() {
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
       }
-      var drop = document.getElementById("fiberColor");
+      var drop = document.getElementById("fiberColor")
       drop.onchange = function() {
-        const colorName = document.getElementById("fiberColor").value;
+        const colorName = document.getElementById("fiberColor").value
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', colorName)
       }
-      var dropD = document.getElementById("fiberDecimation");
+      var dropD = document.getElementById("fiberDecimation")
       dropD.onchange = function() {
-        const stride = document.getElementById("fiberDecimation").value;
+        const stride = document.getElementById("fiberDecimation").value
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDecimationStride', stride)
       }
       var volumeList1 = [
        // first item is background image
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,

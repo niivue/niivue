@@ -15,12 +15,10 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Mesh layers (CIfTI, GIfTI, MZ3, FreeSurfer, STC)
       </h1>
-
     </section>
 <div class="slidecontainer">
   Mesh Layer Timepoint <input type="range" min="0" max="1" value="0" class="slider" id="meshSlider">
@@ -39,7 +37,6 @@
       <p>available mesh shaders:</p>
       <p id="shaders"></p>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
@@ -56,10 +53,6 @@
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
            volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -84,7 +77,7 @@
         let btn = document.createElement("button")
         btn.innerHTML = cmaps[i]
         btn.onclick = function() {
-          nv1.setMeshShader(cmaps[i])
+          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
         }
         cmapEl.appendChild(btn)
       }

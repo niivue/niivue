@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -12,7 +11,6 @@
     }
   </style>
 </head>
-
 <body style="font-family: sans-serif;">
   <div id="app">
     <noscript>
@@ -51,11 +49,9 @@
         <button id="growcut">grow cut</button>
       <input type="checkbox" id="check1" name="check1" checked>
       <label for="check1">fill pen overwrites</label>
-
         <div class="slidecontainer">
           drawing opacity <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
         </div>
-
       </div>
     </section>
     <!-- demo 1 -->
@@ -65,7 +61,6 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p id="location"></p>
     </section>
@@ -74,8 +69,6 @@
     <script src="./niivue.umd.js">
     </script>
     <script type="module" async>
-    
-    
       document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
       function doDrawOpacity(){
         nv1.setDrawOpacity(this.value * 0.01);
@@ -134,26 +127,25 @@
       }
       document.getElementById("superior").addEventListener("click", doSuperior);
       function doSuperior(){
-        nv1.moveCrosshairInVox(0, 0, 1);
+        nv1.moveCrosshairInVox(0, 0, 1)
       }
       document.getElementById("undo").addEventListener("click", doUndo);
       function doUndo(){
-        nv1.drawUndo();
+        nv1.drawUndo()
       }
       document.getElementById("growcut").addEventListener("click", doGrowCut);
       function doGrowCut(){
-        nv1.drawGrowCut();
+        nv1.drawGrowCut()
       }
       document.getElementById("save").addEventListener("click", doSave);
       function doSave(){
-        nv1.saveImage('test.nii', true);
+        nv1.saveImage('test.nii', true)
       }
-
       let query = window.location.search
       const params = new URLSearchParams(query);
       let url = params.get('url')
       var volumeList1 = [
-        // first item is brackground image
+        // first item is background image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../images/FLAIR.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
@@ -166,26 +158,23 @@
         },
 
       ]
+      function handleLocationChange(data){ 
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values[0].value
+      }
       var nv1 = new niivue.Niivue({
         logging: false,
         show3Dcrosshair: true,
         loadingText: 'there are no images',
         dragAndDropEnabled: true,
         backColor: [0.3, 0.2, 0.4, 1],
+        onLocationChange: handleLocationChange
         //thumbnail: "../demos/images/DoG.png"
       })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      //
-      //nv1.setInterpolation(1);
       await nv1.loadVolumes(volumeList1)
-      nv1.getDescriptives(0, false);
-      await nv1.loadDrawing("../images/lesion.nii.gz");
-      // example of using the 'location' change event with a callback function
-      nv1.on('location', (data) => {
-        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
-        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-      })
+      nv1.getDescriptives(0, false)
+      await nv1.loadDrawing("../images/lesion.nii.gz")
     </script>
   </div>
 </body>

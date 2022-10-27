@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Clip planes
@@ -45,11 +44,6 @@
      var volumeList1 = [
      {
            url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -87,7 +81,6 @@
         clr[1] = this.value / 255;
         nv1.setClipPlaneColor(clr);
       }
-
     </script>
   </body>
 </html>

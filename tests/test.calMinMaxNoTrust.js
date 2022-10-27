@@ -18,7 +18,7 @@ test('calMinMax do not trust header cal min max', async () => {
       {
         url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
         volume: { hdr: null, img: null },
-        name: "mni152",
+        name: "mni152.nii.gz",
         colorMap: "gray",
         opacity: 1,
         visible: true,

@@ -10,7 +10,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <!-- demo 1 -->
     <div id="demo1" style="width:90%; height:400px; margin:20px;">
       <canvas id="gl1" height=480 width=640>
@@ -23,46 +22,28 @@
        // first item is background image
          {
            url: "./mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
          },
          {
            url: "./hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "hippo",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "winter",
            opacity: 1,
            visible: true,
          },
          {
            url: "./hippolr.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "hippolr",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "warm",
            opacity: 1,
            visible: true,
          }
-
-
       ]
-
       var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeListA)
       nv1.setSliceType(nv1.sliceTypeMultiPlanar)
-      nv1.setSelectionBoxColor([0, 0, 1, .5]);
+      nv1.setSelectionBoxColor([0, 0, 1, .5])
     </script>
   </body>
 </html>

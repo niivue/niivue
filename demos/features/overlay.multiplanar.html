@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Overlay multiplanar
@@ -24,7 +23,6 @@
         NiiVue can support adding multiple overlay images (two in this example). Here they are displayed in the multiplanar view
       </p>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -32,31 +30,24 @@
         </canvas>
       </div>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
      var volumeList1 = [
      {
            url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
            colorMap: "gray",
            opacity: 1,
            visible: true,
          },
          {
            url: "../images/hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "hippo",
            colorMap: "winter",
            opacity: 1,
            visible: true,
          },
          {
            url: "../images/hippolr.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "hippolr",
            colorMap: "warm",
            opacity: 1,
            visible: true,
@@ -66,7 +57,6 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-
     </script>
   </body>
 </html>

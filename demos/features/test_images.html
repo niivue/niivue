@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Test images
@@ -32,7 +31,6 @@
         </ul>
       </p>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -40,7 +38,6 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p>available test images:</p>
       <p id="images"></p>
@@ -56,11 +53,6 @@
        // first item is background image
          {
            url: "../images/mni152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -78,11 +70,10 @@
         let btn = document.createElement("button")
         btn.innerHTML = imgs[i]
         btn.onclick = function() {
-          let root = 'https://neurolabusc.github.io/niivue-images/'
+          let root = 'https://niivue.github.io/niivue-demo-images/'
           let img = root + imgs[i] + '.nii.gz'
           console.log("Loading: "+img)
           volumeList1[0].url = img
-          console.log(volumeList1);
           nv1.loadVolumes(volumeList1)
           nv1.updateGLVolume()
         }

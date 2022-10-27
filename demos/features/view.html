@@ -25,10 +25,9 @@
     <script src="./niivue.umd.js">
     </script>
     <script>
-			let query = window.location.search
-			const params = new URLSearchParams(query);
-			let url = params.get('url')
-
+    let query = window.location.search
+    const params = new URLSearchParams(query)
+    let url = params.get('url')
      var volumeList1 = [
        // first item is background image
          {
@@ -42,8 +41,6 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-
     </script>
   </body>
 </html>
-

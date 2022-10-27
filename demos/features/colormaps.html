@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Color maps
@@ -27,7 +26,6 @@
         Gamma <input type="range" min="10" max="400" value="100" class="slider" id="gammaSlider">
       </div>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -35,12 +33,10 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p>available color maps:</p>
       <p id="colormaps"></p>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
@@ -53,11 +49,6 @@
        // first item is background image
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -78,7 +69,6 @@
         }
         cmapEl.appendChild(btn)
       }
-
     </script>
   </body>
 </html>

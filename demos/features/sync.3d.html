@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Sync 3D
@@ -27,7 +26,6 @@
         The first canvas can control the second one. The second canvas can be controlled separately from the first. 
       </p>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -35,7 +33,6 @@
         </canvas>
       </div>
     </section>
-
     <!-- demo 2 -->
     <section>
       <div id="demo2" style="width:90%; height:400px;">
@@ -43,8 +40,6 @@
         </canvas>
       </div>
     </section>
-    
-
     <script src="./niivue.umd.js">
     </script>
     <script>
@@ -52,11 +47,6 @@
        // first item is background image
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -66,16 +56,10 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
-
       var volumeList2 = [
-       // first item is brackground image
+       // first item is background image
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
-           intensityMin: 0, // not used yet
-           intensityMax: 100, // not used yet
-           intensityRange:[0, 100], // not used yet
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -85,7 +69,7 @@
       nv2.attachTo('gl2')
       nv2.loadVolumes(volumeList2)
       nv2.setSliceType(nv2.sliceTypeRender)
-			nv1.syncWith(nv2, {'3d':true, '2d':false})
+      nv1.syncWith(nv2, {'3d':true, '2d':false})
     </script>
   </body>
 </html>

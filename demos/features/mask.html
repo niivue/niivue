@@ -15,7 +15,6 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         Overlay 3D
@@ -23,10 +22,8 @@
       <p>
       <input onclick="checkClick(this)" type="checkbox" id="check1" name="check1" value="true">
       <label for="check1">Background masks overlay</label>
-
       </p>
     </section>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:400px;">
@@ -34,24 +31,18 @@
         </canvas>
       </div>
     </section>
-
     <script src="./niivue.umd.js">
     </script>
     <script>
-//    <script type="module" async>
      var volumeList1 = [
      {
            url: "../images/fslmean.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "MeanFunctional",
            colorMap: "gray",
            opacity: 1,
            visible: true,
          },
          {
            url: "../images/fslt.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "Tstatistic",
            colorMap: "redyell",
           cal_min: 0.05,
           cal_max: 5.05,
@@ -65,11 +56,10 @@
       nv1.updateGLVolume()
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([0.15, 270, 0])
-      nv1.setRenderAzimuthElevation(45,45);
+      nv1.setRenderAzimuthElevation(45,45)
       async function checkClick(cb) {
-        nv1.backgroundMasksOverlays = cb.checked;
-        //nv1.graph.normalizeValues = cb.checked;
-        nv1.updateGLVolume();
+        nv1.backgroundMasksOverlays = cb.checked
+        nv1.updateGLVolume()
       }
     </script>
   </body>

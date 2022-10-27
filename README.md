@@ -28,6 +28,8 @@ The primary aim of NiiVue is to translate the features of the widely used native
 
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
 - [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- [OpenNeuro.org](https://openneuro.org)
+- [BrainLife.io](https://brainlife.io/about/)
 
 # Live View
 
@@ -43,7 +45,7 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 ## existing html page
 ```html
-<script src="https://unpkg.com/@niivue/niivue@0.24.2/dist/niivue.umd.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.29.0/dist/niivue.umd.js"></script>
 
 <canvas id="gl" height=480 width=640></canvas>
 

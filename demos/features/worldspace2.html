@@ -7,7 +7,17 @@
     <title>advanced world space</title>
     <style>
       section {
-        margin: 20px;
+        margin: 5px;
+      }
+
+      body {
+        margin: 5px;
+        padding: 5px;
+      }
+
+      html {
+        margin: 5px;
+        padding: 5px;
       }
     </style>
   </head>
@@ -15,24 +25,11 @@
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-
     <section>
       <h1>
         World space options
       </h1>
     </section>
-    <div class="slidecontainer">
-      X Pan <input type="range" min="-30" max="30" value="0" class="slider" id="xSlider">
-    </div>
-    <div class="slidecontainer">
-      Y Pan <input type="range" min="-30" max="30" value="0" class="slider" id="ySlider">
-    </div>
-    <div class="slidecontainer">
-      Z Pan <input type="range" min="-30" max="30" value="0" class="slider" id="zSlider">
-    </div>
-    <div class="slidecontainer">
-      Zoom <input type="range" min="1" max="40" value="10" class="slider" id="zoomSlider">
-    </div>
     <div class="slidecontainer">
       Mesh clipping <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
     </div>
@@ -48,80 +45,94 @@
     <label for="check8">Cube</label>
     <input type="checkbox" id="check9" name="check9" unchecked>
     <label for="check9">Pad</label>
+    <input type="checkbox" id="check10" name="check10" checked>
+    <label for="check10">HighDPI</label>
+    <input type="checkbox" id="check11" name="check11" unchecked>
+    <label for="check11">Force Render</label>
+    &nbsp
+    <label for="dragMode">Drag mode</label>
+    <select name="contrast" id="dragMode">
+      <option value="none">contrast</option>
+      <option value="measurement">measurement</option>
+      <option value="pan">pan/zoom (world space only)</option>
+      <option value="none">none</option>
+    </select>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:800px;">
-        <canvas id="gl1" height=800 width=640>
+      <div id="demo1" style="width:100%; height:100vh;">
+        <canvas id="gl1" height=640 width=640>
         </canvas>
       </div>
     </section>
     <script src="./niivue.umd.js">
     </script>
     <script type="module" async>
-      document.getElementById("check1").addEventListener("change", doCheckClick);
+      var dropDrag = document.getElementById("dragMode")
+      dropDrag.onchange = function() {
+        switch(document.getElementById("dragMode").value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break
+        }
+      }
+      document.getElementById("check1").addEventListener("change", doCheckClick)
       function doCheckClick() {
-        nv1.setRadiologicalConvention(this.checked);
+        nv1.setRadiologicalConvention(this.checked)
       }
-      document.getElementById("check2").addEventListener("change", doCheck2Click);
+      document.getElementById("check2").addEventListener("change", doCheck2Click)
       function doCheck2Click() {
-        nv1.setCornerOrientationText(this.checked);
+        nv1.setCornerOrientationText(this.checked)
       }
-      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      document.getElementById("check3").addEventListener("change", doCheck3Click)
       function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
+        nv1.setSliceMM(this.checked)
       }
-      function doSlider() {
-        var sx = document.getElementById("xSlider");
-        var sy = document.getElementById("ySlider");
-        var sz =document.getElementById("zSlider");
-        var sZoom =document.getElementById("zoomSlider");
-        nv1.setPan2Dxyzmm([parseInt(sx.value),parseInt(sy.value), parseInt(sz.value), 0.1 * parseInt(sZoom.value)])
-      }
-      var xslider = document.getElementById("xSlider");
-      xslider.oninput = function() {
-        doSlider()
-      }
-      var yslider = document.getElementById("ySlider");
-      yslider.oninput = function() {
-        doSlider()
-      }
-      var zslider = document.getElementById("zSlider");
-      zslider.oninput = function() {
-        doSlider()
-      }
-      var zoomslider = document.getElementById("zoomSlider");
-      zoomslider.oninput = function() {
-        doSlider()
-      }
-      var dxslider = document.getElementById("dxSlider");
+      var dxslider = document.getElementById("dxSlider")
       dxslider.oninput = function() {
-        let dx = parseFloat(this.value);
+        let dx = parseFloat(this.value)
         if (dx > 10)
-          dx = Infinity;
-        nv1.setMeshThicknessOn2D(dx);
+          dx = Infinity
+        nv1.setMeshThicknessOn2D(dx)
       }
-     document.getElementById("check7").addEventListener("change", doCheck7Click);
+     document.getElementById("check7").addEventListener("change", doCheck7Click)
      function doCheck7Click() {
-       nv1.opts.isColorbar = this.checked;
-       nv1.drawScene();
+       nv1.opts.isColorbar = this.checked
+       nv1.drawScene()
      }
-      document.getElementById("check8").addEventListener("change", doCheck8Click);
-      function doCheck8Click() {
-        nv1.opts.isOrientCube = this.checked;
-        nv1.drawScene();
-      }
-      document.getElementById("check9").addEventListener("change", doCheck9Click);
-      function doCheck9Click() {
-        let pad = 0;
-        if (this.checked) pad = 5;
-        nv1.opts.multiplanarPadPixels = pad;
-        nv1.drawScene();
-      }
+     document.getElementById("check8").addEventListener("change", doCheck8Click)
+     function doCheck8Click() {
+       nv1.opts.isOrientCube = this.checked
+       nv1.drawScene()
+     }
+     document.getElementById("check9").addEventListener("change", doCheck9Click)
+     function doCheck9Click() {
+       let pad = 0
+       if (this.checked) pad = 5
+       nv1.opts.multiplanarPadPixels = pad
+       nv1.drawScene()
+     }
+     document.getElementById("check10").addEventListener("change", doCheck10Click)
+     function doCheck10Click() {
+       nv1.setHighResolutionCapable(this.checked)
+     }
+     document.getElementById("check11").addEventListener("change", doCheck11Click)
+     function doCheck11Click() {
+       nv1.opts.multiplanarForceRender = this.checked
+       nv1.drawScene()
+     }
+     
      var volumeList1 = [
          {
            url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           volume: {hdr: null, img: null},
-           name: "mni152",
            colorMap: "gray",
            opacity: 1,
            visible: true,
@@ -136,12 +147,14 @@
       nv1.attachTo('gl1')
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(120,10)
+      nv1.setHighResolutionCapable(true)
       await nv1.loadVolumes(volumeList1)
       await nv1.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255]},
          {url: "../images/dpsv.trx", rgba255 : [255, 255, 255, 255]},
       ])
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
+
     </script>
   </body>
 </html>

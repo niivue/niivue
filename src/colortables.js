@@ -41,7 +41,7 @@ colortables.prototype.colormap = function (lutName = "") {
 }; // colormap()
 
 colortables.prototype.colormapFromKey = function (name) {
-  let availMaps = luts.colorMaps(); //ToDo let availMaps = this.colorMaps();
+  let availMaps = this.colorMaps();
   for (let i = 0; i < availMaps.length; i++) {
     let key = availMaps[i];
     if (name.toLowerCase() === key.toLowerCase()) {
