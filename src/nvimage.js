@@ -3038,3 +3038,19 @@ NVImage.prototype.getImageOptions = function () {
   }
   return options;
 };
+
+/**
+ * 
+ * @param {NVImage} baseImage 
+ * @param {Uint8Array} drawingBytes 
+ */
+NVImage.toUint8Array = async function(baseImage, drawingBytes = null) {
+  let isDrawing = drawingBytes;  
+  let hdrBytes = hdrToArrayBuffer(baseImage.hdr, isDrawing);
+  let opad = new Uint8Array(4);
+  let img8 = (isDrawing) ? new Uint8Array(baseImage.img.buffer) : new Uint8Array(drawingBytes.buffer);  
+  let odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
+  odata.set(hdrBytes);
+  odata.set(opad, hdrBytes.length);
+  return odata;
+}
