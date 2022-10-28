@@ -182,7 +182,6 @@ export function NVImage(
   let imgRaw = null;
   this.hdr = null;
   if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
-    console.log("reading dicom files");
     imgRaw = this.readDICOM(dataBuffer);
   } else if (ext === "MIH" || ext === "MIF") {
     imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
@@ -2395,7 +2394,6 @@ NVImage.fetchDicomData = async function (url) {
     throw Error(response.statusText);
   }
   let text = await response.text();
-  console.log(text);
   let lines = text.split("\n");
 
   let baseUrlRE = new RegExp("(.*/).*");
@@ -2446,9 +2444,7 @@ NVImage.loadFromUrl = async function ({
 
   // fetch data associated with image
   if (isManifest) {
-    console.log("loading manifest");
     dataBuffer = await NVImage.fetchDicomData(url);
-    console.log(dataBuffer);
     isDICOMDIR = true;
   } else {
     let response = await fetch(url);
