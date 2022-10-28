@@ -97,8 +97,6 @@ export const dragModes = Object.freeze({
   pan: 3,
 });
 
-
-
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
  * @typedef {Object} NiivueOptions
@@ -2500,38 +2498,39 @@ Niivue.prototype.cloneVolume = function (index) {
 };
 
 /**
- * 
+ *
  * @param {string} url URL of NVDocumet
  */
-Niivue.prototype.loadDocumentFromUrl = async function(url) {
+Niivue.prototype.loadDocumentFromUrl = async function (url) {
   let document = await NVDocument.loadFromUrl(url);
   this.loadDocument(document);
-}
+};
 
 /**
  * Loads an NVDocument
- * @param {NVDocument} document 
+ * @param {NVDocument} document
  * @returns {Niivue} returns the Niivue instance
  */
-Niivue.prototype.loadDocument = async function(document) {
+Niivue.prototype.loadDocument = async function (document) {
   this.scene.renderAzimuth = document.renderAzimuth;
   this.scene.renderElevation = document.renderElevation;
   this.scene.clipPlane = document.clipPlane;
   this.scene.crosshairPos = document.crosshairPos;
 
   this.setSliceType(document.sliceType);
+  this.mediaUrlMap.clear();
+  this.volumes = [];
+  this.meshes = [];
 
   // load our images and meshes
-  for(const imageOption of document.imageOptions) {
-
+  for (const imageOption of document.imageOptions) {
   }
 
-  for(const meshOption of document.meshOptions) {
-
+  for (const meshOption of document.meshOptions) {
   }
 
   return this;
-}
+};
 
 /**
  * load an array of volume objects
@@ -2573,6 +2572,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       cal_min: volumeList[i].cal_min,
       cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
+      isManifest: volumeList[i].isManifest,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.scene.loading$.next(false);

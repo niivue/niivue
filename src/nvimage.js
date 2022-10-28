@@ -25,7 +25,6 @@ function isPlatformLittleEndian() {
  * colormaps = niivue.colorMaps()
  */
 
-
 /**
  * Enum for supported image types
  * @readonly
@@ -34,7 +33,7 @@ function isPlatformLittleEndian() {
 const NVIMAGE_TYPE = Object.freeze({
   NIFTI: 1,
   DICOM: 2,
-  DICOM_MANIFEST: 3
+  DICOM_MANIFEST: 3,
 });
 
 /**
@@ -183,6 +182,7 @@ export function NVImage(
   let imgRaw = null;
   this.hdr = null;
   if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
+    console.log("reading dicom files");
     imgRaw = this.readDICOM(dataBuffer);
   } else if (ext === "MIH" || ext === "MIF") {
     imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
@@ -2374,6 +2374,43 @@ NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
   document.body.removeChild(link);
 }; // saveToDisk()
 
+NVImage.fetchDicomData = async function (url) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
+
+  let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+  let baseUrl = absoluteUrlRE.test(url) ? "" : window.location.href;
+
+  let manifestUrl = new URL(url, baseUrl);
+  let extensionRE = new RegExp("(?:.([^.]+))?$");
+  let extension = extensionRE.exec(manifestUrl.pathname);
+  if (!extension) {
+    manifestUrl = new URL("niivue-manifest.txt", url);
+  }
+
+  let response = await fetch(manifestUrl);
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+  let text = await response.text();
+  let lines = text.split("\n");
+
+  let baseUrlRE = new RegExp("(.*/).*");
+  let folderUrl = baseUrlRE.exec(manifestUrl)[0];
+  let dataBuffer = [];
+  for (const line of lines) {
+    let fileUrl = new URL(line, folderUrl);
+    response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    let contents = await response.arrayBuffer();
+    dataBuffer.push(contents);
+  }
+  return dataBuffer;
+};
+
 /**
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
@@ -2395,15 +2432,30 @@ NVImage.loadFromUrl = async function ({
   ignoreZeroVoxels = false,
   visible = true,
   colorMapNegative = "",
+  isManifest = false,
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
   }
-  let response = await fetch(url);
+
   let nvimage = null;
-  if (!response.ok) {
-    throw Error(response.statusText);
+  let isDICOMDIR = false;
+  let dataBuffer = null;
+
+  // fetch data associated with image
+  if (isManifest) {
+    console.log("loading manifest");
+    dataBuffer = await NVImage.fetchDicomData(url);
+    console.log(dataBuffer);
+    isDICOMDIR = true;
+  } else {
+    let response = await fetch(url);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    dataBuffer = await response.arrayBuffer();
   }
+
   var re = /(?:\.([^.]+))?$/;
   let ext = "";
   if (name === "") {
@@ -2435,7 +2487,6 @@ NVImage.loadFromUrl = async function ({
     }
   }
 
-  let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
@@ -2462,7 +2513,8 @@ NVImage.loadFromUrl = async function ({
       visible,
       false,
       false,
-      colorMapNegative
+      colorMapNegative,
+      isDICOMDIR
     );
   } else {
     alert("Unable to load buffer properly from volume");
