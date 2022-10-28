@@ -2380,9 +2380,10 @@ NVImage.fetchDicomData = async function (url) {
   }
 
   let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
-  let baseUrl = absoluteUrlRE.test(url) ? "" : window.location.href;
 
-  let manifestUrl = new URL(url, baseUrl);
+  let manifestUrl = absoluteUrlRE.test(url)
+    ? url
+    : new URL(url, window.location.href);
   let extensionRE = new RegExp("(?:.([^.]+))?$");
   let extension = extensionRE.exec(manifestUrl.pathname);
   if (!extension) {
@@ -2394,6 +2395,7 @@ NVImage.fetchDicomData = async function (url) {
     throw Error(response.statusText);
   }
   let text = await response.text();
+  console.log(text);
   let lines = text.split("\n");
 
   let baseUrlRE = new RegExp("(.*/).*");
