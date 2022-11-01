@@ -6,6 +6,7 @@ import * as cmaps from "./cmaps";
 import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
+import { prototype } from "nifti-reader-js/src/nifti1";
 const log = new Log();
 
 // not included in public docs
@@ -167,7 +168,6 @@ export function NVImage(
 
   this.onColorMapChange = onColorMapChange;
   this.onOpacityChange = onOpacityChange;
-
   // Added to support zerosLike
   if (!dataBuffer) {
     return;
@@ -2378,6 +2378,7 @@ NVImage.fetchDicomData = async function (url) {
     throw Error("url must not be empty");
   }
 
+  // https://stackoverflow.com/questions/10687099/how-to-test-if-a-url-string-is-absolute-or-relative
   let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
 
   let manifestUrl = absoluteUrlRE.test(url)
@@ -2610,7 +2611,7 @@ NVImage.loadFromFile = async function ({
 };
 
 // not included in public docs
-NVImage.loadFromBase64 = async function ({
+NVImage.loadFromBase64 = function ({
   base64 = null,
   name = "",
   colorMap = "gray",
@@ -2632,7 +2633,6 @@ NVImage.loadFromBase64 = async function ({
     }
     return bytes.buffer;
   }
-
   let nvimage = null;
   try {
     let dataBuffer = base64ToArrayBuffer(base64);
@@ -2653,6 +2653,7 @@ NVImage.loadFromBase64 = async function ({
   } catch (err) {
     log.debug(err);
   }
+
   return nvimage;
 };
 
@@ -3040,17 +3041,78 @@ NVImage.prototype.getImageOptions = function () {
 };
 
 /**
- * 
- * @param {NVImage} baseImage 
- * @param {Uint8Array} drawingBytes 
+ * Converts NVImage to NIfTI compliant byte array
+ * @param {Uint8Array} drawingBytes
  */
-NVImage.toUint8Array = async function(baseImage, drawingBytes = null) {
-  let isDrawing = drawingBytes;  
-  let hdrBytes = hdrToArrayBuffer(baseImage.hdr, isDrawing);
+NVImage.prototype.toUint8Array = function (drawingBytes = null) {
+  let isDrawing = drawingBytes;
+  let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing);
+
+  let drawingBytesToBeConverted = drawingBytes;
+  if (isDrawing) {
+    let perm = this.permRAS;
+    if (perm[0] != 1 || perm[1] != 2 || perm[2] != 3) {
+      let dims = this.hdr.dims; //reverse to original
+      //reverse RAS to native space, layout is mrtrix MIF format
+      // for details see NVImage.readMIF()
+      let layout = [0, 0, 0];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (Math.abs(perm[i]) - 1 !== j) continue;
+          layout[j] = i * Math.sign(perm[i]);
+        }
+      }
+      let stride = 1;
+      let instride = [1, 1, 1];
+      let inflip = [false, false, false];
+      for (let i = 0; i < layout.length; i++) {
+        for (let j = 0; j < layout.length; j++) {
+          let a = Math.abs(layout[j]);
+          if (a != i) continue;
+          instride[j] = stride;
+          //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+          if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+          stride *= dims[j + 1];
+        }
+      }
+      //lookup table for flips and stride offsets:
+      const range = (start, stop, step) =>
+        Array.from(
+          { length: (stop - start) / step + 1 },
+          (_, i) => start + i * step
+        );
+      let xlut = range(0, dims[1] - 1, 1);
+      if (inflip[0]) xlut = range(dims[1] - 1, 0, -1);
+      for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0];
+      let ylut = range(0, dims[2] - 1, 1);
+      if (inflip[1]) ylut = range(dims[2] - 1, 0, -1);
+      for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1];
+      let zlut = range(0, dims[3] - 1, 1);
+      if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
+      for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
+      //convert data
+
+      let inVs = new Uint8Array(drawingBytes);
+      let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
+      let j = 0;
+      for (let z = 0; z < dims[3]; z++) {
+        for (let y = 0; y < dims[2]; y++) {
+          for (let x = 0; x < dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+      drawingBytesToBeConverted = outVs;
+    }
+  }
+  let img8 = isDrawing
+    ? drawingBytesToBeConverted
+    : new Uint8Array(this.img.buffer);
   let opad = new Uint8Array(4);
-  let img8 = (isDrawing) ? new Uint8Array(baseImage.img.buffer) : new Uint8Array(drawingBytes.buffer);  
   let odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
   odata.set(hdrBytes);
   odata.set(opad, hdrBytes.length);
+  odata.set(img8, hdrBytes.length + opad.length);
   return odata;
-}
+};

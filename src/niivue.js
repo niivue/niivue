@@ -392,6 +392,7 @@ export function Niivue(options = {}) {
   ];
 
   this.mediaUrlMap = new Map();
+  this.document = new NVDocument();
 
   this.initialized = false;
   // loop through known Niivue properties
@@ -1262,6 +1263,8 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
  */
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
+  this.document.addImage(volume, imageOptions);
+
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.opts.onVolumeAddedFromUrl) {
@@ -2089,8 +2092,8 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue.removeVolume(this.volumes[3])
  */
 Niivue.prototype.removeVolume = function (volume) {
+  this.document.removeDocument(volume);
   this.setVolume(volume, -1);
-
   // check if we have a url for this volume
   if (this.mediaUrlMap.has(volume)) {
     let url = this.mediaUrlMap.get(volume);
@@ -2499,7 +2502,7 @@ Niivue.prototype.cloneVolume = function (index) {
 
 /**
  *
- * @param {string} url URL of NVDocumet
+ * @param {string} url URL of NVDocument
  */
 Niivue.prototype.loadDocumentFromUrl = async function (url) {
   let document = await NVDocument.loadFromUrl(url);
@@ -2512,6 +2515,7 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  * @returns {Niivue} returns the Niivue instance
  */
 Niivue.prototype.loadDocument = async function (document) {
+  this.document = document;
   this.scene.renderAzimuth = document.renderAzimuth;
   this.scene.renderElevation = document.renderElevation;
   this.scene.clipPlane = document.clipPlane;
@@ -2523,13 +2527,32 @@ Niivue.prototype.loadDocument = async function (document) {
   this.meshes = [];
 
   // load our images and meshes
-  for (const imageOption of document.imageOptions) {
+  let encodedImageBlobs = document.encodedImageBlobs;
+  for (let i = 0; i < document.imageOptionsArray.length; i++) {
+    const imageOptions = document.imageOptionsArray[i];
+    const base64 = encodedImageBlobs[i];
+
+    let image = NVImage.loadFromBase64({ base64, ...imageOptions });
+    if (image) {
+      this.addVolume(image);
+      document.addImage(image, imageOptions);
+    }
   }
 
-  for (const meshOption of document.meshOptions) {
-  }
+  // for (const meshOption of document.meshOptions) {
+  // }
 
   return this;
+};
+
+Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
+  this.document.renderAzimuth = this.scene.renderAzimuth;
+  this.document.renderElevation = this.scene.renderElevation;
+  this.document.clipPlane = this.scene.clipPlane;
+  this.document.crosshairPos = this.scene.crosshairPos;
+  this.document.sliceType = this.sliceType;
+
+  this.document.save(fileName);
 };
 
 /**
