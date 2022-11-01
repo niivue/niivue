@@ -108,21 +108,26 @@ export class NVDocument {
   }
 
   addImage(image, imageOptions) {
-    if (!this.hasImageFromUrl(imageOptions.url)) {
+    if (!this.hasImage(image)) {
       if (!imageOptions.name) {
-        // TODO(cdrake): add file type
-        let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
-        let url = absoluteUrlRE.test(imageOptions.url)
-          ? new URL(imageOptions.url)
-          : new URL(imageOptions.url, window.location.href);
+        if(imageOptions.url) {
+            // TODO(cdrake): add file type
+            let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+            let url = absoluteUrlRE.test(imageOptions.url)
+            ? new URL(imageOptions.url)
+            : new URL(imageOptions.url, window.location.href);
 
-        imageOptions.name = url.pathname.split("/").pop();
-        if (imageOptions.name.toLowerCase().endsWith(".gz")) {
-          imageOptions.name = imageOptions.name.slice(0, -3);
+            imageOptions.name = url.pathname.split("/").pop();
+            if (imageOptions.name.toLowerCase().endsWith(".gz")) {
+            imageOptions.name = imageOptions.name.slice(0, -3);
+            }
+
+            if (!imageOptions.name.toLowerCase().endsWith(".nii")) {
+            imageOptions.name += ".nii";
+            }
         }
-
-        if (!imageOptions.name.toLowerCase().endsWith(".nii")) {
-          imageOptions.name += ".nii";
+        else {
+            throw new Error('no name and no url');
         }
       }
 

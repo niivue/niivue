@@ -2092,7 +2092,7 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue.removeVolume(this.volumes[3])
  */
 Niivue.prototype.removeVolume = function (volume) {
-  this.document.removeDocument(volume);
+  this.document.removeImage(volume);
   this.setVolume(volume, -1);
   // check if we have a url for this volume
   if (this.mediaUrlMap.has(volume)) {

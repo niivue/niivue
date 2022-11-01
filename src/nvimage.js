@@ -32,9 +32,71 @@ function isPlatformLittleEndian() {
  * @enum {number}
  */
 const NVIMAGE_TYPE = Object.freeze({
-  NIFTI: 1,
-  DICOM: 2,
-  DICOM_MANIFEST: 3,
+  UNKNOWN: 0,
+  NII: 1,
+  DCM: 2,
+  DCM_MANIFEST: 3,
+  MIH: 4,
+  MIF: 5,
+  NHDR: 6,
+  NRRD: 7,
+  MHD: 8,
+  MHA: 9,
+  MGH: 10,
+  MGZ: 11,
+  V: 12,
+  V16: 13,
+  VMR: 14,
+  HEAD: 15,
+  parse: (ext) => {
+    let imageType = NVIMAGE_TYPE.UNKNOWN;
+    switch (ext.toUpperCase()) {
+      case "":
+      case "DCM":
+        imageType = NVIMAGE_TYPE.DCM;
+        break;
+      case "NII":
+        imageType = NVIMAGE_TYPE.NII;
+        break;
+      case "MIH":
+        imageType = NVIMAGE_TYPE.MIH;
+        break;
+      case "MIF":
+        imageType = NVIMAGE_TYPE.MIF;
+        break;
+      case "NHDR":
+        imageType = NVIMAGE_TYPE.NHDR;
+        break;
+      case "NRRD":
+        imageType = NVIMAGE_TYPE.NRRD;
+        break;
+      case "MHD":
+        imageType = NVIMAGE_TYPE.MHD;
+        break;
+      case "MHA":
+        imageType = NVIMAGE_TYPE.MHA;
+        break;
+      case "MGH":
+        imageType = NVIMAGE_TYPE.MGH;
+        break;
+      case "MGZ":
+        imageType = NVIMAGE_TYPE.MGZ;
+        break;
+      case "V":
+        imageType = NVIMAGE_TYPE.V;
+        break;
+      case "V16":
+        imageType = NVIMAGE_TYPE.V16;
+        break;
+      case "VMR":
+        imageType = NVIMAGE_TYPE.VMR;
+        break;
+      case "HEAD":
+        imageType = NVIMAGE_TYPE.HEAD;
+        break;
+    }
+    return imageType;
+  },
 });
 
 /**
@@ -52,7 +114,7 @@ const NVIMAGE_TYPE = Object.freeze({
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
  * @property {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
- * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.NIFTI] image type being loaded
+ * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
 
 /**
@@ -72,7 +134,8 @@ export function NVImageFromUrlOptions(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  colorMapNegative = ""
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
   return {
     url,
@@ -87,6 +150,7 @@ export function NVImageFromUrlOptions(
     ignoreZeroVoxels,
     visible,
     colorMapNegative,
+    imageType,
   };
 }
 
@@ -129,7 +193,8 @@ export function NVImage(
   useQFormNotSForm = false,
   colorMapNegative = "",
   onColorMapChange = () => {},
-  onOpacityChange = () => {}
+  onOpacityChange = () => {},
+  imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -178,39 +243,55 @@ export function NVImage(
   if (ext === "GZ") {
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
+    console.log("ext is " + ext);
   }
   let imgRaw = null;
   this.hdr = null;
-  if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
-    imgRaw = this.readDICOM(dataBuffer);
-  } else if (ext === "MIH" || ext === "MIF") {
-    imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
-  } else if (ext === "NHDR" || ext === "NRRD") {
-    imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
-  } else if (ext === "MHD" || ext === "MHA") {
-    imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
-  } else if (ext === "MGH" || ext === "MGZ") {
-    imgRaw = this.readMGH(dataBuffer);
-  } else if (ext === "V") {
-    imgRaw = this.readECAT(dataBuffer);
-  } else if (ext === "V16") {
-    imgRaw = this.readV16(dataBuffer);
-  } else if (ext === "VMR") {
-    imgRaw = this.readVMR(dataBuffer);
-  } else if (ext === "HEAD") {
-    imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
-  } else if (ext === "NII") {
-    this.hdr = nifti.readHeader(dataBuffer);
-    if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
-      this.hdr.cal_max = 0.0;
-    if (nifti.isCompressed(dataBuffer)) {
-      imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
-    } else {
-      imgRaw = nifti.readImage(this.hdr, dataBuffer);
-    }
-  } else {
-    //DICOMs do not always end .dcm, so DICOM is our format of last resort
-    imgRaw = this.readDICOM(dataBuffer);
+
+  if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+    imageType = NVIMAGE_TYPE.parse(ext);
+  }
+
+  switch (imageType) {
+    case NVIMAGE_TYPE.DCM:
+      imgRaw = this.readDICOM(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.MIH:
+    case NVIMAGE_TYPE.MIF:
+      imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
+      break;
+    case NVIMAGE_TYPE.NHDR:
+    case NVIMAGE_TYPE.NRRD:
+      imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
+      break;
+    case NVIMAGE_TYPE.MHD:
+    case NVIMAGE_TYPE.MHA:
+      imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
+      break;
+    case NVIMAGE_TYPE.V:
+      imgRaw = this.readECAT(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.V16:
+      imgRaw = this.readV16(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.VMR:
+      imgRaw = this.readVMR(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.HEAD:
+      imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
+      break;
+    case NVIMAGE_TYPE.NII:
+      this.hdr = nifti.readHeader(dataBuffer);
+      if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
+        this.hdr.cal_max = 0.0;
+      if (nifti.isCompressed(dataBuffer)) {
+        imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
+      } else {
+        imgRaw = nifti.readImage(this.hdr, dataBuffer);
+      }
+      break;
+    default:
+      throw new Error("Image type not supported");
   }
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
@@ -2069,7 +2150,9 @@ Object.defineProperty(NVImage.prototype, "opacity", {
   },
   set: function (opacity) {
     this._opacity = opacity;
-    this.onOpacityChange(this);
+    if (this.onOpacityChange) {
+      this.onOpacityChange(this);
+    }
   },
 });
 
@@ -2434,6 +2517,7 @@ NVImage.loadFromUrl = async function ({
   visible = true,
   colorMapNegative = "",
   isManifest = false,
+  imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
@@ -2513,7 +2597,8 @@ NVImage.loadFromUrl = async function ({
       false,
       false,
       colorMapNegative,
-      isDICOMDIR
+      isDICOMDIR,
+      imageType
     );
   } else {
     alert("Unable to load buffer properly from volume");
