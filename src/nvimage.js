@@ -31,7 +31,7 @@ function isPlatformLittleEndian() {
  * @readonly
  * @enum {number}
  */
-const NVIMAGE_TYPE = Object.freeze({
+export const NVIMAGE_TYPE = Object.freeze({
   UNKNOWN: 0,
   NII: 1,
   DCM: 2,
@@ -243,7 +243,6 @@ export function NVImage(
   if (ext === "GZ") {
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
-    console.log("ext is " + ext);
   }
   let imgRaw = null;
   this.hdr = null;
@@ -3189,6 +3188,8 @@ NVImage.prototype.toUint8Array = function (drawingBytes = null) {
         } //for y
       } //for z
       drawingBytesToBeConverted = outVs;
+      console.log("drawing bytes");
+      console.log(drawingBytesToBeConverted);
     }
   }
   let img8 = isDrawing

@@ -1,4 +1,5 @@
 import { NVUtilities } from "./nvutilities";
+import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 
 /**
  * Slice Type
@@ -32,7 +33,7 @@ export class NVDocument {
 
     this.volumes = [];
     this.meshes = [];
-    this.drawing = null;
+    this.drawBitmap = null;
     this.imageOptionsMap = new Map();
     this.meshOptionsMap = new Map();
   }
@@ -99,6 +100,10 @@ export class NVDocument {
     return this.data.encodedImageBlobs;
   }
 
+  get encodedDrawingBlob() {
+    return this.data.encodedDrawingBlob;
+  }
+
   hasImage(image) {
     return this.volumes.find((i) => i.id === image.id);
   }
@@ -107,51 +112,35 @@ export class NVDocument {
     return this.data.imageOptionsArray.find((i) => i.url === url);
   }
 
-  addImage(image, imageOptions) {
+  addImageOptions(image, imageOptions) {
     if (!this.hasImage(image)) {
       if (!imageOptions.name) {
-        if(imageOptions.url) {
-            // TODO(cdrake): add file type
-            let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
-            let url = absoluteUrlRE.test(imageOptions.url)
+        if (imageOptions.url) {
+          // TODO(cdrake): add file type
+          let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+          let url = absoluteUrlRE.test(imageOptions.url)
             ? new URL(imageOptions.url)
             : new URL(imageOptions.url, window.location.href);
 
-            imageOptions.name = url.pathname.split("/").pop();
-            if (imageOptions.name.toLowerCase().endsWith(".gz")) {
+          imageOptions.name = url.pathname.split("/").pop();
+          if (imageOptions.name.toLowerCase().endsWith(".gz")) {
             imageOptions.name = imageOptions.name.slice(0, -3);
-            }
+          }
 
-            if (!imageOptions.name.toLowerCase().endsWith(".nii")) {
+          if (!imageOptions.name.toLowerCase().endsWith(".nii")) {
             imageOptions.name += ".nii";
-            }
-        }
-        else {
-            throw new Error('no name and no url');
+          }
+        } else {
+          imageOptions.name = "untitled.nii";
         }
       }
+      imageOptions.imageType = NVIMAGE_TYPE.NII;
 
-      this.volumes.push(image);
       this.data.imageOptionsArray.push(imageOptions);
       this.imageOptionsMap.set(
         image.id,
         this.data.imageOptionsArray.length - 1
       );
-    } else {
-      // update the id of existing image
-      let options = this.data.imageOptionsArray.find(
-        (i) => i.url === imageOptions.url
-      );
-      console.log("options");
-      console.log(options);
-      let index = this.data.imageOptionsArray.indexOf(options);
-      if (index >= 0) {
-        if (index < this.volumes.length) {
-          this.volumes[index] = image;
-        } else {
-          this.volumes.splice(index, 0, image);
-        }
-      }
     }
   }
 
@@ -190,9 +179,9 @@ export class NVDocument {
         this.volumes[0].toUint8Array()
       );
       this.data.encodedImageBlobs.push(encodedImageBlob);
-      if (this.drawing) {
+      if (this.drawBitmap) {
         this.data.encodedDrawingBlob = NVUtilities.uint8tob64(
-          this.volumes[0].toUint8Array(this.drawing)
+          this.volumes[0].toUint8Array(this.drawBitmap)
         );
       }
 
@@ -202,10 +191,29 @@ export class NVDocument {
     }
 
     for (let i = 1; i < this.volumes.length; i++) {
-      let imageOptions = this.imageOptionsArray[i];
+      const volume = this.volumes[i];
+      let imageOptions = this.getImageOptions(volume);
+      if (!imageOptions) {
+        imageOptions = {
+          name: "",
+          colorMap: "gray",
+          opacity: 1.0,
+          pairedImgData: null,
+          cal_min: NaN,
+          cal_max: NaN,
+          trustCalMinMax: true,
+          percentileFrac: 0.02,
+          ignoreZeroVoxels: false,
+          visible: true,
+          isDICOMDIR: false,
+          useQFormNotSForm: false,
+          colorMapNegative: "",
+          imageType: NVIMAGE_TYPE.NII,
+        };
+      }
       if (imageOptions) {
         imageOptionsArray.push(imageOptions);
-        const volume = this.volumes[i];
+
         let encodedImageBlob = NVUtilities.uint8tob64(
           await volume.toUint8Array()
         );
@@ -231,7 +239,6 @@ export class NVDocument {
     let document = new NVDocument();
     let response = await fetch(url);
     document.data = await response.json();
-    document.imageOptionsMap = new Map(document.data.imageOptionsMap);
     return document;
   }
 }

@@ -1263,7 +1263,7 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
  */
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
-  this.document.addImage(volume, imageOptions);
+  this.document.addImageOptions(volume, imageOptions);
 
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
@@ -1743,16 +1743,10 @@ Niivue.prototype.drawUndo = function () {
   this.refreshDrawing(true);
 };
 
-/**
- * Open drawing
- * @param {string} filename of NIfTI format drawing
- * @example niivue.loadDrawing("../images/lesion.nii.gz");
- */
-Niivue.prototype.loadDrawing = async function (fnm) {
+Niivue.prototype.loadDrawing = function (drawingBitmap) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await this.loadVolumeFromUrl(new NVImageFromUrlOptions(fnm));
-  let dims = volume.hdr.dims; //reverse to original
+  let dims = drawingBitmap.hdr.dims; //reverse to original
   if (
     dims[1] !== this.back.hdr.dims[1] ||
     dims[2] !== this.back.hdr.dims[2] ||
@@ -1761,9 +1755,9 @@ Niivue.prototype.loadDrawing = async function (fnm) {
     console.log("drawing dimensions do not match background image");
     return false;
   }
-  if (volume.img.constructor !== Uint8Array)
+  if (drawingBitmap.img.constructor !== Uint8Array)
     console.log("Drawings should be UINT8");
-  let perm = volume.permRAS;
+  let perm = drawingBitmap.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(
@@ -1808,7 +1802,7 @@ Niivue.prototype.loadDrawing = async function (fnm) {
   if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
   for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
   //convert data
-  let inVs = volume.img; //new Uint8Array(this.drawBitmap);
+  let inVs = drawingBitmap.img; //new Uint8Array(this.drawBitmap);
   let outVs = this.drawBitmap;
   //for (let i = 0; i < vx; i++)
   //  outVs[i] = i % 3;
@@ -1824,6 +1818,18 @@ Niivue.prototype.loadDrawing = async function (fnm) {
   this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
+};
+
+/**
+ * Open drawing
+ * @param {string} filename of NIfTI format drawing
+ * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
+ */
+Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
+  if (this.drawBitmap) console.log("Overwriting open drawing!");
+  this.drawClearAllUndoBitmaps();
+  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+  this.loadDrawing(volume);
 };
 
 /**
@@ -2531,16 +2537,25 @@ Niivue.prototype.loadDocument = async function (document) {
   for (let i = 0; i < document.imageOptionsArray.length; i++) {
     const imageOptions = document.imageOptionsArray[i];
     const base64 = encodedImageBlobs[i];
-
-    let image = NVImage.loadFromBase64({ base64, ...imageOptions });
-    if (image) {
-      this.addVolume(image);
-      document.addImage(image, imageOptions);
+    if (base64) {
+      let image = NVImage.loadFromBase64({ base64, ...imageOptions });
+      if (image) {
+        this.addVolume(image);
+        document.addImageOptions(image, imageOptions);
+      }
     }
   }
-
   // for (const meshOption of document.meshOptions) {
   // }
+
+  const base64 = document.encodedDrawingBlob;
+  if (base64) {
+    const imageOptions = document.imageOptionsArray[0];
+    let drawingBitmap = NVImage.loadFromBase64({ base64, ...imageOptions });
+    if (drawingBitmap) {
+      this.loadDrawing(drawingBitmap);
+    }
+  }
 
   return this;
 };
@@ -2551,7 +2566,8 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.clipPlane = this.scene.clipPlane;
   this.document.crosshairPos = this.scene.crosshairPos;
   this.document.sliceType = this.sliceType;
-
+  this.document.volumes = this.volumes;
+  this.document.drawBitmap = this.drawBitmap;
   this.document.save(fileName);
 };
 
