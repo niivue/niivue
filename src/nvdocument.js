@@ -242,4 +242,18 @@ export class NVDocument {
     document.data = await response.json();
     return document;
   }
+
+  /**
+   * Factory method to return an instance of NVDocument
+   * @param {File} file
+   * @constructs NVDocument
+   */
+  static async loadFromFile(file) {
+    let arrayBuffer = await NVUtilities.readFileAsync(file);
+    let document = new NVDocument();
+    let utf8decoder = new TextDecoder();
+    let dataString = utf8decoder.decode(arrayBuffer);
+    document.data = JSON.parse(dataString);
+    return document;
+  }
 }

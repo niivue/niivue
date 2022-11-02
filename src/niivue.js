@@ -1361,6 +1361,8 @@ Niivue.prototype.dropListener = async function (e) {
     console.log(ext);
     if (MESH_EXTENSIONS.includes(ext)) {
       this.addMeshFromUrl({ url });
+    } else if (ext === "NVD") {
+      this.loadDocumentFromUrl(url);
     } else {
       this.addVolumeFromUrl(imageOptions);
     }
@@ -1418,6 +1420,13 @@ Niivue.prototype.dropListener = async function (e) {
               this.addMesh(mesh);
             });
             continue;
+          } else if (ext === "NVD") {
+            entry.file(async (file) => {
+              let nvdoc = await NVDocument.loadFromFile(file);
+              this.loadDocument(nvdoc);
+              console.log("loaded document");
+            });
+            break;
           }
           entry.file(async (file) => {
             // if we have paired header/img data
@@ -1714,7 +1723,8 @@ Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
 Niivue.prototype.drawClearAllUndoBitmaps = async function () {
   this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //next add will be cylinder 0
   if (this.drawUndoBitmaps.length < 1) return;
-  for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) array[i] = [];
+  for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--)
+    this.drawUndoBitmaps[i] = [];
 }; // drawClearAllUndoBitmaps()
 
 /**
@@ -2531,7 +2541,8 @@ Niivue.prototype.loadDocument = async function (document) {
   this.mediaUrlMap.clear();
   this.volumes = [];
   this.meshes = [];
-
+  this.drawingBitmap = null;
+  this.createEmptyDrawing();
   // load our images and meshes
   let encodedImageBlobs = document.encodedImageBlobs;
   for (let i = 0; i < document.imageOptionsArray.length; i++) {
