@@ -116,7 +116,6 @@ export class NVDocument {
     if (!this.hasImage(image)) {
       if (!imageOptions.name) {
         if (imageOptions.url) {
-          // TODO(cdrake): add file type
           let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
           let url = absoluteUrlRE.test(imageOptions.url)
             ? new URL(imageOptions.url)
@@ -211,15 +210,17 @@ export class NVDocument {
           imageType: NVIMAGE_TYPE.NII,
         };
       }
-      if (imageOptions) {
-        imageOptionsArray.push(imageOptions);
+      // update image options on current image settings
+      imageOptions.colorMap = volume.colorMap;
+      imageOptions.opacity = volume.opacity;
 
-        let encodedImageBlob = NVUtilities.uint8tob64(
-          await volume.toUint8Array()
-        );
-        this.data.encodedImageBlobs.push(encodedImageBlob);
-        this.data.imageOptionsMap.push([volume.id, i]);
-      }
+      imageOptionsArray.push(imageOptions);
+
+      let encodedImageBlob = NVUtilities.uint8tob64(
+        await volume.toUint8Array()
+      );
+      this.data.encodedImageBlobs.push(encodedImageBlob);
+      this.data.imageOptionsMap.push([volume.id, i]);
     }
 
     this.data.imageOptionsArray = imageOptionsArray;
