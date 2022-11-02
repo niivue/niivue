@@ -31,7 +31,7 @@ export class NVDocument {
     this.data.sliceType = SLICE_TYPE.AXIAL;
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
-
+    this.data.opts = {};
     this.volumes = [];
     this.meshes = [];
     this.drawBitmap = null;
@@ -105,6 +105,14 @@ export class NVDocument {
     return this.data.encodedDrawingBlob;
   }
 
+  get opts() {
+    return this.data.opts;
+  }
+
+  set opts(opts) {
+    this.data.opts = { ...opts };
+  }
+
   hasImage(image) {
     return this.volumes.find((i) => i.id === image.id);
   }
@@ -172,6 +180,20 @@ export class NVDocument {
       throw new Error("nothing to save");
     }
 
+    // save our ui options
+    let propsToRemove = [];
+    for (const prop in this.data.opts) {
+      let typeName = this.data.opts[prop];
+      if (typeName === "function") {
+        propsToRemove.push(prop);
+      }
+    }
+
+    for (const prop in propsToRemove) {
+      delete this.data.opts[prop];
+    }
+
+    // volumes
     if (this.volumes.length) {
       let imageOptions = this.imageOptionsArray[0];
       if (imageOptions) {
@@ -227,6 +249,7 @@ export class NVDocument {
       this.data.imageOptionsArray = imageOptionsArray;
     }
 
+    // meshes
     const meshes = [];
     for (const mesh of this.meshes) {
       const copyMesh = {};

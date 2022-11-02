@@ -2536,7 +2536,7 @@ Niivue.prototype.loadDocument = async function (document) {
   this.scene.renderElevation = document.renderElevation;
   this.scene.clipPlane = document.clipPlane;
   this.scene.crosshairPos = document.crosshairPos;
-
+  this.opts = { ...this.opts, ...document.opts }; // do not overwrite event handlers  
   this.setSliceType(document.sliceType);
   this.mediaUrlMap.clear();
   this.volumes = [];
@@ -2593,6 +2593,7 @@ Niivue.prototype.loadDocument = async function (document) {
 
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.title = fileName;
+  this.document.opts = this.opts;
   this.document.renderAzimuth = this.scene.renderAzimuth;
   this.document.renderElevation = this.scene.renderElevation;
   this.document.clipPlane = this.scene.clipPlane;
