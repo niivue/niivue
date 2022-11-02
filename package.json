@@ -49,6 +49,7 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "@ungap/structured-clone": "^1.0.1",
     "daikon": "^1.2.42",
     "fflate": "^0.7.3",
     "gl-matrix": "^3.4.3",

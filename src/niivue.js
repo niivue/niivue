@@ -2556,8 +2556,6 @@ Niivue.prototype.loadDocument = async function (document) {
       }
     }
   }
-  // for (const meshOption of document.meshOptions) {
-  // }
 
   const base64 = document.encodedDrawingBlob;
   if (base64) {
@@ -2568,10 +2566,33 @@ Niivue.prototype.loadDocument = async function (document) {
     }
   }
 
+  for (const mesh of document.meshes) {
+    const meshInit = { gl: this.gl, ...mesh };
+    console.log(meshInit);
+    const meshToAdd = new NVMesh(
+      meshInit.pts,
+      meshInit.tris,
+      meshInit.name,
+      meshInit.rgba255,
+      meshInit.opacity,
+      meshInit.visible,
+      this.gl,
+      meshInit.connectome,
+      meshInit.dpg,
+      meshInit.dps,
+      meshInit.dpv
+    );
+    meshToAdd.meshShaderIndex = meshInit.meshShaderIndex;
+    meshToAdd.layers = meshInit.layers;
+    meshToAdd.updateMesh(this.gl);
+    this.addMesh(meshToAdd);
+  }
+  this.updateGLVolume();
   return this;
 };
 
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
+  this.document.title = fileName;
   this.document.renderAzimuth = this.scene.renderAzimuth;
   this.document.renderElevation = this.scene.renderElevation;
   this.document.clipPlane = this.scene.clipPlane;
@@ -2579,6 +2600,7 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.sliceType = this.sliceType;
   this.document.volumes = this.volumes;
   this.document.drawBitmap = this.drawBitmap;
+  this.document.meshes = this.meshes;
   this.document.save(fileName);
 };
 
