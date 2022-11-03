@@ -178,7 +178,7 @@ export class NVDocument {
 
   /**
    * Checks if document has an image by id
-   * @param {NVImage} image 
+   * @param {NVImage} image
    * @returns {boolean}
    */
   hasImage(image) {
@@ -187,7 +187,7 @@ export class NVDocument {
 
   /**
    * Checks if document has an image by url
-   * @param {string} url 
+   * @param {string} url
    * @returns {boolean}
    */
   hasImageFromUrl(url) {
@@ -196,8 +196,8 @@ export class NVDocument {
 
   /**
    * Adds an image and the options an image was created with
-   * @param {NVImage} image 
-   * @param {NVImageFromUrlOptions} imageOptions 
+   * @param {NVImage} image
+   * @param {NVImageFromUrlOptions} imageOptions
    */
   addImageOptions(image, imageOptions) {
     if (!this.hasImage(image)) {
@@ -231,8 +231,8 @@ export class NVDocument {
   }
 
   /**
-   * Removes image from the document as well as its options 
-   * @param {NVImage} image 
+   * Removes image from the document as well as its options
+   * @param {NVImage} image
    */
   removeImage(image) {
     if (this.imageOptionsMap.has(image.id)) {
@@ -247,7 +247,7 @@ export class NVDocument {
 
   /**
    * Returns the options for the image if it was added by url
-   * @param {NVImage} image 
+   * @param {NVImage} image
    * @returns {NVImageFromUrlOptions}
    */
   getImageOptions(image) {
@@ -258,7 +258,7 @@ export class NVDocument {
 
   /**
    * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
-   * @param {string} fileName 
+   * @param {string} fileName
    */
   async save(fileName) {
     let imageOptionsArray = [];

@@ -1,7 +1,7 @@
 import { SessionBus, SessionUser } from "./session-bus";
 // Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
 // eslint-disable-next-line no-unused-vars
-import { NVImage, NVImageFromUrlOptions} from "./nvimage";
+import { NVImage, NVImageFromUrlOptions } from "./nvimage";
 // eslint-disable-next-line no-unused-vars
 import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh";
 // eslint-disable-next-line no-unused-vars

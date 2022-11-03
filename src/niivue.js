@@ -2530,7 +2530,7 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  * @param {NVDocument} document
  * @returns {Niivue} returns the Niivue instance
  */
-Niivue.prototype.loadDocument = async function (document) {
+Niivue.prototype.loadDocument = function (document) {
   this.document = document;
   this.scene.renderAzimuth = document.renderAzimuth;
   this.scene.renderElevation = document.renderElevation;
