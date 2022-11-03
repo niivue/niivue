@@ -95,6 +95,7 @@
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
+        <a class="viewBtn" id="SaveDraw">Save Drawing</a>
         <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
         <a class="viewBtn" id="ShowHeader">Show Header</a>
         <a class="linker" href="https://github.com/niivue/niivue">About</a>
@@ -175,8 +176,8 @@
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
-        <a class="viewBtn" id="_FLAIR">FLAIR</a>
-        <a class="viewBtn dropdown-item-checked" id="_mni152">mni152</a>
+        <a class="viewBtn dropdown-item-checked" id="_FLAIR">FLAIR</a>
+        <a class="viewBtn" id="_mni152">mni152</a>
         <a class="viewBtn" id="_shear">CT</a>
         <a class="viewBtn" id="_ct_perfusion">CT CBF</a>
         <a class="viewBtn" id="_pcasl">pCASL</a>
@@ -215,7 +216,7 @@
   nv1.opts.multiplanarForceRender = true
   nv1.graph.autoSizeMultiplanar = true
   nv1.graph.opacity = 1.0
-  nv1.drawOpacity = 0.5;
+  nv1.drawOpacity = 0.5
   var volumeList1 = [{url: "../images/FLAIR.nii.gz"}]
   await nv1.loadVolumes(volumeList1)
   await nv1.loadDrawingFromUrl("../images/lesion.nii.gz")
@@ -240,6 +241,10 @@
           //el.style.removeProperty("display")
           //el.style.display = "block"
         }, 500)*/
+      }
+      if (event.target.id === "SaveDraw") {
+          nv1.saveImage('draw.nii', true)
+          return
       }
       if (event.target.id === "SaveBitmap") {
           nv1.saveScene('ScreenShot.png')
@@ -283,36 +288,36 @@
       if (event.target.id === "Undo") {
         nv1.drawUndo()
       }
-      var isFilled = true;
+      var isFilled = true
       if(event.target.id.charAt(0) === '@') { //sliceType
           if (event.target.id === "@Off")
               nv1.setDrawingEnabled(false)
           else
               nv1.setDrawingEnabled(true)
           if (event.target.id === "@Erase")
-              nv1.setPenValue(0, isFilled);
+              nv1.setPenValue(0, isFilled)
           if (event.target.id === "@Red")
-              nv1.setPenValue(1, isFilled);
+              nv1.setPenValue(1, isFilled)
           if (event.target.id === "@Green")
-              nv1.setPenValue(2, isFilled);
+              nv1.setPenValue(2, isFilled)
           if (event.target.id === "@Blue")
-              nv1.setPenValue(3, isFilled);
+              nv1.setPenValue(3, isFilled)
           if (event.target.id === "@Cluster")
-              nv1.setPenValue(-0, isFilled);
+              nv1.setPenValue(-0, isFilled)
           toggleGroup(event.target.id)
       } //Draw Color
       if (event.target.id === "Translucent") {
           if (nv1.drawOpacity > 0.75)
             nv1.drawOpacity = 0.5
           else
-            nv1.drawOpacity = 1.0;
+            nv1.drawOpacity = 1.0
           nv1.drawScene()
           event.srcElement.classList.toggle("dropdown-item-checked")
           return
       }      
       if (event.target.id === "DrawFilled") {
-          isFilled = !isFilled;
-          nv1.setPenValue(nv1.opts.penValue, isFilled);
+          isFilled = !isFilled
+          nv1.setPenValue(nv1.opts.penValue, isFilled)
           event.srcElement.classList.toggle("dropdown-item-checked")
           return
       }
@@ -337,7 +342,7 @@
           toggleGroup(event.target.id)
       } //sliceType
       if (event.target.id === "WorldSpace") {
-          nv1.setSliceMM(!nv1.opts.isSliceMM);
+          nv1.setSliceMM(!nv1.opts.isSliceMM)
           event.srcElement.classList.toggle("dropdown-item-checked")
           return
       } 
@@ -386,7 +391,7 @@
           toggleGroup(event.target.id)
       } //drag mode
       if (event.target.id === "_mesh") {
-          volumeList1[0].url = '../images//mni152.nii.gz'
+          volumeList1[0].url = '../images/mni152.nii.gz'
           await nv1.loadVolumes(volumeList1)
           nv1.loadMeshes([
               {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255]},
