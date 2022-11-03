@@ -113347,7 +113347,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await this.loadVolumeFromUrl(new NVImageFromUrlOptions(fnm));
+  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
   let dims = volume.hdr.dims;
   if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
     console.log("drawing dimensions do not match background image");
