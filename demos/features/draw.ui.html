@@ -44,7 +44,7 @@
       border: none;
       outline: none;
       color: white;
-      padding: 14px 16px;
+      padding: 12px 12px;
       background-color: #202020;
       font-family: inherit;
       margin: 0;
@@ -60,7 +60,6 @@
       border-radius: 5px;
       box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
       z-index: 1;
-      line-height: 6px;
     }
     .dropdown-content a {
       float: none;
@@ -69,6 +68,7 @@
       text-decoration: none;
       display: block;
       text-align: left;
+      line-height: 6px;
     }
     .dropdown-content a:hover {
       background-color: #aba;
@@ -101,6 +101,14 @@
       </div>
     </div> 
     <div class="dropdown">
+      <button class="dropbtn">Edit 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="Undo">Undo Draw</a>
+      </div>
+    </div>
+    <div class="dropdown">
       <button class="dropbtn" data-toggle="dropdown">View 
         <i class="fa fa-caret-down"></i>
       </button>
@@ -114,6 +122,14 @@
         <a class="viewBtn" id="Radiological">Radiological</a>
         <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
         <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
+        <a class="viewBtn dropdown-item-checked" id="WorldSpace">World Space</a>
+        <a class="viewBtn dropdown-item-checked" id="Interpolate">Smooth Interpolation</a>
+        <a class="viewBtn divider" id="Left">Left</a>
+        <a class="viewBtn" id="Right">Right</a>
+        <a class="viewBtn" id="Anterior">Anterior</a>
+        <a class="viewBtn" id="Posterior">Posterior</a>
+        <a class="viewBtn" id="Inferior">Inferior</a>
+        <a class="viewBtn" id="Superior">Superior</a>
       </div>
     </div> 
     <div class="dropdown">
@@ -126,6 +142,21 @@
         <a class="viewBtn" id="!Viridis">Viridis</a>
         <a class="viewBtn" id="!Inferno">Inferno</a>
         <a class="viewBtn divider dropdown-item-checked" id="BackColor">Dark Background</a>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="dropbtn">Draw 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn dropdown-item-checked" id="@Off">Off</a>
+        <a class="viewBtn" id="@Red">Red</a>
+        <a class="viewBtn" id="@Green">Green</a>
+        <a class="viewBtn" id="@Blue">Blue</a>
+        <a class="viewBtn" id="@Erase">Erase</a>
+        <a class="viewBtn" id="@Cluster">Erase Cluster</a>
+        <a class="viewBtn divider dropdown-item-checked" id="DrawFilled">Fill Outline</a>
+        <a class="viewBtn dropdown-item-checked" id="Translucent">Translucent</a>
       </div>
     </div> 
     <div class="dropdown">
@@ -184,8 +215,10 @@
   nv1.opts.multiplanarForceRender = true
   nv1.graph.autoSizeMultiplanar = true
   nv1.graph.opacity = 1.0
-  var volumeList1 = [{url: "../images/mni152.nii.gz"}]
+  nv1.drawOpacity = 0.5;
+  var volumeList1 = [{url: "../images/FLAIR.nii.gz"}]
   await nv1.loadVolumes(volumeList1)
+  await nv1.loadDrawingFromUrl("../images/lesion.nii.gz")
   function toggleGroup(id) {
       let buttons = document.getElementsByClassName("viewBtn")
       let char0 = id.charAt(0)
@@ -247,6 +280,43 @@
           toggleGroup(event.target.id)
           return
       }
+      if (event.target.id === "Undo") {
+        nv1.drawUndo()
+      }
+      var isFilled = true;
+      if(event.target.id.charAt(0) === '@') { //sliceType
+          if (event.target.id === "@Off")
+              nv1.setDrawingEnabled(false)
+          else
+              nv1.setDrawingEnabled(true)
+          if (event.target.id === "@Erase")
+              nv1.setPenValue(0, isFilled);
+          if (event.target.id === "@Red")
+              nv1.setPenValue(1, isFilled);
+          if (event.target.id === "@Green")
+              nv1.setPenValue(2, isFilled);
+          if (event.target.id === "@Blue")
+              nv1.setPenValue(3, isFilled);
+          if (event.target.id === "@Cluster")
+              nv1.setPenValue(-0, isFilled);
+          toggleGroup(event.target.id)
+      } //Draw Color
+      if (event.target.id === "Translucent") {
+          if (nv1.drawOpacity > 0.75)
+            nv1.drawOpacity = 0.5
+          else
+            nv1.drawOpacity = 1.0;
+          nv1.drawScene()
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          return
+      }      
+      if (event.target.id === "DrawFilled") {
+          isFilled = !isFilled;
+          nv1.setPenValue(nv1.opts.penValue, isFilled);
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          return
+      }
+
       if(event.target.id.charAt(0) === '|') { //sliceType
           if (event.target.id === "|Axial")
               nv1.setSliceType(nv1.sliceTypeAxial)
@@ -266,6 +336,28 @@
           }
           toggleGroup(event.target.id)
       } //sliceType
+      if (event.target.id === "WorldSpace") {
+          nv1.setSliceMM(!nv1.opts.isSliceMM);
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          return
+      } 
+      if (event.target.id === "Interpolate") {
+          nv1.setInterpolation(!nv1.opts.isNearestInterpolation)
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          return
+      }
+      if (event.target.id === "Left")
+          nv1.moveCrosshairInVox(-1, 0, 0)
+      if (event.target.id === "Right")
+          nv1.moveCrosshairInVox(1, 0, 0)
+      if (event.target.id === "Posterior")
+          nv1.moveCrosshairInVox(0, -1, 0)
+      if (event.target.id === "Anterior")
+          nv1.moveCrosshairInVox(0, 1, 0)
+      if (event.target.id === "Inferior")
+          nv1.moveCrosshairInVox(0, 0, -1)
+      if (event.target.id === "Superior")
+          nv1.moveCrosshairInVox(0, 0, 1)
       if (event.target.id === "BackColor") {
           if (nv1.opts.backColor[0] < 0.5)
               nv1.opts.backColor = [1, 1, 1, 1]
