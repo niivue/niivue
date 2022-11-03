@@ -104810,12 +104810,16 @@ const NVIMAGE_TYPE = Object.freeze({
   V16: 13,
   VMR: 14,
   HEAD: 15,
+  DCM_FOLDER: 16,
   parse: (ext) => {
     let imageType = NVIMAGE_TYPE.UNKNOWN;
     switch (ext.toUpperCase()) {
       case "":
       case "DCM":
         imageType = NVIMAGE_TYPE.DCM;
+        break;
+      case "TXT":
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
         break;
       case "NII":
         imageType = NVIMAGE_TYPE.NII;
@@ -104860,7 +104864,7 @@ const NVIMAGE_TYPE = Object.freeze({
     return imageType;
   }
 });
-function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN) {
+function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN) {
   return {
     url,
     urlImageData,
@@ -104873,13 +104877,12 @@ function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gr
     percentileFrac,
     ignoreZeroVoxels,
     visible,
+    useQFormNotSForm,
     colorMapNegative,
     imageType
   };
 }
-function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, isDICOMDIR = false, useQFormNotSForm = false, colorMapNegative = "", onColorMapChange = () => {
-}, onOpacityChange = () => {
-}, imageType = NVIMAGE_TYPE.UNKNOWN) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -104912,8 +104915,10 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   this.visible = visible;
   this.modulationImage = null;
   this.series = [];
-  this.onColorMapChange = onColorMapChange;
-  this.onOpacityChange = onOpacityChange;
+  this.onColorMapChange = () => {
+  };
+  this.onOpacityChange = () => {
+  };
   if (!dataBuffer) {
     return;
   }
@@ -104929,7 +104934,10 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   if (imageType === NVIMAGE_TYPE.UNKNOWN) {
     imageType = NVIMAGE_TYPE.parse(ext);
   }
+  this.imageType = imageType;
   switch (imageType) {
+    case NVIMAGE_TYPE.DCM_FOLDER:
+    case NVIMAGE_TYPE.DCM_MANIFEST:
     case NVIMAGE_TYPE.DCM:
       imgRaw = this.readDICOM(dataBuffer);
       break;
@@ -106768,6 +106776,7 @@ NVImage.loadFromUrl = async function({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  useQFormNotSForm = false,
   colorMapNegative = "",
   isManifest = false,
   imageType = NVIMAGE_TYPE.UNKNOWN
@@ -106776,11 +106785,10 @@ NVImage.loadFromUrl = async function({
     throw Error("url must not be empty");
   }
   let nvimage = null;
-  let isDICOMDIR = false;
   let dataBuffer = null;
   if (isManifest) {
     dataBuffer = await NVImage.fetchDicomData(url);
-    isDICOMDIR = true;
+    imageType = NVIMAGE_TYPE.DCM_MANIFEST;
   } else {
     let response = await fetch(url);
     if (!response.ok) {
@@ -106825,7 +106833,7 @@ NVImage.loadFromUrl = async function({
     pairedImgData = await resp.arrayBuffer();
   }
   if (dataBuffer) {
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, false, false, colorMapNegative, isDICOMDIR, imageType);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, useQFormNotSForm, colorMapNegative, imageType);
   } else {
     alert("Unable to load buffer properly from volume");
   }
@@ -106857,7 +106865,9 @@ NVImage.loadFromFile = async function({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  isDICOMDIR = false
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN
 } = {}) {
   let nvimage = null;
   let dataBuffer = [];
@@ -106874,7 +106884,7 @@ NVImage.loadFromFile = async function({
     if (urlImgData) {
       pairedImgData = await this.readFileAsync(urlImgData);
     }
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, isDICOMDIR);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, useQFormNotSForm, colorMapNegative, imageType);
   } catch (err2) {
     console.log(err2);
     log$2.debug(err2);
@@ -107146,7 +107156,7 @@ NVImage.prototype.applyOptionsUpdate = function(options) {
 NVImage.prototype.getImageOptions = function() {
   let options = null;
   try {
-    options = new NVImageFromUrlOptions("", "", this.name, this._colorMap, this.opacity, this.hdr.cal_min, this.hdr.cal_max, this.trustCalMinMax, this.percentileFrac, this.ignoreZeroVoxels, this.visible, this.colorMapNegative);
+    options = new NVImageFromUrlOptions("", "", this.name, this._colorMap, this.opacity, this.hdr.cal_min, this.hdr.cal_max, this.trustCalMinMax, this.percentileFrac, this.ignoreZeroVoxels, this.visible, this.useQFormNotSForm, this.colorMapNegative, this.imageType);
   } catch (e) {
     console.log(e);
   }
@@ -112823,7 +112833,6 @@ class NVDocument {
             percentileFrac: 0.02,
             ignoreZeroVoxels: false,
             visible: true,
-            isDICOMDIR: false,
             useQFormNotSForm: false,
             colorMapNegative: "",
             imageType: NVIMAGE_TYPE.NII
@@ -113764,7 +113773,7 @@ Niivue.prototype.readDirectory = function(directory) {
           file: allFileObects,
           name: directory.name,
           urlImgData: null,
-          isDICOMDIR: true
+          imageType: NVIMAGE_TYPE.DCM_FOLDER
         });
         this.addVolume(volume);
       }
