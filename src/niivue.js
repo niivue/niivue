@@ -2536,7 +2536,7 @@ Niivue.prototype.loadDocument = async function (document) {
   this.scene.renderElevation = document.renderElevation;
   this.scene.clipPlane = document.clipPlane;
   this.scene.crosshairPos = document.crosshairPos;
-  this.opts = { ...this.opts, ...document.opts }; // do not overwrite event handlers  
+  this.opts = { ...this.opts, ...document.opts }; // do not overwrite event handlers
   this.setSliceType(document.sliceType);
   this.mediaUrlMap.clear();
   this.volumes = [];

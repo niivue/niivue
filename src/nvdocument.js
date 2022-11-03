@@ -1,6 +1,7 @@
 import { NVUtilities } from "./nvutilities";
+// Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
+// eslint-disable-next-line no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
-import { stringify, parse } from "@ungap/structured-clone/json";
 import { serialize, deserialize } from "@ungap/structured-clone";
 /**
  * Slice Type
@@ -15,7 +16,7 @@ const SLICE_TYPE = Object.freeze({
   RENDER: 4,
 });
 
-/**
+/**Creates and instance of NVDocument
  * @class NVDocument
  * @type NVDocument
  * @constructor
@@ -39,9 +40,14 @@ export class NVDocument {
     this.meshOptionsMap = new Map();
   }
 
+  /**
+   * Title of the document
+   * @returns {string}
+   */
   get title() {
     return this.data.title;
   }
+
   /**
    * @param {string} title title of document
    */
@@ -49,78 +55,150 @@ export class NVDocument {
     this.data.title = title;
   }
 
+  /**
+   * @returns {NVImageFromUrlOptions[]}
+   */
   get imageOptionsArray() {
     return this.data.imageOptionsArray;
   }
 
-  get meshOptionsArray() {
-    return this.data.meshOptionsArray;
-  }
+  // get meshOptionsArray() {
+  //   return this.data.meshOptionsArray;
+  // }
 
+  /**
+   * Gets azimuth of scene
+   * @returns {number}
+   */
   get renderAzimuth() {
     return this.data.renderAzimuth;
   }
 
+  /**
+   * Sets azimuth of scene
+   * @param {number} azimuth
+   */
   set renderAzimuth(azimuth) {
     this.data.renderAzimuth = azimuth;
   }
 
+  /**
+   * Gets the elevation of the scene
+   * @returns {number}
+   */
   get renderElevation() {
     return this.data.renderElevation;
   }
 
+  /**
+   * Sets the elevation of the scene
+   */
   set renderElevation(elevation) {
     this.data.renderElevation = elevation;
   }
 
+  /**
+   * Gets the crosshair position of the scene
+   * @returns {number[]}
+   */
   get crosshairPos() {
     return this.data.crosshairPos;
   }
 
+  /**
+   * Sets the crosshair position of the scene
+   * @param {number[]} pos
+   */
   set crosshairPos(pos) {
     this.data.crosshairPos = pos;
   }
 
+  /**
+   * Gets the clip plane of the scene
+   * @returns {number[]}
+   */
   get clipPlane() {
     return this.data.clipPlane;
   }
 
+  /**
+   * Sets the clip plane of the scene
+   * @param {number[]}
+   */
   set clipPlane(plane) {
     this.data.clipPlane = plane;
   }
 
+  /**
+   * Gets the slice type of the scene
+   * @returns {SLICE_TYPE}
+   */
   get sliceType() {
     return this.data.sliceType;
   }
 
+  /**
+   * Sets the slice type of the scene
+   * @param {SLICE_TYPE} sliceType
+   */
   set sliceType(sliceType) {
     this.data.sliceType = sliceType;
   }
 
+  /**
+   * Gets the base 64 encoded blobs of associated images
+   * @returns {string[]}
+   */
   get encodedImageBlobs() {
     return this.data.encodedImageBlobs;
   }
 
+  /**
+   * Gets the base 64 encoded blob of the associated drawing
+   * @returns {string[]}
+   */
   get encodedDrawingBlob() {
     return this.data.encodedDrawingBlob;
   }
 
+  /**
+   * Gets the options of the {@link Niivue} instance
+   * @returns {Object}
+   */
   get opts() {
     return this.data.opts;
   }
 
+  /**
+   * Sets the options of the {@link Niivue} instance
+   */
   set opts(opts) {
     this.data.opts = { ...opts };
   }
 
+  /**
+   * Checks if document has an image by id
+   * @param {NVImage} image 
+   * @returns {boolean}
+   */
   hasImage(image) {
     return this.volumes.find((i) => i.id === image.id);
   }
 
+  /**
+   * Checks if document has an image by url
+   * @param {string} url 
+   * @returns {boolean}
+   */
   hasImageFromUrl(url) {
     return this.data.imageOptionsArray.find((i) => i.url === url);
   }
 
+  /**
+   * Adds an image and the options an image was created with
+   * @param {NVImage} image 
+   * @param {NVImageFromUrlOptions} imageOptions 
+   */
   addImageOptions(image, imageOptions) {
     if (!this.hasImage(image)) {
       if (!imageOptions.name) {
@@ -152,6 +230,10 @@ export class NVDocument {
     }
   }
 
+  /**
+   * Removes image from the document as well as its options 
+   * @param {NVImage} image 
+   */
   removeImage(image) {
     if (this.imageOptionsMap.has(image.id)) {
       let index = this.imageOptionsMap.get(image.id);
@@ -163,12 +245,21 @@ export class NVDocument {
     this.volumes = this.volumes.filter((i) => i.id != image.id);
   }
 
+  /**
+   * Returns the options for the image if it was added by url
+   * @param {NVImage} image 
+   * @returns {NVImageFromUrlOptions}
+   */
   getImageOptions(image) {
     return this.imageOptionsMap.has(image.id)
       ? this.data.imageOptionsArray[this.imageOptionsMap.get(image.id)]
       : null;
   }
 
+  /**
+   * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
+   * @param {string} fileName 
+   */
   async save(fileName) {
     let imageOptionsArray = [];
     this.data.encodedImageBlobs = [];
