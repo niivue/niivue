@@ -60,6 +60,7 @@ import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
 export { colortables } from "./colortables";
+import { NVDocument } from "./nvdocument.js";
 
 const log = new Log();
 const cmapper = new colortables();
@@ -391,6 +392,7 @@ export function Niivue(options = {}) {
   ];
 
   this.mediaUrlMap = new Map();
+  this.document = new NVDocument();
 
   this.initialized = false;
   // loop through known Niivue properties
@@ -1261,6 +1263,8 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
  */
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
+  this.document.addImageOptions(volume, imageOptions);
+
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.opts.onVolumeAddedFromUrl) {
@@ -1357,6 +1361,8 @@ Niivue.prototype.dropListener = async function (e) {
     console.log(ext);
     if (MESH_EXTENSIONS.includes(ext)) {
       this.addMeshFromUrl({ url });
+    } else if (ext === "NVD") {
+      this.loadDocumentFromUrl(url);
     } else {
       this.addVolumeFromUrl(imageOptions);
     }
@@ -1414,6 +1420,13 @@ Niivue.prototype.dropListener = async function (e) {
               this.addMesh(mesh);
             });
             continue;
+          } else if (ext === "NVD") {
+            entry.file(async (file) => {
+              let nvdoc = await NVDocument.loadFromFile(file);
+              this.loadDocument(nvdoc);
+              console.log("loaded document");
+            });
+            break;
           }
           entry.file(async (file) => {
             // if we have paired header/img data
@@ -1710,7 +1723,8 @@ Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
 Niivue.prototype.drawClearAllUndoBitmaps = async function () {
   this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //next add will be cylinder 0
   if (this.drawUndoBitmaps.length < 1) return;
-  for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) array[i] = [];
+  for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--)
+    this.drawUndoBitmaps[i] = [];
 }; // drawClearAllUndoBitmaps()
 
 /**
@@ -1739,16 +1753,10 @@ Niivue.prototype.drawUndo = function () {
   this.refreshDrawing(true);
 };
 
-/**
- * Open drawing
- * @param {string} filename of NIfTI format drawing
- * @example niivue.loadDrawing("../images/lesion.nii.gz");
- */
-Niivue.prototype.loadDrawing = async function (fnm) {
+Niivue.prototype.loadDrawing = function (drawingBitmap) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-  let dims = volume.hdr.dims; //reverse to original
+  let dims = drawingBitmap.hdr.dims;
   if (
     dims[1] !== this.back.hdr.dims[1] ||
     dims[2] !== this.back.hdr.dims[2] ||
@@ -1757,9 +1765,9 @@ Niivue.prototype.loadDrawing = async function (fnm) {
     console.log("drawing dimensions do not match background image");
     return false;
   }
-  if (volume.img.constructor !== Uint8Array)
+  if (drawingBitmap.img.constructor !== Uint8Array)
     console.log("Drawings should be UINT8");
-  let perm = volume.permRAS;
+  let perm = drawingBitmap.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(
@@ -1804,7 +1812,7 @@ Niivue.prototype.loadDrawing = async function (fnm) {
   if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
   for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
   //convert data
-  let inVs = volume.img; //new Uint8Array(this.drawBitmap);
+  let inVs = drawingBitmap.img; //new Uint8Array(this.drawBitmap);
   let outVs = this.drawBitmap;
   //for (let i = 0; i < vx; i++)
   //  outVs[i] = i % 3;
@@ -1820,6 +1828,18 @@ Niivue.prototype.loadDrawing = async function (fnm) {
   this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
+};
+
+/**
+ * Open drawing
+ * @param {string} filename of NIfTI format drawing
+ * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
+ */
+Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
+  if (this.drawBitmap) console.log("Overwriting open drawing!");
+  this.drawClearAllUndoBitmaps();
+  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+  this.loadDrawing(volume);
 };
 
 /**
@@ -2088,8 +2108,8 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue.removeVolume(this.volumes[3])
  */
 Niivue.prototype.removeVolume = function (volume) {
+  this.document.removeImage(volume);
   this.setVolume(volume, -1);
-
   // check if we have a url for this volume
   if (this.mediaUrlMap.has(volume)) {
     let url = this.mediaUrlMap.get(volume);
@@ -2497,6 +2517,95 @@ Niivue.prototype.cloneVolume = function (index) {
 };
 
 /**
+ *
+ * @param {string} url URL of NVDocument
+ */
+Niivue.prototype.loadDocumentFromUrl = async function (url) {
+  let document = await NVDocument.loadFromUrl(url);
+  this.loadDocument(document);
+};
+
+/**
+ * Loads an NVDocument
+ * @param {NVDocument} document
+ * @returns {Niivue} returns the Niivue instance
+ */
+Niivue.prototype.loadDocument = function (document) {
+  this.document = document;
+  this.scene.renderAzimuth = document.renderAzimuth;
+  this.scene.renderElevation = document.renderElevation;
+  this.scene.clipPlane = document.clipPlane;
+  this.scene.crosshairPos = document.crosshairPos;
+  this.opts = { ...this.opts, ...document.opts }; // do not overwrite event handlers
+  this.setSliceType(document.sliceType);
+  this.mediaUrlMap.clear();
+  this.volumes = [];
+  this.meshes = [];
+  this.drawingBitmap = null;
+  this.createEmptyDrawing();
+  // load our images and meshes
+  let encodedImageBlobs = document.encodedImageBlobs;
+  for (let i = 0; i < document.imageOptionsArray.length; i++) {
+    const imageOptions = document.imageOptionsArray[i];
+    const base64 = encodedImageBlobs[i];
+    if (base64) {
+      let image = NVImage.loadFromBase64({ base64, ...imageOptions });
+      if (image) {
+        this.addVolume(image);
+        document.addImageOptions(image, imageOptions);
+      }
+    }
+  }
+
+  const base64 = document.encodedDrawingBlob;
+  if (base64) {
+    const imageOptions = document.imageOptionsArray[0];
+    let drawingBitmap = NVImage.loadFromBase64({ base64, ...imageOptions });
+    if (drawingBitmap) {
+      this.loadDrawing(drawingBitmap);
+    }
+  }
+
+  for (const mesh of document.meshes) {
+    const meshInit = { gl: this.gl, ...mesh };
+    console.log(meshInit);
+    const meshToAdd = new NVMesh(
+      meshInit.pts,
+      meshInit.tris,
+      meshInit.name,
+      meshInit.rgba255,
+      meshInit.opacity,
+      meshInit.visible,
+      this.gl,
+      meshInit.connectome,
+      meshInit.dpg,
+      meshInit.dps,
+      meshInit.dpv
+    );
+    meshToAdd.meshShaderIndex = meshInit.meshShaderIndex;
+    meshToAdd.layers = meshInit.layers;
+    meshToAdd.updateMesh(this.gl);
+    this.addMesh(meshToAdd);
+  }
+  this.updateGLVolume();
+  return this;
+};
+
+Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
+  this.document.title = fileName;
+  this.document.opts = this.opts;
+  this.document.renderAzimuth = this.scene.renderAzimuth;
+  this.document.renderElevation = this.scene.renderElevation;
+  this.document.clipPlane = this.scene.clipPlane;
+  this.document.crosshairPos = this.scene.crosshairPos;
+  this.document.sliceType = this.sliceType;
+  this.document.volumes = this.volumes;
+  this.document.drawBitmap = this.drawBitmap;
+  this.document.meshes = this.meshes;
+  this.document.save(fileName);
+};
+
+/**
  * load an array of volume objects
  * @param {array} volumeList the array of objects to load. each object must have a resolvable "url" property at a minimum
  * @returns {Niivue} returns the Niivue instance
@@ -2536,6 +2645,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       cal_min: volumeList[i].cal_min,
       cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
+      isManifest: volumeList[i].isManifest,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.scene.loading$.next(false);

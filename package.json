@@ -15,7 +15,7 @@
     "dev": "vite",
     "build": "npx prettier --write src/ && npx vite build --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
     "build-win": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
-    "demo": "npm run build && npx http-server demos/",
+    "demo": "npm run build && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
@@ -49,6 +49,7 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "@ungap/structured-clone": "^1.0.1",
     "daikon": "^1.2.42",
     "fflate": "^0.7.3",
     "gl-matrix": "^3.4.3",
