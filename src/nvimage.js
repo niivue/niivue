@@ -48,12 +48,16 @@ export const NVIMAGE_TYPE = Object.freeze({
   V16: 13,
   VMR: 14,
   HEAD: 15,
+  DCM_FOLDER: 16,
   parse: (ext) => {
     let imageType = NVIMAGE_TYPE.UNKNOWN;
     switch (ext.toUpperCase()) {
       case "":
       case "DCM":
         imageType = NVIMAGE_TYPE.DCM;
+        break;
+      case "TXT":
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
         break;
       case "NII":
         imageType = NVIMAGE_TYPE.NII;
@@ -105,15 +109,16 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @type {object}
  * @property {string} url - the resolvable URL pointing to a nifti image to load
  * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
- * @property {string} [name=''] a name for this image. Default is an empty string
- * @property {string} [colorMap='gray'] a color map to use. default is gray
+ * @property {string} [name=""] a name for this image. Default is an empty string
+ * @property {string} [colorMap="gray"] a color map to use. default is gray
  * @property {number} [opacity=1.0] the opacity for this image. default is 1
  * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
  * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
  * @property {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
- * @property {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
+ * @property {string} [colorMapNegative=""] a color map to use for symmetrical negative intensities
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
 
@@ -134,6 +139,7 @@ export function NVImageFromUrlOptions(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  useQFormNotSForm = false,
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
@@ -149,6 +155,7 @@ export function NVImageFromUrlOptions(
     percentileFrac,
     ignoreZeroVoxels,
     visible,
+    useQFormNotSForm,
     colorMapNegative,
     imageType,
   };
@@ -171,7 +178,6 @@ export function NVImageFromUrlOptions(
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {boolean} [isDICOMDIR=true] input is DICOM folder, not a single file
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
  * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
  * @param {function} [onColorMapChange=()=>{}] callback for color map change
@@ -189,11 +195,8 @@ export function NVImage(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  isDICOMDIR = false,
   useQFormNotSForm = false,
   colorMapNegative = "",
-  onColorMapChange = () => {},
-  onOpacityChange = () => {},
   imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
@@ -231,8 +234,9 @@ export function NVImage(
   this.modulationImage = null;
   this.series = []; // for concatenating dicom images
 
-  this.onColorMapChange = onColorMapChange;
-  this.onOpacityChange = onOpacityChange;
+  this.onColorMapChange = () => {};
+  this.onOpacityChange = () => {};
+
   // Added to support zerosLike
   if (!dataBuffer) {
     return;
@@ -251,7 +255,11 @@ export function NVImage(
     imageType = NVIMAGE_TYPE.parse(ext);
   }
 
+  this.imageType = imageType;
+
   switch (imageType) {
+    case NVIMAGE_TYPE.DCM_FOLDER:
+    case NVIMAGE_TYPE.DCM_MANIFEST:
     case NVIMAGE_TYPE.DCM:
       imgRaw = this.readDICOM(dataBuffer);
       break;
@@ -2514,6 +2522,7 @@ NVImage.loadFromUrl = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  useQFormNotSForm = false,
   colorMapNegative = "",
   isManifest = false,
   imageType = NVIMAGE_TYPE.UNKNOWN,
@@ -2523,13 +2532,12 @@ NVImage.loadFromUrl = async function ({
   }
 
   let nvimage = null;
-  let isDICOMDIR = false;
   let dataBuffer = null;
 
   // fetch data associated with image
   if (isManifest) {
     dataBuffer = await NVImage.fetchDicomData(url);
-    isDICOMDIR = true;
+    imageType = NVIMAGE_TYPE.DCM_MANIFEST;
   } else {
     let response = await fetch(url);
     if (!response.ok) {
@@ -2593,10 +2601,8 @@ NVImage.loadFromUrl = async function ({
       percentileFrac,
       ignoreZeroVoxels,
       visible,
-      false,
-      false,
+      useQFormNotSForm,
       colorMapNegative,
-      isDICOMDIR,
       imageType
     );
   } else {
@@ -2639,7 +2645,9 @@ NVImage.readFileAsync = function (file) {
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {boolean} [isDICOMDIR=true] input is DICOM folder, not a single file
+ * @param {boolean} [useQFormNotSForm=false] whether or not to use QForm instead of SForm during construction
+ * @param {string} [colorMapNegative=""] colormap negative for the image
+ * @param {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type
  * @returns {NVImage} returns a NVImage intance
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
@@ -2656,7 +2664,9 @@ NVImage.loadFromFile = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  isDICOMDIR = false,
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
   let dataBuffer = [];
@@ -2685,7 +2695,9 @@ NVImage.loadFromFile = async function ({
       percentileFrac,
       ignoreZeroVoxels,
       visible,
-      isDICOMDIR
+      useQFormNotSForm,
+      colorMapNegative,
+      imageType
     );
   } catch (err) {
     console.log(err);
@@ -3116,7 +3128,9 @@ NVImage.prototype.getImageOptions = function () {
       this.percentileFrac, // percentileFrac
       this.ignoreZeroVoxels, // ignoreZeroVoxels
       this.visible, // visible
-      this.colorMapNegative // colorMapNegative
+      this.useQFormNotSForm, // useQFormNotSForm
+      this.colorMapNegative, // colorMapNegative
+      this.imageType // imageType
     );
   } catch (e) {
     console.log(e);
