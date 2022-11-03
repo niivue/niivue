@@ -319,7 +319,6 @@ export class NVDocument {
             percentileFrac: 0.02,
             ignoreZeroVoxels: false,
             visible: true,
-            isDICOMDIR: false,
             useQFormNotSForm: false,
             colorMapNegative: "",
             imageType: NVIMAGE_TYPE.NII,
