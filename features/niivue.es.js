@@ -4083,12 +4083,12 @@ function requireUtilities$1() {
       return data.getFloat64(start, littleEndian);
     };
     nifti3.Utils.getLongAt = function(data, start, littleEndian) {
-      var ctr, array2 = [], value2 = 0;
+      var ctr, array = [], value2 = 0;
       for (ctr = 0; ctr < 8; ctr += 1) {
-        array2[ctr] = nifti3.Utils.getByteAt(data, start + ctr, littleEndian);
+        array[ctr] = nifti3.Utils.getByteAt(data, start + ctr, littleEndian);
       }
-      for (ctr = array2.length - 1; ctr >= 0; ctr--) {
-        value2 = value2 * 256 + array2[ctr];
+      for (ctr = array.length - 1; ctr >= 0; ctr--) {
+        value2 = value2 * 256 + array[ctr];
       }
       return value2;
     };
@@ -6794,7 +6794,7 @@ function requireDeflate$2() {
   const strings2 = requireStrings$1();
   const msg = requireMessages$1();
   const ZStream = requireZstream$1();
-  const toString = Object.prototype.toString;
+  const toString2 = Object.prototype.toString;
   const {
     Z_NO_FLUSH,
     Z_SYNC_FLUSH,
@@ -6838,7 +6838,7 @@ function requireDeflate$2() {
       let dict;
       if (typeof opt.dictionary === "string") {
         dict = strings2.string2buf(opt.dictionary);
-      } else if (toString.call(opt.dictionary) === "[object ArrayBuffer]") {
+      } else if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") {
         dict = new Uint8Array(opt.dictionary);
       } else {
         dict = opt.dictionary;
@@ -6863,7 +6863,7 @@ function requireDeflate$2() {
       _flush_mode = flush_mode === true ? Z_FINISH : Z_NO_FLUSH;
     if (typeof data === "string") {
       strm.input = strings2.string2buf(data);
-    } else if (toString.call(data) === "[object ArrayBuffer]") {
+    } else if (toString2.call(data) === "[object ArrayBuffer]") {
       strm.input = new Uint8Array(data);
     } else {
       strm.input = data;
@@ -8709,7 +8709,7 @@ function requireInflate$2() {
   const msg = requireMessages$1();
   const ZStream = requireZstream$1();
   const GZheader = requireGzheader$1();
-  const toString = Object.prototype.toString;
+  const toString2 = Object.prototype.toString;
   const {
     Z_NO_FLUSH,
     Z_FINISH,
@@ -8756,7 +8756,7 @@ function requireInflate$2() {
     if (opt.dictionary) {
       if (typeof opt.dictionary === "string") {
         opt.dictionary = strings2.string2buf(opt.dictionary);
-      } else if (toString.call(opt.dictionary) === "[object ArrayBuffer]") {
+      } else if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") {
         opt.dictionary = new Uint8Array(opt.dictionary);
       }
       if (opt.raw) {
@@ -8778,7 +8778,7 @@ function requireInflate$2() {
       _flush_mode = flush_mode;
     else
       _flush_mode = flush_mode === true ? Z_FINISH : Z_NO_FLUSH;
-    if (toString.call(data) === "[object ArrayBuffer]") {
+    if (toString2.call(data) === "[object ArrayBuffer]") {
       strm.input = new Uint8Array(data);
     } else {
       strm.input = data;
@@ -9120,24 +9120,24 @@ function requireUtilities() {
       }
       return tmp.buffer;
     };
-    daikon2.Utils.fillBuffer = function(array2, buffer2, offset, numBytes) {
+    daikon2.Utils.fillBuffer = function(array, buffer2, offset, numBytes) {
       var ctr;
       if (numBytes === 1) {
-        for (ctr = 0; ctr < array2.length; ctr += 1) {
-          buffer2.setUint8(offset + ctr, array2[ctr]);
+        for (ctr = 0; ctr < array.length; ctr += 1) {
+          buffer2.setUint8(offset + ctr, array[ctr]);
         }
       } else if (numBytes === 2) {
-        for (ctr = 0; ctr < array2.length; ctr += 1) {
-          buffer2.setUint16(offset + ctr * 2, array2[ctr], true);
+        for (ctr = 0; ctr < array.length; ctr += 1) {
+          buffer2.setUint16(offset + ctr * 2, array[ctr], true);
         }
       }
     };
-    daikon2.Utils.fillBufferRGB = function(array2, buffer2, offset) {
-      var r, g, b, ctr, numElements = parseInt(array2.length / 3);
+    daikon2.Utils.fillBufferRGB = function(array, buffer2, offset) {
+      var r, g, b, ctr, numElements = parseInt(array.length / 3);
       for (ctr = 0; ctr < numElements; ctr += 1) {
-        r = array2[ctr * 3];
-        g = array2[ctr * 3 + 1];
-        b = array2[ctr * 3 + 2];
+        r = array[ctr * 3];
+        g = array[ctr * 3 + 1];
+        b = array[ctr * 3 + 2];
         buffer2.setUint8(offset + ctr, parseInt((r + b + g) / 3), true);
       }
     };
@@ -15317,9 +15317,9 @@ function requireJpegBaseline() {
           }
           function readDataBlock() {
             var length2 = readUint16();
-            var array2 = data.subarray(offset, offset + length2 - 2);
-            offset += array2.length;
-            return array2;
+            var array = data.subarray(offset, offset + length2 - 2);
+            offset += array.length;
+            return array;
           }
           function prepareComponents(frame2) {
             var mcusPerLine = Math.ceil(frame2.samplesPerLine / 8 / frame2.maxH);
@@ -20041,10 +20041,10 @@ function requireCharLSDynamicMemoryBrowser() {
         return u8array;
       }
       Module["intArrayFromString"] = intArrayFromString;
-      function intArrayToString(array2) {
+      function intArrayToString(array) {
         var ret = [];
-        for (var i2 = 0; i2 < array2.length; i2++) {
-          var chr = array2[i2];
+        for (var i2 = 0; i2 < array.length; i2++) {
+          var chr = array[i2];
           if (chr > 255) {
             chr &= 255;
           }
@@ -20054,18 +20054,18 @@ function requireCharLSDynamicMemoryBrowser() {
       }
       Module["intArrayToString"] = intArrayToString;
       function writeStringToMemory(string, buffer2, dontAddNull) {
-        var array2 = intArrayFromString(string, dontAddNull);
+        var array = intArrayFromString(string, dontAddNull);
         var i2 = 0;
-        while (i2 < array2.length) {
-          var chr = array2[i2];
+        while (i2 < array.length) {
+          var chr = array[i2];
           HEAP8[buffer2 + i2 >> 0] = chr;
           i2 = i2 + 1;
         }
       }
       Module["writeStringToMemory"] = writeStringToMemory;
-      function writeArrayToMemory(array2, buffer2) {
-        for (var i2 = 0; i2 < array2.length; i2++) {
-          HEAP8[buffer2++ >> 0] = array2[i2];
+      function writeArrayToMemory(array, buffer2) {
+        for (var i2 = 0; i2 < array.length; i2++) {
+          HEAP8[buffer2++ >> 0] = array[i2];
         }
       }
       Module["writeArrayToMemory"] = writeArrayToMemory;
@@ -20239,9 +20239,9 @@ function requireCharLSDynamicMemoryBrowser() {
       function __isLeapYear(year) {
         return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
       }
-      function __arraySum(array2, index) {
+      function __arraySum(array, index) {
         var sum = 0;
-        for (var i2 = 0; i2 <= index; sum += array2[i2++])
+        for (var i2 = 0; i2 <= index; sum += array[i2++])
           ;
         return sum;
       }
@@ -21751,7 +21751,7 @@ function requireCharLSDynamicMemoryBrowser() {
       }
       Module.asmGlobalArg = { "Math": Math, "Int8Array": Int8Array, "Int16Array": Int16Array, "Int32Array": Int32Array, "Uint8Array": Uint8Array, "Uint16Array": Uint16Array, "Uint32Array": Uint32Array, "Float32Array": Float32Array, "Float64Array": Float64Array, "NaN": NaN, "Infinity": Infinity, "byteLength": byteLength };
       Module.asmLibraryArg = { "abort": abort, "assert": assert, "invoke_iiiiiiii": invoke_iiiiiiii, "invoke_viiiii": invoke_viiiii, "invoke_iiiiiid": invoke_iiiiiid, "invoke_vi": invoke_vi, "invoke_vii": invoke_vii, "invoke_iiiiiii": invoke_iiiiiii, "invoke_ii": invoke_ii, "invoke_iiiiiiiiiiii": invoke_iiiiiiiiiiii, "invoke_iiii": invoke_iiii, "invoke_viiiiiiiiiiiiiii": invoke_viiiiiiiiiiiiiii, "invoke_viiiiii": invoke_viiiiii, "invoke_viiiiiii": invoke_viiiiiii, "invoke_viiiiiiiiii": invoke_viiiiiiiiii, "invoke_iii": invoke_iii, "invoke_iiiiii": invoke_iiiiii, "invoke_diii": invoke_diii, "invoke_i": invoke_i, "invoke_iiiii": invoke_iiiii, "invoke_viii": invoke_viii, "invoke_v": invoke_v, "invoke_iiiiiiiii": invoke_iiiiiiiii, "invoke_iiiiid": invoke_iiiiid, "invoke_viiii": invoke_viiii, "_fabs": _fabs, "_strftime": _strftime, "_pthread_cond_wait": _pthread_cond_wait, "___lock": ___lock, "_pthread_key_create": _pthread_key_create, "_abort": _abort, "___cxa_guard_acquire": ___cxa_guard_acquire, "___setErrNo": ___setErrNo, "___gxx_personality_v0": ___gxx_personality_v0, "___assert_fail": ___assert_fail, "___cxa_free_exception": ___cxa_free_exception, "___cxa_allocate_exception": ___cxa_allocate_exception, "___cxa_find_matching_catch": ___cxa_find_matching_catch, "__isLeapYear": __isLeapYear, "___cxa_guard_release": ___cxa_guard_release, "__addDays": __addDays, "_strftime_l": _strftime_l, "_emscripten_set_main_loop_timing": _emscripten_set_main_loop_timing, "_llvm_eh_typeid_for": _llvm_eh_typeid_for, "_sbrk": _sbrk, "___cxa_begin_catch": ___cxa_begin_catch, "_emscripten_memcpy_big": _emscripten_memcpy_big, "___cxa_end_catch": ___cxa_end_catch, "___resumeException": ___resumeException, "__ZSt18uncaught_exceptionv": __ZSt18uncaught_exceptionv, "_sysconf": _sysconf, "_pthread_getspecific": _pthread_getspecific, "__arraySum": __arraySum, "_pthread_self": _pthread_self, "_pthread_mutex_unlock": _pthread_mutex_unlock, "_pthread_once": _pthread_once, "___syscall54": ___syscall54, "___unlock": ___unlock, "_pthread_cleanup_pop": _pthread_cleanup_pop, "_pthread_cond_broadcast": _pthread_cond_broadcast, "_emscripten_set_main_loop": _emscripten_set_main_loop, "_pthread_setspecific": _pthread_setspecific, "___cxa_atexit": ___cxa_atexit, "___cxa_throw": ___cxa_throw, "___cxa_rethrow": ___cxa_rethrow, "___syscall6": ___syscall6, "_pthread_cleanup_push": _pthread_cleanup_push, "___cxa_pure_virtual": ___cxa_pure_virtual, "_time": _time, "_pthread_mutex_lock": _pthread_mutex_lock, "___cxa_guard_abort": ___cxa_guard_abort, "_atexit": _atexit, "___syscall140": ___syscall140, "___syscall145": ___syscall145, "___syscall146": ___syscall146, "STACKTOP": STACKTOP, "STACK_MAX": STACK_MAX, "tempDoublePtr": tempDoublePtr, "ABORT": ABORT, "cttz_i8": cttz_i8, "___dso_handle": ___dso_handle };
-      var asm = function(global2, env, buffer2) {
+      var asm = function(global2, env2, buffer2) {
         ;
         var a = global2.Int8Array;
         var b = global2.Int16Array;
@@ -21770,12 +21770,12 @@ function requireCharLSDynamicMemoryBrowser() {
         var o = new g(buffer2);
         var p = new h(buffer2);
         var q = global2.byteLength;
-        var r = env.STACKTOP | 0;
-        var s = env.STACK_MAX | 0;
-        var t = env.tempDoublePtr | 0;
-        var u = env.ABORT | 0;
-        var v = env.cttz_i8 | 0;
-        var w = env.___dso_handle | 0;
+        var r = env2.STACKTOP | 0;
+        var s = env2.STACK_MAX | 0;
+        var t = env2.tempDoublePtr | 0;
+        var u = env2.ABORT | 0;
+        var v = env2.cttz_i8 | 0;
+        var w = env2.___dso_handle | 0;
         var x2 = 0;
         var y = 0;
         var z = 0;
@@ -21809,81 +21809,81 @@ function requireCharLSDynamicMemoryBrowser() {
         var ia = global2.Math.imul;
         var ja = global2.Math.min;
         var ka = global2.Math.clz32;
-        var la = env.abort;
-        var ma = env.assert;
-        var na = env.invoke_iiiiiiii;
-        var oa = env.invoke_viiiii;
-        var pa = env.invoke_iiiiiid;
-        var qa = env.invoke_vi;
-        var ra = env.invoke_vii;
-        var sa = env.invoke_iiiiiii;
-        var ta = env.invoke_ii;
-        var ua = env.invoke_iiiiiiiiiiii;
-        var va = env.invoke_iiii;
-        var wa = env.invoke_viiiiiiiiiiiiiii;
-        var xa = env.invoke_viiiiii;
-        var ya = env.invoke_viiiiiii;
-        var za = env.invoke_viiiiiiiiii;
-        var Aa = env.invoke_iii;
-        var Ba = env.invoke_iiiiii;
-        var Ca = env.invoke_diii;
-        var Da = env.invoke_i;
-        var Ea = env.invoke_iiiii;
-        var Fa = env.invoke_viii;
-        var Ga = env.invoke_v;
-        var Ha = env.invoke_iiiiiiiii;
-        var Ia = env.invoke_iiiiid;
-        var Ja = env.invoke_viiii;
-        var Ka = env._fabs;
-        var La = env._strftime;
-        var Ma = env._pthread_cond_wait;
-        var Na = env.___lock;
-        var Oa = env._pthread_key_create;
-        var Pa = env._abort;
-        var Qa = env.___cxa_guard_acquire;
-        var Ra = env.___setErrNo;
-        var Sa = env.___gxx_personality_v0;
-        var Ta = env.___assert_fail;
-        var Ua = env.___cxa_free_exception;
-        var Va = env.___cxa_allocate_exception;
-        var Wa = env.___cxa_find_matching_catch;
-        var Xa = env.__isLeapYear;
-        var Ya = env.___cxa_guard_release;
-        var Za = env.__addDays;
-        var _a2 = env._strftime_l;
-        var $a = env._emscripten_set_main_loop_timing;
-        var ab = env._llvm_eh_typeid_for;
-        var bb = env._sbrk;
-        var cb = env.___cxa_begin_catch;
-        var db = env._emscripten_memcpy_big;
-        var eb = env.___cxa_end_catch;
-        var fb = env.___resumeException;
-        var gb = env.__ZSt18uncaught_exceptionv;
-        var hb = env._sysconf;
-        var ib = env._pthread_getspecific;
-        var jb = env.__arraySum;
-        var kb = env._pthread_self;
-        var lb = env._pthread_mutex_unlock;
-        var mb = env._pthread_once;
-        var nb = env.___syscall54;
-        var ob = env.___unlock;
-        var pb = env._pthread_cleanup_pop;
-        var qb = env._pthread_cond_broadcast;
-        var rb = env._emscripten_set_main_loop;
-        var sb = env._pthread_setspecific;
-        var tb = env.___cxa_atexit;
-        var ub = env.___cxa_throw;
-        var vb = env.___cxa_rethrow;
-        var wb = env.___syscall6;
-        var xb = env._pthread_cleanup_push;
-        var yb = env.___cxa_pure_virtual;
-        var zb = env._time;
-        var Ab = env._pthread_mutex_lock;
-        var Bb = env.___cxa_guard_abort;
-        var Cb = env._atexit;
-        var Db = env.___syscall140;
-        var Eb = env.___syscall145;
-        var Fb = env.___syscall146;
+        var la = env2.abort;
+        var ma = env2.assert;
+        var na = env2.invoke_iiiiiiii;
+        var oa = env2.invoke_viiiii;
+        var pa = env2.invoke_iiiiiid;
+        var qa = env2.invoke_vi;
+        var ra = env2.invoke_vii;
+        var sa = env2.invoke_iiiiiii;
+        var ta = env2.invoke_ii;
+        var ua = env2.invoke_iiiiiiiiiiii;
+        var va = env2.invoke_iiii;
+        var wa = env2.invoke_viiiiiiiiiiiiiii;
+        var xa = env2.invoke_viiiiii;
+        var ya = env2.invoke_viiiiiii;
+        var za = env2.invoke_viiiiiiiiii;
+        var Aa = env2.invoke_iii;
+        var Ba = env2.invoke_iiiiii;
+        var Ca = env2.invoke_diii;
+        var Da = env2.invoke_i;
+        var Ea = env2.invoke_iiiii;
+        var Fa = env2.invoke_viii;
+        var Ga = env2.invoke_v;
+        var Ha = env2.invoke_iiiiiiiii;
+        var Ia = env2.invoke_iiiiid;
+        var Ja = env2.invoke_viiii;
+        var Ka = env2._fabs;
+        var La = env2._strftime;
+        var Ma = env2._pthread_cond_wait;
+        var Na = env2.___lock;
+        var Oa = env2._pthread_key_create;
+        var Pa = env2._abort;
+        var Qa = env2.___cxa_guard_acquire;
+        var Ra = env2.___setErrNo;
+        var Sa = env2.___gxx_personality_v0;
+        var Ta = env2.___assert_fail;
+        var Ua = env2.___cxa_free_exception;
+        var Va = env2.___cxa_allocate_exception;
+        var Wa = env2.___cxa_find_matching_catch;
+        var Xa = env2.__isLeapYear;
+        var Ya = env2.___cxa_guard_release;
+        var Za = env2.__addDays;
+        var _a2 = env2._strftime_l;
+        var $a = env2._emscripten_set_main_loop_timing;
+        var ab = env2._llvm_eh_typeid_for;
+        var bb = env2._sbrk;
+        var cb = env2.___cxa_begin_catch;
+        var db = env2._emscripten_memcpy_big;
+        var eb = env2.___cxa_end_catch;
+        var fb = env2.___resumeException;
+        var gb = env2.__ZSt18uncaught_exceptionv;
+        var hb = env2._sysconf;
+        var ib = env2._pthread_getspecific;
+        var jb = env2.__arraySum;
+        var kb = env2._pthread_self;
+        var lb = env2._pthread_mutex_unlock;
+        var mb = env2._pthread_once;
+        var nb = env2.___syscall54;
+        var ob = env2.___unlock;
+        var pb = env2._pthread_cleanup_pop;
+        var qb = env2._pthread_cond_broadcast;
+        var rb = env2._emscripten_set_main_loop;
+        var sb = env2._pthread_setspecific;
+        var tb = env2.___cxa_atexit;
+        var ub = env2.___cxa_throw;
+        var vb = env2.___cxa_rethrow;
+        var wb = env2.___syscall6;
+        var xb = env2._pthread_cleanup_push;
+        var yb = env2.___cxa_pure_virtual;
+        var zb = env2._time;
+        var Ab = env2._pthread_mutex_lock;
+        var Bb = env2.___cxa_guard_abort;
+        var Cb = env2._atexit;
+        var Db = env2.___syscall140;
+        var Eb = env2.___syscall145;
+        var Fb = env2.___syscall146;
         var Gb = 0;
         function Hb(newBuffer) {
           if (q(newBuffer) & 16777215 || q(newBuffer) <= 16777215 || q(newBuffer) > 2147483648)
@@ -95901,7 +95901,7 @@ function requireDeflate() {
   var strings2 = requireStrings();
   var msg = requireMessages();
   var ZStream = requireZstream();
-  var toString = Object.prototype.toString;
+  var toString2 = Object.prototype.toString;
   var Z_NO_FLUSH = 0;
   var Z_FINISH = 4;
   var Z_OK = 0;
@@ -95945,7 +95945,7 @@ function requireDeflate() {
       var dict;
       if (typeof opt.dictionary === "string") {
         dict = strings2.string2buf(opt.dictionary);
-      } else if (toString.call(opt.dictionary) === "[object ArrayBuffer]") {
+      } else if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") {
         dict = new Uint8Array(opt.dictionary);
       } else {
         dict = opt.dictionary;
@@ -95967,7 +95967,7 @@ function requireDeflate() {
     _mode = mode === ~~mode ? mode : mode === true ? Z_FINISH : Z_NO_FLUSH;
     if (typeof data === "string") {
       strm.input = strings2.string2buf(data);
-    } else if (toString.call(data) === "[object ArrayBuffer]") {
+    } else if (toString2.call(data) === "[object ArrayBuffer]") {
       strm.input = new Uint8Array(data);
     } else {
       strm.input = data;
@@ -97859,7 +97859,7 @@ function requireInflate() {
   var msg = requireMessages();
   var ZStream = requireZstream();
   var GZheader = requireGzheader();
-  var toString = Object.prototype.toString;
+  var toString2 = Object.prototype.toString;
   function Inflate(options) {
     if (!(this instanceof Inflate))
       return new Inflate(options);
@@ -97898,7 +97898,7 @@ function requireInflate() {
     if (opt.dictionary) {
       if (typeof opt.dictionary === "string") {
         opt.dictionary = strings2.string2buf(opt.dictionary);
-      } else if (toString.call(opt.dictionary) === "[object ArrayBuffer]") {
+      } else if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") {
         opt.dictionary = new Uint8Array(opt.dictionary);
       }
       if (opt.raw) {
@@ -97922,7 +97922,7 @@ function requireInflate() {
     _mode = mode === ~~mode ? mode : mode === true ? c.Z_FINISH : c.Z_NO_FLUSH;
     if (typeof data === "string") {
       strm.input = strings2.binstring2buf(data);
-    } else if (toString.call(data) === "[object ArrayBuffer]") {
+    } else if (toString2.call(data) === "[object ArrayBuffer]") {
       strm.input = new Uint8Array(data);
     } else {
       strm.input = data;
@@ -104793,7 +104793,74 @@ function isPlatformLittleEndian() {
   new DataView(buffer2).setInt16(0, 256, true);
   return new Int16Array(buffer2)[0] === 256;
 }
-function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, colorMapNegative = "") {
+const NVIMAGE_TYPE = Object.freeze({
+  UNKNOWN: 0,
+  NII: 1,
+  DCM: 2,
+  DCM_MANIFEST: 3,
+  MIH: 4,
+  MIF: 5,
+  NHDR: 6,
+  NRRD: 7,
+  MHD: 8,
+  MHA: 9,
+  MGH: 10,
+  MGZ: 11,
+  V: 12,
+  V16: 13,
+  VMR: 14,
+  HEAD: 15,
+  parse: (ext) => {
+    let imageType = NVIMAGE_TYPE.UNKNOWN;
+    switch (ext.toUpperCase()) {
+      case "":
+      case "DCM":
+        imageType = NVIMAGE_TYPE.DCM;
+        break;
+      case "NII":
+        imageType = NVIMAGE_TYPE.NII;
+        break;
+      case "MIH":
+        imageType = NVIMAGE_TYPE.MIH;
+        break;
+      case "MIF":
+        imageType = NVIMAGE_TYPE.MIF;
+        break;
+      case "NHDR":
+        imageType = NVIMAGE_TYPE.NHDR;
+        break;
+      case "NRRD":
+        imageType = NVIMAGE_TYPE.NRRD;
+        break;
+      case "MHD":
+        imageType = NVIMAGE_TYPE.MHD;
+        break;
+      case "MHA":
+        imageType = NVIMAGE_TYPE.MHA;
+        break;
+      case "MGH":
+        imageType = NVIMAGE_TYPE.MGH;
+        break;
+      case "MGZ":
+        imageType = NVIMAGE_TYPE.MGZ;
+        break;
+      case "V":
+        imageType = NVIMAGE_TYPE.V;
+        break;
+      case "V16":
+        imageType = NVIMAGE_TYPE.V16;
+        break;
+      case "VMR":
+        imageType = NVIMAGE_TYPE.VMR;
+        break;
+      case "HEAD":
+        imageType = NVIMAGE_TYPE.HEAD;
+        break;
+    }
+    return imageType;
+  }
+});
+function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN) {
   return {
     url,
     urlImageData,
@@ -104806,12 +104873,13 @@ function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gr
     percentileFrac,
     ignoreZeroVoxels,
     visible,
-    colorMapNegative
+    colorMapNegative,
+    imageType
   };
 }
 function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, isDICOMDIR = false, useQFormNotSForm = false, colorMapNegative = "", onColorMapChange = () => {
 }, onOpacityChange = () => {
-}) {
+}, imageType = NVIMAGE_TYPE.UNKNOWN) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -104858,35 +104926,49 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   }
   let imgRaw = null;
   this.hdr = null;
-  if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
-    imgRaw = this.readDICOM(dataBuffer);
-  } else if (ext === "MIH" || ext === "MIF") {
-    imgRaw = this.readMIF(dataBuffer, pairedImgData);
-  } else if (ext === "NHDR" || ext === "NRRD") {
-    imgRaw = this.readNRRD(dataBuffer, pairedImgData);
-  } else if (ext === "MHD" || ext === "MHA") {
-    imgRaw = this.readMHA(dataBuffer);
-  } else if (ext === "MGH" || ext === "MGZ") {
-    imgRaw = this.readMGH(dataBuffer);
-  } else if (ext === "V") {
-    imgRaw = this.readECAT(dataBuffer);
-  } else if (ext === "V16") {
-    imgRaw = this.readV16(dataBuffer);
-  } else if (ext === "VMR") {
-    imgRaw = this.readVMR(dataBuffer);
-  } else if (ext === "HEAD") {
-    imgRaw = this.readHEAD(dataBuffer, pairedImgData);
-  } else if (ext === "NII") {
-    this.hdr = nifti.readHeader(dataBuffer);
-    if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
-      this.hdr.cal_max = 0;
-    if (nifti.isCompressed(dataBuffer)) {
-      imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
-    } else {
-      imgRaw = nifti.readImage(this.hdr, dataBuffer);
-    }
-  } else {
-    imgRaw = this.readDICOM(dataBuffer);
+  if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+    imageType = NVIMAGE_TYPE.parse(ext);
+  }
+  switch (imageType) {
+    case NVIMAGE_TYPE.DCM:
+      imgRaw = this.readDICOM(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.MIH:
+    case NVIMAGE_TYPE.MIF:
+      imgRaw = this.readMIF(dataBuffer, pairedImgData);
+      break;
+    case NVIMAGE_TYPE.NHDR:
+    case NVIMAGE_TYPE.NRRD:
+      imgRaw = this.readNRRD(dataBuffer, pairedImgData);
+      break;
+    case NVIMAGE_TYPE.MHD:
+    case NVIMAGE_TYPE.MHA:
+      imgRaw = this.readMHA(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.V:
+      imgRaw = this.readECAT(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.V16:
+      imgRaw = this.readV16(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.VMR:
+      imgRaw = this.readVMR(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.HEAD:
+      imgRaw = this.readHEAD(dataBuffer, pairedImgData);
+      break;
+    case NVIMAGE_TYPE.NII:
+      this.hdr = nifti.readHeader(dataBuffer);
+      if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
+        this.hdr.cal_max = 0;
+      if (nifti.isCompressed(dataBuffer)) {
+        imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
+      } else {
+        imgRaw = nifti.readImage(this.hdr, dataBuffer);
+      }
+      break;
+    default:
+      throw new Error("Image type not supported");
   }
   this.nFrame4D = 1;
   for (let i2 = 4; i2 < 7; i2++)
@@ -106398,7 +106480,9 @@ Object.defineProperty(NVImage.prototype, "opacity", {
   },
   set: function(opacity) {
     this._opacity = opacity;
-    this.onOpacityChange(this);
+    if (this.onOpacityChange) {
+      this.onOpacityChange(this);
+    }
   }
 });
 NVImage.prototype.calMinMax = function() {
@@ -106641,6 +106725,37 @@ NVImage.prototype.saveToDisk = async function(fnm, drawing8 = null) {
   link.click();
   document.body.removeChild(link);
 };
+NVImage.fetchDicomData = async function(url) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
+  let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+  let manifestUrl = absoluteUrlRE.test(url) ? url : new URL(url, window.location.href);
+  let extensionRE = new RegExp("(?:.([^.]+))?$");
+  let extension = extensionRE.exec(manifestUrl.pathname);
+  if (!extension) {
+    manifestUrl = new URL("niivue-manifest.txt", url);
+  }
+  let response = await fetch(manifestUrl);
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+  let text = await response.text();
+  let lines = text.split("\n");
+  let baseUrlRE = new RegExp("(.*/).*");
+  let folderUrl = baseUrlRE.exec(manifestUrl)[0];
+  let dataBuffer = [];
+  for (const line of lines) {
+    let fileUrl = new URL(line, folderUrl);
+    response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    let contents = await response.arrayBuffer();
+    dataBuffer.push(contents);
+  }
+  return dataBuffer;
+};
 NVImage.loadFromUrl = async function({
   url = "",
   urlImgData = "",
@@ -106653,15 +106768,25 @@ NVImage.loadFromUrl = async function({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  colorMapNegative = ""
+  colorMapNegative = "",
+  isManifest = false,
+  imageType = NVIMAGE_TYPE.UNKNOWN
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
   }
-  let response = await fetch(url);
   let nvimage = null;
-  if (!response.ok) {
-    throw Error(response.statusText);
+  let isDICOMDIR = false;
+  let dataBuffer = null;
+  if (isManifest) {
+    dataBuffer = await NVImage.fetchDicomData(url);
+    isDICOMDIR = true;
+  } else {
+    let response = await fetch(url);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    dataBuffer = await response.arrayBuffer();
   }
   var re = /(?:\.([^.]+))?$/;
   let ext = "";
@@ -106689,7 +106814,6 @@ NVImage.loadFromUrl = async function({
       name = name.slice(0, name.indexOf("?"));
     }
   }
-  let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
@@ -106701,7 +106825,7 @@ NVImage.loadFromUrl = async function({
     pairedImgData = await resp.arrayBuffer();
   }
   if (dataBuffer) {
-    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, false, false, colorMapNegative);
+    nvimage = new NVImage(dataBuffer, name, colorMap, opacity, pairedImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, false, false, colorMapNegative, isDICOMDIR, imageType);
   } else {
     alert("Unable to load buffer properly from volume");
   }
@@ -106757,7 +106881,7 @@ NVImage.loadFromFile = async function({
   }
   return nvimage;
 };
-NVImage.loadFromBase64 = async function({
+NVImage.loadFromBase64 = function({
   base64 = null,
   name = "",
   colorMap = "gray",
@@ -107027,6 +107151,76 @@ NVImage.prototype.getImageOptions = function() {
     console.log(e);
   }
   return options;
+};
+NVImage.prototype.toUint8Array = function(drawingBytes = null) {
+  let isDrawing = drawingBytes;
+  let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing);
+  let drawingBytesToBeConverted = drawingBytes;
+  if (isDrawing) {
+    let perm = this.permRAS;
+    if (perm[0] != 1 || perm[1] != 2 || perm[2] != 3) {
+      let dims = this.hdr.dims;
+      let layout = [0, 0, 0];
+      for (let i2 = 0; i2 < 3; i2++) {
+        for (let j2 = 0; j2 < 3; j2++) {
+          if (Math.abs(perm[i2]) - 1 !== j2)
+            continue;
+          layout[j2] = i2 * Math.sign(perm[i2]);
+        }
+      }
+      let stride = 1;
+      let instride = [1, 1, 1];
+      let inflip = [false, false, false];
+      for (let i2 = 0; i2 < layout.length; i2++) {
+        for (let j2 = 0; j2 < layout.length; j2++) {
+          let a = Math.abs(layout[j2]);
+          if (a != i2)
+            continue;
+          instride[j2] = stride;
+          if (layout[j2] < 0 || Object.is(layout[j2], -0))
+            inflip[j2] = true;
+          stride *= dims[j2 + 1];
+        }
+      }
+      const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i2) => start + i2 * step);
+      let xlut = range(0, dims[1] - 1, 1);
+      if (inflip[0])
+        xlut = range(dims[1] - 1, 0, -1);
+      for (let i2 = 0; i2 < dims[1]; i2++)
+        xlut[i2] *= instride[0];
+      let ylut = range(0, dims[2] - 1, 1);
+      if (inflip[1])
+        ylut = range(dims[2] - 1, 0, -1);
+      for (let i2 = 0; i2 < dims[2]; i2++)
+        ylut[i2] *= instride[1];
+      let zlut = range(0, dims[3] - 1, 1);
+      if (inflip[2])
+        zlut = range(dims[3] - 1, 0, -1);
+      for (let i2 = 0; i2 < dims[3]; i2++)
+        zlut[i2] *= instride[2];
+      let inVs = new Uint8Array(drawingBytes);
+      let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
+      let j = 0;
+      for (let z = 0; z < dims[3]; z++) {
+        for (let y = 0; y < dims[2]; y++) {
+          for (let x2 = 0; x2 < dims[1]; x2++) {
+            outVs[j] = inVs[xlut[x2] + ylut[y] + zlut[z]];
+            j++;
+          }
+        }
+      }
+      drawingBytesToBeConverted = outVs;
+      console.log("drawing bytes");
+      console.log(drawingBytesToBeConverted);
+    }
+  }
+  let img8 = isDrawing ? drawingBytesToBeConverted : new Uint8Array(this.img.buffer);
+  let opad = new Uint8Array(4);
+  let odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
+  odata.set(hdrBytes);
+  odata.set(opad, hdrBytes.length);
+  odata.set(img8, hdrBytes.length + opad.length);
+  return odata;
 };
 const colortables = function() {
   this.version = 0.1;
@@ -109875,15 +110069,15 @@ NVMesh.readTRX = async function(buffer2) {
       return file.originalSize > 0;
     }
   });
-  var keys = Object.keys(decompressed);
-  for (var i2 = 0, len2 = keys.length; i2 < len2; i2++) {
-    let parts = keys[i2].split("/");
+  var keys2 = Object.keys(decompressed);
+  for (var i2 = 0, len2 = keys2.length; i2 < len2; i2++) {
+    let parts = keys2[i2].split("/");
     let fname = parts.slice(-1)[0];
     if (fname.startsWith("."))
       continue;
     let pname = parts.slice(-2)[0];
     let tag2 = fname.split(".")[0];
-    let data = decompressed[keys[i2]];
+    let data = decompressed[keys2[i2]];
     if (fname.includes("header.json")) {
       let jsonString = new TextDecoder().decode(data);
       header = JSON.parse(jsonString);
@@ -110197,8 +110391,8 @@ var WebSocketSubject = function(_super) {
       _this.destination = Subscriber.create(function(x2) {
         if (socket.readyState === 1) {
           try {
-            var serializer = _this._config.serializer;
-            socket.send(serializer(x2));
+            var serializer2 = _this._config.serializer;
+            socket.send(serializer2(x2));
           } catch (e) {
             _this.destination.error(e);
           }
@@ -110246,8 +110440,8 @@ var WebSocketSubject = function(_super) {
     };
     socket.onmessage = function(e) {
       try {
-        var deserializer = _this._config.deserializer;
-        observer.next(deserializer(e));
+        var deserializer2 = _this._config.deserializer;
+        observer.next(deserializer2(e));
       } catch (err2) {
         observer.error(err2);
       }
@@ -112223,6 +112417,485 @@ var defaultFontMetrics = {
   glyphs,
   kerning
 };
+class NVUtilities {
+  static arrayBufferToBase64(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer);
+    return NVUtilities.uint8tob64(bytes);
+  }
+  static uint8tob64(bytes) {
+    var base64 = "";
+    var encodings = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var byteLength2 = bytes.byteLength;
+    var byteRemainder = byteLength2 % 3;
+    var mainLength = byteLength2 - byteRemainder;
+    var a, b, c, d;
+    var chunk;
+    for (var i2 = 0; i2 < mainLength; i2 = i2 + 3) {
+      chunk = bytes[i2] << 16 | bytes[i2 + 1] << 8 | bytes[i2 + 2];
+      a = (chunk & 16515072) >> 18;
+      b = (chunk & 258048) >> 12;
+      c = (chunk & 4032) >> 6;
+      d = chunk & 63;
+      base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+    }
+    if (byteRemainder == 1) {
+      chunk = bytes[mainLength];
+      a = (chunk & 252) >> 2;
+      b = (chunk & 3) << 4;
+      base64 += encodings[a] + encodings[b] + "==";
+    } else if (byteRemainder == 2) {
+      chunk = bytes[mainLength] << 8 | bytes[mainLength + 1];
+      a = (chunk & 64512) >> 10;
+      b = (chunk & 1008) >> 4;
+      c = (chunk & 15) << 2;
+      base64 += encodings[a] + encodings[b] + encodings[c] + "=";
+    }
+    return base64;
+  }
+  static download(content, fileName, contentType) {
+    var a = document.createElement("a");
+    var file = new Blob([content], { type: contentType });
+    a.href = URL.createObjectURL(file);
+    a.download = fileName;
+    a.click();
+  }
+  static readFileAsync(file) {
+    return new Promise((resolve, reject) => {
+      let reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result);
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+}
+const VOID = -1;
+const PRIMITIVE = 0;
+const ARRAY = 1;
+const OBJECT = 2;
+const DATE = 3;
+const REGEXP = 4;
+const MAP = 5;
+const SET = 6;
+const ERROR = 7;
+const BIGINT = 8;
+const env = typeof self === "object" ? self : globalThis;
+const deserializer = ($, _) => {
+  const as = (out, index) => {
+    $.set(index, out);
+    return out;
+  };
+  const unpair = (index) => {
+    if ($.has(index))
+      return $.get(index);
+    const [type2, value2] = _[index];
+    switch (type2) {
+      case PRIMITIVE:
+      case VOID:
+        return as(value2, index);
+      case ARRAY: {
+        const arr = as([], index);
+        for (const index2 of value2)
+          arr.push(unpair(index2));
+        return arr;
+      }
+      case OBJECT: {
+        const object = as({}, index);
+        for (const [key2, index2] of value2)
+          object[unpair(key2)] = unpair(index2);
+        return object;
+      }
+      case DATE:
+        return as(new Date(value2), index);
+      case REGEXP: {
+        const { source, flags } = value2;
+        return as(new RegExp(source, flags), index);
+      }
+      case MAP: {
+        const map = as(/* @__PURE__ */ new Map(), index);
+        for (const [key2, index2] of value2)
+          map.set(unpair(key2), unpair(index2));
+        return map;
+      }
+      case SET: {
+        const set = as(/* @__PURE__ */ new Set(), index);
+        for (const index2 of value2)
+          set.add(unpair(index2));
+        return set;
+      }
+      case ERROR: {
+        const { name, message } = value2;
+        return as(new env[name](message), index);
+      }
+      case BIGINT:
+        return as(BigInt(value2), index);
+      case "BigInt":
+        return as(Object(BigInt(value2)), index);
+    }
+    return as(new env[type2](value2), index);
+  };
+  return unpair;
+};
+const deserialize = (serialized) => deserializer(/* @__PURE__ */ new Map(), serialized)(0);
+const EMPTY = "";
+const { toString } = {};
+const { keys } = Object;
+const typeOf = (value2) => {
+  const type2 = typeof value2;
+  if (type2 !== "object" || !value2)
+    return [PRIMITIVE, type2];
+  const asString = toString.call(value2).slice(8, -1);
+  switch (asString) {
+    case "Array":
+      return [ARRAY, EMPTY];
+    case "Object":
+      return [OBJECT, EMPTY];
+    case "Date":
+      return [DATE, EMPTY];
+    case "RegExp":
+      return [REGEXP, EMPTY];
+    case "Map":
+      return [MAP, EMPTY];
+    case "Set":
+      return [SET, EMPTY];
+  }
+  if (asString.includes("Array"))
+    return [ARRAY, asString];
+  if (asString.includes("Error"))
+    return [ERROR, asString];
+  return [OBJECT, asString];
+};
+const shouldSkip = ([TYPE, type2]) => TYPE === PRIMITIVE && (type2 === "function" || type2 === "symbol");
+const serializer = (strict, json, $, _) => {
+  const as = (out, value2) => {
+    const index = _.push(out) - 1;
+    $.set(value2, index);
+    return index;
+  };
+  const pair = (value2) => {
+    if ($.has(value2))
+      return $.get(value2);
+    let [TYPE, type2] = typeOf(value2);
+    switch (TYPE) {
+      case PRIMITIVE: {
+        let entry = value2;
+        switch (type2) {
+          case "bigint":
+            TYPE = BIGINT;
+            entry = value2.toString();
+            break;
+          case "function":
+          case "symbol":
+            if (strict)
+              throw new TypeError("unable to serialize " + type2);
+            entry = null;
+            break;
+          case "undefined":
+            return as([VOID], value2);
+        }
+        return as([TYPE, entry], value2);
+      }
+      case ARRAY: {
+        if (type2)
+          return as([type2, [...value2]], value2);
+        const arr = [];
+        const index = as([TYPE, arr], value2);
+        for (const entry of value2)
+          arr.push(pair(entry));
+        return index;
+      }
+      case OBJECT: {
+        if (type2) {
+          switch (type2) {
+            case "BigInt":
+              return as([type2, value2.toString()], value2);
+            case "Boolean":
+            case "Number":
+            case "String":
+              return as([type2, value2.valueOf()], value2);
+          }
+        }
+        if (json && "toJSON" in value2)
+          return pair(value2.toJSON());
+        const entries = [];
+        const index = as([TYPE, entries], value2);
+        for (const key2 of keys(value2)) {
+          if (strict || !shouldSkip(typeOf(value2[key2])))
+            entries.push([pair(key2), pair(value2[key2])]);
+        }
+        return index;
+      }
+      case DATE:
+        return as([TYPE, value2.toISOString()], value2);
+      case REGEXP: {
+        const { source, flags } = value2;
+        return as([TYPE, { source, flags }], value2);
+      }
+      case MAP: {
+        const entries = [];
+        const index = as([TYPE, entries], value2);
+        for (const [key2, entry] of value2) {
+          if (strict || !(shouldSkip(typeOf(key2)) || shouldSkip(typeOf(entry))))
+            entries.push([pair(key2), pair(entry)]);
+        }
+        return index;
+      }
+      case SET: {
+        const entries = [];
+        const index = as([TYPE, entries], value2);
+        for (const entry of value2) {
+          if (strict || !shouldSkip(typeOf(entry)))
+            entries.push(pair(entry));
+        }
+        return index;
+      }
+    }
+    const { message } = value2;
+    return as([TYPE, { name: type2, message }], value2);
+  };
+  return pair;
+};
+const serialize = (value2, { json, lossy } = {}) => {
+  const _ = [];
+  return serializer(!(json || lossy), !!json, /* @__PURE__ */ new Map(), _)(value2), _;
+};
+const SLICE_TYPE = Object.freeze({
+  AXIAL: 0,
+  CORONAL: 1,
+  SAGITTAL: 2,
+  MULTIPLANAR: 3,
+  RENDER: 4
+});
+class NVDocument {
+  constructor() {
+    this.data = {};
+    this.data.title = "Untitled document";
+    this.data.renderAzimuth = 110;
+    this.data.renderElevation = 10;
+    this.data.crosshairPos = [0.5, 0.5, 0.5];
+    this.data.clipPlane = [0, 0, 0, 0];
+    this.data.sliceType = SLICE_TYPE.AXIAL;
+    this.data.imageOptionsArray = [];
+    this.data.meshOptionsArray = [];
+    this.data.opts = {};
+    this.volumes = [];
+    this.meshes = [];
+    this.drawBitmap = null;
+    this.imageOptionsMap = /* @__PURE__ */ new Map();
+    this.meshOptionsMap = /* @__PURE__ */ new Map();
+  }
+  get title() {
+    return this.data.title;
+  }
+  set title(title) {
+    this.data.title = title;
+  }
+  get imageOptionsArray() {
+    return this.data.imageOptionsArray;
+  }
+  get renderAzimuth() {
+    return this.data.renderAzimuth;
+  }
+  set renderAzimuth(azimuth) {
+    this.data.renderAzimuth = azimuth;
+  }
+  get renderElevation() {
+    return this.data.renderElevation;
+  }
+  set renderElevation(elevation) {
+    this.data.renderElevation = elevation;
+  }
+  get crosshairPos() {
+    return this.data.crosshairPos;
+  }
+  set crosshairPos(pos) {
+    this.data.crosshairPos = pos;
+  }
+  get clipPlane() {
+    return this.data.clipPlane;
+  }
+  set clipPlane(plane) {
+    this.data.clipPlane = plane;
+  }
+  get sliceType() {
+    return this.data.sliceType;
+  }
+  set sliceType(sliceType) {
+    this.data.sliceType = sliceType;
+  }
+  get encodedImageBlobs() {
+    return this.data.encodedImageBlobs;
+  }
+  get encodedDrawingBlob() {
+    return this.data.encodedDrawingBlob;
+  }
+  get opts() {
+    return this.data.opts;
+  }
+  set opts(opts) {
+    this.data.opts = __spreadValues({}, opts);
+  }
+  hasImage(image2) {
+    return this.volumes.find((i2) => i2.id === image2.id);
+  }
+  hasImageFromUrl(url) {
+    return this.data.imageOptionsArray.find((i2) => i2.url === url);
+  }
+  addImageOptions(image2, imageOptions) {
+    if (!this.hasImage(image2)) {
+      if (!imageOptions.name) {
+        if (imageOptions.url) {
+          let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+          let url = absoluteUrlRE.test(imageOptions.url) ? new URL(imageOptions.url) : new URL(imageOptions.url, window.location.href);
+          imageOptions.name = url.pathname.split("/").pop();
+          if (imageOptions.name.toLowerCase().endsWith(".gz")) {
+            imageOptions.name = imageOptions.name.slice(0, -3);
+          }
+          if (!imageOptions.name.toLowerCase().endsWith(".nii")) {
+            imageOptions.name += ".nii";
+          }
+        } else {
+          imageOptions.name = "untitled.nii";
+        }
+      }
+      imageOptions.imageType = NVIMAGE_TYPE.NII;
+      this.data.imageOptionsArray.push(imageOptions);
+      this.imageOptionsMap.set(image2.id, this.data.imageOptionsArray.length - 1);
+    }
+  }
+  removeImage(image2) {
+    if (this.imageOptionsMap.has(image2.id)) {
+      let index = this.imageOptionsMap.get(image2.id);
+      if (this.data.imageOptionsArray.length > index) {
+        this.data.imageOptionsArray.splice(index, 1);
+      }
+      this.imageOptionsMap.delete(image2.id);
+    }
+    this.volumes = this.volumes.filter((i2) => i2.id != image2.id);
+  }
+  getImageOptions(image2) {
+    return this.imageOptionsMap.has(image2.id) ? this.data.imageOptionsArray[this.imageOptionsMap.get(image2.id)] : null;
+  }
+  async save(fileName) {
+    let imageOptionsArray = [];
+    this.data.encodedImageBlobs = [];
+    this.data.encodedDrawingBlob = null;
+    this.data.imageOptionsMap = [];
+    if (this.volumes.length == 0 && this.meshes.length == 0) {
+      throw new Error("nothing to save");
+    }
+    let propsToRemove = [];
+    for (const prop in this.data.opts) {
+      let typeName = this.data.opts[prop];
+      if (typeName === "function") {
+        propsToRemove.push(prop);
+      }
+    }
+    for (const prop in propsToRemove) {
+      delete this.data.opts[prop];
+    }
+    if (this.volumes.length) {
+      let imageOptions = this.imageOptionsArray[0];
+      if (imageOptions) {
+        imageOptionsArray.push(imageOptions);
+        let encodedImageBlob = NVUtilities.uint8tob64(this.volumes[0].toUint8Array());
+        this.data.encodedImageBlobs.push(encodedImageBlob);
+        if (this.drawBitmap) {
+          this.data.encodedDrawingBlob = NVUtilities.uint8tob64(this.volumes[0].toUint8Array(this.drawBitmap));
+        }
+        this.data.imageOptionsMap.push([this.volumes[0].id, 0]);
+      } else {
+        throw new Error("image options for base layer not found");
+      }
+      for (let i2 = 1; i2 < this.volumes.length; i2++) {
+        const volume = this.volumes[i2];
+        let imageOptions2 = this.getImageOptions(volume);
+        if (!imageOptions2) {
+          imageOptions2 = {
+            name: "",
+            colorMap: "gray",
+            opacity: 1,
+            pairedImgData: null,
+            cal_min: NaN,
+            cal_max: NaN,
+            trustCalMinMax: true,
+            percentileFrac: 0.02,
+            ignoreZeroVoxels: false,
+            visible: true,
+            isDICOMDIR: false,
+            useQFormNotSForm: false,
+            colorMapNegative: "",
+            imageType: NVIMAGE_TYPE.NII
+          };
+        }
+        imageOptions2.colorMap = volume.colorMap;
+        imageOptions2.opacity = volume.opacity;
+        imageOptionsArray.push(imageOptions2);
+        let encodedImageBlob = NVUtilities.uint8tob64(await volume.toUint8Array());
+        this.data.encodedImageBlobs.push(encodedImageBlob);
+        this.data.imageOptionsMap.push([volume.id, i2]);
+      }
+      this.data.imageOptionsArray = imageOptionsArray;
+    }
+    const meshes = [];
+    for (const mesh of this.meshes) {
+      const copyMesh = {};
+      copyMesh.pts = mesh.pts;
+      copyMesh.tris = mesh.tris;
+      copyMesh.name = mesh.name;
+      copyMesh.rgba255 = mesh.rgba255;
+      copyMesh.opacity = mesh.opacity;
+      copyMesh.connectome = mesh.connectome;
+      copyMesh.dpg = mesh.dpg;
+      copyMesh.dps = mesh.dps;
+      copyMesh.dpv = mesh.dpv;
+      copyMesh.meshShaderIndex = mesh.meshShaderIndex;
+      copyMesh.layers = [];
+      for (const layer of mesh.layers) {
+        const copyLayer = {};
+        copyLayer.values = layer.values;
+        copyLayer.nFrame4D = layer.nFrame4D;
+        copyLayer.frame4D = 0;
+        copyLayer.isOutlineBorder = layer.isOutlineBorder;
+        copyLayer.global_min = layer.global_min;
+        copyLayer.global_max = layer.global_max;
+        copyLayer.cal_min = layer.cal_min;
+        copyLayer.cal_max = layer.cal_max;
+        copyLayer.opacity = layer.opacity;
+        copyLayer.colorMap = layer.colorMap;
+        copyLayer.colorMapNegative = layer.colorMapNegative;
+        copyLayer.useNegativeCmap = layer.useNegativeCmap;
+        copyMesh.layers.push(copyLayer);
+      }
+      meshes.push(copyMesh);
+    }
+    this.data.meshesString = JSON.stringify(serialize(meshes));
+    NVUtilities.download(JSON.stringify(this.data), fileName, "application/json");
+  }
+  static async loadFromUrl(url) {
+    let document2 = new NVDocument();
+    let response = await fetch(url);
+    document2.data = await response.json();
+    if (document2.data.meshesString) {
+      document2.meshes = deserialize(JSON.parse(document2.data.meshesString));
+      delete document2.data["meshesString"];
+    }
+    return document2;
+  }
+  static async loadFromFile(file) {
+    let arrayBuffer = await NVUtilities.readFileAsync(file);
+    let document2 = new NVDocument();
+    let utf8decoder = new TextDecoder();
+    let dataString = utf8decoder.decode(arrayBuffer);
+    document2.data = JSON.parse(dataString);
+    if (document2.data.meshesString) {
+      document2.meshes = deserialize(JSON.parse(document2.data.meshesString));
+      delete document2.data["meshesString"];
+    }
+    return document2;
+  }
+}
 const log = new Log();
 const cmapper = new colortables();
 const MESH_EXTENSIONS = [
@@ -112502,6 +113175,7 @@ function Niivue(options = {}) {
     }
   ];
   this.mediaUrlMap = /* @__PURE__ */ new Map();
+  this.document = new NVDocument();
   this.initialized = false;
   for (let prop in this.defaults) {
     this.opts[prop] = options[prop] === void 0 ? this.defaults[prop] : options[prop];
@@ -112683,13 +113357,13 @@ Niivue.prototype.mouseRightButtonHandler = function(e) {
   this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
-Niivue.prototype.calculateMinMaxVoxIdx = function(array2) {
-  if (array2.length > 2) {
+Niivue.prototype.calculateMinMaxVoxIdx = function(array) {
+  if (array.length > 2) {
     throw new Error("array must not contain more than two values");
   }
   return [
-    Math.floor(Math.min(array2[0], array2[1])),
-    Math.floor(Math.max(array2[0], array2[1]))
+    Math.floor(Math.min(array[0], array[1])),
+    Math.floor(Math.max(array[0], array[1]))
   ];
 };
 function intensityRaw2Scaled(hdr, raw) {
@@ -113042,6 +113716,7 @@ Niivue.prototype.getFileExt = function(fullname, upperCase = true) {
 };
 Niivue.prototype.addVolumeFromUrl = async function(imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
+  this.document.addImageOptions(volume, imageOptions);
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.opts.onVolumeAddedFromUrl) {
@@ -113113,6 +113788,8 @@ Niivue.prototype.dropListener = async function(e) {
     console.log(ext);
     if (MESH_EXTENSIONS.includes(ext)) {
       this.addMeshFromUrl({ url });
+    } else if (ext === "NVD") {
+      this.loadDocumentFromUrl(url);
     } else {
       this.addVolumeFromUrl(imageOptions);
     }
@@ -113160,6 +113837,13 @@ Niivue.prototype.dropListener = async function(e) {
               this.addMesh(mesh);
             });
             continue;
+          } else if (ext === "NVD") {
+            entry.file(async (file) => {
+              let nvdoc = await NVDocument.loadFromFile(file);
+              this.loadDocument(nvdoc);
+              console.log("loaded document");
+            });
+            break;
           }
           entry.file(async (file) => {
             if (pairedImageData !== "") {
@@ -113324,7 +114008,7 @@ Niivue.prototype.drawClearAllUndoBitmaps = async function() {
   if (this.drawUndoBitmaps.length < 1)
     return;
   for (let i2 = this.drawUndoBitmaps.length - 1; i2 >= 0; i2--)
-    array[i2] = [];
+    this.drawUndoBitmaps[i2] = [];
 };
 Niivue.prototype.drawUndo = function() {
   if (this.drawUndoBitmaps.length < 1) {
@@ -113343,19 +114027,18 @@ Niivue.prototype.drawUndo = function() {
   this.drawBitmap = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], this.drawBitmap.length);
   this.refreshDrawing(true);
 };
-Niivue.prototype.loadDrawing = async function(fnm) {
+Niivue.prototype.loadDrawing = function(drawingBitmap) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-  let dims = volume.hdr.dims;
+  let dims = drawingBitmap.hdr.dims;
   if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
     console.log("drawing dimensions do not match background image");
     return false;
   }
-  if (volume.img.constructor !== Uint8Array)
+  if (drawingBitmap.img.constructor !== Uint8Array)
     console.log("Drawings should be UINT8");
-  let perm = volume.permRAS;
+  let perm = drawingBitmap.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   this.drawBitmap = new Uint8Array(vx);
   this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true);
@@ -113397,7 +114080,7 @@ Niivue.prototype.loadDrawing = async function(fnm) {
     zlut = range(dims[3] - 1, 0, -1);
   for (let i2 = 0; i2 < dims[3]; i2++)
     zlut[i2] *= instride[2];
-  let inVs = volume.img;
+  let inVs = drawingBitmap.img;
   let outVs = this.drawBitmap;
   let j = 0;
   for (let z = 0; z < dims[3]; z++) {
@@ -113411,6 +114094,13 @@ Niivue.prototype.loadDrawing = async function(fnm) {
   this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
+};
+Niivue.prototype.loadDrawingFromUrl = async function(fnm) {
+  if (this.drawBitmap)
+    console.log("Overwriting open drawing!");
+  this.drawClearAllUndoBitmaps();
+  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+  this.loadDrawing(volume);
 };
 Niivue.prototype.saveImage = async function(fnm, isSaveDrawing = false) {
   if (!this.back.hasOwnProperty("dims")) {
@@ -113601,6 +114291,7 @@ Niivue.prototype.setMesh = function(mesh, toIndex = 0) {
   });
 };
 Niivue.prototype.removeVolume = function(volume) {
+  this.document.removeImage(volume);
   this.setVolume(volume, -1);
   if (this.mediaUrlMap.has(volume)) {
     let url = this.mediaUrlMap.get(volume);
@@ -113809,6 +114500,68 @@ Niivue.prototype.vox2mm = function(XYZ, mtx) {
 Niivue.prototype.cloneVolume = function(index) {
   return this.volumes[index].clone();
 };
+Niivue.prototype.loadDocumentFromUrl = async function(url) {
+  let document2 = await NVDocument.loadFromUrl(url);
+  this.loadDocument(document2);
+};
+Niivue.prototype.loadDocument = function(document2) {
+  this.document = document2;
+  this.scene.renderAzimuth = document2.renderAzimuth;
+  this.scene.renderElevation = document2.renderElevation;
+  this.scene.clipPlane = document2.clipPlane;
+  this.scene.crosshairPos = document2.crosshairPos;
+  this.opts = __spreadValues(__spreadValues({}, this.opts), document2.opts);
+  this.setSliceType(document2.sliceType);
+  this.mediaUrlMap.clear();
+  this.volumes = [];
+  this.meshes = [];
+  this.drawingBitmap = null;
+  this.createEmptyDrawing();
+  let encodedImageBlobs = document2.encodedImageBlobs;
+  for (let i2 = 0; i2 < document2.imageOptionsArray.length; i2++) {
+    const imageOptions = document2.imageOptionsArray[i2];
+    const base642 = encodedImageBlobs[i2];
+    if (base642) {
+      let image2 = NVImage.loadFromBase64(__spreadValues({ base64: base642 }, imageOptions));
+      if (image2) {
+        this.addVolume(image2);
+        document2.addImageOptions(image2, imageOptions);
+      }
+    }
+  }
+  const base64 = document2.encodedDrawingBlob;
+  if (base64) {
+    const imageOptions = document2.imageOptionsArray[0];
+    let drawingBitmap = NVImage.loadFromBase64(__spreadValues({ base64 }, imageOptions));
+    if (drawingBitmap) {
+      this.loadDrawing(drawingBitmap);
+    }
+  }
+  for (const mesh of document2.meshes) {
+    const meshInit = __spreadValues({ gl: this.gl }, mesh);
+    console.log(meshInit);
+    const meshToAdd = new NVMesh(meshInit.pts, meshInit.tris, meshInit.name, meshInit.rgba255, meshInit.opacity, meshInit.visible, this.gl, meshInit.connectome, meshInit.dpg, meshInit.dps, meshInit.dpv);
+    meshToAdd.meshShaderIndex = meshInit.meshShaderIndex;
+    meshToAdd.layers = meshInit.layers;
+    meshToAdd.updateMesh(this.gl);
+    this.addMesh(meshToAdd);
+  }
+  this.updateGLVolume();
+  return this;
+};
+Niivue.prototype.saveDocument = async function(fileName = "untitled.nvd") {
+  this.document.title = fileName;
+  this.document.opts = this.opts;
+  this.document.renderAzimuth = this.scene.renderAzimuth;
+  this.document.renderElevation = this.scene.renderElevation;
+  this.document.clipPlane = this.scene.clipPlane;
+  this.document.crosshairPos = this.scene.crosshairPos;
+  this.document.sliceType = this.sliceType;
+  this.document.volumes = this.volumes;
+  this.document.drawBitmap = this.drawBitmap;
+  this.document.meshes = this.meshes;
+  this.document.save(fileName);
+};
 Niivue.prototype.loadVolumes = async function(volumeList) {
   this.on("loading", (isLoading) => {
     if (isLoading) {
@@ -113837,7 +114590,8 @@ Niivue.prototype.loadVolumes = async function(volumeList) {
       urlImgData: volumeList[i2].urlImgData,
       cal_min: volumeList[i2].cal_min,
       cal_max: volumeList[i2].cal_max,
-      trustCalMinMax: this.opts.trustCalMinMax
+      trustCalMinMax: this.opts.trustCalMinMax,
+      isManifest: volumeList[i2].isManifest
     };
     await this.addVolumeFromUrl(imageOptions);
     this.scene.loading$.next(false);
