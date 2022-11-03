@@ -1,18 +1,11 @@
 import { SessionBus, SessionUser } from "./session-bus";
-import { NVImage } from "./nvimage";
-import { NVMesh } from "./nvmesh";
-
-/*
- * @typedef {import("./niivue").Niivue} Niivue
- */
-
-/*
- * @typedef {import("./nvimage").NVImageFromUrlOptions} NVImageFromUrlOptions
- */
-
-/*
- * @typedef {import("./nvmesh").NVMeshFromUrlOptions} NVMeshFromUrlOptions
- */
+// Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
+// eslint-disable-next-line no-unused-vars
+import { NVImage, NVImageFromUrlOptions } from "./nvimage";
+// eslint-disable-next-line no-unused-vars
+import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh";
+// eslint-disable-next-line no-unused-vars
+import { Niivue } from "./niivue";
 
 /**
  * Enum for sync operations
