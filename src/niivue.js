@@ -1756,8 +1756,7 @@ Niivue.prototype.drawUndo = function () {
 Niivue.prototype.loadDrawing = function (drawingBitmap) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-  let dims = volume.hdr.dims; //reverse to original
+  let dims = drawingBitmap.hdr.dims;
   if (
     dims[1] !== this.back.hdr.dims[1] ||
     dims[2] !== this.back.hdr.dims[2] ||
