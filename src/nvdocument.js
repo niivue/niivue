@@ -3,6 +3,8 @@ import { NVUtilities } from "./nvutilities";
 // eslint-disable-next-line no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 import { serialize, deserialize } from "@ungap/structured-clone";
+import { dragModes } from "./niivue";
+
 /**
  * Slice Type
  * @enum
@@ -15,6 +17,49 @@ const SLICE_TYPE = Object.freeze({
   MULTIPLANAR: 3,
   RENDER: 4,
 });
+
+export const DEFAULT_OPTIONS = {
+  textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
+  colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
+  crosshairWidth: 1, // 0 for no crosshairs
+  rulerWidth: 4,
+  show3Dcrosshair: false,
+  backColor: [0, 0, 0, 1],
+  crosshairColor: [1, 0, 0, 1],
+  selectionBoxColor: [1, 1, 1, 0.5],
+  clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  rulerColor: [1, 0, 0, 0.8],
+  colorbarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
+  trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
+  clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
+  viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
+  doubleTouchTimeout: 500,
+  longTouchTimeout: 1000,
+  keyDebounceTime: 50, // default debounce time used in keyup listeners
+  isNearestInterpolation: false,
+  isAtlasOutline: false,
+  isRuler: false,
+  isColorbar: false,
+  isOrientCube: false,
+  multiplanarPadPixels: 0,
+  multiplanarForceRender: false,
+  isRadiologicalConvention: false,
+  meshThicknessOn2D: Infinity,
+  dragMode: 1, // contrast
+  isDepthPickMesh: false,
+  isCornerOrientationText: false,
+  sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
+  isSliceMM: false,
+  isHighResolutionCapable: true,
+  logging: false,
+  loadingText: "waiting for images...",
+  dragAndDropEnabled: true,
+  drawingEnabled: false, // drawing disabled by default
+  penValue: 1, // sets drawing color. see "drawPt"
+  isFilledPen: false,
+  thumbnail: "",
+  maxDrawUndoBitmaps: 8,
+};
 
 /**Creates and instance of NVDocument
  * @class NVDocument
@@ -32,7 +77,7 @@ export class NVDocument {
     this.data.sliceType = SLICE_TYPE.AXIAL;
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
-    this.data.opts = {};
+    this.data.opts = DEFAULT_OPTIONS;
     this.volumes = [];
     this.meshes = [];
     this.drawBitmap = null;
@@ -61,10 +106,6 @@ export class NVDocument {
   get imageOptionsArray() {
     return this.data.imageOptionsArray;
   }
-
-  // get meshOptionsArray() {
-  //   return this.data.meshOptionsArray;
-  // }
 
   /**
    * Gets azimuth of scene
@@ -385,6 +426,19 @@ export class NVDocument {
   }
 
   /**
+   * Deserialize mesh data objects
+   * @param {NVDocument} document
+   */
+  static deserializeMeshDataObjects(document) {
+    if (document.data.meshesString) {
+      document.meshDataObjects = deserialize(
+        JSON.parse(document.data.meshesString)
+      );
+      delete document.data["meshesString"];
+    }
+  }
+
+  /**
    * Factory method to return an instance of NVDocument
    * @param {string} url
    * @constructs NVDocument
@@ -393,10 +447,7 @@ export class NVDocument {
     let document = new NVDocument();
     let response = await fetch(url);
     document.data = await response.json();
-    if (document.data.meshesString) {
-      document.meshes = deserialize(JSON.parse(document.data.meshesString));
-      delete document.data["meshesString"];
-    }
+    NVDocument.deserializeMeshDataObjects(document);
     return document;
   }
 
@@ -411,10 +462,7 @@ export class NVDocument {
     let utf8decoder = new TextDecoder();
     let dataString = utf8decoder.decode(arrayBuffer);
     document.data = JSON.parse(dataString);
-    if (document.data.meshesString) {
-      document.meshes = deserialize(JSON.parse(document.data.meshesString));
-      delete document.data["meshesString"];
-    }
+    NVDocument.deserializeMeshDataObjects(document);
 
     return document;
   }

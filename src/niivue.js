@@ -158,78 +158,11 @@ export const dragModes = Object.freeze({
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export function Niivue(options = {}) {
-  this.opts = {}; // will be populate with opts or defaults when a new Niivue object instance is created
-  this.dragModes = dragModes;
-  this.defaults = {
-    textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
-    colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
-    crosshairWidth: 1, // 0 for no crosshairs
-    rulerWidth: 4,
-    show3Dcrosshair: false,
-    backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 0, 0, 1],
-    selectionBoxColor: [1, 1, 1, 0.5],
-    clipPlaneColor: [0.7, 0, 0.7, 0.5],
-    rulerColor: [1, 0, 0, 0.8],
-    colorbarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
-    trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
-    clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
-    viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
-    doubleTouchTimeout: 500,
-    longTouchTimeout: 1000,
-    keyDebounceTime: 50, // default debounce time used in keyup listeners
-    isNearestInterpolation: false,
-    isAtlasOutline: false,
-    isRuler: false,
-    isColorbar: false,
-    isOrientCube: false,
-    multiplanarPadPixels: 0,
-    multiplanarForceRender: false,
-    isRadiologicalConvention: false,
-    meshThicknessOn2D: Infinity,
-    dragMode: dragModes.contrast,
-    isDepthPickMesh: false,
-    isCornerOrientationText: false,
-    sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
-    isSliceMM: false,
-    isHighResolutionCapable: true,
-    logging: false,
-    loadingText: "waiting for images...",
-    dragAndDropEnabled: true,
-    drawingEnabled: false, // drawing disabled by default
-    penValue: 1, // sets drawing color. see "drawPt"
-    isFilledPen: false,
-    thumbnail: "",
-    maxDrawUndoBitmaps: 8,
-    onLocationChange: () => {},
-    onIntensityChange: () => {},
-    onImageLoaded: () => {},
-    onMeshLoaded: () => {},
-    onFrameChange: () => {},
-    onError: () => {},
-    onInfo: () => {},
-    onWarn: () => {},
-    onDebug: () => {},
-    onVolumeAddedFromUrl: () => {},
-    onVolumeWithUrlRemoved: () => {},
-    onVolumeUpdated: () => {},
-    onMeshAddedFromUrl: () => {},
-    onMeshAdded: () => {},
-    onMeshWithUrlRemoved: () => {},
-    onZoom3DChange: () => {},
-    onAzimuthElevationChange: () => {},
-    onClipPlaneChange: () => {},
-    onCustomMeshShaderAdded: () => {},
-    onMeshShaderChanged: () => {},
-    onMeshPropertyChanged: () => {},
-  };
-
   this.canvas = null; // the canvas element on the page
   this.gl = null; // the gl context
   this.colormapTexture = null;
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
-  this.drawBitmap = null; //the CPU memory storage of the drawing
   this.drawUndoBitmaps = [];
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
@@ -330,10 +263,8 @@ export function Niivue(options = {}) {
   this.doubleTouch = false;
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
-  this.volumes = []; // all loaded images. Can add in the ability to push or slice as needed
   this.deferredVolumes = [];
   this.deferredMeshes = [];
-  this.meshes = [];
   this.furthestVertexFromOrigin = 100;
   this.volScaleMultiplier = 1.0;
   this.volScale = [];
@@ -391,18 +322,45 @@ export function Niivue(options = {}) {
     },
   ];
 
-  this.mediaUrlMap = new Map();
+  // Event listeners
+
+  // Defaults
+  this.onLocationChange = () => {};
+  this.onIntensityChange = () => {};
+  this.onImageLoaded = () => {};
+  this.onMeshLoaded = () => {};
+  this.onFrameChange = () => {};
+  this.onError = () => {};
+  this.onInfo = () => {};
+  this.onWarn = () => {};
+  this.onDebug = () => {};
+  this.onVolumeAddedFromUrl = () => {};
+  this.onVolumeWithUrlRemoved = () => {};
+  this.onVolumeUpdated = () => {};
+  this.onMeshAddedFromUrl = () => {};
+  this.onMeshAdded = () => {};
+  this.onMeshWithUrlRemoved = () => {};
+  this.onZoom3DChange = () => {};
+  this.onAzimuthElevationChange = () => {};
+  this.onClipPlaneChange = () => {};
+  this.onCustomMeshShaderAdded = () => {};
+  this.onMeshShaderChanged = () => {};
+  this.onMeshPropertyChanged = () => {};
+
   this.document = new NVDocument();
 
-  this.initialized = false;
-  // loop through known Niivue properties
-  // if the user supplied opts object has a
-  // property listed in the known properties, then set
-  // Niivue.opts.<prop> to that value, else apply defaults.
-  for (let prop in this.defaults) {
-    this.opts[prop] =
-      options[prop] === undefined ? this.defaults[prop] : options[prop];
+  // populate Niivue with user supplied options
+  for (const name in options) {
+    if (typeof options[name] === "function") {
+      this[name] = options[name];
+    } else {
+      this.opts[name] = options[name];
+    }
   }
+
+  this.mediaUrlMap = new Map();
+
+  this.initialized = false;
 
   // now that opts have been parsed, set the current undo to max undo
   this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps; //analogy: cylinder position of a revolver
@@ -431,6 +389,42 @@ export function Niivue(options = {}) {
     this.scene.dpr = 1;
   }
 }
+
+Object.defineProperty(Niivue.prototype, "opts", {
+  get: function () {
+    return this.document.opts;
+  },
+  set: function (opts) {
+    this.document.opts = opts;
+  },
+});
+
+Object.defineProperty(Niivue.prototype, "volumes", {
+  get: function () {
+    return this.document.volumes;
+  },
+  set: function (volumes) {
+    this.document.volumes = volumes;
+  },
+});
+
+Object.defineProperty(Niivue.prototype, "meshes", {
+  get: function () {
+    return this.document.meshes;
+  },
+  set: function (meshes) {
+    this.document.meshes = meshes;
+  },
+});
+
+Object.defineProperty(Niivue.prototype, "drawBitmap", {
+  get: function () {
+    return this.document.drawBitmap;
+  },
+  set: function (drawBitmap) {
+    this.document.drawBitmap = drawBitmap;
+  },
+});
 
 /**
  * save webgl2 canvas as png format bitmap
@@ -804,7 +798,7 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
-  this.opts.onIntensityChange(this.volumes[volIdx]);
+  this.onIntensityChange(this.volumes[volIdx]);
 };
 
 // not included in public docs
@@ -965,7 +959,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   if (this.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
-  this.opts.onIntensityChange(this.volumes[0]);
+  this.onIntensityChange(this.volumes[0]);
   this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   this.drawScene();
 };
@@ -1267,8 +1261,8 @@ Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
 
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
-  if (this.opts.onVolumeAddedFromUrl) {
-    this.opts.onVolumeAddedFromUrl(imageOptions, volume);
+  if (this.onVolumeAddedFromUrl) {
+    this.onVolumeAddedFromUrl(imageOptions, volume);
   }
   this.addVolume(volume);
   return volume;
@@ -1551,7 +1545,7 @@ Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
-  this.opts.onImageLoaded(volume);
+  this.onImageLoaded(volume);
 };
 
 /**
@@ -1565,7 +1559,7 @@ Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
   let idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
   this.setMesh(mesh, idx);
-  this.opts.onMeshLoaded(mesh);
+  this.onMeshLoaded(mesh);
 };
 
 /**
@@ -1951,7 +1945,7 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
   }
   this.meshes[idx].setProperty(key, val, this.gl);
   this.updateGLVolume();
-  this.opts.onMeshPropertyChanged(idx, key, val);
+  this.onMeshPropertyChanged(idx, key, val);
 };
 
 /**
@@ -2007,7 +2001,7 @@ Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
 Niivue.prototype.setRenderAzimuthElevation = function (a, e) {
   this.scene.renderAzimuth = a;
   this.scene.renderElevation = e;
-  this.opts.onAzimuthElevationChange(a, e);
+  this.onAzimuthElevationChange(a, e);
   this.drawScene();
 }; // setRenderAzimuthElevation()
 
@@ -2114,7 +2108,7 @@ Niivue.prototype.removeVolume = function (volume) {
   if (this.mediaUrlMap.has(volume)) {
     let url = this.mediaUrlMap.get(volume);
     // notify subscribers that we are about to remove a volume
-    this.opts.onVolumeWithUrlRemoved(url);
+    this.onVolumeWithUrlRemoved(url);
 
     this.mediaUrlMap.delete(volume);
   }
@@ -2166,7 +2160,7 @@ Niivue.prototype.removeMesh = function (mesh) {
   this.setMesh(mesh, -1);
   if (this.mediaUrlMap.has(mesh)) {
     let url = this.mediaUrlMap.get(mesh);
-    this.opts.onMeshWithUrlRemoved(url);
+    this.onMeshWithUrlRemoved(url);
     this.mediaUrlMap.delete(mesh);
   }
 };
@@ -2182,7 +2176,7 @@ Niivue.prototype.removeMeshByUrl = function (url) {
   if (mesh) {
     this.removeMesh(mesh);
     this.mediaUrlMap.delete(mesh);
-    this.opts.onMeshWithUrlRemoved(url);
+    this.onMeshWithUrlRemoved(url);
   }
 };
 
@@ -2300,7 +2294,7 @@ Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   );
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
-  this.opts.onClipPlaneChange(this.scene.clipPlane);
+  this.onClipPlaneChange(this.scene.clipPlane);
   //if (this.sliceType != this.sliceTypeRender) return;
   this.drawScene();
 }; // setClipPlane()
@@ -2432,8 +2426,8 @@ Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
  */
 Niivue.prototype.setScale = function (scale) {
   this._volScaleMultiplier = scale;
-  if (this.opts.onZoom3DChange) {
-    this.opts.onZoom3DChange(scale);
+  if (this.onZoom3DChange) {
+    this.onZoom3DChange(scale);
   }
   this.drawScene();
 }; // setScale()
@@ -2531,17 +2525,17 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  * @returns {Niivue} returns the Niivue instance
  */
 Niivue.prototype.loadDocument = function (document) {
+  console.log("loading document");
   this.document = document;
   this.scene.renderAzimuth = document.renderAzimuth;
   this.scene.renderElevation = document.renderElevation;
   this.scene.clipPlane = document.clipPlane;
   this.scene.crosshairPos = document.crosshairPos;
-  this.opts = { ...this.opts, ...document.opts }; // do not overwrite event handlers
-  this.setSliceType(document.sliceType);
+  this.sliceType = document.sliceType;
   this.mediaUrlMap.clear();
-  this.volumes = [];
-  this.meshes = [];
-  this.drawingBitmap = null;
+  // this.volumes = [];
+  // this.meshes = [];
+  // this.drawingBitmap = null;
   this.createEmptyDrawing();
   // load our images and meshes
   let encodedImageBlobs = document.encodedImageBlobs;
@@ -2556,6 +2550,9 @@ Niivue.prototype.loadDocument = function (document) {
       }
     }
   }
+  if (this.volumes.length > 0) {
+    this.back = this.volumes[0];
+  }
 
   const base64 = document.encodedDrawingBlob;
   if (base64) {
@@ -2566,8 +2563,8 @@ Niivue.prototype.loadDocument = function (document) {
     }
   }
 
-  for (const mesh of document.meshes) {
-    const meshInit = { gl: this.gl, ...mesh };
+  for (const meshDataObject of document.meshDataObjects) {
+    const meshInit = { gl: this.gl, ...meshDataObject };
     console.log(meshInit);
     const meshToAdd = new NVMesh(
       meshInit.pts,
@@ -2585,6 +2582,7 @@ Niivue.prototype.loadDocument = function (document) {
     meshToAdd.meshShaderIndex = meshInit.meshShaderIndex;
     meshToAdd.layers = meshInit.layers;
     meshToAdd.updateMesh(this.gl);
+    console.log(meshToAdd);
     this.addMesh(meshToAdd);
   }
   this.updateGLVolume();
@@ -2593,15 +2591,11 @@ Niivue.prototype.loadDocument = function (document) {
 
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.title = fileName;
-  this.document.opts = this.opts;
   this.document.renderAzimuth = this.scene.renderAzimuth;
   this.document.renderElevation = this.scene.renderElevation;
   this.document.clipPlane = this.scene.clipPlane;
   this.document.crosshairPos = this.scene.crosshairPos;
   this.document.sliceType = this.sliceType;
-  this.document.volumes = this.volumes;
-  this.document.drawBitmap = this.drawBitmap;
-  this.document.meshes = this.meshes;
   this.document.save(fileName);
 };
 
@@ -2664,7 +2658,7 @@ Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
   Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
   this.mediaUrlMap.set(mesh, options.url);
-  this.opts.onMeshAddedFromUrl(options);
+  this.onMeshAddedFromUrl(options);
   this.addMesh(mesh);
 
   return mesh;
@@ -3729,7 +3723,7 @@ Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
   }
   this.meshes[index].meshShaderIndex = shaderIndex;
   this.updateGLVolume();
-  this.opts.onMeshShaderChanged(index, shaderIndex);
+  this.onMeshShaderChanged(index, shaderIndex);
 };
 
 /**
@@ -3775,7 +3769,7 @@ Niivue.prototype.setCustomMeshShader = function (
   let m = this.createCustomMeshShader(fragmentShaderText, name);
   this.meshShaders.push(m);
 
-  this.opts.onCustomMeshShaderAdded(fragmentShaderText, name);
+  this.onCustomMeshShaderAdded(fragmentShaderText, name);
   return this.meshShaders.length - 1;
 };
 
@@ -4100,8 +4094,8 @@ Niivue.prototype.updateGLVolume = function () {
         this.meshes[i].furthestVertexFromOrigin
       );
 
-  if (this.opts.onVolumeUpdated) {
-    this.opts.onVolumeUpdated();
+  if (this.onVolumeUpdated) {
+    this.onVolumeUpdated();
   }
   this.drawScene();
 }; // updateVolume()
@@ -4758,7 +4752,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   volume.frame4D = frame4D;
   this.updateGLVolume();
 
-  this.opts.onFrameChange(volume, frame4D);
+  this.onFrameChange(volume, frame4D);
 };
 
 /**
@@ -4998,7 +4992,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.opts.onLocationChange({
+        this.onLocationChange({
           mm: this.frac2mm(this.scene.crosshairPos),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
@@ -5037,7 +5031,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.opts.onLocationChange({
+      this.onLocationChange({
         mm: this.frac2mm(this.scene.crosshairPos),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
@@ -6205,7 +6199,11 @@ Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
 Niivue.prototype.sceneExtentsMinMax = function () {
   let mn = mat.vec3.fromValues(0, 0, 0);
   let mx = mat.vec3.fromValues(0, 0, 0);
+  console.log("this.volumes");
+  console.log(this.volumes);
   if (this.volumes.length > 0) {
+    console.log("this.volumeObject3D");
+    console.log(this.volumeObject3D);
     mn = mat.vec3.fromValues(
       this.volumeObject3D.extentsMin[0],
       this.volumeObject3D.extentsMin[1],
@@ -6219,6 +6217,12 @@ Niivue.prototype.sceneExtentsMinMax = function () {
   }
   if (this.meshes.length > 0) {
     if (this.volumes.length < 1) {
+      console.log("this.meshes");
+      console.log(this.meshes);
+      console.log("this.meshes.length");
+      console.log(this.meshes.length);
+      console.log("this.meshes[0].extentsMin");
+      console.log(this.meshes[0].extentsMin);
       mn = mat.vec3.fromValues(
         this.meshes[0].extentsMin[0],
         this.meshes[0].extentsMin[1],
