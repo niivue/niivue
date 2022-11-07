@@ -9,6 +9,7 @@ export { default as cool } from "./cool.json";
 export { default as copper } from "./copper.json";
 export { default as copper2 } from "./copper2.json";
 export { default as ct_airways } from "./ct_airways.json";
+export { default as ct_artery } from "./ct_artery.json";
 export { default as ct_bones } from "./ct_bones.json";
 export { default as ct_brain } from "./ct_brain.json";
 export { default as ct_brain_gray } from "./ct_brain_gray.json";
