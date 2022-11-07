@@ -2564,6 +2564,9 @@ Niivue.prototype.loadDocument = function (document) {
 
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.title = fileName;
+  // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
+  this.drawScene();
+  this.document.previewImageDataURL = this.canvas.toDataURL();
   this.document.download(fileName);
 };
 

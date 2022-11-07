@@ -80,6 +80,7 @@ export class NVDocument {
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
     this.data.opts = DEFAULT_OPTIONS;
+    this.data.previewImageDataURL = "";
 
     this.scene = {
       onAzimuthElevationChange: () => {},
@@ -214,6 +215,22 @@ export class NVDocument {
   }
 
   /**
+   * Gets preview image blob
+   * @returns {string} dataURL of preview image
+   */
+  get previewImageDataURL() {
+    return this.data.previewImageDataURL;
+  }
+
+  /**
+   * Sets preview image blob
+   * @param {string} dataURL encoded preview image
+   */
+  set previewImageDataURL(dataURL) {
+    this.data.previewImageDataURL = dataURL;
+  }
+
+  /**
    * @param {string} title title of document
    */
   set title(title) {
@@ -342,8 +359,8 @@ export class NVDocument {
     let data = {};
     data.encodedImageBlobs = [];
     data.encodedDrawingBlob = null;
+    data.previewImageDataURL = this.data.previewImageDataURL;
     data.imageOptionsMap = [];
-
     let imageOptionsArray = [];
     // save our scene object
     data.sceneData = { ...this.scene.sceneData };
@@ -473,10 +490,8 @@ export class NVDocument {
    */
   static async loadFromUrl(url) {
     let document = new NVDocument();
-    console.log(document);
     let response = await fetch(url);
     document.data = await response.json();
-    console.log(document.data);
     document.scene.sceneData = document.data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);

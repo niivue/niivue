@@ -37,6 +37,11 @@
     <div id="demo1" style="width:90%; height:400px;">
       <canvas id="gl1" height=480 width=640>
       </canvas>
+    </div>    
+  </section>  
+  <section>
+    <div>
+      <ul id="previewImages" style="list-style-type: none;"></ul>       
     </div>
   </section>
   <button id="toggleHippoButton" onclick="toggleHippo()">Add Hippocampus</button>
@@ -59,6 +64,28 @@
       }
     }
 
+    function loadDocument(index) {
+      nv1.loadDocument(documents[index])
+    }
+
+    /**
+     * @param {String} HTML representing a single element
+     * @return {Element}
+     */
+    function htmlToElement(html) {
+        var template = document.createElement('template');
+        html = html.trim(); // Never return a text node of whitespace as the result
+        template.innerHTML = html;
+        return template.content.firstChild;
+    }
+
+    function addPreview(doc) {
+      var ul = document.getElementById("previewImages");
+      var liHTML = `<li><img style="max-height: 50px;" onclick="loadDocument(${documents.length - 1})" src="${doc.previewImageDataURL}"/></li>`;
+      var liElem = htmlToElement(liHTML);
+      ul.appendChild(liElem);
+    }
+
     const url = '../images/hippo.nii.gz';
     var isHippoShowing = false;
     var volumeList1 = [
@@ -74,9 +101,18 @@
     nv1.attachTo('gl1')
     // nv1.loadVolumes(volumeList1)
     nv1.setSliceType(nv1.sliceTypeRender)
-    var documentUrl = "../images/niivue.basic.nvd" //"../images/niivue.drawing.nvd"; // "../images/niivue.mesh.nvd"; 
-    nv1.loadDocumentFromUrl(documentUrl);
-
+    var documents = []
+    var documentUrls = ["../images/niivue.basic.nvd", "../images/niivue.drawing.nvd", "../images/niivue.mesh.nvd"];     
+    for(const documentUrl of documentUrls ) {
+      console.log("loading " + documentUrl);
+      niivue.NVDocument.loadFromUrl(documentUrl).then((doc) => {
+        documents.push(doc)
+        console.log('adding preview')
+        addPreview(doc)
+      })
+    }
+    
+    
   </script>
 </body>
 
