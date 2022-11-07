@@ -7,7 +7,7 @@ test('loadMeshDocument', async () => {
   let counts = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
     await nv.attachTo('gl')    
-    await nv.loadDocumentFromUrl("../images/niivue-meshes.nvd")
+    await nv.loadDocumentFromUrl("../images/niivue.mesh.nvd")
     return {meshCount: nv.meshes.length, layerCount: (nv.meshes.length > 0) ? nv.meshes[0].layers.length : 0}
   })
   expect(counts.meshCount).toBe(1)

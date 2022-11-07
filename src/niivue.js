@@ -60,7 +60,8 @@ import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
 export { colortables } from "./colortables";
-import { NVDocument } from "./nvdocument.js";
+import { NVDocument, SLICE_TYPE, DRAG_MODE } from "./nvdocument.js";
+export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
 const cmapper = new colortables();
@@ -90,12 +91,8 @@ const MESH_EXTENSIONS = [
   "X3D",
 ];
 
-export const dragModes = Object.freeze({
-  none: 0,
-  contrast: 1,
-  measurement: 2,
-  pan: 3,
-});
+const LEFT_MOUSE_BUTTON = 0;
+const RIGHT_MOUSE_BUTTON = 2;
 
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
@@ -129,7 +126,7 @@ export const dragModes = Object.freeze({
  * @property {number} [options.multiplanarPadPixels=0] spacing between tiles of a multiplanar view
  * @property {boolean} [options.multiplanarForceRender=false] always show rendering in multiplanar view
  * @property {number} [options.meshThicknessOn2D=Infinity] 2D slice views can show meshes within this range. Meshes only visible in sliceMM (world space) mode
- * @property {dragModes} [options.dragMode=contrast] behavior for dragging (none, contrast, measurement, pan)
+ * @property {DRAG_MODE} [options.dragMode=contrast] behavior for dragging (none, contrast, measurement, pan)
  * @property {boolean} [options.isDepthPickMesh=false] when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
  * @property {boolean} [options.isCornerOrientationText=false] should slice text be shown in the upper right corner instead of the center of left and top axes?
  * @property {boolean} [options.sagittalNoseLeft=false] should 2D sagittal slices show the anterior direction toward the left or right?
@@ -202,89 +199,57 @@ export function Niivue(options = {}) {
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
-  this.sliceTypeAxial = 0;
-  this.sliceTypeCoronal = 1;
-  this.sliceTypeSagittal = 2;
-  this.sliceTypeMultiplanar = 3;
-  this.sliceTypeRender = 4;
-  this.sliceMosaicString = "";
-  this.sliceType = this.sliceTypeMultiplanar; // sets current view in webgl canvas
-  this.scene = {
-    get renderAzimuth() {
-      return this._azimuth;
-    },
-    /**
-     * @param {number} azimuth
-     */
-    set renderAzimuth(azimuth) {
-      this._azimuth = azimuth;
-      if (this.onAzimuthElevationChange) {
-        this.onAzimuthElevationChange(this._azimuth, this._elevation);
-      }
-    },
 
-    get renderElevation() {
-      return this._elevation;
-    },
-
-    /**
-     * @param {number} elevation
-     */
-    set renderElevation(elevation) {
-      this._elevation = elevation;
-      if (this.onAzimuthElevationChange) {
-        this.onAzimuthElevationChange(this._azimuth, this._elevation);
-      }
-    },
-  };
   this.syncOpts = {};
   this.readyForSync = false;
-  this.scene.renderAzimuth = 110; //-45;
-  this.scene.renderElevation = 10; //-165; //15;
-  this.scene.crosshairPos = [0.5, 0.5, 0.5];
-  this.scene.clipPlane = [0, 0, 0, 0];
-  this.scene.clipPlaneDepthAziElev = [2, 0, 0];
-  this.scene.mousedown = false;
-  this.scene.touchdown = false;
-  this.scene.mouseButtonLeft = 0;
-  this.scene.mouseButtonRight = 2;
-  this.scene.mouseButtonLeftDown = false;
-  this.scene.mouseButtonRightDown = false;
-  this.scene.mouseDepthPicker = false;
-  this.scene.pan2Dxyzmm = [0, 0, 0, 1];
-  this.scene.pan2DxyzmmAtMouseDown = [0, 0, 0, 1];
-  this.scene.prevX = 0;
-  this.scene.prevY = 0;
-  this.scene.currX = 0;
-  this.scene.currY = 0;
-  this.currentTouchTime = 0;
-  this.lastTouchTime = 0;
-  this.touchTimer = null;
-  this.doubleTouch = false;
+
+  // UI Data
+  this.uiData = {};
+  this.uiData.mousedown = false;
+  this.uiData.touchdown = false;
+  this.uiData.mouseButtonLeftDown = false;
+  this.uiData.mouseButtonRightDown = false;
+  this.uiData.mouseDepthPicker = false;
+  this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
+  this.uiData.pan2DxyzmmAtMouseDown = [0, 0, 0, 1];
+  this.uiData.prevX = 0;
+  this.uiData.prevY = 0;
+  this.uiData.currX = 0;
+  this.uiData.currY = 0;
+  this.uiData.currentTouchTime = 0;
+  this.uiData.lastTouchTime = 0;
+  this.uiData.touchTimer = null;
+  this.uiData.doubleTouch = false;
+  this.uiData.isDragging = false;
+  this.uiData.dragStart = [0.0, 0.0];
+  this.uiData.dragEnd = [0.0, 0.0];
+  this.uiData.dragClipPlaneStartDepthAziElev = [0, 0, 0];
+  this.uiData.lastTwoTouchDistance = 0;
+  this.uiData.multiTouchGesture = false;
+  this.uiData.loading$ = new Subject(); // whether or not the scene is loading
+  // mapping of keys (event strings) to rxjs subjects
+  this.eventsToSubjects = {
+    loading: this.uiData.loading$,
+  };
+
   this.back = {}; // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   this.overlays = []; // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is this necessary?
   this.deferredVolumes = [];
   this.deferredMeshes = [];
   this.furthestVertexFromOrigin = 100;
-  this.volScaleMultiplier = 1.0;
   this.volScale = [];
   this.vox = [];
   this.mousePos = [0, 0];
   this.screenSlices = []; // empty array
-  this.isDragging = false;
-  this.dragStart = [0.0, 0.0];
-  this.dragEnd = [0.0, 0.0];
-  this.dragClipPlaneStartDepthAziElev = [0, 0, 0];
-  this.lastTwoTouchDistance = 0;
+
   this.otherNV = null; // another niivue instance that we wish to sync postion with
   this.volumeObject3D = null;
   this.pivot3D = [0, 0, 0]; //center for rendering rotation
   this.furthestFromPivot = 10.0; //most distant point from pivot
-  this.scene.loading$ = new Subject(); // whether or not the scene is loading
+
   this.currentClipPlaneIndex = 0;
   this.lastCalled = new Date().getTime();
-  this.multiTouchGesture = false;
-  this.gestureInterval = null;
+
   this.selectedObjectId = -1;
   this.CLIP_PLANE_ID = 1;
   this.VOLUME_ID = 254;
@@ -346,6 +311,7 @@ export function Niivue(options = {}) {
   this.onCustomMeshShaderAdded = () => {};
   this.onMeshShaderChanged = () => {};
   this.onMeshPropertyChanged = () => {};
+  this.onDocumentLoaded = () => {};
 
   this.document = new NVDocument();
 
@@ -357,6 +323,19 @@ export function Niivue(options = {}) {
       this.opts[name] = options[name];
     }
   }
+
+  if (this.opts.isHighResolutionCapable) {
+    this.uiData.dpr = window.devicePixelRatio || 1;
+  } else {
+    this.uiData.dpr = 1;
+  }
+
+  this.sliceTypeAxial = SLICE_TYPE.AXIAL;
+  this.sliceTypeCoronal = SLICE_TYPE.CORONAL;
+  this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL;
+  this.sliceTypeMultiplanar = SLICE_TYPE.MULTIPLANAR;
+  this.sliceTypeRender = SLICE_TYPE.RENDER;
+  this.sliceMosaicString = "";
 
   this.mediaUrlMap = new Map();
 
@@ -376,26 +355,19 @@ export function Niivue(options = {}) {
   this.loadingText = this.opts.loadingText;
   log.setLogLevel(this.opts.logging);
 
-  // maping of keys (event strings) to rxjs subjects
-  this.eventsToSubjects = {
-    loading: this.scene.loading$,
-  };
-
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
   this.subscriptions = [];
-  if (this.opts.isHighResolutionCapable) {
-    this.scene.dpr = window.devicePixelRatio || 1;
-  } else {
-    this.scene.dpr = 1;
-  }
 }
+
+Object.defineProperty(Niivue.prototype, "scene", {
+  get: function () {
+    return this.document.scene;
+  },
+});
 
 Object.defineProperty(Niivue.prototype, "opts", {
   get: function () {
     return this.document.opts;
-  },
-  set: function (opts) {
-    this.document.opts = opts;
   },
 });
 
@@ -423,6 +395,15 @@ Object.defineProperty(Niivue.prototype, "drawBitmap", {
   },
   set: function (drawBitmap) {
     this.document.drawBitmap = drawBitmap;
+  },
+});
+
+Object.defineProperty(Niivue.prototype, "sliceType", {
+  get: function () {
+    return this.document.opts.sliceType;
+  },
+  set: function (sliceType) {
+    this.document.opts.sliceType = sliceType;
   },
 });
 
@@ -617,17 +598,17 @@ Niivue.prototype.resizeListener = function () {
   //https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
   //https://www.khronos.org/webgl/wiki/HandlingHighDPI
   if (this.opts.isHighResolutionCapable) {
-    this.scene.dpr = window.devicePixelRatio || 1;
-    console.log("devicePixelRatio: " + this.scene.dpr);
+    this.uiData.dpr = window.devicePixelRatio || 1;
+    console.log("devicePixelRatio: " + this.uiData.dpr);
   } else {
-    this.scene.dpr = 1;
+    this.uiData.dpr = 1;
   }
   if (this.canvas.parentElement.hasOwnProperty("width")) {
-    this.canvas.width = this.canvas.parentElement.width * this.scene.dpr;
-    this.canvas.height = this.canvas.parentElement.height * this.scene.dpr;
+    this.canvas.width = this.canvas.parentElement.width * this.uiData.dpr;
+    this.canvas.height = this.canvas.parentElement.height * this.uiData.dpr;
   } else {
-    this.canvas.width = this.canvas.offsetWidth * this.scene.dpr;
-    this.canvas.height = this.canvas.offsetHeight * this.scene.dpr;
+    this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr;
+    this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr;
   }
   this.drawScene();
 };
@@ -679,12 +660,12 @@ Niivue.prototype.mouseDownListener = function (e) {
   // var rect = this.canvas.getBoundingClientRect();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
-  this.scene.mousedown = true;
-  if (e.button === this.scene.mouseButtonLeft) {
-    this.scene.mouseButtonLeftDown = true;
+  this.uiData.mousedown = true;
+  if (e.button === LEFT_MOUSE_BUTTON) {
+    this.uiData.mouseButtonLeftDown = true;
     this.mouseLeftButtonHandler(e);
-  } else if (e.button === this.scene.mouseButtonRight) {
-    this.scene.mouseButtonRightDown = true;
+  } else if (e.button === RIGHT_MOUSE_BUTTON) {
+    this.uiData.mouseButtonRightDown = true;
     this.mouseRightButtonHandler(e);
   }
 };
@@ -705,17 +686,17 @@ Niivue.prototype.mouseLeftButtonHandler = function (e) {
 // handler for mouse right button down
 // note: no test yet
 Niivue.prototype.mouseRightButtonHandler = function (e) {
-  //this.isDragging = true;
+  //this.uiData.isDragging = true;
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
     e,
     this.gl.canvas
   );
-  if (this.opts.dragMode === dragModes.none) return;
+  if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
-  if (!this.isDragging)
-    this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
-  this.isDragging = true;
-  this.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
+  if (!this.uiData.isDragging)
+    this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+  this.uiData.isDragging = true;
+  this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
 };
 
@@ -740,21 +721,24 @@ function intensityRaw2Scaled(hdr, raw) {
 // note: no test yet
 Niivue.prototype.calculateNewRange = function (volIdx = 0) {
   if (
-    this.sliceType === this.sliceTypeRender &&
+    this.opts.sliceType === SLICE_TYPE.RENDER &&
     this.sliceMosaicString.length < 1
   ) {
     return;
   }
   if (
-    this.dragStart[0] === this.dragEnd[0] &&
-    this.dragStart[1] === this.dragEnd[1]
+    this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
+    this.uiData.dragStart[1] === this.uiData.dragEnd[1]
   )
     return;
   // calculate our box
-  let frac = this.canvasPos2frac([this.dragStart[0], this.dragStart[1]]);
+  let frac = this.canvasPos2frac([
+    this.uiData.dragStart[0],
+    this.uiData.dragStart[1],
+  ]);
   if (frac[0] < 0) return;
   let startVox = this.frac2vox(frac, volIdx);
-  frac = this.canvasPos2frac([this.dragEnd[0], this.dragEnd[1]]);
+  frac = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
   if (frac[0] < 0) return;
   let endVox = this.frac2vox(frac, volIdx);
 
@@ -805,17 +789,17 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
 // handler for mouse button up (all buttons)
 // note: no test yet
 Niivue.prototype.mouseUpListener = function () {
-  this.scene.mousedown = false;
-  this.scene.mouseButtonRightDown = false;
-  this.scene.mouseButtonLeftDown = false;
+  this.uiData.mousedown = false;
+  this.uiData.mouseButtonRightDown = false;
+  this.uiData.mouseButtonLeftDown = false;
   if (this.drawPenFillPts.length > 0) this.drawPenFilled();
   else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
 
-  if (this.isDragging) {
-    this.isDragging = false;
-    if (this.opts.dragMode !== dragModes.contrast) return;
+  if (this.uiData.isDragging) {
+    this.uiData.isDragging = false;
+    if (this.opts.dragMode !== DRAG_MODE.contrast) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
@@ -824,7 +808,7 @@ Niivue.prototype.mouseUpListener = function () {
 
 // not included in public docs
 Niivue.prototype.checkMultitouch = function (e) {
-  if (this.scene.touchdown && !this.multiTouchGesture) {
+  if (this.uiData.touchdown && !this.uiData.multiTouchGesture) {
     var rect = this.canvas.getBoundingClientRect();
     this.mouseClick(
       e.touches[0].clientX - rect.left,
@@ -842,35 +826,35 @@ Niivue.prototype.checkMultitouch = function (e) {
 // note: no test yet
 Niivue.prototype.touchStartListener = function (e) {
   e.preventDefault();
-  if (!this.touchTimer) {
-    this.touchTimer = setTimeout(() => {
+  if (!this.uiData.touchTimer) {
+    this.uiData.touchTimer = setTimeout(() => {
       //this.drawScene()
       this.resetBriCon(e);
     }, this.opts.longTouchTimeout);
   }
-  this.scene.touchdown = true;
-  this.currentTouchTime = new Date().getTime();
-  let timeSinceTouch = this.currentTouchTime - this.lastTouchTime;
+  this.uiData.touchdown = true;
+  this.uiData.currentTouchTime = new Date().getTime();
+  let timeSinceTouch = this.uiData.currentTouchTime - this.uiData.lastTouchTime;
   if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
-    this.doubleTouch = true;
+    this.uiData.doubleTouch = true;
     this.setDragStart(
       e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
       e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
     );
     this.resetBriCon(e);
-    this.lastTouchTime = this.currentTouchTime;
+    this.uiData.lastTouchTime = this.uiData.currentTouchTime;
     return;
   } else {
     // reset values to be ready for next touch
-    this.doubleTouch = false;
+    this.uiData.doubleTouch = false;
     this.setDragStart(0, 0);
     this.setDragEnd(0, 0);
-    this.lastTouchTime = this.currentTouchTime;
+    this.uiData.lastTouchTime = this.uiData.currentTouchTime;
   }
-  if (this.scene.touchdown && e.touches.length < 2) {
-    this.multiTouchGesture = false;
+  if (this.uiData.touchdown && e.touches.length < 2) {
+    this.uiData.multiTouchGesture = false;
   } else {
-    this.multiTouchGesture = true;
+    this.uiData.multiTouchGesture = true;
   }
 
   setTimeout(this.checkMultitouch.bind(this), 1, e);
@@ -881,17 +865,17 @@ Niivue.prototype.touchStartListener = function (e) {
 // note: no test yet
 Niivue.prototype.touchEndListener = function (e) {
   e.preventDefault();
-  this.scene.touchdown = false;
-  this.lastTwoTouchDistance = 0;
-  this.multiTouchGesture = false;
-  if (this.touchTimer) {
-    clearTimeout(this.touchTimer);
-    this.touchTimer = null;
+  this.uiData.touchdown = false;
+  this.uiData.lastTwoTouchDistance = 0;
+  this.uiData.multiTouchGesture = false;
+  if (this.uiData.touchTimer) {
+    clearTimeout(this.uiData.touchTimer);
+    this.uiData.touchTimer = null;
   }
-  if (this.isDragging) {
-    this.isDragging = false;
+  if (this.uiData.isDragging) {
+    this.uiData.isDragging = false;
     //if (this.opts.isDragShowsMeasurementTool) return;
-    if (this.opts.dragMode !== dragModes.contrast) return;
+    if (this.opts.dragMode !== DRAG_MODE.contrast) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
@@ -903,20 +887,20 @@ Niivue.prototype.touchEndListener = function (e) {
 // note: no test yet
 Niivue.prototype.mouseMoveListener = function (e) {
   // move crosshair and change slices if mouse click and move
-  if (this.scene.mousedown) {
+  if (this.uiData.mousedown) {
     let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
       e,
       this.gl.canvas
     );
-    if (this.scene.mouseButtonLeftDown) {
+    if (this.uiData.mouseButtonLeftDown) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
-    } else if (this.scene.mouseButtonRightDown) {
+    } else if (this.uiData.mouseButtonRightDown) {
       this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
-    this.scene.prevX = this.scene.currX;
-    this.scene.prevY = this.scene.currY;
+    this.uiData.prevX = this.uiData.currX;
+    this.uiData.prevY = this.uiData.currY;
   }
 };
 
@@ -928,9 +912,9 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_min = this.volumes[0].global_min;
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
-  if (this.isDragging) return;
+  if (this.uiData.isDragging) return;
   let isRender = false;
-  if (this.sliceType === this.sliceTypeRender) isRender = true;
+  if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true;
   let x = 0;
   let y = 0;
   if (msg !== null) {
@@ -944,19 +928,19 @@ Niivue.prototype.resetBriCon = function (msg = null) {
       x = msg.offsetX;
       y = msg.offsetY;
     }
-    x *= this.scene.dpr;
-    y *= this.scene.dpr;
+    x *= this.uiData.dpr;
+    y *= this.uiData.dpr;
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
 
   if (isRender) {
-    this.scene.mouseDepthPicker = true;
+    this.uiData.mouseDepthPicker = true;
     this.drawScene();
     this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
-  if (this.doubleTouch) return;
+  if (this.uiData.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
   this.onIntensityChange(this.volumes[0]);
@@ -965,29 +949,29 @@ Niivue.prototype.resetBriCon = function (msg = null) {
 };
 
 Niivue.prototype.setDragStart = function (x, y) {
-  x *= this.scene.dpr;
-  y *= this.scene.dpr;
-  this.dragStart[0] = x;
-  this.dragStart[1] = y;
+  x *= this.uiData.dpr;
+  y *= this.uiData.dpr;
+  this.uiData.dragStart[0] = x;
+  this.uiData.dragStart[1] = y;
 };
 
 Niivue.prototype.setDragEnd = function (x, y) {
-  x *= this.scene.dpr;
-  y *= this.scene.dpr;
-  this.dragEnd[0] = x;
-  this.dragEnd[1] = y;
+  x *= this.uiData.dpr;
+  y *= this.uiData.dpr;
+  this.uiData.dragEnd[0] = x;
+  this.uiData.dragEnd[1] = y;
 };
 
 // not included in public docs
 // handler for touch move (moving finger on screen)
 // note: no test yet
 Niivue.prototype.touchMoveListener = function (e) {
-  if (this.scene.touchdown && e.touches.length < 2) {
+  if (this.uiData.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
-    if (!this.isDragging)
-      this.scene.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
-    this.isDragging = true;
-    if (this.doubleTouch && this.isDragging) {
+    if (!this.uiData.isDragging)
+      this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+    this.uiData.isDragging = true;
+    if (this.uiData.doubleTouch && this.uiData.isDragging) {
       this.setDragEnd(
         e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
         e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
@@ -1024,15 +1008,15 @@ Niivue.prototype.handlePinchZoom = function (e) {
     ];
 
     // scroll 2D slices
-    if (dist < this.lastTwoTouchDistance) {
-      // this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.95);
+    if (dist < this.uiData.lastTwoTouchDistance) {
+      // this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.95);
       this.sliceScroll2D(
         -0.01,
         e.touches[0].clientX - rect.left,
         e.touches[0].clientY - rect.top
       );
     } else {
-      // this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.05);
+      // this.scene.volScaleMultiplier = Math.min(2.0, this.scene.volScaleMultiplier * 1.05);
       this.sliceScroll2D(
         0.01,
         e.touches[0].clientX - rect.left,
@@ -1040,7 +1024,7 @@ Niivue.prototype.handlePinchZoom = function (e) {
       );
     }
     // this.drawScene();
-    this.lastTwoTouchDistance = dist;
+    this.uiData.lastTwoTouchDistance = dist;
   }
 };
 
@@ -1048,7 +1032,7 @@ Niivue.prototype.handlePinchZoom = function (e) {
 // handler for keyboard shortcuts
 Niivue.prototype.keyUpListener = function (e) {
   if (e.code === this.opts.clipPlaneHotKey) {
-    /*if (this.sliceType != this.sliceTypeRender) {
+    /*if (this.opts.sliceType!= SLICE_TYPE.RENDER) {
       return;
     }*/ //bravo
     let now = new Date().getTime();
@@ -1087,57 +1071,57 @@ Niivue.prototype.keyUpListener = function (e) {
     let now = new Date().getTime();
     let elapsed = now - this.lastCalled;
     if (elapsed > this.opts.keyDebounceTime) {
-      this.setSliceType((this.sliceType + 1) % 5); // 5 total slice types
+      this.setSliceType((this.opts.sliceType + 1) % 5); // 5 total slice types
       this.lastCalled = now;
     }
   }
 };
 
 Niivue.prototype.keyDownListener = function (e) {
-  if (e.code === "KeyH" && this.sliceType === this.sliceTypeRender) {
+  if (e.code === "KeyH" && this.opts.sliceType === SLICE_TYPE.RENDER) {
     this.setRenderAzimuthElevation(
       this.scene.renderAzimuth - 1,
       this.scene.renderElevation
     );
-  } else if (e.code === "KeyL" && this.sliceType === this.sliceTypeRender) {
+  } else if (e.code === "KeyL" && this.opts.sliceType === SLICE_TYPE.RENDER) {
     this.setRenderAzimuthElevation(
       this.scene.renderAzimuth + 1,
       this.scene.renderElevation
     );
-  } else if (e.code === "KeyJ" && this.sliceType === this.sliceTypeRender) {
+  } else if (e.code === "KeyJ" && this.opts.sliceType === SLICE_TYPE.RENDER) {
     this.setRenderAzimuthElevation(
       this.scene.renderAzimuth,
       this.scene.renderElevation + 1
     );
-  } else if (e.code === "KeyK" && this.sliceType === this.sliceTypeRender) {
+  } else if (e.code === "KeyK" && this.opts.sliceType === SLICE_TYPE.RENDER) {
     this.setRenderAzimuthElevation(
       this.scene.renderAzimuth,
       this.scene.renderElevation - 1
     );
-  } else if (e.code === "KeyH" && this.sliceType !== this.sliceTypeRender) {
+  } else if (e.code === "KeyH" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
     this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001;
     this.drawScene();
-  } else if (e.code === "KeyL" && this.sliceType !== this.sliceTypeRender) {
+  } else if (e.code === "KeyL" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
     this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001;
     this.drawScene();
   } else if (
     e.code === "KeyU" &&
-    this.sliceType !== this.sliceTypeRender &&
+    this.opts.sliceType !== SLICE_TYPE.RENDER &&
     e.ctrlKey
   ) {
     this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001;
     this.drawScene();
   } else if (
     e.code === "KeyD" &&
-    this.sliceType !== this.sliceTypeRender &&
+    this.opts.sliceType !== SLICE_TYPE.RENDER &&
     e.ctrlKey
   ) {
     this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001;
     this.drawScene();
-  } else if (e.code === "KeyJ" && this.sliceType !== this.sliceTypeRender) {
+  } else if (e.code === "KeyJ" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
     this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001;
     this.drawScene();
-  } else if (e.code === "KeyK" && this.sliceType !== this.sliceTypeRender) {
+  } else if (e.code === "KeyK" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
     this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001;
     this.drawScene();
   } else if (e.code === "ArrowLeft") {
@@ -1410,7 +1394,7 @@ Niivue.prototype.dropListener = async function (e) {
                 gl: this.gl,
                 name: file.name,
               });
-              this.scene.loading$.next(false);
+              this.uiData.loading$.next(false);
               this.addMesh(mesh);
             });
             continue;
@@ -1527,7 +1511,7 @@ Niivue.prototype.getRadiologicalConvention = function () {
 Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
   if (!this.opts.isHighResolutionCapable) {
-    this.scene.dpr = 1;
+    this.uiData.dpr = 1;
   }
   console.log("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
@@ -1988,7 +1972,7 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
  * @example niivue.setPan2Dxyzmm([5,-4, 2, 1.5])
  */
 Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
-  this.scene.pan2Dxyzmm = xyzmmZoom;
+  this.uiData.pan2Dxyzmm = xyzmmZoom;
   this.drawScene();
 };
 
@@ -2102,7 +2086,6 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * niivue.removeVolume(this.volumes[3])
  */
 Niivue.prototype.removeVolume = function (volume) {
-  this.document.removeImage(volume);
   this.setVolume(volume, -1);
   // check if we have a url for this volume
   if (this.mediaUrlMap.has(volume)) {
@@ -2230,8 +2213,8 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 // update mouse position from new mouse down coordinates
 // note: no test yet
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
-  x *= this.scene.dpr;
-  y *= this.scene.dpr;
+  x *= this.uiData.dpr;
+  y *= this.uiData.dpr;
   if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
 }; // mouseDown()
@@ -2239,8 +2222,8 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 // not included in public docs
 // note: no test yet
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
-  x *= this.scene.dpr;
-  y *= this.scene.dpr;
+  x *= this.uiData.dpr;
+  y *= this.uiData.dpr;
   if (this.inRenderTile(x, y) < 0) return;
   this.scene.renderAzimuth += x - this.mousePos[0];
   this.scene.renderElevation += y - this.mousePos[1];
@@ -2295,7 +2278,7 @@ Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
   this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
   this.onClipPlaneChange(this.scene.clipPlane);
-  //if (this.sliceType != this.sliceTypeRender) return;
+  //if (this.opts.sliceType!= SLICE_TYPE.RENDER) return;
   this.drawScene();
 }; // setClipPlane()
 
@@ -2372,15 +2355,15 @@ Niivue.prototype.setSelectionBoxColor = function (color) {
 // not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
   //if (posChange !== 0 && this.opts.isDragForPanZoom) {
-  if (posChange !== 0 && this.opts.dragMode === dragModes.pan) {
-    let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
+  if (posChange !== 0 && this.opts.dragMode === DRAG_MODE.pan) {
+    let zoom = this.uiData.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
     zoom = Math.round(zoom * 10) / 10;
-    this.scene.pan2Dxyzmm[3] = zoom;
+    this.uiData.pan2Dxyzmm[3] = zoom;
     this.drawScene();
     return;
   }
-  //x *= this.scene.dpr;
-  //y *= this.scene.dpr;
+  //x *= this.uiData.dpr;
+  //y *= this.uiData.dpr;
   this.mouseClick(x, y, posChange, isDelta);
 }; // sliceScroll2D()
 
@@ -2392,7 +2375,7 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
  * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
  */
 Niivue.prototype.setSliceType = function (st) {
-  this.sliceType = st;
+  this.opts.sliceType = st;
   this.drawScene();
   return this;
 }; // setSliceType()
@@ -2425,16 +2408,13 @@ Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
  * niivue.setScale(2) // zoom some
  */
 Niivue.prototype.setScale = function (scale) {
-  this._volScaleMultiplier = scale;
-  if (this.onZoom3DChange) {
-    this.onZoom3DChange(scale);
-  }
+  this.scene.volScaleMultiplier = scale;
   this.drawScene();
 }; // setScale()
 
 Object.defineProperty(Niivue.prototype, "volScaleMultiplier", {
   get: function () {
-    return this._volScaleMultiplier;
+    return this.scene.volScaleMultiplier;
   },
   set: function (scale) {
     this.setScale(scale);
@@ -2527,15 +2507,7 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
 Niivue.prototype.loadDocument = function (document) {
   console.log("loading document");
   this.document = document;
-  this.scene.renderAzimuth = document.renderAzimuth;
-  this.scene.renderElevation = document.renderElevation;
-  this.scene.clipPlane = document.clipPlane;
-  this.scene.crosshairPos = document.crosshairPos;
-  this.sliceType = document.sliceType;
   this.mediaUrlMap.clear();
-  // this.volumes = [];
-  // this.meshes = [];
-  // this.drawingBitmap = null;
   this.createEmptyDrawing();
   // load our images and meshes
   let encodedImageBlobs = document.encodedImageBlobs;
@@ -2586,17 +2558,13 @@ Niivue.prototype.loadDocument = function (document) {
     this.addMesh(meshToAdd);
   }
   this.updateGLVolume();
+  this.onDocumentLoaded();
   return this;
 };
 
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.title = fileName;
-  this.document.renderAzimuth = this.scene.renderAzimuth;
-  this.document.renderElevation = this.scene.renderElevation;
-  this.document.clipPlane = this.scene.clipPlane;
-  this.document.crosshairPos = this.scene.crosshairPos;
-  this.document.sliceType = this.sliceType;
-  this.document.save(fileName);
+  this.document.download(fileName);
 };
 
 /**
@@ -2625,10 +2593,10 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   this.volumes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  this.scene.loading$.next(false);
+  this.uiData.loading$.next(false);
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
-    this.scene.loading$.next(true);
+    this.uiData.loading$.next(true);
     let imageOptions = {
       url: volumeList[i].url,
       name: volumeList[i].name,
@@ -2642,7 +2610,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       isManifest: volumeList[i].isManifest,
     };
     await this.addVolumeFromUrl(imageOptions);
-    this.scene.loading$.next(false);
+    this.uiData.loading$.next(false);
   } // for
   return this;
 }; // loadVolumes()
@@ -2693,12 +2661,12 @@ Niivue.prototype.loadMeshes = async function (meshList) {
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-  this.scene.loading$.next(false);
+  this.uiData.loading$.next(false);
   // for loop to load all volumes in volumeList
   for (let i = 0; i < meshList.length; i++) {
-    this.scene.loading$.next(true);
+    this.uiData.loading$.next(true);
     await this.addMeshFromUrl(meshList[i]);
-    this.scene.loading$.next(false);
+    this.uiData.loading$.next(false);
   } // for
   this.drawScene();
   return this;
@@ -2722,12 +2690,12 @@ Niivue.prototype.loadConnectome = async function (json) {
   this.meshes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  this.scene.loading$.next(false);
+  this.uiData.loading$.next(false);
   // for loop to load all volumes in volumeList
   for (let i = 0; i < 1; i++) {
-    this.scene.loading$.next(true);
+    this.uiData.loading$.next(true);
     let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
-    this.scene.loading$.next(false);
+    this.uiData.loading$.next(false);
     this.addMesh(mesh);
     //this.meshes.push(mesh);
     //this.updateGLVolume();
@@ -4852,7 +4820,7 @@ Niivue.prototype.refreshColormaps = function () {
 
 // not included in public docs
 Niivue.prototype.sliceScale = function () {
-  let dimsMM = this.screenFieldOfViewMM(this.sliceTypeAxial);
+  let dimsMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL);
   var longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]));
   var volScale = [
     dimsMM[0] / longestAxis,
@@ -4876,7 +4844,7 @@ function swizzleVec3(vec, order = [0, 1, 2]) {
 // report if screen space coordinates correspond with a 3D rendering
 Niivue.prototype.inRenderTile = function (x, y) {
   for (let i = 0; i < this.screenSlices.length; i++) {
-    if (this.screenSlices[i].axCorSag !== this.sliceTypeRender) continue;
+    if (this.screenSlices[i].axCorSag !== SLICE_TYPE.RENDER) continue;
     let ltwh = this.screenSlices[i].leftTopWidthHeight;
     if (
       x > ltwh[0] &&
@@ -4910,17 +4878,23 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
     return;
   }
   if (posChange > 0)
-    this.volScaleMultiplier = Math.min(2.0, this.volScaleMultiplier * 1.1);
+    this.scene.volScaleMultiplier = Math.min(
+      2.0,
+      this.scene.volScaleMultiplier * 1.1
+    );
   if (posChange < 0)
-    this.volScaleMultiplier = Math.max(0.5, this.volScaleMultiplier * 0.9);
+    this.scene.volScaleMultiplier = Math.max(
+      0.5,
+      this.scene.volScaleMultiplier * 0.9
+    );
   this.drawScene();
 };
 
 // not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
-  x *= this.scene.dpr;
-  y *= this.scene.dpr;
+  x *= this.uiData.dpr;
+  y *= this.uiData.dpr;
   var posNow;
   var posFuture;
   this.canvas.focus();
@@ -4953,7 +4927,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       return;
     }
   }
-  //if (this.sliceType === this.sliceTypeRender) {
+  //if (this.opts.sliceType=== SLICE_TYPE.RENDER) {
   if (this.inRenderTile(x, y) >= 0) {
     this.sliceScroll3D(posChange);
     this.drawScene(); //TODO: twice?
@@ -4973,7 +4947,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     var axCorSag = this.screenSlices[i].axCorSag;
     if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag)
       continue; //if mouse is drawing on axial slice, ignore any entry to coronal slice
-    if (axCorSag > this.sliceTypeSagittal) continue;
+    if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
     let texFrac = this.screenXY2TextureFrac(x, y, i);
     if (texFrac[0] < 0) continue; //click not on slice i
 
@@ -5062,7 +5036,7 @@ Niivue.prototype.drawRuler = function () {
   let fovMM = [];
   let ltwh = [];
   for (let i = 0; i < this.screenSlices.length; i++) {
-    if (this.screenSlices[i].axCorSag === this.sliceTypeRender) continue;
+    if (this.screenSlices[i].axCorSag === SLICE_TYPE.RENDER) continue;
     //let ltwh = this.screenSlices[i].leftTopWidthHeight;
     if (this.screenSlices[i].fovMM.length > 1) {
       ltwh = this.screenSlices[i].leftTopWidthHeight;
@@ -5113,7 +5087,7 @@ Niivue.prototype.screenXY2mm = function (x, y, forceSlice = -1) {
     let i = s;
     if (forceSlice >= 0) i = forceSlice;
     var axCorSag = this.screenSlices[i].axCorSag;
-    if (axCorSag > this.sliceTypeSagittal) continue;
+    if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
     let ltwh = this.screenSlices[i].leftTopWidthHeight;
     if (
       x < ltwh[0] ||
@@ -5141,9 +5115,9 @@ Niivue.prototype.dragForPanZoom = function (startXYendXY) {
   }
   let v = mat.vec3.create();
   mat.vec3.sub(v, endMM, startMM);
-  this.scene.pan2Dxyzmm[0] = this.scene.pan2DxyzmmAtMouseDown[0] + v[0];
-  this.scene.pan2Dxyzmm[1] = this.scene.pan2DxyzmmAtMouseDown[1] + v[1];
-  this.scene.pan2Dxyzmm[2] = this.scene.pan2DxyzmmAtMouseDown[2] + v[2];
+  this.uiData.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + v[0];
+  this.uiData.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + v[1];
+  this.uiData.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + v[2];
 };
 
 // not included in public docs
@@ -5668,10 +5642,10 @@ Niivue.prototype.calculateMvpMatrix2D = function (
 // not included in public docs
 Niivue.prototype.swizzleVec3MM = function (v3, axCorSag) {
   // change order of vector components
-  if (axCorSag === this.sliceTypeCoronal) {
+  if (axCorSag === SLICE_TYPE.CORONAL) {
     //2D coronal screenXYZ = nifti [i,k,j]
     v3 = swizzleVec3(v3, [0, 2, 1]);
-  } else if (axCorSag === this.sliceTypeSagittal) {
+  } else if (axCorSag === SLICE_TYPE.SAGITTAL) {
     //2D sagittal screenXYZ = nifti [j,k,i]
     v3 = swizzleVec3(v3, [1, 2, 0]);
   }
@@ -5721,9 +5695,9 @@ Niivue.prototype.drawSliceOrientationText = function (
 ) {
   this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   let topText = "S";
-  if (axCorSag === this.sliceTypeAxial) topText = "A";
+  if (axCorSag === SLICE_TYPE.AXIAL) topText = "A";
   let leftText = this.opts.isRadiologicalConvention ? "R" : "L";
-  if (axCorSag === this.sliceTypeSagittal)
+  if (axCorSag === SLICE_TYPE.SAGITTAL)
     leftText = this.opts.sagittalNoseLeft ? "A" : "P";
   if (this.opts.isCornerOrientationText) {
     this.drawTextRightBelow(
@@ -5754,8 +5728,8 @@ Niivue.prototype.xyMM2xyzMM = function (axCorSag, sliceFrac) {
   //given X and Y, find Z for a plane defined by 3 points (a,b,c)
   //https://math.stackexchange.com/questions/851742/calculate-coordinate-of-any-point-on-triangle-in-3d-plane
   let sliceDim = 2; //axial depth is NIfTI k dimension
-  if (axCorSag === this.sliceTypeCoronal) sliceDim = 1; //sagittal depth is NIfTI j dimension
-  if (axCorSag === this.sliceTypeSagittal) sliceDim = 0; //sagittal depth is NIfTI i dimension
+  if (axCorSag === SLICE_TYPE.CORONAL) sliceDim = 1; //sagittal depth is NIfTI j dimension
+  if (axCorSag === SLICE_TYPE.SAGITTAL) sliceDim = 0; //sagittal depth is NIfTI i dimension
   let a = [0, 0, 0];
   let b = [1, 1, 0];
   let c = [1, 0, 1];
@@ -5792,17 +5766,17 @@ Niivue.prototype.draw2DMM = function (
 ) {
   let screen = this.screenFieldOfViewExtendedMM(axCorSag);
   let isRadiolgical =
-    this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
+    this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL;
   if (customMM === Infinity || customMM === -Infinity) {
     isRadiolgical = customMM !== Infinity;
-    if (axCorSag === this.sliceTypeCoronal) isRadiolgical = !isRadiolgical;
-  } else if (this.opts.sagittalNoseLeft && axCorSag === this.sliceTypeSagittal)
+    if (axCorSag === SLICE_TYPE.CORONAL) isRadiolgical = !isRadiolgical;
+  } else if (this.opts.sagittalNoseLeft && axCorSag === SLICE_TYPE.SAGITTAL)
     isRadiolgical = !isRadiolgical;
   let elevation = 0;
   let azimuth = 0;
-  if (axCorSag === this.sliceTypeSagittal) {
+  if (axCorSag === SLICE_TYPE.SAGITTAL) {
     azimuth = isRadiolgical ? 90 : -90;
-  } else if (axCorSag === this.sliceTypeCoronal) {
+  } else if (axCorSag === SLICE_TYPE.CORONAL) {
     azimuth = isRadiolgical ? 180 : 0;
   } else {
     azimuth = isRadiolgical ? 180 : 0;
@@ -5812,19 +5786,19 @@ Niivue.prototype.draw2DMM = function (
     //use full screen
     leftTopWidthHeight = this.scaleSlice(screen.fovMM[0], screen.fovMM[1]);
   if (isNaN(customMM)) {
-    let panXY = this.swizzleVec3MM(this.scene.pan2Dxyzmm, axCorSag);
+    let panXY = this.swizzleVec3MM(this.uiData.pan2Dxyzmm, axCorSag);
     screen.mnMM[0] -= panXY[0];
     screen.mxMM[0] -= panXY[0];
     screen.mnMM[1] -= panXY[1];
     screen.mxMM[1] -= panXY[1];
-    screen.mnMM[0] /= this.scene.pan2Dxyzmm[3];
-    screen.mxMM[0] /= this.scene.pan2Dxyzmm[3];
-    screen.mnMM[1] /= this.scene.pan2Dxyzmm[3];
-    screen.mxMM[1] /= this.scene.pan2Dxyzmm[3];
+    screen.mnMM[0] /= this.uiData.pan2Dxyzmm[3];
+    screen.mxMM[0] /= this.uiData.pan2Dxyzmm[3];
+    screen.mnMM[1] /= this.uiData.pan2Dxyzmm[3];
+    screen.mxMM[1] /= this.uiData.pan2Dxyzmm[3];
   }
   let sliceDim = 2; //axial depth is NIfTI k dimension
-  if (axCorSag === this.sliceTypeCoronal) sliceDim = 1; //sagittal depth is NIfTI j dimension
-  if (axCorSag === this.sliceTypeSagittal) sliceDim = 0; //sagittal depth is NIfTI i dimension
+  if (axCorSag === SLICE_TYPE.CORONAL) sliceDim = 1; //sagittal depth is NIfTI j dimension
+  if (axCorSag === SLICE_TYPE.SAGITTAL) sliceDim = 0; //sagittal depth is NIfTI i dimension
   let sliceFrac = this.scene.crosshairPos[sliceDim];
   let mm = this.frac2mm(this.scene.crosshairPos);
   if (!isNaN(customMM) && customMM !== Infinity && customMM !== -Infinity) {
@@ -5961,7 +5935,7 @@ Niivue.prototype.draw2DVox = function (
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]; //axial: width=i, height=j, slice=k
-  if (axCorSag === this.sliceTypeCoronal) {
+  if (axCorSag === SLICE_TYPE.CORONAL) {
     sliceDim = 1;
     crossXYZ = [
       this.scene.crosshairPos[0],
@@ -5969,7 +5943,7 @@ Niivue.prototype.draw2DVox = function (
       this.scene.crosshairPos[1],
     ]; //coronal: width=i, height=k, slice=j
   }
-  if (axCorSag === this.sliceTypeSagittal) {
+  if (axCorSag === SLICE_TYPE.SAGITTAL) {
     sliceDim = 0;
     crossXYZ = [
       this.scene.crosshairPos[1],
@@ -5984,8 +5958,8 @@ Niivue.prototype.draw2DVox = function (
     crossXYZ[2] = frac[sliceDim];
   }
   let isMirrorLR =
-    this.opts.isRadiologicalConvention && axCorSag < this.sliceTypeSagittal;
-  if (this.opts.sagittalNoseLeft && axCorSag === this.sliceTypeSagittal)
+    this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL;
+  if (this.opts.sagittalNoseLeft && axCorSag === SLICE_TYPE.SAGITTAL)
     isMirrorLR = !isMirrorLR;
   this.sliceShader.use(this.gl);
   gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
@@ -6096,7 +6070,7 @@ Niivue.prototype.calculateMvpMatrix = function (
   let scale = this.furthestFromPivot;
   let origin = this.pivot3D;
   let projectionMatrix = mat.mat4.create();
-  scale = (0.8 * scale) / this.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+  scale = (0.8 * scale) / this.scene.volScaleMultiplier; //2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
   if (whratio < 1)
     //tall window: "portrait" mode, width constrains
     mat.mat4.ortho(
@@ -6199,11 +6173,7 @@ Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
 Niivue.prototype.sceneExtentsMinMax = function () {
   let mn = mat.vec3.fromValues(0, 0, 0);
   let mx = mat.vec3.fromValues(0, 0, 0);
-  console.log("this.volumes");
-  console.log(this.volumes);
   if (this.volumes.length > 0) {
-    console.log("this.volumeObject3D");
-    console.log(this.volumeObject3D);
     mn = mat.vec3.fromValues(
       this.volumeObject3D.extentsMin[0],
       this.volumeObject3D.extentsMin[1],
@@ -6282,13 +6252,13 @@ Niivue.prototype.drawGraph = function () {
   let axialTop = 0;
   if (
     this.graph.autoSizeMultiplanar &&
-    this.sliceType === this.sliceTypeMultiplanar
+    this.opts.sliceType === SLICE_TYPE.MULTIPLANAR
   ) {
     for (let i = 0; i < this.screenSlices.length; i++) {
       var axCorSag = this.screenSlices[i].axCorSag;
-      if (axCorSag === this.sliceTypeAxial)
+      if (axCorSag === SLICE_TYPE.AXIAL)
         axialTop = this.screenSlices[i].leftTopWidthHeight[1];
-      if (axCorSag !== this.sliceTypeSagittal) continue;
+      if (axCorSag !== SLICE_TYPE.SAGITTAL) continue;
       var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
       if (ltwh[1] === axialTop) {
         graph.LTWH[0] = ltwh[0] + ltwh[2];
@@ -6392,7 +6362,7 @@ Niivue.prototype.drawGraph = function () {
   }
   let minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
   //n.b. dpr encodes retina displays
-  let fntScale = 0.07 * (minWH / (this.fontMets.size * this.scene.dpr));
+  let fntScale = 0.07 * (minWH / (this.fontMets.size * this.uiData.dpr));
   let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
   if (fntSize < 16) fntSize = 0;
   let maxTextWid = 0;
@@ -6580,9 +6550,9 @@ function unpackFloatFromVec4i(val) {
 // not included in public docs
 Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
   //use color of screen pixel to infer X,Y,Z coordinates
-  if (!this.scene.mouseDepthPicker) return;
+  if (!this.uiData.mouseDepthPicker) return;
   //start PICKING: picking shader and reading values is slow
-  this.scene.mouseDepthPicker = false;
+  this.uiData.mouseDepthPicker = false;
   let gl = this.gl;
   const pixelX =
     (this.mousePos[0] * leftTopWidthHeight[2]) / leftTopWidthHeight[2];
@@ -6642,7 +6612,7 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     let shader = this.renderShader;
-    if (this.scene.mouseDepthPicker) shader = this.pickingImageShader;
+    if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);
     gl.uniform1i(
       shader.backgroundMasksOverlaysLoc,
@@ -6737,7 +6707,7 @@ Niivue.prototype.draw3D = function (
     leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
     this.screenSlices.push({
       leftTopWidthHeight: leftTopWidthHeight,
-      axCorSag: this.sliceTypeRender,
+      axCorSag: SLICE_TYPE.RENDER,
       sliceFrac: 0,
       AxyzMxy: [],
       leftTopMM: [],
@@ -6746,7 +6716,7 @@ Niivue.prototype.draw3D = function (
   } else {
     this.screenSlices.push({
       leftTopWidthHeight: leftTopWidthHeight.slice(),
-      axCorSag: this.sliceTypeRender,
+      axCorSag: SLICE_TYPE.RENDER,
       sliceFrac: 0,
       AxyzMxy: [],
       leftTopMM: [],
@@ -6767,7 +6737,7 @@ Niivue.prototype.draw3D = function (
   if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
   if (!isMosaic) this.drawCrosshairs3D(true, 1.0, mvpMatrix);
   this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix);
-  if (this.scene.mouseDepthPicker) {
+  if (this.uiData.mouseDepthPicker) {
     this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
     return;
   }
@@ -6825,7 +6795,7 @@ Niivue.prototype.drawMesh3D = function (
   let hasFibers = false;
   for (let i = 0; i < this.meshes.length; i++) {
     shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader;
-    if (this.scene.mouseDepthPicker) shader = this.pickingMeshShader;
+    if (this.uiData.mouseDepthPicker) shader = this.pickingMeshShader;
     shader.use(this.gl); // set Shader
     //set shader uniforms
     gl.uniformMatrix4fv(shader.mvpLoc, false, m);
@@ -7042,7 +7012,7 @@ Niivue.prototype.screenXY2TextureFrac = function (
 ) {
   let texFrac = [-1, -1, -1]; //texture 0..1 so -1 is out of bounds
   var axCorSag = this.screenSlices[i].axCorSag;
-  if (axCorSag > this.sliceTypeSagittal) return texFrac;
+  if (axCorSag > SLICE_TYPE.SAGITTAL) return texFrac;
   var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
   let isMirror = false;
   if (ltwh[2] < 0) {
@@ -7063,10 +7033,8 @@ Niivue.prototype.screenXY2TextureFrac = function (
     // let xyz = mat.vec3.fromValues(30, 30, 0);
     let v = this.screenSlices[i].AxyzMxy;
     xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-    if (axCorSag === this.sliceTypeCoronal)
-      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]); //screen RSA to NIfTI RAS
-    if (axCorSag === this.sliceTypeSagittal)
-      xyzMM = swizzleVec3(xyzMM, [2, 0, 1]); //screen ASR to NIfTI RAS
+    if (axCorSag === SLICE_TYPE.CORONAL) xyzMM = swizzleVec3(xyzMM, [0, 2, 1]); //screen RSA to NIfTI RAS
+    if (axCorSag === SLICE_TYPE.SAGITTAL) xyzMM = swizzleVec3(xyzMM, [2, 0, 1]); //screen ASR to NIfTI RAS
     let xyz = this.mm2frac(xyzMM);
     if (restrict0to1) {
       if (
@@ -7084,15 +7052,15 @@ Niivue.prototype.screenXY2TextureFrac = function (
     texFrac[2] = xyz[2];
   } else {
     texFrac = this.scene.crosshairPos.slice();
-    if (axCorSag === this.sliceTypeAxial) {
+    if (axCorSag === SLICE_TYPE.AXIAL) {
       texFrac[0] = fracX;
       texFrac[1] = fracY;
     }
-    if (axCorSag === this.sliceTypeCoronal) {
+    if (axCorSag === SLICE_TYPE.CORONAL) {
       texFrac[0] = fracX;
       texFrac[2] = fracY;
     }
-    if (axCorSag === this.sliceTypeSagittal) {
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
       texFrac[1] = fracX;
       texFrac[2] = fracY;
     }
@@ -7204,8 +7172,8 @@ Niivue.prototype.drawCrossLinesMM = function (
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
   let thick = Math.max(1, this.opts.crosshairWidth);
-  if (axCorSag === this.sliceTypeCoronal) linesH = axiMM.slice();
-  if (axCorSag === this.sliceTypeSagittal) {
+  if (axCorSag === SLICE_TYPE.CORONAL) linesH = axiMM.slice();
+  if (axCorSag === SLICE_TYPE.SAGITTAL) {
     linesH = axiMM.slice();
     linesV = corMM.slice();
   }
@@ -7345,8 +7313,8 @@ Niivue.prototype.drawCrossLines = function (
   let linesH = corMM.slice();
   let linesV = sagMM.slice();
 
-  if (axCorSag === this.sliceTypeCoronal) linesH = axiMM.slice();
-  if (axCorSag === this.sliceTypeSagittal) {
+  if (axCorSag === SLICE_TYPE.CORONAL) linesH = axiMM.slice();
+  if (axCorSag === SLICE_TYPE.SAGITTAL) {
     linesH = axiMM.slice();
     linesV = corMM.slice();
   }
@@ -7354,7 +7322,7 @@ Niivue.prototype.drawCrossLines = function (
     //draw horizontal lines
     let LTWH = tile.leftTopWidthHeight.slice();
     let sliceDim = 2; //vertical axis is Zmm
-    if (axCorSag === this.sliceTypeAxial) sliceDim = 1; //vertical axis is Ymm
+    if (axCorSag === SLICE_TYPE.AXIAL) sliceDim = 1; //vertical axis is Ymm
     let mm = this.frac2mm([0.5, 0.5, 0.5]);
     for (let i = 0; i < linesH.length; i++) {
       mm[sliceDim] = linesH[i];
@@ -7372,7 +7340,7 @@ Niivue.prototype.drawCrossLines = function (
     let LTWH = tile.leftTopWidthHeight.slice();
     let isRadiolgical = tile.fovMM[0] < 0;
     let sliceDim = 0; //vertical lines on axial/coronal are L/R axis
-    if (axCorSag === this.sliceTypeSagittal) sliceDim = 1; //vertical lines on sagittal are A/P
+    if (axCorSag === SLICE_TYPE.SAGITTAL) sliceDim = 1; //vertical lines on sagittal are A/P
     let mm = this.frac2mm([0.5, 0.5, 0.5]);
     for (let i = 0; i < linesV.length; i++) {
       mm[sliceDim] = linesV[i];
@@ -7408,9 +7376,9 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
   }
   this.screenSlices = [];
   //render always in world space
-  let fovRenderMM = this.screenFieldOfViewMM(this.sliceTypeAxial, true);
+  let fovRenderMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL, true);
   //2d slices might be in world space or voxel space
-  let fovSliceMM = this.screenFieldOfViewMM(this.sliceTypeAxial);
+  let fovSliceMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL);
   //fovRender and fovSlice will only be different if scans are oblique and shown in voxel space
   //let mosaicStr = 'A -52 -12 C 8 ; S 28 48 66'
 
@@ -7433,7 +7401,7 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
     let top = 0;
     let mxRowWid = 0;
     let isLabel = false;
-    let axCorSag = this.sliceTypeAxial;
+    let axCorSag = SLICE_TYPE.AXIAL;
     for (let i = 0; i < items.length; i++) {
       let item = items[i];
       if (item.includes("X")) {
@@ -7448,9 +7416,9 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
         i++; //skip numeric value for vertical/horizontal overlap
         continue;
       }
-      if (item.includes("A")) axCorSag = this.sliceTypeAxial;
-      if (item.includes("C")) axCorSag = this.sliceTypeCoronal;
-      if (item.includes("S")) axCorSag = this.sliceTypeSagittal;
+      if (item.includes("A")) axCorSag = SLICE_TYPE.AXIAL;
+      if (item.includes("C")) axCorSag = SLICE_TYPE.CORONAL;
+      if (item.includes("S")) axCorSag = SLICE_TYPE.SAGITTAL;
       if (item.includes("R")) isRender = true;
       if (item.includes(";")) {
         //EOLN
@@ -7466,17 +7434,17 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
       let fov = fovSliceMM;
       if (isRender) fov = fovRenderMM;
       //draw the slice
-      if (axCorSag === this.sliceTypeSagittal) w = fov[1];
+      if (axCorSag === SLICE_TYPE.SAGITTAL) w = fov[1];
       else w = fov[0];
-      if (axCorSag === this.sliceTypeAxial) h = fov[1];
+      if (axCorSag === SLICE_TYPE.AXIAL) h = fov[1];
       else h = fov[2];
       //console.log("w" + w + " h" + h + "::", fov);
       if (pass === 0) {
         //1st pass: record slice locations in world space
         if (!isRender) {
-          if (axCorSag === this.sliceTypeAxial) axiMM.push(sliceMM);
-          if (axCorSag === this.sliceTypeCoronal) corMM.push(sliceMM);
-          if (axCorSag === this.sliceTypeSagittal) sagMM.push(sliceMM);
+          if (axCorSag === SLICE_TYPE.AXIAL) axiMM.push(sliceMM);
+          if (axCorSag === SLICE_TYPE.CORONAL) corMM.push(sliceMM);
+          if (axCorSag === SLICE_TYPE.SAGITTAL) sagMM.push(sliceMM);
         }
       } else {
         //2nd pass draw
@@ -7539,7 +7507,7 @@ Niivue.prototype.drawScene = function () {
   ) {
     if (this.meshes.length > 0) {
       this.screenSlices = []; // empty array
-      this.sliceType = this.sliceTypeRender; //only meshes loaded: we must use 3D render mode
+      this.opts.sliceType = SLICE_TYPE.RENDER; //only meshes loaded: we must use 3D render mode
       return this.draw3D(); //meshes loaded but no volume
     }
     this.drawLoadingText(this.loadingText);
@@ -7548,14 +7516,14 @@ Niivue.prototype.drawScene = function () {
   if (!this.back.hasOwnProperty("dims")) return;
 
   if (
-    this.isDragging &&
+    this.uiData.isDragging &&
     this.scene.clipPlaneDepthAziElev[0] < 1.8 &&
-    this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0
+    this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
   ) {
     //user dragging over a 3D rendering
-    let x = this.dragStart[0] - this.dragEnd[0];
-    let y = this.dragStart[1] - this.dragEnd[1];
-    let depthAziElev = this.dragClipPlaneStartDepthAziElev.slice();
+    let x = this.uiData.dragStart[0] - this.uiData.dragEnd[0];
+    let y = this.uiData.dragStart[1] - this.uiData.dragEnd[1];
+    let depthAziElev = this.uiData.dragClipPlaneStartDepthAziElev.slice();
     depthAziElev[1] -= x;
     depthAziElev[1] = depthAziElev[1] % 360;
     depthAziElev[2] += y;
@@ -7569,7 +7537,7 @@ Niivue.prototype.drawScene = function () {
   } //dragging over rendering
   if (
     this.sliceMosaicString.length < 1 &&
-    this.sliceType === this.sliceTypeRender
+    this.opts.sliceType === SLICE_TYPE.RENDER
   ) {
     if (this.opts.isColorbar) this.reserveColorbarPanel();
     this.screenSlices = []; // empty array
@@ -7585,11 +7553,11 @@ Niivue.prototype.drawScene = function () {
     // issue56 is use mm else use voxel
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
     this.screenSlices = []; // empty array
-    if (this.sliceType === this.sliceTypeAxial) {
+    if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
       this.draw2D([0, 0, 0, 0], 0);
-    } else if (this.sliceType === this.sliceTypeCoronal) {
+    } else if (this.opts.sliceType === SLICE_TYPE.CORONAL) {
       this.draw2D([0, 0, 0, 0], 1);
-    } else if (this.sliceType === this.sliceTypeSagittal) {
+    } else if (this.opts.sliceType === SLICE_TYPE.SAGITTAL) {
       this.draw2D([0, 0, 0, 0], 2);
     } else {
       //sliceTypeMultiplanar
@@ -7670,33 +7638,36 @@ Niivue.prototype.drawScene = function () {
   if (this.opts.isRuler) this.drawRuler();
   if (this.opts.isColorbar) this.drawColorbar();
 
-  if (this.isDragging) {
+  if (this.uiData.isDragging) {
     //if (this.opts.isDragForPanZoom) {
-    if (this.opts.dragMode === dragModes.pan) {
+    if (this.opts.dragMode === DRAG_MODE.pan) {
       this.dragForPanZoom([
-        this.dragStart[0],
-        this.dragStart[1],
-        this.dragEnd[0],
-        this.dragEnd[1],
+        this.uiData.dragStart[0],
+        this.uiData.dragStart[1],
+        this.uiData.dragEnd[0],
+        this.uiData.dragEnd[1],
       ]);
       return;
     }
-    if (this.opts.dragMode === dragModes.measurement) {
+    if (this.opts.dragMode === DRAG_MODE.measurement) {
       //if (this.opts.isDragShowsMeasurementTool) {
       this.drawMeasurementTool([
-        this.dragStart[0],
-        this.dragStart[1],
-        this.dragEnd[0],
-        this.dragEnd[1],
+        this.uiData.dragStart[0],
+        this.uiData.dragStart[1],
+        this.uiData.dragEnd[0],
+        this.uiData.dragEnd[1],
       ]);
       return;
     }
-    if (this.inRenderTile(this.dragStart[0], this.dragStart[1]) >= 0) return;
-    let width = Math.abs(this.dragStart[0] - this.dragEnd[0]);
-    let height = Math.abs(this.dragStart[1] - this.dragEnd[1]);
+    if (
+      this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
+    )
+      return;
+    let width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);
+    let height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1]);
     this.drawSelectionBox([
-      Math.min(this.dragStart[0], this.dragEnd[0]),
-      Math.min(this.dragStart[1], this.dragEnd[1]),
+      Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
+      Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
       width,
       height,
     ]);
@@ -7707,7 +7678,7 @@ Niivue.prototype.drawScene = function () {
     this.scene.crosshairPos[2],
   ]);
   if (
-    this.sliceType === this.sliceTypeMultiplanar &&
+    this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
     maxVols > 1 &&
     this.graph.autoSizeMultiplanar
   )
