@@ -50,7 +50,7 @@ import {
 import { Subject } from "rxjs";
 import { orientCube } from "./orientCube.js";
 import { NiivueObject3D } from "./niivue-object3D.js";
-import { NVImage, NVImageFromUrlOptions } from "./nvimage.js";
+import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage.js";
 import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
@@ -1330,7 +1330,7 @@ Niivue.prototype.readDirectory = function (directory) {
           file: allFileObects, // an array of file objects
           name: directory.name,
           urlImgData: null, // nothing
-          isDICOMDIR: true, // signify that this is a dicom directory
+          imageType: NVIMAGE_TYPE.DCM_FOLDER, // signify that this is a dicom directory
         });
         this.addVolume(volume);
       }
