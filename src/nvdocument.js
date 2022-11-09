@@ -17,6 +17,10 @@ export const SLICE_TYPE = Object.freeze({
   RENDER: 4,
 });
 
+/**
+ * @enum
+ * @readonly
+ */
 export const DRAG_MODE = Object.freeze({
   none: 0,
   contrast: 1,
@@ -24,6 +28,50 @@ export const DRAG_MODE = Object.freeze({
   pan: 3,
 });
 
+/**
+ * @typdef {Object} NVConfigOptions
+ * @property {number} textHeight
+ * @property {number} colorbarHeight
+ * @property {number} crosshairWidth
+ * @property {number} rulerWidth
+ * @property {boolean} show3Dcrosshair
+ * @property {number[]} backColor
+ * @property {number[]} crosshairColor
+ * @property {number[]} selectionBoxColor
+ * @property {number[]} clipPlaneColor
+ * @property {number[]} rulerColor
+ * @property {number} colorbarMargin
+ * @property {boolean} trustCalMinMax
+ * @property {string} clipPlaneHotKey
+ * @property {string} viewModeHotKey
+ * @property {number} doubleTouchTimeout
+ * @property {number} longTouchTimeout
+ * @property {number} keyDebounceTime
+ * @property {boolean} isNearestInterpolation
+ * @property {boolean} isAtlasOutline
+ * @property {boolean} isRuler
+ * @property {boolean} isColorbar
+ * @property {boolean} isOrientCube
+ * @property {number} multiplanarPadPixels
+ * @property {boolean} multiplanarForceRender
+ * @property {boolean} isRadiologicalConvention
+ * @property {number} meshThicknessOn2D
+ * @property {DRAG_MODE} dragMode
+ * @property {boolean} isDepthPickMesh
+ * @property {boolean} isCornerOrientationText
+ * @property {boolean} sagittalNoseLeft
+ * @property {boolean} isSliceMM
+ * @property {boolean} isHighResolutionCapable
+ * @property {boolean} logging
+ * @property {string} loadingText
+ * @property {boolean} dragAndDropEnabled
+ * @property {boolean} drawingEnabled
+ * @property {number} penValue
+ * @property {boolean} isFilledPen
+ * @property {string} thumbnail
+ * @property {number} maxDrawUndoBitmaps
+ * @property {SLICE_TYPE} sliceType
+ */
 export const DEFAULT_OPTIONS = {
   textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
   colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
@@ -82,6 +130,15 @@ export class NVDocument {
     this.data.opts = DEFAULT_OPTIONS;
     this.data.previewImageDataURL = "";
 
+    /**
+     * @typdef {Object} NVSceneData
+     * @property {number} azimuth
+     * @property {number} elevation
+     * @property {number[]} crosshairPos
+     * @property {number[]} clipPlane
+     * @property {number[]} clipPlaneDepthAziElev
+     * @property {number} volScaleMultiplier
+     */
     this.scene = {
       onAzimuthElevationChange: () => {},
       onZoom3DChange: () => {},
@@ -355,6 +412,22 @@ export class NVDocument {
       : null;
   }
 
+  /**
+   * @typedef {Object} NVDocumentData
+   * @property {string[]} encodedImageBlobs base64 encoded images
+   * @property {string} encodedDrawingBlob base64 encoded drawing
+   * @property {string} previewImageDataURL dataURL of the preview image
+   * @property {Map<string, number>} imageOptionsMap map of image ids to image options
+   * @property {NVImageFromUrlOptions} imageOptionsArray array of image options to recreate images
+   * @property {NVSceneData} sceneData data to recreate a scene
+   * @property {NVConfigOptions} opts configuration options of {@link Niivue} instance
+   * @property {string} meshesString encoded meshes
+   */
+
+  /**
+   * Converts NVDocument to JSON
+   * @returns {NVDocumentData}
+   */
   json() {
     let data = {};
     data.encodedImageBlobs = [];
