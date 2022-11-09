@@ -587,13 +587,13 @@ function subtract(out, a, b) {
   out[2] = a[2] - b[2];
   return out;
 }
-function min$S(out, a, b) {
+function min$T(out, a, b) {
   out[0] = Math.min(a[0], b[0]);
   out[1] = Math.min(a[1], b[1]);
   out[2] = Math.min(a[2], b[2]);
   return out;
 }
-function max$T(out, a, b) {
+function max$U(out, a, b) {
   out[0] = Math.max(a[0], b[0]);
   out[1] = Math.max(a[1], b[1]);
   out[2] = Math.max(a[2], b[2]);
@@ -99851,37 +99851,37 @@ function v4(options, buf, offset) {
   }
   return stringify(rnds);
 }
-const min$R = 0;
-const max$S = 0;
-const R$R = [
+const min$S = 0;
+const max$T = 0;
+const R$S = [
   0,
   0,
   24,
   248,
   255
 ];
-const G$R = [
+const G$S = [
   0,
   0,
   177,
   254,
   0
 ];
-const B$R = [
+const B$S = [
   0,
   136,
   0,
   0,
   0
 ];
-const A$R = [
+const A$S = [
   0,
   32,
   64,
   78,
   128
 ];
-const I$R = [
+const I$S = [
   0,
   64,
   128,
@@ -99889,6 +99889,42 @@ const I$R = [
   255
 ];
 var actc = {
+  min: min$S,
+  max: max$T,
+  R: R$S,
+  G: G$S,
+  B: B$S,
+  A: A$S,
+  I: I$S
+};
+const min$R = 0;
+const max$S = 0;
+const R$R = [
+  0,
+  0,
+  0
+];
+const G$R = [
+  0,
+  0,
+  0
+];
+const B$R = [
+  0,
+  128,
+  255
+];
+const A$R = [
+  0,
+  64,
+  128
+];
+const I$R = [
+  0,
+  128,
+  255
+];
+var blue = {
   min: min$R,
   max: max$S,
   R: R$R,
@@ -99902,29 +99938,44 @@ const max$R = 0;
 const R$Q = [
   0,
   0,
-  0
+  0,
+  0,
+  196,
+  255
 ];
 const G$Q = [
   0,
-  0,
-  0
+  32,
+  128,
+  128,
+  128,
+  32
 ];
 const B$Q = [
   0,
-  128,
-  255
+  255,
+  196,
+  0,
+  0,
+  0
 ];
 const A$Q = [
   0,
+  128,
+  64,
+  64,
   64,
   128
 ];
 const I$Q = [
   0,
+  1,
+  64,
   128,
+  192,
   255
 ];
-var blue = {
+var blue2red = {
   min: min$Q,
   max: max$R,
   R: R$Q,
@@ -99939,43 +99990,33 @@ const R$P = [
   0,
   0,
   0,
-  0,
-  196,
-  255
+  0
 ];
 const G$P = [
   0,
-  32,
+  1,
   128,
-  128,
-  128,
-  32
+  255
 ];
 const B$P = [
   0,
-  255,
-  196,
-  0,
-  0,
-  0
+  222,
+  127,
+  32
 ];
 const A$P = [
   0,
-  128,
-  64,
-  64,
+  0,
   64,
   128
 ];
 const I$P = [
   0,
   1,
-  64,
   128,
-  192,
   255
 ];
-var blue2red = {
+var bluegrn = {
   min: min$P,
   max: max$Q,
   R: R$P,
@@ -99988,35 +100029,30 @@ const min$O = 0;
 const max$P = 0;
 const R$O = [
   0,
-  0,
-  0,
-  0
+  103,
+  255
 ];
 const G$O = [
   0,
-  1,
-  128,
+  126,
   255
 ];
 const B$O = [
   0,
-  222,
-  127,
-  32
+  165,
+  255
 ];
 const A$O = [
   0,
-  0,
-  64,
+  76,
   128
 ];
 const I$O = [
   0,
-  1,
-  128,
+  153,
   255
 ];
-var bluegrn = {
+var bone = {
   min: min$O,
   max: max$P,
   R: R$O,
@@ -100029,30 +100065,45 @@ const min$N = 0;
 const max$O = 0;
 const R$N = [
   0,
+  43,
   103,
+  199,
+  216,
   255
 ];
 const G$N = [
   0,
-  126,
+  0,
+  37,
+  155,
+  213,
   255
 ];
 const B$N = [
   0,
-  165,
+  0,
+  20,
+  97,
+  201,
   255
 ];
 const A$N = [
   0,
-  76,
-  128
+  44,
+  48,
+  54,
+  56,
+  56
 ];
 const I$N = [
   0,
-  153,
+  64,
+  128,
+  196,
+  240,
   255
 ];
-var bone = {
+var bronze = {
   min: min$N,
   max: max$O,
   R: R$N,
@@ -100065,45 +100116,35 @@ const min$M = 0;
 const max$N = 0;
 const R$M = [
   0,
-  43,
-  103,
-  199,
-  216,
+  86,
+  166,
   255
 ];
 const G$M = [
-  0,
-  0,
-  37,
-  155,
-  213,
-  255
+  32,
+  92,
+  156,
+  233
 ];
 const B$M = [
-  0,
-  0,
-  20,
-  97,
-  201,
-  255
+  76,
+  108,
+  117,
+  69
 ];
 const A$M = [
   0,
-  44,
-  48,
-  54,
   56,
-  56
+  80,
+  88
 ];
 const I$M = [
   0,
   64,
-  128,
-  196,
-  240,
+  192,
   255
 ];
-var bronze = {
+var cividis = {
   min: min$M,
   max: max$N,
   R: R$M,
@@ -100116,35 +100157,30 @@ const min$L = 0;
 const max$M = 0;
 const R$L = [
   0,
-  86,
-  166,
-  255
+  0,
+  0
 ];
 const G$L = [
-  32,
-  92,
-  156,
-  233
+  127,
+  196,
+  254
 ];
 const B$L = [
-  76,
-  108,
-  117,
-  69
+  255,
+  255,
+  255
 ];
 const A$L = [
   0,
-  56,
-  80,
-  88
+  64,
+  128
 ];
 const I$L = [
   0,
-  64,
-  192,
+  128,
   255
 ];
-var cividis = {
+var cool = {
   min: min$L,
   max: max$M,
   R: R$L,
@@ -100157,30 +100193,45 @@ const min$K = 0;
 const max$L = 0;
 const R$K = [
   0,
-  0,
-  0
+  61,
+  122,
+  183,
+  244,
+  255
 ];
 const G$K = [
-  127,
-  196,
-  254
+  0,
+  41,
+  81,
+  122,
+  163,
+  203
 ];
 const B$K = [
-  255,
-  255,
-  255
+  0,
+  25,
+  51,
+  76,
+  102,
+  127
 ];
 const A$K = [
   0,
-  64,
+  25,
+  51,
+  71,
+  102,
   128
 ];
 const I$K = [
   0,
-  128,
+  51,
+  102,
+  153,
+  204,
   255
 ];
-var cool = {
+var copper = {
   min: min$K,
   max: max$L,
   R: R$K,
@@ -100205,7 +100256,7 @@ const G$J = [
   81,
   122,
   163,
-  203
+  255
 ];
 const B$J = [
   0,
@@ -100213,7 +100264,7 @@ const B$J = [
   51,
   76,
   102,
-  127
+  255
 ];
 const A$J = [
   0,
@@ -100231,7 +100282,7 @@ const I$J = [
   204,
   255
 ];
-var copper = {
+var copper2 = {
   min: min$J,
   max: max$K,
   R: R$J,
@@ -100240,49 +100291,34 @@ var copper = {
   A: A$J,
   I: I$J
 };
-const min$I = 0;
-const max$J = 0;
+const min$I = -643;
+const max$J = -235;
 const R$I = [
   0,
-  61,
-  122,
-  183,
-  244,
-  255
+  0,
+  0
 ];
 const G$I = [
-  0,
-  41,
-  81,
-  122,
-  163,
-  255
+  154,
+  154,
+  154
 ];
 const B$I = [
-  0,
-  25,
-  51,
-  76,
-  102,
-  255
+  179,
+  179,
+  101
 ];
 const A$I = [
   0,
-  25,
-  51,
-  71,
-  102,
-  128
+  32,
+  0
 ];
 const I$I = [
   0,
-  51,
-  102,
-  153,
-  204,
+  163,
   255
 ];
-var copper2 = {
+var ct_airways = {
   min: min$I,
   max: max$J,
   R: R$I,
@@ -100291,34 +100327,39 @@ var copper2 = {
   A: A$I,
   I: I$I
 };
-const min$H = -643;
-const max$I = -235;
+const min$H = 114;
+const max$I = 800;
 const R$H = [
   0,
-  0,
-  0
+  255,
+  255,
+  255
 ];
 const G$H = [
-  154,
-  154,
-  154
+  0,
+  0,
+  129,
+  255
 ];
 const B$H = [
-  179,
-  179,
-  101
+  0,
+  0,
+  0,
+  255
 ];
 const A$H = [
   0,
-  32,
-  0
+  64,
+  88,
+  228
 ];
 const I$H = [
   0,
-  163,
+  80,
+  160,
   255
 ];
-var ct_airways = {
+var ct_artery = {
   min: min$H,
   max: max$I,
   R: R$H,
@@ -103968,6 +104009,7 @@ var cmaps = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty(
   copper,
   copper2,
   ct_airways,
+  ct_artery,
   ct_bones,
   ct_brain,
   ct_brain_gray,
@@ -107010,8 +107052,8 @@ function getExtents$1(positions, forceOriginInVolume = true) {
         copy(mn, v);
         copy(mx, v);
       }
-      min$S(mn, mn, v);
-      max$T(mx, mx, v);
+      min$T(mn, mn, v);
+      max$U(mx, mx, v);
       subtract(v, v, origin);
       let dx = len(v);
       mxDx = Math.max(mxDx, dx);
@@ -107791,8 +107833,8 @@ function getExtents(pts) {
   for (let i2 = 0; i2 < pts.length; i2 += 3) {
     let v = fromValues$1(pts[i2], pts[i2 + 1], pts[i2 + 2]);
     mxDx = Math.max(mxDx, len(v));
-    min$S(mn, mn, v);
-    max$T(mx, mx, v);
+    min$T(mn, mn, v);
+    max$U(mx, mx, v);
   }
   let extentsMin = [mn[0], mn[1], mn[2]];
   let extentsMax = [mx[0], mx[1], mx[2]];
@@ -116906,8 +116948,8 @@ Niivue.prototype.sceneExtentsMinMax = function() {
     }
     for (let i2 = 0; i2 < this.meshes.length; i2++) {
       let v = fromValues$1(this.meshes[i2].extentsMin[0], this.meshes[i2].extentsMin[1], this.meshes[i2].extentsMin[2]);
-      min$S(mn, mn, v);
-      max$T(mx, mx, v);
+      min$T(mn, mn, v);
+      max$U(mx, mx, v);
     }
   }
   let range = create$1();
