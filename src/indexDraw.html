@@ -95,6 +95,7 @@
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
+        <a class="viewBtn" id="SaveDraw">Save Drawing</a>
         <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
         <a class="viewBtn" id="ShowHeader">Show Header</a>
         <a class="linker" href="https://github.com/niivue/niivue">About</a>
@@ -157,6 +158,7 @@
         <a class="viewBtn" id="@Cluster">Erase Cluster</a>
         <a class="viewBtn divider dropdown-item-checked" id="DrawFilled">Fill Outline</a>
         <a class="viewBtn dropdown-item-checked" id="Translucent">Translucent</a>
+        <a class="viewBtn" id="Growcut">Grow Cut</a>
       </div>
     </div> 
     <div class="dropdown">
@@ -207,7 +209,7 @@
       show3Dcrosshair: true,
       onLocationChange:handleIntensityChange
   })
-  nv1.opts.isColorbar =true
+  nv1.opts.isColorbar = false
   nv1.setRadiologicalConvention(false)
   nv1.attachTo('gl1')
   nv1.setClipPlane([0.3, 270, 0])
@@ -218,9 +220,16 @@
   nv1.graph.autoSizeMultiplanar = true
   nv1.graph.opacity = 1.0
   nv1.drawOpacity = 0.5;
-  var volumeList1 = [{url: "../demos/images/FLAIR.nii.gz"}]
+  //var volumeList1 = [{url: "../demos/images/FLAIR.nii.gz"}]
+  var volumeList1 = [{url: "./brain.nii", colorMap: "ct_artery",}]
+
   await nv1.loadVolumes(volumeList1)
-  await nv1.loadDrawingFromUrl("../demos/images/lesion.nii.gz")
+  //nv1.setSliceType(nv1.sliceTypeRender)
+  nv1.opts.isColorbar =false
+  await nv1.loadDrawingFromUrl("./draw.nii")
+
+  //await nv1.loadDrawingFromUrl("../demos/images/lesion.nii.gz")
+  //nv1.volumes[0].colorMap = 'ct_kidneys'
   function toggleGroup(id) {
       let buttons = document.getElementsByClassName("viewBtn")
       let char0 = id.charAt(0)
@@ -242,6 +251,10 @@
           //el.style.removeProperty("display")
           //el.style.display = "block"
         }, 500)*/
+      }
+      if (event.target.id === "SaveDraw") {
+          nv1.saveImage('draw.nii', true)
+          return
       }
       if (event.target.id === "SaveBitmap") {
           nv1.saveScene('ScreenShot.png')
@@ -303,6 +316,8 @@
               nv1.setPenValue(-0, isFilled);
           toggleGroup(event.target.id)
       } //Draw Color
+      if (event.target.id === "Growcut")
+        nv1.drawGrowCut();
       if (event.target.id === "Translucent") {
           if (nv1.drawOpacity > 0.75)
             nv1.drawOpacity = 0.5
