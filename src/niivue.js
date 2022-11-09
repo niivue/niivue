@@ -2505,7 +2505,6 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  * @returns {Niivue} returns the Niivue instance
  */
 Niivue.prototype.loadDocument = function (document) {
-  console.log("loading document");
   this.document = document;
   this.mediaUrlMap.clear();
   this.createEmptyDrawing();

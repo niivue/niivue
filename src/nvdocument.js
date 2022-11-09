@@ -557,22 +557,18 @@ export class NVDocument {
   }
 
   /**
-   * Factory method to return an instance of NVDocument
+   * Factory method to return an instance of NVDocument from a URL
    * @param {string} url
    * @constructs NVDocument
    */
   static async loadFromUrl(url) {
-    let document = new NVDocument();
     let response = await fetch(url);
-    document.data = await response.json();
-    document.scene.sceneData = document.data.sceneData;
-    delete document.data["sceneData"];
-    NVDocument.deserializeMeshDataObjects(document);
-    return document;
+    let data = await response.json();
+    return NVDocument.loadFromJSON(data);
   }
 
   /**
-   * Factory method to return an instance of NVDocument
+   * Factory method to return an instance of NVDocument from a File object
    * @param {File} file
    * @constructs NVDocument
    */
@@ -586,6 +582,18 @@ export class NVDocument {
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);
 
+    return document;
+  }
+
+  /**
+   * Factory method to return an instance of NVDocument from JSON
+   */
+  static loadFromJSON(data) {
+    let document = new NVDocument();
+    document.data = data;
+    document.scene.sceneData = data.sceneData;
+    delete document.data["sceneData"];
+    NVDocument.deserializeMeshDataObjects(document);
     return document;
   }
 }
