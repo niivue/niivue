@@ -5,65 +5,43 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>advanced world space</title>
-    <style>
-      section {
-        margin: 5px;
-      }
-
-      body {
-        margin: 5px;
-        padding: 5px;
-      }
-
-      html {
-        margin: 5px;
-        padding: 5px;
-      }
-    </style>
+    <link rel="stylesheet" href="light.css">
   </head>
   <body style="font-family: sans-serif;">
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <section>
-      <h1>
-        World space options
-      </h1>
-    </section>
-    <div class="slidecontainer">
-      Mesh clipping <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
-    </div>
-    <input type="checkbox" id="check1" name="check1" unchecked>
-    <label for="check1">Radiological</label>
-    <input type="checkbox" id="check2" name="check2" unchecked>
-    <label for="check2">Corner text</label>
-    <input type="checkbox" id="check3" name="check3" checked>
-    <label for="check3">World space</label>
-    <input type="checkbox" id="check7" name="check7" unchecked>
-    <label for="check7">Colorbar</label>
-    <input type="checkbox" id="check8" name="check8" unchecked>
-    <label for="check8">Cube</label>
-    <input type="checkbox" id="check9" name="check9" unchecked>
-    <label for="check9">Pad</label>
-    <input type="checkbox" id="check10" name="check10" checked>
-    <label for="check10">HighDPI</label>
-    <input type="checkbox" id="check11" name="check11" unchecked>
-    <label for="check11">Force Render</label>
-    &nbsp
-    <label for="dragMode">Drag mode</label>
-    <select name="contrast" id="dragMode">
-      <option value="none">contrast</option>
-      <option value="measurement">measurement</option>
-      <option value="pan">pan/zoom (world space only)</option>
-      <option value="none">none</option>
-    </select>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:100%; height:100vh;">
-        <canvas id="gl1" height=640 width=640>
-        </canvas>
-      </div>
-    </section>
+    <header>
+     <label for="dxSlider">Mesh clipping</label>
+     <input type="range" min="0" max="11" value="11" class="slider" id="dxSlider">
+     <input type="checkbox" id="check1" name="check1" unchecked>
+     <label for="check1">Radiological</label>
+     <input type="checkbox" id="check2" name="check2" unchecked>
+     <label for="check2">Corner text</label>
+     <input type="checkbox" id="check3" name="check3" checked>
+     <label for="check3">World space</label>
+     <input type="checkbox" id="check7" name="check7" unchecked>
+     <label for="check7">Colorbar</label>
+     <input type="checkbox" id="check8" name="check8" unchecked>
+     <label for="check8">Cube</label>
+     <input type="checkbox" id="check9" name="check9" unchecked>
+     <label for="check9">Pad</label>
+     <input type="checkbox" id="check10" name="check10" checked>
+     <label for="check10">HighDPI</label>
+     <input type="checkbox" id="check11" name="check11" unchecked>
+     <label for="check11">Force Render</label>
+     &nbsp
+     <label for="dragMode">Drag mode</label>
+     <select name="contrast" id="dragMode">
+       <option value="none">contrast</option>
+       <option value="measurement">measurement</option>
+       <option value="pan">pan/zoom (world space only)</option>
+       <option value="none">none</option>
+     </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
     <script src="./niivue.umd.js">
     </script>
     <script type="module" async>

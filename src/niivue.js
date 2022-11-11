@@ -329,7 +329,11 @@ export function Niivue(options = {}) {
   } else {
     this.uiData.dpr = 1;
   }
-
+  this.dragModes = [];
+  this.dragModes.contrast = DRAG_MODE.contrast;
+  this.dragModes.measurement = DRAG_MODE.measurement;
+  this.dragModes.none = DRAG_MODE.none;
+  this.dragModes.pan = DRAG_MODE.pan;
   this.sliceTypeAxial = SLICE_TYPE.AXIAL;
   this.sliceTypeCoronal = SLICE_TYPE.CORONAL;
   this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL;
