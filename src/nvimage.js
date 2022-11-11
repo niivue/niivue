@@ -1,12 +1,15 @@
 import nifti from "nifti-reader-js";
+import daikon from "daikon";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 import * as cmaps from "./cmaps";
-import * as pako from "pako";
+import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
+import { prototype } from "nifti-reader-js/src/nifti1";
 const log = new Log();
 
+// not included in public docs
 function isPlatformLittleEndian() {
   //inspired by https://github.com/rii-mango/Papaya
   var buffer = new ArrayBuffer(2);
@@ -24,6 +27,141 @@ function isPlatformLittleEndian() {
  */
 
 /**
+ * Enum for supported image types
+ * @readonly
+ * @enum {number}
+ */
+export const NVIMAGE_TYPE = Object.freeze({
+  UNKNOWN: 0,
+  NII: 1,
+  DCM: 2,
+  DCM_MANIFEST: 3,
+  MIH: 4,
+  MIF: 5,
+  NHDR: 6,
+  NRRD: 7,
+  MHD: 8,
+  MHA: 9,
+  MGH: 10,
+  MGZ: 11,
+  V: 12,
+  V16: 13,
+  VMR: 14,
+  HEAD: 15,
+  DCM_FOLDER: 16,
+  parse: (ext) => {
+    let imageType = NVIMAGE_TYPE.UNKNOWN;
+    switch (ext.toUpperCase()) {
+      case "":
+      case "DCM":
+        imageType = NVIMAGE_TYPE.DCM;
+        break;
+      case "TXT":
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
+        break;
+      case "NII":
+        imageType = NVIMAGE_TYPE.NII;
+        break;
+      case "MIH":
+        imageType = NVIMAGE_TYPE.MIH;
+        break;
+      case "MIF":
+        imageType = NVIMAGE_TYPE.MIF;
+        break;
+      case "NHDR":
+        imageType = NVIMAGE_TYPE.NHDR;
+        break;
+      case "NRRD":
+        imageType = NVIMAGE_TYPE.NRRD;
+        break;
+      case "MHD":
+        imageType = NVIMAGE_TYPE.MHD;
+        break;
+      case "MHA":
+        imageType = NVIMAGE_TYPE.MHA;
+        break;
+      case "MGH":
+        imageType = NVIMAGE_TYPE.MGH;
+        break;
+      case "MGZ":
+        imageType = NVIMAGE_TYPE.MGZ;
+        break;
+      case "V":
+        imageType = NVIMAGE_TYPE.V;
+        break;
+      case "V16":
+        imageType = NVIMAGE_TYPE.V16;
+        break;
+      case "VMR":
+        imageType = NVIMAGE_TYPE.VMR;
+        break;
+      case "HEAD":
+        imageType = NVIMAGE_TYPE.HEAD;
+        break;
+    }
+    return imageType;
+  },
+});
+
+/**
+ * NVImageFromUrlOptions
+ * @typedef  NVImageFromUrlOptions
+ * @type {object}
+ * @property {string} url - the resolvable URL pointing to a nifti image to load
+ * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+ * @property {string} [name=""] a name for this image. Default is an empty string
+ * @property {string} [colorMap="gray"] a color map to use. default is gray
+ * @property {number} [opacity=1.0] the opacity for this image. default is 1
+ * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
+ * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
+ * @property {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @property {boolean} [visible=true] whether or not this image is to be visible
+ * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
+ * @property {string} [colorMapNegative=""] a color map to use for symmetrical negative intensities
+ * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
+ */
+
+/**
+ *
+ * @constructor
+ * @returns {NVImageFromUrlOptions}
+ */
+export function NVImageFromUrlOptions(
+  url,
+  urlImageData = "",
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true,
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN
+) {
+  return {
+    url,
+    urlImageData,
+    name,
+    colorMap,
+    opacity,
+    cal_min,
+    cal_max,
+    trustCalMinMax,
+    percentileFrac,
+    ignoreZeroVoxels,
+    visible,
+    useQFormNotSForm,
+    colorMapNegative,
+    imageType,
+  };
+}
+
+/**
  * @class NVImage
  * @type NVImage
  * @description
@@ -33,22 +171,33 @@ function isPlatformLittleEndian() {
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {string} [colorMap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {string} [pairedImgData=null] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+ * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
+ * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
  * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
+ * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @param {function} [onColorMapChange=()=>{}] callback for color map change
+ * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
-export var NVImage = function (
-  dataBuffer,
+export function NVImage(
+  dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
   name = "",
   colorMap = "gray",
   opacity = 1.0,
   pairedImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  useQFormNotSForm = false
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -74,37 +223,82 @@ export var NVImage = function (
 
   this.name = name;
   this.id = uuidv4();
-  this.colorMap = colorMap;
+  this._colorMap = colorMap;
   this.frame4D = 0; //indexed from 0!
-  this.opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
+  this._opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
+  this.colorMapNegative = colorMapNegative;
   this.visible = visible;
+  this.modulationImage = null;
+  this.series = []; // for concatenating dicom images
+
+  this.onColorMapChange = () => {};
+  this.onOpacityChange = () => {};
 
   // Added to support zerosLike
   if (!dataBuffer) {
     return;
   }
   var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(name)[1];
+  let ext = re.exec(name)[1] || "";
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
+    ext = ext.toUpperCase();
+  }
   let imgRaw = null;
   this.hdr = null;
-  if (ext.toUpperCase() === "NHDR" || ext.toUpperCase() === "NRRD") {
-    imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
-  } else if (ext.toUpperCase() === "MGH") {
-    imgRaw = this.readMGH(dataBuffer);
-  } else if (ext.toUpperCase() === "MGZ") {
-    imgRaw = this.readMGH(nifti.decompress(dataBuffer));
-  } else if (ext.toUpperCase() === "HEAD") {
-    imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
-  } else {
-    this.hdr = nifti.readHeader(dataBuffer);
-    if (nifti.isCompressed(dataBuffer)) {
-      imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
-    } else {
-      imgRaw = nifti.readImage(this.hdr, dataBuffer);
-    }
+
+  if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+    imageType = NVIMAGE_TYPE.parse(ext);
+  }
+
+  this.imageType = imageType;
+
+  switch (imageType) {
+    case NVIMAGE_TYPE.DCM_FOLDER:
+    case NVIMAGE_TYPE.DCM_MANIFEST:
+    case NVIMAGE_TYPE.DCM:
+      imgRaw = this.readDICOM(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.MIH:
+    case NVIMAGE_TYPE.MIF:
+      imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
+      break;
+    case NVIMAGE_TYPE.NHDR:
+    case NVIMAGE_TYPE.NRRD:
+      imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
+      break;
+    case NVIMAGE_TYPE.MHD:
+    case NVIMAGE_TYPE.MHA:
+      imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
+      break;
+    case NVIMAGE_TYPE.V:
+      imgRaw = this.readECAT(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.V16:
+      imgRaw = this.readV16(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.VMR:
+      imgRaw = this.readVMR(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.HEAD:
+      imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
+      break;
+    case NVIMAGE_TYPE.NII:
+      this.hdr = nifti.readHeader(dataBuffer);
+      if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
+        this.hdr.cal_max = 0.0;
+      if (nifti.isCompressed(dataBuffer)) {
+        imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
+      } else {
+        imgRaw = nifti.readImage(this.hdr, dataBuffer);
+      }
+      break;
+    default:
+      throw new Error("Image type not supported");
   }
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
@@ -117,6 +311,35 @@ export var NVImage = function (
       this.hdr,
       imgRaw.byteLength
     );
+  //1007 = NIFTI_INTENT_VECTOR; 2003 = NIFTI_INTENT_RGB_VECTOR
+  // n.b. NIfTI standard says "NIFTI_INTENT_RGB_VECTOR" should be RGBA, but FSL only stores RGB
+  if (
+    (this.hdr.intent_code === 1007 || this.hdr.intent_code === 2003) &&
+    this.nFrame4D === 3 &&
+    this.hdr.datatypeCode === this.DT_FLOAT
+  ) {
+    let tmp = new Float32Array(imgRaw);
+    let f32 = tmp.slice();
+    this.hdr.datatypeCode = this.DT_RGB;
+    this.nFrame4D = 1;
+    for (let i = 4; i < 7; i++) this.hdr.dims[i] = 1;
+    this.hdr.dims[0] = 3; //3D
+    imgRaw = new Uint8Array(this.nVox3D * 3); //*3 for RGB
+    let mx = Math.abs(f32[0]);
+    for (let i = 0; i < this.nVox3D * 3; i++)
+      mx = Math.max(mx, Math.abs(f32[i]));
+    let slope = 1.0;
+    if (mx > 0) slope = 1.0 / mx;
+
+    let nVox3D2 = this.nVox3D * 2;
+    let j = 0;
+    for (let i = 0; i < this.nVox3D; i++) {
+      imgRaw[j] = 255.0 * Math.abs(f32[i] * slope);
+      imgRaw[j + 1] = 255.0 * Math.abs(f32[i + this.nVox3D] * slope);
+      imgRaw[j + 2] = 255.0 * Math.abs(f32[i + nVox3D2] * slope);
+      j += 3;
+    }
+  } //NIFTI_INTENT_VECTOR: this is a RGB tensor
   if (
     this.hdr.pixDims[1] === 0.0 ||
     this.hdr.pixDims[2] === 0.0 ||
@@ -321,10 +544,45 @@ export var NVImage = function (
       throw "datatype " + this.hdr.datatypeCode + " not supported";
   }
   this.calculateRAS();
+  if (!isNaN(cal_min)) this.hdr.cal_min = cal_min;
+  if (!isNaN(cal_max)) this.hdr.cal_max = cal_max;
   this.calMinMax();
+}
+
+// not included in public docs
+// detect difference between voxel grid and world space
+// https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
+NVImage.prototype.computeObliqueAngle = function (mtx44) {
+  let mtx = mat4.clone(mtx44);
+  mat4.transpose(mtx, mtx44);
+  let dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2]);
+  let xmax =
+    Math.max(Math.max(Math.abs(mtx[0]), Math.abs(mtx[1])), Math.abs(mtx[2])) /
+    dxtmp;
+  let dytmp = Math.sqrt(mtx[4] * mtx[4] + mtx[5] * mtx[5] + mtx[6] * mtx[6]);
+  let ymax =
+    Math.max(Math.max(Math.abs(mtx[4]), Math.abs(mtx[5])), Math.abs(mtx[6])) /
+    dytmp;
+  let dztmp = Math.sqrt(mtx[8] * mtx[8] + mtx[9] * mtx[9] + mtx[10] * mtx[10]);
+  let zmax =
+    Math.max(Math.max(Math.abs(mtx[8]), Math.abs(mtx[9])), Math.abs(mtx[10])) /
+    dztmp;
+  let fig_merit = Math.min(Math.min(xmax, ymax), zmax);
+  let oblique_angle = Math.abs((Math.acos(fig_merit) * 180.0) / 3.141592653);
+  if (oblique_angle > 0.01)
+    console.log(
+      "Warning voxels not aligned with world space: " +
+        oblique_angle +
+        " degrees from plumb.\n"
+    );
+  else oblique_angle = 0.0;
+  return oblique_angle;
 };
 
+// not included in public docs
+// detect difference between voxel grid and world space
 NVImage.prototype.calculateOblique = function () {
+  this.oblique_angle = this.computeObliqueAngle(this.matRAS);
   let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
   let X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS);
   let Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS);
@@ -354,17 +612,44 @@ NVImage.prototype.calculateOblique = function () {
   let XY = Math.abs(90 - vec3.angle(X1mm, Y1mm) * (180 / Math.PI));
   let XZ = Math.abs(90 - vec3.angle(X1mm, Z1mm) * (180 / Math.PI));
   let YZ = Math.abs(90 - vec3.angle(Y1mm, Z1mm) * (180 / Math.PI));
-  let maxShear = Math.max(Math.max(XY, XZ), YZ);
-  if (maxShear > 0.1)
-    log.debug("Warning: shear detected (gantry tilt) of %f degrees", maxShear);
+  this.maxShearDeg = Math.max(Math.max(XY, XZ), YZ);
+  if (this.maxShearDeg > 0.1)
+    console.log(
+      "Warning: voxels are rhomboidal, maximum shear is %f degrees.",
+      this.maxShearDeg
+    );
+  //compute a matrix to transform vectors from factional space to mm:
+  let dim = vec4.fromValues(
+    this.dimsRAS[1],
+    this.dimsRAS[2],
+    this.dimsRAS[3],
+    1
+  );
+  let sform = mat4.clone(this.matRAS);
+  mat4.transpose(sform, sform);
+  let shim = vec4.fromValues(-0.5, -0.5, -0.5, 0); //bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
+  mat4.translate(sform, sform, shim);
+  //mat.mat4.scale(sform, sform, dim);
+  sform[0] *= dim[0];
+  sform[1] *= dim[0];
+  sform[2] *= dim[0];
+  sform[4] *= dim[1];
+  sform[5] *= dim[1];
+  sform[6] *= dim[1];
+  sform[8] *= dim[2];
+  sform[9] *= dim[2];
+  sform[10] *= dim[2];
+  this.frac2mm = mat4.clone(sform);
 };
 
+// not included in public docs
+// convert AFNI head/brik space to NIfTI format
+// https://github.com/afni/afni/blob/d6997e71f2b625ac1199460576d48f3136dac62c/src/thd_niftiwrite.c#L315
 NVImage.prototype.THD_daxes_to_NIFTI = function (
   xyzDelta,
   xyzOrigin,
   orientSpecific
 ) {
-  //https://github.com/afni/afni/blob/d6997e71f2b625ac1199460576d48f3136dac62c/src/thd_niftiwrite.c#L315
   let hdr = this.hdr;
   hdr.sform_code = 2;
   const ORIENT_xyz = "xxyyzzg"; //note strings indexed from 0!
@@ -406,6 +691,8 @@ NVImage.prototype.THD_daxes_to_NIFTI = function (
   hdr.affine[2][3] = axstart[nif_z_axnum];
 };
 
+// not included in public docs
+// determine spacing voxel centers (rows, columns, slices)
 NVImage.prototype.SetPixDimFromSForm = function () {
   let m = this.hdr.affine;
   let mat = mat4.fromValues(
@@ -438,20 +725,433 @@ NVImage.prototype.SetPixDimFromSForm = function () {
   this.hdr.pixDims[3] = vec3.length(mm001);
 };
 
-NVImage.prototype.readMGH = function (dataBuffer) {
+// not included in public docs
+// create NIfTI format SForm from DICOM frame of reference
+function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
+  //https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/volume/dicom/header-dicom.js#L605
+  /*Copyright (c) 2012-2015, RII-UTHSCSA
+All rights reserved.
+
+THIS PRODUCT IS NOT FOR CLINICAL USE.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+following conditions are met:
+
+ - Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+   disclaimer.
+
+ - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided with the distribution.
+
+ - Neither the name of the RII-UTHSCSA nor the names of its contributors may be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+  var cosines = imageDirections,
+    m = null;
+  if (cosines) {
+    var vs = {
+      colSize: voxelDimensions[0],
+      rowSize: voxelDimensions[1],
+      sliceSize: voxelDimensions[2],
+    };
+    var coord = imagePosition;
+    var cosx = [cosines[0], cosines[1], cosines[2]];
+    var cosy = [cosines[3], cosines[4], cosines[5]];
+    var cosz = [
+      cosx[1] * cosy[2] - cosx[2] * cosy[1],
+      cosx[2] * cosy[0] - cosx[0] * cosy[2],
+      cosx[0] * cosy[1] - cosx[1] * cosy[0],
+    ];
+    m = [
+      [
+        cosx[0] * vs.colSize * -1,
+        cosy[0] * vs.rowSize * -1,
+        cosz[0] * vs.sliceSize * -1,
+        -1 * coord[0],
+      ],
+      [
+        cosx[1] * vs.colSize * -1,
+        cosy[1] * vs.rowSize * -1,
+        cosz[1] * vs.sliceSize * -1,
+        -1 * coord[1],
+      ],
+      [
+        cosx[2] * vs.colSize,
+        cosy[2] * vs.rowSize,
+        cosz[2] * vs.sliceSize,
+        coord[2],
+      ],
+      [0, 0, 0, 1],
+    ];
+  }
+  return m;
+} // getBestTransform()
+
+// not included in public docs
+// read DICOM format image and treat it like a NIfTI
+NVImage.prototype.readDICOM = function (buf) {
+  this.series = new daikon.Series();
+  // parse DICOM file
+  if (Array.isArray(buf)) {
+    for (let i = 0; i < buf.length; i++) {
+      const dataview = new DataView(buf[i]);
+      let image = daikon.Series.parseImage(dataview);
+      if (image === null) {
+        console.error(daikon.Series.parserError);
+      } else if (image.hasPixelData()) {
+        // if it's part of the same series, add it
+        if (
+          this.series.images.length === 0 ||
+          image.getSeriesId() === this.series.images[0].getSeriesId()
+        ) {
+          this.series.addImage(image);
+        }
+      } // if hasPixelData
+    } // for i
+  } else {
+    // not a dicom folder drop
+    var image = daikon.Series.parseImage(new DataView(buf));
+    if (image === null) {
+      console.error(daikon.Series.parserError);
+    } else if (image.hasPixelData()) {
+      // if it's part of the same series, add it
+      if (
+        this.series.images.length === 0 ||
+        image.getSeriesId() === this.series.images[0].getSeriesId()
+      ) {
+        this.series.addImage(image);
+      }
+    }
+  }
+  // order the image files, determines number of frames, etc.
+  this.series.buildSeries();
+  // output some header info
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.scl_inter = 0;
+  hdr.scl_slope = 1;
+  if (this.series.images[0].getDataScaleIntercept())
+    hdr.scl_inter = this.series.images[0].getDataScaleIntercept();
+  if (this.series.images[0].getDataScaleSlope())
+    hdr.scl_slope = this.series.images[0].getDataScaleSlope();
+  if (hdr.scl_slope === 0) hdr.scl_slope;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims[1] = this.series.images[0].getCols();
+  hdr.dims[2] = this.series.images[0].getRows();
+  hdr.dims[3] = this.series.images[0].getNumberOfFrames();
+  if (this.series.images.length > 1) {
+    if (hdr.dims[3] > 1)
+      console.log(
+        "To Do: multiple slices per file and multiple files (XA30 DWI)"
+      );
+    hdr.dims[3] = this.series.images.length;
+  }
+  let rc = this.series.images[0].getPixelSpacing(); //TODO: order?
+  hdr.pixDims[1] = rc[0];
+  hdr.pixDims[2] = rc[1];
+  hdr.pixDims[3] = Math.max(
+    this.series.images[0].getSliceGap(),
+    this.series.images[0].getSliceThickness()
+  );
+  hdr.pixDims[4] = this.series.images[0].getTR() / 1000.0; //msec -> sec
+  let dt = this.series.images[0].getDataType(); //2=int,3=uint,4=float,
+  let bpv = this.series.images[0].getBitsAllocated();
+  hdr.numBitsPerVoxel = bpv;
+  this.hdr.littleEndian = this.series.images[0].littleEndian;
+  if (bpv === 8 && dt === 2) hdr.datatypeCode = this.DT_INT8;
+  else if (bpv === 8 && dt === 3) hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+  else if (bpv === 16 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_SHORT;
+  else if (bpv === 16 && dt === 3) hdr.datatypeCode = this.DT_UINT16;
+  else if (bpv === 32 && dt === 2) hdr.datatypeCode = this.DT_SIGNED_INT;
+  else if (bpv === 32 && dt === 3) hdr.datatypeCode = this.DT_UINT32;
+  else if (bpv === 32 && dt === 4) hdr.datatypeCode = this.DT_FLOAT;
+  else if (bpv === 64 && dt === 4) hdr.datatypeCode = this.DT_DOUBLE;
+  else console.log("Unsupported DICOM format: " + dt + " " + bpv);
+  let voxelDimensions = hdr.pixDims.slice(1, 4);
+  //console.log("dir", this.series.images[0].getImageDirections());
+  //console.log("pos", this.series.images[0].getImagePosition());
+  //console.log("dims", voxelDimensions);
+  let m = getBestTransform(
+    this.series.images[0].getImageDirections(),
+    voxelDimensions,
+    this.series.images[0].getImagePosition()
+  );
+  if (m) {
+    hdr.sform_code = 1;
+    hdr.affine = [
+      [m[0][0], m[0][1], m[0][2], m[0][3]],
+      [m[1][0], m[1][1], m[1][2], m[1][3]],
+      [m[2][0], m[2][1], m[2][2], m[2][3]],
+      [0, 0, 0, 1],
+    ];
+  }
+  //console.log("DICOM", this.series.images[0]);
+  //console.log("NIfTI", hdr);
+  let imgRaw = [];
+  //let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
+  let data;
+  let length = this.series.validatePixelDataLength(this.series.images[0]);
+  let buffer = new Uint8Array(
+    new ArrayBuffer(length * this.series.images.length)
+  );
+  // implementation copied from:
+  // https://github.com/rii-mango/Daikon/blob/bbe08bad9758dfbdf31ca22fb79048c7bad85706/src/series.js#L496
+  for (let i = 0; i < this.series.images.length; i++) {
+    if (this.series.isMosaic) {
+      data = this.series.getMosaicData(
+        this.series.images[i],
+        this.series.images[i].getPixelDataBytes()
+      );
+    } else {
+      data = this.series.images[i].getPixelDataBytes();
+    }
+    length = this.series.validatePixelDataLength(this.series.images[i]);
+    this.series.images[i].clearPixelData();
+    buffer.set(new Uint8Array(data, 0, length), length * i);
+  } // for images.length
+  imgRaw = buffer.buffer;
+  return imgRaw;
+}; // readDICOM()
+
+// not included in public docs
+// read ECAT7 format image
+// https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
+NVImage.prototype.readECAT = function (buffer) {
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  var reader = new DataView(dataBuffer);
+  var reader = new DataView(buffer);
+
+  let signature = reader.getInt32(0, false); //"MATR"
+  let filetype = reader.getInt16(50, false);
+  if (signature !== 1296127058 || filetype < 1 || filetype > 14) {
+    console.log("Not a valid ECAT file");
+    return;
+  }
+  //list header, starts at 512 bytes: int32_t hdr[4], r[31][4];
+  let pos = 512; //512=main header, 4*32-bit hdr
+  let vols = 0;
+  let frame_duration = [];
+  let rawImg = [];
+  while (true) {
+    //read 512 block lists
+    let hdr0 = reader.getInt32(pos, false);
+    let hdr3 = reader.getInt32(pos + 12, false);
+    if (hdr0 + hdr3 !== 31) break;
+    let lpos = pos + 20; //skip hdr and read slice offset (r[0][1])
+    let r = 0;
+    let voloffset = 0;
+    while (r < 31) {
+      //r[0][1]...r[30][1]
+      voloffset = reader.getInt32(lpos, false);
+      lpos += 16; //e.g. r[0][1] to r[1][1]
+      if (voloffset === 0) break;
+      r++;
+      let ipos = voloffset * 512; //image start position
+      let spos = ipos - 512; //subheader for matrix image, immediately before image
+      let data_type = reader.getUint16(spos, false);
+      hdr.dims[1] = reader.getUint16(spos + 4, false);
+      hdr.dims[2] = reader.getUint16(spos + 6, false);
+      hdr.dims[3] = reader.getUint16(spos + 8, false);
+      let scale_factor = reader.getFloat32(spos + 26, false);
+      hdr.pixDims[1] = reader.getFloat32(spos + 34, false) * 10.0; //cm -> mm
+      hdr.pixDims[2] = reader.getFloat32(spos + 38, false) * 10.0; //cm -> mm
+      hdr.pixDims[3] = reader.getFloat32(spos + 42, false) * 10.0; //cm -> mm
+      hdr.pixDims[4] = reader.getUint32(spos + 46, false) / 1000.0; //ms -> sec
+      frame_duration.push(hdr.pixDims[4]);
+      let nvox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+      var newImg = new Float32Array(nvox3D); //convert to float32 as scale varies
+      if (data_type == 1)
+        //uint8
+        for (var i = 0; i < nvox3D; i++) {
+          newImg[i] = reader.getUint8(ipos) * scale_factor;
+          ipos++;
+        }
+      else if (data_type == 6) {
+        //uint16
+        for (var i = 0; i < nvox3D; i++) {
+          newImg[i] = reader.getUint16(ipos, false) * scale_factor;
+          ipos += 2;
+        }
+      } else if (ihdr.data_type == 7) {
+        //uint32
+        for (var i = 0; i < nvox3D; i++) {
+          newImg[i] = reader.getUint32(ipos, false) * scale_factor;
+          ipos += 4;
+        }
+      } else console.log("Unknown ECAT data type " + data_type);
+      let prevImg = rawImg.slice();
+      rawImg = new Float32Array(prevImg.length + newImg.length);
+      rawImg.set(prevImg);
+      rawImg.set(newImg, prevImg.length);
+      vols++;
+    }
+    if (voloffset === 0) break;
+    pos += 512; //possible to have multiple 512-byte lists of images
+  }
+  hdr.dims[4] = vols;
+  hdr.pixDims[4] = frame_duration[0];
+  if (vols > 1) {
+    hdr.dims[0] = 4;
+    let isFDvaries = false;
+    for (var i = 0; i < vols; i++)
+      if (frame_duration[i] !== frame_duration[0]) isFDvaries = true;
+    if (isFDvaries) console.log("Frame durations vary");
+  }
+  hdr.sform_code = 1;
+  hdr.affine = [
+    [-hdr.pixDims[1], 0, 0, (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1],
+  ];
+  hdr.numBitsPerVoxel = 32;
+  hdr.datatypeCode = this.DT_FLOAT;
+  return rawImg;
+}; // readECAT()
+
+NVImage.prototype.readV16 = function (buffer) {
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  var reader = new DataView(buffer);
+  hdr.dims[1] = reader.getUint16(0, true);
+  hdr.dims[2] = reader.getUint16(2, true);
+  hdr.dims[3] = reader.getUint16(4, true);
+  let nBytes = 2 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (nBytes + 6 !== buffer.byteLength)
+    console.log("This does not look like a valid BrainVoyager V16 file");
+  hdr.numBitsPerVoxel = 16;
+  hdr.datatypeCode = this.DT_UINT16;
+  console.log("Warning: V16 files have no spatial transforms");
+  hdr.affine = [
+    [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1],
+  ];
+  hdr.littleEndian = true;
+  return buffer.slice(6);
+}; // readV16()
+
+// not included in public docs
+// read brainvoyager format VMR image
+// https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
+NVImage.prototype.readVMR = function (buffer) {
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  var reader = new DataView(buffer);
+  let version = reader.getUint16(0, true);
+  if (version !== 4) console.log("Not a valid version 4 VMR image");
+  hdr.dims[1] = reader.getUint16(2, true);
+  hdr.dims[2] = reader.getUint16(4, true);
+  hdr.dims[3] = reader.getUint16(6, true);
+  let nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (version >= 4) {
+    let pos = 8 + nBytes; //offset to post header
+    //let xoff = reader.getUint16(pos, true);
+    //let yoff = reader.getUint16(pos + 2, true);
+    //let zoff = reader.getUint16(pos + 4, true);
+    //let framingCube = reader.getUint16(pos + 6, true);
+    //let posInfo = reader.getUint32(pos + 8, true);
+    //let coordSys = reader.getUint32(pos + 12, true);
+    //let XmmStart = reader.getFloat32(pos + 16, true);
+    //let YmmStart = reader.getFloat32(pos + 20, true);
+    //let ZmmStart = reader.getFloat32(pos + 24, true);
+    //let XmmEnd = reader.getFloat32(pos + 28, true);
+    //let YmmEnd = reader.getFloat32(pos + 32, true);
+    //let ZmmEnd = reader.getFloat32(pos + 36, true);
+    //let Xsl = reader.getFloat32(pos + 40, true);
+    //let Ysl = reader.getFloat32(pos + 44, true);
+    //let Zsl = reader.getFloat32(pos + 48, true);
+    //let colDirX = reader.getFloat32(pos + 52, true);
+    //let colDirY = reader.getFloat32(pos + 56, true);
+    //let colDirZ = reader.getFloat32(pos + 60, true);
+    //let nRow = reader.getUint32(pos + 64, true);
+    //let nCol = reader.getUint32(pos + 68, true);
+    //let FOVrow = reader.getFloat32(pos + 72, true);
+    //let FOVcol = reader.getFloat32(pos + 76, true);
+    //let sliceThickness = reader.getFloat32(pos + 80, true);
+    //let gapThickness = reader.getFloat32(pos + 84, true);
+    let nSpatialTransforms = reader.getUint32(pos + 88, true);
+    pos = pos + 92;
+    if (nSpatialTransforms > 0) {
+      let len = buffer.byteLength;
+      for (let i = 0; i < nSpatialTransforms; i++) {
+        //read variable length name name...
+        while (pos < len && reader.getUint8(pos) !== 0) pos++;
+        pos++;
+        //let typ = reader.getUint32(pos, true);
+        pos += 4;
+        //read variable length name name...
+        while (pos < len && reader.getUint8(pos) !== 0) pos++;
+        pos++;
+        let nValues = reader.getUint32(pos, true);
+        pos += 4;
+        for (let j = 0; j < nValues; j++) pos += 4;
+      }
+    }
+    //let LRconv = reader.getUint8(pos);
+    //let ref = reader.getUint8(pos + 1);
+    hdr.pixDims[1] = reader.getFloat32(pos + 2, true);
+    hdr.pixDims[2] = reader.getFloat32(pos + 6, true);
+    hdr.pixDims[3] = reader.getFloat32(pos + 10, true);
+    //let isVer = reader.getUint8(pos + 14);
+    //let isTal = reader.getUint8(pos + 15);
+    //let minInten = reader.getInt32(pos + 16, true);
+    //let meanInten = reader.getInt32(pos + 20, true);
+    //let maxInten = reader.getInt32(pos + 24, true);
+  }
+  console.log("Warning: VMR spatial transform not implemented");
+  //if (XmmStart === XmmEnd) { // https://brainvoyager.com/bv/sampledata/index.html??
+  hdr.affine = [
+    [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1],
+  ];
+  //}
+  console.log(hdr);
+  hdr.numBitsPerVoxel = 8;
+  hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+  return buffer.slice(8, 8 + nBytes);
+}; // readVMR()
+
+// not included in public docs
+// read FreeSurfer MGH format image
+NVImage.prototype.readMGH = function (buffer) {
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  var raw = buffer;
+  var reader = new DataView(raw);
+  if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
+    let raw8 = fflate.decompressSync(new Uint8Array(buffer));
+    raw = raw8.buffer;
+    reader = new DataView(raw);
+  }
   let version = reader.getInt32(0, false);
   let width = reader.getInt32(4, false);
   let height = reader.getInt32(8, false);
   let depth = reader.getInt32(12, false);
   let nframes = reader.getInt32(16, false);
   let mtype = reader.getInt32(20, false);
-  let dof = reader.getInt32(24, false);
-  let goodRASFlag = reader.getInt16(28, false);
+  //let dof = reader.getInt32(24, false);
+  //let goodRASFlag = reader.getInt16(28, false);
   let spacingX = reader.getFloat32(30, false);
   let spacingY = reader.getFloat32(34, false);
   let spacingZ = reader.getFloat32(38, false);
@@ -464,9 +1164,9 @@ NVImage.prototype.readMGH = function (dataBuffer) {
   let zr = reader.getFloat32(66, false);
   let za = reader.getFloat32(70, false);
   let zs = reader.getFloat32(74, false);
-  let cr = reader.getFloat32(78, false);
-  let ca = reader.getFloat32(82, false);
-  let cs = reader.getFloat32(86, false);
+  //let cr = reader.getFloat32(78, false);
+  //let ca = reader.getFloat32(82, false);
+  //let cs = reader.getFloat32(86, false);
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   if (mtype === 0) {
@@ -530,9 +1230,17 @@ NVImage.prototype.readMGH = function (dataBuffer) {
     [rot44[8], rot44[9], rot44[10], PxyzOffset[2]],
     [0, 0, 0, 1],
   ];
-  return dataBuffer.slice(hdr.vox_offset);
-};
+  let nBytes =
+    hdr.dims[1] *
+    hdr.dims[2] *
+    hdr.dims[3] *
+    hdr.dims[4] *
+    (hdr.numBitsPerVoxel / 8);
+  return raw.slice(hdr.vox_offset, hdr.vox_offset + nBytes);
+}; // readMGH()
 
+// not included in public docs
+// read AFNI head/brik format image
 NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
@@ -542,7 +1250,6 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   let xyzOrigin = [0, 0, 0];
   let xyzDelta = [1, 1, 1];
   let txt = new TextDecoder().decode(dataBuffer);
-  //console.log('>>>', txt);
   var lines = txt.split("\n");
   let nlines = lines.length;
   let i = 0;
@@ -639,19 +1346,347 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   if (pairedImgData.byteLength < nBytes) {
     //n.b. npm run dev implicitly extracts gz, npm run demo does not!
     //assume gz compressed
-    var raw;
-    if (typeof pako === "object" && typeof pako.deflate === "function") {
-      raw = pako.inflate(new Uint8Array(pairedImgData));
-    } else if (typeof Zlib === "object" && typeof Zlib.Gunzip === "function") {
-      var inflate = new Zlib.Gunzip(new Uint8Array(pairedImgData)); // eslint-disable-line no-undef
-      raw = inflate.decompress();
-    }
+    var raw = fflate.decompressSync(new Uint8Array(pairedImgData));
     return raw.buffer;
   }
-  let v = pairedImgData.slice();
   return pairedImgData.slice();
 };
 
+// not included in public docs
+// read ITK MHA format image
+// https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
+NVImage.prototype.readMHA = function (buffer, pairedImgData) {
+  let len = buffer.byteLength;
+  if (len < 20)
+    throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
+  var bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr(); //1st line: signature
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.littleEndian = true;
+  let isGz = false;
+  let isDetached = false;
+  let compressedDataSize = 0;
+  let mat33 = mat3.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  let offset = vec3.fromValues(0, 0, 0);
+  while (line !== "") {
+    let items = line.split(" ");
+    if (items.length > 2);
+    items = items.slice(2);
+    if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("False"))
+      hdr.littleEndian = true;
+    if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("True"))
+      hdr.littleEndian = false;
+    if (line.startsWith("CompressedData") && items[0].includes("True"))
+      isGz = true;
+    if (line.startsWith("CompressedDataSize"))
+      compressedDataSize = parseInt(items[0]);
+    if (line.startsWith("TransformMatrix")) {
+      for (var d = 0; d < 9; d++) mat33[d] = parseFloat(items[d]);
+    }
+    if (line.startsWith("Offset")) {
+      offset[0] = parseFloat(items[0]);
+      offset[1] = parseFloat(items[1]);
+      offset[2] = parseFloat(items[2]);
+    }
+    //if (line.startsWith("AnatomicalOrientation")) //we can ignore, tested with Slicer3D converting NIfTIspace images
+    if (line.startsWith("ElementSpacing")) {
+      hdr.pixDims[1] = parseFloat(items[0]);
+      hdr.pixDims[2] = parseFloat(items[1]);
+      hdr.pixDims[3] = parseFloat(items[2]);
+      if (items.length > 3) hdr.pixDims[4] = parseFloat(items[3]);
+    }
+    if (line.startsWith("DimSize")) {
+      hdr.dims[0] = items.length;
+      for (var d = 0; d < items.length; d++)
+        hdr.dims[d + 1] = parseInt(items[d]);
+    }
+    if (line.startsWith("ElementType")) {
+      switch (items[0]) {
+        case "MET_UCHAR":
+          hdr.numBitsPerVoxel = 8;
+          hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+          break;
+        case "MET_CHAR":
+          hdr.numBitsPerVoxel = 8;
+          hdr.datatypeCode = this.DT_INT8;
+          break;
+        case "MET_SHORT":
+          hdr.numBitsPerVoxel = 16;
+          hdr.datatypeCode = this.DT_SIGNED_SHORT;
+          break;
+        case "MET_USHORT":
+          hdr.numBitsPerVoxel = 16;
+          hdr.datatypeCode = this.DT_UINT16;
+          break;
+        case "MET_INT":
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = this.DT_SIGNED_INT;
+          break;
+        case "MET_UINT":
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = this.DT_UINT32;
+          break;
+        case "MET_FLOAT":
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = this.DT_FLOAT;
+          break;
+        case "MET_DOUBLE":
+          hdr.numBitsPerVoxel = 64;
+          hdr.datatypeCode = this.DT_DOUBLE;
+          break;
+        default:
+          throw new Error("Unsupported NRRD data type: " + value);
+      }
+    }
+    if (line.startsWith("ObjectType") && !items[0].includes("Image"))
+      console.log("Only able to read ObjectType = Image, not " + line);
+    if (line.startsWith("ElementDataFile")) {
+      if (items[0] !== "LOCAL") isDetached = true;
+      break;
+    }
+    line = readStr();
+  }
+  let mmMat = mat3.fromValues(
+    hdr.pixDims[1],
+    0,
+    0,
+    0,
+    hdr.pixDims[2],
+    0,
+    0,
+    0,
+    hdr.pixDims[3]
+  );
+  mat3.multiply(mat33, mmMat, mat33);
+  hdr.affine = [
+    [-mat33[0], -mat33[3], -mat33[6], -offset[0]],
+    [-mat33[1], -mat33[4], -mat33[7], -offset[1]],
+    [mat33[2], mat33[5], mat33[8], offset[2]],
+    [0, 0, 0, 1],
+  ];
+  hdr.vox_offset = pos;
+  if (isDetached && pairedImgData) {
+    if (isGz)
+      return fflate.decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset)))
+        .buffer;
+    return pairedImgData.slice();
+  }
+  if (isGz)
+    return fflate.decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset)))
+      .buffer;
+  return buffer.slice(hdr.vox_offset);
+}; //readMHA()
+
+// not included in public docs
+// read mrtrix MIF format image
+// https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
+NVImage.prototype.readMIF = function (buffer, pairedImgData) {
+  //MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
+  //This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
+  this.hdr = new nifti.NIFTI1();
+  let hdr = this.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
+  let len = buffer.byteLength;
+  if (len < 20) throw new Error("File too small to be MIF: bytes = " + len);
+  var bytes = new Uint8Array(buffer);
+  if (bytes[0] === 31 && bytes[1] === 139) {
+    console.log("MIF with GZ decompression");
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    buffer = raw.buffer;
+    len = buffer.byteLength;
+  }
+  let pos = 0;
+  function readStr() {
+    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    let startPos = pos;
+    while (pos < len && bytes[pos] !== 10) pos++;
+    pos++; //skip EOLN
+    if (pos - startPos < 1) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr(); //1st line: signature 'mrtrix tracks'
+  if (!line.startsWith("mrtrix image")) {
+    console.log("Not a valid MIF file");
+    return;
+  }
+  let layout = [];
+  let nTransform = 0;
+  let TR = 0;
+  let isDetached = false;
+  line = readStr();
+  while (pos < len && !line.startsWith("END")) {
+    let items = line.split(":"); // "vox: 1,1,1" -> "vox", " 1,1,1"
+    line = readStr();
+    if (items.length < 2) break; //
+    let tag = items[0]; // "datatype", "dim"
+    items = items[1].split(","); // " 1,1,1" -> " 1", "1", "1"
+    for (let i = 0; i < items.length; i++) items[i] = items[i].trim(); // " 1", "1", "1" -> "1", "1", "1"
+    switch (tag) {
+      case "dim":
+        hdr.dims[0] = items.length;
+        for (let i = 0; i < items.length; i++)
+          hdr.dims[i + 1] = parseInt(items[i]);
+        break;
+      case "vox":
+        for (let i = 0; i < items.length; i++) {
+          hdr.pixDims[i + 1] = parseFloat(items[i]);
+          if (isNaN(hdr.pixDims[i + 1])) hdr.pixDims[i + 1] = 0.0;
+        }
+        break;
+      case "layout":
+        for (let i = 0; i < items.length; i++) layout.push(parseInt(items[i])); //n.b. JavaScript preserves sign for -0
+        break;
+      case "datatype":
+        let dt = items[0];
+        if (dt.startsWith("Int8")) hdr.datatypeCode = this.DT_INT8;
+        else if (dt.startsWith("UInt8"))
+          hdr.datatypeCode = this.DT_UNSIGNED_CHAR;
+        else if (dt.startsWith("Int16"))
+          hdr.datatypeCode = this.DT_SIGNED_SHORT;
+        else if (dt.startsWith("UInt16")) hdr.datatypeCode = this.DT_UINT16;
+        else if (dt.startsWith("Int32")) hdr.datatypeCode = this.DT_SIGNED_INT;
+        else if (dt.startsWith("UInt32")) hdr.datatypeCode = this.DT_UINT32;
+        else if (dt.startsWith("Float32")) hdr.datatypeCode = this.DT_FLOAT;
+        else if (dt.startsWith("Float64")) hdr.datatypeCode = this.DT_DOUBLE;
+        else console.log("Unsupported datatype " + dt);
+        if (dt.includes("8")) hdr.numBitsPerVoxel = 8;
+        else if (dt.includes("16")) hdr.numBitsPerVoxel = 16;
+        else if (dt.includes("32")) hdr.numBitsPerVoxel = 32;
+        else if (dt.includes("64")) hdr.numBitsPerVoxel = 64;
+        hdr.littleEndian = true; //native, to do support big endian readers
+        if (dt.endsWith("LE")) hdr.littleEndian = true;
+        if (dt.endsWith("BE")) hdr.littleEndian = false;
+        break;
+      case "transform":
+        if (nTransform > 2 || items.length !== 4) break;
+        hdr.affine[nTransform][0] = parseFloat(items[0]);
+        hdr.affine[nTransform][1] = parseFloat(items[1]);
+        hdr.affine[nTransform][2] = parseFloat(items[2]);
+        hdr.affine[nTransform][3] = parseFloat(items[3]);
+        nTransform++;
+        break;
+      case "RepetitionTime":
+        TR = parseFloat(items[0]);
+        break;
+      case "file":
+        isDetached = !items[0].startsWith(". ");
+        if (!isDetached) {
+          items = items[0].split(" "); //". 2336" -> ". ", "2336"
+          hdr.vox_offset = parseInt(items[1]);
+        }
+        break;
+    }
+  }
+  let ndim = hdr.dims[0];
+  if (ndim > 5)
+    console.log("reader only designed for a maximum of 5 dimensions (XYZTD)");
+  let nvox = 1;
+  for (let i = 0; i < ndim; i++) nvox *= Math.max(hdr.dims[i + 1], 1);
+  console.log(nvox);
+  //let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      //hdr.affine[i][j] *= hdr.pixDims[i + 1];
+      hdr.affine[i][j] *= hdr.pixDims[j + 1];
+    }
+  }
+  console.log("mif affine:" + hdr.affine[0]);
+  if (TR > 0) hdr.pixDims[4] = TR;
+  if (isDetached && !pairedImgData)
+    console.log("MIH header provided without paired image data");
+  let rawImg = [];
+  if (isDetached) rawImg = pairedImgData.slice();
+  //n.b. mrconvert can pad files? See dtitest_Siemens_SC 4_dti_nopf_x2_pitch
+  else
+    rawImg = buffer.slice(
+      hdr.vox_offset,
+      hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8)
+    );
+  if (layout.length != hdr.dims[0]) console.log("dims does not match layout");
+  //estimate strides:
+  let stride = 1;
+  let instride = [1, 1, 1, 1, 1];
+  let inflip = [false, false, false, false, false];
+  for (let i = 0; i < layout.length; i++) {
+    for (let j = 0; j < layout.length; j++) {
+      let a = Math.abs(layout[j]);
+      if (a != i) continue;
+      instride[j] = stride;
+      //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+      if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+      stride *= hdr.dims[j + 1];
+    }
+  }
+  //lookup table for flips and stride offsets:
+  const range = (start, stop, step) =>
+    Array.from(
+      { length: (stop - start) / step + 1 },
+      (_, i) => start + i * step
+    );
+  let xlut = range(0, hdr.dims[1] - 1, 1);
+  if (inflip[0]) xlut = range(hdr.dims[1] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[1]; i++) xlut[i] *= instride[0];
+  let ylut = range(0, hdr.dims[2] - 1, 1);
+  if (inflip[1]) ylut = range(hdr.dims[2] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[2]; i++) ylut[i] *= instride[1];
+  let zlut = range(0, hdr.dims[3] - 1, 1);
+  if (inflip[2]) zlut = range(hdr.dims[3] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[3]; i++) zlut[i] *= instride[2];
+  let tlut = range(0, hdr.dims[4] - 1, 1);
+  if (inflip[3]) tlut = range(hdr.dims[4] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[4]; i++) tlut[i] *= instride[3];
+  let dlut = range(0, hdr.dims[5] - 1, 1);
+  if (inflip[4]) dlut = range(hdr.dims[5] - 1, 0, -1);
+  for (let i = 0; i < hdr.dims[5]; i++) dlut[i] *= instride[4];
+  //input and output arrays
+  let j = 0;
+  let inVs = [];
+  let outVs = [];
+  if (hdr.numBitsPerVoxel === 8) {
+    inVs = new Uint8Array(rawImg);
+    outVs = new Uint8Array(nvox);
+  } //8bit
+  if (hdr.numBitsPerVoxel === 16) {
+    inVs = new Uint16Array(rawImg);
+    outVs = new Uint16Array(nvox);
+  }
+  if (hdr.numBitsPerVoxel === 32) {
+    inVs = new Uint32Array(rawImg);
+    outVs = new Uint32Array(nvox);
+  } //32bit
+  if (hdr.numBitsPerVoxel === 64) {
+    inVs = new BigUint64Array(rawImg);
+    outVs = new BigUint64Array(nvox);
+  } //64bit
+  for (let d = 0; d < hdr.dims[5]; d++) {
+    for (let t = 0; t < hdr.dims[4]; t++) {
+      for (let z = 0; z < hdr.dims[3]; z++) {
+        for (let y = 0; y < hdr.dims[2]; y++) {
+          for (let x = 0; x < hdr.dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z] + tlut[t] + dlut[d]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+    } //for t (time)
+  } // for d (direction, phase/real, etc)
+  return outVs;
+}; // readMIF()
+
+// not included in public docs
+// read NRRD format image
+// http://teem.sourceforge.net/nrrd/format.html
 NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
   //inspired by parserNRRD.js in https://github.com/xtk
   //Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
@@ -892,12 +1927,8 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
     ];
   }
 
-  let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   if (isDetached && pairedImgData) {
     //??? .gz files automatically decompressed?
-    //if (isGz)
-    //  return pako.inflate(new Uint8Array(pairedImgData.slice()));
-    //else
     return pairedImgData.slice();
   }
   if (isDetached)
@@ -905,14 +1936,15 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       "Missing data: NRRD header describes detached data file but only one URL provided"
     );
   if (isGz)
-    return pako.inflate(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
-      .buffer;
+    return fflate.decompressSync(
+      new Uint8Array(dataBuffer.slice(hdr.vox_offset))
+    ).buffer;
   else return dataBuffer.slice(hdr.vox_offset);
 }; //readNRRD()
 
 // not included in public docs
+// Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
 NVImage.prototype.calculateRAS = function () {
-  //Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
   // not elegant, as JavaScript arrays are always 1D
   let a = this.hdr.affine;
@@ -996,15 +2028,9 @@ NVImage.prototype.calculateRAS = function () {
     }
   }
   let flip = [0, 0, 0];
-  if (R[0] < 0) {
-    flip[0] = 1; //R[0][0]
-  }
-  if (R[5] < 0) {
-    flip[1] = 1; //R[1][1]
-  }
-  if (R[10] < 0) {
-    flip[2] = 1; //R[2][2]
-  }
+  if (R[0] < 0) flip[0] = 1; //R[0][0]
+  if (R[5] < 0) flip[1] = 1; //R[1][1]
+  if (R[10] < 0) flip[2] = 1; //R[2][2]
   this.dimsRAS = [
     header.dims[0],
     header.dims[perm[0]],
@@ -1017,6 +2043,9 @@ NVImage.prototype.calculateRAS = function () {
     header.pixDims[perm[1]],
     header.pixDims[perm[2]],
   ];
+  this.permRAS = perm.slice();
+  for (let i = 0; i < 3; i++)
+    if (flip[i] === 1) this.permRAS[i] = -this.permRAS[i];
   if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
     this.toRAS = mat4.create(); //aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
     this.matRAS = mat4.clone(rotM);
@@ -1048,6 +2077,7 @@ NVImage.prototype.calculateRAS = function () {
 };
 
 // not included in public docs
+// convert voxel location (row, column slice, indexed from 0) to world space
 NVImage.prototype.vox2mm = function (XYZ, mtx) {
   let sform = mat4.clone(mtx);
   mat4.transpose(sform, sform);
@@ -1057,6 +2087,8 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
   return pos3;
 }; // vox2mm()
 
+// not included in public docs
+// convert world space to voxel location (row, column slice, indexed from 0)
 NVImage.prototype.mm2vox = function (mm) {
   let sform = mat4.fromValues(...this.hdr.affine.flat());
   let out = mat4.clone(sform);
@@ -1069,6 +2101,7 @@ NVImage.prototype.mm2vox = function (mm) {
 }; // vox2mm()
 
 // not included in public docs
+// returns boolean: are two arrays identical?
 NVImage.prototype.arrayEquals = function (a, b) {
   return (
     Array.isArray(a) &&
@@ -1094,22 +2127,48 @@ NVImage.prototype.colorMaps = function (sort = true) {
   return sort === true ? cm.sort() : cm;
 };
 
+// not included in public docs
+// base function for niivue.setColorMap()
 NVImage.prototype.setColorMap = function (cm) {
   let allColorMaps = this.colorMaps();
   if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
-    this.colorMap = cm.toLowerCase();
+    this._colorMap = cm.toLowerCase();
     this.calMinMax();
+    if (this.onColorMapChange) {
+      this.onColorMapChange(this);
+    }
   } else {
     log.warn(`color map ${cm} is not a valid color map`);
   }
 };
+
+Object.defineProperty(NVImage.prototype, "colorMap", {
+  get: function () {
+    return this._colorMap;
+  },
+  set: function (colorMap) {
+    this.setColorMap(colorMap);
+  },
+});
+
+Object.defineProperty(NVImage.prototype, "opacity", {
+  get: function () {
+    return this._opacity;
+  },
+  set: function (opacity) {
+    this._opacity = opacity;
+    if (this.onOpacityChange) {
+      this.onOpacityChange(this);
+    }
+  },
+});
 
 // not included in public docs
 // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
 NVImage.prototype.calMinMax = function () {
-  let cm = this.colorMap;
+  let cm = this._colorMap;
   let allColorMaps = this.colorMaps();
   let cmMin = 0;
   let cmMax = 0;
@@ -1249,22 +2308,204 @@ NVImage.prototype.calMinMax = function () {
 }; //calMinMax
 
 // not included in public docs
+// convert voxel intesnity from stored value to scaled intensity
 NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
   if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
   return raw * hdr.scl_slope + hdr.scl_inter;
 };
 
+// not included in public docs
+function str2Buffer(str) {
+  //emulate node.js Buffer.from
+  var bytes = [];
+  for (var i = 0; i < str.length; i++) {
+    var char = str.charCodeAt(i);
+    bytes.push(char & 0xff);
+  }
+  return bytes;
+}
+
+// not included in public docs
+// save NIfTI header into UINT8 array for saving to disk
+function hdrToArrayBuffer(hdr, isDrawing8 = false) {
+  const SHORT_SIZE = 2;
+  const FLOAT32_SIZE = 4;
+
+  let byteArray = new Uint8Array(348);
+  let view = new DataView(byteArray.buffer);
+  // sizeof_hdr
+  view.setInt32(0, 348, hdr.littleEndian);
+
+  // data_type, db_name, extents, session_error, regular are not used
+
+  // dim_info
+  view.setUint8(39, hdr.dim_info);
+
+  // dims
+  for (let i = 0; i < 8; i++) {
+    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], hdr.littleEndian);
+  }
+
+  // intent_p1, intent_p2, intent_p3
+  view.setFloat32(56, hdr.intent_p1, hdr.littleEndian);
+  view.setFloat32(60, hdr.intent_p2, hdr.littleEndian);
+  view.setFloat32(64, hdr.intent_p3, hdr.littleEndian);
+  // intent_code, datatype, bitpix, slice_start
+  view.setInt16(68, hdr.intent_code, hdr.littleEndian);
+  if (isDrawing8) {
+    view.setInt16(70, 2, hdr.littleEndian); //2 = DT_UNSIGNED_CHAR
+    view.setInt16(72, 8, hdr.littleEndian);
+  } else {
+    view.setInt16(70, hdr.datatypeCode, hdr.littleEndian);
+    view.setInt16(72, hdr.numBitsPerVoxel, hdr.littleEndian);
+  }
+  view.setInt16(74, hdr.slice_start, hdr.littleEndian);
+
+  // pixdim[8], vox_offset, scl_slope, scl_inter
+  for (let i = 0; i < 8; i++) {
+    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], hdr.littleEndian);
+  }
+  if (isDrawing8) {
+    view.setFloat32(108, 352, hdr.littleEndian);
+    view.setFloat32(112, 1.0, hdr.littleEndian);
+    view.setFloat32(116, 0.0, hdr.littleEndian);
+  } else {
+    view.setFloat32(108, hdr.vox_offset, hdr.littleEndian);
+    view.setFloat32(112, hdr.scl_slope, hdr.littleEndian);
+    view.setFloat32(116, hdr.scl_inter, hdr.littleEndian);
+  }
+  // slice_end
+  view.setInt16(120, hdr.slice_end, hdr.littleEndian);
+
+  // slice_code, xyzt_units
+  view.setUint8(122, hdr.slice_code);
+  view.setUint8(123, hdr.xyzt_units);
+
+  // cal_max, cal_min, slice_duration, toffset
+  if (isDrawing8) {
+    view.setFloat32(124, 0, hdr.littleEndian);
+    view.setFloat32(128, 0, hdr.littleEndian);
+  } else {
+    view.setFloat32(124, hdr.cal_max, hdr.littleEndian);
+    view.setFloat32(128, hdr.cal_min, hdr.littleEndian);
+  }
+  view.setFloat32(132, hdr.slice_duration, hdr.littleEndian);
+  view.setFloat32(136, hdr.toffset, hdr.littleEndian);
+
+  // glmax, glmin are unused
+
+  // descrip and aux_file
+  //node.js byteArray.set(Buffer.from(hdr.description), 148);
+  byteArray.set(str2Buffer(hdr.description), 148);
+  //node.js: byteArray.set(Buffer.from(hdr.aux_file), 228);
+  byteArray.set(str2Buffer(hdr.aux_file), 228);
+  // qform_code, sform_code
+  view.setInt16(252, hdr.qform_code, hdr.littleEndian);
+  view.setInt16(254, hdr.sform_code, hdr.littleEndian);
+
+  // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
+  view.setFloat32(256, hdr.quatern_b, hdr.littleEndian);
+  view.setFloat32(260, hdr.quatern_c, hdr.littleEndian);
+  view.setFloat32(264, hdr.quatern_d, hdr.littleEndian);
+  view.setFloat32(268, hdr.qoffset_x, hdr.littleEndian);
+  view.setFloat32(272, hdr.qoffset_y, hdr.littleEndian);
+  view.setFloat32(276, hdr.qoffset_z, hdr.littleEndian);
+  const flattened = hdr.affine.flat();
+  // we only want the first three rows
+  for (let i = 0; i < 12; i++) {
+    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], hdr.littleEndian);
+  }
+  //node.js https://www.w3schools.com/nodejs/met_buffer_from.asp
+  // intent_name and magic
+  //node.js byteArray.set(Buffer.from(hdr.intent_name), 328);
+  byteArray.set(str2Buffer(hdr.intent_name), 328);
+  //node.js byteArray.set(Buffer.from(hdr.magic), 344);
+  byteArray.set(str2Buffer(hdr.magic), 344);
+  return byteArray;
+  //return byteArray.buffer;
+} // hdrToArrayBuffer()
+
+// not included in public docs
+// see niivue.saveImage() for wrapper of this function
+NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
+  let isDrawing8 = !(drawing8 == null);
+  let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8);
+  let opad = new Uint8Array(4);
+  let img8 = new Uint8Array(this.img.buffer);
+  if (isDrawing8) img8 = new Uint8Array(drawing8.buffer);
+  var odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
+  odata.set(hdrBytes);
+  odata.set(opad, hdrBytes.length);
+
+  odata.set(img8, hdrBytes.length + opad.length);
+  let saveData = null;
+  let compress = fnm.endsWith(".gz"); // true if name ends with .gz
+  if (compress) {
+    saveData = fflate.gzipSync(odata, {
+      // GZIP-specific: the filename to use when decompressed
+      filename: fnm,
+      // GZIP-specific: the modification time. Can be a Date, date string,
+      // or Unix timestamp
+      mtime: Date.now(),
+      level: 6, // the default
+    });
+  } else {
+    saveData = odata;
+  }
+  let blob = new Blob([saveData.buffer], { type: "application/octet-stream" });
+  let blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", blobUrl);
+  link.setAttribute("download", fnm);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}; // saveToDisk()
+
+NVImage.fetchDicomData = async function (url) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
+
+  // https://stackoverflow.com/questions/10687099/how-to-test-if-a-url-string-is-absolute-or-relative
+  let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+
+  let manifestUrl = absoluteUrlRE.test(url)
+    ? url
+    : new URL(url, window.location.href);
+  let extensionRE = new RegExp("(?:.([^.]+))?$");
+  let extension = extensionRE.exec(manifestUrl.pathname);
+  if (!extension) {
+    manifestUrl = new URL("niivue-manifest.txt", url);
+  }
+
+  let response = await fetch(manifestUrl);
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+  let text = await response.text();
+  let lines = text.split("\n");
+
+  let baseUrlRE = new RegExp("(.*/).*");
+  let folderUrl = baseUrlRE.exec(manifestUrl)[0];
+  let dataBuffer = [];
+  for (const line of lines) {
+    let fileUrl = new URL(line, folderUrl);
+    response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    let contents = await response.arrayBuffer();
+    dataBuffer.push(contents);
+  }
+  return dataBuffer;
+};
+
 /**
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
- * @param {string} url the resolvable URL pointing to a nifti image to load
- * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
- * @param {number} [opacity=1.0] the opacity for this image. default is 1
- * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
- * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
- * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
- * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @param {NVImageFromUrlOptions} options
  * @returns {NVImage} returns a NVImage intance
  * @example
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
@@ -1275,22 +2516,43 @@ NVImage.loadFromUrl = async function ({
   name = "",
   colorMap = "gray",
   opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  isManifest = false,
+  imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
   }
 
-  let response = await fetch(url);
   let nvimage = null;
-  if (!response.ok) {
-    throw Error(response.statusText);
+  let dataBuffer = null;
+
+  // fetch data associated with image
+  if (isManifest) {
+    dataBuffer = await NVImage.fetchDicomData(url);
+    imageType = NVIMAGE_TYPE.DCM_MANIFEST;
+  } else {
+    let response = await fetch(url);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    dataBuffer = await response.arrayBuffer();
   }
+
   var re = /(?:\.([^.]+))?$/;
-  let ext = re.exec(url)[1];
+  let ext = "";
+  if (name === "") {
+    ext = re.exec(url)[1];
+  } else {
+    ext = re.exec(name)[1];
+  }
   if (ext.toUpperCase() === "NHDR") {
     if (urlImgData === "") {
     }
@@ -1299,13 +2561,25 @@ NVImage.loadFromUrl = async function ({
       urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
     }
   }
-  let urlParts = url.split("/"); // split url parts at slash
-  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
-  let dataBuffer = await response.arrayBuffer();
+  let urlParts;
+  if (name === "") {
+    try {
+      // if a full url like https://domain/path/file.nii.gz?query=filter
+      // parse the url and get the pathname component without the query
+      urlParts = new URL(url).pathname.split("/");
+    } catch (e) {
+      // if a relative url then parse the path (assuming no query)
+      urlParts = url.split("/");
+    }
+    name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
+    if (name.indexOf("?") > -1) {
+      name = name.slice(0, name.indexOf("?")); //remove query string if any
+    }
+  }
+
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
-    console.log(resp.status);
     if (resp.status === 404) {
       if (urlImgData.lastIndexOf("BRIK") !== -1) {
         resp = await fetch(urlImgData + ".gz");
@@ -1321,10 +2595,15 @@ NVImage.loadFromUrl = async function ({
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
-      visible
+      visible,
+      useQFormNotSForm,
+      colorMapNegative,
+      imageType
     );
   } else {
     alert("Unable to load buffer properly from volume");
@@ -1338,7 +2617,6 @@ NVImage.loadFromUrl = async function ({
 NVImage.readFileAsync = function (file) {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
-
     reader.onload = () => {
       if (file.name.lastIndexOf("gz") !== -1) {
         resolve(nifti.decompress(reader.result));
@@ -1360,51 +2638,118 @@ NVImage.readFileAsync = function (file) {
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {string} [colorMap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {string} [urlImgData=null] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+ * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
+ * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
  * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @param {boolean} [useQFormNotSForm=false] whether or not to use QForm instead of SForm during construction
+ * @param {string} [colorMapNegative=""] colormap negative for the image
+ * @param {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type
  * @returns {NVImage} returns a NVImage intance
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
 NVImage.loadFromFile = async function ({
-  file = null,
+  file = null, // file can be an array of file objects or a single file object
   name = "",
   colorMap = "gray",
   opacity = 1.0,
   urlImgData = null,
+  cal_min = NaN,
+  cal_max = NaN,
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
+  let dataBuffer = [];
   try {
-    let dataBuffer = await this.readFileAsync(file);
+    if (Array.isArray(file)) {
+      for (let i = 0; i < file.length; i++) {
+        dataBuffer.push(await this.readFileAsync(file[i]));
+      }
+    } else {
+      dataBuffer = await this.readFileAsync(file);
+      name = file.name;
+    }
     let pairedImgData = null;
-    console.log("before readimg paired image data!!!!");
     if (urlImgData) {
-      console.log("reading paired image data!!!!!");
       pairedImgData = await this.readFileAsync(urlImgData);
     }
-    name = file.name;
     nvimage = new NVImage(
       dataBuffer,
       name,
       colorMap,
       opacity,
       pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible,
+      useQFormNotSForm,
+      colorMapNegative,
+      imageType
+    );
+  } catch (err) {
+    console.log(err);
+    log.debug(err);
+  }
+  return nvimage;
+};
+
+// not included in public docs
+NVImage.loadFromBase64 = function ({
+  base64 = null,
+  name = "",
+  colorMap = "gray",
+  opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true,
+} = {}) {
+  //https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+  function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+  let nvimage = null;
+  try {
+    let dataBuffer = base64ToArrayBuffer(base64);
+    let pairedImgData = null;
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colorMap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
       visible
     );
   } catch (err) {
-    console.log(err);
     log.debug(err);
   }
-  console.log(nvimage);
+
   return nvimage;
 };
 
@@ -1484,6 +2829,7 @@ NVImage.prototype.getImageMetadata = function () {
     bpv,
   };
 };
+
 /**
  * a factory function to make a zero filled image given a NVImage as a reference
  * @param {NVImage} nvImage an existing NVImage as a reference
@@ -1506,6 +2852,7 @@ NVImage.zerosLike = function (nvImage, dataType = "same") {
   return zeroClone;
 };
 
+// not included in public docs
 String.prototype.getBytes = function () {
   //CR??? What does this do?
   let bytes = [];
@@ -1516,8 +2863,10 @@ String.prototype.getBytes = function () {
   return bytes;
 };
 
-NVImage.prototype.getValue = function (x, y, z) {
-  const { nx, ny } = this.getImageMetadata();
+// not included in public docs
+// return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
+NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
+  const { nx, ny, nz } = this.getImageMetadata();
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
     let vx = 4 * (x + y * nx + z * nx * ny);
     //convert rgb to luminance
@@ -1532,7 +2881,8 @@ NVImage.prototype.getValue = function (x, y, z) {
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
-  let i = this.img[x + y * nx + z * nx * ny];
+  let vol = frame4D * nx * ny * nz;
+  let i = this.img[x + y * nx + z * nx * ny + vol];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 
@@ -1606,27 +2956,23 @@ function getExtents(positions, forceOriginInVolume = true) {
  */
 NVImage.prototype.toNiivueObject3D = function (id, gl) {
   //cube has 8 vertices: left/right, posterior/anterior, inferior/superior
-  let LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS);
-  //TODO: ray direction needs to be corrected for oblique rotations
-  let LAI = this.vox2mm([0.0, this.dimsRAS[2] - 1, 0.0], this.matRAS);
-  let LPS = this.vox2mm([0.0, 0.0, this.dimsRAS[3] - 1], this.matRAS);
-  let LAS = this.vox2mm(
-    [0.0, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
-  let RPI = this.vox2mm([this.dimsRAS[1] - 1, 0.0, 0.0], this.matRAS);
-  let RAI = this.vox2mm(
-    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, 0.0],
-    this.matRAS
-  );
-  let RPS = this.vox2mm(
-    [this.dimsRAS[1] - 1, 0.0, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
-  let RAS = this.vox2mm(
-    [this.dimsRAS[1] - 1, this.dimsRAS[2] - 1, this.dimsRAS[3] - 1],
-    this.matRAS
-  );
+  //n.b. voxel coordinates are from VOXEL centers
+  // add/subtract 0.5 to get full image field of view
+  let L = -0.5;
+  let P = -0.5;
+  let I = -0.5;
+  let R = this.dimsRAS[1] - 1 + 0.5;
+  let A = this.dimsRAS[2] - 1 + 0.5;
+  let S = this.dimsRAS[3] - 1 + 0.5;
+
+  let LPI = this.vox2mm([L, P, I], this.matRAS);
+  let LAI = this.vox2mm([L, A, I], this.matRAS);
+  let LPS = this.vox2mm([L, P, S], this.matRAS);
+  let LAS = this.vox2mm([L, A, S], this.matRAS);
+  let RPI = this.vox2mm([R, P, I], this.matRAS);
+  let RAI = this.vox2mm([R, A, I], this.matRAS);
+  let RPS = this.vox2mm([R, P, S], this.matRAS);
+  let RAS = this.vox2mm([R, A, S], this.matRAS);
 
   let posTex = [
     //spatial position (XYZ), texture coordinates UVW
@@ -1729,7 +3075,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     indexBuffer,
     vao
   );
-
   const extents = getExtents([
     ...LPS,
     ...RPS,
@@ -1740,10 +3085,134 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
     ...RAI,
     ...RPI,
   ]);
-  obj3D.extentsMin = extents.min;
-  obj3D.extentsMax = extents.max;
+  obj3D.extentsMin = extents.min.slice();
+  obj3D.extentsMax = extents.max.slice();
+
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   obj3D.originNegate = vec3.clone(extents.origin);
   vec3.negate(obj3D.originNegate, obj3D.originNegate);
+  obj3D.fieldOfViewDeObliqueMM = [
+    this.dimsRAS[1] * this.pixDimsRAS[1],
+    this.dimsRAS[2] * this.pixDimsRAS[2],
+    this.dimsRAS[3] * this.pixDimsRAS[3],
+  ];
   return obj3D;
+};
+
+/**
+ * Update options for image
+ * @param {NVImageFromUrlOptions} options
+ */
+NVImage.prototype.applyOptionsUpdate = function (options) {
+  this.hdr.cal_min = options.cal_min;
+  this.hdr.cal_max = options.cal_max;
+  delete options["url"];
+  delete options["urlImageData"];
+  delete options["cal_min"];
+  delete options["cal_max"];
+  Object.assign(this, options);
+};
+
+NVImage.prototype.getImageOptions = function () {
+  let options = null;
+  try {
+    options = new NVImageFromUrlOptions(
+      "", // url,
+      "", // urlImageData
+      this.name, // name
+      this._colorMap, // colorMap
+      this.opacity, // opacity
+      this.hdr.cal_min, // cal_min
+      this.hdr.cal_max, // cal_max
+      this.trustCalMinMax, // trustCalMinMax,
+      this.percentileFrac, // percentileFrac
+      this.ignoreZeroVoxels, // ignoreZeroVoxels
+      this.visible, // visible
+      this.useQFormNotSForm, // useQFormNotSForm
+      this.colorMapNegative, // colorMapNegative
+      this.imageType // imageType
+    );
+  } catch (e) {
+    console.log(e);
+  }
+  return options;
+};
+
+/**
+ * Converts NVImage to NIfTI compliant byte array
+ * @param {Uint8Array} drawingBytes
+ */
+NVImage.prototype.toUint8Array = function (drawingBytes = null) {
+  let isDrawing = drawingBytes;
+  let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing);
+
+  let drawingBytesToBeConverted = drawingBytes;
+  if (isDrawing) {
+    let perm = this.permRAS;
+    if (perm[0] != 1 || perm[1] != 2 || perm[2] != 3) {
+      let dims = this.hdr.dims; //reverse to original
+      //reverse RAS to native space, layout is mrtrix MIF format
+      // for details see NVImage.readMIF()
+      let layout = [0, 0, 0];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (Math.abs(perm[i]) - 1 !== j) continue;
+          layout[j] = i * Math.sign(perm[i]);
+        }
+      }
+      let stride = 1;
+      let instride = [1, 1, 1];
+      let inflip = [false, false, false];
+      for (let i = 0; i < layout.length; i++) {
+        for (let j = 0; j < layout.length; j++) {
+          let a = Math.abs(layout[j]);
+          if (a != i) continue;
+          instride[j] = stride;
+          //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+          if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+          stride *= dims[j + 1];
+        }
+      }
+      //lookup table for flips and stride offsets:
+      const range = (start, stop, step) =>
+        Array.from(
+          { length: (stop - start) / step + 1 },
+          (_, i) => start + i * step
+        );
+      let xlut = range(0, dims[1] - 1, 1);
+      if (inflip[0]) xlut = range(dims[1] - 1, 0, -1);
+      for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0];
+      let ylut = range(0, dims[2] - 1, 1);
+      if (inflip[1]) ylut = range(dims[2] - 1, 0, -1);
+      for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1];
+      let zlut = range(0, dims[3] - 1, 1);
+      if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
+      for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
+      //convert data
+
+      let inVs = new Uint8Array(drawingBytes);
+      let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
+      let j = 0;
+      for (let z = 0; z < dims[3]; z++) {
+        for (let y = 0; y < dims[2]; y++) {
+          for (let x = 0; x < dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+      drawingBytesToBeConverted = outVs;
+      console.log("drawing bytes");
+      console.log(drawingBytesToBeConverted);
+    }
+  }
+  let img8 = isDrawing
+    ? drawingBytesToBeConverted
+    : new Uint8Array(this.img.buffer);
+  let opad = new Uint8Array(4);
+  let odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
+  odata.set(hdrBytes);
+  odata.set(opad, hdrBytes.length);
+  odata.set(img8, hdrBytes.length + opad.length);
+  return odata;
 };

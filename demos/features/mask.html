@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Background masks overlays</title>
+    <style>
+      section {
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body style="font-family: sans-serif;">
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <section>
+      <h1>
+        Overlay 3D
+      </h1>
+      <p>
+      <input onclick="checkClick(this)" type="checkbox" id="check1" name="check1" value="true">
+      <label for="check1">Background masks overlay</label>
+      </p>
+    </section>
+    <!-- demo 1 -->
+    <section>
+      <div id="demo1" style="width:90%; height:400px;">
+        <canvas id="gl1" height=480 width=640>
+        </canvas>
+      </div>
+    </section>
+    <script src="./niivue.umd.js">
+    </script>
+    <script>
+     var volumeList1 = [
+     {
+           url: "../images/fslmean.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           colorMap: "gray",
+           opacity: 1,
+           visible: true,
+         },
+         {
+           url: "../images/fslt.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+           colorMap: "redyell",
+          cal_min: 0.05,
+          cal_max: 5.05,
+           opacity: 0.9,
+           visible: true,
+         },
+        ] 
+      var nv1 = new niivue.Niivue()
+      nv1.attachTo('gl1')
+      nv1.loadVolumes(volumeList1)
+      nv1.updateGLVolume()
+      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setClipPlane([0.15, 270, 0])
+      nv1.setRenderAzimuthElevation(45,45)
+      async function checkClick(cb) {
+        nv1.backgroundMasksOverlays = cb.checked
+        nv1.updateGLVolume()
+      }
+    </script>
+  </body>
+</html>

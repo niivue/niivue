@@ -16,5 +16,5 @@ test('defaultOptions', async () => {
   expect(opts.backColor).toEqual([0, 0, 0, 1])
   expect(opts.crosshairColor).toEqual([1, 0, 0, 1])
   expect(opts.selectionBoxColor).toEqual([1, 1, 1, .5])
-  expect(opts.colorBarMargin).toEqual(0.05)
+  expect(opts.colorbarMargin).toEqual(0.05)
 })

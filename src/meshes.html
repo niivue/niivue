@@ -30,7 +30,6 @@
 <div class="slidecontainer">
   fiber dither <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
 </div>
-
     <!-- demo 1 -->
     <section>
       <div id="demo1" style="width:90%; height:640px;">
@@ -38,16 +37,14 @@
         </canvas>
       </div>
     </section>
-
     <section>
       <p id="location"></p>
     </section>
-
     <!-- <script type="module" src="./index.js">
     </script> -->
     <script type="module" async>
-      var slider = document.getElementById("fiberLengthSlider");
-      var sliderD = document.getElementById("fiberDitherSlider");
+      var slider = document.getElementById("fiberLengthSlider")
+      var sliderD = document.getElementById("fiberDitherSlider")
       // Update the current slider value (each time you drag the slider handle)
       slider.oninput = function() {
         nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value)
@@ -57,12 +54,12 @@
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
       }
       import { Niivue } from './niivue.js'
-			import {NVImage} from './nvimage.js'
-			import {NVMesh} from './nvmesh.js'
-			let query = window.location.search
-			const params = new URLSearchParams(query);
-			let url = params.get('url')
-			console.log('url is: ',params.get('url'))
+      import {NVImage} from './nvimage.js'
+      import {NVMesh} from './nvmesh.js'
+      let query = window.location.search
+      const params = new URLSearchParams(query)
+      let url = params.get('url')
+      console.log('url is: ',params.get('url'))
       // console.log(Niivue)
       let connectome = {
       "name": "simpleConnectome",
@@ -90,7 +87,7 @@
                 0, 0, 0, 1,],
     }
       var volumeList1 = [
-        // first item is brackground image
+        // first item is background image
         {
           //url: url ? url : "../demos/images/example4d+orig.HEAD",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           url: url ? url : "../tests/images/mni152.nii.gz",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
@@ -100,62 +97,39 @@
           opacity: 1,
           visible: true,
         },
-{
-url: "../demos/images/hippo.nii.gz",
-colorMap: 'red'
-}
+        {
+        url: "../demos/images/hippo.nii.gz",
+        colorMap: 'red'
+        }
       ]
-			var nv1 = new Niivue({
-				logging: true,
-				show3Dcrosshair: true,
-				loadingText: 'there are no images',
-				dragAndDropEnabled: true,
-				backColor: [0.3, 0.2, 0.4, 1],
-				//thumbnail: "../demos/images/DoG.png"
-			})
+      function handleLocationChange(data){ 
+        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values[0].value
+      }
+      var nv1 = new Niivue({
+        logging: true,
+        show3Dcrosshair: true,
+        loadingText: 'there are no images',
+        dragAndDropEnabled: true,
+        backColor: [0.3, 0.2, 0.4, 1],
+        onLocationChange: handleLocationChange
+        //thumbnail: "../demos/images/DoG.png"
+      })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
-      //await nv1.loadVolumes(volumeList1)
-
-//			nv1.createEmptyDrawing()
-
       var meshLayersList1 = [
         {url: "../demos/images/lh.curv", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
-
-
       nv1.loadMeshes([
          {url: "../demos/images/lh.pial", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
-			
-      //nv1.loadConnectome(connectome)
-      //nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.setClipPlane([-0.1, 90, 0])
       nv1.setRenderAzimuthElevation(90,10)
-      //nv1.volumes[0].frame4D = 5;
-
       //nv1.updateGLVolume()
-      // example of using the 'location' change event with a callback function
-      nv1.on('location', (data) => {
-        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
-        document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-        //nv1.volumes[0].frame4D =  Math.floor(Math.random() * 9);
-        //nv1.updateGLVolume()
-      })
-
-			nv1.on('imageLoaded', (image) => {
-				console.log('imageLoaded', image.name)
-			})
-
-			nv1.on('intensityRange', (image) => {
-			 console.log(image.cal_min, image.cal_max)
-			})
     </script>
   </div>
 </body>
-
 </html>

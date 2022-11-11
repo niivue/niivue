@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>world space</title>
+    <style>
+      body {
+        display: flex; 
+        flex-direction: column;
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, Arial, Helvetica, sans-serif;
+        background: #FFFFFF;
+        }
+      header {
+        margin: 10px;
+      }
+      main {
+        flex: 1;
+        position:relative;
+        min-height: 100px;
+      }
+      canvas {
+        position: absolute;
+        cursor: crosshair;
+      }
+      canvas:focus {
+        outline: 0px;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <header>
+      <label for="check3">
+        <a href="https://github.com/rordenlab/dcm2niix/issues/595">Alias Free World space </a>
+      </label>
+      <input type="checkbox" id="check3" name="check3" checked>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+  </body>
+</html>
+<script src="./niivue.umd.js"></script>
+<script>
+  document.getElementById("check3").addEventListener("change", doCheck3Click)
+  function doCheck3Click() {
+    nv1.setSliceMM(this.checked)
+  }
+ var volumeList1 = [
+     {
+       url: "../images/FLAIR.nii.gz",
+       colorMap: "gray",
+       opacity: 1,
+       visible: true,
+     },
+    ] 
+  var nv1 = new niivue.Niivue({
+        dragAndDropEnabled: true,
+        backColor: [0.3, 0.2, 0.4, 1],
+        show3Dcrosshair: true,
+    })
+  nv1.setSliceMM(true)
+  nv1.setRadiologicalConvention(false)
+  nv1.attachTo('gl1')
+  nv1.loadVolumes(volumeList1)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+</script>
+
+

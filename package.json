@@ -1,19 +1,26 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.22.3",
+  "version": "0.30.0",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./src/niivue.js",
   "unpkg": "./dist/niivue.umd.js",
+  "module": "./dist/niivue.es.js",
+  "exports": {
+    ".": {
+      "require": "./dist/niivue.umd.js",
+      "import": "./dist/niivue.es.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "npx prettier --write src/ && npx vite build --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
     "build-win": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
-    "demo": "npm run build && npx http-server demos/",
+    "demo": "npm run build && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
     "copy-demo": "cp -r ./dist/* ./demos/features/",
-    "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\niivue.umd.js",
+    "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
     "docs": "npx jsdoc --readme ./README.md -d devdocs -t ./node_modules/clean-jsdoc-theme/ src/",
@@ -42,23 +49,24 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "@ungap/structured-clone": "^1.0.1",
     "daikon": "^1.2.42",
-    "gifti-reader-js": "^0.4.4",
+    "fflate": "^0.7.3",
     "gl-matrix": "^3.4.3",
-    "jszip": "^3.2.0",
     "nifti-reader-js": "^0.5.4",
     "rxjs": "^7.4.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.2",
     "clean-jsdoc-theme": "^3.3.1",
     "eslint": "^8.4.1",
     "express": "^4.17.1",
-    "http-server": "^14.0.0",
+    "http-server": "^14.1.0",
     "jest": "^27.4.4",
     "jest-image-snapshot": "^4.5.1",
     "jest-puppeteer": "^6.0.2",
-    "jsdoc": "^3.6.7",
+    "jsdoc": "^3.6.11",
     "prettier": "^2.5.1",
     "puppeteer": "^9.1.1",
     "vite": "^2.8.4"
