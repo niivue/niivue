@@ -1816,10 +1816,166 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
 Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
   if (this.drawBitmap) console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-  this.loadDrawing(volume);
+  try {
+    let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+    this.loadDrawing(volume);
+  } catch (err) {
+    console.error("loadDrawingFromUrl() failed to load " + fnm);
+    this.drawClearAllUndoBitmaps();
+  }
 };
 
+// not included in public docs
+Niivue.prototype.findOtsu = async function (mlevel = 2) {
+  // C: https://github.com/rordenlab/niimath
+  // Java: https://github.com/stevenjwest/Multi_OTSU_Segmentation
+  if (this.volumes.length < 1) return [];
+  let img = this.volumes[0].img;
+  let nvox = img.length;
+  if (nvox < 1) return [];
+  const nBin = 256;
+  const maxBin = nBin - 1; //bins indexed from 0: if 256 bins then 0..255
+  const h = new Array(nBin).fill(0);
+  //build 1D histogram
+  let mn = this.volumes[0].cal_min;
+  let mx = this.volumes[0].cal_max;
+  if (mx <= mn) return false;
+  let scale2raw = (mx - mn) / nBin;
+  function bin2raw(bin) {
+    return bin * scale2raw + mn;
+  }
+  let scale2bin = (nBin - 1) / Math.abs(mx - mn);
+  let inter = this.volumes[0].hdr.scl_inter;
+  let slope = this.volumes[0].hdr.scl_slope;
+  for (let v = 0; v < nvox; v++) {
+    let val = img[v] * slope + inter;
+    val = Math.min(Math.max(val, mn), mx);
+    val = Math.round((val - mn) * scale2bin);
+    h[val]++;
+  }
+  //h[1] = h[1] + h[0]; h[0] = 0;
+  //in theory one can convert h from count to probability:
+  //for (let v = 0; v < nBin; v++)
+  //  h[v] = h[v] / nvox;
+  let P = Array(nBin)
+    .fill()
+    .map(() => Array(nBin).fill(0));
+  let S = Array(nBin)
+    .fill()
+    .map(() => Array(nBin).fill(0));
+  // diagonal
+  for (let i = 1; i < nBin; ++i) {
+    P[i][i] = h[i];
+    S[i][i] = i * h[i];
+  }
+  // calculate first row (row 0 is all zero)
+  for (let i = 1; i < nBin - 1; ++i) {
+    P[1][i + 1] = P[1][i] + h[i + 1];
+    S[1][i + 1] = S[1][i] + (i + 1) * h[i + 1];
+  }
+  // using row 1 to calculate others
+  for (let i = 2; i < nBin; i++)
+    for (let j = i + 1; j < nBin; j++) {
+      P[i][j] = P[1][j] - P[1][i - 1];
+      S[i][j] = S[1][j] - S[1][i - 1];
+    }
+  // now calculate H[i][j]
+  for (let i = 1; i < nBin; ++i)
+    for (let j = i + 1; j < nBin; j++) {
+      if (P[i][j] !== 0) P[i][j] = (S[i][j] * S[i][j]) / P[i][j];
+    }
+  let max = 0;
+  let t = [Infinity, Infinity, Infinity];
+  if (mlevel > 3) {
+    for (let l = 0; l < nBin - 3; l++) {
+      for (let m = l + 1; m < nBin - 2; m++) {
+        for (let h = m + 1; h < nBin - 1; h++) {
+          let v = P[0][l] + P[l + 1][m] + P[m + 1][h] + P[h + 1][maxBin];
+          if (v > max) {
+            t[0] = l;
+            t[1] = m;
+            t[2] = h;
+            max = v;
+          } //new max
+        } //for h -> hi
+      } //for m -> mi
+    } //for l -> low
+  } else if (mlevel === 3) {
+    for (let l = 0; l < nBin - 2; l++) {
+      for (let h = l + 1; h < nBin - 1; h++) {
+        let v = P[0][l] + P[l + 1][h] + P[h + 1][maxBin];
+        if (v > max) {
+          t[0] = l;
+          t[1] = h;
+          max = v;
+        } //new max
+      } //for h -> hi
+    } //for l -> low
+  } else {
+    for (let i = 0; i < nBin - 1; i++) {
+      let v = P[0][i] + P[i + 1][maxBin];
+      if (v > max) {
+        t[0] = i;
+        max = v;
+      } //new max
+    }
+  }
+  return [bin2raw(t[0]), bin2raw(t[1]), bin2raw(t[2])];
+};
+
+/**
+ * remove dark voxels in air
+ * @param {number} levels (2-4) segment brain into this many types
+ * @example niivue.drawOtsu(3);
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
+ */
+Niivue.prototype.drawOtsu = async function (levels = 2) {
+  let nvox = this.volumes[0].img.length;
+  let thresholds = await this.findOtsu(levels);
+  if (thresholds.length < 3) return;
+  if (!this.drawBitmap) this.createEmptyDrawing();
+  let drawImg = this.drawBitmap;
+  let img = this.volumes[0].img;
+  for (let i = 0; i < nvox; i++) {
+    if (drawImg[i] !== 0) continue;
+    let v = img[i];
+    if (v > thresholds[0]) drawImg[i] = 1;
+    if (v > thresholds[1]) drawImg[i] = 2;
+    if (v > thresholds[2]) drawImg[i] = 3;
+  }
+  this.drawAddUndoBitmap();
+  this.refreshDrawing(true);
+};
+
+/**
+ * remove dark voxels in air
+ * @param {number} level (1-5) larger values for more preserved voxels
+ * @param {number} volIndex volume to dehaze
+ * @example niivue.removeHaze(3, 0);
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
+ */
+Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
+  let nvox = this.volumes[volIndex].img.length;
+  let otsu = 2;
+  if (level === 5 || level === 1) otsu = 4;
+  if (level === 4 || level === 2) otsu = 3;
+  let thresholds = await this.findOtsu(otsu);
+  if (thresholds.length < 3) return;
+  let threshold = thresholds[0];
+  if (level === 1) threshold = thresholds[2];
+  if (level === 2) threshold = thresholds[1];
+  console.log(this.volumes[volIndex]);
+  let inter = this.volumes[volIndex].hdr.scl_inter;
+  let slope = this.volumes[volIndex].hdr.scl_slope;
+  let mn = this.volumes[volIndex].global_min;
+  let img = this.volumes[volIndex].img;
+  for (let v = 0; v < nvox; v++) {
+    let val = img[v] * slope + inter;
+    if (val < threshold) img[v] = mn;
+  }
+  this.refreshLayers(this.volumes[volIndex], 0, this.volumes.length);
+  this.drawScene();
+};
 /**
  * save voxel-based image to disk
  * @param {string} fnm filename of NIfTI image to create
