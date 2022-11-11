@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Niivue Document</title>
+  <style>
+    section {
+      margin: 20px;
+    }
+  </style>
+</head>
+
+<body style="font-family: sans-serif;">
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+  </noscript>
+  <section>
+    <h1>
+      Document
+    </h1>
+    <p>
+      NiiVue supports saving a collection of images, meshes and a drawing to a document.
+    </p>
+    <p>
+    <h3>Loading Documents</h3>
+    Click on the images to load their associated document
+    </p>
+  </section>
+  <!-- demo 1 -->
+  <section>
+    <div id="demo1" style="width:90%; height:400px;">
+      <canvas id="gl1" height=480 width=640>
+      </canvas>
+    </div>    
+  </section>  
+  <section>
+    <div>
+      <ul id="previewImages" style="list-style-type: none;"></ul>       
+    </div>
+  </section>
+  <button id="toggleHippoButton" onclick="toggleHippo()">Add Hippocampus</button>
+  <button id="saveDocument" onclick="nv1.saveDocument('niivue.basic.nvd')">Save</button>
+
+  <script src="./niivue.umd.js">
+  </script>
+  <script>
+    function toggleHippo() {
+      let buttonElem = document.getElementById('toggleHippoButton');
+      if (isHippoShowing) {
+        nv1.removeVolumeByUrl(url);
+        buttonElem.innerText = 'Add Hippocampus';
+        isHippoShowing = false;
+      }
+      else {
+        nv1.addVolumeFromUrl({ url, colorMap: "bluegrn" })
+        buttonElem.innerText = 'Remove Hippocampus';
+        isHippoShowing = true;
+      }
+    }
+
+    function loadDocument(index) {
+      nv1.loadDocument(documents[index])
+    }
+
+    /**
+     * @param {String} HTML representing a single element
+     * @return {Element}
+     */
+    function htmlToElement(html) {
+        var template = document.createElement('template');
+        html = html.trim(); // Never return a text node of whitespace as the result
+        template.innerHTML = html;
+        return template.content.firstChild;
+    }
+
+    function addPreview(doc) {
+      var ul = document.getElementById("previewImages");
+      var liHTML = `<li><img style="max-height: 50px;" onclick="loadDocument(${documents.length - 1})" src="${doc.previewImageDataURL}"/></li>`;
+      var liElem = htmlToElement(liHTML);
+      ul.appendChild(liElem);
+    }
+
+    const url = '../images/hippo.nii.gz';
+    var isHippoShowing = false;
+    var volumeList1 = [
+      // first item is background image
+      {
+        url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+        colorMap: "gray",
+        opacity: 1,
+        visible: true,
+      },
+    ]
+    var nv1 = new niivue.Niivue()
+    nv1.attachTo('gl1')
+    // nv1.loadVolumes(volumeList1)
+    nv1.setSliceType(nv1.sliceTypeRender)
+    var documents = []
+    var documentUrls = ["../images/niivue.basic.nvd", "../images/niivue.drawing.nvd", "../images/niivue.mesh.nvd"];     
+    for(const documentUrl of documentUrls ) {
+      console.log("loading " + documentUrl);
+      niivue.NVDocument.loadFromUrl(documentUrl).then((doc) => {
+        documents.push(doc)
+        console.log('adding preview')
+        addPreview(doc)
+      })
+    }
+    
+    
+  </script>
+</body>
+
+</html>
