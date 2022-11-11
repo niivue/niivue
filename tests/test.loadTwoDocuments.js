@@ -7,9 +7,9 @@ test('loadTwoDocuments', async () => {
   let nvols = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
     await nv.attachTo('gl')    
-    await nv.loadDocumentFromUrl("../images/niivue-drawing.nvd")
+    await nv.loadDocumentFromUrl("../images/document/niivue.drawing.nvd")
     // now load a document with no meshes
-    await nv.loadDocumentFromUrl("../images/niivue-meshes.nvd")
+    await nv.loadDocumentFromUrl("../images/document/niivue.mesh.nvd")
     return nv.volumes.length
   })
   expect(nvols).toBe(0)

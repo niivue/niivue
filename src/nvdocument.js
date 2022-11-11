@@ -3,18 +3,118 @@ import { NVUtilities } from "./nvutilities";
 // eslint-disable-next-line no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 import { serialize, deserialize } from "@ungap/structured-clone";
+
 /**
  * Slice Type
  * @enum
  * @readonly
  */
-const SLICE_TYPE = Object.freeze({
+export const SLICE_TYPE = Object.freeze({
   AXIAL: 0,
   CORONAL: 1,
   SAGITTAL: 2,
   MULTIPLANAR: 3,
   RENDER: 4,
 });
+
+/**
+ * @enum
+ * @readonly
+ */
+export const DRAG_MODE = Object.freeze({
+  none: 0,
+  contrast: 1,
+  measurement: 2,
+  pan: 3,
+});
+
+/**
+ * @typdef {Object} NVConfigOptions
+ * @property {number} textHeight
+ * @property {number} colorbarHeight
+ * @property {number} crosshairWidth
+ * @property {number} rulerWidth
+ * @property {boolean} show3Dcrosshair
+ * @property {number[]} backColor
+ * @property {number[]} crosshairColor
+ * @property {number[]} selectionBoxColor
+ * @property {number[]} clipPlaneColor
+ * @property {number[]} rulerColor
+ * @property {number} colorbarMargin
+ * @property {boolean} trustCalMinMax
+ * @property {string} clipPlaneHotKey
+ * @property {string} viewModeHotKey
+ * @property {number} doubleTouchTimeout
+ * @property {number} longTouchTimeout
+ * @property {number} keyDebounceTime
+ * @property {boolean} isNearestInterpolation
+ * @property {boolean} isAtlasOutline
+ * @property {boolean} isRuler
+ * @property {boolean} isColorbar
+ * @property {boolean} isOrientCube
+ * @property {number} multiplanarPadPixels
+ * @property {boolean} multiplanarForceRender
+ * @property {boolean} isRadiologicalConvention
+ * @property {number} meshThicknessOn2D
+ * @property {DRAG_MODE} dragMode
+ * @property {boolean} isDepthPickMesh
+ * @property {boolean} isCornerOrientationText
+ * @property {boolean} sagittalNoseLeft
+ * @property {boolean} isSliceMM
+ * @property {boolean} isHighResolutionCapable
+ * @property {boolean} logging
+ * @property {string} loadingText
+ * @property {boolean} dragAndDropEnabled
+ * @property {boolean} drawingEnabled
+ * @property {number} penValue
+ * @property {boolean} isFilledPen
+ * @property {string} thumbnail
+ * @property {number} maxDrawUndoBitmaps
+ * @property {SLICE_TYPE} sliceType
+ */
+export const DEFAULT_OPTIONS = {
+  textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
+  colorbarHeight: 0.05, // 0 for no colorbars, fraction of Nifti j dimension
+  crosshairWidth: 1, // 0 for no crosshairs
+  rulerWidth: 4,
+  show3Dcrosshair: false,
+  backColor: [0, 0, 0, 1],
+  crosshairColor: [1, 0, 0, 1],
+  selectionBoxColor: [1, 1, 1, 0.5],
+  clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  rulerColor: [1, 0, 0, 0.8],
+  colorbarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
+  trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
+  clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
+  viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
+  doubleTouchTimeout: 500,
+  longTouchTimeout: 1000,
+  keyDebounceTime: 50, // default debounce time used in keyup listeners
+  isNearestInterpolation: false,
+  isAtlasOutline: false,
+  isRuler: false,
+  isColorbar: false,
+  isOrientCube: false,
+  multiplanarPadPixels: 0,
+  multiplanarForceRender: false,
+  isRadiologicalConvention: false,
+  meshThicknessOn2D: Infinity,
+  dragMode: DRAG_MODE.contrast,
+  isDepthPickMesh: false,
+  isCornerOrientationText: false,
+  sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
+  isSliceMM: false,
+  isHighResolutionCapable: true,
+  logging: false,
+  loadingText: "waiting for images...",
+  dragAndDropEnabled: true,
+  drawingEnabled: false, // drawing disabled by default
+  penValue: 1, // sets drawing color. see "drawPt"
+  isFilledPen: false,
+  thumbnail: "",
+  maxDrawUndoBitmaps: 8,
+  sliceType: SLICE_TYPE.MULTIPLANAR,
+};
 
 /**Creates and instance of NVDocument
  * @class NVDocument
@@ -25,14 +125,137 @@ export class NVDocument {
   constructor() {
     this.data = {};
     this.data.title = "Untitled document";
-    this.data.renderAzimuth = 110; //-45;
-    this.data.renderElevation = 10; //-165; //15;
-    this.data.crosshairPos = [0.5, 0.5, 0.5];
-    this.data.clipPlane = [0, 0, 0, 0];
-    this.data.sliceType = SLICE_TYPE.AXIAL;
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
-    this.data.opts = {};
+    this.data.opts = DEFAULT_OPTIONS;
+    this.data.previewImageDataURL = "";
+
+    /**
+     * @typdef {Object} NVSceneData
+     * @property {number} azimuth
+     * @property {number} elevation
+     * @property {number[]} crosshairPos
+     * @property {number[]} clipPlane
+     * @property {number[]} clipPlaneDepthAziElev
+     * @property {number} volScaleMultiplier
+     */
+    this.scene = {
+      onAzimuthElevationChange: () => {},
+      onZoom3DChange: () => {},
+      sceneData: {
+        azimuth: 110,
+        elevation: 10,
+        crosshairPos: [0.5, 0.5, 0.5],
+        clipPlane: [0, 0, 0, 0],
+        clipPlaneDepthAziElev: [2, 0, 0],
+        volScaleMultiplier: 1.0,
+      },
+
+      /**
+       * Gets azimuth of scene
+       * @returns {number}
+       */
+      get renderAzimuth() {
+        return this.sceneData.azimuth;
+      },
+      /**
+       * @param {number} azimuth
+       */
+      set renderAzimuth(azimuth) {
+        this.sceneData.azimuth = azimuth;
+        if (this.onAzimuthElevationChange) {
+          this.onAzimuthElevationChange(
+            this.sceneData.azimuth,
+            this.sceneData.elevation
+          );
+        }
+      },
+      /**
+       * Gets elevation of scene
+       * @returns {number}
+       */
+      get renderElevation() {
+        return this.sceneData.elevation;
+      },
+
+      /**
+       * @param {number} elevation
+       */
+      set renderElevation(elevation) {
+        this.sceneData.elevation = elevation;
+        if (this.onAzimuthElevationChange) {
+          this.onAzimuthElevationChange(
+            this.sceneData.azimuth,
+            this.sceneData.elevation
+          );
+        }
+      },
+
+      /**
+       * Gets the scale/zoom of the scene
+       * @returns {number}
+       */
+      get volScaleMultiplier() {
+        return this.sceneData.volScaleMultiplier;
+      },
+
+      /**
+       * Sets scale/zoom of the scene
+       * @param {number} scale
+       */
+      set volScaleMultiplier(scale) {
+        this.sceneData.volScaleMultiplier = scale;
+        this.onZoom3DChange(scale);
+      },
+
+      /**
+       * Gets current crosshairs position
+       * @returns {number[]}
+       */
+      get crosshairPos() {
+        return this.sceneData.crosshairPos;
+      },
+
+      /**
+       * sets current crosshairs position
+       * @param {number[]} crosshairPos
+       */
+      set crosshairPos(crosshairPos) {
+        this.sceneData.crosshairPos = crosshairPos;
+      },
+
+      /**
+       * Gets the current clip plane
+       * @returns {number[]}
+       */
+      get clipPlane() {
+        return this.sceneData.clipPlane;
+      },
+
+      /**
+       * Gets the current clip plane
+       * @param {number[]} clipPlane
+       */
+      set clipPlane(clipPlane) {
+        this.sceneData.clipPlane = clipPlane;
+      },
+
+      /**
+       * Gets current Plane Depth
+       * @returns {number[]}
+       */
+      get clipPlaneDepthAziElev() {
+        return this.sceneData.clipPlaneDepthAziElev;
+      },
+
+      /**
+       * Sets current depth, azimuth and elevation of clip plane
+       * @param {number[]} clipPlaneDepthAziElev
+       */
+      set clipPlaneDepthAziElev(clipPlaneDepthAziElev) {
+        this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev;
+      },
+    };
     this.volumes = [];
     this.meshes = [];
     this.drawBitmap = null;
@@ -49,6 +272,22 @@ export class NVDocument {
   }
 
   /**
+   * Gets preview image blob
+   * @returns {string} dataURL of preview image
+   */
+  get previewImageDataURL() {
+    return this.data.previewImageDataURL;
+  }
+
+  /**
+   * Sets preview image blob
+   * @param {string} dataURL encoded preview image
+   */
+  set previewImageDataURL(dataURL) {
+    this.data.previewImageDataURL = dataURL;
+  }
+
+  /**
    * @param {string} title title of document
    */
   set title(title) {
@@ -60,89 +299,6 @@ export class NVDocument {
    */
   get imageOptionsArray() {
     return this.data.imageOptionsArray;
-  }
-
-  // get meshOptionsArray() {
-  //   return this.data.meshOptionsArray;
-  // }
-
-  /**
-   * Gets azimuth of scene
-   * @returns {number}
-   */
-  get renderAzimuth() {
-    return this.data.renderAzimuth;
-  }
-
-  /**
-   * Sets azimuth of scene
-   * @param {number} azimuth
-   */
-  set renderAzimuth(azimuth) {
-    this.data.renderAzimuth = azimuth;
-  }
-
-  /**
-   * Gets the elevation of the scene
-   * @returns {number}
-   */
-  get renderElevation() {
-    return this.data.renderElevation;
-  }
-
-  /**
-   * Sets the elevation of the scene
-   */
-  set renderElevation(elevation) {
-    this.data.renderElevation = elevation;
-  }
-
-  /**
-   * Gets the crosshair position of the scene
-   * @returns {number[]}
-   */
-  get crosshairPos() {
-    return this.data.crosshairPos;
-  }
-
-  /**
-   * Sets the crosshair position of the scene
-   * @param {number[]} pos
-   */
-  set crosshairPos(pos) {
-    this.data.crosshairPos = pos;
-  }
-
-  /**
-   * Gets the clip plane of the scene
-   * @returns {number[]}
-   */
-  get clipPlane() {
-    return this.data.clipPlane;
-  }
-
-  /**
-   * Sets the clip plane of the scene
-   * @param {number[]}
-   */
-  set clipPlane(plane) {
-    this.data.clipPlane = plane;
-  }
-
-  /**
-   * Gets the slice type of the scene
-   * @returns {SLICE_TYPE}
-   */
-  get sliceType() {
-    return this.data.sliceType;
-  }
-
-  /**
-   * Sets the slice type of the scene
-   * @param {SLICE_TYPE} sliceType
-   */
-  set sliceType(sliceType) {
-    this.data.sliceType = sliceType;
   }
 
   /**
@@ -257,32 +413,33 @@ export class NVDocument {
   }
 
   /**
-   * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
-   * @param {string} fileName
+   * @typedef {Object} NVDocumentData
+   * @property {string[]} encodedImageBlobs base64 encoded images
+   * @property {string} encodedDrawingBlob base64 encoded drawing
+   * @property {string} previewImageDataURL dataURL of the preview image
+   * @property {Map<string, number>} imageOptionsMap map of image ids to image options
+   * @property {NVImageFromUrlOptions} imageOptionsArray array of image options to recreate images
+   * @property {NVSceneData} sceneData data to recreate a scene
+   * @property {NVConfigOptions} opts configuration options of {@link Niivue} instance
+   * @property {string} meshesString encoded meshes
    */
-  async save(fileName) {
+
+  /**
+   * Converts NVDocument to JSON
+   * @returns {NVDocumentData}
+   */
+  json() {
+    let data = {};
+    data.encodedImageBlobs = [];
+    data.encodedDrawingBlob = null;
+    data.previewImageDataURL = this.data.previewImageDataURL;
+    data.imageOptionsMap = [];
     let imageOptionsArray = [];
-    this.data.encodedImageBlobs = [];
-    this.data.encodedDrawingBlob = null;
-    this.data.imageOptionsMap = [];
+    // save our scene object
+    data.sceneData = { ...this.scene.sceneData };
 
-    // check for our base layer
-    if (this.volumes.length == 0 && this.meshes.length == 0) {
-      throw new Error("nothing to save");
-    }
-
-    // save our ui options
-    let propsToRemove = [];
-    for (const prop in this.data.opts) {
-      let typeName = this.data.opts[prop];
-      if (typeName === "function") {
-        propsToRemove.push(prop);
-      }
-    }
-
-    for (const prop in propsToRemove) {
-      delete this.data.opts[prop];
-    }
+    // save our options
+    data.opts = this.opts;
 
     // volumes
     if (this.volumes.length) {
@@ -292,14 +449,14 @@ export class NVDocument {
         let encodedImageBlob = NVUtilities.uint8tob64(
           this.volumes[0].toUint8Array()
         );
-        this.data.encodedImageBlobs.push(encodedImageBlob);
+        data.encodedImageBlobs.push(encodedImageBlob);
         if (this.drawBitmap) {
-          this.data.encodedDrawingBlob = NVUtilities.uint8tob64(
+          data.encodedDrawingBlob = NVUtilities.uint8tob64(
             this.volumes[0].toUint8Array(this.drawBitmap)
           );
         }
 
-        this.data.imageOptionsMap.push([this.volumes[0].id, 0]);
+        data.imageOptionsMap.push([this.volumes[0].id, 0]);
       } else {
         throw new Error("image options for base layer not found");
       }
@@ -330,14 +487,13 @@ export class NVDocument {
 
         imageOptionsArray.push(imageOptions);
 
-        let encodedImageBlob = NVUtilities.uint8tob64(
-          await volume.toUint8Array()
-        );
-        this.data.encodedImageBlobs.push(encodedImageBlob);
-        this.data.imageOptionsMap.push([volume.id, i]);
+        let encodedImageBlob = NVUtilities.uint8tob64(volume.toUint8Array());
+        data.encodedImageBlobs.push(encodedImageBlob);
+        data.imageOptionsMap.push([volume.id, i]);
       }
-      this.data.imageOptionsArray = imageOptionsArray;
     }
+    // Add it even if it's empty
+    data.imageOptionsArray = imageOptionsArray;
 
     // meshes
     const meshes = [];
@@ -352,7 +508,6 @@ export class NVDocument {
       copyMesh.dpg = mesh.dpg;
       copyMesh.dps = mesh.dps;
       copyMesh.dpv = mesh.dpv;
-
       copyMesh.meshShaderIndex = mesh.meshShaderIndex;
       copyMesh.layers = [];
 
@@ -375,33 +530,45 @@ export class NVDocument {
 
       meshes.push(copyMesh);
     }
-    this.data.meshesString = JSON.stringify(serialize(meshes));
-
-    NVUtilities.download(
-      JSON.stringify(this.data),
-      fileName,
-      "application/json"
-    );
+    data.meshesString = JSON.stringify(serialize(meshes));
+    return data;
   }
 
   /**
-   * Factory method to return an instance of NVDocument
+   * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
+   * @param {string} fileName
+   */
+  download(fileName) {
+    let data = this.json();
+    NVUtilities.download(JSON.stringify(data), fileName, "application/json");
+  }
+
+  /**
+   * Deserialize mesh data objects
+   * @param {NVDocument} document
+   */
+  static deserializeMeshDataObjects(document) {
+    if (document.data.meshesString) {
+      document.meshDataObjects = deserialize(
+        JSON.parse(document.data.meshesString)
+      );
+      delete document.data["meshesString"];
+    }
+  }
+
+  /**
+   * Factory method to return an instance of NVDocument from a URL
    * @param {string} url
    * @constructs NVDocument
    */
   static async loadFromUrl(url) {
-    let document = new NVDocument();
     let response = await fetch(url);
-    document.data = await response.json();
-    if (document.data.meshesString) {
-      document.meshes = deserialize(JSON.parse(document.data.meshesString));
-      delete document.data["meshesString"];
-    }
-    return document;
+    let data = await response.json();
+    return NVDocument.loadFromJSON(data);
   }
 
   /**
-   * Factory method to return an instance of NVDocument
+   * Factory method to return an instance of NVDocument from a File object
    * @param {File} file
    * @constructs NVDocument
    */
@@ -411,11 +578,22 @@ export class NVDocument {
     let utf8decoder = new TextDecoder();
     let dataString = utf8decoder.decode(arrayBuffer);
     document.data = JSON.parse(dataString);
-    if (document.data.meshesString) {
-      document.meshes = deserialize(JSON.parse(document.data.meshesString));
-      delete document.data["meshesString"];
-    }
+    document.scene.sceneData = document.data.sceneData;
+    delete document.data["sceneData"];
+    NVDocument.deserializeMeshDataObjects(document);
 
+    return document;
+  }
+
+  /**
+   * Factory method to return an instance of NVDocument from JSON
+   */
+  static loadFromJSON(data) {
+    let document = new NVDocument();
+    document.data = data;
+    document.scene.sceneData = data.sceneData;
+    delete document.data["sceneData"];
+    NVDocument.deserializeMeshDataObjects(document);
     return document;
   }
 }
