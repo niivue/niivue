@@ -113245,6 +113245,11 @@ function Niivue(options = {}) {
   } else {
     this.uiData.dpr = 1;
   }
+  this.dragModes = [];
+  this.dragModes.contrast = DRAG_MODE.contrast;
+  this.dragModes.measurement = DRAG_MODE.measurement;
+  this.dragModes.none = DRAG_MODE.none;
+  this.dragModes.pan = DRAG_MODE.pan;
   this.sliceTypeAxial = SLICE_TYPE.AXIAL;
   this.sliceTypeCoronal = SLICE_TYPE.CORONAL;
   this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL;
@@ -114209,8 +114214,149 @@ Niivue.prototype.loadDrawingFromUrl = async function(fnm) {
   if (this.drawBitmap)
     console.log("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
-  let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-  this.loadDrawing(volume);
+  try {
+    let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+    this.loadDrawing(volume);
+  } catch (err2) {
+    console.error("loadDrawingFromUrl() failed to load " + fnm);
+    this.drawClearAllUndoBitmaps();
+  }
+};
+Niivue.prototype.findOtsu = async function(mlevel = 2) {
+  if (this.volumes.length < 1)
+    return [];
+  let img = this.volumes[0].img;
+  let nvox = img.length;
+  if (nvox < 1)
+    return [];
+  const nBin = 256;
+  const maxBin = nBin - 1;
+  const h = new Array(nBin).fill(0);
+  let mn = this.volumes[0].cal_min;
+  let mx = this.volumes[0].cal_max;
+  if (mx <= mn)
+    return false;
+  let scale2raw = (mx - mn) / nBin;
+  function bin2raw(bin) {
+    return bin * scale2raw + mn;
+  }
+  let scale2bin = (nBin - 1) / Math.abs(mx - mn);
+  let inter = this.volumes[0].hdr.scl_inter;
+  let slope = this.volumes[0].hdr.scl_slope;
+  for (let v = 0; v < nvox; v++) {
+    let val = img[v] * slope + inter;
+    val = Math.min(Math.max(val, mn), mx);
+    val = Math.round((val - mn) * scale2bin);
+    h[val]++;
+  }
+  let P = Array(nBin).fill().map(() => Array(nBin).fill(0));
+  let S = Array(nBin).fill().map(() => Array(nBin).fill(0));
+  for (let i2 = 1; i2 < nBin; ++i2) {
+    P[i2][i2] = h[i2];
+    S[i2][i2] = i2 * h[i2];
+  }
+  for (let i2 = 1; i2 < nBin - 1; ++i2) {
+    P[1][i2 + 1] = P[1][i2] + h[i2 + 1];
+    S[1][i2 + 1] = S[1][i2] + (i2 + 1) * h[i2 + 1];
+  }
+  for (let i2 = 2; i2 < nBin; i2++)
+    for (let j = i2 + 1; j < nBin; j++) {
+      P[i2][j] = P[1][j] - P[1][i2 - 1];
+      S[i2][j] = S[1][j] - S[1][i2 - 1];
+    }
+  for (let i2 = 1; i2 < nBin; ++i2)
+    for (let j = i2 + 1; j < nBin; j++) {
+      if (P[i2][j] !== 0)
+        P[i2][j] = S[i2][j] * S[i2][j] / P[i2][j];
+    }
+  let max2 = 0;
+  let t = [Infinity, Infinity, Infinity];
+  if (mlevel > 3) {
+    for (let l = 0; l < nBin - 3; l++) {
+      for (let m = l + 1; m < nBin - 2; m++) {
+        for (let h2 = m + 1; h2 < nBin - 1; h2++) {
+          let v = P[0][l] + P[l + 1][m] + P[m + 1][h2] + P[h2 + 1][maxBin];
+          if (v > max2) {
+            t[0] = l;
+            t[1] = m;
+            t[2] = h2;
+            max2 = v;
+          }
+        }
+      }
+    }
+  } else if (mlevel === 3) {
+    for (let l = 0; l < nBin - 2; l++) {
+      for (let h2 = l + 1; h2 < nBin - 1; h2++) {
+        let v = P[0][l] + P[l + 1][h2] + P[h2 + 1][maxBin];
+        if (v > max2) {
+          t[0] = l;
+          t[1] = h2;
+          max2 = v;
+        }
+      }
+    }
+  } else {
+    for (let i2 = 0; i2 < nBin - 1; i2++) {
+      let v = P[0][i2] + P[i2 + 1][maxBin];
+      if (v > max2) {
+        t[0] = i2;
+        max2 = v;
+      }
+    }
+  }
+  return [bin2raw(t[0]), bin2raw(t[1]), bin2raw(t[2])];
+};
+Niivue.prototype.drawOtsu = async function(levels = 2) {
+  let nvox = this.volumes[0].img.length;
+  let thresholds = await this.findOtsu(levels);
+  if (thresholds.length < 3)
+    return;
+  if (!this.drawBitmap)
+    this.createEmptyDrawing();
+  let drawImg = this.drawBitmap;
+  let img = this.volumes[0].img;
+  for (let i2 = 0; i2 < nvox; i2++) {
+    if (drawImg[i2] !== 0)
+      continue;
+    let v = img[i2];
+    if (v > thresholds[0])
+      drawImg[i2] = 1;
+    if (v > thresholds[1])
+      drawImg[i2] = 2;
+    if (v > thresholds[2])
+      drawImg[i2] = 3;
+  }
+  this.drawAddUndoBitmap();
+  this.refreshDrawing(true);
+};
+Niivue.prototype.removeHaze = async function(level = 5, volIndex = 0) {
+  let nvox = this.volumes[volIndex].img.length;
+  let otsu = 2;
+  if (level === 5 || level === 1)
+    otsu = 4;
+  if (level === 4 || level === 2)
+    otsu = 3;
+  let thresholds = await this.findOtsu(otsu);
+  if (thresholds.length < 3)
+    return;
+  let threshold = thresholds[0];
+  if (level === 1)
+    threshold = thresholds[2];
+  if (level === 2)
+    threshold = thresholds[1];
+  console.log(this.volumes[volIndex]);
+  let inter = this.volumes[volIndex].hdr.scl_inter;
+  let slope = this.volumes[volIndex].hdr.scl_slope;
+  let mn = this.volumes[volIndex].global_min;
+  let img = this.volumes[volIndex].img;
+  for (let v = 0; v < nvox; v++) {
+    let val = img[v] * slope + inter;
+    if (val < threshold)
+      img[v] = mn;
+  }
+  this.refreshLayers(this.volumes[volIndex], 0, this.volumes.length);
+  this.drawScene();
 };
 Niivue.prototype.saveImage = async function(fnm, isSaveDrawing = false) {
   if (!this.back.hasOwnProperty("dims")) {
