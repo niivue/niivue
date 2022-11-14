@@ -3,95 +3,12 @@
 <head>
     <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      display: flex; 
-      flex-direction: column;
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, Arial, Helvetica, sans-serif;
-      }
-    header {
-      background: #202020;
-      color: white;
-    }
-    main {
-      flex: 1;
-      background: #000000;
-      position:relative;
-    }
-    footer {
-      background: #202020;
-      color: white;
-    }
-    canvas {
-      position: absolute;
-      cursor: crosshair;
-    }
-    canvas:focus {
-      outline: 0px;
-    }
-    div {
-      display:table-row;
-      background-color: blue;
-    }
-    .dropdown {
-      float: left;
-      overflow: hidden;
-    }
-    .dropdown .dropbtn {
-      font-size: 16px;  
-      border: none;
-      outline: none;
-      color: white;
-      padding: 12px 12px;
-      background-color: #202020;
-      font-family: inherit;
-      margin: 0;
-    }
-    .dropdown:hover .dropbtn {
-      background-color: #9a9;
-    }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: #303030;
-      min-width: 160px;
-      border-radius: 5px;
-      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-      z-index: 1;
-    }
-    .dropdown-content a {
-      float: none;
-      color: white;
-      padding: 12px 16px;
-      text-decoration: none;
-      display: block;
-      text-align: left;
-      line-height: 6px;
-    }
-    .dropdown-content a:hover {
-      background-color: #aba;
-    }
-    .dropdown:hover
-    .dropdown-content {
-       display: block;
-    }
-    .dropdown-item-checked::before {
-       position: absolute;
-       left: .2rem;
-       content: "\2022"; /* or '✓' */
-       font-weight: 600;
-     }
-    .divider {
-        border-top: 1px solid grey;
-    }
-  </style>
+  <link rel="stylesheet" href="niivue.css">
 </head>
 <body>
   <header>
     <div class="dropdown">
-      <button class="dropbtn">File 
+      <button class="dropbtn">File
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -100,9 +17,9 @@
         <a class="viewBtn" id="ShowHeader">Show Header</a>
         <a class="linker" href="https://github.com/niivue/niivue">About</a>
       </div>
-    </div> 
+    </div>
     <div class="dropdown">
-      <button class="dropbtn">Edit 
+      <button class="dropbtn">Edit
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -110,7 +27,7 @@
       </div>
     </div>
     <div class="dropdown">
-      <button class="dropbtn" data-toggle="dropdown">View 
+      <button class="dropbtn" data-toggle="dropdown">View
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -118,13 +35,15 @@
         <a class="viewBtn" id="|Sagittal">Sagittal</a>
         <a class="viewBtn" id="|Coronal">Coronal</a>
         <a class="viewBtn" id="|Render">Render</a>
-        <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
+        <a class="viewBtn dropdown-item-checked" id="|MultiPlanar">A+C+S</a>
+        <a class="viewBtn" id="|MultiPlanarRender">A+C+S+R</a>
         <a class="viewBtn divider dropdown-item-checked" id="Colorbar">Colorbar</a>
         <a class="viewBtn" id="Radiological">Radiological</a>
         <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
         <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
         <a class="viewBtn dropdown-item-checked" id="WorldSpace">World Space</a>
         <a class="viewBtn dropdown-item-checked" id="Interpolate">Smooth Interpolation</a>
+        <a class="viewBtn" id="RemoveHaze">Remove Haze</a>
         <a class="viewBtn divider" id="Left">Left</a>
         <a class="viewBtn" id="Right">Right</a>
         <a class="viewBtn" id="Anterior">Anterior</a>
@@ -132,9 +51,9 @@
         <a class="viewBtn" id="Inferior">Inferior</a>
         <a class="viewBtn" id="Superior">Superior</a>
       </div>
-    </div> 
+    </div>
     <div class="dropdown">
-      <button class="dropbtn">Color 
+      <button class="dropbtn">Color
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -146,7 +65,7 @@
       </div>
     </div>
     <div class="dropdown">
-      <button class="dropbtn">Draw 
+      <button class="dropbtn">Draw
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -157,12 +76,14 @@
         <a class="viewBtn" id="@Erase">Erase</a>
         <a class="viewBtn" id="@Cluster">Erase Cluster</a>
         <a class="viewBtn divider dropdown-item-checked" id="DrawFilled">Fill Outline</a>
+        <a class="viewBtn dropdown-item-checked" id="DrawOverwrite">Pen Overwrites Existing</a>
         <a class="viewBtn dropdown-item-checked" id="Translucent">Translucent</a>
         <a class="viewBtn" id="Growcut">Grow Cut</a>
+        <a class="viewBtn" id="DrawOtsu">Otsu</a>
       </div>
-    </div> 
+    </div>
     <div class="dropdown">
-      <button class="dropbtn">Drag 
+      <button class="dropbtn">Drag
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -171,9 +92,9 @@
         <a class="viewBtn" id="^pan">Pan</a>
         <a class="viewBtn" id="^none">None</a>
       </div>
-    </div> 
+    </div>
     <div class="dropdown">
-      <button class="dropbtn">Script 
+      <button class="dropbtn">Script
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
@@ -184,7 +105,7 @@
         <a class="viewBtn" id="_pcasl">pCASL</a>
         <a class="viewBtn" id="_mesh">mesh</a>
       </div>
-    </div> 
+    </div>
   </header>
   <main id="container">
     <canvas id="gl1"></canvas>
@@ -197,7 +118,8 @@
 <script src="./niivue.umd.js"></script>
 <script type="module" async>
   const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
-  function handleIntensityChange(data){ 
+  var isFilled = true;
+  function handleIntensityChange(data){
       document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
   }
   var nv1 = new niivue.Niivue({
@@ -207,17 +129,18 @@
       show3Dcrosshair: true,
       onLocationChange:handleIntensityChange
   })
-  nv1.opts.isColorbar =true
+  nv1.opts.isColorbar = false
   nv1.setRadiologicalConvention(false)
   nv1.attachTo('gl1')
   nv1.setClipPlane([0.3, 270, 0])
   nv1.setRenderAzimuthElevation(120,10)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
   nv1.setSliceMM(true)
-  nv1.opts.multiplanarForceRender = true
+  nv1.opts.multiplanarForceRender = false
   nv1.graph.autoSizeMultiplanar = true
   nv1.graph.opacity = 1.0
-  nv1.drawOpacity = 0.5
+  nv1.drawOpacity = 0.5;
+  nv1.opts.isColorbar =false
   var volumeList1 = [{url: "../images/FLAIR.nii.gz"}]
   await nv1.loadVolumes(volumeList1)
   await nv1.loadDrawingFromUrl("../images/lesion.nii.gz")
@@ -233,7 +156,7 @@
       }
   } // toggleGroup()
   async function onButtonClick(event) {
-      
+     
       if (isTouchDevice) {
         console.log('Touch device: click menu to close menu')
         /*var el = this.parentNode
@@ -289,22 +212,21 @@
       if (event.target.id === "Undo") {
         nv1.drawUndo()
       }
-      var isFilled = true
       if(event.target.id.charAt(0) === '@') { //sliceType
           if (event.target.id === "@Off")
               nv1.setDrawingEnabled(false)
           else
               nv1.setDrawingEnabled(true)
           if (event.target.id === "@Erase")
-              nv1.setPenValue(0, isFilled)
+              nv1.setPenValue(0, isFilled);
           if (event.target.id === "@Red")
-              nv1.setPenValue(1, isFilled)
+              nv1.setPenValue(1, isFilled);
           if (event.target.id === "@Green")
-              nv1.setPenValue(2, isFilled)
+              nv1.setPenValue(2, isFilled);
           if (event.target.id === "@Blue")
-              nv1.setPenValue(3, isFilled)
+              nv1.setPenValue(3, isFilled);
           if (event.target.id === "@Cluster")
-              nv1.setPenValue(-0, isFilled)
+              nv1.setPenValue(-0, isFilled);
           toggleGroup(event.target.id)
       } //Draw Color
       if (event.target.id === "Growcut")
@@ -313,18 +235,30 @@
           if (nv1.drawOpacity > 0.75)
             nv1.drawOpacity = 0.5
           else
-            nv1.drawOpacity = 1.0
+            nv1.drawOpacity = 1.0;
           nv1.drawScene()
           event.srcElement.classList.toggle("dropdown-item-checked")
           return
-      }      
+      }
+      if (event.target.id === "DrawOtsu") {
+        let levels = parseInt(prompt("Segmentation classes (2..4)", "3"));
+        nv1.drawOtsu(levels);
+      }
+      if (event.target.id === "RemoveHaze") {
+        let level = parseInt(prompt("Remove Haze (1..5)", "5"));
+        nv1.removeHaze(level);
+      }
       if (event.target.id === "DrawFilled") {
-          isFilled = !isFilled
-          nv1.setPenValue(nv1.opts.penValue, isFilled)
+          isFilled = !isFilled;
+          nv1.setPenValue(nv1.opts.penValue, isFilled);
           event.srcElement.classList.toggle("dropdown-item-checked")
           return
       }
-
+      if (event.target.id === "DrawOverwrite") {
+          nv1.drawFillOverwrites = ! nv1.drawFillOverwrites;
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          return
+      }
       if(event.target.id.charAt(0) === '|') { //sliceType
           if (event.target.id === "|Axial")
               nv1.setSliceType(nv1.sliceTypeAxial)
@@ -345,10 +279,10 @@
           toggleGroup(event.target.id)
       } //sliceType
       if (event.target.id === "WorldSpace") {
-          nv1.setSliceMM(!nv1.opts.isSliceMM)
+          nv1.setSliceMM(!nv1.opts.isSliceMM);
           event.srcElement.classList.toggle("dropdown-item-checked")
           return
-      } 
+      }
       if (event.target.id === "Interpolate") {
           nv1.setInterpolation(!nv1.opts.isNearestInterpolation)
           event.srcElement.classList.toggle("dropdown-item-checked")
