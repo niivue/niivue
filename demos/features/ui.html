@@ -1,336 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>NiiVue pure HTML user interface</title>
-    <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <style>
-        html,
-        body {
-            padding: 0;
-            margin: 0;
-            height: 100%;
-            width: 100%;
-            background: #202020;
-        }
-        ul {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #202020;
-        }
-        li {
-            float: left;
-        }
-        li a,
-        .dropbtn {
-            /* menu header */
-            display: inline-block;
-            color: white;
-            text-align: center;
-            padding: 4px 8px;
-            text-decoration: none;
-        }
-        canvas:focus {
-            outline: 0px coral;
-        }
-        li a:hover,
-        .dropdown:hover .dropbtn {
-            background-color: #44ABDA;
-        }
-        li.dropdown {
-            display: inline-block;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-        .dropdown-content {
-            font-family: Arial, Helvetica, sans-serif;
-            display: none;
-            position: absolute;
-            background-color: #f9f9f9;
-            min-width: 160px;
-            box-shadow: 0px 6px 6px 0px rgba(0, 0, 0, 0.2);
-            z-index: 1;
-        }
-        .dropdown-content a {
-            /* menu items */
-            color: black;
-            padding: 6px 16px;
-            text-decoration: none;
-            display: block;
-            text-align: left;
-        }
-        .dropdown-content a:hover {
-            background-color: #f1f1f1
-        }
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-        .divider,
-        .linker,
-        .overlay {
-            border-top: 1px solid grey;
-        }
-        canvas {
-          display: block;  /* prevents scrollbar */
-          border: 0;
-          width: 100vw;
-          height: 90vh;
-          max-width:100%;
-          max-height:100%;
-          overflow-x:hidden;
-          overflow-y:hidden;
-          top: 0;
-          left: 0;
-          margin: 0 auto;
-        }
-        .dropdown-item-checked::before {
-           position: absolute;
-           left: .2rem;
-           content: '✓';
-           font-weight: 600;
-         }
-    </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="niivue.css">
 </head>
 <body>
-    <div id="menu-container">
-        <input id="file-input" type="file" name="name" style="display: none;" />
-        <ul>
-            <li class="dropdown">
-                <a href="javascript:void(0)" class="dropbtn" id="FileMenu">File</a>
-                <div class="dropdown-content">
-                    <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
-                    <a class="viewBtn" id="ShowHeader">Show Header</a>
-                    <a class="linker" href="https://github.com/niivue/niivue">About</a>
-                </div>
-            </li>
-            <li class="dropdown">
-                <a href="javascript:void(0)" class="dropbtn" id="ViewMenu">View</a>
-                <div class="dropdown-content">
-                    <a class="viewBtn" id="|Axial">Axial</a>
-                    <a class="viewBtn" id="|Sagittal">Sagittal</a>
-                    <a class="viewBtn" id="|Coronal">Coronal</a>
-                    <a class="viewBtn" id="|Render">Render</a>
-                    <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
-                    <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-                    <a class="divider dropdown-item-checked" id="Colorbar">Colorbar</a>
-                    <a class="viewBtn" id="Radiological">Radiological</a>
-                    <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
-                    <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
-                </div>
-            </li>
-            <li class="dropdown">
-                <a href="javascript:void(0)" class="dropbtn">Color</a>
-                <div class="dropdown-content">
-                    <a class="viewBtn dropdown-item-checked" id="!Gray">Gray</a>
-                    <a class="viewBtn" id="!Plasma">Plasma</a>
-                    <a class="viewBtn" id="!Viridis">Viridis</a>
-                    <a class="viewBtn" id="!Inferno">Inferno</a>
-                    <a class="divider dropdown-item-checked" id="BackColor">Dark Background</a>
-                </div>
-            </li>
-            <li class="dropdown">
-                <a href="javascript:void(0)" class="dropbtn">Drag</a>
-                <div class="dropdown-content">
-                    <a class="viewBtn dropdown-item-checked" id="^contrast">Contrast</a>
-                    <a class="viewBtn" id="^measurement">Measurement</a>
-                    <a class="viewBtn" id="^pan">Pan</a>
-                    <a class="viewBtn" id="^none">None</a>
-                </div>
-            </li>
-            <li class="dropdown">
-                <a href="javascript:void(0)" class="dropbtn">Examples</a>
-                <div class="dropdown-content">
-                    <a class="viewBtn" id="_FLAIR">FLAIR</a>
-                    <a class="viewBtn dropdown-item-checked" id="_mni152">mni152</a>
-                    <a class="viewBtn" id="_shear">CT</a>
-                    <a class="viewBtn" id="_ct_perfusion">CT CBF</a>
-                    <a class="viewBtn" id="_pcasl">pCASL</a>
-                    <a class="viewBtn" id="_mesh">mesh</a>
-                </div>
-            </li>
-        </ul>
-    </div>
-      <div id="demo1" style="width:100%; height:90vh;">
-        <canvas id="gl1" height=640 width=640>
-        </canvas>
+  <header>
+    <div class="dropdown">
+      <button class="dropbtn">File 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
+        <a class="viewBtn" id="ShowHeader">Show Header</a>
+        <a class="linker" href="https://github.com/niivue/niivue">About</a>
       </div>
-    </body>
-    <script src="./niivue.umd.js">
-    </script>
-    <script type="module" async>
-        var canvas = null
-        var WIDTH = 640
-        var HEIGHT = 640
-        function onWindowResize(isInit = false) {
-         WIDTH = canvas.clientWidth
-         HEIGHT = canvas.clientHeight
-        // Check if the canvas is not the same size.
-         if (canvas.width  != WIDTH || canvas.height != HEIGHT) {
-           // Make the canvas the same size
-           canvas.width  = WIDTH
-           canvas.height = HEIGHT
-           nv1.drawScene()
-         }
-        } //onWindowResize()
-        canvas = document.getElementById("gl1")
-        let query = window.location.search
-        const params = new URLSearchParams(query)
-        let url = params.get('url')
-        var volumeList1 = [
-        // first item is background image
-        {
-          url: "../images/mni152.nii.gz",
-        name: "mni152.nii.gz"
-        },
-        ]
-        var nv1 = new niivue.Niivue({
-            logging: true,
-            loadingText: 'there are no images',
-            dragAndDropEnabled: true,
-            backColor: [0, 0, 0, 1],
-            show3Dcrosshair: true,
-        })
-        nv1.opts.isColorbar =true
-        nv1.setRadiologicalConvention(false)
-        nv1.attachTo('gl1')
-        nv1.setClipPlane([0.3, 270, 0])
-        nv1.setRenderAzimuthElevation(120,10)
-        nv1.setSliceType(nv1.sliceTypeMultiplanar)
-        nv1.setSliceMM(true)
-        nv1.opts.multiplanarForceRender = true
-        nv1.graph.autoSizeMultiplanar = true
-        nv1.graph.opacity = 1.0
-        await nv1.loadVolumes(volumeList1)
-        function toggleGroup(id) {
-            let buttons = document.getElementsByClassName("viewBtn")
-            let char0 = id.charAt(0)
-            for (let i = 0; i < buttons.length; i++) {
-                console.log(buttons[i].id)
-                if (buttons[i].id.charAt(0) !== char0)
-                    continue
-                buttons[i].classList.remove("dropdown-item-checked")
-                if (buttons[i].id === id)
-                    buttons[i].classList.add("dropdown-item-checked")
-            }
-        } // toggleGroup()
-        async function onButtonClick(event) {
-            var el = this.parentNode
-            el.style.display = "none"
-            setTimeout(function() { //close menu
-                el.style.removeProperty("display")
-            }, 500)
-            if (event.target.id === "SaveBitmap") {
-                nv1.saveScene('ScreenShot.png')
-                return
-            }
-            if (event.target.id === "ShowHeader") {
-                alert (nv1.volumes[0].hdr.toFormattedString());
-                return
-            }
-            if (event.target.id === "Colorbar") {
-                nv1.opts.isColorbar = !nv1.opts.isColorbar
-                event.srcElement.classList.toggle("dropdown-item-checked")
-                nv1.drawScene()
-                return
-            }
-            if (event.target.id === "Radiological") {
-                nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention
-                event.srcElement.classList.toggle("dropdown-item-checked")
-                nv1.drawScene()
-                return
-            }
-            if (event.target.id === "Crosshair") {
-                nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair
-                event.srcElement.classList.toggle("dropdown-item-checked")
-                nv1.drawScene()
-            }
-            if (event.target.id === "ClipPlane") {
-                if (nv1.scene.clipPlaneDepthAziElev[0] > 1)
-                    nv1.setClipPlane([0.3, 270, 0])
-                else
-                    nv1.setClipPlane([2, 270, 0])
-                nv1.drawScene()
-                return
-            }
-            if (event.target.id.charAt(0) === '!') { // set color scheme
-                nv1.volumes[0].colorMap = event.target.id.substr(1)
-                nv1.updateGLVolume()
-                toggleGroup(event.target.id)
-                return
-            }
-            if(event.target.id.charAt(0) === '|') { //sliceType
-                if (event.target.id === "|Axial")
-                    nv1.setSliceType(nv1.sliceTypeAxial)
-                if (event.target.id === "|Coronal")
-                    nv1.setSliceType(nv1.sliceTypeCoronal)
-                if (event.target.id === "|Sagittal")
-                    nv1.setSliceType(nv1.sliceTypeSagittal)
-                if (event.target.id === "|Render")
-                    nv1.setSliceType(nv1.sliceTypeRender)
-                if (event.target.id === "|MultiPlanar") {
-                    nv1.opts.multiplanarForceRender = false
-                    nv1.setSliceType(nv1.sliceTypeMultiplanar)
-                }
-                if (event.target.id === "|MultiPlanarRender") {
-                    nv1.opts.multiplanarForceRender = true
-                    nv1.setSliceType(nv1.sliceTypeMultiplanar)
-                }
-                toggleGroup(event.target.id)
-            } //sliceType
-            if (event.target.id === "BackColor") {
-                if (nv1.opts.backColor[0] < 0.5)
-                    nv1.opts.backColor = [1, 1, 1, 1]
-                else
-                    nv1.opts.backColor = [0, 0, 0, 1]
-                nv1.drawScene()
-                event.srcElement.classList.toggle("dropdown-item-checked")
-                return
-            }
-            if(event.target.id.charAt(0) === '^') { //drag mode
-                let s = event.target.id.substr(1)
-                switch(s) {
-                     case "none":
-                       nv1.opts.dragMode = nv1.dragModes.none
-                       break
-                     case "contrast":
-                       nv1.opts.dragMode = nv1.dragModes.contrast
-                       break
-                     case "measurement":
-                       nv1.opts.dragMode = nv1.dragModes.measurement
-                       break
-                     case "pan":
-                       nv1.opts.dragMode = nv1.dragModes.pan
-                       break
-                }
-                toggleGroup(event.target.id)
-            } //drag mode
-            if (event.target.id === "_mesh") {
-                volumeList1[0].url = '../images/mni152.nii.gz'
-                await nv1.loadVolumes(volumeList1)
-                nv1.loadMeshes([
-                    {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255]},
-                    {url: "../images/dpsv.trx", rgba255 : [255, 255, 255, 255]},
-                ])
-                toggleGroup(event.target.id)
-            } else if(event.target.id.charAt(0) === '_') { //example image
-                nv1.meshes = [] //close open meshes
-                let root = '../images/'
-                let s = event.target.id.substr(1)
-                let img = root + s + '.nii.gz'
-                console.log('Loading ' + img)
-                volumeList1[0].url = img
-                nv1.loadVolumes(volumeList1)
-                toggleGroup(event.target.id)
-                nv1.updateGLVolume()
-            } //example image
-        } // onButtonClick()
-        var buttons = document.getElementsByClassName("viewBtn")
-        for (let i = 0; i < buttons.length; i++)
-            buttons[i].addEventListener("click", onButtonClick, false)
-        var buttons = document.getElementsByClassName("divider")
-        for (let i = 0; i < buttons.length; i++)
-            buttons[i].addEventListener("click", onButtonClick, false)
-    </script>
+    </div> 
+    <div class="dropdown">
+      <button class="dropbtn" data-toggle="dropdown">View 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a href="#" class="viewBtn" id="|Axial">Axial</a>
+        <a class="viewBtn" id="|Sagittal">Sagittal</a>
+        <a class="viewBtn" id="|Coronal">Coronal</a>
+        <a class="viewBtn" id="|Render">Render</a>
+        <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
+        <a class="viewBtn divider dropdown-item-checked" id="Colorbar">Colorbar</a>
+        <a class="viewBtn" id="Radiological">Radiological</a>
+        <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
+        <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
+      </div>
+    </div> 
+    <div class="dropdown">
+      <button class="dropbtn">Color 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn dropdown-item-checked" id="!Gray">Gray</a>
+        <a class="viewBtn" id="!Plasma">Plasma</a>
+        <a class="viewBtn" id="!Viridis">Viridis</a>
+        <a class="viewBtn" id="!Inferno">Inferno</a>
+        <a class="viewBtn divider dropdown-item-checked" id="BackColor">Dark Background</a>
+      </div>
+    </div> 
+    <div class="dropdown">
+      <button class="dropbtn">Drag 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn dropdown-item-checked" id="^contrast">Contrast</a>
+        <a class="viewBtn" id="^measurement">Measurement</a>
+        <a class="viewBtn" id="^pan">Pan</a>
+        <a class="viewBtn" id="^none">None</a>
+      </div>
+    </div> 
+    <div class="dropdown">
+      <button class="dropbtn">Script 
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="_FLAIR">FLAIR</a>
+        <a class="viewBtn dropdown-item-checked" id="_mni152">mni152</a>
+        <a class="viewBtn" id="_shear">CT</a>
+        <a class="viewBtn" id="_ct_perfusion">CT CBF</a>
+        <a class="viewBtn" id="_pcasl">pCASL</a>
+        <a class="viewBtn" id="_mesh">mesh</a>
+      </div>
+    </div> 
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer id="intensity">
+    &nbsp;
+  </footer>
+</body>
 </html>
+<script src="./niivue.umd.js"></script>
+<script type="module" async>
+  const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
+  function handleIntensityChange(data){ 
+      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+  }
+  var nv1 = new niivue.Niivue({
+      logging: true,
+      dragAndDropEnabled: true,
+      backColor: [0, 0, 0, 1],
+      show3Dcrosshair: true,
+      onLocationChange:handleIntensityChange
+  })
+  nv1.opts.isColorbar =true
+  nv1.setRadiologicalConvention(false)
+  nv1.attachTo('gl1')
+  nv1.setClipPlane([0.3, 270, 0])
+  nv1.setRenderAzimuthElevation(120,10)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  nv1.setSliceMM(true)
+  nv1.opts.multiplanarForceRender = true
+  nv1.graph.autoSizeMultiplanar = true
+  nv1.graph.opacity = 1.0
+  var volumeList1 = [{url: "../images/mni152.nii.gz"}]
+  await nv1.loadVolumes(volumeList1)
+  function toggleGroup(id) {
+      let buttons = document.getElementsByClassName("viewBtn")
+      let char0 = id.charAt(0)
+      for (let i = 0; i < buttons.length; i++) {
+          if (buttons[i].id.charAt(0) !== char0)
+              continue
+          buttons[i].classList.remove("dropdown-item-checked")
+          if (buttons[i].id === id)
+              buttons[i].classList.add("dropdown-item-checked")
+      }
+  } // toggleGroup()
+  async function onButtonClick(event) {
+      
+      if (isTouchDevice) {
+        console.log('Touch device: click menu to close menu')
+        /*var el = this.parentNode
+        el.style.display = "none"
+        setTimeout(function() { //close menu
+          //el.style.removeProperty("display")
+          //el.style.display = "block"
+        }, 500)*/
+      }
+      if (event.target.id === "SaveBitmap") {
+          nv1.saveScene('ScreenShot.png')
+          return
+      }
+      if (event.target.id === "ShowHeader") {
+          alert (nv1.volumes[0].hdr.toFormattedString())
+          return
+      }
+      if (event.target.id === "Colorbar") {
+          nv1.opts.isColorbar = !nv1.opts.isColorbar
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          nv1.drawScene()
+          return
+      }
+      if (event.target.id === "Radiological") {
+          nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          nv1.drawScene()
+          return
+      }
+      if (event.target.id === "Crosshair") {
+          nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          nv1.drawScene()
+      }
+      if (event.target.id === "ClipPlane") {
+          if (nv1.scene.clipPlaneDepthAziElev[0] > 1)
+              nv1.setClipPlane([0.3, 270, 0])
+          else
+              nv1.setClipPlane([2, 270, 0])
+          nv1.drawScene()
+          return
+      }
+      if (event.target.id.charAt(0) === '!') { // set color scheme
+          nv1.volumes[0].colorMap = event.target.id.substr(1)
+          nv1.updateGLVolume()
+          toggleGroup(event.target.id)
+          return
+      }
+      if(event.target.id.charAt(0) === '|') { //sliceType
+          if (event.target.id === "|Axial")
+              nv1.setSliceType(nv1.sliceTypeAxial)
+          if (event.target.id === "|Coronal")
+              nv1.setSliceType(nv1.sliceTypeCoronal)
+          if (event.target.id === "|Sagittal")
+              nv1.setSliceType(nv1.sliceTypeSagittal)
+          if (event.target.id === "|Render")
+              nv1.setSliceType(nv1.sliceTypeRender)
+          if (event.target.id === "|MultiPlanar") {
+              nv1.opts.multiplanarForceRender = false
+              nv1.setSliceType(nv1.sliceTypeMultiplanar)
+          }
+          if (event.target.id === "|MultiPlanarRender") {
+              nv1.opts.multiplanarForceRender = true
+              nv1.setSliceType(nv1.sliceTypeMultiplanar)
+          }
+          toggleGroup(event.target.id)
+      } //sliceType
+      if (event.target.id === "BackColor") {
+          if (nv1.opts.backColor[0] < 0.5)
+              nv1.opts.backColor = [1, 1, 1, 1]
+          else
+              nv1.opts.backColor = [0, 0, 0, 1]
+          nv1.drawScene()
+          event.srcElement.classList.toggle("dropdown-item-checked")
+          return
+      }
+      if(event.target.id.charAt(0) === '^') { //drag mode
+          let s = event.target.id.substr(1)
+          switch(s) {
+               case "none":
+                 nv1.opts.dragMode = nv1.dragModes.none
+                 break
+               case "contrast":
+                 nv1.opts.dragMode = nv1.dragModes.contrast
+                 break
+               case "measurement":
+                 nv1.opts.dragMode = nv1.dragModes.measurement
+                 break
+               case "pan":
+                 nv1.opts.dragMode = nv1.dragModes.pan
+                 break
+          }
+          toggleGroup(event.target.id)
+      } //drag mode
+      if (event.target.id === "_mesh") {
+          volumeList1[0].url = '../images//mni152.nii.gz'
+          await nv1.loadVolumes(volumeList1)
+          nv1.loadMeshes([
+              {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [200, 162, 255, 255]},
+              {url: "../images/dpsv.trx", rgba255 : [255, 255, 255, 255]},
+          ])
+          toggleGroup(event.target.id)
+      } else if(event.target.id.charAt(0) === '_') { //example image
+          nv1.meshes = [] //close open meshes
+          let root = '../images/'
+          let s = event.target.id.substr(1)
+          let img = root + s + '.nii.gz'
+          console.log('Loading ' + img)
+          volumeList1[0].url = img
+          nv1.loadVolumes(volumeList1)
+          toggleGroup(event.target.id)
+          nv1.updateGLVolume()
+      } //example image
+  } // onButtonClick()
+  var buttons = document.getElementsByClassName("viewBtn")
+  for (let i = 0; i < buttons.length; i++)
+      buttons[i].addEventListener("click", onButtonClick, false)
+</script>

@@ -5,59 +5,47 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>world space</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <link rel="stylesheet" href="niivue.css">
   </head>
-  <body style="font-family: sans-serif;">
+  <body>
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <section>
-      <h1>
-        World space
-      </h1>
-      <p>
-        Volumes can be displayed in world space. Each slice is a discrete image from the volume avoiding <a href="https://github.com/rordenlab/dcm2niix/issues/595"> artifacts</a>. 
-      </p>
+    <header>
+      <label for="check3">
+        <a href="https://github.com/rordenlab/dcm2niix/issues/595">Alias Free World space </a>
+      </label>
       <input type="checkbox" id="check3" name="check3" checked>
-      <label for="check3">World space</label>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
-      </div>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
-      document.getElementById("check3").addEventListener("change", doCheck3Click)
-      function doCheck3Click() {
-        nv1.setSliceMM(this.checked)
-      }
-     var volumeList1 = [
-         {
-           url: "../images/FLAIR.nii.gz",
-           colorMap: "gray",
-           opacity: 1,
-           visible: true,
-         },
-        ] 
-      var nv1 = new niivue.Niivue({
-            dragAndDropEnabled: true,
-            backColor: [0.3, 0.2, 0.4, 1],
-            show3Dcrosshair: true,
-        })
-      nv1.setSliceMM(true)
-      nv1.setRadiologicalConvention(false)
-      nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-    </script>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
   </body>
 </html>
+<script src="./niivue.umd.js"></script>
+<script>
+  document.getElementById("check3").addEventListener("change", doCheck3Click)
+  function doCheck3Click() {
+    nv1.setSliceMM(this.checked)
+  }
+ var volumeList1 = [
+     {
+       url: "../images/FLAIR.nii.gz",
+       colorMap: "gray",
+       opacity: 1,
+       visible: true,
+     },
+    ] 
+  var nv1 = new niivue.Niivue({
+        dragAndDropEnabled: true,
+        backColor: [0.3, 0.2, 0.4, 1],
+        show3Dcrosshair: true,
+    })
+  nv1.setSliceMM(true)
+  nv1.setRadiologicalConvention(false)
+  nv1.attachTo('gl1')
+  nv1.loadVolumes(volumeList1)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+</script>
+
 

@@ -6,6 +6,7 @@ import * as cmaps from "./cmaps";
 import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
+import { prototype } from "nifti-reader-js/src/nifti1";
 const log = new Log();
 
 // not included in public docs
@@ -26,20 +27,99 @@ function isPlatformLittleEndian() {
  */
 
 /**
+ * Enum for supported image types
+ * @readonly
+ * @enum {number}
+ */
+export const NVIMAGE_TYPE = Object.freeze({
+  UNKNOWN: 0,
+  NII: 1,
+  DCM: 2,
+  DCM_MANIFEST: 3,
+  MIH: 4,
+  MIF: 5,
+  NHDR: 6,
+  NRRD: 7,
+  MHD: 8,
+  MHA: 9,
+  MGH: 10,
+  MGZ: 11,
+  V: 12,
+  V16: 13,
+  VMR: 14,
+  HEAD: 15,
+  DCM_FOLDER: 16,
+  parse: (ext) => {
+    let imageType = NVIMAGE_TYPE.UNKNOWN;
+    switch (ext.toUpperCase()) {
+      case "":
+      case "DCM":
+        imageType = NVIMAGE_TYPE.DCM;
+        break;
+      case "TXT":
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
+        break;
+      case "NII":
+        imageType = NVIMAGE_TYPE.NII;
+        break;
+      case "MIH":
+        imageType = NVIMAGE_TYPE.MIH;
+        break;
+      case "MIF":
+        imageType = NVIMAGE_TYPE.MIF;
+        break;
+      case "NHDR":
+        imageType = NVIMAGE_TYPE.NHDR;
+        break;
+      case "NRRD":
+        imageType = NVIMAGE_TYPE.NRRD;
+        break;
+      case "MHD":
+        imageType = NVIMAGE_TYPE.MHD;
+        break;
+      case "MHA":
+        imageType = NVIMAGE_TYPE.MHA;
+        break;
+      case "MGH":
+        imageType = NVIMAGE_TYPE.MGH;
+        break;
+      case "MGZ":
+        imageType = NVIMAGE_TYPE.MGZ;
+        break;
+      case "V":
+        imageType = NVIMAGE_TYPE.V;
+        break;
+      case "V16":
+        imageType = NVIMAGE_TYPE.V16;
+        break;
+      case "VMR":
+        imageType = NVIMAGE_TYPE.VMR;
+        break;
+      case "HEAD":
+        imageType = NVIMAGE_TYPE.HEAD;
+        break;
+    }
+    return imageType;
+  },
+});
+
+/**
  * NVImageFromUrlOptions
  * @typedef  NVImageFromUrlOptions
  * @type {object}
  * @property {string} url - the resolvable URL pointing to a nifti image to load
  * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
- * @property {string} [name=''] a name for this image. Default is an empty string
- * @property {string} [colorMap='gray'] a color map to use. default is gray
+ * @property {string} [name=""] a name for this image. Default is an empty string
+ * @property {string} [colorMap="gray"] a color map to use. default is gray
  * @property {number} [opacity=1.0] the opacity for this image. default is 1
  * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
  * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
  * @property {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
- * @property {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
+ * @property {string} [colorMapNegative=""] a color map to use for symmetrical negative intensities
+ * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
 
 /**
@@ -59,7 +139,9 @@ export function NVImageFromUrlOptions(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  colorMapNegative = ""
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
   return {
     url,
@@ -73,7 +155,9 @@ export function NVImageFromUrlOptions(
     percentileFrac,
     ignoreZeroVoxels,
     visible,
+    useQFormNotSForm,
     colorMapNegative,
+    imageType,
   };
 }
 
@@ -94,7 +178,6 @@ export function NVImageFromUrlOptions(
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {boolean} [isDICOMDIR=true] input is DICOM folder, not a single file
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
  * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
  * @param {function} [onColorMapChange=()=>{}] callback for color map change
@@ -112,11 +195,9 @@ export function NVImage(
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  isDICOMDIR = false,
   useQFormNotSForm = false,
   colorMapNegative = "",
-  onColorMapChange = () => {},
-  onOpacityChange = () => {}
+  imageType = NVIMAGE_TYPE.UNKNOWN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -153,8 +234,8 @@ export function NVImage(
   this.modulationImage = null;
   this.series = []; // for concatenating dicom images
 
-  this.onColorMapChange = onColorMapChange;
-  this.onOpacityChange = onOpacityChange;
+  this.onColorMapChange = () => {};
+  this.onOpacityChange = () => {};
 
   // Added to support zerosLike
   if (!dataBuffer) {
@@ -169,36 +250,55 @@ export function NVImage(
   }
   let imgRaw = null;
   this.hdr = null;
-  if (ext === "" && isDICOMDIR && Array.isArray(dataBuffer)) {
-    imgRaw = this.readDICOM(dataBuffer);
-  } else if (ext === "MIH" || ext === "MIF") {
-    imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
-  } else if (ext === "NHDR" || ext === "NRRD") {
-    imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
-  } else if (ext === "MHD" || ext === "MHA") {
-    imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
-  } else if (ext === "MGH" || ext === "MGZ") {
-    imgRaw = this.readMGH(dataBuffer);
-  } else if (ext === "V") {
-    imgRaw = this.readECAT(dataBuffer);
-  } else if (ext === "V16") {
-    imgRaw = this.readV16(dataBuffer);
-  } else if (ext === "VMR") {
-    imgRaw = this.readVMR(dataBuffer);
-  } else if (ext === "HEAD") {
-    imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
-  } else if (ext === "NII") {
-    this.hdr = nifti.readHeader(dataBuffer);
-    if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
-      this.hdr.cal_max = 0.0;
-    if (nifti.isCompressed(dataBuffer)) {
-      imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
-    } else {
-      imgRaw = nifti.readImage(this.hdr, dataBuffer);
-    }
-  } else {
-    //DICOMs do not always end .dcm, so DICOM is our format of last resort
-    imgRaw = this.readDICOM(dataBuffer);
+
+  if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+    imageType = NVIMAGE_TYPE.parse(ext);
+  }
+
+  this.imageType = imageType;
+
+  switch (imageType) {
+    case NVIMAGE_TYPE.DCM_FOLDER:
+    case NVIMAGE_TYPE.DCM_MANIFEST:
+    case NVIMAGE_TYPE.DCM:
+      imgRaw = this.readDICOM(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.MIH:
+    case NVIMAGE_TYPE.MIF:
+      imgRaw = this.readMIF(dataBuffer, pairedImgData); //detached
+      break;
+    case NVIMAGE_TYPE.NHDR:
+    case NVIMAGE_TYPE.NRRD:
+      imgRaw = this.readNRRD(dataBuffer, pairedImgData); //detached
+      break;
+    case NVIMAGE_TYPE.MHD:
+    case NVIMAGE_TYPE.MHA:
+      imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
+      break;
+    case NVIMAGE_TYPE.V:
+      imgRaw = this.readECAT(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.V16:
+      imgRaw = this.readV16(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.VMR:
+      imgRaw = this.readVMR(dataBuffer);
+      break;
+    case NVIMAGE_TYPE.HEAD:
+      imgRaw = this.readHEAD(dataBuffer, pairedImgData); //paired = .BRIK
+      break;
+    case NVIMAGE_TYPE.NII:
+      this.hdr = nifti.readHeader(dataBuffer);
+      if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
+        this.hdr.cal_max = 0.0;
+      if (nifti.isCompressed(dataBuffer)) {
+        imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
+      } else {
+        imgRaw = nifti.readImage(this.hdr, dataBuffer);
+      }
+      break;
+    default:
+      throw new Error("Image type not supported");
   }
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
@@ -2057,7 +2157,9 @@ Object.defineProperty(NVImage.prototype, "opacity", {
   },
   set: function (opacity) {
     this._opacity = opacity;
-    this.onOpacityChange(this);
+    if (this.onOpacityChange) {
+      this.onOpacityChange(this);
+    }
   },
 });
 
@@ -2361,6 +2463,45 @@ NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
   document.body.removeChild(link);
 }; // saveToDisk()
 
+NVImage.fetchDicomData = async function (url) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
+
+  // https://stackoverflow.com/questions/10687099/how-to-test-if-a-url-string-is-absolute-or-relative
+  let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
+
+  let manifestUrl = absoluteUrlRE.test(url)
+    ? url
+    : new URL(url, window.location.href);
+  let extensionRE = new RegExp("(?:.([^.]+))?$");
+  let extension = extensionRE.exec(manifestUrl.pathname);
+  if (!extension) {
+    manifestUrl = new URL("niivue-manifest.txt", url);
+  }
+
+  let response = await fetch(manifestUrl);
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+  let text = await response.text();
+  let lines = text.split("\n");
+
+  let baseUrlRE = new RegExp("(.*/).*");
+  let folderUrl = baseUrlRE.exec(manifestUrl)[0];
+  let dataBuffer = [];
+  for (const line of lines) {
+    let fileUrl = new URL(line, folderUrl);
+    response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    let contents = await response.arrayBuffer();
+    dataBuffer.push(contents);
+  }
+  return dataBuffer;
+};
+
 /**
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
@@ -2381,16 +2522,30 @@ NVImage.loadFromUrl = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
+  useQFormNotSForm = false,
   colorMapNegative = "",
+  isManifest = false,
+  imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   if (url === "") {
     throw Error("url must not be empty");
   }
-  let response = await fetch(url);
+
   let nvimage = null;
-  if (!response.ok) {
-    throw Error(response.statusText);
+  let dataBuffer = null;
+
+  // fetch data associated with image
+  if (isManifest) {
+    dataBuffer = await NVImage.fetchDicomData(url);
+    imageType = NVIMAGE_TYPE.DCM_MANIFEST;
+  } else {
+    let response = await fetch(url);
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    dataBuffer = await response.arrayBuffer();
   }
+
   var re = /(?:\.([^.]+))?$/;
   let ext = "";
   if (name === "") {
@@ -2422,7 +2577,6 @@ NVImage.loadFromUrl = async function ({
     }
   }
 
-  let dataBuffer = await response.arrayBuffer();
   let pairedImgData = null;
   if (urlImgData.length > 0) {
     let resp = await fetch(urlImgData);
@@ -2447,9 +2601,9 @@ NVImage.loadFromUrl = async function ({
       percentileFrac,
       ignoreZeroVoxels,
       visible,
-      false,
-      false,
-      colorMapNegative
+      useQFormNotSForm,
+      colorMapNegative,
+      imageType
     );
   } else {
     alert("Unable to load buffer properly from volume");
@@ -2491,7 +2645,9 @@ NVImage.readFileAsync = function (file) {
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {boolean} [isDICOMDIR=true] input is DICOM folder, not a single file
+ * @param {boolean} [useQFormNotSForm=false] whether or not to use QForm instead of SForm during construction
+ * @param {string} [colorMapNegative=""] colormap negative for the image
+ * @param {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type
  * @returns {NVImage} returns a NVImage intance
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
@@ -2508,7 +2664,9 @@ NVImage.loadFromFile = async function ({
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
   visible = true,
-  isDICOMDIR = false,
+  useQFormNotSForm = false,
+  colorMapNegative = "",
+  imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
   let dataBuffer = [];
@@ -2537,7 +2695,9 @@ NVImage.loadFromFile = async function ({
       percentileFrac,
       ignoreZeroVoxels,
       visible,
-      isDICOMDIR
+      useQFormNotSForm,
+      colorMapNegative,
+      imageType
     );
   } catch (err) {
     console.log(err);
@@ -2547,7 +2707,7 @@ NVImage.loadFromFile = async function ({
 };
 
 // not included in public docs
-NVImage.loadFromBase64 = async function ({
+NVImage.loadFromBase64 = function ({
   base64 = null,
   name = "",
   colorMap = "gray",
@@ -2569,7 +2729,6 @@ NVImage.loadFromBase64 = async function ({
     }
     return bytes.buffer;
   }
-
   let nvimage = null;
   try {
     let dataBuffer = base64ToArrayBuffer(base64);
@@ -2590,6 +2749,7 @@ NVImage.loadFromBase64 = async function ({
   } catch (err) {
     log.debug(err);
   }
+
   return nvimage;
 };
 
@@ -2968,10 +3128,91 @@ NVImage.prototype.getImageOptions = function () {
       this.percentileFrac, // percentileFrac
       this.ignoreZeroVoxels, // ignoreZeroVoxels
       this.visible, // visible
-      this.colorMapNegative // colorMapNegative
+      this.useQFormNotSForm, // useQFormNotSForm
+      this.colorMapNegative, // colorMapNegative
+      this.imageType // imageType
     );
   } catch (e) {
     console.log(e);
   }
   return options;
+};
+
+/**
+ * Converts NVImage to NIfTI compliant byte array
+ * @param {Uint8Array} drawingBytes
+ */
+NVImage.prototype.toUint8Array = function (drawingBytes = null) {
+  let isDrawing = drawingBytes;
+  let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing);
+
+  let drawingBytesToBeConverted = drawingBytes;
+  if (isDrawing) {
+    let perm = this.permRAS;
+    if (perm[0] != 1 || perm[1] != 2 || perm[2] != 3) {
+      let dims = this.hdr.dims; //reverse to original
+      //reverse RAS to native space, layout is mrtrix MIF format
+      // for details see NVImage.readMIF()
+      let layout = [0, 0, 0];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (Math.abs(perm[i]) - 1 !== j) continue;
+          layout[j] = i * Math.sign(perm[i]);
+        }
+      }
+      let stride = 1;
+      let instride = [1, 1, 1];
+      let inflip = [false, false, false];
+      for (let i = 0; i < layout.length; i++) {
+        for (let j = 0; j < layout.length; j++) {
+          let a = Math.abs(layout[j]);
+          if (a != i) continue;
+          instride[j] = stride;
+          //detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+          if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true;
+          stride *= dims[j + 1];
+        }
+      }
+      //lookup table for flips and stride offsets:
+      const range = (start, stop, step) =>
+        Array.from(
+          { length: (stop - start) / step + 1 },
+          (_, i) => start + i * step
+        );
+      let xlut = range(0, dims[1] - 1, 1);
+      if (inflip[0]) xlut = range(dims[1] - 1, 0, -1);
+      for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0];
+      let ylut = range(0, dims[2] - 1, 1);
+      if (inflip[1]) ylut = range(dims[2] - 1, 0, -1);
+      for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1];
+      let zlut = range(0, dims[3] - 1, 1);
+      if (inflip[2]) zlut = range(dims[3] - 1, 0, -1);
+      for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2];
+      //convert data
+
+      let inVs = new Uint8Array(drawingBytes);
+      let outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
+      let j = 0;
+      for (let z = 0; z < dims[3]; z++) {
+        for (let y = 0; y < dims[2]; y++) {
+          for (let x = 0; x < dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
+            j++;
+          } //for x
+        } //for y
+      } //for z
+      drawingBytesToBeConverted = outVs;
+      console.log("drawing bytes");
+      console.log(drawingBytesToBeConverted);
+    }
+  }
+  let img8 = isDrawing
+    ? drawingBytesToBeConverted
+    : new Uint8Array(this.img.buffer);
+  let opad = new Uint8Array(4);
+  let odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
+  odata.set(hdrBytes);
+  odata.set(opad, hdrBytes.length);
+  odata.set(img8, hdrBytes.length + opad.length);
+  return odata;
 };

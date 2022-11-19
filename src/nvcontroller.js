@@ -1,18 +1,11 @@
 import { SessionBus, SessionUser } from "./session-bus";
-import { NVImage } from "./nvimage";
-import { NVMesh } from "./nvmesh";
-
-/*
- * @typedef {import("./niivue").Niivue} Niivue
- */
-
-/*
- * @typedef {import("./nvimage").NVImageFromUrlOptions} NVImageFromUrlOptions
- */
-
-/*
- * @typedef {import("./nvmesh").NVMeshFromUrlOptions} NVMeshFromUrlOptions
- */
+// Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
+// eslint-disable-next-line no-unused-vars
+import { NVImage, NVImageFromUrlOptions } from "./nvimage";
+// eslint-disable-next-line no-unused-vars
+import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh";
+// eslint-disable-next-line no-unused-vars
+import { Niivue } from "./niivue";
 
 /**
  * Enum for sync operations
@@ -54,34 +47,31 @@ export class NVController {
     // bind all of our events
 
     // 2D
-    this.niivue.opts.onLocationChange = this.onLocationChangeHandler.bind(this);
+    this.niivue.onLocationChange = this.onLocationChangeHandler.bind(this);
 
     // 3D
-    this.niivue.opts.onZoom3DChange = this.onZoom3DChangeHandler.bind(this);
+    this.niivue.onZoom3DChange = this.onZoom3DChangeHandler.bind(this);
     this.niivue.scene.onAzimuthElevationChange =
       this.onAzimuthElevationChangeHandler.bind(this);
-    this.niivue.opts.onClipPlaneChange =
-      this.onClipPlaneChangeHandler.bind(this);
+    this.niivue.onClipPlaneChange = this.onClipPlaneChangeHandler.bind(this);
 
     // volume handlers
-    this.niivue.opts.onVolumeAddedFromUrl =
+    this.niivue.onVolumeAddedFromUrl =
       this.onVolumeAddedFromUrlHandler.bind(this);
-    this.niivue.opts.onVolumeWithUrlRemoved =
+    this.niivue.onVolumeWithUrlRemoved =
       this.onVolumeWithUrlRemovedHandler.bind(this);
 
     // mesh handlers
-    this.niivue.opts.onMeshAddedFromUrl =
-      this.onMeshAddedFromUrlHandler.bind(this);
-    this.niivue.opts.onMeshWithUrlRemoved =
+    this.niivue.onMeshAddedFromUrl = this.onMeshAddedFromUrlHandler.bind(this);
+    this.niivue.onMeshWithUrlRemoved =
       this.onMeshWithUrlRemovedHandler.bind(this);
-    this.niivue.opts.onCustomMeshShaderAdded =
+    this.niivue.onCustomMeshShaderAdded =
       this.onCustomMeshShaderAddedHandler.bind(this);
-    this.niivue.opts.onMeshShaderChanged = this.onMeshShaderChanged.bind(this);
-    this.niivue.opts.onMeshPropertyChanged =
-      this.onMeshPropertyChanged.bind(this);
+    this.niivue.onMeshShaderChanged = this.onMeshShaderChanged.bind(this);
+    this.niivue.onMeshPropertyChanged = this.onMeshPropertyChanged.bind(this);
 
     // 4D
-    this.niivue.opts.onFrameChange = this.onFrameChangeHandler.bind(this);
+    this.niivue.onFrameChange = this.onFrameChangeHandler.bind(this);
 
     // volume specific handlers
     for (const volume of this.niivue.volumes) {
