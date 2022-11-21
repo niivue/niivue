@@ -397,7 +397,6 @@ layout(location=0) in vec3 pos;
 uniform int axCorSag;
 uniform float slice;
 uniform vec2 canvasWidthHeight;
-uniform vec3 panXYscale;
 uniform vec4 leftTopWidthHeight;
 out vec3 texPos;
 void main(void) {
@@ -411,8 +410,6 @@ void main(void) {
 
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
-	gl_Position.x += panXYscale.x;
-	gl_Position.y += panXYscale.y;
 	if (axCorSag == 1)
 		texPos = vec3(pos.x, slice, pos.y);
 	else if (axCorSag == 2)

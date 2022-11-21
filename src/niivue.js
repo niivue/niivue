@@ -2514,11 +2514,15 @@ Niivue.prototype.setSelectionBoxColor = function (color) {
 
 // not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
-  //if (posChange !== 0 && this.opts.isDragForPanZoom) {
   if (posChange !== 0 && this.opts.dragMode === DRAG_MODE.pan) {
     let zoom = this.uiData.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
     zoom = Math.round(zoom * 10) / 10;
+    let zoomChange = this.uiData.pan2Dxyzmm[3] - zoom;
     this.uiData.pan2Dxyzmm[3] = zoom;
+    let mm = this.frac2mm(this.scene.crosshairPos);
+    this.uiData.pan2Dxyzmm[0] += zoomChange * mm[0];
+    this.uiData.pan2Dxyzmm[1] += zoomChange * mm[1];
+    this.uiData.pan2Dxyzmm[2] += zoomChange * mm[2];
     this.drawScene();
     return;
   }
@@ -5276,10 +5280,14 @@ Niivue.prototype.dragForPanZoom = function (startXYendXY) {
     return;
   }
   let v = mat.vec3.create();
+  let zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
   mat.vec3.sub(v, endMM, startMM);
-  this.uiData.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + v[0];
-  this.uiData.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + v[1];
-  this.uiData.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + v[2];
+  this.uiData.pan2Dxyzmm[0] =
+    this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0];
+  this.uiData.pan2Dxyzmm[1] =
+    this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1];
+  this.uiData.pan2Dxyzmm[2] =
+    this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
 };
 
 // not included in public docs
