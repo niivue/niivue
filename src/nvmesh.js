@@ -3478,7 +3478,7 @@ NVMesh.loadFromUrl = async function ({
   layers = [],
 } = {}) {
   let urlParts = url.split("/"); // split url parts at slash
-  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  if (name === "") name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
   if (url === "") throw Error("url must not be empty");
   if (gl === null) throw Error("gl context is null");
   //TRX format is special (its a zip archive of multiple files)
