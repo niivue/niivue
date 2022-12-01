@@ -441,7 +441,7 @@ export class NVDocument {
     data.sceneData = { ...this.scene.sceneData };
 
     // save our options
-    data.opts = this.opts;
+    data.opts = { ...this.opts };
 
     // volumes
     if (this.volumes.length) {
@@ -595,7 +595,7 @@ export class NVDocument {
     document.data = data;
     document.scene.sceneData = data.sceneData;
     delete document.data["sceneData"];
-    NVDocument.deserializeMeshDataObjects(document);
+    NVDocument.deserializeMeshDataObjects(document);    
     return document;
   }
 }

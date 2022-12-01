@@ -82,7 +82,7 @@
     }
 
     function loadDocument(index) {
-      nv1.loadDocument(documents[index])
+      nv1.loadDocument(documents[index])      
     }
 
     /**
@@ -115,21 +115,11 @@
     }
 
     const url = '../images/hippo.nii.gz';
-    var isHippoShowing = false;
-    var volumeList1 = [
-      // first item is background image
-      {
-        url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-        colorMap: "gray",
-        opacity: 1,
-        visible: true,
-      },
-    ]
+    var isHippoShowing = false;    
     var nv1 = new niivue.Niivue()
     nv1.attachTo('gl1')
-    nv1.loadVolumes(volumeList1)
-    nv1.setSliceType(nv1.sliceTypeRender)
-
+    
+    
     var buttons = document.getElementsByClassName("viewBtn")
     for (let i = 0; i < buttons.length; i++)
         buttons[i].addEventListener("click", onButtonClick, false)
@@ -142,6 +132,7 @@
       niivue.NVDocument.loadFromUrl(documentUrl).then((doc) => {
         documents.push(doc)
         console.log('adding preview')
+        console.log(doc.opts)
         addPreview(doc)
       })
     }
