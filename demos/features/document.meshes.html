@@ -1,98 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
-  </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <section>
-      <h1>
-        Mesh layers (GIfTI, MZ3, FreeSurfer, STC)
-      </h1>
-      <p>
-        NiiVue also supports a simple 3D view
-      </p>
-    </section>
-<div class="slidecontainer">
-  Mesh Layer Intensity Threshold <input type="range" min="0" max="10" value="2" class="slider" id="meshSlider">
-</div>
-<div class="slidecontainer">
-  Mesh Layer Opacity <input type="range" min="1" max="10" value="7" class="slider" id="meshSlider2">
-</div>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Niivue Mesh Document</title>
+  <link rel="stylesheet" href="niivue.css">  
+</head>
+
+<body style="font-family: sans-serif;">
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+  </noscript>
+  <header>
+    <div class="dropdown">
+      <button class="dropbtn">File
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="SaveDocument">Save Document</a>        
+        <a class="linker" href="https://github.com/niivue/niivue">About</a>
       </div>
-    </section>
-    <section>
-      <p>available mesh shaders:</p>
-      <p id="shaders"></p>
-    </section>
-    <section>
-      <button onclick="toggleMesh()">Toggle mesh</button>
-      <button onclick="save()">Save</button>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
-      function toggleMesh() {
-        if(nv1.meshes.length === 0 && mesh) {
-          nv1.addMesh(mesh);
+    </div>
+    <div class="dropdown" id="MeshDropDown">
+      <button class="dropbtn">Mesh
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="ToggleMesh">Toggle Mesh</a>
+      </div>
+    </div>
+    <div class="dropdown" id="ShadersDropDown">
+      <button class="dropbtn">Shaders
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content" id="shadersDropDownContent">
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="dropbtn">Help
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <section class="help-text">
+          <p>
+            NiiVue supports saving a collection of images/meshes and drawing to a document. 
+          </p>
+          <p>
+            Click File and then Save Document.
+          </p>
+        </section>
+      </div>
+    </div>
+    <div class="vertical-divider"></div>
+    <span class="slidecontainer">
+      Mesh Layer Intensity Threshold <input type="range" min="0" max="10" value="2" class="slider" id="meshSlider">
+    </span>
+    <span class="slidecontainer">
+      Mesh Layer Opacity <input type="range" min="1" max="10" value="7" class="slider" id="meshSlider2">
+    </span>    
+  </header> 
+  <!-- demo 1 -->
+  <section>
+    <div id="demo1" style="width:90%; height:400px;">
+      <canvas id="gl1" style="width:800px;height:400px">
+      </canvas>
+    </div>
+  </section>
+  
+  <script src="./niivue.umd.js">
+  </script>
+  <script>
+    function toggleMesh() {
+      if(nv1.meshes.length === 0 && mesh) {
+        nv1.addMesh(mesh);
+      }
+      else {
+        mesh = nv1.meshes[0];
+        nv1.removeMesh(mesh);
+      }
+    }
+
+    async function onButtonClick(event) {
+      switch(event.target.id) {
+        case "SaveDocument":
+          nv1.saveDocument('niivue.mesh.nvd')
+          break
+        case "ToggleMesh":
+          toggleMesh()
+          break
+      }
+    }
+
+    function checkShader(id) {
+      let cmapEl = document.getElementById('shadersDropDownContent')
+      for(const child of cmapEl.children) {
+        if(id === child.id) {
+          child.classList.add("dropdown-item-checked")
         }
         else {
-          mesh = nv1.meshes[0];
-          nv1.removeMesh(mesh);
+          child.classList.remove("dropdown-item-checked")
         }
       }
+    }
 
-      function save() {
-        nv1.saveDocument('niivue.mesh.nvd');
-      }
-
-      var slider = document.getElementById("meshSlider");
-      slider.oninput = function() {
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value * 0.5)
-      }
-      var slider2 = document.getElementById("meshSlider2");
-      slider2.oninput = function() {
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'opacity', this.value * 0.1)
-      }
-      var nv1 = new niivue.Niivue(({
-        show3Dcrosshair: true,
-        backColor: [1, 1, 1, 1]}))
-      nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.attachTo('gl1')
-      var meshLHLayersList1 = [
-        {url: "../images/BrainMesh_ICBM152.lh.motor.mz3", cal_min: 0.5, cal_max: 5.5, useNegativeCmap: true, opacity: 0.7},
-      ]
-      nv1.loadMeshes([
-         {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLHLayersList1},
-      ])
-      nv1.setClipPlane([-0.1, 270, 0])
+    function initShaders() {
       let cmaps = nv1.meshShaderNames()
-      let cmapEl = document.getElementById('shaders')
+      let cmapEl = document.getElementById('shadersDropDownContent')
       for (let i=0; i<cmaps.length; i++) {
-        let btn = document.createElement("button")
-        btn.innerHTML = cmaps[i]
-        btn.onclick = function() {
+        let buttonLink = document.createElement("a")
+        buttonLink.className = "viewBtn"
+        buttonLink.innerHTML = cmaps[i]
+        buttonLink.id = "shader-" + i
+        buttonLink.onclick = function(event) {
+          checkShader(event.srcElement.id);
           nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
+          
         }
-        cmapEl.appendChild(btn)
+        cmapEl.appendChild(buttonLink)
       }
-      var mesh = nv1.meshes[0];
 
-    </script>
-  </body>
+      checkShader('shader-0');
+    }
+
+    var slider = document.getElementById("meshSlider");
+    slider.oninput = function() {
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value * 0.5)
+    }
+    var slider2 = document.getElementById("meshSlider2");
+    slider2.oninput = function() {
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'opacity', this.value * 0.1)
+    }
+
+    var nv1 = new niivue.Niivue(({
+    show3Dcrosshair: true}))
+    nv1.setSliceType(nv1.sliceTypeRender)
+    nv1.attachTo('gl1')
+    var meshLHLayersList1 = [
+      {url: "../images/BrainMesh_ICBM152.lh.motor.mz3", cal_min: 0.5, cal_max: 5.5, useNegativeCmap: true, opacity: 0.7},
+    ]
+    nv1.loadMeshes([
+        {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLHLayersList1},
+    ])
+    nv1.setClipPlane([-0.1, 270, 0])
+    
+    var buttons = document.getElementsByClassName("viewBtn")
+    for (let i = 0; i < buttons.length; i++)
+        buttons[i].addEventListener("click", onButtonClick, false)
+    
+    initShaders()
+    var mesh = nv1.meshes[0];
+  </script>
+</body>
+
 </html>
