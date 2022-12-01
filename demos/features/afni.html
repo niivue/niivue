@@ -4,72 +4,93 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>time series demo</title>
+    <title>AFNI HEAD/BRIK format</title>
+    <link rel="stylesheet" href="niivue.css">
     <style>
-      section {
-        margin: 20px;
+      .unstyled-button {
+        border: none;
+        padding: 0;
+        background: #202020;
+        color: white;
       }
     </style>
-
-  <script src="./niivue.umd.js"> </script>
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-
-    <section>
-      <h1>
-        AFNI images
-      </h1>
-      <p>
-        AFNI uses a pair of files (.HEAD, .BRIK) to describe each volume. You can also drag and drop the HEAD/BRIK pair to view this format.
-      </p>
-    </section>
-
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
-      </div>
-    </section>
-    <section>
-      <div>
-        <button onclick="prevVolume()">back</button>
-        <button onclick="nextVolume()">forward</button>
-        <p id="volume">volume: 0</p>
-      </div>
-    </section>
-    <script>
-     var volumeList1 = [
-       // first item is background image
-         {
-           url: "../images/example4d+orig.HEAD",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           urlImgData : "../images/example4d+orig.BRIK.gz",
-           colorMap: "gray",
-           opacity: 1,
-           visible: true,
-         },
-        ] 
-      var nv1 = new niivue.Niivue()
-      nv1.setRadiologicalConvention(false)
-      nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      let currentVol = 0
-      function prevVolume(){
-        currentVol = Math.max(currentVol -1, 0)
-        nv1.setFrame4D(nv1.volumes[0].id, currentVol)
-        document.getElementById('volume').innerHTML = 'volume '+currentVol
-      }
-      function nextVolume(){
-        currentVol ++;
-        currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1)
-        nv1.setFrame4D(nv1.volumes[0].id, currentVol)
-        document.getElementById('volume').innerHTML = 'volume '+currentVol
-      }
-    </script>
+  <body>
+    <header>
+      <button class="unstyled-button">Normalize Graph</button>
+      <input onclick="checkClick(this)" type="checkbox" id="check1" name="check1" value="true">
+      <button onclick="prevVolume()">back</button>
+      <button onclick="nextVolume()">forward</button>
+      &nbsp;<button onclick="animateVolume()">animate</button>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="volume">
+      volume: 0
+    </footer>
   </body>
 </html>
+<script src="./niivue.umd.js"> </script>
+<script>
+ var volumeList1 = [
+   // for AFNI head/brik files we need to explicitly specify BOTH
+     {
+	   url: "../images/example4d+orig.HEAD",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+	   urlImgData : "../images/example4d+orig.BRIK.gz",
+       colorMap: "gray",
+       opacity: 1,
+       visible: true,
+     },
+    ] 
+  var nv1 = new niivue.Niivue(
+    {
+      onFrameChange: updateFrameValue
+    }
+  )
+  nv1.setRadiologicalConvention(false)
+  nv1.attachTo('gl1')
+  nv1.loadVolumes(volumeList1)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  nv1.graph.autoSizeMultiplanar = true
+  nv1.opts.multiplanarForceRender = true
+  nv1.graph.normalizeValues = false
+  nv1.graph.opacity = 1.0
+  function checkClick(cb) {
+    nv1.graph.normalizeValues = cb.checked
+    nv1.updateGLVolume()
+  }
+  let currentVol = 0
+  function prevVolume(){
+    currentVol = Math.max(currentVol -1, 0)
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+    document.getElementById('volume').innerHTML = 'volume '+currentVol
+  }
+  function updateFrameValue(volume, index){
+    document.getElementById('volume').innerHTML = 'volume '+index
+    currentVol = index
+  }
+  function nextVolume(){
+    currentVol ++
+    currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1)
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+    document.getElementById('volume').innerHTML = 'volume '+currentVol
+  }
+  var animationTimer = null
+  function doAnimate() {
+    currentVol ++
+    if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id))
+      currentVol = 0
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+  }
+  function animateVolume() {
+    if (animationTimer == null)
+      animationTimer = setInterval(doAnimate, 100)
+    else {
+      clearInterval(animationTimer)
+      animationTimer = null
+    }
+  }
+</script>
+
 

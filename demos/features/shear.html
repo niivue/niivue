@@ -5,36 +5,20 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Shear</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <link rel="stylesheet" href="light.css">
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <section>
-      <h1>
-        Shear
-      </h1>
-      <p>
-        CT scans often have include gantry tilt to reduce artifacts from teeth fillings and radiation dose to the eyeballs. This creates rhomboidal voxels. Viewing 2D slices in world space reveals this shear. Note that 3D renderings are always in world space (so meshes and other objects align nicely).
-      </p>
-      <input type="checkbox" id="check3" name="check3" checked>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
       <label for="check3">World space</label>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:480px; height:480px;">
-        <canvas id="gl1" height=480 width=480>
-        </canvas>
-      </div>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
+	  <input type="checkbox" id="check3" name="check3" checked>
+      <button id="about">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+     import * as niivue from './niivue.es.js'
       document.getElementById("check3").addEventListener("change", doCheck3Click)
       function doCheck3Click() {
         nv1.setSliceMM(this.checked)
@@ -50,7 +34,7 @@
         ] 
       var nv1 = new niivue.Niivue({
             dragAndDropEnabled: true,
-            backColor: [0.3, 0.2, 0.4, 1],
+            backColor: [1, 1, 1, 1],
             show3Dcrosshair: true,
         })
       nv1.setSliceMM(true)
@@ -58,7 +42,10 @@
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      document.getElementById("about").addEventListener("click", doAbout);
+      function doAbout(){
+        window.alert("CT scans often have include gantry tilt to reduce artifacts from teeth fillings and radiation dose to the eyeballs. This creates rhomboidal voxels. Viewing 2D slices in world space reveals this shear. Note that 3D renderings are always in world space (so meshes and other objects align nicely).");
+      }
     </script>
   </body>
 </html>
-

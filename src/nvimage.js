@@ -640,6 +640,33 @@ NVImage.prototype.calculateOblique = function () {
   sform[9] *= dim[2];
   sform[10] *= dim[2];
   this.frac2mm = mat4.clone(sform);
+  let pixdimX = this.pixDimsRAS[1]; //vec3.length(X1mm);
+  let pixdimY = this.pixDimsRAS[2]; //vec3.length(Y1mm);
+  let pixdimZ = this.pixDimsRAS[3]; //vec3.length(Z1mm);
+  console.log("pixdim", pixdimX, pixdimY, pixdimZ);
+  //orthographic view
+  let oform = mat4.clone(sform);
+  oform[0] = pixdimX * dim[0];
+  oform[1] = 0;
+  oform[2] = 0;
+  oform[4] = 0;
+  oform[5] = pixdimY * dim[1];
+  oform[6] = 0;
+  oform[8] = 0;
+  oform[9] = 0;
+  oform[10] = pixdimZ * dim[2];
+  let originVoxel = this.mm2vox([0, 0, 0]);
+  //set matrix translation for distance from origin
+  oform[12] = -originVoxel[0] * pixdimX;
+  oform[13] = -originVoxel[1] * pixdimY;
+  oform[14] = -originVoxel[2] * pixdimZ;
+  this.frac2mmOrtho = mat4.clone(oform);
+  this.extentsMinOrtho = [oform[12], oform[13], oform[14]];
+  this.extentsMaxOrtho = [
+    oform[0] + oform[12],
+    oform[5] + oform[13],
+    oform[10] + oform[14],
+  ];
 };
 
 // not included in public docs
@@ -3087,7 +3114,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   ]);
   obj3D.extentsMin = extents.min.slice();
   obj3D.extentsMax = extents.max.slice();
-
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   obj3D.originNegate = vec3.clone(extents.origin);
   vec3.negate(obj3D.originNegate, obj3D.originNegate);

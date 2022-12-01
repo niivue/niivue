@@ -4,75 +4,58 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <title>mesh layers</title>
+    <link rel="stylesheet" href="light.css">
   </head>
-  <body style="font-family: sans-serif;">
+  <body>
     <noscript>
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <section>
-      <h1>
-        Mesh layers (GIfTI, MZ3, FreeSurfer, STC)
-      </h1>
-      <p>
-        NiiVue also supports a simple 3D view
-      </p>
-    </section>
-<div class="slidecontainer">
-  Mesh Layer Intensity Threshold <input type="range" min="0" max="10" value="2" class="slider" id="meshSlider">
-</div>
-<div class="slidecontainer">
-  Mesh Layer Opacity <input type="range" min="1" max="10" value="7" class="slider" id="meshSlider2">
-</div>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
-      </div>
-    </section>
-    <section>
-      <p>available mesh shaders:</p>
-      <p id="shaders"></p>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
-      var slider = document.getElementById("meshSlider");
-      slider.oninput = function() {
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value * 0.5)
-      }
-      var slider2 = document.getElementById("meshSlider2");
-      slider2.oninput = function() {
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'opacity', this.value * 0.1)
-      }
-      var nv1 = new niivue.Niivue(({
-        show3Dcrosshair: true,
-        backColor: [1, 1, 1, 1]}))
-      nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.attachTo('gl1')
-      var meshLHLayersList1 = [
-        {url: "../images/BrainMesh_ICBM152.lh.motor.mz3", cal_min: 0.5, cal_max: 5.5, useNegativeCmap: true, opacity: 0.7},
-      ]
-      nv1.loadMeshes([
-         {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLHLayersList1},
-      ])
-      nv1.setClipPlane([-0.1, 270, 0])
-      let cmaps = nv1.meshShaderNames()
-      let cmapEl = document.getElementById('shaders')
-      for (let i=0; i<cmaps.length; i++) {
-        let btn = document.createElement("button")
-        btn.innerHTML = cmaps[i]
-        btn.onclick = function() {
-          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
-        }
-        cmapEl.appendChild(btn)
-      }
-    </script>
+    <header>
+      <label for="meshSlider">Threshold</label>
+      <input type="range" min="0" max="10" value="2" class="slider" id="meshSlider">
+	  <label for="meshSlider2">Opacity</label>
+	  <input type="range" min="1" max="10" value="7" class="slider" id="meshSlider2">
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      <p id="shaders">Shaders: </p>
+    </footer>
   </body>
 </html>
+<script src="./niivue.umd.js">
+</script>
+<script>
+	var slider = document.getElementById("meshSlider");
+	slider.oninput = function() {
+		nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_min', this.value * 0.5)
+	}
+	var slider2 = document.getElementById("meshSlider2");
+	slider2.oninput = function() {
+		nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'opacity', this.value * 0.1)
+	}
+	var nv1 = new niivue.Niivue(({
+		show3Dcrosshair: true,
+		backColor: [0.9, 0.9, 1, 1]}))
+	nv1.setSliceType(nv1.sliceTypeRender)
+	nv1.attachTo('gl1')
+	var meshLHLayersList1 = [
+		{url: "../images/BrainMesh_ICBM152.lh.motor.mz3", cal_min: 0.5, cal_max: 5.5, useNegativeCmap: true, opacity: 0.7},
+	]
+	nv1.loadMeshes([
+		{url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLHLayersList1},
+	])
+	nv1.setClipPlane([-0.1, 270, 0])
+	let cmaps = nv1.meshShaderNames()
+	let cmapEl = document.getElementById('shaders')
+	for (let i=0; i<cmaps.length; i++) {
+	let btn = document.createElement("button")
+	btn.innerHTML = cmaps[i]
+	btn.onclick = function() {
+	  nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
+	}
+	cmapEl.appendChild(btn)
+  }
+</script>

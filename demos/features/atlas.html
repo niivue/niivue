@@ -4,41 +4,22 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Voxel-based Atlas</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <title>basic 3D</title>
+    <link rel="stylesheet" href="niivue.css">
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-
-    <section>
-      <h1>
-        Voxel-based Atlas
-      </h1>
-      <input type="checkbox" id="check1" name="check1" unchecked>
-      <label for="check1">outline</label>
-      <div class="slidecontainer">
-        atlas opacity<input type="range" min="1" max="255" value="255" class="slider" id="alphaSlider">
-      </div>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:640px; height:640px;">
-        <canvas id="gl1" height=640 width=640>
-        </canvas>
-      </div>
-    </section>
-    <section>
-      <p id="location"></p>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
+      <label for="check1">Outline</label>
+	  <input type="checkbox" id="check1" name="check1" unchecked>
+      <label for="alphaSlider">Opacity</label>
+      <input type="range" min="1" max="255" value="255" class="slider" id="alphaSlider">
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+     import * as niivue from './niivue.es.js'
      var volumeList1 = [
        // first item is background image
          {
@@ -56,7 +37,6 @@
       var nv1 = new niivue.Niivue({onLocationChange:handleLocationChange})
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
-      //nv1.setSliceType(nv1.sliceTypeRender)
       document.getElementById("check1").addEventListener("change", doCheckClick);
       function doCheckClick() {
         nv1.setAtlasOutline(this.checked)
@@ -65,12 +45,6 @@
       slider.oninput = function() {
         nv1.setOpacity (1, this.value / 255);
       }
-      let query = window.location.search
-      nv1.on('location', (data) => {
-        // data is an object with properties: {mm: [N N N], vox: [N N N], frac: [N N N]}
-        //document.getElementById('location').innerHTML = 'voxel location: ' + data.vox + ' ' + data.values
-        document.getElementById('location').innerHTML = data.xy
-      })
     </script>
   </body>
 </html>
