@@ -117,11 +117,11 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       var meshLayersList1 = [
-        {url: "../demos/images/lh.curv", colorMap: "rocket", opacity: 0.7},
+        {url: "../demos/images/lh.curv?query=test", colorMap: "rocket", opacity: 0.7},
         //{url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 0.9},
       ]
       nv1.loadMeshes([
-         {url: "../demos/images/lh.pial", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
+         {url: "../demos/images/lh.pial?query=test", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/BrainMesh_ICBM152.lh.mz3", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
          //{url: "../demos/images/PJM-example-lh.gii", rgba255 : [255, 255, 255, 255], layers : meshLayersList1},
       ])
