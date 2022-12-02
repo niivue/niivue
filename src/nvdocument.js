@@ -129,7 +129,7 @@ export class NVDocument {
     this.data.title = "Untitled document";
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
-    this.data.opts = DEFAULT_OPTIONS;
+    this.data.opts = { ...DEFAULT_OPTIONS };
     this.data.previewImageDataURL = "";
 
     /**
@@ -441,7 +441,7 @@ export class NVDocument {
     data.sceneData = { ...this.scene.sceneData };
 
     // save our options
-    data.opts = this.opts;
+    data.opts = { ...this.opts };
 
     // volumes
     if (this.volumes.length) {

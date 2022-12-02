@@ -936,7 +936,18 @@ NVMesh.readTCK = function (buffer) {
     console.log("Not a valid TCK file");
     return;
   }
-  while (pos < len && !line.startsWith("END")) line = readStr();
+  let offset = -1; // "file: offset" is REQUIRED
+  while (pos < len && !line.includes("END")) {
+    line = readStr();
+    if (line.toLowerCase().startsWith("file:")) {
+      offset = parseInt(line.split(" ").pop());
+    }
+  }
+  if (offset < 20) {
+    console.log("Not a valid TCK file (missing file offset)");
+    return;
+  }
+  pos = offset;
   var reader = new DataView(buffer);
   //read and transform vertex positions
   let npt = 0;
@@ -3108,6 +3119,12 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (!line.includes("CDATA[")) continue;
       if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
+
+    if (line.startsWith("<MatrixData>")) {
+      //yet another kludge for undocumented FreeSurfer transform
+      console.log("<>", line);
+    }
+
     if (
       line.startsWith("<Name") &&
       line.includes("AnatomicalStructurePrimary")
@@ -3146,7 +3163,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
   if (n_vert > 0) return scalars;
-  if (
+  console.log(">>>", FreeSurferTranlate);
+  /* if (
     positions.length > 2 &&
     (FreeSurferTranlate[0] != 0 ||
       FreeSurferTranlate[1] != 0 ||
@@ -3163,11 +3181,12 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       i++;
     }
   } //issue416: apply FreeSurfer translation
+*/
   return {
     positions,
     indices,
     scalars,
-  };
+  }; //MatrixData
 }; // readGII()
 
 // not included in public docs

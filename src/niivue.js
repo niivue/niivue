@@ -310,7 +310,6 @@ export function Niivue(options = {}) {
   this.onMeshShaderChanged = () => {};
   this.onMeshPropertyChanged = () => {};
   this.onDocumentLoaded = () => {};
-
   this.document = new NVDocument();
 
   // populate Niivue with user supplied options
@@ -6155,10 +6154,10 @@ Niivue.prototype.calculateMvpMatrix = function (
       0.01,
       scale * 8.0
     );
+
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
   //push the model away from the camera so camera not inside model
-
   let translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8); // to avoid clipping, >= SQRT(3)
   mat.mat4.translate(modelMatrix, modelMatrix, translateVec3);
   if (this.position)
@@ -6167,11 +6166,13 @@ Niivue.prototype.calculateMvpMatrix = function (
   mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
   //apply azimuth
   mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180));
+
   mat.mat4.translate(modelMatrix, modelMatrix, [
     -origin[0],
     -origin[1],
     -origin[2],
   ]);
+
   //
   let iModelMatrix = mat.mat4.create();
   mat.mat4.invert(iModelMatrix, modelMatrix);
@@ -6650,7 +6651,14 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
-    //console.log('TODO: rendering in world space, issues when 2D slices are voxel space', this.scene.crosshairPos);
+    console.log(
+      "TODO: rendering in world space, issues when 2D slices are voxel space",
+      this.scene.crosshairPos
+    );
+    //since 3D views are ALWAYS in world space:
+    // if the 2D slices are in voxel space, we must warp rendering from world space fractions to voxel space fractions
+    let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
+    this.scene.crosshairPos = this.mm2frac(mm);
     return;
   }
   let depthZ = unpackFloatFromVec4i(rgbaPixel);
@@ -7075,10 +7083,10 @@ Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
 }; // moveCrosshairInVox()
 
 // not included in public docs
-Niivue.prototype.frac2mm = function (frac, volIdx = 0) {
+Niivue.prototype.frac2mm = function (frac, volIdx = 0, isForceSliceMM = false) {
   let pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1);
   if (this.volumes.length > 0) {
-    if (this.opts.isSliceMM)
+    if (isForceSliceMM || this.opts.isSliceMM)
       mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
     else mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho);
   } else {
@@ -7728,6 +7736,10 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
+    if (
+      this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
+    )
+      return;
     if (this.opts.dragMode === DRAG_MODE.measurement) {
       //if (this.opts.isDragShowsMeasurementTool) {
       this.drawMeasurementTool([
@@ -7738,10 +7750,6 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
-    if (
-      this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
-    )
-      return;
     let width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);
     let height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1]);
     this.drawSelectionBox([
@@ -7766,5 +7774,6 @@ Niivue.prototype.drawScene = function () {
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.gl.finish();
   this.readyForSync = true; // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
+  this.sync();
   return posString;
 }; // drawScene()
