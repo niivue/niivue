@@ -6,42 +6,55 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Niivue Document</title>
-  <style>
-    section {
-      margin: 20px;
-    }
-  </style>
+  <link rel="stylesheet" href="niivue.css">  
 </head>
 
 <body style="font-family: sans-serif;">
   <noscript>
     <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
   </noscript>
-  <section>
-    <h1>
-      Document
-    </h1>
-    <p>
-      NiiVue supports saving a collection of images and drawing to a document.
-    </p>
-    <p>
-    <h3>Controls</h3>
-    <ul>
-      <li>rotate: left mouse click and drag (touch and drag on mobile)</li>
-      <li>zoom: mouse or touch pad scroll wheel (pinch zoom for mobile)</li>
-    </ul>
-    </p>
-  </section>
+  <header>
+    <div class="dropdown">
+      <button class="dropbtn">File
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="SaveDocument">Save Document</a>        
+        <a class="linker" href="https://github.com/niivue/niivue">About</a>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="dropbtn">Volume
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <a class="viewBtn" id="ToggleHippocampus">Toggle Hippocampus</a>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="dropbtn">Help
+        <i class="fa fa-caret-down"></i>
+      </button>
+      <div class="dropdown-content">
+        <section class="help-text">
+          <p>
+            NiiVue supports saving a collection of images and drawing to a document. 
+          </p>
+          <p>
+            Click File and then Save Document.
+          </p>
+        </section>
+      </div>
+    </div>
+  </header> 
   <!-- demo 1 -->
   <section>
     <div id="demo1" style="width:90%; height:400px;">
-      <canvas id="gl1" height=480 width=640>
+      <canvas id="gl1" style="width:800px;height:400px">
       </canvas>
     </div>
   </section>
-  <button id="toggleHippoButton" onclick="toggleHippo()">Add Hippocampus</button>
-  <button id="saveDocument" onclick="nv1.saveDocument('niivue.basic.nvd')">Save</button>
-
+  
   <script src="./niivue.umd.js">
   </script>
   <script>
@@ -56,6 +69,17 @@
         nv1.addVolumeFromUrl({ url, colorMap: "bluegrn" })
         buttonElem.innerText = 'Remove Hippocampus';
         isHippoShowing = true;
+      }
+    }
+
+    async function onButtonClick(event) {
+      switch(event.target.id) {
+        case "SaveDocument":
+          nv1.saveDocument('niivue.basic.nvd')
+          break
+        case "ToggleHippocampus":
+          toggleHippo()
+          break
       }
     }
 
@@ -74,6 +98,11 @@
     nv1.attachTo('gl1')
     nv1.loadVolumes(volumeList1)
     nv1.setSliceType(nv1.sliceTypeRender)
+
+    var buttons = document.getElementsByClassName("viewBtn")
+    for (let i = 0; i < buttons.length; i++)
+        buttons[i].addEventListener("click", onButtonClick, false)
+    
   
   </script>
 </body>
