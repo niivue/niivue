@@ -110229,7 +110229,17 @@ NVMesh.loadFromUrl = async function({
   layers = []
 } = {}) {
   let urlParts = url.split("/");
-  name = urlParts.slice(-1)[0];
+  if (name === "") {
+    try {
+      urlParts = new URL(url).pathname.split("/");
+    } catch (e) {
+      urlParts = url.split("/");
+    }
+    name = urlParts.slice(-1)[0];
+    if (name.indexOf("?") > -1) {
+      name = name.slice(0, name.indexOf("?"));
+    }
+  }
   if (url === "")
     throw Error("url must not be empty");
   if (gl === null)
@@ -110247,6 +110257,10 @@ NVMesh.loadFromUrl = async function({
       throw Error(response.statusText);
     buffer2 = await response.arrayBuffer();
     urlParts = layers[i2].url.split("/");
+    let layerName = urlParts.slice(-1)[0];
+    if (layerName.indexOf("?") > -1) {
+      layerName = layerName.slice(0, layerName.indexOf("?"));
+    }
     let opacity2 = 0.5;
     if (layers[i2].hasOwnProperty("opacity"))
       opacity2 = layers[i2].opacity;
@@ -110265,7 +110279,7 @@ NVMesh.loadFromUrl = async function({
     let cal_max = null;
     if (layers[i2].hasOwnProperty("cal_max"))
       cal_max = layers[i2].cal_max;
-    this.readLayer(urlParts.slice(-1)[0], buffer2, nvmesh, opacity2, colorMap, colorMapNegative, useNegativeCmap, cal_min, cal_max);
+    this.readLayer(layerName, buffer2, nvmesh, opacity2, colorMap, colorMapNegative, useNegativeCmap, cal_min, cal_max);
   }
   nvmesh.updateMesh(gl);
   return nvmesh;
