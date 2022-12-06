@@ -3012,6 +3012,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
+  let FreeSurferMatrix = [];
   let nvert = 0;
   //let isAscii = false;
   while (pos < len) {
@@ -3119,10 +3120,21 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (!line.includes("CDATA[")) continue;
       if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
-
     if (line.startsWith("<MatrixData>")) {
       //yet another kludge for undocumented FreeSurfer transform
-      console.log("<>", line);
+      while (pos < len && !line.endsWith("</MatrixData>"))
+        line += " " + readStrX();
+      line = line.replace("<MatrixData>", "");
+      line = line.replace("</MatrixData>", "");
+      line = line.replace("  ", " ");
+      line = line.trim();
+      var floats = line.split(/\s+/).map(parseFloat);
+      if (floats.length != 16)
+        console.log("Expected MatrixData to have 16 items: '" + line + "'");
+      else {
+        FreeSurferMatrix = mat4.create();
+        for (var i = 0; i < 16; i++) FreeSurferMatrix[i] = floats[i];
+      }
     }
 
     if (
@@ -3163,8 +3175,30 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
   if (n_vert > 0) return scalars;
-  console.log(">>>", FreeSurferTranlate);
-  /* if (
+  /*
+  if (FreeSurferMatrix.length === 16) {
+	mat4.transpose(FreeSurferMatrix, FreeSurferMatrix); //column vs row major
+    nvert = Math.floor(positions.length / 3);
+    let i = 0;
+    for (var v = 0; v < nvert; v++) {
+      //positions[i] += FreeSurferTranlate[0];
+      //positions[i+1] += FreeSurferTranlate[1];
+      //positions[i+2] += FreeSurferTranlate[2];
+      //let pti = vec4.fromValues(0, -height * 0.5, 0, 1);
+      let pt = vec4.fromValues(positions[i], positions[i+1], positions[i+2], 1);
+	  vec4.transformMat4(pt, pt, FreeSurferMatrix);
+if (v === 0)
+  console.log(positions[i+0],positions[i+1], positions[i+2],'>>>',pt[0],pt[1],pt[2]);
+	  positions[i+0] = pt[0];
+	  positions[i+1] = pt[1];
+	  positions[i+2] = pt[2];
+
+
+      i += 3;
+    }
+  }*/
+  /*if (false) {
+   if (
     positions.length > 2 &&
     (FreeSurferTranlate[0] != 0 ||
       FreeSurferTranlate[1] != 0 ||
@@ -3181,7 +3215,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       i++;
     }
   } //issue416: apply FreeSurfer translation
-*/
+}*/
   return {
     positions,
     indices,

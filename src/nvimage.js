@@ -643,7 +643,7 @@ NVImage.prototype.calculateOblique = function () {
   let pixdimX = this.pixDimsRAS[1]; //vec3.length(X1mm);
   let pixdimY = this.pixDimsRAS[2]; //vec3.length(Y1mm);
   let pixdimZ = this.pixDimsRAS[3]; //vec3.length(Z1mm);
-  console.log("pixdim", pixdimX, pixdimY, pixdimZ);
+  //console.log("pixdim", pixdimX, pixdimY, pixdimZ);
   //orthographic view
   let oform = mat4.clone(sform);
   oform[0] = pixdimX * dim[0];
@@ -667,6 +667,12 @@ NVImage.prototype.calculateOblique = function () {
     oform[5] + oform[13],
     oform[10] + oform[14],
   ];
+  this.mm2ortho = mat4.create();
+  mat4.invert(this.mm2ortho, oblique);
+  /*function reportMat(m) {
+    console.log(`m = [${m[0]} ${m[1]} ${m[2]} ${m[3]}; ${m[4]} ${m[5]} ${m[6]} ${m[7]}; ${m[8]} ${m[9]} ${m[10]} ${m[11]}; ${m[12]} ${m[13]} ${m[14]} ${m[15]}]`);
+  }
+  reportMat(this.mm2ortho);*/
 };
 
 // not included in public docs
@@ -3000,7 +3006,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   let RAI = this.vox2mm([R, A, I], this.matRAS);
   let RPS = this.vox2mm([R, P, S], this.matRAS);
   let RAS = this.vox2mm([R, A, S], this.matRAS);
-
   let posTex = [
     //spatial position (XYZ), texture coordinates UVW
     // Superior face

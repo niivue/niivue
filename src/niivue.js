@@ -5939,8 +5939,10 @@ Niivue.prototype.draw2D = function (
 ) {
   let frac2mmTexture = this.volumes[0].frac2mm.slice();
   let screen = this.screenFieldOfViewExtendedMM(axCorSag);
+  let mesh2ortho = mat.mat4.create();
   if (!this.opts.isSliceMM) {
     frac2mmTexture = this.volumes[0].frac2mmOrtho.slice();
+    mesh2ortho = mat.mat4.clone(this.volumes[0].mm2ortho);
     screen = this.screenFieldOfViewExtendedVox(axCorSag);
   }
   let isRadiolgical =
@@ -6096,10 +6098,13 @@ Niivue.prototype.draw2D = function (
         elevation,
         isRadiolgical
       );
+    //we may need to transform mesh vertices to the orthogonal voxel space
+    let mx = mat.mat4.clone(obj.modelViewProjectionMatrix);
+    mat.mat4.multiply(mx, mx, mesh2ortho);
     this.drawMesh3D(
       true,
       1,
-      obj.modelViewProjectionMatrix,
+      mx, //obj.modelViewProjectionMatrix,
       obj.modelMatrix,
       obj.normalMatrix
     );
