@@ -5972,10 +5972,16 @@ Niivue.prototype.draw2D = function (
     let zoomH = pixPerMMh / pixPerMMmin;
     screen.fovMM[0] *= zoomW;
     screen.fovMM[1] *= zoomH;
-    screen.mnMM[0] *= zoomW;
-    screen.mnMM[1] *= zoomH;
-    screen.mxMM[0] *= zoomW;
-    screen.mxMM[1] *= zoomH;
+    let center = (screen.mnMM[0] + screen.mxMM[0]) * 0.5;
+    screen.mnMM[0] = center - screen.fovMM[0] * 0.5;
+    screen.mxMM[0] = center + screen.fovMM[0] * 0.5;
+    center = (screen.mnMM[1] + screen.mxMM[1]) * 0.5;
+    screen.mnMM[1] = center - screen.fovMM[1] * 0.5;
+    screen.mxMM[1] = center + screen.fovMM[1] * 0.5;
+    //screen.mnMM[0] *= zoomW;
+    //screen.mxMM[0] *= zoomW;
+    //screen.mnMM[1] *= zoomH;
+    //screen.mxMM[1] *= zoomH;
     leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
   }
   if (isNaN(customMM)) {
