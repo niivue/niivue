@@ -4337,10 +4337,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       log.error(
         "Fatal error: Unable to render overlay: background dimensions not defined!"
       );
-    let f000 = this.mm2frac(overlayItem.mm000); //origin in output space
-    let f100 = this.mm2frac(overlayItem.mm100);
-    let f010 = this.mm2frac(overlayItem.mm010);
-    let f001 = this.mm2frac(overlayItem.mm001);
+    let f000 = this.mm2frac(overlayItem.mm000, 0, true); //origin in output space
+    let f100 = this.mm2frac(overlayItem.mm100, 0, true);
+    let f010 = this.mm2frac(overlayItem.mm010, 0, true);
+    let f001 = this.mm2frac(overlayItem.mm001, 0, true);
     f100 = mat.vec3.subtract(f100, f100, f000); // direction of i dimension from origin
     f010 = mat.vec3.subtract(f010, f010, f000); // direction of j dimension from origin
     f001 = mat.vec3.subtract(f001, f001, f000); // direction of k dimension from origin
@@ -6785,6 +6785,7 @@ Niivue.prototype.draw3D = function (
 ) {
   let isMosaic = azimuth !== null;
   this.setPivot3D();
+
   if (!isMosaic) {
     azimuth = this.scene.renderAzimuth;
     elevation = this.scene.renderElevation;
