@@ -3248,22 +3248,11 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   }
 };
 
-// not included in public docs
-// set all connected voxels in drawing to new color
-Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
-  //3D "paint bucket" fill:
-  // set all voxels connected to seed point to newColor
-  // https://en.wikipedia.org/wiki/Flood_fill
-  newColor = Math.abs(newColor);
+Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
-  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) return;
-  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2])
-    return;
   let nx = dims[0];
   let nxy = nx * dims[1];
   let nxyz = nxy * dims[2];
-  let img = this.drawBitmap.slice();
-  if (img.length !== nxy * dims[2]) return;
   function xyz2vx(pt) {
     //provided an XYZ 3D point, provide address in 1D array
     return pt[0] + pt[1] * nx + pt[2] * nxy;
@@ -3274,17 +3263,6 @@ Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
     let Y = Math.floor((vx - Z * nxy) / nx); //column
     let X = Math.floor(vx % nx);
     return [X, Y, Z];
-  }
-  let seedVx = xyz2vx(seedXYZ);
-  let seedColor = img[seedVx];
-  if (seedColor === newColor) {
-    console.log("drawFloodFill selected voxel is already desired color");
-    return;
-  }
-  //img is binary mask with selected color as 1 and all other colors 0
-  for (let i = 1; i < nxyz; i++) {
-    img[i] = 0;
-    if (this.drawBitmap[i] === seedColor) img[i] = 1;
   }
   //1. Set Q to the empty queue or stack.
   let Q = [];
@@ -3321,8 +3299,70 @@ Niivue.prototype.drawFloodFill = function (seedXYZ, newColor = 0) {
     testNeighbor([1, 0, 0]); //right
     //7. Continue looping until Q is exhausted.
   }
+};
+// not included in public docs
+// set all connected voxels in drawing to new color
+Niivue.prototype.drawFloodFill = function (
+  seedXYZ,
+  newColor = 0,
+  growSelectedCluster = 0
+) {
+  //3D "paint bucket" fill:
+  // set all voxels connected to seed point to newColor
+  // https://en.wikipedia.org/wiki/Flood_fill
+  newColor = Math.abs(newColor);
+  let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
+  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) return;
+  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2])
+    return;
+  let nx = dims[0];
+  let nxy = nx * dims[1];
+  let nxyz = nxy * dims[2];
+  let img = this.drawBitmap.slice();
+  if (img.length !== nxy * dims[2]) return;
+  function xyz2vx(pt) {
+    //provided an XYZ 3D point, provide address in 1D array
+    return pt[0] + pt[1] * nx + pt[2] * nxy;
+  }
+  let seedVx = xyz2vx(seedXYZ);
+  let seedColor = img[seedVx];
+  if (seedColor === newColor) {
+    if (growSelectedCluster !== 0)
+      console.log("drawFloodFill selected voxel is not part of a drawing");
+    else console.log("drawFloodFill selected voxel is already desired color");
+    return;
+  }
+  for (let i = 1; i < nxyz; i++) {
+    img[i] = 0;
+    if (this.drawBitmap[i] === seedColor) img[i] = 1;
+  }
+  this.drawFloodFillCore(img, seedVx);
+  //8. (Optional) work out intensity of selected cluster
+  if (growSelectedCluster !== 0) {
+    let backImg = this.volumes[0].img;
+    let mx = backImg[seedVx];
+    let mn = mx;
+    for (let i = 1; i < nxyz; i++) {
+      if (img[i] === 2) {
+        mx = Math.max(mx, backImg[i]);
+        mn = Math.min(mn, backImg[i]);
+      }
+    }
+    if (growSelectedCluster == Number.POSITIVE_INFINITY)
+      mx = growSelectedCluster;
+    if (growSelectedCluster == Number.NEGATIVE_INFINITY)
+      mn = growSelectedCluster;
+
+    console.log("Intensity range of selected cluster :", mn, mx);
+    //second pass:
+    for (let i = 1; i < nxyz; i++) {
+      img[i] = 0;
+      if (backImg[i] >= mn && backImg[i] <= mx) img[i] = 1;
+    }
+    this.drawFloodFillCore(img, seedVx);
+    newColor = seedColor;
+  }
   //8. Return
-  //this.drawUndoBitmap = this.drawBitmap.slice();
   for (let i = 1; i < nxyz; i++)
     if (img[i] === 2)
       //if part of cluster
@@ -5122,8 +5162,16 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       this.scene.crosshairPos = texFrac.slice();
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
-        if (this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
-          this.drawFloodFill(pt, Math.abs(this.opts.penValue));
+
+        if (
+          !isFinite(this.opts.penValue) ||
+          this.opts.penValue < 0 ||
+          Object.is(this.opts.penValue, -0)
+        ) {
+          if (!isFinite(this.opts.penValue))
+            //NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
+            this.drawFloodFill(pt, 0, this.opts.penValue);
+          else this.drawFloodFill(pt, Math.abs(this.opts.penValue));
           return;
         }
         if (isNaN(this.drawPenLocation[0])) {
@@ -5943,8 +5991,10 @@ Niivue.prototype.draw2D = function (
   if (!this.opts.isSliceMM) {
     frac2mmTexture = this.volumes[0].frac2mmOrtho.slice();
     mesh2ortho = mat.mat4.clone(this.volumes[0].mm2ortho);
+    //if (axCorSag === 0) console.log('>>', mesh2ortho);
     screen = this.screenFieldOfViewExtendedVox(axCorSag);
   }
+  //if (axCorSag === 0) console.log(this.opts.isSliceMM, '>><', screen)
   let isRadiolgical =
     this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL;
   if (customMM === Infinity || customMM === -Infinity) {
@@ -6117,7 +6167,13 @@ Niivue.prototype.draw2D = function (
   }
   if (isNaN(customMM))
     //no crossbars for mosaic view
-    this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true);
+    this.drawCrosshairs3D(
+      false,
+      0.15,
+      obj.modelViewProjectionMatrix,
+      true,
+      this.opts.isSliceMM
+    );
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 }; // draw2D()
@@ -6662,14 +6718,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
-    console.log(
-      "TODO: rendering in world space, issues when 2D slices are voxel space",
-      this.scene.crosshairPos
-    );
-    //since 3D views are ALWAYS in world space:
-    // if the 2D slices are in voxel space, we must warp rendering from world space fractions to voxel space fractions
-    let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
-    this.scene.crosshairPos = this.mm2frac(mm);
+    //let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
     return;
   }
   let depthZ = unpackFloatFromVec4i(rgbaPixel);
@@ -6951,7 +7000,8 @@ Niivue.prototype.drawCrosshairs3D = function (
   if (!this.opts.show3Dcrosshair && !is2DView) return;
   if (this.opts.crosshairWidth <= 0.0 && is2DView) return;
   let gl = this.gl;
-  let mm = this.frac2mm(this.scene.crosshairPos);
+  let mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM);
+  //baka e.frac2mm
   // mm = [-20, 0, 30]; // <- set any value here to test
   // generate our crosshairs for the base volume
   if (
