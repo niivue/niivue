@@ -3531,7 +3531,20 @@ NVMesh.loadFromUrl = async function ({
   layers = [],
 } = {}) {
   let urlParts = url.split("/"); // split url parts at slash
-  name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz)
+  if (name === "") {
+    try {
+      // if a full url like https://domain/path/file.nii.gz?query=filter
+      // parse the url and get the pathname component without the query
+      urlParts = new URL(url).pathname.split("/");
+    } catch (e) {
+      // if a relative url then parse the path (assuming no query)
+      urlParts = url.split("/");
+    }
+    name = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
+    if (name.indexOf("?") > -1) {
+      name = name.slice(0, name.indexOf("?")); //remove query string if any
+    }
+  }
   if (url === "") throw Error("url must not be empty");
   if (gl === null) throw Error("gl context is null");
   //TRX format is special (its a zip archive of multiple files)
@@ -3547,6 +3560,10 @@ NVMesh.loadFromUrl = async function ({
     if (!response.ok) throw Error(response.statusText);
     buffer = await response.arrayBuffer();
     urlParts = layers[i].url.split("/");
+    let layerName = urlParts.slice(-1)[0];
+    if (layerName.indexOf("?") > -1) {
+      layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
+    }
     let opacity = 0.5;
     if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
     let colorMap = "warm";
@@ -3563,7 +3580,7 @@ NVMesh.loadFromUrl = async function ({
     if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
 
     this.readLayer(
-      urlParts.slice(-1)[0],
+      layerName,
       buffer,
       nvmesh,
       opacity,
