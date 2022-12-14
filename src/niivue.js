@@ -58,7 +58,12 @@ import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
 export { colortables } from "./colortables";
-import { NVDocument, SLICE_TYPE, DRAG_MODE } from "./nvdocument.js";
+import {
+  NVDocument,
+  SLICE_TYPE,
+  DRAG_MODE,
+  DEFAULT_OPTIONS,
+} from "./nvdocument.js";
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
@@ -312,12 +317,19 @@ export function Niivue(options = {}) {
   this.onDocumentLoaded = () => {};
   this.document = new NVDocument();
 
+  this.opts = { ...DEFAULT_OPTIONS };
+  this.scene = { ...this.document.scene };
+
   // populate Niivue with user supplied options
   for (const name in options) {
     if (typeof options[name] === "function") {
       this[name] = options[name];
     } else {
-      this.opts[name] = options[name];
+      // this.opts[name] = options[name];
+      this.opts[name] =
+        DEFAULT_OPTIONS[name] === undefined
+          ? DEFAULT_OPTIONS[name]
+          : options[name];
     }
   }
 
@@ -360,17 +372,17 @@ export function Niivue(options = {}) {
   this.subscriptions = [];
 }
 
-Object.defineProperty(Niivue.prototype, "scene", {
-  get: function () {
-    return this.document.scene;
-  },
-});
+// Object.defineProperty(Niivue.prototype, "scene", {
+//   get: function () {
+//     return this.document.scene;
+//   },
+// });
 
-Object.defineProperty(Niivue.prototype, "opts", {
-  get: function () {
-    return this.document.opts;
-  },
-});
+// Object.defineProperty(Niivue.prototype, "opts", {
+//   get: function () {
+//     return this.document.opts;
+//   },
+// });
 
 Object.defineProperty(Niivue.prototype, "volumes", {
   get: function () {
@@ -399,14 +411,14 @@ Object.defineProperty(Niivue.prototype, "drawBitmap", {
   },
 });
 
-Object.defineProperty(Niivue.prototype, "sliceType", {
-  get: function () {
-    return this.document.opts.sliceType;
-  },
-  set: function (sliceType) {
-    this.document.opts.sliceType = sliceType;
-  },
-});
+// Object.defineProperty(Niivue.prototype, "sliceType", {
+//   get: function () {
+//     return this.document.opts.sliceType;
+//   },
+//   set: function (sliceType) {
+//     this.document.opts.sliceType = sliceType;
+//   },
+// });
 
 /**
  * save webgl2 canvas as png format bitmap
