@@ -5,60 +5,44 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Mosaics</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <link rel="stylesheet" href="light.css">
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <section>
-     <h1>
-       Advanced Mosaic (Lightbox, Montage) View
-     </h1>
-     <p>Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X), labels (L), and renderings (R).</p>
-     <label for="name">Mosaic string:</label>
-     <input type="text" id="str" name="str" onKeyUp="return bar()" value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0" required minlength="2" maxlength="90" size="90">
-     <p>
-     <input type="checkbox" id="check1" name="check1" unchecked>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
+	  <button id="about">Mosaic string:</button>
+      <input type="text" id="str" value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0" required minlength="2" maxlength="128" size="128">
+      <p>
      <label for="check1">Radiological</label>
-     <input type="checkbox" id="check3" name="check3" unchecked>
+     <input type="checkbox" id="check1" name="check1" unchecked>
      <label for="check3">World space</label>
-     <input type="checkbox" id="check5" name="check5" unchecked>
+     <input type="checkbox" id="check3" name="check3" unchecked>
      <label for="check5">Ruler</label>
-     <input type="checkbox" id="check6" name="check6" unchecked>
+     <input type="checkbox" id="check5" name="check5" unchecked>
      <label for="check6">Nose left</label>
-     <input type="checkbox" id="check7" name="check7" unchecked>
+     <input type="checkbox" id="check6" name="check6" unchecked>
      <label for="check7">Colorbar</label>
-     <input type="checkbox" id="check8" name="check8" checked>
+     <input type="checkbox" id="check7" name="check7" checked>
      <label for="check8">Negative colors</label>
-     <input type="checkbox" id="check9" name="check9" unchecked>
+     <input type="checkbox" id="check8" name="check8" checked>
      <label for="check9">Cube</label>
-     <input type="checkbox" id="check10" name="check10" checked>
+     <input type="checkbox" id="check9" name="check9" unchecked>
      <label for="check10">HighDPI</label>
-     <div class="slidecontainer">
-      gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
+     <input type="checkbox" id="check10" name="check10" checked>
+     gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
       <label for="dragMode">drag mode</label>
-      <select name="contrast" id="dragMode">
-        <option value="none">contrast</option>
-        <option value="measurement">measurement</option>
-        <option value="none">none</option>
+      <select id="dragMode">
+       <option value="contrast">contrast</option>
+       <option value="measurement">measurement</option>
+       <option value="none">none</option>
       </select>
-     </div>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:800px;">
-        <canvas id="gl1" height=800 width=640>
-        </canvas>
-      </div>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
+
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+     import * as niivue from './niivue.es.js'
      var dropDrag = document.getElementById("dragMode")
      dropDrag.onchange = function() {
        switch(document.getElementById("dragMode").value) {
@@ -136,20 +120,22 @@
            cal_max: 6,
            visible: true,
          },
-        ] 
-      var nv1 = new niivue.Niivue({
-        show3Dcrosshair: false,
-        backColor: [0, 0.3, 0.4, 1]})
+        ]
+      var nv1 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
       nv1.attachTo('gl1')
       nv1.loadVolumes(volumeList1)
       var txt = document.getElementById("str")
       nv1.setSliceType(nv1.sliceTypeAxial)
+	  nv1.opts.isColorbar = true
       nv1.setSliceMosaicString(txt.value)
-      nv1.setHighResolutionCapable(true)
-       function bar() {
-            console.log(txt.value)//do stuff
+	  document.getElementById("str").addEventListener("keyup", doStr);
+      function doStr() {
             nv1.setSliceMosaicString(txt.value)
-       }
+      }
+	  document.getElementById("about").addEventListener("click", doAbout);
+      function doAbout(){
+        window.alert("Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).");
+      }
     </script>
   </body>
 </html>

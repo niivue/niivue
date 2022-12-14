@@ -4,43 +4,12 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>select font</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <title>Select Font</title>
+    <link rel="stylesheet" href="light.css">
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <section>
-      <h1>
-        Drag and Drop
-      </h1>
-      <p>
-        Select a font below.  To remove the loading text drag and drop a Nifti file from your local computer. Or drag and drop a <a href="../images/mni152.nii.gz">link to a Nifti image</a> (hint: drag the blue link text to the black canvas).
-      </p>
-      <p>
-        <h3>Controls</h3>
-        <ul>
-          <li>move the crosshairs: left mouse click and drag (or click around)</li>
-          <li>slice scrolling: mouse or touch pad scroll up and down (pinch zoom for mobile)</li>
-          <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
-          <li>reset intensity: left mouse click double click (mobile not supported)</li>
-        </ul>
-      </p>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
-      </div>
-    </section>
-    <section>
-      <div>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
         <label for="fonts">Choose a font:</label>
         <select name="fonts" id="fonts" onchange="changeFont()">
           <option value="roboto">Roboto</option>
@@ -48,12 +17,14 @@
           <option value="ubuntu">Ubuntu</option>
           <option value="ubuntubold">UbuntuBold</option>
         </select>
-      </div>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
-      function changeFont() {
+		drag and drop a Nifti image or this <a href="../images/mni152.nii.gz">link to a Nifti image</a>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+      var dropFont = document.getElementById("fonts")
+      dropFont.onchange = function() {
         const fontName = document.getElementById("fonts").value
         switch(fontName) {
           case "roboto":
@@ -70,6 +41,7 @@
             break
         }
       }
+     import * as niivue from './niivue.es.js'
       var nv1 = new niivue.Niivue()
       nv1.attachTo('gl1')
       nv1.setSliceType(nv1.sliceTypeMultiplanar)

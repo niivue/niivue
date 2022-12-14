@@ -746,7 +746,7 @@ layout(location=1) in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
 void main(void) {
-	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vColor = texCoords;
 }`;
 const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
@@ -985,76 +985,6 @@ out vec4 fColor;
 	fColor.rgb = mix(fColor.rgb, colAcc.rgb, overMix);
 	fColor.a = max(fColor.a, colAcc.a);
 }`;
-var vertSliceShader = `#version 300 es
-#line 150
-layout(location=0) in vec3 pos;
-uniform int axCorSag;
-uniform float slice;
-uniform vec2 canvasWidthHeight;
-uniform vec3 panXYscale;
-uniform vec4 leftTopWidthHeight;
-out vec3 texPos;
-void main(void) {
-	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
-	vec2 frac;
-	vec3 vpos = pos;
-	frac.x = (leftTopWidthHeight.x + (vpos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
-	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - vpos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
-	//frac.x = pos.x; //0..1
-	//frac.y = pos.y; //1..0
-
-	frac = (frac * 2.0) - 1.0;
-	gl_Position = vec4(frac, 0.0, 1.0);
-	gl_Position.x += panXYscale.x;
-	gl_Position.y += panXYscale.y;
-	if (axCorSag == 1)
-		texPos = vec3(pos.x, slice, pos.y);
-	else if (axCorSag == 2)
-		texPos = vec3(slice, pos.x, pos.y);
-	else
-		texPos = vec3(pos.xy, slice);
-}`;
-var fragSliceShader = `#version 300 es
-#line 228
-precision highp int;
-precision highp float;
-uniform highp sampler3D volume, overlay;
-uniform int backgroundMasksOverlays;
-uniform float overlays;
-uniform float opacity;
-uniform float drawOpacity;
-uniform highp sampler3D drawing;
-in vec3 texPos;
-out vec4 color;
-void main() {
-	vec4 background = texture(volume, texPos);
-	color = vec4(background.rgb, opacity);
-	vec4 ocolor = vec4(0.0);
-	if (overlays > 0.0) {
-		ocolor = texture(overlay, texPos);
-	}
-	float draw = texture(drawing, texPos).r;
-	if (draw > 0.0) {
-		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (4.0/255.0))
-			dcolor.rgb = vec3(draw,0.0,draw);
-		else if (draw >= (3.0/255.0))
-			dcolor.b = 1.0;
-		else if (draw >= (2.0/255.0))
-			dcolor.g = 1.0;
-		else
-			dcolor.r = 1.0;
-		color.rgb = mix(color.rgb, dcolor, drawOpacity);
-		color.a = max(drawOpacity, color.a);
-	}
-	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
-		return;
-	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-	if (aout <= 0.0) return;
-	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	color.a = aout;
-}`;
 var vertSliceMMShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
@@ -1070,9 +1000,7 @@ void main(void) {
 	else if (axCorSag > 0)
 		texPos = vec3(pos.x, slice, pos.y);
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
-	//vec4 mm = vec4(texPos, 1.0) * frac2mm;
 	gl_Position = mvpMtx * mm;
-	//gl_Position = mm;
 }`;
 var fragSliceMMShader = `#version 300 es
 #line 228
@@ -105941,6 +105869,32 @@ NVImage.prototype.calculateOblique = function() {
   sform[9] *= dim[2];
   sform[10] *= dim[2];
   this.frac2mm = clone$1(sform);
+  let pixdimX = this.pixDimsRAS[1];
+  let pixdimY = this.pixDimsRAS[2];
+  let pixdimZ = this.pixDimsRAS[3];
+  let oform = clone$1(sform);
+  oform[0] = pixdimX * dim[0];
+  oform[1] = 0;
+  oform[2] = 0;
+  oform[4] = 0;
+  oform[5] = pixdimY * dim[1];
+  oform[6] = 0;
+  oform[8] = 0;
+  oform[9] = 0;
+  oform[10] = pixdimZ * dim[2];
+  let originVoxel = this.mm2vox([0, 0, 0], true);
+  oform[12] = (-originVoxel[0] - 0.5) * pixdimX;
+  oform[13] = (-originVoxel[1] - 0.5) * pixdimY;
+  oform[14] = (-originVoxel[2] - 0.5) * pixdimZ;
+  this.frac2mmOrtho = clone$1(oform);
+  this.extentsMinOrtho = [oform[12], oform[13], oform[14]];
+  this.extentsMaxOrtho = [
+    oform[0] + oform[12],
+    oform[5] + oform[13],
+    oform[10] + oform[14]
+  ];
+  this.mm2ortho = create$2();
+  invert(this.mm2ortho, oblique);
 };
 NVImage.prototype.THD_daxes_to_NIFTI = function(xyzDelta, xyzOrigin, orientSpecific) {
   let hdr = this.hdr;
@@ -107136,7 +107090,7 @@ NVImage.prototype.vox2mm = function(XYZ, mtx) {
   let pos3 = fromValues$1(pos[0], pos[1], pos[2]);
   return pos3;
 };
-NVImage.prototype.mm2vox = function(mm) {
+NVImage.prototype.mm2vox = function(mm, frac = false) {
   let sform = fromValues$2(...this.hdr.affine.flat());
   let out = clone$1(sform);
   transpose(out, sform);
@@ -107144,6 +107098,8 @@ NVImage.prototype.mm2vox = function(mm) {
   let pos = fromValues(mm[0], mm[1], mm[2], 1);
   transformMat4(pos, pos, out);
   let pos3 = fromValues$1(pos[0], pos[1], pos[2]);
+  if (frac)
+    return pos3;
   return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
 };
 NVImage.prototype.arrayEquals = function(a, b) {
@@ -108667,8 +108623,18 @@ NVMesh.readTCK = function(buffer2) {
     console.log("Not a valid TCK file");
     return;
   }
-  while (pos < len2 && !line.startsWith("END"))
+  let offset = -1;
+  while (pos < len2 && !line.includes("END")) {
     line = readStr();
+    if (line.toLowerCase().startsWith("file:")) {
+      offset = parseInt(line.split(" ").pop());
+    }
+  }
+  if (offset < 20) {
+    console.log("Not a valid TCK file (missing file offset)");
+    return;
+  }
+  pos = offset;
   var reader = new DataView(buffer2);
   let npt = 0;
   let offsetPt0 = [];
@@ -110490,6 +110456,7 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
   let FreeSurferTranlate = [0, 0, 0];
   let dataType = 0;
   let isGzip = false;
+  let FreeSurferMatrix = [];
   let nvert = 0;
   while (pos < len2) {
     let readBracketTag = function(TagName) {
@@ -110607,6 +110574,22 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
       if (e >= 0)
         FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
+    if (line.startsWith("<MatrixData>")) {
+      while (pos < len2 && !line.endsWith("</MatrixData>"))
+        line += " " + readStrX();
+      line = line.replace("<MatrixData>", "");
+      line = line.replace("</MatrixData>", "");
+      line = line.replace("  ", " ");
+      line = line.trim();
+      var floats = line.split(/\s+/).map(parseFloat);
+      if (floats.length != 16)
+        console.log("Expected MatrixData to have 16 items: '" + line + "'");
+      else {
+        FreeSurferMatrix = create$2();
+        for (var i2 = 0; i2 < 16; i2++)
+          FreeSurferMatrix[i2] = floats[i2];
+      }
+    }
     if (line.startsWith("<Name") && line.includes("AnatomicalStructurePrimary")) {
       if (!line.includes("<Value"))
         line = readStr();
@@ -110637,18 +110620,6 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
   }
   if (n_vert > 0)
     return scalars;
-  if (positions.length > 2 && (FreeSurferTranlate[0] != 0 || FreeSurferTranlate[1] != 0 || FreeSurferTranlate[2] != 0)) {
-    nvert = Math.floor(positions.length / 3);
-    let i3 = 0;
-    for (var v = 0; v < nvert; v++) {
-      positions[i3] += FreeSurferTranlate[0];
-      i3++;
-      positions[i3] += FreeSurferTranlate[1];
-      i3++;
-      positions[i3] += FreeSurferTranlate[2];
-      i3++;
-    }
-  }
   return {
     positions,
     indices,
@@ -113406,6 +113377,7 @@ const DEFAULT_OPTIONS = {
   show3Dcrosshair: false,
   backColor: [0, 0, 0, 1],
   crosshairColor: [1, 0, 0, 1],
+  fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
   rulerColor: [1, 0, 0, 0.8],
@@ -113447,7 +113419,7 @@ class NVDocument {
     this.data.title = "Untitled document";
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
-    this.data.opts = DEFAULT_OPTIONS;
+    this.data.opts = __spreadValues({}, DEFAULT_OPTIONS);
     this.data.previewImageDataURL = "";
     this.scene = {
       onAzimuthElevationChange: () => {
@@ -113588,7 +113560,7 @@ class NVDocument {
     data.imageOptionsMap = [];
     let imageOptionsArray = [];
     data.sceneData = __spreadValues({}, this.scene.sceneData);
-    data.opts = this.opts;
+    data.opts = __spreadValues({}, this.opts);
     if (this.volumes.length) {
       let imageOptions = this.imageOptionsArray[0];
       if (imageOptions) {
@@ -113745,7 +113717,6 @@ function Niivue(options = {}) {
   this.drawPenFillPts = [];
   this.overlayTexture = null;
   this.overlayTextureID = [];
-  this.sliceShader = null;
   this.sliceMMShader = null;
   this.orientCubeShader = null;
   this.orientCubeShaderVAO = null;
@@ -113899,11 +113870,13 @@ function Niivue(options = {}) {
   this.onDocumentLoaded = () => {
   };
   this.document = new NVDocument();
+  this.opts = __spreadValues({}, DEFAULT_OPTIONS);
+  this.scene = __spreadValues({}, this.document.scene);
   for (const name in options) {
     if (typeof options[name] === "function") {
       this[name] = options[name];
     } else {
-      this.opts[name] = options[name];
+      this.opts[name] = DEFAULT_OPTIONS[name] === void 0 ? DEFAULT_OPTIONS[name] : options[name];
     }
   }
   if (this.opts.isHighResolutionCapable) {
@@ -113935,16 +113908,6 @@ function Niivue(options = {}) {
   log.setLogLevel(this.opts.logging);
   this.subscriptions = [];
 }
-Object.defineProperty(Niivue.prototype, "scene", {
-  get: function() {
-    return this.document.scene;
-  }
-});
-Object.defineProperty(Niivue.prototype, "opts", {
-  get: function() {
-    return this.document.opts;
-  }
-});
 Object.defineProperty(Niivue.prototype, "volumes", {
   get: function() {
     return this.document.volumes;
@@ -113967,14 +113930,6 @@ Object.defineProperty(Niivue.prototype, "drawBitmap", {
   },
   set: function(drawBitmap) {
     this.document.drawBitmap = drawBitmap;
-  }
-});
-Object.defineProperty(Niivue.prototype, "sliceType", {
-  get: function() {
-    return this.document.opts.sliceType;
-  },
-  set: function(sliceType) {
-    this.document.opts.sliceType = sliceType;
   }
 });
 Niivue.prototype.saveScene = function(filename = "") {
@@ -114669,7 +114624,6 @@ Niivue.prototype.setSliceMosaicString = function(str) {
 };
 Niivue.prototype.setSliceMM = function(isSliceMM) {
   this.opts.isSliceMM = isSliceMM;
-  console.log("SliceMM feature is experimental");
   this.updateGLVolume();
 };
 Niivue.prototype.getRadiologicalConvention = function() {
@@ -115339,10 +115293,15 @@ Niivue.prototype.setSelectionBoxColor = function(color) {
   this.opts.selectionBoxColor = color;
 };
 Niivue.prototype.sliceScroll2D = function(posChange, x2, y, isDelta = true) {
-  if (posChange !== 0 && this.opts.dragMode === DRAG_MODE.pan) {
+  if (posChange !== 0 && this.opts.dragMode === DRAG_MODE.pan && this.inRenderTile(this.uiData.dpr * x2, this.uiData.dpr * y) === -1) {
     let zoom = this.uiData.pan2Dxyzmm[3] * (1 + 10 * posChange);
     zoom = Math.round(zoom * 10) / 10;
+    let zoomChange = this.uiData.pan2Dxyzmm[3] - zoom;
     this.uiData.pan2Dxyzmm[3] = zoom;
+    let mm = this.frac2mm(this.scene.crosshairPos);
+    this.uiData.pan2Dxyzmm[0] += zoomChange * mm[0];
+    this.uiData.pan2Dxyzmm[1] += zoomChange * mm[1];
+    this.uiData.pan2Dxyzmm[2] += zoomChange * mm[2];
     this.drawScene();
     return;
   }
@@ -115833,19 +115792,10 @@ Niivue.prototype.drawPenLine = function(ptA, ptB, penValue) {
     }
   }
 };
-Niivue.prototype.drawFloodFill = function(seedXYZ, newColor = 0) {
-  newColor = Math.abs(newColor);
+Niivue.prototype.drawFloodFillCore = function(img, seedVx) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
-  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0)
-    return;
-  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2])
-    return;
   let nx = dims[0];
   let nxy = nx * dims[1];
-  let nxyz = nxy * dims[2];
-  let img = this.drawBitmap.slice();
-  if (img.length !== nxy * dims[2])
-    return;
   function xyz2vx(pt) {
     return pt[0] + pt[1] * nx + pt[2] * nxy;
   }
@@ -115854,17 +115804,6 @@ Niivue.prototype.drawFloodFill = function(seedXYZ, newColor = 0) {
     let Y = Math.floor((vx - Z * nxy) / nx);
     let X = Math.floor(vx % nx);
     return [X, Y, Z];
-  }
-  let seedVx = xyz2vx(seedXYZ);
-  let seedColor = img[seedVx];
-  if (seedColor === newColor) {
-    console.log("drawFloodFill selected voxel is already desired color");
-    return;
-  }
-  for (let i2 = 1; i2 < nxyz; i2++) {
-    img[i2] = 0;
-    if (this.drawBitmap[i2] === seedColor)
-      img[i2] = 1;
   }
   let Q = [];
   Q.push(seedVx);
@@ -115894,6 +115833,61 @@ Niivue.prototype.drawFloodFill = function(seedXYZ, newColor = 0) {
     testNeighbor([0, 1, 0]);
     testNeighbor([-1, 0, 0]);
     testNeighbor([1, 0, 0]);
+  }
+};
+Niivue.prototype.drawFloodFill = function(seedXYZ, newColor = 0, growSelectedCluster = 0) {
+  newColor = Math.abs(newColor);
+  let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
+  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0)
+    return;
+  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2])
+    return;
+  let nx = dims[0];
+  let nxy = nx * dims[1];
+  let nxyz = nxy * dims[2];
+  let img = this.drawBitmap.slice();
+  if (img.length !== nxy * dims[2])
+    return;
+  function xyz2vx(pt) {
+    return pt[0] + pt[1] * nx + pt[2] * nxy;
+  }
+  let seedVx = xyz2vx(seedXYZ);
+  let seedColor = img[seedVx];
+  if (seedColor === newColor) {
+    if (growSelectedCluster !== 0)
+      console.log("drawFloodFill selected voxel is not part of a drawing");
+    else
+      console.log("drawFloodFill selected voxel is already desired color");
+    return;
+  }
+  for (let i2 = 1; i2 < nxyz; i2++) {
+    img[i2] = 0;
+    if (this.drawBitmap[i2] === seedColor)
+      img[i2] = 1;
+  }
+  this.drawFloodFillCore(img, seedVx);
+  if (growSelectedCluster !== 0) {
+    let backImg = this.volumes[0].img;
+    let mx = backImg[seedVx];
+    let mn = mx;
+    for (let i2 = 1; i2 < nxyz; i2++) {
+      if (img[i2] === 2) {
+        mx = Math.max(mx, backImg[i2]);
+        mn = Math.min(mn, backImg[i2]);
+      }
+    }
+    if (growSelectedCluster == Number.POSITIVE_INFINITY)
+      mx = growSelectedCluster;
+    if (growSelectedCluster == Number.NEGATIVE_INFINITY)
+      mn = growSelectedCluster;
+    console.log("Intensity range of selected cluster :", mn, mx);
+    for (let i2 = 1; i2 < nxyz; i2++) {
+      img[i2] = 0;
+      if (backImg[i2] >= mn && backImg[i2] <= mx)
+        img[i2] = 1;
+    }
+    this.drawFloodFillCore(img, seedVx);
+    newColor = seedColor;
   }
   for (let i2 = 1; i2 < nxyz; i2++)
     if (img[i2] === 2)
@@ -116300,19 +116294,6 @@ Niivue.prototype.init = async function() {
   this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
   this.pickingImageShader.rayDirLoc = this.pickingImageShader.uniforms["rayDir"];
   this.pickingImageShader.clipPlaneLoc = this.pickingImageShader.uniforms["clipPlane"];
-  this.sliceShader = new Shader(this.gl, vertSliceShader, fragSliceShader);
-  this.sliceShader.use(this.gl);
-  this.sliceShader.drawOpacityLoc = this.sliceShader.uniforms["drawOpacity"];
-  this.sliceShader.opacityLoc = this.sliceShader.uniforms["opacity"];
-  this.sliceShader.backgroundMasksOverlaysLoc = this.sliceShader.uniforms["backgroundMasksOverlays"];
-  this.sliceShader.axCorSagLoc = this.sliceShader.uniforms["axCorSag"];
-  this.sliceShader.sliceLoc = this.sliceShader.uniforms["slice"];
-  this.sliceShader.canvasWidthHeightLoc = this.sliceShader.uniforms["canvasWidthHeight"];
-  this.sliceShader.leftTopWidthHeightLoc = this.sliceShader.uniforms["leftTopWidthHeight"];
-  this.gl.uniform1i(this.sliceShader.uniforms["volume"], 0);
-  this.gl.uniform1i(this.sliceShader.uniforms["overlay"], 2);
-  this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
-  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
   this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader);
   this.sliceMMShader.use(this.gl);
   this.sliceMMShader.drawOpacityLoc = this.sliceMMShader.uniforms["drawOpacity"];
@@ -116522,10 +116503,10 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   } else {
     if (this.back.dims === void 0)
       log.error("Fatal error: Unable to render overlay: background dimensions not defined!");
-    let f000 = this.mm2frac(overlayItem.mm000);
-    let f100 = this.mm2frac(overlayItem.mm100);
-    let f010 = this.mm2frac(overlayItem.mm010);
-    let f001 = this.mm2frac(overlayItem.mm001);
+    let f000 = this.mm2frac(overlayItem.mm000, 0, true);
+    let f100 = this.mm2frac(overlayItem.mm100, 0, true);
+    let f010 = this.mm2frac(overlayItem.mm010, 0, true);
+    let f001 = this.mm2frac(overlayItem.mm001, 0, true);
     f100 = subtract(f100, f100, f000);
     f010 = subtract(f010, f010, f000);
     f001 = subtract(f001, f001, f000);
@@ -116706,10 +116687,6 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   this.gl.uniform1f(this.sliceMMShader.uniforms["overlays"], this.overlays.length);
   this.gl.uniform1f(this.sliceMMShader.uniforms["drawOpacity"], this.drawOpacity);
   this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
-  this.sliceShader.use(this.gl);
-  this.gl.uniform1f(this.sliceShader.uniforms["overlays"], this.overlays.length);
-  this.gl.uniform1f(this.sliceShader.uniforms["drawOpacity"], this.drawOpacity);
-  this.gl.uniform1i(this.sliceShader.uniforms["drawing"], 7);
   this.gl.activeTexture(this.gl.TEXTURE7);
   this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
   this.updateInterpolation(layer);
@@ -116922,8 +116899,11 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
       this.scene.crosshairPos = texFrac.slice();
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
-        if (this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
-          this.drawFloodFill(pt, Math.abs(this.opts.penValue));
+        if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
+          if (!isFinite(this.opts.penValue))
+            this.drawFloodFill(pt, 0, this.opts.penValue);
+          else
+            this.drawFloodFill(pt, Math.abs(this.opts.penValue));
           return;
         }
         if (isNaN(this.drawPenLocation[0])) {
@@ -117004,6 +116984,7 @@ Niivue.prototype.drawRuler10cm = function(startXYendXY) {
   this.gl.bindVertexArray(this.unusedVAO);
 };
 Niivue.prototype.screenXY2mm = function(x2, y, forceSlice = -1) {
+  let texFrac = [];
   for (let s = 0; s < this.screenSlices.length; s++) {
     let i2 = s;
     if (forceSlice >= 0)
@@ -117014,9 +116995,8 @@ Niivue.prototype.screenXY2mm = function(x2, y, forceSlice = -1) {
     let ltwh = this.screenSlices[i2].leftTopWidthHeight;
     if (x2 < ltwh[0] || y < ltwh[1] || x2 > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3])
       continue;
-    console.log(this.screenSlices[i2].leftTopWidthHeight, x2, y);
-    let texFrac = this.screenXY2TextureFrac(x2, y, i2, false);
-    if (forceSlice < 0 && texFrac[0] < 0)
+    texFrac = this.screenXY2TextureFrac(x2, y, i2, false);
+    if (texFrac[0] < 0)
       continue;
     let mm = this.frac2mm(texFrac);
     return [mm[0], mm[1], mm[2], i2];
@@ -117025,17 +117005,19 @@ Niivue.prototype.screenXY2mm = function(x2, y, forceSlice = -1) {
 };
 Niivue.prototype.dragForPanZoom = function(startXYendXY) {
   let endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
-  if (isNaN(endMM[0]))
+  if (isNaN(endMM[0])) {
     return;
+  }
   let startMM = this.screenXY2mm(startXYendXY[0], startXYendXY[1], endMM[3]);
   if (isNaN(startMM[0]) || isNaN(endMM[0]) || endMM[3] !== endMM[3]) {
     return;
   }
   let v = create$1();
+  let zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
   sub(v, endMM, startMM);
-  this.uiData.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + v[0];
-  this.uiData.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + v[1];
-  this.uiData.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + v[2];
+  this.uiData.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0];
+  this.uiData.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1];
+  this.uiData.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
 };
 Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
   let gl = this.gl;
@@ -117052,9 +117034,9 @@ Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
   gl.uniform1f(this.lineShader.thicknessLoc, this.opts.rulerWidth);
   gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  let c = this.opts.rulerColor;
-  c[3] = 1;
-  gl.uniform4fv(this.lineShader.lineColorLoc, c);
+  let color = this.opts.rulerColor;
+  color[3] = 1;
+  gl.uniform4fv(this.lineShader.lineColorLoc, color);
   let w = this.opts.rulerWidth;
   gl.uniform1f(this.lineShader.thicknessLoc, w * 2);
   let sXYeXY = [
@@ -117087,7 +117069,7 @@ Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
     if (lenMM > 99)
       decimals = 0;
     let stringMM = lenMM.toFixed(decimals);
-    this.drawTextBetween(startXYendXY, stringMM);
+    this.drawTextBetween(startXYendXY, stringMM, 1, color);
   }
   gl.bindVertexArray(this.unusedVAO);
 };
@@ -117309,7 +117291,7 @@ Niivue.prototype.drawText = function(xy, str, scale2 = 1, color = null) {
   this.gl.enable(this.gl.BLEND);
   this.gl.uniform2f(this.fontShader.canvasWidthHeightLoc, this.gl.canvas.width, this.gl.canvas.height);
   if (color === null)
-    color = this.opts.crosshairColor;
+    color = this.opts.fontColor;
   this.gl.uniform4fv(this.fontShader.fontColorLoc, color);
   let screenPxRange = size / this.fontMets.size * this.fontMets.distanceRange;
   screenPxRange = Math.max(screenPxRange, 1);
@@ -117365,6 +117347,11 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1, color = null) {
   if (this.opts.textHeight <= 0)
     return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale2;
+  let width = this.textWidth(size, str);
+  if (width > this.canvas.width) {
+    scale2 *= (this.canvas.width - 0) / width;
+    size = this.opts.textHeight * this.gl.canvas.height * scale2;
+  }
   xy[0] -= 0.5 * this.textWidth(size, str);
   this.drawText(xy, str, scale2, color);
 };
@@ -117466,6 +117453,24 @@ Niivue.prototype.screenFieldOfViewMM = function(axCorSag = 0, forceSliceMM = fal
   subtract(fovMM, mxMM, mnMM);
   return fovMM;
 };
+Niivue.prototype.screenFieldOfViewExtendedVox = function(axCorSag = 0) {
+  let mnMM = [
+    this.volumes[0].extentsMinOrtho[0],
+    this.volumes[0].extentsMinOrtho[1],
+    this.volumes[0].extentsMinOrtho[2]
+  ];
+  let mxMM = [
+    this.volumes[0].extentsMaxOrtho[0],
+    this.volumes[0].extentsMaxOrtho[1],
+    this.volumes[0].extentsMaxOrtho[2]
+  ];
+  let rotation = create$2();
+  mnMM = this.swizzleVec3MM(mnMM, axCorSag);
+  mxMM = this.swizzleVec3MM(mxMM, axCorSag);
+  let fovMM = create$1();
+  subtract(fovMM, mxMM, mnMM);
+  return { mnMM, mxMM, rotation, fovMM };
+};
 Niivue.prototype.screenFieldOfViewExtendedMM = function(axCorSag = 0) {
   let mnMM = this.volumeObject3D.extentsMin.slice();
   let mxMM = this.volumeObject3D.extentsMax.slice();
@@ -117528,8 +117533,15 @@ Niivue.prototype.xyMM2xyzMM = function(axCorSag, sliceFrac) {
   AxyzMxy[4] = yMult;
   return AxyzMxy;
 };
-Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
+Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
+  let frac2mmTexture = this.volumes[0].frac2mm.slice();
   let screen2 = this.screenFieldOfViewExtendedMM(axCorSag);
+  let mesh2ortho = create$2();
+  if (!this.opts.isSliceMM) {
+    frac2mmTexture = this.volumes[0].frac2mmOrtho.slice();
+    mesh2ortho = clone$1(this.volumes[0].mm2ortho);
+    screen2 = this.screenFieldOfViewExtendedVox(axCorSag);
+  }
   let isRadiolgical = this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL;
   if (customMM === Infinity || customMM === -Infinity) {
     isRadiolgical = customMM !== Infinity;
@@ -117547,18 +117559,34 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
     azimuth = isRadiolgical ? 180 : 0;
     elevation = isRadiolgical ? -90 : 90;
   }
-  if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)
-    leftTopWidthHeight = this.scaleSlice(screen2.fovMM[0], screen2.fovMM[1]);
+  let gl = this.gl;
+  if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
+    let pixPerMMw = gl.canvas.width / screen2.fovMM[0];
+    let pixPerMMh = gl.canvas.height / screen2.fovMM[1];
+    let pixPerMMmin = Math.min(pixPerMMw, pixPerMMh);
+    let zoomW = pixPerMMw / pixPerMMmin;
+    let zoomH = pixPerMMh / pixPerMMmin;
+    screen2.fovMM[0] *= zoomW;
+    screen2.fovMM[1] *= zoomH;
+    let center = (screen2.mnMM[0] + screen2.mxMM[0]) * 0.5;
+    screen2.mnMM[0] = center - screen2.fovMM[0] * 0.5;
+    screen2.mxMM[0] = center + screen2.fovMM[0] * 0.5;
+    center = (screen2.mnMM[1] + screen2.mxMM[1]) * 0.5;
+    screen2.mnMM[1] = center - screen2.fovMM[1] * 0.5;
+    screen2.mxMM[1] = center + screen2.fovMM[1] * 0.5;
+    leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
+  }
   if (isNaN(customMM)) {
     let panXY = this.swizzleVec3MM(this.uiData.pan2Dxyzmm, axCorSag);
+    let zoom = this.uiData.pan2Dxyzmm[3];
     screen2.mnMM[0] -= panXY[0];
     screen2.mxMM[0] -= panXY[0];
     screen2.mnMM[1] -= panXY[1];
     screen2.mxMM[1] -= panXY[1];
-    screen2.mnMM[0] /= this.uiData.pan2Dxyzmm[3];
-    screen2.mxMM[0] /= this.uiData.pan2Dxyzmm[3];
-    screen2.mnMM[1] /= this.uiData.pan2Dxyzmm[3];
-    screen2.mxMM[1] /= this.uiData.pan2Dxyzmm[3];
+    screen2.mnMM[0] /= zoom;
+    screen2.mxMM[0] /= zoom;
+    screen2.mnMM[1] /= zoom;
+    screen2.mxMM[1] /= zoom;
   }
   let sliceDim = 2;
   if (axCorSag === SLICE_TYPE.CORONAL)
@@ -117574,14 +117602,12 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
     sliceFrac = frac[sliceDim];
   }
   let sliceMM = mm[sliceDim];
-  let gl = this.gl;
   gl.clear(gl.DEPTH_BUFFER_BIT);
   let obj = this.calculateMvpMatrix2D(leftTopWidthHeight, screen2.mnMM, screen2.mxMM, Infinity, 0, azimuth, elevation, isRadiolgical);
   if (customMM === Infinity || customMM === -Infinity) {
     let ltwh = leftTopWidthHeight.slice();
     this.draw3D(leftTopWidthHeight, obj.modelViewProjectionMatrix, obj.modelMatrix, obj.normalMatrix, azimuth, elevation);
     let tile = this.screenSlices[this.screenSlices.length - 1];
-    tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, 0.5);
     tile.leftTopWidthHeight = ltwh;
     tile.axCorSag = axCorSag;
     tile.sliceFrac = Infinity;
@@ -117603,7 +117629,7 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
   gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity);
   gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag);
   gl.uniform1f(this.sliceMMShader.sliceLoc, sliceFrac);
-  gl.uniformMatrix4fv(this.sliceMMShader.frac2mmLoc, false, this.volumes[0].frac2mm);
+  gl.uniformMatrix4fv(this.sliceMMShader.frac2mmLoc, false, frac2mmTexture);
   gl.uniformMatrix4fv(this.sliceMMShader.mvpLoc, false, obj.modelViewProjectionMatrix.slice());
   gl.bindVertexArray(this.genericVAO);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -117614,121 +117640,23 @@ Niivue.prototype.draw2DMM = function(leftTopWidthHeight, axCorSag, customMM = Na
     sliceFrac,
     AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
     leftTopMM: obj.leftTopMM,
+    screen2frac: [],
     fovMM: obj.fovMM
   });
   if (isNaN(customMM)) {
-    this.drawCrosshairs3D(true, 1, obj.modelViewProjectionMatrix, true);
+    this.drawCrosshairs3D(true, 1, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM);
   }
   if (this.opts.meshThicknessOn2D > 0) {
     if (this.opts.meshThicknessOn2D !== Infinity)
       obj = this.calculateMvpMatrix2D(leftTopWidthHeight, screen2.mnMM, screen2.mxMM, this.opts.meshThicknessOn2D, sliceMM, azimuth, elevation, isRadiolgical);
-    this.drawMesh3D(true, 1, obj.modelViewProjectionMatrix, obj.modelMatrix, obj.normalMatrix);
+    let mx = clone$1(obj.modelViewProjectionMatrix);
+    multiply(mx, mx, mesh2ortho);
+    this.drawMesh3D(true, 1, mx, obj.modelMatrix, obj.normalMatrix);
   }
   if (isNaN(customMM))
-    this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true);
+    this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM);
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
-};
-Niivue.prototype.draw2DVox = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
-  let gl = this.gl;
-  let fovMM = this.screenFieldOfViewMM(axCorSag);
-  if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-    leftTopWidthHeight = this.scaleSlice(fovMM[0], fovMM[1]);
-  }
-  gl.cullFace(gl.FRONT);
-  let ltwh = leftTopWidthHeight.slice();
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  gl.disable(gl.DEPTH_TEST);
-  let sliceDim = 2;
-  let crossXYZ = [
-    this.scene.crosshairPos[0],
-    this.scene.crosshairPos[1],
-    this.scene.crosshairPos[2]
-  ];
-  if (axCorSag === SLICE_TYPE.CORONAL) {
-    sliceDim = 1;
-    crossXYZ = [
-      this.scene.crosshairPos[0],
-      this.scene.crosshairPos[2],
-      this.scene.crosshairPos[1]
-    ];
-  }
-  if (axCorSag === SLICE_TYPE.SAGITTAL) {
-    sliceDim = 0;
-    crossXYZ = [
-      this.scene.crosshairPos[1],
-      this.scene.crosshairPos[2],
-      this.scene.crosshairPos[0]
-    ];
-  }
-  if (!isNaN(customMM)) {
-    let mm = this.frac2mm([0.5, 0.5, 0.5]);
-    mm[sliceDim] = customMM;
-    let frac = this.mm2frac(mm);
-    crossXYZ[2] = frac[sliceDim];
-  }
-  let isMirrorLR = this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL;
-  if (this.opts.sagittalNoseLeft && axCorSag === SLICE_TYPE.SAGITTAL)
-    isMirrorLR = !isMirrorLR;
-  this.sliceShader.use(this.gl);
-  gl.uniform1f(this.sliceShader.drawOpacityLoc, this.drawOpacity);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.uniform1f(this.sliceShader.opacityLoc, this.volumes[0].opacity);
-  gl.uniform1i(this.sliceShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
-  gl.uniform1i(this.sliceShader.axCorSagLoc, axCorSag);
-  gl.uniform1f(this.sliceShader.sliceLoc, crossXYZ[2]);
-  gl.uniform2fv(this.sliceShader.canvasWidthHeightLoc, [
-    gl.canvas.width,
-    gl.canvas.height
-  ]);
-  if (isMirrorLR) {
-    gl.disable(gl.CULL_FACE);
-    leftTopWidthHeight[2] = -leftTopWidthHeight[2];
-    leftTopWidthHeight[0] = leftTopWidthHeight[0] - leftTopWidthHeight[2];
-  }
-  gl.uniform4f(this.sliceShader.leftTopWidthHeightLoc, leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
-  gl.bindVertexArray(this.genericVAO);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  this.screenSlices.push({
-    leftTopWidthHeight,
-    axCorSag,
-    sliceFrac: crossXYZ[2],
-    AxyzMxy: [],
-    leftTopMM: [],
-    fovMM: [fovMM[0], fovMM[1]]
-  });
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  this.drawSliceOrientationText(ltwh, axCorSag);
-  if (!isNaN(customMM))
-    return;
-  if (this.opts.crosshairWidth <= 0)
-    return;
-  gl.bindVertexArray(this.genericVAO);
-  this.rectShader.use(this.gl);
-  gl.uniform4fv(this.rectShader.lineColorLoc, this.opts.crosshairColor);
-  gl.uniform2fv(this.rectShader.canvasWidthHeightLoc, [
-    gl.canvas.width,
-    gl.canvas.height
-  ]);
-  var xleft = leftTopWidthHeight[0] + leftTopWidthHeight[2] * crossXYZ[0];
-  gl.uniform4f(this.rectShader.leftTopWidthHeightLoc, xleft - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[1], this.opts.crosshairWidth, leftTopWidthHeight[3]);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  var xtop = leftTopWidthHeight[1] + leftTopWidthHeight[3] * (1 - crossXYZ[1]);
-  gl.uniform4f(this.rectShader.leftTopWidthHeightLoc, leftTopWidthHeight[0], xtop - 0.5 * this.opts.crosshairWidth, leftTopWidthHeight[2], this.opts.crosshairWidth);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  gl.bindVertexArray(this.unusedVAO);
-  gl.enable(gl.CULL_FACE);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.ALWAYS);
-  gl.clearDepth(0);
-  this.sync();
-};
-Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag, customMM = NaN) {
-  if (this.opts.isSliceMM)
-    this.draw2DMM(leftTopWidthHeight, axCorSag, customMM);
-  else
-    this.draw2DVox(leftTopWidthHeight, axCorSag, customMM);
 };
 Niivue.prototype.calculateMvpMatrix = function(unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation) {
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)
@@ -117790,12 +117718,16 @@ Niivue.prototype.calculateRayDirection = function(azimuth, elevation) {
     rayDir[2] = tiny;
   return rayDir;
 };
-Niivue.prototype.sceneExtentsMinMax = function() {
+Niivue.prototype.sceneExtentsMinMax = function(isSliceMM = true) {
   let mn = fromValues$1(0, 0, 0);
   let mx = fromValues$1(0, 0, 0);
   if (this.volumes.length > 0) {
     mn = fromValues$1(this.volumeObject3D.extentsMin[0], this.volumeObject3D.extentsMin[1], this.volumeObject3D.extentsMin[2]);
     mx = fromValues$1(this.volumeObject3D.extentsMax[0], this.volumeObject3D.extentsMax[1], this.volumeObject3D.extentsMax[2]);
+    if (!isSliceMM) {
+      mn = fromValues$1(this.volumes[0].extentsMinOrtho[0], this.volumes[0].extentsMinOrtho[1], this.volumes[0].extentsMinOrtho[2]);
+      mx = fromValues$1(this.volumes[0].extentsMaxOrtho[0], this.volumes[0].extentsMaxOrtho[1], this.volumes[0].extentsMaxOrtho[2]);
+    }
   }
   if (this.meshes.length > 0) {
     if (this.volumes.length < 1) {
@@ -118095,7 +118027,7 @@ Niivue.prototype.depthPicker = function(leftTopWidthHeight, mvpMatrix) {
   let fracX = (this.mousePos[0] - leftTopWidthHeight[0]) / leftTopWidthHeight[2];
   let fracY = (gl.canvas.height - this.mousePos[1] - leftTopWidthHeight[1]) / leftTopWidthHeight[3];
   let mm = unProject(fracX, fracY, depthZ, mvpMatrix);
-  let frac = this.mm2frac(mm);
+  let frac = this.mm2frac(mm, 0, true);
   if (frac[0] < 0 || frac[0] > 1 || frac[1] < 0 || frac[1] > 1 || frac[2] < 0 || frac[2] > 1)
     return;
   this.scene.crosshairPos = this.mm2frac(mm);
@@ -118276,19 +118208,19 @@ Niivue.prototype.drawMesh3D = function(isDepthTest = true, alpha = 1, m, modelMt
   gl.depthFunc(gl.ALWAYS);
   this.readyForSync = true;
 };
-Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpMtx = null, is2DView = false) {
+Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpMtx = null, is2DView = false, isSliceMM = true) {
   if (!this.opts.show3Dcrosshair && !is2DView)
     return;
   if (this.opts.crosshairWidth <= 0 && is2DView)
     return;
   let gl = this.gl;
-  let mm = this.frac2mm(this.scene.crosshairPos);
+  let mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM);
   if (this.crosshairs3D === null || this.crosshairs3D.mm[0] !== mm[0] || this.crosshairs3D.mm[1] !== mm[1] || this.crosshairs3D.mm[2] !== mm[2]) {
     if (this.crosshairs3D !== null) {
       gl.deleteBuffer(this.crosshairs3D.indexBuffer);
       gl.deleteBuffer(this.crosshairs3D.vertexBuffer);
     }
-    let [mn, mx, range] = this.sceneExtentsMinMax();
+    let [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM);
     let radius = 1;
     if (this.volumes.length > 0)
       radius = 0.5 * Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3]);
@@ -118321,7 +118253,7 @@ Niivue.prototype.drawCrosshairs3D = function(isDepthTest = true, alpha = 1, mvpM
   gl.drawElements(gl.TRIANGLES, this.crosshairs3D.indexCount, gl.UNSIGNED_INT, 0);
   gl.bindVertexArray(this.unusedVAO);
 };
-Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
+Niivue.prototype.mm2frac = function(mm, volIdx = 0, isForceSliceMM = false) {
   if (this.volumes.length < 1) {
     let frac2 = [0.1, 0.5, 0.5];
     let [mn, mx, range] = this.sceneExtentsMinMax();
@@ -118334,6 +118266,15 @@ Niivue.prototype.mm2frac = function(mm, volIdx = 0) {
   let d = this.volumes[volIdx].dimsRAS;
   let frac = [0, 0, 0];
   if (typeof d === "undefined") {
+    return frac;
+  }
+  if (!isForceSliceMM && !this.opts.isSliceMM) {
+    let xform = clone$1(this.volumes[volIdx].frac2mmOrtho);
+    invert(xform, xform);
+    transformMat4(mm4, mm4, xform);
+    frac[0] = mm4[0];
+    frac[1] = mm4[1];
+    frac[2] = mm4[2];
     return frac;
   }
   if (d[1] < 1 || d[2] < 1 || d[3] < 1)
@@ -118371,11 +118312,14 @@ Niivue.prototype.moveCrosshairInVox = function(x2, y, z) {
   this.scene.crosshairPos = this.vox2frac(vox);
   this.drawScene();
 };
-Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
+Niivue.prototype.frac2mm = function(frac, volIdx = 0, isForceSliceMM = false) {
   let pos = fromValues(frac[0], frac[1], frac[2], 1);
-  if (this.volumes.length > 0)
-    transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
-  else {
+  if (this.volumes.length > 0) {
+    if (isForceSliceMM || this.opts.isSliceMM)
+      transformMat4(pos, pos, this.volumes[volIdx].frac2mm);
+    else
+      transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho);
+  } else {
     let [mn, mx] = this.sceneExtentsMinMax();
     const lerp2 = (x2, y, a) => x2 * (1 - a) + y * a;
     pos[0] = lerp2(mn[0], mx[0], frac[0]);
@@ -118387,6 +118331,7 @@ Niivue.prototype.frac2mm = function(frac, volIdx = 0) {
 Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2, restrict0to1 = true) {
   let texFrac = [-1, -1, -1];
   var axCorSag = this.screenSlices[i2].axCorSag;
+  fromValues$1(x2 - this.screenSlices[i2].leftTopWidthHeight[0], y - this.screenSlices[i2].leftTopWidthHeight[1], 1);
   if (axCorSag > SLICE_TYPE.SAGITTAL)
     return texFrac;
   var ltwh = this.screenSlices[i2].leftTopWidthHeight.slice();
@@ -118402,39 +118347,26 @@ Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2, restrict0to1 = true)
   var fracY = 1 - (y - ltwh[1]) / ltwh[3];
   if (fracX < 0 || fracX > 1 || fracY < 0 || fracY > 1)
     return texFrac;
-  if (this.screenSlices[i2].AxyzMxy.length > 4) {
-    let xyzMM = [0, 0, 0];
-    xyzMM[0] = this.screenSlices[i2].leftTopMM[0] + fracX * this.screenSlices[i2].fovMM[0];
-    xyzMM[1] = this.screenSlices[i2].leftTopMM[1] + fracY * this.screenSlices[i2].fovMM[1];
-    let v = this.screenSlices[i2].AxyzMxy;
-    xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-    if (axCorSag === SLICE_TYPE.CORONAL)
-      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
-    if (axCorSag === SLICE_TYPE.SAGITTAL)
-      xyzMM = swizzleVec3(xyzMM, [2, 0, 1]);
-    let xyz = this.mm2frac(xyzMM);
-    if (restrict0to1) {
-      if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1)
-        return texFrac;
-    }
-    texFrac[0] = xyz[0];
-    texFrac[1] = xyz[1];
-    texFrac[2] = xyz[2];
-  } else {
-    texFrac = this.scene.crosshairPos.slice();
-    if (axCorSag === SLICE_TYPE.AXIAL) {
-      texFrac[0] = fracX;
-      texFrac[1] = fracY;
-    }
-    if (axCorSag === SLICE_TYPE.CORONAL) {
-      texFrac[0] = fracX;
-      texFrac[2] = fracY;
-    }
-    if (axCorSag === SLICE_TYPE.SAGITTAL) {
-      texFrac[1] = fracX;
-      texFrac[2] = fracY;
-    }
+  if (this.screenSlices[i2].AxyzMxy.length < 4)
+    return texFrac;
+  let xyzMM = [0, 0, 0];
+  xyzMM[0] = this.screenSlices[i2].leftTopMM[0] + fracX * this.screenSlices[i2].fovMM[0];
+  xyzMM[1] = this.screenSlices[i2].leftTopMM[1] + fracY * this.screenSlices[i2].fovMM[1];
+  let v = this.screenSlices[i2].AxyzMxy;
+  xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+  if (axCorSag === SLICE_TYPE.CORONAL)
+    xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+  if (axCorSag === SLICE_TYPE.SAGITTAL)
+    xyzMM = swizzleVec3(xyzMM, [2, 0, 1]);
+  let xyz = this.mm2frac(xyzMM);
+  if (restrict0to1) {
+    if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1)
+      return texFrac;
   }
+  texFrac[0] = xyz[0];
+  texFrac[1] = xyz[1];
+  texFrac[2] = xyz[2];
+  this.frac2mm(texFrac);
   return texFrac;
 };
 Niivue.prototype.canvasPos2frac = function(canvasPos) {
@@ -118766,7 +118698,7 @@ Niivue.prototype.drawMosaic = function(mosaicStr) {
           let inf = sliceMM < 0 ? -Infinity : Infinity;
           if (Object.is(sliceMM, -0))
             inf = -Infinity;
-          this.draw2DMM(ltwh, axCorSag, inf, isLabel);
+          this.draw2D(ltwh, axCorSag, inf, isLabel);
         } else
           this.draw2D(ltwh, axCorSag, sliceMM, isLabel);
         if (isCrossLines) {
@@ -118905,6 +118837,8 @@ Niivue.prototype.drawScene = function() {
       ]);
       return;
     }
+    if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0)
+      return;
     if (this.opts.dragMode === DRAG_MODE.measurement) {
       this.drawMeasurementTool([
         this.uiData.dragStart[0],
@@ -118914,8 +118848,6 @@ Niivue.prototype.drawScene = function() {
       ]);
       return;
     }
-    if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0)
-      return;
     let width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);
     let height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1]);
     this.drawSelectionBox([
@@ -118935,6 +118867,7 @@ Niivue.prototype.drawScene = function() {
   posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
   this.gl.finish();
   this.readyForSync = true;
+  this.sync();
   return posString;
 };
 export { NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVMesh, NVMeshFromUrlOptions, Niivue, SLICE_TYPE, colortables };
