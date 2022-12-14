@@ -5,57 +5,80 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>NiiVue</title>
-  <style>
-    section {
-      margin: 20px;
-    }
-  </style>
+  <link rel="stylesheet" href="niivue.css">
 </head>
-<body style="font-family: sans-serif;">
-  <div id="app">
+<body>
     <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong>niivue requires JavaScript.</strong>
     </noscript>
-    <section>
-      <h1>
-        hot reloadable development preview
-      </h1>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:640px;">
-        <canvas id="gl1" height=640 width=640>
-        </canvas>
-      </div>
-    </section>
-    <section>
-      <p id="location"></p>
-    </section>
-    <!-- <script type="module" src="./index.js">
-    </script> -->
+    <header>
+	  <label for="check1">LR</label>
+	  <input type="checkbox" id="check1" unchecked>
+      <label for="check2">Nose</label>
+      <input type="checkbox" id="check2" unchecked>
+      <label for="check3">World</label>
+      <input type="checkbox" id="check3" unchecked>
+	  <label for="dragMode">Drag mode</label>
+	  <select  id="dragMode">
+		<option value="contrast">contrast</option>
+		<option value="measurement">measurement</option>
+		<option value="pan" selected>pan/zoom</option>
+		<option value="none">none</option>
+	  </select>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">
+      &nbsp;
+    </footer>
     <script type="module" async>
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
-      let query = window.location.search
-      const params = new URLSearchParams(query)
-      let url = params.get('url')
-      var volumeList1 = [
-        // first item is background image
-        {
-          url: url ? url : "../tests/images/mni152.nii.gz?test=test",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          name: "mni152.nii.gz"
+      var dropDrag = document.getElementById("dragMode")
+      dropDrag.onchange = function() {
+        switch(document.getElementById("dragMode").value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break
+        }
+      }
+      document.getElementById("check1").addEventListener("change", doCheckClick);
+      function doCheckClick() {
+        nv1.setRadiologicalConvention(this.checked)
+      }
+      document.getElementById("check2").addEventListener("change", doCheck2Click);
+      function doCheck2Click() {
+        nv1.opts.sagittalNoseLeft = this.checked
+		nv1.drawScene();
+      }
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked)
+      }
+      //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz?test=test" }]
+      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
 
-        },
-      ]
       function handleLocationChange(data){ 
-        document.getElementById('location').innerHTML = data.xy  
+        function flt2str(flt, decimals = 0) {
+          return flt.toFixed(decimals).replace(/\.?0*$/, "")
+        }	
+        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)	
       }
       var nv1 = new Niivue({
-       logging: true,
        loadingText: 'there are no images',
-       dragAndDropEnabled: true,
-       backColor: [0.3, 0.2, 0.4, 1],
+       backColor: [1, 1, 1, 1],
+	   show3Dcrosshair: true,
        onLocationChange:handleLocationChange
       })
       nv1.setRadiologicalConvention(false)
@@ -63,8 +86,9 @@
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(90,10)
+	  nv1.opts.dragMode = nv1.dragModes.pan
+	  nv1.setSliceMM(false)
       await nv1.loadVolumes(volumeList1)
    </script>
-  </div>
 </body>
 </html>

@@ -19,7 +19,7 @@
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
-    "copy-demo": "cp -r ./dist/* ./demos/features/",
+    "copy-demo": "cp -r ./dist/* ./demos/features",
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",

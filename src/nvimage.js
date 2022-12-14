@@ -640,6 +640,42 @@ NVImage.prototype.calculateOblique = function () {
   sform[9] *= dim[2];
   sform[10] *= dim[2];
   this.frac2mm = mat4.clone(sform);
+  let pixdimX = this.pixDimsRAS[1]; //vec3.length(X1mm);
+  let pixdimY = this.pixDimsRAS[2]; //vec3.length(Y1mm);
+  let pixdimZ = this.pixDimsRAS[3]; //vec3.length(Z1mm);
+  //console.log("pixdim", pixdimX, pixdimY, pixdimZ);
+  //orthographic view
+  let oform = mat4.clone(sform);
+  oform[0] = pixdimX * dim[0];
+  oform[1] = 0;
+  oform[2] = 0;
+  oform[4] = 0;
+  oform[5] = pixdimY * dim[1];
+  oform[6] = 0;
+  oform[8] = 0;
+  oform[9] = 0;
+  oform[10] = pixdimZ * dim[2];
+  let originVoxel = this.mm2vox([0, 0, 0], true);
+  //set matrix translation for distance from origin
+  oform[12] = (-originVoxel[0] - 0.5) * pixdimX;
+  oform[13] = (-originVoxel[1] - 0.5) * pixdimY;
+  oform[14] = (-originVoxel[2] - 0.5) * pixdimZ;
+  this.frac2mmOrtho = mat4.clone(oform);
+  this.extentsMinOrtho = [oform[12], oform[13], oform[14]];
+  this.extentsMaxOrtho = [
+    oform[0] + oform[12],
+    oform[5] + oform[13],
+    oform[10] + oform[14],
+  ];
+  this.mm2ortho = mat4.create();
+  mat4.invert(this.mm2ortho, oblique);
+  /*function reportMat(m) {
+    console.log(
+      `m = [${m[0]} ${m[1]} ${m[2]} ${m[3]}; ${m[4]} ${m[5]} ${m[6]} ${m[7]}; ${m[8]} ${m[9]} ${m[10]} ${m[11]}; ${m[12]} ${m[13]} ${m[14]} ${m[15]}]`
+    );
+  }
+  reportMat(this.frac2mmOrtho);
+  reportMat(this.frac2mm);*/
 };
 
 // not included in public docs
@@ -2089,7 +2125,7 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
 
 // not included in public docs
 // convert world space to voxel location (row, column slice, indexed from 0)
-NVImage.prototype.mm2vox = function (mm) {
+NVImage.prototype.mm2vox = function (mm, frac = false) {
   let sform = mat4.fromValues(...this.hdr.affine.flat());
   let out = mat4.clone(sform);
   mat4.transpose(out, sform);
@@ -2097,6 +2133,7 @@ NVImage.prototype.mm2vox = function (mm) {
   let pos = vec4.fromValues(mm[0], mm[1], mm[2], 1);
   vec4.transformMat4(pos, pos, out);
   let pos3 = vec3.fromValues(pos[0], pos[1], pos[2]);
+  if (frac) return pos3;
   return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
 }; // vox2mm()
 
@@ -2973,7 +3010,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   let RAI = this.vox2mm([R, A, I], this.matRAS);
   let RPS = this.vox2mm([R, P, S], this.matRAS);
   let RAS = this.vox2mm([R, A, S], this.matRAS);
-
   let posTex = [
     //spatial position (XYZ), texture coordinates UVW
     // Superior face
@@ -3087,7 +3123,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   ]);
   obj3D.extentsMin = extents.min.slice();
   obj3D.extentsMax = extents.max.slice();
-
   obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
   obj3D.originNegate = vec3.clone(extents.origin);
   vec3.negate(obj3D.originNegate, obj3D.originNegate);

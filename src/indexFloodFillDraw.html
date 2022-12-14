@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>NiiVue</title>
+  <link rel="stylesheet" href="niivue.css">
+</head>
+<body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+	  <label for="check1">LR</label>
+	  <input type="checkbox" id="check1" unchecked>
+      <label for="check2">Nose</label>
+      <input type="checkbox" id="check2" unchecked>
+      <label for="check3">World</label>
+      <input type="checkbox" id="check3" unchecked>
+	  <label for="dragMode">Drag mode</label>
+	  <select  id="dragMode">
+		<option value="contrast">contrast</option>
+		<option value="measurement">measurement</option>
+		<option value="pan" selected>pan/zoom</option>
+		<option value="none">none</option>
+	  </select>
+		<label for="drawPen">Draw color:</label>
+		<select name="drawPen" id="drawPen">
+			<option value="-1">Off</option>
+			<option value="0">Erase</option>
+			<option value="1">Red</option>
+			<option value="2">Green</option>
+			<option value="3">Blue</option>
+			<option value="8">Filled Erase</option>
+			<option value="9">Filled Red</option>
+			<option value="10">Filled Green</option>
+			<option value="11">Filled Blue</option>
+			<option value="12">Erase Selected Cluster</option>
+			<option value="13">Cluster Fill Bright</option>
+			<option value="14">Cluster Fill Dark</option>
+			<option value="15">Cluster Fill Selected Range</option>
+		</select>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">
+      &nbsp;
+    </footer>
+    <script type="module" async>
+      import { Niivue } from './niivue.js'
+      import {NVImage} from './nvimage.js'
+      import {NVMesh} from './nvmesh.js'
+      var dropDrag = document.getElementById("dragMode")
+      dropDrag.onchange = function() {
+        switch(document.getElementById("dragMode").value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break
+        }
+      }
+      document.getElementById("drawPen").addEventListener("change", doDrawPen);
+      function doDrawPen(){
+        const mode = parseInt(document.getElementById("drawPen").value);
+        nv1.setDrawingEnabled(mode >= 0);
+        if (mode >= 0)
+          nv1.setPenValue( (mode & 7), mode > 7);
+        if (mode === 12)//erase selected cluster
+          nv1.setPenValue(-0);
+        if (mode === 13)//erase selected cluster
+          nv1.setPenValue(Number.POSITIVE_INFINITY);
+        if (mode === 14)//erase selected cluster
+          nv1.setPenValue(Number.Negative_INFINITY);
+        if (mode === 15)//erase selected cluster
+          nv1.setPenValue(NaN);
+      }
+      document.getElementById("check1").addEventListener("change", doCheckClick);
+      function doCheckClick() {
+        nv1.setRadiologicalConvention(this.checked)
+      }
+      document.getElementById("check2").addEventListener("change", doCheck2Click);
+      function doCheck2Click() {
+        nv1.opts.sagittalNoseLeft = this.checked
+		nv1.drawScene();
+      }
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      function doCheck3Click() {
+        nv1.setSliceMM(this.checked)
+      }
+      //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz?test=test" }]
+      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
+      function handleIntensityChange(data){
+        document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+      }
+      var nv1 = new Niivue({
+       loadingText: 'there are no images',
+       backColor: [1, 1, 1, 1],
+	   show3Dcrosshair: true,
+       onLocationChange:handleIntensityChange
+      })
+      nv1.setRadiologicalConvention(false)
+      nv1.attachTo('gl1')
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setClipPlane([-0.1, 270, 0])
+      nv1.setRenderAzimuthElevation(90,10)
+	  nv1.opts.dragMode = nv1.dragModes.pan
+	  nv1.setSliceMM(false)
+      await nv1.loadVolumes(volumeList1)
+	  nv1.setDrawingEnabled(1);
+	  nv1.setPenValue(1, 1);
+   </script>
+</body>
+</html>

@@ -4,43 +4,25 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>overlay 3d</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <title>clip planes</title>
+    <link rel="stylesheet" href="niivue.css">
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <section>
-      <h1>
-        Clip planes
-      </h1>
-      <input onclick="checkClick(this)" type="checkbox" id="check1" name="check1" value="false">
-      <label for="check1">Shade volume not background</label>
-<div class="slidecontainer">
-  Clip plane opacity<input type="range" min="1" max="255" value="128" class="slider" id="alphaSlider">
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
+      <label for="check1">Shade Volume</label>
+	  <input type="checkbox" id="check1" name="check1" value="false">
+      <label for="alphaSlider">Opacity</label>
+      <input type="range" min="1" max="255" value="128" class="slider" id="alphaSlider">
+	  <label for="colorSlider">Color</label>
+      <input type="range" min="0" max="255" value="0" class="slider" id="colorSlider">
 </div>
-<div class="slidecontainer">
-  Clip plane green component<input type="range" min="0" max="255" value="0" class="slider" id="colorSlider">
-</div>
-
-    </section>
-
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:640px;">
-        <canvas id="gl1" height=640 width=640>
-        </canvas>
-      </div>
-    </section>
-
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+     import * as niivue from './niivue.es.js'
      var volumeList1 = [
      {
            url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
@@ -60,11 +42,12 @@
       nv1.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [222, 164, 164, 255]},
       ])
-      function checkClick(cb) {
+	  var check = document.getElementById("check1");
+      check.onclick = function() {
         let clr = nv1.opts.clipPlaneColor;
         console.log(clr);
         clr[3] = Math.abs(clr[3]);
-        if (cb.checked) clr[3] = -clr[3];
+        if (this.checked) clr[3] = -clr[3];
         nv1.setClipPlaneColor(clr);
       }
       var slider = document.getElementById("alphaSlider");

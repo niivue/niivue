@@ -5,7 +5,7 @@ layout(location=1) in vec3 texCoords;
 uniform mat4 mvpMtx;
 out vec3 vColor;
 void main(void) {
-	gl_Position = mvpMtx * vec4(pos, 1.0); //vec4(2.0 * (pos.xyz - 0.5), 1.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vColor = texCoords;
 }`;
 
@@ -391,78 +391,6 @@ out vec4 fColor;
 	fColor.a = max(fColor.a, colAcc.a);
 }`;
 
-export var vertSliceShader = `#version 300 es
-#line 150
-layout(location=0) in vec3 pos;
-uniform int axCorSag;
-uniform float slice;
-uniform vec2 canvasWidthHeight;
-uniform vec3 panXYscale;
-uniform vec4 leftTopWidthHeight;
-out vec3 texPos;
-void main(void) {
-	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
-	vec2 frac;
-	vec3 vpos = pos;
-	frac.x = (leftTopWidthHeight.x + (vpos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
-	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - vpos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
-	//frac.x = pos.x; //0..1
-	//frac.y = pos.y; //1..0
-
-	frac = (frac * 2.0) - 1.0;
-	gl_Position = vec4(frac, 0.0, 1.0);
-	gl_Position.x += panXYscale.x;
-	gl_Position.y += panXYscale.y;
-	if (axCorSag == 1)
-		texPos = vec3(pos.x, slice, pos.y);
-	else if (axCorSag == 2)
-		texPos = vec3(slice, pos.x, pos.y);
-	else
-		texPos = vec3(pos.xy, slice);
-}`;
-
-export var fragSliceShader = `#version 300 es
-#line 228
-precision highp int;
-precision highp float;
-uniform highp sampler3D volume, overlay;
-uniform int backgroundMasksOverlays;
-uniform float overlays;
-uniform float opacity;
-uniform float drawOpacity;
-uniform highp sampler3D drawing;
-in vec3 texPos;
-out vec4 color;
-void main() {
-	vec4 background = texture(volume, texPos);
-	color = vec4(background.rgb, opacity);
-	vec4 ocolor = vec4(0.0);
-	if (overlays > 0.0) {
-		ocolor = texture(overlay, texPos);
-	}
-	float draw = texture(drawing, texPos).r;
-	if (draw > 0.0) {
-		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (4.0/255.0))
-			dcolor.rgb = vec3(draw,0.0,draw);
-		else if (draw >= (3.0/255.0))
-			dcolor.b = 1.0;
-		else if (draw >= (2.0/255.0))
-			dcolor.g = 1.0;
-		else
-			dcolor.r = 1.0;
-		color.rgb = mix(color.rgb, dcolor, drawOpacity);
-		color.a = max(drawOpacity, color.a);
-	}
-	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
-		return;
-	float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-	if (aout <= 0.0) return;
-	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	color.a = aout;
-}`;
-
 export var vertSliceMMShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
@@ -478,9 +406,7 @@ void main(void) {
 	else if (axCorSag > 0)
 		texPos = vec3(pos.x, slice, pos.y);
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
-	//vec4 mm = vec4(texPos, 1.0) * frac2mm;
 	gl_Position = mvpMtx * mm;
-	//gl_Position = mm;
 }`;
 
 export var fragSliceMMShader = `#version 300 es

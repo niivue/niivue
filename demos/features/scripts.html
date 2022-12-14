@@ -4,39 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>NiiVue Scripting</title>
-    <style>
-      section {
-        margin: 20px;
-      }
-    </style>
+    <title>script automation</title>
+    <link rel="stylesheet" href="light.css">
   </head>
-  <body style="font-family: sans-serif;">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-
-    <section>
-      <h1>
-        User scripting
-      </h1>
-      <p>
-        Users can automate tasks using JavaScript
-      </p>
-      <textarea id="scriptText" name="customText" rows="8" cols="60">nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.opts.backColor[0]&#10;nv1.updateGLVolume()&#10;</textarea>
-      <br>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
+	  <textarea id="scriptText" name="customText" rows="8" cols="60">nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.opts.backColor[0]&#10;nv1.updateGLVolume()&#10;</textarea>
       <button id="scriptButton">run script</button>
-    </section>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:90%; height:320px;">
-        <canvas id="gl1" height=320 width=640>
-        </canvas>
-      </div>
-    </section>
-    <script src="./niivue.umd.js">
-    </script>
-    <script>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+     import * as niivue from './niivue.es.js'
      document.getElementById("scriptButton").addEventListener("click", doScript)
      function doScript(){
        var val = document.getElementById('scriptText');

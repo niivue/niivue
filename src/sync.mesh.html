@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>sync Mesh</title>
+    <link rel="stylesheet" href="light.css">
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+	<header>
+	  <label for="check10">HighDPI</label> 
+	  <input type="checkbox" id="check10" name="check10" unchecked>
+
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <main>
+      <canvas id="gl2"></canvas>
+    </main>
+    <script type="module" async>
+     import * as niivue from './niivue.es.js'
+      document.getElementById("check10").addEventListener("change", doCheck10Click);
+      function doCheck10Click() {
+        nv1.setHighResolutionCapable(this.checked);
+      }
+      var nv1 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
+      nv1.attachTo('gl1')
+      nv1.setHighResolutionCapable(false)
+      nv1.opts.isOrientCube = true
+      await nv1.loadMeshes([
+         {url: "../images/BrainMesh_ICBM152.lh.mz3"},
+      ])
+      nv1.setMeshShader(0, 'Outline')
+	  nv1.setSliceMM(true)
+      nv1.setSliceType(nv1.sliceTypeRender)
+      var nv2 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
+      nv2.attachTo('gl2')
+      nv2.setHighResolutionCapable(true)
+      await nv2.loadMeshes([
+         {url: "../images/BrainMesh_ICBM152.lh.mz3"},
+      ])
+      //nv2.setMeshShader(0, 'Phong')
+      nv2.setSliceType(nv2.sliceTypeRender)
+	  nv2.setSliceMM(true)
+      nv1.syncWith(nv2, {'3d':true, '2d':false})
+    </script>
+  </body>
+</html>

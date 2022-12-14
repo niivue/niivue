@@ -37,6 +37,7 @@ export const DRAG_MODE = Object.freeze({
  * @property {boolean} show3Dcrosshair
  * @property {number[]} backColor
  * @property {number[]} crosshairColor
+ * @property {number[]} fontColor
  * @property {number[]} selectionBoxColor
  * @property {number[]} clipPlaneColor
  * @property {number[]} rulerColor
@@ -80,6 +81,7 @@ export const DEFAULT_OPTIONS = {
   show3Dcrosshair: false,
   backColor: [0, 0, 0, 1],
   crosshairColor: [1, 0, 0, 1],
+  fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
   rulerColor: [1, 0, 0, 0.8],
@@ -127,7 +129,7 @@ export class NVDocument {
     this.data.title = "Untitled document";
     this.data.imageOptionsArray = [];
     this.data.meshOptionsArray = [];
-    this.data.opts = DEFAULT_OPTIONS;
+    this.data.opts = { ...DEFAULT_OPTIONS };
     this.data.previewImageDataURL = "";
 
     /**
@@ -439,7 +441,7 @@ export class NVDocument {
     data.sceneData = { ...this.scene.sceneData };
 
     // save our options
-    data.opts = this.opts;
+    data.opts = { ...this.opts };
 
     // volumes
     if (this.volumes.length) {

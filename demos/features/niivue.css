@@ -8,6 +8,7 @@ body {
 header {
   background: #202020;
   color: white;
+  display: flex;
 }
 main {
   flex: 1;
@@ -78,4 +79,21 @@ div {
 }
 .divider {
   border-top: 1px solid grey;
+}
+.vertical-divider {
+  border-left: 1px solid grey;
+  height: 40px;
+}
+.help-text {
+  margin: auto;
+  max-width: 150px;
+  padding: 0 10px;
+}
+.slidecontainer {
+  padding: 10px 10px;
+  white-space: normal;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
