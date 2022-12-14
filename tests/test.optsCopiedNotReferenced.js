@@ -12,6 +12,5 @@ test('optsCopiedNotReferenced', async () => {
     return nv1.opts.sliceType
   })
   expect(sliceType).toBe(2) // niivue.SLICE_TYPE.SAGITTAL
-  await snapshot()
 })
 
