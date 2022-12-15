@@ -118,7 +118,7 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
  * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
- * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent 
+ * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
  * @property {string} [colorMapNegative=""] a color map to use for symmetrical negative intensities
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */

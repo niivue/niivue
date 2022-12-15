@@ -4665,10 +4665,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-  this.gl.uniform1i(orientShader.uniforms["isAlphaThreshold"], overlayItem.alphaThreshold);
+  this.gl.uniform1i(
+    orientShader.uniforms["isAlphaThreshold"],
+    overlayItem.alphaThreshold
+  );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
-  console.log('>>>>', overlayItem.cal_min, overlayItem.cal_min);
   this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
   this.gl.uniform1i(orientShader.uniforms["intensityVol"], 6);
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
@@ -5567,9 +5569,9 @@ Niivue.prototype.drawColorbarCore = function (
   let min = this.volumes[layer].cal_min;
   let max = this.volumes[layer].cal_max;
   let thresholdTic = 0.0; //only show threshold tickmark in alphaThreshold mode
-  if ((this.volumes[layer].alphaThreshold) && (min > 0.0)) {
-	  thresholdTic = min;
-	  min = 0.0; 
+  if (this.volumes[layer].alphaThreshold && min > 0.0) {
+    thresholdTic = min;
+    min = 0.0;
   }
   if (min >= max || txtHt < 1) return;
   let range = max - min;
@@ -5594,9 +5596,13 @@ Niivue.prototype.drawColorbarCore = function (
     tic += spacing;
   }
   if (thresholdTic > 0) {
-	  let tticLTWH = [barLTWH[0] + ((thresholdTic - min) / range) * barLTWH[2], barLTWH[1] - (barLTWH[3]*0.25), 2, barLTWH[3]*1.5];
-	  this.drawRect(tticLTWH);
-
+    let tticLTWH = [
+      barLTWH[0] + ((thresholdTic - min) / range) * barLTWH[2],
+      barLTWH[1] - barLTWH[3] * 0.25,
+      2,
+      barLTWH[3] * 1.5,
+    ];
+    this.drawRect(tticLTWH);
   }
 }; // drawColorbarCore()
 
@@ -7025,8 +7031,6 @@ Niivue.prototype.drawCrosshairs3D = function (
   if (this.opts.crosshairWidth <= 0.0 && is2DView) return;
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM);
-  //baka e.frac2mm
-  // mm = [-20, 0, 30]; // <- set any value here to test
   // generate our crosshairs for the base volume
   if (
     this.crosshairs3D === null ||
