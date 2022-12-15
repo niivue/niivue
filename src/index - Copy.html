@@ -12,22 +12,19 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-	  <label for="check1">	&nbsp;NegativeColors</label>
-	  <input type="checkbox" id="check1" checked>
-      <label for="check2">	&nbsp;AlphaThreshold</label>
-      <input type="checkbox" id="check2" checked>
-      <label for="check3">	&nbsp;Smooth</label>
+	  <label for="check1">LR</label>
+	  <input type="checkbox" id="check1" unchecked>
+      <label for="check2">Nose</label>
+      <input type="checkbox" id="check2" unchecked>
+      <label for="check3">World</label>
       <input type="checkbox" id="check3" unchecked>
-	  <label for="dragMode"> &nbsp; Drag mode</label>
+	  <label for="dragMode">Drag mode</label>
 	  <select  id="dragMode">
-		<option value="contrast" selected>contrast</option>
+		<option value="contrast">contrast</option>
 		<option value="measurement">measurement</option>
-		<option value="pan">pan/zoom</option>
+		<option value="pan" selected>pan/zoom</option>
 		<option value="none">none</option>
 	  </select>
-	  <label for="slide">	&nbsp; Threshold</label>
-	  <input type="range" min="0" max="50" value="30" class="slider" id="slide">
-	  <button id="savebmp">Save Bitmap</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -58,46 +55,19 @@
       }
       document.getElementById("check1").addEventListener("change", doCheckClick);
       function doCheckClick() {
-	   if (this.checked)
-        nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
-       else
-        nv1.setColorMapNegative(nv1.volumes[1].id,"")
-       nv1.drawScene()
+        nv1.setRadiologicalConvention(this.checked)
       }
       document.getElementById("check2").addEventListener("change", doCheck2Click);
       function doCheck2Click() {
-        nv1.volumes[1].alphaThreshold = this.checked
-		nv1.updateGLVolume();
-		//nv1.drawScene();
+        nv1.opts.sagittalNoseLeft = this.checked
+		nv1.drawScene();
       }
       document.getElementById("check3").addEventListener("change", doCheck3Click);
       function doCheck3Click() {
-	   nv1.setInterpolation(!this.checked)
-      }	  
-	  
-      var slider = document.getElementById("slide");
-      slider.oninput = function() {
-        nv1.volumes[1].cal_min = 0.1 * this.value;
-		nv1.updateGLVolume();
-		nv1.drawScene();
-		//nv1.setGamma(0.1 * this.value)
+        nv1.setSliceMM(this.checked)
       }
-      document.getElementById("savebmp").addEventListener("click", doBmp);
-      function doBmp(){
-        nv1.saveScene('ScreenShot.png');
-      }
-      var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" },
-	           {
-           url: "../demos/images/fslt.nii.gz",
-           colorMap: "warm",
-           colorMapNegative: "winter",
-           opacity: 1,
-           cal_min: 3,
-           cal_max: 6,
-           visible: true,
-         },
-	  ]
-      //var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
+      //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz?test=test" }]
+      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
 
       function handleLocationChange(data){ 
         function flt2str(flt, decimals = 0) {
@@ -114,12 +84,11 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setClipPlane([-0.1, 270, 0])
+      nv1.setRenderAzimuthElevation(90,10)
+	  nv1.opts.dragMode = nv1.dragModes.pan
 	  nv1.setSliceMM(false)
-	  nv1.opts.isColorbar = true
       await nv1.loadVolumes(volumeList1)
-	  nv1.volumes[1].alphaThreshold= true;
-	  nv1.setInterpolation(true)
-	  nv1.updateGLVolume();
    </script>
 </body>
 </html>

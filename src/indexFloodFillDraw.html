@@ -77,11 +77,11 @@
           nv1.setPenValue( (mode & 7), mode > 7);
         if (mode === 12)//erase selected cluster
           nv1.setPenValue(-0);
-        if (mode === 13)//erase selected cluster
+        if (mode === 13)//grow selected cluster
           nv1.setPenValue(Number.POSITIVE_INFINITY);
-        if (mode === 14)//erase selected cluster
-          nv1.setPenValue(Number.Negative_INFINITY);
-        if (mode === 15)//erase selected cluster
+        if (mode === 14)//grow selected cluster
+          nv1.setPenValue(Number.NEGATIVE_INFINITY);
+        if (mode === 15)//grow selected cluster
           nv1.setPenValue(NaN);
       }
       document.getElementById("check1").addEventListener("change", doCheckClick);

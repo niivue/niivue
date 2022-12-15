@@ -428,6 +428,12 @@ void main() {
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
+		//next lines for "boxing" https://github.com/niivue/niivue/issues/435
+		//however, this only identifies 50% of the edges due to aliasing effects
+		// http://www.aclockworkberry.com/shader-derivative-functions/
+		//WebGL does not have dFdyFine() - not sure how to proceed 
+		//if ((ocolor.a >= 0.99) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
+		//	ocolor.r = 1.0;
 	}
 	float draw = texture(drawing, texPos).r;
 	if (draw > 0.0) {
@@ -676,6 +682,7 @@ uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
 uniform float cal_min;
+uniform bool isAlphaThreshold;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform int modulation;
@@ -686,8 +693,11 @@ void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
 	bool isNegative = (f < 0.0);
-	float r = max(0.00001, abs(cal_max - cal_min));
-	float mn = min(cal_min, cal_max);
+	float mn = cal_min;
+	if (isAlphaThreshold) 
+		mn = 0.0;
+	float r = max(0.00001, abs(cal_max - mn));
+	mn = min(mn, cal_max);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
@@ -703,11 +713,16 @@ void main(void) {
 		// v0 = 1,1,1,0 and v1 = 0,0,0,1
 		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
 			FragColor = texture(colormap, vec2(txl, y));
+		f = - f;
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
 	if (modulation > 0)
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	if ((isAlphaThreshold) && (f < cal_min)) {
+		FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
+		//FragColor.g = 0.0;
+	}
 	FragColor.a *= opacity;
 	if (layer < 1.0) return;
 	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);

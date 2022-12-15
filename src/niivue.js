@@ -4665,8 +4665,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+  this.gl.uniform1i(orientShader.uniforms["isAlphaThreshold"], overlayItem.alphaThreshold);
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
+  console.log('>>>>', overlayItem.cal_min, overlayItem.cal_min);
   this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
   this.gl.uniform1i(orientShader.uniforms["intensityVol"], 6);
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
@@ -5564,6 +5566,11 @@ Niivue.prototype.drawColorbarCore = function (
   );
   let min = this.volumes[layer].cal_min;
   let max = this.volumes[layer].cal_max;
+  let thresholdTic = 0.0; //only show threshold tickmark in alphaThreshold mode
+  if ((this.volumes[layer].alphaThreshold) && (min > 0.0)) {
+	  thresholdTic = min;
+	  min = 0.0; 
+  }
   if (min >= max || txtHt < 1) return;
   let range = max - min;
   let [spacing, ticMin] = tickSpacing(min, max);
@@ -5585,6 +5592,11 @@ Niivue.prototype.drawColorbarCore = function (
     this.drawTextBelow([ticLTWH[0], txtTop], str);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
     tic += spacing;
+  }
+  if (thresholdTic > 0) {
+	  let tticLTWH = [barLTWH[0] + ((thresholdTic - min) / range) * barLTWH[2], barLTWH[1] - (barLTWH[3]*0.25), 2, barLTWH[3]*1.5];
+	  this.drawRect(tticLTWH);
+
   }
 }; // drawColorbarCore()
 
@@ -7137,6 +7149,7 @@ Niivue.prototype.vox2frac = function (vox, volIdx = 0) {
 Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
+  if (this.volumes.length <= volIdx) return [0, 0, 0];
   let vox = [
     Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims == RAS
     Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims == RAS
