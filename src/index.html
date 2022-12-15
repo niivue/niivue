@@ -12,13 +12,15 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-	  <label for="check1">	&nbsp;NegativeColors</label>
+	  <label for="check1">	&nbsp;&nbsp;NegativeColors</label>
 	  <input type="checkbox" id="check1" checked>
-      <label for="check2">	&nbsp;AlphaThreshold</label>
+      <label for="check2">	&nbsp;&nbsp;AlphaThreshold</label>
       <input type="checkbox" id="check2" checked>
-      <label for="check3">	&nbsp;Smooth</label>
+      <label for="check3">	&nbsp;&nbsp;Smooth</label>
       <input type="checkbox" id="check3" unchecked>
-	  <label for="dragMode"> &nbsp; Drag mode</label>
+      <label for="check4">	&nbsp;&nbsp;Outline</label>
+      <input type="checkbox" id="check4" unchecked>
+	  <label for="dragMode"> &nbsp;&nbsp; Drag mode</label>
 	  <select  id="dragMode">
 		<option value="contrast" selected>contrast</option>
 		<option value="measurement">measurement</option>
@@ -74,7 +76,11 @@
       function doCheck3Click() {
 	   nv1.setInterpolation(!this.checked)
       }	  
-	  
+      document.getElementById("check4").addEventListener("change", doCheck4Click);
+      function doCheck4Click() {
+        nv1.overlayOutlineWidth = this.checked
+        nv1.updateGLVolume()
+      }  
       var slider = document.getElementById("slide");
       slider.oninput = function() {
         nv1.volumes[1].cal_min = 0.1 * this.value;
@@ -86,7 +92,7 @@
       function doBmp(){
         nv1.saveScene('ScreenShot.png');
       }
-      var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" },
+      var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz"},
 	           {
            url: "../demos/images/fslt.nii.gz",
            colorMap: "warm",

@@ -415,6 +415,8 @@ precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
 uniform int backgroundMasksOverlays;
+uniform float overlayOutlineWidth;
+uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
@@ -431,9 +433,34 @@ void main() {
 		//next lines for "boxing" https://github.com/niivue/niivue/issues/435
 		//however, this only identifies 50% of the edges due to aliasing effects
 		// http://www.aclockworkberry.com/shader-derivative-functions/
-		//WebGL does not have dFdyFine() - not sure how to proceed 
-		//if ((ocolor.a >= 0.99) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
-		//	ocolor.r = 1.0;
+		//if ((ocolor.a >= 1.0) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
+		//	ocolor.rbg = vec3(0.0, 0.0, 0.0);
+		//Therefore we will explicitly sample left/right/up/down neighbors
+		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
+		if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
+			vec3 vx = (overlayOutlineWidth * 0.25) / vec3(textureSize(overlay, 0));
+			vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
+			vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
+			vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
+			vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
+			vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
+			vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);	
+			float a = 1.0;
+			if (axCorSag != 2) {
+				a = min(a, texture(overlay, vxR).a);
+				a = min(a, texture(overlay, vxL).a);
+			}
+			if (axCorSag != 1) {
+				a = min(a, texture(overlay, vxA).a);
+				a = min(a, texture(overlay, vxP).a);
+			}
+			if (axCorSag != 0) {
+				a = min(a, texture(overlay, vxS).a);
+				a = min(a, texture(overlay, vxI).a);
+			}
+			if (a < 1.0)
+				ocolor.rbg = vec3(0.0, 0.0, 0.0);
+		}
 	}
 	float draw = texture(drawing, texPos).r;
 	if (draw > 0.0) {

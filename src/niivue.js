@@ -202,6 +202,7 @@ export function Niivue(options = {}) {
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
+  this.overlayOutlineWidth = 0; //float, 0 for none
 
   this.syncOpts = {};
   this.readyForSync = false;
@@ -4074,6 +4075,8 @@ Niivue.prototype.init = async function () {
   this.sliceMMShader.use(this.gl);
   this.sliceMMShader.drawOpacityLoc =
     this.sliceMMShader.uniforms["drawOpacity"];
+  this.sliceMMShader.overlayOutlineWidthLoc =
+    this.sliceMMShader.uniforms["overlayOutlineWidth"];
   this.sliceMMShader.backgroundMasksOverlaysLoc =
     this.sliceMMShader.uniforms["backgroundMasksOverlays"];
   this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
@@ -6129,6 +6132,10 @@ Niivue.prototype.draw2D = function (
   gl.depthFunc(gl.GREATER);
   gl.disable(gl.CULL_FACE); //show front and back faces
   this.sliceMMShader.use(this.gl);
+  gl.uniform1f(
+    this.sliceMMShader.overlayOutlineWidthLoc,
+    this.overlayOutlineWidth
+  );
   gl.uniform1i(
     this.sliceMMShader.backgroundMasksOverlaysLoc,
     this.backgroundMasksOverlays
