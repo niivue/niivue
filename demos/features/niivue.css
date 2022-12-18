@@ -12,6 +12,7 @@ header {
   background: #202020;
   color: white;
   display: flex;
+  flex-shrink: 0
 }
 main {
   flex: 1;
@@ -21,6 +22,7 @@ main {
 footer {
   background: #202020;
   color: white;
+  flex-shrink: 0
 }
 canvas {
   position: absolute;

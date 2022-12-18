@@ -12,6 +12,7 @@ body {
 }
 header {
   margin: 10px;
+  flex-shrink: 0
 }
 main {
   flex: 1;
@@ -20,6 +21,7 @@ main {
 }
 footer {
   margin: 10px;
+  flex-shrink: 0
 }
 canvas {
   position: absolute;

@@ -5182,12 +5182,12 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.drawScene();
         this.onLocationChange({
           mm: this.frac2mm(this.scene.crosshairPos, 0, true),
-          vox: this.frac2vox(this.scene.crosshairPos),
+          vox: this.frac2vox(this.scene.crosshairPos), //e.mm2frac
           frac: this.scene.crosshairPos,
           xy: [x, y],
           values: this.volumes.map((v) => {
-            let mm = this.frac2mm(this.scene.crosshairPos);
-            let vox = v.mm2vox(mm);
+            let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+            let vox = v.mm2vox(mm); //e.mm2vox
             let val = v.getValue(...vox);
             return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
           }),
@@ -5233,7 +5233,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         frac: this.scene.crosshairPos,
         xy: [x, y],
         values: this.volumes.map((v) => {
-          let mm = this.frac2mm(this.scene.crosshairPos);
+          let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
           return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
