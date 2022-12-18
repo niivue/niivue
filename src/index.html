@@ -12,24 +12,22 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-	  <label for="check1">	&nbsp;&nbsp;NegativeColors</label>
 	  <input type="checkbox" id="check1" checked>
-      <label for="check2">	&nbsp;&nbsp;AlphaThreshold</label>
+	  <label for="check1">NegativeColors&nbsp;&nbsp;</label>
       <input type="checkbox" id="check2" checked>
-      <label for="check3">	&nbsp;&nbsp;Smooth</label>
+      <label for="check2">AlphaThreshold&nbsp;&nbsp;</label>
+
       <input type="checkbox" id="check3" unchecked>
-      <label for="check4">	&nbsp;&nbsp;Outline</label>
-      <input type="checkbox" id="check4" unchecked>
-	  <label for="dragMode"> &nbsp;&nbsp; Drag mode</label>
-	  <select  id="dragMode">
-		<option value="contrast" selected>contrast</option>
-		<option value="measurement">measurement</option>
-		<option value="pan">pan/zoom</option>
-		<option value="none">none</option>
-	  </select>
-	  <label for="slide">	&nbsp; Threshold</label>
+      <label for="check3">Smooth&nbsp;&nbsp;</label>
+      <input type="checkbox" id="check5" unchecked>
+      <label for="check5">World&nbsp;&nbsp;</label>
+	  <label for="slide3">	&nbsp; -Threshold</label>
+	  <input type="range" min="0" max="50" value="30" class="slider" id="slide3">
+	  <label for="slide">	&nbsp; +Threshold</label>
 	  <input type="range" min="0" max="50" value="30" class="slider" id="slide">
-	  <button id="savebmp">Save Bitmap</button>
+	  <label for="slide2">	&nbsp; Outline</label>
+	  <input type="range" min="0" max="4" value="0" class="slider" id="slide2">
+
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -41,23 +39,6 @@
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
-      var dropDrag = document.getElementById("dragMode")
-      dropDrag.onchange = function() {
-        switch(document.getElementById("dragMode").value) {
-          case "none":
-            nv1.opts.dragMode = nv1.dragModes.none;
-            break
-          case "contrast":
-            nv1.opts.dragMode = nv1.dragModes.contrast;
-            break
-          case "measurement":
-            nv1.opts.dragMode = nv1.dragModes.measurement;
-            break
-          case "pan":
-            nv1.opts.dragMode = nv1.dragModes.pan;
-            break
-        }
-      }
       document.getElementById("check1").addEventListener("change", doCheckClick);
       function doCheckClick() {
 	   if (this.checked)
@@ -70,27 +51,31 @@
       function doCheck2Click() {
         nv1.volumes[1].alphaThreshold = this.checked
 		nv1.updateGLVolume();
-		//nv1.drawScene();
       }
       document.getElementById("check3").addEventListener("change", doCheck3Click);
       function doCheck3Click() {
-	   nv1.setInterpolation(!this.checked)
+	   nv1.setInterpolation(!document.getElementById("check3").checked)
       }	  
-      document.getElementById("check4").addEventListener("change", doCheck4Click);
-      function doCheck4Click() {
-        nv1.overlayOutlineWidth = this.checked
-        nv1.updateGLVolume()
-      }  
+      document.getElementById("check5").addEventListener("change", doCheck5Click);
+      function doCheck5Click() {
+        nv1.setSliceMM(this.checked)
+      }	  
       var slider = document.getElementById("slide");
       slider.oninput = function() {
         nv1.volumes[1].cal_min = 0.1 * this.value;
 		nv1.updateGLVolume();
-		nv1.drawScene();
-		//nv1.setGamma(0.1 * this.value)
       }
-      document.getElementById("savebmp").addEventListener("click", doBmp);
-      function doBmp(){
-        nv1.saveScene('ScreenShot.png');
+      var slider2 = document.getElementById("slide2");
+      slider2.oninput = function() {
+        nv1.overlayOutlineWidth = 0.25  * this.value;
+		nv1.updateGLVolume();
+      }
+      var slider3 = document.getElementById("slide3");
+      slider3.oninput = function() {
+        nv1.volumes[1].cal_minNeg = -6;
+		nv1.volumes[1].cal_maxNeg = -0.1 * this.value;
+		
+		nv1.updateGLVolume();
       }
       var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz"},
 	           {
@@ -124,8 +109,12 @@
 	  nv1.opts.isColorbar = true
       await nv1.loadVolumes(volumeList1)
 	  nv1.volumes[1].alphaThreshold= true;
+      nv1.volumes[1].cal_minNeg = -6;
+	  nv1.volumes[1].cal_maxNeg = -3.0;
+	  nv1.opts.multiplanarForceRender = true;
 	  nv1.setInterpolation(true)
 	  nv1.updateGLVolume();
+	  
    </script>
 </body>
 </html>

@@ -430,15 +430,14 @@ void main() {
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
-		//next lines for "boxing" https://github.com/niivue/niivue/issues/435
+		//dFdx for "boxing" issue 435 has aliasing on some implementations (coarse vs fine)
 		//however, this only identifies 50% of the edges due to aliasing effects
 		// http://www.aclockworkberry.com/shader-derivative-functions/
+		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
 		//if ((ocolor.a >= 1.0) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
 		//	ocolor.rbg = vec3(0.0, 0.0, 0.0);
-		//Therefore we will explicitly sample left/right/up/down neighbors
-		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
 		if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
-			vec3 vx = (overlayOutlineWidth * 0.25) / vec3(textureSize(overlay, 0));
+			vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
 			vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
 			vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
 			vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
@@ -704,11 +703,12 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
 uniform float cal_min;
+uniform float cal_maxNeg;
+uniform float cal_minNeg;
 uniform bool isAlphaThreshold;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
@@ -718,36 +718,53 @@ uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	if ((vx.x < 0.0) || (vx.x > 1.0) || (vx.y < 0.0) || (vx.y > 1.0) || (vx.z < 0.0) || (vx.z > 1.0)) { 
+		//set transparent if out of range
+		//https://webglfundamentals.org/webgl/webgl-3d-textures-repeat-clamp.html
+		FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+		return;
+	}
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
-	bool isNegative = (f < 0.0);
 	float mn = cal_min;
+	float mx = cal_max;
 	if (isAlphaThreshold) 
 		mn = 0.0;
-	float r = max(0.00001, abs(cal_max - mn));
-	mn = min(mn, cal_max);
+	float r = max(0.00001, abs(mx - mn));
+	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
 	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
-	if (isNegative) {
+	//negative colors
+	mn = cal_minNeg;
+	mx = cal_maxNeg;
+	if (isAlphaThreshold) 
+		mx = 0.0;	
+	if ((cal_minNeg != cal_maxNeg) && ( f < mx)) {
+
+		r = max(0.00001, abs(mx - mn));
+		mn = min(mn, mx);
+		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
 		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
 		//select texels at positions 0 and 1 of lookup table: 
 		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
 		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-		txl = mix(0.0, 1.0, (- f - mn) / r);
 		//detect bogus color: negative color slot not used than
 		// v0 = 1,1,1,0 and v1 = 0,0,0,1
 		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
 			FragColor = texture(colormap, vec2(txl, y));
-		f = - f;
+		
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
 	if (modulation > 0)
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
-	if ((isAlphaThreshold) && (f < cal_min)) {
-		FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
+	if (isAlphaThreshold) {
+		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg)) 
+			FragColor.a = pow(-f / -cal_maxNeg, 2.0);
+		else if ((f > 0.0) && (cal_min > 0.0))
+			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
 		//FragColor.g = 0.0;
 	}
 	FragColor.a *= opacity;

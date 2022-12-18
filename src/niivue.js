@@ -1977,7 +1977,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
   let threshold = thresholds[0];
   if (level === 1) threshold = thresholds[2];
   if (level === 2) threshold = thresholds[1];
-  console.log(this.volumes[volIndex]);
+  //console.log(this.volumes[volIndex]);
   let inter = this.volumes[volIndex].hdr.scl_inter;
   let slope = this.volumes[volIndex].hdr.scl_slope;
   let mn = this.volumes[volIndex].global_min;
@@ -4674,6 +4674,22 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
+  //if unused colorMapNegative
+
+  let mnNeg = 0;
+  let mxNeg = 0;
+  if (overlayItem.colorMapNegative.length > 0) {
+    //assume symmetrical
+    mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
+    mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
+    if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
+      //explicit range for negative colormap: allows assymetric maps
+      mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+      mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+    }
+  }
+  this.gl.uniform1f(orientShader.uniforms["cal_minNeg"], mnNeg);
+  this.gl.uniform1f(orientShader.uniforms["cal_maxNeg"], mxNeg);
   this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
   this.gl.uniform1i(orientShader.uniforms["intensityVol"], 6);
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
@@ -5165,7 +5181,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
         this.onLocationChange({
-          mm: this.frac2mm(this.scene.crosshairPos),
+          mm: this.frac2mm(this.scene.crosshairPos, 0, true),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
           xy: [x, y],
@@ -5212,7 +5228,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       this.drawScene();
       this.onLocationChange({
-        mm: this.frac2mm(this.scene.crosshairPos),
+        mm: this.frac2mm(this.scene.crosshairPos, 0, true),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
         xy: [x, y],
@@ -5504,7 +5520,9 @@ Niivue.prototype.reserveColorbarPanel = function () {
 Niivue.prototype.drawColorbarCore = function (
   layer = 0,
   leftTopWidthHeight = [0, 0, 0, 0],
-  isNegativeColor = false
+  isNegativeColor = false,
+  min = 0,
+  max = 1
 ) {
   if (this.volumes.length < 1) return;
   if (layer >= this.volumes.length) layer = 0;
@@ -5555,7 +5573,10 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
-  this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
+  if (isNegativeColor) {
+    let flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]];
+    this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip);
+  } else this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
@@ -5569,15 +5590,16 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.TEXTURE_MAG_FILTER,
     this.gl.LINEAR
   );
-  let min = this.volumes[layer].cal_min;
-  let max = this.volumes[layer].cal_max;
   let thresholdTic = 0.0; //only show threshold tickmark in alphaThreshold mode
-  if (this.volumes[layer].alphaThreshold && min > 0.0) {
+  if (this.volumes[layer].alphaThreshold && max < 0.0 && isNegativeColor) {
+    thresholdTic = max;
+    max = 0.0;
+  } else if (this.volumes[layer].alphaThreshold && min > 0.0) {
     thresholdTic = min;
     min = 0.0;
   }
-  if (min >= max || txtHt < 1) return;
-  let range = max - min;
+  if (min === max || txtHt < 1) return;
+  let range = Math.abs(max - min);
   let [spacing, ticMin] = tickSpacing(min, max);
   if (ticMin < min) ticMin += spacing;
   //determine font size
@@ -5588,17 +5610,17 @@ Niivue.prototype.drawColorbarCore = function (
   let tic = ticMin;
   let ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75];
   let txtTop = ticLTWH[1] + ticLTWH[3];
+  let isNeg = 1;
   while (tic <= max) {
     ticLTWH[0] = barLTWH[0] + ((tic - min) / range) * barLTWH[2];
     this.drawRect(ticLTWH);
-    let str = humanize(tic);
-    if (isNegativeColor) str = "-" + str;
+    let str = humanize(isNeg * tic);
     //if (fntSize > 0)
     this.drawTextBelow([ticLTWH[0], txtTop], str);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
     tic += spacing;
   }
-  if (thresholdTic > 0) {
+  if (thresholdTic !== 0) {
     let tticLTWH = [
       barLTWH[0] + ((thresholdTic - min) / range) * barLTWH[2],
       barLTWH[1] - barLTWH[3] * 0.25,
@@ -5628,10 +5650,23 @@ Niivue.prototype.drawColorbar = function () {
   }
   leftTopWidthHeight[2] = wid;
   for (let i = 0; i < nlayers; i++) {
-    this.drawColorbarCore(i, leftTopWidthHeight);
-    leftTopWidthHeight[0] += wid;
-    if (this.volumes[i].colorMapNegative.length === 0) continue;
-    this.drawColorbarCore(i, leftTopWidthHeight, true);
+    if (this.volumes[i].colorMapNegative.length > 0) {
+      let mn = -this.volumes[i].cal_max;
+      let mx = -this.volumes[i].cal_min;
+      if (
+        isFinite(this.volumes[i].cal_minNeg) &&
+        isFinite(this.volumes[i].cal_maxNeg)
+      ) {
+        mn = Math.min(this.volumes[i].cal_minNeg, this.volumes[i].cal_maxNeg);
+        mx = Math.max(this.volumes[i].cal_minNeg, this.volumes[i].cal_maxNeg);
+      }
+
+      this.drawColorbarCore(i, leftTopWidthHeight, true, mn, mx);
+      leftTopWidthHeight[0] += wid;
+    } //if negative colorbar
+    let min = this.volumes[i].cal_min;
+    let max = this.volumes[i].cal_max;
+    this.drawColorbarCore(i, leftTopWidthHeight, false, min, max);
     leftTopWidthHeight[0] += wid;
   }
 }; // drawColorbar()
@@ -5768,12 +5803,17 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   this.drawText(xy, str, scale, color);
 }; // drawTextBelow()
 
-Niivue.prototype.updateInterpolation = function (layer) {
+Niivue.prototype.updateInterpolation = function (layer, isForceLinear = false) {
   let interp = this.gl.LINEAR;
-  if (this.opts.isNearestInterpolation) interp = this.gl.NEAREST;
-  if (layer === 0) this.gl.activeTexture(this.gl.TEXTURE0);
-  //background
-  else this.gl.activeTexture(this.gl.TEXTURE2);
+  if (!isForceLinear && this.opts.isNearestInterpolation)
+    //if  (this.opts.isNearestInterpolation)
+
+    interp = this.gl.NEAREST;
+  if (layer === 0) {
+    this.gl.activeTexture(this.gl.TEXTURE0); //background
+  } else {
+    this.gl.activeTexture(this.gl.TEXTURE2); //overlay
+  }
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
 }; // updateInterpolation()
@@ -5787,7 +5827,7 @@ Niivue.prototype.setAtlasOutline = function (isOutline) {
 
 /**
  * select between nearest and linear interpolation for voxel based images
- * @param {boolean} isNearest determines nearest neighbor (true) or linear (false)
+ * @property {boolean} isNearest whether nearest neighbor interpolation is used, else linear interpolation
  * @example niivue.setInterpolation(true);
  * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
@@ -6916,7 +6956,9 @@ Niivue.prototype.draw3D = function (
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
+  this.updateInterpolation(0, true); // force background interpolation
   if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
+  this.updateInterpolation(0); //use default interpolation for 2D slices
   if (!isMosaic) this.drawCrosshairs3D(true, 1.0, mvpMatrix);
   this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix);
   if (this.uiData.mouseDepthPicker) {
