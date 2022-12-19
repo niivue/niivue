@@ -5141,7 +5141,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       return;
     }
   }
-  //if (this.opts.sliceType=== SLICE_TYPE.RENDER) {
   if (this.inRenderTile(x, y) >= 0) {
     this.sliceScroll3D(posChange);
     this.drawScene(); //TODO: twice?
@@ -6406,12 +6405,12 @@ Niivue.prototype.sceneExtentsMinMax = function (isSliceMM = true) {
   }
   if (this.meshes.length > 0) {
     if (this.volumes.length < 1) {
-      console.log("this.meshes");
+      /*console.log("this.meshes");
       console.log(this.meshes);
       console.log("this.meshes.length");
       console.log(this.meshes.length);
       console.log("this.meshes[0].extentsMin");
-      console.log(this.meshes[0].extentsMin);
+      console.log(this.meshes[0].extentsMin);*/
       mn = mat.vec3.fromValues(
         this.meshes[0].extentsMin[0],
         this.meshes[0].extentsMin[1],
@@ -6900,6 +6899,21 @@ Niivue.prototype.drawOrientationCube = function (
   this.gl.disable(this.gl.CULL_FACE);
 }; // drawOrientationCube()
 
+Niivue.prototype.createOnLocationChange = function () {
+  this.onLocationChange({
+    mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    vox: this.frac2vox(this.scene.crosshairPos), //borg
+    frac: this.scene.crosshairPos,
+    xy: [this.mousePos[0], this.mousePos[1]],
+    values: this.volumes.map((v) => {
+      let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+      let vox = v.mm2vox(mm); //e.mm2vox
+      let val = v.getValue(...vox);
+      return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
+    }),
+  });
+};
+
 // not included in public docs
 Niivue.prototype.draw3D = function (
   leftTopWidthHeight = [0, 0, 0, 0],
@@ -6963,6 +6977,7 @@ Niivue.prototype.draw3D = function (
   this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix);
   if (this.uiData.mouseDepthPicker) {
     this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
+    this.createOnLocationChange();
     return;
   }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
