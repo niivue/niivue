@@ -39,6 +39,8 @@ import {
   fragMeshMatteShader,
   fragMeshDepthShader,
   fragMeshShaderSHBlue,
+  vertFlatMeshShader,
+  fragFlatMeshShader,
   vertFiberShader,
   fragFiberShader,
   vertSurfaceShader,
@@ -288,6 +290,10 @@ export function Niivue(options = {}) {
     {
       Name: "Toon",
       Frag: fragMeshToonShader,
+    },
+    {
+      Name: "Flat",
+      Frag: fragFlatMeshShader,
     },
   ];
 
@@ -3918,7 +3924,8 @@ Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
  */
 Niivue.prototype.createCustomMeshShader = function (
   fragmentShaderText,
-  name = "Custom"
+  name = "Custom",
+  vertexShaderText = ""
 ) {
   if (!fragmentShaderText) {
     throw "Need frament shader";
@@ -4213,9 +4220,12 @@ Niivue.prototype.init = async function () {
   this.pickingImageShader.use(this.gl);
   this.fiberShader.mvpLoc = this.fiberShader.uniforms["mvpMtx"];
   //compile all mesh shaders
+  //compile all mesh shaders
   for (var i = 0; i < this.meshShaders.length; i++) {
     let m = this.meshShaders[i];
-    m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+    if (m.Name === "Flat")
+      m.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader);
+    else m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
   }
