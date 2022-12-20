@@ -1008,6 +1008,8 @@ precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
 uniform int backgroundMasksOverlays;
+uniform float overlayOutlineWidth;
+uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
@@ -1021,6 +1023,36 @@ void main() {
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
+		//dFdx for "boxing" issue 435 has aliasing on some implementations (coarse vs fine)
+		//however, this only identifies 50% of the edges due to aliasing effects
+		// http://www.aclockworkberry.com/shader-derivative-functions/
+		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
+		//if ((ocolor.a >= 1.0) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
+		//	ocolor.rbg = vec3(0.0, 0.0, 0.0);
+		if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
+			vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
+			vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
+			vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
+			vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
+			vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
+			vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
+			vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);	
+			float a = 1.0;
+			if (axCorSag != 2) {
+				a = min(a, texture(overlay, vxR).a);
+				a = min(a, texture(overlay, vxL).a);
+			}
+			if (axCorSag != 1) {
+				a = min(a, texture(overlay, vxA).a);
+				a = min(a, texture(overlay, vxP).a);
+			}
+			if (axCorSag != 0) {
+				a = min(a, texture(overlay, vxS).a);
+				a = min(a, texture(overlay, vxI).a);
+			}
+			if (a < 1.0)
+				ocolor.rbg = vec3(0.0, 0.0, 0.0);
+		}
 	}
 	float draw = texture(drawing, texPos).r;
 	if (draw > 0.0) {
@@ -1248,11 +1280,13 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
 uniform float cal_min;
+uniform float cal_maxNeg;
+uniform float cal_minNeg;
+uniform bool isAlphaThreshold;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform int modulation;
@@ -1261,30 +1295,55 @@ uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	if ((vx.x < 0.0) || (vx.x > 1.0) || (vx.y < 0.0) || (vx.y > 1.0) || (vx.z < 0.0) || (vx.z > 1.0)) { 
+		//set transparent if out of range
+		//https://webglfundamentals.org/webgl/webgl-3d-textures-repeat-clamp.html
+		FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+		return;
+	}
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
-	bool isNegative = (f < 0.0);
-	float r = max(0.00001, abs(cal_max - cal_min));
-	float mn = min(cal_min, cal_max);
+	float mn = cal_min;
+	float mx = cal_max;
+	if (isAlphaThreshold) 
+		mn = 0.0;
+	float r = max(0.00001, abs(mx - mn));
+	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
 	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
-	if (isNegative) {
+	//negative colors
+	mn = cal_minNeg;
+	mx = cal_maxNeg;
+	if (isAlphaThreshold) 
+		mx = 0.0;	
+	if ((cal_minNeg != cal_maxNeg) && ( f < mx)) {
+
+		r = max(0.00001, abs(mx - mn));
+		mn = min(mn, mx);
+		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
 		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
 		//select texels at positions 0 and 1 of lookup table: 
 		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
 		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-		txl = mix(0.0, 1.0, (- f - mn) / r);
 		//detect bogus color: negative color slot not used than
 		// v0 = 1,1,1,0 and v1 = 0,0,0,1
 		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
 			FragColor = texture(colormap, vec2(txl, y));
+		
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
 	if (modulation > 0)
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	if (isAlphaThreshold) {
+		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg)) 
+			FragColor.a = pow(-f / -cal_maxNeg, 2.0);
+		else if ((f > 0.0) && (cal_min > 0.0))
+			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
+		//FragColor.g = 0.0;
+	}
 	FragColor.a *= opacity;
 	if (layer < 1.0) return;
 	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
@@ -1671,6 +1730,45 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	vec3 a = vClr.rgb * ambient;
 	vec3 d = vClr.rgb * diffuse * SH(-reflect(n, vec3(l.x, l.y, -l.z)) );
+	color = vec4(a + d + s, opacity);
+}`;
+var vertFlatMeshShader = `#version 300 es
+layout(location=0) in vec3 pos;
+layout(location=1) in vec4 norm;
+layout(location=2) in vec4 clr;
+uniform mat4 mvpMtx;
+uniform mat4 modelMtx;
+uniform mat4 normMtx;
+out vec4 vClr;
+flat out vec3 vN, vL, vV;
+void main(void) {
+	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
+	vL = normalize(lightPosition);
+	vV = -vec3(modelMtx*vec4(pos,1.0));
+	vClr = clr;
+}`;
+var fragFlatMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+flat in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`;
 var fragVolumePickingShader = `#version 300 es
@@ -105486,7 +105584,7 @@ const NVIMAGE_TYPE = Object.freeze({
     return imageType;
   }
 });
-function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN) {
+function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, alphaThreshold = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNegative = NaN, cal_maxNegative = NaN) {
   return {
     url,
     urlImageData,
@@ -105501,10 +105599,12 @@ function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gr
     visible,
     useQFormNotSForm,
     colorMapNegative,
-    imageType
+    imageType,
+    cal_minNegative,
+    cal_maxNegative
   };
 }
-function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNegative = NaN, cal_maxNegative = NaN) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -105534,6 +105634,8 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
+  this.cal_minNegative = cal_minNegative;
+  this.cal_maxNegative = cal_maxNegative;
   this.visible = visible;
   this.modulationImage = null;
   this.series = [];
@@ -113746,6 +113848,7 @@ function Niivue(options = {}) {
   this.DEFAULT_FONT_METRICS = defaultFontMetrics;
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
+  this.overlayOutlineWidth = 0;
   this.syncOpts = {};
   this.readyForSync = false;
   this.uiData = {};
@@ -113823,6 +113926,10 @@ function Niivue(options = {}) {
     {
       Name: "Toon",
       Frag: fragMeshToonShader
+    },
+    {
+      Name: "Flat",
+      Frag: fragFlatMeshShader
     }
   ];
   this.onLocationChange = () => {
@@ -114965,7 +115072,6 @@ Niivue.prototype.removeHaze = async function(level = 5, volIndex = 0) {
     threshold = thresholds[2];
   if (level === 2)
     threshold = thresholds[1];
-  console.log(this.volumes[volIndex]);
   let inter = this.volumes[volIndex].hdr.scl_inter;
   let slope = this.volumes[volIndex].hdr.scl_slope;
   let mn = this.volumes[volIndex].global_min;
@@ -116214,7 +116320,7 @@ Niivue.prototype.setMeshShader = function(id, meshShaderNameOrNumber = 2) {
   this.updateGLVolume();
   this.onMeshShaderChanged(index, shaderIndex);
 };
-Niivue.prototype.createCustomMeshShader = function(fragmentShaderText, name = "Custom") {
+Niivue.prototype.createCustomMeshShader = function(fragmentShaderText, name = "Custom", vertexShaderText = "") {
   if (!fragmentShaderText) {
     throw "Need frament shader";
   }
@@ -116297,6 +116403,7 @@ Niivue.prototype.init = async function() {
   this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader);
   this.sliceMMShader.use(this.gl);
   this.sliceMMShader.drawOpacityLoc = this.sliceMMShader.uniforms["drawOpacity"];
+  this.sliceMMShader.overlayOutlineWidthLoc = this.sliceMMShader.uniforms["overlayOutlineWidth"];
   this.sliceMMShader.backgroundMasksOverlaysLoc = this.sliceMMShader.uniforms["backgroundMasksOverlays"];
   this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
   this.sliceMMShader.axCorSagLoc = this.sliceMMShader.uniforms["axCorSag"];
@@ -116367,7 +116474,10 @@ Niivue.prototype.init = async function() {
   this.fiberShader.mvpLoc = this.fiberShader.uniforms["mvpMtx"];
   for (var i2 = 0; i2 < this.meshShaders.length; i2++) {
     let m = this.meshShaders[i2];
-    m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+    if (m.Name === "Flat")
+      m.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader);
+    else
+      m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
   }
@@ -116590,8 +116700,21 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+  this.gl.uniform1i(orientShader.uniforms["isAlphaThreshold"], overlayItem.alphaThreshold);
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
+  let mnNeg = 0;
+  let mxNeg = 0;
+  if (overlayItem.colorMapNegative.length > 0) {
+    mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
+    mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
+    if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
+      mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+      mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+    }
+  }
+  this.gl.uniform1f(orientShader.uniforms["cal_minNeg"], mnNeg);
+  this.gl.uniform1f(orientShader.uniforms["cal_maxNeg"], mxNeg);
   this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
   this.gl.uniform1i(orientShader.uniforms["intensityVol"], 6);
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
@@ -116883,12 +117006,12 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
         this.onLocationChange({
-          mm: this.frac2mm(this.scene.crosshairPos),
+          mm: this.frac2mm(this.scene.crosshairPos, 0, true),
           vox: this.frac2vox(this.scene.crosshairPos),
           frac: this.scene.crosshairPos,
           xy: [x2, y],
           values: this.volumes.map((v) => {
-            let mm = this.frac2mm(this.scene.crosshairPos);
+            let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
             let vox = v.mm2vox(mm);
             let val = v.getValue(...vox);
             return { name: v.name, value: val, id: v.id, mm, vox };
@@ -116922,12 +117045,12 @@ Niivue.prototype.mouseClick = function(x2, y, posChange = 0, isDelta = true) {
       }
       this.drawScene();
       this.onLocationChange({
-        mm: this.frac2mm(this.scene.crosshairPos),
+        mm: this.frac2mm(this.scene.crosshairPos, 0, true),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
         xy: [x2, y],
         values: this.volumes.map((v) => {
-          let mm = this.frac2mm(this.scene.crosshairPos);
+          let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
           return { name: v.name, value: val, id: v.id, mm, vox };
@@ -117154,7 +117277,7 @@ Niivue.prototype.reserveColorbarPanel = function() {
   this.colorbarHeight = leftTopWidthHeight[3] + 1;
   return leftTopWidthHeight;
 };
-Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0, 0, 0, 0], isNegativeColor = false) {
+Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0, 0, 0, 0], isNegativeColor = false, min2 = 0, max2 = 1) {
   if (this.volumes.length < 1)
     return;
   if (layer >= this.volumes.length)
@@ -117200,17 +117323,27 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
     this.gl.canvas.width,
     this.gl.canvas.height
   ]);
-  this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
+  if (isNegativeColor) {
+    let flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]];
+    this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip);
+  } else
+    this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-  let min2 = this.volumes[layer].cal_min;
-  let max2 = this.volumes[layer].cal_max;
-  if (min2 >= max2 || txtHt < 1)
+  let thresholdTic = 0;
+  if (this.volumes[layer].alphaThreshold && max2 < 0 && isNegativeColor) {
+    thresholdTic = max2;
+    max2 = 0;
+  } else if (this.volumes[layer].alphaThreshold && min2 > 0) {
+    thresholdTic = min2;
+    min2 = 0;
+  }
+  if (min2 === max2 || txtHt < 1)
     return;
-  let range = max2 - min2;
+  let range = Math.abs(max2 - min2);
   let [spacing, ticMin] = tickSpacing(min2, max2);
   if (ticMin < min2)
     ticMin += spacing;
@@ -117220,14 +117353,22 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   let tic = ticMin;
   let ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75];
   let txtTop = ticLTWH[1] + ticLTWH[3];
+  let isNeg = 1;
   while (tic <= max2) {
     ticLTWH[0] = barLTWH[0] + (tic - min2) / range * barLTWH[2];
     this.drawRect(ticLTWH);
-    let str = humanize(tic);
-    if (isNegativeColor)
-      str = "-" + str;
+    let str = humanize(isNeg * tic);
     this.drawTextBelow([ticLTWH[0], txtTop], str);
     tic += spacing;
+  }
+  if (thresholdTic !== 0) {
+    let tticLTWH = [
+      barLTWH[0] + (thresholdTic - min2) / range * barLTWH[2],
+      barLTWH[1] - barLTWH[3] * 0.25,
+      2,
+      barLTWH[3] * 1.5
+    ];
+    this.drawRect(tticLTWH);
   }
 };
 Niivue.prototype.drawColorbar = function() {
@@ -117249,11 +117390,19 @@ Niivue.prototype.drawColorbar = function() {
   }
   leftTopWidthHeight[2] = wid;
   for (let i2 = 0; i2 < nlayers; i2++) {
-    this.drawColorbarCore(i2, leftTopWidthHeight);
-    leftTopWidthHeight[0] += wid;
-    if (this.volumes[i2].colorMapNegative.length === 0)
-      continue;
-    this.drawColorbarCore(i2, leftTopWidthHeight, true);
+    if (this.volumes[i2].colorMapNegative.length > 0) {
+      let mn = -this.volumes[i2].cal_max;
+      let mx = -this.volumes[i2].cal_min;
+      if (isFinite(this.volumes[i2].cal_minNeg) && isFinite(this.volumes[i2].cal_maxNeg)) {
+        mn = Math.min(this.volumes[i2].cal_minNeg, this.volumes[i2].cal_maxNeg);
+        mx = Math.max(this.volumes[i2].cal_minNeg, this.volumes[i2].cal_maxNeg);
+      }
+      this.drawColorbarCore(i2, leftTopWidthHeight, true, mn, mx);
+      leftTopWidthHeight[0] += wid;
+    }
+    let min2 = this.volumes[i2].cal_min;
+    let max2 = this.volumes[i2].cal_max;
+    this.drawColorbarCore(i2, leftTopWidthHeight, false, min2, max2);
     leftTopWidthHeight[0] += wid;
   }
 };
@@ -117355,14 +117504,15 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1, color = null) {
   xy[0] -= 0.5 * this.textWidth(size, str);
   this.drawText(xy, str, scale2, color);
 };
-Niivue.prototype.updateInterpolation = function(layer) {
+Niivue.prototype.updateInterpolation = function(layer, isForceLinear = false) {
   let interp = this.gl.LINEAR;
-  if (this.opts.isNearestInterpolation)
+  if (!isForceLinear && this.opts.isNearestInterpolation)
     interp = this.gl.NEAREST;
-  if (layer === 0)
+  if (layer === 0) {
     this.gl.activeTexture(this.gl.TEXTURE0);
-  else
+  } else {
     this.gl.activeTexture(this.gl.TEXTURE2);
+  }
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
 };
@@ -117622,6 +117772,7 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag, customMM = NaN)
   gl.depthFunc(gl.GREATER);
   gl.disable(gl.CULL_FACE);
   this.sliceMMShader.use(this.gl);
+  gl.uniform1f(this.sliceMMShader.overlayOutlineWidthLoc, this.overlayOutlineWidth);
   gl.uniform1i(this.sliceMMShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
   gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
   gl.enable(gl.BLEND);
@@ -117731,12 +117882,6 @@ Niivue.prototype.sceneExtentsMinMax = function(isSliceMM = true) {
   }
   if (this.meshes.length > 0) {
     if (this.volumes.length < 1) {
-      console.log("this.meshes");
-      console.log(this.meshes);
-      console.log("this.meshes.length");
-      console.log(this.meshes.length);
-      console.log("this.meshes[0].extentsMin");
-      console.log(this.meshes[0].extentsMin);
       mn = fromValues$1(this.meshes[0].extentsMin[0], this.meshes[0].extentsMin[1], this.meshes[0].extentsMin[2]);
       mx = fromValues$1(this.meshes[0].extentsMax[0], this.meshes[0].extentsMax[1], this.meshes[0].extentsMax[2]);
     }
@@ -118093,6 +118238,20 @@ Niivue.prototype.drawOrientationCube = function(leftTopWidthHeight, azimuth = 0,
   gl.bindVertexArray(this.unusedVAO);
   this.gl.disable(this.gl.CULL_FACE);
 };
+Niivue.prototype.createOnLocationChange = function() {
+  this.onLocationChange({
+    mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    vox: this.frac2vox(this.scene.crosshairPos),
+    frac: this.scene.crosshairPos,
+    xy: [this.mousePos[0], this.mousePos[1]],
+    values: this.volumes.map((v) => {
+      let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+      let vox = v.mm2vox(mm);
+      let val = v.getValue(...vox);
+      return { name: v.name, value: val, id: v.id, mm, vox };
+    })
+  });
+};
 Niivue.prototype.draw3D = function(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix = null, modelMatrix, normalMatrix, azimuth = null, elevation) {
   let isMosaic = azimuth !== null;
   this.setPivot3D();
@@ -118128,13 +118287,16 @@ Niivue.prototype.draw3D = function(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0);
+  this.updateInterpolation(0, true);
   if (this.volumes.length > 0)
     this.drawImage3D(mvpMatrix, azimuth, elevation);
+  this.updateInterpolation(0);
   if (!isMosaic)
     this.drawCrosshairs3D(true, 1, mvpMatrix);
   this.drawMesh3D(true, 1, mvpMatrix, modelMatrix, normalMatrix);
   if (this.uiData.mouseDepthPicker) {
     this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
+    this.createOnLocationChange();
     return;
   }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
@@ -118297,6 +118459,8 @@ Niivue.prototype.vox2frac = function(vox, volIdx = 0) {
   return frac;
 };
 Niivue.prototype.frac2vox = function(frac, volIdx = 0) {
+  if (this.volumes.length <= volIdx)
+    return [0, 0, 0];
   let vox = [
     Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5),
     Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5),

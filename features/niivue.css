@@ -1,14 +1,22 @@
+html {
+    height: auto;
+    min-height: 100%;
+    margin: 0;
+}
 body {
   display: flex;
   flex-direction: column;
   margin: 0;
-  min-height: 100vh;
+  min-height: 100%;
+  width: 100%;
+  position: absolute;
   font-family: system-ui, Arial, Helvetica, sans-serif;
+  user-select: none; /* Standard syntax */
+  color: white;
+  background: #202020;
 }
 header {
-  background: #202020;
-  color: white;
-  display: flex;
+  margin: 10px;
 }
 main {
   flex: 1;
@@ -16,8 +24,7 @@ main {
   position: relative;
 }
 footer {
-  background: #202020;
-  color: white;
+  margin: 10px;
 }
 canvas {
   position: absolute;
