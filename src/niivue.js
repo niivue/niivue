@@ -39,6 +39,8 @@ import {
   fragMeshMatteShader,
   fragMeshDepthShader,
   fragMeshShaderSHBlue,
+  vertFlatMeshShader,
+  fragFlatMeshShader,
   vertFiberShader,
   fragFiberShader,
   vertSurfaceShader,
@@ -202,6 +204,7 @@ export function Niivue(options = {}) {
   this.DEFAULT_FONT_METRICS = defaultFontMetrics; //"/fonts/Roboto-Regular.json";
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
+  this.overlayOutlineWidth = 0; //float, 0 for none
 
   this.syncOpts = {};
   this.readyForSync = false;
@@ -287,6 +290,10 @@ export function Niivue(options = {}) {
     {
       Name: "Toon",
       Frag: fragMeshToonShader,
+    },
+    {
+      Name: "Flat",
+      Frag: fragFlatMeshShader,
     },
   ];
 
@@ -1976,7 +1983,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
   let threshold = thresholds[0];
   if (level === 1) threshold = thresholds[2];
   if (level === 2) threshold = thresholds[1];
-  console.log(this.volumes[volIndex]);
+  //console.log(this.volumes[volIndex]);
   let inter = this.volumes[volIndex].hdr.scl_inter;
   let slope = this.volumes[volIndex].hdr.scl_slope;
   let mn = this.volumes[volIndex].global_min;
@@ -3917,7 +3924,8 @@ Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
  */
 Niivue.prototype.createCustomMeshShader = function (
   fragmentShaderText,
-  name = "Custom"
+  name = "Custom",
+  vertexShaderText = ""
 ) {
   if (!fragmentShaderText) {
     throw "Need frament shader";
@@ -4074,6 +4082,8 @@ Niivue.prototype.init = async function () {
   this.sliceMMShader.use(this.gl);
   this.sliceMMShader.drawOpacityLoc =
     this.sliceMMShader.uniforms["drawOpacity"];
+  this.sliceMMShader.overlayOutlineWidthLoc =
+    this.sliceMMShader.uniforms["overlayOutlineWidth"];
   this.sliceMMShader.backgroundMasksOverlaysLoc =
     this.sliceMMShader.uniforms["backgroundMasksOverlays"];
   this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
@@ -4210,9 +4220,12 @@ Niivue.prototype.init = async function () {
   this.pickingImageShader.use(this.gl);
   this.fiberShader.mvpLoc = this.fiberShader.uniforms["mvpMtx"];
   //compile all mesh shaders
+  //compile all mesh shaders
   for (var i = 0; i < this.meshShaders.length; i++) {
     let m = this.meshShaders[i];
-    m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
+    if (m.Name === "Flat")
+      m.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader);
+    else m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
   }
@@ -4665,8 +4678,28 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+  this.gl.uniform1i(
+    orientShader.uniforms["isAlphaThreshold"],
+    overlayItem.alphaThreshold
+  );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
+  //if unused colorMapNegative
+
+  let mnNeg = 0;
+  let mxNeg = 0;
+  if (overlayItem.colorMapNegative.length > 0) {
+    //assume symmetrical
+    mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
+    mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
+    if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
+      //explicit range for negative colormap: allows assymetric maps
+      mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+      mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+    }
+  }
+  this.gl.uniform1f(orientShader.uniforms["cal_minNeg"], mnNeg);
+  this.gl.uniform1f(orientShader.uniforms["cal_maxNeg"], mxNeg);
   this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
   this.gl.uniform1i(orientShader.uniforms["intensityVol"], 6);
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
@@ -5118,7 +5151,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       return;
     }
   }
-  //if (this.opts.sliceType=== SLICE_TYPE.RENDER) {
   if (this.inRenderTile(x, y) >= 0) {
     this.sliceScroll3D(posChange);
     this.drawScene(); //TODO: twice?
@@ -5158,13 +5190,13 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
         this.onLocationChange({
-          mm: this.frac2mm(this.scene.crosshairPos),
-          vox: this.frac2vox(this.scene.crosshairPos),
+          mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+          vox: this.frac2vox(this.scene.crosshairPos), //e.mm2frac
           frac: this.scene.crosshairPos,
           xy: [x, y],
           values: this.volumes.map((v) => {
-            let mm = this.frac2mm(this.scene.crosshairPos);
-            let vox = v.mm2vox(mm);
+            let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+            let vox = v.mm2vox(mm); //e.mm2vox
             let val = v.getValue(...vox);
             return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
           }),
@@ -5205,12 +5237,12 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       this.drawScene();
       this.onLocationChange({
-        mm: this.frac2mm(this.scene.crosshairPos),
+        mm: this.frac2mm(this.scene.crosshairPos, 0, true),
         vox: this.frac2vox(this.scene.crosshairPos),
         frac: this.scene.crosshairPos,
         xy: [x, y],
         values: this.volumes.map((v) => {
-          let mm = this.frac2mm(this.scene.crosshairPos);
+          let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
           let vox = v.mm2vox(mm);
           let val = v.getValue(...vox);
           return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
@@ -5497,7 +5529,9 @@ Niivue.prototype.reserveColorbarPanel = function () {
 Niivue.prototype.drawColorbarCore = function (
   layer = 0,
   leftTopWidthHeight = [0, 0, 0, 0],
-  isNegativeColor = false
+  isNegativeColor = false,
+  min = 0,
+  max = 1
 ) {
   if (this.volumes.length < 1) return;
   if (layer >= this.volumes.length) layer = 0;
@@ -5548,7 +5582,10 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
-  this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
+  if (isNegativeColor) {
+    let flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]];
+    this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip);
+  } else this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
@@ -5562,10 +5599,16 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.TEXTURE_MAG_FILTER,
     this.gl.LINEAR
   );
-  let min = this.volumes[layer].cal_min;
-  let max = this.volumes[layer].cal_max;
-  if (min >= max || txtHt < 1) return;
-  let range = max - min;
+  let thresholdTic = 0.0; //only show threshold tickmark in alphaThreshold mode
+  if (this.volumes[layer].alphaThreshold && max < 0.0 && isNegativeColor) {
+    thresholdTic = max;
+    max = 0.0;
+  } else if (this.volumes[layer].alphaThreshold && min > 0.0) {
+    thresholdTic = min;
+    min = 0.0;
+  }
+  if (min === max || txtHt < 1) return;
+  let range = Math.abs(max - min);
   let [spacing, ticMin] = tickSpacing(min, max);
   if (ticMin < min) ticMin += spacing;
   //determine font size
@@ -5576,15 +5619,24 @@ Niivue.prototype.drawColorbarCore = function (
   let tic = ticMin;
   let ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75];
   let txtTop = ticLTWH[1] + ticLTWH[3];
+  let isNeg = 1;
   while (tic <= max) {
     ticLTWH[0] = barLTWH[0] + ((tic - min) / range) * barLTWH[2];
     this.drawRect(ticLTWH);
-    let str = humanize(tic);
-    if (isNegativeColor) str = "-" + str;
+    let str = humanize(isNeg * tic);
     //if (fntSize > 0)
     this.drawTextBelow([ticLTWH[0], txtTop], str);
     //this.drawTextRight([plotLTWH[0], y], str, fntScale)
     tic += spacing;
+  }
+  if (thresholdTic !== 0) {
+    let tticLTWH = [
+      barLTWH[0] + ((thresholdTic - min) / range) * barLTWH[2],
+      barLTWH[1] - barLTWH[3] * 0.25,
+      2,
+      barLTWH[3] * 1.5,
+    ];
+    this.drawRect(tticLTWH);
   }
 }; // drawColorbarCore()
 
@@ -5607,10 +5659,23 @@ Niivue.prototype.drawColorbar = function () {
   }
   leftTopWidthHeight[2] = wid;
   for (let i = 0; i < nlayers; i++) {
-    this.drawColorbarCore(i, leftTopWidthHeight);
-    leftTopWidthHeight[0] += wid;
-    if (this.volumes[i].colorMapNegative.length === 0) continue;
-    this.drawColorbarCore(i, leftTopWidthHeight, true);
+    if (this.volumes[i].colorMapNegative.length > 0) {
+      let mn = -this.volumes[i].cal_max;
+      let mx = -this.volumes[i].cal_min;
+      if (
+        isFinite(this.volumes[i].cal_minNeg) &&
+        isFinite(this.volumes[i].cal_maxNeg)
+      ) {
+        mn = Math.min(this.volumes[i].cal_minNeg, this.volumes[i].cal_maxNeg);
+        mx = Math.max(this.volumes[i].cal_minNeg, this.volumes[i].cal_maxNeg);
+      }
+
+      this.drawColorbarCore(i, leftTopWidthHeight, true, mn, mx);
+      leftTopWidthHeight[0] += wid;
+    } //if negative colorbar
+    let min = this.volumes[i].cal_min;
+    let max = this.volumes[i].cal_max;
+    this.drawColorbarCore(i, leftTopWidthHeight, false, min, max);
     leftTopWidthHeight[0] += wid;
   }
 }; // drawColorbar()
@@ -5747,12 +5812,17 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   this.drawText(xy, str, scale, color);
 }; // drawTextBelow()
 
-Niivue.prototype.updateInterpolation = function (layer) {
+Niivue.prototype.updateInterpolation = function (layer, isForceLinear = false) {
   let interp = this.gl.LINEAR;
-  if (this.opts.isNearestInterpolation) interp = this.gl.NEAREST;
-  if (layer === 0) this.gl.activeTexture(this.gl.TEXTURE0);
-  //background
-  else this.gl.activeTexture(this.gl.TEXTURE2);
+  if (!isForceLinear && this.opts.isNearestInterpolation)
+    //if  (this.opts.isNearestInterpolation)
+
+    interp = this.gl.NEAREST;
+  if (layer === 0) {
+    this.gl.activeTexture(this.gl.TEXTURE0); //background
+  } else {
+    this.gl.activeTexture(this.gl.TEXTURE2); //overlay
+  }
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
   this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
 }; // updateInterpolation()
@@ -5766,7 +5836,7 @@ Niivue.prototype.setAtlasOutline = function (isOutline) {
 
 /**
  * select between nearest and linear interpolation for voxel based images
- * @param {boolean} isNearest determines nearest neighbor (true) or linear (false)
+ * @property {boolean} isNearest whether nearest neighbor interpolation is used, else linear interpolation
  * @example niivue.setInterpolation(true);
  * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
@@ -6111,6 +6181,10 @@ Niivue.prototype.draw2D = function (
   gl.depthFunc(gl.GREATER);
   gl.disable(gl.CULL_FACE); //show front and back faces
   this.sliceMMShader.use(this.gl);
+  gl.uniform1f(
+    this.sliceMMShader.overlayOutlineWidthLoc,
+    this.overlayOutlineWidth
+  );
   gl.uniform1i(
     this.sliceMMShader.backgroundMasksOverlaysLoc,
     this.backgroundMasksOverlays
@@ -6341,12 +6415,12 @@ Niivue.prototype.sceneExtentsMinMax = function (isSliceMM = true) {
   }
   if (this.meshes.length > 0) {
     if (this.volumes.length < 1) {
-      console.log("this.meshes");
+      /*console.log("this.meshes");
       console.log(this.meshes);
       console.log("this.meshes.length");
       console.log(this.meshes.length);
       console.log("this.meshes[0].extentsMin");
-      console.log(this.meshes[0].extentsMin);
+      console.log(this.meshes[0].extentsMin);*/
       mn = mat.vec3.fromValues(
         this.meshes[0].extentsMin[0],
         this.meshes[0].extentsMin[1],
@@ -6835,6 +6909,21 @@ Niivue.prototype.drawOrientationCube = function (
   this.gl.disable(this.gl.CULL_FACE);
 }; // drawOrientationCube()
 
+Niivue.prototype.createOnLocationChange = function () {
+  this.onLocationChange({
+    mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    vox: this.frac2vox(this.scene.crosshairPos), //borg
+    frac: this.scene.crosshairPos,
+    xy: [this.mousePos[0], this.mousePos[1]],
+    values: this.volumes.map((v) => {
+      let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+      let vox = v.mm2vox(mm); //e.mm2vox
+      let val = v.getValue(...vox);
+      return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
+    }),
+  });
+};
+
 // not included in public docs
 Niivue.prototype.draw3D = function (
   leftTopWidthHeight = [0, 0, 0, 0],
@@ -6891,11 +6980,14 @@ Niivue.prototype.draw3D = function (
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
+  this.updateInterpolation(0, true); // force background interpolation
   if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
+  this.updateInterpolation(0); //use default interpolation for 2D slices
   if (!isMosaic) this.drawCrosshairs3D(true, 1.0, mvpMatrix);
   this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix);
   if (this.uiData.mouseDepthPicker) {
     this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
+    this.createOnLocationChange();
     return;
   }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
@@ -7013,8 +7105,6 @@ Niivue.prototype.drawCrosshairs3D = function (
   if (this.opts.crosshairWidth <= 0.0 && is2DView) return;
   let gl = this.gl;
   let mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM);
-  //baka e.frac2mm
-  // mm = [-20, 0, 30]; // <- set any value here to test
   // generate our crosshairs for the base volume
   if (
     this.crosshairs3D === null ||
@@ -7137,6 +7227,7 @@ Niivue.prototype.vox2frac = function (vox, volIdx = 0) {
 Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   //convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
   //consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
+  if (this.volumes.length <= volIdx) return [0, 0, 0];
   let vox = [
     Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims == RAS
     Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims == RAS

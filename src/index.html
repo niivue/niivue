@@ -71,7 +71,7 @@
 
       function handleLocationChange(data){ 
         function flt2str(flt, decimals = 0) {
-          return flt.toFixed(decimals).replace(/\.?0*$/, "")
+          return flt.toFixed(decimals)
         }	
         document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)	
       }

@@ -2,7 +2,7 @@
 
 NiiVue is a WebGL 2.0 medical image viewer. This repository contains the **core NiiVue package**. We have additional projects under development that will demonstrate a [web-based user interface implementation](https://github.com/niivue/niivue-ui), and a [desktop application](https://github.com/niivue/niivue-desktop) built using web technologies.
 
-The NiiVue package is intented to be used by individuals developing interactive web pages related to showing [nifti](https://nifti.nimh.nih.gov) and other formats popular in neuroimaging. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our [web-based user interface implementation](https://github.com/niivue/niivue-ui) (under development) will demonstrate how to integrate NiiVue into a more comprehensive [VueJS](https://vuejs.org/), React and Angular projects.  
+NiiVue allows developers to create interactive web pages for visualizing  [nifti](https://nifti.nimh.nih.gov) and other formats popular in neuroimaging. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our [UI wrapper](https://github.com/niivue/niivue-ui) demonstrates how the modular core NiiVue can be embedded into a rich user interface.  
 
 # Getting started Docs and References
 
@@ -16,18 +16,15 @@ Installs without the bloat of the development dependencies or testing frameworks
 npm install --only=prod @niivue/niivue
 ```
 
-# Active Projects
-
-[See our active projects here](https://github.com/orgs/niivue/projects)
-
 # Overview/Mission
 
-The primary aim of NiiVue is to translate the features of the widely used native desktop applications ([MRIcroGL](https://github.com/rordenlab/MRIcroGL), [Surfice](https://github.com/neurolabusc/surf-ice)) to their web-based equivalents. This will enable other researchers and developers to build cloud-based medical imaging tools with a powerful viewer that can operate on any device (desktop, tablet, mobile).  
+NiiVue brings the features of the widely used native desktop applications ([AFNI](https://afni.nimh.nih.gov/about_afni), [FSLeyes](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSLeyes), [MRIcroGL](https://github.com/rordenlab/MRIcroGL), [Surfice](https://github.com/neurolabusc/surf-ice),  [SUMA](https://afni.nimh.nih.gov/Suma)) to the web. The developers of these tools developed NiiVue in collaboration, allowing us to benefit from collective wisdom. This will enable other researchers and developers to build cloud-based medical imaging tools with a powerful viewer that can operate on any device (desktop, tablet, mobile).  
 
 # Projects and People using NiiVue
 
+- Analysis of Functional NeuroImages (AFNI) [Scientific and Statistical Computing Core](https://afni.nimh.nih.gov/) (National Institutes of Health)
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
-- [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
 - [OpenNeuro.org](https://openneuro.org)
 - [BrainLife.io](https://brainlife.io/about/)
 
@@ -39,31 +36,32 @@ We host many NiiVue examples via github pages. These are updated and deployed au
 
 # Requirements for NiiVue to work  
 
-- [WebGL 2.0 capable](https://caniuse.com/webgl2) web browser (Chrome, FireFox).
+- [WebGL 2.0 capable](https://caniuse.com/webgl2) web browser (Chrome, FireFox, Safari).
 
 # Usage
 
-## existing html page
+## Pure HTML
+
+While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can also embed it directly into HTML web pages. Here is a minimal example:
+
 ```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>NiiVue</title>
+  </head>
+  <body>
+	<canvas id="gl" height=480 width=640></canvas>
+  </body>
 <script src="https://unpkg.com/@niivue/niivue@0.29.0/dist/niivue.umd.js"></script>
-
-<canvas id="gl" height=480 width=640></canvas>
-
 <script>
-  var volumeList = [
-    // first object in array is background image
-      {
-        url: "./some_image.nii.gz",
-      }
-   ]
-
- // Niivue will adjust the canvas to 100% of its parent container's size 
- // the parent element can be any size you want (small or large)
+ var volumeList = [{url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz"}]
  var nv = new niivue.Niivue()
- nv.attachTo('gl') // the canvas element id
+ nv.attachTo('gl') 
  nv.loadVolumes(volumeList)
- nv.setSliceType(nv.sliceTypeMultiPlanar) // press the "v" key to cycle through views
 </script>
+</html>
 ```
 
 ## VueJS example
@@ -95,8 +93,7 @@ export default {
   mounted() {
 
     nv.attachTo('gl')
-    nv.loadVolumes(this.volumeList) // press the "v" key to cycle through views
-
+    nv.loadVolumes(this.volumeList) 
   }
 }
 
@@ -127,7 +124,7 @@ const NiiVue = ({ imageUrl }) => {
     ]
     const nv = new Niivue()
     nv.attachToCanvas(canvas.current)
-    nv.loadVolumes(volumeList) // press the "v" key to cycle through volumes
+    nv.loadVolumes(volumeList)
   }, [imageUrl])
 
   return (
@@ -197,7 +194,7 @@ NiiVue can open several formats popular with brain imaging:
 
 # Alternatives
 
-There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is its use of WebGL 2.0, MRIcroGL inspired shaders, and its minimal design. This makes it easy to integrate with existing web pages quicky in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does **not** use [three.js](https://threejs.org). This means the WebGL calls are tuned for voxel display, and the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, niivue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets. However, there are popular UI frameworks such as [Vuetifyjs](https://vuetifyjs.com/en/) that greatly reduce this burden. Since there are numerous free alternatives, you can choose the optimal tool for your task.
+There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is how it leverages the shaders functions and 3D textures introduced with WebGL 2.0. The minimal design makes it easy to integrate with existing web pages quickly in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does **not** use [three.js](https://threejs.org). This means the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, NiiVue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets (e.g. using VueJS, React, Angular or pure HTML). Since there are numerous free alternatives, you can choose the optimal tool for your task.
 [Francesco Giorlando](https://f.giorlando.org/2018/07/web-viewers-for-fmri/) describes some of the differences between different tools.
 
 | Tool                                                                     | Live Demos                                                               |
@@ -234,20 +231,12 @@ npm install --save-dev @niivue/niivue
 
 ## Local Development
 
-- Make sure you have nodejs and npm installed
-- `git clone git@github.com:niivue/niivue.git`
-- `cd niivue`
-- `npm install`
-
-Source code can be found in `src/`.
-
-You can edit the sources and then launch demos to see the effect of your changes. See the "Launch inlcluded demos" section.
-
-## Run hot module reload development mode
-
-This will run the vite HMR dev server. Open a browser to the URL output in your terminal. changes made to the source code will be immediately reflected in the browser. 
+Make sure you have nodejs and npm installed. 
 
 ```
+git clone git@github.com:niivue/niivue.git
+cd niivue
+npm install
 npm run dev
 ```
 
@@ -335,7 +324,7 @@ npm run test -- -t 'test string'
 
 # Contributing
 
-All contributions to NiiVue are encouraged and welcomed. Feel free to update documentation, add features, fix bugs, or just ask questions on the [issue board](https://github.com/niivue/niivue/issues). 
+Contributions to NiiVue are encouraged and welcomed. Feel free to update documentation, add features, fix bugs, or just ask questions on the [issue board](https://github.com/niivue/niivue/issues). 
 
 ## Using Issues
 

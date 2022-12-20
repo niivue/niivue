@@ -118,7 +118,11 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
  * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
- * @property {string} [colorMapNegative=""] a color map to use for symmetrical negative intensities
+ * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
+ * @property {string} [colorMapNegative=""] a color map to use for negative intensities
+ * @property {number} [cal_minNegative=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
+ * @property {number} [cal_maxNegative=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
 
@@ -140,8 +144,11 @@ export function NVImageFromUrlOptions(
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
+  alphaThreshold = false,
   colorMapNegative = "",
-  imageType = NVIMAGE_TYPE.UNKNOWN
+  imageType = NVIMAGE_TYPE.UNKNOWN,
+  cal_minNegative = NaN,
+  cal_maxNegative = NaN
 ) {
   return {
     url,
@@ -158,6 +165,8 @@ export function NVImageFromUrlOptions(
     useQFormNotSForm,
     colorMapNegative,
     imageType,
+    cal_minNegative,
+    cal_maxNegative,
   };
 }
 
@@ -197,7 +206,9 @@ export function NVImage(
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
-  imageType = NVIMAGE_TYPE.UNKNOWN
+  imageType = NVIMAGE_TYPE.UNKNOWN,
+  cal_minNegative = NaN,
+  cal_maxNegative = NaN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -230,6 +241,9 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
+  this.cal_minNegative = cal_minNegative;
+  this.cal_maxNegative = cal_maxNegative;
+
   this.visible = visible;
   this.modulationImage = null;
   this.series = []; // for concatenating dicom images
