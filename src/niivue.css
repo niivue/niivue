@@ -1,17 +1,22 @@
+html {
+    height: auto;
+    min-height: 100%;
+    margin: 0;
+}
 body {
   display: flex;
   flex-direction: column;
   margin: 0;
-  min-height: 100vh;
+  min-height: 100%;
+  width: 100%;
+  position: absolute;
   font-family: system-ui, Arial, Helvetica, sans-serif;
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
   user-select: none; /* Standard syntax */
+  color: white;
+  background: #202020;
 }
 header {
-  background: #202020;
-  color: white;
-  flex-shrink: 0;
+  margin: 10px;
 }
 main {
   flex: 1;
@@ -19,9 +24,7 @@ main {
   position: relative;
 }
 footer {
-  background: #202020;
-  color: white;
-  flex-shrink: 0;
+  margin: 10px;
 }
 canvas {
   position: absolute;
@@ -83,4 +86,21 @@ div {
 }
 .divider {
   border-top: 1px solid grey;
+}
+.vertical-divider {
+  border-left: 1px solid grey;
+  height: 40px;
+}
+.help-text {
+  margin: auto;
+  max-width: 150px;
+  padding: 0 10px;
+}
+.slidecontainer {
+  padding: 10px 10px;
+  white-space: normal;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
 }

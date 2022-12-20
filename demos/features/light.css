@@ -1,18 +1,22 @@
+html {
+    height: auto;
+    min-height: 100%;
+    margin: 0;
+}
 body {
   display: flex;
   flex-direction: column;
   margin: 0;
-  min-height: 100vh;
+  min-height: 100%;
+  width: 100%;
+  position: absolute;
   font-family: system-ui, Arial, Helvetica, sans-serif;
   background: #FFFFFF;
   color: black;
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
   user-select: none; /* Standard syntax */
 }
 header {
   margin: 10px;
-  flex-shrink: 0
 }
 main {
   flex: 1;
@@ -21,7 +25,6 @@ main {
 }
 footer {
   margin: 10px;
-  flex-shrink: 0
 }
 canvas {
   position: absolute;
