@@ -5584,6 +5584,7 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.canvas.width,
     this.gl.canvas.height,
   ]);
+  this.gl.disable(this.gl.CULL_FACE);
   if (isNegativeColor) {
     let flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]];
     this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip);
