@@ -114139,7 +114139,6 @@ Niivue.prototype.resizeListener = function() {
   this.canvas.style.height = "100%";
   if (this.opts.isHighResolutionCapable) {
     this.uiData.dpr = window.devicePixelRatio || 1;
-    console.log("devicePixelRatio: " + this.uiData.dpr);
   } else {
     this.uiData.dpr = 1;
   }
@@ -117323,6 +117322,7 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
     this.gl.canvas.width,
     this.gl.canvas.height
   ]);
+  this.gl.disable(this.gl.CULL_FACE);
   if (isNegativeColor) {
     let flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]];
     this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip);
