@@ -539,7 +539,7 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
     );
   }
-  log.debug('NIIVUE VERSION ', __NIIVUE_VERSION__)
+  console.log('NIIVUE VERSION ', __NIIVUE_VERSION__) // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
   // avoids white cube around image in 3D render mode
@@ -1150,6 +1150,8 @@ Niivue.prototype.keyDownListener = function (e) {
   } else if (e.code === "ArrowRight") {
     // only works for background (first loaded image is index 0)
     this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
+  } else if (e.code === "Slash" && e.shiftKey){
+    alert(`NIIVUE VERSION: ${__NIIVUE_VERSION__}`)
   }
 };
 
