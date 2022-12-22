@@ -687,8 +687,9 @@ void main(void) {
 	return;
 
 	if (layer < 2.0) return;
-	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	//vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
+	//vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
@@ -769,8 +770,7 @@ void main(void) {
 	}
 	FragColor.a *= opacity;
 	if (layer < 1.0) return;
-	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
@@ -806,28 +806,6 @@ void main(void) {
 	if (!hasAlpha)
 		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
 	FragColor.a *= opacity;
-}`;
-
-export var vertPassThroughShader = `#version 300 es
-#line 283
-precision highp int;
-precision highp float;
-in vec3 vPos;
-out vec2 TexCoord;
-void main() {
-	TexCoord = vPos.xy;
-	gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
-}`;
-
-export var fragPassThroughShader = `#version 300 es
-precision highp int;
-precision highp float;
-in vec2 TexCoord;
-out vec4 FragColor;
-uniform float coordZ;
-uniform lowp sampler3D in3D;
-void main(void) {
- FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
 }`;
 
 export var vertGrowCutShader = `#version 300 es

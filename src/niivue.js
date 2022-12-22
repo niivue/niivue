@@ -21,8 +21,6 @@ import {
 } from "./shader-srcs.js";
 import {
   vertOrientShader,
-  vertPassThroughShader,
-  fragPassThroughShader,
   vertGrowCutShader,
   fragGrowCutShader,
   fragOrientShaderU,
@@ -189,7 +187,6 @@ export function Niivue(options = {}) {
   this.bmpTexture = null; //thumbnail WebGLTexture object
   this.thumbnailVisible = false;
   this.bmpTextureWH = 1.0; //thumbnail width/height ratio
-  this.passThroughShader = null;
   this.growCutShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
@@ -4174,12 +4171,6 @@ Niivue.prototype.init = async function () {
   );
 
   // orientation shaders
-  this.passThroughShader = new Shader(
-    this.gl,
-    vertPassThroughShader,
-    fragPassThroughShader
-  );
-
   this.orientShaderAtlasU = new Shader(
     this.gl,
     vertOrientShader,
@@ -4436,6 +4427,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
         this.gl.TEXTURE2,
         this.back.dims
       );
+      this.overlayTexture = outTexture;
       this.overlayTextureID = outTexture;
     } else outTexture = this.overlayTextureID;
   }
@@ -4653,28 +4645,25 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   let blendTexture = null;
   this.gl.bindVertexArray(this.genericVAO);
   if (layer > 1) {
-    //use pass-through shader to copy previous color to temporary 2D texture
-    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims);
+    //we can not simultaneously read and write to the same texture.
+    //therefore, we must clone the overlay texture when we wish to add another layer
+    //copy previous overlay texture to blend texture
+    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims, true);
     this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
-    let passShader = this.passThroughShader;
-    passShader.use(this.gl);
-    this.gl.uniform1i(passShader.uniforms["in3D"], 2); //overlay volume
     for (let i = 0; i < this.back.dims[3]; i++) {
-      //output slices
-      let coordZ = (1 / this.back.dims[3]) * (i + 0.5);
-      this.gl.uniform1f(passShader.uniforms["coordZ"], coordZ);
+      //n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
       this.gl.framebufferTextureLayer(
         this.gl.FRAMEBUFFER,
         this.gl.COLOR_ATTACHMENT0,
-        blendTexture,
+        this.overlayTexture,
         0,
         i
-      );
-      //this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+      ); //read from existing overlay texture 2 
+      this.gl.activeTexture(this.gl.TEXTURE5); //write to blend texture 5
+      this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D,0, 0,0,i, 0,0, this.back.dims[1], this.back.dims[2]);
     }
   } else
-    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
+    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true);
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
