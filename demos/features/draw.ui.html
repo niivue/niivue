@@ -4,6 +4,7 @@
     <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="niivue.css">
+  <title>Drawing User Interface</title>
 </head>
 <body>
   <header>
@@ -12,7 +13,7 @@
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
-        <a class="viewBtn" id="SaveDraw">Save Drawing</a>
+        <a class="viewBtn" id="SaveDraw" accesskey="s">Save Drawing ^S</a>
         <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
         <a class="viewBtn" id="ShowHeader">Show Header</a>
         <a class="linker" href="https://github.com/niivue/niivue">About</a>
@@ -23,7 +24,7 @@
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
-        <a class="viewBtn" id="Undo">Undo Draw</a>
+        <a class="viewBtn" id="Undo" accesskey="z">Undo Draw ^Z</a>
       </div>
     </div>
     <div class="dropdown">
@@ -69,15 +70,18 @@
         <i class="fa fa-caret-down"></i>
       </button>
       <div class="dropdown-content">
-        <a class="viewBtn dropdown-item-checked" id="@Off">Off</a>
-        <a class="viewBtn" id="@Red">Red</a>
-        <a class="viewBtn" id="@Green">Green</a>
-        <a class="viewBtn" id="@Blue">Blue</a>
-        <a class="viewBtn" id="@Erase">Erase</a>
-        <a class="viewBtn" id="@Cluster">Erase Cluster</a>
-        <a class="viewBtn divider dropdown-item-checked" id="DrawFilled">Fill Outline</a>
-        <a class="viewBtn dropdown-item-checked" id="DrawOverwrite">Pen Overwrites Existing</a>
-        <a class="viewBtn dropdown-item-checked" id="Translucent">Translucent</a>
+        <a class="viewBtn dropdown-item-checked" id="@Off" accesskey="0">Off ^0</a>
+        <a class="viewBtn" id="@Red" accesskey="1">Red ^1</a>
+        <a class="viewBtn" id="@Green" accesskey="2">Green ^2</a>
+        <a class="viewBtn" id="@Blue" accesskey="3">Blue ^3</a>
+        <a class="viewBtn" id="@Erase" accesskey="4">Erase ^4</a>
+        <a class="viewBtn" id="@Cluster" accesskey="5">Erase Cluster ^5</a>
+        <a class="viewBtn" id="@GrowCluster">Grow Cluster</a>
+        <a class="viewBtn" id="@GrowClusterDark">Grow Cluster Dark</a>
+        <a class="viewBtn" id="@GrowClusterBright">Grow Cluster Bright</a>
+        <a class="viewBtn divider dropdown-item-checked" id="DrawFilled" accesskey="f">Fill Outline ^F</a>
+        <a class="viewBtn dropdown-item-checked" id="DrawOverwrite" accesskey="o">Pen Overwrites Existing ^O</a>
+        <a class="viewBtn dropdown-item-checked" id="Translucent" accesskey="t">Translucent ^T</a>
         <a class="viewBtn" id="Growcut">Grow Cut</a>
         <a class="viewBtn" id="DrawOtsu">Otsu</a>
       </div>
@@ -89,7 +93,7 @@
       <div class="dropdown-content">
         <a class="viewBtn dropdown-item-checked" id="^contrast">Contrast</a>
         <a class="viewBtn" id="^measurement">Measurement</a>
-        <a class="viewBtn" id="^pan">Pan</a>
+        <a class="viewBtn" id="^pan">Pan/Zoom</a>
         <a class="viewBtn" id="^none">None</a>
       </div>
     </div>
@@ -119,8 +123,14 @@
 <script type="module" async>
   const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
   var isFilled = true;
-  function handleIntensityChange(data){
-      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+  function handleIntensityChange(data){ 
+	function flt2str(flt, decimals = 0) {
+	  return flt.toFixed(decimals).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')
+	}
+	let str = "";
+	if (data.hasOwnProperty('values')) //e.g. a mesh with no voxels will have no values
+		str = '='+flt2str(data.values[0].value, 3)
+	document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+str	
   }
   var nv1 = new niivue.Niivue({
       logging: true,
@@ -227,6 +237,12 @@
               nv1.setPenValue(3, isFilled);
           if (event.target.id === "@Cluster")
               nv1.setPenValue(-0, isFilled);
+          if (event.target.id === "@GrowCluster")
+              nv1.setPenValue(NaN, isFilled);
+          if (event.target.id === "@GrowClusterBright")
+              nv1.setPenValue(Number.POSITIVE_INFINITY, isFilled);
+          if (event.target.id === "@GrowClusterDark")
+              nv1.setPenValue(Number.NEGATIVE_INFINITY, isFilled);
           toggleGroup(event.target.id)
       } //Draw Color
       if (event.target.id === "Growcut")

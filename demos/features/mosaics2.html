@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
+    <title>Mosaics</title>
     <link rel="stylesheet" href="light.css">
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
 	<header>
 	  <button id="about">Mosaic string:</button>
-      <input type="text" id="str" name="str" onKeyUp="return bar()" value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0" required minlength="2" maxlength="128" size="128">
+      <input type="text" id="str" value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0" required minlength="2" maxlength="128" size="128">
       <p>
      <label for="check1">Radiological</label>
      <input type="checkbox" id="check1" name="check1" unchecked>
@@ -32,9 +32,9 @@
      gamma <input type="range" min="1" max="20" value="10" class="slider" id="gamma">
       <label for="dragMode">drag mode</label>
       <select id="dragMode">
-        <option value="contrast">contrast</option>
-        <option value="measurement">measurement</option>
-        <option value="none">none</option>
+       <option value="contrast">contrast</option>
+       <option value="measurement">measurement</option>
+       <option value="none">none</option>
       </select>
 
     </header>
@@ -128,7 +128,8 @@
       nv1.setSliceType(nv1.sliceTypeAxial)
 	  nv1.opts.isColorbar = true
       nv1.setSliceMosaicString(txt.value)
-      function bar() {
+	  document.getElementById("str").addEventListener("keyup", doStr);
+      function doStr() {
             nv1.setSliceMosaicString(txt.value)
       }
 	  document.getElementById("about").addEventListener("click", doAbout);

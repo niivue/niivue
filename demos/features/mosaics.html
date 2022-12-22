@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>basic 3D</title>
+    <title>Basic Mosaics</title>
     <link rel="stylesheet" href="light.css">
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
 	<header>
 	  <button id="about">Mosaic string:</button>
-      <input type="text" id="str" name="str" onKeyUp="return bar()" value="A -10 0 20 L+ C -10 0; L-  C 20 40  S -10 0 20; A R X 0 R X -0 C R X 0 R X -0 S R X 0 R X -0" required minlength="2" maxlength="128" size="128">
+      <input type="text" id="str" value="A -10 0 20 L+ C -10 0; L-  C 20 40  S -10 0 20; A R X 0 R X -0 C R X 0 R X -0 S R X 0 R X -0" required minlength="2" maxlength="128" size="128">
  
     </header>
     <main>
@@ -27,7 +27,8 @@
       var txt = document.getElementById("str")
       nv1.setSliceType(nv1.sliceTypeAxial)
       nv1.setSliceMosaicString(txt.value)
-      function bar() {
+	  document.getElementById("str").addEventListener("keyup", doStr);
+      function doStr() {
             nv1.setSliceMosaicString(txt.value)
       }
 	  document.getElementById("about").addEventListener("click", doAbout);

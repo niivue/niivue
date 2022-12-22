@@ -118,7 +118,11 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @property {boolean} [visible=true] whether or not this image is to be visible
  * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
- * @property {string} [colorMapNegative=""] a color map to use for symmetrical negative intensities
+ * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
+ * @property {string} [colorMapNegative=""] a color map to use for negative intensities
+ * @property {number} [cal_minNegative=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
+ * @property {number} [cal_maxNegative=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
 
@@ -140,8 +144,11 @@ export function NVImageFromUrlOptions(
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
+  alphaThreshold = false,
   colorMapNegative = "",
-  imageType = NVIMAGE_TYPE.UNKNOWN
+  imageType = NVIMAGE_TYPE.UNKNOWN,
+  cal_minNegative = NaN,
+  cal_maxNegative = NaN
 ) {
   return {
     url,
@@ -158,6 +165,8 @@ export function NVImageFromUrlOptions(
     useQFormNotSForm,
     colorMapNegative,
     imageType,
+    cal_minNegative,
+    cal_maxNegative,
   };
 }
 
@@ -197,7 +206,9 @@ export function NVImage(
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
-  imageType = NVIMAGE_TYPE.UNKNOWN
+  imageType = NVIMAGE_TYPE.UNKNOWN,
+  cal_minNegative = NaN,
+  cal_maxNegative = NaN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -230,6 +241,9 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
+  this.cal_minNegative = cal_minNegative;
+  this.cal_maxNegative = cal_maxNegative;
+
   this.visible = visible;
   this.modulationImage = null;
   this.series = []; // for concatenating dicom images
@@ -643,7 +657,7 @@ NVImage.prototype.calculateOblique = function () {
   let pixdimX = this.pixDimsRAS[1]; //vec3.length(X1mm);
   let pixdimY = this.pixDimsRAS[2]; //vec3.length(Y1mm);
   let pixdimZ = this.pixDimsRAS[3]; //vec3.length(Z1mm);
-  console.log("pixdim", pixdimX, pixdimY, pixdimZ);
+  //console.log("pixdim", pixdimX, pixdimY, pixdimZ);
   //orthographic view
   let oform = mat4.clone(sform);
   oform[0] = pixdimX * dim[0];
@@ -655,11 +669,11 @@ NVImage.prototype.calculateOblique = function () {
   oform[8] = 0;
   oform[9] = 0;
   oform[10] = pixdimZ * dim[2];
-  let originVoxel = this.mm2vox([0, 0, 0]);
+  let originVoxel = this.mm2vox([0, 0, 0], true);
   //set matrix translation for distance from origin
-  oform[12] = -originVoxel[0] * pixdimX;
-  oform[13] = -originVoxel[1] * pixdimY;
-  oform[14] = -originVoxel[2] * pixdimZ;
+  oform[12] = (-originVoxel[0] - 0.5) * pixdimX;
+  oform[13] = (-originVoxel[1] - 0.5) * pixdimY;
+  oform[14] = (-originVoxel[2] - 0.5) * pixdimZ;
   this.frac2mmOrtho = mat4.clone(oform);
   this.extentsMinOrtho = [oform[12], oform[13], oform[14]];
   this.extentsMaxOrtho = [
@@ -667,6 +681,15 @@ NVImage.prototype.calculateOblique = function () {
     oform[5] + oform[13],
     oform[10] + oform[14],
   ];
+  this.mm2ortho = mat4.create();
+  mat4.invert(this.mm2ortho, oblique);
+  /*function reportMat(m) {
+    console.log(
+      `m = [${m[0]} ${m[1]} ${m[2]} ${m[3]}; ${m[4]} ${m[5]} ${m[6]} ${m[7]}; ${m[8]} ${m[9]} ${m[10]} ${m[11]}; ${m[12]} ${m[13]} ${m[14]} ${m[15]}]`
+    );
+  }
+  reportMat(this.frac2mmOrtho);
+  reportMat(this.frac2mm);*/
 };
 
 // not included in public docs
@@ -2116,7 +2139,7 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
 
 // not included in public docs
 // convert world space to voxel location (row, column slice, indexed from 0)
-NVImage.prototype.mm2vox = function (mm) {
+NVImage.prototype.mm2vox = function (mm, frac = false) {
   let sform = mat4.fromValues(...this.hdr.affine.flat());
   let out = mat4.clone(sform);
   mat4.transpose(out, sform);
@@ -2124,6 +2147,7 @@ NVImage.prototype.mm2vox = function (mm) {
   let pos = vec4.fromValues(mm[0], mm[1], mm[2], 1);
   vec4.transformMat4(pos, pos, out);
   let pos3 = vec3.fromValues(pos[0], pos[1], pos[2]);
+  if (frac) return pos3;
   return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
 }; // vox2mm()
 
@@ -3000,7 +3024,6 @@ NVImage.prototype.toNiivueObject3D = function (id, gl) {
   let RAI = this.vox2mm([R, A, I], this.matRAS);
   let RPS = this.vox2mm([R, P, S], this.matRAS);
   let RAS = this.vox2mm([R, A, S], this.matRAS);
-
   let posTex = [
     //spatial position (XYZ), texture coordinates UVW
     // Superior face

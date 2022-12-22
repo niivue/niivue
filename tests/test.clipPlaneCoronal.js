@@ -11,7 +11,7 @@ test('volume is properly clipped in coronal plane', async () => {
     }
     let nv = new niivue.Niivue(opts = opts)
     await nv.attachTo('gl')
-    nv.sliceType = nv.sliceTypeRender;
+    nv.setSliceType(nv.sliceTypeRender) 
 		nv.setClipPlane([0, 0, 0])
 
     // load one volume object in an array

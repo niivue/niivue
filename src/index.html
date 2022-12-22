@@ -68,8 +68,12 @@
       }
       //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz?test=test" }]
       var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
+
       function handleLocationChange(data){ 
-        document.getElementById('location').innerHTML = data.xy  
+        function flt2str(flt, decimals = 0) {
+          return flt.toFixed(decimals)
+        }	
+        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)	
       }
       var nv1 = new Niivue({
        loadingText: 'there are no images',
@@ -80,7 +84,6 @@
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      //nv1.setSliceType(nv1.sliceTypeSagittal)
       nv1.setClipPlane([-0.1, 270, 0])
       nv1.setRenderAzimuthElevation(90,10)
 	  nv1.opts.dragMode = nv1.dragModes.pan
