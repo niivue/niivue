@@ -451,7 +451,6 @@ Niivue.prototype.saveScene = function (filename = "") {
       filename = `niivue-screenshot-${new Date().toString()}.png`;
       filename = filename.replace(/\s/g, "_");
     }
-    console.log(filename);
     saveBlob(blob, filename);
   });
 };
@@ -540,6 +539,7 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
     );
   }
+  console.log('NIIVUE VERSION ', __NIIVUE_VERSION__) // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
   // avoids white cube around image in 3D render mode
@@ -619,7 +619,7 @@ Niivue.prototype.resizeListener = function () {
   //https://www.khronos.org/webgl/wiki/HandlingHighDPI
   if (this.opts.isHighResolutionCapable) {
     this.uiData.dpr = window.devicePixelRatio || 1;
-    //console.log("devicePixelRatio: " + this.uiData.dpr);
+    log.debug("devicePixelRatio: " + this.uiData.dpr);
   } else {
     this.uiData.dpr = 1;
   }
@@ -1150,6 +1150,8 @@ Niivue.prototype.keyDownListener = function (e) {
   } else if (e.code === "ArrowRight") {
     // only works for background (first loaded image is index 0)
     this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
+  } else if (e.code === "Slash" && e.shiftKey){
+    alert(`NIIVUE VERSION: ${__NIIVUE_VERSION__}`)
   }
 };
 
@@ -1309,7 +1311,7 @@ Niivue.prototype.readDirectory = function (directory) {
           fileEntry.file(resolve, reject)
         );
       } catch (err) {
-        console.log(err);
+        log.debug(err);
       }
     }
     for (let i = 0; i < fileSystemEntries.length; i++) {
@@ -1355,8 +1357,8 @@ Niivue.prototype.dropListener = async function (e) {
     urlsToLoad.push(url);
     let imageOptions = new NVImageFromUrlOptions(url);
     let ext = this.getFileExt(url);
-    console.log("dropped ext");
-    console.log(ext);
+    log.debug("dropped ext");
+    log.debug(ext);
     if (MESH_EXTENSIONS.includes(ext)) {
       this.addMeshFromUrl({ url });
     } else if (ext === "NVD") {
@@ -1376,7 +1378,7 @@ Niivue.prototype.dropListener = async function (e) {
       }
       for (const item of items) {
         const entry = item.getAsEntry || item.webkitGetAsEntry();
-        console.log(entry);
+        log.debug(entry);
         if (entry.isFile) {
           let ext = this.getFileExt(entry.name);
           if (ext === "PNG") {
@@ -1422,7 +1424,7 @@ Niivue.prototype.dropListener = async function (e) {
             entry.file(async (file) => {
               let nvdoc = await NVDocument.loadFromFile(file);
               this.loadDocument(nvdoc);
-              console.log("loaded document");
+              log.debug("loaded document");
             });
             break;
           }
@@ -1532,7 +1534,7 @@ Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   if (!this.opts.isHighResolutionCapable) {
     this.uiData.dpr = 1;
   }
-  console.log("HighDPI feature is experimental");
+  log.debug("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
   this.drawScene();
 };
@@ -1704,7 +1706,7 @@ function decodeRLE(rle, decodedlen) {
 // Internal function to store drawings that can be used for undo operations
 Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
   if (!this.drawBitmap || this.drawBitmap.length < 1) {
-    console.log("drawAddUndoBitmap error: No drawing open");
+    log.debug("drawAddUndoBitmap error: No drawing open");
     return false;
   }
   //let rle = encodeRLE(this.drawBitmap);
@@ -1731,7 +1733,7 @@ Niivue.prototype.drawClearAllUndoBitmaps = async function () {
  */
 Niivue.prototype.drawUndo = function () {
   if (this.drawUndoBitmaps.length < 1) {
-    console.log("undo bitmaps not loaded");
+    log.debug("undo bitmaps not loaded");
     return;
   }
   this.currentDrawUndoBitmap--;
@@ -1740,7 +1742,7 @@ Niivue.prototype.drawUndo = function () {
   if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length)
     this.currentDrawUndoBitmap = 0;
   if (this.drawUndoBitmaps[this.currentDrawUndoBitmap].length < 2) {
-    console.log("drawUndo is misbehaving");
+    log.debug("drawUndo is misbehaving");
     return;
   }
   this.drawBitmap = decodeRLE(
@@ -1751,7 +1753,7 @@ Niivue.prototype.drawUndo = function () {
 };
 
 Niivue.prototype.loadDrawing = function (drawingBitmap) {
-  if (this.drawBitmap) console.log("Overwriting open drawing!");
+  if (this.drawBitmap) log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
   let dims = drawingBitmap.hdr.dims;
   if (
@@ -1759,11 +1761,11 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
     dims[2] !== this.back.hdr.dims[2] ||
     dims[3] !== this.back.hdr.dims[3]
   ) {
-    console.log("drawing dimensions do not match background image");
+    log.debug("drawing dimensions do not match background image");
     return false;
   }
   if (drawingBitmap.img.constructor !== Uint8Array)
-    console.log("Drawings should be UINT8");
+    log.debug("Drawings should be UINT8");
   let perm = drawingBitmap.permRAS;
   let vx = dims[1] * dims[2] * dims[3];
   this.drawBitmap = new Uint8Array(vx);
@@ -1833,7 +1835,7 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
  * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
  */
 Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
-  if (this.drawBitmap) console.log("Overwriting open drawing!");
+  if (this.drawBitmap) log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
   try {
     let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
@@ -2004,12 +2006,12 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
  */
 Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
   if (!this.back.hasOwnProperty("dims")) {
-    console.log("No voxelwise image open");
+    log.debug("No voxelwise image open");
     return false;
   }
   if (isSaveDrawing) {
     if (!this.drawBitmap) {
-      console.log("No drawing open");
+      log.debug("No drawing open");
       return false;
     }
     let perm = this.volumes[0].permRAS;
@@ -2716,7 +2718,7 @@ Niivue.prototype.loadDocument = function (document) {
 
   for (const meshDataObject of document.meshDataObjects) {
     const meshInit = { gl: this.gl, ...meshDataObject };
-    console.log(meshInit);
+    log.debug(meshInit);
     const meshToAdd = new NVMesh(
       meshInit.pts,
       meshInit.tris,
@@ -2733,7 +2735,7 @@ Niivue.prototype.loadDocument = function (document) {
     meshToAdd.meshShaderIndex = meshInit.meshShaderIndex;
     meshToAdd.layers = meshInit.layers;
     meshToAdd.updateMesh(this.gl);
-    console.log(meshToAdd);
+    log.debug(meshToAdd);
     this.addMesh(meshToAdd);
   }
   this.updateGLVolume();
@@ -3036,7 +3038,7 @@ Niivue.prototype.drawGrowCut = function () {
   let hdr = this.back.hdr;
   let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
   if (this.drawBitmap.length !== nv) {
-    console.log("bitmap dims are wrong");
+    log.debug("bitmap dims are wrong");
     return;
   }
   //this.drawUndoBitmap = this.drawBitmap.slice();
@@ -3126,7 +3128,7 @@ Niivue.prototype.drawGrowCut = function () {
   const format = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
   const type = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
   if (format !== gl.RED_INTEGER || type !== gl.SHORT)
-    console.log("readPixels will fail.");
+    log.debug("readPixels will fail.");
   img16 = [];
   let nv2D = this.back.dims[1] * this.back.dims[2];
   let slice16 = new Int16Array(nv2D);
@@ -3347,8 +3349,8 @@ Niivue.prototype.drawFloodFill = function (
   let seedColor = img[seedVx];
   if (seedColor === newColor) {
     if (growSelectedCluster !== 0)
-      console.log("drawFloodFill selected voxel is not part of a drawing");
-    else console.log("drawFloodFill selected voxel is already desired color");
+      log.debug("drawFloodFill selected voxel is not part of a drawing");
+    else log.debug("drawFloodFill selected voxel is already desired color");
     return;
   }
   for (let i = 1; i < nxyz; i++) {
@@ -3372,7 +3374,7 @@ Niivue.prototype.drawFloodFill = function (
     if (growSelectedCluster == Number.NEGATIVE_INFINITY)
       mn = growSelectedCluster;
 
-    console.log("Intensity range of selected cluster :", mn, mx);
+    log.debug("Intensity range of selected cluster :", mn, mx);
     //second pass:
     for (let i = 1; i < nxyz; i++) {
       img[i] = 0;
@@ -3906,7 +3908,7 @@ Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
   shaderIndex = Math.max(shaderIndex, 0);
   let index = this.getMeshIndexByID(id);
   if (index >= this.meshes.length) {
-    console.log(
+    log.debug(
       "Unable to change shader until mesh is loaded (maybe you need async)"
     );
     return;
@@ -4313,7 +4315,7 @@ Niivue.prototype.getDescriptives = function (
     for (var m = 0; m < masks.length; m++) {
       let imgMask = this.volumes[masks[m]].img;
       if (imgMask.length !== nv) {
-        console.log(
+        log.debug(
           "Mask resolution does not match image. Skipping masking layer " +
             masks[m]
         );
@@ -4717,7 +4719,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     overlayItem.modulationImage >= 0 &&
     overlayItem.modulationImage < this.volumes.length
   ) {
-    console.log(this.volumes);
+    log.debug(this.volumes);
     let mhdr = this.volumes[overlayItem.modulationImage].hdr;
     if (
       mhdr.dims[1] === hdr.dims[1] &&
@@ -4758,7 +4760,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
           img = new Uint16Array(imgRaw);
           break;
       }
-      console.log(this.volumes[overlayItem.modulationImage]);
+      log.debug(this.volumes[overlayItem.modulationImage]);
       for (let i = 0; i < vx; i++) {
         let v = img[i] * mhdr.scl_slope + mhdr.scl_inter;
         v = (v - mn) * scale;
@@ -4778,7 +4780,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
         this.gl.UNSIGNED_BYTE,
         modulateVolume
       );
-    } else console.log("Modulation image dimensions do not match target");
+    } else log.debug("Modulation image dimensions do not match target");
   } else this.gl.uniform1i(orientShader.uniforms["modulation"], 0);
   this.gl.uniformMatrix4fv(orientShader.uniforms["mtx"], false, mtx);
   if (hdr.intent_code === 1002) {
@@ -6532,7 +6534,7 @@ Niivue.prototype.drawGraph = function () {
   let maxVols = this.volumes[vols[0]].nFrame4D;
   this.graph.selectedColumn = this.volumes[vols[0]].frame4D;
   if (maxVols < 2) {
-    console.log("Unable to generate a graph: Selected volume is 3D not 4D");
+    log.debug("Unable to generate a graph: Selected volume is 3D not 4D");
     return;
   }
   for (let i = 0; i < vols.length; i++) {
@@ -7624,7 +7626,7 @@ Niivue.prototype.drawCrossLines = function (
  */
 Niivue.prototype.drawMosaic = function (mosaicStr) {
   if (this.volumes.length === 0) {
-    console.log("Unable to draw mosaic until voxel-based image is loaded");
+    log.debug("Unable to draw mosaic until voxel-based image is loaded");
     return;
   }
   this.screenSlices = [];
@@ -7816,7 +7818,7 @@ Niivue.prototype.drawScene = function () {
       //sliceTypeMultiplanar
       let { volScale } = this.sliceScale();
       if (typeof this.opts.multiplanarPadPixels !== "number")
-        console.log("multiplanarPadPixels must be numeric");
+        log.debug("multiplanarPadPixels must be numeric");
       let pad = parseFloat(this.opts.multiplanarPadPixels);
       // size for 2 rows, 2 columns
       let ltwh = this.scaleSlice(

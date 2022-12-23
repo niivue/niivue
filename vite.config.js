@@ -4,6 +4,9 @@ const { defineConfig } = require('vite')
 import commonjs from '@rollup/plugin-commonjs';
 
 module.exports = defineConfig({
+    define: {
+      '__NIIVUE_VERSION__': JSON.stringify(process.env.npm_package_version),
+    },
     root: '.',
 		server: {
 			open: '/src/index.html',
