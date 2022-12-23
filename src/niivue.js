@@ -202,6 +202,7 @@ export function Niivue(options = {}) {
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
   this.overlayOutlineWidth = 0; //float, 0 for none
+  this.isAlphaClipDark = false;
 
   this.syncOpts = {};
   this.readyForSync = false;
@@ -4079,6 +4080,8 @@ Niivue.prototype.init = async function () {
   this.sliceMMShader.use(this.gl);
   this.sliceMMShader.drawOpacityLoc =
     this.sliceMMShader.uniforms["drawOpacity"];
+  this.sliceMMShader.isAlphaClipDarkLoc =
+    this.sliceMMShader.uniforms["isAlphaClipDark"];
   this.sliceMMShader.overlayOutlineWidthLoc =
     this.sliceMMShader.uniforms["overlayOutlineWidth"];
   this.sliceMMShader.backgroundMasksOverlaysLoc =
@@ -4357,6 +4360,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       (overlayItem.frame4D + 1) * overlayItem.nVox3D
     );
   let opacity = overlayItem.opacity;
+  if (layer > 1 && opacity === 0) return; //skip completely transparent layers
   let outTexture = null;
   this.gl.bindVertexArray(this.unusedVAO);
   if (this.crosshairs3D !== null) this.crosshairs3D.mm[0] = NaN; //force crosshairs3D redraw
@@ -4648,7 +4652,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     //we can not simultaneously read and write to the same texture.
     //therefore, we must clone the overlay texture when we wish to add another layer
     //copy previous overlay texture to blend texture
-    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims, true);
+    blendTexture = this.rgbaTex(
+      blendTexture,
+      this.gl.TEXTURE5,
+      this.back.dims,
+      true
+    );
     this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
     for (let i = 0; i < this.back.dims[3]; i++) {
       //n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
@@ -4658,12 +4667,27 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
         this.overlayTexture,
         0,
         i
-      ); //read from existing overlay texture 2 
+      ); //read from existing overlay texture 2
       this.gl.activeTexture(this.gl.TEXTURE5); //write to blend texture 5
-      this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D,0, 0,0,i, 0,0, this.back.dims[1], this.back.dims[2]);
+      this.gl.copyTexSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        i,
+        0,
+        0,
+        this.back.dims[1],
+        this.back.dims[2]
+      );
     }
   } else
-    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true);
+    blendTexture = this.rgbaTex(
+      blendTexture,
+      this.gl.TEXTURE5,
+      [2, 2, 2, 2],
+      true
+    );
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
@@ -4698,7 +4722,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   this.gl.uniform1f(orientShader.uniforms["scl_inter"], hdr.scl_inter);
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
-
   this.gl.uniform1i(orientShader.uniforms["modulationVol"], 7);
   let modulateTexture = null;
   if (
@@ -4706,15 +4729,16 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     overlayItem.modulationImage >= 0 &&
     overlayItem.modulationImage < this.volumes.length
   ) {
-    console.log(this.volumes);
+    console.log("modulations", overlayItem.modulateAlpha);
     let mhdr = this.volumes[overlayItem.modulationImage].hdr;
     if (
       mhdr.dims[1] === hdr.dims[1] &&
       mhdr.dims[2] === hdr.dims[2] &&
       mhdr.dims[3] === hdr.dims[3]
     ) {
-      this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
-
+      if (overlayItem.modulateAlpha)
+        this.gl.uniform1i(orientShader.uniforms["modulation"], 2);
+      else this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
       //r8Tex(texID, activeID, dims, isInit = false)
       modulateTexture = this.r8Tex(
         modulateTexture,
@@ -4726,8 +4750,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
       let vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
       let modulateVolume = new Uint8Array(vx);
-      let mn = mhdr.cal_min;
-      let scale = 255.0 / (mhdr.cal_max - mhdr.cal_min);
+      let mn = this.volumes[overlayItem.modulationImage].cal_min;
+      let scale =
+        255.0 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
       let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
       let img = new Uint8Array(imgRaw);
       switch (mhdr.datatypeCode) {
@@ -4747,7 +4772,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
           img = new Uint16Array(imgRaw);
           break;
       }
-      console.log(this.volumes[overlayItem.modulationImage]);
+      //console.log('modulate', this.volumes[overlayItem.modulationImage]);
       for (let i = 0; i < vx; i++) {
         let v = img[i] * mhdr.scl_slope + mhdr.scl_inter;
         v = (v - mn) * scale;
@@ -4892,10 +4917,15 @@ Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
  * modulate intensity of one image based on intensity of another
  * @param {string} id the ID of the NVImage to be biased
  * @param {string} id the ID of the NVImage that controls bias (null to disable modulation)
+ * @param {boolean} does the modulation influence alpha transparency (true) or RGB color (false) components.
  * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
  * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo usage}
  */
-Niivue.prototype.setModulationImage = function (idTarget, idModulation) {
+Niivue.prototype.setModulationImage = function (
+  idTarget,
+  idModulation,
+  modulateAlpha = false
+) {
   //to set:
   // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
   //to clear:
@@ -4905,6 +4935,7 @@ Niivue.prototype.setModulationImage = function (idTarget, idModulation) {
   //if (idModulation)
   idxModulation = this.getVolumeIndexByID(idModulation);
   this.volumes[idxTarget].modulationImage = idxModulation;
+  this.volumes[idxTarget].modulateAlpha = modulateAlpha;
   this.updateGLVolume();
 };
 Niivue.prototype.setGamma = function (gamma = 1.0) {
@@ -6142,7 +6173,6 @@ Niivue.prototype.draw2D = function (
     elevation,
     isRadiolgical
   );
-
   if (customMM === Infinity || customMM === -Infinity) {
     //draw rendering
     let ltwh = leftTopWidthHeight.slice();
@@ -6175,6 +6205,7 @@ Niivue.prototype.draw2D = function (
     this.sliceMMShader.overlayOutlineWidthLoc,
     this.overlayOutlineWidth
   );
+  gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark);
   gl.uniform1i(
     this.sliceMMShader.backgroundMasksOverlaysLoc,
     this.backgroundMasksOverlays
@@ -6902,7 +6933,7 @@ Niivue.prototype.drawOrientationCube = function (
 Niivue.prototype.createOnLocationChange = function () {
   this.onLocationChange({
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
-    vox: this.frac2vox(this.scene.crosshairPos), //borg
+    vox: this.frac2vox(this.scene.crosshairPos),
     frac: this.scene.crosshairPos,
     xy: [this.mousePos[0], this.mousePos[1]],
     values: this.volumes.map((v) => {

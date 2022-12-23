@@ -246,6 +246,7 @@ export function NVImage(
 
   this.visible = visible;
   this.modulationImage = null;
+  this.modulateAlpha = false; //does modulation image influence RGB (false) or A (true)
   this.series = []; // for concatenating dicom images
 
   this.onColorMapChange = () => {};

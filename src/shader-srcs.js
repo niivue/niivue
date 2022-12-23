@@ -420,6 +420,7 @@ uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
@@ -427,6 +428,7 @@ void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
+	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
@@ -477,11 +479,10 @@ void main() {
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
 		return;
-	//float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-	//if (aout <= 0.0) return;
-	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	//color.a = 1.0;
+	float a = color.a + ocolor.a * (1.0 - color.a); // premultiplied alpha
+	if (a == 0.0) return;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
+	color.a = a;
 }`;
 
 export var fragRectShader = `#version 300 es
@@ -759,14 +760,20 @@ void main(void) {
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
-	if (modulation > 0)
-		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	//if (modulation > 10)
+	//	FragColor.a *= texture(modulationVol, vx.xyz).r;
+	//	FragColor.rgb *= texture(modulationVol, vx.xyz).r;
 	if (isAlphaThreshold) {
 		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg)) 
 			FragColor.a = pow(-f / -cal_maxNeg, 2.0);
 		else if ((f > 0.0) && (cal_min > 0.0))
 			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
 		//FragColor.g = 0.0;
+	}
+	if (modulation == 1) {
+		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	} else if (modulation == 2) {
+		FragColor.a = texture(modulationVol, vx.xyz).r;
 	}
 	FragColor.a *= opacity;
 	if (layer < 1.0) return;
@@ -801,10 +808,14 @@ void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
 	uvec4 aColor = texture(intensityVol, vx.xyz);
 	FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
-	if (modulation > 0)
+	if (modulation == 1)
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
-	if (!hasAlpha)
+	if (!hasAlpha) {
 		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
+		FragColor.a = step(0.01, FragColor.a);
+	}
+	if (modulation == 2)
+		FragColor.a = texture(modulationVol, vx.xyz).r;
 	FragColor.a *= opacity;
 }`;
 
