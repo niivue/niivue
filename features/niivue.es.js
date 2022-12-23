@@ -1013,6 +1013,7 @@ uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 in vec3 texPos;
 out vec4 color;
@@ -1020,6 +1021,7 @@ void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
+	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
@@ -1070,11 +1072,10 @@ void main() {
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
 		return;
-	//float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-	//if (aout <= 0.0) return;
-	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	//color.a = 1.0;
+	float a = color.a + ocolor.a * (1.0 - color.a); // premultiplied alpha
+	if (a == 0.0) return;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
+	color.a = a;
 }`;
 var fragRectShader = `#version 300 es
 #line 189
@@ -1265,8 +1266,9 @@ void main(void) {
 	return;
 
 	if (layer < 2.0) return;
-	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	//vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
+	//vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
@@ -1335,8 +1337,9 @@ void main(void) {
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
-	if (modulation > 0)
-		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	//if (modulation > 10)
+	//	FragColor.a *= texture(modulationVol, vx.xyz).r;
+	//	FragColor.rgb *= texture(modulationVol, vx.xyz).r;
 	if (isAlphaThreshold) {
 		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg)) 
 			FragColor.a = pow(-f / -cal_maxNeg, 2.0);
@@ -1344,10 +1347,14 @@ void main(void) {
 			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
 		//FragColor.g = 0.0;
 	}
+	if (modulation == 1) {
+		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	} else if (modulation == 2) {
+		FragColor.a = texture(modulationVol, vx.xyz).r;
+	}
 	FragColor.a *= opacity;
 	if (layer < 1.0) return;
-	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
@@ -1377,31 +1384,15 @@ void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
 	uvec4 aColor = texture(intensityVol, vx.xyz);
 	FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
-	if (modulation > 0)
+	if (modulation == 1)
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
-	if (!hasAlpha)
+	if (!hasAlpha) {
 		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
+		FragColor.a = step(0.01, FragColor.a);
+	}
+	if (modulation == 2)
+		FragColor.a = texture(modulationVol, vx.xyz).r;
 	FragColor.a *= opacity;
-}`;
-var vertPassThroughShader = `#version 300 es
-#line 283
-precision highp int;
-precision highp float;
-in vec3 vPos;
-out vec2 TexCoord;
-void main() {
-	TexCoord = vPos.xy;
-	gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
-}`;
-var fragPassThroughShader = `#version 300 es
-precision highp int;
-precision highp float;
-in vec2 TexCoord;
-out vec4 FragColor;
-uniform float coordZ;
-uniform lowp sampler3D in3D;
-void main(void) {
- FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
 }`;
 var vertGrowCutShader = `#version 300 es
 #line 283
@@ -105638,6 +105629,7 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   this.cal_maxNegative = cal_maxNegative;
   this.visible = visible;
   this.modulationImage = null;
+  this.modulateAlpha = false;
   this.series = [];
   this.onColorMapChange = () => {
   };
@@ -113833,7 +113825,6 @@ function Niivue(options = {}) {
   this.bmpTexture = null;
   this.thumbnailVisible = false;
   this.bmpTextureWH = 1;
-  this.passThroughShader = null;
   this.growCutShader = null;
   this.orientShaderAtlasU = null;
   this.orientShaderU = null;
@@ -113849,6 +113840,7 @@ function Niivue(options = {}) {
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
   this.overlayOutlineWidth = 0;
+  this.isAlphaClipDark = false;
   this.syncOpts = {};
   this.readyForSync = false;
   this.uiData = {};
@@ -116405,6 +116397,7 @@ Niivue.prototype.init = async function() {
   this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader);
   this.sliceMMShader.use(this.gl);
   this.sliceMMShader.drawOpacityLoc = this.sliceMMShader.uniforms["drawOpacity"];
+  this.sliceMMShader.isAlphaClipDarkLoc = this.sliceMMShader.uniforms["isAlphaClipDark"];
   this.sliceMMShader.overlayOutlineWidthLoc = this.sliceMMShader.uniforms["overlayOutlineWidth"];
   this.sliceMMShader.backgroundMasksOverlaysLoc = this.sliceMMShader.uniforms["backgroundMasksOverlays"];
   this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
@@ -116461,7 +116454,6 @@ Niivue.prototype.init = async function() {
   this.colorbarShader.leftTopWidthHeightLoc = this.colorbarShader.uniforms["leftTopWidthHeight"];
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
   this.growCutShader = new Shader(this.gl, vertGrowCutShader, fragGrowCutShader);
-  this.passThroughShader = new Shader(this.gl, vertPassThroughShader, fragPassThroughShader);
   this.orientShaderAtlasU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas));
   this.orientShaderU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader));
   this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
@@ -116586,6 +116578,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
     img = overlayItem.img.slice(overlayItem.frame4D * overlayItem.nVox3D, (overlayItem.frame4D + 1) * overlayItem.nVox3D);
   let opacity = overlayItem.opacity;
+  if (layer > 1 && opacity === 0)
+    return;
   let outTexture = null;
   this.gl.bindVertexArray(this.unusedVAO);
   if (this.crosshairs3D !== null)
@@ -116626,6 +116620,7 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
     invert(mtx, mtx);
     if (layer === 1) {
       outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back.dims);
+      this.overlayTexture = outTexture;
       this.overlayTextureID = outTexture;
     } else
       outTexture = this.overlayTextureID;
@@ -116686,19 +116681,15 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   let blendTexture = null;
   this.gl.bindVertexArray(this.genericVAO);
   if (layer > 1) {
-    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims);
+    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims, true);
     this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
-    let passShader = this.passThroughShader;
-    passShader.use(this.gl);
-    this.gl.uniform1i(passShader.uniforms["in3D"], 2);
     for (let i2 = 0; i2 < this.back.dims[3]; i2++) {
-      let coordZ = 1 / this.back.dims[3] * (i2 + 0.5);
-      this.gl.uniform1f(passShader.uniforms["coordZ"], coordZ);
-      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, blendTexture, 0, i2);
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.overlayTexture, 0, i2);
+      this.gl.activeTexture(this.gl.TEXTURE5);
+      this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i2, 0, 0, this.back.dims[1], this.back.dims[2]);
     }
   } else
-    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
+    blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true);
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
@@ -116731,14 +116722,17 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
     log.debug(this.volumes);
     let mhdr = this.volumes[overlayItem.modulationImage].hdr;
     if (mhdr.dims[1] === hdr.dims[1] && mhdr.dims[2] === hdr.dims[2] && mhdr.dims[3] === hdr.dims[3]) {
-      this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
+      if (overlayItem.modulateAlpha)
+        this.gl.uniform1i(orientShader.uniforms["modulation"], 2);
+      else
+        this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
       modulateTexture = this.r8Tex(modulateTexture, this.gl.TEXTURE7, hdr.dims, true);
       this.gl.activeTexture(this.gl.TEXTURE7);
       this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
       let vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
       let modulateVolume = new Uint8Array(vx);
-      let mn = mhdr.cal_min;
-      let scale2 = 255 / (mhdr.cal_max - mhdr.cal_min);
+      let mn = this.volumes[overlayItem.modulationImage].cal_min;
+      let scale2 = 255 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
       let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
       let img2 = new Uint8Array(imgRaw);
       switch (mhdr.datatypeCode) {
@@ -116829,11 +116823,12 @@ Niivue.prototype.setColorMapNegative = function(id, colorMapNegative) {
   this.volumes[idx].colorMapNegative = colorMapNegative;
   this.updateGLVolume();
 };
-Niivue.prototype.setModulationImage = function(idTarget, idModulation) {
+Niivue.prototype.setModulationImage = function(idTarget, idModulation, modulateAlpha = false) {
   let idxTarget = this.getVolumeIndexByID(idTarget);
   let idxModulation = null;
   idxModulation = this.getVolumeIndexByID(idModulation);
   this.volumes[idxTarget].modulationImage = idxModulation;
+  this.volumes[idxTarget].modulateAlpha = modulateAlpha;
   this.updateGLVolume();
 };
 Niivue.prototype.setGamma = function(gamma = 1) {
@@ -117776,6 +117771,7 @@ Niivue.prototype.draw2D = function(leftTopWidthHeight, axCorSag, customMM = NaN)
   gl.disable(gl.CULL_FACE);
   this.sliceMMShader.use(this.gl);
   gl.uniform1f(this.sliceMMShader.overlayOutlineWidthLoc, this.overlayOutlineWidth);
+  gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark);
   gl.uniform1i(this.sliceMMShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays);
   gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity);
   gl.enable(gl.BLEND);
