@@ -3014,6 +3014,11 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let isGzip = false;
   let FreeSurferMatrix = [];
   let nvert = 0;
+  //FreeSurfer versions after 20221225 disambiguate if transform has been applied
+  // "./mris_convert --to-scanner" store raw vertex positions in scanner space, so transforms should be ignored.
+  //  FreeSurfer versions after 20221225 report that the transform is applied by reporting:
+  //   <DataSpace><![CDATA[NIFTI_XFORM_SCANNER_ANAT
+  let isDataSpaceScanner = false;
   //let isAscii = false;
   while (pos < len) {
     line = readStr();
@@ -3120,6 +3125,15 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (!line.includes("CDATA[")) continue;
       if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
+    //<TransformedSpace>
+    if (
+      line.startsWith("<DataSpace") &&
+      line.includes("NIFTI_XFORM_SCANNER_ANAT")
+    ) {
+      isDataSpaceScanner = true;
+    }
+    /*
+    //in theory, matrix can store rotations, zooms, but in practice translation so redundant with VolGeomC_*
     if (line.startsWith("<MatrixData>")) {
       //yet another kludge for undocumented FreeSurfer transform
       while (pos < len && !line.endsWith("</MatrixData>"))
@@ -3135,7 +3149,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         FreeSurferMatrix = mat4.create();
         for (var i = 0; i < 16; i++) FreeSurferMatrix[i] = floats[i];
       }
-    }
+    }*/
 
     if (
       line.startsWith("<Name") &&
@@ -3175,31 +3189,9 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
   if (n_vert > 0) return scalars;
-  /*
-  if (FreeSurferMatrix.length === 16) {
-	mat4.transpose(FreeSurferMatrix, FreeSurferMatrix); //column vs row major
-    nvert = Math.floor(positions.length / 3);
-    let i = 0;
-    for (var v = 0; v < nvert; v++) {
-      //positions[i] += FreeSurferTranlate[0];
-      //positions[i+1] += FreeSurferTranlate[1];
-      //positions[i+2] += FreeSurferTranlate[2];
-      //let pti = vec4.fromValues(0, -height * 0.5, 0, 1);
-      let pt = vec4.fromValues(positions[i], positions[i+1], positions[i+2], 1);
-	  vec4.transformMat4(pt, pt, FreeSurferMatrix);
-if (v === 0)
-  console.log(positions[i+0],positions[i+1], positions[i+2],'>>>',pt[0],pt[1],pt[2]);
-	  positions[i+0] = pt[0];
-	  positions[i+1] = pt[1];
-	  positions[i+2] = pt[2];
-
-
-      i += 3;
-    }
-  }*/
-  /*if (false) {
-   if (
+  if (
     positions.length > 2 &&
+    !isDataSpaceScanner &&
     (FreeSurferTranlate[0] != 0 ||
       FreeSurferTranlate[1] != 0 ||
       FreeSurferTranlate[2] != 0)
@@ -3215,7 +3207,6 @@ if (v === 0)
       i++;
     }
   } //issue416: apply FreeSurfer translation
-}*/
   return {
     positions,
     indices,
