@@ -120,8 +120,8 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
  * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
  * @property {string} [colorMapNegative=""] a color map to use for negative intensities
- * @property {number} [cal_minNegative=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
- * @property {number} [cal_maxNegative=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+ * @property {number} [cal_minNeg=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
+ * @property {number} [cal_maxNeg=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
 
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
@@ -147,8 +147,8 @@ export function NVImageFromUrlOptions(
   alphaThreshold = false,
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN,
-  cal_minNegative = NaN,
-  cal_maxNegative = NaN
+  cal_minNeg = NaN,
+  cal_maxNeg = NaN
 ) {
   return {
     url,
@@ -165,8 +165,8 @@ export function NVImageFromUrlOptions(
     useQFormNotSForm,
     colorMapNegative,
     imageType,
-    cal_minNegative,
-    cal_maxNegative,
+    cal_minNeg,
+    cal_maxNeg,
   };
 }
 
@@ -207,8 +207,8 @@ export function NVImage(
   useQFormNotSForm = false,
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN,
-  cal_minNegative = NaN,
-  cal_maxNegative = NaN
+  cal_minNeg = NaN,
+  cal_maxNeg = NaN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -241,8 +241,8 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
-  this.cal_minNegative = cal_minNegative;
-  this.cal_maxNegative = cal_maxNegative;
+  this.cal_minNeg = cal_minNeg;
+  this.cal_maxNeg = cal_maxNeg;
 
   this.visible = visible;
   this.modulationImage = null;
@@ -1186,6 +1186,7 @@ NVImage.prototype.readVMR = function (buffer) {
 NVImage.prototype.readMGH = function (buffer) {
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
+  hdr.littleEndian = false; //MGH always big ending
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
   var raw = buffer;

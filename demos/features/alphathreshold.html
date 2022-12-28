@@ -12,27 +12,27 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-	  <input type="checkbox" id="check1" checked>
-	  <label for="check1">NegativeColors&nbsp;&nbsp;</label>
+      <input type="checkbox" id="check1" checked>
+      <label for="check1">NegativeColors&nbsp;&nbsp;</label>
       <input type="checkbox" id="check2" checked>
       <label for="check2">AlphaThresh&nbsp;&nbsp;</label>
       <input type="checkbox" id="check3" unchecked>
       <label for="check3">Smooth&nbsp;&nbsp;</label>
       <input type="checkbox" id="check5" unchecked>
       <label for="check5">World&nbsp;&nbsp;</label>
-	  <label for="slide3">	&nbsp; -Thresh</label>
-	  <input type="range" min="0" max="50" value="30" class="slider" id="slide3">
-	  <label for="slide">	&nbsp; +Thresh</label>
-	  <input type="range" min="0" max="50" value="30" class="slider" id="slide">
-	  <label for="slide2">	&nbsp; Outline</label>
-	  <input type="range" min="0" max="4" value="0" class="slider" id="slide2">
-	  <select  id="dragMode">
-		<option value="contrast" selected>contrast</option>
-		<option value="measurement">measurement</option>
-		<option value="pan">pan/zoom</option>
-		<option value="none">none</option>
-	  </select>
-	  <button id="about">About</button>
+      <label for="slide3">    &nbsp; -Thresh</label>
+      <input type="range" min="0" max="50" value="30" class="slider" id="slide3">
+      <label for="slide">    &nbsp; +Thresh</label>
+      <input type="range" min="0" max="50" value="30" class="slider" id="slide">
+      <label for="slide2">    &nbsp; Outline</label>
+      <input type="range" min="0" max="4" value="0" class="slider" id="slide2">
+      <select  id="dragMode">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="none">none</option>
+      </select>
+      <button id="about">About</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -44,7 +44,7 @@
       import * as niivue from './niivue.es.js'
       document.getElementById("check1").addEventListener("change", doCheckClick);
       function doCheckClick() {
-	   if (this.checked)
+       if (this.checked)
         nv1.setColorMapNegative(nv1.volumes[1].id,"winter");
        else
         nv1.setColorMapNegative(nv1.volumes[1].id,"")
@@ -53,31 +53,31 @@
       document.getElementById("check2").addEventListener("change", doCheck2Click);
       function doCheck2Click() {
         nv1.volumes[1].alphaThreshold = this.checked
-		nv1.updateGLVolume();
+        nv1.updateGLVolume();
       }
       document.getElementById("check3").addEventListener("change", doCheck3Click);
       function doCheck3Click() {
-	   nv1.setInterpolation(!document.getElementById("check3").checked)
-      }	  
+       nv1.setInterpolation(!document.getElementById("check3").checked)
+      }  
       document.getElementById("check5").addEventListener("change", doCheck5Click);
       function doCheck5Click() {
         nv1.setSliceMM(this.checked)
-      }	  
+      }  
       var slider = document.getElementById("slide");
       slider.oninput = function() {
         nv1.volumes[1].cal_min = 0.1 * this.value;
-		nv1.updateGLVolume();
+        nv1.updateGLVolume();
       }
       var slider2 = document.getElementById("slide2");
       slider2.oninput = function() {
         nv1.overlayOutlineWidth = 0.25  * this.value;
-		nv1.updateGLVolume();
+        nv1.updateGLVolume();
       }
       var slider3 = document.getElementById("slide3");
       slider3.oninput = function() {
         nv1.volumes[1].cal_minNeg = -6;
-		nv1.volumes[1].cal_maxNeg = -0.1 * this.value;
-		nv1.updateGLVolume();
+        nv1.volumes[1].cal_maxNeg = -0.1 * this.value;
+        nv1.updateGLVolume();
       }
       var dropDrag = document.getElementById("dragMode")
       dropDrag.onchange = function() {
@@ -101,7 +101,7 @@
         window.alert("NiiVue allows asymmetric positive and negative statistical thresholds. It can also make subthreshold values translucent (only apply to unsmoothed images)");
       }
       var volumeList1 = [{ url: "../images/fslmean.nii.gz"},
-	           {
+               {
            url: "../images/fslt.nii.gz",
            colorMap: "warm",
            colorMapNegative: "winter",
@@ -110,33 +110,32 @@
            cal_max: 6,
            visible: true,
          },
-	  ]
-      function handleLocationChange(data){ 
+      ]
+      function handleLocationChange(data){
         function flt2str(flt, decimals = 0) {
           return flt.toFixed(decimals)
-        }	
-		console.log(data);
-        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)+'   '+flt2str(data.values[1].value, 3)	
+        }
+        console.log(data);
+        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)+'   '+flt2str(data.values[1].value, 3)
       }
       var nv1 = new niivue.Niivue({
        loadingText: 'there are no images',
        backColor: [1, 1, 1, 1],
-	   show3Dcrosshair: true,
+       show3Dcrosshair: true,
        onLocationChange:handleLocationChange
       })
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-	  nv1.setSliceMM(false)
-	  nv1.opts.isColorbar = true
+      nv1.setSliceMM(false)
+      nv1.opts.isColorbar = true
       await nv1.loadVolumes(volumeList1)
-	  nv1.volumes[1].alphaThreshold= true;
+      nv1.volumes[1].alphaThreshold= true;
       nv1.volumes[1].cal_minNeg = -6;
-	  nv1.volumes[1].cal_maxNeg = -3.0;
-	  nv1.opts.multiplanarForceRender = true;
-	  nv1.setInterpolation(true)
-	  nv1.updateGLVolume();
-	  
+      nv1.volumes[1].cal_maxNeg = -3.0;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.setInterpolation(true)
+      nv1.updateGLVolume();
    </script>
 </body>
 </html>

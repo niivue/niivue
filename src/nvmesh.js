@@ -595,10 +595,24 @@ NVMesh.prototype.updateMesh = function (gl) {
       if (layer.useNegativeCmap) {
         let lut = cmapper.colormap(layer.colorMapNegative);
         if (!layer.isOutlineBorder) {
+          let mn = layer.cal_min;
+          let mx = layer.cal_max;
+
+          if (isFinite(layer.cal_minNeg) && isFinite(layer.cal_minNeg)) {
+            mn = -layer.cal_minNeg;
+            mx = -layer.cal_maxNeg;
+          }
+          if (mx < mn) {
+            [mn, mx] = [mx, mn];
+          }
+          let scale255neg = 255.0 / (mx - mn);
           for (let j = 0; j < nvtx; j++) {
             let v255 = Math.round(
-              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+              (-layer.values[j + frameOffset] - mn) * scale255neg
             );
+            /*let v255 = Math.round(
+              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+            );*/
             if (v255 < 0) continue;
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -2119,12 +2133,14 @@ NVMesh.readLayer = function (
     mn = Math.min(mn, layer.values[i]);
     mx = Math.max(mx, layer.values[i]);
   }
+  //console.log('layer range: ', mn, mx);
   layer.global_min = mn;
   layer.global_max = mx;
   layer.cal_min = cal_min;
   if (!cal_min) layer.cal_min = mn;
   layer.cal_max = cal_max;
   if (!cal_max) layer.cal_max = mx;
+  (layer.cal_minNeg = NaN), (layer.cal_maxNeg = NaN);
   layer.opacity = opacity;
   layer.colorMap = colorMap;
   layer.colorMapNegative = colorMapNegative;
@@ -2693,6 +2709,8 @@ NVMesh.readMGH = function (buffer, n_vert = 0) {
   let depth = Math.max(1, reader.getInt32(12, false));
   let nframes = Math.max(1, reader.getInt32(16, false));
   let mtype = reader.getInt32(20, false);
+  let voxoffset = 284; //ALWAYS fixed header size
+  let isLittleEndian = false; //ALWAYS byte order is BIG ENDIAN
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   let nvert = width * height * depth * nframes;
@@ -3569,7 +3587,6 @@ NVMesh.loadFromUrl = async function ({
     if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
     let cal_max = null;
     if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
-
     this.readLayer(
       layerName,
       buffer,

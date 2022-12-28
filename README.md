@@ -52,7 +52,7 @@ While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can als
     <title>NiiVue</title>
   </head>
   <body>
-	<canvas id="gl" height=480 width=640></canvas>
+    <canvas id="gl"></canvas>
   </body>
 <script src="https://unpkg.com/@niivue/niivue@0.29.0/dist/niivue.umd.js"></script>
 <script>
@@ -203,8 +203,6 @@ There are several open source JavaScript NIfTI viewers. What makes NiiVue unique
 | [BioImage Suite Web Project](https://github.com/bioimagesuiteweb/bisweb) | [live demo](https://bioimagesuiteweb.github.io/webapp/viewer.html)       |
 | [BrainBrowser](https://brainbrowser.cbrain.mcgill.ca/)                   | [live demo](https://brainbrowser.cbrain.mcgill.ca/volume-viewer)         |
 | [nifti-drop](https://github.com/vsoch/nifti-drop)                        | [live demo](http://vsoch.github.io/nifti-drop)                           |
-| [Med3web](https://lifescience.opensource.epam.com/mri/)                  | [live demo](https://med3web.opensource.epam.com/)                        |
-| [MRIcroWeb](https://github.com/rordenlab/MRIcroWeb)                      | [live demo](https://rordenlab.github.io)                                 |
 | [Papaya](https://github.com/rii-mango/Papaya)                            | [live demo](https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html) |
 | [VTK.js](https://github.com/Kitware/vtk-js)                              | [live demo](https://kitware.github.io/paraview-glance/app/)              |
 | [slicedrop](https://github.com/slicedrop/slicedrop.github.com)           | [live demo](https://slicedrop.com/)                                      |

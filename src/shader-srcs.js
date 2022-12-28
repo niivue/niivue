@@ -1014,6 +1014,28 @@ void main() {
 	color.a = opacity;
 }`;
 
+//unused: requires gl.Disable(GL_DEPTH_TEST)
+// however, depth test must be ENABLED for meshes not using this shader
+// since fragments computed in parallel, this leads to artifacts when multiple meshes loaded with different shaders
+/*export var fragMeshXRayShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	float Ambient = 0.5;
+	float EdgeFallOff = 1.0;
+	float Intensity = 0.5;
+	bool DimBackfaces = false;
+	float opac = abs(dot(normalize(-vN), normalize(-vV)));
+	opac = Ambient + Intensity*(1.0-pow(opac, EdgeFallOff));
+	float backface = 1.0 - step(0.0, vN.z);
+	opac = mix(opac, 0.0, backface * float(DimBackfaces)); //reverse normal if backface AND two-sided lighting
+	color = vec4(opac * vClr.rgb, opac);
+}`;*/
+
 //outline
 export var fragMeshOutlineShader = `#version 300 es
 precision highp int;
@@ -1040,19 +1062,6 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
-}`;
-
-//discard if alpha is 0
-export var fragMeshOutline = `#version 300 es
-precision highp int;
-precision highp float;
-uniform float opacity;
-in vec4 vClr;
-in vec3 vN, vL, vV;
-out vec4 color;
-void main() {
-	if (vClr.a == 0.0) discard;
-	color = vClr;
 }`;
 
 //Phong: default
