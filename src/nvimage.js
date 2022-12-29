@@ -122,6 +122,8 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {string} [colorMapNegative=""] a color map to use for negative intensities
  * @property {number} [cal_minNeg=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
  * @property {number} [cal_maxNeg=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+ * @property {boolean} [colorbarVisible=true] hide colormaps 
+
 
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
@@ -148,7 +150,8 @@ export function NVImageFromUrlOptions(
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
-  cal_maxNeg = NaN
+  cal_maxNeg = NaN,
+  colorbarVisible = true
 ) {
   return {
     url,
@@ -167,6 +170,7 @@ export function NVImageFromUrlOptions(
     imageType,
     cal_minNeg,
     cal_maxNeg,
+    colorbarVisible,
   };
 }
 
@@ -208,7 +212,8 @@ export function NVImage(
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
-  cal_maxNeg = NaN
+  cal_maxNeg = NaN,
+  colorbarVisible = true
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -243,6 +248,7 @@ export function NVImage(
   this.colorMapNegative = colorMapNegative;
   this.cal_minNeg = cal_minNeg;
   this.cal_maxNeg = cal_maxNeg;
+  this.colorbarVisible = colorbarVisible;
 
   this.visible = visible;
   this.modulationImage = null;
@@ -2583,7 +2589,6 @@ NVImage.loadFromUrl = async function ({
   if (url === "") {
     throw Error("url must not be empty");
   }
-
   let nvimage = null;
   let dataBuffer = null;
 

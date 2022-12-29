@@ -162,7 +162,7 @@ export function Niivue(options = {}) {
   this.canvas = null; // the canvas element on the page
   this.gl = null; // the gl context
   this.colormapTexture = null;
-  this.colormapTextureHeight = 0;
+  this.ColormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawUndoBitmaps = [];
@@ -1352,9 +1352,7 @@ Niivue.prototype.dropListener = async function (e) {
   if (!this.opts.dragAndDropEnabled) {
     return;
   }
-
   const urlsToLoad = [];
-
   const dt = e.dataTransfer;
   const url = dt.getData("text/uri-list");
   if (url) {
@@ -1375,7 +1373,7 @@ Niivue.prototype.dropListener = async function (e) {
     const items = dt.items;
     if (items.length > 0) {
       // adding or replacing
-      if (!e.shiftKey) {
+      if (!e.shiftKey && !e.altKey) {
         this.volumes = [];
         this.overlays = [];
         this.meshes = [];
@@ -1433,8 +1431,8 @@ Niivue.prototype.dropListener = async function (e) {
             break;
           }
           entry.file(async (file) => {
-            // if we have paired header/img data
             if (pairedImageData !== "") {
+              // if we have paired header/img data
               pairedImageData.file(async (imgfile) => {
                 let volume = await NVImage.loadFromFile({
                   file: file,
@@ -1448,7 +1446,13 @@ Niivue.prototype.dropListener = async function (e) {
                 file: file,
                 urlImgData: pairedImageData,
               });
-              this.addVolume(volume);
+              if (e.altKey) {
+                log.debug(
+                  "alt key detected: assuming this is a drawing overlay"
+                );
+                this.drawClearAllUndoBitmaps();
+                this.loadDrawing(volume);
+              } else this.addVolume(volume);
             }
           });
         } else if (entry.isDirectory) {
@@ -4706,9 +4710,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
   //if unused colorMapNegative
-
-  let mnNeg = 0;
-  let mxNeg = 0;
+  let mnNeg = NaN;
+  let mxNeg = NaN;
   if (overlayItem.colorMapNegative.length > 0) {
     //assume symmetrical
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
@@ -4996,8 +4999,9 @@ Niivue.prototype.colormapFromKey = function (name) {
 Niivue.prototype.colormap = function (lutName = "") {
   return cmapper.colormap(lutName);
 }; // colormap()
-//create TEXTURE1 a 2D bitmap with two 256 RGBA values for each layer
-//since each layer can have a positive and negative colormap
+
+//create TEXTURE1 a 2D bitmap with a 256 column RGBA row for each colormap
+//note a single volume can have two colormaps (positive and negative)
 // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
 Niivue.prototype.createColorMapTexture = function (nLayer) {
   if (this.colormapTexture !== null)
@@ -5005,7 +5009,7 @@ Niivue.prototype.createColorMapTexture = function (nLayer) {
   this.colormapTexture = this.gl.createTexture();
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer * 2);
+  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer);
   this.gl.texParameteri(
     this.gl.TEXTURE_2D,
     this.gl.TEXTURE_MIN_FILTER,
@@ -5029,45 +5033,119 @@ Niivue.prototype.createColorMapTexture = function (nLayer) {
     this.gl.CLAMP_TO_EDGE
   );
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-  this.colormapTextureHeight = nLayer * 2;
 }; // createColorMapTexture()
 
-// not included in public docs
-Niivue.prototype.makeMeshColormap = function () {
-  let nmesh = this.meshes.length;
-  let posmaps = [];
-  let negmaps = [];
-  let nLayer = 0;
-  for (let i = 0; i < nmesh; i++) {
-    let nlayers = this.meshes[i].layers.length;
-    if (nlayers < 1) continue;
-    for (let j = 0; j < nlayers; j++) {
-      if (this.meshes[i].layers[j].colorMap.length < 1) continue;
-      posmaps[nLayer] = this.meshes[i].layers[j].colorMap;
-      negmaps[nLayer] = this.meshes[i].layers[j].colorMapNegative;
-      nLayer++;
-    } //for each layer j
-  } //for each mesh i
-  return [posmaps, negmaps];
-}; //makeMeshColormap()
+Niivue.prototype.addColormapList = function (
+  nm = "",
+  mn = NaN,
+  mx = NaN,
+  alpha = false,
+  neg = false,
+  vis = true
+) {
+  if (nm.length < 1) return;
+  this.ColormapLists.push({
+    name: nm,
+    min: mn,
+    max: mx,
+    alphaThreshold: alpha,
+    negative: neg,
+    visible: vis,
+  });
+};
+
+function negMinMax(min, max, minNeg, maxNeg) {
+  let mn = -min;
+  let mx = -max;
+  if (isFinite(minNeg) && isFinite(maxNeg)) {
+    mn = minNeg;
+    mx = maxNeg;
+  }
+  if (mn > mx) [mn, mx] = [mx, mn];
+  return [mn, mx];
+}
 
 // not included in public docs
 Niivue.prototype.refreshColormaps = function () {
-  let nLayer = this.volumes.length;
-  let posmaps = []; //positive maps for each layer: "gray", "warm"
-  let negmaps = []; //negative maps: "", "winter"
-  if (nLayer < 1 && this.meshes.length < 1) return;
-  else if (nLayer < 1) {
-    [posmaps, negmaps] = this.makeMeshColormap();
-  } else {
-    for (let i = 0; i < nLayer; i++) {
-      posmaps[i] = this.volumes[i].colorMap;
-      negmaps[i] = this.volumes[i].colorMapNegative;
+  this.ColormapLists = []; //one entry per colorbar: min, max, tic
+  if (this.volumes.length < 1 && this.meshes.length < 1) return;
+  let nVol = this.volumes.length;
+  if (nVol > 0) {
+    //add colorbars for volumes
+    for (let i = 0; i < nVol; i++) {
+      let volume = this.volumes[i];
+      let neg = negMinMax(
+        volume.cal_min,
+        volume.cal_max,
+        volume.cal_minNeg,
+        volume.cal_maxNeg
+      );
+      //add negative colormaps BEFORE positive ones: we draw them in order from left to right
+      this.addColormapList(
+        volume.colorMapNegative,
+        neg[0],
+        neg[1],
+        volume.alphaThreshold,
+        true,
+        volume.colorbarVisible
+      );
+      this.addColormapList(
+        volume.colorMap,
+        volume.cal_min,
+        volume.cal_max,
+        volume.alphaThreshold,
+        false,
+        volume.colorbarVisible
+      );
     }
   }
-  if (posmaps.length < 1) return;
-  nLayer = posmaps.length;
-  this.createColorMapTexture(nLayer);
+  let nmesh = this.meshes.length;
+  if (nmesh > 0) {
+    //add colorbars for volumes
+    for (let i = 0; i < nmesh; i++) {
+      let mesh = this.meshes[i];
+      if (!mesh.colorbarVisible) continue;
+      let nlayers = mesh.layers.length;
+      if (mesh.hasOwnProperty("edgeColormap")) {
+        let neg = negMinMax(mesh.edgeMin, mesh.edgeMax, NaN, NaN);
+        this.addColormapList(
+          mesh.edgeColormapNegative,
+          neg[0],
+          neg[1],
+          false,
+          true
+        );
+        this.addColormapList(mesh.edgeColormap, mesh.edgeMin, mesh.edgeMax);
+      }
+      if (nlayers < 1) continue;
+      for (let j = 0; j < nlayers; j++) {
+        let layer = this.meshes[i].layers[j];
+        if (layer.colorMap.length < 1) continue;
+        let neg = negMinMax(
+          layer.cal_min,
+          layer.cal_max,
+          layer.cal_minNeg,
+          layer.cal_maxNeg
+        );
+        this.addColormapList(
+          layer.colorMapNegative,
+          neg[0],
+          neg[1],
+          layer.alphaThreshold,
+          true
+        );
+        this.addColormapList(
+          layer.colorMap,
+          layer.cal_min,
+          layer.cal_max,
+          layer.alphaThreshold
+        );
+      } //for each layer j
+    } //for each mesh i
+  } //for meshes
+  let nMaps = this.ColormapLists.length;
+  if (nMaps < 1) return;
+  this.createColorMapTexture(nMaps);
   let luts = [];
   function addColormap(lut) {
     let c = new Uint8ClampedArray(luts.length + lut.length);
@@ -5075,30 +5153,15 @@ Niivue.prototype.refreshColormaps = function () {
     c.set(lut, luts.length);
     luts = c;
   }
-  for (let i = 0; i < nLayer; i++) addColormap(this.colormap(posmaps[i]));
-  //slots for (optional) negative colorMaps
-  let bogusLut = new Uint8ClampedArray(1024);
-  //bogus LUT key - allow shader to discriminate slots used for colorMapNegative
-  bogusLut[0] = 255; //R
-  bogusLut[1] = 255; //G
-  bogusLut[2] = 255; //B
-  bogusLut[3] = 0; //A
-  bogusLut[4] = 0; //R
-  bogusLut[5] = 0; //G
-  bogusLut[6] = 0; //B
-  bogusLut[7] = 255; //A
-  for (let i = 0; i < nLayer; i++) {
-    let lut = bogusLut.slice();
-    if (negmaps[i].length > 0) lut = this.colormap(negmaps[i]);
-    addColormap(lut);
-  } //each layer
+  for (let i = 0; i < nMaps; i++)
+    addColormap(this.colormap(this.ColormapLists[i].name));
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,
     0,
     0,
     0,
     256,
-    nLayer * 2,
+    nMaps,
     this.gl.RGBA,
     this.gl.UNSIGNED_BYTE,
     luts
@@ -5639,7 +5702,6 @@ Niivue.prototype.drawColorbarCore = function (
     this.gl.NEAREST
   );
   let lx = layer;
-  if (isNegativeColor) lx += this.colormapTextureHeight * 0.5;
   this.gl.uniform1f(this.colorbarShader.layerLoc, lx);
   this.gl.uniform2fv(this.colorbarShader.canvasWidthHeightLoc, [
     this.gl.canvas.width,
@@ -5706,128 +5768,32 @@ Niivue.prototype.drawColorbarCore = function (
 
 // not included in public docs
 // high level code to draw colorbar(s)
-Niivue.prototype.drawMeshColorbar = function () {
-  let nmesh = this.meshes.length;
-  let leftTopWidthHeight = this.reserveColorbarPanel();
-  let txtHt = Math.max(this.opts.textHeight, 0.01);
-  txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
-  let fullHt = 3 * txtHt;
-  let wid = 0;
-  let ncolormap = 0;
-  for (let p = 0; p < 2; p++) {
-    let colormap = 0;
-    for (let i = 0; i < nmesh; i++) {
-      let nlayers = this.meshes[i].layers.length;
-      if (nlayers < 1) continue;
-      for (let j = 0; j < nlayers; j++) {
-        if (this.meshes[i].layers[j].colorMapNegative.length > 0) {
-          let mn = -this.meshes[i].layers[j].cal_max;
-          let mx = -this.meshes[i].layers[j].cal_min;
-          if (
-            isFinite(this.meshes[i].layers[j].cal_minNeg) &&
-            isFinite(this.meshes[i].layers[j].cal_maxNeg)
-          ) {
-            mn = Math.min(
-              this.meshes[i].layers[j].cal_minNeg,
-              this.meshes[i].layers[j].cal_maxNeg
-            );
-            mx = Math.max(
-              this.meshes[i].layers[j].cal_minNeg,
-              this.meshes[i].layers[j].cal_maxNeg
-            );
-          }
-          if (p > 0)
-            this.drawColorbarCore(
-              colormap,
-              leftTopWidthHeight,
-              true,
-              mn,
-              mx,
-              false
-            );
-          else colormap++;
-          leftTopWidthHeight[0] += wid;
-        }
-        if (this.meshes[i].layers[j].colorMap.length > 0) {
-          let mn = this.meshes[i].layers[j].cal_min;
-          let mx = this.meshes[i].layers[j].cal_max;
-          if (p > 0)
-            this.drawColorbarCore(
-              colormap,
-              leftTopWidthHeight,
-              false,
-              mn,
-              mx,
-              false
-            );
-          colormap++;
-        }
-      } //for each layer j
-    } //for each mesh i
-    if (colormap < 1) return 0;
-    ncolormap = colormap;
-    wid = leftTopWidthHeight[2] / ncolormap;
-    if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
-      wid = this.gl.canvas.width / ncolormap;
-      leftTopWidthHeight = [0, this.gl.canvas.height - fullHt, wid, fullHt];
-    }
-    leftTopWidthHeight[2] = wid;
-  } //for each pass p
-  return ncolormap;
-};
-
-// not included in public docs
-// high level code to draw colorbar(s)
 Niivue.prototype.drawColorbar = function () {
-  let nlayers = this.volumes.length;
-  let nmesh = this.meshes.length;
-  if (nmesh > 0) {
-    if (this.drawMeshColorbar() > 0) return; //mesh has layers with colormaps
-  }
-  if (nlayers < 1) return;
-  let ncolorMapNegative = 0;
-  for (let i = 0; i < nlayers; i++)
-    if (this.volumes[i].colorMapNegative.length > 0) ncolorMapNegative++;
+  let maps = this.ColormapLists;
+  let nmaps = maps.length;
+  if (nmaps < 1) return;
+  let nVisible = 0; //not all colorbars may be visible
+  for (let i = 0; i < nmaps; i++) if (maps[i].visible) nVisible++;
+  if (nVisible < 1) return;
   let leftTopWidthHeight = this.reserveColorbarPanel();
   let txtHt = Math.max(this.opts.textHeight, 0.01);
   txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
   let fullHt = 3 * txtHt;
-  let wid = leftTopWidthHeight[2] / (nlayers + ncolorMapNegative);
+  let wid = leftTopWidthHeight[2] / nVisible;
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
-    wid = this.gl.canvas.width / nlayers;
+    wid = this.gl.canvas.width / nVisible;
     leftTopWidthHeight = [0, this.gl.canvas.height - fullHt, wid, fullHt];
   }
   leftTopWidthHeight[2] = wid;
-  for (let i = 0; i < nlayers; i++) {
-    if (this.volumes[i].colorMapNegative.length > 0) {
-      let mn = -this.volumes[i].cal_max;
-      let mx = -this.volumes[i].cal_min;
-      if (
-        isFinite(this.volumes[i].cal_minNeg) &&
-        isFinite(this.volumes[i].cal_maxNeg)
-      ) {
-        mn = Math.min(this.volumes[i].cal_minNeg, this.volumes[i].cal_maxNeg);
-        mx = Math.max(this.volumes[i].cal_minNeg, this.volumes[i].cal_maxNeg);
-      }
-      this.drawColorbarCore(
-        i,
-        leftTopWidthHeight,
-        true,
-        mn,
-        mx,
-        this.volumes[i].alphaThreshold
-      );
-      leftTopWidthHeight[0] += wid;
-    } //if negative colorbar
-    let min = this.volumes[i].cal_min;
-    let max = this.volumes[i].cal_max;
+  for (let i = 0; i < nmaps; i++) {
+    if (!maps[i].visible) continue;
     this.drawColorbarCore(
       i,
       leftTopWidthHeight,
-      false,
-      min,
-      max,
-      this.volumes[i].alphaThreshold
+      maps[i].negative,
+      maps[i].min,
+      maps[i].max,
+      maps[i].alphaThreshold
     );
     leftTopWidthHeight[0] += wid;
   }

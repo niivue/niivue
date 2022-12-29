@@ -735,28 +735,22 @@ void main(void) {
 	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
-	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
-	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+	float nlayer = float(textureSize(colormap, 0).y);
+	float y = (layer + 0.5)/nlayer;
+	if (!isnan(cal_minNeg))
+		y = (layer + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
 	//negative colors
 	mn = cal_minNeg;
 	mx = cal_maxNeg;
 	if (isAlphaThreshold) 
 		mx = 0.0;	
-	if ((cal_minNeg != cal_maxNeg) && ( f < mx)) {
-
+	if ((!isnan(cal_minNeg)) && ( f < mx)) {
 		r = max(0.00001, abs(mx - mn));
 		mn = min(mn, mx);
 		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
-		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
-		//select texels at positions 0 and 1 of lookup table: 
-		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
-		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-		//detect bogus color: negative color slot not used than
-		// v0 = 1,1,1,0 and v1 = 0,0,0,1
-		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
-			FragColor = texture(colormap, vec2(txl, y));
-		
+		y = (layer + 0.5)/nlayer;
+		FragColor = texture(colormap, vec2(txl, y));
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
@@ -1328,7 +1322,6 @@ export var fragOrientCubeShader = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
 in vec3 vColor;
-// we need to declare an output for the fragment shader
 out vec4 outColor;
 void main() {
 	outColor = vec4(vColor, 1.0);

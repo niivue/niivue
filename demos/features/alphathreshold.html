@@ -105,10 +105,8 @@
            url: "../images/fslt.nii.gz",
            colorMap: "warm",
            colorMapNegative: "winter",
-           opacity: 1,
            cal_min: 3,
            cal_max: 6,
-           visible: true,
          },
       ]
       function handleLocationChange(data){
@@ -130,6 +128,7 @@
       nv1.setSliceMM(false)
       nv1.opts.isColorbar = true
       await nv1.loadVolumes(volumeList1)
+      nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
       nv1.volumes[1].alphaThreshold= true;
       nv1.volumes[1].cal_minNeg = -6;
       nv1.volumes[1].cal_maxNeg = -3.0;

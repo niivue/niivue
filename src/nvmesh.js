@@ -50,7 +50,8 @@ export function NVMeshFromUrlOptions(
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true,
-  layers = []
+  layers = [],
+  colorbarVisible = true
 ) {
   return {
     url,
@@ -60,6 +61,7 @@ export function NVMeshFromUrlOptions(
     rgba255,
     visible,
     layers,
+    colorbarVisible,
   };
 }
 
@@ -92,9 +94,11 @@ export function NVMesh(
   connectome = null,
   dpg = null,
   dps = null,
-  dpv = null
+  dpv = null,
+  colorbarVisible = true
 ) {
   this.name = name;
+  this.colorbarVisible = colorbarVisible;
   this.id = uuidv4();
   let obj = getExtents(pts);
   this.furthestVertexFromOrigin = obj.mxDx;
@@ -2140,7 +2144,8 @@ NVMesh.readLayer = function (
   if (!cal_min) layer.cal_min = mn;
   layer.cal_max = cal_max;
   if (!cal_max) layer.cal_max = mx;
-  (layer.cal_minNeg = NaN), (layer.cal_maxNeg = NaN);
+  layer.cal_minNeg = NaN;
+  layer.cal_maxNeg = NaN;
   layer.opacity = opacity;
   layer.colorMap = colorMap;
   layer.colorMapNegative = colorMapNegative;
