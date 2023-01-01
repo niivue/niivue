@@ -1011,9 +1011,10 @@ NVMesh.readTRK = function (buffer) {
     //e.g. TRK.gz
     let raw;
     if (magic === 4247762216) {
-      //zstd
-      raw = fzstd.decompress(new Uint8Array(buffer));
-      raw = new Uint8Array(raw);
+      //e.g. TRK.zstd
+      //raw = fzstd.decompress(new Uint8Array(buffer));
+      //raw = new Uint8Array(raw);
+      throw new Error("zstd TRK decompression is not supported");
     } else raw = fflate.decompressSync(new Uint8Array(buffer));
     buffer = raw.buffer;
     reader = new DataView(buffer);
@@ -3035,7 +3036,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
-  let FreeSurferMatrix = [];
+  //let FreeSurferMatrix = [];
   let nvert = 0;
   //FreeSurfer versions after 20221225 disambiguate if transform has been applied
   // "./mris_convert --to-scanner" store raw vertex positions in scanner space, so transforms should be ignored.

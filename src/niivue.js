@@ -1344,6 +1344,17 @@ Niivue.prototype.readDirectory = function (directory) {
   return allEntiresInDir;
 };
 
+/**
+ * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
+ * @param {string} url - filename
+ */
+Niivue.prototype.isMeshExt = function (url) {
+  let ext = this.getFileExt(url);
+  log.debug("dropped ext");
+  log.debug(ext);
+  return MESH_EXTENSIONS.includes(ext);
+}; // isMeshExt()
+
 // not included in public docs
 Niivue.prototype.dropListener = async function (e) {
   e.stopPropagation();
@@ -1835,6 +1846,7 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
   this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
+  return true;
 };
 
 /**
@@ -1845,13 +1857,15 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
 Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
   if (this.drawBitmap) log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
+  let ok = false;
   try {
     let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-    this.loadDrawing(volume);
+    ok = this.loadDrawing(volume);
   } catch (err) {
     console.error("loadDrawingFromUrl() failed to load " + fnm);
     this.drawClearAllUndoBitmaps();
   }
+  return ok;
 };
 
 // not included in public docs
@@ -3281,7 +3295,6 @@ Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   let nx = dims[0];
   let nxy = nx * dims[1];
-  let nxyz = nxy * dims[2];
   function xyz2vx(pt) {
     //provided an XYZ 3D point, provide address in 1D array
     return pt[0] + pt[1] * nx + pt[2] * nxy;
@@ -3328,7 +3341,8 @@ Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
     testNeighbor([1, 0, 0]); //right
     //7. Continue looping until Q is exhausted.
   }
-};
+}; // drawFloodFillCore()
+
 // not included in public docs
 // set all connected voxels in drawing to new color
 Niivue.prototype.drawFloodFill = function (
@@ -4363,6 +4377,7 @@ Niivue.prototype.getDescriptives = function (
 // not included in public docs
 // apply slow computations when image properties have changed
 Niivue.prototype.refreshLayers = function (overlayItem, layer) {
+  this.refreshColormaps();
   if (this.volumes.length < 1) return; //e.g. only meshes
   let hdr = overlayItem.hdr;
   let img = overlayItem.img;
@@ -6694,7 +6709,6 @@ Niivue.prototype.drawGraph = function () {
   if (mn >= mx) {
     mx = mn + 1.0;
   }
-  let dark = 0.9; //make border around graph a bit darker than graph body
   this.drawRect(graph.LTWH, graph.backColor);
   let [spacing, ticMin, ticMax] = tickSpacing(mn, mx);
   let digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)));
@@ -7390,11 +7404,6 @@ Niivue.prototype.screenXY2TextureFrac = function (
 ) {
   let texFrac = [-1, -1, -1]; //texture 0..1 so -1 is out of bounds
   var axCorSag = this.screenSlices[i].axCorSag;
-  let v3 = mat.vec3.fromValues(
-    x - this.screenSlices[i].leftTopWidthHeight[0],
-    y - this.screenSlices[i].leftTopWidthHeight[1],
-    1
-  );
   if (axCorSag > SLICE_TYPE.SAGITTAL) return texFrac;
   var ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
   let isMirror = false;
@@ -7434,7 +7443,6 @@ Niivue.prototype.screenXY2TextureFrac = function (
   texFrac[0] = xyz[0];
   texFrac[1] = xyz[1];
   texFrac[2] = xyz[2];
-  let mm = this.frac2mm(texFrac);
   return texFrac;
 }; // screenXY2TextureFrac()
 
@@ -7931,6 +7939,8 @@ Niivue.prototype.drawScene = function () {
       this.draw2D([0, 0, 0, 0], 2);
     } else {
       //sliceTypeMultiplanar
+      let isDrawPenDown =
+        isFinite(this.drawPenLocation[0]) && this.opts.drawingEnabled;
       let { volScale } = this.sliceScale();
       if (typeof this.opts.multiplanarPadPixels !== "number")
         log.debug("multiplanarPadPixels must be numeric");
@@ -7970,7 +7980,7 @@ Niivue.prototype.drawScene = function () {
         let pixScale = wX1 / volScale[0];
         let hY1 = volScale[1] * pixScale;
         let hZ1 = volScale[2] * pixScale;
-        if (ltwh3x1[3] === ltwh4x1[3]) {
+        if (!isDrawPenDown && ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
           if (maxVols < 2 || !this.graph.autoSizeMultiplanar) {
             this.draw3D([
@@ -8000,7 +8010,7 @@ Niivue.prototype.drawScene = function () {
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
         //draw sagittal
         this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
-        if (maxVols < 2 || !this.graph.autoSizeMultiplanar)
+        if (!isDrawPenDown && (maxVols < 2 || !this.graph.autoSizeMultiplanar))
           this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       } //if landscape else portrait
     } //if multiplanar

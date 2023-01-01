@@ -6,7 +6,7 @@ import * as cmaps from "./cmaps";
 import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
-import { prototype } from "nifti-reader-js/src/nifti1";
+//import { prototype } from "nifti-reader-js/src/nifti1";
 const log = new Log();
 
 // not included in public docs
@@ -495,7 +495,7 @@ export function NVImage(
       let numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
       var u8 = new Uint8Array(imgRaw);
       for (let index = 0; index < u8.length; index += numBytesPerVoxel) {
-        let offset = bytesPer - 1;
+        let offset = numBytesPerVoxel - 1;
         for (let x = 0; x < offset; x++) {
           let theByte = u8[index + x];
           u8[index + x] = u8[index + offset];
@@ -1040,7 +1040,7 @@ NVImage.prototype.readECAT = function (buffer) {
           newImg[i] = reader.getUint16(ipos, false) * scale_factor;
           ipos += 2;
         }
-      } else if (ihdr.data_type == 7) {
+      } else if (data_type == 7) {
         //uint32
         for (var i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint32(ipos, false) * scale_factor;
@@ -1503,7 +1503,7 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
           hdr.datatypeCode = this.DT_DOUBLE;
           break;
         default:
-          throw new Error("Unsupported NRRD data type: " + value);
+          throw new Error("Unsupported NRRD data type: " + items[0]);
       }
     }
     if (line.startsWith("ObjectType") && !items[0].includes("Image"))
