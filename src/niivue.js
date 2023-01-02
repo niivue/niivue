@@ -95,6 +95,7 @@ const MESH_EXTENSIONS = [
 ];
 
 const LEFT_MOUSE_BUTTON = 0;
+const CENTER_MOUSE_BUTTON = 1;
 const RIGHT_MOUSE_BUTTON = 2;
 
 /**
@@ -213,6 +214,7 @@ export function Niivue(options = {}) {
   this.uiData.mousedown = false;
   this.uiData.touchdown = false;
   this.uiData.mouseButtonLeftDown = false;
+  this.uiData.mouseButtonCenterDown = false;
   this.uiData.mouseButtonRightDown = false;
   this.uiData.mouseDepthPicker = false;
   this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
@@ -691,6 +693,9 @@ Niivue.prototype.mouseDownListener = function (e) {
   } else if (e.button === RIGHT_MOUSE_BUTTON) {
     this.uiData.mouseButtonRightDown = true;
     this.mouseRightButtonHandler(e);
+  } else if (e.button === CENTER_MOUSE_BUTTON) {
+    this.uiData.mouseButtonCenterDown = true;
+    this.mouseCenterButtonHandler(e);
   }
 };
 
@@ -706,6 +711,23 @@ Niivue.prototype.mouseLeftButtonHandler = function (e) {
   this.mouseDown(pos.x, pos.y);
 };
 
+// not included in public docs
+// handler for mouse center button down
+// note: no test yet
+Niivue.prototype.mouseCenterButtonHandler = function (e) {
+  //this.uiData.isDragging = true;
+  let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
+    e,
+    this.gl.canvas
+  );
+  if (this.opts.dragMode === DRAG_MODE.none) return;
+  this.setDragStart(pos.x, pos.y);
+  if (!this.uiData.isDragging)
+    this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+  this.uiData.isDragging = true;
+  this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
+  return;
+};
 // not included in public docs
 // handler for mouse right button down
 // note: no test yet
@@ -815,6 +837,8 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
 Niivue.prototype.mouseUpListener = function () {
   this.uiData.mousedown = false;
   this.uiData.mouseButtonRightDown = false;
+  let wasCenterDown = this.uiData.mouseButtonCenterDown;
+  this.uiData.mouseButtonCenterDown = false;
   this.uiData.mouseButtonLeftDown = false;
   if (this.drawPenFillPts.length > 0) this.drawPenFilled();
   else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap();
@@ -824,6 +848,7 @@ Niivue.prototype.mouseUpListener = function () {
   if (this.uiData.isDragging) {
     this.uiData.isDragging = false;
     if (this.opts.dragMode !== DRAG_MODE.contrast) return;
+    if (wasCenterDown) return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
@@ -919,7 +944,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
     if (this.uiData.mouseButtonLeftDown) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
-    } else if (this.uiData.mouseButtonRightDown) {
+    } else if ((this.uiData.mouseButtonRightDown) || (this.uiData.mouseButtonCenterDown) ){
       this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
@@ -5010,7 +5035,13 @@ Niivue.prototype.colormapFromKey = function (name) {
   return cmapper.colormapFromKey(name);
 };
 
-// not included in public docs
+/**
+ * determine active 3D volume from 4D time series
+ * @param {string} id the ID of the 4D NVImage
+ * @returns {number} currently selected volume (indexed from 0)
+ * @example nv1.getFrame4D(nv1.volumes[0].id);
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
+ */
 Niivue.prototype.colormap = function (lutName = "") {
   return cmapper.colormap(lutName);
 }; // colormap()
@@ -5480,6 +5511,7 @@ Niivue.prototype.screenXY2mm = function (x, y, forceSlice = -1) {
   return [NaN, NaN, NaN, NaN];
 };
 
+
 //dragForPanZoom
 Niivue.prototype.dragForPanZoom = function (startXYendXY) {
   let endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
@@ -5500,6 +5532,10 @@ Niivue.prototype.dragForPanZoom = function (startXYendXY) {
   this.uiData.pan2Dxyzmm[2] =
     this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
 };
+
+Niivue.prototype.dragForCenterButton = function (startXYendXY) {
+  this.dragForPanZoom(startXYendXY);
+}
 
 // not included in public docs
 // draw line between start/end points and text to report length
@@ -5943,6 +5979,8 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
     size = this.opts.textHeight * this.gl.canvas.height * scale;
   }
   xy[0] -= 0.5 * this.textWidth(size, str);
+  xy[0] = Math.max(xy[0], 1); //clamp left edge of canvas
+  xy[0] = Math.min(xy[0], this.canvas.width - width - 1); //clamp right edge of canvas
   this.drawText(xy, str, scale, color);
 }; // drawTextBelow()
 
@@ -7367,14 +7405,21 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   return vox;
 }; // frac2vox()
 
-// not included in public docs
-// move crosshair a fixed number of voxels (not mm)
+/**
+ * move crosshair a fixed number of voxels (not mm)
+ * @param {number} x translate left (-) or right (+)
+ * @param {number} y translate posterior (-) or +anterior (+)
+ * @param {number} z translate inferior (-) or superior (+)
+ * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
+ * @example niivue.moveCrosshairInVox(1, 0, 0)
+ */
 Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   let vox = this.frac2vox(this.scene.crosshairPos);
   vox[0] += x;
   vox[1] += y;
   vox[2] += z;
   this.scene.crosshairPos = this.vox2frac(vox);
+  this.createOnLocationChange();
   this.drawScene();
 }; // moveCrosshairInVox()
 
@@ -8019,7 +8064,15 @@ Niivue.prototype.drawScene = function () {
   if (this.opts.isColorbar) this.drawColorbar();
 
   if (this.uiData.isDragging) {
-    //if (this.opts.isDragForPanZoom) {
+    if (this.uiData.mouseButtonCenterDown) {
+      this.dragForCenterButton([
+        this.uiData.dragStart[0],
+        this.uiData.dragStart[1],
+        this.uiData.dragEnd[0],
+        this.uiData.dragEnd[1],
+      ]);
+      return;
+    }
     if (this.opts.dragMode === DRAG_MODE.pan) {
       this.dragForPanZoom([
         this.uiData.dragStart[0],
