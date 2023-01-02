@@ -92,6 +92,7 @@ const MESH_EXTENSIONS = [
   "TRX",
   "VTK",
   "X3D",
+  "JCON",
 ];
 
 const LEFT_MOUSE_BUTTON = 0;
@@ -351,6 +352,7 @@ export function Niivue(options = {}) {
   this.dragModes.measurement = DRAG_MODE.measurement;
   this.dragModes.none = DRAG_MODE.none;
   this.dragModes.pan = DRAG_MODE.pan;
+  this.dragModes.slicer3D = DRAG_MODE.slicer3D;
   this.sliceTypeAxial = SLICE_TYPE.AXIAL;
   this.sliceTypeCoronal = SLICE_TYPE.CORONAL;
   this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL;
@@ -844,7 +846,6 @@ Niivue.prototype.mouseUpListener = function () {
   else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
-
   if (this.uiData.isDragging) {
     this.uiData.isDragging = false;
     if (this.opts.dragMode !== DRAG_MODE.contrast) return;
@@ -944,7 +945,10 @@ Niivue.prototype.mouseMoveListener = function (e) {
     if (this.uiData.mouseButtonLeftDown) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
-    } else if ((this.uiData.mouseButtonRightDown) || (this.uiData.mouseButtonCenterDown) ){
+    } else if (
+      this.uiData.mouseButtonRightDown ||
+      this.uiData.mouseButtonCenterDown
+    ) {
       this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
@@ -5511,7 +5515,6 @@ Niivue.prototype.screenXY2mm = function (x, y, forceSlice = -1) {
   return [NaN, NaN, NaN, NaN];
 };
 
-
 //dragForPanZoom
 Niivue.prototype.dragForPanZoom = function (startXYendXY) {
   let endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
@@ -5535,7 +5538,23 @@ Niivue.prototype.dragForPanZoom = function (startXYendXY) {
 
 Niivue.prototype.dragForCenterButton = function (startXYendXY) {
   this.dragForPanZoom(startXYendXY);
-}
+};
+
+//for slicer3D vertical dragging adjusts zoom
+Niivue.prototype.dragForSlicer3D = function (startXYendXY) {
+  let zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
+  let y = startXYendXY[3] - startXYendXY[1];
+  const pixelScale = 0.01;
+  zoom += y * pixelScale;
+  zoom = Math.max(zoom, 0.1);
+  zoom = Math.min(zoom, 10.0);
+  let zoomChange = this.uiData.pan2Dxyzmm[3] - zoom;
+  this.uiData.pan2Dxyzmm[3] = zoom;
+  let mm = this.frac2mm(this.scene.crosshairPos);
+  this.uiData.pan2Dxyzmm[0] += zoomChange * mm[0];
+  this.uiData.pan2Dxyzmm[1] += zoomChange * mm[1];
+  this.uiData.pan2Dxyzmm[2] += zoomChange * mm[2];
+};
 
 // not included in public docs
 // draw line between start/end points and text to report length
@@ -8073,6 +8092,16 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
+    if (this.opts.dragMode === DRAG_MODE.slicer3D) {
+      this.dragForSlicer3D([
+        this.uiData.dragStart[0],
+        this.uiData.dragStart[1],
+        this.uiData.dragEnd[0],
+        this.uiData.dragEnd[1],
+      ]);
+      return;
+    }
+
     if (this.opts.dragMode === DRAG_MODE.pan) {
       this.dragForPanZoom([
         this.uiData.dragStart[0],

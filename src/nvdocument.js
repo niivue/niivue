@@ -26,6 +26,7 @@ export const DRAG_MODE = Object.freeze({
   contrast: 1,
   measurement: 2,
   pan: 3,
+  slicer3D: 4,
 });
 
 /**

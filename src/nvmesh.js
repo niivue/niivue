@@ -3249,6 +3249,9 @@ NVMesh.loadConnectomeFromJSON = async function (
   visible = true
 ) {
   if (json.hasOwnProperty("name")) name = json.name;
+  if (!json.hasOwnProperty("nodes")) {
+    throw Error("not a valid jcon connectome file");
+  }
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
@@ -3272,6 +3275,15 @@ NVMesh.readMesh = async function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
+  if (ext === "JCON")
+    return await this.loadConnectomeFromJSON(
+      JSON.parse(new TextDecoder().decode(buffer)),
+      gl,
+      name,
+      "",
+      opacity,
+      visible
+    );
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
