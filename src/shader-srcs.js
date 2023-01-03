@@ -9,6 +9,21 @@ void main(void) {
 	vColor = texCoords;
 }`;
 
+const kDrawFunc = `
+	vec4 drawColor(float scalar) {
+	vec4 clrs[7];
+	clrs[0] = vec4(0.0, 0.0, 0.0, 0.0); //clear
+	clrs[1] = vec4(1.0, 0.0, 0.0, drawOpacity); //red
+	clrs[2] = vec4(0.0, 1.0, 0.0, drawOpacity); //green
+	clrs[3] = vec4(0.0, 0.0, 1.0, drawOpacity); //blue
+	clrs[4] = vec4(1.0, 1.0, 0.0, drawOpacity); //yellow
+	clrs[5] = vec4(0.0, 1.0, 1.0, drawOpacity); //cyan
+	clrs[6] = vec4(1.0, 0.0, 1.0, drawOpacity); //purple
+	highp int index = int(scalar * 255.0);
+	index = min(index, 6);
+	return clrs[index];
+}`;
+
 const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale; 
 	vec3 invR = 1.0 / rayDir;
@@ -57,21 +72,7 @@ float frac2ndc(vec3 frac) {
 	vec4 mm = transpose(matRAS) * pos;
 	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
 	return (z_ndc + 1.0) / 2.0;
-}
-vec4 drawColor(float scalar) {
-	vec4 dcolor = vec4(0.0, 0.0, 0.0, 0.0);
-	if (scalar <= 0.0) return dcolor;
-	dcolor.a = drawOpacity;
-	if (scalar >= (4.0/255.0))
-		dcolor.rgb = vec3(scalar,0.0,scalar);
-	else if (scalar >= (3.0/255.0))
-		dcolor.b = 1.0;
-	else if (scalar >= (2.0/255.0))
-		dcolor.g = 1.0;
-	else
-		dcolor.r = 1.0;
-	return dcolor;
-}`;
+}` + kDrawFunc;
 
 export var fragRenderShaderMIP =
   `#version 300 es
@@ -423,8 +424,8 @@ uniform float drawOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 in vec3 texPos;
-out vec4 color;
-void main() {
+out vec4 color;`
++kDrawFunc+`void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -463,18 +464,10 @@ void main() {
 				ocolor.rbg = vec3(0.0, 0.0, 0.0);
 		}
 	}
-	float draw = texture(drawing, texPos).r;
-	if (draw > 0.0) {
-		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (4.0/255.0))
-			dcolor.rgb = vec3(draw,0.0,draw);
-		else if (draw >= (3.0/255.0))
-			dcolor.b = 1.0;
-		else if (draw >= (2.0/255.0))
-			dcolor.g = 1.0;
-		else
-			dcolor.r = 1.0;
-		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+	//borg purple
+	vec4 dcolor = drawColor(texture(drawing, texPos).r);
+	if (dcolor.a > 0.0) {
+		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))

@@ -74,8 +74,11 @@
         <a class="viewBtn" id="@Red" accesskey="1">Red ^1</a>
         <a class="viewBtn" id="@Green" accesskey="2">Green ^2</a>
         <a class="viewBtn" id="@Blue" accesskey="3">Blue ^3</a>
-        <a class="viewBtn" id="@Erase" accesskey="4">Erase ^4</a>
-        <a class="viewBtn" id="@Cluster" accesskey="5">Erase Cluster ^5</a>
+        <a class="viewBtn" id="@Yellow" accesskey="4">Yellow ^4</a>
+        <a class="viewBtn" id="@Cyan" accesskey="5">Cyan ^5</a>
+        <a class="viewBtn" id="@Purple" accesskey="6">Purple ^6</a>
+        <a class="viewBtn" id="@Erase" accesskey="4">Erase ^7</a>
+        <a class="viewBtn" id="@Cluster" accesskey="5">Erase Cluster ^8</a>
         <a class="viewBtn" id="@GrowCluster">Grow Cluster</a>
         <a class="viewBtn" id="@GrowClusterDark">Grow Cluster Dark</a>
         <a class="viewBtn" id="@GrowClusterBright">Grow Cluster Bright</a>
@@ -235,6 +238,12 @@
               nv1.setPenValue(2, isFilled);
           if (event.target.id === "@Blue")
               nv1.setPenValue(3, isFilled);
+          if (event.target.id === "@Yellow")
+              nv1.setPenValue(4, isFilled);
+          if (event.target.id === "@Cyan")
+              nv1.setPenValue(5, isFilled);
+          if (event.target.id === "@Purple")
+              nv1.setPenValue(6, isFilled);
           if (event.target.id === "@Cluster")
               nv1.setPenValue(-0, isFilled);
           if (event.target.id === "@GrowCluster")

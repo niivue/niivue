@@ -73,6 +73,9 @@
         <a class="viewBtn" id="@Red">Red</a>
         <a class="viewBtn" id="@Green">Green</a>
         <a class="viewBtn" id="@Blue">Blue</a>
+        <a class="viewBtn" id="@Yellow">Yellow</a>
+        <a class="viewBtn" id="@Cyan">Cyan</a>
+        <a class="viewBtn" id="@Purple">Purple</a>
         <a class="viewBtn" id="@Erase">Erase</a>
         <a class="viewBtn" id="@Cluster">Erase Cluster</a>
         <a class="viewBtn divider dropdown-item-checked" id="DrawFilled">Fill Outline</a>
@@ -226,6 +229,12 @@
               nv1.setPenValue(2, isFilled);
           if (event.target.id === "@Blue")
               nv1.setPenValue(3, isFilled);
+          if (event.target.id === "@Yellow")
+              nv1.setPenValue(4, isFilled);
+          if (event.target.id === "@Cyan")
+              nv1.setPenValue(5, isFilled);
+          if (event.target.id === "@Purple")
+              nv1.setPenValue(6, isFilled);
           if (event.target.id === "@Cluster")
               nv1.setPenValue(-0, isFilled);
           toggleGroup(event.target.id)
