@@ -1448,7 +1448,13 @@ NVMesh.readCURV = function (buffer, n_vert) {
       "Unable to recognize file type: does not appear to be FreeSurfer format."
     );
   if (n_vert !== n_vertex) {
-    console.log("CURV file has different number of vertices than mesh");
+    console.log(
+      "CURV file has different number of vertices ( " +
+        n_vertex +
+        ")than mesh (" +
+        n_vert +
+        ")"
+    );
     return;
   }
   if (buffer.byteLength < 15 + 4 * n_vertex * n_time) {
@@ -3586,8 +3592,22 @@ NVMesh.loadFromUrl = async function ({
     response = await fetch(layers[i].url);
     if (!response.ok) throw Error(response.statusText);
     buffer = await response.arrayBuffer();
-    urlParts = layers[i].url.split("/");
-    let layerName = urlParts.slice(-1)[0];
+    let layerName = null;
+    if (layers[i].hasOwnProperty("name") && layers[i].name !== "") {
+      layerName = layers[i].name;
+    } else {
+      //urlParts = layers[i].url.split("/");
+      //layerName = urlParts.slice(-1)[0];
+      try {
+        // if a full url like https://domain/path/file.nii.gz?query=filter
+        // parse the url and get the pathname component without the query
+        urlParts = new URL(layers[i].url).pathname.split("/");
+      } catch (e) {
+        // if a relative url then parse the path (assuming no query)
+        urlParts = layers[i].url.split("/");
+      }
+      layerName = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
+    }
     if (layerName.indexOf("?") > -1) {
       layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
     }
