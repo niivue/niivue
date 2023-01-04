@@ -1,0 +1,26 @@
+{
+	"name": "simpleConnectome",
+	"nodeColormap": "viridis",
+	"nodeColormapNegative": "viridis",
+	"nodeMinColor": 2,
+	"nodeMaxColor": 4,
+	"nodeScale": 3,
+	"edgeColormap": "warm",
+	"edgeColormapNegative": "winter",
+	"edgeMin": 2,
+	"edgeMax": 6,
+	"edgeScale": 1,
+	"nodes": {
+		"names": ["RF", "LF", "RP", "LP"],
+		"X": [40, -40, 40, -40],
+		"Y": [40, 40, -40, -40],
+		"Z": [30, 20, 50, 50],
+		"Color": [2, 2, 3, 4],
+		"Size": [2, 2, 3, 4]
+	},
+	"edges": [1, 2, -3, 4,
+		0, 1, 0, 6,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	]
+}

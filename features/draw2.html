@@ -12,41 +12,41 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-		<label for="drawPen">Draw color:</label>
-		<select name="drawPen" id="drawPen">
-			<option value="-1">Off</option>
-			<option value="0">Erase</option>
-			<option value="1">Red</option>
-			<option value="2">Green</option>
-			<option value="3">Blue</option>
-			<option value="8">Filled Erase</option>
-			<option value="9">Filled Red</option>
-			<option value="10">Filled Green</option>
-			<option value="11">Filled Blue</option>
-			<option value="12">Erase Selected Cluster</option>
-		</select>
-		<button id="left">left</button>
-		<button id="right">right</button>
-		<button id="posterior">posterior</button>
-		<button id="anterior">anterior</button>
-		<button id="inferior">inferior</button>
-		<button id="superior">superior</button>
-		<button id="info">info</button>
-		<button id="save">save drawing</button>
-		<button id="undo">undo</button>
-		<button id="growcut">grow cut</button>
-		<label for="drawOpacity">drawing opacity</label>
-		<input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
-		<label for="check1">fill pen overwrites</label>
-		<input type="checkbox" id="check1" name="check1" checked>		
-		<label for="check2">Radiological</label>
-		<input type="checkbox" id="check2" name="check2" unchecked>
-		<label for="check3">World space</label>
-		<input type="checkbox" id="check3" name="check3" unchecked>
-		<label for="check9">Linear Interpolation</label>
-		<input type="checkbox" id="check9" name="check9" checked>
-		<label for="check10">HighDPI</label>
-		<input type="checkbox" id="check10" name="check10" checked>
+        <label for="drawPen">Draw color:</label>
+        <select name="drawPen" id="drawPen">
+            <option value="-1">Off</option>
+            <option value="0">Erase</option>
+            <option value="1">Red</option>
+            <option value="2">Green</option>
+            <option value="3">Blue</option>
+            <option value="8">Filled Erase</option>
+            <option value="9">Filled Red</option>
+            <option value="10">Filled Green</option>
+            <option value="11">Filled Blue</option>
+            <option value="12">Erase Selected Cluster</option>
+        </select>
+        <button id="left">left</button>
+        <button id="right">right</button>
+        <button id="posterior">posterior</button>
+        <button id="anterior">anterior</button>
+        <button id="inferior">inferior</button>
+        <button id="superior">superior</button>
+        <button id="info">info</button>
+        <button id="save">save drawing</button>
+        <button id="undo">undo</button>
+        <button id="growcut">grow cut</button>
+        <label for="drawOpacity">drawing opacity</label>
+        <input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
+        <label for="check1">fill pen overwrites</label>
+        <input type="checkbox" id="check1" name="check1" checked>        
+        <label for="check2">Radiological</label>
+        <input type="checkbox" id="check2" name="check2" unchecked>
+        <label for="check3">World space</label>
+        <input type="checkbox" id="check3" name="check3" unchecked>
+        <label for="check9">Linear Interpolation</label>
+        <input type="checkbox" id="check9" name="check9" checked>
+        <label for="check10">HighDPI</label>
+        <input type="checkbox" id="check10" name="check10" checked>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -131,7 +131,7 @@
       function doCheck2Click() {
         nv1.setRadiologicalConvention(this.checked);
       }
-	  document.getElementById("check3").addEventListener("change", doCheck3Click);
+      document.getElementById("check3").addEventListener("change", doCheck3Click);
       function doCheck3Click() {
         nv1.setSliceMM(this.checked);
       }

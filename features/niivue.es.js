@@ -4,7 +4,7 @@ var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = (obj, key2, value2) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key2] = value2;
+var __defNormalProp = (obj, key2, value) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value }) : obj[key2] = value;
 var __spreadValues = (a, b) => {
   for (var prop in b || (b = {}))
     if (__hasOwnProp.call(b, prop))
@@ -749,6 +749,20 @@ void main(void) {
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vColor = texCoords;
 }`;
+const kDrawFunc = `
+	vec4 drawColor(float scalar) {
+	vec4 clrs[7];
+	clrs[0] = vec4(0.0, 0.0, 0.0, 0.0); //clear
+	clrs[1] = vec4(1.0, 0.0, 0.0, drawOpacity); //red
+	clrs[2] = vec4(0.0, 1.0, 0.0, drawOpacity); //green
+	clrs[3] = vec4(0.0, 0.0, 1.0, drawOpacity); //blue
+	clrs[4] = vec4(1.0, 1.0, 0.0, drawOpacity); //yellow
+	clrs[5] = vec4(0.0, 1.0, 1.0, drawOpacity); //cyan
+	clrs[6] = vec4(1.0, 0.0, 1.0, drawOpacity); //purple
+	highp int index = int(scalar * 255.0);
+	index = min(index, 6);
+	return clrs[index];
+}`;
 const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale; 
 	vec3 invR = 1.0 / rayDir;
@@ -797,21 +811,7 @@ float frac2ndc(vec3 frac) {
 	vec4 mm = transpose(matRAS) * pos;
 	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
 	return (z_ndc + 1.0) / 2.0;
-}
-vec4 drawColor(float scalar) {
-	vec4 dcolor = vec4(0.0, 0.0, 0.0, 0.0);
-	if (scalar <= 0.0) return dcolor;
-	dcolor.a = drawOpacity;
-	if (scalar >= (4.0/255.0))
-		dcolor.rgb = vec3(scalar,0.0,scalar);
-	else if (scalar >= (3.0/255.0))
-		dcolor.b = 1.0;
-	else if (scalar >= (2.0/255.0))
-		dcolor.g = 1.0;
-	else
-		dcolor.r = 1.0;
-	return dcolor;
-}`;
+}` + kDrawFunc;
 var fragRenderShader = `#version 300 es
 #line 14
 precision highp int;
@@ -1016,8 +1016,7 @@ uniform float drawOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 in vec3 texPos;
-out vec4 color;
-void main() {
+out vec4 color;` + kDrawFunc + `void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -1056,18 +1055,10 @@ void main() {
 				ocolor.rbg = vec3(0.0, 0.0, 0.0);
 		}
 	}
-	float draw = texture(drawing, texPos).r;
-	if (draw > 0.0) {
-		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (4.0/255.0))
-			dcolor.rgb = vec3(draw,0.0,draw);
-		else if (draw >= (3.0/255.0))
-			dcolor.b = 1.0;
-		else if (draw >= (2.0/255.0))
-			dcolor.g = 1.0;
-		else
-			dcolor.r = 1.0;
-		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+	//borg purple
+	vec4 dcolor = drawColor(texture(drawing, texPos).r);
+	if (dcolor.a > 0.0) {
+		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
@@ -1312,28 +1303,22 @@ void main(void) {
 	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
-	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
-	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+	float nlayer = float(textureSize(colormap, 0).y);
+	float y = (layer + 0.5)/nlayer;
+	if (!isnan(cal_minNeg))
+		y = (layer + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
 	//negative colors
 	mn = cal_minNeg;
 	mx = cal_maxNeg;
 	if (isAlphaThreshold) 
 		mx = 0.0;	
-	if ((cal_minNeg != cal_maxNeg) && ( f < mx)) {
-
+	if ((!isnan(cal_minNeg)) && ( f < mx)) {
 		r = max(0.00001, abs(mx - mn));
 		mn = min(mn, mx);
 		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
-		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
-		//select texels at positions 0 and 1 of lookup table: 
-		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
-		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-		//detect bogus color: negative color slot not used than
-		// v0 = 1,1,1,0 and v1 = 0,0,0,1
-		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
-			FragColor = texture(colormap, vec2(txl, y));
-		
+		y = (layer + 0.5)/nlayer;
+		FragColor = texture(colormap, vec2(txl, y));
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
@@ -1851,7 +1836,6 @@ var fragOrientCubeShader = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
 in vec3 vColor;
-// we need to declare an output for the fragment shader
 out vec4 outColor;
 void main() {
 	outColor = vec4(vColor, 1.0);
@@ -1947,8 +1931,8 @@ function __spreadArray(to, from, pack) {
     }
   return to.concat(ar || Array.prototype.slice.call(from));
 }
-function isFunction(value2) {
-  return typeof value2 === "function";
+function isFunction(value) {
+  return typeof value === "function";
 }
 function createErrorClass(createImpl) {
   var _super = function(instance) {
@@ -2101,8 +2085,8 @@ var Subscription = function() {
   return Subscription2;
 }();
 var EMPTY_SUBSCRIPTION = Subscription.EMPTY;
-function isSubscription(value2) {
-  return value2 instanceof Subscription || value2 && "closed" in value2 && isFunction(value2.remove) && isFunction(value2.add) && isFunction(value2.unsubscribe);
+function isSubscription(value) {
+  return value instanceof Subscription || value && "closed" in value && isFunction(value.remove) && isFunction(value.add) && isFunction(value.unsubscribe);
 }
 function execFinalizer(finalizer) {
   if (isFunction(finalizer)) {
@@ -2182,11 +2166,11 @@ var Subscriber = function(_super) {
   Subscriber2.create = function(next, error, complete) {
     return new SafeSubscriber(next, error, complete);
   };
-  Subscriber2.prototype.next = function(value2) {
+  Subscriber2.prototype.next = function(value) {
     if (this.isStopped)
       ;
     else {
-      this._next(value2);
+      this._next(value);
     }
   };
   Subscriber2.prototype.error = function(err2) {
@@ -2212,8 +2196,8 @@ var Subscriber = function(_super) {
       this.destination = null;
     }
   };
-  Subscriber2.prototype._next = function(value2) {
-    this.destination.next(value2);
+  Subscriber2.prototype._next = function(value) {
+    this.destination.next(value);
   };
   Subscriber2.prototype._error = function(err2) {
     try {
@@ -2239,11 +2223,11 @@ var ConsumerObserver = function() {
   function ConsumerObserver2(partialObserver) {
     this.partialObserver = partialObserver;
   }
-  ConsumerObserver2.prototype.next = function(value2) {
+  ConsumerObserver2.prototype.next = function(value) {
     var partialObserver = this.partialObserver;
     if (partialObserver.next) {
       try {
-        partialObserver.next(value2);
+        partialObserver.next(value);
       } catch (error) {
         handleUnhandledError(error);
       }
@@ -2371,9 +2355,9 @@ var Observable = function() {
     promiseCtor = getPromiseCtor(promiseCtor);
     return new promiseCtor(function(resolve, reject) {
       var subscriber = new SafeSubscriber({
-        next: function(value2) {
+        next: function(value) {
           try {
-            next(value2);
+            next(value);
           } catch (err2) {
             reject(err2);
             subscriber.unsubscribe();
@@ -2403,13 +2387,13 @@ var Observable = function() {
     var _this = this;
     promiseCtor = getPromiseCtor(promiseCtor);
     return new promiseCtor(function(resolve, reject) {
-      var value2;
+      var value;
       _this.subscribe(function(x2) {
-        return value2 = x2;
+        return value = x2;
       }, function(err2) {
         return reject(err2);
       }, function() {
-        return resolve(value2);
+        return resolve(value);
       });
     });
   };
@@ -2422,11 +2406,11 @@ function getPromiseCtor(promiseCtor) {
   var _a2;
   return (_a2 = promiseCtor !== null && promiseCtor !== void 0 ? promiseCtor : config.Promise) !== null && _a2 !== void 0 ? _a2 : Promise;
 }
-function isObserver(value2) {
-  return value2 && isFunction(value2.next) && isFunction(value2.error) && isFunction(value2.complete);
+function isObserver(value) {
+  return value && isFunction(value.next) && isFunction(value.error) && isFunction(value.complete);
 }
-function isSubscriber(value2) {
-  return value2 && value2 instanceof Subscriber || isObserver(value2) && isSubscription(value2);
+function isSubscriber(value) {
+  return value && value instanceof Subscriber || isObserver(value) && isSubscription(value);
 }
 var ObjectUnsubscribedError = createErrorClass(function(_super) {
   return function ObjectUnsubscribedErrorImpl() {
@@ -2457,7 +2441,7 @@ var Subject = function(_super) {
       throw new ObjectUnsubscribedError();
     }
   };
-  Subject2.prototype.next = function(value2) {
+  Subject2.prototype.next = function(value) {
     var _this = this;
     errorContext(function() {
       var e_1, _a2;
@@ -2469,7 +2453,7 @@ var Subject = function(_super) {
         try {
           for (var _b2 = __values(_this.currentObservers), _c = _b2.next(); !_c.done; _c = _b2.next()) {
             var observer = _c.value;
-            observer.next(value2);
+            observer.next(value);
           }
         } catch (e_1_1) {
           e_1 = { error: e_1_1 };
@@ -2572,9 +2556,9 @@ var AnonymousSubject = function(_super) {
     _this.source = source;
     return _this;
   }
-  AnonymousSubject2.prototype.next = function(value2) {
+  AnonymousSubject2.prototype.next = function(value) {
     var _a2, _b2;
-    (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.next) === null || _b2 === void 0 ? void 0 : _b2.call(_a2, value2);
+    (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.next) === null || _b2 === void 0 ? void 0 : _b2.call(_a2, value);
   };
   AnonymousSubject2.prototype.error = function(err2) {
     var _a2, _b2;
@@ -2619,14 +2603,14 @@ var ReplaySubject = function(_super) {
     _this._windowTime = Math.max(1, _windowTime);
     return _this;
   }
-  ReplaySubject2.prototype.next = function(value2) {
+  ReplaySubject2.prototype.next = function(value) {
     var _a2 = this, isStopped = _a2.isStopped, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow, _timestampProvider = _a2._timestampProvider, _windowTime = _a2._windowTime;
     if (!isStopped) {
-      _buffer.push(value2);
+      _buffer.push(value);
       !_infiniteTimeWindow && _buffer.push(_timestampProvider.now() + _windowTime);
     }
     this._trimBuffer();
-    _super.prototype.next.call(this, value2);
+    _super.prototype.next.call(this, value);
   };
   ReplaySubject2.prototype._subscribe = function(subscriber) {
     this._throwIfClosed();
@@ -4100,14 +4084,14 @@ function requireUtilities$1() {
       return data.getFloat64(start, littleEndian);
     };
     nifti3.Utils.getLongAt = function(data, start, littleEndian) {
-      var ctr, array = [], value2 = 0;
+      var ctr, array = [], value = 0;
       for (ctr = 0; ctr < 8; ctr += 1) {
         array[ctr] = nifti3.Utils.getByteAt(data, start + ctr, littleEndian);
       }
       for (ctr = array.length - 1; ctr >= 0; ctr--) {
-        value2 = value2 * 256 + array[ctr];
+        value = value * 256 + array[ctr];
       }
-      return value2;
+      return value;
     };
     nifti3.Utils.toArrayBuffer = function(buffer2) {
       var ab, view, i2;
@@ -4940,14 +4924,14 @@ function requireTrees$1() {
     s.pending_buf[s.pending++] = w & 255;
     s.pending_buf[s.pending++] = w >>> 8 & 255;
   };
-  const send_bits = (s, value2, length2) => {
+  const send_bits = (s, value, length2) => {
     if (s.bi_valid > Buf_size - length2) {
-      s.bi_buf |= value2 << s.bi_valid & 65535;
+      s.bi_buf |= value << s.bi_valid & 65535;
       put_short(s, s.bi_buf);
-      s.bi_buf = value2 >> Buf_size - s.bi_valid;
+      s.bi_buf = value >> Buf_size - s.bi_valid;
       s.bi_valid += length2 - Buf_size;
     } else {
-      s.bi_buf |= value2 << s.bi_valid & 65535;
+      s.bi_buf |= value << s.bi_valid & 65535;
       s.bi_valid += length2;
     }
   };
@@ -13040,7 +13024,7 @@ function requireTag() {
     daikon2.Utils = daikon2.Utils || (typeof commonjsRequire !== "undefined" ? requireUtilities() : null);
     daikon2.Dictionary = daikon2.Dictionary || (typeof commonjsRequire !== "undefined" ? requireDictionary() : null);
     daikon2.Siemens = daikon2.Siemens || (typeof commonjsRequire !== "undefined" ? requireSiemens() : null);
-    daikon2.Tag = daikon2.Tag || function(group, element, vr, value2, offsetStart, offsetValue, offsetEnd, littleEndian) {
+    daikon2.Tag = daikon2.Tag || function(group, element, vr, value, offsetStart, offsetValue, offsetEnd, littleEndian) {
       this.group = group;
       this.element = element;
       this.vr = vr;
@@ -13050,11 +13034,11 @@ function requireTag() {
       this.sublist = false;
       this.preformatted = false;
       this.id = daikon2.Tag.createId(group, element);
-      if (value2 instanceof Array) {
-        this.value = value2;
+      if (value instanceof Array) {
+        this.value = value;
         this.sublist = true;
-      } else if (value2 !== null) {
-        var dv = new DataView(value2);
+      } else if (value !== null) {
+        var dv = new DataView(value);
         this.value = daikon2.Tag.convertValue(vr, dv, littleEndian);
         if (this.value === dv && this.isPrivateData()) {
           this.value = daikon2.Tag.convertPrivateValue(group, element, dv);
@@ -13535,7 +13519,7 @@ function requireRle() {
       return this.processData();
     };
     daikon2.RLE.prototype.processData = function() {
-      var ctr, temp1, temp2, value2, outputProcessed, offset;
+      var ctr, temp1, temp2, value, outputProcessed, offset;
       if (this.numSegments === 1) {
         return this.output;
       } else if (this.numSegments === 2) {
@@ -13543,8 +13527,8 @@ function requireRle() {
         for (ctr = 0; ctr < this.numElements; ctr += 1) {
           temp1 = this.output.getInt8(ctr);
           temp2 = this.output.getInt8(ctr + this.numElements);
-          value2 = (temp1 & 255) << 8 | temp2 & 255;
-          outputProcessed.setInt16(ctr * 2, value2, this.littleEndian);
+          value = (temp1 & 255) << 8 | temp2 & 255;
+          outputProcessed.setInt16(ctr * 2, value, this.littleEndian);
         }
         return outputProcessed;
       } else if (this.numSegments === 3) {
@@ -13605,19 +13589,19 @@ function requireRle() {
       }
     };
     daikon2.RLE.prototype.getInt32 = function() {
-      var value2 = this.rawData.getInt32(this.bytesRead, this.littleEndian);
+      var value = this.rawData.getInt32(this.bytesRead, this.littleEndian);
       this.bytesRead += 4;
-      return value2;
+      return value;
     };
     daikon2.RLE.prototype.getInt16 = function() {
-      var value2 = this.rawData.getInt16(this.bytesRead, this.littleEndian);
+      var value = this.rawData.getInt16(this.bytesRead, this.littleEndian);
       this.bytesRead += 2;
-      return value2;
+      return value;
     };
     daikon2.RLE.prototype.get = function() {
-      var value2 = this.rawData.getInt8(this.bytesRead);
+      var value = this.rawData.getInt8(this.bytesRead);
       this.bytesRead += 1;
-      return value2;
+      return value;
     };
     daikon2.RLE.prototype.put = function(val) {
       this.output.setInt8(this.bytesPut, val);
@@ -13669,14 +13653,14 @@ function requireDataStream() {
       this.index = 0;
     };
     jpeg.lossless.DataStream.prototype.get16 = function() {
-      var value2 = (this.buffer[this.index] << 8) + this.buffer[this.index + 1];
+      var value = (this.buffer[this.index] << 8) + this.buffer[this.index + 1];
       this.index += 2;
-      return value2;
+      return value;
     };
     jpeg.lossless.DataStream.prototype.get8 = function() {
-      var value2 = this.buffer[this.index];
+      var value = this.buffer[this.index];
       this.index += 1;
-      return value2;
+      return value;
     };
     if (module2.exports) {
       module2.exports = jpeg.lossless.DataStream;
@@ -14504,7 +14488,7 @@ function requireDecoder() {
       return (this.getPreviousX(compOffset) + this.getPreviousY(compOffset)) / 2;
     };
     jpeg.lossless.Decoder.prototype.decodeRGB = function(prev, temp, index) {
-      var value2, actab, dctab, qtab, ctrC, i2, k, j;
+      var value, actab, dctab, qtab, ctrC, i2, k, j;
       prev[0] = this.selector(0);
       prev[1] = this.selector(1);
       prev[2] = this.selector(2);
@@ -14516,24 +14500,24 @@ function requireDecoder() {
           for (k = 0; k < this.IDCT_Source.length; k += 1) {
             this.IDCT_Source[k] = 0;
           }
-          value2 = this.getHuffmanValue(dctab, temp, index);
-          if (value2 >= 65280) {
-            return value2;
+          value = this.getHuffmanValue(dctab, temp, index);
+          if (value >= 65280) {
+            return value;
           }
-          prev[ctrC] = this.IDCT_Source[0] = prev[ctrC] + this.getn(index, value2, temp, index);
+          prev[ctrC] = this.IDCT_Source[0] = prev[ctrC] + this.getn(index, value, temp, index);
           this.IDCT_Source[0] *= qtab[0];
           for (j = 1; j < 64; j += 1) {
-            value2 = this.getHuffmanValue(actab, temp, index);
-            if (value2 >= 65280) {
-              return value2;
+            value = this.getHuffmanValue(actab, temp, index);
+            if (value >= 65280) {
+              return value;
             }
-            j += value2 >> 4;
-            if ((value2 & 15) === 0) {
-              if (value2 >> 4 === 0) {
+            j += value >> 4;
+            if ((value & 15) === 0) {
+              if (value >> 4 === 0) {
                 break;
               }
             } else {
-              this.IDCT_Source[jpeg.lossless.Decoder.IDCT_P[j]] = this.getn(index, value2 & 15, temp, index) * qtab[j];
+              this.IDCT_Source[jpeg.lossless.Decoder.IDCT_P[j]] = this.getn(index, value & 15, temp, index) * qtab[j];
             }
           }
         }
@@ -14541,7 +14525,7 @@ function requireDecoder() {
       return 0;
     };
     jpeg.lossless.Decoder.prototype.decodeSingle = function(prev, temp, index) {
-      var value2, i2, n, nRestart;
+      var value, i2, n, nRestart;
       if (this.restarting) {
         this.restarting = false;
         prev[0] = 1 << this.frame.precision - 1;
@@ -14549,11 +14533,11 @@ function requireDecoder() {
         prev[0] = this.selector();
       }
       for (i2 = 0; i2 < this.nBlock[0]; i2 += 1) {
-        value2 = this.getHuffmanValue(this.dcTab[0], temp, index);
-        if (value2 >= 65280) {
-          return value2;
+        value = this.getHuffmanValue(this.dcTab[0], temp, index);
+        if (value >= 65280) {
+          return value;
         }
-        n = this.getn(prev, value2, temp, index);
+        n = this.getn(prev, value, temp, index);
         nRestart = n >> 8;
         if (nRestart >= jpeg.lossless.Decoder.RESTART_MARKER_BEGIN && nRestart <= jpeg.lossless.Decoder.RESTART_MARKER_END) {
           return nRestart;
@@ -15328,9 +15312,9 @@ function requireJpegBaseline() {
         },
         parse: function parse(data) {
           function readUint16() {
-            var value2 = data[offset] << 8 | data[offset + 1];
+            var value = data[offset] << 8 | data[offset + 1];
             offset += 2;
-            return value2;
+            return value;
           }
           function readDataBlock() {
             var length2 = readUint16();
@@ -16615,11 +16599,11 @@ function requireJpx() {
           bufferSize -= count;
           return buffer2 >>> bufferSize & (1 << count) - 1;
         }
-        function skipMarkerIfEqual(value2) {
-          if (data[offset + position - 1] === 255 && data[offset + position] === value2) {
+        function skipMarkerIfEqual(value) {
+          if (data[offset + position - 1] === 255 && data[offset + position] === value) {
             skipBytes(1);
             return true;
-          } else if (data[offset + position] === 255 && data[offset + position + 1] === value2) {
+          } else if (data[offset + position] === 255 && data[offset + position + 1] === value) {
             skipBytes(2);
             return true;
           }
@@ -16642,16 +16626,16 @@ function requireJpx() {
           if (readBits(1) === 0) {
             return 2;
           }
-          var value2 = readBits(2);
-          if (value2 < 3) {
-            return value2 + 3;
+          var value = readBits(2);
+          if (value < 3) {
+            return value + 3;
           }
-          value2 = readBits(5);
-          if (value2 < 31) {
-            return value2 + 6;
+          value = readBits(5);
+          if (value < 31) {
+            return value + 6;
           }
-          value2 = readBits(7);
-          return value2 + 37;
+          value = readBits(7);
+          return value + 37;
         }
         var tileIndex = context2.currentTile.index;
         var tile = context2.tiles[tileIndex];
@@ -17058,12 +17042,12 @@ function requireJpx() {
         }
         TagTree2.prototype = {
           reset: function TagTree_reset(i2, j) {
-            var currentLevel = 0, value2 = 0, level;
+            var currentLevel = 0, value = 0, level;
             while (currentLevel < this.levels.length) {
               level = this.levels[currentLevel];
               var index = i2 + j * level.width;
               if (level.items[index] !== void 0) {
-                value2 = level.items[index];
+                value = level.items[index];
                 break;
               }
               level.index = index;
@@ -17073,7 +17057,7 @@ function requireJpx() {
             }
             currentLevel--;
             level = this.levels[currentLevel];
-            level.items[level.index] = value2;
+            level.items[level.index] = value;
             this.currentLevel = currentLevel;
             delete this.value;
           },
@@ -17084,15 +17068,15 @@ function requireJpx() {
           nextLevel: function TagTree_nextLevel() {
             var currentLevel = this.currentLevel;
             var level = this.levels[currentLevel];
-            var value2 = level.items[level.index];
+            var value = level.items[level.index];
             currentLevel--;
             if (currentLevel < 0) {
-              this.value = value2;
+              this.value = value;
               return false;
             }
             this.currentLevel = currentLevel;
             level = this.levels[currentLevel];
-            level.items[level.index] = value2;
+            level.items[level.index] = value;
             return true;
           }
         };
@@ -18164,14 +18148,14 @@ function requireJpx() {
       }
     }
     PDFJS.isValidUrl = isValidUrl;
-    function shadow(obj, prop, value2) {
+    function shadow(obj, prop, value) {
       Object.defineProperty(obj, prop, {
-        value: value2,
+        value,
         enumerable: true,
         configurable: true,
         writable: false
       });
-      return value2;
+      return value;
     }
     PDFJS.shadow = shadow;
     PDFJS.PasswordResponses = {
@@ -18274,7 +18258,7 @@ function requireJpx() {
     function readUint32(data, offset) {
       return (data[offset] << 24 | data[offset + 1] << 16 | data[offset + 2] << 8 | data[offset + 3]) >>> 0;
     }
-    function isLittleEndian2() {
+    function isLittleEndian() {
       var buffer8 = new Uint8Array(2);
       buffer8[0] = 1;
       var buffer16 = new Uint16Array(buffer8.buffer);
@@ -18283,7 +18267,7 @@ function requireJpx() {
     Object.defineProperty(PDFJS, "isLittleEndian", {
       configurable: true,
       get: function PDFJS_isLittleEndian() {
-        return shadow(PDFJS, "isLittleEndian", isLittleEndian2());
+        return shadow(PDFJS, "isLittleEndian", isLittleEndian());
       }
     });
     function hasCanvasTypedArrays() {
@@ -18574,9 +18558,9 @@ function requireJpx() {
           };
         }
         if (typeof globalScope.Promise.resolve !== "function") {
-          globalScope.Promise.resolve = function(value2) {
+          globalScope.Promise.resolve = function(value) {
             return new globalScope.Promise(function(resolve) {
-              resolve(value2);
+              resolve(value);
             });
           };
         }
@@ -18722,11 +18706,11 @@ function requireJpx() {
         for (var i2 = 0, ii = promises.length; i2 < ii; ++i2) {
           var promise = promises[i2];
           var resolve = function(i3) {
-            return function(value2) {
+            return function(value) {
               if (deferred._status === STATUS_REJECTED) {
                 return;
               }
-              results[i3] = value2;
+              results[i3] = value;
               unresolved--;
               if (unresolved === 0) {
                 resolveAll(results);
@@ -18741,12 +18725,12 @@ function requireJpx() {
         }
         return deferred;
       };
-      Promise2.isPromise = function Promise_isPromise(value2) {
-        return value2 && typeof value2.then === "function";
+      Promise2.isPromise = function Promise_isPromise(value) {
+        return value && typeof value.then === "function";
       };
-      Promise2.resolve = function Promise_resolve(value2) {
+      Promise2.resolve = function Promise_resolve(value) {
         return new Promise2(function(resolve) {
-          resolve(value2);
+          resolve(value);
         });
       };
       Promise2.reject = function Promise_reject(reason) {
@@ -18759,24 +18743,24 @@ function requireJpx() {
         _value: null,
         _handlers: null,
         _unhandledRejection: null,
-        _updateStatus: function Promise__updateStatus(status, value2) {
+        _updateStatus: function Promise__updateStatus(status, value) {
           if (this._status === STATUS_RESOLVED || this._status === STATUS_REJECTED) {
             return;
           }
-          if (status === STATUS_RESOLVED && Promise2.isPromise(value2)) {
-            value2.then(this._updateStatus.bind(this, STATUS_RESOLVED), this._updateStatus.bind(this, STATUS_REJECTED));
+          if (status === STATUS_RESOLVED && Promise2.isPromise(value)) {
+            value.then(this._updateStatus.bind(this, STATUS_RESOLVED), this._updateStatus.bind(this, STATUS_REJECTED));
             return;
           }
           this._status = status;
-          this._value = value2;
+          this._value = value;
           if (status === STATUS_REJECTED && this._handlers.length === 0) {
             this._unhandledRejection = true;
             HandlerManager.addUnhandledRejection(this);
           }
           HandlerManager.scheduleHandlers(this);
         },
-        _resolve: function Promise_resolve(value2) {
-          this._updateStatus(STATUS_RESOLVED, value2);
+        _resolve: function Promise_resolve(value) {
+          this._updateStatus(STATUS_RESOLVED, value);
         },
         _reject: function Promise_reject(reason) {
           this._updateStatus(STATUS_REJECTED, reason);
@@ -19039,8 +19023,8 @@ function requireCharLSDynamicMemoryBrowser() {
           Module[key] = moduleOverrides[key];
         }
       }
-      var Runtime = { setTempRet0: function(value2) {
-        tempRet0 = value2;
+      var Runtime = { setTempRet0: function(value) {
+        tempRet0 = value;
       }, getTempRet0: function() {
         return tempRet0;
       }, stackSave: function() {
@@ -19288,31 +19272,31 @@ function requireCharLSDynamicMemoryBrowser() {
       })();
       Module["ccall"] = ccall;
       Module["cwrap"] = cwrap;
-      function setValue(ptr, value2, type2, noSafe) {
+      function setValue(ptr, value, type2, noSafe) {
         type2 = type2 || "i8";
         if (type2.charAt(type2.length - 1) === "*")
           type2 = "i32";
         switch (type2) {
           case "i1":
-            HEAP8[ptr >> 0] = value2;
+            HEAP8[ptr >> 0] = value;
             break;
           case "i8":
-            HEAP8[ptr >> 0] = value2;
+            HEAP8[ptr >> 0] = value;
             break;
           case "i16":
-            HEAP16[ptr >> 1] = value2;
+            HEAP16[ptr >> 1] = value;
             break;
           case "i32":
-            HEAP32[ptr >> 2] = value2;
+            HEAP32[ptr >> 2] = value;
             break;
           case "i64":
-            tempI64 = [value2 >>> 0, (tempDouble = value2, +Math_abs(tempDouble) >= 1 ? tempDouble > 0 ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) | 0) >>> 0 : ~~+Math_ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[ptr >> 2] = tempI64[0], HEAP32[ptr + 4 >> 2] = tempI64[1];
+            tempI64 = [value >>> 0, (tempDouble = value, +Math_abs(tempDouble) >= 1 ? tempDouble > 0 ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) | 0) >>> 0 : ~~+Math_ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[ptr >> 2] = tempI64[0], HEAP32[ptr + 4 >> 2] = tempI64[1];
             break;
           case "float":
-            HEAPF32[ptr >> 2] = value2;
+            HEAPF32[ptr >> 2] = value;
             break;
           case "double":
-            HEAPF64[ptr >> 3] = value2;
+            HEAPF64[ptr >> 3] = value;
             break;
           default:
             abort("invalid type for setValue: " + type2);
@@ -20296,19 +20280,19 @@ function requireCharLSDynamicMemoryBrowser() {
         }
         var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        function leadingSomething(value2, digits, character) {
-          var str = typeof value2 === "number" ? value2.toString() : value2 || "";
+        function leadingSomething(value, digits, character) {
+          var str = typeof value === "number" ? value.toString() : value || "";
           while (str.length < digits) {
             str = character[0] + str;
           }
           return str;
         }
-        function leadingNulls(value2, digits) {
-          return leadingSomething(value2, digits, "0");
+        function leadingNulls(value, digits) {
+          return leadingSomething(value, digits, "0");
         }
         function compareByDay(date1, date2) {
-          function sgn(value2) {
-            return value2 < 0 ? -1 : value2 > 0 ? 1 : 0;
+          function sgn(value) {
+            return value < 0 ? -1 : value > 0 ? 1 : 0;
           }
           var compare;
           if ((compare = sgn(date1.getFullYear() - date2.getFullYear())) === 0) {
@@ -20510,10 +20494,10 @@ function requireCharLSDynamicMemoryBrowser() {
       function _pthread_getspecific(key2) {
         return PTHREAD_SPECIFIC[key2] || 0;
       }
-      function ___setErrNo(value2) {
+      function ___setErrNo(value) {
         if (Module["___errno_location"])
-          HEAP32[Module["___errno_location"]() >> 2] = value2;
-        return value2;
+          HEAP32[Module["___errno_location"]() >> 2] = value;
+        return value;
       }
       var ERRNO_CODES = { EPERM: 1, ENOENT: 2, ESRCH: 3, EINTR: 4, EIO: 5, ENXIO: 6, E2BIG: 7, ENOEXEC: 8, EBADF: 9, ECHILD: 10, EAGAIN: 11, EWOULDBLOCK: 11, ENOMEM: 12, EACCES: 13, EFAULT: 14, ENOTBLK: 15, EBUSY: 16, EEXIST: 17, EXDEV: 18, ENODEV: 19, ENOTDIR: 20, EISDIR: 21, EINVAL: 22, ENFILE: 23, EMFILE: 24, ENOTTY: 25, ETXTBSY: 26, EFBIG: 27, ENOSPC: 28, ESPIPE: 29, EROFS: 30, EMLINK: 31, EPIPE: 32, EDOM: 33, ERANGE: 34, ENOMSG: 42, EIDRM: 43, ECHRNG: 44, EL2NSYNC: 45, EL3HLT: 46, EL3RST: 47, ELNRNG: 48, EUNATCH: 49, ENOCSI: 50, EL2HLT: 51, EDEADLK: 35, ENOLCK: 37, EBADE: 52, EBADR: 53, EXFULL: 54, ENOANO: 55, EBADRQC: 56, EBADSLT: 57, EDEADLOCK: 35, EBFONT: 59, ENOSTR: 60, ENODATA: 61, ETIME: 62, ENOSR: 63, ENONET: 64, ENOPKG: 65, EREMOTE: 66, ENOLINK: 67, EADV: 68, ESRMNT: 69, ECOMM: 70, EPROTO: 71, EMULTIHOP: 72, EDOTDOT: 73, EBADMSG: 74, ENOTUNIQ: 76, EBADFD: 77, EREMCHG: 78, ELIBACC: 79, ELIBBAD: 80, ELIBSCN: 81, ELIBMAX: 82, ELIBEXEC: 83, ENOSYS: 38, ENOTEMPTY: 39, ENAMETOOLONG: 36, ELOOP: 40, EOPNOTSUPP: 95, EPFNOSUPPORT: 96, ECONNRESET: 104, ENOBUFS: 105, EAFNOSUPPORT: 97, EPROTOTYPE: 91, ENOTSOCK: 88, ENOPROTOOPT: 92, ESHUTDOWN: 108, ECONNREFUSED: 111, EADDRINUSE: 98, ECONNABORTED: 103, ENETUNREACH: 101, ENETDOWN: 100, ETIMEDOUT: 110, EHOSTDOWN: 112, EHOSTUNREACH: 113, EINPROGRESS: 115, EALREADY: 114, EDESTADDRREQ: 89, EMSGSIZE: 90, EPROTONOSUPPORT: 93, ESOCKTNOSUPPORT: 94, EADDRNOTAVAIL: 99, ENETRESET: 102, EISCONN: 106, ENOTCONN: 107, ETOOMANYREFS: 109, EUSERS: 87, EDQUOT: 122, ESTALE: 116, ENOTSUP: 95, ENOMEDIUM: 123, EILSEQ: 84, EOVERFLOW: 75, ECANCELED: 125, ENOTRECOVERABLE: 131, EOWNERDEAD: 130, ESTRPIPE: 86 };
       function _sysconf(name) {
@@ -20687,15 +20671,15 @@ function requireCharLSDynamicMemoryBrowser() {
         PTHREAD_SPECIFIC_NEXT_KEY++;
         return 0;
       }
-      function _emscripten_set_main_loop_timing(mode, value2) {
+      function _emscripten_set_main_loop_timing(mode, value) {
         Browser.mainLoop.timingMode = mode;
-        Browser.mainLoop.timingValue = value2;
+        Browser.mainLoop.timingValue = value;
         if (!Browser.mainLoop.func) {
           return 1;
         }
         if (mode == 0) {
           Browser.mainLoop.scheduler = function Browser_mainLoop_scheduler_setTimeout() {
-            setTimeout(Browser.mainLoop.runner, value2);
+            setTimeout(Browser.mainLoop.runner, value);
           };
           Browser.mainLoop.method = "timeout";
         } else if (mode == 1) {
@@ -21331,11 +21315,11 @@ function requireCharLSDynamicMemoryBrowser() {
         Browser.nextWgetRequestHandle++;
         return handle;
       } };
-      function _pthread_setspecific(key2, value2) {
+      function _pthread_setspecific(key2, value) {
         if (!(key2 in PTHREAD_SPECIFIC)) {
           return ERRNO_CODES.EINVAL;
         }
-        PTHREAD_SPECIFIC[key2] = value2;
+        PTHREAD_SPECIFIC[key2] = value;
         return 0;
       }
       function _malloc(bytes) {
@@ -94108,14 +94092,14 @@ function requireTrees() {
     s.pending_buf[s.pending++] = w & 255;
     s.pending_buf[s.pending++] = w >>> 8 & 255;
   }
-  function send_bits(s, value2, length2) {
+  function send_bits(s, value, length2) {
     if (s.bi_valid > Buf_size - length2) {
-      s.bi_buf |= value2 << s.bi_valid & 65535;
+      s.bi_buf |= value << s.bi_valid & 65535;
       put_short(s, s.bi_buf);
-      s.bi_buf = value2 >> Buf_size - s.bi_valid;
+      s.bi_buf = value >> Buf_size - s.bi_valid;
       s.bi_valid += length2 - Buf_size;
     } else {
-      s.bi_buf |= value2 << s.bi_valid & 65535;
+      s.bi_buf |= value << s.bi_valid & 65535;
       s.bi_valid += length2;
     }
   }
@@ -98166,7 +98150,7 @@ function requireParser() {
       return tag2;
     };
     daikon2.Parser.prototype.getNextTag = function(data, offset, testForTag) {
-      var group = 0, element, value2 = null, offsetStart = offset, offsetValue, length2 = 0, little = true, vr = null, tag2;
+      var group = 0, element, value = null, offsetStart = offset, offsetValue, length2 = 0, little = true, vr = null, tag2;
       if (offset >= data.byteLength) {
         return null;
       }
@@ -98218,9 +98202,9 @@ function requireParser() {
       offsetValue = offset;
       var isPixelData = group === daikon2.Tag.TAG_PIXEL_DATA[0] && element === daikon2.Tag.TAG_PIXEL_DATA[1];
       if (vr === "SQ" || !isPixelData && !this.encapsulation && daikon2.Parser.DATA_VRS.indexOf(vr) !== -1) {
-        value2 = this.parseSublist(data, offset, length2, vr !== "SQ");
+        value = this.parseSublist(data, offset, length2, vr !== "SQ");
         if (length2 === daikon2.Parser.UNDEFINED_LENGTH) {
-          length2 = value2[value2.length - 1].offsetEnd - offset;
+          length2 = value[value.length - 1].offsetEnd - offset;
         }
       } else if (length2 > 0 && !testForTag) {
         if (length2 === daikon2.Parser.UNDEFINED_LENGTH) {
@@ -98228,10 +98212,10 @@ function requireParser() {
             length2 = data.byteLength - offset;
           }
         }
-        value2 = data.buffer.slice(offset, offset + length2);
+        value = data.buffer.slice(offset, offset + length2);
       }
       offset += length2;
-      tag2 = new daikon2.Tag(group, element, vr, value2, offsetStart, offsetValue, offset, this.littleEndian);
+      tag2 = new daikon2.Tag(group, element, vr, value, offsetStart, offsetValue, offset, this.littleEndian);
       if (tag2.isTransformSyntax()) {
         if (tag2.value[0] === daikon2.Parser.TRANSFER_SYNTAX_IMPLICIT_LITTLE) {
           this.explicit = false;
@@ -98274,7 +98258,7 @@ function requireParser() {
       return tags;
     };
     daikon2.Parser.prototype.parseSublistItem = function(data, offset, raw) {
-      var group, element, length2, offsetEnd, tag2, offsetStart = offset, value2 = null, offsetValue, sublistItemTag, tags = [];
+      var group, element, length2, offsetEnd, tag2, offsetStart = offset, value = null, offsetValue, sublistItemTag, tags = [];
       group = data.getUint16(offset, this.littleEndian);
       offset += 2;
       element = data.getUint16(offset, this.littleEndian);
@@ -98292,7 +98276,7 @@ function requireParser() {
         tags.push(tag2);
         offset = tag2.offsetEnd;
       } else if (raw) {
-        value2 = data.buffer.slice(offset, offset + length2);
+        value = data.buffer.slice(offset, offset + length2);
         offset = offset + length2;
       } else {
         offsetEnd = offset + length2;
@@ -98302,7 +98286,7 @@ function requireParser() {
           offset = tag2.offsetEnd;
         }
       }
-      sublistItemTag = new daikon2.Tag(group, element, null, value2 || tags, offsetStart, offsetValue, offset, this.littleEndian);
+      sublistItemTag = new daikon2.Tag(group, element, null, value || tags, offsetStart, offsetValue, offset, this.littleEndian);
       return sublistItemTag;
     };
     daikon2.Parser.prototype.findFirstTagOffset = function(data) {
@@ -98608,7 +98592,7 @@ function requireImage() {
       return this.getPixelDataBytes();
     };
     daikon2.Image.prototype.getInterpretedData = function(asArray, asObject, frameIndex) {
-      var datatype, numBytes, numElements, dataView, data, ctr, mask, slope, intercept, min2, max2, value2, minIndex, maxIndex, littleEndian, rawValue, rawData, allFrames, elementsPerFrame, totalElements, offset, dataCtr;
+      var datatype, numBytes, numElements, dataView, data, ctr, mask, slope, intercept, min2, max2, value, minIndex, maxIndex, littleEndian, rawValue, rawData, allFrames, elementsPerFrame, totalElements, offset, dataCtr;
       allFrames = arguments.length < 3;
       mask = daikon2.Utils.createBitMask(this.getBitsAllocated() / 8, this.getBitsStored(), this.getDataType() === daikon2.Image.BYTE_TYPE_INTEGER_UNSIGNED);
       datatype = this.getPixelRepresentation() ? daikon2.Image.BYTE_TYPE_INTEGER : daikon2.Image.BYTE_TYPE_INTEGER_UNSIGNED;
@@ -98662,14 +98646,14 @@ function requireImage() {
       }
       for (ctr = offset, dataCtr = 0; dataCtr < numElements; ctr++, dataCtr++) {
         rawValue = getWord(ctr * numBytes, littleEndian);
-        value2 = (rawValue & mask) * slope + intercept;
-        data[dataCtr] = value2;
-        if (value2 < min2) {
-          min2 = value2;
+        value = (rawValue & mask) * slope + intercept;
+        data[dataCtr] = value;
+        if (value < min2) {
+          min2 = value;
           minIndex = dataCtr;
         }
-        if (value2 > max2) {
-          max2 = value2;
+        if (value > max2) {
+          max2 = value;
           maxIndex = dataCtr;
         }
       }
@@ -99006,9 +98990,9 @@ function requireImage() {
       return labeledAsMosaic && canReadAsMosaic;
     };
     daikon2.Image.prototype.isPalette = function() {
-      var value2 = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_PHOTOMETRIC_INTERPRETATION[0], daikon2.Tag.TAG_PHOTOMETRIC_INTERPRETATION[1]), 0);
-      if (value2 !== null) {
-        if (value2.toLowerCase().indexOf("palette") !== -1) {
+      var value = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_PHOTOMETRIC_INTERPRETATION[0], daikon2.Tag.TAG_PHOTOMETRIC_INTERPRETATION[1]), 0);
+      if (value !== null) {
+        if (value.toLowerCase().indexOf("palette") !== -1) {
           return true;
         }
       }
@@ -99097,16 +99081,16 @@ function requireImage() {
       return false;
     };
     daikon2.Image.prototype.getNumberOfFrames = function() {
-      var value2 = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_NUMBER_OF_FRAMES[0], daikon2.Tag.TAG_NUMBER_OF_FRAMES[1]), 0);
-      if (value2 !== null) {
-        return value2;
+      var value = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_NUMBER_OF_FRAMES[0], daikon2.Tag.TAG_NUMBER_OF_FRAMES[1]), 0);
+      if (value !== null) {
+        return value;
       }
       return 1;
     };
     daikon2.Image.prototype.getNumberOfSamplesPerPixel = function() {
-      var value2 = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_SAMPLES_PER_PIXEL[0], daikon2.Tag.TAG_SAMPLES_PER_PIXEL[1]), 0);
-      if (value2 !== null) {
-        return value2;
+      var value = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_SAMPLES_PER_PIXEL[0], daikon2.Tag.TAG_SAMPLES_PER_PIXEL[1]), 0);
+      if (value !== null) {
+        return value;
       }
       return 1;
     };
@@ -99145,18 +99129,18 @@ function requireImage() {
       return daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_PLANAR_CONFIG[0], daikon2.Tag.TAG_PLANAR_CONFIG[1]), 0);
     };
     daikon2.Image.prototype.getImageDescription = function() {
-      var value2, string = "";
-      value2 = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_STUDY_DES[0], daikon2.Tag.TAG_STUDY_DES[1]), 0);
-      if (value2 !== null) {
-        string += " " + value2;
+      var value, string = "";
+      value = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_STUDY_DES[0], daikon2.Tag.TAG_STUDY_DES[1]), 0);
+      if (value !== null) {
+        string += " " + value;
       }
-      value2 = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_SERIES_DESCRIPTION[0], daikon2.Tag.TAG_SERIES_DESCRIPTION[1]), 0);
-      if (value2 !== null) {
-        string += " " + value2;
+      value = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_SERIES_DESCRIPTION[0], daikon2.Tag.TAG_SERIES_DESCRIPTION[1]), 0);
+      if (value !== null) {
+        string += " " + value;
       }
-      value2 = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_IMAGE_COMMENTS[0], daikon2.Tag.TAG_IMAGE_COMMENTS[1]), 0);
-      if (value2 !== null) {
-        string += " " + value2;
+      value = daikon2.Image.getSingleValueSafely(this.getTag(daikon2.Tag.TAG_IMAGE_COMMENTS[0], daikon2.Tag.TAG_IMAGE_COMMENTS[1]), 0);
+      if (value !== null) {
+        string += " " + value;
       }
       return string.trim();
     };
@@ -99281,17 +99265,17 @@ function requireImage() {
       return str;
     };
     daikon2.Image.prototype.getPalleteValues = function(tagID) {
-      var valsBig, valsLittle, value2, numVals, ctr, valsBigMax, valsBigMin, valsLittleMax, valsLittleMin, valsBigDiff, valsLittleDiff;
+      var valsBig, valsLittle, value, numVals, ctr, valsBigMax, valsBigMin, valsLittleMax, valsLittleMin, valsBigDiff, valsLittleDiff;
       valsBig = null;
       valsLittle = null;
-      value2 = daikon2.Image.getValueSafely(this.getTag(tagID[0], tagID[1]));
-      if (value2 !== null) {
-        numVals = value2.buffer.byteLength / 2;
+      value = daikon2.Image.getValueSafely(this.getTag(tagID[0], tagID[1]));
+      if (value !== null) {
+        numVals = value.buffer.byteLength / 2;
         valsBig = [];
         valsLittle = [];
         for (ctr = 0; ctr < numVals; ctr += 1) {
-          valsBig[ctr] = value2.getUint16(ctr * 2, false) & 65535;
-          valsLittle[ctr] = value2.getUint16(ctr * 2, true) & 65535;
+          valsBig[ctr] = value.getUint16(ctr * 2, false) & 65535;
+          valsLittle[ctr] = value.getUint16(ctr * 2, true) & 65535;
         }
         valsBigMax = Math.max.apply(Math, valsBig);
         valsBigMin = Math.min.apply(Math, valsBig);
@@ -99365,15 +99349,15 @@ function requireOrderedmap() {
       this.map = {};
       this.orderedKeys = [];
     };
-    daikon2.OrderedMap.prototype.put = function(key2, value2) {
+    daikon2.OrderedMap.prototype.put = function(key2, value) {
       if (key2 in this.map) {
-        this.map[key2] = value2;
+        this.map[key2] = value;
       } else {
         this.orderedKeys.push(key2);
         this.orderedKeys.sort(function(a, b) {
           return parseFloat(a) - parseFloat(b);
         });
-        this.map[key2] = value2;
+        this.map[key2] = value;
       }
     };
     daikon2.OrderedMap.prototype.remove = function(key2) {
@@ -105575,7 +105559,7 @@ const NVIMAGE_TYPE = Object.freeze({
     return imageType;
   }
 });
-function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, alphaThreshold = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNegative = NaN, cal_maxNegative = NaN) {
+function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, alphaThreshold = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true) {
   return {
     url,
     urlImageData,
@@ -105591,11 +105575,12 @@ function NVImageFromUrlOptions(url, urlImageData = "", name = "", colorMap = "gr
     useQFormNotSForm,
     colorMapNegative,
     imageType,
-    cal_minNegative,
-    cal_maxNegative
+    cal_minNeg,
+    cal_maxNeg,
+    colorbarVisible
   };
 }
-function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNegative = NaN, cal_maxNegative = NaN) {
+function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, visible = true, useQFormNotSForm = false, colorMapNegative = "", imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true) {
   this.DT_NONE = 0;
   this.DT_UNKNOWN = 0;
   this.DT_BINARY = 1;
@@ -105625,8 +105610,9 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
-  this.cal_minNegative = cal_minNegative;
-  this.cal_maxNegative = cal_maxNegative;
+  this.cal_minNeg = cal_minNeg;
+  this.cal_maxNeg = cal_maxNeg;
+  this.colorbarVisible = colorbarVisible;
   this.visible = visible;
   this.modulationImage = null;
   this.modulateAlpha = false;
@@ -105836,7 +105822,7 @@ function NVImage(dataBuffer, name = "", colorMap = "gray", opacity = 1, pairedIm
       let numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
       var u82 = new Uint8Array(imgRaw);
       for (let index = 0; index < u82.length; index += numBytesPerVoxel) {
-        let offset = bytesPer - 1;
+        let offset = numBytesPerVoxel - 1;
         for (let x2 = 0; x2 < offset; x2++) {
           let theByte = u82[index + x2];
           u82[index + x2] = u82[index + offset];
@@ -106239,7 +106225,7 @@ NVImage.prototype.readECAT = function(buffer2) {
           newImg[i2] = reader.getUint16(ipos, false) * scale_factor;
           ipos += 2;
         }
-      } else if (ihdr.data_type == 7) {
+      } else if (data_type == 7) {
         for (var i2 = 0; i2 < nvox3D; i2++) {
           newImg[i2] = reader.getUint32(ipos, false) * scale_factor;
           ipos += 4;
@@ -106354,6 +106340,7 @@ NVImage.prototype.readVMR = function(buffer2) {
 NVImage.prototype.readMGH = function(buffer2) {
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
+  hdr.littleEndian = false;
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
   var raw = buffer2;
@@ -106633,7 +106620,7 @@ NVImage.prototype.readMHA = function(buffer2, pairedImgData) {
           hdr.datatypeCode = this.DT_DOUBLE;
           break;
         default:
-          throw new Error("Unsupported NRRD data type: " + value);
+          throw new Error("Unsupported NRRD data type: " + items[0]);
       }
     }
     if (line.startsWith("ObjectType") && !items[0].includes("Image"))
@@ -106912,24 +106899,24 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
     if (items.length < 2)
       continue;
     let key2 = items[0].trim();
-    let value2 = items[1].trim();
-    value2 = value2.replaceAll(")", " ");
-    value2 = value2.replaceAll("(", " ");
-    value2 = value2.trim();
+    let value = items[1].trim();
+    value = value.replaceAll(")", " ");
+    value = value.replaceAll("(", " ");
+    value = value.trim();
     switch (key2) {
       case "data file":
         isDetached = true;
         break;
       case "encoding":
-        if (value2.includes("raw"))
+        if (value.includes("raw"))
           isGz = false;
-        else if (value2.includes("gz"))
+        else if (value.includes("gz"))
           isGz = true;
         else
           alert("Unsupported NRRD encoding");
         break;
       case "type":
-        switch (value2) {
+        switch (value) {
           case "uchar":
           case "unsigned char":
           case "uint8":
@@ -106983,34 +106970,34 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
             hdr.datatypeCode = this.DT_DOUBLE;
             break;
           default:
-            throw new Error("Unsupported NRRD data type: " + value2);
+            throw new Error("Unsupported NRRD data type: " + value);
         }
         break;
       case "spacings":
-        let pixdims = value2.split(/[ ,]+/);
+        let pixdims = value.split(/[ ,]+/);
         for (var d = 0; d < pixdims.length; d++)
           hdr.pixDims[d + 1] = parseFloat(dims[d]);
       case "sizes":
-        let dims = value2.split(/[ ,]+/);
+        let dims = value.split(/[ ,]+/);
         hdr.dims[0] = dims.length;
         for (let d2 = 0; d2 < dims.length; d2++)
           hdr.dims[d2 + 1] = parseInt(dims[d2]);
         break;
       case "endian":
-        if (value2.includes("little"))
+        if (value.includes("little"))
           hdr.littleEndian = true;
-        else if (value2.includes("big"))
+        else if (value.includes("big"))
           hdr.littleEndian = false;
         break;
       case "space directions":
-        let vs = value2.split(/[ ,]+/);
+        let vs = value.split(/[ ,]+/);
         if (vs.length !== 9)
           break;
         for (var d = 0; d < 9; d++)
           mat33[d] = parseFloat(vs[d]);
         break;
       case "space origin":
-        let ts = value2.split(/[ ,]+/);
+        let ts = value.split(/[ ,]+/);
         if (ts.length !== 3)
           break;
         offset[0] = parseFloat(ts[0]);
@@ -107018,18 +107005,18 @@ NVImage.prototype.readNRRD = function(dataBuffer, pairedImgData) {
         offset[2] = parseFloat(ts[2]);
         break;
       case "space units":
-        if (value2.includes("microns"))
+        if (value.includes("microns"))
           isMicron = true;
         break;
       case "space":
-        if (value2.includes("right-anterior-superior") || value2.includes("RAS"))
+        if (value.includes("right-anterior-superior") || value.includes("RAS"))
           rot33 = fromValues$3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-        else if (value2.includes("left-anterior-superior") || value2.includes("LAS"))
+        else if (value.includes("left-anterior-superior") || value.includes("LAS"))
           rot33 = fromValues$3(-1, 0, 0, 0, 1, 0, 0, 0, 1);
-        else if (value2.includes("left-posterior-superior") || value2.includes("LPS"))
+        else if (value.includes("left-posterior-superior") || value.includes("LPS"))
           rot33 = fromValues$3(-1, 0, 0, 0, -1, 0, 0, 0, 1);
         else
-          console.log("Unsupported NRRD space value:", value2);
+          console.log("Unsupported NRRD space value:", value);
         break;
     }
   }
@@ -108033,7 +108020,7 @@ colortables.prototype.makeLut = function(Rs, Gs, Bs, As, Is) {
 };
 const cmapper$1 = new colortables();
 const log$1 = new Log();
-function NVMeshFromUrlOptions(url = "", gl = null, name = "", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true, layers = []) {
+function NVMeshFromUrlOptions(url = "", gl = null, name = "", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true, layers = [], colorbarVisible = true) {
   return {
     url,
     gl,
@@ -108041,11 +108028,13 @@ function NVMeshFromUrlOptions(url = "", gl = null, name = "", opacity = 1, rgba2
     opacity,
     rgba255,
     visible,
-    layers
+    layers,
+    colorbarVisible
   };
 }
-function NVMesh(pts, tris, name = "", rgba255 = [255, 255, 255, 255], opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null) {
+function NVMesh(pts, tris, name = "", rgba255 = [255, 255, 255, 255], opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null, colorbarVisible = true) {
   this.name = name;
+  this.colorbarVisible = colorbarVisible;
   this.id = v4();
   let obj = getExtents(pts);
   this.furthestVertexFromOrigin = obj.mxDx;
@@ -108458,8 +108447,18 @@ NVMesh.prototype.updateMesh = function(gl) {
       if (layer.useNegativeCmap) {
         let lut2 = cmapper$1.colormap(layer.colorMapNegative);
         if (!layer.isOutlineBorder) {
+          let mn = layer.cal_min;
+          let mx = layer.cal_max;
+          if (isFinite(layer.cal_minNeg) && isFinite(layer.cal_minNeg)) {
+            mn = -layer.cal_minNeg;
+            mx = -layer.cal_maxNeg;
+          }
+          if (mx < mn) {
+            [mn, mx] = [mx, mn];
+          }
+          let scale255neg = 255 / (mx - mn);
           for (let j = 0; j < nvtx; j++) {
-            let v255 = Math.round((-layer.values[j + frameOffset] - layer.cal_min) * scale255);
+            let v255 = Math.round((-layer.values[j + frameOffset] - mn) * scale255neg);
             if (v255 < 0)
               continue;
             v255 = Math.min(255, v255) * 4;
@@ -108670,17 +108669,17 @@ NVMesh.readTRACT = function(buffer2) {
     line = readStr();
     let new_tracts = readNumericTag("ni_dimen=");
     let bundleTag = readNumericTag("Bundle_Tag=");
-    let isLittleEndian2 = line.includes("binary.lsbfirst");
+    let isLittleEndian = line.includes("binary.lsbfirst");
     for (let i2 = 0; i2 < new_tracts; i2++) {
       pos += 4;
-      let new_pts = reader.getUint32(pos, isLittleEndian2) / 3;
+      let new_pts = reader.getUint32(pos, isLittleEndian) / 3;
       pos += 4;
       for (let j = 0; j < new_pts; j++) {
-        pts.push(reader.getFloat32(pos, isLittleEndian2));
+        pts.push(reader.getFloat32(pos, isLittleEndian));
         pos += 4;
-        pts.push(-reader.getFloat32(pos, isLittleEndian2));
+        pts.push(-reader.getFloat32(pos, isLittleEndian));
         pos += 4;
-        pts.push(reader.getFloat32(pos, isLittleEndian2));
+        pts.push(reader.getFloat32(pos, isLittleEndian));
         pos += 4;
       }
       npt += new_pts;
@@ -108763,8 +108762,7 @@ NVMesh.readTRK = function(buffer2) {
   if (magic !== 1128354388) {
     let raw;
     if (magic === 4247762216) {
-      raw = fzstd.decompress(new Uint8Array(buffer2));
-      raw = new Uint8Array(raw);
+      throw new Error("zstd TRK decompression is not supported");
     } else
       raw = decompressSync(new Uint8Array(buffer2));
     buffer2 = raw.buffer;
@@ -109577,7 +109575,7 @@ NVMesh.readPLY = function(buffer2) {
       return 8;
     console.log("Unknown data type: " + str);
   }
-  let isLittleEndian2 = line.includes("binary_little_endian");
+  let isLittleEndian = line.includes("binary_little_endian");
   let nvert = 0;
   let vertIsDouble = false;
   let vertStride = 0;
@@ -109658,7 +109656,7 @@ NVMesh.readPLY = function(buffer2) {
   }
   var reader = new DataView(buffer2);
   var positions = [];
-  if (vertStride === 12 && isLittleEndian2) {
+  if (vertStride === 12 && isLittleEndian) {
     positions = new Float32Array(buffer2, pos, nvert * 3);
     pos += nvert * vertStride;
   } else {
@@ -109666,13 +109664,13 @@ NVMesh.readPLY = function(buffer2) {
     let v = 0;
     for (var i2 = 0; i2 < nvert; i2++) {
       if (vertIsDouble) {
-        positions[v] = reader.getFloat64(pos, isLittleEndian2);
-        positions[v + 1] = reader.getFloat64(pos + 8, isLittleEndian2);
-        positions[v + 2] = reader.getFloat64(pos + 16, isLittleEndian2);
+        positions[v] = reader.getFloat64(pos, isLittleEndian);
+        positions[v + 1] = reader.getFloat64(pos + 8, isLittleEndian);
+        positions[v + 2] = reader.getFloat64(pos + 16, isLittleEndian);
       } else {
-        positions[v] = reader.getFloat32(pos, isLittleEndian2);
-        positions[v + 1] = reader.getFloat32(pos + 4, isLittleEndian2);
-        positions[v + 2] = reader.getFloat32(pos + 8, isLittleEndian2);
+        positions[v] = reader.getFloat32(pos, isLittleEndian);
+        positions[v + 1] = reader.getFloat32(pos + 4, isLittleEndian);
+        positions[v + 2] = reader.getFloat32(pos + 8, isLittleEndian);
       }
       v += 3;
       pos += vertStride;
@@ -109687,11 +109685,11 @@ NVMesh.readPLY = function(buffer2) {
       pos += indexCountBytes;
       if (nIdx !== 3)
         isTriangular = false;
-      indices[j] = reader.getUint32(pos, isLittleEndian2);
+      indices[j] = reader.getUint32(pos, isLittleEndian);
       pos += 4;
-      indices[j + 1] = reader.getUint32(pos, isLittleEndian2);
+      indices[j + 1] = reader.getUint32(pos, isLittleEndian);
       pos += 4;
-      indices[j + 2] = reader.getUint32(pos, isLittleEndian2);
+      indices[j + 2] = reader.getUint32(pos, isLittleEndian);
       pos += 4;
       j += 3;
     }
@@ -109701,19 +109699,19 @@ NVMesh.readPLY = function(buffer2) {
       if (indexCountBytes === 1)
         nIdx = reader.getUint8(pos);
       else if (indexCountBytes === 2)
-        nIdx = reader.getUint16(pos, isLittleEndian2);
+        nIdx = reader.getUint16(pos, isLittleEndian);
       else if (indexCountBytes === 4)
-        nIdx = reader.getUint32(pos, isLittleEndian2);
+        nIdx = reader.getUint32(pos, isLittleEndian);
       pos += indexCountBytes;
       if (nIdx !== 3)
         isTriangular = false;
       for (var k = 0; k < 3; k++) {
         if (indexBytes === 1)
-          indices[j] = reader.getUint8(pos, isLittleEndian2);
+          indices[j] = reader.getUint8(pos, isLittleEndian);
         else if (indexBytes === 2)
-          indices[j] = reader.getUint16(pos, isLittleEndian2);
+          indices[j] = reader.getUint16(pos, isLittleEndian);
         else if (indexBytes === 4)
-          indices[j] = reader.getUint32(pos, isLittleEndian2);
+          indices[j] = reader.getUint32(pos, isLittleEndian);
         j++;
         pos += indexBytes;
       }
@@ -109777,6 +109775,8 @@ NVMesh.readLayer = function(name, buffer2, nvmesh, opacity = 0.5, colorMap = "wa
   layer.cal_max = cal_max;
   if (!cal_max)
     layer.cal_max = mx;
+  layer.cal_minNeg = NaN;
+  layer.cal_maxNeg = NaN;
   layer.opacity = opacity;
   layer.colorMap = colorMap;
   layer.colorMapNegative = colorMapNegative;
@@ -110017,24 +110017,24 @@ NVMesh.readSTL = function(buffer2) {
 NVMesh.readNII2 = function(buffer2, n_vert = 0) {
   let scalars = [];
   let len2 = buffer2.byteLength;
-  let isLittleEndian2 = true;
+  let isLittleEndian = true;
   var reader = new DataView(buffer2);
-  var magic = reader.getUint16(0, isLittleEndian2);
+  var magic = reader.getUint16(0, isLittleEndian);
   if (magic === 469893120) {
-    isLittleEndian2 = false;
-    magic = reader.getUint16(0, isLittleEndian2);
+    isLittleEndian = false;
+    magic = reader.getUint16(0, isLittleEndian);
   }
   if (magic !== 540) {
     console.log("Not a valid NIfTI-2 dataset");
     return scalars;
   }
-  let voxoffset2 = Number(reader.getBigInt64(168, isLittleEndian2));
-  let scl_slope = reader.getFloat64(176, isLittleEndian2);
-  let scl_inter = reader.getFloat64(184, isLittleEndian2);
+  let voxoffset = Number(reader.getBigInt64(168, isLittleEndian));
+  let scl_slope = reader.getFloat64(176, isLittleEndian);
+  let scl_inter = reader.getFloat64(184, isLittleEndian);
   if (scl_slope !== 1 || scl_inter !== 0)
     console.log("ignoring scale slope and intercept");
-  let intent_code = reader.getUint32(504, isLittleEndian2);
-  let datatype = reader.getUint16(12, isLittleEndian2);
+  let intent_code = reader.getUint32(504, isLittleEndian);
+  let datatype = reader.getUint16(12, isLittleEndian);
   if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
     console.log("Unsupported NIfTI datatype " + datatype);
     return scalars;
@@ -110042,10 +110042,10 @@ NVMesh.readNII2 = function(buffer2, n_vert = 0) {
   let nvert = 1;
   let dim = [1, 1, 1, 1, 1, 1, 1, 1];
   for (var i2 = 1; i2 < 8; i2++) {
-    dim[i2] = Math.max(Number(reader.getBigInt64(16 + i2 * 8, isLittleEndian2)), 1);
+    dim[i2] = Math.max(Number(reader.getBigInt64(16 + i2 * 8, isLittleEndian)), 1);
     nvert *= dim[i2];
   }
-  if (intent_code >= 3e3 && intent_code <= 3099 && voxoffset2 > 580) {
+  if (intent_code >= 3e3 && intent_code <= 3099 && voxoffset > 580) {
     let readStrX = function() {
       while (pos < len2 && bytes[pos] === 10)
         pos++;
@@ -110135,9 +110135,9 @@ NVMesh.readNII2 = function(buffer2, n_vert = 0) {
     let vals = [];
     {
       vals = new Float32Array(indexCount * nFrame4D);
-      let off = voxoffset2 + nFrame4D * indexOffset * 4;
+      let off = voxoffset + nFrame4D * indexOffset * 4;
       for (var i2 = 0; i2 < indexCount * nFrame4D; i2++)
-        vals[i2] = reader.getFloat32(off + i2 * 4, isLittleEndian2);
+        vals[i2] = reader.getFloat32(off + i2 * 4, isLittleEndian);
     }
     let scalars2 = new Float32Array(n_vert * nFrame4D);
     let j = 0;
@@ -110154,100 +110154,100 @@ NVMesh.readNII2 = function(buffer2, n_vert = 0) {
     console.log("Vertices in NIfTI (" + nvert + ") is not a multiple of number of vertices (" + n_vert + ")");
     return scalars;
   }
-  if (isLittleEndian2) {
+  if (isLittleEndian) {
     if (datatype === 16)
-      scalars = new Float32Array(buffer2, voxoffset2, nvert);
+      scalars = new Float32Array(buffer2, voxoffset, nvert);
     else if (datatype === 8)
-      scalars = new Int32Array(buffer2, voxoffset2, nvert);
+      scalars = new Int32Array(buffer2, voxoffset, nvert);
     else if (datatype === 4)
-      scalars = new Int16Array(buffer2, voxoffset2, nvert);
+      scalars = new Int16Array(buffer2, voxoffset, nvert);
   } else {
     if (datatype === 16) {
       scalars = new Float32Array(nvert);
       for (var i2 = 0; i2 < nvert; i2++)
-        scalars[i2] = reader.getFloat32(voxoffset2 + i2 * 4, isLittleEndian2);
+        scalars[i2] = reader.getFloat32(voxoffset + i2 * 4, isLittleEndian);
     } else if (datatype === 8) {
       scalars = new Int32Array(nvert);
       for (var i2 = 0; i2 < nvert; i2++)
-        scalars[i2] = reader.getInt32(voxoffset2 + i2 * 4, isLittleEndian2);
+        scalars[i2] = reader.getInt32(voxoffset + i2 * 4, isLittleEndian);
     } else if (datatype === 4) {
       scalars = new Int16Array(nvert);
       for (var i2 = 0; i2 < nvert; i2++)
-        scalars[i2] = reader.getInt16(voxoffset2 + i2 * 2, isLittleEndian2);
+        scalars[i2] = reader.getInt16(voxoffset + i2 * 2, isLittleEndian);
     }
   }
   if (datatype === 2)
-    scalars = new Uint8Array(buffer2, voxoffset2, nvert);
+    scalars = new Uint8Array(buffer2, voxoffset, nvert);
   return scalars;
 };
 NVMesh.readNII = function(buffer2, n_vert = 0) {
   let scalars = [];
-  let isLittleEndian2 = true;
+  let isLittleEndian = true;
   var reader = new DataView(buffer2);
-  var magic = reader.getUint16(0, isLittleEndian2);
+  var magic = reader.getUint16(0, isLittleEndian);
   if (magic === 540 || magic === 469893120)
     return this.readNII2(buffer2, n_vert);
   if (magic === 23553) {
-    isLittleEndian2 = false;
-    magic = reader.getUint16(0, isLittleEndian2);
+    isLittleEndian = false;
+    magic = reader.getUint16(0, isLittleEndian);
   }
   if (magic !== 348) {
     var raw = decompressSync(new Uint8Array(buffer2));
     reader = new DataView(raw.buffer);
     buffer2 = raw.buffer;
-    var magic = reader.getUint16(0, isLittleEndian2);
+    var magic = reader.getUint16(0, isLittleEndian);
     if (magic === 540 || magic === 469893120)
       return this.readNII2(buffer2);
     if (magic === 23553) {
-      isLittleEndian2 = false;
-      magic = reader.getUint16(0, isLittleEndian2);
+      isLittleEndian = false;
+      magic = reader.getUint16(0, isLittleEndian);
     }
   }
   if (magic !== 348)
     console.log("Not a valid NIfTI image.");
-  let voxoffset2 = reader.getFloat32(108, isLittleEndian2);
-  let scl_slope = reader.getFloat32(112, isLittleEndian2);
-  let scl_inter = reader.getFloat32(116, isLittleEndian2);
+  let voxoffset = reader.getFloat32(108, isLittleEndian);
+  let scl_slope = reader.getFloat32(112, isLittleEndian);
+  let scl_inter = reader.getFloat32(116, isLittleEndian);
   if (scl_slope !== 1 || scl_inter !== 0)
     console.log("ignoring scale slope and intercept");
-  let datatype = reader.getUint16(70, isLittleEndian2);
+  let datatype = reader.getUint16(70, isLittleEndian);
   if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
     console.log("Unsupported NIfTI datatype " + datatype);
     return scalars;
   }
   let nvert = 1;
   for (var i2 = 1; i2 < 8; i2++) {
-    let dim = reader.getUint16(40 + i2 * 2, isLittleEndian2);
+    let dim = reader.getUint16(40 + i2 * 2, isLittleEndian);
     nvert *= Math.max(dim, 1);
   }
   if (nvert % n_vert !== 0) {
     console.log("Vertices in NIfTI (" + nvert + ") is not a multiple of number of vertices (" + n_vert + ")");
     return scalars;
   }
-  if (isLittleEndian2) {
+  if (isLittleEndian) {
     if (datatype === 16)
-      scalars = new Float32Array(buffer2, voxoffset2, nvert);
+      scalars = new Float32Array(buffer2, voxoffset, nvert);
     else if (datatype === 8)
-      scalars = new Int32Array(buffer2, voxoffset2, nvert);
+      scalars = new Int32Array(buffer2, voxoffset, nvert);
     else if (datatype === 4)
-      scalars = new Int16Array(buffer2, voxoffset2, nvert);
+      scalars = new Int16Array(buffer2, voxoffset, nvert);
   } else {
     if (datatype === 16) {
       scalars = new Float32Array(nvert);
       for (var i2 = 0; i2 < nvert; i2++)
-        scalars[i2] = reader.getFloat32(voxoffset2 + i2 * 4, isLittleEndian2);
+        scalars[i2] = reader.getFloat32(voxoffset + i2 * 4, isLittleEndian);
     } else if (datatype === 8) {
       scalars = new Int32Array(nvert);
       for (var i2 = 0; i2 < nvert; i2++)
-        scalars[i2] = reader.getInt32(voxoffset2 + i2 * 4, isLittleEndian2);
+        scalars[i2] = reader.getInt32(voxoffset + i2 * 4, isLittleEndian);
     } else if (datatype === 4) {
       scalars = new Int16Array(nvert);
       for (var i2 = 0; i2 < nvert; i2++)
-        scalars[i2] = reader.getInt16(voxoffset2 + i2 * 2, isLittleEndian2);
+        scalars[i2] = reader.getInt16(voxoffset + i2 * 2, isLittleEndian);
     }
   }
   if (datatype === 2)
-    scalars = new Uint8Array(buffer2, voxoffset2, nvert);
+    scalars = new Uint8Array(buffer2, voxoffset, nvert);
   return scalars;
 };
 NVMesh.readMGH = function(buffer2, n_vert = 0) {
@@ -110263,6 +110263,8 @@ NVMesh.readMGH = function(buffer2, n_vert = 0) {
   let depth = Math.max(1, reader.getInt32(12, false));
   let nframes = Math.max(1, reader.getInt32(16, false));
   let mtype = reader.getInt32(20, false);
+  let voxoffset = 284;
+  let isLittleEndian = false;
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   let nvert = width * height * depth * nframes;
@@ -110550,8 +110552,8 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
   let FreeSurferTranlate = [0, 0, 0];
   let dataType = 0;
   let isGzip = false;
-  let FreeSurferMatrix = [];
   let nvert = 0;
+  let isDataSpaceScanner = false;
   while (pos < len2) {
     let readBracketTag = function(TagName) {
       let pos2 = line.indexOf(TagName);
@@ -110668,21 +110670,8 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
       if (e >= 0)
         FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
-    if (line.startsWith("<MatrixData>")) {
-      while (pos < len2 && !line.endsWith("</MatrixData>"))
-        line += " " + readStrX();
-      line = line.replace("<MatrixData>", "");
-      line = line.replace("</MatrixData>", "");
-      line = line.replace("  ", " ");
-      line = line.trim();
-      var floats = line.split(/\s+/).map(parseFloat);
-      if (floats.length != 16)
-        console.log("Expected MatrixData to have 16 items: '" + line + "'");
-      else {
-        FreeSurferMatrix = create$2();
-        for (var i2 = 0; i2 < 16; i2++)
-          FreeSurferMatrix[i2] = floats[i2];
-      }
+    if (line.startsWith("<DataSpace") && line.includes("NIFTI_XFORM_SCANNER_ANAT")) {
+      isDataSpaceScanner = true;
     }
     if (line.startsWith("<Name") && line.includes("AnatomicalStructurePrimary")) {
       if (!line.includes("<Value"))
@@ -110714,6 +110703,18 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
   }
   if (n_vert > 0)
     return scalars;
+  if (positions.length > 2 && !isDataSpaceScanner && (FreeSurferTranlate[0] != 0 || FreeSurferTranlate[1] != 0 || FreeSurferTranlate[2] != 0)) {
+    nvert = Math.floor(positions.length / 3);
+    let i3 = 0;
+    for (var v = 0; v < nvert; v++) {
+      positions[i3] += FreeSurferTranlate[0];
+      i3++;
+      positions[i3] += FreeSurferTranlate[1];
+      i3++;
+      positions[i3] += FreeSurferTranlate[2];
+      i3++;
+    }
+  }
   return {
     positions,
     indices,
@@ -110723,6 +110724,9 @@ NVMesh.readGII = function(buffer2, n_vert = 0) {
 NVMesh.loadConnectomeFromJSON = async function(json, gl, name = "", colorMap = "", opacity = 1, visible = true) {
   if (json.hasOwnProperty("name"))
     name = json.name;
+  if (!json.hasOwnProperty("nodes")) {
+    throw Error("not a valid jcon connectome file");
+  }
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 };
 NVMesh.readMesh = async function(buffer2, name, gl, opacity = 1, rgba255 = [255, 255, 255, 255], visible = true) {
@@ -110736,6 +110740,8 @@ NVMesh.readMesh = async function(buffer2, name, gl, opacity = 1, rgba255 = [255,
     ext = re.exec(name.slice(0, -3))[1];
     ext = ext.toUpperCase();
   }
+  if (ext === "JCON")
+    return await this.loadConnectomeFromJSON(JSON.parse(new TextDecoder().decode(buffer2)), gl, name, "", opacity, visible);
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK")
       obj = this.readTCK(buffer2);
@@ -111065,8 +111071,8 @@ var DEFAULT_WEBSOCKET_CONFIG = {
   deserializer: function(e) {
     return JSON.parse(e.data);
   },
-  serializer: function(value2) {
-    return JSON.stringify(value2);
+  serializer: function(value) {
+    return JSON.stringify(value);
   }
 };
 var WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }";
@@ -113288,51 +113294,51 @@ const deserializer = ($, _) => {
   const unpair = (index) => {
     if ($.has(index))
       return $.get(index);
-    const [type2, value2] = _[index];
+    const [type2, value] = _[index];
     switch (type2) {
       case PRIMITIVE:
       case VOID:
-        return as(value2, index);
+        return as(value, index);
       case ARRAY: {
         const arr = as([], index);
-        for (const index2 of value2)
+        for (const index2 of value)
           arr.push(unpair(index2));
         return arr;
       }
       case OBJECT: {
         const object = as({}, index);
-        for (const [key2, index2] of value2)
+        for (const [key2, index2] of value)
           object[unpair(key2)] = unpair(index2);
         return object;
       }
       case DATE:
-        return as(new Date(value2), index);
+        return as(new Date(value), index);
       case REGEXP: {
-        const { source, flags } = value2;
+        const { source, flags } = value;
         return as(new RegExp(source, flags), index);
       }
       case MAP: {
         const map = as(/* @__PURE__ */ new Map(), index);
-        for (const [key2, index2] of value2)
+        for (const [key2, index2] of value)
           map.set(unpair(key2), unpair(index2));
         return map;
       }
       case SET: {
         const set = as(/* @__PURE__ */ new Set(), index);
-        for (const index2 of value2)
+        for (const index2 of value)
           set.add(unpair(index2));
         return set;
       }
       case ERROR: {
-        const { name, message } = value2;
+        const { name, message } = value;
         return as(new env[name](message), index);
       }
       case BIGINT:
-        return as(BigInt(value2), index);
+        return as(BigInt(value), index);
       case "BigInt":
-        return as(Object(BigInt(value2)), index);
+        return as(Object(BigInt(value)), index);
     }
-    return as(new env[type2](value2), index);
+    return as(new env[type2](value), index);
   };
   return unpair;
 };
@@ -113340,11 +113346,11 @@ const deserialize = (serialized) => deserializer(/* @__PURE__ */ new Map(), seri
 const EMPTY = "";
 const { toString } = {};
 const { keys } = Object;
-const typeOf = (value2) => {
-  const type2 = typeof value2;
-  if (type2 !== "object" || !value2)
+const typeOf = (value) => {
+  const type2 = typeof value;
+  if (type2 !== "object" || !value)
     return [PRIMITIVE, type2];
-  const asString = toString.call(value2).slice(8, -1);
+  const asString = toString.call(value).slice(8, -1);
   switch (asString) {
     case "Array":
       return [ARRAY, EMPTY];
@@ -113367,22 +113373,22 @@ const typeOf = (value2) => {
 };
 const shouldSkip = ([TYPE, type2]) => TYPE === PRIMITIVE && (type2 === "function" || type2 === "symbol");
 const serializer = (strict, json, $, _) => {
-  const as = (out, value2) => {
+  const as = (out, value) => {
     const index = _.push(out) - 1;
-    $.set(value2, index);
+    $.set(value, index);
     return index;
   };
-  const pair = (value2) => {
-    if ($.has(value2))
-      return $.get(value2);
-    let [TYPE, type2] = typeOf(value2);
+  const pair = (value) => {
+    if ($.has(value))
+      return $.get(value);
+    let [TYPE, type2] = typeOf(value);
     switch (TYPE) {
       case PRIMITIVE: {
-        let entry = value2;
+        let entry = value;
         switch (type2) {
           case "bigint":
             TYPE = BIGINT;
-            entry = value2.toString();
+            entry = value.toString();
             break;
           case "function":
           case "symbol":
@@ -113391,16 +113397,16 @@ const serializer = (strict, json, $, _) => {
             entry = null;
             break;
           case "undefined":
-            return as([VOID], value2);
+            return as([VOID], value);
         }
-        return as([TYPE, entry], value2);
+        return as([TYPE, entry], value);
       }
       case ARRAY: {
         if (type2)
-          return as([type2, [...value2]], value2);
+          return as([type2, [...value]], value);
         const arr = [];
-        const index = as([TYPE, arr], value2);
-        for (const entry of value2)
+        const index = as([TYPE, arr], value);
+        for (const entry of value)
           arr.push(pair(entry));
         return index;
       }
@@ -113408,33 +113414,33 @@ const serializer = (strict, json, $, _) => {
         if (type2) {
           switch (type2) {
             case "BigInt":
-              return as([type2, value2.toString()], value2);
+              return as([type2, value.toString()], value);
             case "Boolean":
             case "Number":
             case "String":
-              return as([type2, value2.valueOf()], value2);
+              return as([type2, value.valueOf()], value);
           }
         }
-        if (json && "toJSON" in value2)
-          return pair(value2.toJSON());
+        if (json && "toJSON" in value)
+          return pair(value.toJSON());
         const entries = [];
-        const index = as([TYPE, entries], value2);
-        for (const key2 of keys(value2)) {
-          if (strict || !shouldSkip(typeOf(value2[key2])))
-            entries.push([pair(key2), pair(value2[key2])]);
+        const index = as([TYPE, entries], value);
+        for (const key2 of keys(value)) {
+          if (strict || !shouldSkip(typeOf(value[key2])))
+            entries.push([pair(key2), pair(value[key2])]);
         }
         return index;
       }
       case DATE:
-        return as([TYPE, value2.toISOString()], value2);
+        return as([TYPE, value.toISOString()], value);
       case REGEXP: {
-        const { source, flags } = value2;
-        return as([TYPE, { source, flags }], value2);
+        const { source, flags } = value;
+        return as([TYPE, { source, flags }], value);
       }
       case MAP: {
         const entries = [];
-        const index = as([TYPE, entries], value2);
-        for (const [key2, entry] of value2) {
+        const index = as([TYPE, entries], value);
+        for (const [key2, entry] of value) {
           if (strict || !(shouldSkip(typeOf(key2)) || shouldSkip(typeOf(entry))))
             entries.push([pair(key2), pair(entry)]);
         }
@@ -113442,22 +113448,22 @@ const serializer = (strict, json, $, _) => {
       }
       case SET: {
         const entries = [];
-        const index = as([TYPE, entries], value2);
-        for (const entry of value2) {
+        const index = as([TYPE, entries], value);
+        for (const entry of value) {
           if (strict || !shouldSkip(typeOf(entry)))
             entries.push(pair(entry));
         }
         return index;
       }
     }
-    const { message } = value2;
-    return as([TYPE, { name: type2, message }], value2);
+    const { message } = value;
+    return as([TYPE, { name: type2, message }], value);
   };
   return pair;
 };
-const serialize = (value2, { json, lossy } = {}) => {
+const serialize = (value, { json, lossy } = {}) => {
   const _ = [];
-  return serializer(!(json || lossy), !!json, /* @__PURE__ */ new Map(), _)(value2), _;
+  return serializer(!(json || lossy), !!json, /* @__PURE__ */ new Map(), _)(value), _;
 };
 const SLICE_TYPE = Object.freeze({
   AXIAL: 0,
@@ -113470,7 +113476,8 @@ const DRAG_MODE = Object.freeze({
   none: 0,
   contrast: 1,
   measurement: 2,
-  pan: 3
+  pan: 3,
+  slicer3D: 4
 });
 const DEFAULT_OPTIONS = {
   textHeight: 0.06,
@@ -113492,6 +113499,7 @@ const DEFAULT_OPTIONS = {
   longTouchTimeout: 1e3,
   keyDebounceTime: 50,
   isNearestInterpolation: false,
+  isResizeCanvas: true,
   isAtlasOutline: false,
   isRuler: false,
   isColorbar: false,
@@ -113801,14 +113809,17 @@ const MESH_EXTENSIONS = [
   "TRK",
   "TRX",
   "VTK",
-  "X3D"
+  "X3D",
+  "JCON"
 ];
 const LEFT_MOUSE_BUTTON = 0;
+const CENTER_MOUSE_BUTTON = 1;
 const RIGHT_MOUSE_BUTTON = 2;
 function Niivue(options = {}) {
   this.canvas = null;
   this.gl = null;
   this.colormapTexture = null;
+  this.ColormapLists = [];
   this.volumeTexture = null;
   this.drawTexture = null;
   this.drawUndoBitmaps = [];
@@ -113856,6 +113867,7 @@ function Niivue(options = {}) {
   this.uiData.mousedown = false;
   this.uiData.touchdown = false;
   this.uiData.mouseButtonLeftDown = false;
+  this.uiData.mouseButtonCenterDown = false;
   this.uiData.mouseButtonRightDown = false;
   this.uiData.mouseDepthPicker = false;
   this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
@@ -113997,6 +114009,7 @@ function Niivue(options = {}) {
   this.dragModes.measurement = DRAG_MODE.measurement;
   this.dragModes.none = DRAG_MODE.none;
   this.dragModes.pan = DRAG_MODE.pan;
+  this.dragModes.slicer3D = DRAG_MODE.slicer3D;
   this.sliceTypeAxial = SLICE_TYPE.AXIAL;
   this.sliceTypeCoronal = SLICE_TYPE.CORONAL;
   this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL;
@@ -114101,11 +114114,13 @@ Niivue.prototype.attachToCanvas = async function(canvas) {
   }
   console.log("NIIVUE VERSION ", "0.30.0");
   this.canvas.parentElement.style.backgroundColor = "black";
-  this.canvas.style.width = "100%";
-  this.canvas.style.height = "100%";
-  this.canvas.width = this.canvas.offsetWidth;
-  this.canvas.height = this.canvas.offsetHeight;
-  window.addEventListener("resize", this.resizeListener.bind(this));
+  if (this.opts.isResizeCanvas) {
+    this.canvas.style.width = "100%";
+    this.canvas.style.height = "100%";
+    this.canvas.width = this.canvas.offsetWidth;
+    this.canvas.height = this.canvas.offsetHeight;
+    window.addEventListener("resize", this.resizeListener.bind(this));
+  }
   this.registerInteractions();
   await this.init();
   this.drawScene();
@@ -114136,6 +114151,10 @@ Niivue.prototype.arrayEquals = function(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
 };
 Niivue.prototype.resizeListener = function() {
+  if (!this.opts.isResizeCanvas) {
+    this.drawScene();
+    return;
+  }
   this.canvas.style.width = "100%";
   this.canvas.style.height = "100%";
   if (this.opts.isHighResolutionCapable) {
@@ -114180,12 +114199,26 @@ Niivue.prototype.mouseDownListener = function(e) {
   } else if (e.button === RIGHT_MOUSE_BUTTON) {
     this.uiData.mouseButtonRightDown = true;
     this.mouseRightButtonHandler(e);
+  } else if (e.button === CENTER_MOUSE_BUTTON) {
+    this.uiData.mouseButtonCenterDown = true;
+    this.mouseCenterButtonHandler(e);
   }
 };
 Niivue.prototype.mouseLeftButtonHandler = function(e) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
   this.mouseClick(pos.x, pos.y);
   this.mouseDown(pos.x, pos.y);
+};
+Niivue.prototype.mouseCenterButtonHandler = function(e) {
+  let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+  if (this.opts.dragMode === DRAG_MODE.none)
+    return;
+  this.setDragStart(pos.x, pos.y);
+  if (!this.uiData.isDragging)
+    this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+  this.uiData.isDragging = true;
+  this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
+  return;
 };
 Niivue.prototype.mouseRightButtonHandler = function(e) {
   let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
@@ -114271,6 +114304,8 @@ Niivue.prototype.calculateNewRange = function(volIdx = 0) {
 Niivue.prototype.mouseUpListener = function() {
   this.uiData.mousedown = false;
   this.uiData.mouseButtonRightDown = false;
+  let wasCenterDown = this.uiData.mouseButtonCenterDown;
+  this.uiData.mouseButtonCenterDown = false;
   this.uiData.mouseButtonLeftDown = false;
   if (this.drawPenFillPts.length > 0)
     this.drawPenFilled();
@@ -114281,6 +114316,8 @@ Niivue.prototype.mouseUpListener = function() {
   if (this.uiData.isDragging) {
     this.uiData.isDragging = false;
     if (this.opts.dragMode !== DRAG_MODE.contrast)
+      return;
+    if (wasCenterDown)
       return;
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
@@ -114347,7 +114384,7 @@ Niivue.prototype.mouseMoveListener = function(e) {
     if (this.uiData.mouseButtonLeftDown) {
       this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
-    } else if (this.uiData.mouseButtonRightDown) {
+    } else if (this.uiData.mouseButtonRightDown || this.uiData.mouseButtonCenterDown) {
       this.setDragEnd(pos.x, pos.y);
     }
     this.drawScene();
@@ -114619,6 +114656,12 @@ Niivue.prototype.readDirectory = function(directory) {
   readEntries();
   return allEntiresInDir;
 };
+Niivue.prototype.isMeshExt = function(url) {
+  let ext = this.getFileExt(url);
+  log.debug("dropped ext");
+  log.debug(ext);
+  return MESH_EXTENSIONS.includes(ext);
+};
 Niivue.prototype.dropListener = async function(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -114642,7 +114685,7 @@ Niivue.prototype.dropListener = async function(e) {
   } else {
     const items = dt.items;
     if (items.length > 0) {
-      if (!e.shiftKey) {
+      if (!e.shiftKey && !e.altKey) {
         this.volumes = [];
         this.overlays = [];
         this.meshes = [];
@@ -114705,7 +114748,12 @@ Niivue.prototype.dropListener = async function(e) {
                 file,
                 urlImgData: pairedImageData
               });
-              this.addVolume(volume);
+              if (e.altKey) {
+                log.debug("alt key detected: assuming this is a drawing overlay");
+                this.drawClearAllUndoBitmaps();
+                this.loadDrawing(volume);
+              } else
+                this.addVolume(volume);
             }
           });
         } else if (entry.isDirectory) {
@@ -114939,18 +114987,21 @@ Niivue.prototype.loadDrawing = function(drawingBitmap) {
   this.drawAddUndoBitmap();
   this.refreshDrawing(false);
   this.drawScene();
+  return true;
 };
 Niivue.prototype.loadDrawingFromUrl = async function(fnm) {
   if (this.drawBitmap)
     log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
+  let ok = false;
   try {
     let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
-    this.loadDrawing(volume);
+    ok = this.loadDrawing(volume);
   } catch (err2) {
     console.error("loadDrawingFromUrl() failed to load " + fnm);
     this.drawClearAllUndoBitmaps();
   }
+  return ok;
 };
 Niivue.prototype.findOtsu = async function(mlevel = 2) {
   if (this.volumes.length < 1)
@@ -116580,6 +116631,7 @@ Niivue.prototype.getDescriptives = function(layer = 0, ignoreZeros = false, mask
   };
 };
 Niivue.prototype.refreshLayers = function(overlayItem, layer) {
+  this.refreshColormaps();
   if (this.volumes.length < 1)
     return;
   let hdr = overlayItem.hdr;
@@ -116705,8 +116757,8 @@ Niivue.prototype.refreshLayers = function(overlayItem, layer) {
   this.gl.uniform1i(orientShader.uniforms["isAlphaThreshold"], overlayItem.alphaThreshold);
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
-  let mnNeg = 0;
-  let mxNeg = 0;
+  let mnNeg = NaN;
+  let mxNeg = NaN;
   if (overlayItem.colorMapNegative.length > 0) {
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
     mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
@@ -116867,46 +116919,93 @@ Niivue.prototype.colormapFromKey = function(name) {
 Niivue.prototype.colormap = function(lutName = "") {
   return cmapper.colormap(lutName);
 };
-Niivue.prototype.refreshColormaps = function() {
-  let nLayer = this.volumes.length;
-  if (nLayer < 1)
-    return;
+Niivue.prototype.createColorMapTexture = function(nLayer) {
   if (this.colormapTexture !== null)
     this.gl.deleteTexture(this.colormapTexture);
   this.colormapTexture = this.gl.createTexture();
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer * 2);
+  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-  let luts = this.colormap(this.volumes[0].colorMap);
+};
+Niivue.prototype.addColormapList = function(nm = "", mn = NaN, mx = NaN, alpha = false, neg = false, vis = true) {
+  if (nm.length < 1)
+    return;
+  this.ColormapLists.push({
+    name: nm,
+    min: mn,
+    max: mx,
+    alphaThreshold: alpha,
+    negative: neg,
+    visible: vis
+  });
+};
+function negMinMax(min2, max2, minNeg, maxNeg) {
+  let mn = -min2;
+  let mx = -max2;
+  if (isFinite(minNeg) && isFinite(maxNeg)) {
+    mn = minNeg;
+    mx = maxNeg;
+  }
+  if (mn > mx)
+    [mn, mx] = [mx, mn];
+  return [mn, mx];
+}
+Niivue.prototype.refreshColormaps = function() {
+  this.ColormapLists = [];
+  if (this.volumes.length < 1 && this.meshes.length < 1)
+    return;
+  let nVol = this.volumes.length;
+  if (nVol > 0) {
+    for (let i2 = 0; i2 < nVol; i2++) {
+      let volume = this.volumes[i2];
+      let neg = negMinMax(volume.cal_min, volume.cal_max, volume.cal_minNeg, volume.cal_maxNeg);
+      this.addColormapList(volume.colorMapNegative, neg[0], neg[1], volume.alphaThreshold, true, volume.colorbarVisible);
+      this.addColormapList(volume.colorMap, volume.cal_min, volume.cal_max, volume.alphaThreshold, false, volume.colorbarVisible);
+    }
+  }
+  let nmesh = this.meshes.length;
+  if (nmesh > 0) {
+    for (let i2 = 0; i2 < nmesh; i2++) {
+      let mesh = this.meshes[i2];
+      if (!mesh.colorbarVisible)
+        continue;
+      let nlayers = mesh.layers.length;
+      if (mesh.hasOwnProperty("edgeColormap")) {
+        let neg = negMinMax(mesh.edgeMin, mesh.edgeMax, NaN, NaN);
+        this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true);
+        this.addColormapList(mesh.edgeColormap, mesh.edgeMin, mesh.edgeMax);
+      }
+      if (nlayers < 1)
+        continue;
+      for (let j = 0; j < nlayers; j++) {
+        let layer = this.meshes[i2].layers[j];
+        if (layer.colorMap.length < 1)
+          continue;
+        let neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg);
+        this.addColormapList(layer.colorMapNegative, neg[0], neg[1], layer.alphaThreshold, true);
+        this.addColormapList(layer.colorMap, layer.cal_min, layer.cal_max, layer.alphaThreshold);
+      }
+    }
+  }
+  let nMaps = this.ColormapLists.length;
+  if (nMaps < 1)
+    return;
+  this.createColorMapTexture(nMaps);
+  let luts = [];
   function addColormap(lut) {
     let c = new Uint8ClampedArray(luts.length + lut.length);
     c.set(luts);
     c.set(lut, luts.length);
     luts = c;
   }
-  for (let i2 = 1; i2 < nLayer; i2++)
-    addColormap(this.colormap(this.volumes[i2].colorMap));
-  let bogusLut = new Uint8ClampedArray(1024);
-  bogusLut[0] = 255;
-  bogusLut[1] = 255;
-  bogusLut[2] = 255;
-  bogusLut[3] = 0;
-  bogusLut[4] = 0;
-  bogusLut[5] = 0;
-  bogusLut[6] = 0;
-  bogusLut[7] = 255;
-  for (let i2 = 0; i2 < nLayer; i2++) {
-    let lut = bogusLut.slice();
-    if (this.volumes[i2].colorMapNegative.length > 0)
-      lut = this.colormap(this.volumes[i2].colorMapNegative);
-    addColormap(lut);
-  }
-  this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nLayer * 2, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts);
+  for (let i2 = 0; i2 < nMaps; i2++)
+    addColormap(this.colormap(this.ColormapLists[i2].name));
+  this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nMaps, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts);
   return this;
 };
 Niivue.prototype.sliceScale = function() {
@@ -117148,6 +117247,23 @@ Niivue.prototype.dragForPanZoom = function(startXYendXY) {
   this.uiData.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1];
   this.uiData.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
 };
+Niivue.prototype.dragForCenterButton = function(startXYendXY) {
+  this.dragForPanZoom(startXYendXY);
+};
+Niivue.prototype.dragForSlicer3D = function(startXYendXY) {
+  let zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
+  let y = startXYendXY[3] - startXYendXY[1];
+  const pixelScale = 0.01;
+  zoom += y * pixelScale;
+  zoom = Math.max(zoom, 0.1);
+  zoom = Math.min(zoom, 10);
+  let zoomChange = this.uiData.pan2Dxyzmm[3] - zoom;
+  this.uiData.pan2Dxyzmm[3] = zoom;
+  let mm = this.frac2mm(this.scene.crosshairPos);
+  this.uiData.pan2Dxyzmm[0] += zoomChange * mm[0];
+  this.uiData.pan2Dxyzmm[1] += zoomChange * mm[1];
+  this.uiData.pan2Dxyzmm[2] += zoomChange * mm[2];
+};
 Niivue.prototype.drawMeasurementTool = function(startXYendXY) {
   let gl = this.gl;
   gl.bindVertexArray(this.genericVAO);
@@ -117283,11 +117399,7 @@ Niivue.prototype.reserveColorbarPanel = function() {
   this.colorbarHeight = leftTopWidthHeight[3] + 1;
   return leftTopWidthHeight;
 };
-Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0, 0, 0, 0], isNegativeColor = false, min2 = 0, max2 = 1) {
-  if (this.volumes.length < 1)
-    return;
-  if (layer >= this.volumes.length)
-    layer = 0;
+Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0, 0, 0, 0], isNegativeColor = false, min2 = 0, max2 = 1, isAlphaThreshold) {
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0)
     return;
   let txtHt = Math.max(this.opts.textHeight, 0.01);
@@ -117322,8 +117434,6 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
   let lx = layer;
-  if (isNegativeColor)
-    lx += this.volumes.length;
   this.gl.uniform1f(this.colorbarShader.layerLoc, lx);
   this.gl.uniform2fv(this.colorbarShader.canvasWidthHeightLoc, [
     this.gl.canvas.width,
@@ -117341,10 +117451,10 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
   this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
   let thresholdTic = 0;
-  if (this.volumes[layer].alphaThreshold && max2 < 0 && isNegativeColor) {
+  if (isAlphaThreshold && max2 < 0 && isNegativeColor) {
     thresholdTic = max2;
     max2 = 0;
-  } else if (this.volumes[layer].alphaThreshold && min2 > 0) {
+  } else if (isAlphaThreshold && min2 > 0) {
     thresholdTic = min2;
     min2 = 0;
   }
@@ -117379,37 +117489,30 @@ Niivue.prototype.drawColorbarCore = function(layer = 0, leftTopWidthHeight = [0,
   }
 };
 Niivue.prototype.drawColorbar = function() {
-  let nlayers = this.volumes.length;
-  if (nlayers < 1)
+  let maps = this.ColormapLists;
+  let nmaps = maps.length;
+  if (nmaps < 1)
     return;
-  let ncolorMapNegative = 0;
-  for (let i2 = 0; i2 < nlayers; i2++)
-    if (this.volumes[i2].colorMapNegative.length > 0)
-      ncolorMapNegative++;
+  let nVisible = 0;
+  for (let i2 = 0; i2 < nmaps; i2++)
+    if (maps[i2].visible)
+      nVisible++;
+  if (nVisible < 1)
+    return;
   let leftTopWidthHeight = this.reserveColorbarPanel();
   let txtHt = Math.max(this.opts.textHeight, 0.01);
   txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
   let fullHt = 3 * txtHt;
-  let wid = leftTopWidthHeight[2] / (nlayers + ncolorMapNegative);
+  let wid = leftTopWidthHeight[2] / nVisible;
   if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
-    wid = this.gl.canvas.width / nlayers;
+    wid = this.gl.canvas.width / nVisible;
     leftTopWidthHeight = [0, this.gl.canvas.height - fullHt, wid, fullHt];
   }
   leftTopWidthHeight[2] = wid;
-  for (let i2 = 0; i2 < nlayers; i2++) {
-    if (this.volumes[i2].colorMapNegative.length > 0) {
-      let mn = -this.volumes[i2].cal_max;
-      let mx = -this.volumes[i2].cal_min;
-      if (isFinite(this.volumes[i2].cal_minNeg) && isFinite(this.volumes[i2].cal_maxNeg)) {
-        mn = Math.min(this.volumes[i2].cal_minNeg, this.volumes[i2].cal_maxNeg);
-        mx = Math.max(this.volumes[i2].cal_minNeg, this.volumes[i2].cal_maxNeg);
-      }
-      this.drawColorbarCore(i2, leftTopWidthHeight, true, mn, mx);
-      leftTopWidthHeight[0] += wid;
-    }
-    let min2 = this.volumes[i2].cal_min;
-    let max2 = this.volumes[i2].cal_max;
-    this.drawColorbarCore(i2, leftTopWidthHeight, false, min2, max2);
+  for (let i2 = 0; i2 < nmaps; i2++) {
+    if (!maps[i2].visible)
+      continue;
+    this.drawColorbarCore(i2, leftTopWidthHeight, maps[i2].negative, maps[i2].min, maps[i2].max, maps[i2].alphaThreshold);
     leftTopWidthHeight[0] += wid;
   }
 };
@@ -117509,6 +117612,8 @@ Niivue.prototype.drawTextBelow = function(xy, str, scale2 = 1, color = null) {
     size = this.opts.textHeight * this.gl.canvas.height * scale2;
   }
   xy[0] -= 0.5 * this.textWidth(size, str);
+  xy[0] = Math.max(xy[0], 1);
+  xy[0] = Math.min(xy[0], this.canvas.width - width - 1);
   this.drawText(xy, str, scale2, color);
 };
 Niivue.prototype.updateInterpolation = function(layer, isForceLinear = false) {
@@ -118482,6 +118587,7 @@ Niivue.prototype.moveCrosshairInVox = function(x2, y, z) {
   vox[1] += y;
   vox[2] += z;
   this.scene.crosshairPos = this.vox2frac(vox);
+  this.createOnLocationChange();
   this.drawScene();
 };
 Niivue.prototype.frac2mm = function(frac, volIdx = 0, isForceSliceMM = false) {
@@ -118503,7 +118609,6 @@ Niivue.prototype.frac2mm = function(frac, volIdx = 0, isForceSliceMM = false) {
 Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2, restrict0to1 = true) {
   let texFrac = [-1, -1, -1];
   var axCorSag = this.screenSlices[i2].axCorSag;
-  fromValues$1(x2 - this.screenSlices[i2].leftTopWidthHeight[0], y - this.screenSlices[i2].leftTopWidthHeight[1], 1);
   if (axCorSag > SLICE_TYPE.SAGITTAL)
     return texFrac;
   var ltwh = this.screenSlices[i2].leftTopWidthHeight.slice();
@@ -118538,7 +118643,6 @@ Niivue.prototype.screenXY2TextureFrac = function(x2, y, i2, restrict0to1 = true)
   texFrac[0] = xyz[0];
   texFrac[1] = xyz[1];
   texFrac[2] = xyz[2];
-  this.frac2mm(texFrac);
   return texFrac;
 };
 Niivue.prototype.canvasPos2frac = function(canvasPos) {
@@ -118908,7 +119012,10 @@ Niivue.prototype.drawScene = function() {
     if (this.meshes.length > 0) {
       this.screenSlices = [];
       this.opts.sliceType = SLICE_TYPE.RENDER;
-      return this.draw3D();
+      this.draw3D();
+      if (this.opts.isColorbar)
+        this.drawColorbar();
+      return;
     }
     this.drawLoadingText(this.loadingText);
     return;
@@ -118951,6 +119058,7 @@ Niivue.prototype.drawScene = function() {
     } else if (this.opts.sliceType === SLICE_TYPE.SAGITTAL) {
       this.draw2D([0, 0, 0, 0], 2);
     } else {
+      let isDrawPenDown = isFinite(this.drawPenLocation[0]) && this.opts.drawingEnabled;
       let { volScale } = this.sliceScale();
       if (typeof this.opts.multiplanarPadPixels !== "number")
         log.debug("multiplanarPadPixels must be numeric");
@@ -118971,7 +119079,7 @@ Niivue.prototype.drawScene = function() {
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          if (maxVols < 2 || !this.graph.autoSizeMultiplanar) {
+          if (!isDrawPenDown && (maxVols < 2 || !this.graph.autoSizeMultiplanar)) {
             this.draw3D([
               ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
               ltwh3x1[1],
@@ -118990,7 +119098,7 @@ Niivue.prototype.drawScene = function() {
         this.draw2D([ltwh[0], ltwh[1] + hZ + pad, wX, hY], 0);
         this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
         this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
-        if (maxVols < 2 || !this.graph.autoSizeMultiplanar)
+        if (!isDrawPenDown && (maxVols < 2 || !this.graph.autoSizeMultiplanar))
           this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
       }
     }
@@ -119000,6 +119108,24 @@ Niivue.prototype.drawScene = function() {
   if (this.opts.isColorbar)
     this.drawColorbar();
   if (this.uiData.isDragging) {
+    if (this.uiData.mouseButtonCenterDown) {
+      this.dragForCenterButton([
+        this.uiData.dragStart[0],
+        this.uiData.dragStart[1],
+        this.uiData.dragEnd[0],
+        this.uiData.dragEnd[1]
+      ]);
+      return;
+    }
+    if (this.opts.dragMode === DRAG_MODE.slicer3D) {
+      this.dragForSlicer3D([
+        this.uiData.dragStart[0],
+        this.uiData.dragStart[1],
+        this.uiData.dragEnd[0],
+        this.uiData.dragEnd[1]
+      ]);
+      return;
+    }
     if (this.opts.dragMode === DRAG_MODE.pan) {
       this.dragForPanZoom([
         this.uiData.dragStart[0],

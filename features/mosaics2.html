@@ -9,8 +9,8 @@
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
-	<header>
-	  <button id="about">Mosaic string:</button>
+    <header>
+      <button id="about">Mosaic string:</button>
       <input type="text" id="str" value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0" required minlength="2" maxlength="128" size="128">
       <p>
      <label for="check1">Radiological</label>
@@ -126,13 +126,13 @@
       nv1.loadVolumes(volumeList1)
       var txt = document.getElementById("str")
       nv1.setSliceType(nv1.sliceTypeAxial)
-	  nv1.opts.isColorbar = true
+      nv1.opts.isColorbar = true
       nv1.setSliceMosaicString(txt.value)
-	  document.getElementById("str").addEventListener("keyup", doStr);
+      document.getElementById("str").addEventListener("keyup", doStr);
       function doStr() {
             nv1.setSliceMosaicString(txt.value)
       }
-	  document.getElementById("about").addEventListener("click", doAbout);
+      document.getElementById("about").addEventListener("click", doAbout);
       function doAbout(){
         window.alert("Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R).");
       }
