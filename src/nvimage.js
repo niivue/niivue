@@ -6,7 +6,7 @@ import * as cmaps from "./cmaps";
 import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
-import { prototype } from "nifti-reader-js/src/nifti1";
+//import { prototype } from "nifti-reader-js/src/nifti1";
 const log = new Log();
 
 // not included in public docs
@@ -120,8 +120,10 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
  * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
  * @property {string} [colorMapNegative=""] a color map to use for negative intensities
- * @property {number} [cal_minNegative=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
- * @property {number} [cal_maxNegative=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+ * @property {number} [cal_minNeg=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
+ * @property {number} [cal_maxNeg=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+ * @property {boolean} [colorbarVisible=true] hide colormaps 
+
 
  * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
@@ -147,8 +149,9 @@ export function NVImageFromUrlOptions(
   alphaThreshold = false,
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN,
-  cal_minNegative = NaN,
-  cal_maxNegative = NaN
+  cal_minNeg = NaN,
+  cal_maxNeg = NaN,
+  colorbarVisible = true
 ) {
   return {
     url,
@@ -165,8 +168,9 @@ export function NVImageFromUrlOptions(
     useQFormNotSForm,
     colorMapNegative,
     imageType,
-    cal_minNegative,
-    cal_maxNegative,
+    cal_minNeg,
+    cal_maxNeg,
+    colorbarVisible,
   };
 }
 
@@ -207,8 +211,9 @@ export function NVImage(
   useQFormNotSForm = false,
   colorMapNegative = "",
   imageType = NVIMAGE_TYPE.UNKNOWN,
-  cal_minNegative = NaN,
-  cal_maxNegative = NaN
+  cal_minNeg = NaN,
+  cal_maxNeg = NaN,
+  colorbarVisible = true
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -241,8 +246,9 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
-  this.cal_minNegative = cal_minNegative;
-  this.cal_maxNegative = cal_maxNegative;
+  this.cal_minNeg = cal_minNeg;
+  this.cal_maxNeg = cal_maxNeg;
+  this.colorbarVisible = colorbarVisible;
 
   this.visible = visible;
   this.modulationImage = null;
@@ -489,7 +495,7 @@ export function NVImage(
       let numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
       var u8 = new Uint8Array(imgRaw);
       for (let index = 0; index < u8.length; index += numBytesPerVoxel) {
-        let offset = bytesPer - 1;
+        let offset = numBytesPerVoxel - 1;
         for (let x = 0; x < offset; x++) {
           let theByte = u8[index + x];
           u8[index + x] = u8[index + offset];
@@ -1034,7 +1040,7 @@ NVImage.prototype.readECAT = function (buffer) {
           newImg[i] = reader.getUint16(ipos, false) * scale_factor;
           ipos += 2;
         }
-      } else if (ihdr.data_type == 7) {
+      } else if (data_type == 7) {
         //uint32
         for (var i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint32(ipos, false) * scale_factor;
@@ -1186,6 +1192,7 @@ NVImage.prototype.readVMR = function (buffer) {
 NVImage.prototype.readMGH = function (buffer) {
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
+  hdr.littleEndian = false; //MGH always big ending
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
   var raw = buffer;
@@ -1496,7 +1503,7 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
           hdr.datatypeCode = this.DT_DOUBLE;
           break;
         default:
-          throw new Error("Unsupported NRRD data type: " + value);
+          throw new Error("Unsupported NRRD data type: " + items[0]);
       }
     }
     if (line.startsWith("ObjectType") && !items[0].includes("Image"))
@@ -2582,7 +2589,6 @@ NVImage.loadFromUrl = async function ({
   if (url === "") {
     throw Error("url must not be empty");
   }
-
   let nvimage = null;
   let dataBuffer = null;
 

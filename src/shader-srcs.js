@@ -9,6 +9,21 @@ void main(void) {
 	vColor = texCoords;
 }`;
 
+const kDrawFunc = `
+	vec4 drawColor(float scalar) {
+	vec4 clrs[7];
+	clrs[0] = vec4(0.0, 0.0, 0.0, 0.0); //clear
+	clrs[1] = vec4(1.0, 0.0, 0.0, drawOpacity); //red
+	clrs[2] = vec4(0.0, 1.0, 0.0, drawOpacity); //green
+	clrs[3] = vec4(0.0, 0.0, 1.0, drawOpacity); //blue
+	clrs[4] = vec4(1.0, 1.0, 0.0, drawOpacity); //yellow
+	clrs[5] = vec4(0.0, 1.0, 1.0, drawOpacity); //cyan
+	clrs[6] = vec4(1.0, 0.0, 1.0, drawOpacity); //purple
+	highp int index = int(scalar * 255.0);
+	index = min(index, 6);
+	return clrs[index];
+}`;
+
 const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale; 
 	vec3 invR = 1.0 / rayDir;
@@ -57,21 +72,7 @@ float frac2ndc(vec3 frac) {
 	vec4 mm = transpose(matRAS) * pos;
 	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
 	return (z_ndc + 1.0) / 2.0;
-}
-vec4 drawColor(float scalar) {
-	vec4 dcolor = vec4(0.0, 0.0, 0.0, 0.0);
-	if (scalar <= 0.0) return dcolor;
-	dcolor.a = drawOpacity;
-	if (scalar >= (4.0/255.0))
-		dcolor.rgb = vec3(scalar,0.0,scalar);
-	else if (scalar >= (3.0/255.0))
-		dcolor.b = 1.0;
-	else if (scalar >= (2.0/255.0))
-		dcolor.g = 1.0;
-	else
-		dcolor.r = 1.0;
-	return dcolor;
-}`;
+}` + kDrawFunc;
 
 export var fragRenderShaderMIP =
   `#version 300 es
@@ -423,8 +424,8 @@ uniform float drawOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 in vec3 texPos;
-out vec4 color;
-void main() {
+out vec4 color;`
++kDrawFunc+`void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -463,18 +464,10 @@ void main() {
 				ocolor.rbg = vec3(0.0, 0.0, 0.0);
 		}
 	}
-	float draw = texture(drawing, texPos).r;
-	if (draw > 0.0) {
-		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (4.0/255.0))
-			dcolor.rgb = vec3(draw,0.0,draw);
-		else if (draw >= (3.0/255.0))
-			dcolor.b = 1.0;
-		else if (draw >= (2.0/255.0))
-			dcolor.g = 1.0;
-		else
-			dcolor.r = 1.0;
-		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+	//borg purple
+	vec4 dcolor = drawColor(texture(drawing, texPos).r);
+	if (dcolor.a > 0.0) {
+		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
@@ -735,28 +728,22 @@ void main(void) {
 	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
-	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
-	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+	float nlayer = float(textureSize(colormap, 0).y);
+	float y = (layer + 0.5)/nlayer;
+	if (!isnan(cal_minNeg))
+		y = (layer + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
 	//negative colors
 	mn = cal_minNeg;
 	mx = cal_maxNeg;
 	if (isAlphaThreshold) 
 		mx = 0.0;	
-	if ((cal_minNeg != cal_maxNeg) && ( f < mx)) {
-
+	if ((!isnan(cal_minNeg)) && ( f < mx)) {
 		r = max(0.00001, abs(mx - mn));
 		mn = min(mn, mx);
 		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
-		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
-		//select texels at positions 0 and 1 of lookup table: 
-		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
-		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-		//detect bogus color: negative color slot not used than
-		// v0 = 1,1,1,0 and v1 = 0,0,0,1
-		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
-			FragColor = texture(colormap, vec2(txl, y));
-		
+		y = (layer + 0.5)/nlayer;
+		FragColor = texture(colormap, vec2(txl, y));
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
@@ -1014,6 +1001,28 @@ void main() {
 	color.a = opacity;
 }`;
 
+//unused: requires gl.Disable(GL_DEPTH_TEST)
+// however, depth test must be ENABLED for meshes not using this shader
+// since fragments computed in parallel, this leads to artifacts when multiple meshes loaded with different shaders
+/*export var fragMeshXRayShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vL, vV;
+out vec4 color;
+void main() {
+	float Ambient = 0.5;
+	float EdgeFallOff = 1.0;
+	float Intensity = 0.5;
+	bool DimBackfaces = false;
+	float opac = abs(dot(normalize(-vN), normalize(-vV)));
+	opac = Ambient + Intensity*(1.0-pow(opac, EdgeFallOff));
+	float backface = 1.0 - step(0.0, vN.z);
+	opac = mix(opac, 0.0, backface * float(DimBackfaces)); //reverse normal if backface AND two-sided lighting
+	color = vec4(opac * vClr.rgb, opac);
+}`;*/
+
 //outline
 export var fragMeshOutlineShader = `#version 300 es
 precision highp int;
@@ -1040,19 +1049,6 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
-}`;
-
-//discard if alpha is 0
-export var fragMeshOutline = `#version 300 es
-precision highp int;
-precision highp float;
-uniform float opacity;
-in vec4 vClr;
-in vec3 vN, vL, vV;
-out vec4 color;
-void main() {
-	if (vClr.a == 0.0) discard;
-	color = vClr;
 }`;
 
 //Phong: default
@@ -1319,7 +1315,6 @@ export var fragOrientCubeShader = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
 in vec3 vColor;
-// we need to declare an output for the fragment shader
 out vec4 outColor;
 void main() {
 	outColor = vec4(vColor, 1.0);

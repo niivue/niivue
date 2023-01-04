@@ -50,7 +50,8 @@ export function NVMeshFromUrlOptions(
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true,
-  layers = []
+  layers = [],
+  colorbarVisible = true
 ) {
   return {
     url,
@@ -60,6 +61,7 @@ export function NVMeshFromUrlOptions(
     rgba255,
     visible,
     layers,
+    colorbarVisible,
   };
 }
 
@@ -92,9 +94,11 @@ export function NVMesh(
   connectome = null,
   dpg = null,
   dps = null,
-  dpv = null
+  dpv = null,
+  colorbarVisible = true
 ) {
   this.name = name;
+  this.colorbarVisible = colorbarVisible;
   this.id = uuidv4();
   let obj = getExtents(pts);
   this.furthestVertexFromOrigin = obj.mxDx;
@@ -595,10 +599,24 @@ NVMesh.prototype.updateMesh = function (gl) {
       if (layer.useNegativeCmap) {
         let lut = cmapper.colormap(layer.colorMapNegative);
         if (!layer.isOutlineBorder) {
+          let mn = layer.cal_min;
+          let mx = layer.cal_max;
+
+          if (isFinite(layer.cal_minNeg) && isFinite(layer.cal_minNeg)) {
+            mn = -layer.cal_minNeg;
+            mx = -layer.cal_maxNeg;
+          }
+          if (mx < mn) {
+            [mn, mx] = [mx, mn];
+          }
+          let scale255neg = 255.0 / (mx - mn);
           for (let j = 0; j < nvtx; j++) {
             let v255 = Math.round(
-              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+              (-layer.values[j + frameOffset] - mn) * scale255neg
             );
+            /*let v255 = Math.round(
+              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+            );*/
             if (v255 < 0) continue;
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -993,9 +1011,10 @@ NVMesh.readTRK = function (buffer) {
     //e.g. TRK.gz
     let raw;
     if (magic === 4247762216) {
-      //zstd
-      raw = fzstd.decompress(new Uint8Array(buffer));
-      raw = new Uint8Array(raw);
+      //e.g. TRK.zstd
+      //raw = fzstd.decompress(new Uint8Array(buffer));
+      //raw = new Uint8Array(raw);
+      throw new Error("zstd TRK decompression is not supported");
     } else raw = fflate.decompressSync(new Uint8Array(buffer));
     buffer = raw.buffer;
     reader = new DataView(buffer);
@@ -2125,12 +2144,15 @@ NVMesh.readLayer = function (
     mn = Math.min(mn, layer.values[i]);
     mx = Math.max(mx, layer.values[i]);
   }
+  //console.log('layer range: ', mn, mx);
   layer.global_min = mn;
   layer.global_max = mx;
   layer.cal_min = cal_min;
   if (!cal_min) layer.cal_min = mn;
   layer.cal_max = cal_max;
   if (!cal_max) layer.cal_max = mx;
+  layer.cal_minNeg = NaN;
+  layer.cal_maxNeg = NaN;
   layer.opacity = opacity;
   layer.colorMap = colorMap;
   layer.colorMapNegative = colorMapNegative;
@@ -2699,6 +2721,8 @@ NVMesh.readMGH = function (buffer, n_vert = 0) {
   let depth = Math.max(1, reader.getInt32(12, false));
   let nframes = Math.max(1, reader.getInt32(16, false));
   let mtype = reader.getInt32(20, false);
+  let voxoffset = 284; //ALWAYS fixed header size
+  let isLittleEndian = false; //ALWAYS byte order is BIG ENDIAN
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   let nvert = width * height * depth * nframes;
@@ -3018,8 +3042,13 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
-  let FreeSurferMatrix = [];
+  //let FreeSurferMatrix = [];
   let nvert = 0;
+  //FreeSurfer versions after 20221225 disambiguate if transform has been applied
+  // "./mris_convert --to-scanner" store raw vertex positions in scanner space, so transforms should be ignored.
+  //  FreeSurfer versions after 20221225 report that the transform is applied by reporting:
+  //   <DataSpace><![CDATA[NIFTI_XFORM_SCANNER_ANAT
+  let isDataSpaceScanner = false;
   //let isAscii = false;
   while (pos < len) {
     line = readStr();
@@ -3126,6 +3155,15 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (!line.includes("CDATA[")) continue;
       if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
     }
+    //<TransformedSpace>
+    if (
+      line.startsWith("<DataSpace") &&
+      line.includes("NIFTI_XFORM_SCANNER_ANAT")
+    ) {
+      isDataSpaceScanner = true;
+    }
+    /*
+    //in theory, matrix can store rotations, zooms, but in practice translation so redundant with VolGeomC_*
     if (line.startsWith("<MatrixData>")) {
       //yet another kludge for undocumented FreeSurfer transform
       while (pos < len && !line.endsWith("</MatrixData>"))
@@ -3141,7 +3179,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         FreeSurferMatrix = mat4.create();
         for (var i = 0; i < 16; i++) FreeSurferMatrix[i] = floats[i];
       }
-    }
+    }*/
 
     if (
       line.startsWith("<Name") &&
@@ -3181,31 +3219,9 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
   if (n_vert > 0) return scalars;
-  /*
-  if (FreeSurferMatrix.length === 16) {
-  mat4.transpose(FreeSurferMatrix, FreeSurferMatrix); //column vs row major
-    nvert = Math.floor(positions.length / 3);
-    let i = 0;
-    for (var v = 0; v < nvert; v++) {
-      //positions[i] += FreeSurferTranlate[0];
-      //positions[i+1] += FreeSurferTranlate[1];
-      //positions[i+2] += FreeSurferTranlate[2];
-      //let pti = vec4.fromValues(0, -height * 0.5, 0, 1);
-      let pt = vec4.fromValues(positions[i], positions[i+1], positions[i+2], 1);
-    vec4.transformMat4(pt, pt, FreeSurferMatrix);
-if (v === 0)
-  console.log(positions[i+0],positions[i+1], positions[i+2],'>>>',pt[0],pt[1],pt[2]);
-    positions[i+0] = pt[0];
-    positions[i+1] = pt[1];
-    positions[i+2] = pt[2];
-
-
-      i += 3;
-    }
-  }*/
-  /*if (false) {
-   if (
+  if (
     positions.length > 2 &&
+    !isDataSpaceScanner &&
     (FreeSurferTranlate[0] != 0 ||
       FreeSurferTranlate[1] != 0 ||
       FreeSurferTranlate[2] != 0)
@@ -3221,7 +3237,6 @@ if (v === 0)
       i++;
     }
   } //issue416: apply FreeSurfer translation
-}*/
   return {
     positions,
     indices,
@@ -3240,6 +3255,9 @@ NVMesh.loadConnectomeFromJSON = async function (
   visible = true
 ) {
   if (json.hasOwnProperty("name")) name = json.name;
+  if (!json.hasOwnProperty("nodes")) {
+    throw Error("not a valid jcon connectome file");
+  }
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
@@ -3263,6 +3281,15 @@ NVMesh.readMesh = async function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
+  if (ext === "JCON")
+    return await this.loadConnectomeFromJSON(
+      JSON.parse(new TextDecoder().decode(buffer)),
+      gl,
+      name,
+      "",
+      opacity,
+      visible
+    );
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
@@ -3598,7 +3625,6 @@ NVMesh.loadFromUrl = async function ({
     if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
     let cal_max = null;
     if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
-
     this.readLayer(
       layerName,
       buffer,

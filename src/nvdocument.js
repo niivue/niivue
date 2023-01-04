@@ -26,6 +26,7 @@ export const DRAG_MODE = Object.freeze({
   contrast: 1,
   measurement: 2,
   pan: 3,
+  slicer3D: 4,
 });
 
 /**
@@ -93,6 +94,7 @@ export const DEFAULT_OPTIONS = {
   longTouchTimeout: 1000,
   keyDebounceTime: 50, // default debounce time used in keyup listeners
   isNearestInterpolation: false,
+  isResizeCanvas: true, //Allow canvas width ahd height to resize (false for fixed size)
   isAtlasOutline: false,
   isRuler: false,
   isColorbar: false,

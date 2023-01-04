@@ -39,6 +39,7 @@
   var nv1 = new niivue.Niivue({backColor: [0.7, 0.7, 0.9, 1]})
   nv1.attachTo('gl1')
   nv1.loadVolumes(volumeList1)
+  nv1.opts.isColorbar = true
   nv1.setSliceType(nv1.sliceTypeRender)
   nv1.setClipPlane([0.35, 270, 0])
   //nv1.setSliceType(nv1.sliceTypeMultiplanar)
