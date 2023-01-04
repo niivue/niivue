@@ -109139,7 +109139,7 @@ NVMesh.readCURV = function(buffer2, n_vert) {
   if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255)
     log$1.debug("Unable to recognize file type: does not appear to be FreeSurfer format.");
   if (n_vert !== n_vertex) {
-    console.log("CURV file has different number of vertices than mesh");
+    console.log("CURV file has different number of vertices ( " + n_vertex + ")than mesh (" + n_vert + ")");
     return;
   }
   if (buffer2.byteLength < 15 + 4 * n_vertex * n_time) {
@@ -110973,8 +110973,17 @@ NVMesh.loadFromUrl = async function({
     if (!response.ok)
       throw Error(response.statusText);
     buffer2 = await response.arrayBuffer();
-    urlParts = layers[i2].url.split("/");
-    let layerName = urlParts.slice(-1)[0];
+    let layerName = null;
+    if (layers[i2].hasOwnProperty("name") && layers[i2].name !== "") {
+      layerName = layers[i2].name;
+    } else {
+      try {
+        urlParts = new URL(layers[i2].url).pathname.split("/");
+      } catch (e) {
+        urlParts = layers[i2].url.split("/");
+      }
+      layerName = urlParts.slice(-1)[0];
+    }
     if (layerName.indexOf("?") > -1) {
       layerName = layerName.slice(0, layerName.indexOf("?"));
     }
