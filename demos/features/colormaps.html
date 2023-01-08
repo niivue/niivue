@@ -44,6 +44,7 @@
   nv1.attachTo('gl1')
   nv1.loadVolumes(volumeList1)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  nv1.opts.isColorbar = true
   cmaps = nv1.colorMaps()
   cmapEl = document.getElementById('colormaps')
   for (let i=0; i<cmaps.length; i++) {

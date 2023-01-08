@@ -618,6 +618,11 @@ Niivue.prototype.arrayEquals = function (a, b) {
 // note: no test yet
 Niivue.prototype.resizeListener = function () {
   if (!this.opts.isResizeCanvas) {
+    if (this.opts.isHighResolutionCapable) {
+      log.warn("isHighResolutionCapable requires isResizeCanvas");
+      this.opts.isHighResolutionCapable = false;
+    }
+    this.uiData.dpr = 1;
     this.drawScene();
     return;
   }
@@ -689,7 +694,10 @@ Niivue.prototype.mouseDownListener = function (e) {
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
   this.uiData.mousedown = true;
-  if (e.button === LEFT_MOUSE_BUTTON) {
+  if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
+    this.uiData.mouseButtonCenterDown = true;
+    this.mouseCenterButtonHandler(e);
+  } else if (e.button === LEFT_MOUSE_BUTTON) {
     this.uiData.mouseButtonLeftDown = true;
     this.mouseLeftButtonHandler(e);
   } else if (e.button === RIGHT_MOUSE_BUTTON) {
@@ -1579,10 +1587,13 @@ Niivue.prototype.getRadiologicalConvention = function () {
  */
 Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
+    log.warn("isHighResolutionCapable requires isResizeCanvas");
+    this.opts.isHighResolutionCapable = false;
+  }
   if (!this.opts.isHighResolutionCapable) {
     this.uiData.dpr = 1;
   }
-  log.debug("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
   this.drawScene();
 };
@@ -5366,18 +5377,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.onLocationChange({
-          mm: this.frac2mm(this.scene.crosshairPos, 0, true),
-          vox: this.frac2vox(this.scene.crosshairPos), //e.mm2frac
-          frac: this.scene.crosshairPos,
-          xy: [x, y],
-          values: this.volumes.map((v) => {
-            let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
-            let vox = v.mm2vox(mm); //e.mm2vox
-            let val = v.getValue(...vox);
-            return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
-          }),
-        });
+        this.createOnLocationChange(); //borgo
         return;
       }
       this.scene.crosshairPos = texFrac.slice();
@@ -5994,8 +5994,9 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   let width = this.textWidth(size, str);
   if (width > this.canvas.width) {
-    scale *= (this.canvas.width - 0) / width;
+    scale *= (this.canvas.width - 2) / width;
     size = this.opts.textHeight * this.gl.canvas.height * scale;
+    width = this.textWidth(size, str);
   }
   xy[0] -= 0.5 * this.textWidth(size, str);
   xy[0] = Math.max(xy[0], 1); //clamp left edge of canvas
@@ -8046,7 +8047,10 @@ Niivue.prototype.drawScene = function () {
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          if ((!isDrawPenDown) && (maxVols < 2 || !this.graph.autoSizeMultiplanar)) {
+          if (
+            !isDrawPenDown &&
+            (maxVols < 2 || !this.graph.autoSizeMultiplanar)
+          ) {
             this.draw3D([
               ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
               ltwh3x1[1],
@@ -8101,7 +8105,6 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
-
     if (this.opts.dragMode === DRAG_MODE.pan) {
       this.dragForPanZoom([
         this.uiData.dragStart[0],

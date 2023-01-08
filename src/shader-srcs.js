@@ -24,7 +24,8 @@ const kDrawFunc = `
 	return clrs[index];
 }`;
 
-const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
+const kRenderFunc =
+  `vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale; 
 	vec3 invR = 1.0 / rayDir;
 	vec3 tbot = invR * (vec3(0.0)-startPosition);
@@ -410,7 +411,8 @@ void main(void) {
 	gl_Position = mvpMtx * mm;
 }`;
 
-export var fragSliceMMShader = `#version 300 es
+export var fragSliceMMShader =
+  `#version 300 es
 #line 228
 precision highp int;
 precision highp float;
@@ -424,8 +426,9 @@ uniform float drawOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 in vec3 texPos;
-out vec4 color;`
-+kDrawFunc+`void main() {
+out vec4 color;` +
+  kDrawFunc +
+  `void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);

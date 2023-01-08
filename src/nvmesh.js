@@ -1079,11 +1079,14 @@ NVMesh.readTRK = function (buffer) {
   }
   var vox2mmMat = mat4.create();
   mat4.mul(vox2mmMat, mat, zoomMat);
+  //translation is in mm and not influenced by resolution
+  vox2mmMat[3] = mat[3];
+  vox2mmMat[7] = mat[7];
+  vox2mmMat[11] = mat[11];
   let i32 = null;
   let f32 = null;
   i32 = new Int32Array(buffer.slice(hdr_sz));
   f32 = new Float32Array(i32.buffer);
-
   let ntracks = i32.length;
   //read and transform vertex positions
   let i = 0;
