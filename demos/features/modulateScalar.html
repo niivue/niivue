@@ -61,13 +61,7 @@
         drop.onchange();
       }
       function handleLocationChange(data){ 
-        function flt2str(flt, decimals = 0) {
-          return flt.toFixed(decimals)
-        }
-        let str = "";
-        for (let i = 0; i < data.values.length; i++)
-            str += '  '+ flt2str(data.values[i].value, 3)
-        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+str
+        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+data.string
       }
       var volumeList1 = [
         {

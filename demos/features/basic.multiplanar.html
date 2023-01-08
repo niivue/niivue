@@ -35,7 +35,7 @@
     nv1.setSliceType(st);
   }
   function handleIntensityChange(data){ 
-      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.string
   }
   var volumeList1 = [{url: "../images/mni152.nii.gz"}]
   var nv1 = new niivue.Niivue({

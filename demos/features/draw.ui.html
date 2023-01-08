@@ -127,13 +127,7 @@
   const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
   var isFilled = true;
   function handleIntensityChange(data){ 
-  function flt2str(flt, decimals = 0) {
-    return flt.toFixed(decimals).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')
-  }
-  let str = "";
-  if (data.hasOwnProperty('values')) //e.g. a mesh with no voxels will have no values
-    str = '='+flt2str(data.values[0].value, 3)
-  document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+str  
+    document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+data.string
   }
   var nv1 = new niivue.Niivue({
       logging: true,

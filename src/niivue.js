@@ -5377,7 +5377,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.createOnLocationChange(); //borgo
+        this.createOnLocationChange();
         return;
       }
       this.scene.crosshairPos = texFrac.slice();
@@ -5413,18 +5413,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.onLocationChange({
-        mm: this.frac2mm(this.scene.crosshairPos, 0, true),
-        vox: this.frac2vox(this.scene.crosshairPos),
-        frac: this.scene.crosshairPos,
-        xy: [x, y],
-        values: this.volumes.map((v) => {
-          let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
-          let vox = v.mm2vox(mm);
-          let val = v.getValue(...vox);
-          return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
-        }),
-      });
+      this.createOnLocationChange();
       return;
     } else {
       //if click in slice i
@@ -7099,7 +7088,30 @@ Niivue.prototype.drawOrientationCube = function (
 }; // drawOrientationCube()
 
 Niivue.prototype.createOnLocationChange = function () {
-  this.onLocationChange({
+  //first: provide a string representation
+  let [mn, mx, range] = this.sceneExtentsMinMax(true);
+  let fov = Math.max(Math.max(range[0], range[1]), range[2])
+  function dynamicDecimals(flt) {
+    return Math.max(0.0, - Math.ceil (Math.log10 (Math.abs (flt))));
+  }
+  //dynamic decimal places: fov>100->0, fov>10->1, fov>1->2
+  let deci = dynamicDecimals(fov * 0.001);
+  let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+  function flt2str(flt, decimals = 0) {
+    return parseFloat(flt.toFixed(decimals));
+  }
+  let str = flt2str(mm[0], deci) + "×" + flt2str(mm[1], deci) + "×" + flt2str(mm[2], deci);
+  if (this.volumes.length > 0) {
+    let valStr = " = ";
+    for (let i = 0; i < this.volumes.length; i++) {
+      let vox = this.volumes[i].mm2vox(mm);
+      let flt = this.volumes[i].getValue(...vox);
+      deci = 3;
+      valStr += flt2str(flt, deci) + "   ";
+    }
+    str += valStr;
+  }
+  let msg = {
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
     vox: this.frac2vox(this.scene.crosshairPos),
     frac: this.scene.crosshairPos,
@@ -7110,7 +7122,10 @@ Niivue.prototype.createOnLocationChange = function () {
       let val = v.getValue(...vox);
       return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
     }),
-  });
+    string: str,
+  };
+  //next: provide numeric details
+  this.onLocationChange(msg);
 };
 
 // not included in public docs

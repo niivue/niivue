@@ -32,7 +32,7 @@
          },
         ] 
       function handleLocationChange(data){
-        document.getElementById('location').innerHTML = data.xy
+        document.getElementById('location').innerHTML = data.string
       }
       var nv1 = new niivue.Niivue({onLocationChange:handleLocationChange})
       nv1.attachTo('gl1')

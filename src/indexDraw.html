@@ -113,7 +113,7 @@
   <main id="container">
     <canvas id="gl1"></canvas>
   </main>
-  <footer id="intensity">
+  <footer id="location">
     &nbsp;
   </footer>
 </body>
@@ -124,15 +124,15 @@
   import {NVMesh} from './nvmesh.js'
   const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
   var isFilled = true;
-  function handleIntensityChange(data){
-      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+  function handleLocationChange(data){
+    document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+data.string;
   }
   var nv1 = new Niivue({
       logging: true,
       dragAndDropEnabled: true,
       backColor: [0, 0, 0, 1],
       show3Dcrosshair: true,
-      onLocationChange:handleIntensityChange
+      onLocationChange:handleLocationChange
   })
   nv1.opts.isColorbar = false
   nv1.setRadiologicalConvention(false)

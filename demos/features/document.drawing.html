@@ -135,7 +135,7 @@
   const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
   var isFilled = true;
   function handleIntensityChange(data){
-      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.string
   }
   var nv1 = new niivue.Niivue({
       logging: true,
