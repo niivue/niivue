@@ -164,10 +164,11 @@ export function Niivue(options = {}) {
   this.canvas = null; // the canvas element on the page
   this.gl = null; // the gl context
   this.colormapTexture = null;
-  this.ColormapLists = []; //one entry per colorbar: min, max, tic
+  this.colormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawUndoBitmaps = [];
+  this.drawLut = cmapper.makeDrawLut("_itksnap");
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
@@ -974,6 +975,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
   if (this.uiData.isDragging) return;
+  if (this.volumes.length < 1) return; //issue468
   let isRender = false;
   if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true;
   let x = 0;
@@ -2542,6 +2544,11 @@ Niivue.prototype.setCrosshairWidth = function (crosshairWidth) {
   this.crosshairs3D.mm[0] = NaN; //force redraw
   this.drawScene();
 }; // setCrosshairColor()
+
+Niivue.prototype.setDrawColormap = function (name) {
+  this.drawLut = cmapper.makeDrawLut(name);
+  this.updateGLVolume();
+}; // setDrawColormap()
 
 /**
  * does dragging over a 2D slice create a drawing?
@@ -4128,7 +4135,7 @@ Niivue.prototype.init = async function () {
     this.pickingImageShader.uniforms["backgroundMasksOverlays"];
   this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
   this.gl.uniform1i(this.pickingImageShader.uniforms["volume"], 0);
-  //this.gl.uniform1i(pickingShader.uniforms["colormap"], 1); //orient shader applies colormap
+  this.gl.uniform1i(this.pickingImageShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.pickingImageShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.pickingImageShader.uniforms["drawing"], 7);
   this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
@@ -4158,6 +4165,7 @@ Niivue.prototype.init = async function () {
   this.sliceMMShader.frac2mmLoc = this.sliceMMShader.uniforms["frac2mm"];
   this.sliceMMShader.mvpLoc = this.sliceMMShader.uniforms["mvpMtx"];
   this.gl.uniform1i(this.sliceMMShader.uniforms["volume"], 0);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.sliceMMShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
   this.gl.uniform1f(
@@ -4210,7 +4218,7 @@ Niivue.prototype.init = async function () {
   this.renderShader.backgroundMasksOverlaysLoc =
     this.renderShader.uniforms["backgroundMasksOverlays"];
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
-  //this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1); //orient shader applies colormap
+  this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.renderShader.uniforms["drawing"], 7);
   this.renderShader.mvpLoc = this.renderShader.uniforms["mvpMtx"];
@@ -5105,7 +5113,7 @@ Niivue.prototype.addColormapList = function (
   vis = true
 ) {
   if (nm.length < 1) return;
-  this.ColormapLists.push({
+  this.colormapLists.push({
     name: nm,
     min: mn,
     max: mx,
@@ -5128,7 +5136,7 @@ function negMinMax(min, max, minNeg, maxNeg) {
 
 // not included in public docs
 Niivue.prototype.refreshColormaps = function () {
-  this.ColormapLists = []; //one entry per colorbar: min, max, tic
+  this.colormapLists = []; //one entry per colorbar: min, max, tic
   if (this.volumes.length < 1 && this.meshes.length < 1) return;
   let nVol = this.volumes.length;
   if (nVol > 0) {
@@ -5204,9 +5212,9 @@ Niivue.prototype.refreshColormaps = function () {
       } //for each layer j
     } //for each mesh i
   } //for meshes
-  let nMaps = this.ColormapLists.length;
+  let nMaps = this.colormapLists.length;
   if (nMaps < 1) return;
-  this.createColorMapTexture(nMaps);
+  this.createColorMapTexture(nMaps + 1); //+1 reserve slot for drawLut
   let luts = [];
   function addColormap(lut) {
     let c = new Uint8ClampedArray(luts.length + lut.length);
@@ -5215,14 +5223,15 @@ Niivue.prototype.refreshColormaps = function () {
     luts = c;
   }
   for (let i = 0; i < nMaps; i++)
-    addColormap(this.colormap(this.ColormapLists[i].name));
+    addColormap(this.colormap(this.colormapLists[i].name));
+  addColormap(this.drawLut.lut);
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,
     0,
     0,
     0,
     256,
-    nMaps,
+    nMaps + 1,
     this.gl.RGBA,
     this.gl.UNSIGNED_BYTE,
     luts
@@ -5828,7 +5837,7 @@ Niivue.prototype.drawColorbarCore = function (
 // not included in public docs
 // high level code to draw colorbar(s)
 Niivue.prototype.drawColorbar = function () {
-  let maps = this.ColormapLists;
+  let maps = this.colormapLists;
   let nmaps = maps.length;
   if (nmaps < 1) return;
   let nVisible = 0; //not all colorbars may be visible
@@ -7090,9 +7099,9 @@ Niivue.prototype.drawOrientationCube = function (
 Niivue.prototype.createOnLocationChange = function () {
   //first: provide a string representation
   let [mn, mx, range] = this.sceneExtentsMinMax(true);
-  let fov = Math.max(Math.max(range[0], range[1]), range[2])
+  let fov = Math.max(Math.max(range[0], range[1]), range[2]);
   function dynamicDecimals(flt) {
-    return Math.max(0.0, - Math.ceil (Math.log10 (Math.abs (flt))));
+    return Math.max(0.0, -Math.ceil(Math.log10(Math.abs(flt))));
   }
   //dynamic decimal places: fov>100->0, fov>10->1, fov>1->2
   let deci = dynamicDecimals(fov * 0.001);
@@ -7100,7 +7109,13 @@ Niivue.prototype.createOnLocationChange = function () {
   function flt2str(flt, decimals = 0) {
     return parseFloat(flt.toFixed(decimals));
   }
-  let str = flt2str(mm[0], deci) + "×" + flt2str(mm[1], deci) + "×" + flt2str(mm[2], deci);
+  let str =
+    flt2str(mm[0], deci) +
+    "×" +
+    flt2str(mm[1], deci) +
+    "×" +
+    flt2str(mm[2], deci);
+  //voxel based layer intensity
   if (this.volumes.length > 0) {
     let valStr = " = ";
     for (let i = 0; i < this.volumes.length; i++) {
@@ -7110,7 +7125,18 @@ Niivue.prototype.createOnLocationChange = function () {
       valStr += flt2str(flt, deci) + "   ";
     }
     str += valStr;
+    //drawingBitmap
+    let hdr = this.back.hdr;
+    let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    if (this.drawBitmap.length === nv) {
+      let vox = this.frac2vox(this.scene.crosshairPos);
+      let vx =
+        vox[0] + vox[1] * hdr.dims[1] + vox[2] * hdr.dims[1] * hdr.dims[2];
+      //str += this.drawBitmap[vx].toString();
+      str += " " + this.drawLut.labels[this.drawBitmap[vx]];
+    }
   }
+
   let msg = {
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
     vox: this.frac2vox(this.scene.crosshairPos),
@@ -7124,7 +7150,6 @@ Niivue.prototype.createOnLocationChange = function () {
     }),
     string: str,
   };
-  //next: provide numeric details
   this.onLocationChange(msg);
 };
 
@@ -7139,7 +7164,6 @@ Niivue.prototype.draw3D = function (
 ) {
   let isMosaic = azimuth !== null;
   this.setPivot3D();
-
   if (!isMosaic) {
     azimuth = this.scene.renderAzimuth;
     elevation = this.scene.renderElevation;
