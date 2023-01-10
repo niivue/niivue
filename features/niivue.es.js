@@ -106478,7 +106478,7 @@ NVImage.prototype.readHEAD = function(dataBuffer, pairedImgData) {
         } else if (datatype === 1) {
           hdr.numBitsPerVoxel = 16;
           hdr.datatypeCode = this.DT_SIGNED_SHORT;
-        } else if (datatype === 1) {
+        } else if (datatype === 3) {
           hdr.numBitsPerVoxel = 32;
           hdr.datatypeCode = this.DT_FLOAT;
         } else
