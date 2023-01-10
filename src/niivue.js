@@ -1428,6 +1428,7 @@ Niivue.prototype.dropListener = async function (e) {
         this.overlays = [];
         this.meshes = [];
       }
+      this.closeDrawing();
       for (const item of items) {
         const entry = item.getAsEntry || item.webkitGetAsEntry();
         log.debug(entry);
@@ -7128,7 +7129,7 @@ Niivue.prototype.createOnLocationChange = function () {
     //drawingBitmap
     let hdr = this.back.hdr;
     let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-    if (this.drawBitmap.length === nv) {
+    if (this.drawBitmap && this.drawBitmap.length === nv) {
       let vox = this.frac2vox(this.scene.crosshairPos);
       let vx =
         vox[0] + vox[1] * hdr.dims[1] + vox[2] * hdr.dims[1] * hdr.dims[2];
@@ -7216,6 +7217,15 @@ Niivue.prototype.draw3D = function (
   if (this.uiData.mouseDepthPicker) {
     this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
     this.createOnLocationChange();
+    //redraw with render shader
+    this.draw3D(
+      leftTopWidthHeight,
+      mvpMatrix,
+      modelMatrix,
+      normalMatrix,
+      azimuth,
+      elevation
+    );
     return;
   }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);

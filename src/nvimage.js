@@ -1355,7 +1355,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
         } else if (datatype === 1) {
           hdr.numBitsPerVoxel = 16;
           hdr.datatypeCode = this.DT_SIGNED_SHORT;
-        } else if (datatype === 1) {
+        } else if (datatype === 3) {
           hdr.numBitsPerVoxel = 32;
           hdr.datatypeCode = this.DT_FLOAT;
         } else console.log("Unknown BRICK_TYPES ", datatype);
@@ -2148,7 +2148,7 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
 // not included in public docs
 // convert world space to voxel location (row, column slice, indexed from 0)
 NVImage.prototype.mm2vox = function (mm, frac = false) {
-  let sform = mat4.fromValues(...this.hdr.affine.flat());
+  let sform = mat4.clone(this.matRAS);
   let out = mat4.clone(sform);
   mat4.transpose(out, sform);
   mat4.invert(out, out);

@@ -1236,6 +1236,7 @@ uniform mat4 mvpMtx;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
+uniform int backgroundMasksOverlays;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -1274,8 +1275,7 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
-	if (overlays < 1.0) {
-		//if (fColor.a == 0.0) discard; //no hit, no overlays
+	if ((overlays < 1.0) || (backgroundMasksOverlays > 0)) {
 		return; //background hit, no overlays
 	}
 	//overlay pass
