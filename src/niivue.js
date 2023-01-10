@@ -8046,7 +8046,10 @@ Niivue.prototype.drawScene = function () {
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          if ((!isDrawPenDown) && (maxVols < 2 || !this.graph.autoSizeMultiplanar)) {
+          if (
+            !isDrawPenDown &&
+            (maxVols < 2 || !this.graph.autoSizeMultiplanar)
+          ) {
             this.draw3D([
               ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
               ltwh3x1[1],
