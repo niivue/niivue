@@ -8,6 +8,7 @@ export const colortables = function () {
 colortables.prototype.colorMaps = function (sort = true) {
   let cm = [];
   for (const [key] of Object.entries(cmaps)) {
+    if (key.startsWith("_")) continue; //ignore drawing maps
     cm.push(key);
   }
   return sort === true ? cm.sort() : cm;
@@ -48,6 +49,53 @@ colortables.prototype.colormapFromKey = function (name) {
       return cmaps[key];
     }
   }
+};
+
+// not included in public docs
+colortables.prototype.makeDrawLut = function (name) {
+  let cmap = cmaps[name];
+  if (cmap === undefined) {
+    cmap = {
+      min: 0,
+      max: 0,
+      R: [0, 255, 0, 0, 255, 0, 255],
+      G: [0, 0, 255, 0, 255, 255, 0],
+      B: [0, 0, 0, 255, 0, 255, 255],
+      A: [0, 255, 255, 255, 255, 255, 255],
+      I: [0, 1, 2, 3, 4, 5, 6],
+    };
+  }
+  if (cmap.R.length < 256) {
+    let j = 256 - cmap.R.length;
+    for (let i = 0; i < j; i++) {
+      //make all unused slots opaque red
+      cmap.R.push(255);
+      cmap.G.push(0);
+      cmap.B.push(0);
+      cmap.A.push(255);
+    }
+  }
+  if (!cmap.hasOwnProperty("labels")) cmap.labels = [];
+  if (cmap.labels.length < 256) {
+    let j = cmap.labels.length;
+    for (let i = j; i < 256; i++) {
+      //make all unused slots opaque red
+      cmap.labels.push(i.toString());
+    }
+  }
+  var lut = new Uint8ClampedArray(256 * 4);
+  var k = 0;
+  for (let i = 0; i < 256; i++) {
+    lut[k++] = cmap.R[i]; //Red
+    lut[k++] = cmap.G[i]; //Green
+    lut[k++] = cmap.B[i]; //Blue
+    lut[k++] = cmap.A[i]; //Alpha
+  }
+
+  return {
+    lut: lut,
+    labels: cmap.labels,
+  };
 };
 
 // not included in public docs

@@ -100,7 +100,7 @@
       //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz?test=test" }]
       var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
       function handleIntensityChange(data){
-        document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+        document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.string
       }
       var nv1 = new Niivue({
        loadingText: 'there are no images',

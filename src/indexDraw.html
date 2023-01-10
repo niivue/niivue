@@ -78,6 +78,8 @@
         <a class="viewBtn" id="@Purple">Purple</a>
         <a class="viewBtn" id="@Erase">Erase</a>
         <a class="viewBtn" id="@Cluster">Erase Cluster</a>
+        <a class="viewBtn divider dropdown-item-checked" id="|Snap">ITKsnap Colors</a>
+        <a class="viewBtn" id="|Slicer">Slicer3D Colors</a>
         <a class="viewBtn divider dropdown-item-checked" id="DrawFilled">Fill Outline</a>
         <a class="viewBtn dropdown-item-checked" id="DrawOverwrite">Pen Overwrites Existing</a>
         <a class="viewBtn dropdown-item-checked" id="Translucent">Translucent</a>
@@ -113,7 +115,7 @@
   <main id="container">
     <canvas id="gl1"></canvas>
   </main>
-  <footer id="intensity">
+  <footer id="location">
     &nbsp;
   </footer>
 </body>
@@ -124,15 +126,15 @@
   import {NVMesh} from './nvmesh.js'
   const isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0))
   var isFilled = true;
-  function handleIntensityChange(data){
-      document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.values[0].value.toFixed(3).replace(/\.?0*$/, "")
+  function handleLocationChange(data){
+    document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+data.string;
   }
   var nv1 = new Niivue({
       logging: true,
       dragAndDropEnabled: true,
       backColor: [0, 0, 0, 1],
       show3Dcrosshair: true,
-      onLocationChange:handleIntensityChange
+      onLocationChange:handleLocationChange
   })
   nv1.opts.isColorbar = false
   nv1.setRadiologicalConvention(false)
@@ -215,6 +217,12 @@
       }
       if (event.target.id === "Undo") {
         nv1.drawUndo()
+      }
+      if(event.target.id.charAt(0) === '|') { //sliceType
+          if (event.target.id === "|Slicer")
+              nv1.setDrawColormap("_slicer3d")
+          else
+              nv1.setDrawColormap("_itksnap")
       }
       if(event.target.id.charAt(0) === '@') { //sliceType
           if (event.target.id === "@Off")

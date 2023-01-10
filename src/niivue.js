@@ -164,10 +164,11 @@ export function Niivue(options = {}) {
   this.canvas = null; // the canvas element on the page
   this.gl = null; // the gl context
   this.colormapTexture = null;
-  this.ColormapLists = []; //one entry per colorbar: min, max, tic
+  this.colormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawUndoBitmaps = [];
+  this.drawLut = cmapper.makeDrawLut("_itksnap");
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
@@ -618,6 +619,11 @@ Niivue.prototype.arrayEquals = function (a, b) {
 // note: no test yet
 Niivue.prototype.resizeListener = function () {
   if (!this.opts.isResizeCanvas) {
+    if (this.opts.isHighResolutionCapable) {
+      log.warn("isHighResolutionCapable requires isResizeCanvas");
+      this.opts.isHighResolutionCapable = false;
+    }
+    this.uiData.dpr = 1;
     this.drawScene();
     return;
   }
@@ -689,7 +695,10 @@ Niivue.prototype.mouseDownListener = function (e) {
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
   this.uiData.mousedown = true;
-  if (e.button === LEFT_MOUSE_BUTTON) {
+  if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
+    this.uiData.mouseButtonCenterDown = true;
+    this.mouseCenterButtonHandler(e);
+  } else if (e.button === LEFT_MOUSE_BUTTON) {
     this.uiData.mouseButtonLeftDown = true;
     this.mouseLeftButtonHandler(e);
   } else if (e.button === RIGHT_MOUSE_BUTTON) {
@@ -966,6 +975,7 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
   if (this.uiData.isDragging) return;
+  if (this.volumes.length < 1) return; //issue468
   let isRender = false;
   if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true;
   let x = 0;
@@ -1418,6 +1428,7 @@ Niivue.prototype.dropListener = async function (e) {
         this.overlays = [];
         this.meshes = [];
       }
+      this.closeDrawing();
       for (const item of items) {
         const entry = item.getAsEntry || item.webkitGetAsEntry();
         log.debug(entry);
@@ -1579,10 +1590,13 @@ Niivue.prototype.getRadiologicalConvention = function () {
  */
 Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
   this.opts.isHighResolutionCapable = isHighResolutionCapable;
+  if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
+    log.warn("isHighResolutionCapable requires isResizeCanvas");
+    this.opts.isHighResolutionCapable = false;
+  }
   if (!this.opts.isHighResolutionCapable) {
     this.uiData.dpr = 1;
   }
-  log.debug("HighDPI feature is experimental");
   this.resizeListener(); // test isHighResolutionCapable
   this.drawScene();
 };
@@ -2531,6 +2545,11 @@ Niivue.prototype.setCrosshairWidth = function (crosshairWidth) {
   this.crosshairs3D.mm[0] = NaN; //force redraw
   this.drawScene();
 }; // setCrosshairColor()
+
+Niivue.prototype.setDrawColormap = function (name) {
+  this.drawLut = cmapper.makeDrawLut(name);
+  this.updateGLVolume();
+}; // setDrawColormap()
 
 /**
  * does dragging over a 2D slice create a drawing?
@@ -4117,7 +4136,7 @@ Niivue.prototype.init = async function () {
     this.pickingImageShader.uniforms["backgroundMasksOverlays"];
   this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
   this.gl.uniform1i(this.pickingImageShader.uniforms["volume"], 0);
-  //this.gl.uniform1i(pickingShader.uniforms["colormap"], 1); //orient shader applies colormap
+  this.gl.uniform1i(this.pickingImageShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.pickingImageShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.pickingImageShader.uniforms["drawing"], 7);
   this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms["mvpMtx"];
@@ -4147,6 +4166,7 @@ Niivue.prototype.init = async function () {
   this.sliceMMShader.frac2mmLoc = this.sliceMMShader.uniforms["frac2mm"];
   this.sliceMMShader.mvpLoc = this.sliceMMShader.uniforms["mvpMtx"];
   this.gl.uniform1i(this.sliceMMShader.uniforms["volume"], 0);
+  this.gl.uniform1i(this.sliceMMShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.sliceMMShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
   this.gl.uniform1f(
@@ -4199,7 +4219,7 @@ Niivue.prototype.init = async function () {
   this.renderShader.backgroundMasksOverlaysLoc =
     this.renderShader.uniforms["backgroundMasksOverlays"];
   this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
-  //this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1); //orient shader applies colormap
+  this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.renderShader.uniforms["drawing"], 7);
   this.renderShader.mvpLoc = this.renderShader.uniforms["mvpMtx"];
@@ -5094,7 +5114,7 @@ Niivue.prototype.addColormapList = function (
   vis = true
 ) {
   if (nm.length < 1) return;
-  this.ColormapLists.push({
+  this.colormapLists.push({
     name: nm,
     min: mn,
     max: mx,
@@ -5117,7 +5137,7 @@ function negMinMax(min, max, minNeg, maxNeg) {
 
 // not included in public docs
 Niivue.prototype.refreshColormaps = function () {
-  this.ColormapLists = []; //one entry per colorbar: min, max, tic
+  this.colormapLists = []; //one entry per colorbar: min, max, tic
   if (this.volumes.length < 1 && this.meshes.length < 1) return;
   let nVol = this.volumes.length;
   if (nVol > 0) {
@@ -5193,9 +5213,9 @@ Niivue.prototype.refreshColormaps = function () {
       } //for each layer j
     } //for each mesh i
   } //for meshes
-  let nMaps = this.ColormapLists.length;
+  let nMaps = this.colormapLists.length;
   if (nMaps < 1) return;
-  this.createColorMapTexture(nMaps);
+  this.createColorMapTexture(nMaps + 1); //+1 reserve slot for drawLut
   let luts = [];
   function addColormap(lut) {
     let c = new Uint8ClampedArray(luts.length + lut.length);
@@ -5204,14 +5224,15 @@ Niivue.prototype.refreshColormaps = function () {
     luts = c;
   }
   for (let i = 0; i < nMaps; i++)
-    addColormap(this.colormap(this.ColormapLists[i].name));
+    addColormap(this.colormap(this.colormapLists[i].name));
+  addColormap(this.drawLut.lut);
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,
     0,
     0,
     0,
     256,
-    nMaps,
+    nMaps + 1,
     this.gl.RGBA,
     this.gl.UNSIGNED_BYTE,
     luts
@@ -5366,18 +5387,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         if (posFuture < 0) posFuture = 0;
         this.scene.crosshairPos[2 - axCorSag] = posFuture;
         this.drawScene();
-        this.onLocationChange({
-          mm: this.frac2mm(this.scene.crosshairPos, 0, true),
-          vox: this.frac2vox(this.scene.crosshairPos), //e.mm2frac
-          frac: this.scene.crosshairPos,
-          xy: [x, y],
-          values: this.volumes.map((v) => {
-            let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
-            let vox = v.mm2vox(mm); //e.mm2vox
-            let val = v.getValue(...vox);
-            return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
-          }),
-        });
+        this.createOnLocationChange();
         return;
       }
       this.scene.crosshairPos = texFrac.slice();
@@ -5413,18 +5423,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.onLocationChange({
-        mm: this.frac2mm(this.scene.crosshairPos, 0, true),
-        vox: this.frac2vox(this.scene.crosshairPos),
-        frac: this.scene.crosshairPos,
-        xy: [x, y],
-        values: this.volumes.map((v) => {
-          let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
-          let vox = v.mm2vox(mm);
-          let val = v.getValue(...vox);
-          return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
-        }),
-      });
+      this.createOnLocationChange();
       return;
     } else {
       //if click in slice i
@@ -5839,7 +5838,7 @@ Niivue.prototype.drawColorbarCore = function (
 // not included in public docs
 // high level code to draw colorbar(s)
 Niivue.prototype.drawColorbar = function () {
-  let maps = this.ColormapLists;
+  let maps = this.colormapLists;
   let nmaps = maps.length;
   if (nmaps < 1) return;
   let nVisible = 0; //not all colorbars may be visible
@@ -5994,8 +5993,9 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   let width = this.textWidth(size, str);
   if (width > this.canvas.width) {
-    scale *= (this.canvas.width - 0) / width;
+    scale *= (this.canvas.width - 2) / width;
     size = this.opts.textHeight * this.gl.canvas.height * scale;
+    width = this.textWidth(size, str);
   }
   xy[0] -= 0.5 * this.textWidth(size, str);
   xy[0] = Math.max(xy[0], 1); //clamp left edge of canvas
@@ -7098,7 +7098,47 @@ Niivue.prototype.drawOrientationCube = function (
 }; // drawOrientationCube()
 
 Niivue.prototype.createOnLocationChange = function () {
-  this.onLocationChange({
+  //first: provide a string representation
+  let [mn, mx, range] = this.sceneExtentsMinMax(true);
+  let fov = Math.max(Math.max(range[0], range[1]), range[2]);
+  function dynamicDecimals(flt) {
+    return Math.max(0.0, -Math.ceil(Math.log10(Math.abs(flt))));
+  }
+  //dynamic decimal places: fov>100->0, fov>10->1, fov>1->2
+  let deci = dynamicDecimals(fov * 0.001);
+  let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
+  function flt2str(flt, decimals = 0) {
+    return parseFloat(flt.toFixed(decimals));
+  }
+  let str =
+    flt2str(mm[0], deci) +
+    "×" +
+    flt2str(mm[1], deci) +
+    "×" +
+    flt2str(mm[2], deci);
+  //voxel based layer intensity
+  if (this.volumes.length > 0) {
+    let valStr = " = ";
+    for (let i = 0; i < this.volumes.length; i++) {
+      let vox = this.volumes[i].mm2vox(mm);
+      let flt = this.volumes[i].getValue(...vox);
+      deci = 3;
+      valStr += flt2str(flt, deci) + "   ";
+    }
+    str += valStr;
+    //drawingBitmap
+    let hdr = this.back.hdr;
+    let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    if (this.drawBitmap && this.drawBitmap.length === nv) {
+      let vox = this.frac2vox(this.scene.crosshairPos);
+      let vx =
+        vox[0] + vox[1] * hdr.dims[1] + vox[2] * hdr.dims[1] * hdr.dims[2];
+      //str += this.drawBitmap[vx].toString();
+      str += " " + this.drawLut.labels[this.drawBitmap[vx]];
+    }
+  }
+
+  let msg = {
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
     vox: this.frac2vox(this.scene.crosshairPos),
     frac: this.scene.crosshairPos,
@@ -7109,7 +7149,9 @@ Niivue.prototype.createOnLocationChange = function () {
       let val = v.getValue(...vox);
       return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
     }),
-  });
+    string: str,
+  };
+  this.onLocationChange(msg);
 };
 
 // not included in public docs
@@ -7123,7 +7165,6 @@ Niivue.prototype.draw3D = function (
 ) {
   let isMosaic = azimuth !== null;
   this.setPivot3D();
-
   if (!isMosaic) {
     azimuth = this.scene.renderAzimuth;
     elevation = this.scene.renderElevation;
@@ -7176,6 +7217,15 @@ Niivue.prototype.draw3D = function (
   if (this.uiData.mouseDepthPicker) {
     this.depthPicker(leftTopWidthHeight, mvpMatrix, true);
     this.createOnLocationChange();
+    //redraw with render shader
+    this.draw3D(
+      leftTopWidthHeight,
+      mvpMatrix,
+      modelMatrix,
+      normalMatrix,
+      azimuth,
+      elevation
+    );
     return;
   }
   this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
@@ -8104,7 +8154,6 @@ Niivue.prototype.drawScene = function () {
       ]);
       return;
     }
-
     if (this.opts.dragMode === DRAG_MODE.pan) {
       this.dragForPanZoom([
         this.uiData.dragStart[0],

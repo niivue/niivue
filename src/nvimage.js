@@ -2148,7 +2148,7 @@ NVImage.prototype.vox2mm = function (XYZ, mtx) {
 // not included in public docs
 // convert world space to voxel location (row, column slice, indexed from 0)
 NVImage.prototype.mm2vox = function (mm, frac = false) {
-  let sform = mat4.fromValues(...this.hdr.affine.flat());
+  let sform = mat4.clone(this.matRAS);
   let out = mat4.clone(sform);
   mat4.transpose(out, sform);
   mat4.invert(out, out);

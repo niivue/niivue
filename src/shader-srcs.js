@@ -11,17 +11,11 @@ void main(void) {
 
 const kDrawFunc = `
 	vec4 drawColor(float scalar) {
-	vec4 clrs[7];
-	clrs[0] = vec4(0.0, 0.0, 0.0, 0.0); //clear
-	clrs[1] = vec4(1.0, 0.0, 0.0, drawOpacity); //red
-	clrs[2] = vec4(0.0, 1.0, 0.0, drawOpacity); //green
-	clrs[3] = vec4(0.0, 0.0, 1.0, drawOpacity); //blue
-	clrs[4] = vec4(1.0, 1.0, 0.0, drawOpacity); //yellow
-	clrs[5] = vec4(0.0, 1.0, 1.0, drawOpacity); //cyan
-	clrs[6] = vec4(1.0, 0.0, 1.0, drawOpacity); //purple
-	highp int index = int(scalar * 255.0);
-	index = min(index, 6);
-	return clrs[index];
+		float nlayer = float(textureSize(colormap, 0).y);
+		float layer = (nlayer - 0.5) / nlayer;
+		vec4 dcolor = texture(colormap, vec2(scalar * 255.0/256.0 + 0.5/256.0, layer)).rgba;
+		dcolor.a *= drawOpacity;
+		return dcolor;
 }`;
 
 const kRenderFunc =
@@ -92,6 +86,7 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -234,6 +229,7 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -425,6 +421,7 @@ uniform float opacity;
 uniform float drawOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;` +
   kDrawFunc +
@@ -467,7 +464,6 @@ out vec4 color;` +
 				ocolor.rbg = vec3(0.0, 0.0, 0.0);
 		}
 	}
-	//borg purple
 	vec4 dcolor = drawColor(texture(drawing, texPos).r);
 	if (dcolor.a > 0.0) {
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
@@ -1239,6 +1235,8 @@ uniform mat4 matRAS;
 uniform mat4 mvpMtx;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
+uniform int backgroundMasksOverlays;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -1277,8 +1275,7 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
-	if (overlays < 1.0) {
-		//if (fColor.a == 0.0) discard; //no hit, no overlays
+	if ((overlays < 1.0) || (backgroundMasksOverlays > 0)) {
 		return; //background hit, no overlays
 	}
 	//overlay pass
