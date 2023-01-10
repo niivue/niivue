@@ -597,6 +597,7 @@ Niivue.prototype.sync = function () {
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
   this.otherNV.drawScene();
+  this.otherNV.createOnLocationChange();
 };
 
 /* Not documented publicly for now
