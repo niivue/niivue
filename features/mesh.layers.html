@@ -37,10 +37,7 @@
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'opacity', this.value * 0.1)
   }
   function handleLocationChange(data){ 
-    function flt2str(flt, decimals = 0) {
-      return flt.toFixed(decimals)
-    }
-    document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])
+    document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+ data.string
   }
   var nv1 = new niivue.Niivue(({
     show3Dcrosshair: true,
