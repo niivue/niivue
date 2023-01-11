@@ -9,9 +9,9 @@
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
-	<header>
-	  <label for="check10">HighDPI</label> 
-	  <input type="checkbox" id="check10" name="check10" unchecked>
+    <header>
+      <label for="check10">HighDPI</label> 
+      <input type="checkbox" id="check10" name="check10" unchecked>
       <select id="sliceType">
         <option value=0>Axial</option>
         <option value=1>Coronal</option>
@@ -28,14 +28,18 @@
     <main>
       <canvas id="gl2"></canvas>
     </main>
+    <footer>
+      <x id="intensity"> &nbsp;</x>
+      <x id="intensity2"> &nbsp;</x>
+    </footer>
     <script type="module" async>
      import * as niivue from './niivue.es.js'
-	  document.getElementById("sliceType").addEventListener("change", changeSliceType);
-	  function changeSliceType() {
-		let st = parseInt(document.getElementById("sliceType").value)
-		nv1.setSliceType(st);
-		nv2.setSliceType(st);
-	  }
+      document.getElementById("sliceType").addEventListener("change", changeSliceType);
+      function changeSliceType() {
+        let st = parseInt(document.getElementById("sliceType").value)
+        nv1.setSliceType(st);
+        nv2.setSliceType(st);
+      }
       document.getElementById("check10").addEventListener("change", doCheck10Click);
       function doCheck10Click() {
         nv1.setHighResolutionCapable(this.checked);
@@ -47,32 +51,46 @@
           dx = Infinity
         nv1.setMeshThicknessOn2D(dx)
       }
-      var nv1 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
+      function handleIntensityChange(data){ 
+        document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.string
+      }
+      function handleIntensityChange2(data){ 
+        document.getElementById('intensity2').innerHTML = '&nbsp;&nbsp;'+ data.string
+      }
+      var nv1 = new niivue.Niivue({
+          show3Dcrosshair: true,
+          onLocationChange:handleIntensityChange,
+        backColor: [1, 1, 1, 1]
+      })
       nv1.attachTo('gl1')
       nv1.setHighResolutionCapable(false)
       nv1.opts.isOrientCube = true
-	  var volumeList1 = [{url: "../images/mni152.nii.gz"}]
-	  await nv1.loadVolumes(volumeList1)
+      var volumeList1 = [{url: "../images/mni152.nii.gz"}]
+      await nv1.loadVolumes(volumeList1)
       await nv1.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3"},
       ])
       nv1.setMeshShader(0, 'Outline')
-	  nv1.opts.multiplanarForceRender = true
+      nv1.opts.multiplanarForceRender = true
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
-	  nv1.setSliceMM(true)
-	  nv1.setClipPlane([0, 180, 40])
-	  //
-      var nv2 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
+      nv1.setSliceMM(true)
+      nv1.setClipPlane([0, 180, 40])
+      //
+      var nv2 = new niivue.Niivue({
+          show3Dcrosshair: true,
+          onLocationChange:handleIntensityChange2,
+          backColor: [1, 1, 1, 1]
+      })
       nv2.attachTo('gl2')
       nv2.setHighResolutionCapable(true)
-	  await nv2.loadVolumes(volumeList1)
+      await nv2.loadVolumes(volumeList1)
       await nv2.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3"},
       ])
       nv2.opts.multiplanarForceRender = true
       nv2.setSliceType(nv2.sliceTypeMultiplanar)
-	  nv2.setSliceMM(true)
-	  nv2.setClipPlane([0, 180, 40])
+      nv2.setSliceMM(true)
+      nv2.setClipPlane([0, 180, 40])
       nv1.syncWith(nv2, {'3d':true, '2d':true})
     </script>
   </body>

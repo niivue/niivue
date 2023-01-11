@@ -1348,7 +1348,6 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
@@ -1368,7 +1367,8 @@ void main(void) {
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
 	if (!hasAlpha) {
 		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
-		FragColor.a = step(0.01, FragColor.a);
+		//next line: we could binarize alpha, but see rendering of visible human
+		//FragColor.a = step(0.01, FragColor.a);
 	}
 	if (modulation == 2)
 		FragColor.a = texture(modulationVol, vx.xyz).r;
@@ -116429,6 +116429,7 @@ Niivue.prototype.sync = function() {
     this.otherNV.scene.renderElevation = this.scene.renderElevation;
   }
   this.otherNV.drawScene();
+  this.otherNV.createOnLocationChange();
 };
 Niivue.prototype.arrayEquals = function(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
@@ -116667,7 +116668,7 @@ Niivue.prototype.touchEndListener = function(e) {
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
-  this.drawScene();
+  this.mouseUpListener();
 };
 Niivue.prototype.mouseMoveListener = function(e) {
   if (this.uiData.mousedown) {
