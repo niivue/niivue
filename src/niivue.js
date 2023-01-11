@@ -916,7 +916,6 @@ Niivue.prototype.touchStartListener = function (e) {
   } else {
     this.uiData.multiTouchGesture = true;
   }
-
   setTimeout(this.checkMultitouch.bind(this), 1, e);
 };
 
@@ -939,7 +938,8 @@ Niivue.prototype.touchEndListener = function (e) {
     this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
-  this.drawScene();
+  //mouseUp generates this.drawScene();
+  this.mouseUpListener();
 };
 
 // not included in public docs
