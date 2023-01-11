@@ -5372,7 +5372,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
     let texFrac = this.screenXY2TextureFrac(x, y, i);
     if (texFrac[0] < 0) continue; //click not on slice i
-
     if (true) {
       //user clicked on slice i
       if (!isDelta) {
@@ -5382,11 +5381,11 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       // scrolling... not mouse
       if (posChange !== 0) {
-        posNow = this.scene.crosshairPos[2 - axCorSag];
-        posFuture = posNow + posChange;
-        if (posFuture > 1) posFuture = 1;
-        if (posFuture < 0) posFuture = 0;
-        this.scene.crosshairPos[2 - axCorSag] = posFuture;
+        let posNeg = 1;
+        if (posChange < 0) posNeg = -1;
+        let xyz = [0, 0, 0];
+        xyz[2 - axCorSag] = posNeg;
+        this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
         this.drawScene();
         this.createOnLocationChange();
         return;
