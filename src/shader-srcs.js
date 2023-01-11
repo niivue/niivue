@@ -778,7 +778,6 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
@@ -798,7 +797,8 @@ void main(void) {
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
 	if (!hasAlpha) {
 		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
-		FragColor.a = step(0.01, FragColor.a);
+		//next line: we could binarize alpha, but see rendering of visible human
+		//FragColor.a = step(0.01, FragColor.a);
 	}
 	if (modulation == 2)
 		FragColor.a = texture(modulationVol, vx.xyz).r;
