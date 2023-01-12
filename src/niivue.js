@@ -2963,7 +2963,7 @@ Niivue.prototype.loadConnectome = async function (json) {
  * generate a blank canvas for the pen tool
  * @example niivue.createEmptyDrawing()
  */
-Niivue.prototype.createEmptyDrawing = function () {
+Niivue.prototype.createEmptyDrawing = async function () {
   if (!this.back.hasOwnProperty("dims")) return;
   let mn = Math.min(
     Math.min(this.back.dims[1], this.back.dims[2]),
@@ -3431,7 +3431,7 @@ Niivue.prototype.drawFloodFill = function (
   this.drawFloodFillCore(img, seedVx);
   //8. (Optional) work out intensity of selected cluster
   if (growSelectedCluster !== 0) {
-    let backImg = this.volumes[0].img;
+    let backImg = this.volumes[0].img2RAS();
     let mx = backImg[seedVx];
     let mn = mx;
     for (let i = 1; i < nxyz; i++) {
@@ -3444,7 +3444,6 @@ Niivue.prototype.drawFloodFill = function (
       mx = growSelectedCluster;
     if (growSelectedCluster == Number.NEGATIVE_INFINITY)
       mn = growSelectedCluster;
-
     log.debug("Intensity range of selected cluster :", mn, mx);
     //second pass:
     for (let i = 1; i < nxyz; i++) {
@@ -7127,12 +7126,11 @@ Niivue.prototype.createOnLocationChange = function () {
     }
     str += valStr;
     //drawingBitmap
-    let hdr = this.back.hdr;
-    let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    let dims = this.back.dimsRAS;
+    let nv = dims[1] * dims[2] * dims[3];
     if (this.drawBitmap && this.drawBitmap.length === nv) {
       let vox = this.frac2vox(this.scene.crosshairPos);
-      let vx =
-        vox[0] + vox[1] * hdr.dims[1] + vox[2] * hdr.dims[1] * hdr.dims[2];
+      let vx = vox[0] + vox[1] * dims[1] + vox[2] * dims[1] * dims[2];
       //str += this.drawBitmap[vx].toString();
       str += " " + this.drawLut.labels[this.drawBitmap[vx]];
     }

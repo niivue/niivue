@@ -2134,6 +2134,48 @@ NVImage.prototype.calculateRAS = function () {
   this.calculateOblique();
 };
 
+//Reorient raw image data to RAS
+// note that GPU-based orient shader is much faster
+NVImage.prototype.img2RAS = function () {
+  let perm = this.permRAS.slice();
+  if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) return this.img; //image is already in RAS
+  let hdr = this.hdr;
+  //preallocate/clone image (only 3D for 4D datasets!)
+  let imgRAS = this.img.slice(
+    0,
+    hdr.dims[1] * hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+  );
+  let aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])];
+  let outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]];
+  let inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]]; //increment i,j,k
+  let outStep = [
+    inStep[aperm[0] - 1],
+    inStep[aperm[1] - 1],
+    inStep[aperm[2] - 1],
+  ];
+  let outStart = [0, 0, 0];
+  for (let p = 0; p < 3; p++) {
+    //flip dimensions
+    if (perm[p] < 0) {
+      outStart[p] = outStep[p] * (outdim[p] - 1);
+      outStep[p] = -outStep[p];
+    }
+  }
+  let j = 0;
+  for (let z = 0; z < outdim[2]; z++) {
+    let zi = outStart[2] + z * outStep[2];
+    for (let y = 0; y < outdim[1]; y++) {
+      let yi = outStart[1] + y * outStep[1];
+      for (let x = 0; x < outdim[0]; x++) {
+        let xi = outStart[0] + x * outStep[0];
+        imgRAS[j] = this.img[xi + yi + zi];
+        j++;
+      } //for x
+    } //for y
+  } //for z
+  return imgRAS;
+}; // img2RAS()
+
 // not included in public docs
 // convert voxel location (row, column slice, indexed from 0) to world space
 NVImage.prototype.vox2mm = function (XYZ, mtx) {
@@ -2284,8 +2326,8 @@ NVImage.prototype.calMinMax = function () {
     mn = Math.min(this.img[i], mn);
     mx = Math.max(this.img[i], mx);
   }
-  var mnScale = this.intensityRaw2Scaled(this.hdr, mn);
-  var mxScale = this.intensityRaw2Scaled(this.hdr, mx);
+  var mnScale = this.intensityRaw2Scaled(mn);
+  var mxScale = this.intensityRaw2Scaled(mx);
   if (!this.ignoreZeroVoxels) nZero = 0;
   nZero += nNan;
   let n2pct = Math.round((nVox - nZero) * this.percentileFrac);
@@ -2347,8 +2389,8 @@ NVImage.prototype.calMinMax = function () {
       if (lo == 0 && hi == nBins - 1) ok = 0;
     } //while not ok
   } //if lo == hi
-  var pct2 = this.intensityRaw2Scaled(this.hdr, lo / scl + mn);
-  var pct98 = this.intensityRaw2Scaled(this.hdr, hi / scl + mn);
+  var pct2 = this.intensityRaw2Scaled(lo / scl + mn);
+  var pct98 = this.intensityRaw2Scaled(hi / scl + mn);
   if (
     this.hdr.cal_min < this.hdr.cal_max &&
     this.hdr.cal_min >= mnScale &&
@@ -2367,10 +2409,16 @@ NVImage.prototype.calMinMax = function () {
 }; //calMinMax
 
 // not included in public docs
-// convert voxel intesnity from stored value to scaled intensity
-NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
-  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
-  return raw * hdr.scl_slope + hdr.scl_inter;
+// convert voxel intensity from stored value to scaled intensity
+NVImage.prototype.intensityRaw2Scaled = function (raw) {
+  if (this.hdr.scl_slope === 0) hdr.scl_slope = 1.0;
+  return raw * this.hdr.scl_slope + this.hdr.scl_inter;
+};
+
+// convert voxel intensity from scaled intensity to stored value
+NVImage.prototype.intensityScaled2Raw = function (scaled) {
+  if (this.hdr.scl_slope === 0) this.hdr.scl_slope = 1.0;
+  return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope;
 };
 
 // not included in public docs

@@ -71,11 +71,8 @@
         nv1.setSliceMM(this.checked)
       }
       var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }]
-      function handleLocationChange(data){ 
-        function flt2str(flt, decimals = 0) {
-          return flt.toFixed(decimals)
-        }  
-        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)
+      function handleLocationChange(data){   
+        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+data.vox[0]+'×'+data.vox[1]+'×'+data.vox[2]
       }
       var nv1 = new Niivue({
        loadingText: 'there are no images',
