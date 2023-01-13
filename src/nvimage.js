@@ -2128,11 +2128,68 @@ NVImage.prototype.calculateRAS = function () {
   rotM[3 + 0 * 4] = flip[0];
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
-  this.toRAS = mat4.clone(rotM);
+  this.toRAS = mat4.clone(rotM); //webGL unit textures
+  //voxel based column-major,
+  rotM[3] = 0;
+  rotM[7] = 0;
+  rotM[11] = 0;
+  rotM[12] = 0;
+  if (
+    this.permRAS[0] === -1 ||
+    this.permRAS[1] === -1 ||
+    this.permRAS[2] === -1
+  )
+    rotM[12] = header.dims[1] - 1;
+  rotM[13] = 0;
+  if (
+    this.permRAS[0] === -2 ||
+    this.permRAS[1] === -2 ||
+    this.permRAS[2] === -2
+  )
+    rotM[13] = header.dims[2] - 1;
+  rotM[14] = 0;
+  if (
+    this.permRAS[0] === -3 ||
+    this.permRAS[1] === -3 ||
+    this.permRAS[2] === -3
+  )
+    rotM[14] = header.dims[3] - 1;
+  this.toRASvox = mat4.clone(rotM);
   log.debug(this.hdr.dims);
   log.debug(this.dimsRAS);
   this.calculateOblique();
 };
+
+//identical results to img2RAS(): improved clarity but slower
+/*NVImage.prototype.img2RASslow = function () {
+  let perm = this.permRAS.slice();
+  if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) return this.img; //image is already in RAS
+  let hdr = this.hdr;
+  //preallocate/clone image (only 3D for 4D datasets!)
+  let imgRAS = this.img.slice(
+    0,
+    hdr.dims[1] * hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+  );
+  //output dimensions: RAS
+  let ox = this.dimsRAS[1]
+  let oy = this.dimsRAS[2]
+  let oz = this.dimsRAS[3]
+  //input dimensions: RAW
+  let ix = hdr.dims[1]
+  let ixy = ix * hdr.dims[2]
+  let j = 0;
+  for (let z = 0; z < oz; z++) {
+    for (let y = 0; y < oy; y++) {
+      for (let x = 0; x < ox; x++) {
+        let pos = vec4.fromValues(x, y, z, 1);
+        vec4.transformMat4(pos, pos, this.toRASvox);
+        let vx = pos[0] + pos[1] * ix + pos[2] * ixy;
+        imgRAS[j++] = this.img[vx];
+      } //for x
+    } //for y
+  } //for z
+  return imgRAS;
+}; // img2RASslow()*/
 
 //Reorient raw image data to RAS
 // note that GPU-based orient shader is much faster
@@ -2972,23 +3029,36 @@ String.prototype.getBytes = function () {
 // not included in public docs
 // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
 NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
-  const { nx, ny, nz } = this.getImageMetadata();
+  //const { nx, ny, nz } = this.getImageMetadata();
+  let nx = this.hdr.dims[1];
+  let ny = this.hdr.dims[2];
+  let nz = this.hdr.dims[3];
+  let perm = this.permRAS.slice();
+  if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+    let pos = vec4.fromValues(x, y, z, 1);
+    vec4.transformMat4(pos, pos, this.toRASvox);
+    x = pos[0];
+    y = pos[1];
+    z = pos[2];
+  } //image is already in RAS
+  let vx = x + y * nx + z * nx * ny;
+
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
-    let vx = 4 * (x + y * nx + z * nx * ny);
+    vx *= 4;
     //convert rgb to luminance
     return Math.round(
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
   if (this.hdr.datatypeCode === this.DT_RGB) {
-    let vx = 3 * (x + y * nx + z * nx * ny);
+    vx *= 3;
     //convert rgb to luminance
     return Math.round(
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
   let vol = frame4D * nx * ny * nz;
-  let i = this.img[x + y * nx + z * nx * ny + vol];
+  let i = this.img[vx + vol];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 
