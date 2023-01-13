@@ -32,6 +32,7 @@ import {
   vertMeshShader,
   fragMeshShader,
   fragMeshToonShader,
+  fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
@@ -54,6 +55,7 @@ export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
 export { NVController } from "./nvcontroller";
 import { Log } from "./logger";
+import defaultMatCap from "./matcaps/Shiny.jpg";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
@@ -187,6 +189,7 @@ export function Niivue(options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
+  this.matCapTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
   this.thumbnailVisible = false;
@@ -297,6 +300,10 @@ export function Niivue(options = {}) {
     {
       Name: "Flat",
       Frag: fragFlatMeshShader,
+    },
+    {
+      Name: "Matcap",
+      Frag: fragMeshMatcapShader,
     },
   ];
 
@@ -976,7 +983,6 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
   if (this.uiData.isDragging) return;
-  if (this.volumes.length < 1) return; //issue468
   let isRender = false;
   if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true;
   let x = 0;
@@ -997,13 +1003,13 @@ Niivue.prototype.resetBriCon = function (msg = null) {
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
-
   if (isRender) {
     this.uiData.mouseDepthPicker = true;
     this.drawScene();
     this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
     return;
   }
+  if (this.volumes.length < 1) return; //issue468, AFTER render depth picking
   if (this.uiData.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
@@ -3812,6 +3818,12 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
         this.gl.activeTexture(this.gl.TEXTURE4);
         this.bmpShader.use(this.gl);
         this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else if (textureNum === 5) {
+        this.gl.activeTexture(this.gl.TEXTURE5);
+        if (this.matCapTexture !== null)
+          this.gl.deleteTexture(this.matCapTexture);
+        this.matCapTexture = this.gl.createTexture();
+        pngTexture = this.matCapTexture;
       } else {
         this.fontShader.use(this.gl);
         this.gl.activeTexture(this.gl.TEXTURE3);
@@ -3871,6 +3883,11 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
 Niivue.prototype.loadBmpTexture = async function (bmpUrl) {
   await this.loadPngAsTexture(bmpUrl, 4);
 };
+// not included in public docs
+// load font stored as JPG/PNG bitmap with texture unit 5
+Niivue.prototype.loadMatCapTexture = function (bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 5);
+};
 
 // not included in public docs
 // load font bitmap and metrics
@@ -3926,6 +3943,10 @@ Niivue.prototype.loadFont = async function (
 };
 
 // not included in public docs
+Niivue.prototype.loadDefaultMatCap = async function () {
+  await this.loadMatCapTexture(defaultMatCap);
+};
+// not included in public docs
 Niivue.prototype.loadDefaultFont = async function () {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
@@ -3948,6 +3969,7 @@ Niivue.prototype.initText = async function () {
     this.fontShader.uniforms["uvLeftTopWidthHeight"];
 
   await this.loadDefaultFont();
+  await this.loadDefaultMatCap();
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
@@ -4297,8 +4319,9 @@ Niivue.prototype.init = async function () {
     else m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+    m.shader.isMatcap = m.Name === "Matcap";
+    if (m.shader.isMatcap) this.gl.uniform1i(m.shader.uniforms["matCap"], 5);
   }
-
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
   if (this.opts.thumbnail.length > 0) {
@@ -7292,6 +7315,11 @@ Niivue.prototype.drawMesh3D = function (
     if (this.meshes[i].offsetPt0) {
       hasFibers = true;
       continue;
+    }
+    if (shader.isMatcap) {
+      //texture slot 6 used by other functions, so explicitly switch on
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture);
     }
     gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(
