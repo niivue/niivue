@@ -1006,9 +1006,10 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   if (isRender) {
     this.uiData.mouseDepthPicker = true;
     this.drawScene();
-    this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
+    this.drawScene(); // this duplicate drawScene is necessary for depth picking. DO NOT REMOVE
     return;
   }
+  if (this.opts.dragMode === DRAG_MODE.slicer3D) return;
   if (this.volumes.length < 1) return; //issue468, AFTER render depth picking
   if (this.uiData.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
@@ -3346,7 +3347,7 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   }
 };
 
-Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
+Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   let nx = dims[0];
   let nxy = nx * dims[1];
@@ -3403,7 +3404,9 @@ Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
 Niivue.prototype.drawFloodFill = function (
   seedXYZ,
   newColor = 0,
-  growSelectedCluster = 0
+  growSelectedCluster = 0, //if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
+  forceMin = NaN,
+  forceMax = NaN
 ) {
   //3D "paint bucket" fill:
   // set all voxels connected to seed point to newColor
@@ -3440,16 +3443,21 @@ Niivue.prototype.drawFloodFill = function (
     let backImg = this.volumes[0].img2RAS();
     let mx = backImg[seedVx];
     let mn = mx;
-    for (let i = 1; i < nxyz; i++) {
-      if (img[i] === 2) {
-        mx = Math.max(mx, backImg[i]);
-        mn = Math.min(mn, backImg[i]);
+    if (isFinite(forceMax) && isFinite(forceMin)) {
+      mx = forceMax;
+      mn = forceMin;
+    } else {
+      for (let i = 1; i < nxyz; i++) {
+        if (img[i] === 2) {
+          mx = Math.max(mx, backImg[i]);
+          mn = Math.min(mn, backImg[i]);
+        }
       }
+      if (growSelectedCluster == Number.POSITIVE_INFINITY)
+        mx = growSelectedCluster;
+      if (growSelectedCluster == Number.NEGATIVE_INFINITY)
+        mn = growSelectedCluster;
     }
-    if (growSelectedCluster == Number.POSITIVE_INFINITY)
-      mx = growSelectedCluster;
-    if (growSelectedCluster == Number.NEGATIVE_INFINITY)
-      mn = growSelectedCluster;
     log.debug("Intensity range of selected cluster :", mn, mx);
     //second pass:
     for (let i = 1; i < nxyz; i++) {
@@ -5213,6 +5221,7 @@ Niivue.prototype.refreshColormaps = function () {
       if (nlayers < 1) continue;
       for (let j = 0; j < nlayers; j++) {
         let layer = this.meshes[i].layers[j];
+        if (!layer.colorbarVisible) continue;
         if (layer.colorMap.length < 1) continue;
         let neg = negMinMax(
           layer.cal_min,
@@ -5409,7 +5418,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         xyz[2 - axCorSag] = posNeg;
         this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
         this.drawScene();
-        this.createOnLocationChange();
+        this.createOnLocationChange(axCorSag);
         return;
       }
       this.scene.crosshairPos = texFrac.slice();
@@ -5445,7 +5454,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.createOnLocationChange();
+      this.createOnLocationChange(axCorSag);
       return;
     } else {
       //if click in slice i
@@ -7119,7 +7128,7 @@ Niivue.prototype.drawOrientationCube = function (
   this.gl.disable(this.gl.CULL_FACE);
 }; // drawOrientationCube()
 
-Niivue.prototype.createOnLocationChange = function () {
+Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   //first: provide a string representation
   let [mn, mx, range] = this.sceneExtentsMinMax(true);
   let fov = Math.max(Math.max(range[0], range[1]), range[2]);
@@ -7161,6 +7170,7 @@ Niivue.prototype.createOnLocationChange = function () {
 
   let msg = {
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    axCorSag: axCorSag,
     vox: this.frac2vox(this.scene.crosshairPos),
     frac: this.scene.crosshairPos,
     xy: [this.mousePos[0], this.mousePos[1]],

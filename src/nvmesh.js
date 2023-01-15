@@ -567,7 +567,8 @@ NVMesh.prototype.updateMesh = function (gl) {
           let v255 = Math.round(
             (layer.values[j + frameOffset] - layer.cal_min) * scale255
           );
-          if (v255 < 0) continue;
+          if (v255 < 0 && layer.isTransparentBelowCalMin) continue;
+          v255 = Math.max(0.0, v255);
           v255 = Math.min(255.0, v255) * 4;
           let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
           u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
@@ -679,8 +680,8 @@ NVMesh.prototype.reverseFaces = function (gl) {
 // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
 NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   let layer = this.layers[id];
-  if (!layer.hasOwnProperty(key)) {
-    console.log("mesh does not have property ", key, layer);
+  if (!layer || !layer.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, " for layer ", layer);
     return;
   }
   layer[key] = val;
@@ -1480,7 +1481,8 @@ NVMesh.readCURV = function (buffer, n_vert) {
   //normalize and invert then sqrt
   let scale = 1.0 / (mx - mn);
   for (var i = 0; i < f32.length; i++)
-    f32[i] = Math.sqrt(1.0 - (f32[i] - mn) * scale);
+    //f32[i] = Math.sqrt(1.0 - ((f32[i] - mn) * scale));
+    f32[i] = 1.0 - (f32[i] - mn) * scale;
   return f32;
 }; // readCURV()
 
@@ -2113,6 +2115,8 @@ NVMesh.readLayer = function (
   isOutlineBorder = false
 ) {
   let layer = [];
+  layer.isTransparentBelowCalMin = true;
+  layer.colorbarVisible = true;
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
   if (n_vert < 3) return;
   var re = /(?:\.([^.]+))?$/;
@@ -2124,9 +2128,10 @@ NVMesh.readLayer = function (
   }
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
-  else if (ext === "CRV" || ext === "CURV")
+  else if (ext === "CRV" || ext === "CURV") {
     layer.values = this.readCURV(buffer, n_vert);
-  else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
+    layer.isTransparentBelowCalMin = false;
+  } else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
   else if (ext === "MGH" || ext === "MGZ")
     layer.values = this.readMGH(buffer, n_vert);
   else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
