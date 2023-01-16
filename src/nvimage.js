@@ -148,6 +148,7 @@ export function NVImageFromUrlOptions(
   useQFormNotSForm = false,
   alphaThreshold = false,
   colorMapNegative = "",
+  frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
@@ -171,6 +172,7 @@ export function NVImageFromUrlOptions(
     cal_minNeg,
     cal_maxNeg,
     colorbarVisible,
+    frame4D,
   };
 }
 
@@ -193,6 +195,7 @@ export function NVImageFromUrlOptions(
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
  * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @param {number} [frame4D = 0] volume displayed, 0 indexed, must be less than nFrame4D
  * @param {function} [onColorMapChange=()=>{}] callback for color map change
  * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
@@ -210,6 +213,7 @@ export function NVImage(
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
+  frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
@@ -240,16 +244,15 @@ export function NVImage(
   this.name = name;
   this.id = uuidv4();
   this._colorMap = colorMap;
-  this.frame4D = 0; //indexed from 0!
   this._opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
+  this.frame4D = frame4D; //indexed from 0!
   this.cal_minNeg = cal_minNeg;
   this.cal_maxNeg = cal_maxNeg;
   this.colorbarVisible = colorbarVisible;
-
   this.visible = visible;
   this.modulationImage = null;
   this.modulateAlpha = false; //does modulation image influence RGB (false) or A (true)
@@ -324,6 +327,8 @@ export function NVImage(
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
     if (this.hdr.dims[i] > 1) this.nFrame4D *= this.hdr.dims[i];
+  this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1);
+  console.log(">>>", this.frame4D, this.nFrame4D);
   this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
   let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
   if (nVol4D !== this.nFrame4D)
@@ -2688,6 +2693,7 @@ NVImage.loadFromUrl = async function ({
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
+  frame4D = 0,
   isManifest = false,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
@@ -2696,7 +2702,6 @@ NVImage.loadFromUrl = async function ({
   }
   let nvimage = null;
   let dataBuffer = null;
-
   // fetch data associated with image
   if (isManifest) {
     dataBuffer = await NVImage.fetchDicomData(url);
@@ -2750,7 +2755,7 @@ NVImage.loadFromUrl = async function ({
     }
     pairedImgData = await resp.arrayBuffer();
   }
-
+  console.log(":::!", frame4D);
   if (dataBuffer) {
     nvimage = new NVImage(
       dataBuffer,
@@ -2766,6 +2771,7 @@ NVImage.loadFromUrl = async function ({
       visible,
       useQFormNotSForm,
       colorMapNegative,
+      frame4D,
       imageType
     );
   } else {
@@ -2829,6 +2835,7 @@ NVImage.loadFromFile = async function ({
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
+  frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
@@ -2860,6 +2867,7 @@ NVImage.loadFromFile = async function ({
       visible,
       useQFormNotSForm,
       colorMapNegative,
+      frame4D,
       imageType
     );
   } catch (err) {
@@ -3304,6 +3312,7 @@ NVImage.prototype.getImageOptions = function () {
       this.visible, // visible
       this.useQFormNotSForm, // useQFormNotSForm
       this.colorMapNegative, // colorMapNegative
+      this.frame4D,
       this.imageType // imageType
     );
   } catch (e) {

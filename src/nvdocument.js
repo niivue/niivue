@@ -483,6 +483,7 @@ export class NVDocument {
             useQFormNotSForm: false,
             colorMapNegative: "",
             imageType: NVIMAGE_TYPE.NII,
+            frame4D: 0,
           };
         }
         // update image options on current image settings

@@ -1315,7 +1315,6 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
   this.document.addImageOptions(volume, imageOptions);
-
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.onVolumeAddedFromUrl) {
@@ -2870,6 +2869,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
+      frame4D: volumeList[i].frame4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);
