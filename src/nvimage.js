@@ -324,11 +324,11 @@ export function NVImage(
     default:
       throw new Error("Image type not supported");
   }
+  if (typeof this.hdr.magic == "number") this.hdr.magic = "n+1"; //fix for issue 481, where magic is set to the number 1 rather than a string
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
     if (this.hdr.dims[i] > 1) this.nFrame4D *= this.hdr.dims[i];
   this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1);
-  console.log(">>>", this.frame4D, this.nFrame4D);
   this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
   let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
   if (nVol4D !== this.nFrame4D)
@@ -2755,7 +2755,6 @@ NVImage.loadFromUrl = async function ({
     }
     pairedImgData = await resp.arrayBuffer();
   }
-  console.log(":::!", frame4D);
   if (dataBuffer) {
     nvimage = new NVImage(
       dataBuffer,
