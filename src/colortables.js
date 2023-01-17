@@ -53,7 +53,11 @@ colortables.prototype.colormapFromKey = function (name) {
 
 // not included in public docs
 colortables.prototype.makeDrawLut = function (name) {
-  let cmap = cmaps[name];
+  let cmap = [];
+  if (typeof name === 'object')
+    cmap = name;
+  else
+    cmap = cmaps[name];
   if (cmap === undefined) {
     cmap = {
       min: 0,
@@ -62,7 +66,6 @@ colortables.prototype.makeDrawLut = function (name) {
       G: [0, 0, 255, 0, 255, 255, 0],
       B: [0, 0, 0, 255, 0, 255, 255],
       A: [0, 255, 255, 255, 255, 255, 255],
-      I: [0, 1, 2, 3, 4, 5, 6],
     };
   }
   if (cmap.R.length < 256) {
