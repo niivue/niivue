@@ -32,6 +32,7 @@ import {
   vertMeshShader,
   fragMeshShader,
   fragMeshToonShader,
+  fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
@@ -54,6 +55,7 @@ export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
 export { NVController } from "./nvcontroller";
 import { Log } from "./logger";
+import defaultMatCap from "./matcaps/Shiny.jpg";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
@@ -187,6 +189,7 @@ export function Niivue(options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
+  this.matCapTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
   this.thumbnailVisible = false;
@@ -297,6 +300,10 @@ export function Niivue(options = {}) {
     {
       Name: "Flat",
       Frag: fragFlatMeshShader,
+    },
+    {
+      Name: "Matcap",
+      Frag: fragMeshMatcapShader,
     },
   ];
 
@@ -976,7 +983,6 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
   if (this.uiData.isDragging) return;
-  if (this.volumes.length < 1) return; //issue468
   let isRender = false;
   if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true;
   let x = 0;
@@ -997,13 +1003,14 @@ Niivue.prototype.resetBriCon = function (msg = null) {
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
-
   if (isRender) {
     this.uiData.mouseDepthPicker = true;
     this.drawScene();
-    this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
+    this.drawScene(); // this duplicate drawScene is necessary for depth picking. DO NOT REMOVE
     return;
   }
+  if (this.opts.dragMode === DRAG_MODE.slicer3D) return;
+  if (this.volumes.length < 1) return; //issue468, AFTER render depth picking
   if (this.uiData.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
@@ -1308,7 +1315,6 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
   this.document.addImageOptions(volume, imageOptions);
-
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.onVolumeAddedFromUrl) {
@@ -2863,6 +2869,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
+      frame4D: volumeList[i].frame4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);
@@ -2963,7 +2970,7 @@ Niivue.prototype.loadConnectome = async function (json) {
  * generate a blank canvas for the pen tool
  * @example niivue.createEmptyDrawing()
  */
-Niivue.prototype.createEmptyDrawing = function () {
+Niivue.prototype.createEmptyDrawing = async function () {
   if (!this.back.hasOwnProperty("dims")) return;
   let mn = Math.min(
     Math.min(this.back.dims[1], this.back.dims[2]),
@@ -3340,7 +3347,7 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   }
 };
 
-Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
+Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   let nx = dims[0];
   let nxy = nx * dims[1];
@@ -3397,7 +3404,9 @@ Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
 Niivue.prototype.drawFloodFill = function (
   seedXYZ,
   newColor = 0,
-  growSelectedCluster = 0
+  growSelectedCluster = 0, //if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
+  forceMin = NaN,
+  forceMax = NaN
 ) {
   //3D "paint bucket" fill:
   // set all voxels connected to seed point to newColor
@@ -3431,20 +3440,24 @@ Niivue.prototype.drawFloodFill = function (
   this.drawFloodFillCore(img, seedVx);
   //8. (Optional) work out intensity of selected cluster
   if (growSelectedCluster !== 0) {
-    let backImg = this.volumes[0].img;
+    let backImg = this.volumes[0].img2RAS();
     let mx = backImg[seedVx];
     let mn = mx;
-    for (let i = 1; i < nxyz; i++) {
-      if (img[i] === 2) {
-        mx = Math.max(mx, backImg[i]);
-        mn = Math.min(mn, backImg[i]);
+    if (isFinite(forceMax) && isFinite(forceMin)) {
+      mx = forceMax;
+      mn = forceMin;
+    } else {
+      for (let i = 1; i < nxyz; i++) {
+        if (img[i] === 2) {
+          mx = Math.max(mx, backImg[i]);
+          mn = Math.min(mn, backImg[i]);
+        }
       }
+      if (growSelectedCluster == Number.POSITIVE_INFINITY)
+        mx = growSelectedCluster;
+      if (growSelectedCluster == Number.NEGATIVE_INFINITY)
+        mn = growSelectedCluster;
     }
-    if (growSelectedCluster == Number.POSITIVE_INFINITY)
-      mx = growSelectedCluster;
-    if (growSelectedCluster == Number.NEGATIVE_INFINITY)
-      mn = growSelectedCluster;
-
     log.debug("Intensity range of selected cluster :", mn, mx);
     //second pass:
     for (let i = 1; i < nxyz; i++) {
@@ -3813,6 +3826,12 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
         this.gl.activeTexture(this.gl.TEXTURE4);
         this.bmpShader.use(this.gl);
         this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else if (textureNum === 5) {
+        this.gl.activeTexture(this.gl.TEXTURE5);
+        if (this.matCapTexture !== null)
+          this.gl.deleteTexture(this.matCapTexture);
+        this.matCapTexture = this.gl.createTexture();
+        pngTexture = this.matCapTexture;
       } else {
         this.fontShader.use(this.gl);
         this.gl.activeTexture(this.gl.TEXTURE3);
@@ -3872,6 +3891,11 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
 Niivue.prototype.loadBmpTexture = async function (bmpUrl) {
   await this.loadPngAsTexture(bmpUrl, 4);
 };
+// not included in public docs
+// load font stored as JPG/PNG bitmap with texture unit 5
+Niivue.prototype.loadMatCapTexture = function (bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 5);
+};
 
 // not included in public docs
 // load font bitmap and metrics
@@ -3927,6 +3951,10 @@ Niivue.prototype.loadFont = async function (
 };
 
 // not included in public docs
+Niivue.prototype.loadDefaultMatCap = async function () {
+  await this.loadMatCapTexture(defaultMatCap);
+};
+// not included in public docs
 Niivue.prototype.loadDefaultFont = async function () {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
@@ -3949,6 +3977,7 @@ Niivue.prototype.initText = async function () {
     this.fontShader.uniforms["uvLeftTopWidthHeight"];
 
   await this.loadDefaultFont();
+  await this.loadDefaultMatCap();
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
@@ -4298,8 +4327,9 @@ Niivue.prototype.init = async function () {
     else m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+    m.shader.isMatcap = m.Name === "Matcap";
+    if (m.shader.isMatcap) this.gl.uniform1i(m.shader.uniforms["matCap"], 5);
   }
-
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
   if (this.opts.thumbnail.length > 0) {
@@ -5191,6 +5221,7 @@ Niivue.prototype.refreshColormaps = function () {
       if (nlayers < 1) continue;
       for (let j = 0; j < nlayers; j++) {
         let layer = this.meshes[i].layers[j];
+        if (!layer.colorbarVisible) continue;
         if (layer.colorMap.length < 1) continue;
         let neg = negMinMax(
           layer.cal_min,
@@ -5372,7 +5403,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
     let texFrac = this.screenXY2TextureFrac(x, y, i);
     if (texFrac[0] < 0) continue; //click not on slice i
-
     if (true) {
       //user clicked on slice i
       if (!isDelta) {
@@ -5382,13 +5412,13 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       // scrolling... not mouse
       if (posChange !== 0) {
-        posNow = this.scene.crosshairPos[2 - axCorSag];
-        posFuture = posNow + posChange;
-        if (posFuture > 1) posFuture = 1;
-        if (posFuture < 0) posFuture = 0;
-        this.scene.crosshairPos[2 - axCorSag] = posFuture;
+        let posNeg = 1;
+        if (posChange < 0) posNeg = -1;
+        let xyz = [0, 0, 0];
+        xyz[2 - axCorSag] = posNeg;
+        this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
         this.drawScene();
-        this.createOnLocationChange();
+        this.createOnLocationChange(axCorSag);
         return;
       }
       this.scene.crosshairPos = texFrac.slice();
@@ -5424,7 +5454,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.createOnLocationChange();
+      this.createOnLocationChange(axCorSag);
       return;
     } else {
       //if click in slice i
@@ -7098,7 +7128,7 @@ Niivue.prototype.drawOrientationCube = function (
   this.gl.disable(this.gl.CULL_FACE);
 }; // drawOrientationCube()
 
-Niivue.prototype.createOnLocationChange = function () {
+Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   //first: provide a string representation
   let [mn, mx, range] = this.sceneExtentsMinMax(true);
   let fov = Math.max(Math.max(range[0], range[1]), range[2]);
@@ -7128,12 +7158,11 @@ Niivue.prototype.createOnLocationChange = function () {
     }
     str += valStr;
     //drawingBitmap
-    let hdr = this.back.hdr;
-    let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    let dims = this.back.dimsRAS;
+    let nv = dims[1] * dims[2] * dims[3];
     if (this.drawBitmap && this.drawBitmap.length === nv) {
       let vox = this.frac2vox(this.scene.crosshairPos);
-      let vx =
-        vox[0] + vox[1] * hdr.dims[1] + vox[2] * hdr.dims[1] * hdr.dims[2];
+      let vx = vox[0] + vox[1] * dims[1] + vox[2] * dims[1] * dims[2];
       //str += this.drawBitmap[vx].toString();
       str += " " + this.drawLut.labels[this.drawBitmap[vx]];
     }
@@ -7141,6 +7170,7 @@ Niivue.prototype.createOnLocationChange = function () {
 
   let msg = {
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    axCorSag: axCorSag,
     vox: this.frac2vox(this.scene.crosshairPos),
     frac: this.scene.crosshairPos,
     xy: [this.mousePos[0], this.mousePos[1]],
@@ -7295,6 +7325,11 @@ Niivue.prototype.drawMesh3D = function (
     if (this.meshes[i].offsetPt0) {
       hasFibers = true;
       continue;
+    }
+    if (shader.isMatcap) {
+      //texture slot 6 used by other functions, so explicitly switch on
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture);
     }
     gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(

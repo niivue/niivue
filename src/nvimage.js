@@ -148,6 +148,7 @@ export function NVImageFromUrlOptions(
   useQFormNotSForm = false,
   alphaThreshold = false,
   colorMapNegative = "",
+  frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
@@ -171,6 +172,7 @@ export function NVImageFromUrlOptions(
     cal_minNeg,
     cal_maxNeg,
     colorbarVisible,
+    frame4D,
   };
 }
 
@@ -193,6 +195,7 @@ export function NVImageFromUrlOptions(
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
  * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @param {number} [frame4D = 0] volume displayed, 0 indexed, must be less than nFrame4D
  * @param {function} [onColorMapChange=()=>{}] callback for color map change
  * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
@@ -210,6 +213,7 @@ export function NVImage(
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
+  frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
@@ -240,16 +244,15 @@ export function NVImage(
   this.name = name;
   this.id = uuidv4();
   this._colorMap = colorMap;
-  this.frame4D = 0; //indexed from 0!
   this._opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colorMapNegative = colorMapNegative;
+  this.frame4D = frame4D; //indexed from 0!
   this.cal_minNeg = cal_minNeg;
   this.cal_maxNeg = cal_maxNeg;
   this.colorbarVisible = colorbarVisible;
-
   this.visible = visible;
   this.modulationImage = null;
   this.modulateAlpha = false; //does modulation image influence RGB (false) or A (true)
@@ -321,9 +324,11 @@ export function NVImage(
     default:
       throw new Error("Image type not supported");
   }
+  if (typeof this.hdr.magic == "number") this.hdr.magic = "n+1"; //fix for issue 481, where magic is set to the number 1 rather than a string
   this.nFrame4D = 1;
   for (let i = 4; i < 7; i++)
     if (this.hdr.dims[i] > 1) this.nFrame4D *= this.hdr.dims[i];
+  this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1);
   this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
   let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
   if (nVol4D !== this.nFrame4D)
@@ -2128,11 +2133,110 @@ NVImage.prototype.calculateRAS = function () {
   rotM[3 + 0 * 4] = flip[0];
   rotM[3 + 1 * 4] = flip[1];
   rotM[3 + 2 * 4] = flip[2];
-  this.toRAS = mat4.clone(rotM);
+  this.toRAS = mat4.clone(rotM); //webGL unit textures
+  //voxel based column-major,
+  rotM[3] = 0;
+  rotM[7] = 0;
+  rotM[11] = 0;
+  rotM[12] = 0;
+  if (
+    this.permRAS[0] === -1 ||
+    this.permRAS[1] === -1 ||
+    this.permRAS[2] === -1
+  )
+    rotM[12] = header.dims[1] - 1;
+  rotM[13] = 0;
+  if (
+    this.permRAS[0] === -2 ||
+    this.permRAS[1] === -2 ||
+    this.permRAS[2] === -2
+  )
+    rotM[13] = header.dims[2] - 1;
+  rotM[14] = 0;
+  if (
+    this.permRAS[0] === -3 ||
+    this.permRAS[1] === -3 ||
+    this.permRAS[2] === -3
+  )
+    rotM[14] = header.dims[3] - 1;
+  this.toRASvox = mat4.clone(rotM);
   log.debug(this.hdr.dims);
   log.debug(this.dimsRAS);
   this.calculateOblique();
 };
+
+//identical results to img2RAS(): improved clarity but slower
+/*NVImage.prototype.img2RASslow = function () {
+  let perm = this.permRAS.slice();
+  if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) return this.img; //image is already in RAS
+  let hdr = this.hdr;
+  //preallocate/clone image (only 3D for 4D datasets!)
+  let imgRAS = this.img.slice(
+    0,
+    hdr.dims[1] * hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+  );
+  //output dimensions: RAS
+  let ox = this.dimsRAS[1]
+  let oy = this.dimsRAS[2]
+  let oz = this.dimsRAS[3]
+  //input dimensions: RAW
+  let ix = hdr.dims[1]
+  let ixy = ix * hdr.dims[2]
+  let j = 0;
+  for (let z = 0; z < oz; z++) {
+    for (let y = 0; y < oy; y++) {
+      for (let x = 0; x < ox; x++) {
+        let pos = vec4.fromValues(x, y, z, 1);
+        vec4.transformMat4(pos, pos, this.toRASvox);
+        let vx = pos[0] + pos[1] * ix + pos[2] * ixy;
+        imgRAS[j++] = this.img[vx];
+      } //for x
+    } //for y
+  } //for z
+  return imgRAS;
+}; // img2RASslow()*/
+
+//Reorient raw image data to RAS
+// note that GPU-based orient shader is much faster
+NVImage.prototype.img2RAS = function () {
+  let perm = this.permRAS.slice();
+  if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) return this.img; //image is already in RAS
+  let hdr = this.hdr;
+  //preallocate/clone image (only 3D for 4D datasets!)
+  let imgRAS = this.img.slice(
+    0,
+    hdr.dims[1] * hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+  );
+  let aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])];
+  let outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]];
+  let inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]]; //increment i,j,k
+  let outStep = [
+    inStep[aperm[0] - 1],
+    inStep[aperm[1] - 1],
+    inStep[aperm[2] - 1],
+  ];
+  let outStart = [0, 0, 0];
+  for (let p = 0; p < 3; p++) {
+    //flip dimensions
+    if (perm[p] < 0) {
+      outStart[p] = outStep[p] * (outdim[p] - 1);
+      outStep[p] = -outStep[p];
+    }
+  }
+  let j = 0;
+  for (let z = 0; z < outdim[2]; z++) {
+    let zi = outStart[2] + z * outStep[2];
+    for (let y = 0; y < outdim[1]; y++) {
+      let yi = outStart[1] + y * outStep[1];
+      for (let x = 0; x < outdim[0]; x++) {
+        let xi = outStart[0] + x * outStep[0];
+        imgRAS[j] = this.img[xi + yi + zi];
+        j++;
+      } //for x
+    } //for y
+  } //for z
+  return imgRAS;
+}; // img2RAS()
 
 // not included in public docs
 // convert voxel location (row, column slice, indexed from 0) to world space
@@ -2284,8 +2388,8 @@ NVImage.prototype.calMinMax = function () {
     mn = Math.min(this.img[i], mn);
     mx = Math.max(this.img[i], mx);
   }
-  var mnScale = this.intensityRaw2Scaled(this.hdr, mn);
-  var mxScale = this.intensityRaw2Scaled(this.hdr, mx);
+  var mnScale = this.intensityRaw2Scaled(mn);
+  var mxScale = this.intensityRaw2Scaled(mx);
   if (!this.ignoreZeroVoxels) nZero = 0;
   nZero += nNan;
   let n2pct = Math.round((nVox - nZero) * this.percentileFrac);
@@ -2347,8 +2451,8 @@ NVImage.prototype.calMinMax = function () {
       if (lo == 0 && hi == nBins - 1) ok = 0;
     } //while not ok
   } //if lo == hi
-  var pct2 = this.intensityRaw2Scaled(this.hdr, lo / scl + mn);
-  var pct98 = this.intensityRaw2Scaled(this.hdr, hi / scl + mn);
+  var pct2 = this.intensityRaw2Scaled(lo / scl + mn);
+  var pct98 = this.intensityRaw2Scaled(hi / scl + mn);
   if (
     this.hdr.cal_min < this.hdr.cal_max &&
     this.hdr.cal_min >= mnScale &&
@@ -2367,10 +2471,16 @@ NVImage.prototype.calMinMax = function () {
 }; //calMinMax
 
 // not included in public docs
-// convert voxel intesnity from stored value to scaled intensity
-NVImage.prototype.intensityRaw2Scaled = function (hdr, raw) {
-  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
-  return raw * hdr.scl_slope + hdr.scl_inter;
+// convert voxel intensity from stored value to scaled intensity
+NVImage.prototype.intensityRaw2Scaled = function (raw) {
+  if (this.hdr.scl_slope === 0) hdr.scl_slope = 1.0;
+  return raw * this.hdr.scl_slope + this.hdr.scl_inter;
+};
+
+// convert voxel intensity from scaled intensity to stored value
+NVImage.prototype.intensityScaled2Raw = function (scaled) {
+  if (this.hdr.scl_slope === 0) this.hdr.scl_slope = 1.0;
+  return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope;
 };
 
 // not included in public docs
@@ -2583,6 +2693,7 @@ NVImage.loadFromUrl = async function ({
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
+  frame4D = 0,
   isManifest = false,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
@@ -2591,7 +2702,6 @@ NVImage.loadFromUrl = async function ({
   }
   let nvimage = null;
   let dataBuffer = null;
-
   // fetch data associated with image
   if (isManifest) {
     dataBuffer = await NVImage.fetchDicomData(url);
@@ -2645,7 +2755,6 @@ NVImage.loadFromUrl = async function ({
     }
     pairedImgData = await resp.arrayBuffer();
   }
-
   if (dataBuffer) {
     nvimage = new NVImage(
       dataBuffer,
@@ -2661,6 +2770,7 @@ NVImage.loadFromUrl = async function ({
       visible,
       useQFormNotSForm,
       colorMapNegative,
+      frame4D,
       imageType
     );
   } else {
@@ -2724,6 +2834,7 @@ NVImage.loadFromFile = async function ({
   visible = true,
   useQFormNotSForm = false,
   colorMapNegative = "",
+  frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
@@ -2755,6 +2866,7 @@ NVImage.loadFromFile = async function ({
       visible,
       useQFormNotSForm,
       colorMapNegative,
+      frame4D,
       imageType
     );
   } catch (err) {
@@ -2924,23 +3036,36 @@ String.prototype.getBytes = function () {
 // not included in public docs
 // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
 NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
-  const { nx, ny, nz } = this.getImageMetadata();
+  //const { nx, ny, nz } = this.getImageMetadata();
+  let nx = this.hdr.dims[1];
+  let ny = this.hdr.dims[2];
+  let nz = this.hdr.dims[3];
+  let perm = this.permRAS.slice();
+  if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+    let pos = vec4.fromValues(x, y, z, 1);
+    vec4.transformMat4(pos, pos, this.toRASvox);
+    x = pos[0];
+    y = pos[1];
+    z = pos[2];
+  } //image is already in RAS
+  let vx = x + y * nx + z * nx * ny;
+
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
-    let vx = 4 * (x + y * nx + z * nx * ny);
+    vx *= 4;
     //convert rgb to luminance
     return Math.round(
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
   if (this.hdr.datatypeCode === this.DT_RGB) {
-    let vx = 3 * (x + y * nx + z * nx * ny);
+    vx *= 3;
     //convert rgb to luminance
     return Math.round(
       this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
     );
   }
   let vol = frame4D * nx * ny * nz;
-  let i = this.img[x + y * nx + z * nx * ny + vol];
+  let i = this.img[vx + vol];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 
@@ -3186,6 +3311,7 @@ NVImage.prototype.getImageOptions = function () {
       this.visible, // visible
       this.useQFormNotSForm, // useQFormNotSForm
       this.colorMapNegative, // colorMapNegative
+      this.frame4D,
       this.imageType // imageType
     );
   } catch (e) {
