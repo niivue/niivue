@@ -25,7 +25,9 @@
       <label for="check2">Statistical outline</label>
       <input type="checkbox" id="check2" unchecked>
       <label for="check10">HighDPI</label> 
-      <input type="checkbox" id="check10" name="check10" checked>
+      <input type="checkbox" id="check10" checked>
+      <label for="check11">MeshXRay</label> 
+      <input type="checkbox" id="check11" checked>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -71,6 +73,11 @@
       document.getElementById("check10").addEventListener("change", doCheck10Click)
       function doCheck10Click() {
         nv1.setHighResolutionCapable(this.checked)
+      }
+      document.getElementById("check11").addEventListener("change", doCheck11Click)
+      function doCheck11Click() {
+        nv1.opts.isMeshXRay = this.checked
+        nv1.drawScene();
       }
       document.getElementById("matCaps").addEventListener("change", doMatCap)
       function doMatCap(){

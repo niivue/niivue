@@ -4096,7 +4096,7 @@ Niivue.prototype.init = async function () {
   log.info("renderer: ", renderer);
   //firefox masks vendor and renderer for privacy
   let glInfo = this.gl.getParameter(this.gl.RENDERER);
-  log.info("glInfo: ", glInfo);
+  log.info("firefox renderer: ", glInfo); //Useful with firefox "Intel(R) HD Graphics" useless in Chrome and Safari "WebKit WebGL"
   this.gl.clearDepth(0.0);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
@@ -7268,7 +7268,8 @@ Niivue.prototype.draw3D = function (
     );
     return;
   }
-  this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
+  if (this.opts.isMeshXRay)
+    this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
