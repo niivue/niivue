@@ -4045,6 +4045,8 @@ Niivue.prototype.createCustomMeshShader = function (
   m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
   m.shader.use(this.gl);
   m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  m.shader.normLoc = m.shader.uniforms["normMtx"];
+  m.shader.opacityLoc = m.shader.uniforms["opacity"];
   return m;
 };
 
@@ -4327,6 +4329,8 @@ Niivue.prototype.init = async function () {
     else m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+    m.shader.normLoc = m.shader.uniforms["normMtx"];
+    m.shader.opacityLoc = m.shader.uniforms["opacity"];
     m.shader.isMatcap = m.Name === "Matcap";
     if (m.shader.isMatcap) this.gl.uniform1i(m.shader.uniforms["matCap"], 5);
   }
@@ -7317,10 +7321,11 @@ Niivue.prototype.drawMesh3D = function (
     shader.use(this.gl); // set Shader
     //set shader uniforms
     gl.uniformMatrix4fv(shader.mvpLoc, false, m);
-    gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
-    gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
-    gl.uniform1f(shader.uniforms["opacity"], alpha);
-
+    //gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
+    //gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
+    //gl.uniform1f(shader.uniforms["opacity"], alpha);
+    gl.uniformMatrix4fv(shader.normLoc, false, normMtx);
+    gl.uniform1f(shader.opacityLoc, alpha);
     if (this.meshes[i].indexCount < 3) continue;
     if (this.meshes[i].offsetPt0) {
       hasFibers = true;
