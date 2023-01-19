@@ -2473,8 +2473,11 @@ Niivue.prototype.mouseMove = function mouseMove(x, y) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
   if (this.inRenderTile(x, y) < 0) return;
-  this.scene.renderAzimuth += x - this.mousePos[0];
-  this.scene.renderElevation += y - this.mousePos[1];
+  let dx = (x - this.mousePos[0]) / this.uiData.dpr;
+  let dy = (y - this.mousePos[1]) / this.uiData.dpr;
+  if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+  this.scene.renderAzimuth += dx;
+  this.scene.renderElevation += dy;
   this.mousePos = [x, y];
   this.drawScene();
 }; // mouseMove()
@@ -4089,9 +4092,11 @@ Niivue.prototype.init = async function () {
   let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
   let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
   let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
-  // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
+  //firefox masks vendor and renderer for privacy
+  let glInfo = this.gl.getParameter(this.gl.RENDERER);
+  log.info("glInfo: ", glInfo);
   this.gl.clearDepth(0.0);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
