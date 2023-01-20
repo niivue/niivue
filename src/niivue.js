@@ -541,7 +541,7 @@ Niivue.prototype.off = function (event) {
  */
 Niivue.prototype.attachToCanvas = async function (canvas) {
   this.canvas = canvas;
-  this.gl = this.canvas.getContext("webgl2");
+  this.gl = this.canvas.getContext("webgl2", { alpha: true, antialias: false });
   if (!this.gl) {
     alert(
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
