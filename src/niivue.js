@@ -472,8 +472,8 @@ Niivue.prototype.saveScene = function (filename = "") {
  * @example niivue = new Niivue().attachTo('gl')
  * @example niivue.attachTo('gl')
  */
-Niivue.prototype.attachTo = async function (id, isAntiAllias = false) {
-  await this.attachToCanvas(document.getElementById(id), isAntiAllias);
+Niivue.prototype.attachTo = async function (id, isAntiAlias = null) {
+  await this.attachToCanvas(document.getElementById(id), isAntiAlias);
   log.debug("attached to element with id: ", id);
   return this;
 }; // attachTo
@@ -541,12 +541,16 @@ Niivue.prototype.off = function (event) {
  */
 Niivue.prototype.attachToCanvas = async function (
   canvas,
-  isAntiAllias = false
+  isAntiAlias = null
 ) {
   this.canvas = canvas;
+  if (isAntiAlias === null){
+    isAntiAlias = navigator.hardwareConcurrency > 6;
+    log.debug("AntiAlias ", isAntiAlias, " CPUs ", navigator.hardwareConcurrency);
+  }
   this.gl = this.canvas.getContext("webgl2", {
     alpha: true,
-    antialias: isAntiAllias,
+    antialias: isAntiAlias,
   });
   if (!this.gl) {
     alert(
@@ -556,6 +560,7 @@ Niivue.prototype.attachToCanvas = async function (
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
     );
   }
+
   console.log("NIIVUE VERSION ", __NIIVUE_VERSION__); // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
