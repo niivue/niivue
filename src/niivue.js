@@ -472,8 +472,8 @@ Niivue.prototype.saveScene = function (filename = "") {
  * @example niivue = new Niivue().attachTo('gl')
  * @example niivue.attachTo('gl')
  */
-Niivue.prototype.attachTo = async function (id) {
-  await this.attachToCanvas(document.getElementById(id));
+Niivue.prototype.attachTo = async function (id, isAntiAllias = false) {
+  await this.attachToCanvas(document.getElementById(id), isAntiAllias);
   log.debug("attached to element with id: ", id);
   return this;
 }; // attachTo
@@ -539,9 +539,15 @@ Niivue.prototype.off = function (event) {
  * niivue = new Niivue()
  * niivue.attachToCanvas(document.getElementById(id))
  */
-Niivue.prototype.attachToCanvas = async function (canvas) {
+Niivue.prototype.attachToCanvas = async function (
+  canvas,
+  isAntiAllias = false
+) {
   this.canvas = canvas;
-  this.gl = this.canvas.getContext("webgl2", { alpha: true, antialias: false });
+  this.gl = this.canvas.getContext("webgl2", {
+    alpha: true,
+    antialias: isAntiAllias,
+  });
   if (!this.gl) {
     alert(
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
