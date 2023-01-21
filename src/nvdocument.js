@@ -118,7 +118,7 @@ export const DEFAULT_OPTIONS = {
   thumbnail: "",
   maxDrawUndoBitmaps: 8,
   sliceType: SLICE_TYPE.MULTIPLANAR,
-  isMeshXRay: false,
+  meshXRay: 0.0,
 };
 
 /**Creates and instance of NVDocument

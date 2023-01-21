@@ -539,14 +539,16 @@ Niivue.prototype.off = function (event) {
  * niivue = new Niivue()
  * niivue.attachToCanvas(document.getElementById(id))
  */
-Niivue.prototype.attachToCanvas = async function (
-  canvas,
-  isAntiAlias = null
-) {
+Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
   this.canvas = canvas;
-  if (isAntiAlias === null){
+  if (isAntiAlias === null) {
     isAntiAlias = navigator.hardwareConcurrency > 6;
-    log.debug("AntiAlias ", isAntiAlias, " CPUs ", navigator.hardwareConcurrency);
+    log.debug(
+      "AntiAlias ",
+      isAntiAlias,
+      " CPUs ",
+      navigator.hardwareConcurrency
+    );
   }
   this.gl = this.canvas.getContext("webgl2", {
     alpha: true,
@@ -7080,6 +7082,13 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+    //bork
+    this.gl.activeTexture(this.gl.TEXTURE0);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+    this.gl.activeTexture(this.gl.TEXTURE2);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
+    this.gl.activeTexture(this.gl.TEXTURE7);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
     let shader = this.renderShader;
     if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);
@@ -7279,8 +7288,14 @@ Niivue.prototype.draw3D = function (
     );
     return;
   }
-  if (this.opts.isMeshXRay)
-    this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
+  if (this.opts.meshXRay > 0.0)
+    this.drawMesh3D(
+      false,
+      this.opts.meshXRay,
+      mvpMatrix,
+      modelMatrix,
+      normalMatrix
+    );
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);

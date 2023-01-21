@@ -78,7 +78,7 @@
       }
       document.getElementById("check11").addEventListener("change", doCheck11Click)
       function doCheck11Click() {
-        nv1.opts.isMeshXRay = this.checked
+        nv1.opts.meshXRay = Number(this.checked) * 0.02
         nv1.drawScene();
       }
       document.getElementById("matCaps").addEventListener("change", doMatCap)
