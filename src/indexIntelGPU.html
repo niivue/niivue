@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>NiiVue for FreeSurfer</title>
-  <link rel="stylesheet" href="light.css">
+  <link rel="stylesheet" href="niivue.css">
 </head>
 <body>
     <noscript>
@@ -27,7 +27,7 @@
       <label for="check10">HighDPI</label> 
       <input type="checkbox" id="check10" checked>
       <label for="check11">MeshXRay</label> 
-      <input type="checkbox" id="check11" unchecked>
+      <input type="checkbox" id="check11" checked>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -45,7 +45,9 @@
       </select>
     </footer>
     <script type="module" async>
-      import * as niivue from './niivue.es.js'
+      import { Niivue } from './niivue.js'
+      import {NVImage} from './nvimage.js'
+      import {NVMesh} from './nvmesh.js'
       var slider0 = document.getElementById("meshSlider0")
       slider0.oninput = function() {
           nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'opacity', this.value / 255.0)
@@ -85,21 +87,20 @@
         let matCapName = document.getElementById("matCaps").value
         nv1.loadMatCapTexture("../matcaps/"+matCapName+".jpg")
       }
-      var nv1 = new niivue.Niivue({
+      var nv1 = new Niivue({
        loadingText: 'there are no images',
        backColor: [1, 1, 1, 1],
        show3Dcrosshair: true,
        logging: true,
-       isOrientCube: true,
       })
       var meshLayersList1 = [
-        {url: "../images/lh.curv", colorMap: "gray", cal_min: 0.30, cal_max: 0.5, opacity: 222/255},
-        {url: "../images/boggle.lh.annot", colorMap: "rocket", opacity: 1},
-        {url: "../images/pval.LH.nii.gz", cal_min: 25, cal_max: 35.0, opacity: 1},
+        {url: "../demos/images/lh.curv", colorMap: "gray", cal_min: 0.30, cal_max: 0.5, opacity: 222/255},
+        {url: "../demos/images/boggle.lh.annot", colorMap: "rocket", opacity: 1},
+        {url: "../demos/images/pval.LH.nii.gz", cal_min: 25, cal_max: 35.0, opacity: 1},
       ]
       nv1.attachTo('gl1')
       await nv1.loadMeshes([
-         {url: "../images/lh.pial", layers : meshLayersList1},
+         {url: "../demos/images/lh.pial", layers : meshLayersList1},
       ])
       nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, 'isOutlineBorder', true)
       nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'colorbarVisible', false)

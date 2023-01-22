@@ -97,7 +97,7 @@
         {url: "../images/boggle.lh.annot", colorMap: "rocket", opacity: 1},
         {url: "../images/pval.LH.nii.gz", cal_min: 25, cal_max: 35.0, opacity: 1},
       ]
-      nv1.attachTo('gl1')
+      nv1.attachTo('gl1', false)
       await nv1.loadMeshes([
          {url: "../images/lh.pial", layers : meshLayersList1},
       ])
