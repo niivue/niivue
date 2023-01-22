@@ -548,7 +548,7 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     log.debug(
       "AntiAlias ",
       isAntiAlias,
-      " CPUs ",
+      " Threads ",
       navigator.hardwareConcurrency
     );
   }
@@ -8307,7 +8307,8 @@ Niivue.prototype.drawSceneCore = function () {
 }; // drawSceneCore()
 
 Niivue.prototype.drawScene = async function () {
-  if (this.isBusy) { //limit concurrent draw calls (chrome v FireFox)
+  if (this.isBusy) {
+    //limit concurrent draw calls (chrome v FireFox)
     this.needsRefresh = true;
     return;
   }
@@ -8318,7 +8319,6 @@ Niivue.prototype.drawScene = async function () {
   // https://stackoverflow.com/questions/51710067/webgl-async-operations
   //glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
   await this.gl.finish();
-  if (this.needsRefresh)
-    posString = this.drawScene();
+  if (this.needsRefresh) posString = this.drawScene();
   return posString;
 }; // drawScene()
