@@ -18,6 +18,7 @@
       <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider">
       <label for="threshSlider">Threshold</label>
       <input type="range" min="1" max="59" value="20" class="slider" id="threshSlider">
+      <button id="reset">reset</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -41,6 +42,10 @@
   }
   sliderT.oninput = function() {
     nv1.setMeshProperty(nv1.meshes[0].id, 'edgeMin', this.value * 0.1)
+  }
+  document.getElementById("reset").addEventListener("click", doReset);
+  function doReset(){
+    nv1.setDefaults();
   }
   let connectome = {
     "name": "simpleConnectome",

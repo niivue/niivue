@@ -1560,6 +1560,12 @@ Niivue.prototype.setRadiologicalConvention = function (
   this.updateGLVolume();
 };
 
+Niivue.prototype.setDefaults = function () {
+  this.opts = { ...DEFAULT_OPTIONS };
+  this.scene = { ...this.document.scene };
+  this.updateGLVolume();
+};
+
 /**
  * Limit visibility of mesh in front of a 2D image. Requires world-space mode. Use Infinity to show entire mesh or 0.0 to hide mesh.
  * @param {number} meshThicknessOn2D distance from voxels for clipping mesh
