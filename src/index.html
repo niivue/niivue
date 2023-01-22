@@ -26,6 +26,7 @@
     <option value="slicer3D">slicer3D</option>
     <option value="none">none</option>
     </select>
+    <button id="reset">reset</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -37,6 +38,7 @@
       import { Niivue } from './niivue.js'
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
+      document.getElementById("reset").addEventListener("click", doReset);
       var dropDrag = document.getElementById("dragMode")
       dropDrag.onchange = function() {
         switch(document.getElementById("dragMode").value) {
@@ -74,13 +76,14 @@
       function handleLocationChange(data){   
         document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+data.vox[0]+'×'+data.vox[1]+'×'+data.vox[2]
       }
-      var nv1 = new Niivue({
+      let defaults = {
        loadingText: 'there are no images',
        backColor: [1, 1, 1, 1],
        show3Dcrosshair: true,
        logging: true,
        onLocationChange:handleLocationChange
-      })
+      }
+      var nv1 = new Niivue(defaults)
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
@@ -89,6 +92,9 @@
       await nv1.loadMeshes([
          {url: "../demos/images/connectome.jcon"},
       ])
+      function doReset(){
+        nv1.setDefaults(defaults, true);
+      }
    </script>
 </body>
 </html>

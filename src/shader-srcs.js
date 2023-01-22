@@ -923,16 +923,15 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec4 norm;
 layout(location=2) in vec4 clr;
 uniform mat4 mvpMtx;
-uniform mat4 modelMtx;
+//uniform mat4 modelMtx;
 uniform mat4 normMtx;
 out vec4 vClr;
-out vec3 vN, vL, vV;
+out vec3 vN;
 void main(void) {
 	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
-	vL = normalize(lightPosition);
-	vV = -vec3(modelMtx*vec4(pos,1.0));
+	//vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
 }`;
 
@@ -960,7 +959,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 float stepmix(float edge0, float edge1, float E, float x){
 	float T = clamp(0.5 * (x - edge0 + E) / E, 0.0, 1.0);
@@ -1008,7 +1007,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN, vV;
 out vec4 color;
 void main() {
 	float Ambient = 0.5;
@@ -1028,7 +1027,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
@@ -1056,7 +1055,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
@@ -1097,7 +1096,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	float ambient = 0.35;
@@ -1117,7 +1116,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
@@ -1145,7 +1144,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 //Spherical harmonics constants
 const float C1 = 0.429043;
@@ -1201,16 +1200,14 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec4 norm;
 layout(location=2) in vec4 clr;
 uniform mat4 mvpMtx;
-uniform mat4 modelMtx;
+//uniform mat4 modelMtx;
 uniform mat4 normMtx;
 out vec4 vClr;
-flat out vec3 vN, vL, vV;
+flat out vec3 vN;
 void main(void) {
-	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
-	vL = normalize(lightPosition);
-	vV = -vec3(modelMtx*vec4(pos,1.0));
+	//vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
 }`;
 
@@ -1219,7 +1216,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-flat in vec3 vN, vL, vV;
+flat in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)

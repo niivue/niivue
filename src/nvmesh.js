@@ -1478,11 +1478,9 @@ NVMesh.readCURV = function (buffer, n_vert) {
     mn = Math.min(mn, f32[i]);
     mx = Math.max(mx, f32[i]);
   }
-  //normalize and invert then sqrt
+  //normalize
   let scale = 1.0 / (mx - mn);
-  for (var i = 0; i < f32.length; i++)
-    //f32[i] = Math.sqrt(1.0 - ((f32[i] - mn) * scale));
-    f32[i] = 1.0 - (f32[i] - mn) * scale;
+  for (var i = 0; i < f32.length; i++) f32[i] = 1.0 - (f32[i] - mn) * scale;
   return f32;
 }; // readCURV()
 
