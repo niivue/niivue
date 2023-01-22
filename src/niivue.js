@@ -1560,9 +1560,30 @@ Niivue.prototype.setRadiologicalConvention = function (
   this.updateGLVolume();
 };
 
-Niivue.prototype.setDefaults = function () {
+Niivue.prototype.setDefaults = function (options = {}, resetBriCon = false) {
   this.opts = { ...DEFAULT_OPTIONS };
   this.scene = { ...this.document.scene };
+  // populate Niivue with user supplied options
+  for (const name in options) {
+    if (typeof options[name] === "function") {
+      this[name] = options[name];
+    } else {
+      // this.opts[name] = options[name];
+      this.opts[name] =
+        DEFAULT_OPTIONS[name] === undefined
+          ? DEFAULT_OPTIONS[name]
+          : options[name];
+    }
+  }
+  this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
+  //optional: reset volume contrast and brightness
+  if (resetBriCon && this.volumes && this.volumes.length > 0) {
+    for (let i = 0; i < this.volumes.length; i++) {
+      this.volumes[i].cal_min = this.volumes[i].robust_min;
+      this.volumes[i].cal_max = this.volumes[i].robust_max;
+    }
+  }
+  //display reset image
   this.updateGLVolume();
 };
 
@@ -7088,7 +7109,7 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
-    //bork
+    //next lines optional: these textures should be bound by default
     this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
     this.gl.activeTexture(this.gl.TEXTURE2);

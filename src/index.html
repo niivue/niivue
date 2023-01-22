@@ -39,9 +39,6 @@
       import {NVImage} from './nvimage.js'
       import {NVMesh} from './nvmesh.js'
       document.getElementById("reset").addEventListener("click", doReset);
-      function doReset(){
-        nv1.setDefaults();
-      }
       var dropDrag = document.getElementById("dragMode")
       dropDrag.onchange = function() {
         switch(document.getElementById("dragMode").value) {
@@ -79,13 +76,14 @@
       function handleLocationChange(data){   
         document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+data.vox[0]+'×'+data.vox[1]+'×'+data.vox[2]
       }
-      var nv1 = new Niivue({
+      let defaults = {
        loadingText: 'there are no images',
        backColor: [1, 1, 1, 1],
        show3Dcrosshair: true,
        logging: true,
        onLocationChange:handleLocationChange
-      })
+      }
+      var nv1 = new Niivue(defaults)
       nv1.setRadiologicalConvention(false)
       nv1.attachTo('gl1')
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
@@ -94,6 +92,9 @@
       await nv1.loadMeshes([
          {url: "../demos/images/connectome.jcon"},
       ])
+      function doReset(){
+        nv1.setDefaults(defaults, true);
+      }
    </script>
 </body>
 </html>
