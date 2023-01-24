@@ -165,6 +165,8 @@ const RIGHT_MOUSE_BUTTON = 2;
 export function Niivue(options = {}) {
   this.canvas = null; // the canvas element on the page
   this.gl = null; // the gl context
+  this.isBusy = false;
+  this.needsRefresh = false;
   this.colormapTexture = null;
   this.colormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null;
@@ -546,7 +548,7 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     log.debug(
       "AntiAlias ",
       isAntiAlias,
-      " CPUs ",
+      " Threads ",
       navigator.hardwareConcurrency
     );
   }
@@ -965,7 +967,7 @@ Niivue.prototype.touchEndListener = function (e) {
 // not included in public docs
 // handler for mouse move over canvas
 // note: no test yet
-Niivue.prototype.mouseMoveListener = function (e) {
+Niivue.prototype.mouseMoveListener = async function (e) {
   // move crosshair and change slices if mouse click and move
   if (this.uiData.mousedown) {
     let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
@@ -981,7 +983,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
     ) {
       this.setDragEnd(pos.x, pos.y);
     }
-    this.drawScene();
+    await this.drawScene();
     this.uiData.prevX = this.uiData.currX;
     this.uiData.prevY = this.uiData.currY;
   }
@@ -8073,7 +8075,7 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
 }; // drawMosaic()
 
 // not included in public docs
-Niivue.prototype.drawScene = function () {
+Niivue.prototype.drawSceneCore = function () {
   if (!this.initialized) {
     return; // do not do anything until we are initialized (init will call drawScene).
   }
@@ -8299,8 +8301,24 @@ Niivue.prototype.drawScene = function () {
     this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
-  this.gl.finish();
   this.readyForSync = true; // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
   this.sync();
+  return posString;
+}; // drawSceneCore()
+
+Niivue.prototype.drawScene = async function () {
+  if (this.isBusy) {
+    //limit concurrent draw calls (chrome v FireFox)
+    this.needsRefresh = true;
+    return;
+  }
+  this.isBusy = false;
+  this.needsRefresh = false;
+  let posString = await this.drawSceneCore();
+  //Chrome and Safari get much more bogged down by concurrent draw calls than Safari
+  // https://stackoverflow.com/questions/51710067/webgl-async-operations
+  //glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
+  await this.gl.finish();
+  if (this.needsRefresh) posString = this.drawScene();
   return posString;
 }; // drawScene()
