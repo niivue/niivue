@@ -20,7 +20,7 @@ const kDrawFunc = `
 
 const kRenderFunc =
   `vec3 GetBackPosition(vec3 startPositionTex) {
-	vec3 startPosition = startPositionTex * volScale; 
+	vec3 startPosition = startPositionTex * volScale;
 	vec3 invR = 1.0 / rayDir;
 	vec3 tbot = invR * (vec3(0.0)-startPosition);
 	vec3 ttop = invR * (volScale-startPosition);
@@ -446,7 +446,7 @@ out vec4 color;` +
 			vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
 			vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
 			vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
-			vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);	
+			vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
 			float a = 1.0;
 			if (axCorSag != 2) {
 				a = min(a, texture(overlay, vxR).a);
@@ -712,7 +712,7 @@ uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
-	if ((vx.x < 0.0) || (vx.x > 1.0) || (vx.y < 0.0) || (vx.y > 1.0) || (vx.z < 0.0) || (vx.z > 1.0)) { 
+	if ((vx.x < 0.0) || (vx.x > 1.0) || (vx.y < 0.0) || (vx.y > 1.0) || (vx.z < 0.0) || (vx.z > 1.0)) {
 		//set transparent if out of range
 		//https://webglfundamentals.org/webgl/webgl-3d-textures-repeat-clamp.html
 		FragColor = vec4(0.0, 0.0, 0.0, 0.0);
@@ -721,7 +721,7 @@ void main(void) {
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
 	float mn = cal_min;
 	float mx = cal_max;
-	if (isAlphaThreshold) 
+	if (isAlphaThreshold)
 		mn = 0.0;
 	float r = max(0.00001, abs(mx - mn));
 	mn = min(mn, mx);
@@ -729,15 +729,17 @@ void main(void) {
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = (layer + 0.5)/nlayer;
-	if (!isnan(cal_minNeg))
+	//if (!isnan(cal_minNeg)) //Radeon drivers have issues NaN
+	if (cal_minNeg < cal_maxNeg)
 		y = (layer + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
 	//negative colors
 	mn = cal_minNeg;
 	mx = cal_maxNeg;
-	if (isAlphaThreshold) 
-		mx = 0.0;	
-	if ((!isnan(cal_minNeg)) && ( f < mx)) {
+	if (isAlphaThreshold)
+		mx = 0.0;
+	//if ((!isnan(cal_minNeg)) && ( f < mx)) {
+	if ((cal_minNeg < cal_maxNeg) && ( f < mx)) {
 		r = max(0.00001, abs(mx - mn));
 		mn = min(mn, mx);
 		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
@@ -750,7 +752,7 @@ void main(void) {
 	//	FragColor.a *= texture(modulationVol, vx.xyz).r;
 	//	FragColor.rgb *= texture(modulationVol, vx.xyz).r;
 	if (isAlphaThreshold) {
-		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg)) 
+		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg))
 			FragColor.a = pow(-f / -cal_maxNeg, 2.0);
 		else if ((f > 0.0) && (cal_min > 0.0))
 			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2

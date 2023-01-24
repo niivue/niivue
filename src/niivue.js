@@ -4855,9 +4855,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
-  //if unused colorMapNegative
-  let mnNeg = NaN;
-  let mxNeg = NaN;
+  //if unused colorMapNegative https://github.com/niivue/niivue/issues/490
+  let mnNeg = Number.POSITIVE_INFINITY;
+  let mxNeg = Number.NEGATIVE_INFINITY;
   if (overlayItem.colorMapNegative.length > 0) {
     //assume symmetrical
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
