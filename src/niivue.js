@@ -34,6 +34,7 @@ import {
   fragMeshToonShader,
   fragMeshMatcapShader,
   fragMeshOutlineShader,
+  fragMeshEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
   fragMeshDepthShader,
@@ -290,6 +291,10 @@ export function Niivue(options = {}) {
     {
       Name: "Hemispheric",
       Frag: fragMeshHemiShader,
+    },
+    {
+      Name: "Edge",
+      Frag: fragMeshEdgeShader,
     },
     {
       Name: "Outline",
@@ -7112,12 +7117,13 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     //next lines optional: these textures should be bound by default
-    this.gl.activeTexture(this.gl.TEXTURE0);
+    // these lines can cause warnings, e.g. if drawTexture not used or created
+    /* this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
     this.gl.activeTexture(this.gl.TEXTURE2);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
     this.gl.activeTexture(this.gl.TEXTURE7);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);*/
     let shader = this.renderShader;
     if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);
