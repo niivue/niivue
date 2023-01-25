@@ -7074,11 +7074,12 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     rgbaPixel
   ); // typed array to hold result
   this.selectedObjectId = rgbaPixel[3];
-
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
+    //let mm = this.frac2mm(this.scene.crosshairPos, 0);
+    //this.scene.crosshairPos = this.mm2frac(mm);
     //let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
     return;
   }
@@ -7091,6 +7092,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     leftTopWidthHeight[3];
   //todo: check when top is not zero: leftTopWidthHeight[1]
   let mm = unProject(fracX, fracY, depthZ, mvpMatrix);
+  //n.b. true as renderings are ALWAYS in MM world space. not fractional
   let frac = this.mm2frac(mm, 0, true);
   if (
     frac[0] < 0 ||
@@ -7101,7 +7103,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     frac[2] > 1
   )
     return;
-  this.scene.crosshairPos = this.mm2frac(mm);
+  this.scene.crosshairPos = this.mm2frac(mm, 0, true);
 }; // depthPicker()
 
 // not included in public docs
