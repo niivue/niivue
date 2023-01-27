@@ -10,7 +10,7 @@ test('sets image scale in 3D', async () => {
       crosshairColor: [0, 0, 1, 1] // green
     }
     let nv = new niivue.Niivue(opts = opts)
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
 
     // load one volume object in an array
     var volumeList = [

@@ -6,7 +6,7 @@ beforeEach(async () => {
 test('loadDocumentJSON', async () => {
   let nvols = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     var volumeList = [
       {
         url: "../images/mni152.nii.gz",

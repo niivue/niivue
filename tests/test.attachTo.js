@@ -6,7 +6,7 @@ beforeEach(async () => {
 test('attachTo', async () => {
   let gl = await page.evaluate(async () => {
     nv = new niivue.Niivue()
-    nv = await nv.attachTo('gl')
+    nv = await nv.attachTo('gl', false)
     return nv.gl;
   })
   expect(gl).toBeDefined()

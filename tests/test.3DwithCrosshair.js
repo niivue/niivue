@@ -6,7 +6,7 @@ beforeEach(async () => {
 test('3DwithCrosshair', async () => {
   let nvols = await page.evaluate(async () => {
 		let nv = new niivue.Niivue({show3Dcrosshair:true})
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     // load one volume object in an array
     var volumeList = [
       {

@@ -6,7 +6,7 @@ beforeEach(async () => {
 test('addVolumeByUrl', async () => {
   let nvols = await page.evaluate(async () => {
     nv = new niivue.Niivue()
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     // load one volume object by url with options    
     let options = {
             url: "../images/mni152.nii.gz",

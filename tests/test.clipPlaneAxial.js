@@ -10,7 +10,7 @@ test('volume is properly clipped in axial plane', async () => {
       crosshairColor: [0, 0, 1, 1] // green
     }
     let nv = new niivue.Niivue(opts = opts)
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     nv.setSliceType(nv.sliceTypeRender)
 		nv.setClipPlane([0, 0, -90])
 
