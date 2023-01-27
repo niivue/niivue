@@ -1051,7 +1051,7 @@ void main() {
 	color.a = opacity;
 }`;
 
-//Phong headlight shader for edge enhancement, opposite of fresnel rim lighting
+//Phong: default
 export var fragMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
@@ -1073,7 +1073,7 @@ void main() {
 	color = vec4(d + s, opacity);
 }`;
 
-//Phong: default
+//Phong headlight shader for edge enhancement, opposite of fresnel rim lighting
 export var fragMeshEdgeShader = `#version 300 es
 precision highp int;
 precision highp float;
