@@ -34,6 +34,7 @@ import {
   fragMeshToonShader,
   fragMeshMatcapShader,
   fragMeshOutlineShader,
+  fragMeshEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
   fragMeshDepthShader,
@@ -290,6 +291,10 @@ export function Niivue(options = {}) {
     {
       Name: "Hemispheric",
       Frag: fragMeshHemiShader,
+    },
+    {
+      Name: "Edge",
+      Frag: fragMeshEdgeShader,
     },
     {
       Name: "Outline",
@@ -4855,9 +4860,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
-  //if unused colorMapNegative
-  let mnNeg = NaN;
-  let mxNeg = NaN;
+  //if unused colorMapNegative https://github.com/niivue/niivue/issues/490
+  let mnNeg = Number.POSITIVE_INFINITY;
+  let mxNeg = Number.NEGATIVE_INFINITY;
   if (overlayItem.colorMapNegative.length > 0) {
     //assume symmetrical
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
@@ -7069,11 +7074,12 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     rgbaPixel
   ); // typed array to hold result
   this.selectedObjectId = rgbaPixel[3];
-
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
+    //let mm = this.frac2mm(this.scene.crosshairPos, 0);
+    //this.scene.crosshairPos = this.mm2frac(mm);
     //let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
     return;
   }
@@ -7086,6 +7092,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     leftTopWidthHeight[3];
   //todo: check when top is not zero: leftTopWidthHeight[1]
   let mm = unProject(fracX, fracY, depthZ, mvpMatrix);
+  //n.b. true as renderings are ALWAYS in MM world space. not fractional
   let frac = this.mm2frac(mm, 0, true);
   if (
     frac[0] < 0 ||
@@ -7096,7 +7103,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     frac[2] > 1
   )
     return;
-  this.scene.crosshairPos = this.mm2frac(mm);
+  this.scene.crosshairPos = this.mm2frac(mm, 0, true);
 }; // depthPicker()
 
 // not included in public docs
@@ -7112,12 +7119,13 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     //next lines optional: these textures should be bound by default
-    this.gl.activeTexture(this.gl.TEXTURE0);
+    // these lines can cause warnings, e.g. if drawTexture not used or created
+    /* this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
     this.gl.activeTexture(this.gl.TEXTURE2);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
     this.gl.activeTexture(this.gl.TEXTURE7);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);*/
     let shader = this.renderShader;
     if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);

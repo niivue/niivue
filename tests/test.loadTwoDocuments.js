@@ -6,7 +6,7 @@ beforeEach(async () => {
 test('loadTwoDocuments', async () => {
   let nvols = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
-    await nv.attachTo('gl')    
+    await nv.attachTo('gl', false)    
     await nv.loadDocumentFromUrl("../images/document/niivue.drawing.nvd")
     // now load a document with no meshes
     await nv.loadDocumentFromUrl("../images/document/niivue.mesh.nvd")

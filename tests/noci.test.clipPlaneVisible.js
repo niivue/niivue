@@ -11,7 +11,7 @@ test('clip plane is rendered when it is set to visible', async () => {
     }
     let nv = new niivue.Niivue(opts = opts)
     
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     nv.sliceType = nv.sliceTypeRender;
     nv.clipPlaneObject3D.isVisible = true;
 

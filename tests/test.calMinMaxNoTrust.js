@@ -11,7 +11,7 @@ test('calMinMax do not trust header cal min max', async () => {
       trustCalMinMax: false
     }
     let nv = new niivue.Niivue(opts = opts)
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
 
     // load one volume object in an array
     var volumeList = [

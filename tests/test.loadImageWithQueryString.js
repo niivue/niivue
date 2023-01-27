@@ -7,7 +7,7 @@ beforeEach(async () => {
 test('loadImageWithQueryString', async () => {
   let nvols = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     // load one volume object in an array
     var volumeList = [
       {

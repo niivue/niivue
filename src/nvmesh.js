@@ -560,6 +560,8 @@ NVMesh.prototype.updateMesh = function (gl) {
         layer.cal_min = Math.max(0, layer.cal_min);
         layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
       }
+      if (!layer.hasOwnProperty("isTransparentBelowCalMin"))
+        layer.isTransparentBelowCalMin = true;
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
       if (!layer.isOutlineBorder) {
         //blend colors for each voxel

@@ -6,7 +6,7 @@ beforeEach(async () => {
 test('defaultOptions', async () => {
   let opts = await page.evaluate(async () => {
     let nv = new niivue.Niivue()
-    await nv.attachTo('gl')
+    await nv.attachTo('gl', false)
     return nv.opts
   })
 
