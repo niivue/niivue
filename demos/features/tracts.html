@@ -9,27 +9,27 @@
   </head>
   <body>
     <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong>niivue requires JavaScript. Please enable it to continue.</strong>
     </noscript>
     <header>
-		<label for="fiberLengthSlider">Length</label>
-		<input type="range" min="1" max="80" value="3" class="slider" id="fiberLengthSlider">
-		<label for="fiberDitherSlider">Dither</label>
-		<input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
-		<label for="fiberColor">Choose fiber coloration:</label>
-		<select name="fiberColor" id="fiberColor"">
-		  <option value="Global">Global direction</option>
-		  <option value="Local">Local direction</option>
-		  <option value="DPV0">First Per Vertex Type (if available)</option>
-		  <option value="DPS0">First Per Streamline Type (if available)</option>
-		</select>	  
-		<label for="fiberDecimation">Fiber reduction:</label>
-		<select name="fiberDecimation" id="fiberDecimation"">
-		  <option value="1">100%</option>
-		  <option value="2">50%</option>
-		  <option value="4">25%</option>
-		  <option value="10">10%</option>
-		</select>
+        <label for="fiberLengthSlider">Length</label>
+        <input type="range" min="1" max="80" value="3" class="slider" id="fiberLengthSlider">
+        <label for="fiberDitherSlider">Dither</label>
+        <input type="range" min="0" max="10" value="1" class="slider" id="fiberDitherSlider">
+        <label for="fiberColor">Choose fiber coloration:</label>
+        <select id="fiberColor">
+          <option value="Global">Global direction</option>
+          <option value="Local">Local direction</option>
+          <option value="DPV0">First Per Vertex Type (if available)</option>
+          <option value="DPS0">First Per Streamline Type (if available)</option>
+        </select>      
+        <label for="fiberDecimation">Fiber reduction:</label>
+        <select id="fiberDecimation">
+          <option value="1">100%</option>
+          <option value="2">50%</option>
+          <option value="4">25%</option>
+          <option value="10">10%</option>
+        </select>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -39,41 +39,33 @@
 <script src="./niivue.umd.js">
 </script>
 <script>
-	var slider = document.getElementById("fiberLengthSlider");
-	slider.oninput = function() {
-		nv1.setMeshProperty(nv1.meshes[0].id, 'fiberLength', this.value)
-	}
-	var slider2 = document.getElementById("fiberDitherSlider");
-	slider2.oninput = function() {
-		nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
-	}
-	var drop = document.getElementById("fiberColor")
-	drop.onchange = function() {
-		const colorName = document.getElementById("fiberColor").value
-		nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', colorName)
-	}
-	var dropD = document.getElementById("fiberDecimation")
-	dropD.onchange = function() {
-		const stride = document.getElementById("fiberDecimation").value
-		nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDecimationStride', stride)
-	}
-	var volumeList1 = [
-	// first item is background image
-	 {
-	   url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-	   colorMap: "gray",
-	   opacity: 1,
-	   visible: true,
-	 },
-	] 
-	var nv1 = new niivue.Niivue(({
-		show3Dcrosshair: true,
-		backColor: [0.8, 0.8, 1, 1]}))
-	nv1.setSliceType(nv1.sliceTypeRender)
-	nv1.attachTo('gl1')
-	nv1.loadVolumes(volumeList1)
-	nv1.loadMeshes([
-	 {url: "../images/dpsv.trx", rgba255 : [0, 0, 255, 255]},
-	])
-	nv1.setClipPlane([-0.1, 270, 0])
+    var slider = document.getElementById("fiberLengthSlider")
+    slider.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberLength", this.value)
+    }
+    var slider2 = document.getElementById("fiberDitherSlider")
+    slider2.oninput = function() {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1)
+    }
+    var drop = document.getElementById("fiberColor")
+    drop.onchange = function() {
+        const colorName = document.getElementById("fiberColor").value
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", colorName)
+    }
+    var dropD = document.getElementById("fiberDecimation")
+    dropD.onchange = function() {
+        const stride = document.getElementById("fiberDecimation").value
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberDecimationStride", stride)
+    }
+    var volumeList1 = [
+     {url: "../images/mni152.nii.gz"},
+    ] 
+    var nv1 = new niivue.Niivue(({
+        show3Dcrosshair: true,
+        backColor: [0.8, 0.8, 1, 1]}))
+    nv1.setSliceType(nv1.sliceTypeRender)
+    nv1.attachTo("gl1")
+    nv1.loadVolumes(volumeList1)
+    nv1.loadMeshes([{url: "../images/dpsv.trx"}])
+    nv1.setClipPlane([-0.1, 270, 0])
 </script>

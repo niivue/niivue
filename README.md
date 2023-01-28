@@ -52,12 +52,12 @@ While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can als
     <title>NiiVue</title>
   </head>
   <body>
-    <canvas id="gl"></canvas>
+    <canvas id="gl" width="640" height="640"></canvas>
   </body>
-<script src="https://unpkg.com/@niivue/niivue@0.29.0/dist/niivue.umd.js"></script>
+<script src="https://unpkg.com/@niivue/niivue@0.32.0/dist/niivue.umd.js"></script>
 <script>
  var volumeList = [{url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz"}]
- var nv = new niivue.Niivue()
+ var nv = new niivue.Niivue({isResizeCanvas: false})
  nv.attachTo('gl') 
  nv.loadVolumes(volumeList)
 </script>
