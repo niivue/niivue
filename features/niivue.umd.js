@@ -525,7 +525,7 @@ void main(void) {
 	if ((vx.x < 0.0) || (vx.x > 1.0) || (vx.y < 0.0) || (vx.y > 1.0) || (vx.z < 0.0) || (vx.z > 1.0)) {
 		//set transparent if out of range
 		//https://webglfundamentals.org/webgl/webgl-3d-textures-repeat-clamp.html
-		FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 		return;
 	}
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;

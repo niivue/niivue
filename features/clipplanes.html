@@ -32,7 +32,7 @@
            opacity: 1,
            visible: true,
          },
-        ] 
+        ]
       var nv1 = new niivue.Niivue({
         show3Dcrosshair: false,
         backColor: [1, 1, 1, 1]})
@@ -43,6 +43,7 @@
       nv1.setRenderAzimuthElevation(260, 20)
       nv1.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [222, 164, 164, 255]},
+         {url: "../images/connectome.jcon"},
       ])
       var check = document.getElementById("check1")
       check.onclick = function() {
