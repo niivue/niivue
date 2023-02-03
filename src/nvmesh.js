@@ -3088,6 +3088,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
           datBin = fflate.decompressSync(new Uint8Array(datZ));
         } else datBin = Buffer.from(line.slice(6, -7), "base64");
       }
+
       if (isPts) {
         if (dataType !== 16) console.log("expect positions as FLOAT32");
         positions = new Float32Array(datBin.buffer);
@@ -3128,8 +3129,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
             );
         }
         function Float32Concat(first, second) {
-          var firstLength = first.length,
-            result = new Float32Array(firstLength + second.length);
+          var firstLength = first.length;
+          var result = new Float32Array(firstLength + second.length);
           result.set(first);
           result.set(second, firstLength);
           return result;
@@ -3141,7 +3142,14 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         } else if (dataType === 8) {
           let scalarsInt = new Int32Array(datBin.buffer);
           scalarsNew = Float32Array.from(scalarsInt);
-        } else scalarsNew = new Float32Array(datBin.buffer);
+        } else if (dataType === 16) {
+          scalarsNew = new Float32Array(datBin.buffer);
+        } else if (dataType === 32) {
+          let scalarFloat = new Float64Array(datBin.buffer);
+          scalarsNew = Float32Array.from(scalarFloat);
+        } else {
+          throw new Error(`Invalid dataType: ${dataType}`);
+        }
         scalars = Float32Concat(scalars, scalarsNew);
       }
       continue;
@@ -3199,7 +3207,9 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (!line.includes("CDATA[")) continue;
       this.AnatomicalStructurePrimary = readBracketTag("CDATA[").toUpperCase();
     }
+
     if (!line.startsWith("<DataArray")) continue;
+
     //read DataArray properties
     Dims = [1, 1, 1];
     isGzip = line.includes('Encoding="GZipBase64Binary"');
@@ -3213,6 +3223,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     if (line.includes('DataType="NIFTI_TYPE_UINT8"')) dataType = 2; //DT_UINT8
     if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8; //DT_INT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16; //DT_FLOAT32
+    if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) dataType = 32; //DT_FLOAT64
+
     function readNumericTag(TagName) {
       //Tag 'Dim1' will return 3 for Dim1="3"
       let pos = line.indexOf(TagName);
@@ -3226,6 +3238,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
+
   if (n_vert > 0) return scalars;
   if (
     positions.length > 2 &&
