@@ -3673,7 +3673,7 @@ NVMesh.loadFromUrl = async function ({
     await this.loadLayer(layers[i], nvmesh);
   }
 
-  // apply the new properties...
+  // apply the new properties
   nvmesh.updateMesh(gl);
   return nvmesh;
 };
@@ -3715,7 +3715,7 @@ NVMesh.loadFromFile = async function ({
   layers = [],
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3724,6 +3724,16 @@ NVMesh.loadFromFile = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 /**
