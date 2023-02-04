@@ -299,6 +299,11 @@ export function NVImage(
     case NVIMAGE_TYPE.MHA:
       imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
       break;
+    case NVIMAGE_TYPE.MGH:
+    case NVIMAGE_TYPE.MGZ:
+      imgRaw = this.readMGH(dataBuffer); //to do: pairedImgData
+      break;
+
     case NVIMAGE_TYPE.V:
       imgRaw = this.readECAT(dataBuffer);
       break;
@@ -1227,9 +1232,9 @@ NVImage.prototype.readMGH = function (buffer) {
   let zr = reader.getFloat32(66, false);
   let za = reader.getFloat32(70, false);
   let zs = reader.getFloat32(74, false);
-  //let cr = reader.getFloat32(78, false);
-  //let ca = reader.getFloat32(82, false);
-  //let cs = reader.getFloat32(86, false);
+  let cr = reader.getFloat32(78, false);
+  let ca = reader.getFloat32(82, false);
+  let cs = reader.getFloat32(86, false);
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   if (mtype === 0) {
@@ -1273,24 +1278,19 @@ NVImage.prototype.readMGH = function (buffer) {
     0,
     1
   );
-  let base = 0.0; //0 or 1: are voxels indexed from 0 or 1?
-  let Pcrs = [
-    hdr.dims[1] / 2.0 + base,
-    hdr.dims[2] / 2.0 + base,
-    hdr.dims[3] / 2.0 + base,
-    1,
-  ];
+  let Pcrs = [hdr.dims[1] / 2.0, hdr.dims[2] / 2.0, hdr.dims[3] / 2.0, 1];
+
   let PxyzOffset = [0, 0, 0, 0];
   for (var i = 0; i < 3; i++) {
-    //multiply Pcrs * m
+    PxyzOffset[i] = 0;
     for (var j = 0; j < 3; j++) {
-      PxyzOffset[i] = PxyzOffset[i] + rot44[i + j * 4] * Pcrs[j];
+      PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j];
     }
   }
   hdr.affine = [
-    [rot44[0], rot44[1], rot44[2], PxyzOffset[0]],
-    [rot44[4], rot44[5], rot44[6], PxyzOffset[1]],
-    [rot44[8], rot44[9], rot44[10], PxyzOffset[2]],
+    [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
+    [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
+    [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
     [0, 0, 0, 1],
   ];
   let nBytes =
