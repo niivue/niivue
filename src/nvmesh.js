@@ -3737,8 +3737,8 @@ NVMesh.loadFromFile = async function ({
 };
 
 /**
- * load and return a new NVMesh instance from a file in the browser
- * @param {string} file the file object
+ * load and return a new NVMesh instance from a base64 encoded string
+ * @param {string} [base64=null] the base64 encoded string
  * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
