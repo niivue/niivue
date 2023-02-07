@@ -3563,6 +3563,77 @@ NVMesh.readTRX = async function (buffer) {
   };
 }; // readTRX()
 
+NVMesh.loadLayer = async function (layer, nvmesh) {
+  let buffer;
+
+  function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  if (layer.base64 !== undefined) {
+    // populate buffer with base64 if exists
+    buffer = base64ToArrayBuffer(layer.base64);
+  } else {
+    // fetch url otherwise
+    let response = await fetch(layer.url);
+    if (!response.ok) throw Error(response.statusText);
+    buffer = await response.arrayBuffer();
+  }
+
+  let layerName = null;
+  if (layer.hasOwnProperty("name") && layer.name !== "") {
+    layerName = layer.name;
+  } else {
+    //urlParts = layer.url.split("/");
+    //layerName = urlParts.slice(-1)[0];
+    try {
+      // if a full url like https://domain/path/file.nii.gz?query=filter
+      // parse the url and get the pathname component without the query
+      urlParts = new URL(layer.url).pathname.split("/");
+    } catch (e) {
+      // if a relative url then parse the path (assuming no query)
+      urlParts = layer.url.split("/");
+    }
+    layerName = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
+  }
+  if (layerName.indexOf("?") > -1) {
+    layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
+  }
+
+  let opacity = 0.5;
+  if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
+  let colorMap = "warm";
+  if (layer.hasOwnProperty("colorMap")) colorMap = layer.colorMap;
+  let colorMapNegative = "winter";
+  if (layer.hasOwnProperty("colorMapNegative"))
+    colorMapNegative = layer.colorMapNegative;
+  let useNegativeCmap = false;
+  if (layer.hasOwnProperty("useNegativeCmap"))
+    useNegativeCmap = layer.useNegativeCmap;
+  let cal_min = null;
+  if (layer.hasOwnProperty("cal_min")) cal_min = layer.cal_min;
+  let cal_max = null;
+  if (layer.hasOwnProperty("cal_max")) cal_max = layer.cal_max;
+
+  this.readLayer(
+    layerName,
+    buffer,
+    nvmesh,
+    opacity,
+    colorMap,
+    colorMapNegative,
+    useNegativeCmap,
+    cal_min,
+    cal_max
+  );
+};
+
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -3608,57 +3679,15 @@ NVMesh.loadFromUrl = async function ({
   //var pts = [];
   let buffer = await response.arrayBuffer();
   let nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+
   if (!layers || layers.length < 1) return nvmesh;
+
   for (let i = 0; i < layers.length; i++) {
-    response = await fetch(layers[i].url);
-    if (!response.ok) throw Error(response.statusText);
-    buffer = await response.arrayBuffer();
-    let layerName = null;
-    if (layers[i].hasOwnProperty("name") && layers[i].name !== "") {
-      layerName = layers[i].name;
-    } else {
-      //urlParts = layers[i].url.split("/");
-      //layerName = urlParts.slice(-1)[0];
-      try {
-        // if a full url like https://domain/path/file.nii.gz?query=filter
-        // parse the url and get the pathname component without the query
-        urlParts = new URL(layers[i].url).pathname.split("/");
-      } catch (e) {
-        // if a relative url then parse the path (assuming no query)
-        urlParts = layers[i].url.split("/");
-      }
-      layerName = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
-    }
-    if (layerName.indexOf("?") > -1) {
-      layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
-    }
-    let opacity = 0.5;
-    if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
-    let colorMap = "warm";
-    if (layers[i].hasOwnProperty("colorMap")) colorMap = layers[i].colorMap;
-    let colorMapNegative = "winter";
-    if (layers[i].hasOwnProperty("colorMapNegative"))
-      colorMapNegative = layers[i].colorMapNegative;
-    let useNegativeCmap = false;
-    if (layers[i].hasOwnProperty("useNegativeCmap"))
-      useNegativeCmap = layers[i].useNegativeCmap;
-    let cal_min = null;
-    if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
-    let cal_max = null;
-    if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
-    this.readLayer(
-      layerName,
-      buffer,
-      nvmesh,
-      opacity,
-      colorMap,
-      colorMapNegative,
-      useNegativeCmap,
-      cal_min,
-      cal_max
-    );
+    await this.loadLayer(layers[i], nvmesh);
   }
-  nvmesh.updateMesh(gl); //apply the new properties...
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
   return nvmesh;
 };
 
@@ -3699,7 +3728,7 @@ NVMesh.loadFromFile = async function ({
   layers = [],
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3708,11 +3737,21 @@ NVMesh.loadFromFile = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 /**
- * load and return a new NVMesh instance from a file in the browser
- * @param {string} file the file object
+ * load and return a new NVMesh instance from a base64 encoded string
+ * @param {string} [base64=null] the base64 encoded string
  * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
@@ -3742,7 +3781,7 @@ NVMesh.loadFromBase64 = async function ({
   }
 
   let buffer = base64ToArrayBuffer(base64);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3751,6 +3790,15 @@ NVMesh.loadFromBase64 = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 // not included in public docs
