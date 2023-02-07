@@ -2876,7 +2876,23 @@ NVImage.loadFromFile = async function ({
   return nvimage;
 };
 
-// not included in public docs
+/**
+ * factory function to load and return a new NVImage instance from a base64 encoded string
+ * @constructs NVImage
+ * @param {string} [base64=null] base64 string
+ * @param {string} [name=''] a name for this image. Default is an empty string
+ * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
+ * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
+ * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
+ * @param {boolean} [visible=true] whether or not this image is to be visible
+ * @returns {NVImage} returns a NVImage intance
+ * @example
+ * myImage = NVImage.loadFromBase64('SomeBase64String')
+ */
 NVImage.loadFromBase64 = function ({
   base64 = null,
   name = "",
