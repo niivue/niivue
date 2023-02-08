@@ -120,7 +120,7 @@ export const DEFAULT_OPTIONS = {
   maxDrawUndoBitmaps: 8,
   sliceType: SLICE_TYPE.MULTIPLANAR,
   meshXRay: 0.0,
-  isAntiAlias: null
+  isAntiAlias: null,
 };
 
 /**Creates and instance of NVDocument
