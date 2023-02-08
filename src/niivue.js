@@ -2905,6 +2905,19 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
  * @example
  * niivue = new Niivue()
  * niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
+ * 
+ * Each volume object can have the following properties:
+ * @property {string} url - the url of the image to load
+ * @property {string} name - the name of the image
+ * @property {string} colorMap - the name of the color map to use
+ * @property {string} colorMapNegative - the name of the color map to use for negative values
+ * @property {number} opacity - the opacity of the image
+ * @property {string} urlImgData - the image data to use if header and image are separate files
+ * @property {number} cal_min - the minimum value to display
+ * @property {number} cal_max - the maximum value to display
+ * @property {boolean} trustCalMinMax - whether to trust the cal_min and cal_max values in the header
+ * @property {boolean} isManifest - whether the image is a manifest file
+ * @property {number} frame4D - the index of the 4D data to load
  */
 Niivue.prototype.loadVolumes = async function (volumeList) {
   this.on("loading", (isLoading) => {
