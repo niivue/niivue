@@ -1948,15 +1948,35 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
 
 /**
  * Open drawing
+ * @param {volume} nvimage class
+ * @example niivue.volume("volume");
+ */
+Niivue.prototype.binarize = async function (volume) {
+  let dims = volume.hdr.dims;
+  let vx = dims[1] * dims[2] * dims[3];
+  let img = new Uint8Array(vx);
+  for (let i = 0; i < vx; i++) {
+    if (volume.img[i] !== 0) img[i] = 1;
+  }
+  volume.img = null;
+  volume.img = img;
+  volume.hdr.datatypeCode = 2; //DT_UNSIGNED_CHAR
+  volume.hdr.cal_min = 0;
+  volume.hdr.cal_max = 1;
+}; // binarize()
+
+/**
+ * Open drawing
  * @param {string} filename of NIfTI format drawing
  * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
  */
-Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
+Niivue.prototype.loadDrawingFromUrl = async function (fnm, isBinarize = false) {
   if (this.drawBitmap) log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
   let ok = false;
   try {
     let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+    if (isBinarize) await this.binarize(volume);
     ok = this.loadDrawing(volume);
   } catch (err) {
     console.error("loadDrawingFromUrl() failed to load " + fnm);
