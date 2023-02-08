@@ -7,7 +7,7 @@ beforeEach(async () => {
 test('loadPreviews', async () => {
   let loadedDocuments = await page.evaluate(async () => {        
     let documents = [];
-    var documentUrls = ["../images/document/niivue.basic.nvd", "../images/document/niivue.drawing.nvd", "../images/document/niivue.mesh.nvd"];     
+    var documentUrls = ["./images/document/niivue.basic.nvd", "./images/document/niivue.drawing.nvd", "./images/document/niivue.mesh.nvd"];     
     for(const documentUrl of documentUrls ) {
       let doc = await niivue.NVDocument.loadFromUrl(documentUrl)
       documents.push(doc)      

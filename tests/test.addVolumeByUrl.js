@@ -9,7 +9,7 @@ test('addVolumeByUrl', async () => {
     await nv.attachTo('gl', false)
     // load one volume object by url with options    
     let options = {
-            url: "../images/mni152.nii.gz",
+            url: "./images/mni152.nii.gz",
             volume: { hdr: null, img: null },
             name: "mni152.nii.gz",
             colorMap: "gray",

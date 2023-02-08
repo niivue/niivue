@@ -15,7 +15,7 @@ test('readRGBRender', async () => {
     // load one volume object in an array
     var volumeList = [
       {
-        url: "../images/ct_perfusion.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+        url: "./images/ct_perfusion.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
         volume: { hdr: null, img: null },
         name: "ct_perfusion.nii.gz",
         colorMap: "gray",
