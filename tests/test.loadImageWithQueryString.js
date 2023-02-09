@@ -11,7 +11,7 @@ test('loadImageWithQueryString', async () => {
     // load one volume object in an array
     var volumeList = [
       {
-        url: "../images/mni152.nii.gz?test=test",
+        url: "./images/mni152.nii.gz?test=test",
         colorMap: "gray",
         opacity: 1,
         visible: true,

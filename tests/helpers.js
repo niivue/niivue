@@ -17,7 +17,8 @@ function seconds(n) {
   return 1000 * n
 }
 
-module.exports.httpServerAddress = 'http://localhost:8888/index.html'
-module.exports.httpServerAddressSync = 'http://localhost:8888/sync.html'
+module.exports.httpServerAddress = 'http://localhost:8888/tests/index.html'
+module.exports.httpServerAddressSync = 'http://localhost:8888/tests/sync.html'
+module.exports.httpServerAddressDemos = 'http://localhost:8888/demos/features/'
 module.exports.snapshot = snapshot
 module.exports.seconds = seconds

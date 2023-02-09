@@ -18,7 +18,7 @@ test('clip plane is rendered when it is set to visible', async () => {
     // load one volume object in an array
     var volumeList = [
       {
-        url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+        url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
         volume: { hdr: null, img: null },
         name: "mni152.nii.gz",
         colorMap: "gray",

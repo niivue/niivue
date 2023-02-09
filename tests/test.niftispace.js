@@ -20,7 +20,7 @@ test.each(files)('niftispace_%s', async (file) => {
 		// load one volume object in an array
 		var volumeList = [
 			{
-				url: `/images/nifti_space/${file}`,
+				url: `./images/nifti_space/${file}`,
 				colorMap: "gray",
 				opacity: 1,
 				visible: true,
