@@ -10,7 +10,7 @@ test('removeVolumeByUrl', async () => {
     // load one volume object in an array
     var volumeList = [
       {
-        url: "../images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+        url: "./images/mni152.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
         volume: { hdr: null, img: null },
         name: "mni152.nii.gz",
         colorMap: "gray",
@@ -18,7 +18,7 @@ test('removeVolumeByUrl', async () => {
         visible: true,
       },
       {
-        url: "../images/hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
+        url: "./images/hippo.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
         volume: { hdr: null, img: null },
         name: "hippo.nii.gz",
         colorMap: "winter",
@@ -28,7 +28,7 @@ test('removeVolumeByUrl', async () => {
     ]
     await nv.loadVolumes(volumeList)
 	// move the background to the top of the stack now
-	nv.removeVolumeByUrl("../images/mni152.nii.gz");
+	nv.removeVolumeByUrl("./images/mni152.nii.gz");
     return nv.volumes.length
   })
 

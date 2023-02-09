@@ -10,7 +10,7 @@ test('loadDicomManifest', async () => {
     // load one volume object in an array
     var volumeList = [
       {
-        url: "../images/dicom/niivue-manifest.txt",
+        url: "./images/dicom/niivue-manifest.txt",
         name: "mni152.nii.gz",
         colorMap: "gray",
         opacity: 1,

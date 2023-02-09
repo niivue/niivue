@@ -8,7 +8,7 @@ test('zeroLike creates clone of object with all zeros', async () => {
     const volumeList1 = [
       // first item is background image
         {
-          url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: "./images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
           volume: {hdr: null, img: null},
           name: "mni152.nii.gz",
           colorMap: "gray",

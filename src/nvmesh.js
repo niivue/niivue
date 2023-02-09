@@ -3587,6 +3587,7 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
   }
 
   let layerName = null;
+  let urlParts = [];
   if (layer.hasOwnProperty("name") && layer.name !== "") {
     layerName = layer.name;
   } else {
@@ -3599,8 +3600,9 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
     } catch (e) {
       // if a relative url then parse the path (assuming no query)
       urlParts = layer.url.split("/");
+    } finally {
+      layerName = urlParts.slice(-1)[0];
     }
-    layerName = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
   }
   if (layerName.indexOf("?") > -1) {
     layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any

@@ -9,7 +9,7 @@ test('loadDocumentJSON', async () => {
     await nv.attachTo('gl', false)
     var volumeList = [
       {
-        url: "../images/mni152.nii.gz",
+        url: "./images/mni152.nii.gz",
         volume: { hdr: null, img: null },
         name: "mni152.nii.gz",
         colorMap: "gray",
@@ -17,7 +17,7 @@ test('loadDocumentJSON', async () => {
         visible: true,
       },
       {
-        url: "../images/hippo.nii.gz",
+        url: "./images/hippo.nii.gz",
         volume: { hdr: null, img: null },
         name: "hippo.nii.gz",
         colorMap: "winter",
