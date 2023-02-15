@@ -1,7 +1,7 @@
 html {
-    height: auto;
-    min-height: 100%;
-    margin: 0;
+  height: auto;
+  min-height: 100%;
+  margin: 0;
 }
 body {
   display: flex;
