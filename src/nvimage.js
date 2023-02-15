@@ -2486,7 +2486,7 @@ function hdrToArrayBuffer(hdr, isDrawing8 = false) {
 
 // not included in public docs
 // see niivue.saveImage() for wrapper of this function
-NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
+NVImage.prototype.saveToUint8Array = async function (fnm, drawing8 = null) {
   let isDrawing8 = !(drawing8 == null);
   let hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8);
   let opad = new Uint8Array(4);
@@ -2511,6 +2511,10 @@ NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
   } else {
     saveData = odata;
   }
+  return saveData;
+};
+NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
+  let saveData = this.saveToUint8Array(fnm, drawing8);
   let blob = new Blob([saveData.buffer], { type: "application/octet-stream" });
   let blobUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
