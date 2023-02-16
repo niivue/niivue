@@ -36,6 +36,7 @@
   }
   function handleIntensityChange(data){ 
       document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;'+ data.string
+      console.log(data)
   }
   var volumeList1 = [{url: "../images/mni152.nii.gz"}]
   var nv1 = new niivue.Niivue({
