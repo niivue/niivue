@@ -3017,27 +3017,76 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
 NVMesh.readGII = function (buffer, n_vert = 0) {
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
-  var bytes = new Uint8Array(buffer);
+  var chars = new TextDecoder("ascii").decode(buffer);
+  if (chars[0].charCodeAt(0) == 31) {
+    //raw GIFTI saved as .gii.gz is smaller than gz GIFTI due to base64 overhead
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    buffer = raw.buffer;
+    chars = new TextDecoder("ascii").decode(raw.buffer);
+  }
   let pos = 0;
-  function readStrX() {
-    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+  function readXMLtag() {
+    let isEmptyTag = true;
     let startPos = pos;
-    while (pos < len && bytes[pos] !== 10) pos++;
-    pos++; //skip EOLN
-    if (pos - startPos < 1) return "";
-    return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim();
-  }
-  function readStr() {
-    //concatenate lines to return tag <...>
-    let line = readStrX();
-    if (!line.startsWith("<") || line.endsWith(">")) {
-      return line;
+    while (isEmptyTag) {
+      //while (pos < len && chars[pos] === 10) pos++; //skip blank lines
+      while (pos < len && chars[pos] !== "<") pos++; //find tag start symbol: '<' e.g. "<tag>"
+      startPos = pos;
+      while (pos < len && chars[pos] !== ">") pos++; //find tag end symbol: '>' e.g. "<tag>"
+      isEmptyTag = chars[pos - 1] == "/"; // empty tag ends "/>" e.g. "<br/>"
+      if (startPos + 1 < len && chars[startPos + 1] === "/") {
+        // skip end tag "</"
+        pos += 1;
+        isEmptyTag = true;
+      }
+      let endTagPos = pos;
+      if (pos >= len) break;
     }
-    while (pos < len && !line.endsWith(">")) line += readStrX();
-    return line;
+    let tagString = new TextDecoder()
+      .decode(buffer.slice(startPos + 1, pos))
+      .trim();
+    let startTag = tagString.split(" ")[0].trim();
+    //ignore declarations https://stackoverflow.com/questions/60801060/what-does-mean-in-xml
+    let contentStartPos = pos;
+    let contentEndPos = pos;
+    let endPos = pos;
+    if (chars[startPos + 1] !== "?" && chars[startPos + 1] !== "!") {
+      //ignore declarations "<?" and "<!"
+      let endTag = "</" + startTag + ">";
+      contentEndPos = chars.indexOf(endTag, contentStartPos);
+      endPos = contentEndPos + endTag.length - 1;
+    }
+    // <name>content</name>
+    // a    b      c      d
+    // a: startPos
+    // b: contentStartPos
+    // c: contentEndPos
+    // d: endPos
+    return {
+      name: tagString,
+      startPos: startPos,
+      contentStartPos: contentStartPos,
+      contentEndPos: contentEndPos,
+      endPos: endPos,
+    }; //, 'startTagLastPos': startTagLastPos, 'endTagFirstPos': endTagFirstPos, 'endTagLastPos': endTagLastPos];
   }
-  let line = readStr(); //1st line: signature 'mrtrix tracks'
-  if (!line.includes("xml version")) console.log("Not a GIfTI image");
+  let tag = readXMLtag();
+  console.log(tag);
+  if (!tag.name.startsWith("?xml")) {
+    console.log("readGII: Invalid XML file");
+    return null;
+  }
+  while (!tag.name.startsWith("GIFTI") && tag.endPos < len) {
+    tag = readXMLtag();
+  }
+  if (
+    !tag.name.startsWith("GIFTI") ||
+    tag.contentStartPos == tag.contentEndPos
+  ) {
+    console.log("readGII: XML file does not include GIFTI tag");
+    return null;
+  }
+  len = tag.contentEndPos; //only read contents of GIfTI tag
   let positions = [];
   let indices = [];
   let scalars = [];
@@ -3050,21 +3099,22 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
-  //let FreeSurferMatrix = [];
   let nvert = 0;
   //FreeSurfer versions after 20221225 disambiguate if transform has been applied
   // "./mris_convert --to-scanner" store raw vertex positions in scanner space, so transforms should be ignored.
   //  FreeSurfer versions after 20221225 report that the transform is applied by reporting:
   //   <DataSpace><![CDATA[NIFTI_XFORM_SCANNER_ANAT
   let isDataSpaceScanner = false;
-  //let isAscii = false;
-  while (pos < len) {
-    line = readStr();
-    if (line.startsWith("<Data>")) {
+  tag.endPos = tag.contentStartPos; //read the children of the 'GIFTI' tag
+  let line = "";
+  while (tag.endPos < len && tag.name.length > 1) {
+    tag = readXMLtag();
+    if (tag.name.trim() === "Data") {
       if (isVectors) continue;
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
       //Data can be on one to three lines...
-      if (!line.endsWith("</Data>")) line += readStrX();
-      if (!line.endsWith("</Data>")) line += readStrX();
       let datBin = [];
       if (typeof Buffer === "undefined") {
         //raw.gii
@@ -3078,17 +3128,16 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
           return bytes;
         }
         if (isGzip) {
-          let datZ = base64ToUint8(line.slice(6, -7));
+          let datZ = base64ToUint8(line.slice());
           datBin = fflate.decompressSync(new Uint8Array(datZ));
-        } else datBin = base64ToUint8(line.slice(6, -7));
+        } else datBin = base64ToUint8(line.slice());
       } else {
         //if Buffer not defined
         if (isGzip) {
-          let datZ = Buffer.from(line.slice(6, -7), "base64");
+          let datZ = Buffer.from(line.slice(), "base64");
           datBin = fflate.decompressSync(new Uint8Array(datZ));
-        } else datBin = Buffer.from(line.slice(6, -7), "base64");
+        } else datBin = Buffer.from(line.slice(), "base64");
       }
-
       if (isPts) {
         if (dataType !== 16) console.log("expect positions as FLOAT32");
         positions = new Float32Array(datBin.buffer);
@@ -3161,56 +3210,47 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       let epos = line.indexOf("]", spos);
       return line.slice(spos, epos);
     }
-    if (line.startsWith("<Name") && line.includes("VolGeom")) {
-      //the great kludge: attempt to match GIfTI and CIfTI
-      let e = -1;
-      if (line.includes("VolGeomC_R")) e = 0;
-      if (line.includes("VolGeomC_A")) e = 1;
-      if (line.includes("VolGeomC_S")) e = 2;
-      if (!line.includes("<Value")) line = readStr();
-      if (!line.includes("CDATA[")) continue;
-      if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+    if (tag.name.trim() === "DataSpace") {
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
+      if (line.includes("NIFTI_XFORM_SCANNER_ANAT")) isDataSpaceScanner = true;
     }
-    //<TransformedSpace>
-    if (
-      line.startsWith("<DataSpace") &&
-      line.includes("NIFTI_XFORM_SCANNER_ANAT")
-    ) {
-      isDataSpaceScanner = true;
-    }
-    /*
-    //in theory, matrix can store rotations, zooms, but in practice translation so redundant with VolGeomC_*
-    if (line.startsWith("<MatrixData>")) {
-      //yet another kludge for undocumented FreeSurfer transform
-      while (pos < len && !line.endsWith("</MatrixData>"))
-        line += " " + readStrX();
-      line = line.replace("<MatrixData>", "");
-      line = line.replace("</MatrixData>", "");
-      line = line.replace("  ", " ");
-      line = line.trim();
-      var floats = line.split(/\s+/).map(parseFloat);
-      if (floats.length != 16)
-        console.log("Expected MatrixData to have 16 items: '" + line + "'");
-      else {
-        FreeSurferMatrix = mat4.create();
-        for (var i = 0; i < 16; i++) FreeSurferMatrix[i] = floats[i];
+    if (tag.name.trim() === "MD") {
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
+      if (
+        line.includes("AnatomicalStructurePrimary") &&
+        line.includes("CDATA[")
+      ) {
+        this.AnatomicalStructurePrimary =
+          readBracketTag("CDATA[").toUpperCase();
       }
-    }*/
-
-    if (
-      line.startsWith("<Name") &&
-      line.includes("AnatomicalStructurePrimary")
-    ) {
-      //the great kludge: attempt to match GIfTI and CIfTI
-      //unclear how connectome workbench reconciles multiple CIfTI structures with GIfTI mesh
-      if (!line.includes("<Value")) line = readStr();
-      if (!line.includes("CDATA[")) continue;
-      this.AnatomicalStructurePrimary = readBracketTag("CDATA[").toUpperCase();
     }
-
-    if (!line.startsWith("<DataArray")) continue;
-
+    if (tag.name.trim() === "Name") {
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
+      if (line.includes("VolGeom")) {
+        //the great kludge: attempt to match GIfTI and CIfTI
+        let e = -1;
+        if (line.includes("VolGeomC_R")) e = 0;
+        if (line.includes("VolGeomC_A")) e = 1;
+        if (line.includes("VolGeomC_S")) e = 2;
+        if (e < 0) continue;
+        pos = tag.endPos;
+        tag = readXMLtag();
+        line = new TextDecoder()
+          .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+          .trim();
+        if (e >= 0)
+          FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+      }
+    }
     //read DataArray properties
+    if (!tag.name.startsWith("DataArray")) continue;
+    line = tag.name;
     Dims = [1, 1, 1];
     isGzip = line.includes('Encoding="GZipBase64Binary"');
     if (line.includes('Encoding="ASCII"'))
@@ -3224,7 +3264,6 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8; //DT_INT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16; //DT_FLOAT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) dataType = 32; //DT_FLOAT64
-
     function readNumericTag(TagName) {
       //Tag 'Dim1' will return 3 for Dim1="3"
       let pos = line.indexOf(TagName);
@@ -3237,8 +3276,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[0] = readNumericTag("Dim0=");
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
-  } //for each line
-
+  }
   if (n_vert > 0) return scalars;
   if (
     positions.length > 2 &&
