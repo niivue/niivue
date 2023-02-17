@@ -560,6 +560,8 @@ NVMesh.prototype.updateMesh = function (gl) {
         layer.cal_min = Math.max(0, layer.cal_min);
         layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
       }
+      if (!layer.hasOwnProperty("isTransparentBelowCalMin"))
+        layer.isTransparentBelowCalMin = true;
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
       if (!layer.isOutlineBorder) {
         //blend colors for each voxel
@@ -567,7 +569,8 @@ NVMesh.prototype.updateMesh = function (gl) {
           let v255 = Math.round(
             (layer.values[j + frameOffset] - layer.cal_min) * scale255
           );
-          if (v255 < 0) continue;
+          if (v255 < 0 && layer.isTransparentBelowCalMin) continue;
+          v255 = Math.max(0.0, v255);
           v255 = Math.min(255.0, v255) * 4;
           let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
           u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
@@ -679,8 +682,8 @@ NVMesh.prototype.reverseFaces = function (gl) {
 // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
 NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   let layer = this.layers[id];
-  if (!layer.hasOwnProperty(key)) {
-    console.log("mesh does not have property ", key, layer);
+  if (!layer || !layer.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, " for layer ", layer);
     return;
   }
   layer[key] = val;
@@ -1477,10 +1480,9 @@ NVMesh.readCURV = function (buffer, n_vert) {
     mn = Math.min(mn, f32[i]);
     mx = Math.max(mx, f32[i]);
   }
-  //normalize and invert then sqrt
+  //normalize
   let scale = 1.0 / (mx - mn);
-  for (var i = 0; i < f32.length; i++)
-    f32[i] = Math.sqrt(1.0 - (f32[i] - mn) * scale);
+  for (var i = 0; i < f32.length; i++) f32[i] = 1.0 - (f32[i] - mn) * scale;
   return f32;
 }; // readCURV()
 
@@ -2113,6 +2115,8 @@ NVMesh.readLayer = function (
   isOutlineBorder = false
 ) {
   let layer = [];
+  layer.isTransparentBelowCalMin = true;
+  layer.colorbarVisible = true;
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
   if (n_vert < 3) return;
   var re = /(?:\.([^.]+))?$/;
@@ -2124,9 +2128,10 @@ NVMesh.readLayer = function (
   }
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
-  else if (ext === "CRV" || ext === "CURV")
+  else if (ext === "CRV" || ext === "CURV") {
     layer.values = this.readCURV(buffer, n_vert);
-  else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
+    layer.isTransparentBelowCalMin = false;
+  } else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
   else if (ext === "MGH" || ext === "MGZ")
     layer.values = this.readMGH(buffer, n_vert);
   else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
@@ -3083,6 +3088,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
           datBin = fflate.decompressSync(new Uint8Array(datZ));
         } else datBin = Buffer.from(line.slice(6, -7), "base64");
       }
+
       if (isPts) {
         if (dataType !== 16) console.log("expect positions as FLOAT32");
         positions = new Float32Array(datBin.buffer);
@@ -3123,8 +3129,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
             );
         }
         function Float32Concat(first, second) {
-          var firstLength = first.length,
-            result = new Float32Array(firstLength + second.length);
+          var firstLength = first.length;
+          var result = new Float32Array(firstLength + second.length);
           result.set(first);
           result.set(second, firstLength);
           return result;
@@ -3136,7 +3142,14 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         } else if (dataType === 8) {
           let scalarsInt = new Int32Array(datBin.buffer);
           scalarsNew = Float32Array.from(scalarsInt);
-        } else scalarsNew = new Float32Array(datBin.buffer);
+        } else if (dataType === 16) {
+          scalarsNew = new Float32Array(datBin.buffer);
+        } else if (dataType === 32) {
+          let scalarFloat = new Float64Array(datBin.buffer);
+          scalarsNew = Float32Array.from(scalarFloat);
+        } else {
+          throw new Error(`Invalid dataType: ${dataType}`);
+        }
         scalars = Float32Concat(scalars, scalarsNew);
       }
       continue;
@@ -3194,7 +3207,9 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       if (!line.includes("CDATA[")) continue;
       this.AnatomicalStructurePrimary = readBracketTag("CDATA[").toUpperCase();
     }
+
     if (!line.startsWith("<DataArray")) continue;
+
     //read DataArray properties
     Dims = [1, 1, 1];
     isGzip = line.includes('Encoding="GZipBase64Binary"');
@@ -3208,6 +3223,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     if (line.includes('DataType="NIFTI_TYPE_UINT8"')) dataType = 2; //DT_UINT8
     if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8; //DT_INT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16; //DT_FLOAT32
+    if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) dataType = 32; //DT_FLOAT64
+
     function readNumericTag(TagName) {
       //Tag 'Dim1' will return 3 for Dim1="3"
       let pos = line.indexOf(TagName);
@@ -3221,6 +3238,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
   } //for each line
+
   if (n_vert > 0) return scalars;
   if (
     positions.length > 2 &&
@@ -3545,6 +3563,79 @@ NVMesh.readTRX = async function (buffer) {
   };
 }; // readTRX()
 
+NVMesh.loadLayer = async function (layer, nvmesh) {
+  let buffer;
+
+  function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  if (layer.base64 !== undefined) {
+    // populate buffer with base64 if exists
+    buffer = base64ToArrayBuffer(layer.base64);
+  } else {
+    // fetch url otherwise
+    let response = await fetch(layer.url);
+    if (!response.ok) throw Error(response.statusText);
+    buffer = await response.arrayBuffer();
+  }
+
+  let layerName = null;
+  let urlParts = [];
+  if (layer.hasOwnProperty("name") && layer.name !== "") {
+    layerName = layer.name;
+  } else {
+    //urlParts = layer.url.split("/");
+    //layerName = urlParts.slice(-1)[0];
+    try {
+      // if a full url like https://domain/path/file.nii.gz?query=filter
+      // parse the url and get the pathname component without the query
+      urlParts = new URL(layer.url).pathname.split("/");
+    } catch (e) {
+      // if a relative url then parse the path (assuming no query)
+      urlParts = layer.url.split("/");
+    } finally {
+      layerName = urlParts.slice(-1)[0];
+    }
+  }
+  if (layerName.indexOf("?") > -1) {
+    layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
+  }
+
+  let opacity = 0.5;
+  if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
+  let colorMap = "warm";
+  if (layer.hasOwnProperty("colorMap")) colorMap = layer.colorMap;
+  let colorMapNegative = "winter";
+  if (layer.hasOwnProperty("colorMapNegative"))
+    colorMapNegative = layer.colorMapNegative;
+  let useNegativeCmap = false;
+  if (layer.hasOwnProperty("useNegativeCmap"))
+    useNegativeCmap = layer.useNegativeCmap;
+  let cal_min = null;
+  if (layer.hasOwnProperty("cal_min")) cal_min = layer.cal_min;
+  let cal_max = null;
+  if (layer.hasOwnProperty("cal_max")) cal_max = layer.cal_max;
+
+  this.readLayer(
+    layerName,
+    buffer,
+    nvmesh,
+    opacity,
+    colorMap,
+    colorMapNegative,
+    useNegativeCmap,
+    cal_min,
+    cal_max
+  );
+};
+
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -3590,57 +3681,15 @@ NVMesh.loadFromUrl = async function ({
   //var pts = [];
   let buffer = await response.arrayBuffer();
   let nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible);
+
   if (!layers || layers.length < 1) return nvmesh;
+
   for (let i = 0; i < layers.length; i++) {
-    response = await fetch(layers[i].url);
-    if (!response.ok) throw Error(response.statusText);
-    buffer = await response.arrayBuffer();
-    let layerName = null;
-    if (layers[i].hasOwnProperty("name") && layers[i].name !== "") {
-      layerName = layers[i].name;
-    } else {
-      //urlParts = layers[i].url.split("/");
-      //layerName = urlParts.slice(-1)[0];
-      try {
-        // if a full url like https://domain/path/file.nii.gz?query=filter
-        // parse the url and get the pathname component without the query
-        urlParts = new URL(layers[i].url).pathname.split("/");
-      } catch (e) {
-        // if a relative url then parse the path (assuming no query)
-        urlParts = layers[i].url.split("/");
-      }
-      layerName = urlParts.slice(-1)[0]; // name will be last part of url (e.g. some/url/image.nii.gz --> image.nii.gz
-    }
-    if (layerName.indexOf("?") > -1) {
-      layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
-    }
-    let opacity = 0.5;
-    if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
-    let colorMap = "warm";
-    if (layers[i].hasOwnProperty("colorMap")) colorMap = layers[i].colorMap;
-    let colorMapNegative = "winter";
-    if (layers[i].hasOwnProperty("colorMapNegative"))
-      colorMapNegative = layers[i].colorMapNegative;
-    let useNegativeCmap = false;
-    if (layers[i].hasOwnProperty("useNegativeCmap"))
-      useNegativeCmap = layers[i].useNegativeCmap;
-    let cal_min = null;
-    if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
-    let cal_max = null;
-    if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
-    this.readLayer(
-      layerName,
-      buffer,
-      nvmesh,
-      opacity,
-      colorMap,
-      colorMapNegative,
-      useNegativeCmap,
-      cal_min,
-      cal_max
-    );
+    await this.loadLayer(layers[i], nvmesh);
   }
-  nvmesh.updateMesh(gl); //apply the new properties...
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
   return nvmesh;
 };
 
@@ -3681,7 +3730,7 @@ NVMesh.loadFromFile = async function ({
   layers = [],
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3690,11 +3739,21 @@ NVMesh.loadFromFile = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 /**
- * load and return a new NVMesh instance from a file in the browser
- * @param {string} file the file object
+ * load and return a new NVMesh instance from a base64 encoded string
+ * @param {string} [base64=null] the base64 encoded string
  * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
@@ -3724,7 +3783,7 @@ NVMesh.loadFromBase64 = async function ({
   }
 
   let buffer = base64ToArrayBuffer(base64);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3733,6 +3792,15 @@ NVMesh.loadFromBase64 = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 // not included in public docs

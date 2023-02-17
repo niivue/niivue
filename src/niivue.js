@@ -32,7 +32,9 @@ import {
   vertMeshShader,
   fragMeshShader,
   fragMeshToonShader,
+  fragMeshMatcapShader,
   fragMeshOutlineShader,
+  fragMeshEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
   fragMeshDepthShader,
@@ -54,6 +56,7 @@ export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
 export { NVController } from "./nvcontroller";
 import { Log } from "./logger";
+import defaultMatCap from "./matcaps/Shiny.jpg";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
 import { colortables } from "./colortables";
@@ -163,6 +166,8 @@ const RIGHT_MOUSE_BUTTON = 2;
 export function Niivue(options = {}) {
   this.canvas = null; // the canvas element on the page
   this.gl = null; // the gl context
+  this.isBusy = false;
+  this.needsRefresh = false;
   this.colormapTexture = null;
   this.colormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null;
@@ -187,6 +192,7 @@ export function Niivue(options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
+  this.matCapTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
   this.thumbnailVisible = false;
@@ -287,6 +293,10 @@ export function Niivue(options = {}) {
       Frag: fragMeshHemiShader,
     },
     {
+      Name: "Edge",
+      Frag: fragMeshEdgeShader,
+    },
+    {
       Name: "Outline",
       Frag: fragMeshOutlineShader,
     },
@@ -297,6 +307,10 @@ export function Niivue(options = {}) {
     {
       Name: "Flat",
       Frag: fragFlatMeshShader,
+    },
+    {
+      Name: "Matcap",
+      Frag: fragMeshMatcapShader,
     },
   ];
 
@@ -465,8 +479,8 @@ Niivue.prototype.saveScene = function (filename = "") {
  * @example niivue = new Niivue().attachTo('gl')
  * @example niivue.attachTo('gl')
  */
-Niivue.prototype.attachTo = async function (id) {
-  await this.attachToCanvas(document.getElementById(id));
+Niivue.prototype.attachTo = async function (id, isAntiAlias = null) {
+  await this.attachToCanvas(document.getElementById(id), isAntiAlias);
   log.debug("attached to element with id: ", id);
   return this;
 }; // attachTo
@@ -532,9 +546,21 @@ Niivue.prototype.off = function (event) {
  * niivue = new Niivue()
  * niivue.attachToCanvas(document.getElementById(id))
  */
-Niivue.prototype.attachToCanvas = async function (canvas) {
+Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
   this.canvas = canvas;
-  this.gl = this.canvas.getContext("webgl2");
+  if (isAntiAlias === null) {
+    isAntiAlias = navigator.hardwareConcurrency > 6;
+    log.debug(
+      "AntiAlias ",
+      isAntiAlias,
+      " Threads ",
+      navigator.hardwareConcurrency
+    );
+  }
+  this.gl = this.canvas.getContext("webgl2", {
+    alpha: true,
+    antialias: isAntiAlias,
+  });
   if (!this.gl) {
     alert(
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
@@ -543,6 +569,7 @@ Niivue.prototype.attachToCanvas = async function (canvas) {
       "unable to get webgl2 context. Perhaps this browser does not support webgl2"
     );
   }
+
   console.log("NIIVUE VERSION ", __NIIVUE_VERSION__); // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
@@ -949,7 +976,7 @@ Niivue.prototype.touchEndListener = function (e) {
 // not included in public docs
 // handler for mouse move over canvas
 // note: no test yet
-Niivue.prototype.mouseMoveListener = function (e) {
+Niivue.prototype.mouseMoveListener = async function (e) {
   // move crosshair and change slices if mouse click and move
   if (this.uiData.mousedown) {
     let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
@@ -965,7 +992,7 @@ Niivue.prototype.mouseMoveListener = function (e) {
     ) {
       this.setDragEnd(pos.x, pos.y);
     }
-    this.drawScene();
+    await this.drawScene();
     this.uiData.prevX = this.uiData.currX;
     this.uiData.prevY = this.uiData.currY;
   }
@@ -980,7 +1007,6 @@ Niivue.prototype.resetBriCon = function (msg = null) {
   //this.volumes[0].cal_max = this.volumes[0].global_max;
   // don't reset bri/con if the user is in 3D mode and double clicks
   if (this.uiData.isDragging) return;
-  if (this.volumes.length < 1) return; //issue468
   let isRender = false;
   if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true;
   let x = 0;
@@ -1001,13 +1027,14 @@ Niivue.prototype.resetBriCon = function (msg = null) {
     // test if render is one of the tiles
     if (this.inRenderTile(x, y) >= 0) isRender = true;
   }
-
   if (isRender) {
     this.uiData.mouseDepthPicker = true;
     this.drawScene();
-    this.drawScene(); // this duplicate drawScene is necessary for deptch picking. DO NOT REMOVE
+    this.drawScene(); // this duplicate drawScene is necessary for depth picking. DO NOT REMOVE
     return;
   }
+  if (this.opts.dragMode === DRAG_MODE.slicer3D) return;
+  if (this.volumes.length < 1) return; //issue468, AFTER render depth picking
   if (this.uiData.doubleTouch) return;
   this.volumes[0].cal_min = this.volumes[0].robust_min;
   this.volumes[0].cal_max = this.volumes[0].robust_max;
@@ -1312,7 +1339,6 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
   this.document.addImageOptions(volume, imageOptions);
-
   volume.onColorMapChange = this.onColorMapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.onVolumeAddedFromUrl) {
@@ -1542,6 +1568,33 @@ Niivue.prototype.setRadiologicalConvention = function (
   isRadiologicalConvention
 ) {
   this.opts.isRadiologicalConvention = isRadiologicalConvention;
+  this.updateGLVolume();
+};
+
+Niivue.prototype.setDefaults = function (options = {}, resetBriCon = false) {
+  this.opts = { ...DEFAULT_OPTIONS };
+  this.scene = { ...this.document.scene };
+  // populate Niivue with user supplied options
+  for (const name in options) {
+    if (typeof options[name] === "function") {
+      this[name] = options[name];
+    } else {
+      // this.opts[name] = options[name];
+      this.opts[name] =
+        DEFAULT_OPTIONS[name] === undefined
+          ? DEFAULT_OPTIONS[name]
+          : options[name];
+    }
+  }
+  this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
+  //optional: reset volume contrast and brightness
+  if (resetBriCon && this.volumes && this.volumes.length > 0) {
+    for (let i = 0; i < this.volumes.length; i++) {
+      this.volumes[i].cal_min = this.volumes[i].robust_min;
+      this.volumes[i].cal_max = this.volumes[i].robust_max;
+    }
+  }
+  //display reset image
   this.updateGLVolume();
 };
 
@@ -1899,15 +1952,35 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
 
 /**
  * Open drawing
+ * @param {volume} nvimage class
+ * @example niivue.volume("volume");
+ */
+Niivue.prototype.binarize = async function (volume) {
+  let dims = volume.hdr.dims;
+  let vx = dims[1] * dims[2] * dims[3];
+  let img = new Uint8Array(vx);
+  for (let i = 0; i < vx; i++) {
+    if (volume.img[i] !== 0) img[i] = 1;
+  }
+  volume.img = null;
+  volume.img = img;
+  volume.hdr.datatypeCode = 2; //DT_UNSIGNED_CHAR
+  volume.hdr.cal_min = 0;
+  volume.hdr.cal_max = 1;
+}; // binarize()
+
+/**
+ * Open drawing
  * @param {string} filename of NIfTI format drawing
  * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
  */
-Niivue.prototype.loadDrawingFromUrl = async function (fnm) {
+Niivue.prototype.loadDrawingFromUrl = async function (fnm, isBinarize = false) {
   if (this.drawBitmap) log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
   let ok = false;
   try {
     let volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm));
+    if (isBinarize) await this.binarize(volume);
     ok = this.loadDrawing(volume);
   } catch (err) {
     console.error("loadDrawingFromUrl() failed to load " + fnm);
@@ -2473,8 +2546,11 @@ Niivue.prototype.mouseMove = function mouseMove(x, y) {
   this.mousePos = [x, y];
 
   if (this.inRenderTile(x, y) < 0) return;
-  this.scene.renderAzimuth += x - this.mousePos[0];
-  this.scene.renderElevation += y - this.mousePos[1];
+  let dx = (x - this.mousePos[0]) / this.uiData.dpr;
+  let dy = (y - this.mousePos[1]) / this.uiData.dpr;
+  if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+  this.scene.renderAzimuth += dx;
+  this.scene.renderElevation += dy;
   this.drawScene();
 }; // mouseMove()
 
@@ -2834,6 +2910,19 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
  * @example
  * niivue = new Niivue()
  * niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
+ *
+ * Each volume object can have the following properties:
+ * @property {string} url - the url of the image to load
+ * @property {string} name - the name of the image
+ * @property {string} colorMap - the name of the color map to use
+ * @property {string} colorMapNegative - the name of the color map to use for negative values
+ * @property {number} opacity - the opacity of the image
+ * @property {string} urlImgData - the image data to use if header and image are separate files
+ * @property {number} cal_min - the minimum value to display
+ * @property {number} cal_max - the maximum value to display
+ * @property {boolean} trustCalMinMax - whether to trust the cal_min and cal_max values in the header
+ * @property {boolean} isManifest - whether the image is a manifest file
+ * @property {number} frame4D - the index of the 4D data to load
  */
 Niivue.prototype.loadVolumes = async function (volumeList) {
   this.on("loading", (isLoading) => {
@@ -2868,6 +2957,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       cal_max: volumeList[i].cal_max,
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
+      frame4D: volumeList[i].frame4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);
@@ -2968,7 +3058,7 @@ Niivue.prototype.loadConnectome = async function (json) {
  * generate a blank canvas for the pen tool
  * @example niivue.createEmptyDrawing()
  */
-Niivue.prototype.createEmptyDrawing = function () {
+Niivue.prototype.createEmptyDrawing = async function () {
   if (!this.back.hasOwnProperty("dims")) return;
   let mn = Math.min(
     Math.min(this.back.dims[1], this.back.dims[2]),
@@ -3345,7 +3435,7 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   }
 };
 
-Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
+Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   let nx = dims[0];
   let nxy = nx * dims[1];
@@ -3402,7 +3492,9 @@ Niivue.prototype.drawFloodFillCore = function (img, seedVx) {
 Niivue.prototype.drawFloodFill = function (
   seedXYZ,
   newColor = 0,
-  growSelectedCluster = 0
+  growSelectedCluster = 0, //if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
+  forceMin = NaN,
+  forceMax = NaN
 ) {
   //3D "paint bucket" fill:
   // set all voxels connected to seed point to newColor
@@ -3436,20 +3528,24 @@ Niivue.prototype.drawFloodFill = function (
   this.drawFloodFillCore(img, seedVx);
   //8. (Optional) work out intensity of selected cluster
   if (growSelectedCluster !== 0) {
-    let backImg = this.volumes[0].img;
+    let backImg = this.volumes[0].img2RAS();
     let mx = backImg[seedVx];
     let mn = mx;
-    for (let i = 1; i < nxyz; i++) {
-      if (img[i] === 2) {
-        mx = Math.max(mx, backImg[i]);
-        mn = Math.min(mn, backImg[i]);
+    if (isFinite(forceMax) && isFinite(forceMin)) {
+      mx = forceMax;
+      mn = forceMin;
+    } else {
+      for (let i = 1; i < nxyz; i++) {
+        if (img[i] === 2) {
+          mx = Math.max(mx, backImg[i]);
+          mn = Math.min(mn, backImg[i]);
+        }
       }
+      if (growSelectedCluster == Number.POSITIVE_INFINITY)
+        mx = growSelectedCluster;
+      if (growSelectedCluster == Number.NEGATIVE_INFINITY)
+        mn = growSelectedCluster;
     }
-    if (growSelectedCluster == Number.POSITIVE_INFINITY)
-      mx = growSelectedCluster;
-    if (growSelectedCluster == Number.NEGATIVE_INFINITY)
-      mn = growSelectedCluster;
-
     log.debug("Intensity range of selected cluster :", mn, mx);
     //second pass:
     for (let i = 1; i < nxyz; i++) {
@@ -3818,6 +3914,12 @@ Niivue.prototype.loadPngAsTexture = function (pngUrl, textureNum) {
         this.gl.activeTexture(this.gl.TEXTURE4);
         this.bmpShader.use(this.gl);
         this.gl.uniform1i(this.bmpShader.uniforms["bmpTexture"], 4);
+      } else if (textureNum === 5) {
+        this.gl.activeTexture(this.gl.TEXTURE5);
+        if (this.matCapTexture !== null)
+          this.gl.deleteTexture(this.matCapTexture);
+        this.matCapTexture = this.gl.createTexture();
+        pngTexture = this.matCapTexture;
       } else {
         this.fontShader.use(this.gl);
         this.gl.activeTexture(this.gl.TEXTURE3);
@@ -3877,6 +3979,11 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
 Niivue.prototype.loadBmpTexture = async function (bmpUrl) {
   await this.loadPngAsTexture(bmpUrl, 4);
 };
+// not included in public docs
+// load font stored as JPG/PNG bitmap with texture unit 5
+Niivue.prototype.loadMatCapTexture = function (bmpUrl) {
+  this.loadPngAsTexture(bmpUrl, 5);
+};
 
 // not included in public docs
 // load font bitmap and metrics
@@ -3932,6 +4039,10 @@ Niivue.prototype.loadFont = async function (
 };
 
 // not included in public docs
+Niivue.prototype.loadDefaultMatCap = async function () {
+  await this.loadMatCapTexture(defaultMatCap);
+};
+// not included in public docs
 Niivue.prototype.loadDefaultFont = async function () {
   await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET);
   this.fontMetrics = this.DEFAULT_FONT_METRICS;
@@ -3954,6 +4065,7 @@ Niivue.prototype.initText = async function () {
     this.fontShader.uniforms["uvLeftTopWidthHeight"];
 
   await this.loadDefaultFont();
+  await this.loadDefaultMatCap();
   this.drawLoadingText(this.loadingText);
 }; // initText()
 
@@ -4021,6 +4133,8 @@ Niivue.prototype.createCustomMeshShader = function (
   m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
   m.shader.use(this.gl);
   m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+  m.shader.normLoc = m.shader.uniforms["normMtx"];
+  m.shader.opacityLoc = m.shader.uniforms["opacity"];
   return m;
 };
 
@@ -4063,9 +4177,11 @@ Niivue.prototype.init = async function () {
   let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
   let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
   let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
-  // await this.loadFont()
   log.info("renderer vendor: ", vendor);
   log.info("renderer: ", renderer);
+  //firefox masks vendor and renderer for privacy
+  let glInfo = this.gl.getParameter(this.gl.RENDERER);
+  log.info("firefox renderer: ", glInfo); //Useful with firefox "Intel(R) HD Graphics" useless in Chrome and Safari "WebKit WebGL"
   this.gl.clearDepth(0.0);
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.cullFace(this.gl.FRONT);
@@ -4303,8 +4419,11 @@ Niivue.prototype.init = async function () {
     else m.shader = new Shader(this.gl, vertMeshShader, m.Frag);
     m.shader.use(this.gl);
     m.shader.mvpLoc = m.shader.uniforms["mvpMtx"];
+    m.shader.normLoc = m.shader.uniforms["normMtx"];
+    m.shader.opacityLoc = m.shader.uniforms["opacity"];
+    m.shader.isMatcap = m.Name === "Matcap";
+    if (m.shader.isMatcap) this.gl.uniform1i(m.shader.uniforms["matCap"], 5);
   }
-
   this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader);
   await this.initText();
   if (this.opts.thumbnail.length > 0) {
@@ -4779,9 +4898,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
-  //if unused colorMapNegative
-  let mnNeg = NaN;
-  let mxNeg = NaN;
+  //if unused colorMapNegative https://github.com/niivue/niivue/issues/490
+  let mnNeg = Number.POSITIVE_INFINITY;
+  let mxNeg = Number.NEGATIVE_INFINITY;
   if (overlayItem.colorMapNegative.length > 0) {
     //assume symmetrical
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
@@ -5196,6 +5315,7 @@ Niivue.prototype.refreshColormaps = function () {
       if (nlayers < 1) continue;
       for (let j = 0; j < nlayers; j++) {
         let layer = this.meshes[i].layers[j];
+        if (!layer.colorbarVisible) continue;
         if (layer.colorMap.length < 1) continue;
         let neg = negMinMax(
           layer.cal_min,
@@ -5379,7 +5499,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
     let texFrac = this.screenXY2TextureFrac(x, y, i);
     if (texFrac[0] < 0) continue; //click not on slice i
-
     if (true) {
       //user clicked on slice i
       if (!isDelta) {
@@ -5389,13 +5508,13 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       }
       // scrolling... not mouse
       if (posChange !== 0) {
-        posNow = this.scene.crosshairPos[2 - axCorSag];
-        posFuture = posNow + posChange;
-        if (posFuture > 1) posFuture = 1;
-        if (posFuture < 0) posFuture = 0;
-        this.scene.crosshairPos[2 - axCorSag] = posFuture;
+        let posNeg = 1;
+        if (posChange < 0) posNeg = -1;
+        let xyz = [0, 0, 0];
+        xyz[2 - axCorSag] = posNeg;
+        this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
         this.drawScene();
-        this.createOnLocationChange();
+        this.createOnLocationChange(axCorSag);
         return;
       }
       this.scene.crosshairPos = texFrac.slice();
@@ -5431,7 +5550,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         this.refreshDrawing(false);
       }
       this.drawScene();
-      this.createOnLocationChange();
+      this.createOnLocationChange(axCorSag);
       return;
     } else {
       //if click in slice i
@@ -6995,11 +7114,12 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     rgbaPixel
   ); // typed array to hold result
   this.selectedObjectId = rgbaPixel[3];
-
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map(
       (x) => x / 255.0
     );
+    //let mm = this.frac2mm(this.scene.crosshairPos, 0);
+    //this.scene.crosshairPos = this.mm2frac(mm);
     //let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
     return;
   }
@@ -7012,6 +7132,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     leftTopWidthHeight[3];
   //todo: check when top is not zero: leftTopWidthHeight[1]
   let mm = unProject(fracX, fracY, depthZ, mvpMatrix);
+  //n.b. true as renderings are ALWAYS in MM world space. not fractional
   let frac = this.mm2frac(mm, 0, true);
   if (
     frac[0] < 0 ||
@@ -7022,7 +7143,7 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
     frac[2] > 1
   )
     return;
-  this.scene.crosshairPos = this.mm2frac(mm);
+  this.scene.crosshairPos = this.mm2frac(mm, 0, true);
 }; // depthPicker()
 
 // not included in public docs
@@ -7037,6 +7158,14 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
+    //next lines optional: these textures should be bound by default
+    // these lines can cause warnings, e.g. if drawTexture not used or created
+    /* this.gl.activeTexture(this.gl.TEXTURE0);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+    this.gl.activeTexture(this.gl.TEXTURE2);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
+    this.gl.activeTexture(this.gl.TEXTURE7);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);*/
     let shader = this.renderShader;
     if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);
@@ -7105,7 +7234,7 @@ Niivue.prototype.drawOrientationCube = function (
   this.gl.disable(this.gl.CULL_FACE);
 }; // drawOrientationCube()
 
-Niivue.prototype.createOnLocationChange = function () {
+Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   //first: provide a string representation
   let [mn, mx, range] = this.sceneExtentsMinMax(true);
   let fov = Math.max(Math.max(range[0], range[1]), range[2]);
@@ -7135,12 +7264,11 @@ Niivue.prototype.createOnLocationChange = function () {
     }
     str += valStr;
     //drawingBitmap
-    let hdr = this.back.hdr;
-    let nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    let dims = this.back.dimsRAS;
+    let nv = dims[1] * dims[2] * dims[3];
     if (this.drawBitmap && this.drawBitmap.length === nv) {
       let vox = this.frac2vox(this.scene.crosshairPos);
-      let vx =
-        vox[0] + vox[1] * hdr.dims[1] + vox[2] * hdr.dims[1] * hdr.dims[2];
+      let vx = vox[0] + vox[1] * dims[1] + vox[2] * dims[1] * dims[2];
       //str += this.drawBitmap[vx].toString();
       str += " " + this.drawLut.labels[this.drawBitmap[vx]];
     }
@@ -7148,6 +7276,7 @@ Niivue.prototype.createOnLocationChange = function () {
 
   let msg = {
     mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    axCorSag: axCorSag,
     vox: this.frac2vox(this.scene.crosshairPos),
     frac: this.scene.crosshairPos,
     xy: [this.mousePos[0], this.mousePos[1]],
@@ -7236,7 +7365,14 @@ Niivue.prototype.draw3D = function (
     );
     return;
   }
-  this.drawMesh3D(false, 0.02, mvpMatrix, modelMatrix, normalMatrix);
+  if (this.opts.meshXRay > 0.0)
+    this.drawMesh3D(
+      false,
+      this.opts.meshXRay,
+      mvpMatrix,
+      modelMatrix,
+      normalMatrix
+    );
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
@@ -7294,14 +7430,20 @@ Niivue.prototype.drawMesh3D = function (
     shader.use(this.gl); // set Shader
     //set shader uniforms
     gl.uniformMatrix4fv(shader.mvpLoc, false, m);
-    gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
-    gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
-    gl.uniform1f(shader.uniforms["opacity"], alpha);
-
+    //gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
+    //gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
+    //gl.uniform1f(shader.uniforms["opacity"], alpha);
+    gl.uniformMatrix4fv(shader.normLoc, false, normMtx);
+    gl.uniform1f(shader.opacityLoc, alpha);
     if (this.meshes[i].indexCount < 3) continue;
     if (this.meshes[i].offsetPt0) {
       hasFibers = true;
       continue;
+    }
+    if (shader.isMatcap) {
+      //texture slot 6 used by other functions, so explicitly switch on
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture);
     }
     gl.bindVertexArray(this.meshes[i].vao);
     gl.drawElements(
@@ -7981,7 +8123,7 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
 }; // drawMosaic()
 
 // not included in public docs
-Niivue.prototype.drawScene = function () {
+Niivue.prototype.drawSceneCore = function () {
   if (!this.initialized) {
     return; // do not do anything until we are initialized (init will call drawScene).
   }
@@ -8207,8 +8349,24 @@ Niivue.prototype.drawScene = function () {
     this.drawGraph();
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
-  this.gl.finish();
   this.readyForSync = true; // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
   this.sync();
+  return posString;
+}; // drawSceneCore()
+
+Niivue.prototype.drawScene = async function () {
+  if (this.isBusy) {
+    //limit concurrent draw calls (chrome v FireFox)
+    this.needsRefresh = true;
+    return;
+  }
+  this.isBusy = false;
+  this.needsRefresh = false;
+  let posString = await this.drawSceneCore();
+  //Chrome and Safari get much more bogged down by concurrent draw calls than Safari
+  // https://stackoverflow.com/questions/51710067/webgl-async-operations
+  //glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
+  await this.gl.finish();
+  if (this.needsRefresh) posString = this.drawScene();
   return posString;
 }; // drawScene()

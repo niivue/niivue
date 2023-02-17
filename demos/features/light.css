@@ -1,7 +1,7 @@
 html {
-    height: auto;
-    min-height: 100%;
-    margin: 0;
+  height: auto;
+  min-height: 100%;
+  margin: 0;
 }
 body {
   display: flex;
@@ -11,7 +11,7 @@ body {
   width: 100%;
   position: absolute;
   font-family: system-ui, Arial, Helvetica, sans-serif;
-  background: #FFFFFF;
+  background: #ffffff;
   color: black;
   user-select: none; /* Standard syntax */
 }

@@ -9,13 +9,15 @@
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
-	<header>
+    <header>
       <label for="check1">Shade Volume</label>
-	  <input type="checkbox" id="check1" name="check1" value="false">
+      <input type="checkbox" id="check1" name="check1" value="false">
       <label for="alphaSlider">Opacity</label>
       <input type="range" min="1" max="255" value="128" class="slider" id="alphaSlider">
-	  <label for="colorSlider">Color</label>
+      <label for="colorSlider">Color</label>
       <input type="range" min="0" max="255" value="0" class="slider" id="colorSlider">
+      <label for="xRaySlider">XRay</label>
+      <input type="range" min="0" max="10" value="0" class="slider" id="xRaySlider">
 </div>
     </header>
     <main>
@@ -30,7 +32,7 @@
            opacity: 1,
            visible: true,
          },
-        ] 
+        ]
       var nv1 = new niivue.Niivue({
         show3Dcrosshair: false,
         backColor: [1, 1, 1, 1]})
@@ -41,28 +43,34 @@
       nv1.setRenderAzimuthElevation(260, 20)
       nv1.loadMeshes([
          {url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255 : [222, 164, 164, 255]},
+         {url: "../images/connectome.jcon"},
       ])
-	  var check = document.getElementById("check1");
+      var check = document.getElementById("check1")
       check.onclick = function() {
-        let clr = nv1.opts.clipPlaneColor;
-        console.log(clr);
-        clr[3] = Math.abs(clr[3]);
-        if (this.checked) clr[3] = -clr[3];
-        nv1.setClipPlaneColor(clr);
+        let clr = nv1.opts.clipPlaneColor
+        console.log(clr)
+        clr[3] = Math.abs(clr[3])
+        if (this.checked) clr[3] = -clr[3]
+        nv1.setClipPlaneColor(clr)
       }
-      var slider = document.getElementById("alphaSlider");
+      var slider = document.getElementById("alphaSlider")
       slider.oninput = function() {
-        let clr = nv1.opts.clipPlaneColor;
-        let rev = (clr[3] < 0);
-        clr[3] = this.value / 255;
-        if (rev) clr[3] = -clr[3];
-        nv1.setClipPlaneColor(clr);
+        let clr = nv1.opts.clipPlaneColor
+        let rev = (clr[3] < 0)
+        clr[3] = this.value / 255
+        if (rev) clr[3] = -clr[3]
+        nv1.setClipPlaneColor(clr)
       }
-      var cslider = document.getElementById("colorSlider");
+      var cslider = document.getElementById("colorSlider")
       cslider.oninput = function() {
-        let clr = nv1.opts.clipPlaneColor;
-        clr[1] = this.value / 255;
-        nv1.setClipPlaneColor(clr);
+        let clr = nv1.opts.clipPlaneColor
+        clr[1] = this.value / 255
+        nv1.setClipPlaneColor(clr)
+      }
+      var xslider = document.getElementById("xRaySlider")
+      xslider.oninput = function() {
+        nv1.opts.meshXRay = this.value * 0.01
+        nv1.drawScene()
       }
     </script>
   </body>

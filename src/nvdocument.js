@@ -73,6 +73,7 @@ export const DRAG_MODE = Object.freeze({
  * @property {string} thumbnail
  * @property {number} maxDrawUndoBitmaps
  * @property {SLICE_TYPE} sliceType
+ * @property {boolean} isAntiAlias
  */
 export const DEFAULT_OPTIONS = {
   textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
@@ -118,6 +119,8 @@ export const DEFAULT_OPTIONS = {
   thumbnail: "",
   maxDrawUndoBitmaps: 8,
   sliceType: SLICE_TYPE.MULTIPLANAR,
+  meshXRay: 0.0,
+  isAntiAlias: null,
 };
 
 /**Creates and instance of NVDocument
@@ -483,6 +486,7 @@ export class NVDocument {
             useQFormNotSForm: false,
             colorMapNegative: "",
             imageType: NVIMAGE_TYPE.NII,
+            frame4D: 0,
           };
         }
         // update image options on current image settings
