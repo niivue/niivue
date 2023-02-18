@@ -3071,7 +3071,6 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     }; //, 'startTagLastPos': startTagLastPos, 'endTagFirstPos': endTagFirstPos, 'endTagLastPos': endTagLastPos];
   }
   let tag = readXMLtag();
-  console.log(tag);
   if (!tag.name.startsWith("?xml")) {
     console.log("readGII: Invalid XML file");
     return null;
@@ -3099,6 +3098,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
+  let isASCII = false;
   let nvert = 0;
   //FreeSurfer versions after 20221225 disambiguate if transform has been applied
   // "./mris_convert --to-scanner" store raw vertex positions in scanner space, so transforms should be ignored.
@@ -3116,7 +3116,22 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         .trim();
       //Data can be on one to three lines...
       let datBin = [];
-      if (typeof Buffer === "undefined") {
+      if (isASCII) {
+        let nvert = Dims[0] * Dims[1] * Dims[2];
+        var lines = line.split(/\s+/); //.split(/[ ,]+/);
+        if (nvert !== lines.length)
+          throw new Error("Unable to parse ASCII GIfTI");
+        if (dataType === 2) dataType = 8; //UInt8 -> Int32
+        if (dataType === 32) dataType = 16; //float64 -> float32
+        if (dataType === 8) {
+          datBin = new Int32Array(nvert);
+          for (var v = 0; v < nvert; v++) datBin[v] = parseInt(lines[v]);
+        }
+        if (dataType === 16) {
+          datBin = new Float32Array(nvert);
+          for (var v = 0; v < nvert; v++) datBin[v] = parseFloat(lines[v]);
+        }
+      } else if (typeof Buffer === "undefined") {
         //raw.gii
         function base64ToUint8(base64) {
           var binary_string = atob(base64);
@@ -3253,8 +3268,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     line = tag.name;
     Dims = [1, 1, 1];
     isGzip = line.includes('Encoding="GZipBase64Binary"');
-    if (line.includes('Encoding="ASCII"'))
-      throw new Error("ASCII GIfTI not supported.");
+    isASCII = line.includes('Encoding="ASCII"');
     isIdx = line.includes('Intent="NIFTI_INTENT_TRIANGLE"');
     isPts = line.includes('Intent="NIFTI_INTENT_POINTSET"');
     isVectors = line.includes('Intent="NIFTI_INTENT_VECTOR"');
