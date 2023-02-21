@@ -2634,7 +2634,7 @@ NVMesh.readNII2 = function (buffer, n_vert = 0) {
   } //if isLittleEndian else big end
   if (datatype === 2) scalars = new Uint8Array(buffer, voxoffset, nvert);
   return scalars;
-};
+}; // readNII2()
 
 // not included in public docs
 // read NIfTI1/2 as vertex colors
@@ -3221,7 +3221,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     function readBracketTag(TagName) {
       let pos = line.indexOf(TagName);
       if (pos < 0) return "";
-      let spos = line.indexOf("[", pos) + 1;
+      let spos = pos + TagName.length;
       let epos = line.indexOf("]", spos);
       return line.slice(spos, epos);
     }
@@ -3240,27 +3240,15 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         line.includes("CDATA[")
       ) {
         this.AnatomicalStructurePrimary =
-          readBracketTag("CDATA[").toUpperCase();
+          readBracketTag("<Value><![CDATA[").toUpperCase();
       }
-    }
-    if (tag.name.trim() === "Name") {
-      line = new TextDecoder()
-        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
-        .trim();
-      if (line.includes("VolGeom")) {
-        //the great kludge: attempt to match GIfTI and CIfTI
+      if (line.includes("VolGeom") && line.includes("CDATA[")) {
         let e = -1;
         if (line.includes("VolGeomC_R")) e = 0;
         if (line.includes("VolGeomC_A")) e = 1;
         if (line.includes("VolGeomC_S")) e = 2;
         if (e < 0) continue;
-        pos = tag.endPos;
-        tag = readXMLtag();
-        line = new TextDecoder()
-          .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
-          .trim();
-        if (e >= 0)
-          FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+        FreeSurferTranlate[e] = parseFloat(readBracketTag("<Value><![CDATA["));
       }
     }
     //read DataArray properties
@@ -3291,6 +3279,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
   }
+  //console.log(`p=${positions.length} i=${indices.length} s=${scalars.length}`);
   if (n_vert > 0) return scalars;
   if (
     positions.length > 2 &&
