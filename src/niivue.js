@@ -723,8 +723,8 @@ Niivue.prototype.mouseDownListener = function (e) {
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
   this.uiData.mousedown = true;
-  console.log("mouse down");
-  console.log(e);
+  log.debug("mouse down");
+  log.debug(e);
   if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
     this.uiData.mouseButtonCenterDown = true;
     this.mouseCenterButtonHandler(e);
@@ -749,8 +749,8 @@ Niivue.prototype.mouseLeftButtonHandler = function (e) {
     this.gl.canvas
   );
   this.mouseClick(pos.x, pos.y);
-  console.log("mouse pos");
-  console.log(pos);
+  log.debug("mouse pos");
+  log.debug(pos);
   this.mouseDown(pos.x, pos.y);
 };
 
@@ -2534,7 +2534,7 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  // if (this.inRenderTile(x, y) < 0) return;
+  if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
 }; // mouseDown()
 
@@ -2543,7 +2543,7 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  this.mousePos = [x, y];
+  
 
   if (this.inRenderTile(x, y) < 0) return;
   let dx = (x - this.mousePos[0]) / this.uiData.dpr;
@@ -2551,6 +2551,7 @@ Niivue.prototype.mouseMove = function mouseMove(x, y) {
   if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
   this.scene.renderAzimuth += dx;
   this.scene.renderElevation += dy;
+  this.mousePos = [x, y];
   this.drawScene();
 }; // mouseMove()
 
@@ -5443,7 +5444,7 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  this.mousePos = [x, y];
+  //this.mousePos = [x, y];
 
   var posNow;
   var posFuture;
