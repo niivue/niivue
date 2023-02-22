@@ -37,6 +37,7 @@
     }
     document.getElementById("matCaps").addEventListener("change", doMatCap);
     function doMatCap(){
+      nv1.setMeshShader(nv1.meshes[0].id, "Matcap")
       let matCapName = document.getElementById("matCaps").value;
       nv1.loadMatCapTexture("../matcaps/"+matCapName+".jpg");
     }
