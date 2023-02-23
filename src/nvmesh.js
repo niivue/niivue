@@ -3015,6 +3015,25 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
 // read GIfTI format mesh
 // https://www.nitrc.org/projects/gifti/
 NVMesh.readGII = function (buffer, n_vert = 0) {
+  let xmlStr = buffer.toString();
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlStr, "text/xml");
+
+  // current implementation does these steps:
+  // 1. check that first tag is <xml> and version attribute exists
+  // 2. look for <Name...> tag and parse VolGeomC... attributes
+  // 3. look for <DataSpace..> tag adn parse NIFTI_XFORM_SCANNER_ANAT
+  // 4. look for <Name...> tag and parse AnatomicalStructurePrimary... attributes
+  // 5. look for <DataArray...> tag and parse loads of attributes
+  // n. parse base64 string in <Data> tag
+
+  // ours should:
+  // 1. check xml tag
+  // 2. look for <Name...> and get attributes
+  // 3. iterate through <DataArray...> tags
+  // 3.1 get attributes of <DataArray>
+  // 3.2 parse <Data> within <DataArray>
+
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
   var bytes = new Uint8Array(buffer);
