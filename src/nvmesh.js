@@ -3020,7 +3020,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   var bytes = new Uint8Array(buffer);
   let pos = 0;
   function readStrX() {
-    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    // check if current position is a new-line character
+    while (pos < len && bytes[pos] === 10) pos++;
     let startPos = pos;
     while (pos < len && bytes[pos] !== 10) pos++;
     pos++; //skip EOLN

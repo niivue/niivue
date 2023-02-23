@@ -2905,7 +2905,7 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
  * @example
  * niivue = new Niivue()
  * niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
- * 
+ *
  * Each volume object can have the following properties:
  * @property {string} url - the url of the image to load
  * @property {string} name - the name of the image
