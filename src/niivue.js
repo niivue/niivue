@@ -2543,7 +2543,6 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  
 
   if (this.inRenderTile(x, y) < 0) return;
   let dx = (x - this.mousePos[0]) / this.uiData.dpr;

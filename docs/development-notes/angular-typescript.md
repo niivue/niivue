@@ -1,6 +1,7 @@
 # Angular and TypeScript
 
 ## Toolchain
+
 To use Niivue in Angular a few development modules are needed.
 
 Expose webpack config for Angular: `npm install -D -E @angular-builders/custom-webpack`
@@ -11,15 +12,16 @@ Add a handler image file types in Niivue.
 `npm install file-loader --save-dev`
 
 Configure the module rules in the webpack.config.js file.
+
 ```js
-const webpack = require('webpack');
+const webpack = require("webpack");
 
 module.exports = {
   plugins: [
     new webpack.DefinePlugin({
-      'STABLE_FEATURE': JSON.stringify(true),
-      'EXPERIMENTAL_FEATURE': JSON.stringify(false)
-    })
+      STABLE_FEATURE: JSON.stringify(true),
+      EXPERIMENTAL_FEATURE: JSON.stringify(false),
+    }),
   ],
   module: {
     rules: [
@@ -27,28 +29,28 @@ module.exports = {
         test: /\.(png|jpe?g|gif)$/i,
         use: [
           {
-            loader: 'file-loader',
+            loader: "file-loader",
           },
         ],
       },
     ],
-  }
+  },
 };
 ```
-
 
 ## Generate type info
 
 Use npx and typescript to generate the type info. You can download the source or use the src from the node_modules directory.
+
 ```console
 foo@bar:~niivue$ npx -p typescript tsc src/*.js --lib ES7 --declaration --allowJs --emitDeclarationOnly --outDir types
 ```
 
 ## Create a module to import type info
+
 At the top of the niivue.d.ts file that is generated, export the namespace so that it can be referenced by your code.
 
 ```ts
-
 /**
  * @typedef {Object} NiivueOptions
  * @property {number} [options.textHeight=0.3] the text height for orientation labels (0 to 1). Zero for no text labels
@@ -82,8 +84,3 @@ export function Niivue(options?: NiivueOptions): void;
 ```
 
 Here is the [documentation](https://www.typescriptlang.org/docs/handbook/declaration-files/templates/module-d-ts.html) if you are interested in how this works.
-
-
-
-
-
