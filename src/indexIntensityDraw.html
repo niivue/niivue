@@ -1,38 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="niivue.css">
-</head>
-<body>
-  <main id="container">
-    <canvas id="gl1"></canvas>
-  </main>
-  <footer>
-    <input type="range" min="0" max="100" value="50" class="slider" id="threshold">
-    <button id="array1D">1D</button>&nbsp;<button id="array3D">3D</button>
-    <x id="location">&nbsp;</x>
-  </footer>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        class="slider"
+        id="threshold"
+      />
+      <button id="array1D">1D</button>&nbsp;<button id="array3D">3D</button>
+      <x id="location">&nbsp;</x>
+    </footer>
+  </body>
 </html>
 <script type="module" async>
-  import { Niivue } from './niivue.js'
-  import {NVImage} from './nvimage.js'
-  import {NVMesh} from './nvmesh.js'
+  import { Niivue } from "./niivue.js";
+  import { NVImage } from "./nvimage.js";
+  import { NVMesh } from "./nvmesh.js";
   function setLabelmapPixel(x, y, z, label) {
     let dx = nv1.back.dims[1];
     let dy = nv1.back.dims[2];
     let dz = nv1.back.dims[3];
     nv1.drawBitmap[x + y * dx + z * dx * dy] = label;
-  };
+  }
 
-  function process(as1D = true){
+  function process(as1D = true) {
     let thresh = document.getElementById("threshold").value;
     if (!nv1.drawBitmap) {
       nv1.createEmptyDrawing();
     }
-    console.time('computeTime')
+    console.time("computeTime");
     let backImg = nv1.volumes[0].img2RAS();
     let nxyz = backImg.length;
     let threshRaw = nv1.volumes[0].intensityScaled2Raw(thresh);
@@ -48,29 +55,35 @@
       for (let z = 0; z < dz; z++) {
         for (let y = 0; y < dy; y++) {
           for (let x = 0; x < dx; x++) {
-            setLabelmapPixel(x,y,z, backImg[i++] > threshRaw);
+            setLabelmapPixel(x, y, z, backImg[i++] > threshRaw);
           } //x
         } //y
       } //z
     }
     nv1.refreshDrawing(true);
-    console.timeEnd('computeTime')
+    console.timeEnd("computeTime");
   }
   document.getElementById("array1D").addEventListener("click", doArray1D);
-  function doArray1D(){
+  function doArray1D() {
     process(true);
   }
   document.getElementById("array3D").addEventListener("click", doArray3D);
-  function doArray3D(){
+  function doArray3D() {
     process(false);
   }
-  function handleLocationChange(data){
-    document.getElementById('location').innerHTML = data.string +'  vx:'+data.vox[0]+'×'+data.vox[1]+'×'+data.vox[2]
+  function handleLocationChange(data) {
+    document.getElementById("location").innerHTML =
+      data.string +
+      "  vx:" +
+      data.vox[0] +
+      "×" +
+      data.vox[1] +
+      "×" +
+      data.vox[2];
   }
-  var nv1 = new Niivue({onLocationChange:handleLocationChange})
-  nv1.attachTo('gl1')
+  var nv1 = new Niivue({ onLocationChange: handleLocationChange });
+  nv1.attachTo("gl1");
   nv1.setInterpolation(true);
-  var volumeList1 = [{url: "../demos/Images/AIL.nii.gz"}]
-  await nv1.loadVolumes(volumeList1)
+  var volumeList1 = [{ url: "../demos/Images/AIL.nii.gz" }];
+  await nv1.loadVolumes(volumeList1);
 </script>
-
