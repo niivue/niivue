@@ -748,10 +748,8 @@ Niivue.prototype.mouseLeftButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
-  this.mouseClick(pos.x, pos.y);
-  log.debug("mouse pos");
-  log.debug(pos);
   this.mouseDown(pos.x, pos.y);
+  this.mouseClick(pos.x, pos.y);
 };
 
 // not included in public docs
@@ -901,11 +899,12 @@ Niivue.prototype.mouseUpListener = function () {
 Niivue.prototype.checkMultitouch = function (e) {
   if (this.uiData.touchdown && !this.uiData.multiTouchGesture) {
     var rect = this.canvas.getBoundingClientRect();
-    this.mouseClick(
+    this.mouseDown(
       e.touches[0].clientX - rect.left,
       e.touches[0].clientY - rect.top
     );
-    this.mouseDown(
+
+    this.mouseClick(
       e.touches[0].clientX - rect.left,
       e.touches[0].clientY - rect.top
     );
@@ -984,8 +983,8 @@ Niivue.prototype.mouseMoveListener = async function (e) {
       this.gl.canvas
     );
     if (this.uiData.mouseButtonLeftDown) {
-      this.mouseClick(pos.x, pos.y);
       this.mouseMove(pos.x, pos.y);
+      this.mouseClick(pos.x, pos.y);
     } else if (
       this.uiData.mouseButtonRightDown ||
       this.uiData.mouseButtonCenterDown
@@ -2534,8 +2533,8 @@ Niivue.prototype.moveVolumeToTop = function (volume) {
 Niivue.prototype.mouseDown = function mouseDown(x, y) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  if (this.inRenderTile(x, y) < 0) return;
   this.mousePos = [x, y];
+  // if (this.inRenderTile(x, y) < 0) return;
 }; // mouseDown()
 
 // not included in public docs
@@ -2543,14 +2542,16 @@ Niivue.prototype.mouseDown = function mouseDown(x, y) {
 Niivue.prototype.mouseMove = function mouseMove(x, y) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-
-  if (this.inRenderTile(x, y) < 0) return;
   let dx = (x - this.mousePos[0]) / this.uiData.dpr;
   let dy = (y - this.mousePos[1]) / this.uiData.dpr;
+  this.mousePos = [x, y];
+
+  if (this.inRenderTile(x, y) < 0) return;
+
   if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
   this.scene.renderAzimuth += dx;
   this.scene.renderElevation += dy;
-  this.mousePos = [x, y];
+
   this.drawScene();
 }; // mouseMove()
 
@@ -5443,7 +5444,6 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  //this.mousePos = [x, y];
 
   var posNow;
   var posFuture;
