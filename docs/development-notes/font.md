@@ -1,6 +1,6 @@
 ## Introduction
 
-There are [several approaches to render text in WebGL](https://stackoverflow.com/questions/25956272/better-quality-text-in-webgl) as described [here](https://css-tricks.com/techniques-for-rendering-text-with-webgl/). NiiVue uses 
+There are [several approaches to render text in WebGL](https://stackoverflow.com/questions/25956272/better-quality-text-in-webgl) as described [here](https://css-tricks.com/techniques-for-rendering-text-with-webgl/). NiiVue uses
 [multi-channel signed distance field](https://github.com/Chlumsky/msdfgen). The default font supplied with NiiVue is [Roboto](https://fonts.google.com/specimen/Roboto?preview.text_type=custom), created with [msdf-atlas-gen](https://github.com/Chlumsky/msdf-atlas-gen) using the command:
 
 ```
@@ -12,6 +12,7 @@ Where chars.txt is a text file with the following characters
 ```
 "\"\\ ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!`?'.,;:()[]{}<>|/@^$-%+=#_&~*"
 ```
+
 Running the command will generate output
 
 ```

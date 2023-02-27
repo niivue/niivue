@@ -5,9 +5,9 @@ name: test-Windows-node16
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -17,18 +17,18 @@ jobs:
         node-version: [16.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: rm package-lock.json
-    - run: npm install
-    - run: npm i puppeteer-core
-    - run: npm run test-win
-    - uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: test_data_and_screenshots
-        path: tests
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - run: rm package-lock.json
+      - run: npm install
+      - run: npm i puppeteer-core
+      - run: npm run test-win
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: test_data_and_screenshots
+          path: tests

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>AFNI HEAD/BRIK format</title>
-    <link rel="stylesheet" href="niivue.css">
+    <link rel="stylesheet" href="niivue.css" />
     <style>
       .unstyled-button {
         border: none;
@@ -18,7 +18,13 @@
   <body>
     <header>
       <button class="unstyled-button">Normalize Graph</button>
-      <input onclick="checkClick(this)" type="checkbox" id="check1" name="check1" value="true">
+      <input
+        onclick="checkClick(this)"
+        type="checkbox"
+        id="check1"
+        name="check1"
+        value="true"
+      />
       <button onclick="prevVolume()">back</button>
       <button onclick="nextVolume()">forward</button>
       &nbsp;<button onclick="animateVolume()">animate</button>
@@ -26,71 +32,63 @@
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
-    <footer id="volume">
-      volume: 0
-    </footer>
+    <footer id="volume">volume: 0</footer>
   </body>
 </html>
-<script src="./niivue.umd.js"> </script>
+<script src="./niivue.umd.js"></script>
 <script>
- var volumeList1 = [
-   // for AFNI head/brik files we need to explicitly specify BOTH
-     {
-	   url: "../images/example4d+orig.HEAD",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-	   urlImgData : "../images/example4d+orig.BRIK.gz",
-       colorMap: "gray",
-       opacity: 1,
-       visible: true,
-     },
-    ] 
-  var nv1 = new niivue.Niivue(
+  var volumeList1 = [
+    // for AFNI head/brik files we need to explicitly specify BOTH
     {
-      onFrameChange: updateFrameValue
-    }
-  )
-  nv1.setRadiologicalConvention(false)
-  nv1.attachTo('gl1')
-  nv1.loadVolumes(volumeList1)
-  nv1.setSliceType(nv1.sliceTypeMultiplanar)
-  nv1.graph.autoSizeMultiplanar = true
-  nv1.opts.multiplanarForceRender = true
-  nv1.graph.normalizeValues = false
-  nv1.graph.opacity = 1.0
+      url: "../images/example4d+orig.HEAD", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+      urlImgData: "../images/example4d+orig.BRIK.gz",
+      colorMap: "gray",
+      opacity: 1,
+      visible: true,
+    },
+  ];
+  var nv1 = new niivue.Niivue({
+    onFrameChange: updateFrameValue,
+  });
+  nv1.setRadiologicalConvention(false);
+  nv1.attachTo("gl1");
+  nv1.loadVolumes(volumeList1);
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  nv1.graph.autoSizeMultiplanar = true;
+  nv1.opts.multiplanarForceRender = true;
+  nv1.graph.normalizeValues = false;
+  nv1.graph.opacity = 1.0;
   function checkClick(cb) {
-    nv1.graph.normalizeValues = cb.checked
-    nv1.updateGLVolume()
+    nv1.graph.normalizeValues = cb.checked;
+    nv1.updateGLVolume();
   }
-  let currentVol = 0
-  function prevVolume(){
-    currentVol = Math.max(currentVol -1, 0)
-    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
-    document.getElementById('volume').innerHTML = 'volume '+currentVol
+  let currentVol = 0;
+  function prevVolume() {
+    currentVol = Math.max(currentVol - 1, 0);
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol);
+    document.getElementById("volume").innerHTML = "volume " + currentVol;
   }
-  function updateFrameValue(volume, index){
-    document.getElementById('volume').innerHTML = 'volume '+index
-    currentVol = index
+  function updateFrameValue(volume, index) {
+    document.getElementById("volume").innerHTML = "volume " + index;
+    currentVol = index;
   }
-  function nextVolume(){
-    currentVol ++
-    currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1)
-    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
-    document.getElementById('volume').innerHTML = 'volume '+currentVol
+  function nextVolume() {
+    currentVol++;
+    currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1);
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol);
+    document.getElementById("volume").innerHTML = "volume " + currentVol;
   }
-  var animationTimer = null
+  var animationTimer = null;
   function doAnimate() {
-    currentVol ++
-    if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id))
-      currentVol = 0
-    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+    currentVol++;
+    if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id)) currentVol = 0;
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol);
   }
   function animateVolume() {
-    if (animationTimer == null)
-      animationTimer = setInterval(doAnimate, 100)
+    if (animationTimer == null) animationTimer = setInterval(doAnimate, 100);
     else {
-      clearInterval(animationTimer)
-      animationTimer = null
+      clearInterval(animationTimer);
+      animationTimer = null;
     }
   }
 </script>
-
-

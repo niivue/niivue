@@ -1,19 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>colormaps</title>
-    <link rel="stylesheet" href="light.css">
+    <link rel="stylesheet" href="light.css" />
   </head>
   <body>
     <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
     </noscript>
     <header>
       <label for="gammaSlider">Gamma</label>
-      <input type="range" min="10" max="400" value="100" class="slider" id="gammaSlider">
+      <input
+        type="range"
+        min="10"
+        max="400"
+        value="100"
+        class="slider"
+        id="gammaSlider"
+      />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -23,37 +33,36 @@
     </footer>
   </body>
 </html>
-<script src="./niivue.umd.js">
-</script>
+<script src="./niivue.umd.js"></script>
 <script>
- var slider = document.getElementById("gammaSlider");
- // Update the current slider value (each time you drag the slider handle)
- slider.oninput = function() {
-   nv1.setGamma(this.value * 0.01)
- }
- var volumeList1 = [
-   // first item is background image
-     {
-       url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-       colorMap: "gray",
-       opacity: 1,
-       visible: true,
-     },
-    ] 
-  var nv1 = new niivue.Niivue()
-  nv1.attachTo('gl1')
-  nv1.loadVolumes(volumeList1)
-  nv1.setSliceType(nv1.sliceTypeMultiplanar)
-  nv1.opts.isColorbar = true
-  cmaps = nv1.colorMaps()
-  cmapEl = document.getElementById('colormaps')
-  for (let i=0; i<cmaps.length; i++) {
-    let btn = document.createElement("button")
-    btn.innerHTML = cmaps[i]
-    btn.onclick = function() {
-      nv1.volumes[0].colorMap = cmaps[i]
-      nv1.updateGLVolume()
-    }
-    cmapEl.appendChild(btn)
+  var slider = document.getElementById("gammaSlider");
+  // Update the current slider value (each time you drag the slider handle)
+  slider.oninput = function () {
+    nv1.setGamma(this.value * 0.01);
+  };
+  var volumeList1 = [
+    // first item is background image
+    {
+      url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+      colorMap: "gray",
+      opacity: 1,
+      visible: true,
+    },
+  ];
+  var nv1 = new niivue.Niivue();
+  nv1.attachTo("gl1");
+  nv1.loadVolumes(volumeList1);
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  nv1.opts.isColorbar = true;
+  cmaps = nv1.colorMaps();
+  cmapEl = document.getElementById("colormaps");
+  for (let i = 0; i < cmaps.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = cmaps[i];
+    btn.onclick = function () {
+      nv1.volumes[0].colorMap = cmaps[i];
+      nv1.updateGLVolume();
+    };
+    cmapEl.appendChild(btn);
   }
 </script>
