@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>basic multiplanar clone image</title>
     <style>
       section {
@@ -11,65 +11,72 @@
       }
     </style>
   </head>
-  <body style="font-family: sans-serif;">
+  <body style="font-family: sans-serif">
     <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
     </noscript>
     <section>
-      <h1>
-        Basic multiplanar cloned image
-      </h1>
+      <h1>Basic multiplanar cloned image</h1>
       <p>
-        The most basic usage of NiiVue is to display a single image in the canvas. 
+        The most basic usage of NiiVue is to display a single image in the
+        canvas.
       </p>
-      <p>
-        <h3>Controls</h3>
-        <ul>
-          <li>move the crosshairs: left mouse click and drag (or click around)</li>
-          <li>slice scrolling: mouse or touch pad scroll up and down (pinch zoom for mobile)</li>
-          <li>change intensity range: right mouse click and drag a region (mobile not supported)</li>
-          <li>reset intensity: left mouse click double click (mobile not supported)</li>
-        </ul>
-      </p>
+      <h3>Controls</h3>
+      <ul>
+        <li>
+          move the crosshairs: left mouse click and drag (or click around)
+        </li>
+        <li>
+          slice scrolling: mouse or touch pad scroll up and down (pinch zoom for
+          mobile)
+        </li>
+        <li>
+          change intensity range: right mouse click and drag a region (mobile
+          not supported)
+        </li>
+        <li>
+          reset intensity: left mouse click double click (mobile not supported)
+        </li>
+      </ul>
     </section>
     <!-- demo 1 -->
     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl1" height=480 width=640>
-        </canvas>
+      <div id="demo1" style="width: 90%; height: 400px">
+        <canvas id="gl1" height="480" width="640"> </canvas>
       </div>
     </section>
-     <!-- demo 2 -->
-     <section>
-      <div id="demo1" style="width:90%; height:400px;">
-        <canvas id="gl2" height=480 width=640>
-        </canvas>
+    <!-- demo 2 -->
+    <section>
+      <div id="demo1" style="width: 90%; height: 400px">
+        <canvas id="gl2" height="480" width="640"> </canvas>
       </div>
     </section>
-    <script src="./niivue.umd.js">
-    </script>
+    <script src="./niivue.umd.js"></script>
     <script>
-     const volumeList1 = [
-       // first item is background image
-         {
-           url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           colorMap: "gray",
-           opacity: 1,
-           visible: true,
-         },
-        ]
+      const volumeList1 = [
+        // first item is background image
+        {
+          url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "gray",
+          opacity: 1,
+          visible: true,
+        },
+      ];
       async function load() {
-        var nv1 = new niivue.Niivue()
-        await nv1.attachTo('gl1')
-        await nv1.loadVolumes(volumeList1)
-        nv1.setSliceType(nv1.sliceTypeMultiplanar)
-        var nv2 = new niivue.Niivue()
-        await nv2.attachTo('gl2')
-        nv2.setSliceType(nv2.sliceTypeMultiplanar)
+        var nv1 = new niivue.Niivue();
+        await nv1.attachTo("gl1");
+        await nv1.loadVolumes(volumeList1);
+        nv1.setSliceType(nv1.sliceTypeMultiplanar);
+        var nv2 = new niivue.Niivue();
+        await nv2.attachTo("gl2");
+        nv2.setSliceType(nv2.sliceTypeMultiplanar);
         nv2.volumes.push(nv1.volumes[0].clone());
         nv2.updateGLVolume();
       }
-      load()
+      load();
     </script>
   </body>
 </html>
