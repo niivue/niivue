@@ -21,7 +21,7 @@ beforeEach(async () => {
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 });
 test("saveImage", async () => {
-  let downloadLink = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     let nv = new niivue.Niivue();
     await nv.attachTo("gl", false);
     // load one volume object in an array
@@ -36,15 +36,17 @@ test("saveImage", async () => {
       },
     ];
     await nv.loadVolumes(volumeList);
-    nv.saveImage("test.nii");
+    await nv.saveImage("test.nii");
     
     return;
   });
     
-  // wait until we navigate or the test will not wait for the downloaded file
+  // // wait until we navigate or the test will not wait for the downloaded file
   await page.goto(httpServerAddress, {waitUntil: 'networkidle2'});
-  const fileSize = getFilesizeInBytes(path.join(downloadPath, fileName));
+  const filePath = path.join(downloadPath, fileName);
+  const fileSize = getFilesizeInBytes(filePath);
   expect(fileSize).toBeGreaterThan(4336029);
+  fs.unlinkSync(filePath);
 
 
 });
