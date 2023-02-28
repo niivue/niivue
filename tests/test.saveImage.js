@@ -1,6 +1,7 @@
 const { snapshot, httpServerAddress, seconds } = require("./helpers");
 const path = require("path");
 const fs = require("fs");
+const {waitForDownload} = require("puppeteer-utilz");
 
 const downloadPath = path.resolve('./downloads');
 const fileName = "test.nii";
@@ -42,8 +43,9 @@ test("saveImage", async () => {
   });
     
   // // wait until we navigate or the test will not wait for the downloaded file
-  await page.goto(httpServerAddress, {waitUntil: 'networkidle2'});
+  // await page.goto(httpServerAddress, {waitUntil: 'networkidle2'});
   const filePath = path.join(downloadPath, fileName);
+  waitForDownload(downloadPath);
   const fileSize = getFilesizeInBytes(filePath);
   expect(fileSize).toBeGreaterThan(4336029);
   fs.unlinkSync(filePath);
