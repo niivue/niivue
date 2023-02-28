@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Modulation</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="mode">Display:</label>
+      <select name="mode" id="mode">
+        <option>func</option>
+        <option>cope</option>
+        <option>tstat</option>
+        <option selected>modulate</option>
+      </select>
+      <label for="slideT"> &nbsp; tMax</label>
+      <input
+        type="range"
+        min="1"
+        max="50"
+        value="45"
+        class="slider"
+        id="slideT"
+      />
+      <label for="slideC"> &nbsp; cMax</label>
+      <input
+        type="range"
+        min="1"
+        max="200"
+        value="100"
+        class="slider"
+        id="slideC"
+      />
+      <label for="slide2"> &nbsp; Outline</label>
+      <input
+        type="range"
+        min="0"
+        max="4"
+        value="1"
+        class="slider"
+        id="slide2"
+      />
+      <label for="check">ClipDark</label>
+      <input type="checkbox" id="check" unchecked />
+      <label for="check2">ModulateAlpha</label>
+      <input type="checkbox" id="check2" checked />
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script src="./niivue.umd.js"></script>
+    <script type="module" async>
+      var sliderT = document.getElementById("slideT");
+      sliderT.oninput = function () {
+        nv1.volumes[2].cal_max = 0.1 * this.value;
+        nv1.updateGLVolume();
+      };
+      var sliderC = document.getElementById("slideC");
+      sliderC.oninput = function () {
+        nv1.volumes[1].cal_max = this.value;
+        nv1.updateGLVolume();
+      };
+      var slider2 = document.getElementById("slide2");
+      slider2.oninput = function () {
+        nv1.overlayOutlineWidth = 0.25 * this.value;
+        nv1.updateGLVolume();
+      };
+      document.getElementById("check").addEventListener("change", doCheckClick);
+      function doCheckClick() {
+        nv1.isAlphaClipDark = this.checked;
+        nv1.updateGLVolume();
+      }
+      document
+        .getElementById("check2")
+        .addEventListener("change", doCheck2Click);
+      function doCheck2Click() {
+        drop.onchange();
+      }
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      var volumeList1 = [
+        {
+          url: "../images/mean_func.nii.gz",
+          opacity: 1,
+          colorMap: "gray",
+        },
+        {
+          url: "../images/cope1.nii.gz",
+          colorMap: "winter",
+          opacity: 0,
+          cal_min: 0.0,
+          cal_max: 100,
+        },
+        {
+          url: "../images/tstat1.nii.gz",
+          opacity: 1,
+          colorMap: "warm",
+          cal_min: 0,
+          cal_max: 4.5,
+        },
+      ];
+      var nv1 = new niivue.Niivue({
+        backColor: [0.2, 0.2, 0.3, 1],
+        onLocationChange: handleLocationChange,
+      });
+      nv1.attachTo("gl1");
+      nv1.overlayOutlineWidth = 0.25;
+      await nv1.loadVolumes(volumeList1);
+      nv1.opts.isColorbar = true;
+      nv1.setInterpolation(true);
+      nv1.scene.crosshairPos = [0.55, 0.5, 0.8];
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      var drop = document.getElementById("mode");
+      drop.onchange = function () {
+        let mode = document.getElementById("mode").selectedIndex;
+        nv1.setOpacity(0, 1.0); //background opaque
+        nv1.setOpacity(1, 0.0); //hide tstat
+        nv1.setOpacity(2, 0.0); //hide cope
+        nv1.setOpacity(Math.min(2, mode), 1.0);
+        if (mode == 3) {
+          nv1.setOpacity(1, 1.0); //show cope
+          nv1.setOpacity(2, 0.0); //hide tstat
+          let modulateAlpha = document.getElementById("check2").checked;
+          nv1.setModulationImage(
+            nv1.volumes[1].id,
+            nv1.volumes[2].id,
+            modulateAlpha
+          );
+        } else nv1.setModulationImage(nv1.volumes[1].id, null);
+      };
+      drop.onchange();
+    </script>
+  </body>
+</html>

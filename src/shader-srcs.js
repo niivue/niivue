@@ -9,8 +9,18 @@ void main(void) {
 	vColor = texCoords;
 }`;
 
-const kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
-	vec3 startPosition = startPositionTex * volScale; 
+const kDrawFunc = `
+	vec4 drawColor(float scalar) {
+		float nlayer = float(textureSize(colormap, 0).y);
+		float layer = (nlayer - 0.5) / nlayer;
+		vec4 dcolor = texture(colormap, vec2(scalar * 255.0/256.0 + 0.5/256.0, layer)).rgba;
+		dcolor.a *= drawOpacity;
+		return dcolor;
+}`;
+
+const kRenderFunc =
+  `vec3 GetBackPosition(vec3 startPositionTex) {
+	vec3 startPosition = startPositionTex * volScale;
 	vec3 invR = 1.0 / rayDir;
 	vec3 tbot = invR * (vec3(0.0)-startPosition);
 	vec3 ttop = invR * (volScale-startPosition);
@@ -57,21 +67,7 @@ float frac2ndc(vec3 frac) {
 	vec4 mm = transpose(matRAS) * pos;
 	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
 	return (z_ndc + 1.0) / 2.0;
-}
-vec4 drawColor(float scalar) {
-	vec4 dcolor = vec4(0.0, 0.0, 0.0, 0.0);
-	if (scalar <= 0.0) return dcolor;
-	dcolor.a = drawOpacity;
-	if (scalar >= (4.0/255.0))
-		dcolor.rgb = vec3(scalar,0.0,scalar);
-	else if (scalar >= (3.0/255.0))
-		dcolor.b = 1.0;
-	else if (scalar >= (2.0/255.0))
-		dcolor.g = 1.0;
-	else
-		dcolor.r = 1.0;
-	return dcolor;
-}`;
+}` + kDrawFunc;
 
 export var fragRenderShaderMIP =
   `#version 300 es
@@ -90,6 +86,7 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -232,6 +229,7 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -409,47 +407,74 @@ void main(void) {
 	gl_Position = mvpMtx * mm;
 }`;
 
-export var fragSliceMMShader = `#version 300 es
+export var fragSliceMMShader =
+  `#version 300 es
 #line 228
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
 uniform int backgroundMasksOverlays;
+uniform float overlayOutlineWidth;
+uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
 in vec3 texPos;
-out vec4 color;
-void main() {
+out vec4 color;` +
+  kDrawFunc +
+  `void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
+	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
 	vec4 ocolor = vec4(0.0);
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
+		//dFdx for "boxing" issue 435 has aliasing on some implementations (coarse vs fine)
+		//however, this only identifies 50% of the edges due to aliasing effects
+		// http://www.aclockworkberry.com/shader-derivative-functions/
+		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
+		//if ((ocolor.a >= 1.0) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
+		//	ocolor.rbg = vec3(0.0, 0.0, 0.0);
+		if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
+			vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
+			vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
+			vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
+			vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
+			vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
+			vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
+			vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
+			float a = 1.0;
+			if (axCorSag != 2) {
+				a = min(a, texture(overlay, vxR).a);
+				a = min(a, texture(overlay, vxL).a);
+			}
+			if (axCorSag != 1) {
+				a = min(a, texture(overlay, vxA).a);
+				a = min(a, texture(overlay, vxP).a);
+			}
+			if (axCorSag != 0) {
+				a = min(a, texture(overlay, vxS).a);
+				a = min(a, texture(overlay, vxI).a);
+			}
+			if (a < 1.0)
+				ocolor.rbg = vec3(0.0, 0.0, 0.0);
+		}
 	}
-	float draw = texture(drawing, texPos).r;
-	if (draw > 0.0) {
-		vec3 dcolor = vec3(0.0, 0.0, 0.0);
-		if (draw >= (4.0/255.0))
-			dcolor.rgb = vec3(draw,0.0,draw);
-		else if (draw >= (3.0/255.0))
-			dcolor.b = 1.0;
-		else if (draw >= (2.0/255.0))
-			dcolor.g = 1.0;
-		else
-			dcolor.r = 1.0;
-		color.rgb = mix(color.rgb, dcolor, drawOpacity);
+	vec4 dcolor = drawColor(texture(drawing, texPos).r);
+	if (dcolor.a > 0.0) {
+		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
 		return;
-	//float aout = ocolor.a + (1.0 - ocolor.a) * color.a;
-	//if (aout <= 0.0) return;
-	//color.rgb = ((ocolor.rgb * ocolor.a) + (color.rgb * color.a * (1.0 - ocolor.a))) / aout;
-	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a);
-	//color.a = 1.0;
+	float a = color.a + ocolor.a * (1.0 - color.a); // premultiplied alpha
+	if (a == 0.0) return;
+	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
+	color.a = a;
 }`;
 
 export var fragRectShader = `#version 300 es
@@ -655,8 +680,9 @@ void main(void) {
 	return;
 
 	if (layer < 2.0) return;
-	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	//vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
+	//vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
@@ -671,11 +697,13 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
 uniform float cal_min;
+uniform float cal_maxNeg;
+uniform float cal_minNeg;
+uniform bool isAlphaThreshold;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform int modulation;
@@ -684,34 +712,60 @@ uniform float opacity;
 uniform mat4 mtx;
 void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	if ((vx.x < 0.0) || (vx.x > 1.0) || (vx.y < 0.0) || (vx.y > 1.0) || (vx.z < 0.0) || (vx.z > 1.0)) {
+		//set transparent if out of range
+		//https://webglfundamentals.org/webgl/webgl-3d-textures-repeat-clamp.html
+		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+		return;
+	}
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
-	bool isNegative = (f < 0.0);
-	float r = max(0.00001, abs(cal_max - cal_min));
-	float mn = min(cal_min, cal_max);
+	float mn = cal_min;
+	float mx = cal_max;
+	if (isAlphaThreshold)
+		mn = 0.0;
+	float r = max(0.00001, abs(mx - mn));
+	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
-	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
-	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
+	float nlayer = float(textureSize(colormap, 0).y);
+	float y = (layer + 0.5)/nlayer;
+	//if (!isnan(cal_minNeg)) //Radeon drivers have issues NaN
+	if (cal_minNeg < cal_maxNeg)
+		y = (layer + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
-	if (isNegative) {
-		y = (2.0 * layer + nlayer + nlayer + 1.0)/(4.0 * nlayer);
-		//select texels at positions 0 and 1 of lookup table: 
-		vec4 v0 = texture(colormap, vec2(0.5/256.0, y));
-		vec4 v1 = texture(colormap, vec2(1.5/256.0, y));
-		txl = mix(0.0, 1.0, (- f - mn) / r);
-		//detect bogus color: negative color slot not used than
-		// v0 = 1,1,1,0 and v1 = 0,0,0,1
-		if ((v0.r != 1.0) || (v0.a != 0.0) || (v1.r != 0.0) || (v1.a != 1.0))
-			FragColor = texture(colormap, vec2(txl, y));
+	//negative colors
+	mn = cal_minNeg;
+	mx = cal_maxNeg;
+	if (isAlphaThreshold)
+		mx = 0.0;
+	//if ((!isnan(cal_minNeg)) && ( f < mx)) {
+	if ((cal_minNeg < cal_maxNeg) && ( f < mx)) {
+		r = max(0.00001, abs(mx - mn));
+		mn = min(mn, mx);
+		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
+		y = (layer + 0.5)/nlayer;
+		FragColor = texture(colormap, vec2(txl, y));
 	}
 	if (layer > 0.7)
 		FragColor.a = step(0.00001, FragColor.a);
-	if (modulation > 0)
+	//if (modulation > 10)
+	//	FragColor.a *= texture(modulationVol, vx.xyz).r;
+	//	FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	if (isAlphaThreshold) {
+		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg))
+			FragColor.a = pow(-f / -cal_maxNeg, 2.0);
+		else if ((f > 0.0) && (cal_min > 0.0))
+			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
+		//FragColor.g = 0.0;
+	}
+	if (modulation == 1) {
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
+	} else if (modulation == 2) {
+		FragColor.a = texture(modulationVol, vx.xyz).r;
+	}
 	FragColor.a *= opacity;
 	if (layer < 1.0) return;
-	vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
@@ -726,7 +780,6 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform float scl_slope;
 uniform float scl_inter;
 uniform float cal_max;
@@ -742,33 +795,16 @@ void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
 	uvec4 aColor = texture(intensityVol, vx.xyz);
 	FragColor = vec4(float(aColor.r) / 255.0, float(aColor.g) / 255.0, float(aColor.b) / 255.0, float(aColor.a) / 255.0);
-	if (modulation > 0)
+	if (modulation == 1)
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;
-	if (!hasAlpha)
+	if (!hasAlpha) {
 		FragColor.a = (FragColor.r * 0.21 + FragColor.g * 0.72 + FragColor.b * 0.07);
+		//next line: we could binarize alpha, but see rendering of visible human
+		//FragColor.a = step(0.01, FragColor.a);
+	}
+	if (modulation == 2)
+		FragColor.a = texture(modulationVol, vx.xyz).r;
 	FragColor.a *= opacity;
-}`;
-
-export var vertPassThroughShader = `#version 300 es
-#line 283
-precision highp int;
-precision highp float;
-in vec3 vPos;
-out vec2 TexCoord;
-void main() {
-	TexCoord = vPos.xy;
-	gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
-}`;
-
-export var fragPassThroughShader = `#version 300 es
-precision highp int;
-precision highp float;
-in vec2 TexCoord;
-out vec4 FragColor;
-uniform float coordZ;
-uniform lowp sampler3D in3D;
-void main(void) {
- FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
 }`;
 
 export var vertGrowCutShader = `#version 300 es
@@ -889,16 +925,15 @@ layout(location=0) in vec3 pos;
 layout(location=1) in vec4 norm;
 layout(location=2) in vec4 clr;
 uniform mat4 mvpMtx;
-uniform mat4 modelMtx;
+//uniform mat4 modelMtx;
 uniform mat4 normMtx;
 out vec4 vClr;
-out vec3 vN, vL, vV;
+out vec3 vN;
 void main(void) {
 	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
-	vL = normalize(lightPosition);
-	vV = -vec3(modelMtx*vec4(pos,1.0));
+	//vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
 }`;
 
@@ -926,7 +961,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 float stepmix(float edge0, float edge1, float E, float x){
 	float T = clamp(0.5 * (x - edge0 + E) / E, 0.0, 1.0);
@@ -966,13 +1001,35 @@ void main() {
 	color.a = opacity;
 }`;
 
+//unused: requires gl.Disable(GL_DEPTH_TEST)
+// however, depth test must be ENABLED for meshes not using this shader
+// since fragments computed in parallel, this leads to artifacts when multiple meshes loaded with different shaders
+/*export var fragMeshXRayShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN, vV;
+out vec4 color;
+void main() {
+	float Ambient = 0.5;
+	float EdgeFallOff = 1.0;
+	float Intensity = 0.5;
+	bool DimBackfaces = false;
+	float opac = abs(dot(normalize(-vN), normalize(-vV)));
+	opac = Ambient + Intensity*(1.0-pow(opac, EdgeFallOff));
+	float backface = 1.0 - step(0.0, vN.z);
+	opac = mix(opac, 0.0, backface * float(DimBackfaces)); //reverse normal if backface AND two-sided lighting
+	color = vec4(opac * vClr.rgb, opac);
+}`;*/
+
 //outline
 export var fragMeshOutlineShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
@@ -994,17 +1051,26 @@ void main() {
 	color.a = opacity;
 }`;
 
-//discard if alpha is 0
-export var fragMeshOutline = `#version 300 es
+//Phong headlight shader for edge enhancement, opposite of fresnel rim lighting
+export var fragMeshEdgeShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
-	if (vClr.a == 0.0) discard;
-	color = vClr;
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float diffuse = 1.0;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 0.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = max(dot(n, l), 0.0);
+	vec3 d = lightNormDot * vClr.rgb * diffuse;
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color = vec4(d + s, opacity);
 }`;
 
 //Phong: default
@@ -1013,7 +1079,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
@@ -1031,13 +1097,30 @@ void main() {
 	color = vec4(a + d + s, opacity);
 }`;
 
+//Matcap: modulate mesh color with spherical matcap image
+export var fragMeshMatcapShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+uniform sampler2D matCap;
+out vec4 color;
+void main() {
+	vec3 n = normalize(vN);
+	vec2 uv = n.xy * 0.5 + 0.5;
+	uv.y = 1.0 - uv.y;
+	vec3 clr = texture(matCap,uv.xy).rgb * vClr.rgb;
+	color = vec4(clr, opacity);
+}`;
+
 //matte: same as phong without specular and a bit more diffuse
 export var fragMeshMatteShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	float ambient = 0.35;
@@ -1057,7 +1140,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 void main() {
 	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
@@ -1085,7 +1168,7 @@ precision highp int;
 precision highp float;
 uniform float opacity;
 in vec4 vClr;
-in vec3 vN, vL, vV;
+in vec3 vN;
 out vec4 color;
 //Spherical harmonics constants
 const float C1 = 0.429043;
@@ -1136,6 +1219,45 @@ void main() {
 	color = vec4(a + d + s, opacity);
 }`;
 
+export var vertFlatMeshShader = `#version 300 es
+layout(location=0) in vec3 pos;
+layout(location=1) in vec4 norm;
+layout(location=2) in vec4 clr;
+uniform mat4 mvpMtx;
+//uniform mat4 modelMtx;
+uniform mat4 normMtx;
+out vec4 vClr;
+flat out vec3 vN;
+void main(void) {
+	gl_Position = mvpMtx * vec4(pos, 1.0);
+	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
+	//vV = -vec3(modelMtx*vec4(pos,1.0));
+	vClr = clr;
+}`;
+
+export var fragFlatMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+flat in vec3 vN;
+out vec4 color;
+void main() {
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color = vec4(a + d + s, opacity);
+}`;
+
 export var fragVolumePickingShader =
   `#version 300 es
 #line 506
@@ -1151,6 +1273,8 @@ uniform mat4 matRAS;
 uniform mat4 mvpMtx;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
+uniform int backgroundMasksOverlays;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -1189,8 +1313,7 @@ void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	//end: fast pass
-	if (overlays < 1.0) {
-		//if (fColor.a == 0.0) discard; //no hit, no overlays
+	if ((overlays < 1.0) || (backgroundMasksOverlays > 0)) {
 		return; //background hit, no overlays
 	}
 	//overlay pass
@@ -1230,7 +1353,6 @@ export var fragOrientCubeShader = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
 in vec3 vColor;
-// we need to declare an output for the fragment shader
 out vec4 outColor;
 void main() {
 	outColor = vec4(vColor, 1.0);

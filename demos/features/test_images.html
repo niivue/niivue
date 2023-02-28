@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Test Images</title>
-    <link rel="stylesheet" href="light.css">
+    <link rel="stylesheet" href="light.css" />
   </head>
   <body>
     <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
     </noscript>
     <header>
       <section>
@@ -24,49 +27,66 @@
     </footer>
   </body>
 </html>
-<script src="./niivue.umd.js">
-</script>
+<script src="./niivue.umd.js"></script>
 <script>
- var volumeList1 = [
-   // first item is background image
-     {
-       url: "../images/mni152.nii.gz",
-       colorMap: "gray",
-       opacity: 1,
-       visible: true,
-     },
-    ] 
-  var nv1 = new niivue.Niivue({backColor: [0.7, 0.7, 0.9, 1]})
-  nv1.attachTo('gl1')
-  nv1.loadVolumes(volumeList1)
-  nv1.setSliceType(nv1.sliceTypeRender)
-  nv1.setClipPlane([0.35, 270, 0])
+  var volumeList1 = [
+    // first item is background image
+    {
+      url: "../images/mni152.nii.gz",
+      colorMap: "gray",
+      opacity: 1,
+      visible: true,
+    },
+  ];
+  var nv1 = new niivue.Niivue({ backColor: [0.7, 0.7, 0.9, 1] });
+  nv1.attachTo("gl1");
+  nv1.loadVolumes(volumeList1);
+  nv1.opts.isColorbar = true;
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.setClipPlane([0.35, 270, 0]);
   //nv1.setSliceType(nv1.sliceTypeMultiplanar)
-  imgs = ["chris_MRA", "chris_PD", "chris_t1", "chris_t2", "CT_Abdo", "CT_AVM", "CT_Electrodes", "CT_Philips", "CT_pitch", "fmri_pitch", "Iguana", "mni152", "MR_Gd", "pcasl", "spm152", "spmMotor", "visiblehuman"];
-  imgEl = document.getElementById('images')
-  for (let i=0; i<imgs.length; i++) {
-    let btn = document.createElement("button")
-    btn.innerHTML = imgs[i]
-    btn.onclick = function() {
-      let root = 'https://niivue.github.io/niivue-demo-images/'
-      let img = root + imgs[i] + '.nii.gz'
-      console.log("Loading: "+img)
-      volumeList1[0].url = img
-      nv1.loadVolumes(volumeList1)
-      nv1.updateGLVolume()
-    }
-    imgEl.appendChild(btn)
+  imgs = [
+    "chris_MRA",
+    "chris_PD",
+    "chris_t1",
+    "chris_t2",
+    "CT_Abdo",
+    "CT_AVM",
+    "CT_Electrodes",
+    "CT_Philips",
+    "CT_pitch",
+    "fmri_pitch",
+    "Iguana",
+    "mni152",
+    "MR_Gd",
+    "pcasl",
+    "spm152",
+    "spmMotor",
+    "visiblehuman",
+  ];
+  imgEl = document.getElementById("images");
+  for (let i = 0; i < imgs.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = imgs[i];
+    btn.onclick = function () {
+      let root = "https://niivue.github.io/niivue-demo-images/";
+      let img = root + imgs[i] + ".nii.gz";
+      console.log("Loading: " + img);
+      volumeList1[0].url = img;
+      nv1.loadVolumes(volumeList1);
+      nv1.updateGLVolume();
+    };
+    imgEl.appendChild(btn);
   }
-  cmaps = nv1.colorMaps()
-  cmapEl = document.getElementById('colormaps')
-  for (let i=0; i<cmaps.length; i++) {
-    let btn = document.createElement("button")
-    btn.innerHTML = cmaps[i]
-    btn.onclick = function() {
-      nv1.volumes[0].setColorMap(cmaps[i])
-      nv1.updateGLVolume()
-    }
-    cmapEl.appendChild(btn)
+  cmaps = nv1.colorMaps();
+  cmapEl = document.getElementById("colormaps");
+  for (let i = 0; i < cmaps.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = cmaps[i];
+    btn.onclick = function () {
+      nv1.volumes[0].setColorMap(cmaps[i]);
+      nv1.updateGLVolume();
+    };
+    cmapEl.appendChild(btn);
   }
 </script>
-

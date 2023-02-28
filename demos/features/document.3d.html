@@ -1,110 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Niivue Document</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
 
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Niivue Document</title>
-  <link rel="stylesheet" href="niivue.css">  
-</head>
-
-<body style="font-family: sans-serif;">
-  <noscript>
-    <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-  </noscript>
-  <header>
-    <div class="dropdown">
-      <button class="dropbtn">File
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn" id="SaveDocument">Save Document</a>        
-        <a class="linker" href="https://github.com/niivue/niivue">About</a>
+  <body style="font-family: sans-serif">
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+      <div class="dropdown">
+        <button class="dropbtn">
+          File
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="SaveDocument">Save Document</a>
+          <a class="linker" href="https://github.com/niivue/niivue">About</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">Volume
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn" id="ToggleHippocampus">Toggle Hippocampus</a>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Volume
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="ToggleHippocampus">Toggle Hippocampus</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">Help
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <section class="help-text">
-          <p>
-            NiiVue supports saving a collection of images and drawing to a document. 
-          </p>
-          <p>
-            Click File and then Save Document.
-          </p>
-        </section>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Help
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <section class="help-text">
+            <p>
+              NiiVue supports saving a collection of images and drawing to a
+              document.
+            </p>
+            <p>Click File and then Save Document.</p>
+          </section>
+        </div>
       </div>
-    </div>
-  </header> 
-  <!-- demo 1 -->
-  <main>
-    <div id="demo1" style="width:90%; height:400px;">
-      <canvas id="gl1" style="width:800px;height:400px">
-      </canvas>
-    </div>
-  </main>
-  
-  <script src="./niivue.umd.js">
-  </script>
-  <script>
-    function toggleHippo() {
-      let buttonElem = document.getElementById('toggleHippoButton');
-      if (isHippoShowing) {
-        nv1.removeVolumeByUrl(url);
-        buttonElem.innerText = 'Add Hippocampus';
-        isHippoShowing = false;
+    </header>
+    <!-- demo 1 -->
+    <main>
+      <div id="demo1" style="width: 90%; height: 400px">
+        <canvas id="gl1" style="width: 800px; height: 400px"> </canvas>
+      </div>
+    </main>
+
+    <script src="./niivue.umd.js"></script>
+    <script>
+      function toggleHippo() {
+        let buttonElem = document.getElementById("toggleHippoButton");
+        if (isHippoShowing) {
+          nv1.removeVolumeByUrl(url);
+          buttonElem.innerText = "Add Hippocampus";
+          isHippoShowing = false;
+        } else {
+          nv1.addVolumeFromUrl({ url, colorMap: "bluegrn" });
+          buttonElem.innerText = "Remove Hippocampus";
+          isHippoShowing = true;
+        }
       }
-      else {
-        nv1.addVolumeFromUrl({ url, colorMap: "bluegrn" })
-        buttonElem.innerText = 'Remove Hippocampus';
-        isHippoShowing = true;
+
+      async function onButtonClick(event) {
+        switch (event.target.id) {
+          case "SaveDocument":
+            nv1.saveDocument("niivue.basic.nvd");
+            break;
+          case "ToggleHippocampus":
+            toggleHippo();
+            break;
+        }
       }
-    }
 
-    async function onButtonClick(event) {
-      switch(event.target.id) {
-        case "SaveDocument":
-          nv1.saveDocument('niivue.basic.nvd')
-          break
-        case "ToggleHippocampus":
-          toggleHippo()
-          break
-      }
-    }
+      const url = "../images/hippo.nii.gz";
+      var isHippoShowing = false;
+      var volumeList1 = [
+        // first item is background image
+        {
+          url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "gray",
+          opacity: 1,
+          visible: true,
+        },
+      ];
+      var nv1 = new niivue.Niivue();
+      nv1.attachTo("gl1");
+      nv1.loadVolumes(volumeList1);
+      nv1.setSliceType(nv1.sliceTypeRender);
 
-    const url = '../images/hippo.nii.gz';
-    var isHippoShowing = false;
-    var volumeList1 = [
-      // first item is background image
-      {
-        url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-        colorMap: "gray",
-        opacity: 1,
-        visible: true,
-      },
-    ]
-    var nv1 = new niivue.Niivue()
-    nv1.attachTo('gl1')
-    nv1.loadVolumes(volumeList1)
-    nv1.setSliceType(nv1.sliceTypeRender)
-
-    var buttons = document.getElementsByClassName("viewBtn")
-    for (let i = 0; i < buttons.length; i++)
-        buttons[i].addEventListener("click", onButtonClick, false)
-    
-  
-  </script>
-</body>
-
+      var buttons = document.getElementsByClassName("viewBtn");
+      for (let i = 0; i < buttons.length; i++)
+        buttons[i].addEventListener("click", onButtonClick, false);
+    </script>
+  </body>
 </html>

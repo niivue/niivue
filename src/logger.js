@@ -1,4 +1,4 @@
-/**
+/* not included in public docs
  * @class Log
  * @type Log
  * @param {number} logLevel

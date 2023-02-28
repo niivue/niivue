@@ -1,94 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>NiiVue</title>
-  <link rel="stylesheet" href="niivue.css">
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
     <noscript>
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-	  <label for="check1">LR</label>
-	  <input type="checkbox" id="check1" unchecked>
+      <label for="check1">LR</label>
+      <input type="checkbox" id="check1" unchecked />
       <label for="check2">Nose</label>
-      <input type="checkbox" id="check2" unchecked>
+      <input type="checkbox" id="check2" unchecked />
       <label for="check3">World</label>
-      <input type="checkbox" id="check3" unchecked>
-	  <label for="dragMode">Drag mode</label>
-	  <select  id="dragMode">
-		<option value="contrast">contrast</option>
-		<option value="measurement">measurement</option>
-		<option value="pan" selected>pan/zoom</option>
-		<option value="none">none</option>
-	  </select>
+      <input type="checkbox" id="check3" unchecked />
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option value="contrast">contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan" selected>pan/zoom</option>
+        <option value="slicer3D">slicer3D</option>
+        <option value="none">none</option>
+      </select>
+      <button id="reset">reset</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
-    <footer id="location">
-      &nbsp;
-    </footer>
+    <footer id="location">&nbsp;</footer>
     <script type="module" async>
-      import { Niivue } from './niivue.js'
-      import {NVImage} from './nvimage.js'
-      import {NVMesh} from './nvmesh.js'
-      var dropDrag = document.getElementById("dragMode")
-      dropDrag.onchange = function() {
-        switch(document.getElementById("dragMode").value) {
+      import { Niivue } from "./niivue.js";
+      import { NVImage } from "./nvimage.js";
+      import { NVMesh } from "./nvmesh.js";
+      document.getElementById("reset").addEventListener("click", doReset);
+      var dropDrag = document.getElementById("dragMode");
+      dropDrag.onchange = function () {
+        switch (document.getElementById("dragMode").value) {
           case "none":
             nv1.opts.dragMode = nv1.dragModes.none;
-            break
+            break;
           case "contrast":
             nv1.opts.dragMode = nv1.dragModes.contrast;
-            break
+            break;
           case "measurement":
             nv1.opts.dragMode = nv1.dragModes.measurement;
-            break
+            break;
           case "pan":
             nv1.opts.dragMode = nv1.dragModes.pan;
-            break
+            break;
+          case "slicer3D":
+            nv1.opts.dragMode = nv1.dragModes.slicer3D;
+            break;
         }
-      }
-      document.getElementById("check1").addEventListener("change", doCheckClick);
+      };
+      document
+        .getElementById("check1")
+        .addEventListener("change", doCheckClick);
       function doCheckClick() {
-        nv1.setRadiologicalConvention(this.checked)
+        nv1.setRadiologicalConvention(this.checked);
       }
-      document.getElementById("check2").addEventListener("change", doCheck2Click);
+      document
+        .getElementById("check2")
+        .addEventListener("change", doCheck2Click);
       function doCheck2Click() {
-        nv1.opts.sagittalNoseLeft = this.checked
-		nv1.drawScene();
+        nv1.opts.sagittalNoseLeft = this.checked;
+        nv1.drawScene();
       }
-      document.getElementById("check3").addEventListener("change", doCheck3Click);
+      document
+        .getElementById("check3")
+        .addEventListener("change", doCheck3Click);
       function doCheck3Click() {
-        nv1.setSliceMM(this.checked)
+        nv1.setSliceMM(this.checked);
       }
-      //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz?test=test" }]
-      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz?test=test" }]
-
-      function handleLocationChange(data){ 
-        function flt2str(flt, decimals = 0) {
-          return flt.toFixed(decimals).replace(/\.?0*$/, "")
-        }	
-        document.getElementById('location').innerHTML = '&nbsp;&nbsp;'+flt2str(data.mm[0])+'×'+flt2str(data.mm[1])+'×'+flt2str(data.mm[2])+'='+flt2str(data.values[0].value, 3)	
+      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.vox[0] + "×" + data.vox[1] + "×" + data.vox[2];
       }
-      var nv1 = new Niivue({
-       loadingText: 'there are no images',
-       backColor: [1, 1, 1, 1],
-	   show3Dcrosshair: true,
-       onLocationChange:handleLocationChange
-      })
-      nv1.setRadiologicalConvention(false)
-      nv1.attachTo('gl1')
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      nv1.setClipPlane([-0.1, 270, 0])
-      nv1.setRenderAzimuthElevation(90,10)
-	  nv1.opts.dragMode = nv1.dragModes.pan
-	  nv1.setSliceMM(false)
-      await nv1.loadVolumes(volumeList1)
-   </script>
-</body>
+      let defaults = {
+        loadingText: "there are no images",
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        logging: true,
+        onLocationChange: handleLocationChange,
+      };
+      var nv1 = new Niivue(defaults);
+      nv1.setRadiologicalConvention(false);
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      await nv1.loadVolumes(volumeList1);
+      await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
+      function doReset() {
+        nv1.setDefaults(defaults, true);
+      }
+    </script>
+  </body>
 </html>

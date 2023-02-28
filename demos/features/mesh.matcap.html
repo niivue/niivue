@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Matcaps</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+      <label for="meshSlider">Threshold</label>
+      <input
+        type="range"
+        min="1"
+        max="49"
+        value="20"
+        class="slider"
+        id="meshSlider"
+      />
+      <label for="matCaps">Choose a MatCap:</label>
+      <select id="matCaps">
+        <option value="Shiny">Shiny</option>
+        <option value="Cortex">Cortex</option>
+        <option value="Cream">Cream</option>
+        <option value="Fuzzy">Fuzzy</option>
+        <option value="Peach">Peach</option>
+        <option value="Plastic">Plastic</option>
+      </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "./niivue.es.js";
+  var slider = document.getElementById("meshSlider");
+  slider.oninput = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1);
+  };
+  document.getElementById("matCaps").addEventListener("change", doMatCap);
+  function doMatCap() {
+    nv1.setMeshShader(nv1.meshes[0].id, "Matcap");
+    let matCapName = document.getElementById("matCaps").value;
+    nv1.loadMatCapTexture("../matcaps/" + matCapName + ".jpg");
+  }
+  var nv1 = new niivue.Niivue({
+    show3Dcrosshair: true,
+    backColor: [1, 1, 1, 1],
+  });
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.attachTo("gl1");
+  nv1.opts.isColorbar = true;
+  var meshLHLayersList1 = [
+    {
+      url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
+      cal_min: 2,
+      cal_max: 5,
+      useNegativeCmap: true,
+      opacity: 0.7,
+    },
+  ];
+  await nv1.loadMeshes([
+    { url: "../images/BrainMesh_ICBM152.lh.mz3", layers: meshLHLayersList1 },
+  ]);
+  nv1.setMeshShader(nv1.meshes[0].id, "Matcap");
+  nv1.setClipPlane([-0.1, 270, 0]);
+</script>

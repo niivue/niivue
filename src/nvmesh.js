@@ -50,7 +50,8 @@ export function NVMeshFromUrlOptions(
   opacity = 1.0,
   rgba255 = [255, 255, 255, 255],
   visible = true,
-  layers = []
+  layers = [],
+  colorbarVisible = true
 ) {
   return {
     url,
@@ -60,6 +61,7 @@ export function NVMeshFromUrlOptions(
     rgba255,
     visible,
     layers,
+    colorbarVisible,
   };
 }
 
@@ -92,9 +94,11 @@ export function NVMesh(
   connectome = null,
   dpg = null,
   dps = null,
-  dpv = null
+  dpv = null,
+  colorbarVisible = true
 ) {
   this.name = name;
+  this.colorbarVisible = colorbarVisible;
   this.id = uuidv4();
   let obj = getExtents(pts);
   this.furthestVertexFromOrigin = obj.mxDx;
@@ -556,6 +560,8 @@ NVMesh.prototype.updateMesh = function (gl) {
         layer.cal_min = Math.max(0, layer.cal_min);
         layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
       }
+      if (!layer.hasOwnProperty("isTransparentBelowCalMin"))
+        layer.isTransparentBelowCalMin = true;
       let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
       if (!layer.isOutlineBorder) {
         //blend colors for each voxel
@@ -563,7 +569,8 @@ NVMesh.prototype.updateMesh = function (gl) {
           let v255 = Math.round(
             (layer.values[j + frameOffset] - layer.cal_min) * scale255
           );
-          if (v255 < 0) continue;
+          if (v255 < 0 && layer.isTransparentBelowCalMin) continue;
+          v255 = Math.max(0.0, v255);
           v255 = Math.min(255.0, v255) * 4;
           let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
           u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
@@ -595,10 +602,24 @@ NVMesh.prototype.updateMesh = function (gl) {
       if (layer.useNegativeCmap) {
         let lut = cmapper.colormap(layer.colorMapNegative);
         if (!layer.isOutlineBorder) {
+          let mn = layer.cal_min;
+          let mx = layer.cal_max;
+
+          if (isFinite(layer.cal_minNeg) && isFinite(layer.cal_minNeg)) {
+            mn = -layer.cal_minNeg;
+            mx = -layer.cal_maxNeg;
+          }
+          if (mx < mn) {
+            [mn, mx] = [mx, mn];
+          }
+          let scale255neg = 255.0 / (mx - mn);
           for (let j = 0; j < nvtx; j++) {
             let v255 = Math.round(
-              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+              (-layer.values[j + frameOffset] - mn) * scale255neg
             );
+            /*let v255 = Math.round(
+              (-layer.values[j + frameOffset] - layer.cal_min) * scale255
+            );*/
             if (v255 < 0) continue;
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -661,8 +682,8 @@ NVMesh.prototype.reverseFaces = function (gl) {
 // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
 NVMesh.prototype.setLayerProperty = function (id, key, val, gl) {
   let layer = this.layers[id];
-  if (!layer.hasOwnProperty(key)) {
-    console.log("mesh does not have property ", key, layer);
+  if (!layer || !layer.hasOwnProperty(key)) {
+    console.log("mesh does not have property ", key, " for layer ", layer);
     return;
   }
   layer[key] = val;
@@ -993,9 +1014,10 @@ NVMesh.readTRK = function (buffer) {
     //e.g. TRK.gz
     let raw;
     if (magic === 4247762216) {
-      //zstd
-      raw = fzstd.decompress(new Uint8Array(buffer));
-      raw = new Uint8Array(raw);
+      //e.g. TRK.zstd
+      //raw = fzstd.decompress(new Uint8Array(buffer));
+      //raw = new Uint8Array(raw);
+      throw new Error("zstd TRK decompression is not supported");
     } else raw = fflate.decompressSync(new Uint8Array(buffer));
     buffer = raw.buffer;
     reader = new DataView(buffer);
@@ -1060,11 +1082,14 @@ NVMesh.readTRK = function (buffer) {
   }
   var vox2mmMat = mat4.create();
   mat4.mul(vox2mmMat, mat, zoomMat);
+  //translation is in mm and not influenced by resolution
+  vox2mmMat[3] = mat[3];
+  vox2mmMat[7] = mat[7];
+  vox2mmMat[11] = mat[11];
   let i32 = null;
   let f32 = null;
   i32 = new Int32Array(buffer.slice(hdr_sz));
   f32 = new Float32Array(i32.buffer);
-
   let ntracks = i32.length;
   //read and transform vertex positions
   let i = 0;
@@ -1429,7 +1454,13 @@ NVMesh.readCURV = function (buffer, n_vert) {
       "Unable to recognize file type: does not appear to be FreeSurfer format."
     );
   if (n_vert !== n_vertex) {
-    console.log("CURV file has different number of vertices than mesh");
+    console.log(
+      "CURV file has different number of vertices ( " +
+        n_vertex +
+        ")than mesh (" +
+        n_vert +
+        ")"
+    );
     return;
   }
   if (buffer.byteLength < 15 + 4 * n_vertex * n_time) {
@@ -1449,10 +1480,9 @@ NVMesh.readCURV = function (buffer, n_vert) {
     mn = Math.min(mn, f32[i]);
     mx = Math.max(mx, f32[i]);
   }
-  //normalize and invert then sqrt
+  //normalize
   let scale = 1.0 / (mx - mn);
-  for (var i = 0; i < f32.length; i++)
-    f32[i] = Math.sqrt(1.0 - (f32[i] - mn) * scale);
+  for (var i = 0; i < f32.length; i++) f32[i] = 1.0 - (f32[i] - mn) * scale;
   return f32;
 }; // readCURV()
 
@@ -2085,6 +2115,8 @@ NVMesh.readLayer = function (
   isOutlineBorder = false
 ) {
   let layer = [];
+  layer.isTransparentBelowCalMin = true;
+  layer.colorbarVisible = true;
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
   if (n_vert < 3) return;
   var re = /(?:\.([^.]+))?$/;
@@ -2096,9 +2128,10 @@ NVMesh.readLayer = function (
   }
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
-  else if (ext === "CRV" || ext === "CURV")
+  else if (ext === "CRV" || ext === "CURV") {
     layer.values = this.readCURV(buffer, n_vert);
-  else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
+    layer.isTransparentBelowCalMin = false;
+  } else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
   else if (ext === "MGH" || ext === "MGZ")
     layer.values = this.readMGH(buffer, n_vert);
   else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
@@ -2119,12 +2152,15 @@ NVMesh.readLayer = function (
     mn = Math.min(mn, layer.values[i]);
     mx = Math.max(mx, layer.values[i]);
   }
+  //console.log('layer range: ', mn, mx);
   layer.global_min = mn;
   layer.global_max = mx;
   layer.cal_min = cal_min;
   if (!cal_min) layer.cal_min = mn;
   layer.cal_max = cal_max;
   if (!cal_max) layer.cal_max = mx;
+  layer.cal_minNeg = NaN;
+  layer.cal_maxNeg = NaN;
   layer.opacity = opacity;
   layer.colorMap = colorMap;
   layer.colorMapNegative = colorMapNegative;
@@ -2598,7 +2634,7 @@ NVMesh.readNII2 = function (buffer, n_vert = 0) {
   } //if isLittleEndian else big end
   if (datatype === 2) scalars = new Uint8Array(buffer, voxoffset, nvert);
   return scalars;
-};
+}; // readNII2()
 
 // not included in public docs
 // read NIfTI1/2 as vertex colors
@@ -2693,6 +2729,8 @@ NVMesh.readMGH = function (buffer, n_vert = 0) {
   let depth = Math.max(1, reader.getInt32(12, false));
   let nframes = Math.max(1, reader.getInt32(16, false));
   let mtype = reader.getInt32(20, false);
+  let voxoffset = 284; //ALWAYS fixed header size
+  let isLittleEndian = false; //ALWAYS byte order is BIG ENDIAN
   if (version !== 1 || mtype < 0 || mtype > 4)
     console.log("Not a valid MGH file");
   let nvert = width * height * depth * nframes;
@@ -2979,27 +3017,75 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
 NVMesh.readGII = function (buffer, n_vert = 0) {
   let len = buffer.byteLength;
   if (len < 20) throw new Error("File too small to be GII: bytes = " + len);
-  var bytes = new Uint8Array(buffer);
+  var chars = new TextDecoder("ascii").decode(buffer);
+  if (chars[0].charCodeAt(0) == 31) {
+    //raw GIFTI saved as .gii.gz is smaller than gz GIFTI due to base64 overhead
+    var raw = fflate.decompressSync(new Uint8Array(buffer));
+    buffer = raw.buffer;
+    chars = new TextDecoder("ascii").decode(raw.buffer);
+  }
   let pos = 0;
-  function readStrX() {
-    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+  function readXMLtag() {
+    let isEmptyTag = true;
     let startPos = pos;
-    while (pos < len && bytes[pos] !== 10) pos++;
-    pos++; //skip EOLN
-    if (pos - startPos < 1) return "";
-    return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim();
-  }
-  function readStr() {
-    //concatenate lines to return tag <...>
-    let line = readStrX();
-    if (!line.startsWith("<") || line.endsWith(">")) {
-      return line;
+    while (isEmptyTag) {
+      //while (pos < len && chars[pos] === 10) pos++; //skip blank lines
+      while (pos < len && chars[pos] !== "<") pos++; //find tag start symbol: '<' e.g. "<tag>"
+      startPos = pos;
+      while (pos < len && chars[pos] !== ">") pos++; //find tag end symbol: '>' e.g. "<tag>"
+      isEmptyTag = chars[pos - 1] == "/"; // empty tag ends "/>" e.g. "<br/>"
+      if (startPos + 1 < len && chars[startPos + 1] === "/") {
+        // skip end tag "</"
+        pos += 1;
+        isEmptyTag = true;
+      }
+      let endTagPos = pos;
+      if (pos >= len) break;
     }
-    while (pos < len && !line.endsWith(">")) line += readStrX();
-    return line;
+    let tagString = new TextDecoder()
+      .decode(buffer.slice(startPos + 1, pos))
+      .trim();
+    let startTag = tagString.split(" ")[0].trim();
+    //ignore declarations https://stackoverflow.com/questions/60801060/what-does-mean-in-xml
+    let contentStartPos = pos;
+    let contentEndPos = pos;
+    let endPos = pos;
+    if (chars[startPos + 1] !== "?" && chars[startPos + 1] !== "!") {
+      //ignore declarations "<?" and "<!"
+      let endTag = "</" + startTag + ">";
+      contentEndPos = chars.indexOf(endTag, contentStartPos);
+      endPos = contentEndPos + endTag.length - 1;
+    }
+    // <name>content</name>
+    // a    b      c      d
+    // a: startPos
+    // b: contentStartPos
+    // c: contentEndPos
+    // d: endPos
+    return {
+      name: tagString,
+      startPos: startPos,
+      contentStartPos: contentStartPos,
+      contentEndPos: contentEndPos,
+      endPos: endPos,
+    }; //, 'startTagLastPos': startTagLastPos, 'endTagFirstPos': endTagFirstPos, 'endTagLastPos': endTagLastPos];
   }
-  let line = readStr(); //1st line: signature 'mrtrix tracks'
-  if (!line.includes("xml version")) console.log("Not a GIfTI image");
+  let tag = readXMLtag();
+  if (!tag.name.startsWith("?xml")) {
+    console.log("readGII: Invalid XML file");
+    return null;
+  }
+  while (!tag.name.startsWith("GIFTI") && tag.endPos < len) {
+    tag = readXMLtag();
+  }
+  if (
+    !tag.name.startsWith("GIFTI") ||
+    tag.contentStartPos == tag.contentEndPos
+  ) {
+    console.log("readGII: XML file does not include GIFTI tag");
+    return null;
+  }
+  len = tag.contentEndPos; //only read contents of GIfTI tag
   let positions = [];
   let indices = [];
   let scalars = [];
@@ -3012,18 +3098,40 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let dataType = 0;
   let isLittleEndian = true;
   let isGzip = false;
-  let FreeSurferMatrix = [];
+  let isASCII = false;
   let nvert = 0;
-  //let isAscii = false;
-  while (pos < len) {
-    line = readStr();
-    if (line.startsWith("<Data>")) {
+  //FreeSurfer versions after 20221225 disambiguate if transform has been applied
+  // "./mris_convert --to-scanner" store raw vertex positions in scanner space, so transforms should be ignored.
+  //  FreeSurfer versions after 20221225 report that the transform is applied by reporting:
+  //   <DataSpace><![CDATA[NIFTI_XFORM_SCANNER_ANAT
+  let isDataSpaceScanner = false;
+  tag.endPos = tag.contentStartPos; //read the children of the 'GIFTI' tag
+  let line = "";
+  while (tag.endPos < len && tag.name.length > 1) {
+    tag = readXMLtag();
+    if (tag.name.trim() === "Data") {
       if (isVectors) continue;
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
       //Data can be on one to three lines...
-      if (!line.endsWith("</Data>")) line += readStrX();
-      if (!line.endsWith("</Data>")) line += readStrX();
       let datBin = [];
-      if (typeof Buffer === "undefined") {
+      if (isASCII) {
+        let nvert = Dims[0] * Dims[1] * Dims[2];
+        var lines = line.split(/\s+/); //.split(/[ ,]+/);
+        if (nvert !== lines.length)
+          throw new Error("Unable to parse ASCII GIfTI");
+        if (dataType === 2) dataType = 8; //UInt8 -> Int32
+        if (dataType === 32) dataType = 16; //float64 -> float32
+        if (dataType === 8) {
+          datBin = new Int32Array(nvert);
+          for (var v = 0; v < nvert; v++) datBin[v] = parseInt(lines[v]);
+        }
+        if (dataType === 16) {
+          datBin = new Float32Array(nvert);
+          for (var v = 0; v < nvert; v++) datBin[v] = parseFloat(lines[v]);
+        }
+      } else if (typeof Buffer === "undefined") {
         //raw.gii
         function base64ToUint8(base64) {
           var binary_string = atob(base64);
@@ -3035,15 +3143,15 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
           return bytes;
         }
         if (isGzip) {
-          let datZ = base64ToUint8(line.slice(6, -7));
+          let datZ = base64ToUint8(line.slice());
           datBin = fflate.decompressSync(new Uint8Array(datZ));
-        } else datBin = base64ToUint8(line.slice(6, -7));
+        } else datBin = base64ToUint8(line.slice());
       } else {
         //if Buffer not defined
         if (isGzip) {
-          let datZ = Buffer.from(line.slice(6, -7), "base64");
+          let datZ = Buffer.from(line.slice(), "base64");
           datBin = fflate.decompressSync(new Uint8Array(datZ));
-        } else datBin = Buffer.from(line.slice(6, -7), "base64");
+        } else datBin = Buffer.from(line.slice(), "base64");
       }
       if (isPts) {
         if (dataType !== 16) console.log("expect positions as FLOAT32");
@@ -3085,8 +3193,8 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
             );
         }
         function Float32Concat(first, second) {
-          var firstLength = first.length,
-            result = new Float32Array(firstLength + second.length);
+          var firstLength = first.length;
+          var result = new Float32Array(firstLength + second.length);
           result.set(first);
           result.set(second, firstLength);
           return result;
@@ -3098,7 +3206,14 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
         } else if (dataType === 8) {
           let scalarsInt = new Int32Array(datBin.buffer);
           scalarsNew = Float32Array.from(scalarsInt);
-        } else scalarsNew = new Float32Array(datBin.buffer);
+        } else if (dataType === 16) {
+          scalarsNew = new Float32Array(datBin.buffer);
+        } else if (dataType === 32) {
+          let scalarFloat = new Float64Array(datBin.buffer);
+          scalarsNew = Float32Array.from(scalarFloat);
+        } else {
+          throw new Error(`Invalid dataType: ${dataType}`);
+        }
         scalars = Float32Concat(scalars, scalarsNew);
       }
       continue;
@@ -3106,53 +3221,42 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     function readBracketTag(TagName) {
       let pos = line.indexOf(TagName);
       if (pos < 0) return "";
-      let spos = line.indexOf("[", pos) + 1;
+      let spos = pos + TagName.length;
       let epos = line.indexOf("]", spos);
       return line.slice(spos, epos);
     }
-    if (line.startsWith("<Name") && line.includes("VolGeom")) {
-      //the great kludge: attempt to match GIfTI and CIfTI
-      let e = -1;
-      if (line.includes("VolGeomC_R")) e = 0;
-      if (line.includes("VolGeomC_A")) e = 1;
-      if (line.includes("VolGeomC_S")) e = 2;
-      if (!line.includes("<Value")) line = readStr();
-      if (!line.includes("CDATA[")) continue;
-      if (e >= 0) FreeSurferTranlate[e] = parseFloat(readBracketTag("CDATA["));
+    if (tag.name.trim() === "DataSpace") {
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
+      if (line.includes("NIFTI_XFORM_SCANNER_ANAT")) isDataSpaceScanner = true;
     }
-    if (line.startsWith("<MatrixData>")) {
-      //yet another kludge for undocumented FreeSurfer transform
-      while (pos < len && !line.endsWith("</MatrixData>"))
-        line += " " + readStrX();
-      line = line.replace("<MatrixData>", "");
-      line = line.replace("</MatrixData>", "");
-      line = line.replace("  ", " ");
-      line = line.trim();
-      var floats = line.split(/\s+/).map(parseFloat);
-      if (floats.length != 16)
-        console.log("Expected MatrixData to have 16 items: '" + line + "'");
-      else {
-        FreeSurferMatrix = mat4.create();
-        for (var i = 0; i < 16; i++) FreeSurferMatrix[i] = floats[i];
+    if (tag.name.trim() === "MD") {
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
+      if (
+        line.includes("AnatomicalStructurePrimary") &&
+        line.includes("CDATA[")
+      ) {
+        this.AnatomicalStructurePrimary =
+          readBracketTag("<Value><![CDATA[").toUpperCase();
+      }
+      if (line.includes("VolGeom") && line.includes("CDATA[")) {
+        let e = -1;
+        if (line.includes("VolGeomC_R")) e = 0;
+        if (line.includes("VolGeomC_A")) e = 1;
+        if (line.includes("VolGeomC_S")) e = 2;
+        if (e < 0) continue;
+        FreeSurferTranlate[e] = parseFloat(readBracketTag("<Value><![CDATA["));
       }
     }
-
-    if (
-      line.startsWith("<Name") &&
-      line.includes("AnatomicalStructurePrimary")
-    ) {
-      //the great kludge: attempt to match GIfTI and CIfTI
-      //unclear how connectome workbench reconciles multiple CIfTI structures with GIfTI mesh
-      if (!line.includes("<Value")) line = readStr();
-      if (!line.includes("CDATA[")) continue;
-      this.AnatomicalStructurePrimary = readBracketTag("CDATA[").toUpperCase();
-    }
-    if (!line.startsWith("<DataArray")) continue;
     //read DataArray properties
+    if (!tag.name.startsWith("DataArray")) continue;
+    line = tag.name;
     Dims = [1, 1, 1];
     isGzip = line.includes('Encoding="GZipBase64Binary"');
-    if (line.includes('Encoding="ASCII"'))
-      throw new Error("ASCII GIfTI not supported.");
+    isASCII = line.includes('Encoding="ASCII"');
     isIdx = line.includes('Intent="NIFTI_INTENT_TRIANGLE"');
     isPts = line.includes('Intent="NIFTI_INTENT_POINTSET"');
     isVectors = line.includes('Intent="NIFTI_INTENT_VECTOR"');
@@ -3161,6 +3265,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     if (line.includes('DataType="NIFTI_TYPE_UINT8"')) dataType = 2; //DT_UINT8
     if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8; //DT_INT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16; //DT_FLOAT32
+    if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) dataType = 32; //DT_FLOAT64
     function readNumericTag(TagName) {
       //Tag 'Dim1' will return 3 for Dim1="3"
       let pos = line.indexOf(TagName);
@@ -3173,33 +3278,12 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     Dims[0] = readNumericTag("Dim0=");
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
-  } //for each line
+  }
+  //console.log(`p=${positions.length} i=${indices.length} s=${scalars.length}`);
   if (n_vert > 0) return scalars;
-  /*
-  if (FreeSurferMatrix.length === 16) {
-	mat4.transpose(FreeSurferMatrix, FreeSurferMatrix); //column vs row major
-    nvert = Math.floor(positions.length / 3);
-    let i = 0;
-    for (var v = 0; v < nvert; v++) {
-      //positions[i] += FreeSurferTranlate[0];
-      //positions[i+1] += FreeSurferTranlate[1];
-      //positions[i+2] += FreeSurferTranlate[2];
-      //let pti = vec4.fromValues(0, -height * 0.5, 0, 1);
-      let pt = vec4.fromValues(positions[i], positions[i+1], positions[i+2], 1);
-	  vec4.transformMat4(pt, pt, FreeSurferMatrix);
-if (v === 0)
-  console.log(positions[i+0],positions[i+1], positions[i+2],'>>>',pt[0],pt[1],pt[2]);
-	  positions[i+0] = pt[0];
-	  positions[i+1] = pt[1];
-	  positions[i+2] = pt[2];
-
-
-      i += 3;
-    }
-  }*/
-  /*if (false) {
-   if (
+  if (
     positions.length > 2 &&
+    !isDataSpaceScanner &&
     (FreeSurferTranlate[0] != 0 ||
       FreeSurferTranlate[1] != 0 ||
       FreeSurferTranlate[2] != 0)
@@ -3215,7 +3299,6 @@ if (v === 0)
       i++;
     }
   } //issue416: apply FreeSurfer translation
-}*/
   return {
     positions,
     indices,
@@ -3234,6 +3317,9 @@ NVMesh.loadConnectomeFromJSON = async function (
   visible = true
 ) {
   if (json.hasOwnProperty("name")) name = json.name;
+  if (!json.hasOwnProperty("nodes")) {
+    throw Error("not a valid jcon connectome file");
+  }
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
@@ -3257,6 +3343,15 @@ NVMesh.readMesh = async function (
     ext = re.exec(name.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
+  if (ext === "JCON")
+    return await this.loadConnectomeFromJSON(
+      JSON.parse(new TextDecoder().decode(buffer)),
+      gl,
+      name,
+      "",
+      opacity,
+      visible
+    );
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
@@ -3509,6 +3604,79 @@ NVMesh.readTRX = async function (buffer) {
   };
 }; // readTRX()
 
+NVMesh.loadLayer = async function (layer, nvmesh) {
+  let buffer;
+
+  function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  if (layer.base64 !== undefined) {
+    // populate buffer with base64 if exists
+    buffer = base64ToArrayBuffer(layer.base64);
+  } else {
+    // fetch url otherwise
+    let response = await fetch(layer.url);
+    if (!response.ok) throw Error(response.statusText);
+    buffer = await response.arrayBuffer();
+  }
+
+  let layerName = null;
+  let urlParts = [];
+  if (layer.hasOwnProperty("name") && layer.name !== "") {
+    layerName = layer.name;
+  } else {
+    //urlParts = layer.url.split("/");
+    //layerName = urlParts.slice(-1)[0];
+    try {
+      // if a full url like https://domain/path/file.nii.gz?query=filter
+      // parse the url and get the pathname component without the query
+      urlParts = new URL(layer.url).pathname.split("/");
+    } catch (e) {
+      // if a relative url then parse the path (assuming no query)
+      urlParts = layer.url.split("/");
+    } finally {
+      layerName = urlParts.slice(-1)[0];
+    }
+  }
+  if (layerName.indexOf("?") > -1) {
+    layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
+  }
+
+  let opacity = 0.5;
+  if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
+  let colorMap = "warm";
+  if (layer.hasOwnProperty("colorMap")) colorMap = layer.colorMap;
+  let colorMapNegative = "winter";
+  if (layer.hasOwnProperty("colorMapNegative"))
+    colorMapNegative = layer.colorMapNegative;
+  let useNegativeCmap = false;
+  if (layer.hasOwnProperty("useNegativeCmap"))
+    useNegativeCmap = layer.useNegativeCmap;
+  let cal_min = null;
+  if (layer.hasOwnProperty("cal_min")) cal_min = layer.cal_min;
+  let cal_max = null;
+  if (layer.hasOwnProperty("cal_max")) cal_max = layer.cal_max;
+
+  this.readLayer(
+    layerName,
+    buffer,
+    nvmesh,
+    opacity,
+    colorMap,
+    colorMapNegative,
+    useNegativeCmap,
+    cal_min,
+    cal_max
+  );
+};
+
 /**
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
@@ -3554,44 +3722,15 @@ NVMesh.loadFromUrl = async function ({
   //var pts = [];
   let buffer = await response.arrayBuffer();
   let nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible);
-  if (!layers || layers.length < 1) return nvmesh;
-  for (let i = 0; i < layers.length; i++) {
-    response = await fetch(layers[i].url);
-    if (!response.ok) throw Error(response.statusText);
-    buffer = await response.arrayBuffer();
-    urlParts = layers[i].url.split("/");
-    let layerName = urlParts.slice(-1)[0];
-    if (layerName.indexOf("?") > -1) {
-      layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
-    }
-    let opacity = 0.5;
-    if (layers[i].hasOwnProperty("opacity")) opacity = layers[i].opacity;
-    let colorMap = "warm";
-    if (layers[i].hasOwnProperty("colorMap")) colorMap = layers[i].colorMap;
-    let colorMapNegative = "winter";
-    if (layers[i].hasOwnProperty("colorMapNegative"))
-      colorMapNegative = layers[i].colorMapNegative;
-    let useNegativeCmap = false;
-    if (layers[i].hasOwnProperty("useNegativeCmap"))
-      useNegativeCmap = layers[i].useNegativeCmap;
-    let cal_min = null;
-    if (layers[i].hasOwnProperty("cal_min")) cal_min = layers[i].cal_min;
-    let cal_max = null;
-    if (layers[i].hasOwnProperty("cal_max")) cal_max = layers[i].cal_max;
 
-    this.readLayer(
-      layerName,
-      buffer,
-      nvmesh,
-      opacity,
-      colorMap,
-      colorMapNegative,
-      useNegativeCmap,
-      cal_min,
-      cal_max
-    );
+  if (!layers || layers.length < 1) return nvmesh;
+
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
   }
-  nvmesh.updateMesh(gl); //apply the new properties...
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
   return nvmesh;
 };
 
@@ -3632,7 +3771,7 @@ NVMesh.loadFromFile = async function ({
   layers = [],
 } = {}) {
   let buffer = await this.readFileAsync(file);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3641,11 +3780,21 @@ NVMesh.loadFromFile = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply the new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 /**
- * load and return a new NVMesh instance from a file in the browser
- * @param {string} file the file object
+ * load and return a new NVMesh instance from a base64 encoded string
+ * @param {string} [base64=null] the base64 encoded string
  * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
@@ -3675,7 +3824,7 @@ NVMesh.loadFromBase64 = async function ({
   }
 
   let buffer = base64ToArrayBuffer(base64);
-  return await this.readMesh(
+  let nvmesh = await this.readMesh(
     buffer,
     name,
     gl,
@@ -3684,6 +3833,15 @@ NVMesh.loadFromBase64 = async function ({
     visible,
     layers
   );
+
+  if (!layers || layers.length < 1) return nvmesh;
+  for (let i = 0; i < layers.length; i++) {
+    await this.loadLayer(layers[i], nvmesh);
+  }
+
+  // apply new properties
+  nvmesh.updateMesh(gl);
+  return nvmesh;
 };
 
 // not included in public docs

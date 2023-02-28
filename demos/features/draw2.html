@@ -1,52 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Drawing</title>
-    <link rel="stylesheet" href="light.css">
+    <link rel="stylesheet" href="light.css" />
   </head>
   <body>
     <noscript>
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-		<label for="drawPen">Draw color:</label>
-		<select name="drawPen" id="drawPen">
-			<option value="-1">Off</option>
-			<option value="0">Erase</option>
-			<option value="1">Red</option>
-			<option value="2">Green</option>
-			<option value="3">Blue</option>
-			<option value="8">Filled Erase</option>
-			<option value="9">Filled Red</option>
-			<option value="10">Filled Green</option>
-			<option value="11">Filled Blue</option>
-			<option value="12">Erase Selected Cluster</option>
-		</select>
-		<button id="left">left</button>
-		<button id="right">right</button>
-		<button id="posterior">posterior</button>
-		<button id="anterior">anterior</button>
-		<button id="inferior">inferior</button>
-		<button id="superior">superior</button>
-		<button id="info">info</button>
-		<button id="save">save drawing</button>
-		<button id="undo">undo</button>
-		<button id="growcut">grow cut</button>
-		<label for="drawOpacity">drawing opacity</label>
-		<input type="range" min="0" max="100" value="80" class="slider" id="drawOpacity">
-		<label for="check1">fill pen overwrites</label>
-		<input type="checkbox" id="check1" name="check1" checked>		
-		<label for="check2">Radiological</label>
-		<input type="checkbox" id="check2" name="check2" unchecked>
-		<label for="check3">World space</label>
-		<input type="checkbox" id="check3" name="check3" unchecked>
-		<label for="check9">Linear Interpolation</label>
-		<input type="checkbox" id="check9" name="check9" checked>
-		<label for="check10">HighDPI</label>
-		<input type="checkbox" id="check10" name="check10" checked>
+      <label for="drawPen">Draw color:</label>
+      <select name="drawPen" id="drawPen">
+        <option value="-1">Off</option>
+        <option value="0">Erase</option>
+        <option value="1">Red</option>
+        <option value="2">Green</option>
+        <option value="3">Blue</option>
+        <option value="8">Filled Erase</option>
+        <option value="9">Filled Red</option>
+        <option value="10">Filled Green</option>
+        <option value="11">Filled Blue</option>
+        <option value="12">Erase Selected Cluster</option>
+      </select>
+      <button id="left">left</button>
+      <button id="right">right</button>
+      <button id="posterior">posterior</button>
+      <button id="anterior">anterior</button>
+      <button id="inferior">inferior</button>
+      <button id="superior">superior</button>
+      <button id="info">info</button>
+      <button id="save">save drawing</button>
+      <button id="undo">undo</button>
+      <button id="growcut">grow cut</button>
+      <label for="drawOpacity">drawing opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="80"
+        class="slider"
+        id="drawOpacity"
+      />
+      <label for="check1">fill pen overwrites</label>
+      <input type="checkbox" id="check1" name="check1" checked />
+      <label for="check2">Radiological</label>
+      <input type="checkbox" id="check2" name="check2" unchecked />
+      <label for="check3">World space</label>
+      <input type="checkbox" id="check3" name="check3" unchecked />
+      <label for="check9">Linear Interpolation</label>
+      <input type="checkbox" id="check9" name="check9" checked />
+      <label for="check10">HighDPI</label>
+      <input type="checkbox" id="check10" name="check10" checked />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -55,103 +62,106 @@
 </html>
 <script src="./niivue.umd.js"></script>
 <script type="module" async>
-      document.getElementById("drawOpacity").addEventListener("change", doDrawOpacity);
-      function doDrawOpacity(){
-        nv1.setDrawOpacity(this.value * 0.01);
-      }
-      document.getElementById("drawPen").addEventListener("change", doDrawPen);
-      function doDrawPen(){
-        const mode = parseInt(document.getElementById("drawPen").value);
-        nv1.setDrawingEnabled(mode >= 0);
-        if (mode >= 0)
-          nv1.setPenValue( (mode & 7), mode > 7);
-        if (mode === 12)//erase selected cluster
-          nv1.setPenValue(-0);
-      }
-      document.getElementById("left").addEventListener("click", doLeft);
-      function doLeft(){
-        nv1.moveCrosshairInVox(-1, 0, 0);
-      }
-      document.getElementById("right").addEventListener("click", doRight);
-      function doRight(){
-        nv1.moveCrosshairInVox(1, 0, 0);
-      }
-      document.getElementById("posterior").addEventListener("click", doPosterior);
-      function doPosterior(){
-        nv1.moveCrosshairInVox(0, -1, 0);
-      }
-      document.getElementById("anterior").addEventListener("click", doAnterior);
-      function doAnterior(){
-        nv1.moveCrosshairInVox(0, 1, 0);
-      }
-      document.getElementById("inferior").addEventListener("click", doInferior);
-      function doInferior(){
-        nv1.moveCrosshairInVox(0, 0, -1);
-      }
-      document.getElementById("info").addEventListener("click", doInfo);
-      function doInfo(){
-        let obj = nv1.getDescriptives(0, false);
-        let str = "Number of voxels: " +
-            obj.nvox +
-            "\nMin:" +
-            obj.min +
-            "\nMax:" +
-            obj.max +
-            "\nMean:" +
-            obj.mean +
-            "\nStandard deviation: " +
-            obj.stdev +
-            "\nRobust Min: " +
-            obj.robust_min +
-            "\nRobust Max: " +
-            obj.robust_max;
-        alert(str);
-      }
-      document.getElementById("superior").addEventListener("click", doSuperior);
-      function doSuperior(){
-        nv1.moveCrosshairInVox(0, 0, 1)
-      }
-      document.getElementById("undo").addEventListener("click", doUndo);
-      function doUndo(){
-        nv1.drawUndo()
-      }
-      document.getElementById("growcut").addEventListener("click", doGrowCut);
-      function doGrowCut(){
-        nv1.drawGrowCut()
-      }
-      document.getElementById("save").addEventListener("click", doSave);
-      function doSave(){
-        nv1.saveImage('test.nii', true)
-      }
-      document.getElementById("check1").addEventListener("change", doCheckClick);
-      function doCheckClick() {
-        nv1.drawFillOverwrites = this.checked;
-      }
-      document.getElementById("check2").addEventListener("change", doCheck2Click);
-      function doCheck2Click() {
-        nv1.setRadiologicalConvention(this.checked);
-      }
-	  document.getElementById("check3").addEventListener("change", doCheck3Click);
-      function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
-      }
-      document.getElementById("check9").addEventListener("change", doCheck9Click);
-      function doCheck9Click() {
-        nv1.setInterpolation(! this.checked)
-      }
-      document.getElementById("check10").addEventListener("change", doCheck10Click);
-      function doCheck10Click() {
-        nv1.setHighResolutionCapable(this.checked)
-      }
+  document
+    .getElementById("drawOpacity")
+    .addEventListener("change", doDrawOpacity);
+  function doDrawOpacity() {
+    nv1.setDrawOpacity(this.value * 0.01);
+  }
+  document.getElementById("drawPen").addEventListener("change", doDrawPen);
+  function doDrawPen() {
+    const mode = parseInt(document.getElementById("drawPen").value);
+    nv1.setDrawingEnabled(mode >= 0);
+    if (mode >= 0) nv1.setPenValue(mode & 7, mode > 7);
+    if (mode === 12)
+      //erase selected cluster
+      nv1.setPenValue(-0);
+  }
+  document.getElementById("left").addEventListener("click", doLeft);
+  function doLeft() {
+    nv1.moveCrosshairInVox(-1, 0, 0);
+  }
+  document.getElementById("right").addEventListener("click", doRight);
+  function doRight() {
+    nv1.moveCrosshairInVox(1, 0, 0);
+  }
+  document.getElementById("posterior").addEventListener("click", doPosterior);
+  function doPosterior() {
+    nv1.moveCrosshairInVox(0, -1, 0);
+  }
+  document.getElementById("anterior").addEventListener("click", doAnterior);
+  function doAnterior() {
+    nv1.moveCrosshairInVox(0, 1, 0);
+  }
+  document.getElementById("inferior").addEventListener("click", doInferior);
+  function doInferior() {
+    nv1.moveCrosshairInVox(0, 0, -1);
+  }
+  document.getElementById("info").addEventListener("click", doInfo);
+  function doInfo() {
+    let obj = nv1.getDescriptives(0, false);
+    let str =
+      "Number of voxels: " +
+      obj.nvox +
+      "\nMin:" +
+      obj.min +
+      "\nMax:" +
+      obj.max +
+      "\nMean:" +
+      obj.mean +
+      "\nStandard deviation: " +
+      obj.stdev +
+      "\nRobust Min: " +
+      obj.robust_min +
+      "\nRobust Max: " +
+      obj.robust_max;
+    alert(str);
+  }
+  document.getElementById("superior").addEventListener("click", doSuperior);
+  function doSuperior() {
+    nv1.moveCrosshairInVox(0, 0, 1);
+  }
+  document.getElementById("undo").addEventListener("click", doUndo);
+  function doUndo() {
+    nv1.drawUndo();
+  }
+  document.getElementById("growcut").addEventListener("click", doGrowCut);
+  function doGrowCut() {
+    nv1.drawGrowCut();
+  }
+  document.getElementById("save").addEventListener("click", doSave);
+  function doSave() {
+    nv1.saveImage("test.nii", true);
+  }
+  document.getElementById("check1").addEventListener("change", doCheckClick);
+  function doCheckClick() {
+    nv1.drawFillOverwrites = this.checked;
+  }
+  document.getElementById("check2").addEventListener("change", doCheck2Click);
+  function doCheck2Click() {
+    nv1.setRadiologicalConvention(this.checked);
+  }
+  document.getElementById("check3").addEventListener("change", doCheck3Click);
+  function doCheck3Click() {
+    nv1.setSliceMM(this.checked);
+  }
+  document.getElementById("check9").addEventListener("change", doCheck9Click);
+  function doCheck9Click() {
+    nv1.setInterpolation(!this.checked);
+  }
+  document.getElementById("check10").addEventListener("change", doCheck10Click);
+  function doCheck10Click() {
+    nv1.setHighResolutionCapable(this.checked);
+  }
 
-  var volumeList1 = [{url: "../images/FLAIR.nii.gz"}]
+  var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
   var nv1 = new niivue.Niivue({
-       backColor: [1, 1, 1, 1],
-             })
-  nv1.setRadiologicalConvention(false)
-  nv1.opts.multiplanarForceRender = true
-  nv1.attachTo('gl1')
-  await nv1.loadVolumes(volumeList1)
-  nv1.setSliceType(nv1.sliceTypeMultiplanar)
-  await nv1.loadDrawingFromUrl("../images/lesion.nii.gz")
+    backColor: [1, 1, 1, 1],
+  });
+  nv1.setRadiologicalConvention(false);
+  nv1.opts.multiplanarForceRender = true;
+  nv1.attachTo("gl1");
+  await nv1.loadVolumes(volumeList1);
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  await nv1.loadDrawingFromUrl("../images/lesion.nii.gz");
 </script>

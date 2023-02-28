@@ -1,49 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Background As Mask</title>
-    <link rel="stylesheet" href="niivue.css">
+    <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
-	<header>
-      <input type="checkbox" id="check1" value="true">
+    <header>
+      <input type="checkbox" id="check1" value="true" />
       <label for="check1">Background masks overlay</label>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-     import * as niivue from './niivue.es.js'
-     var volumeList1 = [
-     {
-           url: "../images/fslmean.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           colorMap: "gray",
-           opacity: 1,
-           visible: true,
-         },
-         {
-           url: "../images/fslt.nii.gz",//"./RAS.nii.gz", "./spm152.nii.gz",
-           colorMap: "redyell",
+      import * as niivue from "./niivue.es.js";
+      var volumeList1 = [
+        {
+          url: "../images/fslmean.nii.gz", //"./RAS.nii.gz", "./spm152.nii.gz",
+          colorMap: "gray",
+          opacity: 1,
+          visible: true,
+        },
+        {
+          url: "../images/fslt.nii.gz", //"./RAS.nii.gz", "./spm152.nii.gz",
+          colorMap: "redyell",
           cal_min: 0.05,
           cal_max: 5.05,
-           opacity: 0.9,
-           visible: true,
-         },
-        ] 
-      var nv1 = new niivue.Niivue()
-      nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.setClipPlane([0.15, 270, 0])
-      nv1.setRenderAzimuthElevation(45,45)
-	  document.getElementById("check1").addEventListener("change", checkClick);
+          opacity: 0.9,
+          visible: true,
+        },
+      ];
+      var nv1 = new niivue.Niivue({ show3Dcrosshair: true });
+      nv1.attachTo("gl1");
+      nv1.loadVolumes(volumeList1);
+      nv1.setSliceType(nv1.sliceTypeRender);
+      nv1.setClipPlane([0.15, 270, 0]);
+      nv1.setRenderAzimuthElevation(45, 45);
+      document.getElementById("check1").addEventListener("change", checkClick);
       function checkClick() {
-        nv1.backgroundMasksOverlays = this.checked
-        nv1.updateGLVolume()
+        nv1.backgroundMasksOverlays = this.checked;
+        nv1.updateGLVolume();
       }
     </script>
   </body>

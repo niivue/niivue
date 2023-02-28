@@ -1,76 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>NiiVue</title>
-  <style>
-    section {
-      margin: 0px;
-    }
-
-    body {
-      margin: 0px;
-      padding: 0px;
-    }
-
-    html {
-      margin: 0px;
-      padding: 0px;
-    }
-  </style>
-</head>
-<body style="font-family: sans-serif;">
-  <div id="app">
-    <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
-    </noscript>
-    <!-- demo 1 -->
-    <section>
-      <div id="demo1" style="width:100%; height:100vh;">
-        <canvas id="gl1" height=640 width=640>
-        </canvas>
-      </div>
-    </section>
-    <section>
-      <p id="location"></p>
-    </section>
-    <!-- <script type="module" src="./index.js">
-    </script> -->
-    <script type="module" async>
-      import { Niivue } from './niivue.js'
-      import {NVImage} from './nvimage.js'
-      import {NVMesh} from './nvmesh.js'
-      let query = window.location.search
-      const params = new URLSearchParams(query)
-      let url = params.get('url')
-      var volumeList1 = [
-        // first item is background image
-        {
-          url: url ? url : "../tests/images/mni152.nii.gz?test=test",//"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          name: "mni152.nii.gz"
-
-        },
-      ]
-      function handleLocationChange(data){ 
-        document.getElementById('location').innerHTML = data.xy  
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <style>
+      section {
+        margin: 0px;
       }
-      var nv1 = new Niivue({
-       logging: true,
-       loadingText: 'there are no images',
-       dragAndDropEnabled: true,
-       backColor: [0.3, 0.2, 0.4, 1],
-       onLocationChange:handleLocationChange
-      })
-      nv1.setRadiologicalConvention(false)
-      nv1.attachTo('gl1')
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
-      nv1.setClipPlane([-0.1, 270, 0])
-      nv1.setRenderAzimuthElevation(90,10)
-      await nv1.loadVolumes(volumeList1)
-      // example of using the 'location' change event with a callback function
-   </script>
-  </div>
-</body>
+
+      body {
+        margin: 0px;
+        padding: 0px;
+      }
+
+      html {
+        margin: 0px;
+        padding: 0px;
+      }
+    </style>
+  </head>
+  <body style="font-family: sans-serif">
+    <div id="app">
+      <noscript>
+        <strong
+          >niivue doesn't work properly without JavaScript enabled. Please
+          enable it to continue.</strong
+        >
+      </noscript>
+      <!-- demo 1 -->
+      <section>
+        <div id="demo1" style="width: 100%; height: 100vh">
+          <canvas id="gl1" height="640" width="640"> </canvas>
+        </div>
+      </section>
+      <section>
+        <p id="location"></p>
+      </section>
+      <!-- <script type="module" src="./index.js">
+    </script> -->
+      <script type="module" async>
+        import { Niivue } from "./niivue.js";
+        import { NVImage } from "./nvimage.js";
+        import { NVMesh } from "./nvmesh.js";
+        let query = window.location.search;
+        const params = new URLSearchParams(query);
+        let url = params.get("url");
+        var volumeList1 = [
+          // first item is background image
+          {
+            url: url ? url : "../tests/images/mni152.nii.gz?test=test", //"./AIL.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+            name: "mni152.nii.gz",
+          },
+        ];
+        function handleLocationChange(data) {
+          document.getElementById("location").innerHTML = data.string;
+        }
+        var nv1 = new Niivue({
+          logging: true,
+          loadingText: "there are no images",
+          dragAndDropEnabled: true,
+          backColor: [0.3, 0.2, 0.4, 1],
+          onLocationChange: handleLocationChange,
+        });
+        nv1.setRadiologicalConvention(false);
+        nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeMultiplanar);
+        nv1.setClipPlane([-0.1, 270, 0]);
+        nv1.setRenderAzimuthElevation(90, 10);
+        await nv1.loadVolumes(volumeList1);
+        // example of using the 'location' change event with a callback function
+      </script>
+    </div>
+  </body>
 </html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NiiVue</title>
+  </head>
+  <style>
+    html,
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      background: white;
+      background-color: white;
+      color: black;
+    }
+    header {
+      background-color: white;
+    }
+    canvas {
+      position: absolute;
+      cursor: crosshair;
+    }
+    canvas:focus {
+      outline: 0px;
+    }
+  </style>
+  <body>
+    <header>
+      Turn off `isResizeCanvas` to force NiiVue to have the same size regardless
+      of the window size.
+    </header>
+    <canvas
+      id="gl"
+      width="640"
+      height="640"
+      style="width: 640px; height: 640px"
+    ></canvas>
+  </body>
+</html>
+<script src="./niivue.umd.js"></script>
+<script type="module" async>
+  var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
+  var nv1 = new niivue.Niivue({
+    isResizeCanvas: false,
+  });
+  nv1.attachTo("gl");
+  await nv1.loadVolumes(volumeList1);
+</script>
