@@ -1171,7 +1171,7 @@ function readTxtVTK(buffer) {
   while (v < nvert * 3) {
     pos++;
     let str = lines[pos].trim();
-    let pts = str.split(" ");
+    let pts = str.trim().split(/\s+/);
     for (let i = 0; i < pts.length; i++) {
       if (v >= nvert3) break;
       positions[v] = parseFloat(pts[i]);
@@ -1197,7 +1197,7 @@ function readTxtVTK(buffer) {
       while (c < n_count) {
         str = lines[pos].trim();
         pos++;
-        let items = str.split(" ");
+        let items = str.trim().split(/\s+/);
         for (let i = 0; i < items.length; i++) {
           offsetPt0[c] = parseInt(items[i]);
           c++;
@@ -1957,6 +1957,7 @@ NVMesh.readPLY = function (buffer) {
   let indexCountBytes = 0; //if "property list uchar int vertex_index" this is 1 (uchar)
   let indexBytes = 0; //if "property list uchar int vertex_index" this is 4 (int)
   let nface = 0;
+  let facePadding = 0;
   while (pos < len && !line.startsWith("end_header")) {
     line = readStr();
     if (line.startsWith("comment")) continue;
@@ -1986,8 +1987,21 @@ NVMesh.readPLY = function (buffer) {
       indexBytes = dataTypeBytes(items[3]);
       continue;
     }
-    if (line.startsWith("element face"))
+    if (line.startsWith("element face")) {
       nface = parseInt(items[items.length - 1]);
+      //read face properties:
+      line = readStr();
+      items = line.split(/\s/);
+      while (line.startsWith("property")) {
+        console.log("property", line);
+        if (items[1] === "list") break;
+        //face lines can be padded with extra values
+        // for example, ConvertSurface adds "property uchar intensity"
+        facePadding++;
+        line = readStr();
+        items = line.split(/\s/);
+      }
+    }
   } //while reading all lines of header
   if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1)
     console.log("Malformed ply format");
@@ -2007,17 +2021,17 @@ NVMesh.readPLY = function (buffer) {
     for (var i = 0; i < nface; i++) {
       line = readStr();
       let items = line.split(/\s/);
-      let nTri = parseInt(items[0]) - 2;
+      let nTri = parseInt(items[facePadding]) - 2;
       if (nTri < 1) break; //error
       if (f + nTri * 3 > indices.length) {
         var c = new Int32Array(indices.length + indices.length);
         c.set(indices);
         indices = c.slice();
       }
-      let idx0 = parseInt(items[1]);
-      let idx1 = parseInt(items[2]);
+      let idx0 = parseInt(items[facePadding + 1]);
+      let idx1 = parseInt(items[facePadding + 2]);
       for (let j = 0; j < nTri; j++) {
-        let idx2 = parseInt(items[3 + j]);
+        let idx2 = parseInt(items[facePadding + 3 + j]);
         indices[f + 0] = idx0;
         indices[f + 1] = idx1;
         indices[f + 2] = idx2;
@@ -2168,6 +2182,143 @@ NVMesh.readLayer = function (
   nvmesh.layers.push(layer);
 }; // readLayer()
 
+//FreeSurfer can convert meshes to ICO/TRI format text files
+// https://github.com/dfsp-spirit/freesurferformats/blob/434962608108c75d4337d5e7a5096e3bd4ee6ee6/R/read_fs_surface.R#L1090
+// detect TRI format that uses same extension
+// http://paulbourke.net/dataformats/tri/
+NVMesh.readICO = function (buffer) {
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  var lines = txt.split("\n");
+  let header = lines[0].trim().split(/\s+/);
+  //read line 0: header
+  //FreeSurfer header has one item: [0]'num_verts'
+  //Bourke header has 2 items: [0]'num_verts', [1]'num_faces'
+  if (header.length > 1)
+    console.log("This is not a valid FreeSurfer ICO/TRI mesh.");
+  let num_v = parseInt(header[0]);
+  //read vertices: each line has 4 values: index, x, y, z
+  var positions = new Float32Array(num_v * 3);
+  let v = 0;
+  let line = 1; // line 0 is header
+  for (let i = 0; i < num_v; i++) {
+    let items = lines[line].trim().split(/\s+/);
+    line++;
+    //idx is indexed from 1, not 0
+    let idx = parseInt(items[0]) - 1;
+    let x = parseFloat(items[1]);
+    let y = parseFloat(items[2]);
+    let z = parseFloat(items[3]);
+    if (idx < 0 || idx >= num_v) {
+      console.log("ICO vertices corrupted");
+      break;
+    }
+    idx *= 3;
+    positions[idx] = x;
+    positions[idx + 1] = y;
+    positions[idx + 2] = z;
+  } //read all vertices
+  //read faces
+  header = lines[line].trim().split(/\s+/);
+  line++;
+  let num_f = parseInt(header[0]);
+  var indices = new Int32Array(num_f * 3);
+  for (let i = 0; i < num_f; i++) {
+    let items = lines[line].trim().split(/\s+/);
+    line++;
+    //all values indexed from 1, not 0
+    let idx = parseInt(items[0]) - 1;
+    let x = parseInt(items[1]) - 1;
+    let y = parseInt(items[2]) - 1;
+    let z = parseInt(items[3]) - 1;
+    if (idx < 0 || idx >= num_f) {
+      console.log("ICO indices corrupted");
+      break;
+    }
+    idx *= 3;
+    indices[idx] = x;
+    indices[idx + 1] = y;
+    indices[idx + 2] = z;
+  } //read all faces
+  //FreeSurfer seems to enforce clockwise winding: reverse to CCW
+  for (let j = 0; j < indices.length; j += 3) {
+    let tri = indices[j];
+    indices[j] = indices[j + 1];
+    indices[j + 1] = tri;
+  }
+  return {
+    positions,
+    indices,
+  };
+}; // readICO()
+
+//While BYU and FreeSurfer GEO are related
+// - BYU can have multiple parts
+// - BYU faces not always triangular
+// http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm#GeoFile
+// http://www.eg-models.de/formats/Format_Byu.html
+// https://github.com/dfsp-spirit/freesurferformats/blob/dafaf88a601dac90fa3c9aae4432f003f5344546/R/read_fs_surface.R#L924
+// https://github.com/dfsp-spirit/freesurferformats/blob/434962608108c75d4337d5e7a5096e3bd4ee6ee6/R/read_fs_surface.R#L1144
+// n.b. AFNI uses the '.g' extension for this format 'ConvertSurface  -i_gii L.surf.gii -o_byu L'
+NVMesh.readGEO = function (buffer, isFlipWinding = false) {
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  var lines = txt.split("\n");
+  let header = lines[0].trim().split(/\s+/);
+  //read line 0: header
+  //header[0]='nparts', [1]'npoints/vertices', [2]'npolys/faces', [3]'nconnects'
+  let num_p = parseInt(header[0]);
+  let num_v = parseInt(header[1]);
+  let num_f = parseInt(header[2]);
+  let num_c = parseInt(header[3]);
+  if (num_p > 1 || num_c !== num_f * 3) {
+    console.log("Multi-part BYU/GEO header or not a triangular mesh.");
+  }
+  //skip line 1: it is redundant (contains number of faces once more)
+  //next read the vertices (points)
+  let pts = [];
+  num_v *= 3; //each vertex has three components (x,y,z)
+  let v = 0;
+  let line = 2; // line 0 and 1 are header
+  while (v < num_v) {
+    let items = lines[line].trim().split(/\s+/);
+    line++;
+    for (let i = 0; i < items.length; i++) {
+      pts.push(parseFloat(items[i]));
+      v++;
+      if (v >= num_v) break;
+    } //for each item
+  } //read all vertices
+  //next read faces (triangles)
+  let t = [];
+  num_f *= 3; //each triangle has three vertices (i,j,k)
+  let f = 0;
+  while (f < num_f) {
+    let items = lines[line].trim().split(/\s+/);
+    line++;
+    for (let i = 0; i < items.length; i++) {
+      t.push(Math.abs(parseInt(items[i])) - 1);
+      f++;
+      if (f >= num_f) break;
+    } //for each item
+  } //read all faces
+  //FreeSurfer seems to enforce clockwise winding: reverse to CCW
+  if (isFlipWinding) {
+    for (let j = 0; j < t.length; j += 3) {
+      let tri = t[j];
+      t[j] = t[j + 1];
+      t[j + 1] = tri;
+    }
+  }
+  //return results
+  var positions = new Float32Array(pts);
+  var indices = new Int32Array(t);
+  return {
+    positions,
+    indices,
+  };
+}; // readGEO()
+
 // not included in public docs
 // read OFF format
 // https://en.wikipedia.org/wiki/OFF_(file_format)
@@ -2180,7 +2331,8 @@ NVMesh.readOFF = function (buffer) {
   let pts = [];
   let t = [];
   let i = 0;
-  if (!lines[i].startsWith("OFF")) {
+  //first line signature "OFF", but R freesurfer package uses "# OFF"
+  if (!lines[i].includes("OFF")) {
     console.log("File does not start with OFF");
   } else i++;
   let items = lines[i].split(" ");
@@ -2405,7 +2557,7 @@ NVMesh.readSTL = function (buffer) {
   if (buffer.byteLength < 80 + 4 + 50)
     throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
   var reader = new DataView(buffer);
-  let sig = reader.getUint32(80, true);
+  let sig = reader.getUint32(0, true);
   if (sig === 1768714099)
     throw new Error("Only able to read binary (not ASCII) STL files.");
   var ntri = reader.getUint32(80, true);
@@ -3383,6 +3535,9 @@ NVMesh.readMesh = async function (
   } else if (ext === "MZ3") obj = this.readMZ3(buffer);
   else if (ext === "ASC") obj = this.readASC(buffer);
   else if (ext === "DFS") obj = this.readDFS(buffer);
+  else if (ext === "BYU" || ext === "G") obj = this.readGEO(buffer);
+  else if (ext === "GEO") obj = this.readGEO(buffer, true);
+  else if (ext === "ICO" || ext === "TRI") obj = this.readICO(buffer);
   else if (ext === "OFF") obj = this.readOFF(buffer);
   else if (ext === "NV") obj = this.readNV(buffer);
   else if (ext === "OBJ") obj = this.readOBJ(buffer);
