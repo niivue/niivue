@@ -1,11 +1,11 @@
-const { snapshot, httpServerAddress, seconds } = require("./helpers")
+const { snapshot, httpServerAddress } = require("./helpers")
 
 beforeEach(async () => {
 	await page.goto(httpServerAddress, {timeout:0})
 	await page.setViewport({width: 1440, height: 900, deviceScaleFactor: 1});
 })
 
-test('parse_xml_gifti_file_new_line', async () => {
+test("parse_xml_gifti_file_new_line", async () => {
 	let obj = await page.evaluate(async () => {
 		let xmlFile = `
 <?xml version="1.0" encoding="UTF-8"?>
@@ -42,7 +42,7 @@ test('parse_xml_gifti_file_new_line', async () => {
 	await snapshot()
 })
 
-test('parse_xml_gifti_file_no_new_line', async () => {
+test("parse_xml_gifti_file_no_new_line", async () => {
 	let obj = await page.evaluate(async () => {
 		let xmlFile = `
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE GIFTI SYSTEM "http://www.nitrc.org/frs/download.php/115/gifti.dtd"><GIFTI Version="1.0" NumberOfDataArrays="1"><MetaData /><LabelTable /><DataArray Intent="NIFTI_INTENT_ZSCORE" DataType="NIFTI_TYPE_FLOAT32" ArrayIndexingOrder="RowMajorOrder" Dimensionality="1" Encoding="GZipBase64Binary" Endian="LittleEndian" ExternalFileName="" ExternalFileOffset="0" Dim0="3"><MetaData /><CoordinateSystemTransformMatrix><DataSpace>NIFTI_XFORM_UNKNOWN</DataSpace><TransformedSpace>NIFTI_XFORM_UNKNOWN</TransformedSpace>
