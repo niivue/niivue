@@ -202,7 +202,7 @@ export class NVController {
    * @param {string} sessionName
    * @param {string} sessionKey
    * @param {SessionUser} user
-   * @decription Connects to existing session or creates new session
+   * @description Connects to existing session or creates new session
    */
   connectToSession(
     sessionName,

@@ -262,7 +262,7 @@ export function Niivue(options = {}) {
   this.mousePos = [0, 0];
   this.screenSlices = []; // empty array
 
-  this.otherNV = null; // another niivue instance that we wish to sync postion with
+  this.otherNV = null; // another niivue instance that we wish to sync position with
   this.volumeObject3D = null;
   this.pivot3D = [0, 0, 0]; //center for rendering rotation
   this.furthestFromPivot = 10.0; //most distant point from pivot
@@ -491,7 +491,7 @@ Niivue.prototype.attachTo = async function (id, isAntiAlias = null) {
 }; // attachTo
 
 // on handles matching event strings (event) with know rxjs subjects within NiiVue.
-// if the event string exists (e.g. 'location') then the corrsponding rxjs subject reference
+// if the event string exists (e.g. 'location') then the corresponding rxjs subject reference
 // is extracted from this.eventsToSubjects and the callback passed as the second argument to NiiVue.on
 // is added to the subsciptions to the next method. These callbacks are called whenever subject.next is called within
 // various NiiVue methods.
@@ -1332,7 +1332,7 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
     ext = re.exec(fullname.slice(0, -3))[1]; //img.trk.gz -> img.trk
     ext = ext.toUpperCase();
   }
-  return upperCase ? ext : ext.toLowerCase(); // developer can choose to have extentions as upper or lower
+  return upperCase ? ext : ext.toLowerCase(); // developer can choose to have extensions as upper or lower
 }; // getFleExt
 
 /**
@@ -4124,7 +4124,7 @@ Niivue.prototype.createCustomMeshShader = function (
   vertexShaderText = ""
 ) {
   if (!fragmentShaderText) {
-    throw "Need frament shader";
+    throw "Need fragment shader";
   }
 
   let num = this.meshShaderNameToNumber(name);
@@ -4912,7 +4912,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
     mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
     if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
-      //explicit range for negative colormap: allows assymetric maps
+      //explicit range for negative colormap: allows asymmetric maps
       mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
       mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
     }

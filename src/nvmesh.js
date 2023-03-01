@@ -983,7 +983,7 @@ NVMesh.readTCK = function (buffer) {
     var ptz = reader.getFloat32(pos, true);
     pos += 4;
     if (!isFinite(ptx)) {
-      //both NaN and Inifinity are not finite
+      //both NaN and Infinity are not finite
       offsetPt0.push(npt);
       if (!isNaN(ptx))
         //terminate if infinity
@@ -1304,7 +1304,7 @@ NVMesh.readSMP = function (buffer, n_vert) {
     buffer = raw.buffer;
   }
   if (vers > 5)
-    console.log("Unsupported or invalud BrainVoyager SMP version " + vers);
+    console.log("Unsupported or invalid BrainVoyager SMP version " + vers);
   let nvert = reader.getUint32(2, true);
   if (nvert !== n_vert)
     console.log(
@@ -3689,7 +3689,7 @@ NVMesh.readTRX = async function (buffer) {
     if (fname.startsWith(".")) continue;
     let pname = parts.slice(-2)[0]; // my.trx/dpv/fx.float32 -> dpv
     let tag = fname.split(".")[0]; // "positions.3.float16 -> "positions"
-    //todo: should tags be censored for invalide characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
+    //todo: should tags be censored for invalid characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
     let data = decompressed[keys[i]];
     if (fname.includes("header.json")) {
       let jsonString = new TextDecoder().decode(data);
@@ -3869,7 +3869,7 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {NVMeshLayer[]} [layers=[]] layers of the mesh to load
- * @returns {NVMesh} returns a NVImage intance
+ * @returns {NVMesh} returns a NVImage instance
  * @example
  * myImage = NVMesh.loadFromUrl('./someURL/mesh.gii') // must be served from a server (local or remote)
  */
@@ -3943,7 +3943,7 @@ NVMesh.readFileAsync = function (file) {
  * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
  * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @returns {NVMesh} returns a NVMesh intance
+ * @returns {NVMesh} returns a NVMesh instance
  */
 NVMesh.loadFromFile = async function ({
   file,
@@ -3985,7 +3985,7 @@ NVMesh.loadFromFile = async function ({
  * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
  * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @returns {NVMesh} returns a NVMesh intance
+ * @returns {NVMesh} returns a NVMesh instance
  */
 NVMesh.loadFromBase64 = async function ({
   base64 = null,
