@@ -2550,6 +2550,36 @@ NVMesh.readSRF = function (buffer) {
   };
 }; // readSRF()
 
+// read STL ASCII format file
+// http://paulbourke.net/dataformats/stl/
+function readTxtSTL(buffer) {
+  var enc = new TextDecoder("utf-8");
+  var txt = enc.decode(buffer);
+  var lines = txt.split("\n");
+  if (!lines[0].startsWith("solid")) {
+    console.log("Not a valid STL file");
+    return null;
+  }
+  let pts = [];
+  for (var i = 1; i < lines.length; i++) {
+    if (!lines[i].includes("vertex")) continue;
+    let items = lines[i].trim().split(/\s+/);
+    for (let j = 1; j < items.length; j++) pts.push(parseFloat(items[j]));
+  }
+  var npts = Math.floor(pts.length / 3); //each vertex has x,y,z
+  if (npts * 3 !== pts.length) {
+    console.log("Unable to parse ASCII STL file.");
+    return null;
+  }
+  var positions = new Float32Array(pts);
+  var indices = new Int32Array(npts);
+  for (var i = 0; i < npts; i++) indices[i] = i;
+  return {
+    positions,
+    indices,
+  };
+} // readTxtSTL()
+
 // not included in public docs
 // read STL format, nb this format does not reuse vertices
 // https://en.wikipedia.org/wiki/STL_(file_format)
@@ -2558,8 +2588,7 @@ NVMesh.readSTL = function (buffer) {
     throw new Error("File too small to be STL: bytes = " + buffer.byteLength);
   var reader = new DataView(buffer);
   let sig = reader.getUint32(0, true);
-  if (sig === 1768714099)
-    throw new Error("Only able to read binary (not ASCII) STL files.");
+  if (sig === 1768714099) return readTxtSTL(buffer);
   var ntri = reader.getUint32(80, true);
   let ntri3 = 3 * ntri;
   if (buffer.byteLength < 80 + 4 + ntri * 50)
