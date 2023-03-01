@@ -1,50 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Atlas</title>
-    <link rel="stylesheet" href="niivue.css">
+    <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
-	<header>
+    <header>
       <label for="check1">Outline</label>
-	  <input type="checkbox" id="check1" name="check1" unchecked>
+      <input type="checkbox" id="check1" name="check1" unchecked />
       <label for="alphaSlider">Opacity</label>
-      <input type="range" min="1" max="255" value="255" class="slider" id="alphaSlider">
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="255"
+        class="slider"
+        id="alphaSlider"
+      />
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-     import * as niivue from './niivue.es.js'
-     var volumeList1 = [
-       // first item is background image
-         {
-           url: "../images/mni152.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           colorMap: "gray",
-         },
-         {
-           url: "../images/aal.nii.gz",//"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-           colorMap: "random",
-         },
-        ] 
-      function handleLocationChange(data){
-        document.getElementById('location').innerHTML = data.string
+      import * as niivue from "./niivue.es.js";
+      var volumeList1 = [
+        // first item is background image
+        {
+          url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "gray",
+        },
+        {
+          url: "../images/aal.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          colorMap: "random",
+        },
+      ];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML = data.string;
       }
-      var nv1 = new niivue.Niivue({onLocationChange:handleLocationChange})
-      nv1.attachTo('gl1')
-      nv1.loadVolumes(volumeList1)
-      document.getElementById("check1").addEventListener("change", doCheckClick);
+      var nv1 = new niivue.Niivue({ onLocationChange: handleLocationChange });
+      nv1.attachTo("gl1");
+      nv1.loadVolumes(volumeList1);
+      document
+        .getElementById("check1")
+        .addEventListener("change", doCheckClick);
       function doCheckClick() {
-        nv1.setAtlasOutline(this.checked)
+        nv1.setAtlasOutline(this.checked);
       }
       var slider = document.getElementById("alphaSlider");
-      slider.oninput = function() {
-        nv1.setOpacity (1, this.value / 255);
-      }
+      slider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255);
+      };
     </script>
   </body>
 </html>

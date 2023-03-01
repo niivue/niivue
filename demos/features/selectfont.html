@@ -1,50 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Select Font</title>
-    <link rel="stylesheet" href="light.css">
+    <link rel="stylesheet" href="light.css" />
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
-	<header>
-        <label for="fonts">Choose a font:</label>
-        <select name="fonts" id="fonts" onchange="changeFont()">
-          <option value="roboto">Roboto</option>
-          <option value="garamond">Garamond</option>
-          <option value="ubuntu">Ubuntu</option>
-          <option value="ubuntubold">UbuntuBold</option>
-        </select>
-		drag and drop a Nifti image or this <a href="../images/mni152.nii.gz">link to a Nifti image</a>
+    <header>
+      <label for="fonts">Choose a font:</label>
+      <select name="fonts" id="fonts" onchange="changeFont()">
+        <option value="roboto">Roboto</option>
+        <option value="garamond">Garamond</option>
+        <option value="ubuntu">Ubuntu</option>
+        <option value="ubuntubold">UbuntuBold</option>
+      </select>
+      drag and drop a Nifti image or this
+      <a href="../images/mni152.nii.gz">link to a Nifti image</a>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-      var dropFont = document.getElementById("fonts")
-      dropFont.onchange = function() {
-        const fontName = document.getElementById("fonts").value
-        switch(fontName) {
+      var dropFont = document.getElementById("fonts");
+      dropFont.onchange = function () {
+        const fontName = document.getElementById("fonts").value;
+        switch (fontName) {
           case "roboto":
-            nv1.loadFont("../fonts/Roboto-Regular.png", "../fonts/Roboto-Regular.json")
-            break
+            nv1.loadFont(
+              "../fonts/Roboto-Regular.png",
+              "../fonts/Roboto-Regular.json"
+            );
+            break;
           case "garamond":
-            nv1.loadFont("../fonts/Garamond.png", "../fonts/Garamond.json")
-            break
+            nv1.loadFont("../fonts/Garamond.png", "../fonts/Garamond.json");
+            break;
           case "ubuntu":
             nv1.loadFont("../fonts/Ubuntu.png", "../fonts/Ubuntu.json");
-            break
+            break;
           case "ubuntubold":
             nv1.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
-            break
+            break;
         }
-      }
-     import * as niivue from './niivue.es.js'
-      var nv1 = new niivue.Niivue()
-      nv1.attachTo('gl1')
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      };
+      import * as niivue from "./niivue.es.js";
+      var nv1 = new niivue.Niivue();
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
     </script>
   </body>
 </html>

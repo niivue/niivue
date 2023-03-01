@@ -1,30 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>world space</title>
-    <link rel="stylesheet" href="light.css">
+    <link rel="stylesheet" href="light.css" />
   </head>
   <body>
     <noscript>
-      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
     </noscript>
     <header>
-	  <label for="check1">LR</label>
-	  <input type="checkbox" id="check1" unchecked>
+      <label for="check1">LR</label>
+      <input type="checkbox" id="check1" unchecked />
       <label for="check2">Nose</label>
-      <input type="checkbox" id="check2" unchecked>
+      <input type="checkbox" id="check2" unchecked />
       <label for="check3">World</label>
-      <input type="checkbox" id="check3" checked>
-	  <label for="dragMode">Drag mode</label>
-	  <select  id="dragMode">
-		<option value="contrast" selected>contrast</option>
-		<option value="measurement">measurement</option>
-		<option value="pan">pan/zoom</option>
-		<option value="none">none</option>
-	  </select>
+      <input type="checkbox" id="check3" checked />
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="none">none</option>
+      </select>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -33,54 +36,52 @@
 </html>
 <script src="./niivue.umd.js"></script>
 <script>
-      var dropDrag = document.getElementById("dragMode")
-      dropDrag.onchange = function() {
-        switch(document.getElementById("dragMode").value) {
-          case "none":
-            nv1.opts.dragMode = nv1.dragModes.none;
-            break
-          case "contrast":
-            nv1.opts.dragMode = nv1.dragModes.contrast;
-            break
-          case "measurement":
-            nv1.opts.dragMode = nv1.dragModes.measurement;
-            break
-          case "pan":
-            nv1.opts.dragMode = nv1.dragModes.pan;
-            break
-        }
-      }
-      document.getElementById("check1").addEventListener("change", doCheckClick);
-      function doCheckClick() {
-        nv1.setRadiologicalConvention(this.checked)
-      }
-      document.getElementById("check2").addEventListener("change", doCheck2Click);
-      function doCheck2Click() {
-        nv1.opts.sagittalNoseLeft = this.checked
-		nv1.drawScene();
-      }
-      document.getElementById("check3").addEventListener("change", doCheck3Click);
-      function doCheck3Click() {
-        nv1.setSliceMM(this.checked)
-      }
- var volumeList1 = [
-     {
-       url: "../images/FLAIR.nii.gz",
-       colorMap: "gray",
-       opacity: 1,
-       visible: true,
-     },
-    ] 
+  var dropDrag = document.getElementById("dragMode");
+  dropDrag.onchange = function () {
+    switch (document.getElementById("dragMode").value) {
+      case "none":
+        nv1.opts.dragMode = nv1.dragModes.none;
+        break;
+      case "contrast":
+        nv1.opts.dragMode = nv1.dragModes.contrast;
+        break;
+      case "measurement":
+        nv1.opts.dragMode = nv1.dragModes.measurement;
+        break;
+      case "pan":
+        nv1.opts.dragMode = nv1.dragModes.pan;
+        break;
+    }
+  };
+  document.getElementById("check1").addEventListener("change", doCheckClick);
+  function doCheckClick() {
+    nv1.setRadiologicalConvention(this.checked);
+  }
+  document.getElementById("check2").addEventListener("change", doCheck2Click);
+  function doCheck2Click() {
+    nv1.opts.sagittalNoseLeft = this.checked;
+    nv1.drawScene();
+  }
+  document.getElementById("check3").addEventListener("change", doCheck3Click);
+  function doCheck3Click() {
+    nv1.setSliceMM(this.checked);
+  }
+  var volumeList1 = [
+    {
+      url: "../images/FLAIR.nii.gz",
+      colorMap: "gray",
+      opacity: 1,
+      visible: true,
+    },
+  ];
   var nv1 = new niivue.Niivue({
-        dragAndDropEnabled: true,
-        backColor: [1, 1, 1, 1],
-        show3Dcrosshair: true,
-    })
-  nv1.setSliceMM(true)
-  nv1.setRadiologicalConvention(false)
-  nv1.attachTo('gl1')
-  nv1.loadVolumes(volumeList1)
-  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+    dragAndDropEnabled: true,
+    backColor: [1, 1, 1, 1],
+    show3Dcrosshair: true,
+  });
+  nv1.setSliceMM(true);
+  nv1.setRadiologicalConvention(false);
+  nv1.attachTo("gl1");
+  nv1.loadVolumes(volumeList1);
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
 </script>
-
-
