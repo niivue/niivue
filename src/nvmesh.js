@@ -1624,8 +1624,9 @@ NVMesh.readVTK = function (buffer) {
     throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
   var bytes = new Uint8Array(buffer);
   let pos = 0;
-  function readStr() {
-    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+  function readStr(isSkipBlank = true) {
+    if (isSkipBlank)
+      while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
     let startPos = pos;
     while (pos < len && bytes[pos] !== 10) pos++;
     pos++; //skip EOLN
@@ -1634,7 +1635,7 @@ NVMesh.readVTK = function (buffer) {
   }
   let line = readStr(); //1st line: signature
   if (!line.startsWith("# vtk DataFile")) alert("Invalid VTK mesh");
-  line = readStr(); //2nd line comment
+  line = readStr(false); //2nd line comment, n.b. MRtrix stores empty line
   line = readStr(); //3rd line ASCII/BINARY
   if (line.startsWith("ASCII")) return readTxtVTK(buffer);
   //from NiiVue
@@ -1954,10 +1955,12 @@ NVMesh.readPLY = function (buffer) {
   let nvert = 0;
   let vertIsDouble = false;
   let vertStride = 0; //e.g. if each vertex stores xyz as float32 and rgb as uint8, stride is 15
+  let indexStrideBytes = 0; // "list uchar int vertex_indices" has stride 1 + 3 * 4
   let indexCountBytes = 0; //if "property list uchar int vertex_index" this is 1 (uchar)
   let indexBytes = 0; //if "property list uchar int vertex_index" this is 4 (int)
+  let indexPaddingBytes = 0;
+  let nIndexPadding = 0;
   let nface = 0;
-  let facePadding = 0;
   while (pos < len && !line.startsWith("end_header")) {
     line = readStr();
     if (line.startsWith("comment")) continue;
@@ -1979,33 +1982,34 @@ NVMesh.readPLY = function (buffer) {
         items = line.split(/\s/);
       }
     }
-    if (
-      items[items.length - 1] === "vertex_indices" ||
-      items[items.length - 1] === "vertex_index"
-    ) {
-      indexCountBytes = dataTypeBytes(items[2]);
-      indexBytes = dataTypeBytes(items[3]);
-      continue;
-    }
     if (line.startsWith("element face")) {
       nface = parseInt(items[items.length - 1]);
       //read face properties:
       line = readStr();
       items = line.split(/\s/);
       while (line.startsWith("property")) {
-        console.log("property", line);
-        if (items[1] === "list") break;
-        //face lines can be padded with extra values
-        // for example, ConvertSurface adds "property uchar intensity"
-        facePadding++;
+        //console.log("property", line);
+        if (items[1] === "list") {
+          indexCountBytes = dataTypeBytes(items[2]);
+          indexBytes = dataTypeBytes(items[3]);
+          indexStrideBytes += indexCountBytes + (3 * indexBytes); //e.g. "uchar int" is 1 + 3 * 4 bytes
+        } else {
+          let bytes = dataTypeBytes(items[1]);
+          indexStrideBytes += bytes;
+          if (indexBytes === 0) {
+            //this index property is BEFORE the list
+            indexPaddingBytes += bytes;
+            nIndexPadding ++;
+          }
+        }
         line = readStr();
         items = line.split(/\s/);
       }
     }
   } //while reading all lines of header
-  if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1)
-    console.log("Malformed ply format");
   if (isAscii) {
+    if (nface < 1)
+      console.log(`Malformed ply format: faces ${nface} `);
     let positions = new Float32Array(nvert * 3);
     let v = 0;
     for (var i = 0; i < nvert; i++) {
@@ -2021,17 +2025,17 @@ NVMesh.readPLY = function (buffer) {
     for (var i = 0; i < nface; i++) {
       line = readStr();
       let items = line.split(/\s/);
-      let nTri = parseInt(items[facePadding]) - 2;
+      let nTri = parseInt(items[nIndexPadding]) - 2;
       if (nTri < 1) break; //error
       if (f + nTri * 3 > indices.length) {
         var c = new Int32Array(indices.length + indices.length);
         c.set(indices);
         indices = c.slice();
       }
-      let idx0 = parseInt(items[facePadding + 1]);
-      let idx1 = parseInt(items[facePadding + 2]);
+      let idx0 = parseInt(items[nIndexPadding + 1]);
+      let idx1 = parseInt(items[nIndexPadding + 2]);
       for (let j = 0; j < nTri; j++) {
-        let idx2 = parseInt(items[facePadding + 3 + j]);
+        let idx2 = parseInt(items[nIndexPadding + 3 + j]);
         indices[f + 0] = idx0;
         indices[f + 1] = idx1;
         indices[f + 2] = idx2;
@@ -2045,10 +2049,13 @@ NVMesh.readPLY = function (buffer) {
       indices,
     };
   } //if isAscii
+  if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1)
+    console.log(`Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`);
   var reader = new DataView(buffer);
   var positions = [];
-  if (vertStride === 12 && isLittleEndian) {
+  if (((pos % 4) === 0) && (vertStride === 12 && isLittleEndian)) {
     //optimization: vertices only store xyz position as float
+    //n.b. start offset of Float32Array must be a multiple of 4
     positions = new Float32Array(buffer, pos, nvert * 3);
     pos += nvert * vertStride;
   } else {
@@ -2071,7 +2078,8 @@ NVMesh.readPLY = function (buffer) {
   var indices = new Int32Array(nface * 3); //assume triangular mesh: pre-allocation optimization
   let isTriangular = true;
   let j = 0;
-  if (indexCountBytes === 1 && indexBytes === 4) {
+  if (indexCountBytes === 1 && indexBytes === 4 && indexStrideBytes == 13) {
+    //default mode: "list uchar int vertex_indices" without other properties
     for (var i = 0; i < nface; i++) {
       let nIdx = reader.getUint8(pos);
       pos += indexCountBytes;
@@ -2086,7 +2094,9 @@ NVMesh.readPLY = function (buffer) {
     }
   } else {
     //not 1:4 index data
+    let startPos = pos;
     for (var i = 0; i < nface; i++) {
+      pos = startPos + indexPaddingBytes;
       let nIdx = 0;
       if (indexCountBytes === 1) nIdx = reader.getUint8(pos);
       else if (indexCountBytes === 2)
@@ -2104,6 +2114,7 @@ NVMesh.readPLY = function (buffer) {
         j++;
         pos += indexBytes;
       }
+      startPos += indexStrideBytes;
     } //for each face
   } //if not 1:4 datatype
   if (!isTriangular)
