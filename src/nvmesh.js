@@ -1625,8 +1625,7 @@ NVMesh.readVTK = function (buffer) {
   var bytes = new Uint8Array(buffer);
   let pos = 0;
   function readStr(isSkipBlank = true) {
-    if (isSkipBlank)
-      while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    if (isSkipBlank) while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
     let startPos = pos;
     while (pos < len && bytes[pos] !== 10) pos++;
     pos++; //skip EOLN
@@ -1638,7 +1637,6 @@ NVMesh.readVTK = function (buffer) {
   line = readStr(false); //2nd line comment, n.b. MRtrix stores empty line
   line = readStr(); //3rd line ASCII/BINARY
   if (line.startsWith("ASCII")) return readTxtVTK(buffer);
-  //from NiiVue
   else if (!line.startsWith("BINARY"))
     alert("Invalid VTK image, expected ASCII or BINARY", line);
   line = readStr(); //5th line "DATASET POLYDATA"
@@ -1750,6 +1748,10 @@ NVMesh.readVTK = function (buffer) {
     let npoly = parseInt(items[1]);
     for (let i = 0; i < npoly; i++) {
       let ntri = reader.getInt32(pos, false) - 2; //3 for single triangle, 4 for 2 triangles
+      if (i === 0 && ntri > 65535) {
+        alert("Invalid VTK binary polygons using little-endian data (MRtrix)");
+        return null;
+      }
       pos += 4;
       let fx = reader.getInt32(pos, false);
       pos += 4;
@@ -1992,14 +1994,14 @@ NVMesh.readPLY = function (buffer) {
         if (items[1] === "list") {
           indexCountBytes = dataTypeBytes(items[2]);
           indexBytes = dataTypeBytes(items[3]);
-          indexStrideBytes += indexCountBytes + (3 * indexBytes); //e.g. "uchar int" is 1 + 3 * 4 bytes
+          indexStrideBytes += indexCountBytes + 3 * indexBytes; //e.g. "uchar int" is 1 + 3 * 4 bytes
         } else {
           let bytes = dataTypeBytes(items[1]);
           indexStrideBytes += bytes;
           if (indexBytes === 0) {
             //this index property is BEFORE the list
             indexPaddingBytes += bytes;
-            nIndexPadding ++;
+            nIndexPadding++;
           }
         }
         line = readStr();
@@ -2008,8 +2010,7 @@ NVMesh.readPLY = function (buffer) {
     }
   } //while reading all lines of header
   if (isAscii) {
-    if (nface < 1)
-      console.log(`Malformed ply format: faces ${nface} `);
+    if (nface < 1) console.log(`Malformed ply format: faces ${nface} `);
     let positions = new Float32Array(nvert * 3);
     let v = 0;
     for (var i = 0; i < nvert; i++) {
@@ -2050,10 +2051,12 @@ NVMesh.readPLY = function (buffer) {
     };
   } //if isAscii
   if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1)
-    console.log(`Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`);
+    console.log(
+      `Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`
+    );
   var reader = new DataView(buffer);
   var positions = [];
-  if (((pos % 4) === 0) && (vertStride === 12 && isLittleEndian)) {
+  if (pos % 4 === 0 && vertStride === 12 && isLittleEndian) {
     //optimization: vertices only store xyz position as float
     //n.b. start offset of Float32Array must be a multiple of 4
     positions = new Float32Array(buffer, pos, nvert * 3);
