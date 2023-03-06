@@ -8,7 +8,7 @@ devdocs
 /tests/niivue*.js
 niivue.es.js
 niivue.umd.js
-
+/downloads
 
 # local env files
 .env.local
@@ -29,3 +29,4 @@ pnpm-debug.log*
 *.sln
 *.sw?
 .DS_Store
+

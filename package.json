@@ -69,6 +69,8 @@
     "jsdoc": "^3.6.11",
     "prettier": "^2.5.1",
     "puppeteer": "^9.1.1",
+    "puppeteer-utilz": "^4.0.8",
+    "regenerator-runtime": "^0.13.11",
     "vite": "^2.8.4"
   }
 }
