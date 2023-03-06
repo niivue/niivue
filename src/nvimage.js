@@ -2624,7 +2624,7 @@ NVImage.prototype.saveToUint8Array = async function (fnm, drawing8 = null) {
   return saveData;
 };
 NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
-  let saveData = this.saveToUint8Array(fnm, drawing8);
+  let saveData = await this.saveToUint8Array(fnm, drawing8);
   let blob = new Blob([saveData.buffer], { type: "application/octet-stream" });
   let blobUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
