@@ -57,7 +57,7 @@ function storageAvailable(type) {
 /**
  * @class SessionBus
  * @type SessionBus
- * @description SessionBus is for synchonizing both remote and local instances
+ * @description SessionBus is for synchronizing both remote and local instances
  * @constructor
  * @param {string} name
  * @param {SessionUser} user

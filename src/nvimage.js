@@ -2679,7 +2679,7 @@ NVImage.fetchDicomData = async function (url) {
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
  * @param {NVImageFromUrlOptions} options
- * @returns {NVImage} returns a NVImage intance
+ * @returns {NVImage} returns a NVImage instance
  * @example
  * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
  */
@@ -2820,7 +2820,7 @@ NVImage.readFileAsync = function (file) {
  * @param {boolean} [useQFormNotSForm=false] whether or not to use QForm instead of SForm during construction
  * @param {string} [colorMapNegative=""] colormap negative for the image
  * @param {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type
- * @returns {NVImage} returns a NVImage intance
+ * @returns {NVImage} returns a NVImage instance
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  */
@@ -2893,7 +2893,7 @@ NVImage.loadFromFile = async function ({
  * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
- * @returns {NVImage} returns a NVImage intance
+ * @returns {NVImage} returns a NVImage instance
  * @example
  * myImage = NVImage.loadFromBase64('SomeBase64String')
  */
@@ -2945,7 +2945,7 @@ NVImage.loadFromBase64 = function ({
 
 /**
  * make a clone of a NVImage instance and return a new NVImage
- * @returns {NVImage} returns a NVImage intance
+ * @returns {NVImage} returns a NVImage instance
  * @example
  * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
  * clonedImage = myImage.clone()

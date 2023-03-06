@@ -30,7 +30,7 @@ export const DRAG_MODE = Object.freeze({
 });
 
 /**
- * @typdef {Object} NVConfigOptions
+ * @typedef {Object} NVConfigOptions
  * @property {number} textHeight
  * @property {number} colorbarHeight
  * @property {number} crosshairWidth
@@ -87,7 +87,7 @@ export const DEFAULT_OPTIONS = {
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
   rulerColor: [1, 0, 0, 0.8],
-  colorbarMargin: 0.05, // x axis margin arount color bar, clip space coordinates
+  colorbarMargin: 0.05, // x axis margin around color bar, clip space coordinates
   trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
   clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
   viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
@@ -138,7 +138,7 @@ export class NVDocument {
     this.data.previewImageDataURL = "";
 
     /**
-     * @typdef {Object} NVSceneData
+     * @typedef {Object} NVSceneData
      * @property {number} azimuth
      * @property {number} elevation
      * @property {number[]} crosshairPos
