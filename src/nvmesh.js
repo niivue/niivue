@@ -238,7 +238,7 @@ NVMesh.prototype.updateFibers = function (gl) {
       dpv = this.dpv[n].vals;
   }
   if (dpv) {
-    //color per streamline
+    //color per vertex
     let lut = cmapper.colormap(this.colormap);
     let mn = dpv[0];
     let mx = dpv[0];

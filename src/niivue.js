@@ -452,10 +452,11 @@ Object.defineProperty(Niivue.prototype, "drawBitmap", {
 
 /**
  * save webgl2 canvas as png format bitmap
- * @param {string} filename for screen capture
+ * @param {string} [filename='niivue.png'] filename for screen capture
  * @example niivue.saveScene('test.png');
+ * @see {@link https://niivue.github.io/niivue/features/ui.html|live demo usage}
  */
-Niivue.prototype.saveScene = function (filename = "") {
+Niivue.prototype.saveScene = function (filename = "niivue.png") {
   function saveBlob(blob, name) {
     const a = document.createElement("a");
     document.body.appendChild(a);
@@ -483,6 +484,7 @@ Niivue.prototype.saveScene = function (filename = "") {
  * @param {string} id the id of an html canvas element
  * @example niivue = new Niivue().attachTo('gl')
  * @example niivue.attachTo('gl')
+ * @see {@link https://niivue.github.io/niivue/features/multiplanar.html|live demo usage}
  */
 Niivue.prototype.attachTo = async function (id, isAntiAlias = null) {
   await this.attachToCanvas(document.getElementById(id), isAntiAlias);
@@ -1603,8 +1605,8 @@ Niivue.prototype.setDefaults = function (options = {}, resetBriCon = false) {
 };
 
 /**
- * Limit visibility of mesh in front of a 2D image. Requires world-space mode. Use Infinity to show entire mesh or 0.0 to hide mesh.
- * @param {number} meshThicknessOn2D distance from voxels for clipping mesh
+ * Limit visibility of mesh in front of a 2D image. Requires world-space mode.
+ * @param {number} meshThicknessOn2D distance from voxels for clipping mesh. Use Infinity to show entire mesh or 0.0 to hide mesh.
  * @example niivue.setMeshThicknessOn2D(42)
  * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
  */
@@ -1616,7 +1618,7 @@ Niivue.prototype.setMeshThicknessOn2D = function (meshThicknessOn2D) {
 /**
  * Create a custom multi-slice mosaic (aka lightbox, montage) view.
  * @param {string} str description of mosaic.
- * @example niivue.setMeshThicknessOn2D("A 0 20 C 30 S 42")
+ * @example niivue.setSliceMosaicString("A 0 20 C 30 S 42")
  * @see {@link https://niivue.github.io/niivue/features/mosaics.html|live demo usage}
  */
 Niivue.prototype.setSliceMosaicString = function (str) {
@@ -1625,8 +1627,8 @@ Niivue.prototype.setSliceMosaicString = function (str) {
 };
 
 /**
- * control whether 2D slices use world space (true) or voxel space (false). Beware that voxel space mode limits properties like panning, zooming and mesh visibility.
- * @param {boolean} isSliceMM determines view mode
+ * control 2D slice view mode.
+ * @param {boolean} isSliceMM control whether 2D slices use world space (true) or voxel space (false). Beware that voxel space mode limits properties like panning, zooming and mesh visibility.
  * @example niivue.setSliceMM(true)
  * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
  */
@@ -1853,7 +1855,7 @@ Niivue.prototype.drawClearAllUndoBitmaps = async function () {
 /**
  * Restore drawing to previous state
  * @example niivue.drawUndo();
- * @see {@link https://niivue.github.io/niivue/features/draw.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.drawUndo = function () {
   if (this.drawUndoBitmaps.length < 1) {
@@ -1954,11 +1956,7 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
   return true;
 };
 
-/**
- * Open drawing
- * @param {volume} nvimage class
- * @example niivue.volume("volume");
- */
+// not included in public docs
 Niivue.prototype.binarize = async function (volume) {
   let dims = volume.hdr.dims;
   let vx = dims[1] * dims[2] * dims[3];
@@ -1976,7 +1974,9 @@ Niivue.prototype.binarize = async function (volume) {
 /**
  * Open drawing
  * @param {string} filename of NIfTI format drawing
+ * @param {boolean = false} isBinarize if true will force drawing voxels to be either 0 or 1.
  * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.loadDrawingFromUrl = async function (fnm, isBinarize = false) {
   if (this.drawBitmap) log.debug("Overwriting open drawing!");
@@ -2093,7 +2093,7 @@ Niivue.prototype.findOtsu = async function (mlevel = 2) {
 
 /**
  * remove dark voxels in air
- * @param {number} levels (2-4) segment brain into this many types
+ * @param {number = 2} levels (2-4) segment brain into this many types. For example drawOtsu(2) will create a binary drawing where bright voxels are colored and dark voxels are clear.
  * @example niivue.drawOtsu(3);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2117,8 +2117,8 @@ Niivue.prototype.drawOtsu = async function (levels = 2) {
 
 /**
  * remove dark voxels in air
- * @param {number} level (1-5) larger values for more preserved voxels
- * @param {number} volIndex volume to dehaze
+ * @param {number = 5} level (1-5) larger values for more preserved voxels
+ * @param {number = 0} volIndex volume to dehaze
  * @example niivue.removeHaze(3, 0);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2147,9 +2147,9 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
 /**
  * save voxel-based image to disk
  * @param {string} fnm filename of NIfTI image to create
- * @param {boolean} isSaveDrawing determines whether drawing or background image is saved
+ * @param {boolean = false} isSaveDrawing determines whether drawing or background image is saved
  * @example niivue.saveImage('test.nii', true);
- * @see {@link https://niivue.github.io/niivue/features/draw.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
   if (!this.back.hasOwnProperty("dims")) {
@@ -2434,28 +2434,6 @@ Niivue.prototype.removeVolumeByIndex = function (index) {
 };
 
 /**
- * Remove a volume by index
- * @param {number} index of volume to remove
- */
-Niivue.prototype.removeVolumeByIndex = function (index) {
-  if (index >= this.volumes.length) {
-    throw "Index of volume out of bounds";
-  }
-  this.removeVolume(this.volumes[index]);
-};
-
-/**
- * Remove a volume by index
- * @param {number} index of volume to remove
- */
-Niivue.prototype.removeVolumeByIndex = function (index) {
-  if (index >= this.volumes.length) {
-    throw "Index of volume out of bounds";
-  }
-  this.removeVolume(this.volumes[index]);
-};
-
-/**
  * Remove a triangulated mesh, connectome or tractogram
  * @param {NVMesh} mesh mesh to delete
  * @example
@@ -2654,8 +2632,8 @@ Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
 
 /**
  * determine color and style of drawing
- * @param {boolean} penValue sets the color of the pen
- * @param {boolean} isFilledPen determines if dragging creates flood-filled shape
+ * @param {number} penValue sets the color of the pen
+ * @param {boolean = false} isFilledPen determines if dragging creates flood-filled shape
  * @example niivue.setPenValue(1, true)
  */
 Niivue.prototype.setPenValue = function (penValue, isFilledPen = false) {
@@ -2665,10 +2643,10 @@ Niivue.prototype.setPenValue = function (penValue, isFilledPen = false) {
 };
 
 /**
- * control whether drawing is tansparent (0), opaque (1) or translucent (between 0 and 1).
+ * control whether drawing is transparent (0), opaque (1) or translucent (between 0 and 1).
  * @param {number} opacity translucency of drawing
  * @example niivue.setDrawOpacity(0.7)
- * @see {@link https://niivue.github.io/niivue/features/draw.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.setDrawOpacity = function (opacity) {
   this.drawOpacity = opacity;
@@ -3030,7 +3008,7 @@ Niivue.prototype.loadMeshes = async function (meshList) {
 
 /**
  * load a connectome specified by json
- * @param {string} connectome model
+ * @param {object} connectome model
  * @returns {Niivue} returns the Niivue instance
  */
 Niivue.prototype.loadConnectome = async function (json) {
@@ -4087,7 +4065,7 @@ Niivue.prototype.meshShaderNameToNumber = function (meshShaderName = "Phong") {
 /**
  * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
  * @param {number} id id of mesh to change
- * @param {string | number} meshShaderNameOrNumber identify shader for usage
+ * @param {string | number = 2} meshShaderNameOrNumber identify shader for usage
  * @example niivue.setMeshShader('toon');
  * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
@@ -4145,11 +4123,11 @@ Niivue.prototype.createCustomMeshShader = function (
 };
 
 /**
- * control whether drawing is tansparent (0), opaque (1) or translucent (between 0 and 1).
- * @param {string} fragmentShaderText custom fragment shader.
- * @param {string} name title for new shader.
+ * .
+ * @param {string = ""} fragmentShaderText custom fragment shader.
+ * @param {string = "Custom"} name title for new shader.
  * @returns {number} index of the new shader (for setMeshShader)
- * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/mesh.atlas.html|live demo usage}
  */
 Niivue.prototype.setCustomMeshShader = function (
   fragmentShaderText = "",
@@ -4487,7 +4465,7 @@ Niivue.prototype.updateGLVolume = function () {
  * @param {Array} masks are optional binary images to filter voxles
  * @returns {Array} numeric values to describe image
  * @example niivue.getDescriptives(0, true);
- * @see {@link https://niivue.github.io/niivue/features/draw.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
 Niivue.prototype.getDescriptives = function (
   layer = 0,
@@ -5121,9 +5099,9 @@ Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
 
 /**
  * modulate intensity of one image based on intensity of another
- * @param {string} id the ID of the NVImage to be biased
- * @param {string} id the ID of the NVImage that controls bias (null to disable modulation)
- * @param {boolean} does the modulation influence alpha transparency (true) or RGB color (false) components.
+ * @param {string} idTarget the ID of the NVImage to be biased
+ * @param {string} idModulation the ID of the NVImage that controls bias (null to disable modulation)
+ * @param {boolean = false} modulateAlpha does the modulation influence alpha transparency (true) or RGB color (false) components.
  * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
  * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo usage}
  */
