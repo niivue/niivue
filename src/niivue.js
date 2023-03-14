@@ -1974,7 +1974,7 @@ Niivue.prototype.binarize = async function (volume) {
 /**
  * Open drawing
  * @param {string} filename of NIfTI format drawing
- * @param {boolean = false} isBinarize if true will force drawing voxels to be either 0 or 1.
+ * @param {boolean} [false] isBinarize if true will force drawing voxels to be either 0 or 1.
  * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2093,7 +2093,7 @@ Niivue.prototype.findOtsu = async function (mlevel = 2) {
 
 /**
  * remove dark voxels in air
- * @param {number = 2} levels (2-4) segment brain into this many types. For example drawOtsu(2) will create a binary drawing where bright voxels are colored and dark voxels are clear.
+ * @param {number} [2] levels (2-4) segment brain into this many types. For example drawOtsu(2) will create a binary drawing where bright voxels are colored and dark voxels are clear.
  * @example niivue.drawOtsu(3);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2117,8 +2117,8 @@ Niivue.prototype.drawOtsu = async function (levels = 2) {
 
 /**
  * remove dark voxels in air
- * @param {number = 5} level (1-5) larger values for more preserved voxels
- * @param {number = 0} volIndex volume to dehaze
+ * @param {number} [5] level (1-5) larger values for more preserved voxels
+ * @param {number} [0] volIndex volume to dehaze
  * @example niivue.removeHaze(3, 0);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2147,7 +2147,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
 /**
  * save voxel-based image to disk
  * @param {string} fnm filename of NIfTI image to create
- * @param {boolean = false} isSaveDrawing determines whether drawing or background image is saved
+ * @param {boolean} [false] isSaveDrawing determines whether drawing or background image is saved
  * @example niivue.saveImage('test.nii', true);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2633,7 +2633,7 @@ Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
 /**
  * determine color and style of drawing
  * @param {number} penValue sets the color of the pen
- * @param {boolean = false} isFilledPen determines if dragging creates flood-filled shape
+ * @param {boolean} [false] isFilledPen determines if dragging creates flood-filled shape
  * @example niivue.setPenValue(1, true)
  */
 Niivue.prototype.setPenValue = function (penValue, isFilledPen = false) {
@@ -4065,7 +4065,7 @@ Niivue.prototype.meshShaderNameToNumber = function (meshShaderName = "Phong") {
 /**
  * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
  * @param {number} id id of mesh to change
- * @param {string | number = 2} meshShaderNameOrNumber identify shader for usage
+ * @param {string | number} [2] meshShaderNameOrNumber identify shader for usage
  * @example niivue.setMeshShader('toon');
  * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
@@ -4123,9 +4123,8 @@ Niivue.prototype.createCustomMeshShader = function (
 };
 
 /**
- * .
- * @param {string = ""} fragmentShaderText custom fragment shader.
- * @param {string = "Custom"} name title for new shader.
+ * @param {string} [""] fragmentShaderText custom fragment shader.
+ * @param {string} ["Custom"] name title for new shader.
  * @returns {number} index of the new shader (for setMeshShader)
  * @see {@link https://niivue.github.io/niivue/features/mesh.atlas.html|live demo usage}
  */
@@ -5101,7 +5100,7 @@ Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
  * modulate intensity of one image based on intensity of another
  * @param {string} idTarget the ID of the NVImage to be biased
  * @param {string} idModulation the ID of the NVImage that controls bias (null to disable modulation)
- * @param {boolean = false} modulateAlpha does the modulation influence alpha transparency (true) or RGB color (false) components.
+ * @param {boolean} [false] modulateAlpha does the modulation influence alpha transparency (true) or RGB color (false) components.
  * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
  * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo usage}
  */
