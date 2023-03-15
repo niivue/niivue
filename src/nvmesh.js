@@ -1163,7 +1163,7 @@ function readTxtVTK(buffer) {
   pos++;
   while (lines[pos].length < 1) pos++; //skip blank lines
   if (!lines[pos].startsWith("POINTS")) alert("Not VTK POINTS");
-  let items = lines[pos].split(" ");
+  let items = lines[pos].trim().split(/\s+/);
   let nvert = parseInt(items[1]); //POINTS 10261 float
   let nvert3 = nvert * 3;
   var positions = new Float32Array(nvert * 3);
@@ -1181,7 +1181,7 @@ function readTxtVTK(buffer) {
   let tris = [];
   pos++;
   while (lines[pos].length < 1) pos++; //skip blank lines
-  items = lines[pos].split(" ");
+  items = lines[pos].trim().split(/\s+/);
   pos++;
   if (items[0].includes("LINES")) {
     let n_count = parseInt(items[1]);
@@ -1216,7 +1216,7 @@ function readTxtVTK(buffer) {
       function lineToInts() {
         //VTK can save one array across multiple ASCII lines
         str = lines[pos].trim();
-        let items = str.split(" ");
+        let items = str.trim().split(/\s+/);
         asciiInts = [];
         for (let i = 0; i < items.length; i++)
           asciiInts.push(parseInt(items[i]));
@@ -1247,7 +1247,7 @@ function readTxtVTK(buffer) {
     for (let i = 0; i < nstrip; i++) {
       let str = lines[pos].trim();
       pos++;
-      let vs = str.split(" ");
+      let vs = str.trim().split(/\s+/);
       let ntri = parseInt(vs[0]) - 2; //-2 as triangle strip is creates pts - 2 faces
       let k = 1;
       for (let t = 0; t < ntri; t++) {
@@ -1269,7 +1269,7 @@ function readTxtVTK(buffer) {
     for (let i = 0; i < npoly; i++) {
       let str = lines[pos].trim();
       pos++;
-      let vs = str.split(" ");
+      let vs = str.trim().split(/\s+/);
       let ntri = parseInt(vs[0]) - 2; //e.g. 3 for triangle
       let fx = parseInt(vs[1]);
       let fy = parseInt(vs[2]);
@@ -1538,7 +1538,7 @@ NVMesh.readNV = function (buffer) {
   while (pos < len) {
     let line = readStr(); //1st line: '#!ascii version of lh.pial'
     if (line.startsWith("#")) continue;
-    let items = line.split(" ");
+    let items = line.trim().split(/\s+/);
     if (nvert < 1) {
       nvert = parseInt(items[0]);
       positions = new Float32Array(nvert * 3);
@@ -1587,7 +1587,7 @@ NVMesh.readASC = function (buffer) {
   let line = readStr(); //1st line: '#!ascii version of lh.pial'
   if (!line.startsWith("#!ascii")) console.log("Invalid ASC mesh");
   line = readStr(); //1st line: signature
-  let items = line.split(" ");
+  let items = line.trim().split(/\s+/);
   let nvert = parseInt(items[0]); //173404 346804
   let ntri = parseInt(items[1]);
   var positions = new Float32Array(nvert * 3);
@@ -1648,7 +1648,7 @@ NVMesh.readVTK = function (buffer) {
   )
     console.log("Only able to read VTK float or double POINTS" + line);
   let isFloat64 = line.includes("double");
-  let items = line.split(" ");
+  let items = line.trim().split(/\s+/);
   let nvert = parseInt(items[1]); //POINTS 10261 float
   let nvert3 = nvert * 3;
   var positions = new Float32Array(nvert3);
@@ -1665,7 +1665,7 @@ NVMesh.readVTK = function (buffer) {
     }
   }
   line = readStr(); //Type, "LINES 11885 "
-  items = line.split(" ");
+  items = line.trim().split(/\s+/);
   let tris = [];
   if (items[0].includes("LINES")) {
     let n_count = parseInt(items[1]);
@@ -1766,7 +1766,7 @@ NVMesh.readVTK = function (buffer) {
         fy = fz;
       } //for each triangle
     } //for each polygon
-  } else alert("Unsupported ASCII VTK datatype ", items[0]);
+  } else alert("Unsupported binary VTK datatype ", items[0]);
   var indices = new Int32Array(tris);
   return {
     positions,
@@ -2349,13 +2349,13 @@ NVMesh.readOFF = function (buffer) {
   if (!lines[i].includes("OFF")) {
     console.log("File does not start with OFF");
   } else i++;
-  let items = lines[i].split(" ");
+  let items = lines[i].trim().split(/\s+/);
   let num_v = parseInt(items[0]);
   let num_f = parseInt(items[1]);
   i++;
   for (let j = 0; j < num_v; j++) {
     let str = lines[i];
-    items = str.split(" ");
+    items = str.trim().split(/\s+/);
     pts.push(parseFloat(items[0]));
     pts.push(parseFloat(items[1]));
     pts.push(parseFloat(items[2]));
@@ -2363,7 +2363,7 @@ NVMesh.readOFF = function (buffer) {
   }
   for (let j = 0; j < num_f; j++) {
     let str = lines[i];
-    items = str.split(" ");
+    items = str.trim().split(/\s+/);
     let n = parseInt(items[0]);
     if (n !== 3)
       console.log("Only able to read OFF files with triangular meshes");
@@ -2393,14 +2393,14 @@ NVMesh.readOBJ = function (buffer) {
     let str = lines[i];
     if (str[0] === "v" && str[1] === " ") {
       //'v ' but not 'vt' or 'vn'
-      let items = str.split(" ");
+      let items = str.trim().split(/\s+/);
       pts.push(parseFloat(items[1]));
       pts.push(parseFloat(items[2]));
       pts.push(parseFloat(items[3]));
       //v 0 -0.5 -0
     }
     if (str[0] === "f") {
-      let items = str.split(" ");
+      let items = str.trim().split(/\s+/);
       let new_t = items.length - 3; //number of new triangles created
       if (new_t < 1) break; //error
       let tn = items[1].split("/");
@@ -2743,7 +2743,7 @@ NVMesh.readNII2 = function (buffer, n_vert = 0) {
           return scalars;
         }
         line = line.slice(15, -16);
-        let items = line.split(" ");
+        let items = line.trim().split(/\s+/);;
         if (items.length < indexCount)
           console.log("Error parsing VertexIndices");
         vertexIndices = new Int32Array(indexCount);
@@ -3001,7 +3001,7 @@ NVMesh.readX3D = function (buffer, n_vert = 0) {
     let spos = line.indexOf(delimiter, fpos) + 1;
     let epos = line.indexOf(delimiter, spos);
     let str = line.slice(spos, epos).trim();
-    let items = str.split(" ");
+    let items = str.trim().split(/\s+/);
     if (items.length < 2) return parseFloat(str);
     let ret = [];
     for (let i = 0; i < items.length; i++) ret.push(parseFloat(items[i]));
