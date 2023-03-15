@@ -577,7 +577,7 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     );
   }
 
-  console.log("NIIVUE VERSION ", __NIIVUE_VERSION__); // TH added this rare console.log via suggestion from CR. Don't remove
+  console.log("NIIVUE VERSION ", typeof __NIIVUE_VERSION__ === 'undefined' ? 'null (niivue was likely built in a parent project rather than using the pre-bundled version)' : __NIIVUE_VERSION__); // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
   // avoids white cube around image in 3D render mode
@@ -591,9 +591,7 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     window.addEventListener("resize", this.resizeListener.bind(this)); // must bind 'this' niivue object or else 'this' becomes 'window'
   }
   this.registerInteractions(); // attach mouse click and touch screen event handlers for the canvas
-
   await this.init();
-
   this.drawScene();
   return this;
 };
@@ -1303,7 +1301,6 @@ Niivue.prototype.registerInteractions = function () {
   // add keyup
   this.canvas.setAttribute("tabindex", 0);
   this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
-  this.canvas.focus();
 
   // keydown
   this.canvas.addEventListener(
@@ -6007,7 +6004,6 @@ Niivue.prototype.drawLoadingText = function (text) {
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.enable(this.gl.BLEND);
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
-  this.canvas.focus();
 };
 
 // not included in public docs
