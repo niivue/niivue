@@ -2743,7 +2743,7 @@ NVMesh.readNII2 = function (buffer, n_vert = 0) {
           return scalars;
         }
         line = line.slice(15, -16);
-        let items = line.trim().split(/\s+/);;
+        let items = line.trim().split(/\s+/);
         if (items.length < indexCount)
           console.log("Error parsing VertexIndices");
         vertexIndices = new Int32Array(indexCount);

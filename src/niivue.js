@@ -5422,6 +5422,15 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 };
 
 // not included in public docs
+// if a thumbnail is loaded: close thumbnail and release memory
+Niivue.prototype.deleteThumbnail = function () {
+  if (!this.bmpTexture) return;
+  this.gl.deleteTexture(this.bmpTexture);
+  this.bmpTexture = null;
+  this.thumbnailVisible = false;
+};
+
+// not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   x *= this.uiData.dpr;
@@ -5431,8 +5440,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posFuture;
   this.canvas.focus();
   if (this.thumbnailVisible) {
-    this.gl.deleteTexture(this.bmpTexture);
-    this.bmpTexture = null;
+    //we will simply hide the thmubnail
+    // use deleteThumbnail() to close the thumbnail and free resources
+    //this.gl.deleteTexture(this.bmpTexture);
+    //this.bmpTexture = null;
     this.thumbnailVisible = false;
     //the thumbnail is now released, do something profound: actually load the images
     this.loadVolumes(this.deferredVolumes);
@@ -8118,7 +8129,7 @@ Niivue.prototype.drawSceneCore = function () {
   );
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   //this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  if (this.bmpTexture) {
+  if (this.bmpTexture && this.thumbnailVisible) {
     //draw the thumbnail image and exit
     this.drawThumbnail();
     return;
