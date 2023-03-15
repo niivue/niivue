@@ -93,7 +93,7 @@
       animationTimer = null;
     }
   }
-  document.getElementById("gl1").addEventListener("dblclick", doDblClick);
+  document.getElementById("gl1").addEventListener("dblclick", toggleThumbnail);
   function toggleThumbnail() {
     nv1.thumbnailVisible = !nv1.thumbnailVisible;
     nv1.drawScene();
