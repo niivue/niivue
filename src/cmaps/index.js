@@ -1,5 +1,5 @@
-export { default as itksnap } from "./_itksnap.json";
-export { default as slicer3d } from "./_slicer3d.json";
+export { default as $itksnap } from "./_itksnap.json";
+export { default as $slicer3d } from "./_slicer3d.json";
 export { default as actc } from "./actc.json";
 export { default as bcgwhw_dark } from "./bcgwhw_dark.json";
 export { default as bcgwhw } from "./bcgwhw.json";
