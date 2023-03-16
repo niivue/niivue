@@ -8,7 +8,7 @@ export const colortables = function () {
 colortables.prototype.colorMaps = function (sort = true) {
   let cm = [];
   for (const [key] of Object.entries(cmaps)) {
-    if (key.startsWith("_")) continue; //ignore drawing maps
+    if (key.startsWith("$")) continue; //ignore drawing maps
     cm.push(key);
   }
   return sort === true ? cm.sort() : cm;
