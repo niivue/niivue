@@ -2502,11 +2502,12 @@ NVImage.prototype.descriptiveStatistics = function () {
     mn = Math.min(0, mn);
     mx = Math.max(0, mx);
   }
-  stats.global_min = mn;
-  stats.global_max = mx;
-  stats.mean = sum / nVox;
+  stats.global_min = this.intensityRaw2Scaled(mn);
+  stats.global_max = this.intensityRaw2Scaled(mx);
+  stats.mean = this.intensityRaw2Scaled(sum / nVox);
   stats.meanNonZero = NaN;
-  if (nVox - nZero > 0) stats.meanNonZero = sum / (nVox - nZero);
+  if (nVox - nZero > 0)
+    stats.meanNonZero = this.intensityRaw2Scaled(sum / (nVox - nZero));
   return stats;
 };
 
