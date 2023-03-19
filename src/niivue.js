@@ -150,7 +150,8 @@ const RIGHT_MOUSE_BUTTON = 2;
  * @property {boolean} [options.isHighResolutionCapable=true] demand that high-dot-per-inch displays use native voxel size
  * @property {boolean} [options.drawingEnabled=false] allow user to create and edit voxel-based drawings
  * @property {number} [options.penValue=Infinity] color of drawing when user drags mouse (if drawingEnabled)
- * @property {boolean} [options.isFilledPen=false] create filled drawings when user drags mouse (if drawingEnabled)
+ * @property {number} [options.penValue=Infinity] color of drawing when user drags mouse (if drawingEnabled)
+ * @property {boolean} [options.floodFillNeighbors=6] does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors?
  * @property {number} [options.maxDrawUndoBitmaps=8] number of possible undo steps (if drawingEnabled)
  * @property {string} [options.thumbnail=""] optional 2D png bitmap that can be rapidly loaded to defer slow loading of 3D image
  * @example
@@ -3421,7 +3422,15 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   }
 };
 
-Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
+// a voxel can be defined as having 6, 18 or 26 neighbors:
+//   6: neighbors share faces (distance=1)
+//  18: neighbors share faces (distance=1) or edges (1.4)
+//  26: neighbors share faces (distance=1), edges (1.4) or corners (1.7)
+Niivue.prototype.drawFloodFillCore = async function (
+  img,
+  seedVx,
+  neighbors = 6
+) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   let nx = dims[0];
   let nxy = nx * dims[1];
@@ -3463,12 +3472,37 @@ Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
       img[vxT] = 2; //part of cluster
       Q.push(vxT);
     }
+    //test neighbors that share face
     testNeighbor([0, 0, -1]); //inferior
     testNeighbor([0, 0, 1]); //superior
     testNeighbor([0, -1, 0]); //posterior
     testNeighbor([0, 1, 0]); //anterior
     testNeighbor([-1, 0, 0]); //left
     testNeighbor([1, 0, 0]); //right
+    if (neighbors <= 6) continue;
+    //test voxels that share edge
+    testNeighbor([-1, -1, 0]); //left posterior
+    testNeighbor([1, 1, 0]); //right posterior
+    testNeighbor([-1, 1, 0]); //left anterior
+    testNeighbor([1, 1, 0]); //right anterior
+    testNeighbor([0, -1, -1]); //posterior inferior
+    testNeighbor([0, 1, -1]); //anterior inferior
+    testNeighbor([-1, 0, -1]); //left inferior
+    testNeighbor([1, 0, -1]); //right inferior
+    testNeighbor([0, -1, 1]); //posterior superior
+    testNeighbor([0, 1, 1]); //anterior superior
+    testNeighbor([-1, 0, 1]); //left superior
+    testNeighbor([1, 0, 1]); //right superior
+    if (neighbors <= 18) continue;
+    //test neighbors that share a corner
+    testNeighbor([-1, -1, -1]); //left posterior inferior
+    testNeighbor([1, -1, -1]); //right posterior inferior
+    testNeighbor([-1, 1, -1]); //left anterior inferior
+    testNeighbor([1, 1, -1]); //right anterior inferior
+    testNeighbor([-1, -1, 1]); //left posterior superior
+    testNeighbor([1, -1, 1]); //right posterior superior
+    testNeighbor([-1, 1, 1]); //left anterior superior
+    testNeighbor([1, 1, 1]); //right anterior superior
     //7. Continue looping until Q is exhausted.
   }
 }; // drawFloodFillCore()
@@ -3480,7 +3514,8 @@ Niivue.prototype.drawFloodFill = function (
   newColor = 0,
   growSelectedCluster = 0, //if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
   forceMin = NaN,
-  forceMax = NaN
+  forceMax = NaN,
+  neighbors = 6
 ) {
   //3D "paint bucket" fill:
   // set all voxels connected to seed point to newColor
@@ -3511,7 +3546,7 @@ Niivue.prototype.drawFloodFill = function (
     img[i] = 0;
     if (this.drawBitmap[i] === seedColor) img[i] = 1;
   }
-  this.drawFloodFillCore(img, seedVx);
+  this.drawFloodFillCore(img, seedVx, neighbors);
   //8. (Optional) work out intensity of selected cluster
   if (growSelectedCluster !== 0) {
     let backImg = this.volumes[0].img2RAS();
@@ -3538,7 +3573,7 @@ Niivue.prototype.drawFloodFill = function (
       img[i] = 0;
       if (backImg[i] >= mn && backImg[i] <= mx) img[i] = 1;
     }
-    this.drawFloodFillCore(img, seedVx);
+    this.drawFloodFillCore(img, seedVx, neighbors);
     newColor = seedColor;
   }
   //8. Return
@@ -5565,8 +5600,17 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         ) {
           if (!isFinite(this.opts.penValue))
             //NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-            this.drawFloodFill(pt, 0, this.opts.penValue);
-          else this.drawFloodFill(pt, Math.abs(this.opts.penValue));
+            this.drawFloodFill(
+              pt,
+              0,
+              this.opts.penValue,
+              this.opts.floodFillNeighbors
+            );
+          else
+            this.drawFloodFill(
+              pt,
+              Math.abs(this.opts.penValue, this.opts.floodFillNeighbors)
+            );
           return;
         }
         if (isNaN(this.drawPenLocation[0])) {

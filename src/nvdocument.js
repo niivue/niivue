@@ -69,6 +69,7 @@ export const DRAG_MODE = Object.freeze({
  * @property {boolean} dragAndDropEnabled
  * @property {boolean} drawingEnabled
  * @property {number} penValue
+ * @property {number} floodFillNeighbors
  * @property {boolean} isFilledPen
  * @property {string} thumbnail
  * @property {number} maxDrawUndoBitmaps
@@ -115,6 +116,7 @@ export const DEFAULT_OPTIONS = {
   dragAndDropEnabled: true,
   drawingEnabled: false, // drawing disabled by default
   penValue: 1, // sets drawing color. see "drawPt"
+  floodFillNeighbors: 6, //does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors
   isFilledPen: false,
   thumbnail: "",
   maxDrawUndoBitmaps: 8,
