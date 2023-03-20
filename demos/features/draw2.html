@@ -99,22 +99,8 @@
   }
   document.getElementById("info").addEventListener("click", doInfo);
   function doInfo() {
-    let obj = nv1.getDescriptives(0, false);
-    let str =
-      "Number of voxels: " +
-      obj.nvox +
-      "\nMin:" +
-      obj.min +
-      "\nMax:" +
-      obj.max +
-      "\nMean:" +
-      obj.mean +
-      "\nStandard deviation: " +
-      obj.stdev +
-      "\nRobust Min: " +
-      obj.robust_min +
-      "\nRobust Max: " +
-      obj.robust_max;
+    let obj = nv1.getDescriptives(0);
+    let str = JSON.stringify(obj, null, 2)
     alert(str);
   }
   document.getElementById("superior").addEventListener("click", doSuperior);

@@ -2470,47 +2470,6 @@ NVImage.prototype.calMinMax = function () {
   return [pct2, pct98, mnScale, mxScale];
 }; //calMinMax
 
-NVImage.prototype.descriptiveStatistics = function () {
-  let stats = [];
-  stats.robust_min = this.robust_min;
-  stats.robust_max = this.robust_max;
-  stats.global_min = this.global_min;
-  stats.global_max = this.global_max;
-  let nVox = this.img.length;
-  if (nVox < 1) return stats;
-  let mn = this.img[0];
-  let mx = this.img[0];
-  let nZero = 0;
-  let nNan = 0;
-  let sum = 0;
-  for (let i = 0; i < nVox; i++) {
-    if (isNaN(this.img[i])) {
-      nNan++;
-      continue;
-    }
-    sum += this.img[i];
-    if (this.img[i] === 0) {
-      nZero++;
-      if (this.ignoreZeroVoxels) {
-        continue;
-      }
-    }
-    mn = Math.min(this.img[i], mn);
-    mx = Math.max(this.img[i], mx);
-  }
-  if (nZero > 0) {
-    mn = Math.min(0, mn);
-    mx = Math.max(0, mx);
-  }
-  stats.global_min = this.intensityRaw2Scaled(mn);
-  stats.global_max = this.intensityRaw2Scaled(mx);
-  stats.mean = this.intensityRaw2Scaled(sum / nVox);
-  stats.meanNonZero = NaN;
-  if (nVox - nZero > 0)
-    stats.meanNonZero = this.intensityRaw2Scaled(sum / (nVox - nZero));
-  return stats;
-};
-
 // not included in public docs
 // convert voxel intensity from stored value to scaled intensity
 NVImage.prototype.intensityRaw2Scaled = function (raw) {

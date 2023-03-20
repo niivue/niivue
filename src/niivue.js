@@ -4504,17 +4504,12 @@ Niivue.prototype.updateGLVolume = function () {
 /**
  * basic statistics for selected voxel-based image
  * @param {number} layer selects image to describe
- * @param {boolean} ignoreZeros will not include voxels with intensity of zero
  * @param {Array} masks are optional binary images to filter voxles
  * @returns {Array} numeric values to describe image
- * @example niivue.getDescriptives(0, true);
+ * @example niivue.getDescriptives(0);
  * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
-Niivue.prototype.getDescriptives = function (
-  layer = 0,
-  ignoreZeros = false,
-  masks = []
-) {
+Niivue.prototype.getDescriptives = function (layer = 0, masks = []) {
   let hdr = this.volumes[layer].hdr;
   let slope = hdr.scl_slope;
   if (isNaN(slope)) slope = 1;
@@ -4527,9 +4522,6 @@ Niivue.prototype.getDescriptives = function (
   for (var i = 0; i < nv; i++) img[i] = imgRaw[i] * slope + inter; //assume all voxels survive
   let mask = new Uint8Array(nv);
   for (var i = 0; i < nv; i++) mask[i] = 1; //assume all voxels survive
-  if (ignoreZeros) {
-    for (var i = 0; i < nv; i++) if (img[i] === 0) mask[i] = 0;
-  }
   if (masks.length > 0) {
     for (var m = 0; m < masks.length; m++) {
       let imgMask = this.volumes[masks[m]].img;
@@ -4553,23 +4545,49 @@ Niivue.prototype.getDescriptives = function (
   let S = 0;
   let mx = Number.NEGATIVE_INFINITY;
   let mn = Number.POSITIVE_INFINITY;
+  let kNot0 = 0;
+  let MNot0 = 0;
+  let SNot0 = 0;
+
   for (var i = 0; i < nv; i++) {
     if (mask[i] < 1) continue;
-    k += 1;
     let x = img[i];
-    mn = Math.min(x, mx);
-    mx = Math.max(x, mx);
+    k++;
     let Mnext = M + (x - M) / k;
     S = S + (x - M) * (x - Mnext);
     M = Mnext;
+    if (x === 0) continue;
+    kNot0++;
+    Mnext = MNot0 + (x - MNot0) / kNot0;
+    SNot0 = SNot0 + (x - MNot0) * (x - Mnext);
+    MNot0 = Mnext;
+
+    mn = Math.min(x, mx);
+    mx = Math.max(x, mx);
   }
   let stdev = Math.sqrt(S / (k - 1));
+  let stdevNot0 = Math.sqrt(SNot0 / (kNot0 - 1));
+  let mnNot0 = mn;
+  let mxNot0 = mx;
+  if (k !== kNot0) {
+    //some voxels are equal to zero
+    mn = Math.min(0, mx);
+    mx = Math.max(0, mx);
+  }
+
   return {
     mean: M,
     stdev: stdev,
     nvox: k,
     min: mn,
     max: mx,
+    meanNot0: MNot0,
+    stdevNot0: stdevNot0,
+    nvoxNot0: kNot0,
+    minNot0: mnNot0,
+    maxNot0: mxNot0,
+    cal_min: this.volumes[layer].cal_min,
+    cal_max: this.volumes[layer].cal_max,
     robust_min: this.volumes[layer].robust_min,
     robust_max: this.volumes[layer].robust_max,
   };
