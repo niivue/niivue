@@ -15,7 +15,12 @@ module.exports = defineConfig({
       allow: [".."],
     },
   },
-  plugins: [commonjs()],
+  optimizeDeps: {
+    include: ['nifti-reader-js'],
+  },
+  plugins: [commonjs({
+    include: /node_modules/,
+  })],
   build: {
     outDir: "./dist",
     lib: {

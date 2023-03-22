@@ -15,7 +15,8 @@ function getFilesizeInBytes(filename) {
 beforeEach(async () => {
 
   await page.goto(httpServerAddress, { timeout: 0 });
-  await page._client.send("Page.setDownloadBehavior", {
+  const client = await page.target().createCDPSession();
+  await client.send("Page.setDownloadBehavior", {
     behavior: "allow",
     downloadPath: downloadPath,
   });
