@@ -24,8 +24,8 @@ NiiVue brings the features of the widely used native desktop applications ([AFNI
 
 - Analysis of Functional NeuroImages (AFNI) [Scientific and Statistical Computing Core](https://afni.nimh.nih.gov/) (National Institutes of Health)
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
-- FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital)
-- FreeSurfer [Laboratories for Computational Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital)
 - [OpenNeuro.org](https://openneuro.org)
 - [BrainLife.io](https://brainlife.io/about/)
 
