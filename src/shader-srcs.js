@@ -1357,3 +1357,26 @@ out vec4 outColor;
 void main() {
 	outColor = vec4(vColor, 1.0);
 }`;
+
+export var vertPassThroughShader = `#version 300 es
+#line 1361
+precision highp int;
+precision highp float;
+in vec3 vPos;
+out vec2 TexCoord;
+void main() {
+	TexCoord = vPos.xy;
+	vec2 viewCoord = (vPos.xy - 0.5) * 2.0;
+	gl_Position = vec4((vPos.xy - 0.5) * 2.0, 0.0, 1.0);
+}`;
+
+export var fragPassThroughShader = `#version 300 es
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform lowp sampler3D in3D;
+void main(void) {
+ FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
+}`;

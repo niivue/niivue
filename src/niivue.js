@@ -21,6 +21,8 @@ import {
 } from "./shader-srcs.js";
 import {
   vertOrientShader,
+  vertPassThroughShader,
+  fragPassThroughShader,
   vertGrowCutShader,
   fragGrowCutShader,
   fragOrientShaderU,
@@ -148,7 +150,8 @@ const RIGHT_MOUSE_BUTTON = 2;
  * @property {boolean} [options.isHighResolutionCapable=true] demand that high-dot-per-inch displays use native voxel size
  * @property {boolean} [options.drawingEnabled=false] allow user to create and edit voxel-based drawings
  * @property {number} [options.penValue=Infinity] color of drawing when user drags mouse (if drawingEnabled)
- * @property {boolean} [options.isFilledPen=false] create filled drawings when user drags mouse (if drawingEnabled)
+ * @property {number} [options.penValue=Infinity] color of drawing when user drags mouse (if drawingEnabled)
+ * @property {boolean} [options.floodFillNeighbors=6] does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors?
  * @property {number} [options.maxDrawUndoBitmaps=8] number of possible undo steps (if drawingEnabled)
  * @property {string} [options.thumbnail=""] optional 2D png bitmap that can be rapidly loaded to defer slow loading of 3D image
  * @example
@@ -3423,7 +3426,15 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
   }
 };
 
-Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
+// a voxel can be defined as having 6, 18 or 26 neighbors:
+//   6: neighbors share faces (distance=1)
+//  18: neighbors share faces (distance=1) or edges (1.4)
+//  26: neighbors share faces (distance=1), edges (1.4) or corners (1.7)
+Niivue.prototype.drawFloodFillCore = async function (
+  img,
+  seedVx,
+  neighbors = 6
+) {
   let dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]; //+1: dims indexed from 0!
   let nx = dims[0];
   let nxy = nx * dims[1];
@@ -3465,12 +3476,37 @@ Niivue.prototype.drawFloodFillCore = async function (img, seedVx) {
       img[vxT] = 2; //part of cluster
       Q.push(vxT);
     }
+    //test neighbors that share face
     testNeighbor([0, 0, -1]); //inferior
     testNeighbor([0, 0, 1]); //superior
     testNeighbor([0, -1, 0]); //posterior
     testNeighbor([0, 1, 0]); //anterior
     testNeighbor([-1, 0, 0]); //left
     testNeighbor([1, 0, 0]); //right
+    if (neighbors <= 6) continue;
+    //test voxels that share edge
+    testNeighbor([-1, -1, 0]); //left posterior
+    testNeighbor([1, 1, 0]); //right posterior
+    testNeighbor([-1, 1, 0]); //left anterior
+    testNeighbor([1, 1, 0]); //right anterior
+    testNeighbor([0, -1, -1]); //posterior inferior
+    testNeighbor([0, 1, -1]); //anterior inferior
+    testNeighbor([-1, 0, -1]); //left inferior
+    testNeighbor([1, 0, -1]); //right inferior
+    testNeighbor([0, -1, 1]); //posterior superior
+    testNeighbor([0, 1, 1]); //anterior superior
+    testNeighbor([-1, 0, 1]); //left superior
+    testNeighbor([1, 0, 1]); //right superior
+    if (neighbors <= 18) continue;
+    //test neighbors that share a corner
+    testNeighbor([-1, -1, -1]); //left posterior inferior
+    testNeighbor([1, -1, -1]); //right posterior inferior
+    testNeighbor([-1, 1, -1]); //left anterior inferior
+    testNeighbor([1, 1, -1]); //right anterior inferior
+    testNeighbor([-1, -1, 1]); //left posterior superior
+    testNeighbor([1, -1, 1]); //right posterior superior
+    testNeighbor([-1, 1, 1]); //left anterior superior
+    testNeighbor([1, 1, 1]); //right anterior superior
     //7. Continue looping until Q is exhausted.
   }
 }; // drawFloodFillCore()
@@ -3482,7 +3518,8 @@ Niivue.prototype.drawFloodFill = function (
   newColor = 0,
   growSelectedCluster = 0, //if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
   forceMin = NaN,
-  forceMax = NaN
+  forceMax = NaN,
+  neighbors = 6
 ) {
   //3D "paint bucket" fill:
   // set all voxels connected to seed point to newColor
@@ -3513,7 +3550,7 @@ Niivue.prototype.drawFloodFill = function (
     img[i] = 0;
     if (this.drawBitmap[i] === seedColor) img[i] = 1;
   }
-  this.drawFloodFillCore(img, seedVx);
+  this.drawFloodFillCore(img, seedVx, neighbors);
   //8. (Optional) work out intensity of selected cluster
   if (growSelectedCluster !== 0) {
     let backImg = this.volumes[0].img2RAS();
@@ -3540,7 +3577,7 @@ Niivue.prototype.drawFloodFill = function (
       img[i] = 0;
       if (backImg[i] >= mn && backImg[i] <= mx) img[i] = 1;
     }
-    this.drawFloodFillCore(img, seedVx);
+    this.drawFloodFillCore(img, seedVx, neighbors);
     newColor = seedColor;
   }
   //8. Return
@@ -4357,6 +4394,13 @@ Niivue.prototype.init = async function () {
     fragGrowCutShader
   );
 
+  // pass through shaders
+  this.passThroughShader = new Shader(
+    this.gl,
+    vertPassThroughShader,
+    fragPassThroughShader
+  );
+
   // orientation shaders
   this.orientShaderAtlasU = new Shader(
     this.gl,
@@ -4464,17 +4508,12 @@ Niivue.prototype.updateGLVolume = function () {
 /**
  * basic statistics for selected voxel-based image
  * @param {number} layer selects image to describe
- * @param {boolean} ignoreZeros will not include voxels with intensity of zero
  * @param {Array} masks are optional binary images to filter voxles
  * @returns {Array} numeric values to describe image
- * @example niivue.getDescriptives(0, true);
+ * @example niivue.getDescriptives(0);
  * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
-Niivue.prototype.getDescriptives = function (
-  layer = 0,
-  ignoreZeros = false,
-  masks = []
-) {
+Niivue.prototype.getDescriptives = function (layer = 0, masks = []) {
   let hdr = this.volumes[layer].hdr;
   let slope = hdr.scl_slope;
   if (isNaN(slope)) slope = 1;
@@ -4487,9 +4526,6 @@ Niivue.prototype.getDescriptives = function (
   for (var i = 0; i < nv; i++) img[i] = imgRaw[i] * slope + inter; //assume all voxels survive
   let mask = new Uint8Array(nv);
   for (var i = 0; i < nv; i++) mask[i] = 1; //assume all voxels survive
-  if (ignoreZeros) {
-    for (var i = 0; i < nv; i++) if (img[i] === 0) mask[i] = 0;
-  }
   if (masks.length > 0) {
     for (var m = 0; m < masks.length; m++) {
       let imgMask = this.volumes[masks[m]].img;
@@ -4513,23 +4549,49 @@ Niivue.prototype.getDescriptives = function (
   let S = 0;
   let mx = Number.NEGATIVE_INFINITY;
   let mn = Number.POSITIVE_INFINITY;
+  let kNot0 = 0;
+  let MNot0 = 0;
+  let SNot0 = 0;
+
   for (var i = 0; i < nv; i++) {
     if (mask[i] < 1) continue;
-    k += 1;
     let x = img[i];
-    mn = Math.min(x, mx);
-    mx = Math.max(x, mx);
+    k++;
     let Mnext = M + (x - M) / k;
     S = S + (x - M) * (x - Mnext);
     M = Mnext;
+    if (x === 0) continue;
+    kNot0++;
+    Mnext = MNot0 + (x - MNot0) / kNot0;
+    SNot0 = SNot0 + (x - MNot0) * (x - Mnext);
+    MNot0 = Mnext;
+
+    mn = Math.min(x, mx);
+    mx = Math.max(x, mx);
   }
   let stdev = Math.sqrt(S / (k - 1));
+  let stdevNot0 = Math.sqrt(SNot0 / (kNot0 - 1));
+  let mnNot0 = mn;
+  let mxNot0 = mx;
+  if (k !== kNot0) {
+    //some voxels are equal to zero
+    mn = Math.min(0, mx);
+    mx = Math.max(0, mx);
+  }
+
   return {
     mean: M,
     stdev: stdev,
     nvox: k,
     min: mn,
     max: mx,
+    meanNot0: MNot0,
+    stdevNot0: stdevNot0,
+    nvoxNot0: kNot0,
+    minNot0: mnNot0,
+    maxNot0: mxNot0,
+    cal_min: this.volumes[layer].cal_min,
+    cal_max: this.volumes[layer].cal_max,
     robust_min: this.volumes[layer].robust_min,
     robust_max: this.volumes[layer].robust_max,
   };
@@ -4836,46 +4898,81 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   //blend texture
   let blendTexture = null;
   this.gl.bindVertexArray(this.genericVAO);
-  if (layer > 1) {
-    //we can not simultaneously read and write to the same texture.
-    //therefore, we must clone the overlay texture when we wish to add another layer
-    //copy previous overlay texture to blend texture
-    blendTexture = this.rgbaTex(
-      blendTexture,
-      this.gl.TEXTURE5,
-      this.back.dims,
-      true
-    );
-    this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
-    for (let i = 0; i < this.back.dims[3]; i++) {
-      //n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
-      this.gl.framebufferTextureLayer(
-        this.gl.FRAMEBUFFER,
-        this.gl.COLOR_ATTACHMENT0,
-        this.overlayTexture,
-        0,
-        i
-      ); //read from existing overlay texture 2
-      this.gl.activeTexture(this.gl.TEXTURE5); //write to blend texture 5
-      this.gl.copyTexSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        i,
-        0,
-        0,
-        this.back.dims[1],
-        this.back.dims[2]
+
+  let isUseCopyTexSubImage3D = false;
+  if (isUseCopyTexSubImage3D) {
+    //console.log("Using copyTexSubImage3D (issue 501)");
+    if (layer > 1) {
+      //we can not simultaneously read and write to the same texture.
+      //therefore, we must clone the overlay texture when we wish to add another layer
+      //copy previous overlay texture to blend texture
+      blendTexture = this.rgbaTex(
+        blendTexture,
+        this.gl.TEXTURE5,
+        this.back.dims,
+        true
       );
-    }
-  } else
-    blendTexture = this.rgbaTex(
-      blendTexture,
-      this.gl.TEXTURE5,
-      [2, 2, 2, 2],
-      true
-    );
+      this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
+      for (let i = 0; i < this.back.dims[3]; i++) {
+        //n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
+        this.gl.framebufferTextureLayer(
+          this.gl.FRAMEBUFFER,
+          this.gl.COLOR_ATTACHMENT0,
+          this.overlayTexture,
+          0,
+          i
+        ); //read from existing overlay texture 2
+        this.gl.activeTexture(this.gl.TEXTURE5); //write to blend texture 5
+        this.gl.copyTexSubImage3D(
+          this.gl.TEXTURE_3D,
+          0,
+          0,
+          0,
+          i,
+          0,
+          0,
+          this.back.dims[1],
+          this.back.dims[2]
+        );
+      }
+    } else
+      blendTexture = this.rgbaTex(
+        blendTexture,
+        this.gl.TEXTURE5,
+        [2, 2, 2, 2],
+        true
+      );
+  } else {
+    //console.log("Using pass through shader (issue 501)");
+    if (layer > 1) {
+      //use pass-through shader to copy previous color to temporary 2D texture
+      blendTexture = this.rgbaTex(
+        blendTexture,
+        this.gl.TEXTURE5,
+        this.back.dims
+      );
+      this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
+      let passShader = this.passThroughShader;
+      passShader.use(this.gl);
+      this.gl.uniform1i(passShader.uniforms["in3D"], 2); //overlay volume
+      for (let i = 0; i < this.back.dims[3]; i++) {
+        //output slices
+        let coordZ = (1 / this.back.dims[3]) * (i + 0.5);
+        this.gl.uniform1f(passShader.uniforms["coordZ"], coordZ);
+        this.gl.framebufferTextureLayer(
+          this.gl.FRAMEBUFFER,
+          this.gl.COLOR_ATTACHMENT0,
+          blendTexture,
+          0,
+          i
+        );
+        //this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+      }
+    } else
+      blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
+  }
+
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
   this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
@@ -5426,6 +5523,15 @@ Niivue.prototype.sliceScroll3D = function (posChange = 0) {
 };
 
 // not included in public docs
+// if a thumbnail is loaded: close thumbnail and release memory
+Niivue.prototype.deleteThumbnail = function () {
+  if (!this.bmpTexture) return;
+  this.gl.deleteTexture(this.bmpTexture);
+  this.bmpTexture = null;
+  this.thumbnailVisible = false;
+};
+
+// not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   x *= this.uiData.dpr;
@@ -5435,8 +5541,10 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   var posFuture;
   this.canvas.focus();
   if (this.thumbnailVisible) {
-    this.gl.deleteTexture(this.bmpTexture);
-    this.bmpTexture = null;
+    //we will simply hide the thmubnail
+    // use deleteThumbnail() to close the thumbnail and free resources
+    //this.gl.deleteTexture(this.bmpTexture);
+    //this.bmpTexture = null;
     this.thumbnailVisible = false;
     //the thumbnail is now released, do something profound: actually load the images
     this.loadVolumes(this.deferredVolumes);
@@ -5514,8 +5622,17 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
         ) {
           if (!isFinite(this.opts.penValue))
             //NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-            this.drawFloodFill(pt, 0, this.opts.penValue);
-          else this.drawFloodFill(pt, Math.abs(this.opts.penValue));
+            this.drawFloodFill(
+              pt,
+              0,
+              this.opts.penValue,
+              this.opts.floodFillNeighbors
+            );
+          else
+            this.drawFloodFill(
+              pt,
+              Math.abs(this.opts.penValue, this.opts.floodFillNeighbors)
+            );
           return;
         }
         if (isNaN(this.drawPenLocation[0])) {
@@ -8121,7 +8238,7 @@ Niivue.prototype.drawSceneCore = function () {
   );
   this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   //this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  if (this.bmpTexture) {
+  if (this.bmpTexture && this.thumbnailVisible) {
     //draw the thumbnail image and exit
     this.drawThumbnail();
     return;

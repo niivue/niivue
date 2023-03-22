@@ -28,6 +28,7 @@
       <button onclick="prevVolume()">back</button>
       <button onclick="nextVolume()">forward</button>
       &nbsp;<button onclick="animateVolume()">animate</button>
+      &nbsp;<button onclick="toggleThumbnail()">toggle thumbnail</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -49,6 +50,7 @@
   ];
   var nv1 = new niivue.Niivue({
     onFrameChange: updateFrameValue,
+    thumbnail: "../images/pcasl.png",
   });
   nv1.setRadiologicalConvention(false);
   nv1.attachTo("gl1");
@@ -90,5 +92,10 @@
       clearInterval(animationTimer);
       animationTimer = null;
     }
+  }
+  document.getElementById("gl1").addEventListener("dblclick", toggleThumbnail);
+  function toggleThumbnail() {
+    nv1.thumbnailVisible = !nv1.thumbnailVisible;
+    nv1.drawScene();
   }
 </script>

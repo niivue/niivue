@@ -16,15 +16,16 @@ Installs without the bloat of the development dependencies or testing frameworks
 npm install --only=prod @niivue/niivue
 ```
 
-# Overview/Mission
+# Mission
 
-NiiVue brings the features of the widely used native desktop applications ([AFNI](https://afni.nimh.nih.gov/about_afni), [FSLeyes](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSLeyes), [MRIcroGL](https://github.com/rordenlab/MRIcroGL), [Surfice](https://github.com/neurolabusc/surf-ice), [SUMA](https://afni.nimh.nih.gov/Suma)) to the web. The developers of these tools developed NiiVue in collaboration, allowing us to benefit from collective wisdom. This will enable other researchers and developers to build cloud-based medical imaging tools with a powerful viewer that can operate on any device (desktop, tablet, mobile).
+NiiVue brings the features of the widely used native desktop applications ([AFNI](https://afni.nimh.nih.gov/about_afni), [FSLeyes](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSLeyes), ([FreeSurfer](https://surfer.nmr.mgh.harvard.edu/), [MRIcroGL](https://github.com/rordenlab/MRIcroGL), [Surfice](https://github.com/neurolabusc/surf-ice), [SUMA](https://afni.nimh.nih.gov/Suma)) to the web. The developers of these tools developed NiiVue in collaboration, allowing us to benefit from collective wisdom. This will enable other researchers and developers to build cloud-based medical imaging tools with a powerful viewer that can operate on any device (desktop, tablet, mobile).
 
 # Projects and People using NiiVue
 
 - Analysis of Functional NeuroImages (AFNI) [Scientific and Statistical Computing Core](https://afni.nimh.nih.gov/) (National Institutes of Health)
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
 - FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital)
 - [OpenNeuro.org](https://openneuro.org)
 - [BrainLife.io](https://brainlife.io/about/)
 
