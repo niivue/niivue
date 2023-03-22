@@ -26,8 +26,9 @@
     <footer id="intensity">&nbsp;</footer>
   </body>
 </html>
-<script src="./niivue.umd.js"></script>
-<script>
+<!-- <script type="module" async></script> -->
+<script type="module" async>
+  import * as niivue from "./niivue.es.js";
   function changeSliceType() {
     let st = parseInt(document.getElementById("sliceType").value);
     nv1.setSliceType(st);
@@ -37,13 +38,26 @@
       "&nbsp;&nbsp;" + data.string;
     console.log(data);
   }
-  var volumeList1 = [{ url: "../images/mni152.nii.gz" }];
+  var volumeList1 = [
+    { 
+      url: "../images/mni152.nii.gz",
+      colorMap: "gray",
+      visible: true,
+      opacity: 1
+    }, 
+    {
+      url: "../images/hippo.nii.gz", 
+      colorMap: "red",
+      visible: true,
+      opacity: 1
+    }
+  ];
   var nv1 = new niivue.Niivue({
     dragAndDropEnabled: true,
     onLocationChange: handleIntensityChange,
   });
-  nv1.setRadiologicalConvention(false);
-  nv1.opts.multiplanarForceRender = true;
+  // nv1.setRadiologicalConvention(false);
+  // nv1.opts.multiplanarForceRender = true;
   nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
