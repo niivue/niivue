@@ -1,4 +1,4 @@
-import nifti from "nifti-reader-js";
+import * as nifti from "nifti-reader-js";
 import daikon from "daikon";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
@@ -6,7 +6,6 @@ import * as cmaps from "./cmaps";
 import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
-//import { prototype } from "nifti-reader-js/src/nifti1";
 const log = new Log();
 
 // not included in public docs
@@ -318,6 +317,7 @@ export function NVImage(
       break;
     case NVIMAGE_TYPE.NII:
       this.hdr = nifti.readHeader(dataBuffer);
+      console.log(this.hdr);
       if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
         this.hdr.cal_max = 0.0;
       if (nifti.isCompressed(dataBuffer)) {

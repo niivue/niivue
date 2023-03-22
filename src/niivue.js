@@ -178,7 +178,7 @@ export function Niivue(options = {}) {
   this.volumeTexture = null;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawUndoBitmaps = [];
-  this.drawLut = cmapper.makeDrawLut("_itksnap");
+  this.drawLut = cmapper.makeDrawLut("$itksnap");
   this.drawOpacity = 0.8;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
@@ -577,7 +577,12 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     );
   }
 
-  console.log("NIIVUE VERSION ", __NIIVUE_VERSION__); // TH added this rare console.log via suggestion from CR. Don't remove
+  console.log(
+    "NIIVUE VERSION ",
+    typeof __NIIVUE_VERSION__ === "undefined"
+      ? "null (niivue was likely built in a parent project rather than using the pre-bundled version)"
+      : __NIIVUE_VERSION__
+  ); // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
   // avoids white cube around image in 3D render mode
@@ -591,9 +596,7 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     window.addEventListener("resize", this.resizeListener.bind(this)); // must bind 'this' niivue object or else 'this' becomes 'window'
   }
   this.registerInteractions(); // attach mouse click and touch screen event handlers for the canvas
-
   await this.init();
-
   this.drawScene();
   return this;
 };
@@ -1303,7 +1306,6 @@ Niivue.prototype.registerInteractions = function () {
   // add keyup
   this.canvas.setAttribute("tabindex", 0);
   this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
-  this.canvas.focus();
 
   // keydown
   this.canvas.addEventListener(
@@ -1677,6 +1679,8 @@ Niivue.prototype.addVolume = function (volume) {
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
   this.onImageLoaded(volume);
+  console.log("loaded volume", volume.name);
+  console.log(volume);
 };
 
 /**
@@ -2340,9 +2344,9 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
-  this.volumes.map((v) => {
-    log.debug(v.name);
-  });
+  // this.volumes.map((v) => {
+  //   log.debug(v.name);
+  // });
   let numberOfLoadedImages = this.volumes.length;
   if (toIndex > numberOfLoadedImages) {
     return;
@@ -2371,9 +2375,9 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     this.back = this.volumes[0];
   }
   this.updateGLVolume();
-  this.volumes.map((v) => {
-    log.debug(v.name);
-  });
+  // this.volumes.map((v) => {
+  //   log.debug(v.name);
+  // });
 };
 
 // not included in public docs
@@ -6007,7 +6011,6 @@ Niivue.prototype.drawLoadingText = function (text) {
   this.gl.enable(this.gl.CULL_FACE);
   this.gl.enable(this.gl.BLEND);
   this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
-  this.canvas.focus();
 };
 
 // not included in public docs
@@ -8348,6 +8351,7 @@ Niivue.prototype.drawScene = async function () {
   //Chrome and Safari get much more bogged down by concurrent draw calls than Safari
   // https://stackoverflow.com/questions/51710067/webgl-async-operations
   //glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
+  // await this.gl.finish();
   await this.gl.finish();
   if (this.needsRefresh) posString = this.drawScene();
   return posString;

@@ -9,6 +9,7 @@ devdocs
 niivue.es.js
 niivue.umd.js
 /downloads
+__diff_output__
 
 # local env files
 .env.local
