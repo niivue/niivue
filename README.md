@@ -8,6 +8,10 @@ NiiVue allows developers to create interactive web pages for visualizing [nifti]
 
 [click here to go to the docs web page](https://niivue.github.io/niivue/devdocs/)
 
+### Supported Nodejs versions for building/developing with NiiVue
+
+NiiVue is built and tested using [Nodejs](https://nodejs.dev/en/) `14`, `16`, and `18` and their accompanying npm versions. We recommend using the latest LTS version of Nodejs when building and developing with NiiVue.
+
 ### Install NiiVue using npm
 
 Installs without the bloat of the development dependencies or testing frameworks
