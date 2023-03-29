@@ -18,15 +18,20 @@
   </style>
   <body>
     <main>
-      <canvas id="gl1" width="640" height="640" style="width: 640px; height: 640px"></canvas>
+      <canvas
+        id="gl1"
+        width="640"
+        height="640"
+        style="width: 640px; height: 640px"
+      ></canvas>
     </main>
     <script type="module" async>
       import { Niivue } from "./niivue.js";
       import { NVImage } from "./nvimage.js";
       import { NVMesh } from "./nvmesh.js";
       var volumeList1 = [
-        { url: "../demos/images/hippo.nii.gz"},
-        { url: "../demos/images/MNI152.nii.gz", opacity: 0.5},
+        { url: "../demos/images/hippo.nii.gz" },
+        { url: "../demos/images/MNI152.nii.gz", opacity: 0.5 },
       ];
       var nv = new Niivue({ isResizeCanvas: false });
       nv.setRadiologicalConvention(false);
