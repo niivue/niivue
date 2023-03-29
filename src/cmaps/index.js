@@ -57,3 +57,6 @@ export { default as viridis } from "./viridis.json";
 export { default as warm } from "./warm.json";
 export { default as winter } from "./winter.json";
 export { default as x_rain } from "./x_rain.json";
+export { default as afni_blues_inv } from "./afni_blues_inv.json";
+export { default as afni_reds_inv } from "./afni_reds_inv.json";
+export { default as ROI_i256 } from "./ROI_i256.json";
