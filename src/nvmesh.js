@@ -4,8 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Log } from "./logger";
 import { NiivueObject3D } from "./niivue-object3D.js"; //n.b. used by connectome
 import { mat4, vec3, vec4 } from "gl-matrix";
-import { colortables } from "./colortables";
-const cmapper = new colortables();
+import { cmapper } from "./colortables";
 const log = new Log();
 
 /**

@@ -61,8 +61,8 @@ import { Log } from "./logger";
 import defaultMatCap from "./matcaps/Shiny.jpg";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-import { colortables } from "./colortables";
-export { colortables } from "./colortables";
+import { cmapper } from "./colortables";
+export { colortables, cmapper } from "./colortables";
 import {
   NVDocument,
   SLICE_TYPE,
@@ -72,7 +72,7 @@ import {
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
-const cmapper = new colortables();
+
 const MESH_EXTENSIONS = [
   "ASC",
   "BYU",
@@ -5164,8 +5164,12 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
  * niivue = new Niivue()
  * colormaps = niivue.colorMaps()
  */
-Niivue.prototype.colorMaps = function (sort = true) {
+Niivue.prototype.colorMaps = function () {
   return cmapper.colorMaps();
+};
+
+Niivue.prototype.addMap = function (key, cmap) {
+  cmapper.addMap(key, cmap);
 };
 
 /**
