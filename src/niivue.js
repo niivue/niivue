@@ -5168,8 +5168,14 @@ Niivue.prototype.colorMaps = function () {
   return cmapper.colorMaps();
 };
 
-Niivue.prototype.addMap = function (key, cmap) {
-  cmapper.addMap(key, cmap);
+/**
+ * create a new colormap
+ * @param {string} key name of new colormap
+ * @param {object} colormap properties (Red, Green, Blue, Alpha and Indices)
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
+ */
+Niivue.prototype.addColormap = function (key, cmap) {
+  cmapper.addColormap(key, cmap);
 };
 
 /**

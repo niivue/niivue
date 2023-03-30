@@ -77,7 +77,7 @@
       function doCheck3Click() {
         nv1.setSliceMM(this.checked);
       }
-      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }];
+      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }];
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML =
           "&nbsp;&nbsp;" + data.vox[0] + "×" + data.vox[1] + "×" + data.vox[2];
@@ -96,24 +96,6 @@
       nv1.opts.dragMode = nv1.dragModes.pan;
       await nv1.loadVolumes(volumeList1);
       await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
-      let cmap = {
-        min: 0,
-        max: 0,
-        R: [0, 255, 22, 127],
-        G: [0, 20, 192, 187],
-        B: [0, 152, 80, 255],
-        A: [0, 255, 255, 255],
-        I: [0, 22, 222, 255],
-      };
-      nv1.opts.isColorbar = true;
-      //nv1.volumes[0].setColorMap(cmap)
-      //let cmaps = nv1.colorMaps();
-      //nv1.volumes[0].setColorMap(cmaps[2]);
-      let key = "Warhol";
-      nv1.addMap(key, cmap);
-      nv1.volumes[0].colorMap = key;
-      //console.log(":::", nv1.colorMaps());
-      nv1.updateGLVolume();
       function doReset() {
         nv1.setDefaults(defaults, true);
       }

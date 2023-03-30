@@ -3,59 +3,39 @@ import * as cmaps from "./cmaps";
 export const colortables = function () {
   this.version = 0.1;
   this.gamma = 1.0;
-  this.cmaps = [];
-  if (this.cmaps.length > 0) return this.cmaps;
+  let cmapsSorted = [];
+  if (cmaps.length > 0) return this.cmaps;
   for (const [key] of Object.entries(cmaps)) {
     if (key.startsWith("$")) continue; //ignore drawing maps
-    this.cmaps.push(key);
+    cmapsSorted.push(key);
   }
-  this.cmaps.sort();
-  this.cmapsV = [];
-  for (let i = 0; i < this.cmaps.length; i++) {
-    let key = this.cmaps[i];
-    this.cmapsV[i] = cmaps[key];
+  cmapsSorted.sort();
+  this.cluts = {};
+  for (let i = 0; i < cmapsSorted.length; i++) {
+    let key = cmapsSorted[i];
+    this.cluts[key] = cmaps[key];
   }
 };
 
-colortables.prototype.addMap = function (key, cmap) {
-  for (let i = 0; i < this.cmaps.length; i++) {
-    let ekey = this.cmaps[i];
-    if (ekey.toLowerCase() === key.toLowerCase()) {
-      //overwrite existing cmap
-      this.cmapsV[i] = cmap;
-      return;
-    }
-  }
-  //create a new key
-  console.log("Adding new colormap ", key, cmap);
-  this.cmaps.push(key);
-  this.cmapsV.push(cmap);
+colortables.prototype.addColormap = function (key, cmap) {
+  this.cluts[key] = cmap;
 };
 
 colortables.prototype.colorMaps = function () {
-  return this.cmaps;
+  return Object.keys(this.cluts);
 };
 
 // returns key name if it exists, otherwise returns default "gray"
-colortables.prototype.key2key = function (key = "") {
-  let availMaps = this.colorMaps();
-  for (let i = 0; i < availMaps.length; i++) {
-    let ekey = availMaps[i];
-    if (ekey.toLowerCase() === key.toLowerCase()) return ekey;
-  }
-  console.log("No colormap matching the name '" + key + "'");
-  return ["gray"];
-};
+/*colortables.prototype.key2key = function (key = "") {
+  let cmap = this.cluts[key];
+  if (cmap !== undefined) return key;
+  console.log("No color map named " + key);
+  return "Gray";
+};*/
 
 colortables.prototype.colormapFromKey = function (name) {
-  let ekey = this.key2key(name);
-  let availMaps = this.colorMaps();
-  for (let i = 0; i < availMaps.length; i++) {
-    let key = availMaps[i];
-    if (ekey.toLowerCase() === key.toLowerCase()) {
-      return this.cmapsV[i];
-    }
-  }
+  let cmap = this.cluts[name];
+  if (cmap !== undefined) return cmap;
   console.log("No color map named " + name);
   cmap = {
     min: 0,
@@ -72,7 +52,6 @@ colortables.prototype.colormapFromKey = function (name) {
 // not included in public docs
 colortables.prototype.colormap = function (key = "") {
   let cmap = this.colormapFromKey(key);
-  console.log(cmap);
   return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I);
 }; // colormap()
 
@@ -117,7 +96,6 @@ colortables.prototype.makeDrawLut = function (name) {
     lut[k++] = cmap.B[i]; //Blue
     lut[k++] = cmap.A[i]; //Alpha
   }
-
   return {
     lut: lut,
     labels: cmap.labels,

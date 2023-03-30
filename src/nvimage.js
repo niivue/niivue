@@ -2277,7 +2277,7 @@ NVImage.prototype.arrayEquals = function (a, b) {
 // not included in public docs
 // base function for niivue.setColorMap()
 NVImage.prototype.setColorMap = function (cm) {
-  this._colorMap = cmapper.key2key(cm);
+  this._colorMap = cm;
   this.calMinMax();
   if (this.onColorMapChange) {
     this.onColorMapChange(this);
@@ -2310,11 +2310,11 @@ Object.defineProperty(NVImage.prototype, "opacity", {
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
 NVImage.prototype.calMinMax = function () {
-  let cmap = cmapper.colormap(this._colorMap);
+  let cmap = cmapper.colormapFromKey(this._colorMap);
   let cmMin = 0;
   let cmMax = 0;
-  cmMin = cmap.min;
-  cmMax = cmap.max;
+  if (cmap.hasOwnProperty("min")) cmMin = cmap.min;
+  if (cmap.hasOwnProperty("max")) cmMax = cmap.max;
   if (
     cmMin === cmMax &&
     this.trustCalMinMax &&
