@@ -317,7 +317,6 @@ export function NVImage(
       break;
     case NVIMAGE_TYPE.NII:
       this.hdr = nifti.readHeader(dataBuffer);
-      console.log(this.hdr);
       if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
         this.hdr.cal_max = 0.0;
       if (nifti.isCompressed(dataBuffer)) {

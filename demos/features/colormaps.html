@@ -30,7 +30,7 @@
     </main>
     <footer>
       <label id="colormaps"></label>
-      &nbsp<button id="custom">custom</button>&nbsp
+      &nbsp;<button id="custom">custom</button>&nbsp;
     </footer>
   </body>
 </html>
@@ -69,8 +69,8 @@
   nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.opts.isColorbar = true;
-  cmaps = nv1.colorMaps();
-  cmapEl = document.getElementById("colormaps");
+  let cmaps = nv1.colorMaps();
+  let cmapEl = document.getElementById("colormaps");
   for (let i = 0; i < cmaps.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = cmaps[i];
