@@ -11,7 +11,9 @@
     <noscript>niivue requires JavaScript.</noscript>
     <header>
       <label for="check3">World space</label>
-      <input type="checkbox" id="check3" name="check3" checked />
+      <input type="checkbox" id="check3" checked />
+      <label for="smooth">Smooth</label>
+      <input type="checkbox" id="smooth" checked />
       <button id="about">About</button>
     </header>
     <main>
@@ -24,6 +26,10 @@
         .addEventListener("change", doCheck3Click);
       function doCheck3Click() {
         nv1.setSliceMM(this.checked);
+      }
+      document.getElementById("smooth").addEventListener("change", doSmooth);
+      function doSmooth() {
+        nv1.setInterpolation(!this.checked);
       }
       var volumeList1 = [
         // first item is background image
@@ -74,6 +80,7 @@
       }; //connectome{}
       await nv1.loadConnectome(connectome);
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.multiplanarForceRender = true;
     </script>
   </body>
 </html>
