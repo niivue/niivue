@@ -30,6 +30,7 @@
     </main>
     <footer>
       <label id="colormaps"></label>
+      &nbsp;<button id="custom">custom</button>&nbsp;
     </footer>
   </body>
 </html>
@@ -40,6 +41,20 @@
   slider.oninput = function () {
     nv1.setGamma(this.value * 0.01);
   };
+  document.getElementById("custom").addEventListener("click", doCustom);
+  function doCustom() {
+    let cmap = {
+      R: [0, 255, 22, 127],
+      G: [0, 20, 192, 187],
+      B: [0, 152, 80, 255],
+      A: [0, 255, 255, 255],
+      I: [0, 22, 222, 255],
+    };
+    let key = "Custom";
+    nv1.addColormap(key, cmap);
+    nv1.volumes[0].colorMap = key;
+    nv1.updateGLVolume();
+  }
   var volumeList1 = [
     // first item is background image
     {
@@ -54,8 +69,8 @@
   nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.opts.isColorbar = true;
-  cmaps = nv1.colorMaps();
-  cmapEl = document.getElementById("colormaps");
+  let cmaps = nv1.colorMaps();
+  let cmapEl = document.getElementById("colormaps");
   for (let i = 0; i < cmaps.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = cmaps[i];
