@@ -11,7 +11,9 @@
     <noscript>niivue requires JavaScript.</noscript>
     <header>
       <label for="check3">World space</label>
-      <input type="checkbox" id="check3" name="check3" checked />
+      <input type="checkbox" id="check3" checked />
+      <label for="smooth">Smooth</label>
+      <input type="checkbox" id="smooth" checked />
       <button id="about">About</button>
     </header>
     <main>
@@ -24,6 +26,10 @@
         .addEventListener("change", doCheck3Click);
       function doCheck3Click() {
         nv1.setSliceMM(this.checked);
+      }
+      document.getElementById("smooth").addEventListener("change", doSmooth);
+      function doSmooth() {
+        nv1.setInterpolation(!this.checked);
       }
       var volumeList1 = [
         // first item is background image
@@ -44,6 +50,7 @@
       nv1.attachTo("gl1");
       await nv1.loadVolumes(volumeList1);
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.multiplanarForceRender = true;
       document.getElementById("about").addEventListener("click", doAbout);
       function doAbout() {
         window.alert(
@@ -63,10 +70,10 @@
         edgeMax: 4,
         edgeScale: 1,
         nodes: {
-          names: ["Sphere", "Pyramid", "CylinderHigh", "CylinderLow"], //currently unused
-          X: [24, -17, -14, -14], //Xmm for each node
-          Y: [-66, -133, -75, -75], //Ymm for each node
-          Z: [768, 768, 781, 768], //Zmm for each node
+          names: ["Sphere", "Pyramid", "Box", "CylinderLow"], //currently unused
+          X: [0, -41, -37, -21], //Xmm for each node
+          Y: [0, -59, -6, -21], //Ymm for each node
+          Z: [0, 3, 16, -22], //Zmm for each node
           Color: [2, 2, 3, 4], //Used to interpolate color
           Size: [2, 2, 3, 4], //Size of node
         },
@@ -74,6 +81,7 @@
       }; //connectome{}
       await nv1.loadConnectome(connectome);
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.multiplanarForceRender = true;
     </script>
   </body>
 </html>

@@ -61,8 +61,8 @@ import { Log } from "./logger";
 import defaultMatCap from "./matcaps/Shiny.jpg";
 import defaultFontPNG from "./fonts/Roboto-Regular.png";
 import defaultFontMetrics from "./fonts/Roboto-Regular.json";
-import { colortables } from "./colortables";
-export { colortables } from "./colortables";
+import { cmapper } from "./colortables";
+export { colortables, cmapper } from "./colortables";
 import {
   NVDocument,
   SLICE_TYPE,
@@ -72,7 +72,7 @@ import {
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
-const cmapper = new colortables();
+
 const MESH_EXTENSIONS = [
   "ASC",
   "BYU",
@@ -4627,7 +4627,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       this.gl.TEXTURE0,
       overlayItem.dimsRAS
     ); //this.back.dims)
-    let { volScale, vox } = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+
+    let { volScale, vox } = this.sliceScale(true); // slice scale determined by this.back --> the base image layer
+
     this.volScale = volScale;
     this.vox = vox;
     this.volumeObject3D.scale = volScale;
@@ -5114,7 +5116,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
 
   // set slice scale for render shader
   this.renderShader.use(this.gl);
-  let slicescl = this.sliceScale(); // slice scale determined by this.back --> the base image layer
+  let slicescl = this.sliceScale(true); // slice scale determined by this.back --> the base image layer
   let vox = slicescl.vox;
   let volScale = slicescl.volScale;
   this.gl.uniform1f(this.renderShader.uniforms["overlays"], this.overlays);
@@ -5164,8 +5166,18 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
  * niivue = new Niivue()
  * colormaps = niivue.colorMaps()
  */
-Niivue.prototype.colorMaps = function (sort = true) {
+Niivue.prototype.colorMaps = function () {
   return cmapper.colorMaps();
+};
+
+/**
+ * create a new colormap
+ * @param {string} key name of new colormap
+ * @param {object} colormap properties (Red, Green, Blue, Alpha and Indices)
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
+ */
+Niivue.prototype.addColormap = function (key, cmap) {
+  cmapper.addColormap(key, cmap);
 };
 
 /**
@@ -5451,8 +5463,9 @@ Niivue.prototype.refreshColormaps = function () {
 }; // refreshColormaps()
 
 // not included in public docs
-Niivue.prototype.sliceScale = function () {
+Niivue.prototype.sliceScale = function (forceVox = false) {
   let dimsMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL);
+  if (forceVox) dimsMM = this.screenFieldOfViewVox(SLICE_TYPE.AXIAL);
   var longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]));
   var volScale = [
     dimsMM[0] / longestAxis,
@@ -6354,6 +6367,11 @@ Niivue.prototype.swizzleVec3MM = function (v3, axCorSag) {
   return v3;
 }; // swizzleVec3MM()
 
+Niivue.prototype.screenFieldOfViewVox = function (axCorSag = 0) {
+  let fov = this.volumeObject3D.fieldOfViewDeObliqueMM.slice();
+  return this.swizzleVec3MM(fov, axCorSag);
+};
+
 // not included in public docs
 // determine height/width of image in millimeters
 Niivue.prototype.screenFieldOfViewMM = function (
@@ -6363,8 +6381,7 @@ Niivue.prototype.screenFieldOfViewMM = function (
   //extent of volume/mesh (in millimeters) in screen space
   if (!forceSliceMM && !this.opts.isSliceMM) {
     //return voxel space
-    let fov = this.volumeObject3D.fieldOfViewDeObliqueMM.slice();
-    return this.swizzleVec3MM(fov, axCorSag);
+    return this.screenFieldOfViewVox(axCorSag);
   }
   let mnMM = this.volumeObject3D.extentsMin.slice();
   let mxMM = this.volumeObject3D.extentsMax.slice();

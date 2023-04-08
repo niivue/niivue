@@ -2,7 +2,7 @@ import * as nifti from "nifti-reader-js";
 import daikon from "daikon";
 import { v4 as uuidv4 } from "uuid";
 import { mat3, mat4, vec3, vec4 } from "gl-matrix";
-import * as cmaps from "./cmaps";
+import { cmapper } from "./colortables";
 import * as fflate from "fflate";
 import { NiivueObject3D } from "./niivue-object3D";
 import { Log } from "./logger";
@@ -317,7 +317,6 @@ export function NVImage(
       break;
     case NVIMAGE_TYPE.NII:
       this.hdr = nifti.readHeader(dataBuffer);
-      console.log(this.hdr);
       if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255)
         this.hdr.cal_max = 0.0;
       if (nifti.isCompressed(dataBuffer)) {
@@ -2274,34 +2273,13 @@ NVImage.prototype.arrayEquals = function (a, b) {
   );
 };
 
-/**
- * query all available color maps that can be applied to volumes
- * @param {boolean} [sort=true] whether or not to sort the returned array
- * @returns {array} an array of colormap strings
- * @example
- * myImage = NVImage.loadFromUrl('./someURL/someFile.nii.gz')
- * colormaps = myImage.colorMaps()
- */
-NVImage.prototype.colorMaps = function (sort = true) {
-  let cm = [];
-  for (const [key] of Object.entries(cmaps)) {
-    cm.push(key);
-  }
-  return sort === true ? cm.sort() : cm;
-};
-
 // not included in public docs
 // base function for niivue.setColorMap()
 NVImage.prototype.setColorMap = function (cm) {
-  let allColorMaps = this.colorMaps();
-  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
-    this._colorMap = cm.toLowerCase();
-    this.calMinMax();
-    if (this.onColorMapChange) {
-      this.onColorMapChange(this);
-    }
-  } else {
-    log.warn(`color map ${cm} is not a valid color map`);
+  this._colorMap = cm;
+  this.calMinMax();
+  if (this.onColorMapChange) {
+    this.onColorMapChange(this);
   }
 };
 
@@ -2331,15 +2309,11 @@ Object.defineProperty(NVImage.prototype, "opacity", {
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
 NVImage.prototype.calMinMax = function () {
-  let cm = this._colorMap;
-  let allColorMaps = this.colorMaps();
+  let cmap = cmapper.colormapFromKey(this._colorMap);
   let cmMin = 0;
   let cmMax = 0;
-  if (allColorMaps.indexOf(cm.toLowerCase()) !== -1) {
-    cmMin = cmaps[cm.toLowerCase()].min;
-    cmMax = cmaps[cm.toLowerCase()].max;
-  }
-
+  if (cmap.hasOwnProperty("min")) cmMin = cmap.min;
+  if (cmap.hasOwnProperty("max")) cmMax = cmap.max;
   if (
     cmMin === cmMax &&
     this.trustCalMinMax &&
