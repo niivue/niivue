@@ -1,7 +1,81 @@
-<!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Home</title><!--[if lt IE 9]>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="",baseURL=(locationPathname=document.location.pathname).substr(0,locationPathname.lastIndexOf("/")+1)</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body class="dark" data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">Home</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="We-veb_s2pmEKCqBV0KD3"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="NVController.html">NVController</a></div><div class="sidebar-section-children"><a href="NVDocument.html">NVDocument</a></div><div class="sidebar-section-children"><a href="NVDocument.html">NVDocument</a></div><div class="sidebar-section-children"><a href="NVDocument.html">NVDocument</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></div><div class="sidebar-section-children"><a href="NVMesh.html">NVMesh</a></div><div class="sidebar-section-children"><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></div><div class="sidebar-section-children"><a href="NVMessage.html">NVMessage</a></div><div class="sidebar-section-children"><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></div><div class="sidebar-section-children"><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></div><div class="sidebar-section-children"><a href="NVUtilities.html">NVUtilities</a></div><div class="sidebar-section-children"><a href="Niivue.html">Niivue</a></div><div class="sidebar-section-children"><a href="NiivueObject3D.html">NiivueObject3D</a></div><div class="sidebar-section-children"><a href="SessionBus.html">SessionBus</a></div><div class="sidebar-section-children"><a href="SessionUser.html">SessionUser</a></div><div class="sidebar-section-children"><a href="Shader.html">Shader</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="TXMLLOBFuJQbF92QEcyrQ"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#DRAG_MODE">DRAG_MODE</a></div><div class="sidebar-section-children"><a href="global.html#NVConfigOptions">NVConfigOptions</a></div><div class="sidebar-section-children"><a href="global.html#NVDocumentData">NVDocumentData</a></div><div class="sidebar-section-children"><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></div><div class="sidebar-section-children"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></div><div class="sidebar-section-children"><a href="global.html#NVImageMetadata">NVImageMetadata</a></div><div class="sidebar-section-children"><a href="global.html#NVMESSAGE">NVMESSAGE</a></div><div class="sidebar-section-children"><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></div><div class="sidebar-section-children"><a href="global.html#NVMeshLayer">NVMeshLayer</a></div><div class="sidebar-section-children"><a href="global.html#NVSceneData">NVSceneData</a></div><div class="sidebar-section-children"><a href="global.html#NiivueOptions">NiivueOptions</a></div><div class="sidebar-section-children"><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></div><div class="sidebar-section-children"><a href="global.html#getExtents">getExtents</a></div><div class="sidebar-section-children"><a href="global.html#storageAvailable">storageAvailable</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section class="readme"><article><h1>NiiVue</h1><p>NiiVue is a WebGL 2.0 medical image viewer. This repository contains the <strong>core NiiVue package</strong>. We have additional projects under development that will demonstrate a <a href="https://github.com/niivue/niivue-ui">web-based user interface implementation</a>, and a <a href="https://github.com/niivue/niivue-desktop">desktop application</a> built using web technologies.</p><p>NiiVue allows developers to create interactive web pages for visualizing <a href="https://nifti.nimh.nih.gov">nifti</a> and other formats popular in neuroimaging. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our <a href="https://github.com/niivue/niivue-ui">UI wrapper</a> demonstrates how the modular core NiiVue can be embedded into a rich user interface.</p><h1>Getting started Docs and References</h1><p><a href="https://niivue.github.io/niivue/devdocs/">click here to go to the docs web page</a></p><h3>Supported Nodejs versions for building/developing with NiiVue</h3><p>NiiVue is built and tested using <a href="https://nodejs.dev/en/">Nodejs</a> <code>14</code>, <code>16</code>, and <code>18</code> and their accompanying npm versions. We recommend using the latest LTS version of Nodejs when building and developing with NiiVue.</p><h3>Install NiiVue using npm</h3><p>Installs without the bloat of the development dependencies or testing frameworks</p><pre class="prettyprint source"><code>npm install --only=prod @niivue/niivue
-</code></pre><h1>Mission</h1><p>NiiVue brings the features of the widely used native desktop applications (<a href="https://afni.nimh.nih.gov/about_afni">AFNI</a>, <a href="https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSLeyes">FSLeyes</a>, (<a href="https://surfer.nmr.mgh.harvard.edu/">FreeSurfer</a>, <a href="https://github.com/rordenlab/MRIcroGL">MRIcroGL</a>, <a href="https://github.com/neurolabusc/surf-ice">Surfice</a>, <a href="https://afni.nimh.nih.gov/Suma">SUMA</a>) to the web. The developers of these tools developed NiiVue in collaboration, allowing us to benefit from collective wisdom. This will enable other researchers and developers to build cloud-based medical imaging tools with a powerful viewer that can operate on any device (desktop, tablet, mobile).</p><h1>Projects and People using NiiVue</h1><ul><li>Analysis of Functional NeuroImages (AFNI) <a href="https://afni.nimh.nih.gov/">Scientific and Statistical Computing Core</a> (National Institutes of Health)</li><li><a href="https://cstar.sc.edu/">Center for the Study of Aphasia Recovery</a> (University of South Carolina)</li><li>FMRIB's Software Library (FSL) <a href="https://www.win.ox.ac.uk/">Wellcome Centre for Integrative Neuroimaging</a> (University of Oxford)</li><li>FreeSurfer <a href="https://lcn.martinos.org/">Laboratories for Computational Neuroimaging</a> (Massachusetts General Hospital)</li><li><a href="https://openneuro.org">OpenNeuro.org</a></li><li><a href="https://brainlife.io/about/">BrainLife.io</a></li></ul><h1>Live View</h1><p>We host many NiiVue examples via github pages. These are updated and deployed automatically. All live views reflect the capabilities of the NiiVue version in the main branch.</p><p><a href="https://niivue.github.io/niivue/">See the examples here</a></p><h1>Requirements for NiiVue to work</h1><ul><li><a href="https://caniuse.com/webgl2">WebGL 2.0 capable</a> web browser (Chrome, FireFox, Safari).</li></ul><h1>Usage</h1><h2>Pure HTML</h2><p>While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can also embed it directly into HTML web pages. Here is a minimal example:</p><pre class="prettyprint source lang-html"><code>&lt;!DOCTYPE html>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>NiiVue</h1>
+<p>NiiVue is a WebGL 2.0 medical image viewer. This repository contains the <strong>core NiiVue package</strong>. We have additional projects under development that will demonstrate a <a href="https://github.com/niivue/niivue-ui">web-based user interface implementation</a>, and a <a href="https://github.com/niivue/niivue-desktop">desktop application</a> built using web technologies.</p>
+<p>NiiVue allows developers to create interactive web pages for visualizing <a href="https://nifti.nimh.nih.gov">nifti</a> and other formats popular in neuroimaging. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our <a href="https://github.com/niivue/niivue-ui">UI wrapper</a> demonstrates how the modular core NiiVue can be embedded into a rich user interface.</p>
+<h1>Getting started Docs and References</h1>
+<p><a href="https://niivue.github.io/niivue/devdocs/">click here to go to the docs web page</a></p>
+<h3>Supported Nodejs versions for building/developing with NiiVue</h3>
+<p>NiiVue is built and tested using <a href="https://nodejs.dev/en/">Nodejs</a> <code>14</code>, <code>16</code>, and <code>18</code> and their accompanying npm versions. We recommend using the latest LTS version of Nodejs when building and developing with NiiVue.</p>
+<h3>Install NiiVue using npm</h3>
+<p>Installs without the bloat of the development dependencies or testing frameworks</p>
+<pre class="prettyprint source"><code>npm install --only=prod @niivue/niivue
+</code></pre>
+<h1>Mission</h1>
+<p>NiiVue brings the features of the widely used native desktop applications (<a href="https://afni.nimh.nih.gov/about_afni">AFNI</a>, <a href="https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSLeyes">FSLeyes</a>, (<a href="https://surfer.nmr.mgh.harvard.edu/">FreeSurfer</a>, <a href="https://github.com/rordenlab/MRIcroGL">MRIcroGL</a>, <a href="https://github.com/neurolabusc/surf-ice">Surfice</a>, <a href="https://afni.nimh.nih.gov/Suma">SUMA</a>) to the web. The developers of these tools developed NiiVue in collaboration, allowing us to benefit from collective wisdom. This will enable other researchers and developers to build cloud-based medical imaging tools with a powerful viewer that can operate on any device (desktop, tablet, mobile).</p>
+<h1>Projects and People using NiiVue</h1>
+<ul>
+<li>Analysis of Functional NeuroImages (AFNI) <a href="https://afni.nimh.nih.gov/">Scientific and Statistical Computing Core</a> (National Institutes of Health)</li>
+<li><a href="https://cstar.sc.edu/">Center for the Study of Aphasia Recovery</a> (University of South Carolina)</li>
+<li>FMRIB's Software Library (FSL) <a href="https://www.win.ox.ac.uk/">Wellcome Centre for Integrative Neuroimaging</a> (University of Oxford)</li>
+<li>FreeSurfer <a href="https://lcn.martinos.org/">Laboratories for Computational Neuroimaging</a> (Massachusetts General Hospital)</li>
+<li><a href="https://openneuro.org">OpenNeuro.org</a></li>
+<li><a href="https://brainlife.io/about/">BrainLife.io</a></li>
+</ul>
+<h1>Live View</h1>
+<p>We host many NiiVue examples via github pages. These are updated and deployed automatically. All live views reflect the capabilities of the NiiVue version in the main branch.</p>
+<p><a href="https://niivue.github.io/niivue/">See the examples here</a></p>
+<h1>Requirements for NiiVue to work</h1>
+<ul>
+<li><a href="https://caniuse.com/webgl2">WebGL 2.0 capable</a> web browser (Chrome, FireFox, Safari).</li>
+</ul>
+<h1>Usage</h1>
+<h2>Pure HTML</h2>
+<p>While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can also embed it directly into HTML web pages. Here is a minimal example:</p>
+<pre class="prettyprint source lang-html"><code>&lt;!DOCTYPE html>
 &lt;html lang=&quot;en&quot;>
   &lt;head>
     &lt;meta charset=&quot;utf-8&quot; />
@@ -20,8 +94,13 @@
     nv.loadVolumes(volumeList);
   &lt;/script>
 &lt;/html>
-</code></pre><p>Note that the code above will load the latest current stable release. Alternatively, you can specify a specific NiiVue version. For example, to ensure compatibility with release 0.32.0, you could specify:</p><pre class="prettyprint source lang-html"><code>&lt;script src=&quot;https://unpkg.com/@niivue/niivue@0.32.0/dist/niivue.umd.js&quot;>&lt;/script>
-</code></pre><h2>VueJS example</h2><p>install: <code>npm i @niivue/niivue</code></p><pre class="prettyprint source lang-js"><code>&lt;script>
+</code></pre>
+<p>Note that the code above will load the latest current stable release. Alternatively, you can specify a specific NiiVue version. For example, to ensure compatibility with release 0.32.0, you could specify:</p>
+<pre class="prettyprint source lang-html"><code>&lt;script src=&quot;https://unpkg.com/@niivue/niivue@0.32.0/dist/niivue.umd.js&quot;>&lt;/script>
+</code></pre>
+<h2>VueJS example</h2>
+<p>install: <code>npm i @niivue/niivue</code></p>
+<pre class="prettyprint source lang-js"><code>&lt;script>
 import {Niivue} from '@niivue/niivue'
 const nv = new Niivue()
 
@@ -56,7 +135,10 @@ export default {
 
 &lt;/canvas>
 &lt;/template>
-</code></pre><h2>React example</h2><p>install: <code>npm i @niivue/niivue</code></p><pre class="prettyprint source lang-js"><code>import { useRef, useEffect } from &quot;react&quot;;
+</code></pre>
+<h2>React example</h2>
+<p>install: <code>npm i @niivue/niivue</code></p>
+<pre class="prettyprint source lang-js"><code>import { useRef, useEffect } from &quot;react&quot;;
 import { Niivue } from &quot;@niivue/niivue&quot;;
 
 const NiiVue = ({ imageUrl }) => {
@@ -76,7 +158,11 @@ const NiiVue = ({ imageUrl }) => {
 };
 
 // use as: &lt;NiiVue imageUrl={someUrl}> &lt;/NiiVue>
-</code></pre><h2>Angular example</h2><p>Check our <a href="docs/development-notes/angular-typescript.md">Angular TypeScript development notes</a> for instructions on building an Angular App with Niivue.</p><p>install: <code>npm i @niivue/niivue</code></p><pre class="prettyprint source lang-ts"><code>import { Component, OnInit, ViewChild } from &quot;@angular/core&quot;;
+</code></pre>
+<h2>Angular example</h2>
+<p>Check our <a href="docs/development-notes/angular-typescript.md">Angular TypeScript development notes</a> for instructions on building an Angular App with Niivue.</p>
+<p>install: <code>npm i @niivue/niivue</code></p>
+<pre class="prettyprint source lang-ts"><code>import { Component, OnInit, ViewChild } from &quot;@angular/core&quot;;
 
 import { Niivue } from &quot;@niivue/niivue&quot;;
 
@@ -102,32 +188,186 @@ export class NiivueViewComponent implements OnInit {
     niivue.loadVolumes(volumeList);
   }
 }
-</code></pre><h1>Core Libraries</h1><ul><li><a href="https://github.com/Twinklebear/webgl-util">shader.js source</a></li><li><a href="https://github.com/rii-mango/Daikon">Daikon</a></li><li><a href="https://github.com/rii-mango/NIFTI-Reader-JS">NIFTI-Reader-JS source</a></li><li><a href="https://glmatrix.net/">glMatrix</a></li><li><a href="https://github.com/101arrowz/fflate">fflate</a></li></ul><h1>Funding</h1><ul><li>2021-2022<ul><li>P50 DC014664/DC/NIDCD NIH HHS/United States</li></ul></li></ul><h1>Supported Formats</h1><p>NiiVue can open several formats popular with brain imaging:</p><ul><li>Voxel-based formats: <a href="https://brainder.org/2012/09/23/the-nifti-file-format/">NIfTI</a>, <a href="http://teem.sourceforge.net/nrrd/format.html">NRRD</a>, <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats">MRtrix MIF</a>, <a href="https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html">AFNI HEAD/BRIK</a>, <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat">MGH/MGZ</a>, <a href="https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29">ITK MHD</a>, <a href="https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info">ECAT7</a>.</li><li>Mesh-based formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ASC</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">BYU/GEO/G</a>, <a href="http://brainsuite.org/formats/dfs/">BrainSuite DFS</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ICO/TRI</a>, <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY</a>, <a href="https://www.nitrc.org/projects/bnv/">BrainNet NV</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files">BrainVoyager SRF</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">FreeSurfer</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://en.wikipedia.org/wiki/OFF_(file_format)">OFF</a>, <a href="https://brainder.org/tag/obj/">Wavefront OBJ</a>, <a href="https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45">STL</a>, <a href="https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf">Legacy VTK</a>, <a href="https://3dprint.nih.gov/">X3D</a>.</li><li>Mesh overlay formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="https://balsa.wustl.edu/about/fileTypes">CIfTI-2</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files">SMP</a>, STC, FreeSurfer (CURV/ANNOT)</li><li>Tractography formats: <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck">TCK</a>, <a href="http://trackvis.org/docs/?subsect=fileformat">TRK</a>, <a href="https://github.com/frheault/tractography_file_format">TRX</a>, VTK, AFNI .niml.tract</li><li>DICOM: <a href="https://dicom.nema.org/medical/dicom/current/output/chtml/part10/chapter_7.html">DICOM</a> and <a href="docs/development-notes/dicom-manifests.md">DICOM Manifests</a></li></ul><h1>Alternatives</h1><p>There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is how it leverages the shaders functions and 3D textures introduced with WebGL 2.0. The minimal design makes it easy to integrate with existing web pages quickly in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does <strong>not</strong> use <a href="https://threejs.org">three.js</a>. This means the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, NiiVue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets (e.g. using VueJS, React, Angular or pure HTML). Since there are numerous free alternatives, you can choose the optimal tool for your task. <a href="https://f.giorlando.org/2018/07/web-viewers-for-fmri/">Francesco Giorlando</a> describes some of the differences between different tools.</p><table><thead><tr><th>Tool</th><th>Live Demos</th></tr></thead><tbody><tr><td><a href="https://github.com/FNNDSC/ami">AMI</a></td><td><a href="https://fnndsc.github.io/ami/">live demo</a></td></tr><tr><td><a href="https://github.com/bioimagesuiteweb/bisweb">BioImage Suite Web Project</a></td><td><a href="https://bioimagesuiteweb.github.io/webapp/viewer.html">live demo</a></td></tr><tr><td><a href="https://brainbrowser.cbrain.mcgill.ca/">BrainBrowser</a></td><td><a href="https://brainbrowser.cbrain.mcgill.ca/volume-viewer">live demo</a></td></tr><tr><td><a href="https://github.com/vsoch/nifti-drop">nifti-drop</a></td><td><a href="http://vsoch.github.io/nifti-drop">live demo</a></td></tr><tr><td><a href="https://github.com/rii-mango/Papaya">Papaya</a></td><td><a href="https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html">live demo</a></td></tr><tr><td><a href="https://github.com/Kitware/vtk-js">VTK.js</a></td><td><a href="https://kitware.github.io/paraview-glance/app/">live demo</a></td></tr><tr><td><a href="https://github.com/slicedrop/slicedrop.github.com">slicedrop</a></td><td><a href="https://slicedrop.com/">live demo</a></td></tr></tbody></table><h1>Development</h1><p>All NiiVue development is public on GitHub. The <code>main</code> branch represents the most current state of NiiVue.</p><p>NiiVue is currently in a state of rapid development until we get to version <code>1.0.0</code>. Therefore, it may be a good idea to check back frequently if you are developing software that relies on NiiVue. NiiVue releases starting with <code>0</code> should be considered beta software.</p><p><strong>Note</strong>: All PRs from a fork or feature branch to <code>main</code> will require the automated github actions test suite to pass.</p><h2>Install NiiVue into your project via NPM</h2><p>Each version of NiiVue is published to NPM</p><p>https://www.npmjs.com/package/@niivue/niivue</p><p>Do the following to install NiiVue as a dependency in your project</p><pre class="prettyprint source"><code>npm install --save-dev @niivue/niivue
-</code></pre><h2>Local Development</h2><p>Make sure you have nodejs and npm installed.</p><pre class="prettyprint source"><code>git clone git@github.com:niivue/niivue.git
+</code></pre>
+<h1>Core Libraries</h1>
+<ul>
+<li><a href="https://github.com/Twinklebear/webgl-util">shader.js source</a></li>
+<li><a href="https://github.com/rii-mango/Daikon">Daikon</a></li>
+<li><a href="https://github.com/rii-mango/NIFTI-Reader-JS">NIFTI-Reader-JS source</a></li>
+<li><a href="https://glmatrix.net/">glMatrix</a></li>
+<li><a href="https://github.com/101arrowz/fflate">fflate</a></li>
+</ul>
+<h1>Funding</h1>
+<ul>
+<li>2021-2022
+<ul>
+<li>P50 DC014664/DC/NIDCD NIH HHS/United States</li>
+</ul>
+</li>
+</ul>
+<h1>Supported Formats</h1>
+<p>NiiVue can open several formats popular with brain imaging:</p>
+<ul>
+<li>Voxel-based formats: <a href="https://brainder.org/2012/09/23/the-nifti-file-format/">NIfTI</a>, <a href="http://teem.sourceforge.net/nrrd/format.html">NRRD</a>, <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats">MRtrix MIF</a>, <a href="https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html">AFNI HEAD/BRIK</a>, <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat">MGH/MGZ</a>, <a href="https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29">ITK MHD</a>, <a href="https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info">ECAT7</a>.</li>
+<li>Mesh-based formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ASC</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">BYU/GEO/G</a>, <a href="http://brainsuite.org/formats/dfs/">BrainSuite DFS</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ICO/TRI</a>, <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY</a>, <a href="https://www.nitrc.org/projects/bnv/">BrainNet NV</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files">BrainVoyager SRF</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">FreeSurfer</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://en.wikipedia.org/wiki/OFF_(file_format)">OFF</a>, <a href="https://brainder.org/tag/obj/">Wavefront OBJ</a>, <a href="https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45">STL</a>, <a href="https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf">Legacy VTK</a>, <a href="https://3dprint.nih.gov/">X3D</a>.</li>
+<li>Mesh overlay formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="https://balsa.wustl.edu/about/fileTypes">CIfTI-2</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files">SMP</a>, STC, FreeSurfer (CURV/ANNOT)</li>
+<li>Tractography formats: <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck">TCK</a>, <a href="http://trackvis.org/docs/?subsect=fileformat">TRK</a>, <a href="https://github.com/frheault/tractography_file_format">TRX</a>, VTK, AFNI .niml.tract</li>
+<li>DICOM: <a href="https://dicom.nema.org/medical/dicom/current/output/chtml/part10/chapter_7.html">DICOM</a> and <a href="docs/development-notes/dicom-manifests.md">DICOM Manifests</a></li>
+</ul>
+<h1>Alternatives</h1>
+<p>There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is how it leverages the shaders functions and 3D textures introduced with WebGL 2.0. The minimal design makes it easy to integrate with existing web pages quickly in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does <strong>not</strong> use <a href="https://threejs.org">three.js</a>. This means the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, NiiVue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets (e.g. using VueJS, React, Angular or pure HTML). Since there are numerous free alternatives, you can choose the optimal tool for your task.
+<a href="https://f.giorlando.org/2018/07/web-viewers-for-fmri/">Francesco Giorlando</a> describes some of the differences between different tools.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Live Demos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/FNNDSC/ami">AMI</a></td>
+<td><a href="https://fnndsc.github.io/ami/">live demo</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/bioimagesuiteweb/bisweb">BioImage Suite Web Project</a></td>
+<td><a href="https://bioimagesuiteweb.github.io/webapp/viewer.html">live demo</a></td>
+</tr>
+<tr>
+<td><a href="https://brainbrowser.cbrain.mcgill.ca/">BrainBrowser</a></td>
+<td><a href="https://brainbrowser.cbrain.mcgill.ca/volume-viewer">live demo</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/vsoch/nifti-drop">nifti-drop</a></td>
+<td><a href="http://vsoch.github.io/nifti-drop">live demo</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/rii-mango/Papaya">Papaya</a></td>
+<td><a href="https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html">live demo</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/Kitware/vtk-js">VTK.js</a></td>
+<td><a href="https://kitware.github.io/paraview-glance/app/">live demo</a></td>
+</tr>
+<tr>
+<td><a href="https://github.com/slicedrop/slicedrop.github.com">slicedrop</a></td>
+<td><a href="https://slicedrop.com/">live demo</a></td>
+</tr>
+</tbody>
+</table>
+<h1>Development</h1>
+<p>All NiiVue development is public on GitHub. The <code>main</code> branch represents the most current state of NiiVue.</p>
+<p>NiiVue is currently in a state of rapid development until we get to version <code>1.0.0</code>. Therefore, it may be a good idea to check back frequently if you are developing software that relies on NiiVue. NiiVue releases starting with <code>0</code> should be considered beta software.</p>
+<p><strong>Note</strong>: All PRs from a fork or feature branch to <code>main</code> will require the automated github actions test suite to pass.</p>
+<h2>Install NiiVue into your project via NPM</h2>
+<p>Each version of NiiVue is published to NPM</p>
+<p>https://www.npmjs.com/package/@niivue/niivue</p>
+<p>Do the following to install NiiVue as a dependency in your project</p>
+<pre class="prettyprint source"><code>npm install --save-dev @niivue/niivue
+</code></pre>
+<h2>Local Development</h2>
+<p>Make sure you have nodejs and npm installed.</p>
+<pre class="prettyprint source"><code>git clone git@github.com:niivue/niivue.git
 cd niivue
 npm install
 npm run dev
-</code></pre><h2>Launch included demos</h2><p>Launching the demos will format, build, and serve niivue demo pages. Open the demo URL in your browser to view the demo web pages. You can find the demo URL in your terminal after running <code>npm run demo</code>. The demos are intentionally simple, and each canvas showcases different NiiVue features.</p><p><strong>When viewing the demos during development, be sure to shift + click the refresh button in your browser in order to avoid using cached versions of files.</strong></p><h3>On macOS and Linux</h3><pre class="prettyprint source"><code>npm run demo
-</code></pre><h3>On Windows</h3><pre class="prettyprint source"><code>npm run demo-win
-</code></pre><h2>Build NiiVue</h2><p>Building NiiVue will format, build, and copy the bundled <code>niivue.js</code> to the <code>tests</code> and <code>demos</code> folders.</p><h3>on macOS and Linux</h3><pre class="prettyprint source"><code>npm run build
-</code></pre><h3>on Windows</h3><pre class="prettyprint source"><code>npm run build-win
-</code></pre><h2>Versioning</h2><p>NiiVue uses <a href="https://semver.org/">semantic versioning</a>.</p><p>To update the version run:</p><pre class="prettyprint source"><code>npm version patch # options are: major | minor | patch
-</code></pre><h2>Run unit tests</h2><p>Running the tests will format, build, and copy the bundled <code>niivue.js</code> to the <code>tests</code> and <code>demos</code> folders, then automatically begin the test suite.</p><h3>on macOS and Linux</h3><p><strong>If using macOS with Apple Silicon add this to your .zshrc (if zsh). Also ensure Chrome is installed at that location:</strong></p><pre class="prettyprint source"><code>export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+</code></pre>
+<h2>Launch included demos</h2>
+<p>Launching the demos will format, build, and serve niivue demo pages. Open the demo URL in your browser to view the demo web pages. You can find the demo URL in your terminal after running <code>npm run demo</code>. The demos are intentionally simple, and each canvas showcases different NiiVue features.</p>
+<p><strong>When viewing the demos during development, be sure to shift + click the refresh button in your browser in order to avoid using cached versions of files.</strong></p>
+<h3>On macOS and Linux</h3>
+<pre class="prettyprint source"><code>npm run demo
+</code></pre>
+<h3>On Windows</h3>
+<pre class="prettyprint source"><code>npm run demo-win
+</code></pre>
+<h2>Build NiiVue</h2>
+<p>Building NiiVue will format, build, and copy the bundled <code>niivue.js</code> to the <code>tests</code> and <code>demos</code> folders.</p>
+<h3>on macOS and Linux</h3>
+<pre class="prettyprint source"><code>npm run build
+</code></pre>
+<h3>on Windows</h3>
+<pre class="prettyprint source"><code>npm run build-win
+</code></pre>
+<h2>Versioning</h2>
+<p>NiiVue uses <a href="https://semver.org/">semantic versioning</a>.</p>
+<p>To update the version run:</p>
+<pre class="prettyprint source"><code>npm version patch # options are: major | minor | patch
+</code></pre>
+<h2>Run unit tests</h2>
+<p>Running the tests will format, build, and copy the bundled <code>niivue.js</code> to the <code>tests</code> and <code>demos</code> folders, then automatically begin the test suite.</p>
+<h3>on macOS and Linux</h3>
+<p><strong>If using macOS with Apple Silicon add this to your .zshrc (if zsh). Also ensure Chrome is installed at that location:</strong></p>
+<pre class="prettyprint source"><code>export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 export PUPPETEER_EXECUTABLE_PATH=/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome
-</code></pre><pre class="prettyprint source"><code>npm install
+</code></pre>
+<pre class="prettyprint source"><code>npm install
 npm run test
-</code></pre><h3>on Windows</h3><pre class="prettyprint source"><code>npm run test-win
-</code></pre><h3>Running a specific test</h3><pre class="prettyprint source"><code>npm run test -- -t 'test string'
+</code></pre>
+<h3>on Windows</h3>
+<pre class="prettyprint source"><code>npm run test-win
+</code></pre>
+<h3>Running a specific test</h3>
+<pre class="prettyprint source"><code>npm run test -- -t 'test string'
 # on windows use npm run test-win
-</code></pre><h2>Creating fonts</h2><pre class="prettyprint source"><code>{ echo &quot;data:image/png;base64,&quot;; openssl enc -base64 -in fnt.png; } > fnt.txt
+</code></pre>
+<h2>Creating fonts</h2>
+<pre class="prettyprint source"><code>{ echo &quot;data:image/png;base64,&quot;; openssl enc -base64 -in fnt.png; } > fnt.txt
 
 # then copy the contents of fnt.txt to the font string in src/fnt.js
-</code></pre><h1>Contributing</h1><p>Contributions to NiiVue are encouraged and welcomed. Feel free to update documentation, add features, fix bugs, or just ask questions on the <a href="https://github.com/niivue/niivue/issues">issue board</a>.</p><h2>Using Issues</h2><p><strong>All</strong> contributions should start as a new issue on the <a href="https://github.com/niivue/niivue/issues">NiiVue issue board</a>.</p><p>By starting a new issue for everything we ping everyone watching the project at the same time, and therefore alerting them to the feature, bug, or question. It also gives everyone a change to comment on new posts.</p><h2>Things to consider</h2><p>When adding features please keep in mind that we want NiiVue to work on all devices that support WebGL 2.0 (laptops, desktops, tablets, and phones). Therefore, please do your best to test features on as many devices as you have access to.</p><p>When testing locally from other devices you can navigate to your development computer's local IP address (assuming your phone and computer are on the same local network) at the port specified in the URL you see when running <code>npm run demo</code>.</p><h2>Adding tests</h2><p>NiiVue relies on <a href="https://jestjs.io/">Jest</a></p><p>If you add a feature, or fix a bug please try to add a test for it. You can find tests in the <code>tests</code> folder within the niivue project. There are numerous existing tests, so you can probably use one of those as a template. Generally, a test is contained with an <code>it('test name')</code> block in the <code>tests/test.niivue.js</code> file.</p><p>Some tests generate screenshots of the WebGL canvas in order to compare renderings to previous snapshots. Please have a look at the current tests in order to see how you can add this to your new tests if needed.</p><h2>Automated CI/CD</h2><p>We rely heavily on GitHub's actions to automate testing and checks.</p><p>These automated tests only test in a Linux desktop environment. So do please try to visually check that things work on other devices like tablets and phones when needed.</p><p>Each PR to the main branch must pass the automated checks, and must be reviewed and signed off by at least one other person.</p><p>If all checks and tests pass then PRs will be merged into main.</p><p>You can edit a feature branch as many times as needed to fix broken tests in order to get them passing and merged into main.</p><h2>Protected branches</h2><p>The <code>main</code> branch is protected. This means that no one can commit to main directly. All edits must be merged in from forks or feature branches.</p><h2>Making colormap loader</h2><pre class="prettyprint source"><code>cd src/cmaps
+</code></pre>
+<h1>Contributing</h1>
+<p>Contributions to NiiVue are encouraged and welcomed. Feel free to update documentation, add features, fix bugs, or just ask questions on the <a href="https://github.com/niivue/niivue/issues">issue board</a>.</p>
+<h2>Using Issues</h2>
+<p><strong>All</strong> contributions should start as a new issue on the <a href="https://github.com/niivue/niivue/issues">NiiVue issue board</a>.</p>
+<p>By starting a new issue for everything we ping everyone watching the project at the same time, and therefore alerting them to the feature, bug, or question. It also gives everyone a change to comment on new posts.</p>
+<h2>Things to consider</h2>
+<p>When adding features please keep in mind that we want NiiVue to work on all devices that support WebGL 2.0 (laptops, desktops, tablets, and phones). Therefore, please do your best to test features on as many devices as you have access to.</p>
+<p>When testing locally from other devices you can navigate to your development computer's local IP address (assuming your phone and computer are on the same local network) at the port specified in the URL you see when running <code>npm run demo</code>.</p>
+<h2>Adding tests</h2>
+<p>NiiVue relies on <a href="https://jestjs.io/">Jest</a></p>
+<p>If you add a feature, or fix a bug please try to add a test for it. You can find tests in the <code>tests</code> folder within the niivue project. There are numerous existing tests, so you can probably use one of those as a template. Generally, a test is contained with an <code>it('test name')</code> block in the <code>tests/test.niivue.js</code> file.</p>
+<p>Some tests generate screenshots of the WebGL canvas in order to compare renderings to previous snapshots. Please have a look at the current tests in order to see how you can add this to your new tests if needed.</p>
+<h2>Automated CI/CD</h2>
+<p>We rely heavily on GitHub's actions to automate testing and checks.</p>
+<p>These automated tests only test in a Linux desktop environment. So do please try to visually check that things work on other devices like tablets and phones when needed.</p>
+<p>Each PR to the main branch must pass the automated checks, and must be reviewed and signed off by at least one other person.</p>
+<p>If all checks and tests pass then PRs will be merged into main.</p>
+<p>You can edit a feature branch as many times as needed to fix broken tests in order to get them passing and merged into main.</p>
+<h2>Protected branches</h2>
+<p>The <code>main</code> branch is protected. This means that no one can commit to main directly. All edits must be merged in from forks or feature branches.</p>
+<h2>Making colormap loader</h2>
+<pre class="prettyprint source"><code>cd src/cmaps
 
 for f in ls *.json; do echo &quot;export { default as `basename $f .json` } from './$f';&quot; >> index.js; done;
-</code></pre><h2>macOS kill test server if kept alive because of failing tests</h2><pre class="prettyprint source"><code>sudo lsof -iTCP -sTCP:LISTEN -n -P | grep 8888 # 8888 is the test server used by jest
+</code></pre>
+<h2>macOS kill test server if kept alive because of failing tests</h2>
+<pre class="prettyprint source"><code>sudo lsof -iTCP -sTCP:LISTEN -n -P | grep 8888 # 8888 is the test server used by jest
 
 # the process id is the second column in the result
 
 kill &lt;pid> # kill the node process running the server if needed (when tests fail locally)
-</code></pre></article></section></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">Home</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="We-veb_s2pmEKCqBV0KD3"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="NVController.html">NVController</a></div><div class="sidebar-section-children"><a href="NVDocument.html">NVDocument</a></div><div class="sidebar-section-children"><a href="NVDocument.html">NVDocument</a></div><div class="sidebar-section-children"><a href="NVDocument.html">NVDocument</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="NVImage.html">NVImage</a></div><div class="sidebar-section-children"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></div><div class="sidebar-section-children"><a href="NVMesh.html">NVMesh</a></div><div class="sidebar-section-children"><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></div><div class="sidebar-section-children"><a href="NVMessage.html">NVMessage</a></div><div class="sidebar-section-children"><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></div><div class="sidebar-section-children"><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></div><div class="sidebar-section-children"><a href="NVUtilities.html">NVUtilities</a></div><div class="sidebar-section-children"><a href="Niivue.html">Niivue</a></div><div class="sidebar-section-children"><a href="NiivueObject3D.html">NiivueObject3D</a></div><div class="sidebar-section-children"><a href="SessionBus.html">SessionBus</a></div><div class="sidebar-section-children"><a href="SessionUser.html">SessionUser</a></div><div class="sidebar-section-children"><a href="Shader.html">Shader</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="TXMLLOBFuJQbF92QEcyrQ"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#DRAG_MODE">DRAG_MODE</a></div><div class="sidebar-section-children"><a href="global.html#NVConfigOptions">NVConfigOptions</a></div><div class="sidebar-section-children"><a href="global.html#NVDocumentData">NVDocumentData</a></div><div class="sidebar-section-children"><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></div><div class="sidebar-section-children"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></div><div class="sidebar-section-children"><a href="global.html#NVImageMetadata">NVImageMetadata</a></div><div class="sidebar-section-children"><a href="global.html#NVMESSAGE">NVMESSAGE</a></div><div class="sidebar-section-children"><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></div><div class="sidebar-section-children"><a href="global.html#NVMeshLayer">NVMeshLayer</a></div><div class="sidebar-section-children"><a href="global.html#NVSceneData">NVSceneData</a></div><div class="sidebar-section-children"><a href="global.html#NiivueOptions">NiivueOptions</a></div><div class="sidebar-section-children"><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></div><div class="sidebar-section-children"><a href="global.html#getExtents">getExtents</a></div><div class="sidebar-section-children"><a href="global.html#storageAvailable">storageAvailable</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+</code></pre></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a></li><li><a href="NVDocument.html">NVDocument</a></li><li><a href="NVImage.html">NVImage</a></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Apr 12 2023 10:42:01 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
