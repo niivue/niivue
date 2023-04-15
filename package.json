@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.33.1",
+  "version": "0.33.2",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./src/niivue.js",
   "unpkg": "./dist/niivue.umd.js",
@@ -23,7 +23,7 @@
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
-    "docs": "npx jsdoc --readme ./README.md -d devdocs -t ./node_modules/clean-jsdoc-theme/ src/",
+    "docs": "npx jsdoc --readme ./README.md -d devdocs src/",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm publish --access public"
   },
@@ -53,7 +53,7 @@
     "daikon": "^1.2.43",
     "fflate": "^0.7.4",
     "gl-matrix": "^3.4.3",
-    "nifti-reader-js": "^0.6.2",
+    "nifti-reader-js": "^0.6.4",
     "rxjs": "^7.8.0",
     "uuid": "^9.0.0"
   },
