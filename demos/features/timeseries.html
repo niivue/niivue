@@ -53,13 +53,13 @@
     thumbnail: "../images/pcasl.png",
   });
   nv1.setRadiologicalConvention(false);
-  nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.graph.autoSizeMultiplanar = true;
   nv1.opts.multiplanarForceRender = true;
   nv1.graph.normalizeValues = false;
   nv1.graph.opacity = 1.0;
+  nv1.attachTo("gl1");
   function checkClick(cb) {
     nv1.graph.normalizeValues = cb.checked;
     nv1.updateGLVolume();

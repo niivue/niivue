@@ -151,7 +151,8 @@ export function NVImageFromUrlOptions(
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true
+  colorbarVisible = true,
+  limitVolumes4D = NaN,
 ) {
   return {
     url,
@@ -172,6 +173,7 @@ export function NVImageFromUrlOptions(
     cal_maxNeg,
     colorbarVisible,
     frame4D,
+    limitVolumes4D,
   };
 }
 
@@ -216,7 +218,8 @@ export function NVImage(
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true
+  colorbarVisible = true,
+  limitVolumes4D = NaN,
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -239,7 +242,7 @@ export function NVImage(
   this.DT_COMPLEX128 = 1792; /* double pair (128 bits)       */
   this.DT_COMPLEX256 = 2048; /* long double pair (256 bits)  */
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
-
+  this.limitVolumes4D = limitVolumes4D;
   this.name = name;
   this.id = uuidv4();
   this._colorMap = colorMap;
@@ -376,6 +379,8 @@ export function NVImage(
     this.hdr.pixDims[3] === 0.0
   )
     console.log("pixDims not plausible", this.hdr);
+  if ((!isNaN(this.limitVolumes4D)) && (this.limitVolumes4D < this.nFrame4D))
+    this.nFrame4D = this.limitVolumes4D;
   function isAffineOK(mtx) {
     //A good matrix should not have any components that are not a number
     //A good spatial transformation matrix should not have a row or column that is all zeros
@@ -520,7 +525,6 @@ export function NVImage(
       break;
     case this.DT_SIGNED_SHORT:
       this.img = new Int16Array(imgRaw);
-
       break;
     case this.DT_FLOAT:
       this.img = new Float32Array(imgRaw);

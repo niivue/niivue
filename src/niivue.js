@@ -2673,6 +2673,14 @@ Niivue.prototype.setSelectionBoxColor = function (color) {
 
 // not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
+  if (this.inGraphTile(x,y)) {
+    let vol = this.volumes[0].frame4D;
+    if (posChange > 0) vol++;
+    if (posChange < 0) vol--;
+    
+    this.setFrame4D(this.volumes[0].id, vol);
+    return;
+  }
   if (
     posChange !== 0 &&
     this.opts.dragMode === DRAG_MODE.pan &&
@@ -5250,7 +5258,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
   // don't allow indexing timepoints beyond the max number of time points.
   if (frame4D > this.volumes[idx].nFrame4D - 1) {
-    frame4D = this.volumes[idx].nFrame4D;
+    frame4D = this.volumes[idx].nFrame4D - 1;
   }
   // don't allow negative timepoints
   if (frame4D < 0) {
@@ -5544,12 +5552,18 @@ Niivue.prototype.deleteThumbnail = function () {
   this.thumbnailVisible = false;
 };
 
+Niivue.prototype.inGraphTile = function (x, y) {
+  if ((this.graph.opacity <= 0) || (this.volumes[0].nFrame4D < 1) || (!this.graph.plotLTWH)) return false;
+  if ((this.graph.plotLTWH[2] < 1) || (this.graph.plotLTWH[3] < 1)) return false;
+  let pos = [(x - this.graph.plotLTWH[0])/this.graph.plotLTWH[2], (y - this.graph.plotLTWH[1])/this.graph.plotLTWH[3]];
+  return (pos[0] > 0) && (pos[1] > 0) && (pos[0] <= 1) && (pos[1] <= 1);
+}
+
 // not included in public docs
 // handle mouse click event on canvas
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-
   var posNow;
   var posFuture;
   this.canvas.focus();
@@ -5564,25 +5578,22 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     this.loadMeshes(this.deferredMeshes);
     return;
   }
-  if (
-    this.graph.opacity > 0.0 &&
-    this.volumes[0].nFrame4D > 1 &&
-    this.graph.plotLTWH
-  ) {
-    let pos = [x - this.graph.plotLTWH[0], y - this.graph.plotLTWH[1]];
+  if (this.inGraphTile(x, y)) {
+    let pos = [(x - this.graph.plotLTWH[0])/this.graph.plotLTWH[2], (y - this.graph.plotLTWH[1])/this.graph.plotLTWH[3]];
     if (
       pos[0] > 0 &&
       pos[1] > 0 &&
-      pos[0] <= this.graph.plotLTWH[2] &&
-      pos[1] <= this.graph.plotLTWH[3]
+      pos[0] <= 1 &&
+      pos[1] <= 1
     ) {
       let vol = Math.round(
-        (pos[0] / this.graph.plotLTWH[2]) * (this.volumes[0].nFrame4D - 1)
+        (pos[0]) * (this.volumes[0].nFrame4D - 1)
       );
       //this.graph.selectedColumn = vol;
       this.setFrame4D(this.volumes[0].id, vol);
       return;
     }
+    return;
   }
   if (this.inRenderTile(x, y) >= 0) {
     this.sliceScroll3D(posChange);
@@ -6907,6 +6918,14 @@ Niivue.prototype.getMaxVols = function () {
   return maxVols;
 };
 
+Niivue.prototype.detectPartialllyLoaded4D = function () {
+  if (this.volumes.length < 1) return false;
+  for (let i = 0; i < this.volumes.length; i++)
+    if (this.volumes[i].nFrame4D < this.volumes[i].hdr.dims[4])
+      return true;
+  return false;
+}
+
 // not included in public docs
 // draw graph for 4D NVImage: time across horizontal, intensity is vertical
 Niivue.prototype.drawGraph = function () {
@@ -7157,6 +7176,14 @@ Niivue.prototype.drawGraph = function () {
       [graph.lineRGB[3][0], graph.lineRGB[3][1], graph.lineRGB[3][2], 1]
     );
   }
+  if (this.detectPartialllyLoaded4D()) {
+    this.drawTextBelow(
+          [plotLTWH[0] + plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 0.5],
+          '...',
+          fntScale,
+          graph.textColor
+        );
+   }
 }; // drawGraph()
 
 // not included in public docs
@@ -8403,7 +8430,12 @@ Niivue.prototype.drawSceneCore = function () {
   } //if mosaic not 2D
   if (this.opts.isRuler) this.drawRuler();
   if (this.opts.isColorbar) this.drawColorbar();
-
+  if (
+    this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
+    maxVols > 1 &&
+    this.graph.autoSizeMultiplanar
+  )
+    this.drawGraph();
   if (this.uiData.isDragging) {
     if (this.uiData.mouseButtonCenterDown) {
       this.dragForCenterButton([
@@ -8460,12 +8492,7 @@ Niivue.prototype.drawSceneCore = function () {
     this.scene.crosshairPos[1],
     this.scene.crosshairPos[2],
   ]);
-  if (
-    this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
-    maxVols > 1 &&
-    this.graph.autoSizeMultiplanar
-  )
-    this.drawGraph();
+
   posString =
     pos[0].toFixed(2) + "×" + pos[1].toFixed(2) + "×" + pos[2].toFixed(2);
   this.readyForSync = true; // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
