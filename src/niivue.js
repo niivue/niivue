@@ -2956,6 +2956,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
       frame4D: volumeList[i].frame4D,
+      limitVolumes4D: volumeList[i].limitVolumes4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);

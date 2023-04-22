@@ -151,8 +151,7 @@ export function NVImageFromUrlOptions(
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true,
-  limitVolumes4D = NaN
+  colorbarVisible = true
 ) {
   return {
     url,
@@ -173,7 +172,6 @@ export function NVImageFromUrlOptions(
     cal_maxNeg,
     colorbarVisible,
     frame4D,
-    limitVolumes4D,
   };
 }
 
@@ -218,8 +216,7 @@ export function NVImage(
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true,
-  limitVolumes4D = NaN
+  colorbarVisible = true
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -242,7 +239,7 @@ export function NVImage(
   this.DT_COMPLEX128 = 1792; /* double pair (128 bits)       */
   this.DT_COMPLEX256 = 2048; /* long double pair (256 bits)  */
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
-  this.limitVolumes4D = limitVolumes4D;
+  this.limitVolumes4D = NaN;
   this.name = name;
   this.id = uuidv4();
   this._colorMap = colorMap;
@@ -305,7 +302,6 @@ export function NVImage(
     case NVIMAGE_TYPE.MGZ:
       imgRaw = this.readMGH(dataBuffer); //to do: pairedImgData
       break;
-
     case NVIMAGE_TYPE.V:
       imgRaw = this.readECAT(dataBuffer);
       break;
@@ -337,13 +333,22 @@ export function NVImage(
     if (this.hdr.dims[i] > 1) this.nFrame4D *= this.hdr.dims[i];
   this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1);
   this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
-  let nVol4D = imgRaw.byteLength / this.nVox3D / (this.hdr.numBitsPerVoxel / 8);
-  if (nVol4D !== this.nFrame4D)
-    console.log(
-      "This header does not match voxel data",
-      this.hdr,
-      imgRaw.byteLength
-    );
+  let bytesPerVol = this.nVox3D * (this.hdr.numBitsPerVoxel / 8);
+  let nVol4D = imgRaw.byteLength / bytesPerVol;
+  if (nVol4D !== this.nFrame4D) {
+    if (nVol4D > 0 && nVol4D * bytesPerVol === imgRaw.byteLength)
+      console.log(
+        "Loading the first " + nVol4D + " of " + this.nFrame4D + " volumes"
+      );
+    else
+      console.log(
+        "This header does not match voxel data",
+        this.hdr,
+        imgRaw.byteLength
+      );
+    this.limitVolumes4D = nVol4D;
+    this.nFrame4D = this.limitVolumes4D;
+  }
   //1007 = NIFTI_INTENT_VECTOR; 2003 = NIFTI_INTENT_RGB_VECTOR
   // n.b. NIfTI standard says "NIFTI_INTENT_RGB_VECTOR" should be RGBA, but FSL only stores RGB
   if (
@@ -379,8 +384,6 @@ export function NVImage(
     this.hdr.pixDims[3] === 0.0
   )
     console.log("pixDims not plausible", this.hdr);
-  if (!isNaN(this.limitVolumes4D) && this.limitVolumes4D < this.nFrame4D)
-    this.nFrame4D = this.limitVolumes4D;
   function isAffineOK(mtx) {
     //A good matrix should not have any components that are not a number
     //A good spatial transformation matrix should not have a row or column that is all zeros
@@ -2677,6 +2680,7 @@ NVImage.loadFromUrl = async function ({
   colorMapNegative = "",
   frame4D = 0,
   isManifest = false,
+  limitVolumes4D = NaN,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   if (url === "") {
@@ -2685,7 +2689,32 @@ NVImage.loadFromUrl = async function ({
   let nvimage = null;
   let dataBuffer = null;
   // fetch data associated with image
-  if (isManifest) {
+  if (!isNaN(limitVolumes4D)) {
+    let response = await fetch(url, { headers: { range: "bytes=0-352" } });
+    dataBuffer = await response.arrayBuffer();
+    var bytes = new Uint8Array(dataBuffer);
+    let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
+    if (!isNifti1) isNifti1 = bytes[1] === 92 && bytes[0] === 1;
+    if (!isNifti1) dataBuffer = null;
+    else {
+      let hdr = nifti.readHeader(dataBuffer);
+      let nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+      let nVox3D = 1;
+      for (let i = 1; i < 4; i++) if (hdr.dims[i] > 1) nVox3D *= hdr.dims[i];
+      let nFrame4D = 1;
+      for (let i = 4; i < 7; i++) if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
+      let volsToLoad = Math.max(Math.min(limitVolumes4D, nFrame4D), 1);
+      let bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+      response = await fetch(url, {
+        headers: { range: "bytes=0-" + bytesToLoad },
+      });
+      dataBuffer = await response.arrayBuffer();
+      dataBuffer = dataBuffer.slice(0, bytesToLoad);
+    } //if isNifti1
+  }
+  if (dataBuffer) {
+    //
+  } else if (isManifest) {
     dataBuffer = await NVImage.fetchDicomData(url);
     imageType = NVIMAGE_TYPE.DCM_MANIFEST;
   } else {
