@@ -2673,11 +2673,10 @@ Niivue.prototype.setSelectionBoxColor = function (color) {
 
 // not included in public docs
 Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
-  if (this.inGraphTile(x,y)) {
+  if (this.inGraphTile(x, y)) {
     let vol = this.volumes[0].frame4D;
     if (posChange > 0) vol++;
     if (posChange < 0) vol--;
-    
     this.setFrame4D(this.volumes[0].id, vol);
     return;
   }
@@ -5256,19 +5255,20 @@ Niivue.prototype.setGamma = function (gamma = 1.0) {
  */
 Niivue.prototype.setFrame4D = function (id, frame4D) {
   let idx = this.getVolumeIndexByID(id);
+  let volume = this.volumes[idx];
   // don't allow indexing timepoints beyond the max number of time points.
-  if (frame4D > this.volumes[idx].nFrame4D - 1) {
-    frame4D = this.volumes[idx].nFrame4D - 1;
+  if (frame4D > volume.nFrame4D - 1) {
+    frame4D = volume.nFrame4D - 1;
   }
   // don't allow negative timepoints
   if (frame4D < 0) {
     frame4D = 0;
   }
-  let volume = this.volumes[idx];
+  if (frame4D == volume.frame4D) return; //no change
   volume.frame4D = frame4D;
   this.updateGLVolume();
-
   this.onFrameChange(volume, frame4D);
+  this.createOnLocationChange();
 };
 
 /**
@@ -5553,11 +5553,19 @@ Niivue.prototype.deleteThumbnail = function () {
 };
 
 Niivue.prototype.inGraphTile = function (x, y) {
-  if ((this.graph.opacity <= 0) || (this.volumes[0].nFrame4D < 1) || (!this.graph.plotLTWH)) return false;
-  if ((this.graph.plotLTWH[2] < 1) || (this.graph.plotLTWH[3] < 1)) return false;
-  let pos = [(x - this.graph.plotLTWH[0])/this.graph.plotLTWH[2], (y - this.graph.plotLTWH[1])/this.graph.plotLTWH[3]];
-  return (pos[0] > 0) && (pos[1] > 0) && (pos[0] <= 1) && (pos[1] <= 1);
-}
+  if (
+    this.graph.opacity <= 0 ||
+    this.volumes[0].nFrame4D < 1 ||
+    !this.graph.plotLTWH
+  )
+    return false;
+  if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) return false;
+  let pos = [
+    (x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2],
+    (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3],
+  ];
+  return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1;
+};
 
 // not included in public docs
 // handle mouse click event on canvas
@@ -5579,16 +5587,12 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     return;
   }
   if (this.inGraphTile(x, y)) {
-    let pos = [(x - this.graph.plotLTWH[0])/this.graph.plotLTWH[2], (y - this.graph.plotLTWH[1])/this.graph.plotLTWH[3]];
-    if (
-      pos[0] > 0 &&
-      pos[1] > 0 &&
-      pos[0] <= 1 &&
-      pos[1] <= 1
-    ) {
-      let vol = Math.round(
-        (pos[0]) * (this.volumes[0].nFrame4D - 1)
-      );
+    let pos = [
+      (x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2],
+      (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3],
+    ];
+    if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
+      let vol = Math.round(pos[0] * (this.volumes[0].nFrame4D - 1));
       //this.graph.selectedColumn = vol;
       this.setFrame4D(this.volumes[0].id, vol);
       return;
@@ -6921,10 +6925,9 @@ Niivue.prototype.getMaxVols = function () {
 Niivue.prototype.detectPartialllyLoaded4D = function () {
   if (this.volumes.length < 1) return false;
   for (let i = 0; i < this.volumes.length; i++)
-    if (this.volumes[i].nFrame4D < this.volumes[i].hdr.dims[4])
-      return true;
+    if (this.volumes[i].nFrame4D < this.volumes[i].hdr.dims[4]) return true;
   return false;
-}
+};
 
 // not included in public docs
 // draw graph for 4D NVImage: time across horizontal, intensity is vertical
@@ -7178,12 +7181,12 @@ Niivue.prototype.drawGraph = function () {
   }
   if (this.detectPartialllyLoaded4D()) {
     this.drawTextBelow(
-          [plotLTWH[0] + plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 0.5],
-          '...',
-          fntScale,
-          graph.textColor
-        );
-   }
+      [plotLTWH[0] + plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 0.5],
+      "...",
+      fntScale,
+      graph.textColor
+    );
+  }
 }; // drawGraph()
 
 // not included in public docs
@@ -7399,12 +7402,14 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
     flt2str(mm[1], deci) +
     "×" +
     flt2str(mm[2], deci);
+  if (this.volumes[0].nFrame4D > 0)
+    str += "×" + flt2str(this.volumes[0].frame4D);
   //voxel based layer intensity
   if (this.volumes.length > 0) {
     let valStr = " = ";
     for (let i = 0; i < this.volumes.length; i++) {
       let vox = this.volumes[i].mm2vox(mm);
-      let flt = this.volumes[i].getValue(...vox);
+      let flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D);
       deci = 3;
       valStr += flt2str(flt, deci) + "   ";
     }
@@ -8335,6 +8340,12 @@ Niivue.prototype.drawSceneCore = function () {
   }
   if (this.opts.isColorbar) this.reserveColorbarPanel();
   let maxVols = this.getMaxVols();
+  let isDrawGraph =
+    this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
+    maxVols > 1 &&
+    this.graph.autoSizeMultiplanar &&
+    this.graph.opacity > 0;
+
   if (this.sliceMosaicString.length > 0) {
     this.drawMosaic(this.sliceMosaicString);
   } else {
@@ -8392,10 +8403,7 @@ Niivue.prototype.drawSceneCore = function () {
         let hZ1 = volScale[2] * pixScale;
         if (ltwh3x1[3] === ltwh4x1[3]) {
           ltwh3x1 = ltwh4x1;
-          if (
-            !isDrawPenDown &&
-            (maxVols < 2 || !this.graph.autoSizeMultiplanar)
-          ) {
+          if (!isDrawPenDown && (maxVols < 2 || !isDrawGraph)) {
             this.draw3D([
               ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
               ltwh3x1[1],
@@ -8430,12 +8438,7 @@ Niivue.prototype.drawSceneCore = function () {
   } //if mosaic not 2D
   if (this.opts.isRuler) this.drawRuler();
   if (this.opts.isColorbar) this.drawColorbar();
-  if (
-    this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
-    maxVols > 1 &&
-    this.graph.autoSizeMultiplanar
-  )
-    this.drawGraph();
+  if (isDrawGraph) this.drawGraph();
   if (this.uiData.isDragging) {
     if (this.uiData.mouseButtonCenterDown) {
       this.dragForCenterButton([

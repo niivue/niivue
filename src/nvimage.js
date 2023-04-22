@@ -152,7 +152,7 @@ export function NVImageFromUrlOptions(
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
   colorbarVisible = true,
-  limitVolumes4D = NaN,
+  limitVolumes4D = NaN
 ) {
   return {
     url,
@@ -219,7 +219,7 @@ export function NVImage(
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
   colorbarVisible = true,
-  limitVolumes4D = NaN,
+  limitVolumes4D = NaN
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -379,7 +379,7 @@ export function NVImage(
     this.hdr.pixDims[3] === 0.0
   )
     console.log("pixDims not plausible", this.hdr);
-  if ((!isNaN(this.limitVolumes4D)) && (this.limitVolumes4D < this.nFrame4D))
+  if (!isNaN(this.limitVolumes4D) && this.limitVolumes4D < this.nFrame4D)
     this.nFrame4D = this.limitVolumes4D;
   function isAffineOK(mtx) {
     //A good matrix should not have any components that are not a number

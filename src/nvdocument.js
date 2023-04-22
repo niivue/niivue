@@ -489,7 +489,7 @@ export class NVDocument {
             colorMapNegative: "",
             imageType: NVIMAGE_TYPE.NII,
             frame4D: 0,
-            limitVolumes4D: NaN
+            limitVolumes4D: NaN,
           };
         }
         // update image options on current image settings
