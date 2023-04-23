@@ -239,7 +239,6 @@ export function NVImage(
   this.DT_COMPLEX128 = 1792; /* double pair (128 bits)       */
   this.DT_COMPLEX256 = 2048; /* long double pair (256 bits)  */
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
-  this.limitVolumes4D = NaN;
   this.name = name;
   this.id = uuidv4();
   this._colorMap = colorMap;
@@ -335,6 +334,7 @@ export function NVImage(
   this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
   let bytesPerVol = this.nVox3D * (this.hdr.numBitsPerVoxel / 8);
   let nVol4D = imgRaw.byteLength / bytesPerVol;
+  this.nTotalFrame4D = this.nFrame4D;
   if (nVol4D !== this.nFrame4D) {
     if (nVol4D > 0 && nVol4D * bytesPerVol === imgRaw.byteLength)
       console.log(
@@ -346,8 +346,7 @@ export function NVImage(
         this.hdr,
         imgRaw.byteLength
       );
-    this.limitVolumes4D = nVol4D;
-    this.nFrame4D = this.limitVolumes4D;
+    this.nFrame4D = nVol4D;
   }
   //1007 = NIFTI_INTENT_VECTOR; 2003 = NIFTI_INTENT_RGB_VECTOR
   // n.b. NIfTI standard says "NIFTI_INTENT_RGB_VECTOR" should be RGBA, but FSL only stores RGB
@@ -2690,9 +2689,16 @@ NVImage.loadFromUrl = async function ({
   let dataBuffer = null;
   // fetch data associated with image
   if (!isNaN(limitVolumes4D)) {
+    //let response = await fetch(url, { headers: {'Content-Encoding': 'gzip', range: "bytes=0-352" } });
     let response = await fetch(url, { headers: { range: "bytes=0-352" } });
     dataBuffer = await response.arrayBuffer();
     var bytes = new Uint8Array(dataBuffer);
+    if (bytes[0] === 31 && bytes[1] === 139) {
+      //GZip
+      alert("We need to decompress partial data, this will not end well");
+      //perhaps fflate requires full file for CRC
+      //let raw = fflate.decompressSync(new Uint8Array(dataBuffer)).buffer;
+    }
     let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
     if (!isNifti1) isNifti1 = bytes[1] === 92 && bytes[0] === 1;
     if (!isNifti1) dataBuffer = null;
@@ -2723,6 +2729,7 @@ NVImage.loadFromUrl = async function ({
       throw Error(response.statusText);
     }
     dataBuffer = await response.arrayBuffer();
+    var bytes = new Uint8Array(dataBuffer);
   }
 
   var re = /(?:\.([^.]+))?$/;
@@ -2784,6 +2791,7 @@ NVImage.loadFromUrl = async function ({
       frame4D,
       imageType
     );
+    nvimage.url = url;
   } else {
     alert("Unable to load buffer properly from volume");
   }

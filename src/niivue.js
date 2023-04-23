@@ -5247,6 +5247,21 @@ Niivue.prototype.setGamma = function (gamma = 1.0) {
   this.updateGLVolume();
 };
 
+/**Load all volumes for image opened with `limitVolumes4D`
+ * @param {string} id the ID of the 4D NVImage
+ **/
+Niivue.prototype.loadDeferred4DVolumes = async function (id) {
+  let idx = this.getVolumeIndexByID(id);
+  let volume = this.volumes[idx];
+  if (volume.nTotalFrame4D <= volume.nFrame4D) return;
+  //only load image data: do not change other settings like contrast
+  let v = await NVImage.loadFromUrl({ url: volume.url });
+  volume.img = v.img.slice();
+  volume.nTotalFrame4D = v.nTotalFrame4D;
+  volume.nFrame4D = v.nFrame4D;
+  this.updateGLVolume();
+};
+
 /**
  * show desired 3D volume from 4D time series
  * @param {string} id the ID of the 4D NVImage
@@ -5561,10 +5576,13 @@ Niivue.prototype.inGraphTile = function (x, y) {
   )
     return false;
   if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) return false;
+  //this.graph.LTWH is tile
+  //this.graph.plotLTWH is body of plot
   let pos = [
-    (x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2],
-    (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3],
+    (x - this.graph.LTWH[0]) / this.graph.LTWH[2],
+    (y - this.graph.LTWH[1]) / this.graph.LTWH[3],
   ];
+
   return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1;
 };
 
@@ -5592,12 +5610,16 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       (x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2],
       (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3],
     ];
+
     if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
       let vol = Math.round(pos[0] * (this.volumes[0].nFrame4D - 1));
       //this.graph.selectedColumn = vol;
       this.setFrame4D(this.volumes[0].id, vol);
       return;
     }
+    if (pos[0] > 0.5 && pos[1] > 1.0)
+      //load full 4D series if user clicks on lower right of plot tile
+      this.loadDeferred4DVolumes(this.volumes[0].id);
     return;
   }
   if (this.inRenderTile(x, y) >= 0) {
@@ -7070,6 +7092,7 @@ Niivue.prototype.drawGraph = function () {
     graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
     graph.LTWH[3] - fntSize - 2 * margin * frameHt,
   ];
+  this.graph.LTWH = graph.LTWH;
   this.graph.plotLTWH = plotLTWH;
   this.drawRect(plotLTWH, this.opts.backColor); //this.opts.backColor
   //draw horizontal lines
