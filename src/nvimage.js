@@ -2689,15 +2689,18 @@ NVImage.loadFromUrl = async function ({
   let dataBuffer = null;
   // fetch data associated with image
   if (!isNaN(limitVolumes4D)) {
-    //let response = await fetch(url, { headers: {'Content-Encoding': 'gzip', range: "bytes=0-352" } });
     let response = await fetch(url, { headers: { range: "bytes=0-352" } });
     dataBuffer = await response.arrayBuffer();
     var bytes = new Uint8Array(dataBuffer);
+    let isGz = false;
     if (bytes[0] === 31 && bytes[1] === 139) {
-      //GZip
-      alert("We need to decompress partial data, this will not end well");
-      //perhaps fflate requires full file for CRC
-      //let raw = fflate.decompressSync(new Uint8Array(dataBuffer)).buffer;
+      isGz = true;
+      const dcmpStrm = new fflate.Decompress((chunk, final) => {
+        //console.log('decoded:', chunk);
+        bytes = chunk;
+      });
+      await dcmpStrm.push(bytes);
+      dataBuffer = bytes.buffer;
     }
     let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
     if (!isNifti1) isNifti1 = bytes[1] === 92 && bytes[0] === 1;
@@ -2715,6 +2718,14 @@ NVImage.loadFromUrl = async function ({
         headers: { range: "bytes=0-" + bytesToLoad },
       });
       dataBuffer = await response.arrayBuffer();
+      if (isGz) {
+        var bytes = new Uint8Array(dataBuffer);
+        const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
+          bytes = chunk;
+        });
+        await dcmpStrm2.push(bytes);
+        dataBuffer = bytes.buffer;
+      }
       dataBuffer = dataBuffer.slice(0, bytesToLoad);
     } //if isNifti1
   }
@@ -2729,7 +2740,6 @@ NVImage.loadFromUrl = async function ({
       throw Error(response.statusText);
     }
     dataBuffer = await response.arrayBuffer();
-    var bytes = new Uint8Array(dataBuffer);
   }
 
   var re = /(?:\.([^.]+))?$/;
