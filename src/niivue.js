@@ -2956,7 +2956,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
       frame4D: volumeList[i].frame4D,
-      limitVolumes4D: volumeList[i].limitVolumes4D,
+      limitFrames4D: volumeList[i].limitFrames4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);
@@ -5242,12 +5242,19 @@ Niivue.prototype.setModulationImage = function (
   this.volumes[idxTarget].modulateAlpha = modulateAlpha;
   this.updateGLVolume();
 };
+
+/**
+ * adjust screen gamma. Low values emphasize shadows but can appear flat, high gamma hides shadow details.
+ * @param {number} gamma selects luminance, default is 1
+ * @example niivue.setGamma(1.0);
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
+ */
 Niivue.prototype.setGamma = function (gamma = 1.0) {
   cmapper.gamma = gamma;
   this.updateGLVolume();
 };
 
-/**Load all volumes for image opened with `limitVolumes4D`
+/**Load all volumes for image opened with `limitFrames4D`
  * @param {string} id the ID of the 4D NVImage
  **/
 Niivue.prototype.loadDeferred4DVolumes = async function (id) {

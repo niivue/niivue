@@ -2679,7 +2679,7 @@ NVImage.loadFromUrl = async function ({
   colorMapNegative = "",
   frame4D = 0,
   isManifest = false,
-  limitVolumes4D = NaN,
+  limitFrames4D = NaN,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   if (url === "") {
@@ -2688,7 +2688,7 @@ NVImage.loadFromUrl = async function ({
   let nvimage = null;
   let dataBuffer = null;
   // fetch data associated with image
-  if (!isNaN(limitVolumes4D)) {
+  if (!isNaN(limitFrames4D)) {
     let response = await fetch(url, { headers: { range: "bytes=0-352" } });
     dataBuffer = await response.arrayBuffer();
     var bytes = new Uint8Array(dataBuffer);
@@ -2712,7 +2712,7 @@ NVImage.loadFromUrl = async function ({
       for (let i = 1; i < 4; i++) if (hdr.dims[i] > 1) nVox3D *= hdr.dims[i];
       let nFrame4D = 1;
       for (let i = 4; i < 7; i++) if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
-      let volsToLoad = Math.max(Math.min(limitVolumes4D, nFrame4D), 1);
+      let volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
       let bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
       response = await fetch(url, {
         headers: { range: "bytes=0-" + bytesToLoad },
