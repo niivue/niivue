@@ -77,10 +77,13 @@
       function doCheck3Click() {
         nv1.setSliceMM(this.checked);
       }
-      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }];
+      var volumeList1 = [
+        { url: "../demos/images/pcasl.nii.gz", limitFrames4D: 3 },
+      ];
+      //var volumeList1 = [{ url: "https://niivue.github.io/niivue-demo-images/pcasl.nii.gz", limitVolumes4D: 3 }];
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML =
-          "&nbsp;&nbsp;" + data.vox[0] + "×" + data.vox[1] + "×" + data.vox[2];
+          "&nbsp;&nbsp;" + data.string;
       }
       let defaults = {
         loadingText: "there are no images",
@@ -94,8 +97,12 @@
       nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.graph.autoSizeMultiplanar = true;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.graph.normalizeValues = false;
+      nv1.graph.opacity = 1.0;
       await nv1.loadVolumes(volumeList1);
-      await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
+      //await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
       function doReset() {
         nv1.setDefaults(defaults, true);
       }

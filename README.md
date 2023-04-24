@@ -32,6 +32,7 @@ NiiVue brings the features of the widely used native desktop applications ([AFNI
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital)
 - [OpenNeuro.org](https://openneuro.org)
 - [BrainLife.io](https://brainlife.io/about/)
+- [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 
 # Live View
 
