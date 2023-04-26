@@ -61984,7 +61984,7 @@ Niivue.prototype.createOnLocationChange = function(m = NaN) {
     frac: this.scene.crosshairPos,
     xy: [this.mousePos[0], this.mousePos[1]],
     values: this.volumes.map((d) => {
-      let L = this.frac2mm(this.scene.crosshairPos, 0, !0), e = d.mm2vox(L), Q = d.getValue(...e);
+      let L = this.frac2mm(this.scene.crosshairPos, 0, !0), e = d.mm2vox(L), Q = d.getValue(...e, d.frame4D);
       return { name: d.name, value: Q, id: d.id, mm: L, vox: e };
     }),
     string: V
