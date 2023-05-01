@@ -4207,10 +4207,14 @@ Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
   let rendererInfo = this.gl.getExtension("WEBGL_debug_renderer_info");
-  let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
-  let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
-  log.info("renderer vendor: ", vendor);
-  log.info("renderer: ", renderer);
+  if (rendererInfo) {
+    let vendor = this.gl.getParameter(rendererInfo.UNMASKED_VENDOR_WEBGL);
+    let renderer = this.gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL);
+    log.info("renderer vendor: ", vendor);
+    log.info("renderer: ", renderer);
+  } else {
+    log.info("debug_renderer_info unavailable");
+  }
   //firefox masks vendor and renderer for privacy
   let glInfo = this.gl.getParameter(this.gl.RENDERER);
   log.info("firefox renderer: ", glInfo); //Useful with firefox "Intel(R) HD Graphics" useless in Chrome and Safari "WebKit WebGL"
