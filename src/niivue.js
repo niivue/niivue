@@ -7465,7 +7465,7 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
     values: this.volumes.map((v) => {
       let mm = this.frac2mm(this.scene.crosshairPos, 0, true);
       let vox = v.mm2vox(mm); //e.mm2vox
-      let val = v.getValue(...vox);
+      let val = v.getValue(...vox, v.frame4D);
       return { name: v.name, value: val, id: v.id, mm: mm, vox: vox };
     }),
     string: str,
