@@ -2730,9 +2730,7 @@ NVImage.loadFromUrl = async function ({
       let volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
       let bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
       if (dataBuffer.byteLength < bytesToLoad) {
-        response = await fetch(url, {
-          headers: { range: "bytes=0-" + bytesToLoad },
-        });
+        response = await this.fetchPartial(url, bytesToLoad);
         dataBuffer = await response.arrayBuffer();
         if (isGz) {
           var bytes = new Uint8Array(dataBuffer);
