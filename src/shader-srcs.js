@@ -71,7 +71,7 @@ float frac2ndc(vec3 frac) {
 
 export var fragRenderShaderMIP =
   `#version 300 es
-#line 14
+#line 73
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -213,7 +213,7 @@ out vec4 fColor;
 
 export var fragRenderShader =
   `#version 300 es
-#line 14
+#line 215
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -390,7 +390,7 @@ out vec4 fColor;
 }`;
 
 export var vertSliceMMShader = `#version 300 es
-#line 4
+#line 392
 layout(location=0) in vec3 pos;
 uniform int axCorSag;
 uniform mat4 mvpMtx;
@@ -409,7 +409,7 @@ void main(void) {
 
 export var fragSliceMMShader =
   `#version 300 es
-#line 228
+#line 411
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
@@ -478,7 +478,7 @@ out vec4 color;` +
 }`;
 
 export var fragRectShader = `#version 300 es
-#line 189
+#line 480
 precision highp int;
 precision highp float;
 uniform vec4 lineColor;
@@ -488,7 +488,7 @@ void main() {
 }`;
 
 export var vertColorbarShader = `#version 300 es
-#line 200
+#line 490
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -504,7 +504,7 @@ void main(void) {
 }`;
 
 export var fragColorbarShader = `#version 300 es
-#line 217
+#line 506
 precision highp int;
 precision highp float;
 uniform highp sampler2D colormap;
@@ -518,7 +518,7 @@ void main() {
 }`;
 
 export var vertRectShader = `#version 300 es
-#line 229
+#line 520
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -532,7 +532,7 @@ void main(void) {
 }`;
 
 export var vertLineShader = `#version 300 es
-#line 229
+#line 534
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform float thickness;
@@ -547,7 +547,7 @@ void main(void) {
 }`;
 
 export var vertBmpShader = `#version 300 es
-#line 229
+#line 549
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -563,7 +563,7 @@ void main(void) {
 }`;
 
 export var fragBmpShader = `#version 300 es
-#line 262
+#line 565
 precision highp int;
 precision highp float;
 uniform highp sampler2D bmpTexture;
@@ -574,7 +574,7 @@ void main() {
 }`;
 
 export var vertFontShader = `#version 300 es
-#line 244
+#line 576
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -591,7 +591,7 @@ void main(void) {
 }`;
 
 export var fragFontShader = `#version 300 es
-#line 262
+#line 593
 precision highp int;
 precision highp float;
 uniform highp sampler2D fontTexture;
@@ -611,7 +611,7 @@ void main() {
 }`;
 
 export var vertOrientShader = `#version 300 es
-#line 283
+#line 613
 precision highp int;
 precision highp float;
 in vec3 vPos;
@@ -634,7 +634,7 @@ uniform highp sampler3D intensityVol;
 `;
 
 //uniform vec2 canvasWidthHeight;
-export var fragOrientShaderAtlas = `#line 309
+export var fragOrientShaderAtlas = `#line 636
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -671,11 +671,8 @@ void main(void) {
 	}
 	idx = ((idx - uint(1)) % uint(100))+uint(1);
 	float fx = (float(idx)+0.5) / 256.0;
-	//float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
-	//float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = ((2.0 * layer) + 1.5)/nlayer;
-	//float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
 	//FragColor.a *= opacity;
 	FragColor.a = opacity;
@@ -692,7 +689,7 @@ void main(void) {
 	FragColor.a = aout;
 }`;
 
-export var fragOrientShader = `#line 309
+export var fragOrientShader = `#line 691
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -774,7 +771,7 @@ void main(void) {
 	FragColor.a = aout;
 }`;
 
-export var fragRGBOrientShader = `#line 309
+export var fragRGBOrientShader = `#line 773
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -809,7 +806,7 @@ void main(void) {
 }`;
 
 export var vertGrowCutShader = `#version 300 es
-#line 283
+#line 808
 precision highp int;
 precision highp float;
 in vec3 vPos;
@@ -822,7 +819,7 @@ void main() {
 //https://github.com/pieper/step/blob/master/src/growcut.js
 // Steve Pieper 2022: Apache License 2.0
 export var fragGrowCutShader = `#version 300 es
-#line 742
+#line 829
 	precision highp float;
 	precision highp int;
 	precision highp isampler3D;
@@ -1261,7 +1258,7 @@ void main() {
 
 export var fragVolumePickingShader =
   `#version 300 es
-#line 506
+#line 1260
 //precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -1360,7 +1357,7 @@ void main() {
 }`;
 
 export var vertPassThroughShader = `#version 300 es
-#line 1361
+#line 1359
 precision highp int;
 precision highp float;
 in vec3 vPos;
