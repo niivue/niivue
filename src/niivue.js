@@ -5365,7 +5365,9 @@ Niivue.prototype.addColormapList = function (
   neg = false,
   vis = true
 ) {
-  if (nm.length < 1) return;
+  //if (nm.length < 1) return;
+  //issue583 unused colormap: e.g. a volume without a negative colormap
+  if (nm.length < 1) vis = false;
   this.colormapLists.push({
     name: nm,
     min: mn,

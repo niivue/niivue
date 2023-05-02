@@ -36,7 +36,9 @@ colortables.prototype.colorMaps = function () {
 colortables.prototype.colormapFromKey = function (name) {
   let cmap = this.cluts[name];
   if (cmap !== undefined) return cmap;
-  console.log("No color map named " + name);
+  cmap = this.cluts[name.toLowerCase()];
+  if (cmap !== undefined) return cmap;
+  if (name.length > 0) console.log("No color map named " + name);
   cmap = {
     min: 0,
     max: 0,
