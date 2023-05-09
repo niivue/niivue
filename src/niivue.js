@@ -7754,6 +7754,12 @@ Niivue.prototype.mm2frac = function (mm, volIdx = 0, isForceSliceMM = false) {
     frac[0] = (mm[0] - mn[0]) / range[0];
     frac[1] = (mm[1] - mn[1]) / range[1];
     frac[2] = (mm[2] - mn[2]) / range[2];
+    if (!isFinite(frac)) {
+      if (!isFinite(frac[0])) frac[0] = 0.5;
+      if (!isFinite(frac[1])) frac[1] = 0.5;
+      if (!isFinite(frac[2])) frac[2] = 0.5;
+      console.error("mm2frac() not finite: objects not (yet) loaded.");
+    }
     return frac;
   }
   //convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
