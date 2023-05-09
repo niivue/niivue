@@ -5044,9 +5044,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
       let vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
       let modulateVolume = new Uint8Array(vx);
+      let mpow = overlayItem.modulatePower;
       let mn = this.volumes[overlayItem.modulationImage].cal_min;
-      let scale =
-        255.0 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
+      let denom = this.volumes[overlayItem.modulationImage].cal_max - mn;
+      let scale = 255.0 / Math.pow(denom, mpow);
       let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
       let img = new Uint8Array(imgRaw);
       switch (mhdr.datatypeCode) {
@@ -5069,7 +5070,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       log.debug(this.volumes[overlayItem.modulationImage]);
       for (let i = 0; i < vx; i++) {
         let v = img[i] * mhdr.scl_slope + mhdr.scl_inter;
-        v = (v - mn) * scale;
+        v = Math.pow(v - mn, mpow) * scale;
         v = Math.min(Math.max(v, 0.0), 255.0);
         modulateVolume[i] = v;
       }
@@ -5228,7 +5229,8 @@ Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
 Niivue.prototype.setModulationImage = function (
   idTarget,
   idModulation,
-  modulateAlpha = false
+  modulateAlpha = false,
+  modulatePower = 2.0 // default to quadratic, as in AFNI
 ) {
   //to set:
   // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
@@ -5240,6 +5242,7 @@ Niivue.prototype.setModulationImage = function (
   idxModulation = this.getVolumeIndexByID(idModulation);
   this.volumes[idxTarget].modulationImage = idxModulation;
   this.volumes[idxTarget].modulateAlpha = modulateAlpha;
+  this.volumes[idxTarget].modulatePower = modulatePower;
   this.updateGLVolume();
 };
 
