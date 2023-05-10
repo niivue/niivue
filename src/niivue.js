@@ -5048,9 +5048,9 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
       let vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
       let modulateVolume = new Uint8Array(vx);
+      let mpow = Math.abs(overlayItem.modulateAlpha); // can convert bool, too
       let mn = this.volumes[overlayItem.modulationImage].cal_min;
-      let scale =
-        255.0 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
+      let denom = this.volumes[overlayItem.modulationImage].cal_max - mn;
       let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
       let img = new Uint8Array(imgRaw);
       switch (mhdr.datatypeCode) {
@@ -5076,9 +5076,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       let volOffset = this.volumes[overlayItem.modulationImage].frame4D * vx;
       for (let i = 0; i < vx; i++) {
         let vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter;
-        let v = (vRaw - mn) * scale;
+        let v = (vRaw - mn) / denom;
         if (isColorMapNegative) v = Math.abs(v);
-        v = Math.min(Math.max(v, 0.0), 255.0);
+        v = Math.min(Math.max(v, 0.0), 1.0);
+        v = Math.pow(v, mpow) * 255.0;
         modulateVolume[i] = v;
       }
       this.gl.texSubImage3D(

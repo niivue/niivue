@@ -253,7 +253,7 @@ export function NVImage(
   this.colorbarVisible = colorbarVisible;
   this.visible = visible;
   this.modulationImage = null;
-  this.modulateAlpha = false; //does modulation image influence RGB (false) or A (true)
+  this.modulateAlpha = 0; // if !=0, mod transparency with expon power |Alpha|
   this.series = []; // for concatenating dicom images
 
   this.onColorMapChange = () => {};
