@@ -2655,6 +2655,18 @@ NVImage.fetchDicomData = async function (url) {
   return dataBuffer;
 };
 
+NVImage.fetchPartial = async function (url, bytesToLoad) {
+  let response = [];
+  try {
+    response = await fetch(url, {
+      headers: { range: "bytes=0-" + bytesToLoad },
+    });
+  } catch {
+    response = await fetch(url);
+  }
+  return response;
+};
+
 /**
  * factory function to load and return a new NVImage instance from a given URL
  * @constructs NVImage
@@ -2689,7 +2701,10 @@ NVImage.loadFromUrl = async function ({
   let dataBuffer = null;
   // fetch data associated with image
   if (!isNaN(limitFrames4D)) {
-    let response = await fetch(url, { headers: { range: "bytes=0-352" } });
+    //let response = await fetch(url, { headers: { range: "bytes=0-352" } });
+    //NIfTI header first 352 bytes
+    // however, GZip header might can add bloat https://en.wikipedia.org/wiki/Gzip
+    let response = await this.fetchPartial(url, 512);
     dataBuffer = await response.arrayBuffer();
     var bytes = new Uint8Array(dataBuffer);
     let isGz = false;
@@ -2714,19 +2729,22 @@ NVImage.loadFromUrl = async function ({
       for (let i = 4; i < 7; i++) if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
       let volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
       let bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
-      response = await fetch(url, {
-        headers: { range: "bytes=0-" + bytesToLoad },
-      });
-      dataBuffer = await response.arrayBuffer();
-      if (isGz) {
-        var bytes = new Uint8Array(dataBuffer);
-        const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
-          bytes = chunk;
-        });
-        await dcmpStrm2.push(bytes);
-        dataBuffer = bytes.buffer;
-      }
-      dataBuffer = dataBuffer.slice(0, bytesToLoad);
+      if (dataBuffer.byteLength < bytesToLoad) {
+        response = await this.fetchPartial(url, bytesToLoad);
+        dataBuffer = await response.arrayBuffer();
+        if (isGz) {
+          var bytes = new Uint8Array(dataBuffer);
+          const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
+            bytes = chunk;
+          });
+          await dcmpStrm2.push(bytes);
+          dataBuffer = bytes.buffer;
+        }
+      } //load image data
+      if (dataBuffer.byteLength < bytesToLoad)
+        //fail: e.g. incompressible data
+        dataBuffer = null;
+      else dataBuffer = dataBuffer.slice(0, bytesToLoad);
     } //if isNifti1
   }
   if (dataBuffer) {
