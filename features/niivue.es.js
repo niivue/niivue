@@ -60246,10 +60246,14 @@ Niivue.prototype.meshShaderNames = function(m = !0) {
   return m === !0 ? u.sort() : u;
 };
 Niivue.prototype.init = async function() {
-  let m = this.gl.getExtension("WEBGL_debug_renderer_info"), u = this.gl.getParameter(m.UNMASKED_VENDOR_WEBGL), p = this.gl.getParameter(m.UNMASKED_RENDERER_WEBGL);
-  log.info("renderer vendor: ", u), log.info("renderer: ", p);
-  let v = this.gl.getParameter(this.gl.RENDERER);
-  log.info("firefox renderer: ", v), this.gl.clearDepth(0), this.gl.enable(this.gl.CULL_FACE), this.gl.cullFace(this.gl.FRONT), this.gl.enable(this.gl.BLEND), this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA), this.volumeTexture = this.rgbaTex(
+  let m = this.gl.getExtension("WEBGL_debug_renderer_info");
+  if (m) {
+    let F = this.gl.getParameter(m.UNMASKED_VENDOR_WEBGL), _ = this.gl.getParameter(m.UNMASKED_RENDERER_WEBGL);
+    log.info("renderer vendor: ", F), log.info("renderer: ", _);
+  } else
+    log.info("debug_renderer_info unavailable");
+  let u = this.gl.getParameter(this.gl.RENDERER);
+  log.info("firefox renderer: ", u), this.gl.clearDepth(0), this.gl.enable(this.gl.CULL_FACE), this.gl.cullFace(this.gl.FRONT), this.gl.enable(this.gl.BLEND), this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA), this.volumeTexture = this.rgbaTex(
     this.volumeTexture,
     this.gl.TEXTURE0,
     [2, 2, 2, 2],
@@ -60265,7 +60269,7 @@ Niivue.prototype.init = async function() {
     [2, 2, 2, 2],
     !0
   );
-  let y = [
+  let p = [
     1,
     1,
     0,
@@ -60285,7 +60289,7 @@ Niivue.prototype.init = async function() {
   ];
   this.cuboidVertexBuffer = this.gl.createBuffer(), this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer), this.gl.bufferData(
     this.gl.ARRAY_BUFFER,
-    new Float32Array(y),
+    new Float32Array(p),
     this.gl.STATIC_DRAW
   ), this.genericVAO = this.gl.createVertexArray(), this.gl.bindVertexArray(this.genericVAO), this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer), this.gl.enableVertexAttribArray(0), this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, !1, 0, 0), this.gl.bindVertexArray(this.unusedVAO), this.pickingMeshShader = new Shader(
     this.gl,
@@ -60307,12 +60311,12 @@ Niivue.prototype.init = async function() {
     vertOrientCubeShader,
     fragOrientCubeShader
   );
-  let T = this.gl;
-  this.orientCubeShaderVAO = T.createVertexArray(), T.bindVertexArray(this.orientCubeShaderVAO);
-  let E = this.orientCubeShader.program;
-  this.orientCubeMtxLoc = T.getUniformLocation(E, "u_matrix");
-  var F = T.createBuffer();
-  T.enableVertexAttribArray(0), T.enableVertexAttribArray(1), T.bindBuffer(T.ARRAY_BUFFER, F), T.bufferData(T.ARRAY_BUFFER, orientCube, T.STATIC_DRAW), T.vertexAttribPointer(0, 3, T.FLOAT, !1, 24, 0), T.enableVertexAttribArray(1), T.vertexAttribPointer(1, 3, T.FLOAT, !1, 24, 12), T.bindVertexArray(this.unusedVAO), this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader), this.rectShader.use(this.gl), this.rectShader.lineColorLoc = this.rectShader.uniforms.lineColor, this.rectShader.canvasWidthHeightLoc = this.rectShader.uniforms.canvasWidthHeight, this.rectShader.leftTopWidthHeightLoc = this.rectShader.uniforms.leftTopWidthHeight, this.lineShader = new Shader(this.gl, vertLineShader, fragRectShader), this.lineShader.use(this.gl), this.lineShader.lineColorLoc = this.lineShader.uniforms.lineColor, this.lineShader.canvasWidthHeightLoc = this.lineShader.uniforms.canvasWidthHeight, this.lineShader.thicknessLoc = this.lineShader.uniforms.thickness, this.lineShader.startXYendXYLoc = this.lineShader.uniforms.startXYendXY, this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader), this.renderShader.use(this.gl), this.renderShader.drawOpacityLoc = this.renderShader.uniforms.drawOpacity, this.renderShader.backgroundMasksOverlaysLoc = this.renderShader.uniforms.backgroundMasksOverlays, this.gl.uniform1i(this.renderShader.uniforms.volume, 0), this.gl.uniform1i(this.renderShader.uniforms.colormap, 1), this.gl.uniform1i(this.renderShader.uniforms.overlay, 2), this.gl.uniform1i(this.renderShader.uniforms.drawing, 7), this.renderShader.mvpLoc = this.renderShader.uniforms.mvpMtx, this.renderShader.clipPlaneClrLoc = this.renderShader.uniforms.clipPlaneColor, this.renderShader.mvpMatRASLoc = this.renderShader.uniforms.matRAS, this.renderShader.rayDirLoc = this.renderShader.uniforms.rayDir, this.renderShader.clipPlaneLoc = this.renderShader.uniforms.clipPlane, this.colorbarShader = new Shader(
+  let v = this.gl;
+  this.orientCubeShaderVAO = v.createVertexArray(), v.bindVertexArray(this.orientCubeShaderVAO);
+  let y = this.orientCubeShader.program;
+  this.orientCubeMtxLoc = v.getUniformLocation(y, "u_matrix");
+  var T = v.createBuffer();
+  v.enableVertexAttribArray(0), v.enableVertexAttribArray(1), v.bindBuffer(v.ARRAY_BUFFER, T), v.bufferData(v.ARRAY_BUFFER, orientCube, v.STATIC_DRAW), v.vertexAttribPointer(0, 3, v.FLOAT, !1, 24, 0), v.enableVertexAttribArray(1), v.vertexAttribPointer(1, 3, v.FLOAT, !1, 24, 12), v.bindVertexArray(this.unusedVAO), this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader), this.rectShader.use(this.gl), this.rectShader.lineColorLoc = this.rectShader.uniforms.lineColor, this.rectShader.canvasWidthHeightLoc = this.rectShader.uniforms.canvasWidthHeight, this.rectShader.leftTopWidthHeightLoc = this.rectShader.uniforms.leftTopWidthHeight, this.lineShader = new Shader(this.gl, vertLineShader, fragRectShader), this.lineShader.use(this.gl), this.lineShader.lineColorLoc = this.lineShader.uniforms.lineColor, this.lineShader.canvasWidthHeightLoc = this.lineShader.uniforms.canvasWidthHeight, this.lineShader.thicknessLoc = this.lineShader.uniforms.thickness, this.lineShader.startXYendXYLoc = this.lineShader.uniforms.startXYendXY, this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader), this.renderShader.use(this.gl), this.renderShader.drawOpacityLoc = this.renderShader.uniforms.drawOpacity, this.renderShader.backgroundMasksOverlaysLoc = this.renderShader.uniforms.backgroundMasksOverlays, this.gl.uniform1i(this.renderShader.uniforms.volume, 0), this.gl.uniform1i(this.renderShader.uniforms.colormap, 1), this.gl.uniform1i(this.renderShader.uniforms.overlay, 2), this.gl.uniform1i(this.renderShader.uniforms.drawing, 7), this.renderShader.mvpLoc = this.renderShader.uniforms.mvpMtx, this.renderShader.clipPlaneClrLoc = this.renderShader.uniforms.clipPlaneColor, this.renderShader.mvpMatRASLoc = this.renderShader.uniforms.matRAS, this.renderShader.rayDirLoc = this.renderShader.uniforms.rayDir, this.renderShader.clipPlaneLoc = this.renderShader.uniforms.clipPlane, this.colorbarShader = new Shader(
     this.gl,
     vertColorbarShader,
     fragColorbarShader
@@ -60349,9 +60353,9 @@ Niivue.prototype.init = async function() {
     vertSurfaceShader,
     fragSurfaceShader
   ), this.surfaceShader.use(this.gl), this.surfaceShader.mvpLoc = this.surfaceShader.uniforms.mvpMtx, this.surfaceShader.colorLoc = this.surfaceShader.uniforms.surfaceColor, this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader), this.pickingImageShader.use(this.gl), this.fiberShader.mvpLoc = this.fiberShader.uniforms.mvpMtx;
-  for (var _ = 0; _ < this.meshShaders.length; _++) {
-    let V = this.meshShaders[_];
-    V.Name === "Flat" ? V.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader) : V.shader = new Shader(this.gl, vertMeshShader, V.Frag), V.shader.use(this.gl), V.shader.mvpLoc = V.shader.uniforms.mvpMtx, V.shader.normLoc = V.shader.uniforms.normMtx, V.shader.opacityLoc = V.shader.uniforms.opacity, V.shader.isMatcap = V.Name === "Matcap", V.shader.isMatcap && this.gl.uniform1i(V.shader.uniforms.matCap, 5);
+  for (var E = 0; E < this.meshShaders.length; E++) {
+    let F = this.meshShaders[E];
+    F.Name === "Flat" ? F.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader) : F.shader = new Shader(this.gl, vertMeshShader, F.Frag), F.shader.use(this.gl), F.shader.mvpLoc = F.shader.uniforms.mvpMtx, F.shader.normLoc = F.shader.uniforms.normMtx, F.shader.opacityLoc = F.shader.uniforms.opacity, F.shader.isMatcap = F.Name === "Matcap", F.shader.isMatcap && this.gl.uniform1i(F.shader.uniforms.matCap, 5);
   }
   return this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader), await this.initText(), this.opts.thumbnail.length > 0 && (await this.loadBmpTexture(this.opts.thumbnail), this.thumbnailVisible = !0), this.updateGLVolume(), this.initialized = !0, this.resizeListener(), this.drawScene(), this;
 };
