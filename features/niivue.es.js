@@ -71,8 +71,8 @@ function transpose(m, u) {
   return m;
 }
 function invert(m, u) {
-  var p = u[0], v = u[1], y = u[2], T = u[3], E = u[4], F = u[5], _ = u[6], V = u[7], H = u[8], d = u[9], L = u[10], e = u[11], Q = u[12], K = u[13], Z = u[14], J = u[15], n0 = p * F - v * E, a0 = p * _ - y * E, D = p * V - T * E, s0 = v * _ - y * F, $ = v * V - T * F, m0 = y * V - T * _, u0 = H * K - d * Q, o0 = H * Z - L * Q, a = H * J - e * Q, k0 = d * Z - L * K, g0 = d * J - e * K, A0 = L * J - e * Z, S0 = n0 * A0 - a0 * g0 + D * k0 + s0 * a - $ * o0 + m0 * u0;
-  return S0 ? (S0 = 1 / S0, m[0] = (F * A0 - _ * g0 + V * k0) * S0, m[1] = (y * g0 - v * A0 - T * k0) * S0, m[2] = (K * m0 - Z * $ + J * s0) * S0, m[3] = (L * $ - d * m0 - e * s0) * S0, m[4] = (_ * a - E * A0 - V * o0) * S0, m[5] = (p * A0 - y * a + T * o0) * S0, m[6] = (Z * D - Q * m0 - J * a0) * S0, m[7] = (H * m0 - L * D + e * a0) * S0, m[8] = (E * g0 - F * a + V * u0) * S0, m[9] = (v * a - p * g0 - T * u0) * S0, m[10] = (Q * $ - K * D + J * n0) * S0, m[11] = (d * D - H * $ - e * n0) * S0, m[12] = (F * o0 - E * k0 - _ * u0) * S0, m[13] = (p * k0 - v * o0 + y * u0) * S0, m[14] = (K * a0 - Q * s0 - Z * n0) * S0, m[15] = (H * s0 - d * a0 + L * n0) * S0, m) : null;
+  var p = u[0], v = u[1], y = u[2], T = u[3], E = u[4], F = u[5], _ = u[6], V = u[7], H = u[8], d = u[9], L = u[10], e = u[11], Q = u[12], K = u[13], Z = u[14], J = u[15], n0 = p * F - v * E, a0 = p * _ - y * E, D = p * V - T * E, s0 = v * _ - y * F, $ = v * V - T * F, m0 = y * V - T * _, u0 = H * K - d * Q, o0 = H * Z - L * Q, a = H * J - e * Q, E0 = d * Z - L * K, g0 = d * J - e * K, A0 = L * J - e * Z, S0 = n0 * A0 - a0 * g0 + D * E0 + s0 * a - $ * o0 + m0 * u0;
+  return S0 ? (S0 = 1 / S0, m[0] = (F * A0 - _ * g0 + V * E0) * S0, m[1] = (y * g0 - v * A0 - T * E0) * S0, m[2] = (K * m0 - Z * $ + J * s0) * S0, m[3] = (L * $ - d * m0 - e * s0) * S0, m[4] = (_ * a - E * A0 - V * o0) * S0, m[5] = (p * A0 - y * a + T * o0) * S0, m[6] = (Z * D - Q * m0 - J * a0) * S0, m[7] = (H * m0 - L * D + e * a0) * S0, m[8] = (E * g0 - F * a + V * u0) * S0, m[9] = (v * a - p * g0 - T * u0) * S0, m[10] = (Q * $ - K * D + J * n0) * S0, m[11] = (d * D - H * $ - e * n0) * S0, m[12] = (F * o0 - E * E0 - _ * u0) * S0, m[13] = (p * E0 - v * o0 + y * u0) * S0, m[14] = (K * a0 - Q * s0 - Z * n0) * S0, m[15] = (H * s0 - d * a0 + L * n0) * S0, m) : null;
 }
 function multiply(m, u, p) {
   var v = u[0], y = u[1], T = u[2], E = u[3], F = u[4], _ = u[5], V = u[6], H = u[7], d = u[8], L = u[9], e = u[10], Q = u[11], K = u[12], Z = u[13], J = u[14], n0 = u[15], a0 = p[0], D = p[1], s0 = p[2], $ = p[3];
@@ -264,7 +264,7 @@ float frac2ndc(vec3 frac) {
 	return (z_ndc + 1.0) / 2.0;
 }` + kDrawFunc;
 var fragRenderShader = `#version 300 es
-#line 14
+#line 215
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -437,7 +437,7 @@ out vec4 fColor;
 	fColor.rgb = mix(fColor.rgb, colAcc.rgb, overMix);
 	fColor.a = max(fColor.a, colAcc.a);
 }`, vertSliceMMShader = `#version 300 es
-#line 4
+#line 392
 layout(location=0) in vec3 pos;
 uniform int axCorSag;
 uniform mat4 mvpMtx;
@@ -453,7 +453,7 @@ void main(void) {
 	vec4 mm = frac2mm * vec4(texPos, 1.0);
 	gl_Position = mvpMtx * mm;
 }`, fragSliceMMShader = `#version 300 es
-#line 228
+#line 411
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
@@ -518,7 +518,7 @@ out vec4 color;` + kDrawFunc + `void main() {
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
 	color.a = a;
 }`, fragRectShader = `#version 300 es
-#line 189
+#line 480
 precision highp int;
 precision highp float;
 uniform vec4 lineColor;
@@ -526,7 +526,7 @@ out vec4 color;
 void main() {
 	color = lineColor;
 }`, vertColorbarShader = `#version 300 es
-#line 200
+#line 490
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -540,7 +540,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 	vColor = pos.xy;
 }`, fragColorbarShader = `#version 300 es
-#line 217
+#line 506
 precision highp int;
 precision highp float;
 uniform highp sampler2D colormap;
@@ -552,7 +552,7 @@ void main() {
 	float fmap = (0.5 + layer) / nlayer;
 	color = vec4(texture(colormap, vec2(vColor.x, fmap)).rgb, 1.0);
 }`, vertRectShader = `#version 300 es
-#line 229
+#line 520
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -564,7 +564,7 @@ void main(void) {
 	frac = (frac * 2.0) - 1.0;
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`, vertLineShader = `#version 300 es
-#line 229
+#line 534
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform float thickness;
@@ -577,7 +577,7 @@ void main(void) {
 	posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y); //1..0
 	gl_Position = vec4((posXY * 2.0) - 1.0, 0.0, 1.0);
 }`, vertBmpShader = `#version 300 es
-#line 229
+#line 549
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -591,7 +591,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 	vUV = vec2(pos.x, 1.0 - pos.y);
 }`, fragBmpShader = `#version 300 es
-#line 262
+#line 565
 precision highp int;
 precision highp float;
 uniform highp sampler2D bmpTexture;
@@ -600,7 +600,7 @@ out vec4 color;
 void main() {
 	color = texture(bmpTexture, vUV);
 }`, vertFontShader = `#version 300 es
-#line 244
+#line 576
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -615,7 +615,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 	vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y  + ((1.0 - pos.y) * uvLeftTopWidthHeight.w) );
 }`, fragFontShader = `#version 300 es
-#line 262
+#line 593
 precision highp int;
 precision highp float;
 uniform highp sampler2D fontTexture;
@@ -633,7 +633,7 @@ void main() {
 	float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 	color = vec4(fontColor.rgb , fontColor.a * opacity);
 }`, vertOrientShader = `#version 300 es
-#line 283
+#line 613
 precision highp int;
 precision highp float;
 in vec3 vPos;
@@ -647,7 +647,7 @@ uniform highp usampler3D intensityVol;
 uniform highp isampler3D intensityVol;
 `, fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
-`, fragOrientShaderAtlas = `#line 309
+`, fragOrientShaderAtlas = `#line 636
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -684,9 +684,8 @@ void main(void) {
 	}
 	idx = ((idx - uint(1)) % uint(100))+uint(1);
 	float fx = (float(idx)+0.5) / 256.0;
-	float nlayer = float(textureSize(colormap, 0).y) * 0.5; //0.5 as both each layer has positive and negative color slot
-	float y = (2.0 * layer + 1.0)/(4.0 * nlayer);
-	//float y = (2.0 * layer + 1.0)/(4.0 * numLayers);
+	float nlayer = float(textureSize(colormap, 0).y);
+	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
 	//FragColor.a *= opacity;
 	FragColor.a = opacity;
@@ -701,7 +700,7 @@ void main(void) {
 	if (aout <= 0.0) return;
 	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
 	FragColor.a = aout;
-}`, fragOrientShader = `#line 309
+}`, fragOrientShader = `#line 691
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -739,10 +738,9 @@ void main(void) {
 	float txl = mix(0.0, 1.0, (f - mn) / r);
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y);
-	float y = (layer + 0.5)/nlayer;
-	//if (!isnan(cal_minNeg)) //Radeon drivers have issues NaN
-	if (cal_minNeg < cal_maxNeg)
-		y = (layer + 1.5)/nlayer;
+	//each volume has two color maps:
+	// (layer*2) = negative and (layer * 2) + 1 = postive
+	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
 	//negative colors
 	mn = cal_minNeg;
@@ -754,7 +752,7 @@ void main(void) {
 		r = max(0.00001, abs(mx - mn));
 		mn = min(mn, mx);
 		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
-		y = (layer + 0.5)/nlayer;
+		y = ((2.0 * layer) + 0.5)/nlayer;
 		FragColor = texture(colormap, vec2(txl, y));
 	}
 	if (layer > 0.7)
@@ -782,7 +780,7 @@ void main(void) {
 	if (aout <= 0.0) return;
 	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
 	FragColor.a = aout;
-}`, fragRGBOrientShader = `#line 309
+}`, fragRGBOrientShader = `#line 773
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -815,7 +813,7 @@ void main(void) {
 		FragColor.a = texture(modulationVol, vx.xyz).r;
 	FragColor.a *= opacity;
 }`, vertGrowCutShader = `#version 300 es
-#line 283
+#line 808
 precision highp int;
 precision highp float;
 in vec3 vPos;
@@ -824,7 +822,7 @@ void main() {
 	TexCoord = vPos.xy;
 	gl_Position = vec4((vPos.x - 0.5) * 2.0, (vPos.y - 0.5) * 2.0, 0.0, 1.0);
 }`, fragGrowCutShader = `#version 300 es
-#line 742
+#line 829
 	precision highp float;
 	precision highp int;
 	precision highp isampler3D;
@@ -1197,7 +1195,7 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`, fragVolumePickingShader = `#version 300 es
-#line 506
+#line 1260
 //precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -1288,7 +1286,7 @@ out vec4 outColor;
 void main() {
 	outColor = vec4(vColor, 1.0);
 }`, vertPassThroughShader = `#version 300 es
-#line 1361
+#line 1359
 precision highp int;
 precision highp float;
 in vec3 vPos;
@@ -3329,7 +3327,7 @@ function requireNifti1() {
       var L = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], e, Q = p, K = v, Z = y, J, n0, a0;
       return L[3][0] = L[3][1] = L[3][2] = 0, L[3][3] = 1, e = 1 - (Q * Q + K * K + Z * Z), e < 1e-7 ? (e = 1 / Math.sqrt(Q * Q + K * K + Z * Z), Q *= e, K *= e, Z *= e, e = 0) : e = Math.sqrt(e), J = _ > 0 ? _ : 1, n0 = V > 0 ? V : 1, a0 = H > 0 ? H : 1, d < 0 && (a0 = -a0), L[0][0] = (e * e + Q * Q - K * K - Z * Z) * J, L[0][1] = 2 * (Q * K - e * Z) * n0, L[0][2] = 2 * (Q * Z + e * K) * a0, L[1][0] = 2 * (Q * K + e * Z) * J, L[1][1] = (e * e + K * K - Q * Q - Z * Z) * n0, L[1][2] = 2 * (K * Z - e * Q) * a0, L[2][0] = 2 * (Q * Z - e * K) * J, L[2][1] = 2 * (K * Z + e * Q) * n0, L[2][2] = (e * e + Z * Z - K * K - Q * Q) * a0, L[0][3] = T, L[1][3] = E, L[2][3] = F, L;
     }, u.NIFTI1.prototype.convertNiftiSFormToNEMA = function(p) {
-      var v, y, T, E, F, _, V, H, d, L, e, Q, K, Z, J, n0, a0, D, s0, $, m0, u0, o0, a, k0, g0, A0, S0, w0, T0, F0, O0, $0, Re;
+      var v, y, T, E, F, _, V, H, d, L, e, Q, K, Z, J, n0, a0, D, s0, $, m0, u0, o0, a, E0, g0, A0, S0, T0, w0, F0, O0, $0, Re;
       if (J = 0, A0 = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], S0 = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], v = p[0][0], y = p[0][1], T = p[0][2], E = p[1][0], F = p[1][1], _ = p[1][2], V = p[2][0], H = p[2][1], d = p[2][2], L = Math.sqrt(v * v + E * E + V * V), L === 0 || (v /= L, E /= L, V /= L, L = Math.sqrt(y * y + F * F + H * H), L === 0))
         return null;
       if (y /= L, F /= L, H /= L, L = v * y + E * F + V * H, Math.abs(L) > 1e-4) {
@@ -3357,46 +3355,46 @@ function requireNifti1() {
                 for (S0[0][0] = S0[0][1] = S0[0][2] = S0[1][0] = S0[1][1] = S0[1][2] = S0[2][0] = S0[2][1] = S0[2][2] = 0, n0 = -1; n0 <= 1; n0 += 2)
                   for (a0 = -1; a0 <= 1; a0 += 2)
                     for (D = -1; D <= 1; D += 2)
-                      S0[0][K - 1] = n0, S0[1][Z - 1] = a0, S0[2][J - 1] = D, Q = this.nifti_mat33_determ(S0), Q * e > 0 && (k0 = this.nifti_mat33_mul(S0, A0), L = k0[0][0] + k0[1][1] + k0[2][2], L > g0 && (g0 = L, s0 = K, $ = Z, m0 = J, u0 = n0, o0 = a0, a = D));
+                      S0[0][K - 1] = n0, S0[1][Z - 1] = a0, S0[2][J - 1] = D, Q = this.nifti_mat33_determ(S0), Q * e > 0 && (E0 = this.nifti_mat33_mul(S0, A0), L = E0[0][0] + E0[1][1] + E0[2][2], L > g0 && (g0 = L, s0 = K, $ = Z, m0 = J, u0 = n0, o0 = a0, a = D));
           }
-      switch (w0 = T0 = F0 = O0 = $0 = Re = 0, s0 * u0) {
+      switch (T0 = w0 = F0 = O0 = $0 = Re = 0, s0 * u0) {
         case 1:
-          w0 = "X", O0 = "+";
+          T0 = "X", O0 = "+";
           break;
         case -1:
-          w0 = "X", O0 = "-";
+          T0 = "X", O0 = "-";
           break;
         case 2:
-          w0 = "Y", O0 = "+";
+          T0 = "Y", O0 = "+";
           break;
         case -2:
-          w0 = "Y", O0 = "-";
+          T0 = "Y", O0 = "-";
           break;
         case 3:
-          w0 = "Z", O0 = "+";
+          T0 = "Z", O0 = "+";
           break;
         case -3:
-          w0 = "Z", O0 = "-";
+          T0 = "Z", O0 = "-";
           break;
       }
       switch ($ * o0) {
         case 1:
-          T0 = "X", $0 = "+";
+          w0 = "X", $0 = "+";
           break;
         case -1:
-          T0 = "X", $0 = "-";
+          w0 = "X", $0 = "-";
           break;
         case 2:
-          T0 = "Y", $0 = "+";
+          w0 = "Y", $0 = "+";
           break;
         case -2:
-          T0 = "Y", $0 = "-";
+          w0 = "Y", $0 = "-";
           break;
         case 3:
-          T0 = "Z", $0 = "+";
+          w0 = "Z", $0 = "+";
           break;
         case -3:
-          T0 = "Z", $0 = "-";
+          w0 = "Z", $0 = "-";
           break;
       }
       switch (m0 * a) {
@@ -3419,7 +3417,7 @@ function requireNifti1() {
           F0 = "Z", Re = "-";
           break;
       }
-      return w0 + T0 + F0 + O0 + $0 + Re;
+      return T0 + w0 + F0 + O0 + $0 + Re;
     }, u.NIFTI1.prototype.nifti_mat33_mul = function(p, v) {
       var y = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], T, E;
       for (T = 0; T < 3; T += 1)
@@ -3759,8 +3757,8 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
           for (var $ = new u8(s0), m0 = new u8(19), u0 = 0; u0 < D; ++u0)
             m0[clim[u0]] = bits(m, _ + u0 * 3, 7);
           _ += D * 3;
-          for (var o0 = max$j(m0), a = (1 << o0) - 1, k0 = hMap(m0, o0, 1), u0 = 0; u0 < s0; ) {
-            var g0 = k0[bits(m, _, a)];
+          for (var o0 = max$j(m0), a = (1 << o0) - 1, E0 = hMap(m0, o0, 1), u0 = 0; u0 < s0; ) {
+            var g0 = E0[bits(m, _, a)];
             _ += g0 & 15;
             var Z = g0 >>> 4;
             if (Z < 16)
@@ -3771,8 +3769,8 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
                 $[u0++] = A0;
             }
           }
-          var w0 = $.subarray(0, a0), T0 = $.subarray(a0);
-          L = max$j(w0), e = max$j(T0), H = hMap(w0, L, 1), d = hMap(T0, e, 1);
+          var T0 = $.subarray(0, a0), w0 = $.subarray(a0);
+          L = max$j(T0), e = max$j(w0), H = hMap(T0, L, 1), d = hMap(w0, e, 1);
         } else
           err(1);
       else {
@@ -3809,10 +3807,10 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
         }
         var Qe = d[bits16(m, _) & O0], He = Qe >>> 4;
         Qe || err(3), _ += Qe & 15;
-        var T0 = fd[He];
+        var w0 = fd[He];
         if (He > 3) {
           var Ye = fdeb[He];
-          T0 += bits16(m, _) & (1 << Ye) - 1, _ += Ye;
+          w0 += bits16(m, _) & (1 << Ye) - 1, _ += Ye;
         }
         if (_ > Q) {
           T && err(0);
@@ -3820,7 +3818,7 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
         }
         y && E(V + 131072);
         for (var B0 = V + Te; V < B0; V += 4)
-          u[V] = u[V - T0], u[V + 1] = u[V + 1 - T0], u[V + 2] = u[V + 2 - T0], u[V + 3] = u[V + 3 - T0];
+          u[V] = u[V - w0], u[V + 1] = u[V + 1 - w0], u[V + 2] = u[V + 2 - w0], u[V + 3] = u[V + 3 - w0];
         V = B0;
       }
     }
@@ -3917,15 +3915,15 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
     m0[n0[u0] & 31]++;
   for (var u0 = 0; u0 < s0.length; ++u0)
     m0[s0[u0] & 31]++;
-  for (var o0 = hTree(m0, 7), a = o0[0], k0 = o0[1], g0 = 19; g0 > 4 && !a[clim[g0 - 1]]; --g0)
+  for (var o0 = hTree(m0, 7), a = o0[0], E0 = o0[1], g0 = 19; g0 > 4 && !a[clim[g0 - 1]]; --g0)
     ;
-  var A0 = V + 5 << 3, S0 = clen(y, flt) + clen(T, fdt) + E, w0 = clen(y, L) + clen(T, K) + E + 14 + 3 * g0 + clen(m0, a) + (2 * m0[16] + 3 * m0[17] + 7 * m0[18]);
-  if (A0 <= S0 && A0 <= w0)
+  var A0 = V + 5 << 3, S0 = clen(y, flt) + clen(T, fdt) + E, T0 = clen(y, L) + clen(T, K) + E + 14 + 3 * g0 + clen(m0, a) + (2 * m0[16] + 3 * m0[17] + 7 * m0[18]);
+  if (A0 <= S0 && A0 <= T0)
     return wfblk(u, H, m.subarray(_, _ + V));
-  var T0, F0, O0, $0;
-  if (wbits(u, H, 1 + (w0 < S0)), H += 2, w0 < S0) {
-    T0 = hMap(L, e, 0), F0 = L, O0 = hMap(K, Z, 0), $0 = K;
-    var Re = hMap(a, k0, 0);
+  var w0, F0, O0, $0;
+  if (wbits(u, H, 1 + (T0 < S0)), H += 2, T0 < S0) {
+    w0 = hMap(L, e, 0), F0 = L, O0 = hMap(K, Z, 0), $0 = K;
+    var Re = hMap(a, E0, 0);
     wbits(u, H, a0 - 257), wbits(u, H + 5, $ - 1), wbits(u, H + 10, g0 - 4), H += 14;
     for (var u0 = 0; u0 < g0; ++u0)
       wbits(u, H + 3 * u0, a[clim[u0]]);
@@ -3936,16 +3934,16 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
         wbits(u, H, Re[He]), H += a[He], He > 15 && (wbits(u, H, Qe[u0] >>> 5 & 127), H += Qe[u0] >>> 12);
       }
   } else
-    T0 = flm, F0 = flt, O0 = fdm, $0 = fdt;
+    w0 = flm, F0 = flt, O0 = fdm, $0 = fdt;
   for (var u0 = 0; u0 < F; ++u0)
     if (v[u0] > 255) {
       var He = v[u0] >>> 18 & 31;
-      wbits16(u, H, T0[He + 257]), H += F0[He + 257], He > 7 && (wbits(u, H, v[u0] >>> 23 & 31), H += fleb[He]);
+      wbits16(u, H, w0[He + 257]), H += F0[He + 257], He > 7 && (wbits(u, H, v[u0] >>> 23 & 31), H += fleb[He]);
       var B0 = v[u0] & 31;
       wbits16(u, H, O0[B0]), H += $0[B0], B0 > 3 && (wbits16(u, H, v[u0] >>> 5 & 8191), H += fdeb[B0]);
     } else
-      wbits16(u, H, T0[v[u0]]), H += F0[v[u0]];
-  return wbits16(u, H, T0[256]), H + F0[256];
+      wbits16(u, H, w0[v[u0]]), H += F0[v[u0]];
+  return wbits16(u, H, w0[256]), H + F0[256];
 }, deo = /* @__PURE__ */ new u32([65540, 131080, 131088, 131104, 262176, 1048704, 1048832, 2114560, 2117632]), et = /* @__PURE__ */ new u8(0), dflt = function(m, u, p, v, y, T) {
   var E = m.length, F = new u8(v + E + 5 * (1 + Math.ceil(E / 7e3)) + y), _ = F.subarray(v, F.length - y), V = 0;
   if (!u || E < 8)
@@ -3956,20 +3954,20 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
   else {
     for (var L = deo[u - 1], e = L >>> 13, Q = L & 8191, K = (1 << p) - 1, Z = new u16(32768), J = new u16(K + 1), n0 = Math.ceil(p / 3), a0 = 2 * n0, D = function(U0) {
       return (m[U0] ^ m[U0 + 1] << n0 ^ m[U0 + 2] << a0) & K;
-    }, s0 = new u32(25e3), $ = new u16(288), m0 = new u16(32), u0 = 0, o0 = 0, H = 0, a = 0, k0 = 0, g0 = 0; H < E; ++H) {
-      var A0 = D(H), S0 = H & 32767, w0 = J[A0];
-      if (Z[S0] = w0, J[A0] = S0, k0 <= H) {
-        var T0 = E - H;
-        if ((u0 > 7e3 || a > 24576) && T0 > 423) {
+    }, s0 = new u32(25e3), $ = new u16(288), m0 = new u16(32), u0 = 0, o0 = 0, H = 0, a = 0, E0 = 0, g0 = 0; H < E; ++H) {
+      var A0 = D(H), S0 = H & 32767, T0 = J[A0];
+      if (Z[S0] = T0, J[A0] = S0, E0 <= H) {
+        var w0 = E - H;
+        if ((u0 > 7e3 || a > 24576) && w0 > 423) {
           V = wblk(m, _, 0, s0, $, m0, o0, a, g0, H - g0, V), a = u0 = o0 = 0, g0 = H;
           for (var F0 = 0; F0 < 286; ++F0)
             $[F0] = 0;
           for (var F0 = 0; F0 < 30; ++F0)
             m0[F0] = 0;
         }
-        var O0 = 2, $0 = 0, Re = Q, Te = S0 - w0 & 32767;
-        if (T0 > 2 && A0 == D(H - Te))
-          for (var Ye = Math.min(e, T0) - 1, Qe = Math.min(32767, H), He = Math.min(258, T0); Te <= Qe && --Re && S0 != w0; ) {
+        var O0 = 2, $0 = 0, Re = Q, Te = S0 - T0 & 32767;
+        if (w0 > 2 && A0 == D(H - Te))
+          for (var Ye = Math.min(e, w0) - 1, Qe = Math.min(32767, H), He = Math.min(258, w0); Te <= Qe && --Re && S0 != T0; ) {
             if (m[H + O0] == m[H + O0 - Te]) {
               for (var B0 = 0; B0 < He && m[H + B0] == m[H + B0 - Te]; ++B0)
                 ;
@@ -3978,16 +3976,16 @@ var flm = /* @__PURE__ */ hMap(flt, 9, 0), flrm = /* @__PURE__ */ hMap(flt, 9, 1
                   break;
                 for (var ii = Math.min(Te, B0 - 2), Ve = 0, F0 = 0; F0 < ii; ++F0) {
                   var Xe = H - Te + F0 + 32768 & 32767, di = Z[Xe], pi = Xe - di + 32768 & 32767;
-                  pi > Ve && (Ve = pi, w0 = Xe);
+                  pi > Ve && (Ve = pi, T0 = Xe);
                 }
               }
             }
-            S0 = w0, w0 = Z[S0], Te += S0 - w0 + 32768 & 32767;
+            S0 = T0, T0 = Z[S0], Te += S0 - T0 + 32768 & 32767;
           }
         if ($0) {
           s0[a++] = 268435456 | revfl[O0] << 18 | revfd[$0];
           var Ai = revfl[O0] & 31, $e = revfd[$0] & 31;
-          o0 += fleb[Ai] + fdeb[$e], ++$[257 + Ai], ++m0[$e], k0 = H + O0, ++u0;
+          o0 += fleb[Ai] + fdeb[$e], ++$[257 + Ai], ++m0[$e], E0 = H + O0, ++u0;
         } else
           s0[a++] = m[H], ++$[m[H]];
       }
@@ -4678,20 +4676,20 @@ function zip(m, u, p) {
   for (var Q = function(Z) {
     var J = y[Z], n0 = v[J], a0 = n0[0], D = n0[1], s0 = crc(), $ = a0.length;
     s0.p(a0);
-    var m0 = strToU8(J), u0 = m0.length, o0 = D.comment, a = o0 && strToU8(o0), k0 = a && a.length, g0 = exfl(D.extra), A0 = D.level == 0 ? 0 : 8, S0 = function(w0, T0) {
-      if (w0)
-        d(), L(w0, null);
+    var m0 = strToU8(J), u0 = m0.length, o0 = D.comment, a = o0 && strToU8(o0), E0 = a && a.length, g0 = exfl(D.extra), A0 = D.level == 0 ? 0 : 8, S0 = function(T0, w0) {
+      if (T0)
+        d(), L(T0, null);
       else {
-        var F0 = T0.length;
+        var F0 = w0.length;
         V[Z] = mrg(D, {
           size: $,
           crc: s0.d(),
-          c: T0,
+          c: w0,
           f: m0,
           m: a,
-          u: u0 != J.length || a && o0.length != k0,
+          u: u0 != J.length || a && o0.length != E0,
           compression: A0
-        }), E += 30 + u0 + g0 + F0, F += 76 + 2 * (u0 + g0) + (k0 || 0) + F0, --T || e();
+        }), E += 30 + u0 + g0 + F0, F += 76 + 2 * (u0 + g0) + (E0 || 0) + F0, --T || e();
       }
     };
     if (u0 > 65535 && S0(err(11, 0, 1), null), !A0)
@@ -4699,8 +4697,8 @@ function zip(m, u, p) {
     else if ($ < 16e4)
       try {
         S0(null, deflateSync(a0, D));
-      } catch (w0) {
-        S0(w0, null);
+      } catch (T0) {
+        S0(T0, null);
       }
     else
       H.push(deflate$2(a0, D, S0));
@@ -4791,8 +4789,8 @@ var UnzipPassThrough = /* @__PURE__ */ function() {
           if (H > F + 30 + m0 + u0) {
             var o0 = [];
             Q.k.unshift(o0), E = 2;
-            var a = b4(V, F + 18), k0 = b4(V, F + 22), g0 = strFromU8(V.subarray(F + 30, F += 30 + m0), !s0);
-            a == 4294967295 ? (J = $ ? [-2] : z64e(V, F), a = J[0], k0 = J[1]) : $ && (a = -1), F += u0, Q.c = a;
+            var a = b4(V, F + 18), E0 = b4(V, F + 22), g0 = strFromU8(V.subarray(F + 30, F += 30 + m0), !s0);
+            a == 4294967295 ? (J = $ ? [-2] : z64e(V, F), a = J[0], E0 = J[1]) : $ && (a = -1), F += u0, Q.c = a;
             var A0, S0 = {
               name: g0,
               compression: D,
@@ -4800,12 +4798,12 @@ var UnzipPassThrough = /* @__PURE__ */ function() {
                 if (S0.ondata || err(5), !a)
                   S0.ondata(null, et, !0);
                 else {
-                  var w0 = v.o[D];
-                  w0 || S0.ondata(err(14, "unknown compression type " + D, 1), null, !1), A0 = a < 0 ? new w0(g0) : new w0(g0, a, k0), A0.ondata = function($0, Re, Te) {
+                  var T0 = v.o[D];
+                  T0 || S0.ondata(err(14, "unknown compression type " + D, 1), null, !1), A0 = a < 0 ? new T0(g0) : new T0(g0, a, E0), A0.ondata = function($0, Re, Te) {
                     S0.ondata($0, Re, Te);
                   };
-                  for (var T0 = 0, F0 = o0; T0 < F0.length; T0++) {
-                    var O0 = F0[T0];
+                  for (var w0 = 0, F0 = o0; w0 < F0.length; w0++) {
+                    var O0 = F0[w0];
                     A0.push(O0, !1);
                   }
                   v.k[0] == o0 && v.c ? v.d = A0 : A0.push(et, !0);
@@ -4815,7 +4813,7 @@ var UnzipPassThrough = /* @__PURE__ */ function() {
                 A0 && A0.terminate && A0.terminate();
               }
             };
-            a >= 0 && (S0.size = a, S0.originalSize = k0), Q.onfile(S0);
+            a >= 0 && (S0.size = a, S0.originalSize = E0), Q.onfile(S0);
           }
           return "break";
         } else if (d) {
@@ -4870,8 +4868,8 @@ function unzip(m, u, p) {
     for (var e = u && u.filter, Q = function(Z) {
       var J = zh(m, H, d), n0 = J[0], a0 = J[1], D = J[2], s0 = J[3], $ = J[4], m0 = J[5], u0 = slzh(m, m0);
       H = $;
-      var o0 = function(k0, g0) {
-        k0 ? (y(), E(k0, null)) : (g0 && (T[s0] = g0), --_ || E(null, T));
+      var o0 = function(E0, g0) {
+        E0 ? (y(), E(E0, null)) : (g0 && (T[s0] = g0), --_ || E(null, T));
       };
       if (!e || e({
         name: s0,
@@ -4886,8 +4884,8 @@ function unzip(m, u, p) {
           if (a0 < 32e4)
             try {
               o0(null, inflateSync(a, new u8(D)));
-            } catch (k0) {
-              o0(k0, null);
+            } catch (E0) {
+              o0(E0, null);
             }
           else
             v.push(inflate$2(a, { size: D }, o0));
@@ -9807,36 +9805,36 @@ function requireJpegBaseline() {
         for (var $ = 0, m0 = [], u0, o0, a = 16; a > 0 && !D[a - 1]; )
           a--;
         m0.push({ children: [], index: 0 });
-        var k0 = m0[0], g0;
+        var E0 = m0[0], g0;
         for (u0 = 0; u0 < a; u0++) {
           for (o0 = 0; o0 < D[u0]; o0++) {
-            for (k0 = m0.pop(), k0.children[k0.index] = s0[$]; k0.index > 0; )
-              k0 = m0.pop();
-            for (k0.index++, m0.push(k0); m0.length <= u0; )
-              m0.push(g0 = { children: [], index: 0 }), k0.children[k0.index] = g0.children, k0 = g0;
+            for (E0 = m0.pop(), E0.children[E0.index] = s0[$]; E0.index > 0; )
+              E0 = m0.pop();
+            for (E0.index++, m0.push(E0); m0.length <= u0; )
+              m0.push(g0 = { children: [], index: 0 }), E0.children[E0.index] = g0.children, E0 = g0;
             $++;
           }
-          u0 + 1 < a && (m0.push(g0 = { children: [], index: 0 }), k0.children[k0.index] = g0.children, k0 = g0);
+          u0 + 1 < a && (m0.push(g0 = { children: [], index: 0 }), E0.children[E0.index] = g0.children, E0 = g0);
         }
         return m0[0].children;
       }
       function K(D, s0, $) {
         return 64 * ((D.blocksPerLine + 1) * s0 + $);
       }
-      function Z(D, s0, $, m0, u0, o0, a, k0, g0) {
+      function Z(D, s0, $, m0, u0, o0, a, E0, g0) {
         $.precision, $.samplesPerLine, $.scanLines;
         var A0 = $.mcusPerLine, S0 = $.progressive;
         $.maxH, $.maxV;
-        var w0 = s0, T0 = 0, F0 = 0;
+        var T0 = s0, w0 = 0, F0 = 0;
         function O0() {
           if (F0 > 0)
-            return F0--, T0 >> F0 & 1;
-          if (T0 = D[s0++], T0 == 255) {
+            return F0--, w0 >> F0 & 1;
+          if (w0 = D[s0++], w0 == 255) {
             var J0 = D[s0++];
             if (J0)
-              throw "unexpected marker: " + (T0 << 8 | J0).toString(16);
+              throw "unexpected marker: " + (w0 << 8 | J0).toString(16);
           }
-          return F0 = 7, T0 >>> 7;
+          return F0 = 7, w0 >>> 7;
         }
         function $0(J0) {
           for (var ie = J0, Se; (Se = O0()) !== null; ) {
@@ -9942,8 +9940,8 @@ function requireJpegBaseline() {
           var z0 = Se / J0.blocksPerLine | 0, Z0 = Se % J0.blocksPerLine, h0 = K(J0, z0, Z0);
           ie(J0, h0);
         }
-        var $e = m0.length, ue, U0, oe, E0, L0, ee;
-        S0 ? o0 === 0 ? ee = k0 === 0 ? Qe : He : ee = k0 === 0 ? ii : di : ee = Ye;
+        var $e = m0.length, ue, U0, oe, x0, L0, ee;
+        S0 ? o0 === 0 ? ee = E0 === 0 ? Qe : He : ee = E0 === 0 ? ii : di : ee = Ye;
         var Y0 = 0, G0, Q0;
         $e == 1 ? Q0 = m0[0].blocksPerLine * m0[0].blocksPerColumn : Q0 = A0 * $.mcusPerColumn, u0 || (u0 = Q0);
         for (var P0, re; Y0 < Q0; ) {
@@ -9956,8 +9954,8 @@ function requireJpegBaseline() {
             for (L0 = 0; L0 < u0; L0++) {
               for (U0 = 0; U0 < $e; U0++)
                 for (ue = m0[U0], P0 = ue.h, re = ue.v, oe = 0; oe < re; oe++)
-                  for (E0 = 0; E0 < P0; E0++)
-                    pi(ue, ee, Y0, oe, E0);
+                  for (x0 = 0; x0 < P0; x0++)
+                    pi(ue, ee, Y0, oe, x0);
               Y0++;
             }
           if (F0 = 0, G0 = D[s0] << 8 | D[s0 + 1], G0 <= 65280)
@@ -9967,27 +9965,27 @@ function requireJpegBaseline() {
           else
             break;
         }
-        return s0 - w0;
+        return s0 - T0;
       }
       function J(D, s0, $) {
-        var m0 = D.quantizationTable, u0, o0, a, k0, g0, A0, S0, w0, T0, F0;
+        var m0 = D.quantizationTable, u0, o0, a, E0, g0, A0, S0, T0, w0, F0;
         for (F0 = 0; F0 < 64; F0++)
           $[F0] = D.blockData[s0 + F0] * m0[F0];
         for (F0 = 0; F0 < 8; ++F0) {
           var O0 = 8 * F0;
           if ($[1 + O0] === 0 && $[2 + O0] === 0 && $[3 + O0] === 0 && $[4 + O0] === 0 && $[5 + O0] === 0 && $[6 + O0] === 0 && $[7 + O0] === 0) {
-            T0 = d * $[0 + O0] + 512 >> 10, $[0 + O0] = T0, $[1 + O0] = T0, $[2 + O0] = T0, $[3 + O0] = T0, $[4 + O0] = T0, $[5 + O0] = T0, $[6 + O0] = T0, $[7 + O0] = T0;
+            w0 = d * $[0 + O0] + 512 >> 10, $[0 + O0] = w0, $[1 + O0] = w0, $[2 + O0] = w0, $[3 + O0] = w0, $[4 + O0] = w0, $[5 + O0] = w0, $[6 + O0] = w0, $[7 + O0] = w0;
             continue;
           }
-          u0 = d * $[0 + O0] + 128 >> 8, o0 = d * $[4 + O0] + 128 >> 8, a = $[2 + O0], k0 = $[6 + O0], g0 = L * ($[1 + O0] - $[7 + O0]) + 128 >> 8, w0 = L * ($[1 + O0] + $[7 + O0]) + 128 >> 8, A0 = $[3 + O0] << 4, S0 = $[5 + O0] << 4, T0 = u0 - o0 + 1 >> 1, u0 = u0 + o0 + 1 >> 1, o0 = T0, T0 = a * H + k0 * V + 128 >> 8, a = a * V - k0 * H + 128 >> 8, k0 = T0, T0 = g0 - S0 + 1 >> 1, g0 = g0 + S0 + 1 >> 1, S0 = T0, T0 = w0 + A0 + 1 >> 1, A0 = w0 - A0 + 1 >> 1, w0 = T0, T0 = u0 - k0 + 1 >> 1, u0 = u0 + k0 + 1 >> 1, k0 = T0, T0 = o0 - a + 1 >> 1, o0 = o0 + a + 1 >> 1, a = T0, T0 = g0 * _ + w0 * F + 2048 >> 12, g0 = g0 * F - w0 * _ + 2048 >> 12, w0 = T0, T0 = A0 * E + S0 * T + 2048 >> 12, A0 = A0 * T - S0 * E + 2048 >> 12, S0 = T0, $[0 + O0] = u0 + w0, $[7 + O0] = u0 - w0, $[1 + O0] = o0 + S0, $[6 + O0] = o0 - S0, $[2 + O0] = a + A0, $[5 + O0] = a - A0, $[3 + O0] = k0 + g0, $[4 + O0] = k0 - g0;
+          u0 = d * $[0 + O0] + 128 >> 8, o0 = d * $[4 + O0] + 128 >> 8, a = $[2 + O0], E0 = $[6 + O0], g0 = L * ($[1 + O0] - $[7 + O0]) + 128 >> 8, T0 = L * ($[1 + O0] + $[7 + O0]) + 128 >> 8, A0 = $[3 + O0] << 4, S0 = $[5 + O0] << 4, w0 = u0 - o0 + 1 >> 1, u0 = u0 + o0 + 1 >> 1, o0 = w0, w0 = a * H + E0 * V + 128 >> 8, a = a * V - E0 * H + 128 >> 8, E0 = w0, w0 = g0 - S0 + 1 >> 1, g0 = g0 + S0 + 1 >> 1, S0 = w0, w0 = T0 + A0 + 1 >> 1, A0 = T0 - A0 + 1 >> 1, T0 = w0, w0 = u0 - E0 + 1 >> 1, u0 = u0 + E0 + 1 >> 1, E0 = w0, w0 = o0 - a + 1 >> 1, o0 = o0 + a + 1 >> 1, a = w0, w0 = g0 * _ + T0 * F + 2048 >> 12, g0 = g0 * F - T0 * _ + 2048 >> 12, T0 = w0, w0 = A0 * E + S0 * T + 2048 >> 12, A0 = A0 * T - S0 * E + 2048 >> 12, S0 = w0, $[0 + O0] = u0 + T0, $[7 + O0] = u0 - T0, $[1 + O0] = o0 + S0, $[6 + O0] = o0 - S0, $[2 + O0] = a + A0, $[5 + O0] = a - A0, $[3 + O0] = E0 + g0, $[4 + O0] = E0 - g0;
         }
         for (F0 = 0; F0 < 8; ++F0) {
           var $0 = F0;
           if ($[1 * 8 + $0] === 0 && $[2 * 8 + $0] === 0 && $[3 * 8 + $0] === 0 && $[4 * 8 + $0] === 0 && $[5 * 8 + $0] === 0 && $[6 * 8 + $0] === 0 && $[7 * 8 + $0] === 0) {
-            T0 = d * $[F0 + 0] + 8192 >> 14, $[0 * 8 + $0] = T0, $[1 * 8 + $0] = T0, $[2 * 8 + $0] = T0, $[3 * 8 + $0] = T0, $[4 * 8 + $0] = T0, $[5 * 8 + $0] = T0, $[6 * 8 + $0] = T0, $[7 * 8 + $0] = T0;
+            w0 = d * $[F0 + 0] + 8192 >> 14, $[0 * 8 + $0] = w0, $[1 * 8 + $0] = w0, $[2 * 8 + $0] = w0, $[3 * 8 + $0] = w0, $[4 * 8 + $0] = w0, $[5 * 8 + $0] = w0, $[6 * 8 + $0] = w0, $[7 * 8 + $0] = w0;
             continue;
           }
-          u0 = d * $[0 * 8 + $0] + 2048 >> 12, o0 = d * $[4 * 8 + $0] + 2048 >> 12, a = $[2 * 8 + $0], k0 = $[6 * 8 + $0], g0 = L * ($[1 * 8 + $0] - $[7 * 8 + $0]) + 2048 >> 12, w0 = L * ($[1 * 8 + $0] + $[7 * 8 + $0]) + 2048 >> 12, A0 = $[3 * 8 + $0], S0 = $[5 * 8 + $0], T0 = u0 - o0 + 1 >> 1, u0 = u0 + o0 + 1 >> 1, o0 = T0, T0 = a * H + k0 * V + 2048 >> 12, a = a * V - k0 * H + 2048 >> 12, k0 = T0, T0 = g0 - S0 + 1 >> 1, g0 = g0 + S0 + 1 >> 1, S0 = T0, T0 = w0 + A0 + 1 >> 1, A0 = w0 - A0 + 1 >> 1, w0 = T0, T0 = u0 - k0 + 1 >> 1, u0 = u0 + k0 + 1 >> 1, k0 = T0, T0 = o0 - a + 1 >> 1, o0 = o0 + a + 1 >> 1, a = T0, T0 = g0 * _ + w0 * F + 2048 >> 12, g0 = g0 * F - w0 * _ + 2048 >> 12, w0 = T0, T0 = A0 * E + S0 * T + 2048 >> 12, A0 = A0 * T - S0 * E + 2048 >> 12, S0 = T0, $[0 * 8 + $0] = u0 + w0, $[7 * 8 + $0] = u0 - w0, $[1 * 8 + $0] = o0 + S0, $[6 * 8 + $0] = o0 - S0, $[2 * 8 + $0] = a + A0, $[5 * 8 + $0] = a - A0, $[3 * 8 + $0] = k0 + g0, $[4 * 8 + $0] = k0 - g0;
+          u0 = d * $[0 * 8 + $0] + 2048 >> 12, o0 = d * $[4 * 8 + $0] + 2048 >> 12, a = $[2 * 8 + $0], E0 = $[6 * 8 + $0], g0 = L * ($[1 * 8 + $0] - $[7 * 8 + $0]) + 2048 >> 12, T0 = L * ($[1 * 8 + $0] + $[7 * 8 + $0]) + 2048 >> 12, A0 = $[3 * 8 + $0], S0 = $[5 * 8 + $0], w0 = u0 - o0 + 1 >> 1, u0 = u0 + o0 + 1 >> 1, o0 = w0, w0 = a * H + E0 * V + 2048 >> 12, a = a * V - E0 * H + 2048 >> 12, E0 = w0, w0 = g0 - S0 + 1 >> 1, g0 = g0 + S0 + 1 >> 1, S0 = w0, w0 = T0 + A0 + 1 >> 1, A0 = T0 - A0 + 1 >> 1, T0 = w0, w0 = u0 - E0 + 1 >> 1, u0 = u0 + E0 + 1 >> 1, E0 = w0, w0 = o0 - a + 1 >> 1, o0 = o0 + a + 1 >> 1, a = w0, w0 = g0 * _ + T0 * F + 2048 >> 12, g0 = g0 * F - T0 * _ + 2048 >> 12, T0 = w0, w0 = A0 * E + S0 * T + 2048 >> 12, A0 = A0 * T - S0 * E + 2048 >> 12, S0 = w0, $[0 * 8 + $0] = u0 + T0, $[7 * 8 + $0] = u0 - T0, $[1 * 8 + $0] = o0 + S0, $[6 * 8 + $0] = o0 - S0, $[2 * 8 + $0] = a + A0, $[5 * 8 + $0] = a - A0, $[3 * 8 + $0] = E0 + g0, $[4 * 8 + $0] = E0 - g0;
         }
         for (F0 = 0; F0 < 64; ++F0) {
           var Re = s0 + F0, Te = $[F0];
@@ -9997,8 +9995,8 @@ function requireJpegBaseline() {
       function n0(D, s0) {
         for (var $ = s0.blocksPerLine, m0 = s0.blocksPerColumn, u0 = new Int32Array(64), o0 = 0; o0 < m0; o0++)
           for (var a = 0; a < $; a++) {
-            var k0 = K(s0, o0, a);
-            J(s0, k0, u0);
+            var E0 = K(s0, o0, a);
+            J(s0, E0, u0);
           }
         return s0.blockData;
       }
@@ -10015,11 +10013,11 @@ function requireJpegBaseline() {
               o0[a] = u0.charCodeAt(a);
             $(u0);
           } else {
-            var k0 = new XMLHttpRequest();
-            k0.open("GET", s0, !0), k0.responseType = "arraybuffer", k0.onload = function() {
-              var g0 = new Uint8Array(k0.response);
+            var E0 = new XMLHttpRequest();
+            E0.open("GET", s0, !0), E0.responseType = "arraybuffer", E0.onload = function() {
+              var g0 = new Uint8Array(E0.response);
               $(g0);
-            }.bind(this), k0.send(null);
+            }.bind(this), E0.send(null);
           }
         },
         parse: function(s0) {
@@ -10041,7 +10039,7 @@ function requireJpegBaseline() {
           }
           var o0 = 0;
           s0.length;
-          var a = null, k0 = null, g0, A0, S0 = [], w0 = [], T0 = [], F0 = $();
+          var a = null, E0 = null, g0, A0, S0 = [], T0 = [], w0 = [], F0 = $();
           if (F0 != 65496)
             throw "SOI not found";
           for (F0 = $(); F0 != 65497; ) {
@@ -10073,7 +10071,7 @@ function requireJpegBaseline() {
                   thumbWidth: Te[12],
                   thumbHeight: Te[13],
                   thumbData: Te.subarray(14, 14 + 3 * Te[12] * Te[13])
-                }), F0 === 65518 && Te[0] === 65 && Te[1] === 100 && Te[2] === 111 && Te[3] === 98 && Te[4] === 101 && Te[5] === 0 && (k0 = {
+                }), F0 === 65518 && Te[0] === 65 && Te[1] === 100 && Te[2] === 111 && Te[3] === 98 && Te[4] === 101 && Te[5] === 0 && (E0 = {
                   version: Te[6],
                   flags0: Te[7] << 8 | Te[8],
                   flags1: Te[9] << 8 | Te[10],
@@ -10124,13 +10122,13 @@ function requireJpegBaseline() {
               case 65476:
                 var oe = $();
                 for (O0 = 2; O0 < oe; ) {
-                  var E0 = s0[o0++], L0 = new Uint8Array(16), ee = 0;
+                  var x0 = s0[o0++], L0 = new Uint8Array(16), ee = 0;
                   for ($0 = 0; $0 < 16; $0++, o0++)
                     ee += L0[$0] = s0[o0];
                   var Y0 = new Uint8Array(ee);
                   for ($0 = 0; $0 < ee; $0++, o0++)
                     Y0[$0] = s0[o0];
-                  O0 += 17 + ee, (E0 >> 4 ? w0 : T0)[E0 & 15] = Q(L0, Y0);
+                  O0 += 17 + ee, (x0 >> 4 ? T0 : w0)[x0 & 15] = Q(L0, Y0);
                 }
                 break;
               case 65501:
@@ -10143,7 +10141,7 @@ function requireJpegBaseline() {
                   var re = g0.componentIds[s0[o0++]];
                   P0 = g0.components[re];
                   var J0 = s0[o0++];
-                  P0.huffmanTableDC = T0[J0 >> 4], P0.huffmanTableAC = w0[J0 & 15], Q0.push(P0);
+                  P0.huffmanTableDC = w0[J0 >> 4], P0.huffmanTableAC = T0[J0 & 15], Q0.push(P0);
                 }
                 var ie = s0[o0++], Se = s0[o0++], z0 = s0[o0++], Z0 = Z(
                   s0,
@@ -10167,7 +10165,7 @@ function requireJpegBaseline() {
             }
             F0 = $();
           }
-          switch (this.width = g0.samplesPerLine, this.height = g0.scanLines, this.jfif = a, this.adobe = k0, this.components = [], g0.components.length) {
+          switch (this.width = g0.samplesPerLine, this.height = g0.scanLines, this.jfif = a, this.adobe = E0, this.components = [], g0.components.length) {
             case 1:
               this.colorspace = u.Grayscale;
               break;
@@ -10195,44 +10193,44 @@ function requireJpegBaseline() {
         getData16: function(s0, $) {
           if (this.components.length !== 1)
             throw "Unsupported color mode";
-          var m0 = this.width / s0, u0 = this.height / $, o0, a, k0, g0, A0, S0, w0 = 0, T0 = this.components.length, F0 = s0 * $ * T0, O0 = new Uint16Array(F0), $0 = new Uint16Array((this.components[0].blocksPerLine << 3) * this.components[0].blocksPerColumn * 8);
-          for (S0 = 0; S0 < T0; S0++) {
+          var m0 = this.width / s0, u0 = this.height / $, o0, a, E0, g0, A0, S0, T0 = 0, w0 = this.components.length, F0 = s0 * $ * w0, O0 = new Uint16Array(F0), $0 = new Uint16Array((this.components[0].blocksPerLine << 3) * this.components[0].blocksPerColumn * 8);
+          for (S0 = 0; S0 < w0; S0++) {
             o0 = this.components[S0];
             for (var Re = o0.blocksPerLine, Te = o0.blocksPerColumn, Ye = Re << 3, Qe, He, B0 = 0, ii = 0; ii < Te; ii++)
               for (var Ve = ii << 3, Xe = 0; Xe < Re; Xe++) {
-                var di = K(o0, ii, Xe), w0 = 0, pi = Xe << 3;
+                var di = K(o0, ii, Xe), T0 = 0, pi = Xe << 3;
                 for (Qe = 0; Qe < 8; Qe++) {
                   var B0 = (Ve + Qe) * Ye;
                   for (He = 0; He < 8; He++)
-                    $0[B0 + pi + He] = o0.output[di + w0++];
+                    $0[B0 + pi + He] = o0.output[di + T0++];
                 }
               }
-            a = o0.scaleX * m0, k0 = o0.scaleY * u0, w0 = S0;
+            a = o0.scaleX * m0, E0 = o0.scaleY * u0, T0 = S0;
             var Ai, $e, ue;
             for (A0 = 0; A0 < $; A0++)
               for (g0 = 0; g0 < s0; g0++)
-                $e = 0 | A0 * k0, Ai = 0 | g0 * a, ue = $e * Ye + Ai, O0[w0] = $0[ue], w0 += T0;
+                $e = 0 | A0 * E0, Ai = 0 | g0 * a, ue = $e * Ye + Ai, O0[T0] = $0[ue], T0 += w0;
           }
           return O0;
         },
         getData: function(s0, $) {
-          var m0 = this.width / s0, u0 = this.height / $, o0, a, k0, g0, A0, S0, w0 = 0, T0, F0, O0, $0, Re, Te, Ye, Qe, He, B0 = this.components.length, ii = s0 * $ * B0, Ve = new Uint8Array(ii), Xe = new Uint8Array((this.components[0].blocksPerLine << 3) * this.components[0].blocksPerColumn * 8);
+          var m0 = this.width / s0, u0 = this.height / $, o0, a, E0, g0, A0, S0, T0 = 0, w0, F0, O0, $0, Re, Te, Ye, Qe, He, B0 = this.components.length, ii = s0 * $ * B0, Ve = new Uint8Array(ii), Xe = new Uint8Array((this.components[0].blocksPerLine << 3) * this.components[0].blocksPerColumn * 8);
           for (S0 = 0; S0 < B0; S0++) {
             o0 = this.components[S0];
             for (var di = o0.blocksPerLine, pi = o0.blocksPerColumn, Ai = di << 3, $e, ue, U0 = 0, oe = 0; oe < pi; oe++)
-              for (var E0 = oe << 3, L0 = 0; L0 < di; L0++) {
-                var ee = K(o0, oe, L0), w0 = 0, Y0 = L0 << 3;
+              for (var x0 = oe << 3, L0 = 0; L0 < di; L0++) {
+                var ee = K(o0, oe, L0), T0 = 0, Y0 = L0 << 3;
                 for ($e = 0; $e < 8; $e++) {
-                  var U0 = (E0 + $e) * Ai;
+                  var U0 = (x0 + $e) * Ai;
                   for (ue = 0; ue < 8; ue++)
-                    Xe[U0 + Y0 + ue] = o0.output[ee + w0++] * o0.bitConversion;
+                    Xe[U0 + Y0 + ue] = o0.output[ee + T0++] * o0.bitConversion;
                 }
               }
-            a = o0.scaleX * m0, k0 = o0.scaleY * u0, w0 = S0;
+            a = o0.scaleX * m0, E0 = o0.scaleY * u0, T0 = S0;
             var G0, Q0, P0;
             for (A0 = 0; A0 < $; A0++)
               for (g0 = 0; g0 < s0; g0++)
-                Q0 = 0 | A0 * k0, G0 = 0 | g0 * a, P0 = Q0 * Ai + G0, Ve[w0] = Xe[P0], w0 += B0;
+                Q0 = 0 | A0 * E0, G0 = 0 | g0 * a, P0 = Q0 * Ai + G0, Ve[T0] = Xe[P0], T0 += B0;
           }
           switch (B0) {
             case 1:
@@ -10241,14 +10239,14 @@ function requireJpegBaseline() {
             case 3:
               if (He = !0, this.adobe && this.adobe.transformCode ? He = !0 : typeof this.colorTransform < "u" && (He = !!this.colorTransform), He)
                 for (S0 = 0; S0 < ii; S0 += B0)
-                  T0 = Ve[S0], F0 = Ve[S0 + 1], O0 = Ve[S0 + 2], Te = a0(T0 - 179.456 + 1.402 * O0), Ye = a0(T0 + 135.459 - 0.344 * F0 - 0.714 * O0), Qe = a0(T0 - 226.816 + 1.772 * F0), Ve[S0] = Te, Ve[S0 + 1] = Ye, Ve[S0 + 2] = Qe;
+                  w0 = Ve[S0], F0 = Ve[S0 + 1], O0 = Ve[S0 + 2], Te = a0(w0 - 179.456 + 1.402 * O0), Ye = a0(w0 + 135.459 - 0.344 * F0 - 0.714 * O0), Qe = a0(w0 - 226.816 + 1.772 * F0), Ve[S0] = Te, Ve[S0 + 1] = Ye, Ve[S0 + 2] = Qe;
               break;
             case 4:
               if (!this.adobe)
                 throw "Unsupported color mode (4 components)";
               if (He = !1, this.adobe && this.adobe.transformCode ? He = !0 : typeof this.colorTransform < "u" && (He = !!this.colorTransform), He)
                 for (S0 = 0; S0 < ii; S0 += B0)
-                  T0 = Ve[S0], F0 = Ve[S0 + 1], O0 = Ve[S0 + 2], $0 = a0(434.456 - T0 - 1.402 * O0), Re = a0(119.541 - T0 + 0.344 * F0 + 0.714 * O0), T0 = a0(481.816 - T0 - 1.772 * F0), Ve[S0] = $0, Ve[S0 + 1] = Re, Ve[S0 + 2] = T0;
+                  w0 = Ve[S0], F0 = Ve[S0 + 1], O0 = Ve[S0 + 2], $0 = a0(434.456 - w0 - 1.402 * O0), Re = a0(119.541 - w0 + 0.344 * F0 + 0.714 * O0), w0 = a0(481.816 - w0 - 1.772 * F0), Ve[S0] = $0, Ve[S0 + 1] = Re, Ve[S0 + 2] = w0;
               break;
             default:
               throw "Unsupported color mode";
@@ -10291,9 +10289,9 @@ function requireJpx() {
             this.parseCodestream(U0, 0, U0.length);
             return;
           }
-          for (var E0 = 0, L0 = U0.length; E0 < L0; ) {
-            var ee = 8, Y0 = Z(U0, E0), G0 = Z(U0, E0 + 4);
-            if (E0 += ee, Y0 === 1 && (Y0 = Z(U0, E0) * 4294967296 + Z(U0, E0 + 4), E0 += 8, ee += 8), Y0 === 0 && (Y0 = L0 - E0 + ee), Y0 < ee)
+          for (var x0 = 0, L0 = U0.length; x0 < L0; ) {
+            var ee = 8, Y0 = Z(U0, x0), G0 = Z(U0, x0 + 4);
+            if (x0 += ee, Y0 === 1 && (Y0 = Z(U0, x0) * 4294967296 + Z(U0, x0 + 4), x0 += 8, ee += 8), Y0 === 0 && (Y0 = L0 - x0 + ee), Y0 < ee)
               throw new Error("JPX Error: Invalid box field size");
             var Q0 = Y0 - ee, P0 = !0;
             switch (G0) {
@@ -10301,9 +10299,9 @@ function requireJpx() {
                 P0 = !1;
                 break;
               case 1668246642:
-                var re = U0[E0];
-                if (U0[E0 + 1], U0[E0 + 2], re === 1) {
-                  var J0 = Z(U0, E0 + 3);
+                var re = U0[x0];
+                if (U0[x0 + 1], U0[x0 + 2], re === 1) {
+                  var J0 = Z(U0, x0 + 3);
                   switch (J0) {
                     case 16:
                     case 17:
@@ -10317,10 +10315,10 @@ function requireJpx() {
                   re === 2 && T("ICC profile not supported");
                 break;
               case 1785737827:
-                this.parseCodestream(U0, E0, E0 + Q0);
+                this.parseCodestream(U0, x0, x0 + Q0);
                 break;
               case 1783636e3:
-                Z(U0, E0) !== 218793738 && E("Invalid JP2 signature");
+                Z(U0, x0) !== 218793738 && E("Invalid JP2 signature");
                 break;
               case 1783634458:
               case 1718909296:
@@ -10338,14 +10336,14 @@ function requireJpx() {
                 E("Unsupported header type " + G0 + " (" + ie + ")");
                 break;
             }
-            P0 && (E0 += Q0);
+            P0 && (x0 += Q0);
           }
         },
         parseImageProperties: function(U0) {
           for (var oe = U0.getByte(); oe >= 0; ) {
-            var E0 = oe;
+            var x0 = oe;
             oe = U0.getByte();
-            var L0 = E0 << 8 | oe;
+            var L0 = x0 << 8 | oe;
             if (L0 === 65361) {
               U0.skip(4);
               var ee = U0.getInt32() >>> 0, Y0 = U0.getInt32() >>> 0, G0 = U0.getInt32() >>> 0, Q0 = U0.getInt32() >>> 0;
@@ -10357,10 +10355,10 @@ function requireJpx() {
           }
           throw new Error("JPX Error: No size marker found in JPX stream");
         },
-        parseCodestream: function(U0, oe, E0) {
+        parseCodestream: function(U0, oe, x0) {
           var L0 = {};
           try {
-            for (var ee = !1, Y0 = oe; Y0 + 1 < E0; ) {
+            for (var ee = !1, Y0 = oe; Y0 + 1 < x0; ) {
               var G0 = K(U0, Y0);
               Y0 += 2;
               var Q0 = 0, P0, re, J0, ie, Se, z0;
@@ -10450,9 +10448,9 @@ function requireJpx() {
                     }
                     i0.precinctsSizes = z;
                   }
-                  var x0 = [];
-                  if (i0.selectiveArithmeticCodingBypass && x0.push("selectiveArithmeticCodingBypass"), i0.resetContextProbabilities && x0.push("resetContextProbabilities"), i0.terminationOnEachCodingPass && x0.push("terminationOnEachCodingPass"), i0.verticalyStripe && x0.push("verticalyStripe"), i0.predictableTermination && x0.push("predictableTermination"), x0.length > 0)
-                    throw ee = !0, new Error("JPX Error: Unsupported COD options (" + x0.join(", ") + ")");
+                  var k0 = [];
+                  if (i0.selectiveArithmeticCodingBypass && k0.push("selectiveArithmeticCodingBypass"), i0.resetContextProbabilities && k0.push("resetContextProbabilities"), i0.terminationOnEachCodingPass && k0.push("terminationOnEachCodingPass"), i0.verticalyStripe && k0.push("verticalyStripe"), i0.predictableTermination && k0.push("predictableTermination"), k0.length > 0)
+                    throw ee = !0, new Error("JPX Error: Unsupported COD options (" + k0.join(", ") + ")");
                   L0.mainHeader ? L0.COD = i0 : (L0.currentTile.COD = i0, L0.currentTile.COC = []);
                   break;
                 case 65424:
@@ -10486,24 +10484,24 @@ function requireJpx() {
         ue.x0 = Math.ceil(U0.XOsiz / ue.XRsiz), ue.x1 = Math.ceil(U0.Xsiz / ue.XRsiz), ue.y0 = Math.ceil(U0.YOsiz / ue.YRsiz), ue.y1 = Math.ceil(U0.Ysiz / ue.YRsiz), ue.width = ue.x1 - ue.x0, ue.height = ue.y1 - ue.y0;
       }
       function o0(ue, U0) {
-        for (var oe = ue.SIZ, E0, L0 = [], ee = Math.ceil((oe.Xsiz - oe.XTOsiz) / oe.XTsiz), Y0 = Math.ceil((oe.Ysiz - oe.YTOsiz) / oe.YTsiz), G0 = 0; G0 < Y0; G0++)
+        for (var oe = ue.SIZ, x0, L0 = [], ee = Math.ceil((oe.Xsiz - oe.XTOsiz) / oe.XTsiz), Y0 = Math.ceil((oe.Ysiz - oe.YTOsiz) / oe.YTsiz), G0 = 0; G0 < Y0; G0++)
           for (var Q0 = 0; Q0 < ee; Q0++)
-            E0 = {}, E0.tx0 = Math.max(oe.XTOsiz + Q0 * oe.XTsiz, oe.XOsiz), E0.ty0 = Math.max(oe.YTOsiz + G0 * oe.YTsiz, oe.YOsiz), E0.tx1 = Math.min(oe.XTOsiz + (Q0 + 1) * oe.XTsiz, oe.Xsiz), E0.ty1 = Math.min(oe.YTOsiz + (G0 + 1) * oe.YTsiz, oe.Ysiz), E0.width = E0.tx1 - E0.tx0, E0.height = E0.ty1 - E0.ty0, E0.components = [], L0.push(E0);
+            x0 = {}, x0.tx0 = Math.max(oe.XTOsiz + Q0 * oe.XTsiz, oe.XOsiz), x0.ty0 = Math.max(oe.YTOsiz + G0 * oe.YTsiz, oe.YOsiz), x0.tx1 = Math.min(oe.XTOsiz + (Q0 + 1) * oe.XTsiz, oe.Xsiz), x0.ty1 = Math.min(oe.YTOsiz + (G0 + 1) * oe.YTsiz, oe.Ysiz), x0.width = x0.tx1 - x0.tx0, x0.height = x0.ty1 - x0.ty0, x0.components = [], L0.push(x0);
         ue.tiles = L0;
         for (var P0 = oe.Csiz, re = 0, J0 = P0; re < J0; re++)
           for (var ie = U0[re], Se = 0, z0 = L0.length; Se < z0; Se++) {
             var Z0 = {};
-            E0 = L0[Se], Z0.tcx0 = Math.ceil(E0.tx0 / ie.XRsiz), Z0.tcy0 = Math.ceil(E0.ty0 / ie.YRsiz), Z0.tcx1 = Math.ceil(E0.tx1 / ie.XRsiz), Z0.tcy1 = Math.ceil(E0.ty1 / ie.YRsiz), Z0.width = Z0.tcx1 - Z0.tcx0, Z0.height = Z0.tcy1 - Z0.tcy0, E0.components[re] = Z0;
+            x0 = L0[Se], Z0.tcx0 = Math.ceil(x0.tx0 / ie.XRsiz), Z0.tcy0 = Math.ceil(x0.ty0 / ie.YRsiz), Z0.tcx1 = Math.ceil(x0.tx1 / ie.XRsiz), Z0.tcy1 = Math.ceil(x0.ty1 / ie.YRsiz), Z0.width = Z0.tcx1 - Z0.tcx0, Z0.height = Z0.tcy1 - Z0.tcy0, x0.components[re] = Z0;
           }
       }
       function a(ue, U0, oe) {
-        var E0 = U0.codingStyleParameters, L0 = {};
-        return E0.entropyCoderWithCustomPrecincts ? (L0.PPx = E0.precinctsSizes[oe].PPx, L0.PPy = E0.precinctsSizes[oe].PPy) : (L0.PPx = 15, L0.PPy = 15), L0.xcb_ = oe > 0 ? Math.min(E0.xcb, L0.PPx - 1) : Math.min(E0.xcb, L0.PPx), L0.ycb_ = oe > 0 ? Math.min(E0.ycb, L0.PPy - 1) : Math.min(E0.ycb, L0.PPy), L0;
+        var x0 = U0.codingStyleParameters, L0 = {};
+        return x0.entropyCoderWithCustomPrecincts ? (L0.PPx = x0.precinctsSizes[oe].PPx, L0.PPy = x0.precinctsSizes[oe].PPy) : (L0.PPx = 15, L0.PPy = 15), L0.xcb_ = oe > 0 ? Math.min(x0.xcb, L0.PPx - 1) : Math.min(x0.xcb, L0.PPx), L0.ycb_ = oe > 0 ? Math.min(x0.ycb, L0.PPy - 1) : Math.min(x0.ycb, L0.PPy), L0;
       }
-      function k0(ue, U0, oe) {
-        var E0 = 1 << oe.PPx, L0 = 1 << oe.PPy, ee = U0.resLevel === 0, Y0 = 1 << oe.PPx + (ee ? 0 : -1), G0 = 1 << oe.PPy + (ee ? 0 : -1), Q0 = U0.trx1 > U0.trx0 ? Math.ceil(U0.trx1 / E0) - Math.floor(U0.trx0 / E0) : 0, P0 = U0.try1 > U0.try0 ? Math.ceil(U0.try1 / L0) - Math.floor(U0.try0 / L0) : 0, re = Q0 * P0;
+      function E0(ue, U0, oe) {
+        var x0 = 1 << oe.PPx, L0 = 1 << oe.PPy, ee = U0.resLevel === 0, Y0 = 1 << oe.PPx + (ee ? 0 : -1), G0 = 1 << oe.PPy + (ee ? 0 : -1), Q0 = U0.trx1 > U0.trx0 ? Math.ceil(U0.trx1 / x0) - Math.floor(U0.trx0 / x0) : 0, P0 = U0.try1 > U0.try0 ? Math.ceil(U0.try1 / L0) - Math.floor(U0.try0 / L0) : 0, re = Q0 * P0;
         U0.precinctParameters = {
-          precinctWidth: E0,
+          precinctWidth: x0,
           precinctHeight: L0,
           numprecinctswide: Q0,
           numprecinctshigh: P0,
@@ -10513,7 +10511,7 @@ function requireJpx() {
         };
       }
       function g0(ue, U0, oe) {
-        var E0 = oe.xcb_, L0 = oe.ycb_, ee = 1 << E0, Y0 = 1 << L0, G0 = U0.tbx0 >> E0, Q0 = U0.tby0 >> L0, P0 = U0.tbx1 + ee - 1 >> E0, re = U0.tby1 + Y0 - 1 >> L0, J0 = U0.resolution.precinctParameters, ie = [], Se = [], z0, Z0, h0, Ie;
+        var x0 = oe.xcb_, L0 = oe.ycb_, ee = 1 << x0, Y0 = 1 << L0, G0 = U0.tbx0 >> x0, Q0 = U0.tby0 >> L0, P0 = U0.tbx1 + ee - 1 >> x0, re = U0.tby1 + Y0 - 1 >> L0, J0 = U0.resolution.precinctParameters, ie = [], Se = [], z0, Z0, h0, Ie;
         for (Z0 = Q0; Z0 < re; Z0++)
           for (z0 = G0; z0 < P0; z0++) {
             h0 = {
@@ -10537,35 +10535,35 @@ function requireJpx() {
             }
           }
         U0.codeblockParameters = {
-          codeblockWidth: E0,
+          codeblockWidth: x0,
           codeblockHeight: L0,
           numcodeblockwide: P0 - G0 + 1,
           numcodeblockhigh: re - Q0 + 1
         }, U0.codeblocks = ie, U0.precincts = Se;
       }
       function A0(ue, U0, oe) {
-        for (var E0 = [], L0 = ue.subbands, ee = 0, Y0 = L0.length; ee < Y0; ee++)
+        for (var x0 = [], L0 = ue.subbands, ee = 0, Y0 = L0.length; ee < Y0; ee++)
           for (var G0 = L0[ee], Q0 = G0.codeblocks, P0 = 0, re = Q0.length; P0 < re; P0++) {
             var J0 = Q0[P0];
-            J0.precinctNumber === U0 && E0.push(J0);
+            J0.precinctNumber === U0 && x0.push(J0);
           }
         return {
           layerNumber: oe,
-          codeblocks: E0
+          codeblocks: x0
         };
       }
       function S0(ue) {
-        for (var U0 = ue.SIZ, oe = ue.currentTile.index, E0 = ue.tiles[oe], L0 = E0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = 0, G0 = 0; G0 < ee; G0++)
+        for (var U0 = ue.SIZ, oe = ue.currentTile.index, x0 = ue.tiles[oe], L0 = x0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = 0, G0 = 0; G0 < ee; G0++)
           Y0 = Math.max(
             Y0,
-            E0.components[G0].codingStyleParameters.decompositionLevelsCount
+            x0.components[G0].codingStyleParameters.decompositionLevelsCount
           );
         var Q0 = 0, P0 = 0, re = 0, J0 = 0;
         this.nextPacket = function() {
           for (; Q0 < L0; Q0++) {
             for (; P0 <= Y0; P0++) {
               for (; re < ee; re++) {
-                var Se = E0.components[re];
+                var Se = x0.components[re];
                 if (!(P0 > Se.codingStyleParameters.decompositionLevelsCount)) {
                   for (var z0 = Se.resolutions[P0], Z0 = z0.precinctParameters.numprecincts; J0 < Z0; ) {
                     var h0 = A0(z0, J0, Q0);
@@ -10580,18 +10578,18 @@ function requireJpx() {
           }
         };
       }
-      function w0(ue) {
-        for (var U0 = ue.SIZ, oe = ue.currentTile.index, E0 = ue.tiles[oe], L0 = E0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = 0, G0 = 0; G0 < ee; G0++)
+      function T0(ue) {
+        for (var U0 = ue.SIZ, oe = ue.currentTile.index, x0 = ue.tiles[oe], L0 = x0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = 0, G0 = 0; G0 < ee; G0++)
           Y0 = Math.max(
             Y0,
-            E0.components[G0].codingStyleParameters.decompositionLevelsCount
+            x0.components[G0].codingStyleParameters.decompositionLevelsCount
           );
         var Q0 = 0, P0 = 0, re = 0, J0 = 0;
         this.nextPacket = function() {
           for (; Q0 <= Y0; Q0++) {
             for (; P0 < L0; P0++) {
               for (; re < ee; re++) {
-                var Se = E0.components[re];
+                var Se = x0.components[re];
                 if (!(Q0 > Se.codingStyleParameters.decompositionLevelsCount)) {
                   for (var z0 = Se.resolutions[Q0], Z0 = z0.precinctParameters.numprecincts; J0 < Z0; ) {
                     var h0 = A0(z0, J0, P0);
@@ -10606,10 +10604,10 @@ function requireJpx() {
           }
         };
       }
-      function T0(ue) {
-        var U0 = ue.SIZ, oe = ue.currentTile.index, E0 = ue.tiles[oe], L0 = E0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0, G0, Q0, P0, re = 0;
+      function w0(ue) {
+        var U0 = ue.SIZ, oe = ue.currentTile.index, x0 = ue.tiles[oe], L0 = x0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0, G0, Q0, P0, re = 0;
         for (Q0 = 0; Q0 < ee; Q0++) {
-          var J0 = E0.components[Q0];
+          var J0 = x0.components[Q0];
           re = Math.max(
             re,
             J0.codingStyleParameters.decompositionLevelsCount
@@ -10621,7 +10619,7 @@ function requireJpx() {
         for (G0 = 0; G0 <= re; ++G0) {
           var Se = 0;
           for (Q0 = 0; Q0 < ee; ++Q0) {
-            var z0 = E0.components[Q0].resolutions;
+            var z0 = x0.components[Q0].resolutions;
             G0 < z0.length && (Se = Math.max(
               Se,
               z0[G0].precinctParameters.numprecincts
@@ -10633,7 +10631,7 @@ function requireJpx() {
           for (; G0 <= re; G0++) {
             for (; P0 < ie[G0]; P0++) {
               for (; Q0 < ee; Q0++) {
-                var h0 = E0.components[Q0];
+                var h0 = x0.components[Q0];
                 if (!(G0 > h0.codingStyleParameters.decompositionLevelsCount)) {
                   var Ie = h0.resolutions[G0], d0 = Ie.precinctParameters.numprecincts;
                   if (!(P0 >= d0)) {
@@ -10652,12 +10650,12 @@ function requireJpx() {
         };
       }
       function F0(ue) {
-        var U0 = ue.SIZ, oe = ue.currentTile.index, E0 = ue.tiles[oe], L0 = E0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = Re(E0), G0 = Y0, Q0 = 0, P0 = 0, re = 0, J0 = 0, ie = 0;
+        var U0 = ue.SIZ, oe = ue.currentTile.index, x0 = ue.tiles[oe], L0 = x0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = Re(x0), G0 = Y0, Q0 = 0, P0 = 0, re = 0, J0 = 0, ie = 0;
         this.nextPacket = function() {
           for (; ie < G0.maxNumHigh; ie++) {
             for (; J0 < G0.maxNumWide; J0++) {
               for (; re < ee; re++) {
-                for (var z0 = E0.components[re], Z0 = z0.codingStyleParameters.decompositionLevelsCount; P0 <= Z0; P0++) {
+                for (var z0 = x0.components[re], Z0 = z0.codingStyleParameters.decompositionLevelsCount; P0 <= Z0; P0++) {
                   var h0 = z0.resolutions[P0], Ie = Y0.components[re].resolutions[P0], d0 = $0(
                     J0,
                     ie,
@@ -10682,10 +10680,10 @@ function requireJpx() {
         };
       }
       function O0(ue) {
-        var U0 = ue.SIZ, oe = ue.currentTile.index, E0 = ue.tiles[oe], L0 = E0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = Re(E0), G0 = 0, Q0 = 0, P0 = 0, re = 0, J0 = 0;
+        var U0 = ue.SIZ, oe = ue.currentTile.index, x0 = ue.tiles[oe], L0 = x0.codingStyleDefaultParameters.layersCount, ee = U0.Csiz, Y0 = Re(x0), G0 = 0, Q0 = 0, P0 = 0, re = 0, J0 = 0;
         this.nextPacket = function() {
           for (; P0 < ee; ++P0) {
-            for (var Se = E0.components[P0], z0 = Y0.components[P0], Z0 = Se.codingStyleParameters.decompositionLevelsCount; J0 < z0.maxNumHigh; J0++) {
+            for (var Se = x0.components[P0], z0 = Y0.components[P0], Z0 = Se.codingStyleParameters.decompositionLevelsCount; J0 < z0.maxNumHigh; J0++) {
               for (; re < z0.maxNumWide; re++) {
                 for (; Q0 <= Z0; Q0++) {
                   var h0 = Se.resolutions[Q0], Ie = z0.resolutions[Q0], d0 = $0(
@@ -10711,15 +10709,15 @@ function requireJpx() {
           }
         };
       }
-      function $0(ue, U0, oe, E0, L0) {
-        var ee = ue * E0.minWidth, Y0 = U0 * E0.minHeight;
+      function $0(ue, U0, oe, x0, L0) {
+        var ee = ue * x0.minWidth, Y0 = U0 * x0.minHeight;
         if (ee % oe.width !== 0 || Y0 % oe.height !== 0)
           return null;
         var G0 = Y0 / oe.width * L0.precinctParameters.numprecinctswide;
         return ee / oe.height + G0;
       }
       function Re(ue) {
-        for (var U0 = ue.components.length, oe = Number.MAX_VALUE, E0 = Number.MAX_VALUE, L0 = 0, ee = 0, Y0 = new Array(U0), G0 = 0; G0 < U0; G0++) {
+        for (var U0 = ue.components.length, oe = Number.MAX_VALUE, x0 = Number.MAX_VALUE, L0 = 0, ee = 0, Y0 = new Array(U0), G0 = 0; G0 < U0; G0++) {
           for (var Q0 = ue.components[G0], P0 = Q0.codingStyleParameters.decompositionLevelsCount, re = new Array(P0 + 1), J0 = Number.MAX_VALUE, ie = Number.MAX_VALUE, Se = 0, z0 = 0, Z0 = 1, h0 = P0; h0 >= 0; --h0) {
             var Ie = Q0.resolutions[h0], d0 = Z0 * Ie.precinctParameters.precinctWidth, N0 = Z0 * Ie.precinctParameters.precinctHeight;
             J0 = Math.min(
@@ -10739,7 +10737,7 @@ function requireJpx() {
               height: N0
             }, Z0 <<= 1;
           }
-          oe = Math.min(oe, J0), E0 = Math.min(E0, ie), L0 = Math.max(L0, Se), ee = Math.max(ee, z0), Y0[G0] = {
+          oe = Math.min(oe, J0), x0 = Math.min(x0, ie), L0 = Math.max(L0, Se), ee = Math.max(ee, z0), Y0[G0] = {
             resolutions: re,
             minWidth: J0,
             minHeight: ie,
@@ -10750,16 +10748,16 @@ function requireJpx() {
         return {
           components: Y0,
           minWidth: oe,
-          minHeight: E0,
+          minHeight: x0,
           maxNumWide: L0,
           maxNumHigh: ee
         };
       }
       function Te(ue) {
-        for (var U0 = ue.SIZ, oe = ue.currentTile.index, E0 = ue.tiles[oe], L0 = U0.Csiz, ee = 0; ee < L0; ee++) {
-          for (var Y0 = E0.components[ee], G0 = Y0.codingStyleParameters.decompositionLevelsCount, Q0 = [], P0 = [], re = 0; re <= G0; re++) {
+        for (var U0 = ue.SIZ, oe = ue.currentTile.index, x0 = ue.tiles[oe], L0 = U0.Csiz, ee = 0; ee < L0; ee++) {
+          for (var Y0 = x0.components[ee], G0 = Y0.codingStyleParameters.decompositionLevelsCount, Q0 = [], P0 = [], re = 0; re <= G0; re++) {
             var J0 = a(ue, Y0, re), ie = {}, Se = 1 << G0 - re;
-            ie.trx0 = Math.ceil(Y0.tcx0 / Se), ie.try0 = Math.ceil(Y0.tcy0 / Se), ie.trx1 = Math.ceil(Y0.tcx1 / Se), ie.try1 = Math.ceil(Y0.tcy1 / Se), ie.resLevel = re, k0(ue, ie, J0), Q0.push(ie);
+            ie.trx0 = Math.ceil(Y0.tcx0 / Se), ie.try0 = Math.ceil(Y0.tcy0 / Se), ie.trx1 = Math.ceil(Y0.tcx1 / Se), ie.try1 = Math.ceil(Y0.tcy1 / Se), ie.resLevel = re, E0(ue, ie, J0), Q0.push(ie);
             var z0;
             if (re === 0)
               z0 = {}, z0.type = "LL", z0.tbx0 = Math.ceil(Y0.tcx0 / Se), z0.tby0 = Math.ceil(Y0.tcy0 / Se), z0.tbx1 = Math.ceil(Y0.tcx1 / Se), z0.tby1 = Math.ceil(Y0.tcy1 / Se), z0.resolution = ie, g0(ue, z0, J0), P0.push(z0), ie.subbands = [z0];
@@ -10770,28 +10768,28 @@ function requireJpx() {
           }
           Y0.resolutions = Q0, Y0.subbands = P0;
         }
-        var Ie = E0.codingStyleDefaultParameters.progressionOrder;
+        var Ie = x0.codingStyleDefaultParameters.progressionOrder;
         switch (Ie) {
           case 0:
-            E0.packetsIterator = new S0(ue);
+            x0.packetsIterator = new S0(ue);
             break;
           case 1:
-            E0.packetsIterator = new w0(ue);
+            x0.packetsIterator = new T0(ue);
             break;
           case 2:
-            E0.packetsIterator = new T0(ue);
+            x0.packetsIterator = new w0(ue);
             break;
           case 3:
-            E0.packetsIterator = new F0(ue);
+            x0.packetsIterator = new F0(ue);
             break;
           case 4:
-            E0.packetsIterator = new O0(ue);
+            x0.packetsIterator = new O0(ue);
             break;
           default:
             throw new Error("JPX Error: Unsupported progression order " + Ie);
         }
       }
-      function Ye(ue, U0, oe, E0) {
+      function Ye(ue, U0, oe, x0) {
         var L0 = 0, ee, Y0 = 0, G0 = !1;
         function Q0(D0) {
           for (; Y0 < D0; ) {
@@ -10819,7 +10817,7 @@ function requireJpx() {
           var D0 = Q0(2);
           return D0 < 3 ? D0 + 3 : (D0 = Q0(5), D0 < 31 ? D0 + 6 : (D0 = Q0(7), D0 + 37));
         }
-        for (var Se = ue.currentTile.index, z0 = ue.tiles[Se], Z0 = ue.COD.sopMarkerUsed, h0 = ue.COD.ephMarkerUsed, Ie = z0.packetsIterator; L0 < E0; )
+        for (var Se = ue.currentTile.index, z0 = ue.tiles[Se], Z0 = ue.COD.sopMarkerUsed, h0 = ue.COD.ephMarkerUsed, Ie = z0.packetsIterator; L0 < x0; )
           try {
             J0(), Z0 && P0(145) && re(4);
             var d0 = Ie.nextPacket();
@@ -10829,7 +10827,7 @@ function requireJpx() {
               continue;
             for (var N0 = d0.layerNumber, W0 = [], ne, R0 = 0, q0 = d0.codeblocks.length; R0 < q0; R0++) {
               ne = d0.codeblocks[R0];
-              var i0 = ne.precinct, c0 = ne.cbx - i0.cbxMin, De = ne.cby - i0.cbyMin, z = !1, H0 = !1, x0;
+              var i0 = ne.precinct, c0 = ne.cbx - i0.cbxMin, De = ne.cby - i0.cbyMin, z = !1, H0 = !1, k0;
               if (ne.included !== void 0)
                 z = !!Q0(1);
               else {
@@ -10866,7 +10864,7 @@ function requireJpx() {
                     if (L0 >= U0.length)
                       return;
                     if (Q0(1)) {
-                      if (x0 = !M0.nextLevel(), x0)
+                      if (k0 = !M0.nextLevel(), k0)
                         break;
                     } else
                       M0.incrementValue();
@@ -10897,8 +10895,8 @@ function requireJpx() {
           }
         return L0;
       }
-      function Qe(ue, U0, oe, E0, L0, ee, Y0, G0) {
-        for (var Q0 = E0.tbx0, P0 = E0.tby0, re = E0.tbx1 - E0.tbx0, J0 = E0.codeblocks, ie = E0.type.charAt(0) === "H" ? 1 : 0, Se = E0.type.charAt(1) === "H" ? U0 : 0, z0 = 0, Z0 = J0.length; z0 < Z0; ++z0) {
+      function Qe(ue, U0, oe, x0, L0, ee, Y0, G0) {
+        for (var Q0 = x0.tbx0, P0 = x0.tby0, re = x0.tbx1 - x0.tbx0, J0 = x0.codeblocks, ie = x0.type.charAt(0) === "H" ? 1 : 0, Se = x0.type.charAt(1) === "H" ? U0 : 0, z0 = 0, Z0 = J0.length; z0 < Z0; ++z0) {
           var h0 = J0[z0], Ie = h0.tbx1_ - h0.tbx0_, d0 = h0.tby1_ - h0.tby0_;
           if (!(Ie === 0 || d0 === 0) && h0.data !== void 0) {
             var N0, W0;
@@ -10915,8 +10913,8 @@ function requireJpx() {
             var z = new Int16Array(R0), H0 = 0;
             for (i0 = 0, c0 = ne.length; i0 < c0; i0++) {
               De = ne[i0];
-              var x0 = De.data.subarray(De.start, De.end);
-              z.set(x0, H0), H0 += x0.length;
+              var k0 = De.data.subarray(De.start, De.end);
+              z.set(k0, H0), H0 += k0.length;
             }
             var p0 = new p(z, 0, R0);
             for (N0.setDecoder(p0), i0 = 0; i0 < q0; i0++) {
@@ -10935,7 +10933,7 @@ function requireJpx() {
             }
             var M0 = h0.tbx0_ - Q0 + (h0.tby0_ - P0) * re, j0 = N0.coefficentsSign, Le = N0.coefficentsMagnitude, I0 = N0.bitsDecoded, Me = Y0 ? 0 : 0.5, Ze, ke, Fe;
             H0 = 0;
-            var D0 = E0.type !== "LL";
+            var D0 = x0.type !== "LL";
             for (i0 = 0; i0 < d0; i0++) {
               var qe = M0 / re | 0, Ri = 2 * qe * (U0 - re) + ie + Se;
               for (Ze = 0; Ze < Ie; Ze++) {
@@ -10952,8 +10950,8 @@ function requireJpx() {
         }
       }
       function He(ue, U0, oe) {
-        for (var E0 = U0.components[oe], L0 = E0.codingStyleParameters, ee = E0.quantizationParameters, Y0 = L0.decompositionLevelsCount, G0 = ee.SPqcds, Q0 = ee.scalarExpounded, P0 = ee.guardBits, re = L0.segmentationSymbolUsed, J0 = ue.components[oe].precision, ie = L0.reversibleTransformation, Se = ie ? new $e() : new Ai(), z0 = [], Z0 = 0, h0 = 0; h0 <= Y0; h0++) {
-          for (var Ie = E0.resolutions[h0], d0 = Ie.trx1 - Ie.trx0, N0 = Ie.try1 - Ie.try0, W0 = new Float32Array(d0 * N0), ne = 0, R0 = Ie.subbands.length; ne < R0; ne++) {
+        for (var x0 = U0.components[oe], L0 = x0.codingStyleParameters, ee = x0.quantizationParameters, Y0 = L0.decompositionLevelsCount, G0 = ee.SPqcds, Q0 = ee.scalarExpounded, P0 = ee.guardBits, re = L0.segmentationSymbolUsed, J0 = ue.components[oe].precision, ie = L0.reversibleTransformation, Se = ie ? new $e() : new Ai(), z0 = [], Z0 = 0, h0 = 0; h0 <= Y0; h0++) {
+          for (var Ie = x0.resolutions[h0], d0 = Ie.trx1 - Ie.trx0, N0 = Ie.try1 - Ie.try0, W0 = new Float32Array(d0 * N0), ne = 0, R0 = Ie.subbands.length; ne < R0; ne++) {
             var q0, i0;
             Q0 ? (q0 = G0[Z0].mu, i0 = G0[Z0].epsilon, Z0++) : (q0 = G0[0].mu, i0 = G0[0].epsilon + (h0 > 0 ? 1 - h0 : 0));
             var c0 = Ie.subbands[ne], De = $[c0.type], z = ie ? 1 : Math.pow(2, J0 + De - i0) * (1 + q0 / 2048), H0 = P0 + i0 - 1;
@@ -10974,40 +10972,40 @@ function requireJpx() {
             items: W0
           });
         }
-        var x0 = Se.calculate(
+        var k0 = Se.calculate(
           z0,
-          E0.tcx0,
-          E0.tcy0
+          x0.tcx0,
+          x0.tcy0
         );
         return {
-          left: E0.tcx0,
-          top: E0.tcy0,
-          width: x0.width,
-          height: x0.height,
-          items: x0.items
+          left: x0.tcx0,
+          top: x0.tcy0,
+          width: k0.width,
+          height: k0.height,
+          items: k0.items
         };
       }
       function B0(ue) {
-        for (var U0 = ue.SIZ, oe = ue.components, E0 = U0.Csiz, L0 = [], ee = 0, Y0 = ue.tiles.length; ee < Y0; ee++) {
+        for (var U0 = ue.SIZ, oe = ue.components, x0 = U0.Csiz, L0 = [], ee = 0, Y0 = ue.tiles.length; ee < Y0; ee++) {
           var G0 = ue.tiles[ee], Q0 = [], P0;
-          for (P0 = 0; P0 < E0; P0++)
+          for (P0 = 0; P0 < x0; P0++)
             Q0[P0] = He(ue, G0, P0);
           var re = Q0[0], J0 = oe[0].isSigned;
           if (J0)
-            var ie = new Int16Array(re.items.length * E0);
+            var ie = new Int16Array(re.items.length * x0);
           else
-            var ie = new Uint16Array(re.items.length * E0);
+            var ie = new Uint16Array(re.items.length * x0);
           var Se = {
             left: re.left,
             top: re.top,
             width: re.width,
             height: re.height,
             items: ie
-          }, z0, Z0, h0, Ie, d0, N0 = 0, W0, ne, R0, q0, i0, c0, De, z, H0, x0;
+          }, z0, Z0, h0, Ie, d0, N0 = 0, W0, ne, R0, q0, i0, c0, De, z, H0, k0;
           if (G0.codingStyleDefaultParameters.multipleComponentTransform) {
-            var p0 = E0 === 4, M0 = Q0[0].items, j0 = Q0[1].items, Le = Q0[2].items, I0 = p0 ? Q0[3].items : null;
+            var p0 = x0 === 4, M0 = Q0[0].items, j0 = Q0[1].items, Le = Q0[2].items, I0 = p0 ? Q0[3].items : null;
             z0 = oe[0].precision - 8, Z0 = (128 << z0) + 0.5, h0 = 255 * (1 << z0), d0 = h0 * 0.5, Ie = -d0;
-            var Me = G0.components[0], Ze = E0 - 3;
+            var Me = G0.components[0], Ze = x0 - 3;
             if (ne = M0.length, Me.codingStyleParameters.reversibleTransformation)
               for (W0 = 0; W0 < ne; W0++, N0 += Ze)
                 R0 = M0[W0] + Z0, q0 = j0[W0], i0 = Le[W0], De = R0 - (i0 + q0 >> 2), c0 = De + i0, z = De + q0, ie[N0++] = c0 <= 0 ? 0 : c0 >= h0 ? 255 : c0 >> z0, ie[N0++] = De <= 0 ? 0 : De >= h0 ? 255 : De >> z0, ie[N0++] = z <= 0 ? 0 : z >= h0 ? 255 : z >> z0;
@@ -11018,21 +11016,21 @@ function requireJpx() {
               for (W0 = 0, N0 = 3; W0 < ne; W0++, N0 += 4)
                 H0 = I0[W0], ie[N0] = H0 <= Ie ? 0 : H0 >= d0 ? 255 : H0 + Z0 >> z0;
           } else
-            for (P0 = 0; P0 < E0; P0++)
+            for (P0 = 0; P0 < x0; P0++)
               if (oe[P0].precision === 8) {
                 var ke = Q0[P0].items;
                 for (z0 = oe[P0].precision - 8, Z0 = (128 << z0) + 0.5, h0 = 127.5 * (1 << z0), Ie = -h0, N0 = P0, W0 = 0, ne = ke.length; W0 < ne; W0++)
-                  x0 = ke[W0], ie[N0] = x0 <= Ie ? 0 : x0 >= h0 ? 255 : x0 + Z0 >> z0, N0 += E0;
+                  k0 = ke[W0], ie[N0] = k0 <= Ie ? 0 : k0 >= h0 ? 255 : k0 + Z0 >> z0, N0 += x0;
               } else {
                 var J0 = oe[P0].isSigned, ke = Q0[P0].items;
                 if (J0)
                   for (N0 = P0, W0 = 0, ne = ke.length; W0 < ne; W0++)
-                    ie[N0] = ke[W0], N0 += E0;
+                    ie[N0] = ke[W0], N0 += x0;
                 else {
                   z0 = oe[P0].precision - 8, Z0 = (128 << z0) + 0.5;
                   var Fe = Math.pow(2, oe[P0].precision) - 1;
                   for (N0 = P0, W0 = 0, ne = ke.length; W0 < ne; W0++)
-                    x0 = ke[W0], ie[N0] = Math.max(Math.min(x0 + Z0, Fe), 0), N0 += E0;
+                    k0 = ke[W0], ie[N0] = Math.max(Math.min(k0 + Z0, Fe), 0), N0 += x0;
                 }
               }
           L0.push(Se);
@@ -11040,7 +11038,7 @@ function requireJpx() {
         return L0;
       }
       function ii(ue, U0) {
-        for (var oe = ue.SIZ, E0 = oe.Csiz, L0 = ue.tiles[U0], ee = 0; ee < E0; ee++) {
+        for (var oe = ue.SIZ, x0 = oe.Csiz, L0 = ue.tiles[U0], ee = 0; ee < x0; ee++) {
           var Y0 = L0.components[ee], G0 = ue.currentTile.QCC[ee] !== void 0 ? ue.currentTile.QCC[ee] : ue.currentTile.QCD;
           Y0.quantizationParameters = G0;
           var Q0 = ue.currentTile.COC[ee] !== void 0 ? ue.currentTile.COC[ee] : ue.currentTile.COD;
@@ -11049,95 +11047,95 @@ function requireJpx() {
         L0.codingStyleDefaultParameters = ue.currentTile.COD;
       }
       var Ve = function() {
-        function U0(oe, E0) {
-          var L0 = Q(Math.max(oe, E0)) + 1;
+        function U0(oe, x0) {
+          var L0 = Q(Math.max(oe, x0)) + 1;
           this.levels = [];
           for (var ee = 0; ee < L0; ee++) {
             var Y0 = {
               width: oe,
-              height: E0,
+              height: x0,
               items: []
             };
-            this.levels.push(Y0), oe = Math.ceil(oe / 2), E0 = Math.ceil(E0 / 2);
+            this.levels.push(Y0), oe = Math.ceil(oe / 2), x0 = Math.ceil(x0 / 2);
           }
         }
         return U0.prototype = {
-          reset: function(E0, L0) {
+          reset: function(x0, L0) {
             for (var ee = 0, Y0 = 0, G0; ee < this.levels.length; ) {
               G0 = this.levels[ee];
-              var Q0 = E0 + L0 * G0.width;
+              var Q0 = x0 + L0 * G0.width;
               if (G0.items[Q0] !== void 0) {
                 Y0 = G0.items[Q0];
                 break;
               }
-              G0.index = Q0, E0 >>= 1, L0 >>= 1, ee++;
+              G0.index = Q0, x0 >>= 1, L0 >>= 1, ee++;
             }
             ee--, G0 = this.levels[ee], G0.items[G0.index] = Y0, this.currentLevel = ee, delete this.value;
           },
           incrementValue: function() {
-            var E0 = this.levels[this.currentLevel];
-            E0.items[E0.index]++;
+            var x0 = this.levels[this.currentLevel];
+            x0.items[x0.index]++;
           },
           nextLevel: function() {
-            var E0 = this.currentLevel, L0 = this.levels[E0], ee = L0.items[L0.index];
-            return E0--, E0 < 0 ? (this.value = ee, !1) : (this.currentLevel = E0, L0 = this.levels[E0], L0.items[L0.index] = ee, !0);
+            var x0 = this.currentLevel, L0 = this.levels[x0], ee = L0.items[L0.index];
+            return x0--, x0 < 0 ? (this.value = ee, !1) : (this.currentLevel = x0, L0 = this.levels[x0], L0.items[L0.index] = ee, !0);
           }
         }, U0;
       }(), Xe = function() {
-        function U0(oe, E0) {
-          var L0 = Q(Math.max(oe, E0)) + 1;
+        function U0(oe, x0) {
+          var L0 = Q(Math.max(oe, x0)) + 1;
           this.levels = [];
           for (var ee = 0; ee < L0; ee++) {
-            for (var Y0 = new Uint8Array(oe * E0), G0 = new Uint8Array(oe * E0), Q0 = 0, P0 = Y0.length; Q0 < P0; Q0++)
+            for (var Y0 = new Uint8Array(oe * x0), G0 = new Uint8Array(oe * x0), Q0 = 0, P0 = Y0.length; Q0 < P0; Q0++)
               Y0[Q0] = 0, G0[Q0] = 0;
             var re = {
               width: oe,
-              height: E0,
+              height: x0,
               items: Y0,
               status: G0
             };
-            this.levels.push(re), oe = Math.ceil(oe / 2), E0 = Math.ceil(E0 / 2);
+            this.levels.push(re), oe = Math.ceil(oe / 2), x0 = Math.ceil(x0 / 2);
           }
         }
         return U0.prototype = {
-          reset: function(E0, L0, ee) {
+          reset: function(x0, L0, ee) {
             this.currentStopValue = ee;
             for (var Y0 = 0; Y0 < this.levels.length; ) {
-              var G0 = this.levels[Y0], Q0 = E0 + L0 * G0.width;
-              G0.index = Q0, E0 >>= 1, L0 >>= 1, Y0++;
+              var G0 = this.levels[Y0], Q0 = x0 + L0 * G0.width;
+              G0.index = Q0, x0 >>= 1, L0 >>= 1, Y0++;
             }
             this.currentLevel = this.levels.length - 1, this.minValue = this.levels[this.currentLevel].items[0];
           },
           incrementValue: function() {
-            var E0 = this.levels[this.currentLevel];
-            E0.items[E0.index] = E0.items[E0.index] + 1, E0.items[E0.index] > this.minValue && (this.minValue = E0.items[E0.index]);
+            var x0 = this.levels[this.currentLevel];
+            x0.items[x0.index] = x0.items[x0.index] + 1, x0.items[x0.index] > this.minValue && (this.minValue = x0.items[x0.index]);
           },
           nextLevel: function() {
-            var E0 = this.currentLevel;
-            if (E0--, E0 < 0)
+            var x0 = this.currentLevel;
+            if (x0--, x0 < 0)
               return !1;
-            this.currentLevel = E0;
-            var L0 = this.levels[E0];
+            this.currentLevel = x0;
+            var L0 = this.levels[x0];
             return L0.items[L0.index] < this.minValue ? L0.items[L0.index] = this.minValue : L0.items[L0.index] > this.minValue && (this.minValue = L0.items[L0.index]), !0;
           },
           isLeaf: function() {
             return this.currentLevel === 0;
           },
           isAboveThreshold: function() {
-            var E0 = this.currentLevel, L0 = this.levels[E0];
+            var x0 = this.currentLevel, L0 = this.levels[x0];
             return L0.items[L0.index] > this.currentStopValue;
           },
           isKnown: function() {
-            var E0 = this.currentLevel, L0 = this.levels[E0];
+            var x0 = this.currentLevel, L0 = this.levels[x0];
             return L0.status[L0.index] > 0;
           },
           setKnown: function() {
-            var E0 = this.currentLevel, L0 = this.levels[E0];
+            var x0 = this.currentLevel, L0 = this.levels[x0];
             L0.status[L0.index] = 1;
           }
         }, U0;
       }(), di = function() {
-        var U0 = 17, oe = 18, E0 = new Uint8Array([
+        var U0 = 17, oe = 18, x0 = new Uint8Array([
           0,
           5,
           8,
@@ -11367,7 +11365,7 @@ function requireJpx() {
           8
         ]);
         function Y0(G0, Q0, P0, re, J0) {
-          this.width = G0, this.height = Q0, this.contextLabelTable = P0 === "HH" ? ee : P0 === "HL" ? L0 : E0;
+          this.width = G0, this.height = Q0, this.contextLabelTable = P0 === "HH" ? ee : P0 === "HL" ? L0 : x0;
           var ie = G0 * Q0;
           this.neighborsSignificance = new Uint8Array(ie), this.coefficentsSign = new Uint8Array(ie), this.coefficentsMagnitude = J0 > 14 ? new Uint32Array(ie) : J0 > 6 ? new Uint16Array(ie) : new Uint8Array(ie), this.processingFlags = new Uint8Array(ie);
           var Se = new Uint8Array(ie);
@@ -11431,8 +11429,8 @@ function requireJpx() {
             for (var Q0 = this.decoder, P0 = this.width, re = this.height, J0 = this.neighborsSignificance, ie = this.coefficentsMagnitude, Se = this.coefficentsSign, z0 = this.contexts, Z0 = this.contextLabelTable, h0 = this.bitsDecoded, Ie = this.processingFlags, d0 = 1, N0 = 2, W0 = P0, ne = P0 * 2, R0 = P0 * 3, q0, i0 = 0; i0 < re; i0 = q0) {
               q0 = Math.min(i0 + 4, re);
               for (var c0 = i0 * P0, De = i0 + 3 < re, z = 0; z < P0; z++) {
-                var H0 = c0 + z, x0 = De && Ie[H0] === 0 && Ie[H0 + W0] === 0 && Ie[H0 + ne] === 0 && Ie[H0 + R0] === 0 && J0[H0] === 0 && J0[H0 + W0] === 0 && J0[H0 + ne] === 0 && J0[H0 + R0] === 0, p0 = 0, M0 = H0, j0 = i0, Le;
-                if (x0) {
+                var H0 = c0 + z, k0 = De && Ie[H0] === 0 && Ie[H0 + W0] === 0 && Ie[H0 + ne] === 0 && Ie[H0 + R0] === 0 && J0[H0] === 0 && J0[H0 + W0] === 0 && J0[H0 + ne] === 0 && J0[H0 + R0] === 0, p0 = 0, M0 = H0, j0 = i0, Le;
+                if (k0) {
                   var I0 = Q0.readBit(z0, oe);
                   if (!I0) {
                     h0[H0]++, h0[H0 + W0]++, h0[H0 + ne]++, h0[H0 + R0]++;
@@ -11460,19 +11458,19 @@ function requireJpx() {
       }(), pi = function() {
         function U0() {
         }
-        return U0.prototype.calculate = function(E0, L0, ee) {
-          for (var Y0 = E0[0], G0 = 1, Q0 = E0.length; G0 < Q0; G0++)
-            Y0 = this.iterate(Y0, E0[G0], L0, ee);
+        return U0.prototype.calculate = function(x0, L0, ee) {
+          for (var Y0 = x0[0], G0 = 1, Q0 = x0.length; G0 < Q0; G0++)
+            Y0 = this.iterate(Y0, x0[G0], L0, ee);
           return Y0;
-        }, U0.prototype.extend = function(E0, L0, ee) {
+        }, U0.prototype.extend = function(x0, L0, ee) {
           var Y0 = L0 - 1, G0 = L0 + 1, Q0 = L0 + ee - 2, P0 = L0 + ee;
-          E0[Y0--] = E0[G0++], E0[P0++] = E0[Q0--], E0[Y0--] = E0[G0++], E0[P0++] = E0[Q0--], E0[Y0--] = E0[G0++], E0[P0++] = E0[Q0--], E0[Y0] = E0[G0], E0[P0] = E0[Q0];
-        }, U0.prototype.iterate = function(E0, L0, ee, Y0) {
-          var G0 = E0.width, Q0 = E0.height, P0 = E0.items, re = L0.width, J0 = L0.height, ie = L0.items, Se, z0, Z0, h0, Ie, d0;
+          x0[Y0--] = x0[G0++], x0[P0++] = x0[Q0--], x0[Y0--] = x0[G0++], x0[P0++] = x0[Q0--], x0[Y0--] = x0[G0++], x0[P0++] = x0[Q0--], x0[Y0] = x0[G0], x0[P0] = x0[Q0];
+        }, U0.prototype.iterate = function(x0, L0, ee, Y0) {
+          var G0 = x0.width, Q0 = x0.height, P0 = x0.items, re = L0.width, J0 = L0.height, ie = L0.items, Se, z0, Z0, h0, Ie, d0;
           for (Z0 = 0, Se = 0; Se < Q0; Se++)
             for (h0 = Se * 2 * re, z0 = 0; z0 < G0; z0++, Z0++, h0 += 2)
               ie[h0] = P0[Z0];
-          P0 = E0.items = null;
+          P0 = x0.items = null;
           var N0 = 4, W0 = new Float32Array(re + 2 * N0);
           if (re === 1) {
             if (ee & 1)
@@ -11488,14 +11486,14 @@ function requireJpx() {
           for (Se = 0; Se < ne; Se++)
             R0.push(new Float32Array(J0 + 2 * N0));
           var q0, i0 = 0;
-          if (E0 = N0 + J0, J0 === 1) {
+          if (x0 = N0 + J0, J0 === 1) {
             if (Y0 & 1)
               for (Ie = 0; Ie < re; Ie++)
                 ie[Ie] *= 0.5;
           } else
             for (Ie = 0; Ie < re; Ie++) {
               if (i0 === 0) {
-                for (ne = Math.min(re - Ie, ne), Z0 = Ie, h0 = N0; h0 < E0; Z0 += re, h0++)
+                for (ne = Math.min(re - Ie, ne), Z0 = Ie, h0 = N0; h0 < x0; Z0 += re, h0++)
                   for (q0 = 0; q0 < ne; q0++)
                     R0[q0][h0] = ie[Z0 + q0];
                 i0 = ne;
@@ -11503,7 +11501,7 @@ function requireJpx() {
               i0--;
               var c0 = R0[i0];
               if (this.extend(c0, N0, J0), this.filter(c0, N0, J0), i0 === 0)
-                for (Z0 = Ie - ne + 1, h0 = N0; h0 < E0; Z0 += re, h0++)
+                for (Z0 = Ie - ne + 1, h0 = N0; h0 < x0; Z0 += re, h0++)
                   for (q0 = 0; q0 < ne; q0++)
                     ie[Z0 + q0] = R0[q0][h0];
             }
@@ -11517,34 +11515,34 @@ function requireJpx() {
         function U0() {
           pi.call(this);
         }
-        return U0.prototype = Object.create(pi.prototype), U0.prototype.filter = function(E0, L0, ee) {
+        return U0.prototype = Object.create(pi.prototype), U0.prototype.filter = function(x0, L0, ee) {
           var Y0 = ee >> 1;
           L0 = L0 | 0;
           var G0, Q0, P0, re, J0 = -1.586134342059924, ie = -0.052980118572961, Se = 0.882911075530934, z0 = 0.443506852043971, Z0 = 1.230174104914001, h0 = 1 / Z0;
           for (G0 = L0 - 3, Q0 = Y0 + 4; Q0--; G0 += 2)
-            E0[G0] *= h0;
-          for (G0 = L0 - 2, P0 = z0 * E0[G0 - 1], Q0 = Y0 + 3; Q0-- && (re = z0 * E0[G0 + 1], E0[G0] = Z0 * E0[G0] - P0 - re, Q0--); G0 += 2)
-            G0 += 2, P0 = z0 * E0[G0 + 1], E0[G0] = Z0 * E0[G0] - P0 - re;
-          for (G0 = L0 - 1, P0 = Se * E0[G0 - 1], Q0 = Y0 + 2; Q0-- && (re = Se * E0[G0 + 1], E0[G0] -= P0 + re, Q0--); G0 += 2)
-            G0 += 2, P0 = Se * E0[G0 + 1], E0[G0] -= P0 + re;
-          for (G0 = L0, P0 = ie * E0[G0 - 1], Q0 = Y0 + 1; Q0-- && (re = ie * E0[G0 + 1], E0[G0] -= P0 + re, Q0--); G0 += 2)
-            G0 += 2, P0 = ie * E0[G0 + 1], E0[G0] -= P0 + re;
+            x0[G0] *= h0;
+          for (G0 = L0 - 2, P0 = z0 * x0[G0 - 1], Q0 = Y0 + 3; Q0-- && (re = z0 * x0[G0 + 1], x0[G0] = Z0 * x0[G0] - P0 - re, Q0--); G0 += 2)
+            G0 += 2, P0 = z0 * x0[G0 + 1], x0[G0] = Z0 * x0[G0] - P0 - re;
+          for (G0 = L0 - 1, P0 = Se * x0[G0 - 1], Q0 = Y0 + 2; Q0-- && (re = Se * x0[G0 + 1], x0[G0] -= P0 + re, Q0--); G0 += 2)
+            G0 += 2, P0 = Se * x0[G0 + 1], x0[G0] -= P0 + re;
+          for (G0 = L0, P0 = ie * x0[G0 - 1], Q0 = Y0 + 1; Q0-- && (re = ie * x0[G0 + 1], x0[G0] -= P0 + re, Q0--); G0 += 2)
+            G0 += 2, P0 = ie * x0[G0 + 1], x0[G0] -= P0 + re;
           if (Y0 !== 0)
-            for (G0 = L0 + 1, P0 = J0 * E0[G0 - 1], Q0 = Y0; Q0-- && (re = J0 * E0[G0 + 1], E0[G0] -= P0 + re, Q0--); G0 += 2)
-              G0 += 2, P0 = J0 * E0[G0 + 1], E0[G0] -= P0 + re;
+            for (G0 = L0 + 1, P0 = J0 * x0[G0 - 1], Q0 = Y0; Q0-- && (re = J0 * x0[G0 + 1], x0[G0] -= P0 + re, Q0--); G0 += 2)
+              G0 += 2, P0 = J0 * x0[G0 + 1], x0[G0] -= P0 + re;
         }, U0;
       }(), $e = function() {
         function U0() {
           pi.call(this);
         }
-        return U0.prototype = Object.create(pi.prototype), U0.prototype.filter = function(E0, L0, ee) {
+        return U0.prototype = Object.create(pi.prototype), U0.prototype.filter = function(x0, L0, ee) {
           var Y0 = ee >> 1;
           L0 = L0 | 0;
           var G0, Q0;
           for (G0 = L0, Q0 = Y0 + 1; Q0--; G0 += 2)
-            E0[G0] -= E0[G0 - 1] + E0[G0 + 1] + 2 >> 2;
+            x0[G0] -= x0[G0 - 1] + x0[G0 + 1] + 2 >> 2;
           for (G0 = L0 + 1, Q0 = Y0; Q0--; G0 += 2)
-            E0[G0] += E0[G0 - 1] + E0[G0 + 1] >> 1;
+            x0[G0] += x0[G0 - 1] + x0[G0 + 1] >> 1;
         }, U0;
       }();
       return m0;
@@ -11606,26 +11604,26 @@ function requireJpx() {
         byteIn: function() {
           var o0 = this.data, a = this.bp;
           if (o0[a] === 255) {
-            var k0 = o0[a + 1];
-            k0 > 143 ? (this.clow += 65280, this.ct = 8) : (a++, this.clow += o0[a] << 9, this.ct = 7, this.bp = a);
+            var E0 = o0[a + 1];
+            E0 > 143 ? (this.clow += 65280, this.ct = 8) : (a++, this.clow += o0[a] << 9, this.ct = 7, this.bp = a);
           } else
             a++, this.clow += a < this.dataEnd ? o0[a] << 8 : 65280, this.ct = 8, this.bp = a;
           this.clow > 65535 && (this.chigh += this.clow >> 16, this.clow &= 65535);
         },
         // C.3.2 Decoding a decision (DECODE)
         readBit: function(o0, a) {
-          var k0 = o0[a] >> 1, g0 = o0[a] & 1, A0 = $[k0], S0 = A0.qe, w0, T0 = this.a - S0;
+          var E0 = o0[a] >> 1, g0 = o0[a] & 1, A0 = $[E0], S0 = A0.qe, T0, w0 = this.a - S0;
           if (this.chigh < S0)
-            T0 < S0 ? (T0 = S0, w0 = g0, k0 = A0.nmps) : (T0 = S0, w0 = 1 ^ g0, A0.switchFlag === 1 && (g0 = w0), k0 = A0.nlps);
+            w0 < S0 ? (w0 = S0, T0 = g0, E0 = A0.nmps) : (w0 = S0, T0 = 1 ^ g0, A0.switchFlag === 1 && (g0 = T0), E0 = A0.nlps);
           else {
-            if (this.chigh -= S0, T0 & 32768)
-              return this.a = T0, g0;
-            T0 < S0 ? (w0 = 1 ^ g0, A0.switchFlag === 1 && (g0 = w0), k0 = A0.nlps) : (w0 = g0, k0 = A0.nmps);
+            if (this.chigh -= S0, w0 & 32768)
+              return this.a = w0, g0;
+            w0 < S0 ? (T0 = 1 ^ g0, A0.switchFlag === 1 && (g0 = T0), E0 = A0.nlps) : (T0 = g0, E0 = A0.nmps);
           }
           do
-            this.ct === 0 && this.byteIn(), T0 <<= 1, this.chigh = this.chigh << 1 & 65535 | this.clow >> 15 & 1, this.clow = this.clow << 1 & 65535, this.ct--;
-          while (!(T0 & 32768));
-          return this.a = T0, o0[a] = k0 << 1 | g0, w0;
+            this.ct === 0 && this.byteIn(), w0 <<= 1, this.chigh = this.chigh << 1 & 65535 | this.clow >> 15 & 1, this.clow = this.clow << 1 & 65535, this.ct--;
+          while (!(w0 & 32768));
+          return this.a = w0, o0[a] = E0 << 1 | g0, T0;
         }
       }, m0;
     }(), v = typeof window > "u" ? commonjsGlobal : window;
@@ -11875,8 +11873,8 @@ function requireJpx() {
       function $() {
       }
       var m0 = ["rgb(", 0, ",", 0, ",", 0, ")"];
-      return $.makeCssRgb = function(o0, a, k0) {
-        return m0[1] = o0, m0[3] = a, m0[5] = k0, m0.join("");
+      return $.makeCssRgb = function(o0, a, E0) {
+        return m0[1] = o0, m0[3] = a, m0[5] = E0, m0.join("");
       }, $.transform = function(o0, a) {
         return [
           o0[0] * a[0] + o0[2] * a[1],
@@ -11887,18 +11885,18 @@ function requireJpx() {
           o0[1] * a[4] + o0[3] * a[5] + o0[5]
         ];
       }, $.applyTransform = function(o0, a) {
-        var k0 = o0[0] * a[0] + o0[1] * a[2] + a[4], g0 = o0[0] * a[1] + o0[1] * a[3] + a[5];
-        return [k0, g0];
+        var E0 = o0[0] * a[0] + o0[1] * a[2] + a[4], g0 = o0[0] * a[1] + o0[1] * a[3] + a[5];
+        return [E0, g0];
       }, $.applyInverseTransform = function(o0, a) {
-        var k0 = a[0] * a[3] - a[1] * a[2], g0 = (o0[0] * a[3] - o0[1] * a[2] + a[2] * a[5] - a[4] * a[3]) / k0, A0 = (-o0[0] * a[1] + o0[1] * a[0] + a[4] * a[1] - a[5] * a[0]) / k0;
+        var E0 = a[0] * a[3] - a[1] * a[2], g0 = (o0[0] * a[3] - o0[1] * a[2] + a[2] * a[5] - a[4] * a[3]) / E0, A0 = (-o0[0] * a[1] + o0[1] * a[0] + a[4] * a[1] - a[5] * a[0]) / E0;
         return [g0, A0];
       }, $.getAxialAlignedBoundingBox = function(o0, a) {
-        var k0 = $.applyTransform(o0, a), g0 = $.applyTransform(o0.slice(2, 4), a), A0 = $.applyTransform([o0[0], o0[3]], a), S0 = $.applyTransform([o0[2], o0[1]], a);
+        var E0 = $.applyTransform(o0, a), g0 = $.applyTransform(o0.slice(2, 4), a), A0 = $.applyTransform([o0[0], o0[3]], a), S0 = $.applyTransform([o0[2], o0[1]], a);
         return [
-          Math.min(k0[0], g0[0], A0[0], S0[0]),
-          Math.min(k0[1], g0[1], A0[1], S0[1]),
-          Math.max(k0[0], g0[0], A0[0], S0[0]),
-          Math.max(k0[1], g0[1], A0[1], S0[1])
+          Math.min(E0[0], g0[0], A0[0], S0[0]),
+          Math.min(E0[1], g0[1], A0[1], S0[1]),
+          Math.max(E0[0], g0[0], A0[0], S0[0]),
+          Math.max(E0[1], g0[1], A0[1], S0[1])
         ];
       }, $.inverseTransform = function(o0) {
         var a = o0[0] * o0[3] - o0[1] * o0[2];
@@ -11917,16 +11915,16 @@ function requireJpx() {
           o0[6] * a[0] + o0[7] * a[1] + o0[8] * a[2]
         ];
       }, $.singularValueDecompose2dScale = function(o0) {
-        var a = [o0[0], o0[2], o0[1], o0[3]], k0 = o0[0] * a[0] + o0[1] * a[2], g0 = o0[0] * a[1] + o0[1] * a[3], A0 = o0[2] * a[0] + o0[3] * a[2], S0 = o0[2] * a[1] + o0[3] * a[3], w0 = (k0 + S0) / 2, T0 = Math.sqrt((k0 + S0) * (k0 + S0) - 4 * (k0 * S0 - A0 * g0)) / 2, F0 = w0 + T0 || 1, O0 = w0 - T0 || 1;
+        var a = [o0[0], o0[2], o0[1], o0[3]], E0 = o0[0] * a[0] + o0[1] * a[2], g0 = o0[0] * a[1] + o0[1] * a[3], A0 = o0[2] * a[0] + o0[3] * a[2], S0 = o0[2] * a[1] + o0[3] * a[3], T0 = (E0 + S0) / 2, w0 = Math.sqrt((E0 + S0) * (E0 + S0) - 4 * (E0 * S0 - A0 * g0)) / 2, F0 = T0 + w0 || 1, O0 = T0 - w0 || 1;
         return [Math.sqrt(F0), Math.sqrt(O0)];
       }, $.normalizeRect = function(o0) {
         var a = o0.slice(0);
         return o0[0] > o0[2] && (a[0] = o0[2], a[2] = o0[0]), o0[1] > o0[3] && (a[1] = o0[3], a[3] = o0[1]), a;
       }, $.intersect = function(o0, a) {
-        function k0(w0, T0) {
-          return w0 - T0;
+        function E0(T0, w0) {
+          return T0 - w0;
         }
-        var g0 = [o0[0], o0[2], a[0], a[2]].sort(k0), A0 = [o0[1], o0[3], a[1], a[3]].sort(k0), S0 = [];
+        var g0 = [o0[0], o0[2], a[0], a[2]].sort(E0), A0 = [o0[1], o0[3], a[1], a[3]].sort(E0), S0 = [];
         if (o0 = $.normalizeRect(o0), a = $.normalizeRect(a), g0[0] === o0[0] && g0[1] === a[0] || g0[0] === a[0] && g0[1] === o0[0])
           S0[0] = g0[1], S0[2] = g0[2];
         else
@@ -11943,50 +11941,50 @@ function requireJpx() {
       }, $.prependToArray = function(o0, a) {
         Array.prototype.unshift.apply(o0, a);
       }, $.extendObj = function(o0, a) {
-        for (var k0 in a)
-          o0[k0] = a[k0];
+        for (var E0 in a)
+          o0[E0] = a[E0];
       }, $.getInheritableProperty = function(o0, a) {
         for (; o0 && !o0.has(a); )
           o0 = o0.get("Parent");
         return o0 ? o0.get(a) : null;
-      }, $.inherit = function(o0, a, k0) {
+      }, $.inherit = function(o0, a, E0) {
         o0.prototype = Object.create(a.prototype), o0.prototype.constructor = o0;
-        for (var g0 in k0)
-          o0.prototype[g0] = k0[g0];
+        for (var g0 in E0)
+          o0.prototype[g0] = E0[g0];
       }, $.loadScript = function(o0, a) {
-        var k0 = document.createElement("script"), g0 = !1;
-        k0.setAttribute("src", o0), a && (k0.onload = function() {
+        var E0 = document.createElement("script"), g0 = !1;
+        E0.setAttribute("src", o0), a && (E0.onload = function() {
           g0 || a(), g0 = !0;
-        }), document.getElementsByTagName("head")[0].appendChild(k0);
+        }), document.getElementsByTagName("head")[0].appendChild(E0);
       }, $;
     }();
     y.PageViewport = function() {
-      function $(m0, u0, o0, a, k0, g0) {
-        this.viewBox = m0, this.scale = u0, this.rotation = o0, this.offsetX = a, this.offsetY = k0;
-        var A0 = (m0[2] + m0[0]) / 2, S0 = (m0[3] + m0[1]) / 2, w0, T0, F0, O0;
+      function $(m0, u0, o0, a, E0, g0) {
+        this.viewBox = m0, this.scale = u0, this.rotation = o0, this.offsetX = a, this.offsetY = E0;
+        var A0 = (m0[2] + m0[0]) / 2, S0 = (m0[3] + m0[1]) / 2, T0, w0, F0, O0;
         switch (o0 = o0 % 360, o0 = o0 < 0 ? o0 + 360 : o0, o0) {
           case 180:
-            w0 = -1, T0 = 0, F0 = 0, O0 = 1;
+            T0 = -1, w0 = 0, F0 = 0, O0 = 1;
             break;
           case 90:
-            w0 = 0, T0 = 1, F0 = 1, O0 = 0;
+            T0 = 0, w0 = 1, F0 = 1, O0 = 0;
             break;
           case 270:
-            w0 = 0, T0 = -1, F0 = -1, O0 = 0;
+            T0 = 0, w0 = -1, F0 = -1, O0 = 0;
             break;
           default:
-            w0 = 1, T0 = 0, F0 = 0, O0 = -1;
+            T0 = 1, w0 = 0, F0 = 0, O0 = -1;
             break;
         }
         g0 && (F0 = -F0, O0 = -O0);
         var $0, Re, Te, Ye;
-        w0 === 0 ? ($0 = Math.abs(S0 - m0[1]) * u0 + a, Re = Math.abs(A0 - m0[0]) * u0 + k0, Te = Math.abs(m0[3] - m0[1]) * u0, Ye = Math.abs(m0[2] - m0[0]) * u0) : ($0 = Math.abs(A0 - m0[0]) * u0 + a, Re = Math.abs(S0 - m0[1]) * u0 + k0, Te = Math.abs(m0[2] - m0[0]) * u0, Ye = Math.abs(m0[3] - m0[1]) * u0), this.transform = [
-          w0 * u0,
+        T0 === 0 ? ($0 = Math.abs(S0 - m0[1]) * u0 + a, Re = Math.abs(A0 - m0[0]) * u0 + E0, Te = Math.abs(m0[3] - m0[1]) * u0, Ye = Math.abs(m0[2] - m0[0]) * u0) : ($0 = Math.abs(A0 - m0[0]) * u0 + a, Re = Math.abs(S0 - m0[1]) * u0 + E0, Te = Math.abs(m0[2] - m0[0]) * u0, Ye = Math.abs(m0[3] - m0[1]) * u0), this.transform = [
           T0 * u0,
+          w0 * u0,
           F0 * u0,
           O0 * u0,
-          $0 - w0 * u0 * A0 - F0 * u0 * S0,
-          Re - T0 * u0 * A0 - O0 * u0 * S0
+          $0 - T0 * u0 * A0 - F0 * u0 * S0,
+          Re - w0 * u0 * A0 - O0 * u0 * S0
         ], this.width = Te, this.height = Ye, this.fontScale = u0;
       }
       return $.prototype = /** @lends PDFJS.PageViewport.prototype */
@@ -12057,14 +12055,14 @@ function requireJpx() {
     y.createPromiseCapability = D, function() {
       if (v.Promise) {
         typeof v.Promise.all != "function" && (v.Promise.all = function(g0) {
-          var A0 = 0, S0 = [], w0, T0, F0 = new v.Promise(function(O0, $0) {
-            w0 = O0, T0 = $0;
+          var A0 = 0, S0 = [], T0, w0, F0 = new v.Promise(function(O0, $0) {
+            T0 = O0, w0 = $0;
           });
           return g0.forEach(function(O0, $0) {
             A0++, O0.then(function(Re) {
-              S0[$0] = Re, A0--, A0 === 0 && w0(S0);
-            }, T0);
-          }), A0 === 0 && w0(S0), F0;
+              S0[$0] = Re, A0--, A0 === 0 && T0(S0);
+            }, w0);
+          }), A0 === 0 && T0(S0), F0;
         }), typeof v.Promise.resolve != "function" && (v.Promise.resolve = function(g0) {
           return new v.Promise(function(A0) {
             A0(g0);
@@ -12088,13 +12086,13 @@ function requireJpx() {
         },
         runHandlers: function() {
           for (var A0 = 1, S0 = Date.now() + A0; this.handlers.length > 0; ) {
-            var w0 = this.handlers.shift(), T0 = w0.thisPromise._status, F0 = w0.thisPromise._value;
+            var T0 = this.handlers.shift(), w0 = T0.thisPromise._status, F0 = T0.thisPromise._value;
             try {
-              T0 === m0 ? typeof w0.onResolve == "function" && (F0 = w0.onResolve(F0)) : typeof w0.onReject == "function" && (F0 = w0.onReject(F0), T0 = m0, w0.thisPromise._unhandledRejection && this.removeUnhandeledRejection(w0.thisPromise));
+              w0 === m0 ? typeof T0.onResolve == "function" && (F0 = T0.onResolve(F0)) : typeof T0.onReject == "function" && (F0 = T0.onReject(F0), w0 = m0, T0.thisPromise._unhandledRejection && this.removeUnhandeledRejection(T0.thisPromise));
             } catch (O0) {
-              T0 = u0, F0 = O0;
+              w0 = u0, F0 = O0;
             }
-            if (w0.nextPromise._updateStatus(T0, F0), Date.now() >= S0)
+            if (T0.nextPromise._updateStatus(w0, F0), Date.now() >= S0)
               break;
           }
           if (this.handlers.length > 0) {
@@ -12117,17 +12115,17 @@ function requireJpx() {
         scheduleRejectionCheck: function() {
           this.pendingRejectionCheck || (this.pendingRejectionCheck = !0, setTimeout(function() {
             this.pendingRejectionCheck = !1;
-            for (var S0 = Date.now(), w0 = 0; w0 < this.unhandledRejections.length; w0++)
-              if (S0 - this.unhandledRejections[w0].time > o0) {
-                var T0 = this.unhandledRejections[w0].promise._value, F0 = "Unhandled rejection: " + T0;
-                T0.stack && (F0 += `
-` + T0.stack), E(F0), this.unhandledRejections.splice(w0), w0--;
+            for (var S0 = Date.now(), T0 = 0; T0 < this.unhandledRejections.length; T0++)
+              if (S0 - this.unhandledRejections[T0].time > o0) {
+                var w0 = this.unhandledRejections[T0].promise._value, F0 = "Unhandled rejection: " + w0;
+                w0.stack && (F0 += `
+` + w0.stack), E(F0), this.unhandledRejections.splice(T0), T0--;
               }
             this.unhandledRejections.length && this.scheduleRejectionCheck();
           }.bind(this), o0));
         }
       };
-      function k0(g0) {
+      function E0(g0) {
         this._status = $, this._handlers = [];
         try {
           g0.call(this, this._resolve.bind(this), this._reject.bind(this));
@@ -12135,42 +12133,42 @@ function requireJpx() {
           this._reject(A0);
         }
       }
-      k0.all = function(A0) {
-        var S0, w0, T0 = new k0(function(He, B0) {
-          S0 = He, w0 = B0;
+      E0.all = function(A0) {
+        var S0, T0, w0 = new E0(function(He, B0) {
+          S0 = He, T0 = B0;
         }), F0 = A0.length, O0 = [];
         if (F0 === 0)
-          return S0(O0), T0;
+          return S0(O0), w0;
         function $0(He) {
-          T0._status !== u0 && (O0 = [], w0(He));
+          w0._status !== u0 && (O0 = [], T0(He));
         }
         for (var Re = 0, Te = A0.length; Re < Te; ++Re) {
           var Ye = A0[Re], Qe = function(He) {
             return function(B0) {
-              T0._status !== u0 && (O0[He] = B0, F0--, F0 === 0 && S0(O0));
+              w0._status !== u0 && (O0[He] = B0, F0--, F0 === 0 && S0(O0));
             };
           }(Re);
-          k0.isPromise(Ye) ? Ye.then(Qe, $0) : Qe(Ye);
+          E0.isPromise(Ye) ? Ye.then(Qe, $0) : Qe(Ye);
         }
-        return T0;
-      }, k0.isPromise = function(A0) {
+        return w0;
+      }, E0.isPromise = function(A0) {
         return A0 && typeof A0.then == "function";
-      }, k0.resolve = function(A0) {
-        return new k0(function(S0) {
+      }, E0.resolve = function(A0) {
+        return new E0(function(S0) {
           S0(A0);
         });
-      }, k0.reject = function(A0) {
-        return new k0(function(S0, w0) {
-          w0(A0);
+      }, E0.reject = function(A0) {
+        return new E0(function(S0, T0) {
+          T0(A0);
         });
-      }, k0.prototype = {
+      }, E0.prototype = {
         _status: null,
         _value: null,
         _handlers: null,
         _unhandledRejection: null,
         _updateStatus: function(A0, S0) {
           if (!(this._status === m0 || this._status === u0)) {
-            if (A0 === m0 && k0.isPromise(S0)) {
+            if (A0 === m0 && E0.isPromise(S0)) {
               S0.then(
                 this._updateStatus.bind(this, m0),
                 this._updateStatus.bind(this, u0)
@@ -12187,20 +12185,20 @@ function requireJpx() {
           this._updateStatus(u0, A0);
         },
         then: function(A0, S0) {
-          var w0 = new k0(function(T0, F0) {
-            this.resolve = T0, this.reject = F0;
+          var T0 = new E0(function(w0, F0) {
+            this.resolve = w0, this.reject = F0;
           });
           return this._handlers.push({
             thisPromise: this,
             onResolve: A0,
             onReject: S0,
-            nextPromise: w0
-          }), a.scheduleHandlers(this), w0;
+            nextPromise: T0
+          }), a.scheduleHandlers(this), T0;
         },
         catch2: function(A0) {
           return this.then(void 0, A0);
         }
-      }, v.Promise = k0;
+      }, v.Promise = E0;
     }(), y.createBlob = function($, m0) {
       if (typeof Blob < "u")
         return new Blob([$], { type: m0 });
@@ -12213,11 +12211,11 @@ function requireJpx() {
           var a = y.createBlob(u0, o0);
           return URL.createObjectURL(a);
         }
-        for (var k0 = "data:" + o0 + ";base64,", g0 = 0, A0 = u0.length; g0 < A0; g0 += 3) {
-          var S0 = u0[g0] & 255, w0 = u0[g0 + 1] & 255, T0 = u0[g0 + 2] & 255, F0 = S0 >> 2, O0 = (S0 & 3) << 4 | w0 >> 4, $0 = g0 + 1 < A0 ? (w0 & 15) << 2 | T0 >> 6 : 64, Re = g0 + 2 < A0 ? T0 & 63 : 64;
-          k0 += $[F0] + $[O0] + $[$0] + $[Re];
+        for (var E0 = "data:" + o0 + ";base64,", g0 = 0, A0 = u0.length; g0 < A0; g0 += 3) {
+          var S0 = u0[g0] & 255, T0 = u0[g0 + 1] & 255, w0 = u0[g0 + 2] & 255, F0 = S0 >> 2, O0 = (S0 & 3) << 4 | T0 >> 4, $0 = g0 + 1 < A0 ? (T0 & 15) << 2 | w0 >> 6 : 64, Re = g0 + 2 < A0 ? w0 & 63 : 64;
+          E0 += $[F0] + $[O0] + $[$0] + $[Re];
         }
-        return k0;
+        return E0;
       };
     }(), m.exports && (m.exports = u);
   }(jpx)), jpxExports;
@@ -14142,7 +14140,7 @@ function requireCharLSDynamicMemoryBrowser() {
       }
       Module.asmGlobalArg = { Math, Int8Array, Int16Array, Int32Array, Uint8Array, Uint16Array, Uint32Array, Float32Array, Float64Array, NaN: NaN, Infinity: 1 / 0, byteLength }, Module.asmLibraryArg = { abort, assert, invoke_iiiiiiii, invoke_viiiii, invoke_iiiiiid, invoke_vi, invoke_vii, invoke_iiiiiii, invoke_ii, invoke_iiiiiiiiiiii, invoke_iiii, invoke_viiiiiiiiiiiiiii, invoke_viiiiii, invoke_viiiiiii, invoke_viiiiiiiiii, invoke_iii, invoke_iiiiii, invoke_diii, invoke_i, invoke_iiiii, invoke_viii, invoke_v, invoke_iiiiiiiii, invoke_iiiiid, invoke_viiii, _fabs, _strftime, _pthread_cond_wait, ___lock, _pthread_key_create, _abort, ___cxa_guard_acquire, ___setErrNo, ___gxx_personality_v0, ___assert_fail, ___cxa_free_exception, ___cxa_allocate_exception, ___cxa_find_matching_catch, __isLeapYear, ___cxa_guard_release, __addDays, _strftime_l, _emscripten_set_main_loop_timing, _llvm_eh_typeid_for, _sbrk, ___cxa_begin_catch, _emscripten_memcpy_big, ___cxa_end_catch, ___resumeException, __ZSt18uncaught_exceptionv, _sysconf, _pthread_getspecific, __arraySum, _pthread_self, _pthread_mutex_unlock, _pthread_once, ___syscall54, ___unlock, _pthread_cleanup_pop, _pthread_cond_broadcast, _emscripten_set_main_loop, _pthread_setspecific, ___cxa_atexit, ___cxa_throw, ___cxa_rethrow, ___syscall6, _pthread_cleanup_push, ___cxa_pure_virtual, _time, _pthread_mutex_lock, ___cxa_guard_abort, _atexit, ___syscall140, ___syscall145, ___syscall146, STACKTOP, STACK_MAX, tempDoublePtr, ABORT, cttz_i8, ___dso_handle };
       var asm = function(m, u, p) {
-        var v = m.Int8Array, y = m.Int16Array, T = m.Int32Array, E = m.Uint8Array, F = m.Uint16Array, _ = m.Uint32Array, V = m.Float32Array, H = m.Float64Array, d = new v(p), L = new y(p), e = new T(p), Q = new E(p), K = new F(p), Z = new _(p), J = new V(p), n0 = new H(p), a0 = m.byteLength, D = u.STACKTOP | 0, s0 = u.STACK_MAX | 0, $ = u.tempDoublePtr | 0, m0 = u.ABORT | 0, u0 = u.cttz_i8 | 0, o0 = u.___dso_handle | 0, a = 0, k0 = 0, g0 = 0, A0 = 0, S0 = m.NaN, w0 = m.Infinity, T0 = 0, F0 = 0, O0 = 0, $0 = 0, Re = 0, Te = 0, Ye = 0, Qe = 0, He = 0, B0 = 0, ii = 0, Ve = 0, Xe = 0, di = 0, pi = 0, Ai = 0, $e = 0, ue = 0, U0 = 0, oe = m.Math.floor, E0 = m.Math.abs, L0 = m.Math.sqrt, ee = m.Math.pow, Y0 = m.Math.cos, G0 = m.Math.sin, Q0 = m.Math.tan, P0 = m.Math.acos, re = m.Math.asin, J0 = m.Math.atan, ie = m.Math.atan2, Se = m.Math.exp, z0 = m.Math.log, Z0 = m.Math.ceil, h0 = m.Math.imul, Ie = m.Math.min, d0 = m.Math.clz32, N0 = u.abort, W0 = u.assert, ne = u.invoke_iiiiiiii, R0 = u.invoke_viiiii, q0 = u.invoke_iiiiiid, i0 = u.invoke_vi, c0 = u.invoke_vii, De = u.invoke_iiiiiii, z = u.invoke_ii, H0 = u.invoke_iiiiiiiiiiii, x0 = u.invoke_iiii, p0 = u.invoke_viiiiiiiiiiiiiii, M0 = u.invoke_viiiiii, j0 = u.invoke_viiiiiii, Le = u.invoke_viiiiiiiiii, I0 = u.invoke_iii, Me = u.invoke_iiiiii, Ze = u.invoke_diii, ke = u.invoke_i, Fe = u.invoke_iiiii, D0 = u.invoke_viii, qe = u.invoke_v, Ri = u.invoke_iiiiiiiii, Vi = u.invoke_iiiiid, V0 = u.invoke_viiii, Kt = u._fabs, Pi = u._strftime, Ji = u._pthread_cond_wait, Ui = u.___lock, st = u._pthread_key_create, fe = u._abort, pe = u.___cxa_guard_acquire, Ug = u.___setErrNo, Bg = u.___gxx_personality_v0, E1 = u.___assert_fail, de = u.___cxa_free_exception, me = u.___cxa_allocate_exception, j = u.___cxa_find_matching_catch, Vg = u.__isLeapYear, Ae = u.___cxa_guard_release, qg = u.__addDays, Pn = u._strftime_l, Gg = u._emscripten_set_main_loop_timing, Fr = u._llvm_eh_typeid_for, kt = u._sbrk, zi = u.___cxa_begin_catch, Ln = u._emscripten_memcpy_big, Xi = u.___cxa_end_catch, t0 = u.___resumeException, x1 = u.__ZSt18uncaught_exceptionv, Nn = u._sysconf, _n = u._pthread_getspecific, Qg = u.__arraySum, k1 = u._pthread_self, M1 = u._pthread_mutex_unlock, On = u._pthread_once, Un = u.___syscall54, Bn = u.___unlock, F1 = u._pthread_cleanup_pop, Vn = u._pthread_cond_broadcast, Hg = u._emscripten_set_main_loop, qn = u._pthread_setspecific, ve = u.___cxa_atexit, Oe = u.___cxa_throw, R1 = u.___cxa_rethrow, Gn = u.___syscall6, P1 = u._pthread_cleanup_push, Qn = u.___cxa_pure_virtual, Hn = u._time, L1 = u._pthread_mutex_lock, Hi = u.___cxa_guard_abort, Yg = u._atexit, Yn = u.___syscall140, N1 = u.___syscall145, _1 = u.___syscall146, zg = 0;
+        var v = m.Int8Array, y = m.Int16Array, T = m.Int32Array, E = m.Uint8Array, F = m.Uint16Array, _ = m.Uint32Array, V = m.Float32Array, H = m.Float64Array, d = new v(p), L = new y(p), e = new T(p), Q = new E(p), K = new F(p), Z = new _(p), J = new V(p), n0 = new H(p), a0 = m.byteLength, D = u.STACKTOP | 0, s0 = u.STACK_MAX | 0, $ = u.tempDoublePtr | 0, m0 = u.ABORT | 0, u0 = u.cttz_i8 | 0, o0 = u.___dso_handle | 0, a = 0, E0 = 0, g0 = 0, A0 = 0, S0 = m.NaN, T0 = m.Infinity, w0 = 0, F0 = 0, O0 = 0, $0 = 0, Re = 0, Te = 0, Ye = 0, Qe = 0, He = 0, B0 = 0, ii = 0, Ve = 0, Xe = 0, di = 0, pi = 0, Ai = 0, $e = 0, ue = 0, U0 = 0, oe = m.Math.floor, x0 = m.Math.abs, L0 = m.Math.sqrt, ee = m.Math.pow, Y0 = m.Math.cos, G0 = m.Math.sin, Q0 = m.Math.tan, P0 = m.Math.acos, re = m.Math.asin, J0 = m.Math.atan, ie = m.Math.atan2, Se = m.Math.exp, z0 = m.Math.log, Z0 = m.Math.ceil, h0 = m.Math.imul, Ie = m.Math.min, d0 = m.Math.clz32, N0 = u.abort, W0 = u.assert, ne = u.invoke_iiiiiiii, R0 = u.invoke_viiiii, q0 = u.invoke_iiiiiid, i0 = u.invoke_vi, c0 = u.invoke_vii, De = u.invoke_iiiiiii, z = u.invoke_ii, H0 = u.invoke_iiiiiiiiiiii, k0 = u.invoke_iiii, p0 = u.invoke_viiiiiiiiiiiiiii, M0 = u.invoke_viiiiii, j0 = u.invoke_viiiiiii, Le = u.invoke_viiiiiiiiii, I0 = u.invoke_iii, Me = u.invoke_iiiiii, Ze = u.invoke_diii, ke = u.invoke_i, Fe = u.invoke_iiiii, D0 = u.invoke_viii, qe = u.invoke_v, Ri = u.invoke_iiiiiiiii, Vi = u.invoke_iiiiid, V0 = u.invoke_viiii, Kt = u._fabs, Pi = u._strftime, Ji = u._pthread_cond_wait, Ui = u.___lock, st = u._pthread_key_create, fe = u._abort, pe = u.___cxa_guard_acquire, Ug = u.___setErrNo, Bg = u.___gxx_personality_v0, E1 = u.___assert_fail, de = u.___cxa_free_exception, me = u.___cxa_allocate_exception, j = u.___cxa_find_matching_catch, Vg = u.__isLeapYear, Ae = u.___cxa_guard_release, qg = u.__addDays, Pn = u._strftime_l, Gg = u._emscripten_set_main_loop_timing, Fr = u._llvm_eh_typeid_for, kt = u._sbrk, zi = u.___cxa_begin_catch, Ln = u._emscripten_memcpy_big, Xi = u.___cxa_end_catch, t0 = u.___resumeException, x1 = u.__ZSt18uncaught_exceptionv, Nn = u._sysconf, _n = u._pthread_getspecific, Qg = u.__arraySum, k1 = u._pthread_self, M1 = u._pthread_mutex_unlock, On = u._pthread_once, Un = u.___syscall54, Bn = u.___unlock, F1 = u._pthread_cleanup_pop, Vn = u._pthread_cond_broadcast, Hg = u._emscripten_set_main_loop, qn = u._pthread_setspecific, ve = u.___cxa_atexit, Oe = u.___cxa_throw, R1 = u.___cxa_rethrow, Gn = u.___syscall6, P1 = u._pthread_cleanup_push, Qn = u.___cxa_pure_virtual, Hn = u._time, L1 = u._pthread_mutex_lock, Hi = u.___cxa_guard_abort, Yg = u._atexit, Yn = u.___syscall140, N1 = u.___syscall145, _1 = u.___syscall146, zg = 0;
         function zn(t) {
           return a0(t) & 16777215 || a0(t) <= 16777215 || a0(t) > 2147483648 ? !1 : (d = new v(t), L = new y(t), e = new T(t), Q = new E(t), K = new F(t), Z = new _(t), J = new V(t), n0 = new H(t), p = t, !0);
         }
@@ -14161,7 +14159,7 @@ function requireCharLSDynamicMemoryBrowser() {
           t = t | 0, r = r | 0, D = t, s0 = r;
         }
         function bn(t, r) {
-          t = t | 0, r = r | 0, a || (a = t, k0 = r);
+          t = t | 0, r = r | 0, a || (a = t, E0 = r);
         }
         function jg(t) {
           t = t | 0, d[$ >> 0] = d[t >> 0], d[$ + 1 >> 0] = d[t + 1 >> 0], d[$ + 2 >> 0] = d[t + 2 >> 0], d[$ + 3 >> 0] = d[t + 3 >> 0];
@@ -15136,9 +15134,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -15179,9 +15177,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -15570,7 +15568,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -15608,7 +15606,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 c = j() | 0, f0(n), f0(o), he(l), n = c;
                 break;
               }
-              f0(n), a = 0, n = x0(28, c | 0, 49087, 24) | 0, t = a, a = 0, !(t & 1) && (a = 0, s = I0(36, n | 0, r | 0) | 0, r = a, a = 0, !(r & 1)) && (a = 0, x0(28, s | 0, 49112, 20) | 0, r = a, a = 0, !(r & 1)) && (t = me(16) | 0, a = 0, c0(64, f | 0, l | 0), r = a, a = 0, r & 1 ? n = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, t | 0, 1, 35648, f | 0), r = a, a = 0, r & 1 ? s = 1 : (a = 0, D0(6, t | 0, 824, 96), a = 0, s = 0), n = j() | 0, f0(f), s || (f = n, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0))), de(t | 0), f = n, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0)), f = j() | 0, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0);
+              f0(n), a = 0, n = k0(28, c | 0, 49087, 24) | 0, t = a, a = 0, !(t & 1) && (a = 0, s = I0(36, n | 0, r | 0) | 0, r = a, a = 0, !(r & 1)) && (a = 0, k0(28, s | 0, 49112, 20) | 0, r = a, a = 0, !(r & 1)) && (t = me(16) | 0, a = 0, c0(64, f | 0, l | 0), r = a, a = 0, r & 1 ? n = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, t | 0, 1, 35648, f | 0), r = a, a = 0, r & 1 ? s = 1 : (a = 0, D0(6, t | 0, 824, 96), a = 0, s = 0), n = j() | 0, f0(f), s || (f = n, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0))), de(t | 0), f = n, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0)), f = j() | 0, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0);
             }
           while (0);
           c = n, X0(h), t0(c | 0);
@@ -15762,7 +15760,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -15923,7 +15921,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -15985,7 +15983,7 @@ function requireCharLSDynamicMemoryBrowser() {
             return e[t >> 2] = 0, C = 0, D = w, C | 0;
           do
             if ((h | 0) > 0) {
-              if (n1(S, h, l), a = 0, o = x0(e[(e[g >> 2] | 0) + 48 >> 2] | 0, g | 0, (d[S >> 0] & 1 ? e[S + 8 >> 2] | 0 : S + 1 | 0) | 0, h | 0) | 0, C = a, a = 0, C & 1 && (C = j() | 0, f0(S), t0(C | 0)), (o | 0) == (h | 0)) {
+              if (n1(S, h, l), a = 0, o = k0(e[(e[g >> 2] | 0) + 48 >> 2] | 0, g | 0, (d[S >> 0] & 1 ? e[S + 8 >> 2] | 0 : S + 1 | 0) | 0, h | 0) | 0, C = a, a = 0, C & 1 && (C = j() | 0, f0(S), t0(C | 0)), (o | 0) == (h | 0)) {
                 f0(S);
                 break;
               }
@@ -16217,7 +16215,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -16379,7 +16377,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -16541,7 +16539,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -16703,7 +16701,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     l = j() | 0, f0(C), f0(r), he(c);
                     break;
                   }
-                  f0(C), a = 0, l = x0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
+                  f0(C), a = 0, l = k0(28, O | 0, 49029, 57) | 0, C = a, a = 0, !(C & 1) && (a = 0, I0(36, l | 0, 0) | 0, C = a, a = 0, !(C & 1)) && (h = me(16) | 0, a = 0, c0(64, k | 0, c | 0), C = a, a = 0, C & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, k | 0), C = a, a = 0, C & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(k), f || (k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0))), de(h | 0), k = l, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0)), k = j() | 0, e[O >> 2] = 36200, e[S >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(S), t0(k | 0);
                 }
               while (0);
               O = l, X0(S), t0(O | 0);
@@ -17303,9 +17301,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -17346,9 +17344,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -17659,9 +17657,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -17702,9 +17700,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -17960,7 +17958,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 l = j() | 0, f0(w), f0(r), he(c);
                 break;
               }
-              f0(w), a = 0, l = x0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
+              f0(w), a = 0, l = k0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
             }
           while (0);
           k = l, X0(n), t0(k | 0);
@@ -18117,7 +18115,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 l = j() | 0, f0(w), f0(r), he(c);
                 break;
               }
-              f0(w), a = 0, l = x0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
+              f0(w), a = 0, l = k0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
             }
           while (0);
           k = l, X0(n), t0(k | 0);
@@ -18274,7 +18272,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 l = j() | 0, f0(w), f0(r), he(c);
                 break;
               }
-              f0(w), a = 0, l = x0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
+              f0(w), a = 0, l = k0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
             }
           while (0);
           k = l, X0(n), t0(k | 0);
@@ -18431,7 +18429,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 l = j() | 0, f0(w), f0(r), he(c);
                 break;
               }
-              f0(w), a = 0, l = x0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
+              f0(w), a = 0, l = k0(28, k | 0, 49029, 57) | 0, w = a, a = 0, !(w & 1) && (a = 0, I0(36, l | 0, 0) | 0, w = a, a = 0, !(w & 1)) && (h = me(16) | 0, a = 0, c0(64, C | 0, c | 0), w = a, a = 0, w & 1 ? l = j() | 0 : (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, h | 0, 3, 35648, C | 0), w = a, a = 0, w & 1 ? f = 1 : (a = 0, D0(6, h | 0, 824, 96), a = 0, f = 0), l = j() | 0, f0(C), f || (C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0))), de(h | 0), C = l, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0)), C = j() | 0, e[k >> 2] = 36200, e[n >> 2] = 36220, e[c >> 2] = 36236, f0(r), he(c), X0(n), t0(C | 0);
             }
           while (0);
           k = l, X0(n), t0(k | 0);
@@ -18775,9 +18773,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -18818,9 +18816,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -19115,9 +19113,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -19158,9 +19156,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -19455,9 +19453,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -19498,9 +19496,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -19797,9 +19795,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -19840,9 +19838,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -20134,9 +20132,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -20177,9 +20175,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -20465,9 +20463,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -20508,9 +20506,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -20860,9 +20858,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -20903,9 +20901,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -21199,9 +21197,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -21242,9 +21240,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -21538,9 +21536,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -21581,9 +21579,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -21858,9 +21856,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -21901,9 +21899,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -22178,9 +22176,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -22221,9 +22219,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -22493,9 +22491,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -22536,9 +22534,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -25249,7 +25247,7 @@ function requireCharLSDynamicMemoryBrowser() {
                             t = t + 1 | 0;
                           } while (t >>> 0 < h >>> 0);
                       while (0);
-                    if (a = 0, x0(32, f | 0, t | 0, S | 0) | 0, f = a, a = 0, f & 1)
+                    if (a = 0, k0(32, f | 0, t | 0, S | 0) | 0, f = a, a = 0, f & 1)
                       break;
                   }
                   t = e[r >> 2] | 0;
@@ -25550,7 +25548,7 @@ function requireCharLSDynamicMemoryBrowser() {
                                 }
                               } else
                                 g = e[n >> 2] | 0;
-                              if (a = 0, g = x0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 8192, g | 0) | 0, ae = a, a = 0, ae & 1) {
+                              if (a = 0, g = k0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 8192, g | 0) | 0, ae = a, a = 0, ae & 1) {
                                 ae = 26;
                                 break i;
                               }
@@ -25683,7 +25681,7 @@ function requireCharLSDynamicMemoryBrowser() {
                                     do
                                       if ((n | 0) != ((U ? X : s) + ((U ? (o & 255) >>> 1 : e[X >> 2] | 0) << 2) | 0)) {
                                         for (o = n; ; ) {
-                                          if (a = 0, n = x0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 8192, e[o >> 2] | 0) | 0, U = a, a = 0, U & 1) {
+                                          if (a = 0, n = k0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 8192, e[o >> 2] | 0) | 0, U = a, a = 0, U & 1) {
                                             ae = 23;
                                             break i;
                                           }
@@ -25856,7 +25854,7 @@ function requireCharLSDynamicMemoryBrowser() {
                                   }
                                 } else
                                   o = e[w >> 2] | 0;
-                                if (a = 0, w = x0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 2048, o | 0) | 0, N = a, a = 0, N & 1) {
+                                if (a = 0, w = k0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 2048, o | 0) | 0, N = a, a = 0, N & 1) {
                                   ae = 25;
                                   break i;
                                 }
@@ -26031,7 +26029,7 @@ function requireCharLSDynamicMemoryBrowser() {
                                     }
                                   } else
                                     s = e[o >> 2] | 0;
-                                  if (a = 0, s = x0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 2048, s | 0) | 0, N = a, a = 0, N & 1) {
+                                  if (a = 0, s = k0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 2048, s | 0) | 0, N = a, a = 0, N & 1) {
                                     ae = 24;
                                     break i;
                                   }
@@ -26133,7 +26131,7 @@ function requireCharLSDynamicMemoryBrowser() {
                               }
                             } else
                               g = e[n >> 2] | 0;
-                            if (a = 0, g = x0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 8192, g | 0) | 0, N = a, a = 0, N & 1) {
+                            if (a = 0, g = k0(e[(e[h >> 2] | 0) + 12 >> 2] | 0, h | 0, 8192, g | 0) | 0, N = a, a = 0, N & 1) {
                               ae = 21;
                               break i;
                             }
@@ -26331,7 +26329,7 @@ function requireCharLSDynamicMemoryBrowser() {
                             t = t + 4 | 0;
                           } while (t >>> 0 < h >>> 0);
                       while (0);
-                    if (a = 0, x0(33, f | 0, t | 0, S | 0) | 0, f = a, a = 0, f & 1)
+                    if (a = 0, k0(33, f | 0, t | 0, S | 0) | 0, f = a, a = 0, f & 1)
                       break;
                   }
                   t = e[r >> 2] | 0;
@@ -29791,7 +29789,7 @@ function requireCharLSDynamicMemoryBrowser() {
           f = D, D = D + 16 | 0, l = f, s = e[r >> 2] | 0;
           do
             if (s)
-              if (o = d[n >> 0] | 0, o & 1 ? o = e[n + 4 >> 2] | 0 : o = (o & 255) >>> 1, o && (s5(n, 56990) | 0, s = e[r >> 2] | 0), r = e[r + 4 >> 2] | 0, kr[e[(e[r >> 2] | 0) + 24 >> 2] & 15](l, r, s), r = d[l >> 0] | 0, o = (r & 1) == 0, a = 0, x0(30, n | 0, (o ? l + 1 | 0 : e[l + 8 >> 2] | 0) | 0, (o ? (r & 255) >>> 1 : e[l + 4 >> 2] | 0) | 0) | 0, r = a, a = 0, r & 1)
+              if (o = d[n >> 0] | 0, o & 1 ? o = e[n + 4 >> 2] | 0 : o = (o & 255) >>> 1, o && (s5(n, 56990) | 0, s = e[r >> 2] | 0), r = e[r + 4 >> 2] | 0, kr[e[(e[r >> 2] | 0) + 24 >> 2] & 15](l, r, s), r = d[l >> 0] | 0, o = (r & 1) == 0, a = 0, k0(30, n | 0, (o ? l + 1 | 0 : e[l + 8 >> 2] | 0) | 0, (o ? (r & 255) >>> 1 : e[l + 4 >> 2] | 0) | 0) | 0, r = a, a = 0, r & 1)
                 f = j() | 0, f0(l), t0(f | 0);
               else {
                 f0(l);
@@ -31028,7 +31026,7 @@ function requireCharLSDynamicMemoryBrowser() {
           var t = 0, r = 0;
           do
             if (!(d[1968] | 0) && pe(1968) | 0)
-              if (a = 0, t = x0(31, 2147483647, 58885, 0) | 0, r = a, a = 0, r & 1)
+              if (a = 0, t = k0(31, 2147483647, 58885, 0) | 0, r = a, a = 0, r & 1)
                 r = j() | 0, Hi(1968), t0(r | 0);
               else {
                 e[11196] = t, Ae(1968);
@@ -32274,7 +32272,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     if ((S | 0) == (s | 0))
                       n = e[o >> 2] | 0, t = c, c = s;
                     else {
-                      if (c = rt(e[k >> 2] | 0) | 0, a = 0, n = x0(34, C | 0, 0, r | 0) | 0, N = a, a = 0, N & 1) {
+                      if (c = rt(e[k >> 2] | 0) | 0, a = 0, n = k0(34, C | 0, 0, r | 0) | 0, N = a, a = 0, N & 1) {
                         U = 35;
                         break;
                       }
@@ -32326,7 +32324,7 @@ function requireCharLSDynamicMemoryBrowser() {
                     do
                       if ((n | 0) != (e[o >> 2] | 0)) {
                         for (; ; ) {
-                          if (N = e[n >> 2] | 0, t = rt(e[k >> 2] | 0) | 0, a = 0, c = x0(34, c | 0, N | 0, O | 0) | 0, N = a, a = 0, N & 1) {
+                          if (N = e[n >> 2] | 0, t = rt(e[k >> 2] | 0) | 0, a = 0, c = k0(34, c | 0, N | 0, O | 0) | 0, N = a, a = 0, N & 1) {
                             q = t;
                             break;
                           }
@@ -32508,7 +32506,7 @@ function requireCharLSDynamicMemoryBrowser() {
         function A3(t, r, n, s, o) {
           t = t | 0, r = r | 0, n = n | 0, s = s | 0, o = o | 0;
           var l = 0, f = 0;
-          switch (f = D, D = D + 16 | 0, l = f, e[o >> 2] = n, n = rt(e[t + 8 >> 2] | 0) | 0, a = 0, t = x0(34, l | 0, 0, r | 0) | 0, r = a, a = 0, r & 1 && (l = j() | 0, n | 0 && (a = 0, z(75, n | 0) | 0, f = a, a = 0, f & 1) && (f = j(0) | 0, Ee(f)), t0(l | 0)), n | 0 && (a = 0, z(75, n | 0) | 0, r = a, a = 0, r & 1) && (r = j(0) | 0, Ee(r)), t | 0) {
+          switch (f = D, D = D + 16 | 0, l = f, e[o >> 2] = n, n = rt(e[t + 8 >> 2] | 0) | 0, a = 0, t = k0(34, l | 0, 0, r | 0) | 0, r = a, a = 0, r & 1 && (l = j() | 0, n | 0 && (a = 0, z(75, n | 0) | 0, f = a, a = 0, f & 1) && (f = j(0) | 0, Ee(f)), t0(l | 0)), n | 0 && (a = 0, z(75, n | 0) | 0, r = a, a = 0, r & 1) && (r = j(0) | 0, Ee(r)), t | 0) {
             case 0:
             case -1: {
               l = 2;
@@ -32539,7 +32537,7 @@ function requireCharLSDynamicMemoryBrowser() {
             if (s & 1)
               o = 16;
             else {
-              if (a = 0, s = x0(35, 0, 0, 4) | 0, t = a, a = 0, t & 1) {
+              if (a = 0, s = k0(35, 0, 0, 4) | 0, t = a, a = 0, t & 1) {
                 if (t = j(0) | 0, !n || (a = 0, z(75, n | 0) | 0, f = a, a = 0, !(f & 1)))
                   break;
                 f = j(0) | 0, Ee(f);
@@ -32572,7 +32570,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 t = 0;
               else {
                 for (t = 0, h = 0; ; ) {
-                  if (f = rt(e[c >> 2] | 0) | 0, a = 0, l = x0(36, n | 0, S - n | 0, r | 0) | 0, C = a, a = 0, C & 1) {
+                  if (f = rt(e[c >> 2] | 0) | 0, a = 0, l = k0(36, n | 0, S - n | 0, r | 0) | 0, C = a, a = 0, C & 1) {
                     w = f;
                     break;
                   }
@@ -35619,7 +35617,7 @@ function requireCharLSDynamicMemoryBrowser() {
         function N8(t, r, n, s) {
           t = t | 0, r = r | 0, n = n | 0, s = s | 0;
           var o = 0, l = 0;
-          if (o = D, D = D + 16 | 0, l = o, e[l >> 2] = s, s = rt(r) | 0, a = 0, r = x0(37, t | 0, n | 0, l | 0) | 0, t = a, a = 0, t & 1)
+          if (o = D, D = D + 16 | 0, l = o, e[l >> 2] = s, s = rt(r) | 0, a = 0, r = k0(37, t | 0, n | 0, l | 0) | 0, t = a, a = 0, t & 1)
             r = j() | 0, s | 0 && (a = 0, z(75, s | 0) | 0, l = a, a = 0, l & 1) && (l = j(0) | 0, Ee(l)), t0(r | 0);
           else
             return s | 0 && (a = 0, z(75, s | 0) | 0, l = a, a = 0, l & 1) && (l = j(0) | 0, Ee(l)), D = o, r | 0;
@@ -35640,7 +35638,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 }
                 do
                   if ((c | 0) > 0)
-                    if (l1(g, c, l), a = 0, o = x0(e[(e[f >> 2] | 0) + 48 >> 2] | 0, f | 0, (d[g >> 0] & 1 ? e[g + 8 >> 2] | 0 : g + 4 | 0) | 0, c | 0) | 0, C = a, a = 0, C & 1 && (C = j() | 0, ye(g), t0(C | 0)), (o | 0) == (c | 0)) {
+                    if (l1(g, c, l), a = 0, o = k0(e[(e[f >> 2] | 0) + 48 >> 2] | 0, f | 0, (d[g >> 0] & 1 ? e[g + 8 >> 2] | 0 : g + 4 | 0) | 0, c | 0) | 0, C = a, a = 0, C & 1 && (C = j() | 0, ye(g), t0(C | 0)), (o | 0) == (c | 0)) {
                       ye(g);
                       break;
                     } else {
@@ -37455,9 +37453,9 @@ function requireCharLSDynamicMemoryBrowser() {
                         t = j() | 0, f0(N), f0(l), he(o);
                         break;
                       }
-                      f0(N), a = 0, t = x0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
+                      f0(N), a = 0, t = k0(28, M | 0, 49007, 21) | 0, N = a, a = 0;
                       do
-                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, x0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
+                        if (!(N & 1) && (a = 0, g = I0(36, t | 0, e[q >> 2] | 0) | 0, N = a, a = 0, !(N & 1)) && (a = 0, k0(28, g | 0, 50997, 18) | 0, N = a, a = 0, !(N & 1))) {
                           if (s = me(16) | 0, a = 0, c0(64, C | 0, o | 0), N = a, a = 0, N & 1)
                             t = j() | 0;
                           else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, C | 0), N = a, a = 0, N & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(C), !n)
@@ -37498,9 +37496,9 @@ function requireCharLSDynamicMemoryBrowser() {
                       t = j() | 0, f0(N), f0(l), he(o);
                       break;
                     }
-                    f0(N), a = 0, t = x0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
+                    f0(N), a = 0, t = k0(28, Y | 0, 49007, 21) | 0, M = a, a = 0;
                     do
-                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, x0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
+                      if (!(M & 1) && (a = 0, w = I0(36, t | 0, e[q >> 2] | 0) | 0, M = a, a = 0, !(M & 1)) && (a = 0, k0(28, w | 0, 50997, 18) | 0, M = a, a = 0, !(M & 1))) {
                         if (s = me(16) | 0, a = 0, c0(64, O | 0, o | 0), M = a, a = 0, M & 1)
                           t = j() | 0;
                         else if (!(d[8] | 0) && pe(8) | 0 && (ve(72, 35648, o0 | 0) | 0, Ae(8)), a = 0, V0(36, s | 0, 9, 35648, O | 0), M = a, a = 0, M & 1 ? n = 1 : (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0), t = j() | 0, f0(O), !n)
@@ -38385,7 +38383,7 @@ function requireCharLSDynamicMemoryBrowser() {
                 c = j() | 0, f0(r), f0(o), he(l), r = c;
                 break;
               }
-              f0(r), e[c + ((e[(e[c >> 2] | 0) + -12 >> 2] | 0) + 76) >> 2] = 48, a = 0, r = x0(28, c | 0, 50907, 62) | 0, n = a, a = 0, !(n & 1) && (n = r + ((e[(e[r >> 2] | 0) + -12 >> 2] | 0) + 4) | 0, e[n >> 2] = e[n >> 2] & -75 | 8, n = r + ((e[(e[r >> 2] | 0) + -12 >> 2] | 0) + 4) | 0, e[n >> 2] = e[n >> 2] | 16384, e[r + ((e[(e[r >> 2] | 0) + -12 >> 2] | 0) + 12) >> 2] = 2, a = 0, I0(38, r | 0, s | 0) | 0, s = a, a = 0, !(s & 1)) && (n = me(16) | 0, a = 0, c0(64, f | 0, l | 0), s = a, a = 0, s & 1 ? r = j() | 0 : (a = 0, r = ke(1) | 0, s = a, a = 0, !(s & 1) && (a = 0, V0(36, n | 0, 12, r | 0, f | 0), s = a, a = 0, !(s & 1)) ? (a = 0, D0(6, n | 0, 824, 96), a = 0, t = 0) : t = 1, r = j() | 0, f0(f), t || (f = r, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0))), de(n | 0), f = r, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0)), f = j() | 0, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0);
+              f0(r), e[c + ((e[(e[c >> 2] | 0) + -12 >> 2] | 0) + 76) >> 2] = 48, a = 0, r = k0(28, c | 0, 50907, 62) | 0, n = a, a = 0, !(n & 1) && (n = r + ((e[(e[r >> 2] | 0) + -12 >> 2] | 0) + 4) | 0, e[n >> 2] = e[n >> 2] & -75 | 8, n = r + ((e[(e[r >> 2] | 0) + -12 >> 2] | 0) + 4) | 0, e[n >> 2] = e[n >> 2] | 16384, e[r + ((e[(e[r >> 2] | 0) + -12 >> 2] | 0) + 12) >> 2] = 2, a = 0, I0(38, r | 0, s | 0) | 0, s = a, a = 0, !(s & 1)) && (n = me(16) | 0, a = 0, c0(64, f | 0, l | 0), s = a, a = 0, s & 1 ? r = j() | 0 : (a = 0, r = ke(1) | 0, s = a, a = 0, !(s & 1) && (a = 0, V0(36, n | 0, 12, r | 0, f | 0), s = a, a = 0, !(s & 1)) ? (a = 0, D0(6, n | 0, 824, 96), a = 0, t = 0) : t = 1, r = j() | 0, f0(f), t || (f = r, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0))), de(n | 0), f = r, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0)), f = j() | 0, e[c >> 2] = 36200, e[h >> 2] = 36220, e[l >> 2] = 36236, f0(o), he(l), X0(h), t0(f | 0);
             }
           while (0);
           return c = r, X0(h), t0(c | 0), 0;
@@ -38419,9 +38417,9 @@ function requireCharLSDynamicMemoryBrowser() {
                     t = j() | 0, f0(h), f0(l), he(o);
                     break;
                   }
-                  f0(h), a = 0, t = x0(28, g | 0, 50970, 26) | 0, w = a, a = 0;
+                  f0(h), a = 0, t = k0(28, g | 0, 50970, 26) | 0, w = a, a = 0;
                   do
-                    if (!(w & 1) && (a = 0, s = I0(38, t | 0, r & 255 | 0) | 0, w = a, a = 0, !(w & 1)) && (a = 0, x0(28, s | 0, 50997, 18) | 0, w = a, a = 0, !(w & 1))) {
+                    if (!(w & 1) && (a = 0, s = I0(38, t | 0, r & 255 | 0) | 0, w = a, a = 0, !(w & 1)) && (a = 0, k0(28, s | 0, 50997, 18) | 0, w = a, a = 0, !(w & 1))) {
                       if (s = me(16) | 0, a = 0, c0(64, c | 0, o | 0), w = a, a = 0, w & 1)
                         t = j() | 0;
                       else if (a = 0, t = ke(1) | 0, w = a, a = 0, !(w & 1) && (a = 0, V0(36, s | 0, 10, t | 0, c | 0), w = a, a = 0, !(w & 1)) ? (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0) : n = 1, t = j() | 0, f0(c), !n)
@@ -38449,9 +38447,9 @@ function requireCharLSDynamicMemoryBrowser() {
                     t = j() | 0, f0(h), f0(f), he(l);
                     break;
                   }
-                  f0(h), a = 0, t = x0(28, w | 0, 51016, 20) | 0, g = a, a = 0;
+                  f0(h), a = 0, t = k0(28, w | 0, 51016, 20) | 0, g = a, a = 0;
                   do
-                    if (!(g & 1) && (a = 0, o = I0(38, t | 0, r & 255 | 0) | 0, g = a, a = 0, !(g & 1)) && (a = 0, x0(28, o | 0, 51037, 13) | 0, g = a, a = 0, !(g & 1))) {
+                    if (!(g & 1) && (a = 0, o = I0(38, t | 0, r & 255 | 0) | 0, g = a, a = 0, !(g & 1)) && (a = 0, k0(28, o | 0, 51037, 13) | 0, g = a, a = 0, !(g & 1))) {
                       if (s = me(16) | 0, a = 0, c0(64, S | 0, l | 0), g = a, a = 0, g & 1)
                         t = j() | 0;
                       else if (a = 0, t = ke(1) | 0, g = a, a = 0, !(g & 1) && (a = 0, V0(36, s | 0, 11, t | 0, S | 0), g = a, a = 0, !(g & 1)) ? (a = 0, D0(6, s | 0, 824, 96), a = 0, n = 0) : n = 1, t = j() | 0, f0(S), !n)
@@ -39650,7 +39648,7 @@ function requireCharLSDynamicMemoryBrowser() {
                                 s = c + l - C;
                                 do
                                   if ((q & 2147483647 | 0) > (-2 - b | 0)) {
-                                    if (+E0(+s) >= 9007199254740992 && (o = O & (g | 0) == (w | 0) ? 0 : o, r = r + 1 | 0, s = s * 0.5), (r + 50 | 0) <= (r0 | 0) && !(l != 0 & (o | 0) != 0))
+                                    if (+x0(+s) >= 9007199254740992 && (o = O & (g | 0) == (w | 0) ? 0 : o, r = r + 1 | 0, s = s * 0.5), (r + 50 | 0) <= (r0 | 0) && !(l != 0 & (o | 0) != 0))
                                       break;
                                     b0 = ci() | 0, e[b0 >> 2] = 34;
                                   }
@@ -39672,7 +39670,7 @@ function requireCharLSDynamicMemoryBrowser() {
                   do
                     o || (e[e0 >> 2] = (e[e0 >> 2] | 0) + -1), r = r + -1 | 0;
                   while (r >>> 0 > 3);
-                s = +(C0 | 0) * w0;
+                s = +(C0 | 0) * T0;
               }
             while (0);
           return D = Ge, +s;
@@ -41527,14 +41525,14 @@ function requireTrees() {
   ), a = (
     /* extra bits for each bit length code */
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7]
-  ), k0 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], g0 = 512, A0 = new Array((e + 2) * 2);
+  ), E0 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], g0 = 512, A0 = new Array((e + 2) * 2);
   T(A0);
   var S0 = new Array(Q * 2);
   T(S0);
-  var w0 = new Array(g0);
-  T(w0);
-  var T0 = new Array(H - V + 1);
+  var T0 = new Array(g0);
   T(T0);
+  var w0 = new Array(H - V + 1);
+  T(w0);
   var F0 = new Array(d);
   T(F0);
   var O0 = new Array(Q);
@@ -41547,7 +41545,7 @@ function requireTrees() {
     this.dyn_tree = d0, this.max_code = 0, this.stat_desc = N0;
   }
   function He(d0) {
-    return d0 < 256 ? w0[d0] : w0[256 + (d0 >>> 7)];
+    return d0 < 256 ? T0[d0] : T0[256 + (d0 >>> 7)];
   }
   function B0(d0, N0) {
     d0.pending_buf[d0.pending++] = N0 & 255, d0.pending_buf[d0.pending++] = N0 >>> 8 & 255;
@@ -41574,7 +41572,7 @@ function requireTrees() {
     d0.bi_valid === 16 ? (B0(d0, d0.bi_buf), d0.bi_buf = 0, d0.bi_valid = 0) : d0.bi_valid >= 8 && (d0.pending_buf[d0.pending++] = d0.bi_buf & 255, d0.bi_buf >>= 8, d0.bi_valid -= 8);
   }
   function pi(d0, N0) {
-    var W0 = N0.dyn_tree, ne = N0.max_code, R0 = N0.stat_desc.static_tree, q0 = N0.stat_desc.has_stree, i0 = N0.stat_desc.extra_bits, c0 = N0.stat_desc.extra_base, De = N0.stat_desc.max_length, z, H0, x0, p0, M0, j0, Le = 0;
+    var W0 = N0.dyn_tree, ne = N0.max_code, R0 = N0.stat_desc.static_tree, q0 = N0.stat_desc.has_stree, i0 = N0.stat_desc.extra_bits, c0 = N0.stat_desc.extra_base, De = N0.stat_desc.max_length, z, H0, k0, p0, M0, j0, Le = 0;
     for (p0 = 0; p0 <= J; p0++)
       d0.bl_count[p0] = 0;
     for (W0[d0.heap[d0.heap_max] * 2 + 1] = 0, z = d0.heap_max + 1; z < Z; z++)
@@ -41587,7 +41585,7 @@ function requireTrees() {
       } while (Le > 0);
       for (p0 = De; p0 !== 0; p0--)
         for (H0 = d0.bl_count[p0]; H0 !== 0; )
-          x0 = d0.heap[--z], !(x0 > ne) && (W0[x0 * 2 + 1] !== p0 && (d0.opt_len += (p0 - W0[x0 * 2 + 1]) * W0[x0 * 2], W0[x0 * 2 + 1] = p0), H0--);
+          k0 = d0.heap[--z], !(k0 > ne) && (W0[k0 * 2 + 1] !== p0 && (d0.opt_len += (p0 - W0[k0 * 2 + 1]) * W0[k0 * 2], W0[k0 * 2 + 1] = p0), H0--);
     }
   }
   function Ai(d0, N0, W0) {
@@ -41603,13 +41601,13 @@ function requireTrees() {
     var d0, N0, W0, ne, R0, q0 = new Array(J + 1);
     for (W0 = 0, ne = 0; ne < d - 1; ne++)
       for (F0[ne] = W0, d0 = 0; d0 < 1 << u0[ne]; d0++)
-        T0[W0++] = ne;
-    for (T0[W0 - 1] = ne, R0 = 0, ne = 0; ne < 16; ne++)
+        w0[W0++] = ne;
+    for (w0[W0 - 1] = ne, R0 = 0, ne = 0; ne < 16; ne++)
       for (O0[ne] = R0, d0 = 0; d0 < 1 << o0[ne]; d0++)
-        w0[R0++] = ne;
+        T0[R0++] = ne;
     for (R0 >>= 7; ne < Q; ne++)
       for (O0[ne] = R0 << 7, d0 = 0; d0 < 1 << o0[ne] - 7; d0++)
-        w0[256 + R0++] = ne;
+        T0[256 + R0++] = ne;
     for (N0 = 0; N0 <= J; N0++)
       q0[N0] = 0;
     for (d0 = 0; d0 <= 143; )
@@ -41640,12 +41638,12 @@ function requireTrees() {
   function oe(d0, N0, W0, ne) {
     U0(d0), ne && (B0(d0, W0), B0(d0, ~W0)), m.arraySet(d0.pending_buf, d0.window, N0, W0, d0.pending), d0.pending += W0;
   }
-  function E0(d0, N0, W0, ne) {
+  function x0(d0, N0, W0, ne) {
     var R0 = N0 * 2, q0 = W0 * 2;
     return d0[R0] < d0[q0] || d0[R0] === d0[q0] && ne[N0] <= ne[W0];
   }
   function L0(d0, N0, W0) {
-    for (var ne = d0.heap[W0], R0 = W0 << 1; R0 <= d0.heap_len && (R0 < d0.heap_len && E0(N0, d0.heap[R0 + 1], d0.heap[R0], d0.depth) && R0++, !E0(N0, ne, d0.heap[R0], d0.depth)); )
+    for (var ne = d0.heap[W0], R0 = W0 << 1; R0 <= d0.heap_len && (R0 < d0.heap_len && x0(N0, d0.heap[R0 + 1], d0.heap[R0], d0.depth) && R0++, !x0(N0, ne, d0.heap[R0], d0.depth)); )
       d0.heap[W0] = d0.heap[R0], W0 = R0, R0 <<= 1;
     d0.heap[W0] = ne;
   }
@@ -41653,7 +41651,7 @@ function requireTrees() {
     var ne, R0, q0 = 0, i0, c0;
     if (d0.last_lit !== 0)
       do
-        ne = d0.pending_buf[d0.d_buf + q0 * 2] << 8 | d0.pending_buf[d0.d_buf + q0 * 2 + 1], R0 = d0.pending_buf[d0.l_buf + q0], q0++, ne === 0 ? Ve(d0, R0, N0) : (i0 = T0[R0], Ve(d0, i0 + L + 1, N0), c0 = u0[i0], c0 !== 0 && (R0 -= F0[i0], ii(d0, R0, c0)), ne--, i0 = He(ne), Ve(d0, i0, W0), c0 = o0[i0], c0 !== 0 && (ne -= O0[i0], ii(d0, ne, c0)));
+        ne = d0.pending_buf[d0.d_buf + q0 * 2] << 8 | d0.pending_buf[d0.d_buf + q0 * 2 + 1], R0 = d0.pending_buf[d0.l_buf + q0], q0++, ne === 0 ? Ve(d0, R0, N0) : (i0 = w0[R0], Ve(d0, i0 + L + 1, N0), c0 = u0[i0], c0 !== 0 && (R0 -= F0[i0], ii(d0, R0, c0)), ne--, i0 = He(ne), Ve(d0, i0, W0), c0 = o0[i0], c0 !== 0 && (ne -= O0[i0], ii(d0, ne, c0)));
       while (q0 < d0.last_lit);
     Ve(d0, D, N0);
   }
@@ -41716,14 +41714,14 @@ function requireTrees() {
   }
   function P0(d0) {
     var N0;
-    for (G0(d0, d0.dyn_ltree, d0.l_desc.max_code), G0(d0, d0.dyn_dtree, d0.d_desc.max_code), Y0(d0, d0.bl_desc), N0 = K - 1; N0 >= 3 && d0.bl_tree[k0[N0] * 2 + 1] === 0; N0--)
+    for (G0(d0, d0.dyn_ltree, d0.l_desc.max_code), G0(d0, d0.dyn_dtree, d0.d_desc.max_code), Y0(d0, d0.bl_desc), N0 = K - 1; N0 >= 3 && d0.bl_tree[E0[N0] * 2 + 1] === 0; N0--)
       ;
     return d0.opt_len += 3 * (N0 + 1) + 5 + 5 + 4, N0;
   }
   function re(d0, N0, W0, ne) {
     var R0;
     for (ii(d0, N0 - 257, 5), ii(d0, W0 - 1, 5), ii(d0, ne - 4, 4), R0 = 0; R0 < ne; R0++)
-      ii(d0, d0.bl_tree[k0[R0] * 2 + 1], 3);
+      ii(d0, d0.bl_tree[E0[R0] * 2 + 1], 3);
     Q0(d0, d0.dyn_ltree, N0 - 1), Q0(d0, d0.dyn_dtree, W0 - 1);
   }
   function J0(d0) {
@@ -41753,7 +41751,7 @@ function requireTrees() {
     d0.level > 0 ? (d0.strm.data_type === y && (d0.strm.data_type = J0(d0)), Y0(d0, d0.l_desc), Y0(d0, d0.d_desc), i0 = P0(d0), R0 = d0.opt_len + 3 + 7 >>> 3, q0 = d0.static_len + 3 + 7 >>> 3, q0 <= R0 && (R0 = q0)) : R0 = q0 = W0 + 5, W0 + 4 <= R0 && N0 !== -1 ? z0(d0, N0, W0, ne) : d0.strategy === u || q0 === R0 ? (ii(d0, (F << 1) + (ne ? 1 : 0), 3), ee(d0, A0, S0)) : (ii(d0, (_ << 1) + (ne ? 1 : 0), 3), re(d0, d0.l_desc.max_code + 1, d0.d_desc.max_code + 1, i0 + 1), ee(d0, d0.dyn_ltree, d0.dyn_dtree)), ue(d0), ne && U0(d0);
   }
   function Ie(d0, N0, W0) {
-    return d0.pending_buf[d0.d_buf + d0.last_lit * 2] = N0 >>> 8 & 255, d0.pending_buf[d0.d_buf + d0.last_lit * 2 + 1] = N0 & 255, d0.pending_buf[d0.l_buf + d0.last_lit] = W0 & 255, d0.last_lit++, N0 === 0 ? d0.dyn_ltree[W0 * 2]++ : (d0.matches++, N0--, d0.dyn_ltree[(T0[W0] + L + 1) * 2]++, d0.dyn_dtree[He(N0) * 2]++), d0.last_lit === d0.lit_bufsize - 1;
+    return d0.pending_buf[d0.d_buf + d0.last_lit * 2] = N0 >>> 8 & 255, d0.pending_buf[d0.d_buf + d0.last_lit * 2 + 1] = N0 & 255, d0.pending_buf[d0.l_buf + d0.last_lit] = W0 & 255, d0.last_lit++, N0 === 0 ? d0.dyn_ltree[W0 * 2]++ : (d0.matches++, N0--, d0.dyn_ltree[(w0[W0] + L + 1) * 2]++, d0.dyn_dtree[He(N0) * 2]++), d0.last_lit === d0.lit_bufsize - 1;
   }
   return trees._tr_init = Se, trees._tr_stored_block = z0, trees._tr_flush_block = h0, trees._tr_tally = Ie, trees._tr_align = Z0, trees;
 }
@@ -41826,7 +41824,7 @@ function requireDeflate$1() {
   if (hasRequiredDeflate$1)
     return deflate;
   hasRequiredDeflate$1 = 1;
-  var m = requireCommon(), u = requireTrees(), p = requireAdler32(), v = requireCrc32(), y = requireMessages(), T = 0, E = 1, F = 3, _ = 4, V = 5, H = 0, d = 1, L = -2, e = -3, Q = -5, K = -1, Z = 1, J = 2, n0 = 3, a0 = 4, D = 0, s0 = 2, $ = 8, m0 = 9, u0 = 15, o0 = 8, a = 29, k0 = 256, g0 = k0 + 1 + a, A0 = 30, S0 = 19, w0 = 2 * g0 + 1, T0 = 15, F0 = 3, O0 = 258, $0 = O0 + F0 + 1, Re = 32, Te = 42, Ye = 69, Qe = 73, He = 91, B0 = 103, ii = 113, Ve = 666, Xe = 1, di = 2, pi = 3, Ai = 4, $e = 3;
+  var m = requireCommon(), u = requireTrees(), p = requireAdler32(), v = requireCrc32(), y = requireMessages(), T = 0, E = 1, F = 3, _ = 4, V = 5, H = 0, d = 1, L = -2, e = -3, Q = -5, K = -1, Z = 1, J = 2, n0 = 3, a0 = 4, D = 0, s0 = 2, $ = 8, m0 = 9, u0 = 15, o0 = 8, a = 29, E0 = 256, g0 = E0 + 1 + a, A0 = 30, S0 = 19, T0 = 2 * g0 + 1, w0 = 15, F0 = 3, O0 = 258, $0 = O0 + F0 + 1, Re = 32, Te = 42, Ye = 69, Qe = 73, He = 91, B0 = 103, ii = 113, Ve = 666, Xe = 1, di = 2, pi = 3, Ai = 4, $e = 3;
   function ue(z, H0) {
     return z.msg = y[H0], H0;
   }
@@ -41837,12 +41835,12 @@ function requireDeflate$1() {
     for (var H0 = z.length; --H0 >= 0; )
       z[H0] = 0;
   }
-  function E0(z) {
-    var H0 = z.state, x0 = H0.pending;
-    x0 > z.avail_out && (x0 = z.avail_out), x0 !== 0 && (m.arraySet(z.output, H0.pending_buf, H0.pending_out, x0, z.next_out), z.next_out += x0, H0.pending_out += x0, z.total_out += x0, z.avail_out -= x0, H0.pending -= x0, H0.pending === 0 && (H0.pending_out = 0));
+  function x0(z) {
+    var H0 = z.state, k0 = H0.pending;
+    k0 > z.avail_out && (k0 = z.avail_out), k0 !== 0 && (m.arraySet(z.output, H0.pending_buf, H0.pending_out, k0, z.next_out), z.next_out += k0, H0.pending_out += k0, z.total_out += k0, z.avail_out -= k0, H0.pending -= k0, H0.pending === 0 && (H0.pending_out = 0));
   }
   function L0(z, H0) {
-    u._tr_flush_block(z, z.block_start >= 0 ? z.block_start : -1, z.strstart - z.block_start, H0), z.block_start = z.strstart, E0(z.strm);
+    u._tr_flush_block(z, z.block_start >= 0 ? z.block_start : -1, z.strstart - z.block_start, H0), z.block_start = z.strstart, x0(z.strm);
   }
   function ee(z, H0) {
     z.pending_buf[z.pending++] = H0;
@@ -41850,13 +41848,13 @@ function requireDeflate$1() {
   function Y0(z, H0) {
     z.pending_buf[z.pending++] = H0 >>> 8 & 255, z.pending_buf[z.pending++] = H0 & 255;
   }
-  function G0(z, H0, x0, p0) {
+  function G0(z, H0, k0, p0) {
     var M0 = z.avail_in;
-    return M0 > p0 && (M0 = p0), M0 === 0 ? 0 : (z.avail_in -= M0, m.arraySet(H0, z.input, z.next_in, M0, x0), z.state.wrap === 1 ? z.adler = p(z.adler, H0, M0, x0) : z.state.wrap === 2 && (z.adler = v(z.adler, H0, M0, x0)), z.next_in += M0, z.total_in += M0, M0);
+    return M0 > p0 && (M0 = p0), M0 === 0 ? 0 : (z.avail_in -= M0, m.arraySet(H0, z.input, z.next_in, M0, k0), z.state.wrap === 1 ? z.adler = p(z.adler, H0, M0, k0) : z.state.wrap === 2 && (z.adler = v(z.adler, H0, M0, k0)), z.next_in += M0, z.total_in += M0, M0);
   }
   function Q0(z, H0) {
-    var x0 = z.max_chain_length, p0 = z.strstart, M0, j0, Le = z.prev_length, I0 = z.nice_match, Me = z.strstart > z.w_size - $0 ? z.strstart - (z.w_size - $0) : 0, Ze = z.window, ke = z.w_mask, Fe = z.prev, D0 = z.strstart + O0, qe = Ze[p0 + Le - 1], Ri = Ze[p0 + Le];
-    z.prev_length >= z.good_match && (x0 >>= 2), I0 > z.lookahead && (I0 = z.lookahead);
+    var k0 = z.max_chain_length, p0 = z.strstart, M0, j0, Le = z.prev_length, I0 = z.nice_match, Me = z.strstart > z.w_size - $0 ? z.strstart - (z.w_size - $0) : 0, Ze = z.window, ke = z.w_mask, Fe = z.prev, D0 = z.strstart + O0, qe = Ze[p0 + Le - 1], Ri = Ze[p0 + Le];
+    z.prev_length >= z.good_match && (k0 >>= 2), I0 > z.lookahead && (I0 = z.lookahead);
     do
       if (M0 = H0, !(Ze[M0 + Le] !== Ri || Ze[M0 + Le - 1] !== qe || Ze[M0] !== Ze[p0] || Ze[++M0] !== Ze[p0 + 1])) {
         p0 += 2, M0++;
@@ -41869,20 +41867,20 @@ function requireDeflate$1() {
           qe = Ze[p0 + Le - 1], Ri = Ze[p0 + Le];
         }
       }
-    while ((H0 = Fe[H0 & ke]) > Me && --x0 !== 0);
+    while ((H0 = Fe[H0 & ke]) > Me && --k0 !== 0);
     return Le <= z.lookahead ? Le : z.lookahead;
   }
   function P0(z) {
-    var H0 = z.w_size, x0, p0, M0, j0, Le;
+    var H0 = z.w_size, k0, p0, M0, j0, Le;
     do {
       if (j0 = z.window_size - z.lookahead - z.strstart, z.strstart >= H0 + (H0 - $0)) {
-        m.arraySet(z.window, z.window, H0, H0, 0), z.match_start -= H0, z.strstart -= H0, z.block_start -= H0, p0 = z.hash_size, x0 = p0;
+        m.arraySet(z.window, z.window, H0, H0, 0), z.match_start -= H0, z.strstart -= H0, z.block_start -= H0, p0 = z.hash_size, k0 = p0;
         do
-          M0 = z.head[--x0], z.head[x0] = M0 >= H0 ? M0 - H0 : 0;
+          M0 = z.head[--k0], z.head[k0] = M0 >= H0 ? M0 - H0 : 0;
         while (--p0);
-        p0 = H0, x0 = p0;
+        p0 = H0, k0 = p0;
         do
-          M0 = z.prev[--x0], z.prev[x0] = M0 >= H0 ? M0 - H0 : 0;
+          M0 = z.prev[--k0], z.prev[k0] = M0 >= H0 ? M0 - H0 : 0;
         while (--p0);
         j0 += H0;
       }
@@ -41894,8 +41892,8 @@ function requireDeflate$1() {
     } while (z.lookahead < $0 && z.strm.avail_in !== 0);
   }
   function re(z, H0) {
-    var x0 = 65535;
-    for (x0 > z.pending_buf_size - 5 && (x0 = z.pending_buf_size - 5); ; ) {
+    var k0 = 65535;
+    for (k0 > z.pending_buf_size - 5 && (k0 = z.pending_buf_size - 5); ; ) {
       if (z.lookahead <= 1) {
         if (P0(z), z.lookahead === 0 && H0 === T)
           return Xe;
@@ -41903,25 +41901,25 @@ function requireDeflate$1() {
           break;
       }
       z.strstart += z.lookahead, z.lookahead = 0;
-      var p0 = z.block_start + x0;
+      var p0 = z.block_start + k0;
       if ((z.strstart === 0 || z.strstart >= p0) && (z.lookahead = z.strstart - p0, z.strstart = p0, L0(z, !1), z.strm.avail_out === 0) || z.strstart - z.block_start >= z.w_size - $0 && (L0(z, !1), z.strm.avail_out === 0))
         return Xe;
     }
     return z.insert = 0, H0 === _ ? (L0(z, !0), z.strm.avail_out === 0 ? pi : Ai) : (z.strstart > z.block_start && (L0(z, !1), z.strm.avail_out === 0), Xe);
   }
   function J0(z, H0) {
-    for (var x0, p0; ; ) {
+    for (var k0, p0; ; ) {
       if (z.lookahead < $0) {
         if (P0(z), z.lookahead < $0 && H0 === T)
           return Xe;
         if (z.lookahead === 0)
           break;
       }
-      if (x0 = 0, z.lookahead >= F0 && (z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, x0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart), x0 !== 0 && z.strstart - x0 <= z.w_size - $0 && (z.match_length = Q0(z, x0)), z.match_length >= F0)
+      if (k0 = 0, z.lookahead >= F0 && (z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, k0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart), k0 !== 0 && z.strstart - k0 <= z.w_size - $0 && (z.match_length = Q0(z, k0)), z.match_length >= F0)
         if (p0 = u._tr_tally(z, z.strstart - z.match_start, z.match_length - F0), z.lookahead -= z.match_length, z.match_length <= z.max_lazy_match && z.lookahead >= F0) {
           z.match_length--;
           do
-            z.strstart++, z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, x0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart;
+            z.strstart++, z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, k0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart;
           while (--z.match_length !== 0);
           z.strstart++;
         } else
@@ -41934,17 +41932,17 @@ function requireDeflate$1() {
     return z.insert = z.strstart < F0 - 1 ? z.strstart : F0 - 1, H0 === _ ? (L0(z, !0), z.strm.avail_out === 0 ? pi : Ai) : z.last_lit && (L0(z, !1), z.strm.avail_out === 0) ? Xe : di;
   }
   function ie(z, H0) {
-    for (var x0, p0, M0; ; ) {
+    for (var k0, p0, M0; ; ) {
       if (z.lookahead < $0) {
         if (P0(z), z.lookahead < $0 && H0 === T)
           return Xe;
         if (z.lookahead === 0)
           break;
       }
-      if (x0 = 0, z.lookahead >= F0 && (z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, x0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart), z.prev_length = z.match_length, z.prev_match = z.match_start, z.match_length = F0 - 1, x0 !== 0 && z.prev_length < z.max_lazy_match && z.strstart - x0 <= z.w_size - $0 && (z.match_length = Q0(z, x0), z.match_length <= 5 && (z.strategy === Z || z.match_length === F0 && z.strstart - z.match_start > 4096) && (z.match_length = F0 - 1)), z.prev_length >= F0 && z.match_length <= z.prev_length) {
+      if (k0 = 0, z.lookahead >= F0 && (z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, k0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart), z.prev_length = z.match_length, z.prev_match = z.match_start, z.match_length = F0 - 1, k0 !== 0 && z.prev_length < z.max_lazy_match && z.strstart - k0 <= z.w_size - $0 && (z.match_length = Q0(z, k0), z.match_length <= 5 && (z.strategy === Z || z.match_length === F0 && z.strstart - z.match_start > 4096) && (z.match_length = F0 - 1)), z.prev_length >= F0 && z.match_length <= z.prev_length) {
         M0 = z.strstart + z.lookahead - F0, p0 = u._tr_tally(z, z.strstart - 1 - z.prev_match, z.prev_length - F0), z.lookahead -= z.prev_length - 1, z.prev_length -= 2;
         do
-          ++z.strstart <= M0 && (z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, x0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart);
+          ++z.strstart <= M0 && (z.ins_h = (z.ins_h << z.hash_shift ^ z.window[z.strstart + F0 - 1]) & z.hash_mask, k0 = z.prev[z.strstart & z.w_mask] = z.head[z.ins_h], z.head[z.ins_h] = z.strstart);
         while (--z.prev_length !== 0);
         if (z.match_available = 0, z.match_length = F0 - 1, z.strstart++, p0 && (L0(z, !1), z.strm.avail_out === 0))
           return Xe;
@@ -41957,7 +41955,7 @@ function requireDeflate$1() {
     return z.match_available && (p0 = u._tr_tally(z, 0, z.window[z.strstart - 1]), z.match_available = 0), z.insert = z.strstart < F0 - 1 ? z.strstart : F0 - 1, H0 === _ ? (L0(z, !0), z.strm.avail_out === 0 ? pi : Ai) : z.last_lit && (L0(z, !1), z.strm.avail_out === 0) ? Xe : di;
   }
   function Se(z, H0) {
-    for (var x0, p0, M0, j0, Le = z.window; ; ) {
+    for (var k0, p0, M0, j0, Le = z.window; ; ) {
       if (z.lookahead <= O0) {
         if (P0(z), z.lookahead <= O0 && H0 === T)
           return Xe;
@@ -41971,25 +41969,25 @@ function requireDeflate$1() {
         while (p0 === Le[++M0] && p0 === Le[++M0] && p0 === Le[++M0] && p0 === Le[++M0] && p0 === Le[++M0] && p0 === Le[++M0] && p0 === Le[++M0] && p0 === Le[++M0] && M0 < j0);
         z.match_length = O0 - (j0 - M0), z.match_length > z.lookahead && (z.match_length = z.lookahead);
       }
-      if (z.match_length >= F0 ? (x0 = u._tr_tally(z, 1, z.match_length - F0), z.lookahead -= z.match_length, z.strstart += z.match_length, z.match_length = 0) : (x0 = u._tr_tally(z, 0, z.window[z.strstart]), z.lookahead--, z.strstart++), x0 && (L0(z, !1), z.strm.avail_out === 0))
+      if (z.match_length >= F0 ? (k0 = u._tr_tally(z, 1, z.match_length - F0), z.lookahead -= z.match_length, z.strstart += z.match_length, z.match_length = 0) : (k0 = u._tr_tally(z, 0, z.window[z.strstart]), z.lookahead--, z.strstart++), k0 && (L0(z, !1), z.strm.avail_out === 0))
         return Xe;
     }
     return z.insert = 0, H0 === _ ? (L0(z, !0), z.strm.avail_out === 0 ? pi : Ai) : z.last_lit && (L0(z, !1), z.strm.avail_out === 0) ? Xe : di;
   }
   function z0(z, H0) {
-    for (var x0; ; ) {
+    for (var k0; ; ) {
       if (z.lookahead === 0 && (P0(z), z.lookahead === 0)) {
         if (H0 === T)
           return Xe;
         break;
       }
-      if (z.match_length = 0, x0 = u._tr_tally(z, 0, z.window[z.strstart]), z.lookahead--, z.strstart++, x0 && (L0(z, !1), z.strm.avail_out === 0))
+      if (z.match_length = 0, k0 = u._tr_tally(z, 0, z.window[z.strstart]), z.lookahead--, z.strstart++, k0 && (L0(z, !1), z.strm.avail_out === 0))
         return Xe;
     }
     return z.insert = 0, H0 === _ ? (L0(z, !0), z.strm.avail_out === 0 ? pi : Ai) : z.last_lit && (L0(z, !1), z.strm.avail_out === 0) ? Xe : di;
   }
-  function Z0(z, H0, x0, p0, M0) {
-    this.good_length = z, this.max_lazy = H0, this.nice_length = x0, this.max_chain = p0, this.func = M0;
+  function Z0(z, H0, k0, p0, M0) {
+    this.good_length = z, this.max_lazy = H0, this.nice_length = k0, this.max_chain = p0, this.func = M0;
   }
   var h0;
   h0 = [
@@ -42019,7 +42017,7 @@ function requireDeflate$1() {
     z.window_size = 2 * z.w_size, oe(z.head), z.max_lazy_match = h0[z.level].max_lazy, z.good_match = h0[z.level].good_length, z.nice_match = h0[z.level].nice_length, z.max_chain_length = h0[z.level].max_chain, z.strstart = 0, z.block_start = 0, z.lookahead = 0, z.insert = 0, z.match_length = z.prev_length = F0 - 1, z.match_available = 0, z.ins_h = 0;
   }
   function d0() {
-    this.strm = null, this.status = 0, this.pending_buf = null, this.pending_buf_size = 0, this.pending_out = 0, this.pending = 0, this.wrap = 0, this.gzhead = null, this.gzindex = 0, this.method = $, this.last_flush = -1, this.w_size = 0, this.w_bits = 0, this.w_mask = 0, this.window = null, this.window_size = 0, this.prev = null, this.head = null, this.ins_h = 0, this.hash_size = 0, this.hash_bits = 0, this.hash_mask = 0, this.hash_shift = 0, this.block_start = 0, this.match_length = 0, this.prev_match = 0, this.match_available = 0, this.strstart = 0, this.match_start = 0, this.lookahead = 0, this.prev_length = 0, this.max_chain_length = 0, this.max_lazy_match = 0, this.level = 0, this.strategy = 0, this.good_match = 0, this.nice_match = 0, this.dyn_ltree = new m.Buf16(w0 * 2), this.dyn_dtree = new m.Buf16((2 * A0 + 1) * 2), this.bl_tree = new m.Buf16((2 * S0 + 1) * 2), oe(this.dyn_ltree), oe(this.dyn_dtree), oe(this.bl_tree), this.l_desc = null, this.d_desc = null, this.bl_desc = null, this.bl_count = new m.Buf16(T0 + 1), this.heap = new m.Buf16(2 * g0 + 1), oe(this.heap), this.heap_len = 0, this.heap_max = 0, this.depth = new m.Buf16(2 * g0 + 1), oe(this.depth), this.l_buf = 0, this.lit_bufsize = 0, this.last_lit = 0, this.d_buf = 0, this.opt_len = 0, this.static_len = 0, this.matches = 0, this.insert = 0, this.bi_buf = 0, this.bi_valid = 0;
+    this.strm = null, this.status = 0, this.pending_buf = null, this.pending_buf_size = 0, this.pending_out = 0, this.pending = 0, this.wrap = 0, this.gzhead = null, this.gzindex = 0, this.method = $, this.last_flush = -1, this.w_size = 0, this.w_bits = 0, this.w_mask = 0, this.window = null, this.window_size = 0, this.prev = null, this.head = null, this.ins_h = 0, this.hash_size = 0, this.hash_bits = 0, this.hash_mask = 0, this.hash_shift = 0, this.block_start = 0, this.match_length = 0, this.prev_match = 0, this.match_available = 0, this.strstart = 0, this.match_start = 0, this.lookahead = 0, this.prev_length = 0, this.max_chain_length = 0, this.max_lazy_match = 0, this.level = 0, this.strategy = 0, this.good_match = 0, this.nice_match = 0, this.dyn_ltree = new m.Buf16(T0 * 2), this.dyn_dtree = new m.Buf16((2 * A0 + 1) * 2), this.bl_tree = new m.Buf16((2 * S0 + 1) * 2), oe(this.dyn_ltree), oe(this.dyn_dtree), oe(this.bl_tree), this.l_desc = null, this.d_desc = null, this.bl_desc = null, this.bl_count = new m.Buf16(w0 + 1), this.heap = new m.Buf16(2 * g0 + 1), oe(this.heap), this.heap_len = 0, this.heap_max = 0, this.depth = new m.Buf16(2 * g0 + 1), oe(this.depth), this.l_buf = 0, this.lit_bufsize = 0, this.last_lit = 0, this.d_buf = 0, this.opt_len = 0, this.static_len = 0, this.matches = 0, this.insert = 0, this.bi_buf = 0, this.bi_valid = 0;
   }
   function N0(z) {
     var H0;
@@ -42032,26 +42030,26 @@ function requireDeflate$1() {
   function ne(z, H0) {
     return !z || !z.state || z.state.wrap !== 2 ? L : (z.state.gzhead = H0, H);
   }
-  function R0(z, H0, x0, p0, M0, j0) {
+  function R0(z, H0, k0, p0, M0, j0) {
     if (!z)
       return L;
     var Le = 1;
-    if (H0 === K && (H0 = 6), p0 < 0 ? (Le = 0, p0 = -p0) : p0 > 15 && (Le = 2, p0 -= 16), M0 < 1 || M0 > m0 || x0 !== $ || p0 < 8 || p0 > 15 || H0 < 0 || H0 > 9 || j0 < 0 || j0 > a0)
+    if (H0 === K && (H0 = 6), p0 < 0 ? (Le = 0, p0 = -p0) : p0 > 15 && (Le = 2, p0 -= 16), M0 < 1 || M0 > m0 || k0 !== $ || p0 < 8 || p0 > 15 || H0 < 0 || H0 > 9 || j0 < 0 || j0 > a0)
       return ue(z, L);
     p0 === 8 && (p0 = 9);
     var I0 = new d0();
-    return z.state = I0, I0.strm = z, I0.wrap = Le, I0.gzhead = null, I0.w_bits = p0, I0.w_size = 1 << I0.w_bits, I0.w_mask = I0.w_size - 1, I0.hash_bits = M0 + 7, I0.hash_size = 1 << I0.hash_bits, I0.hash_mask = I0.hash_size - 1, I0.hash_shift = ~~((I0.hash_bits + F0 - 1) / F0), I0.window = new m.Buf8(I0.w_size * 2), I0.head = new m.Buf16(I0.hash_size), I0.prev = new m.Buf16(I0.w_size), I0.lit_bufsize = 1 << M0 + 6, I0.pending_buf_size = I0.lit_bufsize * 4, I0.pending_buf = new m.Buf8(I0.pending_buf_size), I0.d_buf = 1 * I0.lit_bufsize, I0.l_buf = (1 + 2) * I0.lit_bufsize, I0.level = H0, I0.strategy = j0, I0.method = x0, W0(z);
+    return z.state = I0, I0.strm = z, I0.wrap = Le, I0.gzhead = null, I0.w_bits = p0, I0.w_size = 1 << I0.w_bits, I0.w_mask = I0.w_size - 1, I0.hash_bits = M0 + 7, I0.hash_size = 1 << I0.hash_bits, I0.hash_mask = I0.hash_size - 1, I0.hash_shift = ~~((I0.hash_bits + F0 - 1) / F0), I0.window = new m.Buf8(I0.w_size * 2), I0.head = new m.Buf16(I0.hash_size), I0.prev = new m.Buf16(I0.w_size), I0.lit_bufsize = 1 << M0 + 6, I0.pending_buf_size = I0.lit_bufsize * 4, I0.pending_buf = new m.Buf8(I0.pending_buf_size), I0.d_buf = 1 * I0.lit_bufsize, I0.l_buf = (1 + 2) * I0.lit_bufsize, I0.level = H0, I0.strategy = j0, I0.method = k0, W0(z);
   }
   function q0(z, H0) {
     return R0(z, H0, $, u0, o0, D);
   }
   function i0(z, H0) {
-    var x0, p0, M0, j0;
+    var k0, p0, M0, j0;
     if (!z || !z.state || H0 > V || H0 < 0)
       return z ? ue(z, L) : L;
     if (p0 = z.state, !z.output || !z.input && z.avail_in !== 0 || p0.status === Ve && H0 !== _)
       return ue(z, z.avail_out === 0 ? Q : L);
-    if (p0.strm = z, x0 = p0.last_flush, p0.last_flush = H0, p0.status === Te)
+    if (p0.strm = z, k0 = p0.last_flush, p0.last_flush = H0, p0.status === Te)
       if (p0.wrap === 2)
         z.adler = 0, ee(p0, 31), ee(p0, 139), ee(p0, 8), p0.gzhead ? (ee(
           p0,
@@ -42063,7 +42061,7 @@ function requireDeflate$1() {
       }
     if (p0.status === Ye)
       if (p0.gzhead.extra) {
-        for (M0 = p0.pending; p0.gzindex < (p0.gzhead.extra.length & 65535) && !(p0.pending === p0.pending_buf_size && (p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), E0(z), M0 = p0.pending, p0.pending === p0.pending_buf_size)); )
+        for (M0 = p0.pending; p0.gzindex < (p0.gzhead.extra.length & 65535) && !(p0.pending === p0.pending_buf_size && (p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), x0(z), M0 = p0.pending, p0.pending === p0.pending_buf_size)); )
           ee(p0, p0.gzhead.extra[p0.gzindex] & 255), p0.gzindex++;
         p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), p0.gzindex === p0.gzhead.extra.length && (p0.gzindex = 0, p0.status = Qe);
       } else
@@ -42072,7 +42070,7 @@ function requireDeflate$1() {
       if (p0.gzhead.name) {
         M0 = p0.pending;
         do {
-          if (p0.pending === p0.pending_buf_size && (p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), E0(z), M0 = p0.pending, p0.pending === p0.pending_buf_size)) {
+          if (p0.pending === p0.pending_buf_size && (p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), x0(z), M0 = p0.pending, p0.pending === p0.pending_buf_size)) {
             j0 = 1;
             break;
           }
@@ -42085,7 +42083,7 @@ function requireDeflate$1() {
       if (p0.gzhead.comment) {
         M0 = p0.pending;
         do {
-          if (p0.pending === p0.pending_buf_size && (p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), E0(z), M0 = p0.pending, p0.pending === p0.pending_buf_size)) {
+          if (p0.pending === p0.pending_buf_size && (p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), x0(z), M0 = p0.pending, p0.pending === p0.pending_buf_size)) {
             j0 = 1;
             break;
           }
@@ -42094,10 +42092,10 @@ function requireDeflate$1() {
         p0.gzhead.hcrc && p0.pending > M0 && (z.adler = v(z.adler, p0.pending_buf, p0.pending - M0, M0)), j0 === 0 && (p0.status = B0);
       } else
         p0.status = B0;
-    if (p0.status === B0 && (p0.gzhead.hcrc ? (p0.pending + 2 > p0.pending_buf_size && E0(z), p0.pending + 2 <= p0.pending_buf_size && (ee(p0, z.adler & 255), ee(p0, z.adler >> 8 & 255), z.adler = 0, p0.status = ii)) : p0.status = ii), p0.pending !== 0) {
-      if (E0(z), z.avail_out === 0)
+    if (p0.status === B0 && (p0.gzhead.hcrc ? (p0.pending + 2 > p0.pending_buf_size && x0(z), p0.pending + 2 <= p0.pending_buf_size && (ee(p0, z.adler & 255), ee(p0, z.adler >> 8 & 255), z.adler = 0, p0.status = ii)) : p0.status = ii), p0.pending !== 0) {
+      if (x0(z), z.avail_out === 0)
         return p0.last_flush = -1, H;
-    } else if (z.avail_in === 0 && U0(H0) <= U0(x0) && H0 !== _)
+    } else if (z.avail_in === 0 && U0(H0) <= U0(k0) && H0 !== _)
       return ue(z, Q);
     if (p0.status === Ve && z.avail_in !== 0)
       return ue(z, Q);
@@ -42105,20 +42103,20 @@ function requireDeflate$1() {
       var Me = p0.strategy === J ? z0(p0, H0) : p0.strategy === n0 ? Se(p0, H0) : h0[p0.level].func(p0, H0);
       if ((Me === pi || Me === Ai) && (p0.status = Ve), Me === Xe || Me === pi)
         return z.avail_out === 0 && (p0.last_flush = -1), H;
-      if (Me === di && (H0 === E ? u._tr_align(p0) : H0 !== V && (u._tr_stored_block(p0, 0, 0, !1), H0 === F && (oe(p0.head), p0.lookahead === 0 && (p0.strstart = 0, p0.block_start = 0, p0.insert = 0))), E0(z), z.avail_out === 0))
+      if (Me === di && (H0 === E ? u._tr_align(p0) : H0 !== V && (u._tr_stored_block(p0, 0, 0, !1), H0 === F && (oe(p0.head), p0.lookahead === 0 && (p0.strstart = 0, p0.block_start = 0, p0.insert = 0))), x0(z), z.avail_out === 0))
         return p0.last_flush = -1, H;
     }
-    return H0 !== _ ? H : p0.wrap <= 0 ? d : (p0.wrap === 2 ? (ee(p0, z.adler & 255), ee(p0, z.adler >> 8 & 255), ee(p0, z.adler >> 16 & 255), ee(p0, z.adler >> 24 & 255), ee(p0, z.total_in & 255), ee(p0, z.total_in >> 8 & 255), ee(p0, z.total_in >> 16 & 255), ee(p0, z.total_in >> 24 & 255)) : (Y0(p0, z.adler >>> 16), Y0(p0, z.adler & 65535)), E0(z), p0.wrap > 0 && (p0.wrap = -p0.wrap), p0.pending !== 0 ? H : d);
+    return H0 !== _ ? H : p0.wrap <= 0 ? d : (p0.wrap === 2 ? (ee(p0, z.adler & 255), ee(p0, z.adler >> 8 & 255), ee(p0, z.adler >> 16 & 255), ee(p0, z.adler >> 24 & 255), ee(p0, z.total_in & 255), ee(p0, z.total_in >> 8 & 255), ee(p0, z.total_in >> 16 & 255), ee(p0, z.total_in >> 24 & 255)) : (Y0(p0, z.adler >>> 16), Y0(p0, z.adler & 65535)), x0(z), p0.wrap > 0 && (p0.wrap = -p0.wrap), p0.pending !== 0 ? H : d);
   }
   function c0(z) {
     var H0;
     return !z || !z.state ? L : (H0 = z.state.status, H0 !== Te && H0 !== Ye && H0 !== Qe && H0 !== He && H0 !== B0 && H0 !== ii && H0 !== Ve ? ue(z, L) : (z.state = null, H0 === ii ? ue(z, e) : H));
   }
   function De(z, H0) {
-    var x0 = H0.length, p0, M0, j0, Le, I0, Me, Ze, ke;
+    var k0 = H0.length, p0, M0, j0, Le, I0, Me, Ze, ke;
     if (!z || !z.state || (p0 = z.state, Le = p0.wrap, Le === 2 || Le === 1 && p0.status !== Te || p0.lookahead))
       return L;
-    for (Le === 1 && (z.adler = p(z.adler, H0, x0, 0)), p0.wrap = 0, x0 >= p0.w_size && (Le === 0 && (oe(p0.head), p0.strstart = 0, p0.block_start = 0, p0.insert = 0), ke = new m.Buf8(p0.w_size), m.arraySet(ke, H0, x0 - p0.w_size, p0.w_size, 0), H0 = ke, x0 = p0.w_size), I0 = z.avail_in, Me = z.next_in, Ze = z.input, z.avail_in = x0, z.next_in = 0, z.input = H0, P0(p0); p0.lookahead >= F0; ) {
+    for (Le === 1 && (z.adler = p(z.adler, H0, k0, 0)), p0.wrap = 0, k0 >= p0.w_size && (Le === 0 && (oe(p0.head), p0.strstart = 0, p0.block_start = 0, p0.insert = 0), ke = new m.Buf8(p0.w_size), m.arraySet(ke, H0, k0 - p0.w_size, p0.w_size, 0), H0 = ke, k0 = p0.w_size), I0 = z.avail_in, Me = z.next_in, Ze = z.input, z.avail_in = k0, z.next_in = 0, z.input = H0, P0(p0); p0.lookahead >= F0; ) {
       M0 = p0.strstart, j0 = p0.lookahead - (F0 - 1);
       do
         p0.ins_h = (p0.ins_h << p0.hash_shift ^ p0.window[M0 + F0 - 1]) & p0.hash_mask, p0.prev[M0 & p0.w_mask] = p0.head[p0.ins_h], p0.head[p0.ins_h] = M0, M0++;
@@ -42279,7 +42277,7 @@ function requireInffast() {
   hasRequiredInffast = 1;
   var m = 30, u = 12;
   return inffast = function(v, y) {
-    var T, E, F, _, V, H, d, L, e, Q, K, Z, J, n0, a0, D, s0, $, m0, u0, o0, a, k0, g0, A0;
+    var T, E, F, _, V, H, d, L, e, Q, K, Z, J, n0, a0, D, s0, $, m0, u0, o0, a, E0, g0, A0;
     T = v.state, E = v.next_in, g0 = v.input, F = E + (v.avail_in - 5), _ = v.next_out, A0 = v.output, V = _ - (y - v.avail_out), H = _ + (v.avail_out - 257), d = T.dmax, L = T.wsize, e = T.whave, Q = T.wnext, K = T.window, Z = T.hold, J = T.bits, n0 = T.lencode, a0 = T.distcode, D = (1 << T.lenbits) - 1, s0 = (1 << T.distbits) - 1;
     e:
       do {
@@ -42302,13 +42300,13 @@ function requireInffast() {
                         v.msg = "invalid distance too far back", T.mode = m;
                         break e;
                       }
-                      if (a = 0, k0 = K, Q === 0) {
+                      if (a = 0, E0 = K, Q === 0) {
                         if (a += L - m0, m0 < u0) {
                           u0 -= m0;
                           do
                             A0[_++] = K[a++];
                           while (--m0);
-                          a = _ - o0, k0 = A0;
+                          a = _ - o0, E0 = A0;
                         }
                       } else if (Q < m0) {
                         if (a += L + Q - m0, m0 -= Q, m0 < u0) {
@@ -42321,7 +42319,7 @@ function requireInffast() {
                             do
                               A0[_++] = K[a++];
                             while (--m0);
-                            a = _ - o0, k0 = A0;
+                            a = _ - o0, E0 = A0;
                           }
                         }
                       } else if (a += Q - m0, m0 < u0) {
@@ -42329,11 +42327,11 @@ function requireInffast() {
                         do
                           A0[_++] = K[a++];
                         while (--m0);
-                        a = _ - o0, k0 = A0;
+                        a = _ - o0, E0 = A0;
                       }
                       for (; u0 > 2; )
-                        A0[_++] = k0[a++], A0[_++] = k0[a++], A0[_++] = k0[a++], u0 -= 3;
-                      u0 && (A0[_++] = k0[a++], u0 > 1 && (A0[_++] = k0[a++]));
+                        A0[_++] = E0[a++], A0[_++] = E0[a++], A0[_++] = E0[a++], u0 -= 3;
+                      u0 && (A0[_++] = E0[a++], u0 > 1 && (A0[_++] = E0[a++]));
                     } else {
                       a = _ - o0;
                       do
@@ -42509,7 +42507,7 @@ function requireInftrees() {
     64
   ];
   return inftrees = function(L, e, Q, K, Z, J, n0, a0) {
-    var D = a0.bits, s0 = 0, $ = 0, m0 = 0, u0 = 0, o0 = 0, a = 0, k0 = 0, g0 = 0, A0 = 0, S0 = 0, w0, T0, F0, O0, $0, Re = null, Te = 0, Ye, Qe = new m.Buf16(u + 1), He = new m.Buf16(u + 1), B0 = null, ii = 0, Ve, Xe, di;
+    var D = a0.bits, s0 = 0, $ = 0, m0 = 0, u0 = 0, o0 = 0, a = 0, E0 = 0, g0 = 0, A0 = 0, S0 = 0, T0, w0, F0, O0, $0, Re = null, Te = 0, Ye, Qe = new m.Buf16(u + 1), He = new m.Buf16(u + 1), B0 = null, ii = 0, Ve, Xe, di;
     for (s0 = 0; s0 <= u; s0++)
       Qe[s0] = 0;
     for ($ = 0; $ < K; $++)
@@ -42529,29 +42527,29 @@ function requireInftrees() {
       He[s0 + 1] = He[s0] + Qe[s0];
     for ($ = 0; $ < K; $++)
       e[Q + $] !== 0 && (n0[He[e[Q + $]]++] = $);
-    if (L === y ? (Re = B0 = n0, Ye = 19) : L === T ? (Re = F, Te -= 257, B0 = _, ii -= 257, Ye = 256) : (Re = V, B0 = H, Ye = -1), S0 = 0, $ = 0, s0 = m0, $0 = J, a = o0, k0 = 0, F0 = -1, A0 = 1 << o0, O0 = A0 - 1, L === T && A0 > p || L === E && A0 > v)
+    if (L === y ? (Re = B0 = n0, Ye = 19) : L === T ? (Re = F, Te -= 257, B0 = _, ii -= 257, Ye = 256) : (Re = V, B0 = H, Ye = -1), S0 = 0, $ = 0, s0 = m0, $0 = J, a = o0, E0 = 0, F0 = -1, A0 = 1 << o0, O0 = A0 - 1, L === T && A0 > p || L === E && A0 > v)
       return 1;
     for (; ; ) {
-      Ve = s0 - k0, n0[$] < Ye ? (Xe = 0, di = n0[$]) : n0[$] > Ye ? (Xe = B0[ii + n0[$]], di = Re[Te + n0[$]]) : (Xe = 32 + 64, di = 0), w0 = 1 << s0 - k0, T0 = 1 << a, m0 = T0;
+      Ve = s0 - E0, n0[$] < Ye ? (Xe = 0, di = n0[$]) : n0[$] > Ye ? (Xe = B0[ii + n0[$]], di = Re[Te + n0[$]]) : (Xe = 32 + 64, di = 0), T0 = 1 << s0 - E0, w0 = 1 << a, m0 = w0;
       do
-        T0 -= w0, Z[$0 + (S0 >> k0) + T0] = Ve << 24 | Xe << 16 | di | 0;
-      while (T0 !== 0);
-      for (w0 = 1 << s0 - 1; S0 & w0; )
-        w0 >>= 1;
-      if (w0 !== 0 ? (S0 &= w0 - 1, S0 += w0) : S0 = 0, $++, --Qe[s0] === 0) {
+        w0 -= T0, Z[$0 + (S0 >> E0) + w0] = Ve << 24 | Xe << 16 | di | 0;
+      while (w0 !== 0);
+      for (T0 = 1 << s0 - 1; S0 & T0; )
+        T0 >>= 1;
+      if (T0 !== 0 ? (S0 &= T0 - 1, S0 += T0) : S0 = 0, $++, --Qe[s0] === 0) {
         if (s0 === u0)
           break;
         s0 = e[Q + n0[$]];
       }
       if (s0 > o0 && (S0 & O0) !== F0) {
-        for (k0 === 0 && (k0 = o0), $0 += m0, a = s0 - k0, g0 = 1 << a; a + k0 < u0 && (g0 -= Qe[a + k0], !(g0 <= 0)); )
+        for (E0 === 0 && (E0 = o0), $0 += m0, a = s0 - E0, g0 = 1 << a; a + E0 < u0 && (g0 -= Qe[a + E0], !(g0 <= 0)); )
           a++, g0 <<= 1;
         if (A0 += 1 << a, L === T && A0 > p || L === E && A0 > v)
           return 1;
         F0 = S0 & O0, Z[F0] = o0 << 24 | a << 16 | $0 - J | 0;
       }
     }
-    return S0 !== 0 && (Z[$0 + S0] = s0 - k0 << 24 | 64 << 16 | 0), a0.bits = o0, 0;
+    return S0 !== 0 && (Z[$0 + S0] = s0 - E0 << 24 | 64 << 16 | 0), a0.bits = o0, 0;
   }, inftrees;
 }
 var hasRequiredInflate$1;
@@ -42559,7 +42557,7 @@ function requireInflate$1() {
   if (hasRequiredInflate$1)
     return inflate;
   hasRequiredInflate$1 = 1;
-  var m = requireCommon(), u = requireAdler32(), p = requireCrc32(), v = requireInffast(), y = requireInftrees(), T = 0, E = 1, F = 2, _ = 4, V = 5, H = 6, d = 0, L = 1, e = 2, Q = -2, K = -3, Z = -4, J = -5, n0 = 8, a0 = 1, D = 2, s0 = 3, $ = 4, m0 = 5, u0 = 6, o0 = 7, a = 8, k0 = 9, g0 = 10, A0 = 11, S0 = 12, w0 = 13, T0 = 14, F0 = 15, O0 = 16, $0 = 17, Re = 18, Te = 19, Ye = 20, Qe = 21, He = 22, B0 = 23, ii = 24, Ve = 25, Xe = 26, di = 27, pi = 28, Ai = 29, $e = 30, ue = 31, U0 = 32, oe = 852, E0 = 592, L0 = 15, ee = L0;
+  var m = requireCommon(), u = requireAdler32(), p = requireCrc32(), v = requireInffast(), y = requireInftrees(), T = 0, E = 1, F = 2, _ = 4, V = 5, H = 6, d = 0, L = 1, e = 2, Q = -2, K = -3, Z = -4, J = -5, n0 = 8, a0 = 1, D = 2, s0 = 3, $ = 4, m0 = 5, u0 = 6, o0 = 7, a = 8, E0 = 9, g0 = 10, A0 = 11, S0 = 12, T0 = 13, w0 = 14, F0 = 15, O0 = 16, $0 = 17, Re = 18, Te = 19, Ye = 20, Qe = 21, He = 22, B0 = 23, ii = 24, Ve = 25, Xe = 26, di = 27, pi = 28, Ai = 29, $e = 30, ue = 31, U0 = 32, oe = 852, x0 = 592, L0 = 15, ee = L0;
   function Y0(R0) {
     return (R0 >>> 24 & 255) + (R0 >>> 8 & 65280) + ((R0 & 65280) << 8) + ((R0 & 255) << 24);
   }
@@ -42568,7 +42566,7 @@ function requireInflate$1() {
   }
   function Q0(R0) {
     var q0;
-    return !R0 || !R0.state ? Q : (q0 = R0.state, R0.total_in = R0.total_out = q0.total = 0, R0.msg = "", q0.wrap && (R0.adler = q0.wrap & 1), q0.mode = a0, q0.last = 0, q0.havedict = 0, q0.dmax = 32768, q0.head = null, q0.hold = 0, q0.bits = 0, q0.lencode = q0.lendyn = new m.Buf32(oe), q0.distcode = q0.distdyn = new m.Buf32(E0), q0.sane = 1, q0.back = -1, d);
+    return !R0 || !R0.state ? Q : (q0 = R0.state, R0.total_in = R0.total_out = q0.total = 0, R0.msg = "", q0.wrap && (R0.adler = q0.wrap & 1), q0.mode = a0, q0.last = 0, q0.havedict = 0, q0.dmax = 32768, q0.head = null, q0.hold = 0, q0.bits = 0, q0.lencode = q0.lendyn = new m.Buf32(oe), q0.distcode = q0.distdyn = new m.Buf32(x0), q0.sane = 1, q0.back = -1, d);
   }
   function P0(R0) {
     var q0;
@@ -42608,25 +42606,25 @@ function requireInflate$1() {
     return z.window === null && (z.wsize = 1 << z.wbits, z.wnext = 0, z.whave = 0, z.window = new m.Buf8(z.wsize)), c0 >= z.wsize ? (m.arraySet(z.window, q0, i0 - z.wsize, z.wsize, 0), z.wnext = 0, z.whave = z.wsize) : (De = z.wsize - z.wnext, De > c0 && (De = c0), m.arraySet(z.window, q0, i0 - c0, De, z.wnext), c0 -= De, c0 ? (m.arraySet(z.window, q0, i0 - c0, c0, 0), z.wnext = c0, z.whave = z.wsize) : (z.wnext += De, z.wnext === z.wsize && (z.wnext = 0), z.whave < z.wsize && (z.whave += De))), 0;
   }
   function d0(R0, q0) {
-    var i0, c0, De, z, H0, x0, p0, M0, j0, Le, I0, Me, Ze, ke, Fe = 0, D0, qe, Ri, Vi, V0, Kt, Pi, Ji, Ui = new m.Buf8(4), st, fe, pe = (
+    var i0, c0, De, z, H0, k0, p0, M0, j0, Le, I0, Me, Ze, ke, Fe = 0, D0, qe, Ri, Vi, V0, Kt, Pi, Ji, Ui = new m.Buf8(4), st, fe, pe = (
       /* permutation of code lengths */
       [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
     );
     if (!R0 || !R0.state || !R0.output || !R0.input && R0.avail_in !== 0)
       return Q;
-    i0 = R0.state, i0.mode === S0 && (i0.mode = w0), H0 = R0.next_out, De = R0.output, p0 = R0.avail_out, z = R0.next_in, c0 = R0.input, x0 = R0.avail_in, M0 = i0.hold, j0 = i0.bits, Le = x0, I0 = p0, Ji = d;
+    i0 = R0.state, i0.mode === S0 && (i0.mode = T0), H0 = R0.next_out, De = R0.output, p0 = R0.avail_out, z = R0.next_in, c0 = R0.input, k0 = R0.avail_in, M0 = i0.hold, j0 = i0.bits, Le = k0, I0 = p0, Ji = d;
     e:
       for (; ; )
         switch (i0.mode) {
           case a0:
             if (i0.wrap === 0) {
-              i0.mode = w0;
+              i0.mode = T0;
               break;
             }
             for (; j0 < 16; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             if (i0.wrap & 2 && M0 === 35615) {
               i0.check = 0, Ui[0] = M0 & 255, Ui[1] = M0 >>> 8 & 255, i0.check = p(i0.check, Ui, 2, 0), M0 = 0, j0 = 0, i0.mode = D;
@@ -42651,9 +42649,9 @@ function requireInflate$1() {
             break;
           case D:
             for (; j0 < 16; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             if (i0.flags = M0, (i0.flags & 255) !== n0) {
               R0.msg = "unknown compression method", i0.mode = $e;
@@ -42666,31 +42664,31 @@ function requireInflate$1() {
             i0.head && (i0.head.text = M0 >> 8 & 1), i0.flags & 512 && (Ui[0] = M0 & 255, Ui[1] = M0 >>> 8 & 255, i0.check = p(i0.check, Ui, 2, 0)), M0 = 0, j0 = 0, i0.mode = s0;
           case s0:
             for (; j0 < 32; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             i0.head && (i0.head.time = M0), i0.flags & 512 && (Ui[0] = M0 & 255, Ui[1] = M0 >>> 8 & 255, Ui[2] = M0 >>> 16 & 255, Ui[3] = M0 >>> 24 & 255, i0.check = p(i0.check, Ui, 4, 0)), M0 = 0, j0 = 0, i0.mode = $;
           case $:
             for (; j0 < 16; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             i0.head && (i0.head.xflags = M0 & 255, i0.head.os = M0 >> 8), i0.flags & 512 && (Ui[0] = M0 & 255, Ui[1] = M0 >>> 8 & 255, i0.check = p(i0.check, Ui, 2, 0)), M0 = 0, j0 = 0, i0.mode = m0;
           case m0:
             if (i0.flags & 1024) {
               for (; j0 < 16; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               i0.length = M0, i0.head && (i0.head.extra_len = M0), i0.flags & 512 && (Ui[0] = M0 & 255, Ui[1] = M0 >>> 8 & 255, i0.check = p(i0.check, Ui, 2, 0)), M0 = 0, j0 = 0;
             } else
               i0.head && (i0.head.extra = null);
             i0.mode = u0;
           case u0:
-            if (i0.flags & 1024 && (Me = i0.length, Me > x0 && (Me = x0), Me && (i0.head && (Pi = i0.head.extra_len - i0.length, i0.head.extra || (i0.head.extra = new Array(i0.head.extra_len)), m.arraySet(
+            if (i0.flags & 1024 && (Me = i0.length, Me > k0 && (Me = k0), Me && (i0.head && (Pi = i0.head.extra_len - i0.length, i0.head.extra || (i0.head.extra = new Array(i0.head.extra_len)), m.arraySet(
               i0.head.extra,
               c0,
               z,
@@ -42699,41 +42697,41 @@ function requireInflate$1() {
               Me,
               /*len + copy > state.head.extra_max - len ? state.head.extra_max : copy,*/
               Pi
-            )), i0.flags & 512 && (i0.check = p(i0.check, c0, Me, z)), x0 -= Me, z += Me, i0.length -= Me), i0.length))
+            )), i0.flags & 512 && (i0.check = p(i0.check, c0, Me, z)), k0 -= Me, z += Me, i0.length -= Me), i0.length))
               break e;
             i0.length = 0, i0.mode = o0;
           case o0:
             if (i0.flags & 2048) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
               Me = 0;
               do
                 Pi = c0[z + Me++], i0.head && Pi && i0.length < 65536 && (i0.head.name += String.fromCharCode(Pi));
-              while (Pi && Me < x0);
-              if (i0.flags & 512 && (i0.check = p(i0.check, c0, Me, z)), x0 -= Me, z += Me, Pi)
+              while (Pi && Me < k0);
+              if (i0.flags & 512 && (i0.check = p(i0.check, c0, Me, z)), k0 -= Me, z += Me, Pi)
                 break e;
             } else
               i0.head && (i0.head.name = null);
             i0.length = 0, i0.mode = a;
           case a:
             if (i0.flags & 4096) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
               Me = 0;
               do
                 Pi = c0[z + Me++], i0.head && Pi && i0.length < 65536 && (i0.head.comment += String.fromCharCode(Pi));
-              while (Pi && Me < x0);
-              if (i0.flags & 512 && (i0.check = p(i0.check, c0, Me, z)), x0 -= Me, z += Me, Pi)
+              while (Pi && Me < k0);
+              if (i0.flags & 512 && (i0.check = p(i0.check, c0, Me, z)), k0 -= Me, z += Me, Pi)
                 break e;
             } else
               i0.head && (i0.head.comment = null);
-            i0.mode = k0;
-          case k0:
+            i0.mode = E0;
+          case E0:
             if (i0.flags & 512) {
               for (; j0 < 16; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               if (M0 !== (i0.check & 65535)) {
                 R0.msg = "header crc mismatch", i0.mode = $e;
@@ -42745,31 +42743,31 @@ function requireInflate$1() {
             break;
           case g0:
             for (; j0 < 32; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             R0.adler = i0.check = Y0(M0), M0 = 0, j0 = 0, i0.mode = A0;
           case A0:
             if (i0.havedict === 0)
-              return R0.next_out = H0, R0.avail_out = p0, R0.next_in = z, R0.avail_in = x0, i0.hold = M0, i0.bits = j0, e;
+              return R0.next_out = H0, R0.avail_out = p0, R0.next_in = z, R0.avail_in = k0, i0.hold = M0, i0.bits = j0, e;
             R0.adler = i0.check = 1, i0.mode = S0;
           case S0:
             if (q0 === V || q0 === H)
               break e;
-          case w0:
+          case T0:
             if (i0.last) {
               M0 >>>= j0 & 7, j0 -= j0 & 7, i0.mode = di;
               break;
             }
             for (; j0 < 3; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             switch (i0.last = M0 & 1, M0 >>>= 1, j0 -= 1, M0 & 3) {
               case 0:
-                i0.mode = T0;
+                i0.mode = w0;
                 break;
               case 1:
                 if (h0(i0), i0.mode = Ye, q0 === H) {
@@ -42785,11 +42783,11 @@ function requireInflate$1() {
             }
             M0 >>>= 2, j0 -= 2;
             break;
-          case T0:
+          case w0:
             for (M0 >>>= j0 & 7, j0 -= j0 & 7; j0 < 32; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             if ((M0 & 65535) !== (M0 >>> 16 ^ 65535)) {
               R0.msg = "invalid stored block lengths", i0.mode = $e;
@@ -42801,18 +42799,18 @@ function requireInflate$1() {
             i0.mode = O0;
           case O0:
             if (Me = i0.length, Me) {
-              if (Me > x0 && (Me = x0), Me > p0 && (Me = p0), Me === 0)
+              if (Me > k0 && (Me = k0), Me > p0 && (Me = p0), Me === 0)
                 break e;
-              m.arraySet(De, c0, z, Me, H0), x0 -= Me, z += Me, p0 -= Me, H0 += Me, i0.length -= Me;
+              m.arraySet(De, c0, z, Me, H0), k0 -= Me, z += Me, p0 -= Me, H0 += Me, i0.length -= Me;
               break;
             }
             i0.mode = S0;
             break;
           case $0:
             for (; j0 < 14; ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             if (i0.nlen = (M0 & 31) + 257, M0 >>>= 5, j0 -= 5, i0.ndist = (M0 & 31) + 1, M0 >>>= 5, j0 -= 5, i0.ncode = (M0 & 15) + 4, M0 >>>= 4, j0 -= 4, i0.nlen > 286 || i0.ndist > 30) {
               R0.msg = "too many length or distance symbols", i0.mode = $e;
@@ -42822,9 +42820,9 @@ function requireInflate$1() {
           case Re:
             for (; i0.have < i0.ncode; ) {
               for (; j0 < 3; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               i0.lens[pe[i0.have++]] = M0 & 7, M0 >>>= 3, j0 -= 3;
             }
@@ -42838,18 +42836,18 @@ function requireInflate$1() {
           case Te:
             for (; i0.have < i0.nlen + i0.ndist; ) {
               for (; Fe = i0.lencode[M0 & (1 << i0.lenbits) - 1], D0 = Fe >>> 24, qe = Fe >>> 16 & 255, Ri = Fe & 65535, !(D0 <= j0); ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               if (Ri < 16)
                 M0 >>>= D0, j0 -= D0, i0.lens[i0.have++] = Ri;
               else {
                 if (Ri === 16) {
                   for (fe = D0 + 2; j0 < fe; ) {
-                    if (x0 === 0)
+                    if (k0 === 0)
                       break e;
-                    x0--, M0 += c0[z++] << j0, j0 += 8;
+                    k0--, M0 += c0[z++] << j0, j0 += 8;
                   }
                   if (M0 >>>= D0, j0 -= D0, i0.have === 0) {
                     R0.msg = "invalid bit length repeat", i0.mode = $e;
@@ -42858,16 +42856,16 @@ function requireInflate$1() {
                   Pi = i0.lens[i0.have - 1], Me = 3 + (M0 & 3), M0 >>>= 2, j0 -= 2;
                 } else if (Ri === 17) {
                   for (fe = D0 + 3; j0 < fe; ) {
-                    if (x0 === 0)
+                    if (k0 === 0)
                       break e;
-                    x0--, M0 += c0[z++] << j0, j0 += 8;
+                    k0--, M0 += c0[z++] << j0, j0 += 8;
                   }
                   M0 >>>= D0, j0 -= D0, Pi = 0, Me = 3 + (M0 & 7), M0 >>>= 3, j0 -= 3;
                 } else {
                   for (fe = D0 + 7; j0 < fe; ) {
-                    if (x0 === 0)
+                    if (k0 === 0)
                       break e;
-                    x0--, M0 += c0[z++] << j0, j0 += 8;
+                    k0--, M0 += c0[z++] << j0, j0 += 8;
                   }
                   M0 >>>= D0, j0 -= D0, Pi = 0, Me = 11 + (M0 & 127), M0 >>>= 7, j0 -= 7;
                 }
@@ -42898,20 +42896,20 @@ function requireInflate$1() {
           case Ye:
             i0.mode = Qe;
           case Qe:
-            if (x0 >= 6 && p0 >= 258) {
-              R0.next_out = H0, R0.avail_out = p0, R0.next_in = z, R0.avail_in = x0, i0.hold = M0, i0.bits = j0, v(R0, I0), H0 = R0.next_out, De = R0.output, p0 = R0.avail_out, z = R0.next_in, c0 = R0.input, x0 = R0.avail_in, M0 = i0.hold, j0 = i0.bits, i0.mode === S0 && (i0.back = -1);
+            if (k0 >= 6 && p0 >= 258) {
+              R0.next_out = H0, R0.avail_out = p0, R0.next_in = z, R0.avail_in = k0, i0.hold = M0, i0.bits = j0, v(R0, I0), H0 = R0.next_out, De = R0.output, p0 = R0.avail_out, z = R0.next_in, c0 = R0.input, k0 = R0.avail_in, M0 = i0.hold, j0 = i0.bits, i0.mode === S0 && (i0.back = -1);
               break;
             }
             for (i0.back = 0; Fe = i0.lencode[M0 & (1 << i0.lenbits) - 1], D0 = Fe >>> 24, qe = Fe >>> 16 & 255, Ri = Fe & 65535, !(D0 <= j0); ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             if (qe && !(qe & 240)) {
               for (Vi = D0, V0 = qe, Kt = Ri; Fe = i0.lencode[Kt + ((M0 & (1 << Vi + V0) - 1) >> Vi)], D0 = Fe >>> 24, qe = Fe >>> 16 & 255, Ri = Fe & 65535, !(Vi + D0 <= j0); ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               M0 >>>= Vi, j0 -= Vi, i0.back += Vi;
             }
@@ -42931,24 +42929,24 @@ function requireInflate$1() {
           case He:
             if (i0.extra) {
               for (fe = i0.extra; j0 < fe; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               i0.length += M0 & (1 << i0.extra) - 1, M0 >>>= i0.extra, j0 -= i0.extra, i0.back += i0.extra;
             }
             i0.was = i0.length, i0.mode = B0;
           case B0:
             for (; Fe = i0.distcode[M0 & (1 << i0.distbits) - 1], D0 = Fe >>> 24, qe = Fe >>> 16 & 255, Ri = Fe & 65535, !(D0 <= j0); ) {
-              if (x0 === 0)
+              if (k0 === 0)
                 break e;
-              x0--, M0 += c0[z++] << j0, j0 += 8;
+              k0--, M0 += c0[z++] << j0, j0 += 8;
             }
             if (!(qe & 240)) {
               for (Vi = D0, V0 = qe, Kt = Ri; Fe = i0.distcode[Kt + ((M0 & (1 << Vi + V0) - 1) >> Vi)], D0 = Fe >>> 24, qe = Fe >>> 16 & 255, Ri = Fe & 65535, !(Vi + D0 <= j0); ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               M0 >>>= Vi, j0 -= Vi, i0.back += Vi;
             }
@@ -42960,9 +42958,9 @@ function requireInflate$1() {
           case ii:
             if (i0.extra) {
               for (fe = i0.extra; j0 < fe; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               i0.offset += M0 & (1 << i0.extra) - 1, M0 >>>= i0.extra, j0 -= i0.extra, i0.back += i0.extra;
             }
@@ -42996,9 +42994,9 @@ function requireInflate$1() {
           case di:
             if (i0.wrap) {
               for (; j0 < 32; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 |= c0[z++] << j0, j0 += 8;
+                k0--, M0 |= c0[z++] << j0, j0 += 8;
               }
               if (I0 -= p0, R0.total_out += I0, i0.total += I0, I0 && (R0.adler = i0.check = /*UPDATE(state.check, put - _out, _out);*/
               i0.flags ? p(i0.check, De, I0, H0 - I0) : u(i0.check, De, I0, H0 - I0)), I0 = p0, (i0.flags ? M0 : Y0(M0)) !== i0.check) {
@@ -43011,9 +43009,9 @@ function requireInflate$1() {
           case pi:
             if (i0.wrap && i0.flags) {
               for (; j0 < 32; ) {
-                if (x0 === 0)
+                if (k0 === 0)
                   break e;
-                x0--, M0 += c0[z++] << j0, j0 += 8;
+                k0--, M0 += c0[z++] << j0, j0 += 8;
               }
               if (M0 !== (i0.total & 4294967295)) {
                 R0.msg = "incorrect length check", i0.mode = $e;
@@ -43034,7 +43032,7 @@ function requireInflate$1() {
           default:
             return Q;
         }
-    return R0.next_out = H0, R0.avail_out = p0, R0.next_in = z, R0.avail_in = x0, i0.hold = M0, i0.bits = j0, (i0.wsize || I0 !== R0.avail_out && i0.mode < $e && (i0.mode < di || q0 !== _)) && Ie(R0, R0.output, R0.next_out, I0 - R0.avail_out), Le -= R0.avail_in, I0 -= R0.avail_out, R0.total_in += Le, R0.total_out += I0, i0.total += I0, i0.wrap && I0 && (R0.adler = i0.check = /*UPDATE(state.check, strm.next_out - _out, _out);*/
+    return R0.next_out = H0, R0.avail_out = p0, R0.next_in = z, R0.avail_in = k0, i0.hold = M0, i0.bits = j0, (i0.wsize || I0 !== R0.avail_out && i0.mode < $e && (i0.mode < di || q0 !== _)) && Ie(R0, R0.output, R0.next_out, I0 - R0.avail_out), Le -= R0.avail_in, I0 -= R0.avail_out, R0.total_in += Le, R0.total_out += I0, i0.total += I0, i0.wrap && I0 && (R0.adler = i0.check = /*UPDATE(state.check, strm.next_out - _out, _out);*/
     i0.flags ? p(i0.check, De, I0, R0.next_out - I0) : u(i0.check, De, I0, R0.next_out - I0)), R0.data_type = i0.bits + (i0.last ? 64 : 0) + (i0.mode === S0 ? 128 : 0) + (i0.mode === Ye || i0.mode === F0 ? 256 : 0), (Le === 0 && I0 === 0 || q0 === _) && Ji === d && (Ji = J), Ji;
   }
   function N0(R0) {
@@ -43363,26 +43361,26 @@ function requireImage() {
     }, u.Image.prototype.getRawData = function() {
       return this.getPixelDataBytes();
     }, u.Image.prototype.getInterpretedData = function(E, F, _) {
-      var V, H, d, L, e, Q, K, Z, J, n0, a0, D, s0, $, m0, u0, o0, a, k0, g0, A0, S0;
+      var V, H, d, L, e, Q, K, Z, J, n0, a0, D, s0, $, m0, u0, o0, a, E0, g0, A0, S0;
       a = arguments.length < 3, K = u.Utils.createBitMask(
         this.getBitsAllocated() / 8,
         this.getBitsStored(),
         this.getDataType() === u.Image.BYTE_TYPE_INTEGER_UNSIGNED
-      ), V = this.getPixelRepresentation() ? u.Image.BYTE_TYPE_INTEGER : u.Image.BYTE_TYPE_INTEGER_UNSIGNED, H = this.getBitsAllocated() / 8, o0 = this.getRawData(), L = new DataView(o0), g0 = o0.byteLength / H, k0 = g0 / this.getNumberOfFrames(), d = a ? g0 : k0, A0 = a ? 0 : _ * k0, Z = this.getDataScaleSlope() || 1, J = this.getDataScaleIntercept() || 0, n0 = u.Utils.MAX_VALUE, a0 = u.Utils.MIN_VALUE, s0 = -1, $ = -1, m0 = this.littleEndian, E ? e = new Array(d) : e = new Float32Array(d);
-      var w0;
-      V === u.Image.BYTE_TYPE_INTEGER ? H === 1 ? w0 = L.getInt8.bind(L) : H === 2 && (w0 = L.getInt16.bind(L)) : V === u.Image.BYTE_TYPE_INTEGER_UNSIGNED && (H === 1 ? w0 = L.getUint8.bind(L) : H === 2 && (w0 = L.getUint16.bind(L)));
-      var T0 = u.Image.getSingleValueSafely(this.getTag(u.Tag.TAG_LUT_SHAPE[0], u.Tag.TAG_LUT_SHAPE[1]), 0) === "INVERSE";
-      if (T0 = T0 || this.getPhotometricInterpretation() === "MONOCHROME1", T0) {
+      ), V = this.getPixelRepresentation() ? u.Image.BYTE_TYPE_INTEGER : u.Image.BYTE_TYPE_INTEGER_UNSIGNED, H = this.getBitsAllocated() / 8, o0 = this.getRawData(), L = new DataView(o0), g0 = o0.byteLength / H, E0 = g0 / this.getNumberOfFrames(), d = a ? g0 : E0, A0 = a ? 0 : _ * E0, Z = this.getDataScaleSlope() || 1, J = this.getDataScaleIntercept() || 0, n0 = u.Utils.MAX_VALUE, a0 = u.Utils.MIN_VALUE, s0 = -1, $ = -1, m0 = this.littleEndian, E ? e = new Array(d) : e = new Float32Array(d);
+      var T0;
+      V === u.Image.BYTE_TYPE_INTEGER ? H === 1 ? T0 = L.getInt8.bind(L) : H === 2 && (T0 = L.getInt16.bind(L)) : V === u.Image.BYTE_TYPE_INTEGER_UNSIGNED && (H === 1 ? T0 = L.getUint8.bind(L) : H === 2 && (T0 = L.getUint16.bind(L)));
+      var w0 = u.Image.getSingleValueSafely(this.getTag(u.Tag.TAG_LUT_SHAPE[0], u.Tag.TAG_LUT_SHAPE[1]), 0) === "INVERSE";
+      if (w0 = w0 || this.getPhotometricInterpretation() === "MONOCHROME1", w0) {
         var F0 = Math.pow(2, this.getBitsStored()) - 1, O0 = 0;
         V === u.Image.BYTE_TYPE_INTEGER && (F0 /= 2, O0 = -F0);
-        var $0 = w0;
-        w0 = function(Re, Te) {
+        var $0 = T0;
+        T0 = function(Re, Te) {
           var Ye = F0 - $0(Re, Te);
           return Math.min(F0, Math.max(O0, Ye));
         };
       }
       for (Q = A0, S0 = 0; S0 < d; Q++, S0++)
-        u0 = w0(Q * H, m0), D = (u0 & K) * Z + J, e[S0] = D, D < n0 && (n0 = D, s0 = S0), D > a0 && (a0 = D, $ = S0);
+        u0 = T0(Q * H, m0), D = (u0 & K) * Z + J, e[S0] = D, D < n0 && (n0 = D, s0 = S0), D > a0 && (a0 = D, $ = S0);
       return F ? {
         data: e,
         min: n0,
@@ -51778,7 +51776,7 @@ colortables.prototype.colorMaps = function() {
 };
 colortables.prototype.colormapFromKey = function(m) {
   let u = this.cluts[m];
-  return u !== void 0 || (console.log("No color map named " + m), u = {
+  return u !== void 0 || (u = this.cluts[m.toLowerCase()], u !== void 0) || (m.length > 0 && console.log("No color map named " + m), u = {
     min: 0,
     max: 0,
     R: [0, 255],
@@ -52000,8 +51998,8 @@ function NVImage(m, u = "", p = "gray", v = 1, y = null, T = NaN, E = NaN, F = !
       throw new Error("Image type not supported");
   }
   typeof this.hdr.magic == "number" && (this.hdr.magic = "n+1"), this.nFrame4D = 1;
-  for (let w0 = 4; w0 < 7; w0++)
-    this.hdr.dims[w0] > 1 && (this.nFrame4D *= this.hdr.dims[w0]);
+  for (let T0 = 4; T0 < 7; T0++)
+    this.hdr.dims[T0] > 1 && (this.nFrame4D *= this.hdr.dims[T0]);
   this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1), this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
   let s0 = this.nVox3D * (this.hdr.numBitsPerVoxel / 8), $ = D.byteLength / s0;
   if (this.nTotalFrame4D = this.nFrame4D, $ !== this.nFrame4D && ($ > 0 && $ * s0 === D.byteLength ? console.log(
@@ -52011,32 +52009,32 @@ function NVImage(m, u = "", p = "gray", v = 1, y = null, T = NaN, E = NaN, F = !
     this.hdr,
     D.byteLength
   ), this.nFrame4D = $), (this.hdr.intent_code === 1007 || this.hdr.intent_code === 2003) && this.nFrame4D === 3 && this.hdr.datatypeCode === this.DT_FLOAT) {
-    let T0 = new Float32Array(D).slice();
+    let w0 = new Float32Array(D).slice();
     this.hdr.datatypeCode = this.DT_RGB, this.nFrame4D = 1;
     for (let Te = 4; Te < 7; Te++)
       this.hdr.dims[Te] = 1;
     this.hdr.dims[0] = 3, D = new Uint8Array(this.nVox3D * 3);
-    let F0 = Math.abs(T0[0]);
+    let F0 = Math.abs(w0[0]);
     for (let Te = 0; Te < this.nVox3D * 3; Te++)
-      F0 = Math.max(F0, Math.abs(T0[Te]));
+      F0 = Math.max(F0, Math.abs(w0[Te]));
     let O0 = 1;
     F0 > 0 && (O0 = 1 / F0);
     let $0 = this.nVox3D * 2, Re = 0;
     for (let Te = 0; Te < this.nVox3D; Te++)
-      D[Re] = 255 * Math.abs(T0[Te] * O0), D[Re + 1] = 255 * Math.abs(T0[Te + this.nVox3D] * O0), D[Re + 2] = 255 * Math.abs(T0[Te + $0] * O0), Re += 3;
+      D[Re] = 255 * Math.abs(w0[Te] * O0), D[Re + 1] = 255 * Math.abs(w0[Te + this.nVox3D] * O0), D[Re + 2] = 255 * Math.abs(w0[Te + $0] * O0), Re += 3;
   }
   (this.hdr.pixDims[1] === 0 || this.hdr.pixDims[2] === 0 || this.hdr.pixDims[3] === 0) && console.log("pixDims not plausible", this.hdr);
-  function m0(w0) {
-    let T0 = [!1, !1, !1, !1], F0 = [!1, !1, !1, !1];
+  function m0(T0) {
+    let w0 = [!1, !1, !1, !1], F0 = [!1, !1, !1, !1];
     for (let O0 = 0; O0 < 4; O0++)
       for (let $0 = 0; $0 < 4; $0++)
-        if (isNaN(w0[O0][$0]))
+        if (isNaN(T0[O0][$0]))
           return !1;
     for (let O0 = 0; O0 < 3; O0++)
       for (let $0 = 0; $0 < 3; $0++)
-        w0[O0][$0] !== 0 && (T0[O0] = !0, F0[$0] = !0);
+        T0[O0][$0] !== 0 && (w0[O0] = !0, F0[$0] = !0);
     for (let O0 = 0; O0 < 3; O0++)
-      if (!T0[O0] || !F0[O0])
+      if (!w0[O0] || !F0[O0])
         return !1;
     return !0;
   }
@@ -52044,23 +52042,23 @@ function NVImage(m, u = "", p = "gray", v = 1, y = null, T = NaN, E = NaN, F = !
   let u0 = m0(this.hdr.affine);
   if (d || !u0 || this.hdr.qform_code > this.hdr.sform_code) {
     log$2.debug("spatial transform based on QForm");
-    const w0 = this.hdr.quatern_b, T0 = this.hdr.quatern_c, F0 = this.hdr.quatern_d, O0 = Math.sqrt(
-      1 - (Math.pow(w0, 2) + Math.pow(T0, 2) + Math.pow(F0, 2))
+    const T0 = this.hdr.quatern_b, w0 = this.hdr.quatern_c, F0 = this.hdr.quatern_d, O0 = Math.sqrt(
+      1 - (Math.pow(T0, 2) + Math.pow(w0, 2) + Math.pow(F0, 2))
     ), $0 = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0], Re = [
       [
-        O0 * O0 + w0 * w0 - T0 * T0 - F0 * F0,
-        2 * w0 * T0 - 2 * O0 * F0,
-        2 * w0 * F0 + 2 * O0 * T0
-      ],
-      [
-        2 * w0 * T0 + 2 * O0 * F0,
         O0 * O0 + T0 * T0 - w0 * w0 - F0 * F0,
-        2 * T0 * F0 - 2 * O0 * w0
+        2 * T0 * w0 - 2 * O0 * F0,
+        2 * T0 * F0 + 2 * O0 * w0
       ],
       [
-        2 * w0 * F0 - 2 * O0 * T0,
-        2 * T0 * F0 + 2 * O0 * w0,
-        O0 * O0 + F0 * F0 - T0 * T0 - w0 * w0
+        2 * T0 * w0 + 2 * O0 * F0,
+        O0 * O0 + w0 * w0 - T0 * T0 - F0 * F0,
+        2 * w0 * F0 - 2 * O0 * T0
+      ],
+      [
+        2 * T0 * F0 - 2 * O0 * w0,
+        2 * w0 * F0 + 2 * O0 * T0,
+        O0 * O0 + F0 * F0 - w0 * w0 - T0 * T0
       ]
     ], Te = this.hdr.affine;
     for (let Ye = 0; Ye < 3; Ye += 1)
@@ -52070,11 +52068,11 @@ function NVImage(m, u = "", p = "gray", v = 1, y = null, T = NaN, E = NaN, F = !
   }
   if (u0 = m0(this.hdr.affine), !u0) {
     log$2.debug("Defective NIfTI: spatial transform does not make sense");
-    let w0 = this.hdr.pixDims[1], T0 = this.hdr.pixDims[2], F0 = this.hdr.pixDims[3];
-    (isNaN(w0) || w0 === 0) && (w0 = 1), (isNaN(T0) || T0 === 0) && (T0 = 1), (isNaN(F0) || F0 === 0) && (F0 = 1), this.hdr.pixDims[1] = w0, this.hdr.pixDims[2] = T0, this.hdr.pixDims[3] = F0;
+    let T0 = this.hdr.pixDims[1], w0 = this.hdr.pixDims[2], F0 = this.hdr.pixDims[3];
+    (isNaN(T0) || T0 === 0) && (T0 = 1), (isNaN(w0) || w0 === 0) && (w0 = 1), (isNaN(F0) || F0 === 0) && (F0 = 1), this.hdr.pixDims[1] = T0, this.hdr.pixDims[2] = w0, this.hdr.pixDims[3] = F0;
     const O0 = [
-      [w0, 0, 0, 0],
-      [0, T0, 0, 0],
+      [T0, 0, 0, 0],
+      [0, w0, 0, 0],
       [0, 0, F0, 0],
       [0, 0, 0, 1]
     ];
@@ -52083,24 +52081,24 @@ function NVImage(m, u = "", p = "gray", v = 1, y = null, T = NaN, E = NaN, F = !
   if (this.hdr.datatypeCode !== this.DT_RGB && this.hdr.datatypeCode !== this.DT_RGBA32 && this.hdr.littleEndian !== isPlatformLittleEndian() && this.hdr.numBitsPerVoxel > 8) {
     if (this.hdr.numBitsPerVoxel === 16) {
       var o0 = new Uint16Array(D);
-      for (let w0 = 0; w0 < o0.length; w0++) {
-        let T0 = o0[w0];
-        o0[w0] = ((T0 & 255) << 8 | T0 >> 8 & 255) << 16 >> 16;
+      for (let T0 = 0; T0 < o0.length; T0++) {
+        let w0 = o0[T0];
+        o0[T0] = ((w0 & 255) << 8 | w0 >> 8 & 255) << 16 >> 16;
       }
     } else if (this.hdr.numBitsPerVoxel === 32) {
       var a = new Uint32Array(D);
-      for (let w0 = 0; w0 < a.length; w0++) {
-        let T0 = a[w0];
-        a[w0] = (T0 & 255) << 24 | (T0 & 65280) << 8 | T0 >> 8 & 65280 | T0 >> 24 & 255;
+      for (let T0 = 0; T0 < a.length; T0++) {
+        let w0 = a[T0];
+        a[T0] = (w0 & 255) << 24 | (w0 & 65280) << 8 | w0 >> 8 & 65280 | w0 >> 24 & 255;
       }
     } else if (this.hdr.numBitsPerVoxel === 64) {
-      let w0 = this.hdr.numBitsPerVoxel / 8;
-      var k0 = new Uint8Array(D);
-      for (let T0 = 0; T0 < k0.length; T0 += w0) {
-        let F0 = w0 - 1;
+      let T0 = this.hdr.numBitsPerVoxel / 8;
+      var E0 = new Uint8Array(D);
+      for (let w0 = 0; w0 < E0.length; w0 += T0) {
+        let F0 = T0 - 1;
         for (let O0 = 0; O0 < F0; O0++) {
-          let $0 = k0[T0 + O0];
-          k0[T0 + O0] = k0[T0 + F0], k0[T0 + F0] = $0, F0--;
+          let $0 = E0[w0 + O0];
+          E0[w0 + O0] = E0[w0 + F0], E0[w0 + F0] = $0, F0--;
         }
       }
     }
@@ -52128,37 +52126,37 @@ function NVImage(m, u = "", p = "gray", v = 1, y = null, T = NaN, E = NaN, F = !
       this.img = new Uint8Array(D);
       break;
     case this.DT_INT8: {
-      let w0 = new Int8Array(D);
-      var g0 = w0.length;
+      let T0 = new Int8Array(D);
+      var g0 = T0.length;
       this.img = new Int16Array(g0);
-      for (let T0 = 0; T0 < g0 - 1; T0++)
-        this.img[T0] = w0[T0];
+      for (let w0 = 0; w0 < g0 - 1; w0++)
+        this.img[w0] = T0[w0];
       this.hdr.datatypeCode = this.DT_SIGNED_SHORT;
       break;
     }
     case this.DT_UINT32: {
-      let w0 = new Uint32Array(D);
-      var A0 = w0.length;
+      let T0 = new Uint32Array(D);
+      var A0 = T0.length;
       this.img = new Float64Array(A0);
-      for (let T0 = 0; T0 < A0 - 1; T0++)
-        this.img[T0] = w0[T0];
+      for (let w0 = 0; w0 < A0 - 1; w0++)
+        this.img[w0] = T0[w0];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
     }
     case this.DT_SIGNED_INT: {
-      let w0 = new Int32Array(D);
-      var S0 = w0.length;
+      let T0 = new Int32Array(D);
+      var S0 = T0.length;
       this.img = new Float64Array(S0);
-      for (let T0 = 0; T0 < S0 - 1; T0++)
-        this.img[T0] = w0[T0];
+      for (let w0 = 0; w0 < S0 - 1; w0++)
+        this.img[w0] = T0[w0];
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
     }
     case this.DT_INT64: {
-      let w0 = new BigInt64Array(D), T0 = w0.length;
-      this.img = new Float64Array(T0);
-      for (let F0 = 0; F0 < T0 - 1; F0++)
-        this.img[F0] = Number(w0[F0]);
+      let T0 = new BigInt64Array(D), w0 = T0.length;
+      this.img = new Float64Array(w0);
+      for (let F0 = 0; F0 < w0 - 1; F0++)
+        this.img[F0] = Number(T0[F0]);
       this.hdr.datatypeCode = this.DT_DOUBLE;
       break;
     }
@@ -52469,16 +52467,16 @@ NVImage.prototype.readMGH = function(m) {
     0,
     0,
     1
-  ), a = [u.dims[1] / 2, u.dims[2] / 2, u.dims[3] / 2, 1], k0 = [0, 0, 0, 0];
+  ), a = [u.dims[1] / 2, u.dims[2] / 2, u.dims[3] / 2, 1], E0 = [0, 0, 0, 0];
   for (var g0 = 0; g0 < 3; g0++) {
-    k0[g0] = 0;
+    E0[g0] = 0;
     for (var A0 = 0; A0 < 3; A0++)
-      k0[g0] = k0[g0] + o0[A0 + g0 * 4] * a[A0];
+      E0[g0] = E0[g0] + o0[A0 + g0 * 4] * a[A0];
   }
   u.affine = [
-    [o0[0], o0[1], o0[2], $ - k0[0]],
-    [o0[4], o0[5], o0[6], m0 - k0[1]],
-    [o0[8], o0[9], o0[10], u0 - k0[2]],
+    [o0[0], o0[1], o0[2], $ - E0[0]],
+    [o0[4], o0[5], o0[6], m0 - E0[1]],
+    [o0[8], o0[9], o0[10], u0 - E0[2]],
     [0, 0, 0, 1]
   ];
   let S0 = u.dims[1] * u.dims[2] * u.dims[3] * u.dims[4] * (u.numBitsPerVoxel / 8);
@@ -52680,16 +52678,16 @@ NVImage.prototype.readMIF = function(m, u) {
     switch (A0) {
       case "dim":
         p.dims[0] = g0.length;
-        for (let w0 = 0; w0 < g0.length; w0++)
-          p.dims[w0 + 1] = parseInt(g0[w0]);
+        for (let T0 = 0; T0 < g0.length; T0++)
+          p.dims[T0 + 1] = parseInt(g0[T0]);
         break;
       case "vox":
-        for (let w0 = 0; w0 < g0.length; w0++)
-          p.pixDims[w0 + 1] = parseFloat(g0[w0]), isNaN(p.pixDims[w0 + 1]) && (p.pixDims[w0 + 1] = 0);
+        for (let T0 = 0; T0 < g0.length; T0++)
+          p.pixDims[T0 + 1] = parseFloat(g0[T0]), isNaN(p.pixDims[T0 + 1]) && (p.pixDims[T0 + 1] = 0);
         break;
       case "layout":
-        for (let w0 = 0; w0 < g0.length; w0++)
-          V.push(parseInt(g0[w0]));
+        for (let T0 = 0; T0 < g0.length; T0++)
+          V.push(parseInt(g0[T0]));
         break;
       case "datatype":
         let S0 = g0[0];
@@ -52729,7 +52727,7 @@ NVImage.prototype.readMIF = function(m, u) {
       Math.abs(V[A0]) == g0 && (J[A0] = Z, (V[A0] < 0 || Object.is(V[A0], -0)) && (n0[A0] = !0), Z *= p.dims[A0 + 1]);
   const a0 = (g0, A0, S0) => Array.from(
     { length: (A0 - g0) / S0 + 1 },
-    (w0, T0) => g0 + T0 * S0
+    (T0, w0) => g0 + w0 * S0
   );
   let D = a0(0, p.dims[1] - 1, 1);
   n0[0] && (D = a0(p.dims[1] - 1, 0, -1));
@@ -52751,15 +52749,15 @@ NVImage.prototype.readMIF = function(m, u) {
   n0[4] && (u0 = a0(p.dims[5] - 1, 0, -1));
   for (let g0 = 0; g0 < p.dims[5]; g0++)
     u0[g0] *= J[4];
-  let o0 = 0, a = [], k0 = [];
-  p.numBitsPerVoxel === 8 && (a = new Uint8Array(K), k0 = new Uint8Array(Q)), p.numBitsPerVoxel === 16 && (a = new Uint16Array(K), k0 = new Uint16Array(Q)), p.numBitsPerVoxel === 32 && (a = new Uint32Array(K), k0 = new Uint32Array(Q)), p.numBitsPerVoxel === 64 && (a = new BigUint64Array(K), k0 = new BigUint64Array(Q));
+  let o0 = 0, a = [], E0 = [];
+  p.numBitsPerVoxel === 8 && (a = new Uint8Array(K), E0 = new Uint8Array(Q)), p.numBitsPerVoxel === 16 && (a = new Uint16Array(K), E0 = new Uint16Array(Q)), p.numBitsPerVoxel === 32 && (a = new Uint32Array(K), E0 = new Uint32Array(Q)), p.numBitsPerVoxel === 64 && (a = new BigUint64Array(K), E0 = new BigUint64Array(Q));
   for (let g0 = 0; g0 < p.dims[5]; g0++)
     for (let A0 = 0; A0 < p.dims[4]; A0++)
       for (let S0 = 0; S0 < p.dims[3]; S0++)
-        for (let w0 = 0; w0 < p.dims[2]; w0++)
-          for (let T0 = 0; T0 < p.dims[1]; T0++)
-            k0[o0] = a[D[T0] + s0[w0] + $[S0] + m0[A0] + u0[g0]], o0++;
-  return k0;
+        for (let T0 = 0; T0 < p.dims[2]; T0++)
+          for (let w0 = 0; w0 < p.dims[1]; w0++)
+            E0[o0] = a[D[w0] + s0[T0] + $[S0] + m0[A0] + u0[g0]], o0++;
+  return E0;
 };
 NVImage.prototype.readNRRD = function(m, u) {
   this.hdr = new niftiExports.NIFTI1();
@@ -53183,6 +53181,17 @@ NVImage.fetchDicomData = async function(m) {
   }
   return H;
 };
+NVImage.fetchPartial = async function(m, u) {
+  let p = [];
+  try {
+    p = await fetch(m, {
+      headers: { range: "bytes=0-" + u }
+    });
+  } catch {
+    p = await fetch(m);
+  }
+  return p;
+};
 NVImage.loadFromUrl = async function({
   url: m = "",
   urlImgData: u = "",
@@ -53206,7 +53215,7 @@ NVImage.loadFromUrl = async function({
     throw Error("url must not be empty");
   let J = null, n0 = null;
   if (!isNaN(K)) {
-    let u0 = await fetch(m, { headers: { range: "bytes=0-352" } });
+    let u0 = await this.fetchPartial(m, 512);
     n0 = await u0.arrayBuffer();
     var a0 = new Uint8Array(n0);
     let o0 = !1;
@@ -53217,22 +53226,20 @@ NVImage.loadFromUrl = async function({
     if (a || (a = a0[1] === 92 && a0[0] === 1), !a)
       n0 = null;
     else {
-      let k0 = niftiExports.readHeader(n0), g0 = k0.numBitsPerVoxel / 8, A0 = 1;
+      let E0 = niftiExports.readHeader(n0), g0 = E0.numBitsPerVoxel / 8, A0 = 1;
       for (let F0 = 1; F0 < 4; F0++)
-        k0.dims[F0] > 1 && (A0 *= k0.dims[F0]);
+        E0.dims[F0] > 1 && (A0 *= E0.dims[F0]);
       let S0 = 1;
       for (let F0 = 4; F0 < 7; F0++)
-        k0.dims[F0] > 1 && (S0 *= k0.dims[F0]);
-      let w0 = Math.max(Math.min(K, S0), 1), T0 = k0.vox_offset + w0 * A0 * g0;
-      if (u0 = await fetch(m, {
-        headers: { range: "bytes=0-" + T0 }
-      }), n0 = await u0.arrayBuffer(), o0) {
+        E0.dims[F0] > 1 && (S0 *= E0.dims[F0]);
+      let T0 = Math.max(Math.min(K, S0), 1), w0 = E0.vox_offset + T0 * A0 * g0;
+      if (n0.byteLength < w0 && (u0 = await this.fetchPartial(m, w0), n0 = await u0.arrayBuffer(), o0)) {
         var a0 = new Uint8Array(n0);
         await new Decompress(($0, Re) => {
           a0 = $0;
         }).push(a0), n0 = a0.buffer;
       }
-      n0 = n0.slice(0, T0);
+      n0.byteLength < w0 ? n0 = null : n0 = n0.slice(0, w0);
     }
   }
   if (!n0)
@@ -53708,9 +53715,9 @@ NVMesh.prototype.updateFibers = function(m) {
       Math.abs(s0 - u0)
     );
     normalize(a, a);
-    let k0 = o0 - H;
+    let E0 = o0 - H;
     for (let g0 = 0; g0 < 3; g0++)
-      a[g0] = 255 * Math.max(Math.min(Math.abs(a[g0]) + k0, 1), 0);
+      a[g0] = 255 * Math.max(Math.min(Math.abs(a[g0]) + E0, 1), 0);
     return a[0] + (a[1] << 8) + (a[2] << 16);
   }
   let L = this.fiberColor.toLowerCase(), e = null, Q = null;
@@ -53741,8 +53748,8 @@ NVMesh.prototype.updateFibers = function(m) {
     for (let $ = 0; $ < v; $++) {
       let m0 = (e[$] - D) / (s0 - D);
       m0 = Math.round(Math.max(Math.min(255, m0 * 255)), 1) * 4;
-      let u0 = a0[m0] + (a0[m0 + 1] << 8) + (a0[m0 + 2] << 16), o0 = p[$], a = p[$ + 1] - 1, k0 = o0 * 4 + 3, g0 = a * 4 + 3;
-      for (let A0 = k0; A0 <= g0; A0 += 4)
+      let u0 = a0[m0] + (a0[m0 + 1] << 8) + (a0[m0 + 2] << 16), o0 = p[$], a = p[$ + 1] - 1, E0 = o0 * 4 + 3, g0 = a * 4 + 3;
+      for (let A0 = E0; A0 <= g0; A0 += 4)
         E[A0] = u0;
     }
   } else if (L.includes("local"))
@@ -53779,8 +53786,8 @@ NVMesh.prototype.updateFibers = function(m) {
         u[m0 + 2],
         V * Math.random()
       ), o0 = D * 4 + 3, a = s0 * 4 + 3;
-      for (let k0 = o0; k0 <= a; k0 += 4)
-        E[k0] = u0;
+      for (let E0 = o0; E0 <= a; E0 += 4)
+        E[E0] = u0;
     }
   m.bindBuffer(m.ARRAY_BUFFER, this.vertexBuffer), m.bufferData(m.ARRAY_BUFFER, new Uint32Array(E), m.STATIC_DRAW);
   let K = this.fiberLength, Z = Math.pow(2, 32) - 1, J = [], n0 = -1;
@@ -54199,13 +54206,13 @@ NVMesh.readTRK = function(m) {
     let m0 = Z[a0];
     a0 = a0 + 1, s0.push(D);
     for (let u0 = 0; u0 < m0; u0++) {
-      let o0 = J[a0 + 0], a = J[a0 + 1], k0 = J[a0 + 2];
+      let o0 = J[a0 + 0], a = J[a0 + 1], E0 = J[a0 + 2];
       if (a0 += 3, $.push(
-        o0 * K[0] + a * K[1] + k0 * K[2] + K[3]
+        o0 * K[0] + a * K[1] + E0 * K[2] + K[3]
       ), $.push(
-        o0 * K[4] + a * K[5] + k0 * K[6] + K[7]
+        o0 * K[4] + a * K[5] + E0 * K[6] + K[7]
       ), $.push(
-        o0 * K[8] + a * K[9] + k0 * K[10] + K[11]
+        o0 * K[8] + a * K[9] + E0 * K[10] + K[11]
       ), F > 0)
         for (let g0 = 0; g0 < F; g0++)
           E[g0].vals.push(J[a0]), a0++;
@@ -54684,41 +54691,41 @@ NVMesh.readPLY = function(m) {
     let a = T.split(/\s/);
     if (T.startsWith("element vertex"))
       for (V = parseInt(a[a.length - 1]), T = y(), a = T.split(/\s/); T.startsWith("property"); ) {
-        let k0 = a[1];
-        a[2] === "x" && k0.startsWith("double") ? H = !0 : a[2] === "x" && !k0.startsWith("float") && console.log("Error: expect ply xyz to be float or double: " + T), d += F(k0), T = y(), a = T.split(/\s/);
+        let E0 = a[1];
+        a[2] === "x" && E0.startsWith("double") ? H = !0 : a[2] === "x" && !E0.startsWith("float") && console.log("Error: expect ply xyz to be float or double: " + T), d += F(E0), T = y(), a = T.split(/\s/);
       }
     if (T.startsWith("element face"))
       for (J = parseInt(a[a.length - 1]), T = y(), a = T.split(/\s/); T.startsWith("property"); ) {
         if (a[1] === "list")
           e = F(a[2]), Q = F(a[3]), L += e + 3 * Q;
         else {
-          let k0 = F(a[1]);
-          L += k0, Q === 0 && (K += k0, Z++);
+          let E0 = F(a[1]);
+          L += E0, Q === 0 && (K += E0, Z++);
         }
         T = y(), a = T.split(/\s/);
       }
   }
   if (E) {
     J < 1 && console.log(`Malformed ply format: faces ${J} `);
-    let a = new Float32Array(V * 3), k0 = 0;
+    let a = new Float32Array(V * 3), E0 = 0;
     for (var n0 = 0; n0 < V; n0++) {
       T = y();
       let S0 = T.split(/\s/);
-      a[k0] = parseFloat(S0[0]), a[k0 + 1] = parseFloat(S0[1]), a[k0 + 2] = parseFloat(S0[2]), k0 += 3;
+      a[E0] = parseFloat(S0[0]), a[E0 + 1] = parseFloat(S0[1]), a[E0 + 2] = parseFloat(S0[2]), E0 += 3;
     }
     let g0 = new Int32Array(J * 3), A0 = 0;
     for (var n0 = 0; n0 < J; n0++) {
       T = y();
-      let w0 = T.split(/\s/), T0 = parseInt(w0[Z]) - 2;
-      if (T0 < 1)
+      let T0 = T.split(/\s/), w0 = parseInt(T0[Z]) - 2;
+      if (w0 < 1)
         break;
-      if (A0 + T0 * 3 > g0.length) {
+      if (A0 + w0 * 3 > g0.length) {
         var a0 = new Int32Array(g0.length + g0.length);
         a0.set(g0), g0 = a0.slice();
       }
-      let F0 = parseInt(w0[Z + 1]), O0 = parseInt(w0[Z + 2]);
-      for (let $0 = 0; $0 < T0; $0++) {
-        let Re = parseInt(w0[Z + 3 + $0]);
+      let F0 = parseInt(T0[Z + 1]), O0 = parseInt(T0[Z + 2]);
+      for (let $0 = 0; $0 < w0; $0++) {
+        let Re = parseInt(T0[Z + 3 + $0]);
         g0[A0 + 0] = F0, g0[A0 + 1] = O0, g0[A0 + 2] = Re, O0 = Re, A0 += 3;
       }
     }
@@ -54743,8 +54750,8 @@ NVMesh.readPLY = function(m) {
   let m0 = !0, u0 = 0;
   if (e === 1 && Q === 4 && L == 13)
     for (var n0 = 0; n0 < J; n0++) {
-      let k0 = D.getUint8(v);
-      v += e, k0 !== 3 && (m0 = !1), $[u0] = D.getUint32(v, _), v += 4, $[u0 + 1] = D.getUint32(v, _), v += 4, $[u0 + 2] = D.getUint32(v, _), v += 4, u0 += 3;
+      let E0 = D.getUint8(v);
+      v += e, E0 !== 3 && (m0 = !1), $[u0] = D.getUint32(v, _), v += 4, $[u0 + 1] = D.getUint32(v, _), v += 4, $[u0 + 2] = D.getUint32(v, _), v += 4, u0 += 3;
     }
   else {
     let a = v;
@@ -55068,24 +55075,24 @@ NVMesh.readNII2 = function(m, u = 0) {
       for (; s0 < v && !S0.endsWith(">"); )
         S0 += $();
       return S0;
-    }, o0 = function(S0, w0 = !1) {
-      let T0 = u0.indexOf(S0);
-      if (T0 < 0)
+    }, o0 = function(S0, T0 = !1) {
+      let w0 = u0.indexOf(S0);
+      if (w0 < 0)
         return 1;
-      let F0 = u0.indexOf('"', T0) + 1, O0 = u0.indexOf('"', F0), $0 = u0.slice(F0, O0);
-      return w0 ? $0 : parseInt($0);
+      let F0 = u0.indexOf('"', w0) + 1, O0 = u0.indexOf('"', F0), $0 = u0.slice(F0, O0);
+      return T0 ? $0 : parseInt($0);
     }, Z = 0, J = 0, n0 = 0, a0 = "", D = [];
     var K = new Uint8Array(m);
     let s0 = 552, u0 = [];
     for (; s0 < v && (u0 = m0(), !u0.includes("</CIFTI>")); )
       if (u0.includes("<BrainModel")) {
-        let S0 = o0("SurfaceNumberOfVertices="), w0 = o0("BrainStructure=", !0).toUpperCase();
+        let S0 = o0("SurfaceNumberOfVertices="), T0 = o0("BrainStructure=", !0).toUpperCase();
         if (S0 % u !== 0)
           continue;
-        let T0 = !1;
-        if (this.AnatomicalStructurePrimary.includes("CORTEX") && w0.includes("CORTEX") && (T0 = !0), !T0 || (T0 = !1, this.AnatomicalStructurePrimary.includes("LEFT") && w0.includes("LEFT") && (T0 = !0), this.AnatomicalStructurePrimary.includes("RIGHT") && w0.includes("RIGHT") && (T0 = !0), !T0))
+        let w0 = !1;
+        if (this.AnatomicalStructurePrimary.includes("CORTEX") && T0.includes("CORTEX") && (w0 = !0), !w0 || (w0 = !1, this.AnatomicalStructurePrimary.includes("LEFT") && T0.includes("LEFT") && (w0 = !0), this.AnatomicalStructurePrimary.includes("RIGHT") && T0.includes("RIGHT") && (w0 = !0), !w0))
           continue;
-        if (n0 = S0, Z = o0("IndexOffset="), J = o0("IndexCount="), a0 = w0, u0.includes("<VertexIndices>") || (u0 = m0()), !u0.startsWith("<VertexIndices>") || !u0.endsWith("</VertexIndices>"))
+        if (n0 = S0, Z = o0("IndexOffset="), J = o0("IndexCount="), a0 = T0, u0.includes("<VertexIndices>") || (u0 = m0()), !u0.startsWith("<VertexIndices>") || !u0.endsWith("</VertexIndices>"))
           return console.log("Unable to find CIfTI <VertexIndices>"), g0;
         u0 = u0.slice(15, -16);
         let F0 = u0.trim().split(/\s+/);
@@ -55097,17 +55104,17 @@ NVMesh.readNII2 = function(m, u = 0) {
       return console.log("Unable to find CIfTI structure that matches the mesh."), g0;
     if (d !== 16)
       return console.log("Only able to read float32 CIfTI (only known datatype)."), g0;
-    let a = e[5], k0 = [];
+    let a = e[5], E0 = [];
     {
-      k0 = new Float32Array(J * a);
+      E0 = new Float32Array(J * a);
       let S0 = F + a * Z * 4;
       for (var Q = 0; Q < J * a; Q++)
-        k0[Q] = T.getFloat32(S0 + Q * 4, y);
+        E0[Q] = T.getFloat32(S0 + Q * 4, y);
     }
     let g0 = new Float32Array(u * a), A0 = 0;
     for (let S0 = 0; S0 < J; S0++)
-      for (let w0 = 0; w0 < a; w0++)
-        g0[D[S0] + w0 * u] = k0[A0], A0++;
+      for (let T0 = 0; T0 < a; T0++)
+        g0[D[S0] + T0 * u] = E0[A0], A0++;
     return console.log(
       "CIfTI diagnostics",
       n0,
@@ -55250,10 +55257,10 @@ NVMesh.readX3D = function(m, u = 0) {
     let $ = F[s0 + D.length + 1], m0 = F.indexOf($, s0) + 1, u0 = F.indexOf($, m0), o0 = F.slice(m0, u0).trim(), a = o0.trim().split(/\s+/);
     if (a.length < 2)
       return parseFloat(o0);
-    let k0 = [];
+    let E0 = [];
     for (let g0 = 0; g0 < a.length; g0++)
-      k0.push(parseFloat(a[g0]));
-    return k0;
+      E0.push(parseFloat(a[g0]));
+    return E0;
   }
   F.includes("xml version") || console.log("Not a X3D image");
   let H = [], d = [], L = [], e = [], Q = [0, 0, 0], K = [0, 0, 0, 0], Z = [255, 255, 255, 255], J = [255, 255, 255, 255], n0 = [];
@@ -55297,16 +55304,16 @@ NVMesh.readX3D = function(m, u = 0) {
             for (; o0 < $.length; )
               $[o0] >= 0 ? (d.push($[o0 - 2] + u0), d.push($[o0 - 1] + u0), d.push($[o0 - 0] + u0), o0 += 1) : o0 += 3;
           H = [...H, ...m0];
-          let a = Math.floor(m0.length / 3), k0 = Array(a).fill(Z).flat();
+          let a = Math.floor(m0.length / 3), E0 = Array(a).fill(Z).flat();
           if (e.length === a * 3) {
             let g0 = 0, A0 = 0;
             for (let S0 = 0; S0 < a; S0++) {
-              for (let w0 = 0; w0 < 3; w0++)
-                k0[A0] = Math.round(e[g0] * 255), g0++, A0++;
+              for (let T0 = 0; T0 < 3; T0++)
+                E0[A0] = Math.round(e[g0] * 255), g0++, A0++;
               A0++;
             }
           }
-          L = [...L, ...k0];
+          L = [...L, ...E0];
         } else if (s0 < 0)
           NiivueObject3D.makeColoredSphere(
             H,
@@ -55352,25 +55359,25 @@ NVMesh.readGII = function(m, u = 0) {
   }
   let T = 0;
   function E() {
-    let k0 = !0, g0 = T;
-    for (; k0; ) {
+    let E0 = !0, g0 = T;
+    for (; E0; ) {
       for (; T < p && v[T] !== "<"; )
         T++;
       for (g0 = T; T < p && v[T] !== ">"; )
         T++;
-      if (k0 = v[T - 1] == "/", g0 + 1 < p && v[g0 + 1] === "/" && (T += 1, k0 = !0), T >= p)
+      if (E0 = v[T - 1] == "/", g0 + 1 < p && v[g0 + 1] === "/" && (T += 1, E0 = !0), T >= p)
         break;
     }
-    let A0 = new TextDecoder().decode(m.slice(g0 + 1, T)).trim(), S0 = A0.split(" ")[0].trim(), w0 = T, T0 = T, F0 = T;
+    let A0 = new TextDecoder().decode(m.slice(g0 + 1, T)).trim(), S0 = A0.split(" ")[0].trim(), T0 = T, w0 = T, F0 = T;
     if (v[g0 + 1] !== "?" && v[g0 + 1] !== "!") {
       let O0 = "</" + S0 + ">";
-      T0 = v.indexOf(O0, w0), F0 = T0 + O0.length - 1;
+      w0 = v.indexOf(O0, T0), F0 = w0 + O0.length - 1;
     }
     return {
       name: A0,
       startPos: g0,
-      contentStartPos: w0,
-      contentEndPos: T0,
+      contentStartPos: T0,
+      contentEndPos: w0,
       endPos: F0
     };
   }
@@ -55386,17 +55393,17 @@ NVMesh.readGII = function(m, u = 0) {
   F.endPos = F.contentStartPos;
   let $ = "";
   for (; F.endPos < p && F.name.length > 1; ) {
-    let k0 = function(A0) {
+    let E0 = function(A0) {
       let S0 = $.indexOf(A0);
       if (S0 < 0)
         return "";
-      let w0 = S0 + A0.length, T0 = $.indexOf("]", w0);
-      return $.slice(w0, T0);
+      let T0 = S0 + A0.length, w0 = $.indexOf("]", T0);
+      return $.slice(T0, w0);
     }, g0 = function(A0) {
       let S0 = $.indexOf(A0);
       if (S0 < 0)
         return 1;
-      let w0 = $.indexOf('"', S0) + 1, T0 = $.indexOf('"', w0), F0 = $.slice(w0, T0);
+      let T0 = $.indexOf('"', S0) + 1, w0 = $.indexOf('"', T0), F0 = $.slice(T0, w0);
       return parseInt(F0);
     };
     if (F = E(), F.name.trim() === "Data") {
@@ -55420,14 +55427,14 @@ NVMesh.readGII = function(m, u = 0) {
             A0[u0] = parseFloat(m0[u0]);
         }
       } else if (typeof Buffer > "u") {
-        let S0 = function(w0) {
-          for (var T0 = atob(w0), F0 = T0.length, O0 = new Uint8Array(F0), $0 = 0; $0 < F0; $0++)
-            O0[$0] = T0.charCodeAt($0);
+        let S0 = function(T0) {
+          for (var w0 = atob(T0), F0 = w0.length, O0 = new Uint8Array(F0), $0 = 0; $0 < F0; $0++)
+            O0[$0] = w0.charCodeAt($0);
           return O0;
         };
         if (n0) {
-          let w0 = S0($.slice());
-          A0 = decompressSync(new Uint8Array(w0));
+          let T0 = S0($.slice());
+          A0 = decompressSync(new Uint8Array(T0));
         } else
           A0 = S0($.slice());
       } else if (n0) {
@@ -55437,49 +55444,49 @@ NVMesh.readGII = function(m, u = 0) {
         A0 = Buffer.from($.slice(), "base64");
       if (L) {
         if (J !== 16 && console.log("expect positions as FLOAT32"), _ = new Float32Array(A0.buffer), Q) {
-          let S0 = _.slice(), w0 = S0.length / 3, T0 = 0;
-          for (var o0 = 0; o0 < w0; o0++)
+          let S0 = _.slice(), T0 = S0.length / 3, w0 = 0;
+          for (var o0 = 0; o0 < T0; o0++)
             for (var a = 0; a < 3; a++)
-              _[T0] = S0[a * w0 + o0], T0++;
+              _[w0] = S0[a * T0 + o0], w0++;
         }
       } else if (d) {
         if (J !== 8 && console.log("expect indices as INT32"), V = new Int32Array(A0.buffer), Q) {
-          let S0 = V.slice(), w0 = S0.length / 3, T0 = 0;
-          for (var o0 = 0; o0 < w0; o0++)
+          let S0 = V.slice(), T0 = S0.length / 3, w0 = 0;
+          for (var o0 = 0; o0 < T0; o0++)
             for (var a = 0; a < 3; a++)
-              V[T0] = S0[a * w0 + o0], T0++;
+              V[w0] = S0[a * T0 + o0], w0++;
         }
       } else {
-        let S0 = function(T0, F0) {
-          var O0 = T0.length, $0 = new Float32Array(O0 + F0.length);
-          return $0.set(T0), $0.set(F0, O0), $0;
+        let S0 = function(w0, F0) {
+          var O0 = w0.length, $0 = new Float32Array(O0 + F0.length);
+          return $0.set(w0), $0.set(F0, O0), $0;
         };
         D = K[0] * K[1] * K[2], u !== 0 && D % u !== 0 && console.log(
           "Number of vertices in scalar overlay (" + D + ") does not match mesh (" + u + ")"
         );
-        let w0 = [];
+        let T0 = [];
         if (J === 2) {
-          let T0 = new UInt8Array(A0.buffer);
-          w0 = Float32Array.from(T0);
+          let w0 = new UInt8Array(A0.buffer);
+          T0 = Float32Array.from(w0);
         } else if (J === 8) {
-          let T0 = new Int32Array(A0.buffer);
-          w0 = Float32Array.from(T0);
+          let w0 = new Int32Array(A0.buffer);
+          T0 = Float32Array.from(w0);
         } else if (J === 16)
-          w0 = new Float32Array(A0.buffer);
+          T0 = new Float32Array(A0.buffer);
         else if (J === 32) {
-          let T0 = new Float64Array(A0.buffer);
-          w0 = Float32Array.from(T0);
+          let w0 = new Float64Array(A0.buffer);
+          T0 = Float32Array.from(w0);
         } else
           throw new Error(`Invalid dataType: ${J}`);
-        H = S0(H, w0);
+        H = S0(H, T0);
       }
       continue;
     }
-    if (F.name.trim() === "DataSpace" && ($ = new TextDecoder().decode(m.slice(F.contentStartPos + 1, F.contentEndPos)).trim(), $.includes("NIFTI_XFORM_SCANNER_ANAT") && (s0 = !0)), F.name.trim() === "MD" && ($ = new TextDecoder().decode(m.slice(F.contentStartPos + 1, F.contentEndPos)).trim(), $.includes("AnatomicalStructurePrimary") && $.includes("CDATA[") && (this.AnatomicalStructurePrimary = k0("<Value><![CDATA[").toUpperCase()), $.includes("VolGeom") && $.includes("CDATA["))) {
+    if (F.name.trim() === "DataSpace" && ($ = new TextDecoder().decode(m.slice(F.contentStartPos + 1, F.contentEndPos)).trim(), $.includes("NIFTI_XFORM_SCANNER_ANAT") && (s0 = !0)), F.name.trim() === "MD" && ($ = new TextDecoder().decode(m.slice(F.contentStartPos + 1, F.contentEndPos)).trim(), $.includes("AnatomicalStructurePrimary") && $.includes("CDATA[") && (this.AnatomicalStructurePrimary = E0("<Value><![CDATA[").toUpperCase()), $.includes("VolGeom") && $.includes("CDATA["))) {
       let A0 = -1;
       if ($.includes("VolGeomC_R") && (A0 = 0), $.includes("VolGeomC_A") && (A0 = 1), $.includes("VolGeomC_S") && (A0 = 2), A0 < 0)
         continue;
-      Z[A0] = parseFloat(k0("<Value><![CDATA["));
+      Z[A0] = parseFloat(E0("<Value><![CDATA["));
     }
     F.name.startsWith("DataArray") && ($ = F.name, K = [1, 1, 1], n0 = $.includes('Encoding="GZipBase64Binary"'), a0 = $.includes('Encoding="ASCII"'), d = $.includes('Intent="NIFTI_INTENT_TRIANGLE"'), L = $.includes('Intent="NIFTI_INTENT_POINTSET"'), e = $.includes('Intent="NIFTI_INTENT_VECTOR"'), Q = $.includes('ArrayIndexingOrder="ColumnMajorOrder"'), $.includes('Endian="LittleEndian"'), $.includes('DataType="NIFTI_TYPE_UINT8"') && (J = 2), $.includes('DataType="NIFTI_TYPE_INT32"') && (J = 8), $.includes('DataType="NIFTI_TYPE_FLOAT32"') && (J = 16), $.includes('DataType="NIFTI_TYPE_FLOAT64"') && (J = 32), K[0] = g0("Dim0="), K[1] = g0("Dim1="), K[2] = g0("Dim2="));
   }
@@ -55487,9 +55494,9 @@ NVMesh.readGII = function(m, u = 0) {
     return H;
   if (_.length > 2 && !s0 && (Z[0] != 0 || Z[1] != 0 || Z[2] != 0)) {
     D = Math.floor(_.length / 3);
-    let k0 = 0;
+    let E0 = 0;
     for (var u0 = 0; u0 < D; u0++)
-      _[k0] += Z[0], k0++, _[k0] += Z[1], k0++, _[k0] += Z[2], k0++;
+      _[E0] += Z[0], E0++, _[E0] += Z[1], E0++, _[E0] += Z[2], E0++;
   }
   return {
     positions: _,
@@ -60690,9 +60697,10 @@ Niivue.prototype.refreshLayers = function(m, u) {
           break;
       }
       log.debug(this.volumes[m.modulationImage]);
-      for (let u0 = 0; u0 < n0; u0++) {
-        let o0 = m0[u0] * J.scl_slope + J.scl_inter;
-        o0 = (o0 - D) * s0, o0 = Math.min(Math.max(o0, 0), 255), a0[u0] = o0;
+      let u0 = this.volumes[m.modulationImage].colorMapNegative.length > 0, o0 = this.volumes[m.modulationImage].frame4D * n0;
+      for (let a = 0; a < n0; a++) {
+        let g0 = (m0[a + o0] * J.scl_slope + J.scl_inter - D) * s0;
+        u0 && (g0 = Math.abs(g0)), g0 = Math.min(Math.max(g0, 0), 255), a0[a] = g0;
       }
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -60814,7 +60822,7 @@ Niivue.prototype.createColorMapTexture = function(m) {
   ), this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
 };
 Niivue.prototype.addColormapList = function(m = "", u = NaN, p = NaN, v = !1, y = !1, T = !0) {
-  m.length < 1 || this.colormapLists.push({
+  m.length < 1 && (T = !1), this.colormapLists.push({
     name: m,
     min: u,
     max: p,
@@ -61723,10 +61731,10 @@ Niivue.prototype.drawGraph = function() {
   }
   for (let A0 = 0; A0 < y.length; A0++) {
     m.lines[A0] = [];
-    let S0 = this.frac2vox(this.scene.crosshairPos), w0 = this.volumes[y[A0]], T0 = w0.nFrame4D;
-    T0 = Math.min(T0, T);
-    for (let F0 = 0; F0 < T0; F0++) {
-      let O0 = w0.getValue(...S0, F0);
+    let S0 = this.frac2vox(this.scene.crosshairPos), T0 = this.volumes[y[A0]], w0 = T0.nFrame4D;
+    w0 = Math.min(w0, T);
+    for (let F0 = 0; F0 < w0; F0++) {
+      let O0 = T0.getValue(...S0, F0);
       m.lines[A0].push(O0);
     }
   }
@@ -61743,15 +61751,15 @@ Niivue.prototype.drawGraph = function() {
   let E = m.lines[0][0], F = m.lines[0][0];
   for (let A0 = 0; A0 < m.lines.length; A0++)
     for (let S0 = 0; S0 < m.lines[A0].length; S0++) {
-      let w0 = m.lines[A0][S0];
-      E = Math.min(w0, E), F = Math.max(w0, F);
+      let T0 = m.lines[A0][S0];
+      E = Math.min(T0, E), F = Math.max(T0, F);
     }
   if (m.normalizeValues && F > E) {
     let A0 = F - E;
     for (let S0 = 0; S0 < m.lines.length; S0++)
-      for (let w0 = 0; w0 < m.lines[S0].length; w0++) {
-        let T0 = m.lines[S0][w0];
-        m.lines[S0][w0] = (T0 - E) / A0;
+      for (let T0 = 0; T0 < m.lines[S0].length; T0++) {
+        let w0 = m.lines[S0][T0];
+        m.lines[S0][T0] = (w0 - E) / A0;
       }
     E = 0, F = 1;
   }
@@ -61787,12 +61795,12 @@ Niivue.prototype.drawGraph = function() {
     ), J += _;
   }
   J = V;
-  let k0 = 0.5 * m.lineThickness;
+  let E0 = 0.5 * m.lineThickness;
   for (; J <= F; ) {
     let A0 = o0 - (J - E) * m0;
     this.drawLine(
       [
-        s0[0] - k0,
+        s0[0] - E0,
         A0,
         s0[0] + s0[2] + m.lineThickness,
         A0
@@ -61807,23 +61815,23 @@ Niivue.prototype.drawGraph = function() {
   for (; m.lines[0].length / g0 > 20; )
     g0 *= 5;
   for (let A0 = 0; A0 < m.lines[0].length; A0 += g0) {
-    let S0 = A0 * u0 + s0[0], w0 = m.lineThickness;
+    let S0 = A0 * u0 + s0[0], T0 = m.lineThickness;
     if (A0 % 2 === 1)
-      w0 *= 0.5, this.drawLine(
+      T0 *= 0.5, this.drawLine(
         [S0, s0[1], S0, s0[1] + s0[3]],
-        w0,
+        T0,
         a
       );
     else {
-      let T0 = L(A0);
+      let w0 = L(A0);
       K > 0 && this.drawTextBelow(
         [S0, 2 + s0[1] + s0[3]],
-        T0,
+        w0,
         Q,
         m.textColor
       ), this.drawLine(
         [S0, s0[1], S0, s0[1] + s0[3]],
-        w0,
+        T0,
         m.lineColor
       );
     }
@@ -61836,9 +61844,9 @@ Niivue.prototype.drawGraph = function() {
       m.lineRGB[A0][2],
       m.lineAlpha
     ]);
-    for (let w0 = 1; w0 < m.lines[A0].length; w0++) {
-      let T0 = (w0 - 1) * u0, F0 = w0 * u0, O0 = (m.lines[A0][w0 - 1] - E) * m0, $0 = (m.lines[A0][w0] - E) * m0, Re = [
-        s0[0] + T0,
+    for (let T0 = 1; T0 < m.lines[A0].length; T0++) {
+      let w0 = (T0 - 1) * u0, F0 = T0 * u0, O0 = (m.lines[A0][T0 - 1] - E) * m0, $0 = (m.lines[A0][T0] - E) * m0, Re = [
+        s0[0] + w0,
         s0[1] + s0[3] - O0,
         s0[0] + F0,
         s0[1] + s0[3] - $0
@@ -62116,7 +62124,7 @@ Niivue.prototype.drawCrosshairs3D = function(m = !0, u = 1, p = null, v = !1, y 
 Niivue.prototype.mm2frac = function(m, u = 0, p = !1) {
   if (this.volumes.length < 1) {
     let F = [0.1, 0.5, 0.5], [_, V, H] = this.sceneExtentsMinMax();
-    return F[0] = (m[0] - _[0]) / H[0], F[1] = (m[1] - _[1]) / H[1], F[2] = (m[2] - _[2]) / H[2], F;
+    return F[0] = (m[0] - _[0]) / H[0], F[1] = (m[1] - _[1]) / H[1], F[2] = (m[2] - _[2]) / H[2], isFinite(F) || (isFinite(F[0]) || (F[0] = 0.5), isFinite(F[1]) || (F[1] = 0.5), isFinite(F[2]) || (F[2] = 0.5), console.error("mm2frac() not finite: objects not (yet) loaded.")), F;
   }
   let v = fromValues(m[0], m[1], m[2], 1), y = this.volumes[u].dimsRAS, T = [0, 0, 0];
   if (typeof y > "u")
@@ -62390,8 +62398,8 @@ Niivue.prototype.drawMosaic = function(m) {
       else {
         let a = [F * e, F * Q, F * m0, F * u0];
         if (this.opts.textHeight = Z ? _ : 0, H) {
-          let k0 = $ < 0 ? -1 / 0 : 1 / 0;
-          Object.is($, -0) && (k0 = -1 / 0), this.draw2D(a, J, k0, Z);
+          let E0 = $ < 0 ? -1 / 0 : 1 / 0;
+          Object.is($, -0) && (E0 = -1 / 0), this.draw2D(a, J, E0, Z);
         } else
           this.draw2D(a, J, $, Z);
         d && this.drawCrossLines(
