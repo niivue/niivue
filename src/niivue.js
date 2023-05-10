@@ -5067,9 +5067,13 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
           break;
       }
       log.debug(this.volumes[overlayItem.modulationImage]);
+      let isColorMapNegative =
+        this.volumes[overlayItem.modulationImage].colorMapNegative.length > 0;
+      let volOffset = this.volumes[overlayItem.modulationImage].frame4D * vx;
       for (let i = 0; i < vx; i++) {
-        let v = img[i] * mhdr.scl_slope + mhdr.scl_inter;
-        v = (v - mn) * scale;
+        let vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter;
+        let v = (vRaw - mn) * scale;
+        if (isColorMapNegative) v = Math.abs(v);
         v = Math.min(Math.max(v, 0.0), 255.0);
         modulateVolume[i] = v;
       }
