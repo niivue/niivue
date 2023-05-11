@@ -253,7 +253,7 @@ export function NVImage(
   this.colorbarVisible = colorbarVisible;
   this.visible = visible;
   this.modulationImage = null;
-  this.modulateAlpha = false; //does modulation image influence RGB (false) or A (true)
+  this.modulateAlpha = 0; // if !=0, mod transparency with expon power |Alpha|
   this.series = []; // for concatenating dicom images
 
   this.onColorMapChange = () => {};
@@ -1319,6 +1319,19 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   let xyzDelta = [1, 1, 1];
   let txt = new TextDecoder().decode(dataBuffer);
   var lines = txt.split("\n");
+  //embed entire AFNI HEAD text as NIfTI extension
+  let mod = (dataBuffer.byteLength + 8) % 16;
+  let len = dataBuffer.byteLength + (16 - mod);
+  console.log(dataBuffer.byteLength, "len", len);
+  var extBuffer = new Uint8Array(len);
+  extBuffer.fill(0);
+  extBuffer.set(new Uint8Array(dataBuffer));
+  let newExtension = new nifti.NIFTIEXTENSION(len + 8, 42, extBuffer, true);
+  hdr.addExtension(newExtension);
+  hdr.extensionCode = 42;
+  hdr.extensionFlag[0] = 1;
+  hdr.extensionSize = len + 8;
+  //Done creating an extension
   let nlines = lines.length;
   let i = 0;
   let hasIJK_TO_DICOM_REAL = false;

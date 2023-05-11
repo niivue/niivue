@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Basic Multiplanar</title>
-    <link rel="stylesheet" href="light.css" />
+    <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>
@@ -19,6 +19,8 @@
         <option value="4">Render</option>
         <option value="3" selected>A+C+S+R</option>
       </select>
+      <label for="retinaCheck">&nbsp; HighDPI</label>
+      <input type="checkbox" id="retinaCheck" checked />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -26,13 +28,18 @@
     <footer id="intensity">&nbsp;</footer>
   </body>
 </html>
-<!-- <script type="module" async></script> -->
+<script src="./niivue.umd.js"></script>
 <script type="module" async>
-  import * as niivue from "./niivue.es.js";
   var drop = document.getElementById("sliceType");
   drop.onchange = function () {
     let st = parseInt(document.getElementById("sliceType").value);
     nv1.setSliceType(st);
+  }
+  document
+    .getElementById("retinaCheck")
+    .addEventListener("change", doRetinaCheck);
+  function doRetinaCheck() {
+    nv1.setHighResolutionCapable(this.checked);
   }
   function handleIntensityChange(data) {
     document.getElementById("intensity").innerHTML =
@@ -40,26 +47,19 @@
     console.log(data);
   }
   var volumeList1 = [
-    { 
-      url: "../images/mni152.nii.gz",
-      colorMap: "gray",
-      visible: true,
-      opacity: 1
-    }, 
-    {
-      url: "../images/hippo.nii.gz", 
-      colorMap: "red",
-      visible: true,
-      opacity: 1
-    }
+    { url: "../images/mni152.nii.gz"},
+    { url: "../images/stats.nv_demo_mskd.nii.gz", colorMap: "warm", colorMapNegative: "winter", frame4D: 1, cal_min: 3.3641, cal_max: 6},
   ];
   var nv1 = new niivue.Niivue({
-    dragAndDropEnabled: true,
+    logging: true,
+    show3Dcrosshair: true,
     onLocationChange: handleIntensityChange,
   });
-  // nv1.setRadiologicalConvention(false);
-  // nv1.opts.multiplanarForceRender = true;
-  nv1.attachTo("gl1");
-  nv1.loadVolumes(volumeList1);
+  nv1.attachTo("gl1", true);
+  nv1.opts.isColorbar = true;
+  nv1.opts.multiplanarForceRender = true;
+  await nv1.loadVolumes(volumeList1);
+  nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  nv1.updateGLVolume();
 </script>
