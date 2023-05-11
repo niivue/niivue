@@ -5050,7 +5050,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       let modulateVolume = new Uint8Array(vx);
       let mn = this.volumes[overlayItem.modulationImage].cal_min;
       let scale =
-        255.0 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
+        1.0 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
       let imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
       let img = new Uint8Array(imgRaw);
       switch (mhdr.datatypeCode) {
@@ -5073,12 +5073,31 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       log.debug(this.volumes[overlayItem.modulationImage]);
       let isColorMapNegative =
         this.volumes[overlayItem.modulationImage].colorMapNegative.length > 0;
+      //negative thresholds might be asymmetric from positive ones
+      let mnNeg = this.volumes[overlayItem.modulationImage].cal_min;
+      let mxNeg = this.volumes[overlayItem.modulationImage].cal_max;
+      if (
+        isFinite(this.volumes[overlayItem.modulationImage].cal_minNeg) &&
+        isFinite(this.volumes[overlayItem.modulationImage].cal_maxNeg)
+      ) {
+        //explicit range for negative colormap: allows asymmetric maps
+        mnNeg = this.volumes[overlayItem.modulationImage].cal_minNeg;
+        mxNeg = this.volumes[overlayItem.modulationImage].cal_minNeg;
+      }
+      mnNeg = Math.abs(mnNeg);
+      mxNeg = Math.abs(mxNeg);
+      if (mnNeg > mxNeg) [mnNeg, mxNeg] = [mxNeg, mnNeg];
+      let scaleNeg = 1.0 / (mxNeg - mnNeg);
+      let mpow = Math.abs(overlayItem.modulateAlpha); // can convert bool, too
+      //volOffset selects the correct frame
       let volOffset = this.volumes[overlayItem.modulationImage].frame4D * vx;
       for (let i = 0; i < vx; i++) {
         let vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter;
         let v = (vRaw - mn) * scale;
-        if (isColorMapNegative) v = Math.abs(v);
-        v = Math.min(Math.max(v, 0.0), 255.0);
+        if (isColorMapNegative && vRaw < 0.0)
+          v = (Math.abs(vRaw) - mnNeg) * scaleNeg;
+        v = Math.min(Math.max(v, 0.0), 1.0);
+        v = Math.pow(v, mpow) * 255.0;
         modulateVolume[i] = v;
       }
       this.gl.texSubImage3D(

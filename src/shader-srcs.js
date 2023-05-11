@@ -439,30 +439,95 @@ out vec4 color;` +
 		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
 		//if ((ocolor.a >= 1.0) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
 		//	ocolor.rbg = vec3(0.0, 0.0, 0.0);
-		if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
-			vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
-			vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
-			vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
-			vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
-			vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
-			vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
-			vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
-			float a = 1.0;
-			if (axCorSag != 2) {
-				a = min(a, texture(overlay, vxR).a);
-				a = min(a, texture(overlay, vxL).a);
+		bool isOutlineBelowNotAboveThreshold = true;
+		if (isOutlineBelowNotAboveThreshold) {
+			if ((overlayOutlineWidth > 0.0) && (ocolor.a < 1.0)) { //check voxel neighbors for edge
+				vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
+				//6 voxel neighbors that share a face
+				vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
+				vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
+				vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
+				vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
+				vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
+				vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
+				float a = 0.0;
+				if (axCorSag != 2) {
+					a = max(a, texture(overlay, vxR).a);
+					a = max(a, texture(overlay, vxL).a);
+				}
+				if (axCorSag != 1) {
+					a = max(a, texture(overlay, vxA).a);
+					a = max(a, texture(overlay, vxP).a);
+				}
+				if (axCorSag != 0) {
+					a = max(a, texture(overlay, vxS).a);
+					a = max(a, texture(overlay, vxI).a);
+				}
+				bool isCheckCorners = true;
+				if (isCheckCorners) {
+					//12 voxel neighbors that share an edge
+					vec3 vxRA = vec3(texPos.x+vx.x, texPos.y+vx.y, texPos.z);
+					vec3 vxLA = vec3(texPos.x-vx.x, texPos.y+vx.y, texPos.z);
+					vec3 vxRP = vec3(texPos.x+vx.x, texPos.y-vx.y, texPos.z);
+					vec3 vxLP = vec3(texPos.x-vx.x, texPos.y-vx.y, texPos.z);
+					vec3 vxRS = vec3(texPos.x+vx.x, texPos.y, texPos.z+vx.z);
+					vec3 vxLS = vec3(texPos.x-vx.x, texPos.y, texPos.z+vx.z);
+					vec3 vxRI = vec3(texPos.x+vx.x, texPos.y, texPos.z-vx.z);
+					vec3 vxLI = vec3(texPos.x-vx.x, texPos.y, texPos.z-vx.z);
+					vec3 vxAS = vec3(texPos.x, texPos.y+vx.y, texPos.z+vx.z);
+					vec3 vxPS = vec3(texPos.x, texPos.y-vx.y, texPos.z+vx.z);
+					vec3 vxAI = vec3(texPos.x, texPos.y+vx.y, texPos.z-vx.z);
+					vec3 vxPI = vec3(texPos.x, texPos.y-vx.y, texPos.z-vx.z);
+
+					if (axCorSag == 0) { //axial corners
+						a = max(a, texture(overlay, vxRA).a);
+						a = max(a, texture(overlay, vxLA).a);
+						a = max(a, texture(overlay, vxRP).a);
+						a = max(a, texture(overlay, vxLP).a);
+					}
+					if (axCorSag == 1) { //coronal corners
+						a = max(a, texture(overlay, vxRS).a);
+						a = max(a, texture(overlay, vxLS).a);
+						a = max(a, texture(overlay, vxRI).a);
+						a = max(a, texture(overlay, vxLI).a);
+					}
+					if (axCorSag == 2) { //sagittal corners
+						a = max(a, texture(overlay, vxAS).a);
+						a = max(a, texture(overlay, vxPS).a);
+						a = max(a, texture(overlay, vxAI).a);
+						a = max(a, texture(overlay, vxPI).a);
+					}
+				}
+				if (a >= 1.0)
+					ocolor = vec4(0.0, 0.0, 0.0, 1.0);
 			}
-			if (axCorSag != 1) {
-				a = min(a, texture(overlay, vxA).a);
-				a = min(a, texture(overlay, vxP).a);
+
+		} else {
+			if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
+				vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
+				vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
+				vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
+				vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
+				vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
+				vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
+				vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
+				float a = 1.0;
+				if (axCorSag != 2) {
+					a = min(a, texture(overlay, vxR).a);
+					a = min(a, texture(overlay, vxL).a);
+				}
+				if (axCorSag != 1) {
+					a = min(a, texture(overlay, vxA).a);
+					a = min(a, texture(overlay, vxP).a);
+				}
+				if (axCorSag != 0) {
+					a = min(a, texture(overlay, vxS).a);
+					a = min(a, texture(overlay, vxI).a);
+				}
+				if (a < 1.0)
+					ocolor = vec4(0.0, 0.0, 0.0, 1.0);
 			}
-			if (axCorSag != 0) {
-				a = min(a, texture(overlay, vxS).a);
-				a = min(a, texture(overlay, vxI).a);
-			}
-			if (a < 1.0)
-				ocolor.rbg = vec3(0.0, 0.0, 0.0);
-		}
+		} //outline above threshold
 	}
 	vec4 dcolor = drawColor(texture(drawing, texPos).r);
 	if (dcolor.a > 0.0) {
