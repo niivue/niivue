@@ -32,7 +32,7 @@
           <i class="fa fa-caret-down"></i>
         </button>
         <div class="dropdown-content">
-          <a class="viewBtn" id="ToggleHippocampus">Toggle Hippocampus</a>
+          <a class="viewBtn" id="Toggleamygdala">Toggle amygdala</a>
         </div>
       </div>
       <div class="dropdown">
@@ -60,15 +60,15 @@
 
     <script src="./niivue.umd.js"></script>
     <script>
-      function toggleHippo() {
-        let buttonElem = document.getElementById("toggleHippoButton");
+      function toggleAmyg() {
+        let buttonElem = document.getElementById("toggleAmygButton");
         if (isHippoShowing) {
           nv1.removeVolumeByUrl(url);
-          buttonElem.innerText = "Add Hippocampus";
+          buttonElem.innerText = "Add amygdala";
           isHippoShowing = false;
         } else {
           nv1.addVolumeFromUrl({ url, colorMap: "bluegrn" });
-          buttonElem.innerText = "Remove Hippocampus";
+          buttonElem.innerText = "Remove amygdala";
           isHippoShowing = true;
         }
       }
@@ -78,13 +78,13 @@
           case "SaveDocument":
             nv1.saveDocument("niivue.basic.nvd");
             break;
-          case "ToggleHippocampus":
-            toggleHippo();
+          case "Toggleamygdala":
+            toggleAmyg();
             break;
         }
       }
 
-      const url = "../images/hippo.nii.gz";
+      const url = "../images/left_amyg.nii.gz";
       var isHippoShowing = false;
       var volumeList1 = [
         // first item is background image
