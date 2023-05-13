@@ -325,6 +325,7 @@ export function Niivue(options = {}) {
   // Event listeners
 
   // Defaults
+  this.onContrastDragRelease = [];
   this.onLocationChange = () => {};
   this.onIntensityChange = () => {};
   this.onImageLoaded = () => {};
@@ -902,7 +903,15 @@ Niivue.prototype.mouseUpListener = function () {
     this.uiData.isDragging = false;
     if (this.opts.dragMode !== DRAG_MODE.contrast) return;
     if (wasCenterDown) return;
-    this.calculateNewRange();
+    function isFunction(test) {
+      return(Object.prototype.toString.call(test).indexOf("Function") > -1);
+    }
+    if (isFunction(this.onContrastDragRelease)) {
+      let fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]]);
+      let fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
+      this.onContrastDragRelease(fracStart, fracEnd);
+    } else
+      this.calculateNewRange();
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
   this.drawScene();
