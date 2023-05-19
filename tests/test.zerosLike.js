@@ -11,7 +11,7 @@ test("zeroLike creates clone of object with all zeros", async () => {
         url: "./images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
         volume: { hdr: null, img: null },
         name: "mni152.nii.gz",
-        colorMap: "gray",
+        colormap: "gray",
         opacity: 1,
         visible: true,
       },

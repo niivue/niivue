@@ -11,8 +11,8 @@ const log = new Log();
  * @typedef {Object} NVMeshLayer
  * @property {string} url
  * @property {number} opacity
- * @property {string} colorMap
- * @property {string} colorMapNegative
+ * @property {string} colormap
+ * @property {string} colormapNegative
  * @property {boolean} useNegativeCmap
  * @property {number} cal_min
  * @property {number} cal_max
@@ -552,7 +552,7 @@ NVMesh.prototype.updateMesh = function (gl) {
         }
         continue;
       }
-      let lut = cmapper.colormap(layer.colorMap);
+      let lut = cmapper.colormap(layer.colormap);
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
       let frameOffset = nvtx * frame;
       if (layer.useNegativeCmap) {
@@ -599,7 +599,7 @@ NVMesh.prototype.updateMesh = function (gl) {
         }
       }
       if (layer.useNegativeCmap) {
-        let lut = cmapper.colormap(layer.colorMapNegative);
+        let lut = cmapper.colormap(layer.colormapNegative);
         if (!layer.isOutlineBorder) {
           let mn = layer.cal_min;
           let mx = layer.cal_max;
@@ -2134,8 +2134,8 @@ NVMesh.readLayer = function (
   buffer,
   nvmesh,
   opacity = 0.5,
-  colorMap = "warm",
-  colorMapNegative = "winter",
+  colormap = "warm",
+  colormapNegative = "winter",
   useNegativeCmap = false,
   cal_min = null,
   cal_max = null,
@@ -2189,8 +2189,8 @@ NVMesh.readLayer = function (
   layer.cal_minNeg = NaN;
   layer.cal_maxNeg = NaN;
   layer.opacity = opacity;
-  layer.colorMap = colorMap;
-  layer.colorMapNegative = colorMapNegative;
+  layer.colormap = colormap;
+  layer.colormapNegative = colormapNegative;
   layer.useNegativeCmap = useNegativeCmap;
   nvmesh.layers.push(layer);
 }; // readLayer()
@@ -3506,7 +3506,7 @@ NVMesh.loadConnectomeFromJSON = async function (
   json,
   gl,
   name = "",
-  colorMap = "",
+  colormap = "",
   opacity = 1.0,
   visible = true
 ) {
@@ -3562,7 +3562,7 @@ NVMesh.readMesh = async function (
       pts,
       offsetPt0,
       name,
-      null, //colorMap,
+      null, //colormap,
       opacity, //opacity,
       visible, //visible,
       gl,
@@ -3595,7 +3595,7 @@ NVMesh.readMesh = async function (
         pts,
         offsetPt0,
         name,
-        null, //colorMap,
+        null, //colormap,
         opacity, //opacity,
         visible, //visible,
         gl,
@@ -3640,7 +3640,7 @@ NVMesh.readMesh = async function (
     pts,
     tris,
     name,
-    rgba255, //colorMap,
+    rgba255, //colormap,
     opacity, //opacity,
     visible, //visible,
     gl
@@ -3848,11 +3848,11 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
 
   let opacity = 0.5;
   if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
-  let colorMap = "warm";
-  if (layer.hasOwnProperty("colorMap")) colorMap = layer.colorMap;
-  let colorMapNegative = "winter";
-  if (layer.hasOwnProperty("colorMapNegative"))
-    colorMapNegative = layer.colorMapNegative;
+  let colormap = "warm";
+  if (layer.hasOwnProperty("colormap")) colormap = layer.colormap;
+  let colormapNegative = "winter";
+  if (layer.hasOwnProperty("colormapNegative"))
+    colormapNegative = layer.colormapNegative;
   let useNegativeCmap = false;
   if (layer.hasOwnProperty("useNegativeCmap"))
     useNegativeCmap = layer.useNegativeCmap;
@@ -3866,8 +3866,8 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
     buffer,
     nvmesh,
     opacity,
-    colorMap,
-    colorMapNegative,
+    colormap,
+    colormapNegative,
     useNegativeCmap,
     cal_min,
     cal_max
@@ -3878,7 +3878,7 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {string} [colormap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {NVMeshLayer[]} [layers=[]] layers of the mesh to load

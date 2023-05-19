@@ -25,7 +25,7 @@ test.each(files)("colormap_%s", async (file) => {
     var volumeList = [
       {
         url: `./images/mni152.nii.gz`,
-        colorMap: `${file}`,
+        colormap: `${file}`,
         opacity: 1,
         visible: true,
       },

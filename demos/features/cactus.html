@@ -199,7 +199,7 @@
   var volumeList1 = [{ url: "../images/cactus.nii.gz" }];
   await nv1.loadVolumes(volumeList1);
   //image specific settings
-  nv1.volumes[0].colorMap = "ct_kidneys";
+  nv1.volumes[0].colormap = "ct_kidneys";
   nv1.volumes[0].cal_min = 80;
   nv1.volumes[0].cal_max = 480;
   nv1.opts.dragMode = nv1.dragModes.slicer3D;
@@ -256,7 +256,7 @@
     }
     if (event.target.id.charAt(0) === "!") {
       // set color scheme
-      nv1.volumes[0].colorMap = event.target.id.substr(1);
+      nv1.volumes[0].colormap = event.target.id.substr(1);
       nv1.updateGLVolume();
       toggleGroup(event.target.id);
       return;

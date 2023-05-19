@@ -21,7 +21,7 @@ test.each(files)("niftispace_%s", async (file) => {
     var volumeList = [
       {
         url: `./images/nifti_space/${file}`,
-        colorMap: "gray",
+        colormap: "gray",
         opacity: 1,
         visible: true,
       },

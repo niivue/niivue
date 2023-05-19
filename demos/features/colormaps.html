@@ -52,14 +52,14 @@
     };
     let key = "Custom";
     nv1.addColormap(key, cmap);
-    nv1.volumes[0].colorMap = key;
+    nv1.volumes[0].colormap = key;
     nv1.updateGLVolume();
   }
   var volumeList1 = [
     // first item is background image
     {
       url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-      colorMap: "gray",
+      colormap: "gray",
       opacity: 1,
       visible: true,
     },
@@ -69,13 +69,13 @@
   nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.opts.isColorbar = true;
-  let cmaps = nv1.colorMaps();
+  let cmaps = nv1.colormaps();
   let cmapEl = document.getElementById("colormaps");
   for (let i = 0; i < cmaps.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = cmaps[i];
     btn.onclick = function () {
-      nv1.volumes[0].colorMap = cmaps[i];
+      nv1.volumes[0].colormap = cmaps[i];
       nv1.updateGLVolume();
     };
     cmapEl.appendChild(btn);

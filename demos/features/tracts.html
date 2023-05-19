@@ -51,7 +51,7 @@
   </body>
 </html>
 <script src="./niivue.umd.js"></script>
-<script>
+<script type="module" async>
   var slider = document.getElementById("fiberLengthSlider");
   slider.oninput = function () {
     nv1.setMeshProperty(nv1.meshes[0].id, "fiberLength", this.value);
@@ -75,9 +75,13 @@
     show3Dcrosshair: true,
     backColor: [0.8, 0.8, 1, 1],
   });
+  nv1.opts.isColorbar = true;
   nv1.setSliceType(nv1.sliceTypeRender);
   nv1.attachTo("gl1");
-  nv1.loadVolumes(volumeList1);
-  nv1.loadMeshes([{ url: "../images/dpsv.trx" }]);
+  await nv1.loadVolumes(volumeList1);
+  await nv1.loadMeshes([{ url: "../images/dpsv.trx" }]);
+  nv1.setMeshProperty(nv1.meshes[0].id, "colormap", "blue");
+  console.log('<<<', nv1.volumes[0]);
+  console.log('>>>', nv1.meshes[0]);
   nv1.setClipPlane([-0.1, 270, 0]);
 </script>

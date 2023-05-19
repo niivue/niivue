@@ -21,7 +21,7 @@ test("canvasPos2frac", async () => {
         intensityMin: 0, // not used yet
         intensityMax: 100, // not used yet
         intensityRange: [0, 100], // not used yet
-        colorMap: "gray",
+        colormap: "gray",
         opacity: 1,
         visible: true,
       },
