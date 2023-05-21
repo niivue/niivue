@@ -21,12 +21,13 @@
       <input type="checkbox" id="check3" unchecked />
       <label for="dragMode">Drag mode</label>
       <select id="dragMode">
-        <option value="contrast" selected>contrast</option>
+        <option value="contrast">contrast</option>
         <option value="measurement">measurement</option>
-        <option value="pan">pan/zoom</option>
+        <option value="pan" selected>pan/zoom</option>
         <option value="slicer3D">slicer3D</option>
         <option value="none">none</option>
       </select>
+      <button id="reset">reset</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -36,6 +37,7 @@
       import { Niivue } from "./niivue.js";
       import { NVImage } from "./nvimage.js";
       import { NVMesh } from "./nvmesh.js";
+      document.getElementById("reset").addEventListener("click", doReset);
       var dropDrag = document.getElementById("dragMode");
       dropDrag.onchange = function () {
         switch (document.getElementById("dragMode").value) {
@@ -93,16 +95,16 @@
       nv1.setRadiologicalConvention(false);
       nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.dragMode = nv1.dragModes.pan;
       nv1.graph.autoSizeMultiplanar = true;
       nv1.opts.multiplanarForceRender = true;
       nv1.graph.normalizeValues = false;
       nv1.graph.opacity = 1.0;
       await nv1.loadVolumes(volumeList1);
       //await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
-      function doContrastDragRelease(startFrac, endFrac) {
-        console.log("DragRelease", startFrac, endFrac);
+      function doReset() {
+        nv1.setDefaults(defaults, true);
       }
-      nv1.onContrastDragRelease = doContrastDragRelease;
     </script>
   </body>
 </html>

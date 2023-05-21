@@ -103,6 +103,7 @@ const MESH_EXTENSIONS = [
   "VTK",
   "X3D",
   "JCON",
+  "JSON",
 ];
 
 const LEFT_MOUSE_BUTTON = 0;
@@ -325,7 +326,8 @@ export function Niivue(options = {}) {
   // Event listeners
 
   // Defaults
-  this.onContrastDragRelease = [];
+  this.onContrastDragRelease = []; //override default behavior
+  this.onMouseUp = []; //override default behavior
   this.onLocationChange = () => {};
   this.onIntensityChange = () => {};
   this.onImageLoaded = () => {};
@@ -775,6 +777,7 @@ Niivue.prototype.mouseCenterButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
+  this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
   if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.uiData.isDragging)
@@ -792,6 +795,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
+  this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
   if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.uiData.isDragging)
@@ -890,6 +894,18 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
 // handler for mouse button up (all buttons)
 // note: no test yet
 Niivue.prototype.mouseUpListener = function () {
+  function isFunction(test) {
+    return Object.prototype.toString.call(test).indexOf("Function") > -1;
+  }
+  //let fracPos = this.canvasPos2frac(this.mousePos);
+  let uiData = {
+    mouseButtonRightDown: this.uiData.mouseButtonRightDown,
+    mouseButtonCenterDown: this.uiData.mouseButtonCenterDown,
+    isDragging: this.uiData.isDragging,
+    mousePos: this.mousePos,
+    fracPos: this.canvasPos2frac(this.mousePos),
+    //xyzMM: this.frac2mm(fracPos),
+  };
   this.uiData.mousedown = false;
   this.uiData.mouseButtonRightDown = false;
   let wasCenterDown = this.uiData.mouseButtonCenterDown;
@@ -899,13 +915,16 @@ Niivue.prototype.mouseUpListener = function () {
   else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
+  if (isFunction(this.onMouseUp)) this.onMouseUp(uiData);
   if (this.uiData.isDragging) {
     this.uiData.isDragging = false;
     if (this.opts.dragMode !== DRAG_MODE.contrast) return;
     if (wasCenterDown) return;
-    function isFunction(test) {
-      return Object.prototype.toString.call(test).indexOf("Function") > -1;
-    }
+    if (
+      this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
+      this.uiData.dragStart[1] === this.uiData.dragEnd[1]
+    )
+      return;
     if (isFunction(this.onContrastDragRelease)) {
       let fracStart = this.canvasPos2frac([
         this.uiData.dragStart[0],

@@ -371,6 +371,11 @@ NVMesh.prototype.updateConnectome = function (gl) {
     if ((nEdges = nNode * nNode)) hasEdges = true;
     else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
   }
+  if (!json.hasOwnProperty("nodeScale")) json.nodeScale = 4;
+  if (!json.hasOwnProperty("edgeScale")) json.edgeScale = 1;
+  if (!json.hasOwnProperty("nodeColormap")) json.nodeColormap = "warm";
+  if (!json.hasOwnProperty("edgeColormap")) json.edgeColormap = "warm";
+
   //draw all nodes
   let pts = [];
   let rgba255 = [];
@@ -3502,6 +3507,55 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
 
 // not included in public docs
 // read connectome saved as JSON
+NVMesh.loadConnectomeFromFreeSurfer = async function (
+  json,
+  gl,
+  name = "",
+  colormap = "",
+  opacity = 1.0,
+  visible = true
+) {
+  let rgb255 = [255, 0, 0];
+  if (json.hasOwnProperty("color")) rgb255 = json.color;
+  let isValid = true;
+  if (!json.hasOwnProperty("data_type")) isValid = false;
+  else if (json.data_type !== "fs_pointset") isValid = false;
+  if (!json.hasOwnProperty("points")) isValid = false;
+  if (!isValid) {
+    throw Error("not a valid FreeSurfer json pointset");
+  }
+  let jcon = [];
+  jcon.nodes = [];
+  jcon.nodes.names = [];
+  jcon.nodes.prefilled = [];
+  jcon.nodes.X = [];
+  jcon.nodes.Y = [];
+  jcon.nodes.Z = [];
+  jcon.nodes.Color = [];
+  jcon.nodes.Size = [];
+  jcon.name = json.data_type;
+  for (let i = 0; i < json.points.length; i++) {
+    let name = "";
+    if (json.points[i].hasOwnProperty("comments"))
+      if (json.points[i].comments[0].hasOwnProperty("text"))
+        name = json.points[i].comments[0].text;
+    jcon.nodes.names.push(name);
+    let prefilled = "";
+    if (json.points[i].hasOwnProperty("comments"))
+      if (json.points[i].comments[0].hasOwnProperty("prefilled"))
+        prefilled = json.points[i].comments[0].prefilled;
+    jcon.nodes.prefilled.push(prefilled);
+    jcon.nodes.X.push(json.points[i].coordinates.x);
+    jcon.nodes.Y.push(json.points[i].coordinates.y);
+    jcon.nodes.Z.push(json.points[i].coordinates.z);
+    jcon.nodes.Color.push(1);
+    jcon.nodes.Size.push(1);
+  }
+  return new NVMesh([], [], name, [], opacity, visible, gl, jcon);
+}; // loadConnectomeFromFreeSurfer
+
+// not included in public docs
+// read connectome saved as JSON
 NVMesh.loadConnectomeFromJSON = async function (
   json,
   gl,
@@ -3514,6 +3568,7 @@ NVMesh.loadConnectomeFromJSON = async function (
   if (!json.hasOwnProperty("nodes")) {
     throw Error("not a valid jcon connectome file");
   }
+  console.log(">>>>>", json);
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
@@ -3539,6 +3594,15 @@ NVMesh.readMesh = async function (
   }
   if (ext === "JCON")
     return await this.loadConnectomeFromJSON(
+      JSON.parse(new TextDecoder().decode(buffer)),
+      gl,
+      name,
+      "",
+      opacity,
+      visible
+    );
+  if (ext === "JSON")
+    return await this.loadConnectomeFromFreeSurfer(
       JSON.parse(new TextDecoder().decode(buffer)),
       gl,
       name,
