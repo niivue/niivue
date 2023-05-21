@@ -113,7 +113,8 @@ export function NVMesh(
   this.hasConnectome = false;
   this.pts = pts;
   this.layers = [];
-  if (!rgba255) {
+  if (rgba255[3] < 1) {
+    this.rgba255 = rgba255;
     this.fiberLength = 2;
     this.fiberDither = 0.1;
     this.fiberColor = "Global";
@@ -272,6 +273,14 @@ NVMesh.prototype.updateFibers = function (gl) {
       let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
       let vEnd4 = vEnd * 4 + 3;
       for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+    }
+  } else if (fiberColor.includes("fixed")) {
+    let RGBA =
+      this.rgba255[0] + (this.rgba255[1] << 8) + (this.rgba255[2] << 16);
+    let v4 = 3; //+3: fill 4th component colors: XYZC = 0123
+    for (let i = 0; i < npt; i++) {
+      posClrU32[v4] = RGBA;
+      v4 += 4;
     }
   } else if (fiberColor.includes("local")) {
     for (let i = 0; i < n_count; i++) {
@@ -3610,6 +3619,7 @@ NVMesh.readMesh = async function (
       opacity,
       visible
     );
+  rgba255[3] = Math.max(0, rgba255[3]);
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
@@ -3622,11 +3632,12 @@ NVMesh.readMesh = async function (
     if (!obj.hasOwnProperty("dpg")) obj.dpg = null;
     if (!obj.hasOwnProperty("dps")) obj.dps = null;
     if (!obj.hasOwnProperty("dpv")) obj.dpv = null;
+    rgba255[3] = -1.0;
     return new NVMesh(
       pts,
       offsetPt0,
       name,
-      null, //colormap,
+      rgba255, //colormap,
       opacity, //opacity,
       visible, //visible,
       gl,
@@ -3655,11 +3666,12 @@ NVMesh.readMesh = async function (
       //VTK files used both for meshes and streamlines
       let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
       let pts = new Float32Array(obj.pts.slice());
+      rgba255[3] = -1.0;
       return new NVMesh(
         pts,
         offsetPt0,
         name,
-        null, //colormap,
+        rgba255, //colormap,
         opacity, //opacity,
         visible, //visible,
         gl,
