@@ -12,8 +12,18 @@
       <strong>niivue requires JavaScript. Please enable it to continue.</strong>
     </noscript>
     <header>
-      <label for="fiberColor">Color:</label>
-      <select id="fiberColor">
+      <label for="shaderDrop">Shader:</label>
+      <select id="shaderDrop">
+        <option value="Edge">Edge</option>
+        <option value="Flat">Flat</option>
+        <option value="Matcap">Matcap</option>
+        <option value="Matte">Matte</option>
+        <option value="Outline" selected>Outline</option>
+        <option value="Phong">Phong</option>
+        <option value="Toon">Toon</option>
+      </select>
+      <label for="colorDrop">Color:</label>
+      <select id="colorDrop">
         <option value="Global">Global direction</option>
         <option value="Local">Local direction</option>
         <option value="Fixed" selected>Fixed</option>
@@ -27,6 +37,15 @@
         class="slider"
         id="xRaySlider"
       />
+      <label for="zoomSlider">Zoom</label>
+      <input
+        type="range"
+        min="1"
+        max="20"
+        value="10"
+        class="slider"
+        id="zoomSlider"
+      />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -35,23 +54,30 @@
 </html>
 <script src="./niivue.umd.js"></script>
 <script type="module" async>
-  xRaySlider.onchange = function () {
-    nv1.opts.meshXRay = xRaySlider.value * 0.01;
+  zoomSlider.onchange = function () {
+    nv1.scene.volScaleMultiplier = zoomSlider.value * 0.1;
     nv1.drawScene();
   };
-  var drop = document.getElementById("fiberColor");
-  drop.onchange = function () {
-    const colorName = document.getElementById("fiberColor").value;
+  xRaySlider.onchange = function () {
+    nv1.opts.meshXRay = this.value * 0.01;
+    nv1.drawScene();
+  };
+  shaderDrop.onchange = function () {
+    const shaderName = this.value;
+    nv1.setMeshShader(nv1.meshes[3].id, shaderName);
+  };
+  colorDrop.onchange = function () {
+    const colorName = this.value;
     nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", colorName);
     nv1.setMeshProperty(nv1.meshes[1].id, "fiberColor", colorName);
     nv1.setMeshProperty(nv1.meshes[2].id, "fiberColor", colorName);
   };
-  var volumeList1 = [{ url: "../images/mni152.nii.gz"}];
+  var volumeList1 = [{ url: "../images/mni152.nii.gz" }];
   var nv1 = new niivue.Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
   });
-  //nv1.opts.isColorbar = true;
+  nv1.opts.isOrientCube = true;
   nv1.setSliceType(nv1.sliceTypeRender);
   nv1.attachTo("gl1");
   await nv1.loadVolumes(volumeList1);
@@ -61,11 +87,13 @@
     { url: "../images/tract.SLF1_R.tck", rgba255: [0, 0, 255, 255] },
     {
       url: "../images/BrainMesh_ICBM152.lh.mz3",
-      rgba255: [242, 174, 177, 255], opacity: 0.2
+      rgba255: [242, 174, 177, 255],
+      opacity: 0.2,
     },
   ]);
   nv1.setClipPlane([-0.1, 0, 90]);
-  nv1.setRenderAzimuthElevation(160, 15);
-  document.getElementById("fiberColor").dispatchEvent(new Event("change"));
+  nv1.setRenderAzimuthElevation(135, 15);
+  document.getElementById("colorDrop").dispatchEvent(new Event("change"));
   document.getElementById("xRaySlider").dispatchEvent(new Event("change"));
+  document.getElementById("shaderDrop").dispatchEvent(new Event("change"));
 </script>
