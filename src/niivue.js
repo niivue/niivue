@@ -326,8 +326,8 @@ export function Niivue(options = {}) {
   // Event listeners
 
   // Defaults
-  this.onContrastDragRelease = []; //override default behavior
-  this.onMouseUp = []; //override default behavior
+  this.onContrastDragRelease = this.calculateNewRange; // function to call when contrast drag is released by default. Can be overridden by user
+  this.onMouseUp = () => {};
   this.onLocationChange = () => {};
   this.onIntensityChange = () => {};
   this.onImageLoaded = () => {};
@@ -824,7 +824,11 @@ function intensityRaw2Scaled(hdr, raw) {
 
 // not included in public docs
 // note: no test yet
-Niivue.prototype.calculateNewRange = function (volIdx = 0) {
+Niivue.prototype.calculateNewRange = function ({
+  fracStart = null,
+  fracEnd = null,
+  volIdx = 0,
+} = {}) {
   if (
     this.opts.sliceType === SLICE_TYPE.RENDER &&
     this.sliceMosaicString.length < 1
@@ -925,17 +929,16 @@ Niivue.prototype.mouseUpListener = function () {
       this.uiData.dragStart[1] === this.uiData.dragEnd[1]
     )
       return;
-    if (isFunction(this.onContrastDragRelease)) {
-      let fracStart = this.canvasPos2frac([
-        this.uiData.dragStart[0],
-        this.uiData.dragStart[1],
-      ]);
-      let fracEnd = this.canvasPos2frac([
-        this.uiData.dragEnd[0],
-        this.uiData.dragEnd[1],
-      ]);
-      this.onContrastDragRelease(fracStart, fracEnd);
-    } else this.calculateNewRange();
+
+    let fracStart = this.canvasPos2frac([
+      this.uiData.dragStart[0],
+      this.uiData.dragStart[1],
+    ]);
+    let fracEnd = this.canvasPos2frac([
+      this.uiData.dragEnd[0],
+      this.uiData.dragEnd[1],
+    ]);
+    this.onContrastDragRelease({ fracStart, fracEnd, volIdx: 0 });
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
   this.drawScene();

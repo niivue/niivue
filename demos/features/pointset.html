@@ -115,8 +115,8 @@
         document.getElementById("location").innerHTML =
           "&nbsp;&nbsp;" + data.string;
       }
-      function doContrastDragRelease(startFrac, endFrac) {
-        console.log("DragRelease", startFrac, endFrac);
+      function doContrastDragRelease({fracStart, fracEnd}) {
+        console.log("DragRelease", fracStart, fracEnd);
       }
       function deleteNode(XYZmm) {
         let nodes = nv1.meshes[0].nodes;
