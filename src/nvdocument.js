@@ -123,6 +123,7 @@ export const DEFAULT_OPTIONS = {
   sliceType: SLICE_TYPE.MULTIPLANAR,
   meshXRay: 0.0,
   isAntiAlias: null,
+  limitFrames4D: NaN
 };
 
 /**Creates and instance of NVDocument

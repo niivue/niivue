@@ -78,7 +78,7 @@
         nv1.setSliceMM(this.checked);
       }
       var volumeList1 = [
-        { url: "../demos/images/pcasl.nii.gz", limitFrames4D: 3 },
+        { url: "../demos/images/pcasl.nii.gz" },
       ];
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML =
@@ -89,6 +89,7 @@
         backColor: [1, 1, 1, 1],
         show3Dcrosshair: true,
         logging: true,
+        limitFrames4D: 3,
         onLocationChange: handleLocationChange,
       };
       var nv1 = new Niivue(defaults);

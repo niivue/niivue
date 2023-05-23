@@ -1566,6 +1566,7 @@ Niivue.prototype.dropListener = async function (e) {
                 let volume = await NVImage.loadFromFile({
                   file: file,
                   urlImgData: imgfile,
+                  limitFrames4D: this.opts.limitFrames4D,
                 });
                 this.addVolume(volume);
               });
@@ -1574,6 +1575,7 @@ Niivue.prototype.dropListener = async function (e) {
               let volume = await NVImage.loadFromFile({
                 file: file,
                 urlImgData: pairedImageData,
+                limitFrames4D: this.opts.limitFrames4D,
               });
               if (e.altKey) {
                 log.debug(
@@ -2996,7 +2998,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
       frame4D: volumeList[i].frame4D,
-      limitFrames4D: volumeList[i].limitFrames4D,
+      limitFrames4D: volumeList[i].limitFrames4D || this.opts.limitFrames4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);
@@ -5334,11 +5336,21 @@ Niivue.prototype.loadDeferred4DVolumes = async function (id) {
   let volume = this.volumes[idx];
   if (volume.nTotalFrame4D <= volume.nFrame4D) return;
   //only load image data: do not change other settings like contrast
-  let v = await NVImage.loadFromUrl({ url: volume.url });
-  volume.img = v.img.slice();
-  volume.nTotalFrame4D = v.nTotalFrame4D;
-  volume.nFrame4D = v.nFrame4D;
-  this.updateGLVolume();
+  // check if volume has the property fileObject
+  let v
+  if (volume.fileObject) {
+    // if it does, load the image data from the fileObject
+    v = await NVImage.loadFromFile({file: volume.fileObject});
+  } else {
+    v = await NVImage.loadFromUrl({ url: volume.url });
+  }
+  // if v is not undefined, then we have successfully loaded the image data
+  if (v) {
+    volume.img = v.img.slice();
+    volume.nTotalFrame4D = v.nTotalFrame4D;
+    volume.nFrame4D = v.nFrame4D;
+    this.updateGLVolume();
+  }
 };
 
 /**

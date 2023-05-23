@@ -2842,11 +2842,11 @@ NVImage.loadFromUrl = async function ({
 
 // not included in public docs
 // loading Nifti files
-NVImage.readFileAsync = function (file) {
+NVImage.readFileAsync = function (file, bytesToLoad=NaN) {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
     reader.onload = () => {
-      if (file.name.lastIndexOf("gz") !== -1) {
+      if (file.name.lastIndexOf("gz") !== -1 && isNaN(bytesToLoad)) {
         resolve(nifti.decompress(reader.result));
       } else {
         resolve(reader.result);
@@ -2854,8 +2854,11 @@ NVImage.readFileAsync = function (file) {
     };
 
     reader.onerror = reject;
-
-    reader.readAsArrayBuffer(file);
+    if (isNaN(bytesToLoad)) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsArrayBuffer(file.slice(0, bytesToLoad));
+    }
   });
 };
 
@@ -2895,6 +2898,7 @@ NVImage.loadFromFile = async function ({
   useQFormNotSForm = false,
   colormapNegative = "",
   frame4D = 0,
+  limitFrames4D = NaN,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
@@ -2905,7 +2909,52 @@ NVImage.loadFromFile = async function ({
         dataBuffer.push(await this.readFileAsync(file[i]));
       }
     } else {
-      dataBuffer = await this.readFileAsync(file);
+      if (!isNaN(limitFrames4D)) {
+        dataBuffer = await this.readFileAsync(file, 512);
+        let bytes = new Uint8Array(dataBuffer);
+        let isGz = false;
+        if (bytes[0] === 31 && bytes[1] === 139) {
+          isGz = true;
+          const dcmpStrm = new fflate.Decompress((chunk, final) => {
+            //console.log('decoded:', chunk);
+            bytes = chunk;
+          });
+          await dcmpStrm.push(bytes);
+          dataBuffer = bytes.buffer;
+        }
+        let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
+        if (!isNifti1) isNifti1 = bytes[1] === 92 && bytes[0] === 1;
+        if (!isNifti1) dataBuffer = null;
+        else {
+          let hdr = nifti.readHeader(dataBuffer);
+          let nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+          let nVox3D = 1;
+          for (let i = 1; i < 4; i++) if (hdr.dims[i] > 1) nVox3D *= hdr.dims[i];
+          let nFrame4D = 1;
+          for (let i = 4; i < 7; i++) if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
+          let volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+          let bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+          if (dataBuffer.byteLength < bytesToLoad) {
+            //response = await this.fetchPartial(url, bytesToLoad);
+            //dataBuffer = await response.arrayBuffer();
+            dataBuffer = await this.readFileAsync(file, bytesToLoad);
+            if (isGz) {
+              let bytes = new Uint8Array(dataBuffer);
+              const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
+                bytes = chunk;
+              });
+              await dcmpStrm2.push(bytes);
+              dataBuffer = bytes.buffer;
+            }
+          } //load image data
+          if (dataBuffer.byteLength < bytesToLoad)
+            //fail: e.g. incompressible data
+            dataBuffer = null;
+          else dataBuffer = dataBuffer.slice(0, bytesToLoad);
+        } //if isNifti1
+      } else {
+        dataBuffer = await this.readFileAsync(file, limitFrames4D);
+      }
       name = file.name;
     }
     let pairedImgData = null;
@@ -2929,6 +2978,9 @@ NVImage.loadFromFile = async function ({
       frame4D,
       imageType
     );
+    // add a reference to the file object as a new property of the NVImage instance
+    // is this too hacky?
+    nvimage.fileObject = file
   } catch (err) {
     console.log(err);
     log.debug(err);
