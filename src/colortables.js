@@ -21,10 +21,14 @@ colortables.prototype.addColormap = function (key, cmap) {
   this.cluts[key] = cmap;
 };
 
-colortables.prototype.colorMaps = function () {
+colortables.prototype.colormaps = function () {
   return Object.keys(this.cluts);
 };
 
+//for backward compatibility: prior to v0.34 "colormaps" used to be "colorMaps"
+colortables.prototype.colorMaps = function () {
+  return Object.keys(this.cluts);
+};
 // returns key name if it exists, otherwise returns default "gray"
 /*colortables.prototype.key2key = function (key = "") {
   let cmap = this.cluts[key];

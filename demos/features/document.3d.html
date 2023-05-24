@@ -67,7 +67,7 @@
           buttonElem.innerText = "Add Hippocampus";
           isHippoShowing = false;
         } else {
-          nv1.addVolumeFromUrl({ url, colorMap: "bluegrn" });
+          nv1.addVolumeFromUrl({ url, colormap: "bluegrn" });
           buttonElem.innerText = "Remove Hippocampus";
           isHippoShowing = true;
         }
@@ -90,7 +90,7 @@
         // first item is background image
         {
           url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          colorMap: "gray",
+          colormap: "gray",
           opacity: 1,
           visible: true,
         },

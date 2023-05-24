@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>FreeSurfer Point Sets</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="slicer3D">slicer3D</option>
+        <option value="none">none</option>
+        <option value="custom">custom</option>
+      </select>
+      <label for="pointID">Point</label>
+      <select id="pointID">
+        <option value="0" selected>0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+      <label for="colorMode">Color</label>
+      <select id="colorMode">
+        <option value="warm" selected>yellow</option>
+        <option value="red">red</option>
+        <option value="blue">blue</option>
+        <option value="green">green</option>
+      </select>
+      <label for="nodeSlider">Size</label>
+      <input
+        type="range"
+        min="0"
+        max="12"
+        value="4"
+        class="slider"
+        id="nodeSlider"
+      />
+      <label for="checkEdit">Edit</label>
+      <input type="checkbox" id="checkEdit" unchecked />
+      <button id="about">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script src="./niivue.umd.js"></script>
+    <script type="module" async>
+      document.getElementById("about").addEventListener("click", doAbout);
+      function doAbout() {
+        window.alert(
+          "The demo loads FreeSurfer Control Points. When `Edit` is checked, you can click and right-click to add and remove nodes."
+        );
+      }
+      nodeSlider.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", nodeSlider.value);
+      };
+      var dropPoint = document.getElementById("pointID");
+      dropPoint.onchange = function () {
+        let num = dropPoint.value;
+        let nodes = nv1.meshes[0].nodes;
+        let name = nodes.names[num];
+        let XYZ = [nodes.X[num], nodes.Y[num], nodes.Z[num]];
+        console.log("Selected point name: " + name);
+        //nb prefilled property unique to FreeSurfer: does not exist for jcon format
+        // therefore, check to ensure this property exists
+        if (nodes.hasOwnProperty("prefilled"))
+          console.log("Selected point prefilled: " + nodes.prefilled[num]);
+        nv1.scene.crosshairPos = nv1.mm2frac(XYZ);
+        //nv1.updateGLVolume();
+        nv1.drawScene();
+      };
+      var dropColor = document.getElementById("colorMode");
+      dropColor.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "nodeColormap", dropColor.value);
+      };
+      var dropDrag = document.getElementById("dragMode");
+      dropDrag.onchange = function () {
+        nv1.onContrastDragRelease = null;
+        switch (document.getElementById("dragMode").value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break;
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break;
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break;
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break;
+          case "slicer3D":
+            nv1.opts.dragMode = nv1.dragModes.slicer3D;
+            break;
+          case "custom":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            nv1.onContrastDragRelease = doContrastDragRelease;
+            break;
+        }
+      };
+      var volumeList1 = [
+        { url: "../images/mni152.nii.gz", limitFrames4D: 3 },
+      ];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      function doContrastDragRelease({fracStart, fracEnd}) {
+        console.log("DragRelease", fracStart, fracEnd);
+      }
+      function deleteNode(XYZmm) {
+        let nodes = nv1.meshes[0].nodes;
+        if (nodes.X.length < 1) return;
+        console.log("Deleting ", XYZmm);
+        let minDx = Number.POSITIVE_INFINITY;
+        let minIdx = 0;
+        //check distance of each node from clicked location
+        for (let i = 0; i < nodes.X.length; i++) {
+          let dx = Math.sqrt(
+            Math.pow(XYZmm[0] - nodes.X[i], 2) +
+              Math.pow(XYZmm[1] - nodes.Y[i], 2) +
+              Math.pow(XYZmm[2] - nodes.Z[i], 2)
+          );
+          if (dx < minDx) {
+            minDx = dx;
+            minIdx = i;
+          }
+        }
+        console.log("Node " + minIdx + " is " + minDx + "mm from the click");
+        const tolerance = 15.0; //e.g. only 15mm from clicked location
+        if (minDx > tolerance) return;
+        nodes.names.splice(minIdx, 1);
+        nodes.prefilled.splice(minIdx, 1);
+        nodes.X.splice(minIdx, 1);
+        nodes.Y.splice(minIdx, 1);
+        nodes.Z.splice(minIdx, 1);
+        nodes.Color.splice(minIdx, 1);
+        nodes.Size.splice(minIdx, 1);
+        nv1.meshes[0].updateMesh(nv1.gl);
+        nv1.updateGLVolume();
+      }
+      function addNode(XYZmm) {
+        let nodes = nv1.meshes[0].nodes;
+        console.log("Adding ", XYZmm);
+        nodes.names.push("");
+        nodes.prefilled.push("");
+        nodes.X.push(XYZmm[0]);
+        nodes.Y.push(XYZmm[1]);
+        nodes.Z.push(XYZmm[2]);
+        nodes.Color.push(1);
+        nodes.Size.push(1);
+        nv1.meshes[0].updateMesh(nv1.gl);
+        nv1.updateGLVolume();
+      }
+
+      function doMouseUp(uiData) {
+        if (!document.getElementById("checkEdit").checked) return;
+        if (uiData.fracPos[0] < 0) return; //not on volume
+        if (uiData.mouseButtonCenterDown) return;
+        let XYZmmVec = this.frac2mm(uiData.fracPos);
+        let XYZmm = [XYZmmVec[0], XYZmmVec[1], XYZmmVec[2]];
+        if (uiData.mouseButtonRightDown) deleteNode(XYZmm);
+        else addNode(XYZmm);
+      }
+      let defaults = {
+        loadingText: "there are no images",
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        logging: true,
+        onLocationChange: handleLocationChange,
+      };
+      var nv1 = new niivue.Niivue(defaults);
+      nv1.setRadiologicalConvention(false);
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.graph.autoSizeMultiplanar = true;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.graph.normalizeValues = false;
+      nv1.graph.opacity = 1.0;
+      await nv1.loadVolumes(volumeList1);
+      await nv1.loadMeshes([
+        { url: "../images/FreeSurferControlPoints.json" },
+      ]);
+      document.getElementById("pointID").dispatchEvent(new Event("change"));
+      document.getElementById("dragMode").dispatchEvent(new Event("change"));
+      nv1.onMouseUp = doMouseUp;
+    </script>
+  </body>
+</html>

@@ -13,6 +13,15 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="255"
+        class="slider"
+        id="opacitySlider"
+      />
       <label for="modulateSlider">Modulation</label>
       <input
         type="range"
@@ -41,7 +50,12 @@
     <footer id="location">&nbsp;</footer>
     <script src="./niivue.umd.js"></script>
     <script type="module" async>
-      document.getElementById("ExtButton").addEventListener("click", doExtButton);
+      opacitySlider.onchange = function () {
+        drop.onchange();
+      };
+      document
+        .getElementById("ExtButton")
+        .addEventListener("click", doExtButton);
       function doExtButton() {
         let str = "Volume does not have an extension";
         if (nv1.volumes[1].hdr.extensions.length > 0) {
@@ -54,10 +68,8 @@
         .getElementById("outlineCheck")
         .addEventListener("change", doCheckClick);
       function doCheckClick() {
-        if (this.checked)
-          nv1.overlayOutlineWidth = 1.0
-        else
-          nv1.overlayOutlineWidth = 0.0;
+        if (this.checked) nv1.overlayOutlineWidth = 1.0;
+        else nv1.overlayOutlineWidth = 0.0;
         nv1.drawScene();
       }
       document
@@ -74,9 +86,23 @@
         drop.onchange();
       }
       var volumeList1 = [
-        { url: "../images/mni152.nii.gz"},
-        { url: "../images/stats.nv_demo_mskd.nii.gz", colorMap: "warm", colorMapNegative: "winter", frame4D: 1, cal_min: 0.01, cal_max: 3.3641},
-        { url: "../images/stats.nv_demo_mskd.nii.gz", colorMap: "afni_reds_inv", colorMapNegative: "afni_blues_inv", frame4D: 0, cal_max: 3.09735, cal_min: 0},
+        { url: "../images/mni152.nii.gz" },
+        {
+          url: "../images/stats.nv_demo_mskd.nii.gz",
+          colormap: "blue2magenta",
+          colormapNegative: "blue2cyan",
+          frame4D: 1,
+          cal_min: 0.01,
+          cal_max: 3.3641,
+        },
+        {
+          url: "../images/stats.nv_demo_mskd.nii.gz",
+          colormap: "afni_reds_inv",
+          colormapNegative: "afni_blues_inv",
+          frame4D: 0,
+          cal_max: 3.09735,
+          cal_min: 0,
+        },
       ];
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML =
@@ -101,12 +127,20 @@
         nv1.setOpacity(0, 1.0); //background opaque
         nv1.setOpacity(1, 0.0); //hide tstat
         nv1.setOpacity(2, 0.0); //hide cope
-        nv1.setOpacity(Math.min(mode, 2), 1.0);
+        let visibleOverlay = Math.min(mode, 2);
+        let opacity = opacitySlider.value / 255;
+        nv1.overlayOutlineAlpha = opacity;
+        nv1.setOpacity(visibleOverlay, opacity);
+        nv1.overlayAlphaShader = 1.0;
         if (mode === 3) {
+          nv1.overlayAlphaShader = opacity;
           let modulateAlpha = document.getElementById("modulateSlider").value;
-          nv1.setModulationImage(nv1.volumes[2].id, nv1.volumes[1].id, modulateAlpha);
-        } else
-          nv1.setModulationImage(nv1.volumes[2].id, null);
+          nv1.setModulationImage(
+            nv1.volumes[2].id,
+            nv1.volumes[1].id,
+            modulateAlpha
+          );
+        } else nv1.setModulationImage(nv1.volumes[2].id, null);
       };
       nv1.overlayOutlineWidth = 1;
       nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan

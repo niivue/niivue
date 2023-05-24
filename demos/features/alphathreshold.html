@@ -65,8 +65,8 @@
         .getElementById("check1")
         .addEventListener("change", doCheckClick);
       function doCheckClick() {
-        if (this.checked) nv1.setColorMapNegative(nv1.volumes[1].id, "winter");
-        else nv1.setColorMapNegative(nv1.volumes[1].id, "");
+        if (this.checked) nv1.setColormapNegative(nv1.volumes[1].id, "winter");
+        else nv1.setColormapNegative(nv1.volumes[1].id, "");
         nv1.drawScene();
       }
       document
@@ -131,8 +131,8 @@
         { url: "../images/fslmean.nii.gz" },
         {
           url: "../images/fslt.nii.gz",
-          colorMap: "warm",
-          colorMapNegative: "winter",
+          colormap: "warm",
+          colormapNegative: "winter",
           cal_min: 3,
           cal_max: 6,
         },

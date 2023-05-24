@@ -123,6 +123,7 @@ export const DEFAULT_OPTIONS = {
   sliceType: SLICE_TYPE.MULTIPLANAR,
   meshXRay: 0.0,
   isAntiAlias: null,
+  limitFrames4D: NaN,
 };
 
 /**Creates and instance of NVDocument
@@ -476,7 +477,7 @@ export class NVDocument {
         if (!imageOptions) {
           imageOptions = {
             name: "",
-            colorMap: "gray",
+            colormap: "gray",
             opacity: 1.0,
             pairedImgData: null,
             cal_min: NaN,
@@ -486,14 +487,14 @@ export class NVDocument {
             ignoreZeroVoxels: false,
             visible: true,
             useQFormNotSForm: false,
-            colorMapNegative: "",
+            colormapNegative: "",
             imageType: NVIMAGE_TYPE.NII,
             frame4D: 0,
             limitFrames4D: NaN,
           };
         }
         // update image options on current image settings
-        imageOptions.colorMap = volume.colorMap;
+        imageOptions.colormap = volume.colormap;
         imageOptions.opacity = volume.opacity;
 
         imageOptionsArray.push(imageOptions);
@@ -533,8 +534,8 @@ export class NVDocument {
         copyLayer.cal_min = layer.cal_min;
         copyLayer.cal_max = layer.cal_max;
         copyLayer.opacity = layer.opacity;
-        copyLayer.colorMap = layer.colorMap;
-        copyLayer.colorMapNegative = layer.colorMapNegative;
+        copyLayer.colormap = layer.colormap;
+        copyLayer.colormapNegative = layer.colormapNegative;
         copyLayer.useNegativeCmap = layer.useNegativeCmap;
         copyMesh.layers.push(copyLayer);
       }

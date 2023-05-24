@@ -4,6 +4,8 @@ export { default as actc } from "./actc.json";
 export { default as bcgwhw_dark } from "./bcgwhw_dark.json";
 export { default as bcgwhw } from "./bcgwhw.json";
 export { default as blue2red } from "./blue2red.json";
+export { default as blue2magenta } from "./blue2magenta.json";
+export { default as blue2cyan } from "./blue2cyan.json";
 export { default as bluegrn } from "./bluegrn.json";
 export { default as blue } from "./blue.json";
 export { default as bone } from "./bone.json";

@@ -22,7 +22,7 @@ function isPlatformLittleEndian() {
  * @returns {array} an array of colormap strings
  * @example
  * niivue = new Niivue()
- * colormaps = niivue.colorMaps()
+ * colormaps = niivue.colormaps()
  */
 
 /**
@@ -109,7 +109,7 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {string} url - the resolvable URL pointing to a nifti image to load
  * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
  * @property {string} [name=""] a name for this image. Default is an empty string
- * @property {string} [colorMap="gray"] a color map to use. default is gray
+ * @property {string} [colormap="gray"] a color map to use. default is gray
  * @property {number} [opacity=1.0] the opacity for this image. default is 1
  * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
  * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
@@ -118,9 +118,9 @@ export const NVIMAGE_TYPE = Object.freeze({
  * @property {boolean} [visible=true] whether or not this image is to be visible
  * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
  * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
- * @property {string} [colorMapNegative=""] a color map to use for negative intensities
- * @property {number} [cal_minNeg=NaN] minimum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_min)
- * @property {number} [cal_maxNeg=NaN] maximum intensity for colorMapNegative brightness/contrast (NaN for symmetrical cal_max)
+ * @property {string} [colormapNegative=""] a color map to use for negative intensities
+ * @property {number} [cal_minNeg=NaN] minimum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_min)
+ * @property {number} [cal_maxNeg=NaN] maximum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_max)
  * @property {boolean} [colorbarVisible=true] hide colormaps 
 
 
@@ -136,7 +136,7 @@ export function NVImageFromUrlOptions(
   url,
   urlImageData = "",
   name = "",
-  colorMap = "gray",
+  colormap = "gray",
   opacity = 1.0,
   cal_min = NaN,
   cal_max = NaN,
@@ -146,7 +146,7 @@ export function NVImageFromUrlOptions(
   visible = true,
   useQFormNotSForm = false,
   alphaThreshold = false,
-  colorMapNegative = "",
+  colormapNegative = "",
   frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
@@ -157,7 +157,7 @@ export function NVImageFromUrlOptions(
     url,
     urlImageData,
     name,
-    colorMap,
+    colormap,
     opacity,
     cal_min,
     cal_max,
@@ -166,7 +166,7 @@ export function NVImageFromUrlOptions(
     ignoreZeroVoxels,
     visible,
     useQFormNotSForm,
-    colorMapNegative,
+    colormapNegative,
     imageType,
     cal_minNeg,
     cal_maxNeg,
@@ -183,7 +183,7 @@ export function NVImageFromUrlOptions(
  * @constructor
  * @param {array} dataBuffer an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {string} [colormap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {string} [pairedImgData=null] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
  * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
@@ -193,15 +193,15 @@ export function NVImageFromUrlOptions(
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
- * @param {string} [colorMapNegative=''] a color map to use for symmetrical negative intensities
+ * @param {string} [colormapNegative=''] a color map to use for symmetrical negative intensities
  * @param {number} [frame4D = 0] volume displayed, 0 indexed, must be less than nFrame4D
- * @param {function} [onColorMapChange=()=>{}] callback for color map change
+ * @param {function} [onColormapChange=()=>{}] callback for color map change
  * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
 export function NVImage(
   dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
   name = "",
-  colorMap = "gray",
+  colormap = "gray",
   opacity = 1.0,
   pairedImgData = null,
   cal_min = NaN,
@@ -211,7 +211,7 @@ export function NVImage(
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
-  colorMapNegative = "",
+  colormapNegative = "",
   frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
@@ -241,12 +241,12 @@ export function NVImage(
   this.DT_RGBA32 = 2304; /* 4 byte RGBA (32 bits/voxel)  */
   this.name = name;
   this.id = uuidv4();
-  this._colorMap = colorMap;
+  this._colormap = colormap;
   this._opacity = opacity > 1.0 ? 1.0 : opacity; //make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
   this.percentileFrac = percentileFrac;
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
-  this.colorMapNegative = colorMapNegative;
+  this.colormapNegative = colormapNegative;
   this.frame4D = frame4D; //indexed from 0!
   this.cal_minNeg = cal_minNeg;
   this.cal_maxNeg = cal_maxNeg;
@@ -256,7 +256,7 @@ export function NVImage(
   this.modulateAlpha = 0; // if !=0, mod transparency with expon power |Alpha|
   this.series = []; // for concatenating dicom images
 
-  this.onColorMapChange = () => {};
+  this.onColormapChange = () => {};
   this.onOpacityChange = () => {};
 
   // Added to support zerosLike
@@ -2293,21 +2293,21 @@ NVImage.prototype.arrayEquals = function (a, b) {
 };
 
 // not included in public docs
-// base function for niivue.setColorMap()
-NVImage.prototype.setColorMap = function (cm) {
-  this._colorMap = cm;
+// base function for niivue.setColormap()
+NVImage.prototype.setColormap = function (cm) {
+  this._colormap = cm;
   this.calMinMax();
-  if (this.onColorMapChange) {
-    this.onColorMapChange(this);
+  if (this.onColormapChange) {
+    this.onColormapChange(this);
   }
 };
 
-Object.defineProperty(NVImage.prototype, "colorMap", {
+Object.defineProperty(NVImage.prototype, "colormap", {
   get: function () {
-    return this._colorMap;
+    return this._colormap;
   },
-  set: function (colorMap) {
-    this.setColorMap(colorMap);
+  set: function (colormap) {
+    this.setColormap(colormap);
   },
 });
 
@@ -2328,7 +2328,7 @@ Object.defineProperty(NVImage.prototype, "opacity", {
 //clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
 //ToDo: convert to web assembly, this is slow in JavaScript
 NVImage.prototype.calMinMax = function () {
-  let cmap = cmapper.colormapFromKey(this._colorMap);
+  let cmap = cmapper.colormapFromKey(this._colormap);
   let cmMin = 0;
   let cmMax = 0;
   if (cmap.hasOwnProperty("min")) cmMin = cmap.min;
@@ -2692,7 +2692,7 @@ NVImage.loadFromUrl = async function ({
   url = "",
   urlImgData = "",
   name = "",
-  colorMap = "gray",
+  colormap = "gray",
   opacity = 1.0,
   cal_min = NaN,
   cal_max = NaN,
@@ -2701,7 +2701,7 @@ NVImage.loadFromUrl = async function ({
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
-  colorMapNegative = "",
+  colormapNegative = "",
   frame4D = 0,
   isManifest = false,
   limitFrames4D = NaN,
@@ -2818,7 +2818,7 @@ NVImage.loadFromUrl = async function ({
     nvimage = new NVImage(
       dataBuffer,
       name,
-      colorMap,
+      colormap,
       opacity,
       pairedImgData,
       cal_min,
@@ -2828,7 +2828,7 @@ NVImage.loadFromUrl = async function ({
       ignoreZeroVoxels,
       visible,
       useQFormNotSForm,
-      colorMapNegative,
+      colormapNegative,
       frame4D,
       imageType
     );
@@ -2842,11 +2842,11 @@ NVImage.loadFromUrl = async function ({
 
 // not included in public docs
 // loading Nifti files
-NVImage.readFileAsync = function (file) {
+NVImage.readFileAsync = function (file, bytesToLoad = NaN) {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
     reader.onload = () => {
-      if (file.name.lastIndexOf("gz") !== -1) {
+      if (file.name.lastIndexOf("gz") !== -1 && isNaN(bytesToLoad)) {
         resolve(nifti.decompress(reader.result));
       } else {
         resolve(reader.result);
@@ -2854,8 +2854,11 @@ NVImage.readFileAsync = function (file) {
     };
 
     reader.onerror = reject;
-
-    reader.readAsArrayBuffer(file);
+    if (isNaN(bytesToLoad)) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsArrayBuffer(file.slice(0, bytesToLoad));
+    }
   });
 };
 
@@ -2864,7 +2867,7 @@ NVImage.readFileAsync = function (file) {
  * @constructs NVImage
  * @param {string} file the file object
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {string} [colormap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {string} [urlImgData=null] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
  * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
@@ -2874,7 +2877,7 @@ NVImage.readFileAsync = function (file) {
  * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {boolean} [useQFormNotSForm=false] whether or not to use QForm instead of SForm during construction
- * @param {string} [colorMapNegative=""] colormap negative for the image
+ * @param {string} [colormapNegative=""] colormap negative for the image
  * @param {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type
  * @returns {NVImage} returns a NVImage instance
  * @example
@@ -2883,7 +2886,7 @@ NVImage.readFileAsync = function (file) {
 NVImage.loadFromFile = async function ({
   file = null, // file can be an array of file objects or a single file object
   name = "",
-  colorMap = "gray",
+  colormap = "gray",
   opacity = 1.0,
   urlImgData = null,
   cal_min = NaN,
@@ -2893,8 +2896,9 @@ NVImage.loadFromFile = async function ({
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
-  colorMapNegative = "",
+  colormapNegative = "",
   frame4D = 0,
+  limitFrames4D = NaN,
   imageType = NVIMAGE_TYPE.UNKNOWN,
 } = {}) {
   let nvimage = null;
@@ -2905,7 +2909,55 @@ NVImage.loadFromFile = async function ({
         dataBuffer.push(await this.readFileAsync(file[i]));
       }
     } else {
-      dataBuffer = await this.readFileAsync(file);
+      if (!isNaN(limitFrames4D)) {
+        dataBuffer = await this.readFileAsync(file, 512);
+        let bytes = new Uint8Array(dataBuffer);
+        let isGz = false;
+        if (bytes[0] === 31 && bytes[1] === 139) {
+          isGz = true;
+          const dcmpStrm = new fflate.Decompress((chunk, final) => {
+            //console.log('decoded:', chunk);
+            bytes = chunk;
+          });
+          await dcmpStrm.push(bytes);
+          dataBuffer = bytes.buffer;
+        }
+        let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
+        if (!isNifti1) isNifti1 = bytes[1] === 92 && bytes[0] === 1;
+        if (!isNifti1) dataBuffer = null;
+        else {
+          let hdr = nifti.readHeader(dataBuffer);
+          let nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+          let nVox3D = 1;
+          for (let i = 1; i < 4; i++)
+            if (hdr.dims[i] > 1) nVox3D *= hdr.dims[i];
+          let nFrame4D = 1;
+          for (let i = 4; i < 7; i++)
+            if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
+          let volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+          let bytesToLoad =
+            hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+          if (dataBuffer.byteLength < bytesToLoad) {
+            //response = await this.fetchPartial(url, bytesToLoad);
+            //dataBuffer = await response.arrayBuffer();
+            dataBuffer = await this.readFileAsync(file, bytesToLoad);
+            if (isGz) {
+              let bytes = new Uint8Array(dataBuffer);
+              const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
+                bytes = chunk;
+              });
+              await dcmpStrm2.push(bytes);
+              dataBuffer = bytes.buffer;
+            }
+          } //load image data
+          if (dataBuffer.byteLength < bytesToLoad)
+            //fail: e.g. incompressible data
+            dataBuffer = null;
+          else dataBuffer = dataBuffer.slice(0, bytesToLoad);
+        } //if isNifti1
+      } else {
+        dataBuffer = await this.readFileAsync(file, limitFrames4D);
+      }
       name = file.name;
     }
     let pairedImgData = null;
@@ -2915,7 +2967,7 @@ NVImage.loadFromFile = async function ({
     nvimage = new NVImage(
       dataBuffer,
       name,
-      colorMap,
+      colormap,
       opacity,
       pairedImgData,
       cal_min,
@@ -2925,10 +2977,13 @@ NVImage.loadFromFile = async function ({
       ignoreZeroVoxels,
       visible,
       useQFormNotSForm,
-      colorMapNegative,
+      colormapNegative,
       frame4D,
       imageType
     );
+    // add a reference to the file object as a new property of the NVImage instance
+    // is this too hacky?
+    nvimage.fileObject = file;
   } catch (err) {
     console.log(err);
     log.debug(err);
@@ -2941,7 +2996,7 @@ NVImage.loadFromFile = async function ({
  * @constructs NVImage
  * @param {string} [base64=null] base64 string
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {string} [colormap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
  * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
@@ -2956,7 +3011,7 @@ NVImage.loadFromFile = async function ({
 NVImage.loadFromBase64 = function ({
   base64 = null,
   name = "",
-  colorMap = "gray",
+  colormap = "gray",
   opacity = 1.0,
   cal_min = NaN,
   cal_max = NaN,
@@ -2982,7 +3037,7 @@ NVImage.loadFromBase64 = function ({
     nvimage = new NVImage(
       dataBuffer,
       name,
-      colorMap,
+      colormap,
       opacity,
       pairedImgData,
       cal_min,
@@ -3377,7 +3432,7 @@ NVImage.prototype.getImageOptions = function () {
       "", // url,
       "", // urlImageData
       this.name, // name
-      this._colorMap, // colorMap
+      this._colormap, // colormap
       this.opacity, // opacity
       this.hdr.cal_min, // cal_min
       this.hdr.cal_max, // cal_max
@@ -3386,7 +3441,7 @@ NVImage.prototype.getImageOptions = function () {
       this.ignoreZeroVoxels, // ignoreZeroVoxels
       this.visible, // visible
       this.useQFormNotSForm, // useQFormNotSForm
-      this.colorMapNegative, // colorMapNegative
+      this.colormapNegative, // colormapNegative
       this.frame4D,
       this.imageType // imageType
     );

@@ -103,6 +103,7 @@ const MESH_EXTENSIONS = [
   "VTK",
   "X3D",
   "JCON",
+  "JSON",
 ];
 
 const LEFT_MOUSE_BUTTON = 0;
@@ -220,6 +221,7 @@ export function Niivue(options = {}) {
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
   this.overlayOutlineWidth = 0; //float, 0 for none
+  this.overlayAlphaShader = 1; //float, 1 for opaque
   this.isAlphaClipDark = false;
 
   this.syncOpts = {};
@@ -325,6 +327,8 @@ export function Niivue(options = {}) {
   // Event listeners
 
   // Defaults
+  this.onContrastDragRelease = this.calculateNewRange; // function to call when contrast drag is released by default. Can be overridden by user
+  this.onMouseUp = () => {};
   this.onLocationChange = () => {};
   this.onIntensityChange = () => {};
   this.onImageLoaded = () => {};
@@ -774,6 +778,7 @@ Niivue.prototype.mouseCenterButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
+  this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
   if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.uiData.isDragging)
@@ -791,6 +796,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
     e,
     this.gl.canvas
   );
+  this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
   if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.uiData.isDragging)
@@ -819,7 +825,11 @@ function intensityRaw2Scaled(hdr, raw) {
 
 // not included in public docs
 // note: no test yet
-Niivue.prototype.calculateNewRange = function (volIdx = 0) {
+Niivue.prototype.calculateNewRange = function ({
+  fracStart = null,
+  fracEnd = null,
+  volIdx = 0,
+} = {}) {
   if (
     this.opts.sliceType === SLICE_TYPE.RENDER &&
     this.sliceMosaicString.length < 1
@@ -889,6 +899,18 @@ Niivue.prototype.calculateNewRange = function (volIdx = 0) {
 // handler for mouse button up (all buttons)
 // note: no test yet
 Niivue.prototype.mouseUpListener = function () {
+  function isFunction(test) {
+    return Object.prototype.toString.call(test).indexOf("Function") > -1;
+  }
+  //let fracPos = this.canvasPos2frac(this.mousePos);
+  let uiData = {
+    mouseButtonRightDown: this.uiData.mouseButtonRightDown,
+    mouseButtonCenterDown: this.uiData.mouseButtonCenterDown,
+    isDragging: this.uiData.isDragging,
+    mousePos: this.mousePos,
+    fracPos: this.canvasPos2frac(this.mousePos),
+    //xyzMM: this.frac2mm(fracPos),
+  };
   this.uiData.mousedown = false;
   this.uiData.mouseButtonRightDown = false;
   let wasCenterDown = this.uiData.mouseButtonCenterDown;
@@ -898,11 +920,26 @@ Niivue.prototype.mouseUpListener = function () {
   else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap();
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1;
+  if (isFunction(this.onMouseUp)) this.onMouseUp(uiData);
   if (this.uiData.isDragging) {
     this.uiData.isDragging = false;
     if (this.opts.dragMode !== DRAG_MODE.contrast) return;
     if (wasCenterDown) return;
-    this.calculateNewRange();
+    if (
+      this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
+      this.uiData.dragStart[1] === this.uiData.dragEnd[1]
+    )
+      return;
+
+    let fracStart = this.canvasPos2frac([
+      this.uiData.dragStart[0],
+      this.uiData.dragStart[1],
+    ]);
+    let fracEnd = this.canvasPos2frac([
+      this.uiData.dragEnd[0],
+      this.uiData.dragEnd[1],
+    ]);
+    this.onContrastDragRelease({ fracStart, fracEnd, volIdx: 0 });
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
   this.drawScene();
@@ -1350,7 +1387,7 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
   this.document.addImageOptions(volume, imageOptions);
-  volume.onColorMapChange = this.onColorMapChange;
+  volume.onColormapChange = this.onColormapChange;
   this.mediaUrlMap.set(volume, imageOptions.url);
   if (this.onVolumeAddedFromUrl) {
     this.onVolumeAddedFromUrl(imageOptions, volume);
@@ -1530,6 +1567,7 @@ Niivue.prototype.dropListener = async function (e) {
                 let volume = await NVImage.loadFromFile({
                   file: file,
                   urlImgData: imgfile,
+                  limitFrames4D: this.opts.limitFrames4D,
                 });
                 this.addVolume(volume);
               });
@@ -1538,6 +1576,7 @@ Niivue.prototype.dropListener = async function (e) {
               let volume = await NVImage.loadFromFile({
                 file: file,
                 urlImgData: pairedImageData,
+                limitFrames4D: this.opts.limitFrames4D,
               });
               if (e.altKey) {
                 log.debug(
@@ -2912,8 +2951,8 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
  * Each volume object can have the following properties:
  * @property {string} url - the url of the image to load
  * @property {string} name - the name of the image
- * @property {string} colorMap - the name of the color map to use
- * @property {string} colorMapNegative - the name of the color map to use for negative values
+ * @property {string} colormap - the name of the color map to use
+ * @property {string} colormapNegative - the name of the color map to use for negative values
  * @property {number} opacity - the opacity of the image
  * @property {string} urlImgData - the image data to use if header and image are separate files
  * @property {number} cal_min - the minimum value to display
@@ -2944,11 +2983,15 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
   // for loop to load all volumes in volumeList
   for (let i = 0; i < volumeList.length; i++) {
     this.uiData.loading$.next(true);
+    if (volumeList[i].colorMap !== undefined)
+      volumeList[i].colormap = volumeList[i].colorMap;
+    if (volumeList[i].colorMapNegative !== undefined)
+      volumeList[i].colormapNegative = volumeList[i].colorMapNegative;
     let imageOptions = {
       url: volumeList[i].url,
       name: volumeList[i].name,
-      colorMap: volumeList[i].colorMap,
-      colorMapNegative: volumeList[i].colorMapNegative,
+      colormap: volumeList[i].colormap,
+      colormapNegative: volumeList[i].colormapNegative,
       opacity: volumeList[i].opacity,
       urlImgData: volumeList[i].urlImgData,
       cal_min: volumeList[i].cal_min,
@@ -2956,7 +2999,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
       trustCalMinMax: this.opts.trustCalMinMax,
       isManifest: volumeList[i].isManifest,
       frame4D: volumeList[i].frame4D,
-      limitFrames4D: volumeList[i].limitFrames4D,
+      limitFrames4D: volumeList[i].limitFrames4D || this.opts.limitFrames4D,
     };
     await this.addVolumeFromUrl(imageOptions);
     this.uiData.loading$.next(false);
@@ -4316,6 +4359,8 @@ Niivue.prototype.init = async function () {
     this.sliceMMShader.uniforms["isAlphaClipDark"];
   this.sliceMMShader.overlayOutlineWidthLoc =
     this.sliceMMShader.uniforms["overlayOutlineWidth"];
+  this.sliceMMShader.overlayAlphaShaderLoc =
+    this.sliceMMShader.uniforms["overlayAlphaShader"];
   this.sliceMMShader.backgroundMasksOverlaysLoc =
     this.sliceMMShader.uniforms["backgroundMasksOverlays"];
   this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
@@ -4996,10 +5041,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   );
   this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
   this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
-  //if unused colorMapNegative https://github.com/niivue/niivue/issues/490
+  //if unused colormapNegative https://github.com/niivue/niivue/issues/490
   let mnNeg = Number.POSITIVE_INFINITY;
   let mxNeg = Number.NEGATIVE_INFINITY;
-  if (overlayItem.colorMapNegative.length > 0) {
+  if (overlayItem.colormapNegative.length > 0) {
     //assume symmetrical
     mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
     mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
@@ -5034,9 +5079,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       mhdr.dims[2] === hdr.dims[2] &&
       mhdr.dims[3] === hdr.dims[3]
     ) {
-      if (overlayItem.modulateAlpha)
+      if (overlayItem.modulateAlpha) {
         this.gl.uniform1i(orientShader.uniforms["modulation"], 2);
-      else this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
+        this.gl.uniform1f(orientShader.uniforms["opacity"], 1.0);
+      } else this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
       //r8Tex(texID, activeID, dims, isInit = false)
       modulateTexture = this.r8Tex(
         modulateTexture,
@@ -5071,8 +5117,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
           break;
       }
       log.debug(this.volumes[overlayItem.modulationImage]);
-      let isColorMapNegative =
-        this.volumes[overlayItem.modulationImage].colorMapNegative.length > 0;
+      let isColormapNegative =
+        this.volumes[overlayItem.modulationImage].colormapNegative.length > 0;
       //negative thresholds might be asymmetric from positive ones
       let mnNeg = this.volumes[overlayItem.modulationImage].cal_min;
       let mxNeg = this.volumes[overlayItem.modulationImage].cal_max;
@@ -5094,7 +5140,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       for (let i = 0; i < vx; i++) {
         let vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter;
         let v = (vRaw - mn) * scale;
-        if (isColorMapNegative && vRaw < 0.0)
+        if (isColormapNegative && vRaw < 0.0)
           v = (Math.abs(vRaw) - mnNeg) * scaleNeg;
         v = Math.min(Math.max(v, 0.0), 1.0);
         v = Math.pow(v, mpow) * 255.0;
@@ -5199,10 +5245,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
  * @returns {array} an array of colormap strings
  * @example
  * niivue = new Niivue()
- * colormaps = niivue.colorMaps()
+ * colormaps = niivue.colormaps()
  */
-Niivue.prototype.colorMaps = function () {
-  return cmapper.colorMaps();
+Niivue.prototype.colormaps = function () {
+  return cmapper.colormaps();
 };
 
 /**
@@ -5218,29 +5264,34 @@ Niivue.prototype.addColormap = function (key, cmap) {
 /**
  * update the colormap of an image given its ID
  * @param {string} id the ID of the NVImage
- * @param {string} colorMap the name of the colorMap to use
+ * @param {string} colormap the name of the colormap to use
  * @example
  * niivue = new Niivue()
- * niivue.setColorMap(someImage.id, 'red')
+ * niivue.setColormap(someImage.id, 'red')
  */
-Niivue.prototype.setColorMap = function (id, colorMap) {
+Niivue.prototype.setColormap = function (id, colormap) {
   let idx = this.getVolumeIndexByID(id);
-  this.volumes[idx].colorMap = colorMap;
+  this.volumes[idx].colormap = colormap;
   this.updateGLVolume();
+};
+
+//compatibility alias for NiiVue < 0.35
+Niivue.prototype.setColorMap = function (id, colormap) {
+  this.setColormap(id, colormap);
 };
 
 /**
  * use given color map for negative voxels in image
  * @param {string} id the ID of the NVImage
- * @param {string} colorMapNegative the name of the colorMap to use
+ * @param {string} colormapNegative the name of the colormap to use
  * @example
  * niivue = new Niivue()
- * niivue.setColorMapNegative(niivue.volumes[1].id,"winter");
+ * niivue.setColormapNegative(niivue.volumes[1].id,"winter");
  * @see {@link https://niivue.github.io/niivue/features/mosaics2.html|live demo usage}
  */
-Niivue.prototype.setColorMapNegative = function (id, colorMapNegative) {
+Niivue.prototype.setColormapNegative = function (id, colormapNegative) {
   let idx = this.getVolumeIndexByID(id);
-  this.volumes[idx].colorMapNegative = colorMapNegative;
+  this.volumes[idx].colormapNegative = colormapNegative;
   this.updateGLVolume();
 };
 
@@ -5289,11 +5340,21 @@ Niivue.prototype.loadDeferred4DVolumes = async function (id) {
   let volume = this.volumes[idx];
   if (volume.nTotalFrame4D <= volume.nFrame4D) return;
   //only load image data: do not change other settings like contrast
-  let v = await NVImage.loadFromUrl({ url: volume.url });
-  volume.img = v.img.slice();
-  volume.nTotalFrame4D = v.nTotalFrame4D;
-  volume.nFrame4D = v.nFrame4D;
-  this.updateGLVolume();
+  // check if volume has the property fileObject
+  let v;
+  if (volume.fileObject) {
+    // if it does, load the image data from the fileObject
+    v = await NVImage.loadFromFile({ file: volume.fileObject });
+  } else {
+    v = await NVImage.loadFromUrl({ url: volume.url });
+  }
+  // if v is not undefined, then we have successfully loaded the image data
+  if (v) {
+    volume.img = v.img.slice();
+    volume.nTotalFrame4D = v.nTotalFrame4D;
+    volume.nFrame4D = v.nFrame4D;
+    this.updateGLVolume();
+  }
 };
 
 /**
@@ -5352,7 +5413,7 @@ Niivue.prototype.colormap = function (lutName = "") {
 //create TEXTURE1 a 2D bitmap with a 256 column RGBA row for each colormap
 //note a single volume can have two colormaps (positive and negative)
 // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
-Niivue.prototype.createColorMapTexture = function (nLayer) {
+Niivue.prototype.createColormapTexture = function (nLayer) {
   if (this.colormapTexture !== null)
     this.gl.deleteTexture(this.colormapTexture);
   this.colormapTexture = this.gl.createTexture();
@@ -5382,7 +5443,7 @@ Niivue.prototype.createColorMapTexture = function (nLayer) {
     this.gl.CLAMP_TO_EDGE
   );
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-}; // createColorMapTexture()
+}; // createColormapTexture()
 
 Niivue.prototype.addColormapList = function (
   nm = "",
@@ -5433,7 +5494,7 @@ Niivue.prototype.refreshColormaps = function () {
       );
       //add negative colormaps BEFORE positive ones: we draw them in order from left to right
       this.addColormapList(
-        volume.colorMapNegative,
+        volume.colormapNegative,
         neg[0],
         neg[1],
         volume.alphaThreshold,
@@ -5441,7 +5502,7 @@ Niivue.prototype.refreshColormaps = function () {
         volume.colorbarVisible
       );
       this.addColormapList(
-        volume.colorMap,
+        volume.colormap,
         volume.cal_min,
         volume.cal_max,
         volume.alphaThreshold,
@@ -5472,7 +5533,7 @@ Niivue.prototype.refreshColormaps = function () {
       for (let j = 0; j < nlayers; j++) {
         let layer = this.meshes[i].layers[j];
         if (!layer.colorbarVisible) continue;
-        if (layer.colorMap.length < 1) continue;
+        if (layer.colormap.length < 1) continue;
         let neg = negMinMax(
           layer.cal_min,
           layer.cal_max,
@@ -5480,14 +5541,14 @@ Niivue.prototype.refreshColormaps = function () {
           layer.cal_maxNeg
         );
         this.addColormapList(
-          layer.colorMapNegative,
+          layer.colormapNegative,
           neg[0],
           neg[1],
           layer.alphaThreshold,
           true
         );
         this.addColormapList(
-          layer.colorMap,
+          layer.colormap,
           layer.cal_min,
           layer.cal_max,
           layer.alphaThreshold
@@ -5497,7 +5558,7 @@ Niivue.prototype.refreshColormaps = function () {
   } //for meshes
   let nMaps = this.colormapLists.length;
   if (nMaps < 1) return;
-  this.createColorMapTexture(nMaps + 1); //+1 reserve slot for drawLut
+  this.createColormapTexture(nMaps + 1); //+1 reserve slot for drawLut
   let luts = [];
   function addColormap(lut) {
     let c = new Uint8ClampedArray(luts.length + lut.length);
@@ -6692,6 +6753,10 @@ Niivue.prototype.draw2D = function (
   gl.uniform1f(
     this.sliceMMShader.overlayOutlineWidthLoc,
     this.overlayOutlineWidth
+  );
+  gl.uniform1f(
+    this.sliceMMShader.overlayAlphaShaderLoc,
+    this.overlayAlphaShader
   );
   gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark);
   gl.uniform1i(

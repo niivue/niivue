@@ -12,7 +12,7 @@ test("loadImageWithQueryString", async () => {
     var volumeList = [
       {
         url: "./images/mni152.nii.gz?test=test",
-        colorMap: "gray",
+        colormap: "gray",
         opacity: 1,
         visible: true,
       },

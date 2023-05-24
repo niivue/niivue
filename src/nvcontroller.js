@@ -75,7 +75,7 @@ export class NVController {
 
     // volume specific handlers
     for (const volume of this.niivue.volumes) {
-      volume.onColorMapChange = this.onColorMapChangeHandler.bind(this);
+      volume.onColormapChange = this.onColormapChangeHandler.bind(this);
       volume.onOpacityChange = this.onOpacityChangeHandler.bind(this);
     }
   }
@@ -141,7 +141,7 @@ export class NVController {
       case NVMESSAGE.COLORMAP_CHANGED:
         {
           let volume = this.niivue.getMediaByUrl(msg.url);
-          volume._colorMap = msg.colorMap;
+          volume._colormap = msg.colormap;
           this.niivue.updateGLVolume();
         }
         break;
@@ -274,7 +274,7 @@ export class NVController {
         imageOptions,
       });
     }
-    volume.onColorMapChange = this.onColorMapChangeHandler.bind(this);
+    volume.onColormapChange = this.onColormapChangeHandler.bind(this);
     volume.onOpacityChange = this.onOpacityChangeHandler.bind(this);
   }
 
@@ -283,7 +283,7 @@ export class NVController {
    * @param {NVImage} volume
    */
   async onImageLoadedHandler(volume) {
-    volume.onColorMapChange = this.onColorMapChangeHandler.bind(this);
+    volume.onColormapChange = this.onColormapChangeHandler.bind(this);
     volume.onOpacityChange = this.onOpacityChangeHandler.bind(this);
     if (this.isInSession && this.niivue.mediaUrlMap.has(volume)) {
       let url = this.niivue.mediaUrlMap.get(volume);
@@ -344,14 +344,14 @@ export class NVController {
    *
    * @param {NVImage} volume volume that has changed color maps
    */
-  async onColorMapChangeHandler(volume) {
+  async onColormapChangeHandler(volume) {
     if (this.isInSession && this.niivue.mediaUrlMap.has(volume)) {
       let url = this.niivue.mediaUrlMap.get(volume);
-      let colorMap = volume.colorMap;
+      let colormap = volume.colormap;
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.COLORMAP_CHANGED,
         url,
-        colorMap,
+        colormap,
       });
     }
   }

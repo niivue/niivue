@@ -12,7 +12,7 @@ test("loadDicomManifest", async () => {
       {
         url: "./images/dicom/niivue-manifest.txt",
         name: "mni152.nii.gz",
-        colorMap: "gray",
+        colormap: "gray",
         opacity: 1,
         visible: true,
         isManifest: true,

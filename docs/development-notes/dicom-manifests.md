@@ -11,7 +11,7 @@ import * as niivue from "./niivue.es.js";
 var volumeList1 = [
   {
     url: "https://raw.githubusercontent.com/niivue/niivue-demo-images/main/dicom/niivue-manifest.txt",
-    colorMap: "gray",
+    colormap: "gray",
     opacity: 1,
     visible: true,
     isManifest: true,

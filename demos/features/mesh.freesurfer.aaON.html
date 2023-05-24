@@ -156,12 +156,12 @@
       var meshLayersList1 = [
         {
           url: "../images/lh.curv",
-          colorMap: "gray",
+          colormap: "gray",
           cal_min: 0.3,
           cal_max: 0.5,
           opacity: 222 / 255,
         },
-        { url: "../images/boggle.lh.annot", colorMap: "rocket", opacity: 1 },
+        { url: "../images/boggle.lh.annot", colormap: "rocket", opacity: 1 },
         {
           url: "../images/pval.LH.nii.gz",
           cal_min: 25,
@@ -176,7 +176,7 @@
       nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "isOutlineBorder", true);
       nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false);
       nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colorbarVisible", false);
-      nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "colorMapNegative", "");
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "colormapNegative", "");
       document.getElementById("check10").checked =
         nv1.opts.isHighResolutionCapable;
       nv1.opts.isColorbar = true;
