@@ -415,6 +415,7 @@ precision highp float;
 uniform highp sampler3D volume, overlay;
 uniform int backgroundMasksOverlays;
 uniform float overlayOutlineWidth;
+uniform float overlayAlphaShader;
 uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
@@ -431,6 +432,7 @@ out vec4 color;` +
 	color = vec4(background.rgb, opacity);
 	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
 	vec4 ocolor = vec4(0.0);
+	float overlayAlpha = overlayAlphaShader;
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
 		//dFdx for "boxing" issue 435 has aliasing on some implementations (coarse vs fine)
@@ -498,8 +500,10 @@ out vec4 color;` +
 						a = max(a, texture(overlay, vxPI).a);
 					}
 				}
-				if (a >= 1.0)
+				if (a >= 1.0) {
 					ocolor = vec4(0.0, 0.0, 0.0, 1.0);
+					overlayAlpha = 1.0;
+				}
 			}
 
 		} else {
@@ -524,11 +528,14 @@ out vec4 color;` +
 					a = min(a, texture(overlay, vxS).a);
 					a = min(a, texture(overlay, vxI).a);
 				}
-				if (a < 1.0)
+				if (a < 1.0) {
 					ocolor = vec4(0.0, 0.0, 0.0, 1.0);
+					overlayAlpha = 1.0;
+				}
 			}
 		} //outline above threshold
 	}
+	ocolor.a *= overlayAlpha;
 	vec4 dcolor = drawColor(texture(drawing, texPos).r);
 	if (dcolor.a > 0.0) {
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);

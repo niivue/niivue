@@ -2842,7 +2842,7 @@ NVImage.loadFromUrl = async function ({
 
 // not included in public docs
 // loading Nifti files
-NVImage.readFileAsync = function (file, bytesToLoad=NaN) {
+NVImage.readFileAsync = function (file, bytesToLoad = NaN) {
   return new Promise((resolve, reject) => {
     let reader = new FileReader();
     reader.onload = () => {
@@ -2929,11 +2929,14 @@ NVImage.loadFromFile = async function ({
           let hdr = nifti.readHeader(dataBuffer);
           let nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
           let nVox3D = 1;
-          for (let i = 1; i < 4; i++) if (hdr.dims[i] > 1) nVox3D *= hdr.dims[i];
+          for (let i = 1; i < 4; i++)
+            if (hdr.dims[i] > 1) nVox3D *= hdr.dims[i];
           let nFrame4D = 1;
-          for (let i = 4; i < 7; i++) if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
+          for (let i = 4; i < 7; i++)
+            if (hdr.dims[i] > 1) nFrame4D *= hdr.dims[i];
           let volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
-          let bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+          let bytesToLoad =
+            hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
           if (dataBuffer.byteLength < bytesToLoad) {
             //response = await this.fetchPartial(url, bytesToLoad);
             //dataBuffer = await response.arrayBuffer();
@@ -2980,7 +2983,7 @@ NVImage.loadFromFile = async function ({
     );
     // add a reference to the file object as a new property of the NVImage instance
     // is this too hacky?
-    nvimage.fileObject = file
+    nvimage.fileObject = file;
   } catch (err) {
     console.log(err);
     log.debug(err);

@@ -221,6 +221,7 @@ export function Niivue(options = {}) {
   this.fontMets = null;
   this.backgroundMasksOverlays = 0;
   this.overlayOutlineWidth = 0; //float, 0 for none
+  this.overlayAlphaShader = 1; //float, 1 for opaque
   this.isAlphaClipDark = false;
 
   this.syncOpts = {};
@@ -4358,6 +4359,8 @@ Niivue.prototype.init = async function () {
     this.sliceMMShader.uniforms["isAlphaClipDark"];
   this.sliceMMShader.overlayOutlineWidthLoc =
     this.sliceMMShader.uniforms["overlayOutlineWidth"];
+  this.sliceMMShader.overlayAlphaShaderLoc =
+    this.sliceMMShader.uniforms["overlayAlphaShader"];
   this.sliceMMShader.backgroundMasksOverlaysLoc =
     this.sliceMMShader.uniforms["backgroundMasksOverlays"];
   this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms["opacity"];
@@ -5076,9 +5079,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       mhdr.dims[2] === hdr.dims[2] &&
       mhdr.dims[3] === hdr.dims[3]
     ) {
-      if (overlayItem.modulateAlpha)
+      if (overlayItem.modulateAlpha) {
         this.gl.uniform1i(orientShader.uniforms["modulation"], 2);
-      else this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
+        this.gl.uniform1f(orientShader.uniforms["opacity"], 1.0);
+      } else this.gl.uniform1i(orientShader.uniforms["modulation"], 1);
       //r8Tex(texID, activeID, dims, isInit = false)
       modulateTexture = this.r8Tex(
         modulateTexture,
@@ -5337,10 +5341,10 @@ Niivue.prototype.loadDeferred4DVolumes = async function (id) {
   if (volume.nTotalFrame4D <= volume.nFrame4D) return;
   //only load image data: do not change other settings like contrast
   // check if volume has the property fileObject
-  let v
+  let v;
   if (volume.fileObject) {
     // if it does, load the image data from the fileObject
-    v = await NVImage.loadFromFile({file: volume.fileObject});
+    v = await NVImage.loadFromFile({ file: volume.fileObject });
   } else {
     v = await NVImage.loadFromUrl({ url: volume.url });
   }
@@ -6749,6 +6753,10 @@ Niivue.prototype.draw2D = function (
   gl.uniform1f(
     this.sliceMMShader.overlayOutlineWidthLoc,
     this.overlayOutlineWidth
+  );
+  gl.uniform1f(
+    this.sliceMMShader.overlayAlphaShaderLoc,
+    this.overlayAlphaShader
   );
   gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark);
   gl.uniform1i(
