@@ -167,7 +167,7 @@ loading and rendering NIFTI image data in a WebGL 2.0 context.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line174">line 174</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line175">line 175</a>
     </li></ul></dd>
     
 
@@ -352,7 +352,7 @@ loading and rendering NIFTI image data in a WebGL 2.0 context.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5214">line 5214</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5260">line 5260</a>
     </li></ul></dd>
     
 
@@ -496,7 +496,7 @@ loading and rendering NIFTI image data in a WebGL 2.0 context.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1696">line 1696</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1735">line 1735</a>
     </li></ul></dd>
     
 
@@ -639,7 +639,7 @@ niivue.addMesh(NVMesh.loadFromUrl({url:'./someURL.gii'}))</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2972">line 2972</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3015">line 3015</a>
     </li></ul></dd>
     
 
@@ -794,7 +794,7 @@ niivue.addMesh(NVMesh.loadFromUrl({url:'./someURL.gii'}))</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1680">line 1680</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1719">line 1719</a>
     </li></ul></dd>
     
 
@@ -937,7 +937,7 @@ niivue.addVolume(NVImage.loadFromUrl({url:'./someURL.nii.gz'}))</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1350">line 1350</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1387">line 1387</a>
     </li></ul></dd>
     
 
@@ -1092,7 +1092,7 @@ niivue.addVolume(NVImage.loadFromUrl({url:'./someURL.nii.gz'}))</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line492">line 492</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line496">line 496</a>
     </li></ul></dd>
     
 
@@ -1243,7 +1243,7 @@ niivue.addVolume(NVImage.loadFromUrl({url:'./someURL.nii.gz'}))</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line559">line 559</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line563">line 563</a>
     </li></ul></dd>
     
 
@@ -1386,7 +1386,7 @@ niivue.attachToCanvas(document.getElementById(id))</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2821">line 2821</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2860">line 2860</a>
     </li></ul></dd>
     
 
@@ -1450,7 +1450,178 @@ niivue.cloneVolume(0)</code></pre>
     
 
     
-    <h4 class="name" id="colorMaps"><span class="type-signature"></span>colorMaps<span class="signature">(sort<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {array}</span></h4>
+    <h4 class="name" id="colormap"><span class="type-signature"></span>colormap<span class="signature">(id)</span><span class="type-signature"> &rarr; {number}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    determine active 3D volume from 4D time series
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">the ID of the 4D NVImage</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5409">line 5409</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+    <dt class="tag-see">See:</dt>
+    <dd class="tag-see">
+        <ul>
+            <li><a href="https://niivue.github.io/niivue/features/colormaps.html">live demo usage</a></li>
+        </ul>
+    </dd>
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    currently selected volume (indexed from 0)
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">number</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>nv1.getFrame4D(nv1.volumes[0].id);</code></pre>
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="colormaps"><span class="type-signature"></span>colormaps<span class="signature">(sort<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {array}</span></h4>
     
 
     
@@ -1571,7 +1742,7 @@ niivue.cloneVolume(0)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5204">line 5204</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5250">line 5250</a>
     </li></ul></dd>
     
 
@@ -1625,178 +1796,7 @@ niivue.cloneVolume(0)</code></pre>
     <h5>Example</h5>
     
     <pre class="prettyprint"><code>niivue = new Niivue()
-colormaps = niivue.colorMaps()</code></pre>
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="colormap"><span class="type-signature"></span>colormap<span class="signature">(id)</span><span class="type-signature"> &rarr; {number}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    determine active 3D volume from 4D time series
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">the ID of the 4D NVImage</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5348">line 5348</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-    <dt class="tag-see">See:</dt>
-    <dd class="tag-see">
-        <ul>
-            <li><a href="https://niivue.github.io/niivue/features/colormaps.html">live demo usage</a></li>
-        </ul>
-    </dd>
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    currently selected volume (indexed from 0)
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">number</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>nv1.getFrame4D(nv1.volumes[0].id);</code></pre>
+colormaps = niivue.colormaps()</code></pre>
 
 
 
@@ -1926,7 +1926,7 @@ colormaps = niivue.colorMaps()</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4148">line 4148</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4191">line 4191</a>
     </li></ul></dd>
     
 
@@ -2036,7 +2036,7 @@ colormaps = niivue.colorMaps()</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3060">line 3060</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3103">line 3103</a>
     </li></ul></dd>
     
 
@@ -2130,7 +2130,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3202">line 3202</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3245">line 3245</a>
     </li></ul></dd>
     
 
@@ -2272,7 +2272,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line8230">line 8230</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line8295">line 8295</a>
     </li></ul></dd>
     
 
@@ -2433,7 +2433,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2107">line 2107</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2146">line 2146</a>
     </li></ul></dd>
     
 
@@ -2533,7 +2533,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1867">line 1867</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1906">line 1906</a>
     </li></ul></dd>
     
 
@@ -2705,7 +2705,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4528">line 4528</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4573">line 4573</a>
     </li></ul></dd>
     
 
@@ -2876,7 +2876,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5331">line 5331</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5392">line 5392</a>
     </li></ul></dd>
     
 
@@ -3047,7 +3047,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1367">line 1367</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1404">line 1404</a>
     </li></ul></dd>
     
 
@@ -3205,7 +3205,7 @@ works on drawing with multiple colors
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2330">line 2330</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2369">line 2369</a>
     </li></ul></dd>
     
 
@@ -3306,7 +3306,7 @@ niivue.getOverlayIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1650">line 1650</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1689">line 1689</a>
     </li></ul></dd>
     
 
@@ -3470,7 +3470,7 @@ niivue.getOverlayIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1710">line 1710</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1749">line 1749</a>
     </li></ul></dd>
     
 
@@ -3613,7 +3613,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1432">line 1432</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1469">line 1469</a>
     </li></ul></dd>
     
 
@@ -3750,7 +3750,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3029">line 3029</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3072">line 3072</a>
     </li></ul></dd>
     
 
@@ -3909,7 +3909,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5287">line 5287</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5338">line 5338</a>
     </li></ul></dd>
     
 
@@ -4046,7 +4046,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2839">line 2839</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2878">line 2878</a>
     </li></ul></dd>
     
 
@@ -4201,7 +4201,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2829">line 2829</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2868">line 2868</a>
     </li></ul></dd>
     
 
@@ -4381,7 +4381,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1988">line 1988</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2027">line 2027</a>
     </li></ul></dd>
     
 
@@ -4530,7 +4530,7 @@ niivue.getVolumeIndexByID(someVolume.id)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2992">line 2992</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line3035">line 3035</a>
     </li></ul></dd>
     
 
@@ -4738,7 +4738,7 @@ niivue.loadMeshes([{url: 'someMesh.gii}])</code></pre>
 
         <tr>
             
-                <td class="name"><code>colorMap</code></td>
+                <td class="name"><code>colormap</code></td>
             
 
             <td class="type">
@@ -4761,7 +4761,7 @@ niivue.loadMeshes([{url: 'someMesh.gii}])</code></pre>
 
         <tr>
             
-                <td class="name"><code>colorMapNegative</code></td>
+                <td class="name"><code>colormapNegative</code></td>
             
 
             <td class="type">
@@ -4977,7 +4977,7 @@ niivue.loadMeshes([{url: 'someMesh.gii}])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2925">line 2925</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2964">line 2964</a>
     </li></ul></dd>
     
 
@@ -5144,7 +5144,7 @@ Each volume object can have the following properties:</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4198">line 4198</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4241">line 4241</a>
     </li></ul></dd>
     
 
@@ -5361,7 +5361,7 @@ Each volume object can have the following properties:</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line7852">line 7852</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line7917">line 7917</a>
     </li></ul></dd>
     
 
@@ -5510,7 +5510,7 @@ Each volume object can have the following properties:</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2504">line 2504</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2543">line 2543</a>
     </li></ul></dd>
     
 
@@ -5653,7 +5653,7 @@ niivue.moveVolumeDown(this.volumes[1]) // move the second image to the backgroun
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2481">line 2481</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2520">line 2520</a>
     </li></ul></dd>
     
 
@@ -5796,7 +5796,7 @@ niivue.moveVolumeToBottom(this.volumes[3]) // move the 4th volume to the 0 posit
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2516">line 2516</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2555">line 2555</a>
     </li></ul></dd>
     
 
@@ -5939,7 +5939,7 @@ niivue.moveVolumeToTop(this.volumes[0]) // move the background image to the top 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2492">line 2492</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2531">line 2531</a>
     </li></ul></dd>
     
 
@@ -6082,7 +6082,7 @@ niivue.moveVolumeUp(this.volumes[0]) // move the background image to the second 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line536">line 536</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line540">line 540</a>
     </li></ul></dd>
     
 
@@ -6248,7 +6248,7 @@ niivue.off('location')</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line517">line 517</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line521">line 521</a>
     </li></ul></dd>
     
 
@@ -6441,7 +6441,7 @@ function doSomethingWithLocationData(data){
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2132">line 2132</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2171">line 2171</a>
     </li></ul></dd>
     
 
@@ -6590,7 +6590,7 @@ function doSomethingWithLocationData(data){
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2450">line 2450</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2489">line 2489</a>
     </li></ul></dd>
     
 
@@ -6733,7 +6733,7 @@ niivue.removeMesh(this.meshes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2465">line 2465</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2504">line 2504</a>
     </li></ul></dd>
     
 
@@ -6875,7 +6875,7 @@ niivue.removeMesh(this.meshes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2418">line 2418</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2457">line 2457</a>
     </li></ul></dd>
     
 
@@ -7018,7 +7018,7 @@ niivue.removeVolume(this.volumes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2436">line 2436</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2475">line 2475</a>
     </li></ul></dd>
     
 
@@ -7155,7 +7155,7 @@ niivue.removeVolume(this.volumes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1378">line 1378</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1415">line 1415</a>
     </li></ul></dd>
     
 
@@ -7292,7 +7292,7 @@ niivue.removeVolume(this.volumes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2271">line 2271</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2310">line 2310</a>
     </li></ul></dd>
     
 
@@ -7477,7 +7477,7 @@ niivue.removeVolume(this.volumes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2161">line 2161</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2200">line 2200</a>
     </li></ul></dd>
     
 
@@ -7646,7 +7646,7 @@ niivue.removeVolume(this.volumes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line462">line 462</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line466">line 466</a>
     </li></ul></dd>
     
 
@@ -7795,7 +7795,7 @@ niivue.removeVolume(this.volumes[3])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2583">line 2583</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2622">line 2622</a>
     </li></ul></dd>
     
 
@@ -7938,7 +7938,7 @@ niivue.setClipPlane([42, 42])</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2763">line 2763</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2802">line 2802</a>
     </li></ul></dd>
     
 
@@ -7980,7 +7980,7 @@ niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent</code></pre>
     
 
     
-    <h4 class="name" id="setColorMap"><span class="type-signature"></span>setColorMap<span class="signature">(id, colorMap)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="setColormap"><span class="type-signature"></span>setColormap<span class="signature">(id, colormap)</span><span class="type-signature"></span></h4>
     
 
     
@@ -8047,7 +8047,7 @@ niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent</code></pre>
 
         <tr>
             
-                <td class="name"><code>colorMap</code></td>
+                <td class="name"><code>colormap</code></td>
             
 
             <td class="type">
@@ -8063,7 +8063,7 @@ niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent</code></pre>
 
             
 
-            <td class="description last">the name of the colorMap to use</td>
+            <td class="description last">the name of the colormap to use</td>
         </tr>
 
     
@@ -8104,7 +8104,7 @@ niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5226">line 5226</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5272">line 5272</a>
     </li></ul></dd>
     
 
@@ -8136,7 +8136,7 @@ niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent</code></pre>
     <h5>Example</h5>
     
     <pre class="prettyprint"><code>niivue = new Niivue()
-niivue.setColorMap(someImage.id, 'red')</code></pre>
+niivue.setColormap(someImage.id, 'red')</code></pre>
 
 
 
@@ -8146,7 +8146,7 @@ niivue.setColorMap(someImage.id, 'red')</code></pre>
     
 
     
-    <h4 class="name" id="setColorMapNegative"><span class="type-signature"></span>setColorMapNegative<span class="signature">(id, colorMapNegative)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="setColormapNegative"><span class="type-signature"></span>setColormapNegative<span class="signature">(id, colormapNegative)</span><span class="type-signature"></span></h4>
     
 
     
@@ -8213,7 +8213,7 @@ niivue.setColorMap(someImage.id, 'red')</code></pre>
 
         <tr>
             
-                <td class="name"><code>colorMapNegative</code></td>
+                <td class="name"><code>colormapNegative</code></td>
             
 
             <td class="type">
@@ -8229,7 +8229,7 @@ niivue.setColorMap(someImage.id, 'red')</code></pre>
 
             
 
-            <td class="description last">the name of the colorMap to use</td>
+            <td class="description last">the name of the colormap to use</td>
         </tr>
 
     
@@ -8270,7 +8270,7 @@ niivue.setColorMap(someImage.id, 'red')</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5241">line 5241</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5292">line 5292</a>
     </li></ul></dd>
     
 
@@ -8309,7 +8309,7 @@ niivue.setColorMap(someImage.id, 'red')</code></pre>
     <h5>Example</h5>
     
     <pre class="prettyprint"><code>niivue = new Niivue()
-niivue.setColorMapNegative(niivue.volumes[1].id,"winter");</code></pre>
+niivue.setColormapNegative(niivue.volumes[1].id,"winter");</code></pre>
 
 
 
@@ -8420,7 +8420,7 @@ niivue.setColorMapNegative(niivue.volumes[1].id,"winter");</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1567">line 1567</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1606">line 1606</a>
     </li></ul></dd>
     
 
@@ -8569,7 +8569,7 @@ niivue.setColorMapNegative(niivue.volumes[1].id,"winter");</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2606">line 2606</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2645">line 2645</a>
     </li></ul></dd>
     
 
@@ -8712,7 +8712,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2616">line 2616</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2655">line 2655</a>
     </li></ul></dd>
     
 
@@ -8895,7 +8895,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4180">line 4180</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4223">line 4223</a>
     </li></ul></dd>
     
 
@@ -9061,7 +9061,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2658">line 2658</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2697">line 2697</a>
     </li></ul></dd>
     
 
@@ -9210,7 +9210,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2632">line 2632</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2671">line 2671</a>
     </li></ul></dd>
     
 
@@ -9375,7 +9375,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5306">line 5306</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5367">line 5367</a>
     </li></ul></dd>
     
 
@@ -9524,7 +9524,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5279">line 5279</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5330">line 5330</a>
     </li></ul></dd>
     
 
@@ -9673,7 +9673,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1660">line 1660</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1699">line 1699</a>
     </li></ul></dd>
     
 
@@ -9825,7 +9825,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line6350">line 6350</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line6411">line 6411</a>
     </li></ul></dd>
     
 
@@ -10043,7 +10043,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2289">line 2289</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2328">line 2328</a>
     </li></ul></dd>
     
 
@@ -10231,7 +10231,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2255">line 2255</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2294">line 2294</a>
     </li></ul></dd>
     
 
@@ -10419,7 +10419,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4121">line 4121</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4164">line 4164</a>
     </li></ul></dd>
     
 
@@ -10568,7 +10568,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1618">line 1618</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1657">line 1657</a>
     </li></ul></dd>
     
 
@@ -10791,7 +10791,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5255">line 5255</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line5306">line 5306</a>
     </li></ul></dd>
     
 
@@ -10963,7 +10963,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green</
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2723">line 2723</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2762">line 2762</a>
     </li></ul></dd>
     
 
@@ -11106,7 +11106,7 @@ niivue.setOpacity(0, 0.5) // make the first volume transparent</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2304">line 2304</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2343">line 2343</a>
     </li></ul></dd>
     
 
@@ -11291,7 +11291,7 @@ niivue.setOpacity(0, 0.5) // make the first volume transparent</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2646">line 2646</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2685">line 2685</a>
     </li></ul></dd>
     
 
@@ -11433,7 +11433,7 @@ niivue.setOpacity(0, 0.5) // make the first volume transparent</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1578">line 1578</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1617">line 1617</a>
     </li></ul></dd>
     
 
@@ -11605,7 +11605,7 @@ niivue.setOpacity(0, 0.5) // make the first volume transparent</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2315">line 2315</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2354">line 2354</a>
     </li></ul></dd>
     
 
@@ -11747,7 +11747,7 @@ niivue.setOpacity(0, 0.5) // make the first volume transparent</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2742">line 2742</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2781">line 2781</a>
     </li></ul></dd>
     
 
@@ -11890,7 +11890,7 @@ niivue.setScale(2) // zoom some</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2670">line 2670</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2709">line 2709</a>
     </li></ul></dd>
     
 
@@ -12033,7 +12033,7 @@ niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green</code></
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1640">line 1640</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1679">line 1679</a>
     </li></ul></dd>
     
 
@@ -12182,7 +12182,7 @@ niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green</code></
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1629">line 1629</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line1668">line 1668</a>
     </li></ul></dd>
     
 
@@ -12343,7 +12343,7 @@ niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green</code></
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2709">line 2709</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2748">line 2748</a>
     </li></ul></dd>
     
 
@@ -12541,7 +12541,7 @@ niivue.setSliceType(Niivue.sliceTypeMultiplanar)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2349">line 2349</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2388">line 2388</a>
     </li></ul></dd>
     
 
@@ -12707,7 +12707,7 @@ niivue.setVolume(someVolume, 1) // move it to the second position in the array o
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2557">line 2557</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line2596">line 2596</a>
     </li></ul></dd>
     
 
@@ -12872,7 +12872,7 @@ xyz = niivue.sph2cartDeg(42, 42)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line615">line 615</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line619">line 619</a>
     </li></ul></dd>
     
 
@@ -12967,7 +12967,7 @@ niivue2.syncWith(niivue1)</code></pre>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4489">line 4489</a>
+        <a href="niivue.js.html">niivue.js</a>, <a href="niivue.js.html#line4534">line 4534</a>
     </li></ul></dd>
     
 
@@ -13025,7 +13025,7 @@ niivue.updateGLVolume()</code></pre>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Tue May 16 2023 13:14:33 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed May 24 2023 10:39:22 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

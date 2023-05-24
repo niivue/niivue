@@ -118,8 +118,8 @@
         .getElementById("check8")
         .addEventListener("change", doCheck8Click);
       function doCheck8Click() {
-        if (this.checked) nv1.setColorMapNegative(nv1.volumes[1].id, "winter");
-        else nv1.setColorMapNegative(nv1.volumes[1].id, "");
+        if (this.checked) nv1.setColormapNegative(nv1.volumes[1].id, "winter");
+        else nv1.setColormapNegative(nv1.volumes[1].id, "");
         nv1.drawScene();
       }
       document
@@ -138,14 +138,14 @@
       var volumeList1 = [
         {
           url: "../images/fslmean.nii.gz",
-          colorMap: "gray",
+          colormap: "gray",
           opacity: 1,
           visible: true,
         },
         {
           url: "../images/fslt.nii.gz",
-          colorMap: "warm",
-          colorMapNegative: "winter",
+          colormap: "warm",
+          colormapNegative: "winter",
           opacity: 1,
           cal_min: 1,
           cal_max: 6,

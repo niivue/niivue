@@ -93,7 +93,7 @@
     // first item is background image
     {
       url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-      colorMap: "gray",
+      colormap: "gray",
     },
   ];
   let opts = {
@@ -123,7 +123,6 @@
   document.getElementById("reset").addEventListener("click", doReset);
   function doReset() {
     nv1.setDefaults(opts, true);
-    //opts does not encode scene properties like clip plane
     nv1.setClipPlane([-0.1, 270, 0]);
   }
 </script>

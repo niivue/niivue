@@ -39,8 +39,8 @@ const log = new Log();
  * @typedef {Object} NVMeshLayer
  * @property {string} url
  * @property {number} opacity
- * @property {string} colorMap
- * @property {string} colorMapNegative
+ * @property {string} colormap
+ * @property {string} colormapNegative
  * @property {boolean} useNegativeCmap
  * @property {number} cal_min
  * @property {number} cal_max
@@ -141,7 +141,8 @@ export function NVMesh(
   this.hasConnectome = false;
   this.pts = pts;
   this.layers = [];
-  if (!rgba255) {
+  if (rgba255[3] &lt; 1) {
+    this.rgba255 = rgba255;
     this.fiberLength = 2;
     this.fiberDither = 0.1;
     this.fiberColor = "Global";
@@ -301,6 +302,14 @@ NVMesh.prototype.updateFibers = function (gl) {
       let vEnd4 = vEnd * 4 + 3;
       for (let j = vStart4; j &lt;= vEnd4; j += 4) posClrU32[j] = RGBA;
     }
+  } else if (fiberColor.includes("fixed")) {
+    let RGBA =
+      this.rgba255[0] + (this.rgba255[1] &lt;&lt; 8) + (this.rgba255[2] &lt;&lt; 16);
+    let v4 = 3; //+3: fill 4th component colors: XYZC = 0123
+    for (let i = 0; i &lt; npt; i++) {
+      posClrU32[v4] = RGBA;
+      v4 += 4;
+    }
   } else if (fiberColor.includes("local")) {
     for (let i = 0; i &lt; n_count; i++) {
       //for each streamline
@@ -399,6 +408,11 @@ NVMesh.prototype.updateConnectome = function (gl) {
     if ((nEdges = nNode * nNode)) hasEdges = true;
     else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
   }
+  if (!json.hasOwnProperty("nodeScale")) json.nodeScale = 4;
+  if (!json.hasOwnProperty("edgeScale")) json.edgeScale = 1;
+  if (!json.hasOwnProperty("nodeColormap")) json.nodeColormap = "warm";
+  if (!json.hasOwnProperty("edgeColormap")) json.edgeColormap = "warm";
+
   //draw all nodes
   let pts = [];
   let rgba255 = [];
@@ -580,7 +594,7 @@ NVMesh.prototype.updateMesh = function (gl) {
         }
         continue;
       }
-      let lut = cmapper.colormap(layer.colorMap);
+      let lut = cmapper.colormap(layer.colormap);
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
       let frameOffset = nvtx * frame;
       if (layer.useNegativeCmap) {
@@ -627,7 +641,7 @@ NVMesh.prototype.updateMesh = function (gl) {
         }
       }
       if (layer.useNegativeCmap) {
-        let lut = cmapper.colormap(layer.colorMapNegative);
+        let lut = cmapper.colormap(layer.colormapNegative);
         if (!layer.isOutlineBorder) {
           let mn = layer.cal_min;
           let mx = layer.cal_max;
@@ -2162,8 +2176,8 @@ NVMesh.readLayer = function (
   buffer,
   nvmesh,
   opacity = 0.5,
-  colorMap = "warm",
-  colorMapNegative = "winter",
+  colormap = "warm",
+  colormapNegative = "winter",
   useNegativeCmap = false,
   cal_min = null,
   cal_max = null,
@@ -2217,8 +2231,8 @@ NVMesh.readLayer = function (
   layer.cal_minNeg = NaN;
   layer.cal_maxNeg = NaN;
   layer.opacity = opacity;
-  layer.colorMap = colorMap;
-  layer.colorMapNegative = colorMapNegative;
+  layer.colormap = colormap;
+  layer.colormapNegative = colormapNegative;
   layer.useNegativeCmap = useNegativeCmap;
   nvmesh.layers.push(layer);
 }; // readLayer()
@@ -3530,11 +3544,60 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
 
 // not included in public docs
 // read connectome saved as JSON
+NVMesh.loadConnectomeFromFreeSurfer = async function (
+  json,
+  gl,
+  name = "",
+  colormap = "",
+  opacity = 1.0,
+  visible = true
+) {
+  let rgb255 = [255, 0, 0];
+  if (json.hasOwnProperty("color")) rgb255 = json.color;
+  let isValid = true;
+  if (!json.hasOwnProperty("data_type")) isValid = false;
+  else if (json.data_type !== "fs_pointset") isValid = false;
+  if (!json.hasOwnProperty("points")) isValid = false;
+  if (!isValid) {
+    throw Error("not a valid FreeSurfer json pointset");
+  }
+  let jcon = [];
+  jcon.nodes = [];
+  jcon.nodes.names = [];
+  jcon.nodes.prefilled = [];
+  jcon.nodes.X = [];
+  jcon.nodes.Y = [];
+  jcon.nodes.Z = [];
+  jcon.nodes.Color = [];
+  jcon.nodes.Size = [];
+  jcon.name = json.data_type;
+  for (let i = 0; i &lt; json.points.length; i++) {
+    let name = "";
+    if (json.points[i].hasOwnProperty("comments"))
+      if (json.points[i].comments[0].hasOwnProperty("text"))
+        name = json.points[i].comments[0].text;
+    jcon.nodes.names.push(name);
+    let prefilled = "";
+    if (json.points[i].hasOwnProperty("comments"))
+      if (json.points[i].comments[0].hasOwnProperty("prefilled"))
+        prefilled = json.points[i].comments[0].prefilled;
+    jcon.nodes.prefilled.push(prefilled);
+    jcon.nodes.X.push(json.points[i].coordinates.x);
+    jcon.nodes.Y.push(json.points[i].coordinates.y);
+    jcon.nodes.Z.push(json.points[i].coordinates.z);
+    jcon.nodes.Color.push(1);
+    jcon.nodes.Size.push(1);
+  }
+  return new NVMesh([], [], name, [], opacity, visible, gl, jcon);
+}; // loadConnectomeFromFreeSurfer
+
+// not included in public docs
+// read connectome saved as JSON
 NVMesh.loadConnectomeFromJSON = async function (
   json,
   gl,
   name = "",
-  colorMap = "",
+  colormap = "",
   opacity = 1.0,
   visible = true
 ) {
@@ -3542,6 +3605,7 @@ NVMesh.loadConnectomeFromJSON = async function (
   if (!json.hasOwnProperty("nodes")) {
     throw Error("not a valid jcon connectome file");
   }
+  console.log(">>>>>", json);
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
@@ -3574,6 +3638,16 @@ NVMesh.readMesh = async function (
       opacity,
       visible
     );
+  if (ext === "JSON")
+    return await this.loadConnectomeFromFreeSurfer(
+      JSON.parse(new TextDecoder().decode(buffer)),
+      gl,
+      name,
+      "",
+      opacity,
+      visible
+    );
+  rgba255[3] = Math.max(0, rgba255[3]);
   if (ext === "TCK" || ext === "TRK" || ext === "TRX" || ext === "TRACT") {
     if (ext === "TCK") obj = this.readTCK(buffer);
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
@@ -3586,11 +3660,12 @@ NVMesh.readMesh = async function (
     if (!obj.hasOwnProperty("dpg")) obj.dpg = null;
     if (!obj.hasOwnProperty("dps")) obj.dps = null;
     if (!obj.hasOwnProperty("dpv")) obj.dpv = null;
+    rgba255[3] = -1.0;
     return new NVMesh(
       pts,
       offsetPt0,
       name,
-      null, //colorMap,
+      rgba255, //colormap,
       opacity, //opacity,
       visible, //visible,
       gl,
@@ -3619,11 +3694,12 @@ NVMesh.readMesh = async function (
       //VTK files used both for meshes and streamlines
       let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
       let pts = new Float32Array(obj.pts.slice());
+      rgba255[3] = -1.0;
       return new NVMesh(
         pts,
         offsetPt0,
         name,
-        null, //colorMap,
+        rgba255, //colormap,
         opacity, //opacity,
         visible, //visible,
         gl,
@@ -3668,7 +3744,7 @@ NVMesh.readMesh = async function (
     pts,
     tris,
     name,
-    rgba255, //colorMap,
+    rgba255, //colormap,
     opacity, //opacity,
     visible, //visible,
     gl
@@ -3876,11 +3952,11 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
 
   let opacity = 0.5;
   if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
-  let colorMap = "warm";
-  if (layer.hasOwnProperty("colorMap")) colorMap = layer.colorMap;
-  let colorMapNegative = "winter";
-  if (layer.hasOwnProperty("colorMapNegative"))
-    colorMapNegative = layer.colorMapNegative;
+  let colormap = "warm";
+  if (layer.hasOwnProperty("colormap")) colormap = layer.colormap;
+  let colormapNegative = "winter";
+  if (layer.hasOwnProperty("colormapNegative"))
+    colormapNegative = layer.colormapNegative;
   let useNegativeCmap = false;
   if (layer.hasOwnProperty("useNegativeCmap"))
     useNegativeCmap = layer.useNegativeCmap;
@@ -3894,8 +3970,8 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
     buffer,
     nvmesh,
     opacity,
-    colorMap,
-    colorMapNegative,
+    colormap,
+    colormapNegative,
     useNegativeCmap,
     cal_min,
     cal_max
@@ -3906,7 +3982,7 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
  * factory function to load and return a new NVMesh instance from a given URL
  * @param {string} url the resolvable URL pointing to a nifti image to load
  * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colorMap='gray'] a color map to use. default is gray
+ * @param {string} [colormap='gray'] a color map to use. default is gray
  * @param {number} [opacity=1.0] the opacity for this image. default is 1
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {NVMeshLayer[]} [layers=[]] layers of the mesh to load
@@ -4094,7 +4170,7 @@ String.prototype.getBytes = function () {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Tue May 16 2023 13:14:33 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed May 24 2023 10:39:22 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

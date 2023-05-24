@@ -1,0 +1,84 @@
+{
+    "color": [
+        0,
+        255,
+        0
+    ],
+    "data_type": "fs_pointset",
+    "points": [
+        {
+            "comments": [
+                {
+                    "edited": true,
+                    "prefilled": [
+                        "WM doesn't extend far enough"
+                    ],
+                    "text": "Anterior Commissure",
+                    "timestamp": "2023-05-20T14:16:37.630-04:00",
+                    "user": "chris"
+                }
+            ],
+            "coordinates": {
+                "x": -0.5206680297851562,
+                "y": 3.9430923461914062,
+                "z": -5.776313781738281
+            },
+            "legacy_stat": 1
+        },
+        {
+            "comments": [
+                {
+                    "edited": true,
+                    "prefilled": [
+                        "Other"
+                    ],
+                    "text": "Insula",
+                    "timestamp": "2023-05-20T14:16:47.162-04:00",
+                    "user": "chris"
+                }
+            ],
+            "coordinates": {
+                "x": 44.401031494140625,
+                "y": 8.041610717773438,
+                "z": -4.340492248535156
+            },
+            "legacy_stat": 1
+        },
+        {
+            "comments": [
+                {
+                    "prefilled": [
+                    ],
+                    "text": "CalcarineFiissure",
+                    "timestamp": "2023-05-20T14:14:35.197-04:00",
+                    "user": "chris"
+                }
+            ],
+            "coordinates": {
+                "x": 6.1697998046875,
+                "y": -70.60783386230469,
+                "z": 12.889289855957031
+            },
+            "legacy_stat": 1
+        },
+        {
+            "comments": [
+                {
+                    "prefilled": [
+                    ],
+                    "text": "SuperiorFrontalSulcus",
+                    "timestamp": "2023-05-20T14:16:16.230-04:00",
+                    "user": "chris"
+                }
+            ],
+            "coordinates": {
+                "x": 21.462295532226562,
+                "y": 4.2127685546875,
+                "z": 57.878173828125
+            },
+            "legacy_stat": 1
+        }
+    ],
+    "version": 1,
+    "vox2ras": "scanner_ras"
+}
