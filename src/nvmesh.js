@@ -2159,7 +2159,7 @@ NVMesh.readLayer = function (
   nvmesh,
   opacity = 0.5,
   colormap = "warm",
-  colormapNegative = "",
+  colormapNegative = "winter",
   useNegativeCmap = false,
   cal_min = null,
   cal_max = null,
@@ -3937,7 +3937,7 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
   if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
   let colormap = "warm";
   if (layer.hasOwnProperty("colormap")) colormap = layer.colormap;
-  let colormapNegative = "";
+  let colormapNegative = "winter";
   if (layer.hasOwnProperty("colormapNegative"))
     colormapNegative = layer.colormapNegative;
   let useNegativeCmap = false;
