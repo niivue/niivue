@@ -575,13 +575,20 @@ NVMesh.prototype.updateMesh = function (gl) {
       }
       if (!layer.hasOwnProperty("isTransparentBelowCalMin"))
         layer.isTransparentBelowCalMin = true;
-      let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
+      let mn = layer.cal_min;
+      let mnVisible = mn;
+      if (layer.alphaThreshold) mn = Math.min(mn, 0.0);
+
+      let scale255 = 255.0 / (layer.cal_max - mn);
+      let mnCal = layer.cal_min;
+      if (!layer.isTransparentBelowCalMin) mnCal = Number.NEGATIVE_INFINITY;
+
       if (!layer.isOutlineBorder) {
         //blend colors for each voxel
         for (let j = 0; j < nvtx; j++) {
-          let v255 = Math.round(
-            (layer.values[j + frameOffset] - layer.cal_min) * scale255
-          );
+          let v = layer.values[j + frameOffset];
+          if (v < mnCal) continue;
+          let v255 = Math.round((v - mn) * scale255);
           if (v255 < 0 && layer.isTransparentBelowCalMin) continue;
           v255 = Math.max(0.0, v255);
           v255 = Math.min(255.0, v255) * 4;
@@ -625,15 +632,18 @@ NVMesh.prototype.updateMesh = function (gl) {
           if (mx < mn) {
             [mn, mx] = [mx, mn];
           }
+          let mnVisible = mn;
+          if (mnVisible === 0.0) mnVisible = Number.EPSILON; //do not shade 0.0 twice with positive and negative colormap
+          if (layer.alphaThreshold) mn = 0.0;
           let scale255neg = 255.0 / (mx - mn);
           for (let j = 0; j < nvtx; j++) {
-            let v255 = Math.round(
-              (-layer.values[j + frameOffset] - mn) * scale255neg
-            );
+            let v = -layer.values[j + frameOffset];
+            if (v < mnVisible) continue;
+            let v255 = Math.round((v - mn) * scale255neg);
             /*let v255 = Math.round(
               (-layer.values[j + frameOffset] - layer.cal_min) * scale255
             );*/
-            if (v255 < 0) continue;
+            if (v255 < 0) continue; //borg
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
             u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
@@ -2149,13 +2159,14 @@ NVMesh.readLayer = function (
   nvmesh,
   opacity = 0.5,
   colormap = "warm",
-  colormapNegative = "winter",
+  colormapNegative = "",
   useNegativeCmap = false,
   cal_min = null,
   cal_max = null,
   isOutlineBorder = false
 ) {
   let layer = [];
+  layer.alphaThreshold = false;
   layer.isTransparentBelowCalMin = true;
   layer.colorbarVisible = true;
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
@@ -3926,7 +3937,7 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
   if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
   let colormap = "warm";
   if (layer.hasOwnProperty("colormap")) colormap = layer.colormap;
-  let colormapNegative = "winter";
+  let colormapNegative = "";
   if (layer.hasOwnProperty("colormapNegative"))
     colormapNegative = layer.colormapNegative;
   let useNegativeCmap = false;
