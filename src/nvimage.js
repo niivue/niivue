@@ -145,13 +145,13 @@ export function NVImageFromUrlOptions(
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
-  alphaThreshold = false,
   colormapNegative = "",
   frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true
+  colorbarVisible = true,
+  alphaThreshold = false
 ) {
   return {
     url,
@@ -172,6 +172,10 @@ export function NVImageFromUrlOptions(
     cal_maxNeg,
     colorbarVisible,
     frame4D,
+    cal_minNeg,
+    cal_maxNeg,
+    colorbarVisible,
+    alphaThreshold,
   };
 }
 
