@@ -3592,7 +3592,6 @@ NVMesh.loadConnectomeFromJSON = async function (
   if (!json.hasOwnProperty("nodes")) {
     throw Error("not a valid jcon connectome file");
   }
-  console.log(">>>>>", json);
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
