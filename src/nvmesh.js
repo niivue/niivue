@@ -1114,6 +1114,10 @@ NVMesh.readTRK = function (buffer) {
   i32 = new Int32Array(buffer.slice(hdr_sz));
   f32 = new Float32Array(i32.buffer);
   let ntracks = i32.length;
+  if (ntracks < 1) {
+    log.error("Empty TRK file.");
+    return;
+  }
   //read and transform vertex positions
   let i = 0;
   let npt = 0;
@@ -3636,6 +3640,12 @@ NVMesh.readMesh = async function (
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
     else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
+    if (typeof obj === "undefined") {
+      let pts = [0, 0, 0, 0, 0, 0];
+      let offsetPt0 = [0];
+      obj = { pts, offsetPt0 };
+      log.error("Creating empty tracts");
+    }
     //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     //let pts = new Float32Array(obj.pts.slice());
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
@@ -3769,7 +3779,6 @@ NVMesh.readTRX = async function (buffer) {
   let dpv = [];
   let header = [];
   let isOverflowUint64 = false;
-
   /*if (urlIsLocalFile) {
     data = fs.readFileSync(url);
   } else {
@@ -3874,7 +3883,10 @@ NVMesh.readTRX = async function (buffer) {
       pts = vals.slice();
     }
   }
-  if (noff === 0 || npt === 0) alert("Failure reading TRX format");
+  if (noff === 0 || npt === 0) {
+    log.error("Failure reading TRX format (no offsets or points).");
+    return;
+  }
   if (isOverflowUint64)
     alert("Too many vertices: JavaScript does not support 64 bit integers");
   offsetPt0[noff] = npt / 3; //solve fence post problem, offset for final streamline

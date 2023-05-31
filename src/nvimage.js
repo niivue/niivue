@@ -1461,8 +1461,7 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
   let offset = vec3.fromValues(0, 0, 0);
   while (line !== "") {
     let items = line.split(" ");
-    if (items.length > 2);
-    items = items.slice(2);
+    if (items.length > 2) items = items.slice(2);
     if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("False"))
       hdr.littleEndian = true;
     if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("True"))
