@@ -19,7 +19,7 @@ const NVMESSAGE = Object.freeze({
   FRAME_CHANGED: 4, // "frame changed",
   VOLUME_ADDED_FROM_URL: 5, // "volume added from url",
   VOLUME_WITH_URL_REMOVED: 6, //"volume with url removed",
-  COLOR_MAP_CHANGED: 7, // "color map has changed",
+  COLORMAP_CHANGED: 7, // "color map has changed",
   OPACITY_CHANGED: 8, //"opacity has changed",
   MESH_FROM_URL_ADDED: 9, //"mesh added from url",
   MESH_WITH_URL_REMOVED: 10, //"mesh with url removed",
@@ -180,7 +180,7 @@ export class NVController {
         }
         break;
 
-      case NVMESSAGE.MESH_SHADER_CHANGED:
+      case NVMESSAGE.SHADER_CHANGED:
         this.niivue.meshes[msg.meshIndex].meshShaderIndex = msg.shaderIndex;
         this.niivue.updateGLVolume();
         break;
@@ -413,7 +413,7 @@ export class NVController {
   onMeshShaderChanged(meshIndex, shaderIndex) {
     if (this.isInSession) {
       this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.MESH_SHADER_CHANGED,
+        op: NVMESSAGE.SHADER_CHANGED,
         meshIndex,
         shaderIndex,
       });
