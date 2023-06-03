@@ -40,9 +40,7 @@ Log.prototype.warn = function () {
 };
 
 Log.prototype.error = function () {
-  if (this.logLevel === this.LOGGING_ON) {
-    console.error(this.getTimeStamp(), "ERROR", ...arguments);
-  }
+  console.error(this.getTimeStamp(), "ERROR", ...arguments);
 };
 
 Log.prototype.setLogLevel = function (logLevel) {

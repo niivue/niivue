@@ -39,6 +39,8 @@ export { default as ge_color } from "./ge_color.json";
 export { default as gold } from "./gold.json";
 export { default as gray } from "./gray.json";
 export { default as green } from "./green.json";
+export { default as green2cyan } from "./green2cyan.json";
+export { default as green2orange } from "./green2orange.json";
 export { default as hotiron } from "./hotiron.json";
 export { default as hot } from "./hot.json";
 export { default as hsv } from "./hsv.json";

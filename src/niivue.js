@@ -7527,7 +7527,7 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
     flt2str(mm[1], deci) +
     "×" +
     flt2str(mm[2], deci);
-  if (this.volumes[0].nFrame4D > 0)
+  if (this.volumes.length > 0 && this.volumes[0].nFrame4D > 0)
     str += "×" + flt2str(this.volumes[0].frame4D);
   //voxel based layer intensity
   if (this.volumes.length > 0) {
@@ -7850,7 +7850,8 @@ Niivue.prototype.mm2frac = function (mm, volIdx = 0, isForceSliceMM = false) {
       if (!isFinite(frac[0])) frac[0] = 0.5;
       if (!isFinite(frac[1])) frac[1] = 0.5;
       if (!isFinite(frac[2])) frac[2] = 0.5;
-      console.error("mm2frac() not finite: objects not (yet) loaded.");
+      if (this.meshes.length < 1)
+        console.error("mm2frac() not finite: objects not (yet) loaded.");
     }
     return frac;
   }

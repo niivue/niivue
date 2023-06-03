@@ -575,13 +575,20 @@ NVMesh.prototype.updateMesh = function (gl) {
       }
       if (!layer.hasOwnProperty("isTransparentBelowCalMin"))
         layer.isTransparentBelowCalMin = true;
-      let scale255 = 255.0 / (layer.cal_max - layer.cal_min);
+      let mn = layer.cal_min;
+      let mnVisible = mn;
+      if (layer.alphaThreshold) mn = Math.min(mn, 0.0);
+
+      let scale255 = 255.0 / (layer.cal_max - mn);
+      let mnCal = layer.cal_min;
+      if (!layer.isTransparentBelowCalMin) mnCal = Number.NEGATIVE_INFINITY;
+
       if (!layer.isOutlineBorder) {
         //blend colors for each voxel
         for (let j = 0; j < nvtx; j++) {
-          let v255 = Math.round(
-            (layer.values[j + frameOffset] - layer.cal_min) * scale255
-          );
+          let v = layer.values[j + frameOffset];
+          if (v < mnCal) continue;
+          let v255 = Math.round((v - mn) * scale255);
           if (v255 < 0 && layer.isTransparentBelowCalMin) continue;
           v255 = Math.max(0.0, v255);
           v255 = Math.min(255.0, v255) * 4;
@@ -625,15 +632,18 @@ NVMesh.prototype.updateMesh = function (gl) {
           if (mx < mn) {
             [mn, mx] = [mx, mn];
           }
+          let mnVisible = mn;
+          if (mnVisible === 0.0) mnVisible = Number.EPSILON; //do not shade 0.0 twice with positive and negative colormap
+          if (layer.alphaThreshold) mn = 0.0;
           let scale255neg = 255.0 / (mx - mn);
           for (let j = 0; j < nvtx; j++) {
-            let v255 = Math.round(
-              (-layer.values[j + frameOffset] - mn) * scale255neg
-            );
+            let v = -layer.values[j + frameOffset];
+            if (v < mnVisible) continue;
+            let v255 = Math.round((v - mn) * scale255neg);
             /*let v255 = Math.round(
               (-layer.values[j + frameOffset] - layer.cal_min) * scale255
             );*/
-            if (v255 < 0) continue;
+            if (v255 < 0) continue; //borg
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
             u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
@@ -1104,6 +1114,10 @@ NVMesh.readTRK = function (buffer) {
   i32 = new Int32Array(buffer.slice(hdr_sz));
   f32 = new Float32Array(i32.buffer);
   let ntracks = i32.length;
+  if (ntracks < 1) {
+    log.error("Empty TRK file.");
+    return;
+  }
   //read and transform vertex positions
   let i = 0;
   let npt = 0;
@@ -2156,6 +2170,7 @@ NVMesh.readLayer = function (
   isOutlineBorder = false
 ) {
   let layer = [];
+  layer.alphaThreshold = false;
   layer.isTransparentBelowCalMin = true;
   layer.colorbarVisible = true;
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
@@ -3577,7 +3592,6 @@ NVMesh.loadConnectomeFromJSON = async function (
   if (!json.hasOwnProperty("nodes")) {
     throw Error("not a valid jcon connectome file");
   }
-  console.log(">>>>>", json);
   return new NVMesh([], [], name, [], opacity, visible, gl, json);
 }; //loadConnectomeFromJSON()
 
@@ -3625,6 +3639,12 @@ NVMesh.readMesh = async function (
     else if (ext === "TRACT") obj = this.readTRACT(buffer);
     else if (ext === "TRX") obj = await this.readTRX(buffer);
     else obj = this.readTRK(buffer);
+    if (typeof obj === "undefined") {
+      let pts = [0, 0, 0, 0, 0, 0];
+      let offsetPt0 = [0];
+      obj = { pts, offsetPt0 };
+      log.error("Creating empty tracts");
+    }
     //let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
     //let pts = new Float32Array(obj.pts.slice());
     let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
@@ -3758,7 +3778,6 @@ NVMesh.readTRX = async function (buffer) {
   let dpv = [];
   let header = [];
   let isOverflowUint64 = false;
-
   /*if (urlIsLocalFile) {
     data = fs.readFileSync(url);
   } else {
@@ -3863,7 +3882,10 @@ NVMesh.readTRX = async function (buffer) {
       pts = vals.slice();
     }
   }
-  if (noff === 0 || npt === 0) alert("Failure reading TRX format");
+  if (noff === 0 || npt === 0) {
+    log.error("Failure reading TRX format (no offsets or points).");
+    return;
+  }
   if (isOverflowUint64)
     alert("Too many vertices: JavaScript does not support 64 bit integers");
   offsetPt0[noff] = npt / 3; //solve fence post problem, offset for final streamline

@@ -145,13 +145,13 @@ export function NVImageFromUrlOptions(
   ignoreZeroVoxels = false,
   visible = true,
   useQFormNotSForm = false,
-  alphaThreshold = false,
   colormapNegative = "",
   frame4D = 0,
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true
+  colorbarVisible = true,
+  alphaThreshold = false
 ) {
   return {
     url,
@@ -172,6 +172,10 @@ export function NVImageFromUrlOptions(
     cal_maxNeg,
     colorbarVisible,
     frame4D,
+    cal_minNeg,
+    cal_maxNeg,
+    colorbarVisible,
+    alphaThreshold,
   };
 }
 
@@ -1318,7 +1322,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   let xyzOrigin = [0, 0, 0];
   let xyzDelta = [1, 1, 1];
   let txt = new TextDecoder().decode(dataBuffer);
-  var lines = txt.split("\n");
+  var lines = txt.split(/\r?\n/);
   //embed entire AFNI HEAD text as NIfTI extension
   let mod = (dataBuffer.byteLength + 8) % 16;
   let len = dataBuffer.byteLength + (16 - mod);
@@ -1461,8 +1465,7 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
   let offset = vec3.fromValues(0, 0, 0);
   while (line !== "") {
     let items = line.split(" ");
-    if (items.length > 2);
-    items = items.slice(2);
+    if (items.length > 2) items = items.slice(2);
     if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("False"))
       hdr.littleEndian = true;
     if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("True"))
