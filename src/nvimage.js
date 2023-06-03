@@ -1322,7 +1322,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
   let xyzOrigin = [0, 0, 0];
   let xyzDelta = [1, 1, 1];
   let txt = new TextDecoder().decode(dataBuffer);
-  var lines = txt.split("\n");
+  var lines = txt.split(/\r?\n/);
   //embed entire AFNI HEAD text as NIfTI extension
   let mod = (dataBuffer.byteLength + 8) % 16;
   let len = dataBuffer.byteLength + (16 - mod);
