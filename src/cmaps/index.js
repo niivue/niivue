@@ -10,6 +10,7 @@ export { default as bluegrn } from "./bluegrn.json";
 export { default as blue } from "./blue.json";
 export { default as bone } from "./bone.json";
 export { default as bronze } from "./bronze.json";
+export { default as cet_l17 } from "./cet_l17.json";
 export { default as cividis } from "./cividis.json";
 export { default as cool } from "./cool.json";
 export { default as copper2 } from "./copper2.json";
