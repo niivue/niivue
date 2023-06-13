@@ -135,6 +135,8 @@ const RIGHT_MOUSE_BUTTON = 2;
  * @property {boolean} [options.logging=false] turn on logging or not (true/false)
  * @property {string} [options.loadingText="waiting on images..."] the loading text to display when there is a blank canvas and no images
  * @property {boolean} [options.dragAndDropEnabled=true] whether or not to allow file and url drag and drop on the canvas
+ * @property {boolean} [options.displaySliceInfo=false] whether or not the current slice and total slice number are shown on the canvas
+ * @property {number} [options.displaySliceScale=0.5] the text height relative to canvas width and height labels (0 to 1). Zero for no text labels
  * @property {boolean} [options.isNearestInterpolation=false] whether nearest neighbor interpolation is used, else linear interpolation
  * @property {boolean} [options.isAtlasOutline=false] whether atlas maps are only visible at the boundary of regions
  * @property {boolean} [options.isRuler=false] whether a 10cm ruler is displayed
@@ -5762,7 +5764,6 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
       this.scene.crosshairPos = texFrac.slice();
       if (this.opts.drawingEnabled) {
         let pt = this.frac2vox(this.scene.crosshairPos);
-
         if (
           !isFinite(this.opts.penValue) ||
           this.opts.penValue < 0 ||
@@ -6337,6 +6338,38 @@ Niivue.prototype.drawTextRightBelow = function (
   this.drawText(xy, str, scale, color);
 }; // drawTextLeftBelow()
 
+/**
+ * Draws a string in the bottom right of a drawing defined by the x and y values
+ * @param {number[]} xy - x and y amount in pixel inside of canvas
+ * @param {string} str - the string to show
+ * @param {number} [scale=1] - scale of the text
+ * @param {*} [color=null]  - color of the text
+ */
+Niivue.prototype.drawTextBottomRight = function (
+  xy,
+  str,
+  scale = 1,
+  color = null
+) {
+  //horizontally centered on x, below y
+  if (this.opts.textHeight <= 0) return;
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let width = this.textWidth(size, str);
+  if (width > this.canvas.width) {
+    scale *= (this.canvas.width - 2) / width;
+    size = this.opts.textHeight * this.gl.canvas.height * scale;
+    width = this.textWidth(size, str);
+  }
+  xy[0] -= width + size / 2;
+  xy[0] = Math.max(xy[0], 1); //clamp left edge of canvas
+  xy[0] = Math.min(xy[0], this.canvas.width - width - 1); //clamp right edge of canvas
+
+  xy[1] -= size + size / 2;
+  xy[1] = Math.max(xy[1], 1); //clamp top edge of canvas
+  xy[1] = Math.min(xy[1], this.canvas.height - size - 1); //clamp bottom edge of canvas
+  this.drawText(xy, str, scale, color);
+};
+
 // not included in public docs
 Niivue.prototype.drawTextBetween = function (
   startXYendXY,
@@ -6561,6 +6594,39 @@ Niivue.prototype.screenFieldOfViewExtendedMM = function (axCorSag = 0) {
   mat.vec3.subtract(fovMM, mxMM, mnMM);
   return { mnMM, mxMM, rotation, fovMM };
 }; // screenFieldOfViewExtendedMM()
+
+/**
+ * Draws the current visible slice and total amount of slices in the bottom right of each individual drawing
+ * @param {number[]} leftTopWidthHeight - contains pixel amount for each drawing from left, top, its width and height
+ * @param {number[]} AxyzMxy - contains the current three dimensional rerpresentation of the current slice xy are the total amount of available space
+ * @param {number} sliceFrac - current visible slice relative to total amount of slices
+ * @param {number} scale - size of the text relative to the canvas width and height from 0 to 1 (0 means no text)
+ */
+Niivue.prototype.drawSliceNumber = function (
+  leftTopWidthHeight,
+  AxyzMxy,
+  sliceFrac,
+  scale
+) {
+  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+  const maxSlices = AxyzMxy[0] + AxyzMxy[1];
+  const currentSlice = maxSlices * sliceFrac;
+  const [left, top, width, height] = leftTopWidthHeight;
+  const textHeight = this.opts.textHeight * this.gl.canvas.height * scale;
+  const sliceTextHeader = "Slice #";
+  const sliceNumberText = `${Math.abs(currentSlice).toFixed(0)} / ${Math.abs(maxSlices).toFixed(0)}`;
+
+  this.drawTextBottomRight(
+    [left + width, top + height - textHeight],
+    sliceTextHeader,
+    scale
+  );
+  this.drawTextBottomRight(
+    [left + width, top + height],
+    sliceNumberText,
+    scale
+  );
+};
 
 // not included in public docs
 // show text labels for L/R, A/P, I/S dimensions
@@ -6834,6 +6900,14 @@ Niivue.prototype.draw2D = function (
       true,
       this.opts.isSliceMM
     );
+  if (this.opts.displaySliceInfo) {
+    this.drawSliceNumber(
+      leftTopWidthHeight,
+      this.xyMM2xyzMM(axCorSag, sliceFrac),
+      sliceFrac,
+      this.opts.displaySliceScale
+    );
+  }
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 }; // draw2D()
@@ -8644,6 +8718,7 @@ Niivue.prototype.drawScene = async function () {
   this.isBusy = false;
   this.needsRefresh = false;
   let posString = await this.drawSceneCore();
+
   //Chrome and Safari get much more bogged down by concurrent draw calls than Safari
   // https://stackoverflow.com/questions/51710067/webgl-async-operations
   //glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
