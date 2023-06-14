@@ -113,6 +113,8 @@ export const DEFAULT_OPTIONS = {
   isHighResolutionCapable: true,
   logging: false,
   loadingText: "waiting for images...",
+  displaySliceInfo: false,
+  displaySliceScale: 0.5, // 0 for no text, fraction of canvas min(height,width) 
   dragAndDropEnabled: true,
   drawingEnabled: false, // drawing disabled by default
   penValue: 1, // sets drawing color. see "drawPt"
