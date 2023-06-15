@@ -61,6 +61,70 @@ colortables.prototype.colormap = function (key = "") {
   return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I);
 }; // colormap()
 
+colortables.prototype.makeLabelLut = function (cm) {
+  if (
+    !cm.hasOwnProperty("R") ||
+    !cm.hasOwnProperty("G") ||
+    !cm.hasOwnProperty("B")
+  ) {
+    console.log("Invalid colormap table.", cm);
+    return [];
+  }
+  let nLabels = cm.R.length;
+  //if indices not provided, indices default to 0..(nLabels-1)
+  let idxs = Array.apply(null, { length: nLabels }).map(Number.call, Number);
+  if (cm.hasOwnProperty("I")) idxs = cm.I;
+  if (
+    nLabels !== cm.G.length ||
+    nLabels !== cm.B.length ||
+    nLabels !== idxs.length
+  ) {
+    console.log("colormap does not make sense.", cm);
+    return [];
+  }
+  let As = new Uint8ClampedArray(nLabels).fill(64);
+  As[0] = 0;
+  if (cm.hasOwnProperty("A")) As = cm.A;
+  let mnIdx = Math.min(...idxs);
+  let mxIdx = Math.max(...idxs);
+  //n.b. number of input labels can be sparse: I:[0,3,4] output is dense [0,1,2,3,4]
+  let nLabelsDense = mxIdx - mnIdx + 1;
+  var lut = new Uint8ClampedArray(nLabelsDense * 4).fill(0);
+  for (var i = 0; i < nLabels; i++) {
+    let k = (idxs[i] - mnIdx) * 4;
+    lut[k++] = cm.R[i]; //Red
+    lut[k++] = cm.G[i]; //Green
+    lut[k++] = cm.B[i]; //Blue
+    lut[k++] = As[i]; //Alpha
+  }
+  let cmap = [];
+  //labels are optional
+  if (cm.hasOwnProperty("labels")) {
+    let nL = cm.labels.length;
+    if (nL === nLabelsDense) cmap.labels = cm.labels;
+    else if (nL === nLabels) {
+      cmap.labels = Array(nLabelsDense).fill("xxx");
+      for (var i = 0; i < nLabels; i++) {
+        let idx = idxs[i];
+        cmap.labels[idx] = cm.labels[i];
+      }
+    }
+  }
+  cmap.lut = lut;
+  cmap.min = mnIdx;
+  cmap.max = mxIdx;
+  return cmap;
+};
+
+colortables.prototype.makeLabelLutFromUrl = async function (name) {
+  async function fetchJSON(fnm) {
+    const response = await fetch(fnm);
+    const js = await response.json();
+    return js;
+  }
+  let cm = await fetchJSON(name);
+  return this.makeLabelLut(cm);
+};
 // not included in public docs
 colortables.prototype.makeDrawLut = function (name) {
   let cmap = [];
@@ -114,10 +178,31 @@ colortables.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
   //intensity indices should be in increasing order with the first value 0 and the last 255.
   // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
   var lut = new Uint8ClampedArray(256 * 4);
-  for (var i = 0; i < Is.length - 1; i++) {
+  let nIdx = Rs.length;
+  if (typeof Is === "undefined") {
+    Is = new Uint8ClampedArray(nIdx).fill(0);
+    for (var i = 0; i < nIdx; i++) Is[i] = Math.round((i * 255.0) / (nIdx - 1));
+  }
+  if (typeof As === "undefined") {
+    As = new Uint8ClampedArray(nIdx).fill(64);
+    As[0] = 0;
+  }
+  for (var i = 0; i < nIdx - 1; i++) {
     //return a + f * (b - a);
     var idxLo = Is[i];
     var idxHi = Is[i + 1];
+    if (i === 0 && idxLo !== 0)
+      console.log(
+        "colormap issue: indices expected to start with 0 not ",
+        idxLo
+      );
+    if (i === Is.length - 2 && idxHi !== 255) {
+      console.log(
+        "padding colormap: indices expected end with 255 not ",
+        idxHi
+      );
+      idxHi = 255;
+    }
     var idxRng = idxHi - idxLo;
     var k = idxLo * 4;
     for (var j = idxLo; j <= idxHi; j++) {

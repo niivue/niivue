@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="light.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="check1">Background</label>
+      <input type="checkbox" id="check1" checked />
+      <label for="check2">Mask</label>
+      <input type="checkbox" id="check2" unchecked />
+      <label for="check3">Smooth</label>
+      <input type="checkbox" id="check3" checked />
+      <label for="alphaSlider">Opacity</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="127"
+        class="slider"
+        id="alphaSlider"
+      />
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>&nbsp;
+      <label id="location"></label>
+      <p>
+      <textarea id="scriptText" name="customText" rows="8" cols="60">let cmap = {&#10; R: [0,   0, 120, 175],&#10; G: [0,  90,  60, 185],&#10; B: [0, 120,  60, 175],&#10; labels: ["air","CSF","gray","white"],&#10;};</textarea>
+      &nbsp;<button id="custom">Apply</button>&nbsp;
+    </footer>
+    <script src="./niivue.umd.js"></script>
+    <script type="module" async>
+      var slider = document.getElementById("alphaSlider");
+      slider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255);
+      };
+      var check1 = document.getElementById("check1");
+      check1.onclick = function (event) {
+        nv1.volumes[0].opacity = this.checked;
+        nv1.updateGLVolume();
+      };
+      var check2 = document.getElementById("check2");
+      check2.onclick = function (event) {
+        nv1.isAlphaClipDark = this.checked;
+        nv1.updateGLVolume();
+      };
+      var check3 = document.getElementById("check3");
+      check3.onclick = function (event) {
+        nv1.setInterpolation(!this.checked);
+      };
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      var btn = document.getElementById("custom");
+      btn.onclick = function (event) {
+        var val = document.getElementById("scriptText").value;
+        val += ';nv1.volumes[1].setColormapLabel(cmap);nv1.updateGLVolume();';
+        val && eval(val);
+      }
+      let defaults = {
+        logging: false,
+        dragAndDropEnabled: true,
+        backColor: [0.3, 0.3, 0.3, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      };
+      var nv1 = new niivue.Niivue(defaults);
+      nv1.setRadiologicalConvention(false);
+      nv1.attachTo("gl1");
+      var volumeList1 = [
+        {
+          url: "../images/mni152.nii.gz",
+        },
+        {
+          url: "../images/mni152_pveseg.nii.gz",
+          opacity: 0.5,
+        },
+      ];
+      await nv1.loadVolumes(volumeList1);
+      nv1.opts.multiplanarForceRender = true;
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.graph.autoSizeMultiplanar = true;
+      nv1.updateGLVolume(); //apply labeled colormap
+      btn.click();
+    </script>
+  </body>
+</html>

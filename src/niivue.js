@@ -1721,8 +1721,8 @@ Niivue.prototype.addVolume = function (volume) {
   let idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
   this.setVolume(volume, idx);
   this.onImageLoaded(volume);
-  console.log("loaded volume", volume.name);
-  console.log(volume);
+  log.debug("loaded volume", volume.name);
+  log.debug(volume);
 };
 
 /**
@@ -4806,6 +4806,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       img
     );
   } else if (hdr.datatypeCode === 4) {
+    if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU;
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       1,
@@ -5031,16 +5032,51 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     } else
       blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2]);
   }
-
   orientShader.use(this.gl);
   this.gl.activeTexture(this.gl.TEXTURE1);
-  this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+  //for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
+  let colormapLabelTexture = null;
+  if (
+    overlayItem.colormapLabel.hasOwnProperty("lut") &&
+    overlayItem.colormapLabel.lut.length > 7
+  ) {
+    let nLabel =
+      overlayItem.colormapLabel.max - overlayItem.colormapLabel.min + 1;
+    colormapLabelTexture = this.createColormapTexture(
+      colormapLabelTexture,
+      1,
+      nLabel
+    );
+    this.gl.texSubImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      nLabel,
+      1,
+      this.gl.RGBA,
+      this.gl.UNSIGNED_BYTE,
+      overlayItem.colormapLabel.lut
+    );
+    this.gl.uniform1f(
+      orientShader.uniforms["cal_min"],
+      overlayItem.colormapLabel.min - 0.5
+    );
+    this.gl.uniform1f(
+      orientShader.uniforms["cal_max"],
+      overlayItem.colormapLabel.max + 0.5
+    );
+    //this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, colormapLabelTexture);
+  } else {
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+    this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
+    this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
+  }
   this.gl.uniform1i(
     orientShader.uniforms["isAlphaThreshold"],
     overlayItem.alphaThreshold
   );
-  this.gl.uniform1f(orientShader.uniforms["cal_min"], overlayItem.cal_min);
-  this.gl.uniform1f(orientShader.uniforms["cal_max"], overlayItem.cal_max);
   //if unused colormapNegative https://github.com/niivue/niivue/issues/490
   let mnNeg = Number.POSITIVE_INFINITY;
   let mxNeg = Number.NEGATIVE_INFINITY;
@@ -5054,18 +5090,21 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
     }
   }
+  this.gl.uniform1f(orientShader.uniforms["layer"], layer);
   this.gl.uniform1f(orientShader.uniforms["cal_minNeg"], mnNeg);
   this.gl.uniform1f(orientShader.uniforms["cal_maxNeg"], mxNeg);
   this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
   this.gl.uniform1i(orientShader.uniforms["intensityVol"], 6);
   this.gl.uniform1i(orientShader.uniforms["blend3D"], 5);
   this.gl.uniform1i(orientShader.uniforms["colormap"], 1);
-  this.gl.uniform1f(orientShader.uniforms["layer"], layer);
   //this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
   this.gl.uniform1f(orientShader.uniforms["scl_inter"], hdr.scl_inter);
   this.gl.uniform1f(orientShader.uniforms["scl_slope"], hdr.scl_slope);
   this.gl.uniform1f(orientShader.uniforms["opacity"], opacity);
   this.gl.uniform1i(orientShader.uniforms["modulationVol"], 7);
+  //  this.gl.uniform1f(orientShader.uniforms["cal_min"], 2);
+  //  this.gl.uniform1f(orientShader.uniforms["cal_max"], 3);
+
   let modulateTexture = null;
   if (
     overlayItem.modulationImage &&
@@ -5231,6 +5270,11 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     this.sliceMMShader.uniforms["drawOpacity"],
     this.drawOpacity
   );
+  if (colormapLabelTexture !== null) {
+    this.gl.deleteTexture(colormapLabelTexture);
+    this.gl.activeTexture(this.gl.TEXTURE1);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+  }
   this.gl.uniform1i(this.sliceMMShader.uniforms["drawing"], 7);
   this.gl.activeTexture(this.gl.TEXTURE7);
   this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
@@ -5238,7 +5282,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
   //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
 }; // refreshLayers()
-
 /**
  * query all available color maps that can be applied to volumes
  * @param {boolean} [sort=true] whether or not to sort the returned array
@@ -5410,16 +5453,20 @@ Niivue.prototype.colormap = function (lutName = "") {
   return cmapper.colormap(lutName);
 }; // colormap()
 
-//create TEXTURE1 a 2D bitmap with a 256 column RGBA row for each colormap
+//create TEXTURE1 a 2D bitmap with a nCol columns RGBA and nRow rows
 //note a single volume can have two colormaps (positive and negative)
 // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
-Niivue.prototype.createColormapTexture = function (nLayer) {
-  if (this.colormapTexture !== null)
-    this.gl.deleteTexture(this.colormapTexture);
-  this.colormapTexture = this.gl.createTexture();
+Niivue.prototype.createColormapTexture = function (
+  texture = null,
+  nRow = 0,
+  nCol = 256
+) {
+  if (texture !== null) this.gl.deleteTexture(texture);
+  if (nRow < 1 || nCol < 1) return null;
+  texture = this.gl.createTexture();
   this.gl.activeTexture(this.gl.TEXTURE1);
-  this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, 256, nLayer);
+  this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+  this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, nCol, nRow);
   this.gl.texParameteri(
     this.gl.TEXTURE_2D,
     this.gl.TEXTURE_MIN_FILTER,
@@ -5443,6 +5490,7 @@ Niivue.prototype.createColormapTexture = function (nLayer) {
     this.gl.CLAMP_TO_EDGE
   );
   this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
+  return texture;
 }; // createColormapTexture()
 
 Niivue.prototype.addColormapList = function (
@@ -5558,7 +5606,10 @@ Niivue.prototype.refreshColormaps = function () {
   } //for meshes
   let nMaps = this.colormapLists.length;
   if (nMaps < 1) return;
-  this.createColormapTexture(nMaps + 1); //+1 reserve slot for drawLut
+  this.colormapTexture = this.createColormapTexture(
+    this.colormapTexture,
+    nMaps + 1
+  );
   let luts = [];
   function addColormap(lut) {
     let c = new Uint8ClampedArray(luts.length + lut.length);
@@ -6383,8 +6434,6 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
 Niivue.prototype.updateInterpolation = function (layer, isForceLinear = false) {
   let interp = this.gl.LINEAR;
   if (!isForceLinear && this.opts.isNearestInterpolation)
-    //if  (this.opts.isNearestInterpolation)
-
     interp = this.gl.NEAREST;
   if (layer === 0) {
     this.gl.activeTexture(this.gl.TEXTURE0); //background
@@ -6412,8 +6461,7 @@ Niivue.prototype.setInterpolation = function (isNearest) {
   this.opts.isNearestInterpolation = isNearest;
   let numLayers = this.volumes.length;
   if (numLayers < 1) return;
-  this.updateInterpolation(0);
-  if (numLayers > 1) this.updateInterpolation(1);
+  for (let i = 0; i < numLayers; i++) this.updateInterpolation(i);
   this.drawScene();
 }; // setInterpolation()
 
@@ -7536,7 +7584,13 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
       let vox = this.volumes[i].mm2vox(mm);
       let flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D);
       deci = 3;
-      valStr += flt2str(flt, deci) + "   ";
+      if (this.volumes[i].colormapLabel.hasOwnProperty("labels")) {
+        let v = Math.round(flt);
+        if (v >= 0 && v < this.volumes[i].colormapLabel.labels.length)
+          valStr += this.volumes[i].colormapLabel.labels[v];
+        else valStr += "undefined(" + flt2str(flt, deci) + ")";
+      } else valStr += flt2str(flt, deci);
+      valStr += "   ";
     }
     str += valStr;
     //drawingBitmap

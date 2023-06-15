@@ -742,7 +742,8 @@ void main(void) {
 			return;
 	}
 	idx = ((idx - uint(1)) % uint(100))+uint(1);
-	float fx = (float(idx)+0.5) / 256.0;
+	float textureWidth = float(textureSize(colormap, 0).x);
+	float fx = (float(idx)+0.5) / textureWidth;
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
