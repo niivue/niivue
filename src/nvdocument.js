@@ -75,6 +75,11 @@ export const DRAG_MODE = Object.freeze({
  * @property {number} maxDrawUndoBitmaps
  * @property {SLICE_TYPE} sliceType
  * @property {boolean} isAntiAlias
+ * @property {boolean} displaySliceInfo
+ * @property {number} displaySliceScale
+ * @property {boolean} enableBorderHighlight
+ * @property {number[]} borderHighlightColor
+ * @property {number} borderHighlightWidth
  */
 export const DEFAULT_OPTIONS = {
   textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
@@ -114,7 +119,7 @@ export const DEFAULT_OPTIONS = {
   logging: false,
   loadingText: "waiting for images...",
   displaySliceInfo: false,
-  displaySliceScale: 0.5, // 0 for no text, fraction of canvas min(height,width) 
+  displaySliceScale: 0.5, // 0 for no text, fraction of canvas min(height,width)
   dragAndDropEnabled: true,
   drawingEnabled: false, // drawing disabled by default
   penValue: 1, // sets drawing color. see "drawPt"
@@ -126,6 +131,9 @@ export const DEFAULT_OPTIONS = {
   meshXRay: 0.0,
   isAntiAlias: null,
   limitFrames4D: NaN,
+  enableBorderHighlight: false,
+  borderHighlightColor: [0, 1, 0, 1], // green in rgb values (1 -> 255, 0 -> 0) last number is the transparency a. If a is smaller than 0 the default red color is shown
+  borderHighlightWidth: 4,
 };
 
 /**Creates and instance of NVDocument
