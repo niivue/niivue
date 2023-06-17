@@ -61,7 +61,7 @@ colortables.prototype.colormap = function (key = "") {
   return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I);
 }; // colormap()
 
-colortables.prototype.makeLabelLut = function (cm) {
+colortables.prototype.makeLabelLut = function (cm, alphaFill = 64) {
   if (
     !cm.hasOwnProperty("R") ||
     !cm.hasOwnProperty("G") ||
@@ -82,7 +82,7 @@ colortables.prototype.makeLabelLut = function (cm) {
     console.log("colormap does not make sense.", cm);
     return [];
   }
-  let As = new Uint8ClampedArray(nLabels).fill(64);
+  let As = new Uint8ClampedArray(nLabels).fill(alphaFill);
   As[0] = 0;
   if (cm.hasOwnProperty("A")) As = cm.A;
   let mnIdx = Math.min(...idxs);
@@ -103,7 +103,7 @@ colortables.prototype.makeLabelLut = function (cm) {
     let nL = cm.labels.length;
     if (nL === nLabelsDense) cmap.labels = cm.labels;
     else if (nL === nLabels) {
-      cmap.labels = Array(nLabelsDense).fill("xxx");
+      cmap.labels = Array(nLabelsDense).fill("?");
       for (var i = 0; i < nLabels; i++) {
         let idx = idxs[i];
         cmap.labels[idx] = cm.labels[i];
@@ -125,7 +125,9 @@ colortables.prototype.makeLabelLutFromUrl = async function (name) {
   let cm = await fetchJSON(name);
   return this.makeLabelLut(cm);
 };
+
 // not included in public docs
+// The drawing colormap is a variant of the label colormap with precisely 256 colors
 colortables.prototype.makeDrawLut = function (name) {
   let cmap = [];
   if (typeof name === "object") cmap = name;
@@ -140,37 +142,34 @@ colortables.prototype.makeDrawLut = function (name) {
       A: [0, 255, 255, 255, 255, 255, 255],
     };
   }
-  if (cmap.R.length < 256) {
-    let j = 256 - cmap.R.length;
-    for (let i = 0; i < j; i++) {
-      //make all unused slots opaque red
-      cmap.R.push(255);
-      cmap.G.push(0);
-      cmap.B.push(0);
-      cmap.A.push(255);
-    }
-  }
-  if (!cmap.hasOwnProperty("labels")) cmap.labels = [];
-  if (cmap.labels.length < 256) {
-    let j = cmap.labels.length;
+  let cm = this.makeLabelLut(cmap, 255);
+  if (!cm.hasOwnProperty("labels")) cm.labels = [];
+  if (cm.labels.length < 256) {
+    let j = cm.labels.length;
     for (let i = j; i < 256; i++) {
       //make all unused slots opaque red
-      cmap.labels.push(i.toString());
+      cm.labels.push(i.toString());
     }
   }
   var lut = new Uint8ClampedArray(256 * 4);
   var k = 0;
   for (let i = 0; i < 256; i++) {
-    lut[k++] = cmap.R[i]; //Red
-    lut[k++] = cmap.G[i]; //Green
-    lut[k++] = cmap.B[i]; //Blue
-    lut[k++] = cmap.A[i]; //Alpha
+    lut[k++] = 255; //Red
+    lut[k++] = 0; //Green
+    lut[k++] = 0; //Blue
+    lut[k++] = 255; //Alpha
+  }
+  lut[3] = 0; //make first alpha transparent: not part of drawing
+  //drawings can have no more than 256 colors
+  let explicitLUTbytes = Math.min(cm.lut.length, 256 * 4);
+  if (explicitLUTbytes > 0) {
+    for (let i = 0; i < explicitLUTbytes; i++) lut[i] = cm.lut[i];
   }
   return {
     lut: lut,
-    labels: cmap.labels,
+    labels: cm.labels,
   };
-};
+}; // makeDrawLut()
 
 // not included in public docs
 colortables.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {

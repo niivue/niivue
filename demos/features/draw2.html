@@ -58,6 +58,12 @@
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
+    <footer>&nbsp;
+      <label id="location"></label>
+      <p>
+      <textarea id="scriptText" name="customText" rows="8" cols="60">let cmap = {&#10; R: [0, 255, 22, 127],&#10; G: [0, 20, 192, 187],&#10; B: [0, 152, 80, 255],&#10; labels: ["clear", "pink","lime","sky"],&#10;};</textarea>
+      &nbsp;<button id="custom">Apply</button>&nbsp;
+    </footer>
   </body>
 </html>
 <script src="./niivue.umd.js"></script>
@@ -139,10 +145,20 @@
   function doCheck10Click() {
     nv1.setHighResolutionCapable(this.checked);
   }
-
+  var btn = document.getElementById("custom");
+  btn.onclick = function (event) {
+    var val = document.getElementById("scriptText").value;
+    val += ';nv1.setDrawColormap(cmap);';
+    val && eval(val);
+  }
+  function handleLocationChange(data) {
+    document.getElementById("location").innerHTML =
+      "&nbsp;&nbsp;" + data.string;
+  }
   var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
   var nv1 = new niivue.Niivue({
     backColor: [1, 1, 1, 1],
+    onLocationChange: handleLocationChange,
   });
   nv1.setRadiologicalConvention(false);
   nv1.opts.multiplanarForceRender = true;

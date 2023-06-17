@@ -184,6 +184,7 @@ export function Niivue(options = {}) {
   this.drawUndoBitmaps = [];
   this.drawLut = cmapper.makeDrawLut("$itksnap");
   this.drawOpacity = 0.8;
+  this.renderDrawAmbientOcclusion = 0.4;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
@@ -4425,6 +4426,10 @@ Niivue.prototype.init = async function () {
   this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
   this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
   this.gl.uniform1i(this.renderShader.uniforms["drawing"], 7);
+  this.gl.uniform1f(
+    this.renderShader.uniforms["renderDrawAmbientOcclusion"],
+    this.renderDrawAmbientOcclusion
+  );
   this.renderShader.mvpLoc = this.renderShader.uniforms["mvpMtx"];
   this.renderShader.clipPlaneClrLoc =
     this.renderShader.uniforms["clipPlaneColor"];
@@ -5316,6 +5321,17 @@ Niivue.prototype.setColormap = function (id, colormap) {
   let idx = this.getVolumeIndexByID(id);
   this.volumes[idx].colormap = colormap;
   this.updateGLVolume();
+};
+
+//see issue616
+Niivue.prototype.setRenderDrawAmbientOcclusion = function (ao) {
+  this.renderDrawAmbientOcclusion = ao;
+  this.renderShader.use(this.gl);
+  this.gl.uniform1f(
+    this.renderShader.uniforms["renderDrawAmbientOcclusion"],
+    this.renderDrawAmbientOcclusion
+  );
+  this.drawScene();
 };
 
 //compatibility alias for NiiVue < 0.35

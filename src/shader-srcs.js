@@ -13,7 +13,7 @@ const kDrawFunc = `
 	vec4 drawColor(float scalar) {
 		float nlayer = float(textureSize(colormap, 0).y);
 		float layer = (nlayer - 0.5) / nlayer;
-		vec4 dcolor = texture(colormap, vec2(scalar * 255.0/256.0 + 0.5/256.0, layer)).rgba;
+		vec4 dcolor = texture(colormap, vec2((scalar * 255.0)/256.0 + 0.5/256.0, layer)).rgba;
 		dcolor.a *= drawOpacity;
 		return dcolor;
 }`;
@@ -230,6 +230,7 @@ uniform vec4 clipPlaneColor;
 uniform float drawOpacity;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
+uniform float renderDrawAmbientOcclusion;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -349,11 +350,55 @@ out vec4 fColor;
 	vec4 overFirstHit = vec4(0.0,0.0,0.0,2.0 * len);
 	if (backgroundMasksOverlays > 0)
 		samplePos = firstHit;
+	bool firstDraw = true;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
 			float val = texture(drawing, samplePos.xyz).r;
-			colorSample = drawColor(val);
+			vec4 draw = drawColor(val);
+			if ((draw.a > 0.0) && (firstDraw)) {
+				firstDraw = false;
+				float sum = 0.0;
+				const float mn = 1.0 / 256.0;
+				const float sampleRadius = 1.1;
+				float dx = sliceSize * sampleRadius;
+				vec3 center = samplePos.xyz;
+				//six neighbors that share a face
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,0.0,+dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,0.0,-dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,+dx,0.0), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,-dx,0.0), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(+dx,0.0,0.0), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(-dx,0.0,0.0), dir)).r, mn);
+				//float proportion = (sum / mn) / 6.0;
+				
+				//12 neighbors that share an edge
+				dx = sliceSize * sampleRadius * sqrt(2.0) * 0.5;
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,+dx,+dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(+dx,0.0,+dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(+dx,+dx,0.0), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,-dx,-dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(-dx,0.0,-dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(-dx,-dx,0.0), dir)).r, mn);
+
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,+dx,-dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(+dx,0.0,-dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(+dx,-dx,0.0), dir)).r, mn);
+				
+				sum += min(texture(drawing, center.xyz + cross(vec3(0.0,-dx,+dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(-dx,0.0,+dx), dir)).r, mn);
+				sum += min(texture(drawing, center.xyz + cross(vec3(-dx,+dx,0.0), dir)).r, mn);
+				float proportion = (sum / mn) / 18.0; //proportion of six neighbors is non-zero
+				
+				//a high proportion of hits means crevice
+				//since the AO term adds shadows that darken most voxels, it will result in dark surfaces
+				//the term brighten adds a little illumination to balance this
+				// without brighten, only the most extreme ridges will not be darker
+				const float brighten = 1.2;
+				vec3 ao = draw.rgb * (1.0 - proportion) * brighten;
+				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusion);
+			}
+			colorSample = draw;
 		}
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
