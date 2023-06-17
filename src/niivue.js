@@ -1040,13 +1040,13 @@ Niivue.prototype.touchEndListener = function (e) {
  * @param {MouseEvent} e mouse move event
  */
 Niivue.prototype.mouseMoveListener = async function (e) {
-  // move crosshair and change slices if mouse click and move
-  const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
-    e,
-    this.gl.canvas
-  );
 
+  // move crosshair and change slices if mouse click and move
   if (this.uiData.mousedown) {
+    let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
+      e,
+      this.gl.canvas
+    );
     if (this.uiData.mouseButtonLeftDown) {
       this.mouseMove(pos.x, pos.y);
       this.mouseClick(pos.x, pos.y);
@@ -1056,12 +1056,20 @@ Niivue.prototype.mouseMoveListener = async function (e) {
     ) {
       this.setDragEnd(pos.x, pos.y);
     }
-  } else {
-    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+    await this.drawScene();
+    this.uiData.prevX = this.uiData.currX;
+    this.uiData.prevY = this.uiData.currY;
   }
-  await this.drawScene();
-  this.uiData.prevX = this.uiData.currX;
-  this.uiData.prevY = this.uiData.currY;
+
+  // if highlighting of border is enabled in constructor, set the current mouse pos and update the canvas
+  if (this.opts.enableBorderHighlight) {
+    let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
+      e,
+      this.gl.canvas
+    );
+    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+    this.drawScene();
+  }
 };
 
 // not included in public docs
@@ -6254,7 +6262,6 @@ Niivue.prototype.drawColorbarCore = function (
  * @param {leftTopWidthHeight} leftTopWidthHeight
  */
 Niivue.prototype.drawHighlightBorder = function (leftTopWidthHeight) {
-  console.log("leftTopWidthHeight", leftTopWidthHeight);
   const [left, top, width, height] = leftTopWidthHeight;
   const xStart = left;
   const xEnd = left + width;
@@ -6984,7 +6991,6 @@ Niivue.prototype.draw2D = function (
   // draw highlight border if it is enabled in options as well as if current mosue pos is in a slice tile
   if (this.opts.enableBorderHighlight) {
     const tile = this.inSliceTile(this.mousePos[0], this.mousePos[1]);
-    console.log(this.screenSlices);
     if (tile >= 0) {
       this.drawHighlightBorder(this.screenSlices[tile].leftTopWidthHeight);
     }

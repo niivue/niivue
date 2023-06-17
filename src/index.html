@@ -98,12 +98,12 @@
       nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.opts.dragMode = nv1.dragModes.pan;
-      // nv1.graph.autoSizeMultiplanar = true;
+      nv1.graph.autoSizeMultiplanar = true;
       nv1.opts.multiplanarForceRender = true;
-      // nv1.graph.normalizeValues = false;
-      // nv1.graph.opacity = 1.0;
+      nv1.graph.normalizeValues = false;
+      nv1.graph.opacity = 1.0;
       await nv1.loadVolumes(volumeList1);
-      //await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
+      await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
       function doReset() {
         nv1.setDefaults(defaults, true);
       }
