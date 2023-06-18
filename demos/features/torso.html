@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="check1">&nbsp;Show CT</label>
+      <input type="checkbox" id="check1" checked />
+      <label for="check2">&nbsp;&nbsp;Mask</label>
+      <input type="checkbox" id="check2" unchecked />
+      <label for="check3">&nbsp;&nbsp;Smooth</label>
+      <input type="checkbox" id="check3" checked />
+      <label for="alphaSlider">&nbsp;&nbsp;Alpha</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="204"
+        class="slider"
+        id="alphaSlider"
+      />
+      <label for="ambientSlider">&nbsp;&nbsp;Occlusion</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="102"
+        class="slider"
+        id="ambientSlider"
+      />
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script src="./niivue.umd.js"></script>
+    <script type="module" async>
+      var slider = document.getElementById("alphaSlider");
+      slider.oninput = function () {
+        nv1.setDrawOpacity(this.value / 255);
+      };
+      var slider2 = document.getElementById("ambientSlider");
+      slider2.oninput = function () {
+        nv1.setRenderDrawAmbientOcclusion(this.value / 255);
+      };
+      var check1 = document.getElementById("check1");
+      check1.onclick = function (event) {
+        nv1.volumes[0].opacity = this.checked;
+        nv1.updateGLVolume();
+      };
+      var check2 = document.getElementById("check2");
+      check2.onclick = function (event) {
+        nv1.isAlphaClipDark = this.checked;
+        nv1.updateGLVolume();
+      };
+      var check3 = document.getElementById("check3");
+      check3.onclick = function (event) {
+        nv1.setInterpolation(!this.checked);
+      };
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      let defaults = {
+        logging: true,
+        dragAndDropEnabled: true,
+        backColor: [0.3, 0.3, 0.3, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      };
+      var nv1 = new niivue.Niivue(defaults);
+      nv1.setRadiologicalConvention(false);
+      nv1.attachTo("gl1");
+      var volumeList1 = [
+        {
+          url: "../images/torso.nii.gz",
+          cal_min: 0,
+          cal_max: 200,
+          opacity: 1.0,
+        },
+      ];
+      await nv1.loadVolumes(volumeList1);
+      nv1.opts.multiplanarForceRender = true;
+      nv1.graph.autoSizeMultiplanar = true;
+      nv1.setClipPlane([-0.1, 270, 0]);
+      let cmap = {
+        R: [0, 0, 185, 185, 252, 0, 103, 216, 127, 127, 0, 222],
+        G: [0, 20, 102, 102, 0, 255, 76, 132, 0, 127, 255, 154],
+        B: [0, 152, 83, 83, 0, 0, 71, 105, 127, 0, 255, 132],
+        A: [0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+        labels: [
+          "background",
+          "1spleen",
+          "2kidneyR",
+          "3kidneyL",
+          "4gallbladder",
+          "5esophagus",
+          "6Liver",
+          "7stomach",
+          "8aorta",
+          "9inferiorvenacava",
+          "10pancreas",
+          "11bladder",
+        ],
+      };
+      nv1.setDrawColormap(cmap);
+      nv1.setRadiologicalConvention(true);
+
+      await nv1.loadDrawingFromUrl("../images/torsoLabel.nii.gz");
+    </script>
+  </body>
+</html>

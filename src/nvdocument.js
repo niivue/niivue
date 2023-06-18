@@ -488,6 +488,7 @@ export class NVDocument {
             visible: true,
             useQFormNotSForm: false,
             colormapNegative: "",
+            colormapLabel: [],
             imageType: NVIMAGE_TYPE.NII,
             frame4D: 0,
             limitFrames4D: NaN,
@@ -536,6 +537,7 @@ export class NVDocument {
         copyLayer.opacity = layer.opacity;
         copyLayer.colormap = layer.colormap;
         copyLayer.colormapNegative = layer.colormapNegative;
+        copyLayer.colormapLabel = layer.colormapLabel;
         copyLayer.useNegativeCmap = layer.useNegativeCmap;
         copyMesh.layers.push(copyLayer);
       }

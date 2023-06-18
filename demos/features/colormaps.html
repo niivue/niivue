@@ -24,50 +24,49 @@
         class="slider"
         id="gammaSlider"
       />
+      <button id="saveBmp">Save Bitmap</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
     <footer>
       <label id="colormaps"></label>
+      <p>
+      <textarea id="scriptText" name="customText" rows="8" cols="60">
+let cmap = {&#10; R: [0, 255, 0],&#10; G: [0, 0, 255],&#10; B: [0, 0, 0],&#10; A: [0, 64, 64],&#10; I: [0, 85, 255],&#10;};&#10;
+</textarea>
       &nbsp;<button id="custom">custom</button>&nbsp;
     </footer>
   </body>
 </html>
 <script src="./niivue.umd.js"></script>
-<script>
+<script type="module" async>
   var slider = document.getElementById("gammaSlider");
-  // Update the current slider value (each time you drag the slider handle)
   slider.oninput = function () {
     nv1.setGamma(this.value * 0.01);
   };
   document.getElementById("custom").addEventListener("click", doCustom);
   function doCustom() {
-    let cmap = {
-      R: [0, 255, 22, 127],
-      G: [0, 20, 192, 187],
-      B: [0, 152, 80, 255],
-      A: [0, 255, 255, 255],
-      I: [0, 22, 222, 255],
-    };
-    let key = "Custom";
-    nv1.addColormap(key, cmap);
-    nv1.volumes[0].colormap = key;
-    nv1.updateGLVolume();
+    var val = document.getElementById("scriptText").value;
+    val += ';let key = "Custom"; nv1.addColormap(key, cmap); nv1.volumes[0].colormap = key;nv1.updateGLVolume();';
+    val && eval(val);
+  }
+  document.getElementById("saveBmp").addEventListener("click", doSaveBmp);
+  function doSaveBmp() {
+    nv1.saveScene("ScreenShot.png");
   }
   var volumeList1 = [
-    // first item is background image
     {
-      url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+      url: "../images/mni152.nii.gz",
       colormap: "gray",
       opacity: 1,
       visible: true,
     },
   ];
-  var nv1 = new niivue.Niivue();
+  var nv1 = new niivue.Niivue({backColor: [0.3, 0.3, 0.3, 1]});
   nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
-  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  nv1.opts.multiplanarForceRender = true;
   nv1.opts.isColorbar = true;
   let cmaps = nv1.colormaps();
   let cmapEl = document.getElementById("colormaps");

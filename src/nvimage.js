@@ -151,7 +151,8 @@ export function NVImageFromUrlOptions(
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
   colorbarVisible = true,
-  alphaThreshold = false
+  alphaThreshold = false,
+  colormapLabel = []
 ) {
   return {
     url,
@@ -176,6 +177,7 @@ export function NVImageFromUrlOptions(
     cal_maxNeg,
     colorbarVisible,
     alphaThreshold,
+    colormapLabel,
   };
 }
 
@@ -220,7 +222,8 @@ export function NVImage(
   imageType = NVIMAGE_TYPE.UNKNOWN,
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
-  colorbarVisible = true
+  colorbarVisible = true,
+  colormapLabel = []
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -251,6 +254,7 @@ export function NVImage(
   this.ignoreZeroVoxels = ignoreZeroVoxels;
   this.trustCalMinMax = trustCalMinMax;
   this.colormapNegative = colormapNegative;
+  this.colormapLabel = colormapLabel;
   this.frame4D = frame4D; //indexed from 0!
   this.cal_minNeg = cal_minNeg;
   this.cal_maxNeg = cal_maxNeg;
@@ -371,7 +375,6 @@ export function NVImage(
       mx = Math.max(mx, Math.abs(f32[i]));
     let slope = 1.0;
     if (mx > 0) slope = 1.0 / mx;
-
     let nVox3D2 = this.nVox3D * 2;
     let j = 0;
     for (let i = 0; i < this.nVox3D; i++) {
@@ -2297,12 +2300,24 @@ NVImage.prototype.arrayEquals = function (a, b) {
 
 // not included in public docs
 // base function for niivue.setColormap()
+// colormaps are continuously interpolated between 256 values (0..256)
 NVImage.prototype.setColormap = function (cm) {
   this._colormap = cm;
   this.calMinMax();
   if (this.onColormapChange) {
     this.onColormapChange(this);
   }
+};
+
+// not included in public docs
+// base function for niivue.setColormap()
+// label colormaps are discretely sampled from an arbitrary number of colors
+NVImage.prototype.setColormapLabel = function (cm) {
+  this.colormapLabel = cmapper.makeLabelLut(cm);
+};
+
+NVImage.prototype.setColormapLabelFromUrl = async function (url) {
+  this.colormapLabel = await cmapper.makeLabelLutFromUrl(url);
 };
 
 Object.defineProperty(NVImage.prototype, "colormap", {
