@@ -4,7 +4,7 @@ Medical images typically store scalar intensity values, with each voxel storing 
 
 This page describes the NiiVue format for storing these transforms. NiiVue comes with many built-in colormaps. The [colormap live demo](https://niivue.github.io/niivue/features/colormaps.html) allows you to explore these colormaps as well as define custom colormaps.
 
-##Basics
+## Basics
 
  You can paste the code snippets below into the [colormap live demo](https://niivue.github.io/niivue/features/colormaps.html) and press the `custom` button to see these colormaps in action. We define the red, green, blue, alpha (RGBA) values with 8 bits per component (0..255).
 
@@ -21,7 +21,7 @@ let cmap = {
 ```
 ![colormap1](colormap1.png)
 
-####Alpha
+#### Alpha
 
 The Alpha component sets the opacity of the volume rendering. For most MR modalities, air has darker intensities than tissues, and we want to make the air transparent. Therefore, in the example above, the air is completely transparent (A: 0) while the brain is translucent (A: 64). In the example below, we make the air have a little opacity (A: 0). Notice the rendering shows the brain surrounded by haze.
 
@@ -37,7 +37,7 @@ let cmap = {
 
 ![colormap2](colormap2.png)
 
-####Index
+#### Index
 
 The least intuitive aspect of the colormap is the index component (`I`). This should be zero for the first node and 255 for the final node, and intermediate nodes placed between these two extremes. To visualize the influence of the node position, consider changing the position of the middle (red) node from `85` to `170`. The colormap gradient still has the order black, red, green but the black-red portion is now larger and the red-green is now shorter.
 
@@ -53,7 +53,7 @@ let cmap = {
 
 ![colormap3](colormap3.png)
 
-####Range (min..max)
+#### Range (min..max)
 
 You can optionally specify the `min` and `max` range for the colormap. In the example below, this clamps the colorbar to the range 40..60. This is useful for CT images, where voxel intensity reflects [calibrated Hounsfield Units](https://en.wikipedia.org/wiki/Hounsfield_scale). However, this is typically not useful for MR images, where most sequences generate relative intensities. Therefore, for MR the minimum and maximum can vary between images. When the image intensity range is not specified, NiiVue will set the default range of the colorbars to the [robust range](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Fslutils).
 
@@ -71,7 +71,7 @@ let cmap = {
 ```
 ![colormap4](colormap4.png)
 
-####Shortcuts
+#### Shortcuts
 
 All colormaps must specify the vectors Red (`R`), Green (`G`) and Blue (`B`). These three vectors **must** have the same number of elements as each other, and **must** have at least two elements and no more than 256 elements. If you do not specify the Indices (`I`), the nodes will be evenly between 0 and 255. If you do not specify the Alpha (`A`) the first node will have be transparent (A: 0) and all others will be translucent (A: 64). Therefore, the following is a valid colormap:
 
@@ -83,13 +83,13 @@ let cmap = {
 };
 ```
 
-### Negative Colormaps
+## Negative Colormaps
 
 Objects can specify both a positive and a negative color map. For example, this [voxel-based image](https://niivue.github.io/niivue/features/alphathreshold.html) uses the `warm` colormap and the `winter` colormapNegative. Alternatively, this [mesh](https://niivue.github.io/niivue/features/mesh.stats.html) uses the `green2orange ` colormap and the `green2cyan ` colormapNegative. This allows statistical maps to highlight correlated as well as anti-correlated contrasts.
 
 ![colormapNegative](colormapNegative.png)
 
-###Atlases and Labeled Images
+## Atlases and Labeled Images
 
 The NiiVue colormaps described above are ideal for continuous images, but are not appropriate for indexed images such as atlases that have discrete tissues. The function `setColormapLabel()` allows you to override the previously described continuous colormap with a custom discrete colormap.
 

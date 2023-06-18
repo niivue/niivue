@@ -209,6 +209,7 @@ export function Niivue(options = {}) {
   this.bmpTextureWH = 1.0; //thumbnail width/height ratio
   this.growCutShader = null;
   this.orientShaderAtlasU = null;
+  this.orientShaderAtlasI = null;
   this.orientShaderU = null;
   this.orientShaderI = null;
   this.orientShaderF = null;
@@ -4469,6 +4470,11 @@ Niivue.prototype.init = async function () {
     vertOrientShader,
     fragOrientShaderU.concat(fragOrientShaderAtlas)
   );
+  this.orientShaderAtlasI = new Shader(
+    this.gl,
+    vertOrientShader,
+    fragOrientShaderI.concat(fragOrientShaderAtlas)
+  );
 
   this.orientShaderU = new Shader(
     this.gl,
@@ -4811,7 +4817,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       img
     );
   } else if (hdr.datatypeCode === 4) {
-    if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU;
+    orientShader = this.orientShaderI;
+    if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasI;
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       1,
@@ -4833,7 +4840,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       this.gl.SHORT,
       img
     );
-    orientShader = this.orientShaderI;
   } else if (hdr.datatypeCode === 16) {
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
@@ -4908,6 +4914,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       img
     );
   } else if (hdr.datatypeCode === 512) {
+    if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU;
     this.gl.texStorage3D(
       this.gl.TEXTURE_3D,
       1,
@@ -5209,6 +5216,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   if (hdr.intent_code === 1002) {
     let x = 1.0 / this.back.dims[1];
     if (!this.opts.isAtlasOutline) x = -x;
+    console.log("ATLAS>>>", x);
     this.gl.uniform3fv(orientShader.uniforms["xyzFrac"], [
       x,
       1.0 / this.back.dims[2],
