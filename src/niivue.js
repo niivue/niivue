@@ -1040,7 +1040,6 @@ Niivue.prototype.touchEndListener = function (e) {
  * @param {MouseEvent} e mouse move event
  */
 Niivue.prototype.mouseMoveListener = async function (e) {
-
   // move crosshair and change slices if mouse click and move
   if (this.uiData.mousedown) {
     let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
@@ -1702,6 +1701,19 @@ Niivue.prototype.setSliceMosaicString = function (str) {
  */
 Niivue.prototype.setSliceMM = function (isSliceMM) {
   this.opts.isSliceMM = isSliceMM;
+  this.updateGLVolume();
+};
+
+/**
+ * Sets the intesity of a specific voxel to a given value
+ * @param {number} x x coordinate of the voxel
+ * @param {number} y y coordinate of the voxel
+ * @param {number} z z coordinate of the voxel
+ * @param {number} value number between 0 and 1, where 1 is full intensity and 0 is no intensity(black)
+ * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
+ */
+Niivue.prototype.setVoxel = function (x, y, z, value, frame4D = 0) {
+  this.volumes[0].setVoxel(x, y, z, value, frame4D);
   this.updateGLVolume();
 };
 

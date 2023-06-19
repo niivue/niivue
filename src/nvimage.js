@@ -3183,7 +3183,6 @@ NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
     z = pos[2];
   } //image is already in RAS
   let vx = x + y * nx + z * nx * ny;
-
   if (this.hdr.datatypeCode === this.DT_RGBA32) {
     vx *= 4;
     //convert rgb to luminance
@@ -3201,6 +3200,61 @@ NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
   let vol = frame4D * nx * ny * nz;
   let i = this.img[vx + vol];
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
+};
+
+/**
+ * Sets the intesity of a specific voxel to a given value
+ * @param {number} x x coordinate of the voxel
+ * @param {number} y y coordinate of the voxel
+ * @param {number} z z coordinate of the voxel
+ * @param {number} value number between 0 and 1, where 1 is full intensity and 0 is no intensity(black)
+ * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
+ */
+NVImage.prototype.setVoxel = function (x, y, z, value, frame4D = 0) {
+  const nx = this.hdr.dims[1];
+  const ny = this.hdr.dims[2];
+  const nz = this.hdr.dims[3];
+  // TODO: check if this is needed until next todo marker
+  // let perm = this.permRAS.slice();
+  // if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+  //   let pos = vec4.fromValues(x, y, z, 1);
+  //   vec4.transformMat4(pos, pos, this.toRASvox);
+  //   x = pos[0];
+  //   y = pos[1];
+  //   z = pos[2];
+  // } //image is already in RAS
+  let vx = x + y * nx + z * nx * ny;
+  // if (this.hdr.datatypeCode === this.DT_RGBA32) {
+  //   vx *= 4;
+  //   //convert rgb to luminance
+  //   return Math.round(
+  //     this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
+  //   );
+  // }
+  // if (this.hdr.datatypeCode === this.DT_RGB) {
+  //   vx *= 3;
+  //   //convert rgb to luminance
+  //   return Math.round(
+  //     this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07
+  //   );
+  // }
+  // TODO: Check until here
+  const vol = frame4D * nx * ny * nz;
+  const i = vx + vol;
+  const newValue = this.convertToIntensityValue(value);
+  this.img[i] = newValue;
+};
+
+/**
+ * Converts an input value to the intensity value of the corresponding image
+ * @param {number} value needs to be a value between 0 and 1, where 1 is high intensity and 0 is no intensity
+ * @returns {number} converted value for the given into to the corresponding image
+ */
+NVImage.prototype.convertToIntensityValue = function (value) {
+  if (value < 0 || value > 1) {
+    throw new Error("value needs to be between 0 and 1");
+  }
+  return (this.global_max > 252 ? this.global_max : 252) * value;
 };
 
 /**
