@@ -90,6 +90,7 @@
         limitFrames4D: 3,
         displaySliceInfo: true,
         displaySliceScale: 0.4,
+        enableBorderHighlight: true,
         onLocationChange: handleLocationChange,
       };
       var nv1 = new Niivue(defaults);
@@ -102,7 +103,7 @@
       nv1.graph.normalizeValues = false;
       nv1.graph.opacity = 1.0;
       await nv1.loadVolumes(volumeList1);
-      //await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
+      await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
       function doReset() {
         nv1.setDefaults(defaults, true);
       }

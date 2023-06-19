@@ -111,6 +111,11 @@ const CENTER_MOUSE_BUTTON = 1;
 const RIGHT_MOUSE_BUTTON = 2;
 
 /**
+ * Contains pixel amount for each drawing from left, top, its width and height
+ * @typedef {number[]} leftTopWidthHeight
+ */
+
+/**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
  * @typedef {Object} NiivueOptions
  * @property {number} [options.textHeight=0.06] the text height for orientation labels (0 to 1). Zero for no text labels
@@ -157,6 +162,9 @@ const RIGHT_MOUSE_BUTTON = 2;
  * @property {boolean} [options.floodFillNeighbors=6] does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors?
  * @property {number} [options.maxDrawUndoBitmaps=8] number of possible undo steps (if drawingEnabled)
  * @property {string} [options.thumbnail=""] optional 2D png bitmap that can be rapidly loaded to defer slow loading of 3D image
+ * @property {boolean} [enableBorderHighlight=false] enable border highlight on hover
+ * @property {number[]} [borderHighlightColor=[0,1,0,1]] green in rgb values (1 -> 255, 0 -> 0) last number is the transparency a. If a is smaller than 0 the default red color is shown
+ * @property {number} [borderHighlightWidth=4] stroke width of the highlighted border
  * @example
  * niivue.opts.isColorbar = true;
  * niivue.updateGLVolume()
@@ -1027,7 +1035,12 @@ Niivue.prototype.touchEndListener = function (e) {
 // not included in public docs
 // handler for mouse move over canvas
 // note: no test yet
+/**
+ * Handler for move move event
+ * @param {MouseEvent} e mouse move event
+ */
 Niivue.prototype.mouseMoveListener = async function (e) {
+
   // move crosshair and change slices if mouse click and move
   if (this.uiData.mousedown) {
     let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
@@ -1046,6 +1059,16 @@ Niivue.prototype.mouseMoveListener = async function (e) {
     await this.drawScene();
     this.uiData.prevX = this.uiData.currX;
     this.uiData.prevY = this.uiData.currY;
+  }
+
+  // if highlighting of border is enabled in constructor, set the current mouse pos and update the canvas
+  if (this.opts.enableBorderHighlight) {
+    let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
+      e,
+      this.gl.canvas
+    );
+    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+    this.drawScene();
   }
 };
 
@@ -1328,7 +1351,6 @@ Niivue.prototype.registerInteractions = function () {
     "contextmenu",
     this.mouseContextMenuListener.bind(this)
   );
-
   // add double click
   this.canvas.addEventListener("dblclick", this.resetBriCon.bind(this));
 
@@ -5625,6 +5647,27 @@ Niivue.prototype.inRenderTile = function (x, y) {
   return -1; //mouse position not in rendering tile
 };
 
+/**
+ * This function takes in the mouse x and y position and returns the index of this.screenSlices
+ * @param {number} x current mouse x position
+ * @param {number} y current mouse y position
+ * @returns {number} index of this.screenSlices in which the mouse is. If the mouse is not in a Slice tile or inside a render it returns -1
+ */
+Niivue.prototype.inSliceTile = function (x, y) {
+  for (let i = 0; i < this.screenSlices.length; i++) {
+    if (this.screenSlices[i].axCorSag === SLICE_TYPE.RENDER) continue;
+    let ltwh = this.screenSlices[i].leftTopWidthHeight;
+    if (
+      x > ltwh[0] &&
+      y > ltwh[1] &&
+      x < ltwh[0] + ltwh[2] &&
+      y < ltwh[1] + ltwh[3]
+    )
+      return i;
+  }
+  return -1; //mouse position in not in slice tile
+};
+
 // not included in public docs
 // if clip plane is active, change depth of clip plane
 // otherwise, set zoom factor for rendering size
@@ -6214,6 +6257,39 @@ Niivue.prototype.drawColorbarCore = function (
   }
 }; // drawColorbarCore()
 
+/**
+ * Draws the highlight border around the current target on which the mouse points
+ * @param {leftTopWidthHeight} leftTopWidthHeight
+ */
+Niivue.prototype.drawHighlightBorder = function (leftTopWidthHeight) {
+  const [left, top, width, height] = leftTopWidthHeight;
+  const xStart = left;
+  const xEnd = left + width;
+  const yStart = top;
+  const yEnd = top + height;
+
+  this.drawLine(
+    [xStart, yStart, xEnd, yStart],
+    this.opts.borderHighlightWidth,
+    this.opts.borderHighlightColor
+  );
+  this.drawLine(
+    [xEnd, yStart, xEnd, yEnd],
+    this.opts.borderHighlightWidth,
+    this.opts.borderHighlightColor
+  );
+  this.drawLine(
+    [xEnd, yEnd, xStart, yEnd],
+    this.opts.borderHighlightWidth,
+    this.opts.borderHighlightColor
+  );
+  this.drawLine(
+    [xStart, yEnd, xStart, yStart],
+    this.opts.borderHighlightWidth,
+    this.opts.borderHighlightColor
+  );
+};
+
 // not included in public docs
 // high level code to draw colorbar(s)
 Niivue.prototype.drawColorbar = function () {
@@ -6597,10 +6673,10 @@ Niivue.prototype.screenFieldOfViewExtendedMM = function (axCorSag = 0) {
 
 /**
  * Draws the current visible slice and total amount of slices in the bottom right of each individual drawing
- * @param {number[]} leftTopWidthHeight - contains pixel amount for each drawing from left, top, its width and height
- * @param {number[]} AxyzMxy - contains the current three dimensional rerpresentation of the current slice xy are the total amount of available space
- * @param {number} sliceFrac - current visible slice relative to total amount of slices
- * @param {number} scale - size of the text relative to the canvas width and height from 0 to 1 (0 means no text)
+ * @param {leftTopWidthHeight} leftTopWidthHeight
+ * @param {number[]} AxyzMxy contains the current three dimensional rerpresentation of the current slice xy are the total amount of available space
+ * @param {number} sliceFrac current visible slice relative to total amount of slices
+ * @param {number} scale size of the text relative to the canvas width and height from 0 to 1 (0 means no text)
  */
 Niivue.prototype.drawSliceNumber = function (
   leftTopWidthHeight,
@@ -6614,7 +6690,9 @@ Niivue.prototype.drawSliceNumber = function (
   const [left, top, width, height] = leftTopWidthHeight;
   const textHeight = this.opts.textHeight * this.gl.canvas.height * scale;
   const sliceTextHeader = "Slice #";
-  const sliceNumberText = `${Math.abs(currentSlice).toFixed(0)} / ${Math.abs(maxSlices).toFixed(0)}`;
+  const sliceNumberText = `${Math.abs(currentSlice).toFixed(0)} / ${Math.abs(
+    maxSlices
+  ).toFixed(0)}`;
 
   this.drawTextBottomRight(
     [left + width, top + height - textHeight],
@@ -6900,6 +6978,8 @@ Niivue.prototype.draw2D = function (
       true,
       this.opts.isSliceMM
     );
+
+  // draws slice number on each slice drawing if enabled in options
   if (this.opts.displaySliceInfo) {
     this.drawSliceNumber(
       leftTopWidthHeight,
@@ -6908,6 +6988,14 @@ Niivue.prototype.draw2D = function (
       this.opts.displaySliceScale
     );
   }
+  // draw highlight border if it is enabled in options as well as if current mosue pos is in a slice tile
+  if (this.opts.enableBorderHighlight) {
+    const tile = this.inSliceTile(this.mousePos[0], this.mousePos[1]);
+    if (tile >= 0) {
+      this.drawHighlightBorder(this.screenSlices[tile].leftTopWidthHeight);
+    }
+  }
+
   this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
   this.readyForSync = true;
 }; // draw2D()
