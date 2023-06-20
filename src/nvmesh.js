@@ -546,6 +546,8 @@ NVMesh.prototype.updateMesh = function (gl) {
         //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
         return x * (1 - a) + y * a;
       }
+      if (!layer.hasOwnProperty("colormapLabel"))
+        layer.colormapLabel = [];
       if (
         layer.colormapLabel.hasOwnProperty("R") &&
         !layer.colormapLabel.hasOwnProperty("lut")
