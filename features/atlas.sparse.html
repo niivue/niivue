@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="check1">Outline</label>
+      <input type="checkbox" id="check1" name="check1" unchecked />
+      <label for="alphaSlider">Opacity</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="127"
+        class="slider"
+        id="alphaSlider"
+      />
+      <button id="about">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
+      import * as niivue from "./niivue.es.js";
+      var volumeList1 = [
+        {url: "../images/inia19-t1-brain.nii.gz"},
+        {url: "../images/inia19-NeuroMaps.nii.gz", opacity: 0.5},
+      ];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML = data.string;
+      }
+      var nv1 = new niivue.Niivue({ onLocationChange: handleLocationChange });
+      nv1.attachTo("gl1");
+      await nv1.loadVolumes(volumeList1);
+      /*async function fetchJSON(fnm) {
+        const response = await fetch(fnm);
+        const js = await response.json();
+        return js;
+      }
+      let cmap = await fetchJSON("../demos/images/inia19-NeuroMaps.json");
+      nv1.volumes[1].setColormapLabel(cmap);*/
+      await nv1.volumes[1].setColormapLabelFromUrl("../images/inia19-NeuroMaps.json");
+      nv1.updateGLVolume();
+      document
+        .getElementById("check1")
+        .addEventListener("change", doCheckClick);
+      function doCheckClick() {
+        nv1.setAtlasOutline(this.checked);
+      }
+      var slider = document.getElementById("alphaSlider");
+      slider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255);
+      };
+      document.getElementById("about").addEventListener("click", doAbout);
+      function doAbout() {
+        window.alert(
+          "This demo demonstrates sparse labeling. The inia19 atlas has 1004 labels in the range 0..1606 ."
+        );
+      }
+    </script>
+  </body>
+</html>
