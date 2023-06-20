@@ -546,8 +546,7 @@ NVMesh.prototype.updateMesh = function (gl) {
         //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
         return x * (1 - a) + y * a;
       }
-      if (!layer.hasOwnProperty("colormapLabel"))
-        layer.colormapLabel = [];
+      if (!layer.hasOwnProperty("colormapLabel")) layer.colormapLabel = [];
       if (
         layer.colormapLabel.hasOwnProperty("R") &&
         !layer.colormapLabel.hasOwnProperty("lut")
@@ -1544,7 +1543,7 @@ NVMesh.readCURV = function (buffer, n_vert) {
 // not included in public docs
 // read freesurfer Annotation file provides vertex colors
 // https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
-NVMesh.readANNOT = function (buffer, n_vert, isFastRead = true) {
+NVMesh.readANNOT = function (buffer, n_vert, isReadColortables = false) {
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let n_vertex = view.getUint32(0, false);
@@ -1563,7 +1562,7 @@ NVMesh.readANNOT = function (buffer, n_vert, isFastRead = true) {
     let idx = view.getUint32((pos += 4), false);
     rgba32[idx] = view.getUint32((pos += 4), false);
   }
-  if (isFastRead)
+  if (!isReadColortables)
     //only read label colors, ignore labels
     return rgba32;
   let tag = 0;
@@ -1587,7 +1586,7 @@ NVMesh.readANNOT = function (buffer, n_vert, isFastRead = true) {
   if (num_entries < 1)
     //undocumented old format
     return rgba32;
-  //create a lookuptable
+  //preallocate lookuptable
   let LUT = {
     R: Array(maxstruc).fill(0),
     G: Array(maxstruc).fill(0),
@@ -2284,6 +2283,7 @@ NVMesh.readLayer = function (
   layer.isTransparentBelowCalMin = true;
   layer.colorbarVisible = true;
   layer.colormapLabel = [];
+  let isReadColortables = true;
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
   if (n_vert < 3) return;
   var re = /(?:\.([^.]+))?$/;
@@ -2295,11 +2295,9 @@ NVMesh.readLayer = function (
   }
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
   else if (ext === "ANNOT") {
-    //fast read ignores labels and only reads RGBA:
-    let isFastRead = false;
-    if (isFastRead) layer.values = this.readANNOT(buffer, n_vert);
+    if (!isReadColortables) layer.values = this.readANNOT(buffer, n_vert);
     else {
-      let obj = this.readANNOT(buffer, n_vert, false);
+      let obj = this.readANNOT(buffer, n_vert, true);
       if (obj.hasOwnProperty("scalars")) {
         layer.values = obj.scalars;
         layer.colormapLabel = obj.colormapLabel;
@@ -2313,9 +2311,17 @@ NVMesh.readLayer = function (
     let obj = this.readGII(buffer, n_vert);
     layer.values = obj.scalars; //colormapLabel
     layer.colormapLabel = obj.colormapLabel;
-  } else if (ext === "MGH" || ext === "MGZ")
-    layer.values = this.readMGH(buffer, n_vert);
-  else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
+  } else if (ext === "MGH" || ext === "MGZ") {
+    if (!isReadColortables) layer.values = this.readMGH(buffer, n_vert);
+    else {
+      let obj = this.readMGH(buffer, n_vert, true);
+      if (obj.hasOwnProperty("scalars")) {
+        layer.values = obj.scalars;
+        layer.colormapLabel = obj.colormapLabel;
+      } //unable to decode colormapLabel
+      else layer.values = obj;
+    }
+  } else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
   else if (ext === "SMP") layer.values = this.readSMP(buffer, n_vert);
   else if (ext === "STC") layer.values = this.readSTC(buffer, n_vert);
   else {
@@ -3064,7 +3070,7 @@ NVMesh.readNII = function (buffer, n_vert = 0) {
 // not included in public docs
 // read MGH format as vertex colors (not voxel-based image)
 // https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
-NVMesh.readMGH = function (buffer, n_vert = 0) {
+NVMesh.readMGH = function (buffer, n_vert = 0, isReadColortables = false) {
   var reader = new DataView(buffer);
   var raw = buffer;
   if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
@@ -3106,7 +3112,110 @@ NVMesh.readMGH = function (buffer, n_vert = 0) {
     for (var i = 0; i < nvert; i++)
       scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian);
   } else if (mtype === 0) scalars = new Uint8Array(buffer, voxoffset, nvert);
-  return scalars;
+  if (!isReadColortables) return scalars;
+  //next: read footer
+  let bytesPerVertex = 4;
+  if (mtype === 4) bytesPerVertex = 2;
+  if (mtype === 0) bytesPerVertex = 1;
+  voxoffset += bytesPerVertex * nvert;
+  voxoffset += 4 * 4; //skip TR, FlipAngle, TE, TI, FOV
+  const TAG_OLD_COLORTABLE = 1;
+  const TAG_OLD_USEREALRAS = 2;
+  const TAG_CMDLINE = 3;
+  const TAG_USEREALRAS = 4;
+  const TAG_COLORTABLE = 5;
+  const TAG_GCAMORPH_GEOM = 10;
+  const TAG_GCAMORPH_TYPE = 11;
+  const TAG_GCAMORPH_LABELS = 12;
+  const TAG_OLD_SURF_GEOM = 20;
+  const TAG_SURF_GEOM = 21;
+  const TAG_OLD_MGH_XFORM = 30;
+  const TAG_MGH_XFORM = 31;
+  const TAG_GROUP_AVG_SURFACE_AREA = 32;
+  const TAG_AUTO_ALIGN = 33;
+  const TAG_SCALAR_DOUBLE = 40;
+  const TAG_PEDIR = 41;
+  const TAG_MRI_FRAME = 42;
+  const TAG_FIELDSTRENGTH = 43;
+  const TAG_ORIG_RAS2VOX = 44;
+  let nBytes = raw.byteLength;
+  let colormapLabel = [];
+  while (voxoffset < nBytes - 8) {
+    let vx = voxoffset;
+    let tagType = reader.getInt32((voxoffset += 4), isLittleEndian);
+    let plen = 0;
+    switch (tagType) {
+      case TAG_OLD_MGH_XFORM:
+        // doesn't include null
+        plen = reader.getInt32((voxoffset += 4), isLittleEndian) - 1;
+        break;
+      case TAG_OLD_SURF_GEOM: // these don't take lengths at all
+      case TAG_OLD_USEREALRAS:
+        plen = 0;
+        break;
+      case TAG_OLD_COLORTABLE:
+        plen = 0;
+        //CTABreadFromBinary()
+        let version = reader.getInt32((voxoffset += 4), isLittleEndian);
+        if (version > 0) {
+          console.log("unsupported CTABreadFromBinaryV1");
+          return scalars;
+        }
+        version = -version;
+        if (version !== 2) {
+          console.log("CTABreadFromBinary: unknown version");
+          return scalars;
+        }
+        //CTABreadFromBinaryV2() follows
+        let nentries = reader.getInt32((voxoffset += 4), isLittleEndian);
+        if (nentries < 0) {
+          console.log("CTABreadFromBinaryV2: nentries was ", nentries);
+          return scalars;
+        }
+        //skip the file name
+        let len = reader.getInt32((voxoffset += 4), isLittleEndian);
+        voxoffset += len;
+        let num_entries_to_read = reader.getInt32(
+          (voxoffset += 4),
+          isLittleEndian
+        );
+        if (num_entries_to_read < 0) return scalars;
+        //Allocate our table.
+        let Labels = { R: [], G: [], B: [], A: [], I: [], labels: [] };
+        for (let i = 0; i < num_entries_to_read; i++) {
+          let structure = reader.getInt32((voxoffset += 4), isLittleEndian);
+          let labelLen = reader.getInt32((voxoffset += 4), isLittleEndian);
+          let pos = voxoffset + 4;
+          let txt = "";
+          for (let c = 0; c < labelLen; c++) {
+            let val = reader.getUint8(pos++);
+            if (val == 0) break;
+            txt += String.fromCharCode(val);
+          } //for labelLen
+          voxoffset += labelLen;
+          let R = reader.getInt32((voxoffset += 4), isLittleEndian);
+          let G = reader.getInt32((voxoffset += 4), isLittleEndian);
+          let B = reader.getInt32((voxoffset += 4), isLittleEndian);
+          let A = 255 - reader.getInt32((voxoffset += 4), isLittleEndian);
+          Labels.I.push(structure);
+          Labels.R.push(R);
+          Labels.G.push(G);
+          Labels.B.push(B);
+          Labels.A.push(A);
+          Labels.labels.push(txt);
+          //break
+        } // for num_entries_to_read
+        colormapLabel = cmapper.makeLabelLut(Labels);
+        break;
+      default:
+        plen = reader.getInt32((voxoffset += 8), isLittleEndian);
+    }
+    voxoffset += plen;
+  }
+  return {
+    scalars,
+    colormapLabel,
+  };
 }; // readMGH()
 
 // not included in public docs
