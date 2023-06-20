@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Mesh Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+      <label for="meshSlider">Atlas transparency</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="127"
+        class="slider"
+        id="meshSlider"
+      />
+      <label id="shaders">Shaders:</label>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      
+      <textarea rows="6" cols="80" id="scriptText" rows="4" cols="50">let cmap = {&#10; R: [255,   0,   0,   0, 127, 127,   0, 255],&#10; G: [  0, 255,   0, 127,   0, 127, 255,   0],&#10; B: [  0,   0, 255, 127, 127,   0, 255, 255],&#10; labels: ["N0","N1","N2","N3","N4","N5","N6","N7"],&#10;}</textarea>
+      <button id="customColormap">Use custom colormap</button>
+    </footer>
+  </body>
+</html>
+<script src="./niivue.umd.js"></script>
+<script type="module" async>
+  var slider = document.getElementById("meshSlider");
+  slider.oninput = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      0,
+      "opacity",
+      this.value / 255.0
+    );
+  };
+  var nv1 = new niivue.Niivue({
+    show3Dcrosshair: true,
+    backColor: [0.2, 0.2, 0.2, 1],
+  });
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.attachTo("gl1");
+  //you can convert between GIfTI and FreeSurfer annot files:
+  // mris_convert  --annot lh.Yeo2011_7Networks_N1000.annot lh.pial ./lh.Yeo2011.gii
+  var meshLayersList1 = [
+    { url: "../images/lh.Yeo2011.gii", opacity: 0.5}, //boggle.lh.annot lh.boggle.gii
+  ];
+  await nv1.loadMeshes([
+    {
+      url: "../images/lh.pial",
+      rgba255: [255, 255, 255, 255],
+      layers: meshLayersList1,
+    },
+  ]);
+  let cmaps = nv1.meshShaderNames();
+  let cmapEl = document.getElementById("shaders");
+  for (let i = 0; i < cmaps.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = cmaps[i];
+    btn.onclick = function () {
+      nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+    };
+    cmapEl.appendChild(btn);
+  }
+  document
+    .getElementById("customColormap")
+    .addEventListener("click", doCustomColormap);
+  function doCustomColormap() {
+    var val = document.getElementById("scriptText").value;
+    val += ';nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel",cmap);nv1.updateGLVolume();';
+    val && eval(val);
+  }
+</script>

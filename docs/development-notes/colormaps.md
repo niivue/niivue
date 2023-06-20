@@ -93,7 +93,7 @@ Objects can specify both a positive and a negative color map. For example, this 
 
 The NiiVue colormaps described above are ideal for continuous images, but are not appropriate for indexed images such as atlases that have discrete tissues. The function `setColormapLabel()` allows you to override the previously described continuous colormap with a custom discrete colormap.
 
-Consider an MRI scan that has been segmented with [FSL FIRST](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FIRST). This can generate a volume where there are discrete tissues that we will want to map to specific colors and label with names. In this case, the segmented image may have the intensities 0 for Air, 1 for water, 2 for gray matter and 3 for white matter. This [labelled live demo](https://niivue.github.io/niivue/features/segment.html) uses this colormap:
+Consider an MRI scan that has been segmented with [FSL FIRST](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FIRST). This can generate a volume where there are discrete tissues that we will want to map to specific colors and label with names. In this case, the segmented image may have the intensities 0 for Air, 1 for water, 2 for gray matter and 3 for white matter. This [labeled live demo](https://niivue.github.io/niivue/features/segment.html) uses this colormap:
 
 ```
 let cmap = {
@@ -124,6 +124,8 @@ let cmap = {
 ```
 
 The `I` field is optional: if it is not provided the labels are considered to be in the range of 0..n-1. Therefore, it is only required if the labels are sparse or do not begin from 0.
+
+The [labeled voxel live demo](https://niivue.github.io/niivue/features/segment.html) and [labeled mesh live demo](https://niivue.github.io/niivue/features/mesh.atlas.gii.html) allow you to interactively change the colormaps.
 
 ## Links
 

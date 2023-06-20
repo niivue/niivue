@@ -539,13 +539,39 @@ NVMesh.prototype.updateMesh = function (gl) {
     for (let i = 0; i < this.layers.length; i++) {
       let nvtx = this.pts.length / 3;
       let layer = this.layers[i];
-      if (layer.opacity <= 0.0 || layer.cal_min > layer.cal_max) continue;
       let opacity = layer.opacity;
+      if (opacity <= 0.0 || layer.cal_min > layer.cal_max) continue;
       var u8 = new Uint8Array(posNormClr.buffer); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
       function lerp(x, y, a) {
         //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
         return x * (1 - a) + y * a;
       }
+      if (
+        layer.colormapLabel.hasOwnProperty("R") &&
+        !layer.colormapLabel.hasOwnProperty("lut")
+      ) {
+        //convert colormap JSON to RGBA LUT
+        layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel);
+      }
+      if (layer.colormapLabel.hasOwnProperty("lut")) {
+        let lut = layer.colormapLabel.lut;
+        let nLabel = Math.floor(lut.length / 4);
+        let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
+        let frameOffset = nvtx * frame;
+        let mx = 0;
+        for (let j = 0; j < layer.values.length; j++) {
+          let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+          let k =
+            4 *
+            Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1);
+          mx = Math.max(mx, k);
+          u8[vtx + 0] = lerp(u8[vtx + 0], lut[k + 0], opacity);
+          u8[vtx + 1] = lerp(u8[vtx + 1], lut[k + 1], opacity);
+          u8[vtx + 2] = lerp(u8[vtx + 2], lut[k + 2], opacity);
+          k += 4;
+        } //for each vertex
+        continue;
+      } //if colormapLabel
       if (layer.values.constructor === Uint32Array) {
         let rgba8 = new Uint8Array(layer.values.buffer);
         let opaque = new Array(nvtx).fill(true);
@@ -643,7 +669,7 @@ NVMesh.prototype.updateMesh = function (gl) {
             /*let v255 = Math.round(
               (-layer.values[j + frameOffset] - layer.cal_min) * scale255
             );*/
-            if (v255 < 0) continue; //borg
+            if (v255 < 0) continue;
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
             u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
@@ -1516,7 +1542,7 @@ NVMesh.readCURV = function (buffer, n_vert) {
 // not included in public docs
 // read freesurfer Annotation file provides vertex colors
 // https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
-NVMesh.readANNOT = function (buffer, n_vert) {
+NVMesh.readANNOT = function (buffer, n_vert, isFastRead = true) {
   const view = new DataView(buffer); //ArrayBuffer to dataview
   //ALWAYS big endian
   let n_vertex = view.getUint32(0, false);
@@ -1528,16 +1554,98 @@ NVMesh.readANNOT = function (buffer, n_vert) {
     console.log("ANNOT file smaller than specified");
     return;
   }
-  let pos = 4;
+  let pos = 0;
   //reading all floats with .slice() would be faster, but lets handle endian-ness
   let rgba32 = new Uint32Array(n_vertex);
   for (let i = 0; i < n_vertex; i++) {
-    let idx = view.getUint32(pos, false);
-    pos += 4;
-    rgba32[idx] = view.getUint32(pos, false);
-    pos += 4;
+    let idx = view.getUint32((pos += 4), false);
+    rgba32[idx] = view.getUint32((pos += 4), false);
   }
-  return rgba32;
+  if (isFastRead)
+    //only read label colors, ignore labels
+    return rgba32;
+  let tag = 0;
+  try {
+    tag = view.getInt32((pos += 4), false);
+  } catch (error) {
+    return rgba32;
+  }
+  let TAG_OLD_COLORTABLE = 1;
+  if (tag !== TAG_OLD_COLORTABLE)
+    //undocumented old format
+    return rgba32;
+  let ctabversion = view.getInt32((pos += 4), false);
+  if (ctabversion > 0)
+    //undocumented old format
+    return rgba32;
+  let maxstruc = view.getInt32((pos += 4), false);
+  let len = view.getInt32((pos += 4), false);
+  pos += len;
+  let num_entries = view.getInt32((pos += 4), false);
+  if (num_entries < 1)
+    //undocumented old format
+    return rgba32;
+  //create a lookuptable
+  let LUT = {
+    R: Array(maxstruc).fill(0),
+    G: Array(maxstruc).fill(0),
+    B: Array(maxstruc).fill(0),
+    A: Array(maxstruc).fill(0),
+    I: Array(maxstruc).fill(0),
+    labels: Array(maxstruc).fill(""),
+  };
+  for (let i = 0; i < num_entries; i++) {
+    let struc = view.getInt32((pos += 4), false);
+    let labelLen = view.getInt32((pos += 4), false);
+    pos += 4;
+    let txt = "";
+    for (let c = 0; c < labelLen; c++) {
+      let val = view.getUint8(pos++);
+      if (val == 0) break;
+      txt += String.fromCharCode(val);
+    }
+    pos -= 4;
+    let R = view.getInt32((pos += 4), false);
+    let G = view.getInt32((pos += 4), false);
+    let B = view.getInt32((pos += 4), false);
+    let A = view.getInt32((pos += 4), false);
+    if (struc < 0 || struc >= maxstruc) {
+      console.log("annot entry out of range");
+      continue;
+    }
+    LUT.R[struc] = R;
+    LUT.G[struc] = G;
+    LUT.B[struc] = B;
+    LUT.A[struc] = A;
+    LUT.I[struc] = (A << 24) + (B << 16) + (G << 8) + R;
+    LUT.labels[struc] = txt;
+  }
+  let scalars = new Float32Array(n_vertex);
+  scalars.fill(-1);
+  let nError = 0;
+  for (let i = 0; i < n_vert; i++) {
+    let RGB = rgba32[i];
+    for (let c = 0; c < maxstruc; c++) {
+      if (LUT.I[c] === RGB) {
+        scalars[i] = c;
+        break;
+      }
+    } //for c
+    if (scalars[i] < 0) {
+      nError++;
+      scalars[i] = 0;
+    }
+  }
+  if (nError > 0)
+    console.log(
+      `annot vertex colors do not match ${nError} of ${n_vertex} vertices.`
+    );
+  for (let i = 0; i < maxstruc; i++) LUT.I[i] = i;
+  let colormapLabel = cmapper.makeLabelLut(LUT);
+  return {
+    scalars,
+    colormapLabel,
+  };
 }; // readANNOT()
 
 // not included in public docs
@@ -2173,6 +2281,7 @@ NVMesh.readLayer = function (
   layer.alphaThreshold = false;
   layer.isTransparentBelowCalMin = true;
   layer.colorbarVisible = true;
+  layer.colormapLabel = [];
   let n_vert = nvmesh.vertexCount / 3; //each vertex has XYZ component
   if (n_vert < 3) return;
   var re = /(?:\.([^.]+))?$/;
@@ -2183,12 +2292,26 @@ NVMesh.readLayer = function (
     ext = ext.toUpperCase();
   }
   if (ext === "MZ3") layer.values = this.readMZ3(buffer, n_vert);
-  else if (ext === "ANNOT") layer.values = this.readANNOT(buffer, n_vert);
-  else if (ext === "CRV" || ext === "CURV") {
+  else if (ext === "ANNOT") {
+    //fast read ignores labels and only reads RGBA:
+    let isFastRead = false;
+    if (isFastRead) layer.values = this.readANNOT(buffer, n_vert);
+    else {
+      let obj = this.readANNOT(buffer, n_vert, false);
+      if (obj.hasOwnProperty("scalars")) {
+        layer.values = obj.scalars;
+        layer.colormapLabel = obj.colormapLabel;
+      } //unable to decode colormapLabel
+      else layer.values = obj;
+    }
+  } else if (ext === "CRV" || ext === "CURV") {
     layer.values = this.readCURV(buffer, n_vert);
     layer.isTransparentBelowCalMin = false;
-  } else if (ext === "GII") layer.values = this.readGII(buffer, n_vert);
-  else if (ext === "MGH" || ext === "MGZ")
+  } else if (ext === "GII") {
+    let obj = this.readGII(buffer, n_vert);
+    layer.values = obj.scalars; //colormapLabel
+    layer.colormapLabel = obj.colormapLabel;
+  } else if (ext === "MGH" || ext === "MGZ")
     layer.values = this.readMGH(buffer, n_vert);
   else if (ext === "NII") layer.values = this.readNII(buffer, n_vert);
   else if (ext === "SMP") layer.values = this.readSMP(buffer, n_vert);
@@ -3330,8 +3453,38 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
   let isDataSpaceScanner = false;
   tag.endPos = tag.contentStartPos; //read the children of the 'GIFTI' tag
   let line = "";
+  function readNumericTag(TagName, isFloat = false) {
+    //Tag 'Dim1' will return 3 for Dim1="3"
+    let pos = line.indexOf(TagName);
+    if (pos < 0) return 1;
+    let spos = line.indexOf('"', pos) + 1;
+    let epos = line.indexOf('"', spos);
+    let str = line.slice(spos, epos);
+    if (isFloat) return parseFloat(str);
+    else return parseInt(str);
+  }
+  function readBracketTag(TagName) {
+    let pos = line.indexOf(TagName);
+    if (pos < 0) return "";
+    let spos = pos + TagName.length;
+    let epos = line.indexOf("]", spos);
+    return line.slice(spos, epos);
+  }
+  let Labels = { R: [], G: [], B: [], A: [], I: [], labels: [] };
   while (tag.endPos < len && tag.name.length > 1) {
     tag = readXMLtag();
+    if (tag.name.startsWith("Label Key")) {
+      line = tag.name;
+      Labels.I.push(readNumericTag("Key="));
+      Labels.R.push(Math.round(255 * readNumericTag("Red=", true)));
+      Labels.G.push(Math.round(255 * readNumericTag("Green=", true)));
+      Labels.B.push(Math.round(255 * readNumericTag("Blue=", true)));
+      Labels.A.push(Math.round(255 * readNumericTag("Alpha", true)));
+      line = new TextDecoder()
+        .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
+        .trim();
+      Labels.labels.push(readBracketTag("<![CDATA["));
+    }
     if (tag.name.trim() === "Data") {
       if (isVectors) continue;
       line = new TextDecoder()
@@ -3441,13 +3594,6 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
       }
       continue;
     }
-    function readBracketTag(TagName) {
-      let pos = line.indexOf(TagName);
-      if (pos < 0) return "";
-      let spos = pos + TagName.length;
-      let epos = line.indexOf("]", spos);
-      return line.slice(spos, epos);
-    }
     if (tag.name.trim() === "DataSpace") {
       line = new TextDecoder()
         .decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos))
@@ -3489,21 +3635,14 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8; //DT_INT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16; //DT_FLOAT32
     if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) dataType = 32; //DT_FLOAT64
-    function readNumericTag(TagName) {
-      //Tag 'Dim1' will return 3 for Dim1="3"
-      let pos = line.indexOf(TagName);
-      if (pos < 0) return 1;
-      let spos = line.indexOf('"', pos) + 1;
-      let epos = line.indexOf('"', spos);
-      let str = line.slice(spos, epos);
-      return parseInt(str);
-    }
     Dims[0] = readNumericTag("Dim0=");
     Dims[1] = readNumericTag("Dim1=");
     Dims[2] = readNumericTag("Dim2=");
   }
   //console.log(`p=${positions.length} i=${indices.length} s=${scalars.length}`);
-  if (n_vert > 0) return scalars;
+  let colormapLabel = [];
+  if (Labels.I.length > 1) colormapLabel = cmapper.makeLabelLut(Labels);
+  if (n_vert > 0) return { scalars, colormapLabel };
   if (
     positions.length > 2 &&
     !isDataSpaceScanner &&
@@ -3526,6 +3665,7 @@ NVMesh.readGII = function (buffer, n_vert = 0) {
     positions,
     indices,
     scalars,
+    colormapLabel,
   }; //MatrixData
 }; // readGII()
 
