@@ -758,7 +758,6 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform float coordZ;
 uniform float layer;
-//uniform float numLayers;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform float opacity;
@@ -766,23 +765,23 @@ uniform vec3 xyzFrac;
 uniform mat4 mtx;
 void main(void) {
 	vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
-	uint idx = texture(intensityVol, vx.xyz).r;
+	uint idx = uint(texture(intensityVol, vx.xyz).r);
 	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
 	if (idx == uint(0))
 		return;
 	if (xyzFrac.x > 0.0) { //outline
 		vx = vec4(TexCoord.x+xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint R = texture(intensityVol, vx.xyz).r;
+		uint R = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x-xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint L = texture(intensityVol, vx.xyz).r;
+		uint L = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x, TexCoord.y+xyzFrac.y, coordZ, 1.0) * mtx;
-		uint A = texture(intensityVol, vx.xyz).r;
+		uint A = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x, TexCoord.y-xyzFrac.y, coordZ, 1.0) * mtx;
-		uint P = texture(intensityVol, vx.xyz).r;
+		uint P = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzFrac.z, 1.0) * mtx;
-		uint S = texture(intensityVol, vx.xyz).r;
+		uint S = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzFrac.z, 1.0) * mtx;
-		uint I = texture(intensityVol, vx.xyz).r;
+		uint I = uint(texture(intensityVol, vx.xyz).r);
 		if ((idx == R) && (idx == L) && (idx == A) && (idx == P) && (idx == S) && (idx == I))
 			return;
 	}
