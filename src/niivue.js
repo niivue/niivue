@@ -1710,10 +1710,11 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
  * @param {number} y y coordinate of the voxel
  * @param {number} z z coordinate of the voxel
  * @param {number} value number between 0 and 1, where 1 is full intensity and 0 is no intensity(black)
+ * @param {number} volume which volume should get changed
  * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
  */
-Niivue.prototype.setVoxel = function (x, y, z, value, frame4D = 0) {
-  this.volumes[0].setVoxel(x, y, z, value, frame4D);
+Niivue.prototype.setVoxel = function (x, y, z, value, volume, frame4D = 0) {
+  this.volumes[volume].setVoxel(x, y, z, value, frame4D);
   this.updateGLVolume();
 };
 

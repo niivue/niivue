@@ -3254,7 +3254,7 @@ NVImage.prototype.convertToIntensityValue = function (value) {
   if (value < 0 || value > 1) {
     throw new Error("value needs to be between 0 and 1");
   }
-  return (this.global_max > 252 ? this.global_max : 252) * value;
+  return this.global_max * value;
 };
 
 /**
