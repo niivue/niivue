@@ -1719,7 +1719,7 @@ Niivue.prototype.setVoxel = function (x, y, z, value, volume, frame4D = 0) {
 };
 
 /**
- * Sets the intesity of a specific voxel to a given value
+ * Sets the intensity of one or several voxels based on a single voxel and brush size
  * @param {number} x x coordinate of the voxel
  * @param {number} y y coordinate of the voxel
  * @param {number} z z coordinate of the voxel
@@ -1729,7 +1729,7 @@ Niivue.prototype.setVoxel = function (x, y, z, value, volume, frame4D = 0) {
  * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
  * @throws Will throw, if brush size is set to 0
  */
-Niivue.prototype.drawVoxels = function (
+Niivue.prototype.setVoxelsWithBrushSize = function (
   x,
   y,
   z,
@@ -1763,7 +1763,7 @@ Niivue.prototype.drawVoxels = function (
 };
 
 /**
- * Sets the intesity of a specific voxel to a given value
+ * Creates an array of voxels based on a given voxel and a brush size
  * @param {number} x x coordinate of the voxel
  * @param {number} y y coordinate of the voxel
  * @param {number} z z coordinate of the voxel
@@ -1771,6 +1771,8 @@ Niivue.prototype.drawVoxels = function (
  * @param {number} volume which volume should get changed
  * @param {number} [brushSize=1] size of the brush cannot be 0
  * @param {number} axCorSag 0 = Axial view, 1 = Coronal view, 2 = Sagittal view
+ * @returns an Array of Voxels
+ * @example getBrushSizeVoxelMapping(12,30,10,4,0)
  * @throws Will throw, if brush size is set to 0
  * @throws Will throw, if axCorSag is not equal to 0 or 1 or 2
  */
@@ -1795,7 +1797,7 @@ Niivue.prototype.getBrushSizeVoxelMapping = function (
   }
 
   const maxIncrease = Math.floor(brushSize / 2);
-  
+
   for (let i = -maxIncrease; i <= maxIncrease; i++) {
     for (let j = maxIncrease; j >= -maxIncrease; j--) {
       if (
