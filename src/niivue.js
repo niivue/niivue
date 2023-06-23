@@ -1719,6 +1719,114 @@ Niivue.prototype.setVoxel = function (x, y, z, value, volume, frame4D = 0) {
 };
 
 /**
+ * Sets the intesity of a specific voxel to a given value
+ * @param {number} x x coordinate of the voxel
+ * @param {number} y y coordinate of the voxel
+ * @param {number} z z coordinate of the voxel
+ * @param {number} value number between 0 and 1, where 1 is full intensity and 0 is no intensity(black)
+ * @param {number} volume which volume should get changed
+ * @param {number} [brushSize=1] size of the brush cannot be 0
+ * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
+ * @throws Will throw, if brush size is set to 0
+ */
+Niivue.prototype.drawVoxels = function (
+  x,
+  y,
+  z,
+  value,
+  volume,
+  brushSize = 1,
+  frame4D = 0
+) {
+  if (brushSize < 1) {
+    throw new Error("brushSize needs to be at least 1");
+  }
+
+  const sliceTile = this.inSliceTile(...this.mousePos);
+
+  if (sliceTile < 0) {
+    throw new Error("not a slice tile");
+  }
+
+  const axCorSag = this.screenSlices[sliceTile].axCorSag;
+  const voxelArray = this.getBrushSizeVoxelMapping(
+    x,
+    y,
+    z,
+    brushSize,
+    axCorSag
+  );
+  voxelArray.forEach((voxel) =>
+    this.volumes[volume].setVoxel(...voxel, value, frame4D)
+  );
+  this.updateGLVolume();
+};
+
+/**
+ * Sets the intesity of a specific voxel to a given value
+ * @param {number} x x coordinate of the voxel
+ * @param {number} y y coordinate of the voxel
+ * @param {number} z z coordinate of the voxel
+ * @param {number} value number between 0 and 1, where 1 is full intensity and 0 is no intensity(black)
+ * @param {number} volume which volume should get changed
+ * @param {number} [brushSize=1] size of the brush cannot be 0
+ * @param {number} axCorSag 0 = Axial view, 1 = Coronal view, 2 = Sagittal view
+ * @throws Will throw, if brush size is set to 0
+ * @throws Will throw, if axCorSag is not equal to 0 or 1 or 2
+ */
+Niivue.prototype.getBrushSizeVoxelMapping = function (
+  x,
+  y,
+  z,
+  brushSize,
+  axCorSag
+) {
+  if(axCorSag !== 0 && axCorSag !== 1 && axCorSag !== 2) {
+    throw new Error("axCorSag must either be 0 or 1 or 2")
+  }
+  if (brushSize < 1) {
+    throw new Error("brushSize needs to be at least 1");
+  }
+
+  const resultVoxels = [];
+
+  if (brushSize === 1) {
+    return [[x, y, z]];
+  }
+
+  const maxIncrease = Math.floor(brushSize / 2);
+  
+  for (let i = -maxIncrease; i <= maxIncrease; i++) {
+    for (let j = maxIncrease; j >= -maxIncrease; j--) {
+      if (
+        brushSize % 2 === 0 &&
+        (Math.abs(i) === maxIncrease || Math.abs(j) === maxIncrease)
+      ) {
+        if (Math.abs(i) === maxIncrease && Math.abs(j) === maxIncrease) {
+          continue;
+        }
+        if (Math.abs(i) === maxIncrease && Math.abs(j) === maxIncrease - 1) {
+          continue;
+        }
+        if (Math.abs(j) === maxIncrease && Math.abs(i) === maxIncrease - 1) {
+          continue;
+        }
+      }
+      if (axCorSag === 0) {
+        resultVoxels.push([x + i, y + j, z]);
+      }
+      if (axCorSag === 1) {
+        resultVoxels.push([x + i, y, z + j]);
+      }
+      if (axCorSag === 2) {
+        resultVoxels.push([x, y + i, z + j]);
+      }
+    }
+  }
+  return resultVoxels;
+};
+
+/**
  * Detect if display is using radiological or neurological convention.
  * @returns {boolean} radiological convention status
  * @example let rc = niivue.getRadiologicalConvention()
