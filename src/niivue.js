@@ -4581,7 +4581,11 @@ Niivue.prototype.updateGLVolume = function () {
  * @example niivue.getDescriptives(0);
  * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
-Niivue.prototype.getDescriptives = function (layer = 0, masks = []) {
+Niivue.prototype.getDescriptives = function (
+  layer = 0,
+  masks = [],
+  drawingIsMask = false
+) {
   let hdr = this.volumes[layer].hdr;
   let slope = hdr.scl_slope;
   if (isNaN(slope)) slope = 1;
@@ -4608,6 +4612,10 @@ Niivue.prototype.getDescriptives = function (layer = 0, masks = []) {
         if (imgMask[i] === 0 || isNaN(imgMask[i])) mask[i] = 0;
       } //for each voxel in mask
     } //for each mask
+  } else if (masks.length < 1 && drawingIsMask) {
+    for (let i = 0; i < nv; i++) {
+      if (this.drawBitmap[i] === 0 || isNaN(this.drawBitmap[i])) mask[i] = 0;
+    } //for each voxel in mask
   } //if masks
   //Welfords method
   //https://www.embeddedrelated.com/showarticle/785.php
@@ -4651,6 +4659,9 @@ Niivue.prototype.getDescriptives = function (layer = 0, masks = []) {
     mean: M,
     stdev: stdev,
     nvox: k,
+    volumeMM3: k * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3],
+    // volume also in milliliters
+    volumeML: k * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3] * 0.001,
     min: mn,
     max: mx,
     meanNot0: MNot0,
