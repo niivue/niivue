@@ -3243,6 +3243,7 @@ NVImage.prototype.setVoxel = function (x, y, z, value, frame4D = 0) {
   const i = vx + vol;
   const newValue = this.convertToIntensityValue(value);
   this.img[i] = newValue;
+  return i
 };
 
 /**

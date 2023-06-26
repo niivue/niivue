@@ -69,6 +69,7 @@ import {
   DRAG_MODE,
   DEFAULT_OPTIONS,
 } from "./nvdocument.js";
+import Stack from "./stack.js";
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
@@ -113,6 +114,18 @@ const RIGHT_MOUSE_BUTTON = 2;
 /**
  * Contains pixel amount for each drawing from left, top, its width and height
  * @typedef {number[]} leftTopWidthHeight
+ */
+
+/** 
+ * @typedef {{volume: number, voxelChanges: new Set<valueOfvoxelChangesAtIndex>() }} voxelChangesOnVolume
+ */
+
+/** 
+ * @typedef {{index: number, value: number, voxel: voxel}} valueOfvoxelChangesAtIndex
+ */
+
+/**
+ * @typedef {[number, number, number]} voxel
  */
 
 /**
@@ -333,6 +346,22 @@ export function Niivue(options = {}) {
       Frag: fragMeshMatcapShader,
     },
   ];
+
+  // Initialization of stacks
+  /**
+   * @type {import('./stack.js').Stack}
+   */
+  this.undoStack = new Stack()
+
+  /**
+   * @type {import('./stack.js').Stack}
+   */
+  this.redoStack = new Stack()
+
+  /**
+   * @type {voxelChangesOnVolume[]}
+   */
+  this.bufferStack = [];
 
   // Event listeners
 
@@ -951,6 +980,12 @@ Niivue.prototype.mouseUpListener = function () {
     ]);
     this.onContrastDragRelease({ fracStart, fracEnd, volIdx: 0 });
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+  }
+  if(this.bufferStack.length > 0) {
+    if(this.redoStack.peek()) {
+      this.redoStack.clear()
+    }
+    this.undoStack.push(this.bufferStack)
   }
   this.drawScene();
 };
@@ -1704,6 +1739,23 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
   this.updateGLVolume();
 };
 
+Niivue.prototype.addElementToBuffer = function(x,y,z,index,volume, value) {
+  const indexOfElement = this.bufferStack.findIndex(el => el.volume === volume)
+
+  if(indexOfElement >= 0) {
+    const newVoxelChange = {index, value, voxel: [x,y,z]}
+    const indexOfVoxelChange = this.bufferStack[indexOfElement].voxelChanges.findIndex(change => change.index === index)
+    if(indexOfVoxelChange >= 0) {
+      return
+    } else {
+      this.bufferStack[indexOfElement].voxelChanges.push(newVoxelChange)
+    }
+  } else {
+    const newElement = {volume, voxelChanges: [{index, value, voxel:[x,y,z]}]}
+    this.bufferStack.push(newElement)
+  }
+}
+
 /**
  * Sets the intesity of a specific voxel to a given value
  * @param {number} x x coordinate of the voxel
@@ -1714,8 +1766,8 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
  * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
  */
 Niivue.prototype.setVoxel = function (x, y, z, value, volume, frame4D = 0) {
-  this.volumes[volume].setVoxel(x, y, z, value, frame4D);
-  this.updateGLVolume();
+  const index = this.volumes[volume].setVoxel(x, y, z, value, frame4D);
+  this.addElementToBuffer(x,y,z,index,volume,value)
 };
 
 /**
@@ -1757,7 +1809,7 @@ Niivue.prototype.setVoxelsWithBrushSize = function (
     axCorSag
   );
   voxelArray.forEach((voxel) =>
-    this.volumes[volume].setVoxel(...voxel, value, frame4D)
+    this.setVoxel(...voxel, value, volume, frame4D)
   );
   this.updateGLVolume();
 };
