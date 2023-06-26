@@ -105,7 +105,7 @@
   }
   document.getElementById("info").addEventListener("click", doInfo);
   function doInfo() {
-    let obj = nv1.getDescriptives(0);
+    let obj = nv1.getDescriptives(0, [], true);
     let str = JSON.stringify(obj, null, 2)
     alert(str);
   }
