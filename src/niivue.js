@@ -116,16 +116,16 @@ const RIGHT_MOUSE_BUTTON = 2;
  * @typedef {number[]} leftTopWidthHeight
  */
 
-/** 
- * @typedef {{volume: number, voxelChanges: new Set<valueOfvoxelChangesAtIndex>() }} voxelChangesOnVolume
- */
-
-/** 
- * @typedef {{index: number, value: number, voxel: voxel}} valueOfvoxelChangesAtIndex
+/**
+ * @typedef {Object} indexVoxelEdit
+ * @property {number} index index of the voxel in the image
+ * @property {number} value the old value of the edited voxel
  */
 
 /**
- * @typedef {[number, number, number]} voxel
+ * @typedef {Object} volumeVoxelEdit
+ * @property {number} volume the volume of the image
+ * @property {indexVoxelEdit[]} voxelEdits list of all voxel changes of this volume
  */
 
 /**
@@ -349,17 +349,17 @@ export function Niivue(options = {}) {
 
   // Initialization of stacks
   /**
-   * @type {import('./stack.js').Stack}
+   * @type {import('./stack.js').Stack<volumeVoxelEdit[]>}
    */
-  this.undoStack = new Stack()
+  this.undoStack = new Stack();
 
   /**
-   * @type {import('./stack.js').Stack}
+   * @type {import('./stack.js').Stack<volumeVoxelEdit[]>}
    */
-  this.redoStack = new Stack()
+  this.redoStack = new Stack();
 
   /**
-   * @type {voxelChangesOnVolume[]}
+   * @type {volumeVoxelEdit[]}
    */
   this.bufferStack = [];
 
@@ -981,11 +981,12 @@ Niivue.prototype.mouseUpListener = function () {
     this.onContrastDragRelease({ fracStart, fracEnd, volIdx: 0 });
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
-  if(this.bufferStack.length > 0) {
-    if(this.redoStack.peek()) {
-      this.redoStack.clear()
+  if (this.bufferStack.length > 0) {
+    if (this.redoStack.peek()) {
+      this.redoStack.clear();
     }
-    this.undoStack.push(this.bufferStack)
+    this.undoStack.push([...this.bufferStack]);
+    this.bufferStack.length = 0;
   }
   this.drawScene();
 };
@@ -1738,23 +1739,87 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
   this.opts.isSliceMM = isSliceMM;
   this.updateGLVolume();
 };
+/**
+ * 
+ * @param {number} volume the volume of the image
+ * @param {number} index the index of the change inside the image
+ * @param {number} value the value that got changed
+ * @returns 
+ */
+Niivue.prototype.addElementToBuffer = function (volume, index, value) {
+  const indexOfElement = this.bufferStack.findIndex(
+    (el) => el.volume === volume
+  );
 
-Niivue.prototype.addElementToBuffer = function(x,y,z,index,volume, value) {
-  const indexOfElement = this.bufferStack.findIndex(el => el.volume === volume)
+  // The volume already exists in the buffer
+  if (indexOfElement >= 0) {
+    /** @type {indexVoxelEdit}*/
+    const newVoxelChange = { index, value };
 
-  if(indexOfElement >= 0) {
-    const newVoxelChange = {index, value, voxel: [x,y,z]}
-    const indexOfVoxelChange = this.bufferStack[indexOfElement].voxelChanges.findIndex(change => change.index === index)
-    if(indexOfVoxelChange >= 0) {
-      return
+    const indexOfVoxelChange = this.bufferStack[
+      indexOfElement
+    ].voxelEdits.findIndex((edit) => edit.index === index);
+
+    // the index and value does already exist in the list
+    if (indexOfVoxelChange >= 0) {
+      return;
     } else {
-      this.bufferStack[indexOfElement].voxelChanges.push(newVoxelChange)
+      this.bufferStack[indexOfElement].voxelEdits.push(newVoxelChange);
     }
+    // volume does not exist in buffer -> add it to buffer
   } else {
-    const newElement = {volume, voxelChanges: [{index, value, voxel:[x,y,z]}]}
-    this.bufferStack.push(newElement)
+    /**
+     * @type {volumeVoxelEdit}
+     */
+    const newElement = { volume, voxelEdits: [{ index, value }] };
+
+    this.bufferStack.push(newElement);
   }
-}
+};
+
+Niivue.prototype.undoLastVoxelEdit = function () {
+  if (!this.undoStack.peek()) {
+    throw new Error("There are no changes to undo");
+  }
+  const lastEdits = this.undoStack.pop();
+
+  lastEdits.forEach((volumeEdit) =>
+    volumeEdit.voxelEdits.forEach(
+      (edit) =>
+        (edit.value = this.volumes[volumeEdit.volume].setVoxelValueOnIndex(
+          edit.index,
+          edit.value
+        ))
+    )
+  );
+
+  this.redoStack.push(lastEdits);
+
+  this.updateGLVolume();
+};
+
+
+Niivue.prototype.redoLastVoxelEditUndo = function () {
+  if (!this.redoStack.peek()) {
+    throw new Error("There are no changes to redo");
+  }
+
+  const lastRedo = this.redoStack.pop();
+
+  lastRedo.forEach((volumeRedo) =>
+    volumeRedo.voxelEdits.forEach(
+      (edit) =>
+        (edit.value = this.volumes[volumeRedo.volume].setVoxelValueOnIndex(
+          edit.index,
+          edit.value
+        ))
+    )
+  );
+
+  this.undoStack.push(lastRedo);
+
+  this.updateGLVolume();
+};
 
 /**
  * Sets the intesity of a specific voxel to a given value
@@ -1766,8 +1831,17 @@ Niivue.prototype.addElementToBuffer = function(x,y,z,index,volume, value) {
  * @param {number} [frame4D=0] volume displayed, 0 indexed, must be less than nFrame4D
  */
 Niivue.prototype.setVoxel = function (x, y, z, value, volume, frame4D = 0) {
-  const index = this.volumes[volume].setVoxel(x, y, z, value, frame4D);
-  this.addElementToBuffer(x,y,z,index,volume,value)
+  const { index, oldValue } = this.volumes[volume].setVoxel(
+    x,
+    y,
+    z,
+    value,
+    frame4D
+  );
+
+  this.addElementToBuffer(volume, index, oldValue);
+
+  this.updateGLVolume();
 };
 
 /**
@@ -1835,8 +1909,8 @@ Niivue.prototype.getBrushSizeVoxelMapping = function (
   brushSize,
   axCorSag
 ) {
-  if(axCorSag !== 0 && axCorSag !== 1 && axCorSag !== 2) {
-    throw new Error("axCorSag must either be 0 or 1 or 2")
+  if (axCorSag !== 0 && axCorSag !== 1 && axCorSag !== 2) {
+    throw new Error("axCorSag must either be 0 or 1 or 2");
   }
   if (brushSize < 1) {
     throw new Error("brushSize needs to be at least 1");

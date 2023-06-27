@@ -1,10 +1,10 @@
-
-/** 
+/**
+ * @template A
  * @typedef {Object} Stack
- * @property {(element: any) => void} push push an element on top of the stack
- * @property {() => any} pop returns the top most element from the stack and remove it from the stack
- * @property {() => any} peek returns the top most element from the stack without removing it from the stack
- * @property {() => any} clear clears the stack
+ * @property {(element: A) => void} push push an element on top of the stack
+ * @property {() => A} pop returns the top most element from the stack and remove it from the stack
+ * @property {() => A} peek returns the top most element from the stack without removing it from the stack
+ * @property {() => void} clear clears the stack
  */
 
 /**
@@ -13,7 +13,6 @@
  * @type {Stack}
  */
 class Stack {
-
   /**
    * Create stack
    */
@@ -23,7 +22,7 @@ class Stack {
 
   /**
    * @property {Function} push push an element on top of the stack
-   * @param {*} element 
+   * @param {*} element
    */
   push(element) {
     this.stack.push(element);
@@ -36,14 +35,14 @@ class Stack {
    */
   pop() {
     if (this.stack.length == 0) {
-      throw new Error('stack is empty')
+      throw new Error("stack is empty");
     }
     return this.stack.pop();
   }
 
   /**
    * @property {Function} peek returns the top most element from the stack without removing it from the stack
-   * @returns {*} the top most element from the stack
+   * @returns {*} the top most element from the stack or undefined if there is no element in the stack
    */
   peek() {
     return this.stack[this.stack.length - 1];

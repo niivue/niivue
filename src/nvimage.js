@@ -3239,11 +3239,22 @@ NVImage.prototype.setVoxel = function (x, y, z, value, frame4D = 0) {
   //   );
   // }
   // TODO: Check until here
+
   const vol = frame4D * nx * ny * nz;
   const i = vx + vol;
+
+  const oldValue = this.img[i];
+
   const newValue = this.convertToIntensityValue(value);
   this.img[i] = newValue;
-  return i
+
+  return { index: i, oldValue };
+};
+
+NVImage.prototype.setVoxelValueOnIndex = function (index, value) {
+  const oldValue = this.img[index];
+  this.img[index] = value;
+  return oldValue;
 };
 
 /**
