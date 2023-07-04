@@ -3920,8 +3920,11 @@ NVMesh.readMesh = async function (
   } //is fibers
   if (ext === "GII") {
     obj = this.readGII(buffer);
-  } else if (ext === "MZ3") obj = this.readMZ3(buffer);
-  else if (ext === "ASC") obj = this.readASC(buffer);
+  } else if (ext === "MZ3") {
+    obj = this.readMZ3(buffer);
+    if (obj.positions === null)
+      console.log("MZ3 does not have positions (statistical overlay?)");
+  } else if (ext === "ASC") obj = this.readASC(buffer);
   else if (ext === "DFS") obj = this.readDFS(buffer);
   else if (ext === "BYU" || ext === "G") obj = this.readGEO(buffer);
   else if (ext === "GEO") obj = this.readGEO(buffer, true);
