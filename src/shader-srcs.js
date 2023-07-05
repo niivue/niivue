@@ -454,11 +454,13 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
+uniform mat4 normMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float drawOpacity;
 uniform highp sampler3D drawing, gradient;
 uniform highp sampler2D colormap;
+uniform highp sampler2D matCap;
 uniform float renderDrawAmbientOcclusion;
 uniform float gradientAmount;
 in vec3 vColor;
@@ -467,12 +469,13 @@ out vec4 fColor;
   kRenderFunc +
   kRenderInit +
   `
+	float startPos = samplePos.a;
 	vec4 gradAcc = vec4(0.0,0.0,0.0,0.0);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
-		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
 			vec4 grad = texture(gradient, samplePos.xyz);
+			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
 			gradAcc.rgb += (1.0 - gradAcc.a) * grad.a * grad.rgb;
 			gradAcc.a += (1.0 - gradAcc.a) * grad.a;
 			if (firstHit.a > lenNoClip)
@@ -484,22 +487,18 @@ out vec4 fColor;
 			if ( colAcc.a > earlyTermination )
 				break;
 		}
+		samplePos += deltaDir; //advance ray position
 	}
-	if (gradientAmount > 0.0) {
-		float ambient = 1.0 - (gradientAmount * 0.25);
-		float diffuse = gradientAmount;
-		float specular = gradientAmount;
-		float shininess = 10.0;
-		vec3 light_pos = vec3(-1.0,0.0,1.0);
-		vec3 lightPosition = normalize(light_pos) ;
-		vec3 gradSample = normalize(gradAcc.rgb*2.0 - 1.0);
-		float lightNormDot = dot(gradSample.rgb, lightPosition); //with respect to light location
-		vec3 a = colAcc.rgb * ambient;
-		vec3 d = max(lightNormDot, 0.0) * colAcc.rgb * diffuse;
-		vec3 lightdir = normalize(dir);
-		float s =  max(specular * pow(max(dot(reflect(lightPosition, gradSample.rgb), lightdir), 0.0), shininess), 0.0);
-		s = max(s, 0.0);
-		colAcc.rgb = a + s;
+	if ((clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < (2.0 * deltaDir.a))) {
+		//do not shade clipped plane
+	} else {
+		vec3 n = mat3(normMtx) * gradAcc.rgb;
+		n.y = - n.y;
+		vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb;
+		//modulation darkens image, so 'brighten' modulates
+		float brighten = 1.0 + (gradientAmount/2.0);
+		mc = mix(colAcc.rgb, mc, gradientAmount);
+		colAcc.rgb *= mc * brighten;
 	}
 ` +
   kRenderTail;

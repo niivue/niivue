@@ -2205,6 +2205,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
   this.refreshLayers(this.volumes[volIndex], 0, this.volumes.length);
   this.drawScene();
 };
+
 /**
  * save voxel-based image to disk
  * @param {string} fnm filename of NIfTI image to create
@@ -3835,11 +3836,16 @@ Niivue.prototype.createRandomDrawing = function () {
   this.refreshDrawing(true);
 };*/
 
-// not included in public docs
-//release GPU and CPU memory: make sure you have saved any changes before calling this!
+/**
+ * close drawing: make sure you have saved any changes before calling this!
+ * @example niivue.closeDrawing();
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
+ */
 Niivue.prototype.closeDrawing = function () {
+  this.drawClearAllUndoBitmaps();
   this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
   this.drawBitmap = null;
+  this.drawScene();
 };
 
 // not included in public docs
@@ -4283,7 +4289,6 @@ Niivue.prototype.initRenderShader = async function (
   this.gl.uniform1i(shader.uniforms["volume"], 0);
   this.gl.uniform1i(shader.uniforms["colormap"], 1);
   this.gl.uniform1i(shader.uniforms["overlay"], 2);
-  this.gl.uniform1i(shader.uniforms["gradient"], 5);
   this.gl.uniform1i(shader.uniforms["drawing"], 7);
   this.gl.uniform1f(
     shader.uniforms["renderDrawAmbientOcclusion"],
@@ -4480,7 +4485,10 @@ Niivue.prototype.init = async function () {
     fragRenderGradientShader
   );
   this.initRenderShader(this.renderGradientShader, 0.3);
-  //this.renderShader = this.renderGradientShader;
+  this.gl.uniform1i(this.renderGradientShader.uniforms["matCap"], 5);
+  this.gl.uniform1i(this.renderGradientShader.uniforms["gradient"], 6);
+  this.renderGradientShader.normLoc =
+    this.renderGradientShader.uniforms["normMtx"];
   this.renderShader = this.renderVolumeShader;
   // colorbar shader
   this.colorbarShader = new Shader(
@@ -4636,10 +4644,9 @@ Niivue.prototype.gradientGL = function (hdr) {
   gl.bindVertexArray(vao2);
   gl.activeTexture(gl.TEXTURE0);
   if (this.gradientTexture !== null) gl.deleteTexture(this.gradientTexture);
-  //this.gradientTexture = this.bindBlankGL(hdr);
   this.gradientTexture = this.rgbaTex(
     this.gradientTexture,
-    this.gl.TEXTURE5,
+    this.gl.TEXTURE6,
     hdr.dims
   );
   for (let i = 0; i < hdr.dims[3] - 1; i++) {
@@ -4656,16 +4663,11 @@ Niivue.prototype.gradientGL = function (hdr) {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3);
   }
-
   gl.deleteFramebuffer(fb);
   gl.deleteTexture(tempTex3D);
   gl.deleteBuffer(vbo2);
-
-  //gl.activeTexture(gl.TEXTURE0);
-  //gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture);
-  //return to volume rendering shader
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  return; //borg
+  return;
 }; // gradientGL()
 /**
  * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
@@ -7135,9 +7137,7 @@ Niivue.prototype.calculateMvpMatrix = function (
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
 }; // calculateMvpMatrix()
 
-// not included in public docs
-// calculate the near-far direction from the camera's perspective
-Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
+Niivue.prototype.calculateModelMatrix = function (azimuth, elevation) {
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
   //push the model away from the camera so camera not inside model
@@ -7149,6 +7149,13 @@ Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
     let oblique = mat.mat4.clone(this.back.obliqueRAS);
     mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
   }
+  return modelMatrix;
+};
+
+// not included in public docs
+// calculate the near-far direction from the camera's perspective
+Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
+  const modelMatrix = this.calculateModelMatrix(azimuth, elevation);
   //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
   let projectionMatrix = mat.mat4.fromValues(
     1,
@@ -7673,11 +7680,14 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
       this.backgroundMasksOverlays
     );
     if (this.gradientTextureAmount > 0.0) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture);
-      gl.activeTexture(gl.TEXTURE5);
+      gl.activeTexture(gl.TEXTURE6);
       gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture);
-      gl.uniform1i(shader.uniforms["gradient"], 5);
+      let modelMatrix = this.calculateModelMatrix(azimuth, elevation);
+      let iModelMatrix = mat.mat4.create();
+      mat.mat4.invert(iModelMatrix, modelMatrix);
+      let normalMatrix = mat.mat4.create();
+      mat.mat4.transpose(normalMatrix, iModelMatrix);
+      gl.uniformMatrix4fv(shader.normLoc, false, normalMatrix);
     }
     if (this.drawBitmap && this.drawBitmap.length > 8)
       gl.uniform1f(shader.drawOpacityLoc, this.drawOpacity);

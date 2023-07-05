@@ -17,9 +17,8 @@ The term Textures refers to bitmap images that are stored on the graphics card. 
 - TEXTURE2: Overlay volumes. This 3D RGBA bitmap stores the blended values of all loaded overlays.
 - TEXTURE3: Font. This is a 2D bitmap that stores the [multi-channel signed distance field typeface](https://github.com/Chlumsky/msdfgen).
 - TEXTURE4: Thumbnail. This is a 2D bitmap that can be rapidly displayed. When a user clicks on the thumbnail the (large and slow) volumes and meshes will be loaded.
-- TEXTURE5: Matcap. This is a 2D bitmap used for exclusively by the matcap mesh shader (transiently enabled with the shader, so available for other functions).
-- TEXTURE5: Temporary 2D texture: this is used to blend multiple overlays into a single texture (TEXTURE2).
-- TEXTURE6: Temporary 3D texture: this is used for compute shaders to reorient volumes (e.g. reformat an image from ASR to LIP orientation).
+- TEXTURE5: Matcap. This is a 2D bitmap used for exclusively by the matcap mesh shader (transiently enabled with the shader, so available for other functions). It is also used as a temporary 2D texture: this is used to blend multiple overlays into a single texture (TEXTURE2). 
+- TEXTURE6: Temporary 3D texture: this is used for compute shaders to reorient volumes (e.g. reformat an image from ASR to LIP orientation). It is also used as for volume rendering shaders that use a gradient map for lighting.
 - TEXTURE7: Drawing texture: this stores any active drawing, having the same resolution as TEXTURE0.
 
 ##### Color Schemes
