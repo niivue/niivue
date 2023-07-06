@@ -496,10 +496,11 @@ out vec4 fColor;
 		vec3 n = mat3(normMtx) * gradAcc.rgb;
 		n.y = - n.y;
 		vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb;
-		//modulation darkens image, so 'brighten' modulates
-		float brighten = 1.0 + (gradientAmount/2.0);
-		mc = mix(colAcc.rgb, mc, gradientAmount);
-		colAcc.rgb *= mc * brighten;
+		//modulation always darkens image, as all colors are equal or darker than input
+		// so we 'brighten' to compensave
+		float brighten = 1.5;
+		mc *= colAcc.rgb * brighten;
+		colAcc.rgb = mix(colAcc.rgb, mc, gradientAmount);
 	}
 ` +
   kRenderTail;
