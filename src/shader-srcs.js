@@ -274,7 +274,8 @@ const kRenderInit = `void main() {
 	samplePos += deltaDir * ran; //jitter ray
 `;
 
-const kRenderTail = `if (firstHit.a < len)
+const kRenderTail = `
+	if (firstHit.a < len)
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
@@ -383,8 +384,8 @@ const kRenderTail = `if (firstHit.a < len)
 		return;
 	}
 
-	//if (overFirstHit.a < len)
-	gl_FragDepth = frac2ndc(overFirstHit.xyz);
+	if (overFirstHit.a < firstHit.a)
+		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
 	if (fColor.a <= 0.0)
