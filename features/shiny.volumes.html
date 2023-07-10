@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="renderMode">Volume Render Mode</label>
+      <select id="renderMode">
+        <option value="0">matte</option>
+        <option value="0.3">low</option>
+        <option value="0.6" selected>medium</option>
+        <option value="1.0">high</option>
+      </select>
+      <label for="matCaps">Choose a MatCap:</label>
+      <select id="matCaps">
+        <option value="Shiny">Shiny</option>
+        <option value="Cortex">Cortex</option>
+        <option value="Cream">Cream</option>
+        <option value="Fuzzy">Fuzzy</option>
+        <option value="Peach">Peach</option>
+        <option value="Plastic">Plastic</option>
+      </select>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
+      import * as niivue from "./niivue.es.js";
+      document.getElementById("renderMode").onchange = function () {
+        nv1.setVolumeRenderIllumination(this.value);
+      };
+      document.getElementById("matCaps").onchange = function () {
+        let matCapName = document.getElementById("matCaps").value;
+        nv1.loadMatCapTexture("../matcaps/" + matCapName + ".jpg");
+      };
+      var volumeList1 = [
+        { url: "../images/mni152.nii.gz", cal_min: 30, cal_max: 80 },
+        {url: "../images/spmMotor.nii.gz",cal_min: 3,cal_max: 8,colormap: "warm"}
+      ];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      let defaults = {
+        loadingText: "there are no images",
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        logging: true,
+        limitFrames4D: 3,
+        onLocationChange: handleLocationChange,
+      };
+      var nv1 = new niivue.Niivue(defaults);
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeRender);
+      nv1.opts.multiplanarForceRender = true;
+      nv1.setVolumeRenderIllumination(0.6);
+      nv1.setClipPlane([0.3, 180, 20]);
+      await nv1.loadVolumes(volumeList1);
+    </script>
+  </body>
+</html>

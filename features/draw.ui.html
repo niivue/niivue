@@ -15,6 +15,7 @@
         </button>
         <div class="dropdown-content">
           <a class="viewBtn" id="SaveDraw" accesskey="s">Save Drawing ^S</a>
+          <a class="viewBtn" id="CloseDraw">Close Drawing</a>
           <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
           <a class="viewBtn" id="ShowHeader">Show Header</a>
           <a class="linker" href="https://github.com/niivue/niivue">About</a>
@@ -216,6 +217,10 @@
     }
     if (event.target.id === "SaveDraw") {
       nv1.saveImage("draw.nii", true);
+      return;
+    }
+    if (event.target.id === "CloseDraw") {
+      nv1.closeDrawing();
       return;
     }
     if (event.target.id === "SaveBitmap") {
