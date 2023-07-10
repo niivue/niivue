@@ -10,14 +10,25 @@
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <textarea id="scriptText" name="customText" rows="8" cols="60">
-nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.opts.backColor[0]&#10;nv1.updateGLVolume()&#10;</textarea
-      >
-      <button id="scriptButton">run script</button>
+      <label for="slide">Custom</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        class="slider"
+        id="slide"
+      />
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
+    <footer>
+      <textarea id="scriptText" name="customText" rows="8" cols="60">
+nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.opts.backColor[0]&#10;nv1.drawScene()&#10;document.getElementById("slide").onchange = function(){&#10;&nbsp;nv1.opts.backColor[1] = this.value / 100;&#10;&nbsp;nv1.drawScene();&#10;};&#10;</textarea
+      >
+      <button id="scriptButton">run script</button>
+    </footer>
     <script type="module" async>
       import * as niivue from "./niivue.es.js";
       document
@@ -28,9 +39,8 @@ nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.
         val && eval(val.value);
       }
       var volumeList1 = [
-        // first item is background image
         {
-          url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: "../images/mni152.nii.gz", 
           colormap: "gray",
           opacity: 1,
           visible: true,
@@ -50,20 +60,8 @@ nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.
         },
         { url: "../images/motor_4t95mesh.rh.mz3", rgba255: [0, 0, 255, 255] },
       ]);
-      nv1.setClipPlane([-0.1, 270, 0]);
-      let cmaps = nv1.meshShaderNames();
-      let cmapEl = document.getElementById("shaders");
-      for (let i = 0; i < cmaps.length; i++) {
-        let btn = document.createElement("button");
-        btn.innerHTML = cmaps[i];
-        btn.onclick = function () {
-          nv1.setMeshShader(cmaps[i]);
-        };
-        cmapEl.appendChild(btn);
-      }
-      function customShader() {
-        nv1.setCustomMeshShader(document.getElementById("customText").value);
-      }
+      nv1.setClipPlane([0.1, 0, 145]);
+      nv1.setRenderAzimuthElevation(100, 25);
     </script>
   </body>
 </html>

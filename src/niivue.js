@@ -11,7 +11,11 @@ import {
   vertLineShader,
   fragRectShader,
 } from "./shader-srcs.js";
-import { vertRenderShader, fragRenderShader } from "./shader-srcs.js";
+import {
+  vertRenderShader,
+  fragRenderShader,
+  fragRenderGradientShader,
+} from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
   vertFontShader,
@@ -48,6 +52,9 @@ import {
   vertSurfaceShader,
   fragSurfaceShader,
   fragVolumePickingShader,
+  blurVertShader,
+  blurFragShader,
+  sobelFragShader,
 } from "./shader-srcs.js";
 import { Subject } from "rxjs";
 import { orientCube } from "./orientCube.js";
@@ -180,6 +187,8 @@ export function Niivue(options = {}) {
   this.colormapTexture = null;
   this.colormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null;
+  this.gradientTexture = null; //3D texture for volume rnedering lighting
+  this.gradientTextureAmount = 0.0;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawUndoBitmaps = [];
   this.drawLut = cmapper.makeDrawLut("$itksnap");
@@ -197,6 +206,8 @@ export function Niivue(options = {}) {
   this.orientCubeShaderVAO = null;
   this.rectShader = null;
   this.renderShader = null;
+  this.renderGradientShader = null;
+  this.renderVolumeShader = null;
   this.pickingMeshShader = null;
   this.pickingImageShader = null;
   this.colorbarShader = null;
@@ -215,6 +226,8 @@ export function Niivue(options = {}) {
   this.orientShaderF = null;
   this.orientShaderRGBU = null;
   this.surfaceShader = null;
+  this.blurShader = null;
+  this.sobelShader = null;
   this.genericVAO = null; //used for 2D slices, 2D lines, 2D Fonts
   this.unusedVAO = null;
   this.crosshairs3D = null;
@@ -2192,6 +2205,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
   this.refreshLayers(this.volumes[volIndex], 0, this.volumes.length);
   this.drawScene();
 };
+
 /**
  * save voxel-based image to disk
  * @param {string} fnm filename of NIfTI image to create
@@ -2810,6 +2824,17 @@ Niivue.prototype.setClipPlaneColor = function (color) {
   );
   this.drawScene();
 }; // setClipPlaneColor()
+
+Niivue.prototype.setVolumeRenderIllumination = function (gradientAmount = 0.0) {
+  this.renderShader = this.renderVolumeShader;
+  if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader;
+  this.initRenderShader(this.renderShader, gradientAmount);
+  this.renderShader.use(this.gl);
+  this.setClipPlaneColor(this.opts.clipPlaneColor);
+  this.gradientTextureAmount = gradientAmount;
+  this.refreshLayers(this.volumes[0], 0, this.volumes.length);
+  this.drawScene();
+};
 
 // not included in public docs.
 // note: marked for removal at some point in the future (this just makes a test sphere)
@@ -3811,11 +3836,16 @@ Niivue.prototype.createRandomDrawing = function () {
   this.refreshDrawing(true);
 };*/
 
-// not included in public docs
-//release GPU and CPU memory: make sure you have saved any changes before calling this!
+/**
+ * close drawing: make sure you have saved any changes before calling this!
+ * @example niivue.closeDrawing();
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
+ */
 Niivue.prototype.closeDrawing = function () {
+  this.drawClearAllUndoBitmaps();
   this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true);
   this.drawBitmap = null;
+  this.drawScene();
 };
 
 // not included in public docs
@@ -4248,6 +4278,31 @@ Niivue.prototype.meshShaderNames = function (sort = true) {
 };
 
 // not included in public docs
+Niivue.prototype.initRenderShader = async function (
+  shader,
+  gradientAmount = 0.0
+) {
+  shader.use(this.gl);
+  shader.drawOpacityLoc = shader.uniforms["drawOpacity"];
+  shader.backgroundMasksOverlaysLoc =
+    shader.uniforms["backgroundMasksOverlays"];
+  this.gl.uniform1i(shader.uniforms["volume"], 0);
+  this.gl.uniform1i(shader.uniforms["colormap"], 1);
+  this.gl.uniform1i(shader.uniforms["overlay"], 2);
+  this.gl.uniform1i(shader.uniforms["drawing"], 7);
+  this.gl.uniform1f(
+    shader.uniforms["renderDrawAmbientOcclusion"],
+    this.renderDrawAmbientOcclusion
+  );
+  shader.mvpLoc = shader.uniforms["mvpMtx"];
+  shader.clipPlaneClrLoc = shader.uniforms["clipPlaneColor"];
+  shader.mvpMatRASLoc = shader.uniforms["matRAS"];
+  shader.rayDirLoc = shader.uniforms["rayDir"];
+  shader.clipPlaneLoc = shader.uniforms["clipPlane"];
+  this.gl.uniform1f(shader.uniforms["gradientAmount"], gradientAmount);
+};
+
+// not included in public docs
 Niivue.prototype.init = async function () {
   //initial setup: only at the startup of the component
   // print debug info (gpu vendor and renderer)
@@ -4418,25 +4473,23 @@ Niivue.prototype.init = async function () {
   this.lineShader.thicknessLoc = this.lineShader.uniforms["thickness"];
   this.lineShader.startXYendXYLoc = this.lineShader.uniforms["startXYendXY"];
   // render shader (3D)
-  this.renderShader = new Shader(this.gl, vertRenderShader, fragRenderShader);
-  this.renderShader.use(this.gl);
-  this.renderShader.drawOpacityLoc = this.renderShader.uniforms["drawOpacity"];
-  this.renderShader.backgroundMasksOverlaysLoc =
-    this.renderShader.uniforms["backgroundMasksOverlays"];
-  this.gl.uniform1i(this.renderShader.uniforms["volume"], 0);
-  this.gl.uniform1i(this.renderShader.uniforms["colormap"], 1);
-  this.gl.uniform1i(this.renderShader.uniforms["overlay"], 2);
-  this.gl.uniform1i(this.renderShader.uniforms["drawing"], 7);
-  this.gl.uniform1f(
-    this.renderShader.uniforms["renderDrawAmbientOcclusion"],
-    this.renderDrawAmbientOcclusion
+  this.renderVolumeShader = new Shader(
+    this.gl,
+    vertRenderShader,
+    fragRenderShader
   );
-  this.renderShader.mvpLoc = this.renderShader.uniforms["mvpMtx"];
-  this.renderShader.clipPlaneClrLoc =
-    this.renderShader.uniforms["clipPlaneColor"];
-  this.renderShader.mvpMatRASLoc = this.renderShader.uniforms["matRAS"];
-  this.renderShader.rayDirLoc = this.renderShader.uniforms["rayDir"];
-  this.renderShader.clipPlaneLoc = this.renderShader.uniforms["clipPlane"];
+  this.initRenderShader(this.renderVolumeShader);
+  this.renderGradientShader = new Shader(
+    this.gl,
+    vertRenderShader,
+    fragRenderGradientShader
+  );
+  this.initRenderShader(this.renderGradientShader, 0.3);
+  this.gl.uniform1i(this.renderGradientShader.uniforms["matCap"], 5);
+  this.gl.uniform1i(this.renderGradientShader.uniforms["gradient"], 6);
+  this.renderGradientShader.normLoc =
+    this.renderGradientShader.uniforms["normMtx"];
+  this.renderShader = this.renderVolumeShader;
   // colorbar shader
   this.colorbarShader = new Shader(
     this.gl,
@@ -4450,6 +4503,8 @@ Niivue.prototype.init = async function () {
   this.colorbarShader.leftTopWidthHeightLoc =
     this.colorbarShader.uniforms["leftTopWidthHeight"];
   this.gl.uniform1i(this.colorbarShader.uniforms["colormap"], 1);
+  this.blurShader = new Shader(this.gl, blurVertShader, blurFragShader);
+  this.sobelShader = new Shader(this.gl, blurVertShader, sobelFragShader);
 
   this.growCutShader = new Shader(
     this.gl,
@@ -4536,12 +4591,91 @@ Niivue.prototype.init = async function () {
   return this;
 }; // init()
 
+Niivue.prototype.gradientGL = function (hdr) {
+  let gl = this.gl;
+  var faceStrip = [0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0];
+  var vao2 = gl.createVertexArray();
+  gl.bindVertexArray(vao2);
+  var vbo2 = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo2);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faceStrip), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  var fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.disable(gl.CULL_FACE);
+  gl.viewport(0, 0, hdr.dims[1], hdr.dims[2]);
+  gl.disable(gl.BLEND);
+  let tempTex3D = this.rgbaTex(null, this.gl.TEXTURE5, hdr.dims);
+  //tempTex3D = this.bindBlankGL(hdr);
+  let blurShader = this.blurShader;
+  blurShader.use(gl);
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture);
+
+  gl.uniform1i(blurShader.uniforms["intensityVol"], 0);
+  gl.uniform1f(blurShader.uniforms["dX"], 0.7 / hdr.dims[1]);
+  gl.uniform1f(blurShader.uniforms["dY"], 0.7 / hdr.dims[2]);
+  gl.uniform1f(blurShader.uniforms["dZ"], 0.7 / hdr.dims[3]);
+  gl.bindVertexArray(vao2);
+  for (let i = 0; i < hdr.dims[3] - 1; i++) {
+    var coordZ = (1 / hdr.dims[3]) * (i + 0.5);
+    gl.uniform1f(blurShader.uniforms["coordZ"], coordZ);
+    gl.framebufferTextureLayer(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      tempTex3D,
+      0,
+      i
+    );
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3);
+  }
+  let sobelShader = this.sobelShader;
+  sobelShader.use(gl);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_3D, tempTex3D); //input texture
+  gl.uniform1i(sobelShader.uniforms["intensityVol"], 1);
+  gl.uniform1f(sobelShader.uniforms["dX"], 0.7 / hdr.dims[1]);
+  gl.uniform1f(sobelShader.uniforms["dY"], 0.7 / hdr.dims[2]);
+  gl.uniform1f(sobelShader.uniforms["dZ"], 0.7 / hdr.dims[3]);
+  gl.uniform1f(sobelShader.uniforms["coordZ"], 0.5);
+  gl.bindVertexArray(vao2);
+  gl.activeTexture(gl.TEXTURE0);
+  if (this.gradientTexture !== null) gl.deleteTexture(this.gradientTexture);
+  this.gradientTexture = this.rgbaTex(
+    this.gradientTexture,
+    this.gl.TEXTURE6,
+    hdr.dims
+  );
+  for (let i = 0; i < hdr.dims[3] - 1; i++) {
+    var coordZ = (1 / hdr.dims[3]) * (i + 0.5);
+    gl.uniform1f(sobelShader.uniforms["coordZ"], coordZ);
+    //console.log(coordZ);
+    gl.framebufferTextureLayer(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      this.gradientTexture,
+      0,
+      i
+    );
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3);
+  }
+  gl.deleteFramebuffer(fb);
+  gl.deleteTexture(tempTex3D);
+  gl.deleteBuffer(vbo2);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return;
+}; // gradientGL()
 /**
  * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
  * @example
  * niivue = new Niivue()
  * niivue.updateGLVolume()
  */
+
 Niivue.prototype.updateGLVolume = function () {
   //load volume or change contrast
   let visibleLayers = 0;
@@ -5258,6 +5392,15 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
 
   this.gl.deleteFramebuffer(fb);
 
+  if (layer === 0) {
+    this.volumeTexture = outTexture;
+    if (this.gradientTextureAmount > 0.0) this.gradientGL(hdr, tempTex3D);
+    else {
+      if (this.gradientTexture !== null)
+        this.gl.deleteTexture(this.gradientTexture);
+      this.gradientTexture = null;
+    }
+  }
   // set slice scale for render shader
   this.renderShader.use(this.gl);
   let slicescl = this.sliceScale(true); // slice scale determined by this.back --> the base image layer
@@ -5303,6 +5446,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   this.gl.activeTexture(this.gl.TEXTURE7);
   this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
   this.updateInterpolation(layer);
+  //
   //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
   //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
 }; // refreshLayers()
@@ -6993,9 +7137,7 @@ Niivue.prototype.calculateMvpMatrix = function (
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
 }; // calculateMvpMatrix()
 
-// not included in public docs
-// calculate the near-far direction from the camera's perspective
-Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
+Niivue.prototype.calculateModelMatrix = function (azimuth, elevation) {
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
   //push the model away from the camera so camera not inside model
@@ -7007,6 +7149,13 @@ Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
     let oblique = mat.mat4.clone(this.back.obliqueRAS);
     mat.mat4.multiply(modelMatrix, modelMatrix, oblique);
   }
+  return modelMatrix;
+};
+
+// not included in public docs
+// calculate the near-far direction from the camera's perspective
+Niivue.prototype.calculateRayDirection = function (azimuth, elevation) {
+  const modelMatrix = this.calculateModelMatrix(azimuth, elevation);
   //from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
   let projectionMatrix = mat.mat4.fromValues(
     1,
@@ -7517,12 +7666,12 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.cullFace(gl.FRONT); //TH switch since we L/R flipped in calculateMvpMatrix
     //next lines optional: these textures should be bound by default
     // these lines can cause warnings, e.g. if drawTexture not used or created
-    /* this.gl.activeTexture(this.gl.TEXTURE0);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
-    this.gl.activeTexture(this.gl.TEXTURE2);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
-    this.gl.activeTexture(this.gl.TEXTURE7);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);*/
+    //this.gl.activeTexture(this.gl.TEXTURE0);
+    //this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+    //this.gl.activeTexture(this.gl.TEXTURE2);
+    //this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
+    //this.gl.activeTexture(this.gl.TEXTURE7);
+    //this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
     let shader = this.renderShader;
     if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader;
     shader.use(this.gl);
@@ -7530,6 +7679,16 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
       shader.backgroundMasksOverlaysLoc,
       this.backgroundMasksOverlays
     );
+    if (this.gradientTextureAmount > 0.0) {
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture);
+      let modelMatrix = this.calculateModelMatrix(azimuth, elevation);
+      let iModelMatrix = mat.mat4.create();
+      mat.mat4.invert(iModelMatrix, modelMatrix);
+      let normalMatrix = mat.mat4.create();
+      mat.mat4.transpose(normalMatrix, iModelMatrix);
+      gl.uniformMatrix4fv(shader.normLoc, false, normalMatrix);
+    }
     if (this.drawBitmap && this.drawBitmap.length > 8)
       gl.uniform1f(shader.drawOpacityLoc, this.drawOpacity);
     else gl.uniform1f(shader.drawOpacityLoc, 0.0);

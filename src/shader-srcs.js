@@ -211,31 +211,7 @@ out vec4 fColor;
 	fColor.a = max(fColor.a, colAcc.a);
 }`;
 
-export var fragRenderShader =
-  `#version 300 es
-#line 215
-precision highp int;
-precision highp float;
-uniform vec3 rayDir;
-uniform vec3 texVox;
-uniform int backgroundMasksOverlays;
-uniform vec3 volScale;
-uniform vec4 clipPlane;
-uniform highp sampler3D volume, overlay;
-uniform float overlays;
-uniform float backOpacity;
-uniform mat4 mvpMtx;
-uniform mat4 matRAS;
-uniform vec4 clipPlaneColor;
-uniform float drawOpacity;
-uniform highp sampler3D drawing;
-uniform highp sampler2D colormap;
-uniform float renderDrawAmbientOcclusion;
-in vec3 vColor;
-out vec4 fColor;
-` +
-  kRenderFunc +
-  `void main() {
+const kRenderInit = `void main() {
 	if (fColor.x > 2.0) {
 		fColor = vec4(1.0, 0.0, 0.0, 0.5);
 		return;
@@ -296,20 +272,9 @@ out vec4 fColor;
 	float backNearest = len; //assume no hit
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
 	samplePos += deltaDir * ran; //jitter ray
-	while (samplePos.a <= len) {
-		vec4 colorSample = texture(volume, samplePos.xyz);
-		samplePos += deltaDir; //advance ray position
-		if (colorSample.a >= 0.01) {
-			if (firstHit.a > lenNoClip)
-				firstHit = samplePos;
-			backNearest = min(backNearest, samplePos.a);
-			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-			colorSample.rgb *= colorSample.a;
-			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
-			if ( colAcc.a > earlyTermination )
-				break;
-		}
-	}
+`;
+
+const kRenderTail = `
 	if (firstHit.a < len)
 		gl_FragDepth = frac2ndc(firstHit.xyz);
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
@@ -419,8 +384,8 @@ out vec4 fColor;
 		return;
 	}
 
-	//if (overFirstHit.a < len)
-	gl_FragDepth = frac2ndc(overFirstHit.xyz);
+	if (overFirstHit.a < firstHit.a)
+		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
 	float overlayDepth = 0.3;
 	if (fColor.a <= 0.0)
@@ -432,7 +397,113 @@ out vec4 fColor;
 	}
 	fColor.rgb = mix(fColor.rgb, colAcc.rgb, overMix);
 	fColor.a = max(fColor.a, colAcc.a);
-}`;
+}`; // kRenderTail
+
+export var fragRenderShader =
+  `#version 300 es
+#line 215
+precision highp int;
+precision highp float;
+uniform vec3 rayDir;
+uniform vec3 texVox;
+uniform int backgroundMasksOverlays;
+uniform vec3 volScale;
+uniform vec4 clipPlane;
+uniform highp sampler3D volume, overlay;
+uniform float overlays;
+uniform float backOpacity;
+uniform mat4 mvpMtx;
+uniform mat4 matRAS;
+uniform vec4 clipPlaneColor;
+uniform float drawOpacity;
+uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
+uniform float renderDrawAmbientOcclusion;
+in vec3 vColor;
+out vec4 fColor;
+` +
+  kRenderFunc +
+  kRenderInit +
+  `while (samplePos.a <= len) {
+		vec4 colorSample = texture(volume, samplePos.xyz);
+		samplePos += deltaDir; //advance ray position
+		if (colorSample.a >= 0.01) {
+			if (firstHit.a > lenNoClip)
+				firstHit = samplePos;
+			backNearest = min(backNearest, samplePos.a);
+			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			colorSample.rgb *= colorSample.a;
+			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+			if ( colAcc.a > earlyTermination )
+				break;
+		}
+	}
+` +
+  kRenderTail;
+
+export var fragRenderGradientShader =
+  `#version 300 es
+#line 215
+precision highp int;
+precision highp float;
+uniform vec3 rayDir;
+uniform vec3 texVox;
+uniform int backgroundMasksOverlays;
+uniform vec3 volScale;
+uniform vec4 clipPlane;
+uniform highp sampler3D volume, overlay;
+uniform float overlays;
+uniform float backOpacity;
+uniform mat4 mvpMtx;
+uniform mat4 normMtx;
+uniform mat4 matRAS;
+uniform vec4 clipPlaneColor;
+uniform float drawOpacity;
+uniform highp sampler3D drawing, gradient;
+uniform highp sampler2D colormap;
+uniform highp sampler2D matCap;
+uniform float renderDrawAmbientOcclusion;
+uniform float gradientAmount;
+in vec3 vColor;
+out vec4 fColor;
+` +
+  kRenderFunc +
+  kRenderInit +
+  `
+	float startPos = samplePos.a;
+	vec4 gradAcc = vec4(0.0,0.0,0.0,0.0);
+	while (samplePos.a <= len) {
+		vec4 colorSample = texture(volume, samplePos.xyz);
+		if (colorSample.a >= 0.01) {
+			vec4 grad = texture(gradient, samplePos.xyz);
+			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
+			gradAcc.rgb += (1.0 - gradAcc.a) * grad.a * grad.rgb;
+			gradAcc.a += (1.0 - gradAcc.a) * grad.a;
+			if (firstHit.a > lenNoClip)
+				firstHit = samplePos;
+			backNearest = min(backNearest, samplePos.a);
+			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			colorSample.rgb *= colorSample.a;
+			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+			if ( colAcc.a > earlyTermination )
+				break;
+		}
+		samplePos += deltaDir; //advance ray position
+	}
+	if ((clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < (2.0 * deltaDir.a))) {
+		//do not shade clipped plane
+	} else {
+		vec3 n = mat3(normMtx) * gradAcc.rgb;
+		n.y = - n.y;
+		vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb;
+		//modulation always darkens image, as all colors are equal or darker than input
+		// so we 'brighten' to compensave
+		float brighten = 1.5;
+		mc *= colAcc.rgb * brighten;
+		colAcc.rgb = mix(colAcc.rgb, mc, gradientAmount);
+	}
+` +
+  kRenderTail;
 
 export var vertSliceMMShader = `#version 300 es
 #line 392
@@ -1494,4 +1565,71 @@ uniform float coordZ;
 uniform lowp sampler3D in3D;
 void main(void) {
  FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
+}`;
+
+export var blurVertShader = `#version 300 es
+#line 286
+precision highp int;
+precision highp float;
+in vec3 vPos;
+out vec2 TexCoord;
+void main() {
+    TexCoord = vPos.xy;
+    gl_Position = vec4( (vPos.xy-vec2(0.5,0.5))* 2.0, 0.0, 1.0);
+}`;
+
+export var blurFragShader = `#version 300 es
+#line 298
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float dX;
+uniform float dY;
+uniform float dZ;
+uniform highp sampler3D intensityVol;
+void main(void) {
+ vec3 vx = vec3(TexCoord.xy, coordZ);
+ vec4 samp = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
+ samp += texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
+ samp += texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
+ samp += texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
+ samp += texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
+ samp += texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
+ samp += texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
+ samp += texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
+ FragColor = samp*0.125;
+}`;
+
+export var sobelFragShader = `#version 300 es
+#line 323
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float dX;
+uniform float dY;
+uniform float dZ;
+uniform highp sampler3D intensityVol;
+void main(void) {
+  vec3 vx = vec3(TexCoord.xy, coordZ);
+  //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
+  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).r;
+  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).r;
+  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).r;
+  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).r;
+  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).r;
+  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).r;
+  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
+  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
+  vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
+  gradientSample.r =   BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
+  gradientSample.g =  TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
+  gradientSample.b =  TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
+  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+  gradientSample.rgb = normalize(gradientSample.rgb);
+  gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
+  FragColor = gradientSample;
 }`;
