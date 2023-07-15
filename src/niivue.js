@@ -1697,6 +1697,17 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
 };
 
 /**
+ * control whether voxel overlays are combined using additive (emission) or traditional (transmission) blending.
+ * @param {boolean} isAdditiveBlending emission (true) or transmission (false) mixing
+ * @example niivue.isAdditiveBlending(true)
+ * @see {@link https://niivue.github.io/niivue/features/additive.voxels.html|live demo usage}
+ */
+Niivue.prototype.setAdditiveBlending = function (isAdditiveBlending) {
+  this.opts.isAdditiveBlending = isAdditiveBlending;
+  this.updateGLVolume();
+};
+
+/**
  * Detect if display is using radiological or neurological convention.
  * @returns {boolean} radiological convention status
  * @example let rc = niivue.getRadiologicalConvention()
@@ -5233,6 +5244,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   this.gl.uniform1i(
     orientShader.uniforms["isAlphaThreshold"],
     overlayItem.alphaThreshold
+  );
+  this.gl.uniform1i(
+    orientShader.uniforms["isAdditiveBlending"],
+    this.opts.isAdditiveBlending
   );
   //if unused colormapNegative https://github.com/niivue/niivue/issues/490
   let mnNeg = Number.POSITIVE_INFINITY;
