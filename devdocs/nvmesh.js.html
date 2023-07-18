@@ -562,18 +562,28 @@ NVMesh.prototype.updateMesh = function (gl) {
     console.log("underspecified mesh");
     return;
   }
+  function lerp(x, y, a) {
+    //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
+    return x * (1 - a) + y * a;
+  }
+  function additiveBlend(x, y) {
+    return Math.min(x + y, 255.0);
+  }
   let posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
+  let nvtx = this.pts.length / 3;
+  var u8 = new Uint8Array(posNormClr.buffer); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
+  //create emission values
+  let posNormClrEmission = posNormClr.slice();
+  let maxAdditiveBlend = 0;
+  var additiveRGBA = new Uint8Array(nvtx * 4); //emission
+
   if (this.layers &amp;&amp; this.layers.length > 0) {
     for (let i = 0; i &lt; this.layers.length; i++) {
-      let nvtx = this.pts.length / 3;
       let layer = this.layers[i];
       let opacity = layer.opacity;
       if (opacity &lt;= 0.0 || layer.cal_min > layer.cal_max) continue;
-      var u8 = new Uint8Array(posNormClr.buffer); //Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
-      function lerp(x, y, a) {
-        //https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
-        return x * (1 - a) + y * a;
-      }
+      if (!layer.hasOwnProperty("isAdditiveBlend"))
+        layer.isAdditiveBlend = false;
       if (!layer.hasOwnProperty("colormapLabel")) layer.colormapLabel = [];
       if (
         layer.colormapLabel.hasOwnProperty("R") &amp;&amp;
@@ -624,6 +634,8 @@ NVMesh.prototype.updateMesh = function (gl) {
       let lut = cmapper.colormap(layer.colormap);
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
       let frameOffset = nvtx * frame;
+      if (layer.isAdditiveBlend)
+        maxAdditiveBlend = Math.max(maxAdditiveBlend, opacity);
       if (layer.useNegativeCmap) {
         layer.cal_min = Math.max(0, layer.cal_min);
         layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max);
@@ -648,9 +660,27 @@ NVMesh.prototype.updateMesh = function (gl) {
           v255 = Math.max(0.0, v255);
           v255 = Math.min(255.0, v255) * 4;
           let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
-          u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
-          u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
-          u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+          if (layer.isAdditiveBlend) {
+            let j4 = j * 4;
+            //sum red, green and blue layers
+            additiveRGBA[j4 + 0] = additiveBlend(
+              additiveRGBA[j4 + 0],
+              lut[v255 + 0]
+            );
+            additiveRGBA[j4 + 1] = additiveBlend(
+              additiveRGBA[j4 + 1],
+              lut[v255 + 1]
+            );
+            additiveRGBA[j4 + 2] = additiveBlend(
+              additiveRGBA[j4 + 2],
+              lut[v255 + 2]
+            );
+            additiveRGBA[j4 + 3] = additiveBlend(additiveRGBA[j4 + 3], 255.0);
+          } else {
+            u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+            u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+            u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+          }
         }
       } else {
         //isOutlineBorder
@@ -701,9 +731,28 @@ NVMesh.prototype.updateMesh = function (gl) {
             if (v255 &lt; 0) continue;
             v255 = Math.min(255.0, v255) * 4;
             let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
-            u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
-            u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
-            u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+
+            if (layer.isAdditiveBlend) {
+              let j4 = j * 4;
+              //sum red, green and blue layers
+              additiveRGBA[j4 + 0] = additiveBlend(
+                additiveRGBA[j4 + 0],
+                lut[v255 + 0]
+              );
+              additiveRGBA[j4 + 1] = additiveBlend(
+                additiveRGBA[j4 + 1],
+                lut[v255 + 1]
+              );
+              additiveRGBA[j4 + 2] = additiveBlend(
+                additiveRGBA[j4 + 2],
+                lut[v255 + 2]
+              );
+              additiveRGBA[j4 + 3] = additiveBlend(additiveRGBA[j4 + 3], 255.0);
+            } else {
+              u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity);
+              u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity);
+              u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity);
+            }
           }
         } else {
           // isOutlineBorder
@@ -729,6 +778,23 @@ NVMesh.prototype.updateMesh = function (gl) {
       }
     }
   }
+  if (maxAdditiveBlend > 0) {
+    for (let j = 0; j &lt; nvtx; j++) {
+      let vtx = j * 28 + 24; //posNormClr is 28 bytes stride, RGBA color at offset 24,
+      let v = j * 4; //additiveRGBA is 4 bytes stride, RGBA color at offset 0,
+      let opacity = Math.min(maxAdditiveBlend, additiveRGBA[v + 3] / 255);
+      if (opacity &lt;= 0) continue;
+      function modulate(x, y) {
+        return Math.min(x * y * (1 / 255), 255.0);
+      }
+      u8[vtx + 0] = modulate(u8[vtx + 0], additiveRGBA[v + 0]);
+      u8[vtx + 1] = modulate(u8[vtx + 1], additiveRGBA[v + 1]);
+      u8[vtx + 2] = modulate(u8[vtx + 2], additiveRGBA[v + 2]);
+      u8[vtx + 0] = lerp(u8[vtx + 0], additiveRGBA[v + 0], opacity);
+      u8[vtx + 1] = lerp(u8[vtx + 1], additiveRGBA[v + 1], opacity);
+      u8[vtx + 2] = lerp(u8[vtx + 2], additiveRGBA[v + 2], opacity);
+    }
+  } //isAdditiveBlend
   //generate webGL buffers and vao
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   gl.bufferData(
@@ -2309,6 +2375,7 @@ NVMesh.readLayer = function (
   let layer = [];
   layer.alphaThreshold = false;
   layer.isTransparentBelowCalMin = true;
+  layer.isAdditiveBlend = false;
   layer.colorbarVisible = true;
   layer.colormapLabel = [];
   let isReadColortables = true;
@@ -4446,7 +4513,7 @@ String.prototype.getBytes = function () {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Mon Jul 10 2023 12:24:13 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Tue Jul 18 2023 10:11:02 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
