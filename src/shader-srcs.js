@@ -891,6 +891,7 @@ uniform float cal_min;
 uniform float cal_maxNeg;
 uniform float cal_minNeg;
 uniform bool isAlphaThreshold;
+uniform bool isAdditiveBlending;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform int modulation;
@@ -955,7 +956,10 @@ void main(void) {
 	// https://en.wikipedia.org/wiki/Alpha_compositing
 	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
 	if (aout <= 0.0) return;
-	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	if (isAdditiveBlending)
+		FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a)) / aout;
+	else
+		FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
 	FragColor.a = aout;
 }`;
 

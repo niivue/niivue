@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Mesh Statistics</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+      <label for="additiveCheck">Additive</label>
+      <input type="checkbox" id="additiveCheck" checked />
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="10"
+        class="slider"
+        id="opacitySlider"
+      />
+      <label for="redSlider">RedLeft</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="2"
+        class="slider"
+        id="redSlider"
+      />
+      <label for="greenSlider">GreenAnterior</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="1"
+        class="slider"
+        id="greenSlider"
+      />
+      <label for="blueSlider">BlueSuperior</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="1"
+        class="slider"
+        id="blueSlider"
+      />
+      <label for="shaderDrop">Shader</label>
+      <select id="shaderDrop">
+        <option value="Edge">Edge</option>
+        <option value="Flat">Flat</option>
+        <option value="Matcap" selected>Matcap</option>
+        <option value="Matte">Matte</option>
+        <option value="Outline">Outline</option>
+        <option value="Phong">Phong</option>
+        <option value="Toon">Toon</option>
+      </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "./niivue.es.js";
+  additiveCheck.onchange = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "isAdditiveBlend",
+      this.checked
+    );
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      2,
+      "isAdditiveBlend",
+      this.checked
+    );
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      3,
+      "isAdditiveBlend",
+      this.checked
+    );
+  };
+  opacitySlider.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "opacity", this.value * 0.1);
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "opacity", this.value * 0.1);
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 3, "opacity", this.value * 0.1);
+  };
+  redSlider.onchange = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "cal_min",
+      parseInt(this.value) + 0.5
+    );
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "cal_max",
+      parseInt(this.value) + 2.5
+    );
+  };
+  greenSlider.onchange = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      2,
+      "cal_min",
+      parseInt(this.value) + 0.5
+    );
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      2,
+      "cal_max",
+      parseInt(this.value) + 2.5
+    );
+  };
+  blueSlider.onchange = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      3,
+      "cal_min",
+      parseInt(this.value) + 0.5
+    );
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      3,
+      "cal_max",
+      parseInt(this.value) + 2.5
+    );
+  };
+  shaderDrop.onchange = function () {
+    const shaderName = this.value;
+    nv1.setMeshShader(nv1.meshes[0].id, shaderName);
+  };
+  var nv1 = new niivue.Niivue({
+    show3Dcrosshair: true,
+    backColor: [0.7, 0.7, 0.7, 1],
+  });
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.attachTo("gl1");
+  nv1.opts.isColorbar = true;
+  var meshLHLayersList1 = [
+    {
+      url: "../images/BrainMesh_ICBM152.lh.curv",
+      colormap: "gray",
+      colormapNegative: "",
+      cal_min: 0.3,
+      cal_max: 0.5,
+      opacity: 0.7,
+    },
+    {
+      url: "../images/xd.mz3",
+      cal_min: 2.5,
+      cal_max: 4.5,
+      colormap: "red",
+      colormapNegative: "",
+    },
+    {
+      url: "../images/yd.mz3",
+      cal_min: 1.5,
+      cal_max: 3.5,
+      colormap: "green",
+      colormapNegative: "",
+    },
+    {
+      url: "../images/zd.mz3",
+      cal_min: 1.5,
+      cal_max: 3.5,
+      colormap: "blue",
+      colormapNegative: "",
+    },
+  ];
+  await nv1.loadMeshes([
+    {
+      url: "../images/BrainMesh_ICBM152.lh.mz3",
+      layers: meshLHLayersList1,
+    },
+  ]);
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false);
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "alphaThreshold", true);
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "alphaThreshold", true);
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 3, "alphaThreshold", true);
+  nv1.setClipPlane([-0.1, 270, 0]);
+  shaderDrop.onchange();
+  additiveCheck.onchange();
+  opacitySlider.onchange();
+</script>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Statistical Thresholds</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="checkAlpha">&nbsp;&nbsp;AlphaThresh</label>
+      <input type="checkbox" id="checkAlpha" checked />
+      <label for="checkAdditive">&nbsp;&nbsp;Additive</label>
+      <input type="checkbox" id="checkAdditive" checked />
+      <label for="slideRed"> &nbsp; RedThresh</label>
+      <input
+        type="range"
+        min="1"
+        max="39"
+        value="20"
+        class="slider"
+        id="slideRed"
+      />
+      <label for="slideGreen"> &nbsp; GreenThresh</label>
+      <input
+        type="range"
+        min="1"
+        max="39"
+        value="20"
+        class="slider"
+        id="slideGreen"
+      />
+      <button id="about">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
+      import * as niivue from "./niivue.es.js";
+      document.getElementById("checkAlpha").onchange = function () {
+        nv1.volumes[1].alphaThreshold = this.checked;
+        nv1.volumes[2].alphaThreshold = this.checked;
+        nv1.updateGLVolume();
+      }
+      document.getElementById("checkAdditive").onchange = function () {
+        nv1.setAdditiveBlending(this.checked);
+      }
+      document.getElementById("slideRed").oninput = function () {
+        nv1.volumes[1].cal_min = 0.1 * this.value;
+        nv1.updateGLVolume();
+      };
+      document.getElementById("slideGreen").oninput = function () {
+        nv1.volumes[2].cal_min = 0.1 * this.value;
+        nv1.updateGLVolume();
+      };
+      document.getElementById("about").addEventListener("click", doAbout);
+      function doAbout() {
+        window.alert(
+          "In the emissive additive color mode, red and green combine to form yellow. Otherwise, higher overlays overwrite color of lower layers."
+        );
+      }
+      var volumeList1 = [
+        { url: "../images/mni152.nii.gz" },
+        {
+          url: "../images/narps-4965_9U7M-hypo1_unthresh.nii.gz",
+          colormap: "red",
+          cal_min: 2,
+          cal_max: 4,
+        },
+        {
+          url: "../images/narps-4735_50GV-hypo1_unthresh.nii.gz",
+          colormap: "green",
+          cal_min: 2,
+          cal_max: 4,
+        },
+      ];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      
+      var nv1 = new niivue.Niivue({
+        loadingText: "there are no images",
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      });
+      nv1.setRadiologicalConvention(false);
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.setSliceMM(false);
+      nv1.opts.isColorbar = true;
+      nv1.setAdditiveBlending(true);
+      await nv1.loadVolumes(volumeList1);
+      nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
+      nv1.opts.multiplanarForceRender = true;
+      nv1.setInterpolation(true);
+      nv1.updateGLVolume();
+      checkAlpha.onchange();
+    </script>
+  </body>
+</html>
