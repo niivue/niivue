@@ -17,14 +17,23 @@
     <header>
       <label for="invertCheck">Invert</label>
       <input type="checkbox" id="invertCheck" unchecked />
-      <label for="gammaSlider">Gamma</label>
+      <label for="curveSlider">Curvature</label>
       <input
         type="range"
-        min="10"
-        max="400"
-        value="100"
+        min="0"
+        max="10"
+        value="7"
         class="slider"
-        id="gammaSlider"
+        id="curveSlider"
+      />
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="7"
+        class="slider"
+        id="opacitySlider"
       />
       <button id="saveBmp">Save Bitmap</button>
     </header>
@@ -33,56 +42,59 @@
     </main>
     <footer>
       <label id="colormaps"></label>
-      <p>
-      <textarea id="scriptText" name="customText" rows="8" cols="60">
-let cmap = {&#10; R: [0, 255, 0],&#10; G: [0, 0, 255],&#10; B: [0, 0, 0],&#10; A: [0, 64, 64],&#10; I: [0, 85, 255],&#10;};&#10;
-</textarea>
-      &nbsp;<button id="custom">custom</button>&nbsp;
     </footer>
   </body>
 </html>
-<script src="./niivue.umd.js"></script>
 <script type="module" async>
-  var slider = document.getElementById("gammaSlider");
-  slider.oninput = function () {
-    nv1.setGamma(this.value * 0.01);
-  };
+  import * as niivue from "./niivue.es.js";
   invertCheck.onchange = function () {
-    nv1.volumes[0].colormapInvert = this.checked;
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapInvert", this.checked);
     nv1.updateGLVolume();
+  };
+  curveSlider.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1);
   }
-  document.getElementById("custom").addEventListener("click", doCustom);
-  function doCustom() {
-    var val = document.getElementById("scriptText").value;
-    val += ';let key = "Custom"; nv1.addColormap(key, cmap); nv1.volumes[0].colormap = key;nv1.updateGLVolume();';
-    val && eval(val);
+  opacitySlider.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "opacity", this.value * 0.1);
   }
   document.getElementById("saveBmp").addEventListener("click", doSaveBmp);
   function doSaveBmp() {
     nv1.saveScene("ScreenShot.png");
   }
-  var volumeList1 = [
+  var meshLHLayersList1 = [
     {
-      url: "../images/mni152.nii.gz",
+      url: "../images/BrainMesh_ICBM152.lh.curv",
       colormap: "gray",
-      opacity: 1,
-      visible: true,
+      cal_min: 0.3,
+      cal_max: 0.5,
+      opacity: 0.7,
+    },
+    {
+      url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
+      cal_min: 1.64,
+      cal_max: 5,
+      colormap: "warm",
+      colormapNegative: "winter",
+      useNegativeCmap: true,
+      opacity: 0.7,
     },
   ];
-  var nv1 = new niivue.Niivue({backColor: [0.3, 0.3, 0.3, 1]});
-  nv1.attachTo("gl1");
-  nv1.loadVolumes(volumeList1);
-  nv1.opts.multiplanarForceRender = true;
-  nv1.opts.isColorbar = true;
+  var nv1 = new niivue.Niivue({ backColor: [0.3, 0.3, 0.3, 1] });
   let cmaps = nv1.colormaps();
   let cmapEl = document.getElementById("colormaps");
   for (let i = 0; i < cmaps.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = cmaps[i];
     btn.onclick = function () {
-      nv1.volumes[0].colormap = cmaps[i];
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", cmaps[i]);
       nv1.updateGLVolume();
     };
     cmapEl.appendChild(btn);
   }
+  nv1.attachTo("gl1");
+  nv1.opts.isColorbar = true;
+  await nv1.loadMeshes([
+    { url: "../images/BrainMesh_ICBM152.lh.mz3", layers: meshLHLayersList1 },
+  ]);
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false);
 </script>

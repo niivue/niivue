@@ -48,7 +48,7 @@
         nv1.updateGLVolume();
       }
       document.getElementById("checkAdditive").onchange = function () {
-        nv1.setAdditiveBlending(this.checked);
+        nv1.setAdditiveBlend(this.checked);
       }
       document.getElementById("slideRed").oninput = function () {
         nv1.volumes[1].cal_min = 0.1 * this.value;
@@ -95,7 +95,7 @@
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.setSliceMM(false);
       nv1.opts.isColorbar = true;
-      nv1.setAdditiveBlending(true);
+      nv1.setAdditiveBlend(true);
       await nv1.loadVolumes(volumeList1);
       nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
       nv1.opts.multiplanarForceRender = true;

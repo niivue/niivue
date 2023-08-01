@@ -223,7 +223,8 @@ export function NVImage(
   cal_minNeg = NaN,
   cal_maxNeg = NaN,
   colorbarVisible = true,
-  colormapLabel = []
+  colormapLabel = [],
+  colormapInvert = false
 ) {
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   this.DT_NONE = 0;
@@ -581,6 +582,19 @@ export function NVImage(
       this.img = new Float64Array(vx);
       for (let i = 0; i < vx - 1; i++) this.img[i] = Number(i64[i]);
       this.hdr.datatypeCode = this.DT_DOUBLE;
+      break;
+    }
+    case this.DT_COMPLEX: {
+      //saved as real/imaginary pairs: show real following fsleyes/MRIcroGL convention
+      let f32 = new Float32Array(imgRaw);
+      let nvx = Math.floor(f32.length / 2);
+      this.img = new Float32Array(nvx);
+      let r = 0;
+      for (let i = 0; i < nvx - 1; i++) {
+        this.img[i] = f32[r];
+        r += 2;
+      }
+      this.hdr.datatypeCode = this.DT_FLOAT;
       break;
     }
     default:

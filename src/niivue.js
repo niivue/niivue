@@ -1698,12 +1698,12 @@ Niivue.prototype.setSliceMM = function (isSliceMM) {
 
 /**
  * control whether voxel overlays are combined using additive (emission) or traditional (transmission) blending.
- * @param {boolean} isAdditiveBlending emission (true) or transmission (false) mixing
- * @example niivue.isAdditiveBlending(true)
+ * @param {boolean} isAdditiveBlend emission (true) or transmission (false) mixing
+ * @example niivue.isAdditiveBlend(true)
  * @see {@link https://niivue.github.io/niivue/features/additive.voxels.html|live demo usage}
  */
-Niivue.prototype.setAdditiveBlending = function (isAdditiveBlending) {
-  this.opts.isAdditiveBlending = isAdditiveBlending;
+Niivue.prototype.setAdditiveBlend = function (isAdditiveBlend) {
+  this.opts.isAdditiveBlend = isAdditiveBlend;
   this.updateGLVolume();
 };
 
@@ -5246,8 +5246,8 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
     overlayItem.alphaThreshold
   );
   this.gl.uniform1i(
-    orientShader.uniforms["isAdditiveBlending"],
-    this.opts.isAdditiveBlending
+    orientShader.uniforms["isAdditiveBlend"],
+    this.opts.isAdditiveBlend
   );
   //if unused colormapNegative https://github.com/niivue/niivue/issues/490
   let mnNeg = Number.POSITIVE_INFINITY;
@@ -5643,8 +5643,8 @@ Niivue.prototype.colormapFromKey = function (name) {
  * @example nv1.getFrame4D(nv1.volumes[0].id);
  * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
-Niivue.prototype.colormap = function (lutName = "") {
-  return cmapper.colormap(lutName);
+Niivue.prototype.colormap = function (lutName = "", isInvert = false) {
+  return cmapper.colormap(lutName, isInvert);
 }; // colormap()
 
 //create TEXTURE1 a 2D bitmap with a nCol columns RGBA and nRow rows
@@ -5693,7 +5693,8 @@ Niivue.prototype.addColormapList = function (
   mx = NaN,
   alpha = false,
   neg = false,
-  vis = true
+  vis = true,
+  inv = false
 ) {
   //if (nm.length < 1) return;
   //issue583 unused colormap: e.g. a volume without a negative colormap
@@ -5705,6 +5706,7 @@ Niivue.prototype.addColormapList = function (
     alphaThreshold: alpha,
     negative: neg,
     visible: vis,
+    invert: inv,
   });
 };
 
@@ -5741,7 +5743,8 @@ Niivue.prototype.refreshColormaps = function () {
         neg[1],
         volume.alphaThreshold,
         true,
-        volume.colorbarVisible
+        volume.colorbarVisible,
+        volume.colormapInvert
       );
       this.addColormapList(
         volume.colormap,
@@ -5749,7 +5752,8 @@ Niivue.prototype.refreshColormaps = function () {
         volume.cal_max,
         volume.alphaThreshold,
         false,
-        volume.colorbarVisible
+        volume.colorbarVisible,
+        volume.colormapInvert
       );
     }
   }
@@ -5767,9 +5771,20 @@ Niivue.prototype.refreshColormaps = function () {
           neg[0],
           neg[1],
           false,
-          true
+          true,
+          true,
+          mesh.colormapInvert
         );
-        this.addColormapList(mesh.edgeColormap, mesh.edgeMin, mesh.edgeMax);
+        //  alpha = false,
+        this.addColormapList(
+          mesh.edgeColormap,
+          mesh.edgeMin,
+          mesh.edgeMax,
+          false,
+          false,
+          true,
+          mesh.colormapInvert
+        );
       }
       if (nlayers < 1) continue;
       for (let j = 0; j < nlayers; j++) {
@@ -5787,13 +5802,18 @@ Niivue.prototype.refreshColormaps = function () {
           neg[0],
           neg[1],
           layer.alphaThreshold,
-          true
+          true, //neg
+          true, //vis
+          layer.colormapInvert
         );
         this.addColormapList(
           layer.colormap,
           layer.cal_min,
           layer.cal_max,
-          layer.alphaThreshold
+          layer.alphaThreshold,
+          false, //neg
+          true, //vis
+          layer.colormapInvert
         );
       } //for each layer j
     } //for each mesh i
@@ -5812,7 +5832,9 @@ Niivue.prototype.refreshColormaps = function () {
     luts = c;
   }
   for (let i = 0; i < nMaps; i++)
-    addColormap(this.colormap(this.colormapLists[i].name));
+    addColormap(
+      this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert)
+    );
   addColormap(this.drawLut.lut);
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,

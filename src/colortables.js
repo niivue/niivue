@@ -9,7 +9,7 @@ export const colortables = function () {
     if (key.startsWith("$")) continue; //ignore drawing maps
     cmapsSorted.push(key);
   }
-  cmapsSorted.sort();
+  cmapsSorted.sort(new Intl.Collator("en").compare); //case insensite, e.g. "ROI_i256" > "actc"
   this.cluts = {};
   for (let i = 0; i < cmapsSorted.length; i++) {
     let key = cmapsSorted[i];
@@ -56,9 +56,9 @@ colortables.prototype.colormapFromKey = function (name) {
 };
 
 // not included in public docs
-colortables.prototype.colormap = function (key = "") {
+colortables.prototype.colormap = function (key = "", isInvert = false) {
   let cmap = this.colormapFromKey(key);
-  return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I);
+  return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I, isInvert);
 }; // colormap()
 
 colortables.prototype.makeLabelLut = function (cm, alphaFill = 64) {
@@ -172,12 +172,26 @@ colortables.prototype.makeDrawLut = function (name) {
 }; // makeDrawLut()
 
 // not included in public docs
-colortables.prototype.makeLut = function (Rs, Gs, Bs, As, Is) {
+colortables.prototype.makeLut = function (Rsi, Gsi, Bsi, Asi, Isi, isInvert) {
   //create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
   //intensity indices should be in increasing order with the first value 0 and the last 255.
   // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
+  let nIdx = Rsi.length;
+  let Rs = [...Rsi];
+  let Gs = [...Gsi];
+  let Bs = [...Bsi];
+  let As = [...Asi];
+  let Is = [...Isi];
+  if (isInvert) {
+    for (var i = 0; i < nIdx; i++) {
+      Rs[i] = Rsi[nIdx - 1 - i];
+      Gs[i] = Gsi[nIdx - 1 - i];
+      Bs[i] = Bsi[nIdx - 1 - i];
+      As[i] = 255 - Asi[nIdx - 1 - i];
+      Is[i] = 255 - Isi[nIdx - 1 - i];
+    }
+  }
   var lut = new Uint8ClampedArray(256 * 4);
-  let nIdx = Rs.length;
   if (typeof Is === "undefined") {
     Is = new Uint8ClampedArray(nIdx).fill(0);
     for (var i = 0; i < nIdx; i++) Is[i] = Math.round((i * 255.0) / (nIdx - 1));

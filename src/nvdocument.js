@@ -75,7 +75,7 @@ export const DRAG_MODE = Object.freeze({
  * @property {number} maxDrawUndoBitmaps
  * @property {SLICE_TYPE} sliceType
  * @property {boolean} isAntiAlias
- * @property {boolean} isAdditiveBlending
+ * @property {boolean} isAdditiveBlend
  */
 export const DEFAULT_OPTIONS = {
   textHeight: 0.06, // 0 for no text, fraction of canvas min(height,width)
@@ -125,7 +125,7 @@ export const DEFAULT_OPTIONS = {
   meshXRay: 0.0,
   isAntiAlias: null,
   limitFrames4D: NaN,
-  isAdditiveBlending: false,
+  isAdditiveBlend: false,
 };
 
 /**Creates and instance of NVDocument
