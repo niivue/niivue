@@ -22,6 +22,7 @@ test.each(files)("colormap_%s", async (file) => {
     let nv = new niivue.Niivue();
     await nv.attachTo("gl", false);
     // load one volume object in an array
+    console.log(`${file}`)
     var volumeList = [
       {
         url: `./images/mni152.nii.gz`,
