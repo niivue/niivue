@@ -37,3 +37,26 @@ test.each(files)("colormap_%s", async (file) => {
   expect(retFile).toBe(file);
   await snapshot();
 });
+
+test.each(files)("colormap_inverted_%s", async (file) => {
+  let retFile = await page.evaluate(async (file) => {
+    let nv = new niivue.Niivue();
+    await nv.attachTo("gl", false);
+    // load one volume object in an array
+    console.log(`${file}`)
+    var volumeList = [
+      {
+        url: `./images/mni152.nii.gz`,
+        colormap: `${file}`,
+        opacity: 1,
+        visible: true,
+      },
+    ];
+    await nv.loadVolumes(volumeList);
+    nv.volumes[0].colormapInvert = true;
+    nv.updateGLVolume();
+    return file;
+  }, file);
+  expect(retFile).toBe(file);
+  await snapshot();
+});
