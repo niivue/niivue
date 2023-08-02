@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Tractography</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript. Please enable it to continue.</strong>
+    </noscript>
+    <header>
+      <label for="fiberDitherSlider">Dither</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="1"
+        class="slider"
+        id="fiberDitherSlider"
+      />
+      <label for="fiberColor">Choose fiber coloration:</label>
+      <select id="fiberColor">
+        <option value="Global">Global direction</option>
+        <option value="Local">Local direction</option>
+        <option value="Fixed">Fixed</option>
+        <option value="DPG0">First Group (if available)</option>
+        <option value="DPG1">Second Group (if available)</option>
+        <option value="DPG01">Both Groups (if available)</option>
+      </select>
+      <label for="fiberDecimation">Fiber reduction:</label>
+      <select id="fiberDecimation">
+        <option value="1">100%</option>
+        <option value="2">50%</option>
+        <option value="4">25%</option>
+        <option value="10">10%</option>
+      </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+  </body>
+  <footer>
+    <label id="colormaps"></label>
+    <p>
+    <textarea id="scriptText" name="customText" rows="8" cols="60">let cmap = {&#10; R: [0, 255],&#10; G: [96, 0],&#10; B: [64, 64],&#10; I: [0, 1],&#10;};&#10;</textarea>
+    &nbsp;<button id="custom">custom group colors</button>&nbsp;
+  </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "./niivue.es.js";
+  fiberDitherSlider.oninput = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
+  };
+  fiberColor.onchange = function () {
+    const colorName = document.getElementById("fiberColor").value;
+    if (colorName === "DPG0") {
+      let cmap = {
+            R: [0],
+            G: [255],
+            B: [0],
+            I: [0]
+      };
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap);
+    } else if (colorName === "DPG1") {
+      let cmap = {
+            R: [0],
+            G: [255],
+            B: [0],
+            I: [1]
+      };
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap);
+    } else if (colorName === "DPG01") {
+      let cmap = {
+            R: [0, 255],
+            G: [255, 0],
+            B: [0, 0],
+            I: [0, 1]
+      };
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap);
+    } else {
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", colorName);
+    }
+  };
+  custom.onclick = function ()  {
+    var val = document.getElementById("scriptText").value;
+    val += '; nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap);';
+    val && eval(val);
+  }
+  fiberDecimation.onchange = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberDecimationStride", this.value);
+  };
+  var volumeList1 = [{ url: "../images/sub-01_ses-01_dwi_desc-b0_dwi.nii.gz" }];
+  var nv1 = new niivue.Niivue({
+    show3Dcrosshair: true,
+    backColor: [0.7, 0.7, 0.7, 1],
+  });
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.attachTo("gl1");
+  await nv1.loadVolumes(volumeList1);
+  await nv1.loadMeshes([{ url: "../images/sub-01_ses-01_dwi_space-RASMM_model-probCSD_algo-AFQ_tractography.trx", rgba255: [0, 142, 0, 255]}]);
+  nv1.setClipPlane([-0.1, 180, 0]);
+</script>

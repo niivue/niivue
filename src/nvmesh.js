@@ -111,6 +111,8 @@ export function NVMesh(
   this.vao = gl.createVertexArray();
   this.offsetPt0 = null;
   this.hasConnectome = false;
+  this.colormapInvert = false;
+  this.fiberGroupColormap = null;
   this.pts = pts;
   this.layers = [];
   if (rgba255[3] < 1) {
@@ -210,6 +212,14 @@ NVMesh.prototype.updateFibers = function (gl) {
   //fill fiber Color
   let dither = this.fiberDither;
   let ditherHalf = dither * 0.5;
+  function rgb2int32(r, g, b) {
+    let ditherFrac = dither * Math.random();
+    let d = 255.0 * (ditherFrac - ditherHalf);
+    r = Math.max(Math.min(r + d, 255.0), 0.0);
+    g = Math.max(Math.min(g + d, 255.0), 0.0);
+    b = Math.max(Math.min(b + d, 255.0), 0.0);
+    return r + (g << 8) + (b << 16);
+  }
   function direction2rgb(x1, y1, z1, x2, y2, z2, ditherFrac) {
     //generate color based on direction between two 3D spatial positions
     let v = vec3.fromValues(
@@ -237,9 +247,45 @@ NVMesh.prototype.updateFibers = function (gl) {
     if (n < this.dpv.length && this.dpv[n].vals.length === npt)
       dpv = this.dpv[n].vals;
   }
-  if (dpv) {
+  let streamlineVisible = new Int16Array(n_count);
+  //if ((this.dpg !== null) && (this.fiberGroupMask !== null) && (this.fiberGroupMask.length === this.dpg.length)) {
+  if (this.dpg !== null && this.fiberGroupColormap !== null) {
+    let lut = new Uint8ClampedArray(this.dpg.length * 4); //4 component RGBA for each group
+    let groupVisible = new Array(this.dpg.length).fill(false);
+    let cmap = this.fiberGroupColormap;
+    if (!cmap.hasOwnProperty("A"))
+      cmap.A = new Uint8ClampedArray(cmap.I.length).fill(255);
+    for (let i = 0; i < cmap.I.length; i++) {
+      let idx = cmap.I[i];
+      if (idx < 0 || idx >= this.dpg.length) continue;
+      if (cmap.A[i] < 1) continue;
+      groupVisible[idx] = true;
+      idx *= 4;
+      lut[idx] = cmap.R[i];
+      lut[idx + 1] = cmap.G[i];
+      lut[idx + 2] = cmap.B[i];
+      lut[idx + 3] = 255; //opaque
+    }
+    streamlineVisible.fill(-1); // -1 assume streamline not visible
+    for (let i = 0; i < this.dpg.length; i++) {
+      if (!groupVisible[i]) continue; //this group is not visible
+      for (let v = 0; v < this.dpg[i].vals.length; v++)
+        streamlineVisible[this.dpg[i].vals[v]] = i;
+    }
+    for (let i = 0; i < n_count; i++) {
+      if (streamlineVisible[i] < 0) continue; //hidden
+      let color = (streamlineVisible[i] % 256) * 4;
+      //let RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16);
+      let RGBA = rgb2int32(lut[color], lut[color + 1], lut[color + 2]);
+      let vStart = offsetPt0[i]; //first vertex in streamline
+      let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+      let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+      let vEnd4 = vEnd * 4 + 3;
+      for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+    }
+  } else if (dpv) {
     //color per vertex
-    let lut = cmapper.colormap(this.colormap);
+    let lut = cmapper.colormap(this.colormap, this.colormapInvert);
     let mn = dpv[0];
     let mx = dpv[0];
     for (let i = 0; i < npt; i++) {
@@ -256,7 +302,7 @@ NVMesh.prototype.updateFibers = function (gl) {
     }
   } else if (dps) {
     //color per streamline
-    let lut = cmapper.colormap(this.colormap);
+    let lut = cmapper.colormap(this.colormap, this.colormapInvert);
     let mn = dps[0];
     let mx = dps[0];
     for (let i = 0; i < n_count; i++) {
@@ -275,13 +321,24 @@ NVMesh.prototype.updateFibers = function (gl) {
       for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
     }
   } else if (fiberColor.includes("fixed")) {
-    let RGBA =
-      this.rgba255[0] + (this.rgba255[1] << 8) + (this.rgba255[2] << 16);
-    let v4 = 3; //+3: fill 4th component colors: XYZC = 0123
-    for (let i = 0; i < npt; i++) {
-      posClrU32[v4] = RGBA;
-      v4 += 4;
-    }
+    if (dither === 0.0) {
+      let RGBA =
+        this.rgba255[0] + (this.rgba255[1] << 8) + (this.rgba255[2] << 16);
+      let v4 = 3; //+3: fill 4th component colors: XYZC = 0123
+      for (let i = 0; i < npt; i++) {
+        posClrU32[v4] = RGBA;
+        v4 += 4;
+      }
+    } else {
+      for (let i = 0; i < n_count; i++) {
+        let RGBA = rgb2int32(this.rgba255[0], this.rgba255[1], this.rgba255[2]);
+        let vStart = offsetPt0[i]; //first vertex in streamline
+        let vEnd = offsetPt0[i + 1] - 1; //last vertex in streamline
+        let vStart4 = vStart * 4 + 3; //+3: fill 4th component colors: XYZC = 0123
+        let vEnd4 = vEnd * 4 + 3;
+        for (let j = vStart4; j <= vEnd4; j += 4) posClrU32[j] = RGBA;
+      }
+    } //else fixed with dither
   } else if (fiberColor.includes("local")) {
     for (let i = 0; i < n_count; i++) {
       //for each streamline
@@ -350,6 +407,7 @@ NVMesh.prototype.updateFibers = function (gl) {
   let stride = -1;
   for (let i = 0; i < n_count; i++) {
     //let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
+    if (streamlineVisible[i] < 0) continue;
     if (this.fiberLengths[i] < min_mm) continue;
     stride++;
     if (stride % this.fiberDecimationStride !== 0) continue; //e.g. if stride is 2 then half culled
@@ -388,8 +446,8 @@ NVMesh.prototype.updateConnectome = function (gl) {
   //draw all nodes
   let pts = [];
   let rgba255 = [];
-  let lut = cmapper.colormap(json.nodeColormap);
-  let lutNeg = cmapper.colormap(json.nodeColormapNegative);
+  let lut = cmapper.colormap(json.nodeColormap, this.colormapInvert);
+  let lutNeg = cmapper.colormap(json.nodeColormapNegative, this.colormapInvert);
   let hasNeg = json.hasOwnProperty("nodeColormapNegative");
   let min = json.nodeMinColor;
   let max = json.nodeMaxColor;
@@ -415,8 +473,8 @@ NVMesh.prototype.updateConnectome = function (gl) {
   }
   //draw all edges
   if (hasEdges) {
-    lut = cmapper.colormap(json.edgeColormap);
-    lutNeg = cmapper.colormap(json.edgeColormapNegative);
+    lut = cmapper.colormap(json.edgeColormap, this.colormapInvert);
+    lutNeg = cmapper.colormap(json.edgeColormapNegative, this.colormapInvert);
     hasNeg = json.hasOwnProperty("edgeColormapNegative");
     min = json.edgeMin;
     max = json.edgeMax;
@@ -603,7 +661,7 @@ NVMesh.prototype.updateMesh = function (gl) {
         }
         continue;
       }
-      let lut = cmapper.colormap(layer.colormap);
+      let lut = cmapper.colormap(layer.colormap, layer.colormapInvert);
       let frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
       let frameOffset = nvtx * frame;
       if (layer.isAdditiveBlend)
@@ -677,7 +735,10 @@ NVMesh.prototype.updateMesh = function (gl) {
         }
       }
       if (layer.useNegativeCmap) {
-        let lut = cmapper.colormap(layer.colormapNegative);
+        let lut = cmapper.colormap(
+          layer.colormapNegative,
+          layer.colormapInvert
+        );
         if (!layer.isOutlineBorder) {
           let mn = layer.cal_min;
           let mx = layer.cal_max;
@@ -2345,6 +2406,7 @@ NVMesh.readLayer = function (
   isOutlineBorder = false
 ) {
   let layer = [];
+  layer.colormapInvert = false;
   layer.alphaThreshold = false;
   layer.isTransparentBelowCalMin = true;
   layer.isAdditiveBlend = false;
@@ -4166,14 +4228,22 @@ NVMesh.readTRX = async function (buffer) {
       for (let i = 0; i < nval; i++) vals[i] = decodeFloat16(u16[i]);
     } else continue; //not a data array
     nval = vals.length;
+
     //next: read data_per_group
-    if (pname.includes("dpg")) {
+    if (pname.includes("groups")) {
       dpg.push({
         id: tag,
         vals: vals.slice(),
       });
       continue;
     }
+    /*if (pname.includes("dpg")) {
+      dpg.push({
+        id: tag,
+        vals: vals.slice(),
+      });
+      continue;
+    }*/
     //next: read data_per_vertex
     if (pname.includes("dpv")) {
       dpv.push({
