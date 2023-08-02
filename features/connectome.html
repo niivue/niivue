@@ -15,6 +15,8 @@
       >
     </noscript>
     <header>
+      <label for="invertCheck">Invert</label>
+      <input type="checkbox" id="invertCheck" unchecked />
       <label for="edgeSlider">Edge</label>
       <input
         type="range"
@@ -54,6 +56,10 @@
 </html>
 <script src="./niivue.umd.js"></script>
 <script type="module" async>
+  invertCheck.onchange = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, "colormapInvert", this.checked);
+    nv1.updateGLVolume();
+  };
   var sliderE = document.getElementById("edgeSlider");
   var sliderN = document.getElementById("nodeSlider");
   var sliderT = document.getElementById("threshSlider");
@@ -69,8 +75,8 @@
   };
   let connectome = {
     name: "simpleConnectome",
-    nodeColormap: "viridis",
-    nodeColormapNegative: "viridis",
+    nodeColormap: "warm",
+    nodeColormapNegative: "winter",
     nodeMinColor: 2,
     nodeMaxColor: 4,
     nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
