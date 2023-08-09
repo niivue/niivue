@@ -193,12 +193,12 @@ export function Niivue(options = {}) {
   this.colormapLists = []; //one entry per colorbar: min, max, tic
   this.volumeTexture = null; // the GPU memory storage of the volume
   this.gradientTexture = null; //3D texture for volume rnedering lighting
-  this.gradientTextureAmount = 0.0; 
+  this.gradientTextureAmount = 0.0;
   this.drawTexture = null; //the GPU memory storage of the drawing
   this.drawUndoBitmaps = []; // array of drawBitmaps for undo
   this.drawLut = cmapper.makeDrawLut("$itksnap"); // the color lookup table for drawing
   this.drawOpacity = 0.8; // opacity of drawing (default)
-  this.renderDrawAmbientOcclusion = 0.4; 
+  this.renderDrawAmbientOcclusion = 0.4;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
@@ -494,7 +494,7 @@ export function Niivue(options = {}) {
   // this seems redundant with onMeshLoaded
   this.onMeshAdded = () => {};
   this.onMeshWithUrlRemoved = () => {};
-  
+
   // not implemented anywhere...
   this.onZoom3DChange = () => {};
 
@@ -516,7 +516,7 @@ export function Niivue(options = {}) {
    * niivue.onClipPlaneChange = function(clipPlane){
    * console.log('clipPlane: ', clipPlane)
    * }
-   */ 
+   */
   this.onClipPlaneChange = () => {};
   this.onCustomMeshShaderAdded = () => {};
   this.onMeshShaderChanged = () => {};
@@ -851,7 +851,7 @@ Niivue.prototype.arrayEquals = function (a, b) {
 };
 
 /**
- * callback function to handle resize window events, redraws the scene. 
+ * callback function to handle resize window events, redraws the scene.
  * @type {function}
  * @private
  */
@@ -1015,7 +1015,6 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
     Math.floor(Math.max(array[0], array[1])),
   ];
 };
-
 
 /**
  * scale the raw intensity values by the header scale slope and intercept
