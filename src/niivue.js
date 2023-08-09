@@ -80,6 +80,10 @@ export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
 
+/**
+ * mesh file formats that can be loaded
+ * @type {string[]} MESH_EXTENSIONS
+ */
 const MESH_EXTENSIONS = [
   "ASC",
   "BYU",
@@ -113,6 +117,7 @@ const MESH_EXTENSIONS = [
   "JSON",
 ];
 
+// mouse button codes
 const LEFT_MOUSE_BUTTON = 0;
 const CENTER_MOUSE_BUTTON = 1;
 const RIGHT_MOUSE_BUTTON = 2;
@@ -180,24 +185,24 @@ const RIGHT_MOUSE_BUTTON = 2;
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export function Niivue(options = {}) {
-  this.canvas = null; // the canvas element on the page
+  this.canvas = null; // the reference to the canvas element on the page
   this.gl = null; // the gl context
-  this.isBusy = false;
-  this.needsRefresh = false;
-  this.colormapTexture = null;
+  this.isBusy = false; // flag to indicate if the scene is busy drawing
+  this.needsRefresh = false; // flag to indicate if the scene needs to be redrawn
+  this.colormapTexture = null; // the GPU memory storage of the colormap
   this.colormapLists = []; //one entry per colorbar: min, max, tic
-  this.volumeTexture = null;
+  this.volumeTexture = null; // the GPU memory storage of the volume
   this.gradientTexture = null; //3D texture for volume rnedering lighting
-  this.gradientTextureAmount = 0.0;
+  this.gradientTextureAmount = 0.0; 
   this.drawTexture = null; //the GPU memory storage of the drawing
-  this.drawUndoBitmaps = [];
-  this.drawLut = cmapper.makeDrawLut("$itksnap");
-  this.drawOpacity = 0.8;
-  this.renderDrawAmbientOcclusion = 0.4;
+  this.drawUndoBitmaps = []; // array of drawBitmaps for undo
+  this.drawLut = cmapper.makeDrawLut("$itksnap"); // the color lookup table for drawing
+  this.drawOpacity = 0.8; // opacity of drawing (default)
+  this.renderDrawAmbientOcclusion = 0.4; 
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
-  this.drawFillOverwrites = true;
+  this.drawFillOverwrites = true; //if true, fill overwrites existing drawing
   this.drawPenFillPts = []; //store mouse points for filled pen
   this.overlayTexture = null;
   this.overlayTextureID = [];
@@ -343,29 +348,190 @@ export function Niivue(options = {}) {
 
   // Defaults
   this.onContrastDragRelease = this.calculateNewRange; // function to call when contrast drag is released by default. Can be overridden by user
+  /**
+   * callback function to run when the left mouse button is released
+   * @type {function}
+   * @example
+   * niivue.onMouseUp = function(){
+   *   console.log('mouse up')
+   * }
+   */
   this.onMouseUp = () => {};
+  /**
+   * callback function to run when the crosshair location changes
+   * @type {function}
+   * @example
+   * niivue.onLocationChange = function(data){
+   * console.log('location changed')
+   * console.log('mm: ', data.mm)
+   * console.log('vox: ', data.vox)
+   * console.log('frac: ', data.frac)
+   * console.log('values: ', data.values)
+   * }
+   */
   this.onLocationChange = () => {};
+
+  /**
+   * callback function to run when the user changes the intensity range with the selection box action (right click)
+   * @type {function}
+   * @example
+   * niivue.onIntensityChange = function(volume){
+   * console.log('intensity changed')
+   * console.log('volume: ', volume)
+   * }
+   */
   this.onIntensityChange = () => {};
+
+  /**
+   * callback function to run when a new volume is loaded
+   * @type {function}
+   * @example
+   * niivue.onImageLoaded = function(volume){
+   * console.log('volume loaded')
+   * console.log('volume: ', volume)
+   * }
+   */
   this.onImageLoaded = () => {};
+
+  /**
+   * callback function to run when a new mesh is loaded
+   * @type {function}
+   * @example
+   * niivue.onMeshLoaded = function(mesh){
+   * console.log('mesh loaded')
+   * console.log('mesh: ', mesh)
+   * }
+   */
   this.onMeshLoaded = () => {};
+
+  /**
+   * callback function to run when the user changes the volume when a 4D image is loaded
+   * @type {function}
+   * @example
+   * niivue.onFrameChange = function(volume, frameNumber){
+   * console.log('frame changed')
+   * console.log('volume: ', volume)
+   * console.log('frameNumber: ', frameNumber)
+   * }
+   */
   this.onFrameChange = () => {};
+
+  /**
+   * callback function to run when niivue reports an error
+   * @type {function}
+   * @example
+   * niivue.onError = function(error){
+   * console.log('error: ', error)
+   * }
+   */
   this.onError = () => {};
+
+  /**
+   * callback function to run when niivue reports detailed info
+   * @type {function}
+   * @example
+   * niivue.onInfo = function(info){
+   * console.log('info: ', info)
+   * }
+   */
   this.onInfo = () => {};
+
+  /**
+   * callback function to run when niivue reports a warning
+   * @type {function}
+   * @example
+   * niivue.onWarn = function(warn){
+   * console.log('warn: ', warn)
+   * }
+   */
   this.onWarn = () => {};
+
+  /**
+   * callback function to run when niivue reports a debug message
+   * @type {function}
+   * @example
+   * niivue.onDebug = function(debug){
+   * console.log('debug: ', debug)
+   * }
+   */
   this.onDebug = () => {};
+
+  /**
+   * callback function to run when a volume is added from a url
+   * @type {function}
+   * @example
+   * niivue.onVolumeAddedFromUrl = function(imageOptions, volume){
+   * console.log('volume added from url')
+   * console.log('imageOptions: ', imageOptions)
+   * console.log('volume: ', volume)
+   * }
+   */
   this.onVolumeAddedFromUrl = () => {};
   this.onVolumeWithUrlRemoved = () => {};
+
+  /**
+   * callback function to run when updateGLVolume is called (most users will not need to use this)
+   * @type {function}
+   * @example
+   * niivue.onVolumeUpdated = function(){
+   * console.log('volume updated')
+   * }
+   */
   this.onVolumeUpdated = () => {};
+
+  /**
+   * callback function to run when a mesh is added from a url
+   * @type {function}
+   * @example
+   * niivue.onMeshAddedFromUrl = function(meshOptions, mesh){
+   * console.log('mesh added from url')
+   * console.log('meshOptions: ', meshOptions)
+   * console.log('mesh: ', mesh)
+   * }
+   */
   this.onMeshAddedFromUrl = () => {};
+
+  // this seems redundant with onMeshLoaded
   this.onMeshAdded = () => {};
   this.onMeshWithUrlRemoved = () => {};
+  
+  // not implemented anywhere...
   this.onZoom3DChange = () => {};
+
+  /**
+   * callback function to run when the user changes the rotation of the 3D rendering
+   * @type {function}
+   * @example
+   * niivue.onAzimuthElevationChange = function(azimuth, elevation){
+   * console.log('azimuth: ', azimuth)
+   * console.log('elevation: ', elevation)
+   * }
+   */
   this.onAzimuthElevationChange = () => {};
+
+  /**
+   * callback function to run when the user changes the clip plane
+   * @type {function}
+   * @example
+   * niivue.onClipPlaneChange = function(clipPlane){
+   * console.log('clipPlane: ', clipPlane)
+   * }
+   */ 
   this.onClipPlaneChange = () => {};
   this.onCustomMeshShaderAdded = () => {};
   this.onMeshShaderChanged = () => {};
   this.onMeshPropertyChanged = () => {};
+
+  /**
+   * callback function to run when the user loads a new NiiVue document
+   * @type {function}
+   * @example
+   * niivue.onDocumentLoaded = function(document){
+   * console.log('document: ', document)
+   * }
+   */
   this.onDocumentLoaded = () => {};
+
   this.document = new NVDocument();
 
   this.opts = { ...DEFAULT_OPTIONS };
@@ -373,6 +539,7 @@ export function Niivue(options = {}) {
 
   // populate Niivue with user supplied options
   for (const name in options) {
+    // if the user supplied a function for a callback, use it, else use the default callback or nothing
     if (typeof options[name] === "function") {
       this[name] = options[name];
     } else {
@@ -389,6 +556,7 @@ export function Niivue(options = {}) {
   } else {
     this.uiData.dpr = 1;
   }
+
   this.dragModes = [];
   this.dragModes.contrast = DRAG_MODE.contrast;
   this.dragModes.measurement = DRAG_MODE.measurement;
@@ -639,7 +807,15 @@ Niivue.prototype.syncWith = function (
   this.syncOpts = syncOpts;
 };
 
-// not included in public docs
+/**
+ * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
+ * @private
+ * @example
+ * niivue1 = new Niivue()
+ * niivue2 = new Niivue()
+ * niivue2.syncWith(niivue1)
+ * niivue2.sync()
+ */
 Niivue.prototype.sync = function () {
   if (!this.otherNV || typeof this.otherNV === "undefined") {
     return;
@@ -674,9 +850,11 @@ Niivue.prototype.arrayEquals = function (a, b) {
   );
 };
 
-// not included in public docs
-//handle window resizing
-// note: no test yet
+/**
+ * callback function to handle resize window events, redraws the scene. 
+ * @type {function}
+ * @private
+ */
 Niivue.prototype.resizeListener = function () {
   if (!this.opts.isResizeCanvas) {
     if (this.opts.isHighResolutionCapable) {
@@ -712,6 +890,12 @@ Niivue.prototype.resizeListener = function () {
  * https://stackoverflow.com/questions/42309715/how-to-correctly-pass-mouse-coordinates-to-webgl
  * note:  no test yet
  */
+/**
+ * callback to handle mouse move events relative to the canvas
+ * @type {function}
+ * @private
+ * @returns {object} the mouse position relative to the canvas
+ */
 Niivue.prototype.getRelativeMousePosition = function (event, target) {
   target = target || event.target;
   var rect = target.getBoundingClientRect();
@@ -730,10 +914,6 @@ Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function (
 ) {
   target = target || event.target;
   var pos = this.getRelativeMousePosition(event, target);
-
-  //pos.x = (pos.x * target.width) / target.clientWidth;
-  //pos.y = (pos.y * target.height) / target.clientHeight;
-
   return pos;
 };
 
@@ -821,7 +1001,11 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
   return;
 };
 
-// not included in public docs
+/**
+ * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
+ * @param {Array} array an array of two values
+ * @returns {Array} an array of two values representing the min and max voxel indices
+ */
 Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   if (array.length > 2) {
     throw new Error("array must not contain more than two values");
@@ -832,7 +1016,14 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   ];
 };
 
-// not included in public docs
+
+/**
+ * scale the raw intensity values by the header scale slope and intercept
+ * @param {object} hdr the header object
+ * @param {Array} raw the raw intensity values
+ * @returns {Array} the scaled intensity values
+ * @private
+ */
 function intensityRaw2Scaled(hdr, raw) {
   if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
   return raw * hdr.scl_slope + hdr.scl_inter;
@@ -2966,7 +3157,7 @@ Niivue.prototype.loadDocument = function (document) {
     this.addMesh(meshToAdd);
   }
   this.updateGLVolume();
-  this.onDocumentLoaded();
+  this.onDocumentLoaded(document);
   return this;
 };
 
@@ -3056,7 +3247,7 @@ Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
   Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
   this.mediaUrlMap.set(mesh, options.url);
-  this.onMeshAddedFromUrl(options);
+  this.onMeshAddedFromUrl(options, mesh);
   this.addMesh(mesh);
 
   return mesh;
