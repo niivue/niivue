@@ -62066,7 +62066,7 @@ Niivue.prototype.loadDocument = function(m) {
     );
     T.meshShaderIndex = C.meshShaderIndex, T.layers = C.layers, T.updateMesh(this.gl), log.debug(T), this.addMesh(T);
   }
-  return this.updateGLVolume(), this.onDocumentLoaded(), this;
+  return this.updateGLVolume(), this.onDocumentLoaded(m), this;
 };
 Niivue.prototype.saveDocument = async function(m = "untitled.nvd") {
   this.document.title = m, this.drawScene(), this.document.previewImageDataURL = this.canvas.toDataURL(), this.document.download(m);
@@ -62101,7 +62101,7 @@ Niivue.prototype.addMeshFromUrl = async function(m) {
   let h = new NVMeshFromUrlOptions();
   h.gl = this.gl, Object.assign(h, m);
   let g = await NVMesh.loadFromUrl(h);
-  return this.mediaUrlMap.set(g, h.url), this.onMeshAddedFromUrl(h), this.addMesh(g), g;
+  return this.mediaUrlMap.set(g, h.url), this.onMeshAddedFromUrl(h, g), this.addMesh(g), g;
 };
 Niivue.prototype.loadMeshes = async function(m) {
   if (this.on("loading", (h) => {

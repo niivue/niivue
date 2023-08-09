@@ -1,23 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="utf-8">
-    <title>JSDoc: Class: NVController</title>
-
-    <script src="scripts/prettify/prettify.js"> </script>
-    <script src="scripts/prettify/lang-css.js"> </script>
+    <title>NVController - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
 
-<div id="main">
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
 
-    <h1 class="page-title">Class: NVController</h1>
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a><ul class='methods'><li data-type='method'><a href="NVController.html#connectToSession">connectToSession</a></li><li data-type='method'><a href="NVController.html#onAzimuthElevationChangeHandler">onAzimuthElevationChangeHandler</a></li><li data-type='method'><a href="NVController.html#onClipPlaneChangeHandler">onClipPlaneChangeHandler</a></li><li data-type='method'><a href="NVController.html#onColormapChangeHandler">onColormapChangeHandler</a></li><li data-type='method'><a href="NVController.html#onCustomMeshShaderAddedHandler">onCustomMeshShaderAddedHandler</a></li><li data-type='method'><a href="NVController.html#onFrameChangeHandler">onFrameChangeHandler</a></li><li data-type='method'><a href="NVController.html#onImageLoadedHandler">onImageLoadedHandler</a></li><li data-type='method'><a href="NVController.html#onMeshAddedFromUrlHandler">onMeshAddedFromUrlHandler</a></li><li data-type='method'><a href="NVController.html#onMeshLoadedHandler">onMeshLoadedHandler</a></li><li data-type='method'><a href="NVController.html#onMeshPropertyChanged">onMeshPropertyChanged</a></li><li data-type='method'><a href="NVController.html#onMeshShaderChanged">onMeshShaderChanged</a></li><li data-type='method'><a href="NVController.html#onOpacityChangeHandler">onOpacityChangeHandler</a></li><li data-type='method'><a href="NVController.html#onVolumeAddedFromUrlHandler">onVolumeAddedFromUrlHandler</a></li><li data-type='method'><a href="NVController.html#onVolumeWithUrlRemovedHandler">onVolumeWithUrlRemovedHandler</a></li><li data-type='method'><a href="NVController.html#onZoom3DChangeHandler">onZoom3DChangeHandler</a></li></ul></li><li><a href="NVDocument.html">NVDocument</a><ul class='methods'><li data-type='method'><a href="NVDocument.html#addImageOptions">addImageOptions</a></li><li data-type='method'><a href="NVDocument.html#download">download</a></li><li data-type='method'><a href="NVDocument.html#getImageOptions">getImageOptions</a></li><li data-type='method'><a href="NVDocument.html#hasImage">hasImage</a></li><li data-type='method'><a href="NVDocument.html#hasImageFromUrl">hasImageFromUrl</a></li><li data-type='method'><a href="NVDocument.html#json">json</a></li><li data-type='method'><a href="NVDocument.html#removeImage">removeImage</a></li><li data-type='method'><a href="NVDocument.html#.deserializeMeshDataObjects">deserializeMeshDataObjects</a></li><li data-type='method'><a href="NVDocument.html#.loadFromJSON">loadFromJSON</a></li></ul></li><li></li><li></li><li><a href="NVImage.html">NVImage</a><ul class='methods'><li data-type='method'><a href="NVImage.html#applyOptionsUpdate">applyOptionsUpdate</a></li><li data-type='method'><a href="NVImage.html#clone">clone</a></li><li data-type='method'><a href="NVImage.html#getImageMetadata">getImageMetadata</a></li><li data-type='method'><a href="NVImage.html#toNiivueObject3D">toNiivueObject3D</a></li><li data-type='method'><a href="NVImage.html#toUint8Array">toUint8Array</a></li><li data-type='method'><a href="NVImage.html#zeroImage">zeroImage</a></li><li data-type='method'><a href="NVImage.html#.zerosLike">zerosLike</a></li></ul></li><li></li><li></li><li></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a><ul class='methods'><li data-type='method'><a href="NVMesh.html#.loadFromBase64">loadFromBase64</a></li><li data-type='method'><a href="NVMesh.html#.loadFromFile">loadFromFile</a></li><li data-type='method'><a href="NVMesh.html#.loadFromUrl">loadFromUrl</a></li></ul></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a><ul class='methods'><li data-type='method'><a href="Niivue.html#addColormap">addColormap</a></li><li data-type='method'><a href="Niivue.html#addMesh">addMesh</a></li><li data-type='method'><a href="Niivue.html#addMeshFromUrl">addMeshFromUrl</a></li><li data-type='method'><a href="Niivue.html#addVolume">addVolume</a></li><li data-type='method'><a href="Niivue.html#addVolumeFromUrl">addVolumeFromUrl</a></li><li data-type='method'><a href="Niivue.html#attachTo">attachTo</a></li><li data-type='method'><a href="Niivue.html#attachToCanvas">attachToCanvas</a></li><li data-type='method'><a href="Niivue.html#calculateMinMaxVoxIdx">calculateMinMaxVoxIdx</a></li><li data-type='method'><a href="Niivue.html#cloneVolume">cloneVolume</a></li><li data-type='method'><a href="Niivue.html#closeDrawing">closeDrawing</a></li><li data-type='method'><a href="Niivue.html#colormap">colormap</a></li><li data-type='method'><a href="Niivue.html#colormaps">colormaps</a></li><li data-type='method'><a href="Niivue.html#createCustomMeshShader">createCustomMeshShader</a></li><li data-type='method'><a href="Niivue.html#createEmptyDrawing">createEmptyDrawing</a></li><li data-type='method'><a href="Niivue.html#drawGrowCut">drawGrowCut</a></li><li data-type='method'><a href="Niivue.html#drawMosaic">drawMosaic</a></li><li data-type='method'><a href="Niivue.html#drawOtsu">drawOtsu</a></li><li data-type='method'><a href="Niivue.html#drawUndo">drawUndo</a></li><li data-type='method'><a href="Niivue.html#getDescriptives">getDescriptives</a></li><li data-type='method'><a href="Niivue.html#getFrame4D">getFrame4D</a></li><li data-type='method'><a href="Niivue.html#getMediaByUrl">getMediaByUrl</a></li><li data-type='method'><a href="Niivue.html#getOverlayIndexByID">getOverlayIndexByID</a></li><li data-type='method'><a href="Niivue.html#getRadiologicalConvention">getRadiologicalConvention</a></li><li data-type='method'><a href="Niivue.html#getVolumeIndexByID">getVolumeIndexByID</a></li><li data-type='method'><a href="Niivue.html#isMeshExt">isMeshExt</a></li><li data-type='method'><a href="Niivue.html#loadConnectome">loadConnectome</a></li><li data-type='method'><a href="Niivue.html#loadDeferred4DVolumes">loadDeferred4DVolumes</a></li><li data-type='method'><a href="Niivue.html#loadDocument">loadDocument</a></li><li data-type='method'><a href="Niivue.html#loadDocumentFromUrl">loadDocumentFromUrl</a></li><li data-type='method'><a href="Niivue.html#loadDrawingFromUrl">loadDrawingFromUrl</a></li><li data-type='method'><a href="Niivue.html#loadMeshes">loadMeshes</a></li><li data-type='method'><a href="Niivue.html#loadVolumes">loadVolumes</a></li><li data-type='method'><a href="Niivue.html#meshShaderNames">meshShaderNames</a></li><li data-type='method'><a href="Niivue.html#moveCrosshairInVox">moveCrosshairInVox</a></li><li data-type='method'><a href="Niivue.html#moveVolumeDown">moveVolumeDown</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToBottom">moveVolumeToBottom</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToTop">moveVolumeToTop</a></li><li data-type='method'><a href="Niivue.html#moveVolumeUp">moveVolumeUp</a></li><li data-type='method'><a href="Niivue.html#off">off</a></li><li data-type='method'><a href="Niivue.html#on">on</a></li><li data-type='method'><a href="Niivue.html#onAzimuthElevationChange">onAzimuthElevationChange</a></li><li data-type='method'><a href="Niivue.html#onClipPlaneChange">onClipPlaneChange</a></li><li data-type='method'><a href="Niivue.html#onDebug">onDebug</a></li><li data-type='method'><a href="Niivue.html#onDocumentLoaded">onDocumentLoaded</a></li><li data-type='method'><a href="Niivue.html#onError">onError</a></li><li data-type='method'><a href="Niivue.html#onFrameChange">onFrameChange</a></li><li data-type='method'><a href="Niivue.html#onImageLoaded">onImageLoaded</a></li><li data-type='method'><a href="Niivue.html#onInfo">onInfo</a></li><li data-type='method'><a href="Niivue.html#onIntensityChange">onIntensityChange</a></li><li data-type='method'><a href="Niivue.html#onLocationChange">onLocationChange</a></li><li data-type='method'><a href="Niivue.html#onMeshAddedFromUrl">onMeshAddedFromUrl</a></li><li data-type='method'><a href="Niivue.html#onMeshLoaded">onMeshLoaded</a></li><li data-type='method'><a href="Niivue.html#onMouseUp">onMouseUp</a></li><li data-type='method'><a href="Niivue.html#onVolumeAddedFromUrl">onVolumeAddedFromUrl</a></li><li data-type='method'><a href="Niivue.html#onVolumeUpdated">onVolumeUpdated</a></li><li data-type='method'><a href="Niivue.html#onWarn">onWarn</a></li><li data-type='method'><a href="Niivue.html#removeHaze">removeHaze</a></li><li data-type='method'><a href="Niivue.html#removeMesh">removeMesh</a></li><li data-type='method'><a href="Niivue.html#removeMeshByUrl">removeMeshByUrl</a></li><li data-type='method'><a href="Niivue.html#removeVolume">removeVolume</a></li><li data-type='method'><a href="Niivue.html#removeVolumeByIndex">removeVolumeByIndex</a></li><li data-type='method'><a href="Niivue.html#removeVolumeByUrl">removeVolumeByUrl</a></li><li data-type='method'><a href="Niivue.html#reverseFaces">reverseFaces</a></li><li data-type='method'><a href="Niivue.html#saveImage">saveImage</a></li><li data-type='method'><a href="Niivue.html#saveScene">saveScene</a></li><li data-type='method'><a href="Niivue.html#setAdditiveBlend">setAdditiveBlend</a></li><li data-type='method'><a href="Niivue.html#setClipPlane">setClipPlane</a></li><li data-type='method'><a href="Niivue.html#setClipPlaneColor">setClipPlaneColor</a></li><li data-type='method'><a href="Niivue.html#setColormap">setColormap</a></li><li data-type='method'><a href="Niivue.html#setColormapNegative">setColormapNegative</a></li><li data-type='method'><a href="Niivue.html#setCornerOrientationText">setCornerOrientationText</a></li><li data-type='method'><a href="Niivue.html#setCrosshairColor">setCrosshairColor</a></li><li data-type='method'><a href="Niivue.html#setCrosshairWidth">setCrosshairWidth</a></li><li data-type='method'><a href="Niivue.html#setCustomMeshShader">setCustomMeshShader</a></li><li data-type='method'><a href="Niivue.html#setDrawOpacity">setDrawOpacity</a></li><li data-type='method'><a href="Niivue.html#setDrawingEnabled">setDrawingEnabled</a></li><li data-type='method'><a href="Niivue.html#setFrame4D">setFrame4D</a></li><li data-type='method'><a href="Niivue.html#setGamma">setGamma</a></li><li data-type='method'><a href="Niivue.html#setHighResolutionCapable">setHighResolutionCapable</a></li><li data-type='method'><a href="Niivue.html#setInterpolation">setInterpolation</a></li><li data-type='method'><a href="Niivue.html#setMeshLayerProperty">setMeshLayerProperty</a></li><li data-type='method'><a href="Niivue.html#setMeshProperty">setMeshProperty</a></li><li data-type='method'><a href="Niivue.html#setMeshShader">setMeshShader</a></li><li data-type='method'><a href="Niivue.html#setMeshThicknessOn2D">setMeshThicknessOn2D</a></li><li data-type='method'><a href="Niivue.html#setModulationImage">setModulationImage</a></li><li data-type='method'><a href="Niivue.html#setOpacity">setOpacity</a></li><li data-type='method'><a href="Niivue.html#setPan2Dxyzmm">setPan2Dxyzmm</a></li><li data-type='method'><a href="Niivue.html#setPenValue">setPenValue</a></li><li data-type='method'><a href="Niivue.html#setRadiologicalConvention">setRadiologicalConvention</a></li><li data-type='method'><a href="Niivue.html#setRenderAzimuthElevation">setRenderAzimuthElevation</a></li><li data-type='method'><a href="Niivue.html#setScale">setScale</a></li><li data-type='method'><a href="Niivue.html#setSelectionBoxColor">setSelectionBoxColor</a></li><li data-type='method'><a href="Niivue.html#setSliceMM">setSliceMM</a></li><li data-type='method'><a href="Niivue.html#setSliceMosaicString">setSliceMosaicString</a></li><li data-type='method'><a href="Niivue.html#setSliceType">setSliceType</a></li><li data-type='method'><a href="Niivue.html#setVolume">setVolume</a></li><li data-type='method'><a href="Niivue.html#sph2cartDeg">sph2cartDeg</a></li><li data-type='method'><a href="Niivue.html#syncWith">syncWith</a></li><li data-type='method'><a href="Niivue.html#updateGLVolume">updateGLVolume</a></li></ul></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#MESH_EXTENSIONS">MESH_EXTENSIONS</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">NVController</h1>
+    
 
     
 
@@ -28,33 +47,77 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>NVController<span class="signature">(niivue)</span><span class="type-signature"></span></h2>
+        <h2>
         
-            <div class="class-description">NVController</div>
+            NVController
+        
+        </h2>
+        
+            <div class="class-description usertext">NVController</div>
         
     
 </header>
 
 <article>
-    <div class="container-overview">
     
+        <div class="container-overview">
         
+            
 
     
     <h2>Constructor</h2>
     
 
-    
     <h4 class="name" id="NVController"><span class="type-signature"></span>new NVController<span class="signature">(niivue)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    NVController is for synchronizing both remote and local instances of Niivue
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>NVController is for synchronizing both remote and local instances of Niivue</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line38">line 38</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -64,7 +127,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -98,6 +165,7 @@
 <span class="param-type"><a href="Niivue.html">Niivue</a></span>
 
 
+
             
             </td>
 
@@ -117,37 +185,94 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        </div>
+    
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Classes</h3>
+
+        <dl>
+            <dt><a href="NVController.html">NVController</a></dt>
+            <dd></dd>
+        </dl>
+    
+    
+    
+
+     
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="connectToSession"><span class="type-signature"></span>connectToSession<span class="signature">(serverBaseUrl, sessionName, sessionKey, user)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Connects to existing session or creates new session</li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line38">line 38</a>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line207">line 207</a>
     </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     
 
     
@@ -169,66 +294,7 @@
 
 
 
-
-
-
-
-
-
-
-    
-    </div>
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Classes</h3>
-
-        <dl>
-            <dt><a href="NVController.html">NVController</a></dt>
-            <dd></dd>
-        </dl>
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="connectToSession"><span class="type-signature"></span>connectToSession<span class="signature">(serverBaseUrl, sessionName, sessionKey, user)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Connects to existing session or creates new session
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -262,6 +328,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -283,6 +350,7 @@
             
                 
 <span class="param-type">string</span>
+
 
 
             
@@ -308,6 +376,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -331,6 +400,7 @@
 <span class="param-type"><a href="SessionUser.html">SessionUser</a></span>
 
 
+
             
             </td>
 
@@ -344,52 +414,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line207">line 207</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -414,17 +438,56 @@
 
     
 
-    
-    <h4 class="name" id="onAzimuthElevationChangeHandler"><span class="type-signature">(async) </span>onAzimuthElevationChangeHandler<span class="signature">(azimuth, elevation)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onAzimuthElevationChangeHandler"><span class="type-signature type-signature-async">(async) </span>onAzimuthElevationChangeHandler<span class="signature">(azimuth, elevation)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Azimuth and/or elevation has changed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Azimuth and/or elevation has changed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line242">line 242</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -434,7 +497,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -468,6 +535,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -491,6 +559,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -504,52 +573,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line242">line 242</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -574,17 +597,56 @@
 
     
 
-    
-    <h4 class="name" id="onClipPlaneChangeHandler"><span class="type-signature">(async) </span>onClipPlaneChangeHandler<span class="signature">(clipPlane)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onClipPlaneChangeHandler"><span class="type-signature type-signature-async">(async) </span>onClipPlaneChangeHandler<span class="signature">(clipPlane)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Clip plane has changed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Clip plane has changed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line256">line 256</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -594,7 +656,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -628,6 +694,7 @@
 <span class="param-type">Array.&lt;number></span>
 
 
+
             
             </td>
 
@@ -641,52 +708,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line256">line 256</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -711,15 +732,53 @@
 
     
 
-    
-    <h4 class="name" id="onColormapChangeHandler"><span class="type-signature">(async) </span>onColormapChangeHandler<span class="signature">(volume)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onColormapChangeHandler"><span class="type-signature type-signature-async">(async) </span>onColormapChangeHandler<span class="signature">(volume)</span><span class="type-signature"></span></h4>
 
     
 
 
 
 
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line347">line 347</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -727,7 +786,13 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -761,6 +826,7 @@
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -774,52 +840,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line347">line 347</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -844,17 +864,56 @@
 
     
 
-    
     <h4 class="name" id="onCustomMeshShaderAddedHandler"><span class="type-signature"></span>onCustomMeshShaderAddedHandler<span class="signature">(fragmentShaderText, name)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Custom mesh shader has been added
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Custom mesh shader has been added</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line398">line 398</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -864,7 +923,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -898,6 +961,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -921,6 +985,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -934,52 +999,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line398">line 398</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1004,17 +1023,56 @@
 
     
 
-    
     <h4 class="name" id="onFrameChangeHandler"><span class="type-signature"></span>onFrameChangeHandler<span class="signature">(volume, index)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Frame for 4D image has changed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Frame for 4D image has changed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line379">line 379</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1024,7 +1082,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1056,6 +1118,7 @@
             
                 
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
             
@@ -1081,6 +1144,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -1094,52 +1158,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line379">line 379</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1164,17 +1182,56 @@
 
     
 
-    
-    <h4 class="name" id="onImageLoadedHandler"><span class="type-signature">(async) </span>onImageLoadedHandler<span class="signature">(volume)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onImageLoadedHandler"><span class="type-signature type-signature-async">(async) </span>onImageLoadedHandler<span class="signature">(volume)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    A volume has been added
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>A volume has been added</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line285">line 285</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1184,7 +1241,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1218,6 +1279,7 @@
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -1231,52 +1293,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line285">line 285</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1301,17 +1317,56 @@
 
     
 
-    
-    <h4 class="name" id="onMeshAddedFromUrlHandler"><span class="type-signature">(async) </span>onMeshAddedFromUrlHandler<span class="signature">(meshOptions)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onMeshAddedFromUrlHandler"><span class="type-signature type-signature-async">(async) </span>onMeshAddedFromUrlHandler<span class="signature">(meshOptions)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Notifies that a mesh has been loaded by URL
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Notifies that a mesh has been loaded by URL</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line314">line 314</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1321,7 +1376,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1355,6 +1414,7 @@
 <span class="param-type"><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></span>
 
 
+
             
             </td>
 
@@ -1368,52 +1428,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line314">line 314</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1438,17 +1452,56 @@
 
     
 
-    
-    <h4 class="name" id="onMeshLoadedHandler"><span class="type-signature">(async) </span>onMeshLoadedHandler<span class="signature">(mesh)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onMeshLoadedHandler"><span class="type-signature type-signature-async">(async) </span>onMeshLoadedHandler<span class="signature">(mesh)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Notifies that a mesh has been added
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Notifies that a mesh has been added</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line329">line 329</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1458,7 +1511,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1492,6 +1549,7 @@
 <span class="param-type"><a href="NVMesh.html">NVMesh</a></span>
 
 
+
             
             </td>
 
@@ -1505,52 +1563,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line329">line 329</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1575,17 +1587,56 @@
 
     
 
-    
     <h4 class="name" id="onMeshPropertyChanged"><span class="type-signature"></span>onMeshPropertyChanged<span class="signature">(meshIndex, key, val)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Mesh property has been changed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Mesh property has been changed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line429">line 429</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1595,7 +1646,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1627,6 +1682,7 @@
             
                 
 <span class="param-type">number</span>
+
 
 
             
@@ -1652,6 +1708,7 @@
 <span class="param-type">any</span>
 
 
+
             
             </td>
 
@@ -1675,6 +1732,7 @@
 <span class="param-type">any</span>
 
 
+
             
             </td>
 
@@ -1688,52 +1746,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line429">line 429</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1758,17 +1770,56 @@
 
     
 
-    
     <h4 class="name" id="onMeshShaderChanged"><span class="type-signature"></span>onMeshShaderChanged<span class="signature">(meshIndex, shaderIndex)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Mesh shader has changed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Mesh shader has changed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line413">line 413</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1778,7 +1829,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1812,6 +1867,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -1835,6 +1891,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -1848,52 +1905,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line413">line 413</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -1918,15 +1929,53 @@
 
     
 
-    
-    <h4 class="name" id="onOpacityChangeHandler"><span class="type-signature">(async) </span>onOpacityChangeHandler<span class="signature">(volume)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onOpacityChangeHandler"><span class="type-signature type-signature-async">(async) </span>onOpacityChangeHandler<span class="signature">(volume)</span><span class="type-signature"></span></h4>
 
     
 
 
 
 
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line362">line 362</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1934,7 +1983,13 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1968,6 +2023,7 @@
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -1981,52 +2037,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line362">line 362</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -2051,17 +2061,56 @@
 
     
 
-    
-    <h4 class="name" id="onVolumeAddedFromUrlHandler"><span class="type-signature">(async) </span>onVolumeAddedFromUrlHandler<span class="signature">(imageOptions)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onVolumeAddedFromUrlHandler"><span class="type-signature type-signature-async">(async) </span>onVolumeAddedFromUrlHandler<span class="signature">(imageOptions)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Add an image and notify subscribers
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Add an image and notify subscribers</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line269">line 269</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -2071,7 +2120,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2105,6 +2158,7 @@
 <span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
 
 
+
             
             </td>
 
@@ -2118,52 +2172,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line269">line 269</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -2188,17 +2196,56 @@
 
     
 
-    
-    <h4 class="name" id="onVolumeWithUrlRemovedHandler"><span class="type-signature">(async) </span>onVolumeWithUrlRemovedHandler<span class="signature">(url)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onVolumeWithUrlRemovedHandler"><span class="type-signature type-signature-async">(async) </span>onVolumeWithUrlRemovedHandler<span class="signature">(url)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Notifies other users that a volume has been removed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Notifies other users that a volume has been removed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line301">line 301</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -2208,7 +2255,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2242,6 +2293,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -2255,52 +2307,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line301">line 301</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -2325,17 +2331,56 @@
 
     
 
-    
-    <h4 class="name" id="onZoom3DChangeHandler"><span class="type-signature">(async) </span>onZoom3DChangeHandler<span class="signature">(zoom)</span><span class="type-signature"></span></h4>
-    
+    <h4 class="name" id="onZoom3DChangeHandler"><span class="type-signature type-signature-async">(async) </span>onZoom3DChangeHandler<span class="signature">(zoom)</span><span class="type-signature"></span></h4>
 
     
 
 
 
-<div class="description">
-    Zoom level has changed
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Zoom level has changed</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line228">line 228</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -2345,7 +2390,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2379,6 +2428,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -2392,52 +2442,6 @@
     
     </tbody>
 </table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvcontroller.js.html">nvcontroller.js</a>, <a href="nvcontroller.js.html#line228">line 228</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
 
 
 
@@ -2470,19 +2474,21 @@
 
 
 
+    
+    
 </div>
-
-<nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a></li><li><a href="NVDocument.html">NVDocument</a></li><li><a href="NVImage.html">NVImage</a></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
-</nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Aug 09 2023 12:06:11 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Wed Aug 09 2023 16:11:10 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
-<script> prettyPrint(); </script>
-<script src="scripts/linenumber.js"> </script>
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
 </body>
 </html>

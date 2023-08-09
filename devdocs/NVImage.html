@@ -1,23 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="utf-8">
-    <title>JSDoc: Class: NVImage</title>
-
-    <script src="scripts/prettify/prettify.js"> </script>
-    <script src="scripts/prettify/lang-css.js"> </script>
+    <title>NVImage - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
 
-<div id="main">
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
 
-    <h1 class="page-title">Class: NVImage</h1>
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a><ul class='methods'><li data-type='method'><a href="NVController.html#connectToSession">connectToSession</a></li><li data-type='method'><a href="NVController.html#onAzimuthElevationChangeHandler">onAzimuthElevationChangeHandler</a></li><li data-type='method'><a href="NVController.html#onClipPlaneChangeHandler">onClipPlaneChangeHandler</a></li><li data-type='method'><a href="NVController.html#onColormapChangeHandler">onColormapChangeHandler</a></li><li data-type='method'><a href="NVController.html#onCustomMeshShaderAddedHandler">onCustomMeshShaderAddedHandler</a></li><li data-type='method'><a href="NVController.html#onFrameChangeHandler">onFrameChangeHandler</a></li><li data-type='method'><a href="NVController.html#onImageLoadedHandler">onImageLoadedHandler</a></li><li data-type='method'><a href="NVController.html#onMeshAddedFromUrlHandler">onMeshAddedFromUrlHandler</a></li><li data-type='method'><a href="NVController.html#onMeshLoadedHandler">onMeshLoadedHandler</a></li><li data-type='method'><a href="NVController.html#onMeshPropertyChanged">onMeshPropertyChanged</a></li><li data-type='method'><a href="NVController.html#onMeshShaderChanged">onMeshShaderChanged</a></li><li data-type='method'><a href="NVController.html#onOpacityChangeHandler">onOpacityChangeHandler</a></li><li data-type='method'><a href="NVController.html#onVolumeAddedFromUrlHandler">onVolumeAddedFromUrlHandler</a></li><li data-type='method'><a href="NVController.html#onVolumeWithUrlRemovedHandler">onVolumeWithUrlRemovedHandler</a></li><li data-type='method'><a href="NVController.html#onZoom3DChangeHandler">onZoom3DChangeHandler</a></li></ul></li><li><a href="NVDocument.html">NVDocument</a><ul class='methods'><li data-type='method'><a href="NVDocument.html#addImageOptions">addImageOptions</a></li><li data-type='method'><a href="NVDocument.html#download">download</a></li><li data-type='method'><a href="NVDocument.html#getImageOptions">getImageOptions</a></li><li data-type='method'><a href="NVDocument.html#hasImage">hasImage</a></li><li data-type='method'><a href="NVDocument.html#hasImageFromUrl">hasImageFromUrl</a></li><li data-type='method'><a href="NVDocument.html#json">json</a></li><li data-type='method'><a href="NVDocument.html#removeImage">removeImage</a></li><li data-type='method'><a href="NVDocument.html#.deserializeMeshDataObjects">deserializeMeshDataObjects</a></li><li data-type='method'><a href="NVDocument.html#.loadFromJSON">loadFromJSON</a></li></ul></li><li></li><li></li><li><a href="NVImage.html">NVImage</a><ul class='methods'><li data-type='method'><a href="NVImage.html#applyOptionsUpdate">applyOptionsUpdate</a></li><li data-type='method'><a href="NVImage.html#clone">clone</a></li><li data-type='method'><a href="NVImage.html#getImageMetadata">getImageMetadata</a></li><li data-type='method'><a href="NVImage.html#toNiivueObject3D">toNiivueObject3D</a></li><li data-type='method'><a href="NVImage.html#toUint8Array">toUint8Array</a></li><li data-type='method'><a href="NVImage.html#zeroImage">zeroImage</a></li><li data-type='method'><a href="NVImage.html#.zerosLike">zerosLike</a></li></ul></li><li></li><li></li><li></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a><ul class='methods'><li data-type='method'><a href="NVMesh.html#.loadFromBase64">loadFromBase64</a></li><li data-type='method'><a href="NVMesh.html#.loadFromFile">loadFromFile</a></li><li data-type='method'><a href="NVMesh.html#.loadFromUrl">loadFromUrl</a></li></ul></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a><ul class='methods'><li data-type='method'><a href="Niivue.html#addColormap">addColormap</a></li><li data-type='method'><a href="Niivue.html#addMesh">addMesh</a></li><li data-type='method'><a href="Niivue.html#addMeshFromUrl">addMeshFromUrl</a></li><li data-type='method'><a href="Niivue.html#addVolume">addVolume</a></li><li data-type='method'><a href="Niivue.html#addVolumeFromUrl">addVolumeFromUrl</a></li><li data-type='method'><a href="Niivue.html#attachTo">attachTo</a></li><li data-type='method'><a href="Niivue.html#attachToCanvas">attachToCanvas</a></li><li data-type='method'><a href="Niivue.html#calculateMinMaxVoxIdx">calculateMinMaxVoxIdx</a></li><li data-type='method'><a href="Niivue.html#cloneVolume">cloneVolume</a></li><li data-type='method'><a href="Niivue.html#closeDrawing">closeDrawing</a></li><li data-type='method'><a href="Niivue.html#colormap">colormap</a></li><li data-type='method'><a href="Niivue.html#colormaps">colormaps</a></li><li data-type='method'><a href="Niivue.html#createCustomMeshShader">createCustomMeshShader</a></li><li data-type='method'><a href="Niivue.html#createEmptyDrawing">createEmptyDrawing</a></li><li data-type='method'><a href="Niivue.html#drawGrowCut">drawGrowCut</a></li><li data-type='method'><a href="Niivue.html#drawMosaic">drawMosaic</a></li><li data-type='method'><a href="Niivue.html#drawOtsu">drawOtsu</a></li><li data-type='method'><a href="Niivue.html#drawUndo">drawUndo</a></li><li data-type='method'><a href="Niivue.html#getDescriptives">getDescriptives</a></li><li data-type='method'><a href="Niivue.html#getFrame4D">getFrame4D</a></li><li data-type='method'><a href="Niivue.html#getMediaByUrl">getMediaByUrl</a></li><li data-type='method'><a href="Niivue.html#getOverlayIndexByID">getOverlayIndexByID</a></li><li data-type='method'><a href="Niivue.html#getRadiologicalConvention">getRadiologicalConvention</a></li><li data-type='method'><a href="Niivue.html#getVolumeIndexByID">getVolumeIndexByID</a></li><li data-type='method'><a href="Niivue.html#isMeshExt">isMeshExt</a></li><li data-type='method'><a href="Niivue.html#loadConnectome">loadConnectome</a></li><li data-type='method'><a href="Niivue.html#loadDeferred4DVolumes">loadDeferred4DVolumes</a></li><li data-type='method'><a href="Niivue.html#loadDocument">loadDocument</a></li><li data-type='method'><a href="Niivue.html#loadDocumentFromUrl">loadDocumentFromUrl</a></li><li data-type='method'><a href="Niivue.html#loadDrawingFromUrl">loadDrawingFromUrl</a></li><li data-type='method'><a href="Niivue.html#loadMeshes">loadMeshes</a></li><li data-type='method'><a href="Niivue.html#loadVolumes">loadVolumes</a></li><li data-type='method'><a href="Niivue.html#meshShaderNames">meshShaderNames</a></li><li data-type='method'><a href="Niivue.html#moveCrosshairInVox">moveCrosshairInVox</a></li><li data-type='method'><a href="Niivue.html#moveVolumeDown">moveVolumeDown</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToBottom">moveVolumeToBottom</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToTop">moveVolumeToTop</a></li><li data-type='method'><a href="Niivue.html#moveVolumeUp">moveVolumeUp</a></li><li data-type='method'><a href="Niivue.html#off">off</a></li><li data-type='method'><a href="Niivue.html#on">on</a></li><li data-type='method'><a href="Niivue.html#onAzimuthElevationChange">onAzimuthElevationChange</a></li><li data-type='method'><a href="Niivue.html#onClipPlaneChange">onClipPlaneChange</a></li><li data-type='method'><a href="Niivue.html#onDebug">onDebug</a></li><li data-type='method'><a href="Niivue.html#onDocumentLoaded">onDocumentLoaded</a></li><li data-type='method'><a href="Niivue.html#onError">onError</a></li><li data-type='method'><a href="Niivue.html#onFrameChange">onFrameChange</a></li><li data-type='method'><a href="Niivue.html#onImageLoaded">onImageLoaded</a></li><li data-type='method'><a href="Niivue.html#onInfo">onInfo</a></li><li data-type='method'><a href="Niivue.html#onIntensityChange">onIntensityChange</a></li><li data-type='method'><a href="Niivue.html#onLocationChange">onLocationChange</a></li><li data-type='method'><a href="Niivue.html#onMeshAddedFromUrl">onMeshAddedFromUrl</a></li><li data-type='method'><a href="Niivue.html#onMeshLoaded">onMeshLoaded</a></li><li data-type='method'><a href="Niivue.html#onMouseUp">onMouseUp</a></li><li data-type='method'><a href="Niivue.html#onVolumeAddedFromUrl">onVolumeAddedFromUrl</a></li><li data-type='method'><a href="Niivue.html#onVolumeUpdated">onVolumeUpdated</a></li><li data-type='method'><a href="Niivue.html#onWarn">onWarn</a></li><li data-type='method'><a href="Niivue.html#removeHaze">removeHaze</a></li><li data-type='method'><a href="Niivue.html#removeMesh">removeMesh</a></li><li data-type='method'><a href="Niivue.html#removeMeshByUrl">removeMeshByUrl</a></li><li data-type='method'><a href="Niivue.html#removeVolume">removeVolume</a></li><li data-type='method'><a href="Niivue.html#removeVolumeByIndex">removeVolumeByIndex</a></li><li data-type='method'><a href="Niivue.html#removeVolumeByUrl">removeVolumeByUrl</a></li><li data-type='method'><a href="Niivue.html#reverseFaces">reverseFaces</a></li><li data-type='method'><a href="Niivue.html#saveImage">saveImage</a></li><li data-type='method'><a href="Niivue.html#saveScene">saveScene</a></li><li data-type='method'><a href="Niivue.html#setAdditiveBlend">setAdditiveBlend</a></li><li data-type='method'><a href="Niivue.html#setClipPlane">setClipPlane</a></li><li data-type='method'><a href="Niivue.html#setClipPlaneColor">setClipPlaneColor</a></li><li data-type='method'><a href="Niivue.html#setColormap">setColormap</a></li><li data-type='method'><a href="Niivue.html#setColormapNegative">setColormapNegative</a></li><li data-type='method'><a href="Niivue.html#setCornerOrientationText">setCornerOrientationText</a></li><li data-type='method'><a href="Niivue.html#setCrosshairColor">setCrosshairColor</a></li><li data-type='method'><a href="Niivue.html#setCrosshairWidth">setCrosshairWidth</a></li><li data-type='method'><a href="Niivue.html#setCustomMeshShader">setCustomMeshShader</a></li><li data-type='method'><a href="Niivue.html#setDrawOpacity">setDrawOpacity</a></li><li data-type='method'><a href="Niivue.html#setDrawingEnabled">setDrawingEnabled</a></li><li data-type='method'><a href="Niivue.html#setFrame4D">setFrame4D</a></li><li data-type='method'><a href="Niivue.html#setGamma">setGamma</a></li><li data-type='method'><a href="Niivue.html#setHighResolutionCapable">setHighResolutionCapable</a></li><li data-type='method'><a href="Niivue.html#setInterpolation">setInterpolation</a></li><li data-type='method'><a href="Niivue.html#setMeshLayerProperty">setMeshLayerProperty</a></li><li data-type='method'><a href="Niivue.html#setMeshProperty">setMeshProperty</a></li><li data-type='method'><a href="Niivue.html#setMeshShader">setMeshShader</a></li><li data-type='method'><a href="Niivue.html#setMeshThicknessOn2D">setMeshThicknessOn2D</a></li><li data-type='method'><a href="Niivue.html#setModulationImage">setModulationImage</a></li><li data-type='method'><a href="Niivue.html#setOpacity">setOpacity</a></li><li data-type='method'><a href="Niivue.html#setPan2Dxyzmm">setPan2Dxyzmm</a></li><li data-type='method'><a href="Niivue.html#setPenValue">setPenValue</a></li><li data-type='method'><a href="Niivue.html#setRadiologicalConvention">setRadiologicalConvention</a></li><li data-type='method'><a href="Niivue.html#setRenderAzimuthElevation">setRenderAzimuthElevation</a></li><li data-type='method'><a href="Niivue.html#setScale">setScale</a></li><li data-type='method'><a href="Niivue.html#setSelectionBoxColor">setSelectionBoxColor</a></li><li data-type='method'><a href="Niivue.html#setSliceMM">setSliceMM</a></li><li data-type='method'><a href="Niivue.html#setSliceMosaicString">setSliceMosaicString</a></li><li data-type='method'><a href="Niivue.html#setSliceType">setSliceType</a></li><li data-type='method'><a href="Niivue.html#setVolume">setVolume</a></li><li data-type='method'><a href="Niivue.html#sph2cartDeg">sph2cartDeg</a></li><li data-type='method'><a href="Niivue.html#syncWith">syncWith</a></li><li data-type='method'><a href="Niivue.html#updateGLVolume">updateGLVolume</a></li></ul></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#MESH_EXTENSIONS">MESH_EXTENSIONS</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">NVImage</h1>
+    
 
     
 
@@ -28,33 +47,77 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>NVImage<span class="signature">(dataBuffer, name<span class="signature-attributes">opt</span>, colormap<span class="signature-attributes">opt</span>, opacity<span class="signature-attributes">opt</span>, pairedImgData<span class="signature-attributes">opt</span>, cal_min<span class="signature-attributes">opt</span>, cal_max<span class="signature-attributes">opt</span>, trustCalMinMax<span class="signature-attributes">opt</span>, percentileFrac<span class="signature-attributes">opt</span>, ignoreZeroVoxels<span class="signature-attributes">opt</span>, visible<span class="signature-attributes">opt</span>, useQFormNotSForm<span class="signature-attributes">opt</span>, colormapNegative<span class="signature-attributes">opt</span>, frame4D<span class="signature-attributes">opt</span>, onColormapChange<span class="signature-attributes">opt</span>, onOpacityChange<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h2>
+        <h2>
         
-            <div class="class-description">NVImage</div>
+            NVImage
+        
+        </h2>
+        
+            <div class="class-description usertext">NVImage</div>
         
     
 </header>
 
 <article>
-    <div class="container-overview">
     
+        <div class="container-overview">
         
+            
 
     
     <h2>Constructor</h2>
     
 
-    
     <h4 class="name" id="NVImage"><span class="type-signature"></span>new NVImage<span class="signature">(dataBuffer, name<span class="signature-attributes">opt</span>, colormap<span class="signature-attributes">opt</span>, opacity<span class="signature-attributes">opt</span>, pairedImgData<span class="signature-attributes">opt</span>, cal_min<span class="signature-attributes">opt</span>, cal_max<span class="signature-attributes">opt</span>, trustCalMinMax<span class="signature-attributes">opt</span>, percentileFrac<span class="signature-attributes">opt</span>, ignoreZeroVoxels<span class="signature-attributes">opt</span>, visible<span class="signature-attributes">opt</span>, useQFormNotSForm<span class="signature-attributes">opt</span>, colormapNegative<span class="signature-attributes">opt</span>, frame4D<span class="signature-attributes">opt</span>, onColormapChange<span class="signature-attributes">opt</span>, onOpacityChange<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    a NVImage encapsulates some images data and provides methods to query and operate on images
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>a NVImage encapsulates some images data and provides methods to query and operate on images</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line207">line 207</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -64,7 +127,11 @@
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -102,6 +169,7 @@
 <span class="param-type">array</span>
 
 
+
             
             </td>
 
@@ -137,6 +205,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -155,7 +224,7 @@
             
                 <td class="default">
                 
-                    ''
+                    <code>''</code>
                 
                 </td>
             
@@ -176,6 +245,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -194,7 +264,7 @@
             
                 <td class="default">
                 
-                    'gray'
+                    <code>'gray'</code>
                 
                 </td>
             
@@ -215,6 +285,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -233,7 +304,7 @@
             
                 <td class="default">
                 
-                    1.0
+                    <code>1.0</code>
                 
                 </td>
             
@@ -254,6 +325,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -272,7 +344,7 @@
             
                 <td class="default">
                 
-                    null
+                    <code>null</code>
                 
                 </td>
             
@@ -293,6 +365,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -311,7 +384,7 @@
             
                 <td class="default">
                 
-                    NaN
+                    <code>NaN</code>
                 
                 </td>
             
@@ -332,6 +405,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -350,7 +424,7 @@
             
                 <td class="default">
                 
-                    NaN
+                    <code>NaN</code>
                 
                 </td>
             
@@ -371,6 +445,7 @@
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -389,7 +464,7 @@
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -410,6 +485,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -428,7 +504,7 @@
             
                 <td class="default">
                 
-                    0.02
+                    <code>0.02</code>
                 
                 </td>
             
@@ -449,6 +525,7 @@
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -467,7 +544,7 @@
             
                 <td class="default">
                 
-                    false
+                    <code>false</code>
                 
                 </td>
             
@@ -488,6 +565,7 @@
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -506,7 +584,7 @@
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -527,6 +605,7 @@
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -545,7 +624,7 @@
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -566,6 +645,7 @@
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -584,7 +664,7 @@
             
                 <td class="default">
                 
-                    ''
+                    <code>''</code>
                 
                 </td>
             
@@ -605,6 +685,7 @@
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -623,7 +704,7 @@
             
                 <td class="default">
                 
-                    0
+                    <code>0</code>
                 
                 </td>
             
@@ -644,6 +725,7 @@
 <span class="param-type">function</span>
 
 
+
             
             </td>
 
@@ -662,7 +744,7 @@
             
                 <td class="default">
                 
-                    ()=>{}
+                    <code>()=>{}</code>
                 
                 </td>
             
@@ -683,6 +765,7 @@
 <span class="param-type">function</span>
 
 
+
             
             </td>
 
@@ -701,7 +784,7 @@
             
                 <td class="default">
                 
-                    ()=>{}
+                    <code>()=>{}</code>
                 
                 </td>
             
@@ -718,37 +801,87 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        </div>
+    
+
+    
+
+    
+
+    
+    
+    
+
+     
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="applyOptionsUpdate"><span class="type-signature"></span>applyOptionsUpdate<span class="signature">(options)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Update options for image</li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line207">line 207</a>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3450">line 3450</a>
     </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     
 
     
@@ -770,59 +903,7 @@
 
 
 
-
-
-
-
-
-
-
-    
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="applyOptionsUpdate"><span class="type-signature"></span>applyOptionsUpdate<span class="signature">(options)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Update options for image
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -856,6 +937,7 @@
 <span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
 
 
+
             
             </td>
 
@@ -875,52 +957,6 @@
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3450">line 3450</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -939,54 +975,17 @@
 
     
 
-    
     <h4 class="name" id="clone"><span class="type-signature"></span>clone<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    make a clone of a NVImage instance and return a new NVImage
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>make a clone of a NVImage instance and return a new NVImage</li></ul></dd>
     
 
     
@@ -1001,6 +1000,30 @@
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -1013,11 +1036,29 @@
 
 
 
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+clonedImage = myImage.clone()</code></pre>
 
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -1026,13 +1067,14 @@
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
     </dd>
@@ -1042,67 +1084,22 @@
 
 
 
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-clonedImage = myImage.clone()</code></pre>
-
-
-
         
             
 
     
 
-    
     <h4 class="name" id="getImageMetadata"><span class="type-signature"></span>getImageMetadata<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="global.html#NVImageMetadata">NVImageMetadata</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    get nifti specific metadata about the image
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>get nifti specific metadata about the image</li></ul></dd>
     
 
     
@@ -1117,6 +1114,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -1133,7 +1154,19 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -1142,13 +1175,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="global.html#NVImageMetadata">NVImageMetadata</a></span>
+
 
 
     </dd>
@@ -1158,22 +1192,58 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toNiivueObject3D"><span class="type-signature"></span>toNiivueObject3D<span class="signature">(id, gl)</span><span class="type-signature"> &rarr; {<a href="NiivueObject3D.html">NiivueObject3D</a>}</span></h4>
-    
 
     
 
 
 
 
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1181,7 +1251,13 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1215,6 +1291,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -1238,6 +1315,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">WebGLRenderingContext</span>
 
 
+
             
             </td>
 
@@ -1257,45 +1335,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -1306,12 +1345,7 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -1320,13 +1354,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NiivueObject3D.html">NiivueObject3D</a></span>
+
 
 
     </dd>
@@ -1336,24 +1371,61 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toUint8Array"><span class="type-signature"></span>toUint8Array<span class="signature">(drawingBytes)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Converts NVImage to NIfTI compliant byte array
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Converts NVImage to NIfTI compliant byte array</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1363,7 +1435,11 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1397,6 +1473,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">Uint8Array</span>
 
 
+
             
             </td>
 
@@ -1416,52 +1493,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -1480,54 +1511,17 @@ clonedImage = myImage.clone()</code></pre>
 
     
 
-    
     <h4 class="name" id="zeroImage"><span class="type-signature"></span>zeroImage<span class="signature">()</span><span class="type-signature"></span></h4>
-    
 
     
-
-
-
-<div class="description">
-    fill a NVImage instance with zeros for the image data
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>fill a NVImage instance with zeros for the image data</li></ul></dd>
     
 
     
@@ -1542,6 +1536,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -1554,18 +1572,28 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
+    <h5 class="h5-examples">Example</h5>
     
     <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
 clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1574,17 +1602,56 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
     
 
-    
-    <h4 class="name" id=".zerosLike"><span class="type-signature">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
+    <h4 class="name" id=".zerosLike"><span class="type-signature type-signature-static">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
 
     
 
 
 
-<div class="description">
-    a factory function to make a zero filled image given a NVImage as a reference
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>a factory function to make a zero filled image given a NVImage as a reference</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1594,7 +1661,17 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+newZeroImage = NVImage.zerosLike(myImage)</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -1628,6 +1705,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -1651,6 +1729,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type">dataType</span>
 
 
+
             
             </td>
 
@@ -1670,45 +1749,6 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -1719,12 +1759,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -1733,7 +1768,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
@@ -1742,18 +1777,11 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
     </dd>
 </dl>
 
     
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
@@ -1771,18 +1799,46 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+<dl class="details">
+    
 
-    <h5>Type:</h5>
-    <ul>
-        <li>
-            
-<span class="param-type">Object</span>
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
+    </li></ul></dd>
+    
 
+    
 
-        </li>
-    </ul>
+    
 
+    
 
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -1821,6 +1877,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">Array.&lt;number></span>
 
 
+
             
             </td>
 
@@ -1842,6 +1899,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 
 <span class="param-type">Array.&lt;number></span>
+
 
 
             
@@ -1867,6 +1925,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -1884,45 +1943,20 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
 
-    
 
-    
 
-    
 
-    
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Object</span>
 
-    
 
-    
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
+        </li>
+    </ul>
 
 
 
@@ -1947,115 +1981,34 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>NVImage<span class="signature">(options)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h2>
+        <h2>
+        
+            NVImage
+        
+        </h2>
         
     
 </header>
 
 <article>
-    <div class="container-overview">
     
+        <div class="container-overview">
         
+            
 
     
 
-    
     <h4 class="name" id="NVImage"><span class="type-signature"></span>new NVImage<span class="signature">(options)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    factory function to load and return a new NVImage instance from a given URL
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>options</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>factory function to load and return a new NVImage instance from a given URL</li></ul></dd>
     
 
     
@@ -2070,100 +2023,50 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    returns a NVImage instance
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type"><a href="NVImage.html">NVImage</a></span>
-
-
-    </dd>
-</dl>
 
     
 
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
-    <h5>Example</h5>
+
+
+
+
+
+
+
+
+    <h5 class="h5-examples">Example</h5>
     
     <pre class="prettyprint"><code>myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)</code></pre>
 
 
 
-    
-    </div>
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="applyOptionsUpdate"><span class="type-signature"></span>applyOptionsUpdate<span class="signature">(options)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Update options for image
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2197,6 +2100,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
 
 
+
             
             </td>
 
@@ -2216,30 +2120,79 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    returns a NVImage instance
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+        </div>
+    
+
+    
+
+    
+
+    
+    
+    
+
+     
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="applyOptionsUpdate"><span class="type-signature"></span>applyOptionsUpdate<span class="signature">(options)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Update options for image</li></ul></dd>
     
 
     
@@ -2254,8 +2207,92 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
 
 
 
@@ -2280,54 +2317,17 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
     
 
-    
     <h4 class="name" id="clone"><span class="type-signature"></span>clone<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    make a clone of a NVImage instance and return a new NVImage
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>make a clone of a NVImage instance and return a new NVImage</li></ul></dd>
     
 
     
@@ -2342,6 +2342,30 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -2354,11 +2378,29 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+clonedImage = myImage.clone()</code></pre>
 
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -2367,13 +2409,14 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
     </dd>
@@ -2383,67 +2426,22 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-clonedImage = myImage.clone()</code></pre>
-
-
-
         
             
 
     
 
-    
     <h4 class="name" id="getImageMetadata"><span class="type-signature"></span>getImageMetadata<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="global.html#NVImageMetadata">NVImageMetadata</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    get nifti specific metadata about the image
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>get nifti specific metadata about the image</li></ul></dd>
     
 
     
@@ -2458,6 +2456,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -2474,7 +2496,19 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -2483,13 +2517,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="global.html#NVImageMetadata">NVImageMetadata</a></span>
+
 
 
     </dd>
@@ -2499,22 +2534,58 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toNiivueObject3D"><span class="type-signature"></span>toNiivueObject3D<span class="signature">(id, gl)</span><span class="type-signature"> &rarr; {<a href="NiivueObject3D.html">NiivueObject3D</a>}</span></h4>
-    
 
     
 
 
 
 
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -2522,7 +2593,13 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2556,6 +2633,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -2579,6 +2657,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">WebGLRenderingContext</span>
 
 
+
             
             </td>
 
@@ -2598,45 +2677,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -2647,12 +2687,7 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -2661,13 +2696,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NiivueObject3D.html">NiivueObject3D</a></span>
+
 
 
     </dd>
@@ -2677,24 +2713,61 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toUint8Array"><span class="type-signature"></span>toUint8Array<span class="signature">(drawingBytes)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Converts NVImage to NIfTI compliant byte array
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Converts NVImage to NIfTI compliant byte array</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -2704,7 +2777,11 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2738,6 +2815,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">Uint8Array</span>
 
 
+
             
             </td>
 
@@ -2757,52 +2835,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -2821,54 +2853,17 @@ clonedImage = myImage.clone()</code></pre>
 
     
 
-    
     <h4 class="name" id="zeroImage"><span class="type-signature"></span>zeroImage<span class="signature">()</span><span class="type-signature"></span></h4>
-    
 
     
-
-
-
-<div class="description">
-    fill a NVImage instance with zeros for the image data
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>fill a NVImage instance with zeros for the image data</li></ul></dd>
     
 
     
@@ -2883,6 +2878,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -2895,18 +2914,28 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
+    <h5 class="h5-examples">Example</h5>
     
     <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
 clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2915,17 +2944,56 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
     
 
-    
-    <h4 class="name" id=".zerosLike"><span class="type-signature">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
+    <h4 class="name" id=".zerosLike"><span class="type-signature type-signature-static">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
 
     
 
 
 
-<div class="description">
-    a factory function to make a zero filled image given a NVImage as a reference
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>a factory function to make a zero filled image given a NVImage as a reference</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -2935,7 +3003,17 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+newZeroImage = NVImage.zerosLike(myImage)</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -2969,6 +3047,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -2992,6 +3071,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type">dataType</span>
 
 
+
             
             </td>
 
@@ -3011,45 +3091,6 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -3060,12 +3101,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -3074,7 +3110,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
@@ -3083,18 +3119,11 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
     </dd>
 </dl>
 
     
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
@@ -3112,18 +3141,46 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+<dl class="details">
+    
 
-    <h5>Type:</h5>
-    <ul>
-        <li>
-            
-<span class="param-type">Object</span>
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
+    </li></ul></dd>
+    
 
+    
 
-        </li>
-    </ul>
+    
 
+    
 
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -3162,6 +3219,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">Array.&lt;number></span>
 
 
+
             
             </td>
 
@@ -3183,6 +3241,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 
 <span class="param-type">Array.&lt;number></span>
+
 
 
             
@@ -3208,6 +3267,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -3225,45 +3285,20 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
 
-    
 
-    
 
-    
 
-    
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Object</span>
 
-    
 
-    
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
+        </li>
+    </ul>
 
 
 
@@ -3288,29 +3323,73 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>NVImage<span class="signature">(file, name<span class="signature-attributes">opt</span>, colormap<span class="signature-attributes">opt</span>, opacity<span class="signature-attributes">opt</span>, urlImgData<span class="signature-attributes">opt</span>, cal_min<span class="signature-attributes">opt</span>, cal_max<span class="signature-attributes">opt</span>, trustCalMinMax<span class="signature-attributes">opt</span>, percentileFrac<span class="signature-attributes">opt</span>, ignoreZeroVoxels<span class="signature-attributes">opt</span>, visible<span class="signature-attributes">opt</span>, useQFormNotSForm<span class="signature-attributes">opt</span>, colormapNegative<span class="signature-attributes">opt</span>, imageType<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h2>
+        <h2>
+        
+            NVImage
+        
+        </h2>
         
     
 </header>
 
 <article>
-    <div class="container-overview">
     
+        <div class="container-overview">
         
+            
 
     
 
-    
     <h4 class="name" id="NVImage"><span class="type-signature"></span>new NVImage<span class="signature">(file, name<span class="signature-attributes">opt</span>, colormap<span class="signature-attributes">opt</span>, opacity<span class="signature-attributes">opt</span>, urlImgData<span class="signature-attributes">opt</span>, cal_min<span class="signature-attributes">opt</span>, cal_max<span class="signature-attributes">opt</span>, trustCalMinMax<span class="signature-attributes">opt</span>, percentileFrac<span class="signature-attributes">opt</span>, ignoreZeroVoxels<span class="signature-attributes">opt</span>, visible<span class="signature-attributes">opt</span>, useQFormNotSForm<span class="signature-attributes">opt</span>, colormapNegative<span class="signature-attributes">opt</span>, imageType<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
 
 
 
-<div class="description">
-    factory function to load and return a new NVImage instance from a file in the browser
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>factory function to load and return a new NVImage instance from a file in the browser</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line2918">line 2918</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -3320,7 +3399,16 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -3358,6 +3446,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -3393,6 +3482,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -3411,7 +3501,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    ''
+                    <code>''</code>
                 
                 </td>
             
@@ -3432,6 +3522,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -3450,7 +3541,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    'gray'
+                    <code>'gray'</code>
                 
                 </td>
             
@@ -3471,6 +3562,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -3489,7 +3581,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    1.0
+                    <code>1.0</code>
                 
                 </td>
             
@@ -3510,6 +3602,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -3528,7 +3621,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    null
+                    <code>null</code>
                 
                 </td>
             
@@ -3549,6 +3642,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -3567,7 +3661,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    NaN
+                    <code>NaN</code>
                 
                 </td>
             
@@ -3588,6 +3682,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -3606,7 +3701,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    NaN
+                    <code>NaN</code>
                 
                 </td>
             
@@ -3627,6 +3722,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -3645,7 +3741,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -3666,6 +3762,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -3684,7 +3781,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    0.02
+                    <code>0.02</code>
                 
                 </td>
             
@@ -3705,6 +3802,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -3723,7 +3821,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    false
+                    <code>false</code>
                 
                 </td>
             
@@ -3744,6 +3842,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -3762,7 +3861,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -3783,6 +3882,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -3801,7 +3901,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    false
+                    <code>false</code>
                 
                 </td>
             
@@ -3822,6 +3922,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -3840,7 +3941,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    ""
+                    <code>""</code>
                 
                 </td>
             
@@ -3861,6 +3962,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type"><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></span>
 
 
+
             
             </td>
 
@@ -3879,7 +3981,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    NVIMAGE_TYPE.UNKNOWN
+                    <code>NVIMAGE_TYPE.UNKNOWN</code>
                 
                 </td>
             
@@ -3896,45 +3998,6 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line2918">line 2918</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -3945,12 +4008,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -3959,13 +4017,14 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
     </dd>
@@ -3975,16 +4034,8 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop</code></pre>
-
-
-
-    
-    </div>
-
+        
+        </div>
     
 
     
@@ -3992,8 +4043,10 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
-
     
+    
+
+     
 
     
 
@@ -4007,17 +4060,56 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
     
 
-    
     <h4 class="name" id="applyOptionsUpdate"><span class="type-signature"></span>applyOptionsUpdate<span class="signature">(options)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Update options for image
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Update options for image</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3450">line 3450</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -4027,7 +4119,11 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -4061,6 +4157,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
 
 
+
             
             </td>
 
@@ -4080,52 +4177,6 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3450">line 3450</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -4144,54 +4195,17 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
     
 
-    
     <h4 class="name" id="clone"><span class="type-signature"></span>clone<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    make a clone of a NVImage instance and return a new NVImage
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>make a clone of a NVImage instance and return a new NVImage</li></ul></dd>
     
 
     
@@ -4206,6 +4220,30 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -4218,11 +4256,29 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+clonedImage = myImage.clone()</code></pre>
 
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -4231,13 +4287,14 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
     </dd>
@@ -4247,67 +4304,22 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-clonedImage = myImage.clone()</code></pre>
-
-
-
         
             
 
     
 
-    
     <h4 class="name" id="getImageMetadata"><span class="type-signature"></span>getImageMetadata<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="global.html#NVImageMetadata">NVImageMetadata</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    get nifti specific metadata about the image
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>get nifti specific metadata about the image</li></ul></dd>
     
 
     
@@ -4322,6 +4334,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -4338,7 +4374,19 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -4347,13 +4395,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="global.html#NVImageMetadata">NVImageMetadata</a></span>
+
 
 
     </dd>
@@ -4363,22 +4412,58 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toNiivueObject3D"><span class="type-signature"></span>toNiivueObject3D<span class="signature">(id, gl)</span><span class="type-signature"> &rarr; {<a href="NiivueObject3D.html">NiivueObject3D</a>}</span></h4>
-    
 
     
 
 
 
 
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -4386,7 +4471,13 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -4420,6 +4511,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -4443,6 +4535,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">WebGLRenderingContext</span>
 
 
+
             
             </td>
 
@@ -4462,45 +4555,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -4511,12 +4565,7 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -4525,13 +4574,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NiivueObject3D.html">NiivueObject3D</a></span>
+
 
 
     </dd>
@@ -4541,24 +4591,61 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toUint8Array"><span class="type-signature"></span>toUint8Array<span class="signature">(drawingBytes)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Converts NVImage to NIfTI compliant byte array
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Converts NVImage to NIfTI compliant byte array</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -4568,7 +4655,11 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -4602,6 +4693,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">Uint8Array</span>
 
 
+
             
             </td>
 
@@ -4621,52 +4713,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -4685,54 +4731,17 @@ clonedImage = myImage.clone()</code></pre>
 
     
 
-    
     <h4 class="name" id="zeroImage"><span class="type-signature"></span>zeroImage<span class="signature">()</span><span class="type-signature"></span></h4>
-    
 
     
-
-
-
-<div class="description">
-    fill a NVImage instance with zeros for the image data
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>fill a NVImage instance with zeros for the image data</li></ul></dd>
     
 
     
@@ -4747,6 +4756,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -4759,18 +4792,28 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
+    <h5 class="h5-examples">Example</h5>
     
     <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
 clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4779,17 +4822,56 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
     
 
-    
-    <h4 class="name" id=".zerosLike"><span class="type-signature">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
+    <h4 class="name" id=".zerosLike"><span class="type-signature type-signature-static">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
 
     
 
 
 
-<div class="description">
-    a factory function to make a zero filled image given a NVImage as a reference
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>a factory function to make a zero filled image given a NVImage as a reference</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -4799,7 +4881,17 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+newZeroImage = NVImage.zerosLike(myImage)</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -4833,6 +4925,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -4856,6 +4949,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type">dataType</span>
 
 
+
             
             </td>
 
@@ -4875,45 +4969,6 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -4924,12 +4979,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -4938,7 +4988,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
@@ -4947,18 +4997,11 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
     </dd>
 </dl>
 
     
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
@@ -4976,18 +5019,46 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+<dl class="details">
+    
 
-    <h5>Type:</h5>
-    <ul>
-        <li>
-            
-<span class="param-type">Object</span>
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
+    </li></ul></dd>
+    
 
+    
 
-        </li>
-    </ul>
+    
 
+    
 
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -5026,6 +5097,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">Array.&lt;number></span>
 
 
+
             
             </td>
 
@@ -5047,6 +5119,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 
 <span class="param-type">Array.&lt;number></span>
+
 
 
             
@@ -5072,6 +5145,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -5089,45 +5163,20 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
 
-    
 
-    
 
-    
 
-    
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Object</span>
 
-    
 
-    
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
+        </li>
+    </ul>
 
 
 
@@ -5152,29 +5201,73 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>NVImage<span class="signature">(base64<span class="signature-attributes">opt</span>, name<span class="signature-attributes">opt</span>, colormap<span class="signature-attributes">opt</span>, opacity<span class="signature-attributes">opt</span>, cal_min<span class="signature-attributes">opt</span>, cal_max<span class="signature-attributes">opt</span>, trustCalMinMax<span class="signature-attributes">opt</span>, percentileFrac<span class="signature-attributes">opt</span>, ignoreZeroVoxels<span class="signature-attributes">opt</span>, visible<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h2>
+        <h2>
+        
+            NVImage
+        
+        </h2>
         
     
 </header>
 
 <article>
-    <div class="container-overview">
     
+        <div class="container-overview">
         
+            
 
     
 
-    
     <h4 class="name" id="NVImage"><span class="type-signature"></span>new NVImage<span class="signature">(base64<span class="signature-attributes">opt</span>, name<span class="signature-attributes">opt</span>, colormap<span class="signature-attributes">opt</span>, opacity<span class="signature-attributes">opt</span>, cal_min<span class="signature-attributes">opt</span>, cal_max<span class="signature-attributes">opt</span>, trustCalMinMax<span class="signature-attributes">opt</span>, percentileFrac<span class="signature-attributes">opt</span>, ignoreZeroVoxels<span class="signature-attributes">opt</span>, visible<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
 
 
 
-<div class="description">
-    factory function to load and return a new NVImage instance from a base64 encoded string
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>factory function to load and return a new NVImage instance from a base64 encoded string</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3043">line 3043</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -5184,7 +5277,16 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromBase64('SomeBase64String')</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -5222,6 +5324,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -5240,7 +5343,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    null
+                    <code>null</code>
                 
                 </td>
             
@@ -5261,6 +5364,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -5279,7 +5383,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    ''
+                    <code>''</code>
                 
                 </td>
             
@@ -5300,6 +5404,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">string</span>
 
 
+
             
             </td>
 
@@ -5318,7 +5423,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    'gray'
+                    <code>'gray'</code>
                 
                 </td>
             
@@ -5339,6 +5444,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -5357,7 +5463,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    1.0
+                    <code>1.0</code>
                 
                 </td>
             
@@ -5378,6 +5484,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -5396,7 +5503,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    NaN
+                    <code>NaN</code>
                 
                 </td>
             
@@ -5417,6 +5524,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -5435,7 +5543,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    NaN
+                    <code>NaN</code>
                 
                 </td>
             
@@ -5456,6 +5564,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -5474,7 +5583,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -5495,6 +5604,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -5513,7 +5623,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    0.02
+                    <code>0.02</code>
                 
                 </td>
             
@@ -5534,6 +5644,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -5552,7 +5663,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    false
+                    <code>false</code>
                 
                 </td>
             
@@ -5573,6 +5684,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">boolean</span>
 
 
+
             
             </td>
 
@@ -5591,7 +5703,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 <td class="default">
                 
-                    true
+                    <code>true</code>
                 
                 </td>
             
@@ -5608,45 +5720,6 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3043">line 3043</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -5657,12 +5730,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -5671,13 +5739,14 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
     </dd>
@@ -5687,16 +5756,8 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromBase64('SomeBase64String')</code></pre>
-
-
-
-    
-    </div>
-
+        
+        </div>
     
 
     
@@ -5704,8 +5765,10 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
-
     
+    
+
+     
 
     
 
@@ -5719,17 +5782,56 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
     
 
-    
     <h4 class="name" id="applyOptionsUpdate"><span class="type-signature"></span>applyOptionsUpdate<span class="signature">(options)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Update options for image
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Update options for image</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3450">line 3450</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -5739,7 +5841,11 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -5773,6 +5879,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type"><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></span>
 
 
+
             
             </td>
 
@@ -5792,52 +5899,6 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3450">line 3450</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -5856,54 +5917,17 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
     
 
-    
     <h4 class="name" id="clone"><span class="type-signature"></span>clone<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    make a clone of a NVImage instance and return a new NVImage
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>make a clone of a NVImage instance and return a new NVImage</li></ul></dd>
     
 
     
@@ -5918,6 +5942,30 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -5930,11 +5978,29 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+clonedImage = myImage.clone()</code></pre>
 
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -5943,13 +6009,14 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
+
 
 
     </dd>
@@ -5959,67 +6026,22 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-clonedImage = myImage.clone()</code></pre>
-
-
-
         
             
 
     
 
-    
     <h4 class="name" id="getImageMetadata"><span class="type-signature"></span>getImageMetadata<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="global.html#NVImageMetadata">NVImageMetadata</a>}</span></h4>
-    
 
     
-
-
-
-<div class="description">
-    get nifti specific metadata about the image
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>get nifti specific metadata about the image</li></ul></dd>
     
 
     
@@ -6034,6 +6056,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -6050,7 +6096,19 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<h5>Returns:</h5>
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -6059,13 +6117,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="global.html#NVImageMetadata">NVImageMetadata</a></span>
+
 
 
     </dd>
@@ -6075,22 +6134,58 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toNiivueObject3D"><span class="type-signature"></span>toNiivueObject3D<span class="signature">(id, gl)</span><span class="type-signature"> &rarr; {<a href="NiivueObject3D.html">NiivueObject3D</a>}</span></h4>
-    
 
     
 
 
 
 
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -6098,7 +6193,13 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -6132,6 +6233,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -6155,6 +6257,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">WebGLRenderingContext</span>
 
 
+
             
             </td>
 
@@ -6174,45 +6277,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3303">line 3303</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -6223,12 +6287,7 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -6237,13 +6296,14 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
     <dd>
         
 <span class="param-type"><a href="NiivueObject3D.html">NiivueObject3D</a></span>
+
 
 
     </dd>
@@ -6253,24 +6313,61 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
         
             
 
     
 
-    
     <h4 class="name" id="toUint8Array"><span class="type-signature"></span>toUint8Array<span class="signature">(drawingBytes)</span><span class="type-signature"></span></h4>
-    
 
     
 
 
 
-<div class="description">
-    Converts NVImage to NIfTI compliant byte array
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Converts NVImage to NIfTI compliant byte array</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -6280,7 +6377,11 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -6314,6 +6415,7 @@ clonedImage = myImage.clone()</code></pre>
 <span class="param-type">Uint8Array</span>
 
 
+
             
             </td>
 
@@ -6333,52 +6435,6 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3490">line 3490</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
 
 
 
@@ -6397,54 +6453,17 @@ clonedImage = myImage.clone()</code></pre>
 
     
 
-    
     <h4 class="name" id="zeroImage"><span class="type-signature"></span>zeroImage<span class="signature">()</span><span class="type-signature"></span></h4>
-    
 
     
-
-
-
-<div class="description">
-    fill a NVImage instance with zeros for the image data
-</div>
-
-
-
-
-
-
-
-
-
 
 
 
 
 <dl class="details">
-
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>fill a NVImage instance with zeros for the image data</li></ul></dd>
     
 
     
@@ -6459,6 +6478,30 @@ clonedImage = myImage.clone()</code></pre>
     
 
     
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </dl>
 
 
@@ -6471,18 +6514,28 @@ clonedImage = myImage.clone()</code></pre>
 
 
 
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
+    <h5 class="h5-examples">Example</h5>
     
     <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
 clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6491,17 +6544,56 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
     
 
-    
-    <h4 class="name" id=".zerosLike"><span class="type-signature">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
-    
+    <h4 class="name" id=".zerosLike"><span class="type-signature type-signature-static">(static) </span>zerosLike<span class="signature">(nvImage, string)</span><span class="type-signature"> &rarr; {<a href="NVImage.html">NVImage</a>}</span></h4>
 
     
 
 
 
-<div class="description">
-    a factory function to make a zero filled image given a NVImage as a reference
-</div>
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>a factory function to make a zero filled image given a NVImage as a reference</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -6511,7 +6603,17 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-    <h5>Parameters:</h5>
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
+newZeroImage = NVImage.zerosLike(myImage)</code></pre>
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
     
 
 <table class="params">
@@ -6545,6 +6647,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
             
             </td>
 
@@ -6568,6 +6671,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type">dataType</span>
 
 
+
             
             </td>
 
@@ -6587,45 +6691,6 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3175">line 3175</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
 
 
 
@@ -6636,12 +6701,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-
-
-
-
-
-<h5>Returns:</h5>
+<h5 class="h5-returns">Returns:</h5>
 
         
 <div class="param-desc">
@@ -6650,7 +6710,7 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 
 
 
-<dl>
+<dl class="param-type">
     <dt>
         Type
     </dt>
@@ -6659,18 +6719,11 @@ clonedImageWithZeros = myImage.clone().zeroImage()</code></pre>
 <span class="param-type"><a href="NVImage.html">NVImage</a></span>
 
 
+
     </dd>
 </dl>
 
     
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
-newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
@@ -6688,18 +6741,46 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+<dl class="details">
+    
 
-    <h5>Type:</h5>
-    <ul>
-        <li>
-            
-<span class="param-type">Object</span>
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
+    </li></ul></dd>
+    
 
+    
 
-        </li>
-    </ul>
+    
 
+    
 
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -6738,6 +6819,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">Array.&lt;number></span>
 
 
+
             
             </td>
 
@@ -6759,6 +6841,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
             
                 
 <span class="param-type">Array.&lt;number></span>
+
 
 
             
@@ -6784,6 +6867,7 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 <span class="param-type">number</span>
 
 
+
             
             </td>
 
@@ -6801,45 +6885,20 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
-<dl class="details">
 
-    
 
-    
 
-    
 
-    
+    <h5 class="h5-types">Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Object</span>
 
-    
 
-    
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="nvimage.js.html">nvimage.js</a>, <a href="nvimage.js.html#line3235">line 3235</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
+        </li>
+    </ul>
 
 
 
@@ -6857,19 +6916,21 @@ newZeroImage = NVImage.zerosLike(myImage)</code></pre>
 
 
 
+    
+    
 </div>
-
-<nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a></li><li><a href="NVDocument.html">NVDocument</a></li><li><a href="NVImage.html">NVImage</a></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
-</nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Aug 09 2023 12:06:11 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Wed Aug 09 2023 16:11:10 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
-<script> prettyPrint(); </script>
-<script src="scripts/linenumber.js"> </script>
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
 </body>
 </html>

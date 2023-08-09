@@ -1,23 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="utf-8">
-    <title>JSDoc: Source: niivue.js</title>
-
-    <script src="scripts/prettify/prettify.js"> </script>
-    <script src="scripts/prettify/lang-css.js"> </script>
+    <title>niivue.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
 
-<div id="main">
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
 
-    <h1 class="page-title">Source: niivue.js</h1>
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a><ul class='methods'><li data-type='method'><a href="NVController.html#connectToSession">connectToSession</a></li><li data-type='method'><a href="NVController.html#onAzimuthElevationChangeHandler">onAzimuthElevationChangeHandler</a></li><li data-type='method'><a href="NVController.html#onClipPlaneChangeHandler">onClipPlaneChangeHandler</a></li><li data-type='method'><a href="NVController.html#onColormapChangeHandler">onColormapChangeHandler</a></li><li data-type='method'><a href="NVController.html#onCustomMeshShaderAddedHandler">onCustomMeshShaderAddedHandler</a></li><li data-type='method'><a href="NVController.html#onFrameChangeHandler">onFrameChangeHandler</a></li><li data-type='method'><a href="NVController.html#onImageLoadedHandler">onImageLoadedHandler</a></li><li data-type='method'><a href="NVController.html#onMeshAddedFromUrlHandler">onMeshAddedFromUrlHandler</a></li><li data-type='method'><a href="NVController.html#onMeshLoadedHandler">onMeshLoadedHandler</a></li><li data-type='method'><a href="NVController.html#onMeshPropertyChanged">onMeshPropertyChanged</a></li><li data-type='method'><a href="NVController.html#onMeshShaderChanged">onMeshShaderChanged</a></li><li data-type='method'><a href="NVController.html#onOpacityChangeHandler">onOpacityChangeHandler</a></li><li data-type='method'><a href="NVController.html#onVolumeAddedFromUrlHandler">onVolumeAddedFromUrlHandler</a></li><li data-type='method'><a href="NVController.html#onVolumeWithUrlRemovedHandler">onVolumeWithUrlRemovedHandler</a></li><li data-type='method'><a href="NVController.html#onZoom3DChangeHandler">onZoom3DChangeHandler</a></li></ul></li><li><a href="NVDocument.html">NVDocument</a><ul class='methods'><li data-type='method'><a href="NVDocument.html#addImageOptions">addImageOptions</a></li><li data-type='method'><a href="NVDocument.html#download">download</a></li><li data-type='method'><a href="NVDocument.html#getImageOptions">getImageOptions</a></li><li data-type='method'><a href="NVDocument.html#hasImage">hasImage</a></li><li data-type='method'><a href="NVDocument.html#hasImageFromUrl">hasImageFromUrl</a></li><li data-type='method'><a href="NVDocument.html#json">json</a></li><li data-type='method'><a href="NVDocument.html#removeImage">removeImage</a></li><li data-type='method'><a href="NVDocument.html#.deserializeMeshDataObjects">deserializeMeshDataObjects</a></li><li data-type='method'><a href="NVDocument.html#.loadFromJSON">loadFromJSON</a></li></ul></li><li></li><li></li><li><a href="NVImage.html">NVImage</a><ul class='methods'><li data-type='method'><a href="NVImage.html#applyOptionsUpdate">applyOptionsUpdate</a></li><li data-type='method'><a href="NVImage.html#clone">clone</a></li><li data-type='method'><a href="NVImage.html#getImageMetadata">getImageMetadata</a></li><li data-type='method'><a href="NVImage.html#toNiivueObject3D">toNiivueObject3D</a></li><li data-type='method'><a href="NVImage.html#toUint8Array">toUint8Array</a></li><li data-type='method'><a href="NVImage.html#zeroImage">zeroImage</a></li><li data-type='method'><a href="NVImage.html#.zerosLike">zerosLike</a></li></ul></li><li></li><li></li><li></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a><ul class='methods'><li data-type='method'><a href="NVMesh.html#.loadFromBase64">loadFromBase64</a></li><li data-type='method'><a href="NVMesh.html#.loadFromFile">loadFromFile</a></li><li data-type='method'><a href="NVMesh.html#.loadFromUrl">loadFromUrl</a></li></ul></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a><ul class='methods'><li data-type='method'><a href="Niivue.html#addColormap">addColormap</a></li><li data-type='method'><a href="Niivue.html#addMesh">addMesh</a></li><li data-type='method'><a href="Niivue.html#addMeshFromUrl">addMeshFromUrl</a></li><li data-type='method'><a href="Niivue.html#addVolume">addVolume</a></li><li data-type='method'><a href="Niivue.html#addVolumeFromUrl">addVolumeFromUrl</a></li><li data-type='method'><a href="Niivue.html#attachTo">attachTo</a></li><li data-type='method'><a href="Niivue.html#attachToCanvas">attachToCanvas</a></li><li data-type='method'><a href="Niivue.html#calculateMinMaxVoxIdx">calculateMinMaxVoxIdx</a></li><li data-type='method'><a href="Niivue.html#cloneVolume">cloneVolume</a></li><li data-type='method'><a href="Niivue.html#closeDrawing">closeDrawing</a></li><li data-type='method'><a href="Niivue.html#colormap">colormap</a></li><li data-type='method'><a href="Niivue.html#colormaps">colormaps</a></li><li data-type='method'><a href="Niivue.html#createCustomMeshShader">createCustomMeshShader</a></li><li data-type='method'><a href="Niivue.html#createEmptyDrawing">createEmptyDrawing</a></li><li data-type='method'><a href="Niivue.html#drawGrowCut">drawGrowCut</a></li><li data-type='method'><a href="Niivue.html#drawMosaic">drawMosaic</a></li><li data-type='method'><a href="Niivue.html#drawOtsu">drawOtsu</a></li><li data-type='method'><a href="Niivue.html#drawUndo">drawUndo</a></li><li data-type='method'><a href="Niivue.html#getDescriptives">getDescriptives</a></li><li data-type='method'><a href="Niivue.html#getFrame4D">getFrame4D</a></li><li data-type='method'><a href="Niivue.html#getMediaByUrl">getMediaByUrl</a></li><li data-type='method'><a href="Niivue.html#getOverlayIndexByID">getOverlayIndexByID</a></li><li data-type='method'><a href="Niivue.html#getRadiologicalConvention">getRadiologicalConvention</a></li><li data-type='method'><a href="Niivue.html#getVolumeIndexByID">getVolumeIndexByID</a></li><li data-type='method'><a href="Niivue.html#isMeshExt">isMeshExt</a></li><li data-type='method'><a href="Niivue.html#loadConnectome">loadConnectome</a></li><li data-type='method'><a href="Niivue.html#loadDeferred4DVolumes">loadDeferred4DVolumes</a></li><li data-type='method'><a href="Niivue.html#loadDocument">loadDocument</a></li><li data-type='method'><a href="Niivue.html#loadDocumentFromUrl">loadDocumentFromUrl</a></li><li data-type='method'><a href="Niivue.html#loadDrawingFromUrl">loadDrawingFromUrl</a></li><li data-type='method'><a href="Niivue.html#loadMeshes">loadMeshes</a></li><li data-type='method'><a href="Niivue.html#loadVolumes">loadVolumes</a></li><li data-type='method'><a href="Niivue.html#meshShaderNames">meshShaderNames</a></li><li data-type='method'><a href="Niivue.html#moveCrosshairInVox">moveCrosshairInVox</a></li><li data-type='method'><a href="Niivue.html#moveVolumeDown">moveVolumeDown</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToBottom">moveVolumeToBottom</a></li><li data-type='method'><a href="Niivue.html#moveVolumeToTop">moveVolumeToTop</a></li><li data-type='method'><a href="Niivue.html#moveVolumeUp">moveVolumeUp</a></li><li data-type='method'><a href="Niivue.html#off">off</a></li><li data-type='method'><a href="Niivue.html#on">on</a></li><li data-type='method'><a href="Niivue.html#onAzimuthElevationChange">onAzimuthElevationChange</a></li><li data-type='method'><a href="Niivue.html#onClipPlaneChange">onClipPlaneChange</a></li><li data-type='method'><a href="Niivue.html#onDebug">onDebug</a></li><li data-type='method'><a href="Niivue.html#onDocumentLoaded">onDocumentLoaded</a></li><li data-type='method'><a href="Niivue.html#onError">onError</a></li><li data-type='method'><a href="Niivue.html#onFrameChange">onFrameChange</a></li><li data-type='method'><a href="Niivue.html#onImageLoaded">onImageLoaded</a></li><li data-type='method'><a href="Niivue.html#onInfo">onInfo</a></li><li data-type='method'><a href="Niivue.html#onIntensityChange">onIntensityChange</a></li><li data-type='method'><a href="Niivue.html#onLocationChange">onLocationChange</a></li><li data-type='method'><a href="Niivue.html#onMeshAddedFromUrl">onMeshAddedFromUrl</a></li><li data-type='method'><a href="Niivue.html#onMeshLoaded">onMeshLoaded</a></li><li data-type='method'><a href="Niivue.html#onMouseUp">onMouseUp</a></li><li data-type='method'><a href="Niivue.html#onVolumeAddedFromUrl">onVolumeAddedFromUrl</a></li><li data-type='method'><a href="Niivue.html#onVolumeUpdated">onVolumeUpdated</a></li><li data-type='method'><a href="Niivue.html#onWarn">onWarn</a></li><li data-type='method'><a href="Niivue.html#removeHaze">removeHaze</a></li><li data-type='method'><a href="Niivue.html#removeMesh">removeMesh</a></li><li data-type='method'><a href="Niivue.html#removeMeshByUrl">removeMeshByUrl</a></li><li data-type='method'><a href="Niivue.html#removeVolume">removeVolume</a></li><li data-type='method'><a href="Niivue.html#removeVolumeByIndex">removeVolumeByIndex</a></li><li data-type='method'><a href="Niivue.html#removeVolumeByUrl">removeVolumeByUrl</a></li><li data-type='method'><a href="Niivue.html#reverseFaces">reverseFaces</a></li><li data-type='method'><a href="Niivue.html#saveImage">saveImage</a></li><li data-type='method'><a href="Niivue.html#saveScene">saveScene</a></li><li data-type='method'><a href="Niivue.html#setAdditiveBlend">setAdditiveBlend</a></li><li data-type='method'><a href="Niivue.html#setClipPlane">setClipPlane</a></li><li data-type='method'><a href="Niivue.html#setClipPlaneColor">setClipPlaneColor</a></li><li data-type='method'><a href="Niivue.html#setColormap">setColormap</a></li><li data-type='method'><a href="Niivue.html#setColormapNegative">setColormapNegative</a></li><li data-type='method'><a href="Niivue.html#setCornerOrientationText">setCornerOrientationText</a></li><li data-type='method'><a href="Niivue.html#setCrosshairColor">setCrosshairColor</a></li><li data-type='method'><a href="Niivue.html#setCrosshairWidth">setCrosshairWidth</a></li><li data-type='method'><a href="Niivue.html#setCustomMeshShader">setCustomMeshShader</a></li><li data-type='method'><a href="Niivue.html#setDrawOpacity">setDrawOpacity</a></li><li data-type='method'><a href="Niivue.html#setDrawingEnabled">setDrawingEnabled</a></li><li data-type='method'><a href="Niivue.html#setFrame4D">setFrame4D</a></li><li data-type='method'><a href="Niivue.html#setGamma">setGamma</a></li><li data-type='method'><a href="Niivue.html#setHighResolutionCapable">setHighResolutionCapable</a></li><li data-type='method'><a href="Niivue.html#setInterpolation">setInterpolation</a></li><li data-type='method'><a href="Niivue.html#setMeshLayerProperty">setMeshLayerProperty</a></li><li data-type='method'><a href="Niivue.html#setMeshProperty">setMeshProperty</a></li><li data-type='method'><a href="Niivue.html#setMeshShader">setMeshShader</a></li><li data-type='method'><a href="Niivue.html#setMeshThicknessOn2D">setMeshThicknessOn2D</a></li><li data-type='method'><a href="Niivue.html#setModulationImage">setModulationImage</a></li><li data-type='method'><a href="Niivue.html#setOpacity">setOpacity</a></li><li data-type='method'><a href="Niivue.html#setPan2Dxyzmm">setPan2Dxyzmm</a></li><li data-type='method'><a href="Niivue.html#setPenValue">setPenValue</a></li><li data-type='method'><a href="Niivue.html#setRadiologicalConvention">setRadiologicalConvention</a></li><li data-type='method'><a href="Niivue.html#setRenderAzimuthElevation">setRenderAzimuthElevation</a></li><li data-type='method'><a href="Niivue.html#setScale">setScale</a></li><li data-type='method'><a href="Niivue.html#setSelectionBoxColor">setSelectionBoxColor</a></li><li data-type='method'><a href="Niivue.html#setSliceMM">setSliceMM</a></li><li data-type='method'><a href="Niivue.html#setSliceMosaicString">setSliceMosaicString</a></li><li data-type='method'><a href="Niivue.html#setSliceType">setSliceType</a></li><li data-type='method'><a href="Niivue.html#setVolume">setVolume</a></li><li data-type='method'><a href="Niivue.html#sph2cartDeg">sph2cartDeg</a></li><li data-type='method'><a href="Niivue.html#syncWith">syncWith</a></li><li data-type='method'><a href="Niivue.html#updateGLVolume">updateGLVolume</a></li></ul></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#MESH_EXTENSIONS">MESH_EXTENSIONS</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">niivue.js</h1>
+    
 
     
 
@@ -108,6 +127,10 @@ export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
 
+/**
+ * mesh file formats that can be loaded
+ * @type {string[]} MESH_EXTENSIONS
+ */
 const MESH_EXTENSIONS = [
   "ASC",
   "BYU",
@@ -141,6 +164,7 @@ const MESH_EXTENSIONS = [
   "JSON",
 ];
 
+// mouse button codes
 const LEFT_MOUSE_BUTTON = 0;
 const CENTER_MOUSE_BUTTON = 1;
 const RIGHT_MOUSE_BUTTON = 2;
@@ -208,24 +232,24 @@ const RIGHT_MOUSE_BUTTON = 2;
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export function Niivue(options = {}) {
-  this.canvas = null; // the canvas element on the page
+  this.canvas = null; // the reference to the canvas element on the page
   this.gl = null; // the gl context
-  this.isBusy = false;
-  this.needsRefresh = false;
-  this.colormapTexture = null;
+  this.isBusy = false; // flag to indicate if the scene is busy drawing
+  this.needsRefresh = false; // flag to indicate if the scene needs to be redrawn
+  this.colormapTexture = null; // the GPU memory storage of the colormap
   this.colormapLists = []; //one entry per colorbar: min, max, tic
-  this.volumeTexture = null;
+  this.volumeTexture = null; // the GPU memory storage of the volume
   this.gradientTexture = null; //3D texture for volume rnedering lighting
   this.gradientTextureAmount = 0.0;
   this.drawTexture = null; //the GPU memory storage of the drawing
-  this.drawUndoBitmaps = [];
-  this.drawLut = cmapper.makeDrawLut("$itksnap");
-  this.drawOpacity = 0.8;
+  this.drawUndoBitmaps = []; // array of drawBitmaps for undo
+  this.drawLut = cmapper.makeDrawLut("$itksnap"); // the color lookup table for drawing
+  this.drawOpacity = 0.8; // opacity of drawing (default)
   this.renderDrawAmbientOcclusion = 0.4;
   this.colorbarHeight = 0; //height in pixels, set when colorbar is drawn
   this.drawPenLocation = [NaN, NaN, NaN];
   this.drawPenAxCorSag = -1; //do not allow pen to drag between Sagittal/Coronal/Axial
-  this.drawFillOverwrites = true;
+  this.drawFillOverwrites = true; //if true, fill overwrites existing drawing
   this.drawPenFillPts = []; //store mouse points for filled pen
   this.overlayTexture = null;
   this.overlayTextureID = [];
@@ -371,29 +395,190 @@ export function Niivue(options = {}) {
 
   // Defaults
   this.onContrastDragRelease = this.calculateNewRange; // function to call when contrast drag is released by default. Can be overridden by user
+  /**
+   * callback function to run when the left mouse button is released
+   * @type {function}
+   * @example
+   * niivue.onMouseUp = function(){
+   *   console.log('mouse up')
+   * }
+   */
   this.onMouseUp = () => {};
+  /**
+   * callback function to run when the crosshair location changes
+   * @type {function}
+   * @example
+   * niivue.onLocationChange = function(data){
+   * console.log('location changed')
+   * console.log('mm: ', data.mm)
+   * console.log('vox: ', data.vox)
+   * console.log('frac: ', data.frac)
+   * console.log('values: ', data.values)
+   * }
+   */
   this.onLocationChange = () => {};
+
+  /**
+   * callback function to run when the user changes the intensity range with the selection box action (right click)
+   * @type {function}
+   * @example
+   * niivue.onIntensityChange = function(volume){
+   * console.log('intensity changed')
+   * console.log('volume: ', volume)
+   * }
+   */
   this.onIntensityChange = () => {};
+
+  /**
+   * callback function to run when a new volume is loaded
+   * @type {function}
+   * @example
+   * niivue.onImageLoaded = function(volume){
+   * console.log('volume loaded')
+   * console.log('volume: ', volume)
+   * }
+   */
   this.onImageLoaded = () => {};
+
+  /**
+   * callback function to run when a new mesh is loaded
+   * @type {function}
+   * @example
+   * niivue.onMeshLoaded = function(mesh){
+   * console.log('mesh loaded')
+   * console.log('mesh: ', mesh)
+   * }
+   */
   this.onMeshLoaded = () => {};
+
+  /**
+   * callback function to run when the user changes the volume when a 4D image is loaded
+   * @type {function}
+   * @example
+   * niivue.onFrameChange = function(volume, frameNumber){
+   * console.log('frame changed')
+   * console.log('volume: ', volume)
+   * console.log('frameNumber: ', frameNumber)
+   * }
+   */
   this.onFrameChange = () => {};
+
+  /**
+   * callback function to run when niivue reports an error
+   * @type {function}
+   * @example
+   * niivue.onError = function(error){
+   * console.log('error: ', error)
+   * }
+   */
   this.onError = () => {};
+
+  /**
+   * callback function to run when niivue reports detailed info
+   * @type {function}
+   * @example
+   * niivue.onInfo = function(info){
+   * console.log('info: ', info)
+   * }
+   */
   this.onInfo = () => {};
+
+  /**
+   * callback function to run when niivue reports a warning
+   * @type {function}
+   * @example
+   * niivue.onWarn = function(warn){
+   * console.log('warn: ', warn)
+   * }
+   */
   this.onWarn = () => {};
+
+  /**
+   * callback function to run when niivue reports a debug message
+   * @type {function}
+   * @example
+   * niivue.onDebug = function(debug){
+   * console.log('debug: ', debug)
+   * }
+   */
   this.onDebug = () => {};
+
+  /**
+   * callback function to run when a volume is added from a url
+   * @type {function}
+   * @example
+   * niivue.onVolumeAddedFromUrl = function(imageOptions, volume){
+   * console.log('volume added from url')
+   * console.log('imageOptions: ', imageOptions)
+   * console.log('volume: ', volume)
+   * }
+   */
   this.onVolumeAddedFromUrl = () => {};
   this.onVolumeWithUrlRemoved = () => {};
+
+  /**
+   * callback function to run when updateGLVolume is called (most users will not need to use this)
+   * @type {function}
+   * @example
+   * niivue.onVolumeUpdated = function(){
+   * console.log('volume updated')
+   * }
+   */
   this.onVolumeUpdated = () => {};
+
+  /**
+   * callback function to run when a mesh is added from a url
+   * @type {function}
+   * @example
+   * niivue.onMeshAddedFromUrl = function(meshOptions, mesh){
+   * console.log('mesh added from url')
+   * console.log('meshOptions: ', meshOptions)
+   * console.log('mesh: ', mesh)
+   * }
+   */
   this.onMeshAddedFromUrl = () => {};
+
+  // this seems redundant with onMeshLoaded
   this.onMeshAdded = () => {};
   this.onMeshWithUrlRemoved = () => {};
+
+  // not implemented anywhere...
   this.onZoom3DChange = () => {};
+
+  /**
+   * callback function to run when the user changes the rotation of the 3D rendering
+   * @type {function}
+   * @example
+   * niivue.onAzimuthElevationChange = function(azimuth, elevation){
+   * console.log('azimuth: ', azimuth)
+   * console.log('elevation: ', elevation)
+   * }
+   */
   this.onAzimuthElevationChange = () => {};
+
+  /**
+   * callback function to run when the user changes the clip plane
+   * @type {function}
+   * @example
+   * niivue.onClipPlaneChange = function(clipPlane){
+   * console.log('clipPlane: ', clipPlane)
+   * }
+   */
   this.onClipPlaneChange = () => {};
   this.onCustomMeshShaderAdded = () => {};
   this.onMeshShaderChanged = () => {};
   this.onMeshPropertyChanged = () => {};
+
+  /**
+   * callback function to run when the user loads a new NiiVue document
+   * @type {function}
+   * @example
+   * niivue.onDocumentLoaded = function(document){
+   * console.log('document: ', document)
+   * }
+   */
   this.onDocumentLoaded = () => {};
+
   this.document = new NVDocument();
 
   this.opts = { ...DEFAULT_OPTIONS };
@@ -401,6 +586,7 @@ export function Niivue(options = {}) {
 
   // populate Niivue with user supplied options
   for (const name in options) {
+    // if the user supplied a function for a callback, use it, else use the default callback or nothing
     if (typeof options[name] === "function") {
       this[name] = options[name];
     } else {
@@ -417,6 +603,7 @@ export function Niivue(options = {}) {
   } else {
     this.uiData.dpr = 1;
   }
+
   this.dragModes = [];
   this.dragModes.contrast = DRAG_MODE.contrast;
   this.dragModes.measurement = DRAG_MODE.measurement;
@@ -667,7 +854,15 @@ Niivue.prototype.syncWith = function (
   this.syncOpts = syncOpts;
 };
 
-// not included in public docs
+/**
+ * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
+ * @private
+ * @example
+ * niivue1 = new Niivue()
+ * niivue2 = new Niivue()
+ * niivue2.syncWith(niivue1)
+ * niivue2.sync()
+ */
 Niivue.prototype.sync = function () {
   if (!this.otherNV || typeof this.otherNV === "undefined") {
     return;
@@ -702,9 +897,11 @@ Niivue.prototype.arrayEquals = function (a, b) {
   );
 };
 
-// not included in public docs
-//handle window resizing
-// note: no test yet
+/**
+ * callback function to handle resize window events, redraws the scene.
+ * @type {function}
+ * @private
+ */
 Niivue.prototype.resizeListener = function () {
   if (!this.opts.isResizeCanvas) {
     if (this.opts.isHighResolutionCapable) {
@@ -740,6 +937,12 @@ Niivue.prototype.resizeListener = function () {
  * https://stackoverflow.com/questions/42309715/how-to-correctly-pass-mouse-coordinates-to-webgl
  * note:  no test yet
  */
+/**
+ * callback to handle mouse move events relative to the canvas
+ * @type {function}
+ * @private
+ * @returns {object} the mouse position relative to the canvas
+ */
 Niivue.prototype.getRelativeMousePosition = function (event, target) {
   target = target || event.target;
   var rect = target.getBoundingClientRect();
@@ -758,10 +961,6 @@ Niivue.prototype.getNoPaddingNoBorderCanvasRelativeMousePosition = function (
 ) {
   target = target || event.target;
   var pos = this.getRelativeMousePosition(event, target);
-
-  //pos.x = (pos.x * target.width) / target.clientWidth;
-  //pos.y = (pos.y * target.height) / target.clientHeight;
-
   return pos;
 };
 
@@ -849,7 +1048,11 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
   return;
 };
 
-// not included in public docs
+/**
+ * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
+ * @param {Array} array an array of two values
+ * @returns {Array} an array of two values representing the min and max voxel indices
+ */
 Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   if (array.length > 2) {
     throw new Error("array must not contain more than two values");
@@ -860,7 +1063,13 @@ Niivue.prototype.calculateMinMaxVoxIdx = function (array) {
   ];
 };
 
-// not included in public docs
+/**
+ * scale the raw intensity values by the header scale slope and intercept
+ * @param {object} hdr the header object
+ * @param {Array} raw the raw intensity values
+ * @returns {Array} the scaled intensity values
+ * @private
+ */
 function intensityRaw2Scaled(hdr, raw) {
   if (hdr.scl_slope === 0) hdr.scl_slope = 1.0;
   return raw * hdr.scl_slope + hdr.scl_inter;
@@ -2994,7 +3203,7 @@ Niivue.prototype.loadDocument = function (document) {
     this.addMesh(meshToAdd);
   }
   this.updateGLVolume();
-  this.onDocumentLoaded();
+  this.onDocumentLoaded(document);
   return this;
 };
 
@@ -3084,7 +3293,7 @@ Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
   Object.assign(options, meshOptions);
   let mesh = await NVMesh.loadFromUrl(options);
   this.mediaUrlMap.set(mesh, options.url);
-  this.onMeshAddedFromUrl(options);
+  this.onMeshAddedFromUrl(options, mesh);
   this.addMesh(mesh);
 
   return mesh;
@@ -8972,19 +9181,21 @@ Niivue.prototype.drawScene = async function () {
 
 
 
+    
+    
 </div>
-
-<nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="NVController.html">NVController</a></li><li><a href="NVDocument.html">NVDocument</a></li><li><a href="NVImage.html">NVImage</a></li><li><a href="global.html#NVImageFromUrlOptions">NVImageFromUrlOptions</a></li><li><a href="NVMesh.html">NVMesh</a></li><li><a href="global.html#NVMeshFromUrlOptions">NVMeshFromUrlOptions</a></li><li><a href="NVMessage.html">NVMessage</a></li><li><a href="NVMessageSet4DVolumeIndexData.html">NVMessageSet4DVolumeIndexData</a></li><li><a href="NVMesssageUpdateData.html">NVMesssageUpdateData</a></li><li><a href="NVUtilities.html">NVUtilities</a></li><li><a href="Niivue.html">Niivue</a></li><li><a href="NiivueObject3D.html">NiivueObject3D</a></li><li><a href="SessionBus.html">SessionBus</a></li><li><a href="SessionUser.html">SessionUser</a></li><li><a href="Shader.html">Shader</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DRAG_MODE">DRAG_MODE</a></li><li><a href="global.html#NVIMAGE_TYPE">NVIMAGE_TYPE</a></li><li><a href="global.html#NVMESSAGE">NVMESSAGE</a></li><li><a href="global.html#SLICE_TYPE">SLICE_TYPE</a></li><li><a href="global.html#getExtents">getExtents</a></li><li><a href="global.html#storageAvailable">storageAvailable</a></li></ul>
-</nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Aug 09 2023 12:06:11 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Wed Aug 09 2023 16:11:10 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
-<script> prettyPrint(); </script>
-<script src="scripts/linenumber.js"> </script>
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
 </body>
 </html>
