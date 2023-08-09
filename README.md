@@ -4,6 +4,125 @@ NiiVue is a WebGL 2.0 medical image viewer. This repository contains the **core 
 
 NiiVue allows developers to create interactive web pages for visualizing [nifti](https://nifti.nimh.nih.gov) and other formats popular in neuroimaging. NiiVue includes many mouse and keyboard interactions that enable browsing and manipulating images displayed in the canvas. This core package does not include a comprehensive user interface outside of the canvas (e.g. buttons, and other widgets). However, developers who wish to build custom user interfaces around the NiiVue canvas can manipulate the rendered images and change settings via the API. Our [UI wrapper](https://github.com/niivue/niivue-ui) demonstrates how the modular core NiiVue can be embedded into a rich user interface.
 
+# API examples
+
+## Load a volume
+
+```js
+import { Niivue } from "@niivue/niivue";
+// make an array of volumes to load
+let volumeList = [
+  { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
+];
+const nv = new Niivue();
+nv.attachTo("gl"); // attach to canvas with id="gl"
+nv.loadVolumes(volumeList);
+```
+
+## Load a mesh
+
+```js
+import { Niivue } from "@niivue/niivue";
+// make an array of meshes to load
+let meshList = [
+  { url: "https://niivue.github.io/niivue/features/images/BrainMesh_ICBM152.lh.mz3"},
+];
+const nv = new Niivue();
+nv.attachTo("gl"); // attach to canvas with id="gl"
+nv.loadMeshes(meshList);
+```
+
+## Load a volume and set the colormap
+
+```js
+import { Niivue } from "@niivue/niivue";
+// make an array of volumes to load
+let volumeList = [
+  { 
+    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+    colormap: "red", // see: https://niivue.github.io/niivue/features/colormaps.html
+  },
+];
+const nv = new Niivue();
+nv.attachTo("gl"); // attach to canvas with id="gl"
+nv.loadVolumes(volumeList);
+```
+
+## Load multiple volumes
+  
+  ```js
+  import { Niivue } from "@niivue/niivue";
+  // make an array of volumes to load
+  let volumeList = [
+    { 
+      url: "https://niivue.github.io/niivue/features/images/mni152.nii.gz",
+      colormap: "grey"
+    },
+    { 
+      url: "https://niivue.github.io/niivue/features/images/hippo.nii.gz",
+      colormap: "red"
+    },
+  ]
+  const nv = new Niivue();
+  nv.attachTo("gl"); // attach to canvas with id="gl"
+  nv.loadVolumes(volumeList);
+  ```
+
+## Load a volume and a mesh
+  
+  ```js
+  import { Niivue } from "@niivue/niivue";
+  // make an array of volumes to load
+  let volumeList = [
+    { 
+      url: "https://niivue.github.io/niivue/features/images/mni152.nii.gz",
+      colormap: "grey"
+    },
+  ]
+  // make an array of meshes to load
+  let meshList = [
+    { url: "https://niivue.github.io/niivue/features/images/BrainMesh_ICBM152.lh.mz3"},
+  ]
+  const nv = new Niivue();
+  nv.attachTo("gl"); // attach to canvas with id="gl"
+  nv.setSliceMM(true) // world space coordinates to be used by all images when loading volumes and meshes together
+  nv.loadVolumes(volumeList); // async
+  nv.loadMeshes(meshList); // async
+  ```
+
+  ## Set properties before loading images
+  
+  ```js
+    import { Niivue } from "@niivue/niivue";
+    // make an array of volumes to load
+    let volumeList = [
+      { 
+        url: "https://niivue.github.io/niivue/features/images/mni152.nii.gz",
+        colormap: "grey"
+      },
+    ]
+    const nv = new Niivue({
+      isColorbar: true, // show colorbar
+      isOrientationCube: true, // show orientation cube in bottom corner
+      crosshairColor: [0, 1, 0, 0.5], // set crosshair color to green and 50% opacity
+      show3Dcrosshair: true, // show crosshair in 3D view
+      backColor: [1, 1, 1, 1], // set background color to white
+      crosshairWidth: 4, // make crosshair thicker
+      // for more options see: https://niivue.github.io/niivue/devdocs/global.html#NiivueOptions
+    });
+    nv.attachTo("gl"); // attach to canvas with id="gl"
+    nv.loadVolumes(volumeList); // async
+  ```
+
+  
+
+
+
+
+
+
+
+
 # Getting started Docs and References
 
 [click here to go to the docs web page](https://niivue.github.io/niivue/devdocs/)

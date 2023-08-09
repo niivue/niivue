@@ -23,7 +23,7 @@
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
-    "docs": "npx jsdoc --readme ./README.md -d devdocs src/",
+    "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm publish --access public"
   },
@@ -60,6 +60,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.0.1",
     "clean-jsdoc-theme": "^4.2.6",
+    "docdash": "^2.0.1",
     "eslint": "^8.36.0",
     "express": "^4.18.2",
     "http-server": "^14.1.1",
