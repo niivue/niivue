@@ -8011,6 +8011,11 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
           valStr += this.volumes[i].colormapLabel.labels[v];
         else valStr += "undefined(" + flt2str(flt, deci) + ")";
       } else valStr += flt2str(flt, deci);
+      if (this.volumes[i].hasOwnProperty("imaginary")) {
+        flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D, true);
+        if (flt >= 0) valStr += "+";
+        valStr += flt2str(flt, deci);
+      }
       valStr += "   ";
     }
     str += valStr;

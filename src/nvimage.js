@@ -588,10 +588,12 @@ export function NVImage(
       //saved as real/imaginary pairs: show real following fsleyes/MRIcroGL convention
       let f32 = new Float32Array(imgRaw);
       let nvx = Math.floor(f32.length / 2);
+      this.imaginary = new Float32Array(nvx);
       this.img = new Float32Array(nvx);
       let r = 0;
       for (let i = 0; i < nvx - 1; i++) {
         this.img[i] = f32[r];
+        this.imaginary[i] = f32[r + 1];
         r += 2;
       }
       this.hdr.datatypeCode = this.DT_FLOAT;
@@ -3198,7 +3200,13 @@ String.prototype.getBytes = function () {
 
 // not included in public docs
 // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
-NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
+NVImage.prototype.getValue = function (
+  x,
+  y,
+  z,
+  frame4D = 0,
+  isReadImaginary = false
+) {
   //const { nx, ny, nz } = this.getImageMetadata();
   let nx = this.hdr.dims[1];
   let ny = this.hdr.dims[2];
@@ -3229,6 +3237,8 @@ NVImage.prototype.getValue = function (x, y, z, frame4D = 0) {
   }
   let vol = frame4D * nx * ny * nz;
   let i = this.img[vx + vol];
+  if (isReadImaginary) i = this.imaginary[vx + vol];
+
   return this.hdr.scl_slope * i + this.hdr.scl_inter;
 };
 
