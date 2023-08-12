@@ -471,14 +471,19 @@ out vec4 fColor;
   kRenderInit +
   `
 	float startPos = samplePos.a;
-	vec4 gradAcc = vec4(0.0,0.0,0.0,0.0);
+	float clipClose = clipPos.a + 2.0 * deltaDir.a; //do not apply gradients near clip plane
+	float brighten = 1.0 + gradientAmount / 2.0; //modulating makes average intensity darker
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.01) {
 			vec4 grad = texture(gradient, samplePos.xyz);
 			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
-			gradAcc.rgb += (1.0 - gradAcc.a) * grad.a * grad.rgb;
-			gradAcc.a += (1.0 - gradAcc.a) * grad.a;
+			vec3 n = mat3(normMtx) * grad.rgb;
+			n.y = - n.y;
+			vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb;
+			mc.rgb = colorSample.rgb * mc * brighten;
+			if (samplePos.a > clipClose)
+				colorSample.rgb = mix(colorSample.rgb, mc, gradientAmount);
 			if (firstHit.a > lenNoClip)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
@@ -489,18 +494,6 @@ out vec4 fColor;
 				break;
 		}
 		samplePos += deltaDir; //advance ray position
-	}
-	if ((clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < (2.0 * deltaDir.a))) {
-		//do not shade clipped plane
-	} else {
-		vec3 n = mat3(normMtx) * gradAcc.rgb;
-		n.y = - n.y;
-		vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb;
-		//modulation always darkens image, as all colors are equal or darker than input
-		// so we 'brighten' to compensave
-		float brighten = 1.5;
-		mc *= colAcc.rgb * brighten;
-		colAcc.rgb = mix(colAcc.rgb, mc, gradientAmount);
 	}
 ` +
   kRenderTail;
