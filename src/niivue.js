@@ -346,8 +346,16 @@ export function Niivue(options = {}) {
 
   // Event listeners
 
-  // Defaults
-  this.onContrastDragRelease = this.calculateNewRange; // function to call when contrast drag is released by default. Can be overridden by user
+  /**
+   * callback function to run when the right mouse button is released after dragging
+   * @type {function}
+   * @example
+   * niivue.onDragRelease = function(){
+   *   console.log('drag ended')
+   * }
+   */
+  this.onDragRelease = () => {}; // function to call when contrast drag is released by default. Can be overridden by user
+
   /**
    * callback function to run when the left mouse button is released
    * @type {function}
@@ -563,6 +571,7 @@ export function Niivue(options = {}) {
   this.dragModes.none = DRAG_MODE.none;
   this.dragModes.pan = DRAG_MODE.pan;
   this.dragModes.slicer3D = DRAG_MODE.slicer3D;
+  this.dragModes.callbackOnly = DRAG_MODE.callbackOnly;
   this.sliceTypeAxial = SLICE_TYPE.AXIAL;
   this.sliceTypeCoronal = SLICE_TYPE.CORONAL;
   this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL;
@@ -1100,6 +1109,38 @@ Niivue.prototype.calculateNewRange = function ({
   this.onIntensityChange(this.volumes[volIdx]);
 };
 
+Niivue.prototype.generateMouseUpCallback = function (fracStart, fracEnd) {
+  //calculate details for callback
+  let tileStart = this.tileIndex(
+    this.uiData.dragStart[0],
+    this.uiData.dragStart[1]
+  );
+  let tileEnd = this.tileIndex(this.uiData.dragEnd[0], this.uiData.dragEnd[1]);
+  //a tile index of -1 indicates invalid: drag not constrained to one tile
+  let tileIdx = -1;
+  if (tileStart === tileEnd) tileIdx = tileEnd;
+  let axCorSag = -1;
+  if (tileIdx >= 0) axCorSag = this.screenSlices[tileIdx].axCorSag;
+  let mmStart = this.frac2mm(fracStart);
+  let mmEnd = this.frac2mm(fracEnd);
+  let v = mat.vec3.create();
+  mat.vec3.sub(v, mmStart, mmEnd);
+  let mmLength = mat.vec3.len(v);
+  let voxStart = this.frac2vox(fracStart);
+  let voxEnd = this.frac2vox(fracEnd);
+  this.onDragRelease({
+    fracStart,
+    fracEnd,
+    voxStart,
+    voxEnd,
+    mmStart,
+    mmEnd,
+    mmLength,
+    tileIdx,
+    axCorSag,
+  });
+};
+
 // not included in public docs
 // handler for mouse button up (all buttons)
 // note: no test yet
@@ -1128,14 +1169,7 @@ Niivue.prototype.mouseUpListener = function () {
   if (isFunction(this.onMouseUp)) this.onMouseUp(uiData);
   if (this.uiData.isDragging) {
     this.uiData.isDragging = false;
-    if (this.opts.dragMode !== DRAG_MODE.contrast) return;
-    if (wasCenterDown) return;
-    if (
-      this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
-      this.uiData.dragStart[1] === this.uiData.dragEnd[1]
-    )
-      return;
-
+    if (this.opts.dragMode === DRAG_MODE.callbackOnly) this.drawScene(); //hide selectionbox
     let fracStart = this.canvasPos2frac([
       this.uiData.dragStart[0],
       this.uiData.dragStart[1],
@@ -1144,7 +1178,15 @@ Niivue.prototype.mouseUpListener = function () {
       this.uiData.dragEnd[0],
       this.uiData.dragEnd[1],
     ]);
-    this.onContrastDragRelease({ fracStart, fracEnd, volIdx: 0 });
+    this.generateMouseUpCallback(fracStart, fracEnd);
+    if (this.opts.dragMode !== DRAG_MODE.contrast) return;
+    if (wasCenterDown) return;
+    if (
+      this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
+      this.uiData.dragStart[1] === this.uiData.dragEnd[1]
+    )
+      return;
+    this.calculateNewRange({ fracStart, fracEnd, volIdx: 0 });
     this.refreshLayers(this.volumes[0], 0, this.volumes.length);
   }
   this.drawScene();
@@ -6063,11 +6105,9 @@ function swizzleVec3(vec, order = [0, 1, 2]) {
   return vout;
 }
 
-// not included in public docs
-// report if screen space coordinates correspond with a 3D rendering
-Niivue.prototype.inRenderTile = function (x, y) {
+//return tile at canvas coordinate(x,y)
+Niivue.prototype.tileIndex = function (x, y) {
   for (let i = 0; i < this.screenSlices.length; i++) {
-    if (this.screenSlices[i].axCorSag !== SLICE_TYPE.RENDER) continue;
     let ltwh = this.screenSlices[i].leftTopWidthHeight;
     if (
       x > ltwh[0] &&
@@ -6076,6 +6116,16 @@ Niivue.prototype.inRenderTile = function (x, y) {
       y < ltwh[1] + ltwh[3]
     )
       return i;
+  }
+  return -1; //mouse position not in rendering tile
+};
+
+// not included in public docs
+// report if screen space coordinates correspond with a 3D rendering
+Niivue.prototype.inRenderTile = function (x, y) {
+  let idx = this.tileIndex(x, y);
+  if (idx >= 0 && this.screenSlices[idx].axCorSag === SLICE_TYPE.RENDER) {
+    return idx;
   }
   return -1; //mouse position not in rendering tile
 };
