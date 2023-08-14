@@ -149,9 +149,14 @@ NiiVue brings the features of the widely used native desktop applications ([AFNI
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
 - FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital)
-- [OpenNeuro.org](https://openneuro.org)
-- [BrainLife.io](https://brainlife.io/about/)
+- [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
+- [BrainLife.io](https://brainlife.io/about/) integrates NiiVue into [ezbids](https://brainlife.io/ezbids/)
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
+- [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
+- [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
+- [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
+- [CACTAS](https://github.com/mpsych/CACTAS) from [Daniel Haehn's team](https://danielhaehn.com/) is extending NiiVue drawing and segmentation capabilities
+- [Digital Brain Bank](https://elifesciences.org/articles/73153) for navigating MRI datasets
 
 # Live View
 
@@ -312,7 +317,9 @@ export class NiivueViewComponent implements OnInit {
 # Funding
 
 - 2021-2022
-  - P50 DC014664/DC/NIDCD NIH HHS/United States
+  - [P50 DC014664](https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10094384) NIH NIDCD [NOT-OD-21-091](https://grants.nih.gov/grants/guide/notice-files/NOT-OD-21-091.html#:~:text=NOT%2DOD%2D21%2D091,Software%20Tools%20for%20Open%20Science)
+- 2023-2026
+  - [RF1 MH133701](https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10724895) NIH NIMH
 
 # Supported Formats
 
@@ -326,8 +333,7 @@ NiiVue can open several formats popular with brain imaging:
 
 # Alternatives
 
-There are several open source JavaScript NIfTI viewers. What makes NiiVue unique is how it leverages the shaders functions and 3D textures introduced with WebGL 2.0. The minimal design makes it easy to integrate with existing web pages quickly in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does **not** use [three.js](https://threejs.org). This means the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, NiiVue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets (e.g. using VueJS, React, Angular or pure HTML). Since there are numerous free alternatives, you can choose the optimal tool for your task.
-[Francesco Giorlando](https://f.giorlando.org/2018/07/web-viewers-for-fmri/) describes some of the differences between different tools.
+There are several open source JavaScript voxel viewers. What makes NiiVue unique is how it leverages the shaders functions and 3D textures introduced with WebGL 2.0. The minimal design makes it easy to integrate with existing web pages quickly in order to build powerful web-based viewers and support cloud-based analysis pipelines. Unlike many alternatives, NiiVue does **not** use [three.js](https://threejs.org). This means the screen is only refreshed when needed (preserving battery life and helping your computer do other tasks). On the other hand, NiiVue does not have access to the three.js user interface widgets, requiring developers to create their own custom widgets (e.g. using VueJS, React, Angular or pure HTML). Since there are numerous free alternatives, you can choose the optimal tool for your task.
 
 | Tool                                                                     | Live Demos                                                               |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -338,6 +344,7 @@ There are several open source JavaScript NIfTI viewers. What makes NiiVue unique
 | [Papaya](https://github.com/rii-mango/Papaya)                            | [live demo](https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html) |
 | [VTK.js](https://github.com/Kitware/vtk-js)                              | [live demo](https://kitware.github.io/paraview-glance/app/)              |
 | [slicedrop](https://github.com/slicedrop/slicedrop.github.com)           | [live demo](https://slicedrop.com/)                                      |
+| [OHIF DICOM Viewer](https://github.com/OHIF/Viewers)                     | [live demo](https://viewer.ohif.org/)                                    |
 
 # Development
 
