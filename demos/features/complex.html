@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Basic Multiplanar</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <select id="sliceType">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>A+C+S+R</option>
+      </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "./niivue.es.js";
+  sliceType.onchange = function () {
+    nv1.setSliceType(parseInt(this.value));
+  }
+  function handleIntensityChange(data) {
+    document.getElementById("intensity").innerHTML = data.string;
+  }
+  var volumeList1 = [{url: "../images/complex.nii.gz",}];
+  var nv1 = new niivue.Niivue({
+    onLocationChange: handleIntensityChange,
+  });
+  nv1.attachTo("gl1");
+  nv1.loadVolumes(volumeList1);
+</script>
