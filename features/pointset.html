@@ -88,7 +88,7 @@
       };
       var dropDrag = document.getElementById("dragMode");
       dropDrag.onchange = function () {
-        nv1.onContrastDragRelease = null;
+        nv1.onDragRelease = null;
         switch (document.getElementById("dragMode").value) {
           case "none":
             nv1.opts.dragMode = nv1.dragModes.none;
@@ -106,8 +106,8 @@
             nv1.opts.dragMode = nv1.dragModes.slicer3D;
             break;
           case "custom":
-            nv1.opts.dragMode = nv1.dragModes.contrast;
-            nv1.onContrastDragRelease = doContrastDragRelease;
+            nv1.opts.dragMode = nv1.dragModes.callbackOnly;
+            nv1.onDragRelease = doDragRelease;
             break;
         }
       };
@@ -118,7 +118,7 @@
         document.getElementById("location").innerHTML =
           "&nbsp;&nbsp;" + data.string;
       }
-      function doContrastDragRelease({fracStart, fracEnd}) {
+      function doDragRelease({fracStart, fracEnd}) {
         console.log("DragRelease", fracStart, fracEnd);
       }
       function deleteNode(XYZmm) {

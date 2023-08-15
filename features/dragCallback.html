@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option>none</option>
+        <option selected>contrast</option>
+        <option>measurement</option>
+        <option>pan/zoom</option>
+        <option>slicer3D</option>
+        <option>callbackOnly</option>
+      </select>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script src="./niivue.umd.js"></script>
+    <script type="module" async>
+      document.getElementById("dragMode").onchange = function () {
+        nv1.opts.dragMode = this.selectedIndex;
+      };
+      var volumeList1 = [{ url: "../images/mni152.nii.gz" }];
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      let defaults = {
+        loadingText: "there are no images",
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        limitFrames4D: 3,
+        onLocationChange: handleLocationChange,
+      };
+      function doDragRelease(info) {
+        console.log("DragRelease", info);
+        if (info.tileIdx < 0)
+            document.getElementById("location").innerHTML = "Invalid drag";
+        else
+            document.getElementById("location").innerHTML = `Tile: ${info.tileIdx} Orient: ${info.axCorSag} Length:${Math.round(info.mmLength)} x:${info.voxStart[0]}..${info.voxEnd[0]} y:${info.voxStart[1]}..${info.voxEnd[1]} z:${info.voxStart[2]}..${info.voxEnd[2]}`;
+      }
+      var nv1 = new niivue.Niivue(defaults);
+      nv1.setRadiologicalConvention(false);
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.onDragRelease = doDragRelease;
+      await nv1.loadVolumes(volumeList1);
+    </script>
+  </body>
+</html>
