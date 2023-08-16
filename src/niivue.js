@@ -2583,6 +2583,7 @@ Niivue.prototype.reverseFaces = function (mesh) {
  * @param {str} key attribute to change
  * @param {number} value for attribute
  * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
+ * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html|live demo usage}
  */
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
@@ -2609,6 +2610,7 @@ Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
  * @param {number} azimuth
  * @param {number} elevation
  * @example niivue.setRenderAzimuthElevation(45, 15)
+ * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.setRenderAzimuthElevation = function (a, e) {
   this.scene.renderAzimuth = a;
@@ -2744,6 +2746,7 @@ Niivue.prototype.removeVolumeByIndex = function (index) {
  * @example
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
+ * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
  */
 Niivue.prototype.removeMesh = function (mesh) {
   this.setMesh(mesh, -1);
@@ -2877,6 +2880,7 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
  * @example
  * niivue = new Niivue()
  * niivue.setClipPlane([42, 42])
+ * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   // azimuthElevation is 2 component vector [a, e, d]
@@ -2917,6 +2921,20 @@ Niivue.prototype.setCrosshairWidth = function (crosshairWidth) {
   this.drawScene();
 }; // setCrosshairColor()
 
+/*
+ * set colors and labels for different drawing values
+ * @param {array} cmap a structure mapping indices to colors and labels
+ * @example
+ * let cmap = {
+ *    R: [0, 255, 0],
+ *    G: [0, 20, 0],
+ *    B: [0, 20, 80],
+ *    A: [0, 255, 255],
+ *    labels: ["", "white-matter", "delete T1"],
+ *  };
+ *  nv.setDrawColormap(cmap);
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
+*/
 Niivue.prototype.setDrawColormap = function (name) {
   this.drawLut = cmapper.makeDrawLut(name);
   this.updateGLVolume();
