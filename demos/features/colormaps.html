@@ -17,6 +17,12 @@
     <header>
       <label for="invertCheck">Invert</label>
       <input type="checkbox" id="invertCheck" unchecked />
+      <label for="selectCheck">Green Dragging Selection</label>
+      <input type="checkbox" id="selectCheck" unchecked />
+      <label for="crossCheck">Green Crosshairs</label>
+      <input type="checkbox" id="crossCheck" unchecked />
+      <label for="wideCheck">Wide Crosshairs</label>
+      <input type="checkbox" id="wideCheck" unchecked />
       <label for="gammaSlider">Gamma</label>
       <input
         type="range"
@@ -50,6 +56,24 @@ let cmap = {&#10; R: [0, 255, 0],&#10; G: [0, 0, 255],&#10; B: [0, 0, 0],&#10; A
   invertCheck.onchange = function () {
     nv1.volumes[0].colormapInvert = this.checked;
     nv1.updateGLVolume();
+  }
+  selectCheck.onchange = function () {
+    if (this.checked)
+      nv1.setSelectionBoxColor([0, 1, 0, 0.7]);
+    else
+      nv1.setSelectionBoxColor([1, 1, 1, 0.5]);
+  }
+  crossCheck.onchange = function () {
+    if (this.checked)
+      nv1.setCrosshairColor([0, 1, 0, 1]);
+    else
+      nv1.setCrosshairColor([1, 0, 0, 1]);
+  }
+  wideCheck.onchange = function () {
+    if (this.checked)
+      nv1.setCrosshairWidth(3);
+    else
+      nv1.setCrosshairWidth(1);
   }
   document.getElementById("custom").addEventListener("click", doCustom);
   function doCustom() {
