@@ -24,6 +24,7 @@
         class="slider"
         id="meshSlider"
       />
+      <button id="reverse">Reverse Faces</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -44,7 +45,10 @@
       255,
     ]);
   };
-
+  document.getElementById("reverse").addEventListener("click", doReverse);
+  function doReverse() {
+    nv1.reverseFaces(nv1.meshes[0].id);
+  }
   var nv1 = new niivue.Niivue({
     show3Dcrosshair: true,
     backColor: [0.9, 0.9, 1, 1],
