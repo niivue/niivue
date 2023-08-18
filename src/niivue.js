@@ -807,6 +807,7 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
  * niivue1 = new Niivue()
  * niivue2 = new Niivue()
  * niivue2.syncWith(niivue1)
+ * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
  */
 Niivue.prototype.syncWith = function (
   otherNV,
@@ -1630,6 +1631,7 @@ Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
  * Add an image and notify subscribers
  * @param {NVImageFromUrlOptions} imageOptions
  * @returns {NVImage}
+ * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
   let volume = await NVImage.loadFromUrl(imageOptions);
@@ -1658,6 +1660,7 @@ Niivue.prototype.getMediaByUrl = function (url) {
 /**
  * Remove volume by url
  * @param {string} url - Volume added by url to remove
+ * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.removeVolumeByUrl = function (url) {
   let volume = this.getMediaByUrl(url);
@@ -1859,7 +1862,7 @@ Niivue.prototype.setCornerOrientationText = function (isCornerOrientationText) {
  * control whether 2D slices use radiological or neurological convention.
  * @param {boolean} isRadiologicalConvention new display convention
  * @example niivue.setCornerOrientationText(true)
- * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/worldspace.html|live demo usage}
  */
 Niivue.prototype.setRadiologicalConvention = function (
   isRadiologicalConvention
@@ -1868,6 +1871,13 @@ Niivue.prototype.setRadiologicalConvention = function (
   this.updateGLVolume();
 };
 
+/**
+ * Reset scene to default settings.
+ * @param {object} options to set - empty {} for defaults.
+ * @param {boolean} resetBriCon also reset contrast (default false).
+ * @example niivue.nv1.setDefaults(opts, true);
+ * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
+ */
 Niivue.prototype.setDefaults = function (options = {}, resetBriCon = false) {
   this.opts = { ...DEFAULT_OPTIONS };
   this.scene = { ...this.document.scene };
@@ -1973,6 +1983,7 @@ Niivue.prototype.setHighResolutionCapable = function (isHighResolutionCapable) {
  * @example
  * niivue = new Niivue()
  * niivue.addVolume(NVImage.loadFromUrl({url:'./someURL.nii.gz'}))
+ * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.addVolume = function (volume) {
   this.volumes.push(volume);
@@ -1989,6 +2000,7 @@ Niivue.prototype.addVolume = function (volume) {
  * @example
  * niivue = new Niivue()
  * niivue.addMesh(NVMesh.loadFromUrl({url:'./someURL.gii'}))
+ * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.addMesh = function (mesh) {
   this.meshes.push(mesh);
@@ -2182,6 +2194,7 @@ Niivue.prototype.drawUndo = function () {
   this.refreshDrawing(true);
 };
 
+// not included in public docs
 Niivue.prototype.loadDrawing = function (drawingBitmap) {
   if (this.drawBitmap) log.debug("Overwriting open drawing!");
   this.drawClearAllUndoBitmaps();
@@ -2549,6 +2562,7 @@ Niivue.prototype.getMeshIndexByID = function (id) {
  * @param {str} key attribute to change
  * @param {number} value for attribute
  * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
+ * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
 Niivue.prototype.setMeshProperty = function (id, key, val) {
   let idx = this.getMeshIndexByID(id);
@@ -2565,6 +2579,7 @@ Niivue.prototype.setMeshProperty = function (id, key, val) {
  * reverse triangle winding of mesh (swap front and back faces)
  * @param {number} id identity of mesh to change
  * @example niivue.reverseFaces(niivue.meshes[0].id)
+ * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
 Niivue.prototype.reverseFaces = function (mesh) {
   let idx = this.getMeshIndexByID(mesh);
@@ -2583,6 +2598,7 @@ Niivue.prototype.reverseFaces = function (mesh) {
  * @param {str} key attribute to change
  * @param {number} value for attribute
  * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
+ * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html|live demo usage}
  */
 Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
   let idx = this.getMeshIndexByID(mesh);
@@ -2601,7 +2617,7 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
  */
 Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
   this.uiData.pan2Dxyzmm = xyzmmZoom;
-  this.drawScene();
+  this.drawScene(); //borg
 };
 
 /**
@@ -2609,6 +2625,7 @@ Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
  * @param {number} azimuth
  * @param {number} elevation
  * @example niivue.setRenderAzimuthElevation(45, 15)
+ * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.setRenderAzimuthElevation = function (a, e) {
   this.scene.renderAzimuth = a;
@@ -2712,6 +2729,7 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
  * @example
  * niivue = new Niivue()
  * niivue.removeVolume(this.volumes[3])
+ * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.removeVolume = function (volume) {
   this.setVolume(volume, -1);
@@ -2744,6 +2762,7 @@ Niivue.prototype.removeVolumeByIndex = function (index) {
  * @example
  * niivue = new Niivue()
  * niivue.removeMesh(this.meshes[3])
+ * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
  */
 Niivue.prototype.removeMesh = function (mesh) {
   this.setMesh(mesh, -1);
@@ -2877,6 +2896,7 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
  * @example
  * niivue = new Niivue()
  * niivue.setClipPlane([42, 42])
+ * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
   // azimuthElevation is 2 component vector [a, e, d]
@@ -2895,11 +2915,12 @@ Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
 }; // setClipPlane()
 
 /**
- * set the crosshair color
+ * set the crosshair and colorbar outline color
  * @param {array} color an RGBA array. values range from 0 to 1
  * @example
  * niivue = new Niivue()
  * niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
 Niivue.prototype.setCrosshairColor = function (color) {
   this.opts.crosshairColor = color;
@@ -2910,6 +2931,7 @@ Niivue.prototype.setCrosshairColor = function (color) {
  * set thickness of crosshair
  * @param {number} crosshairWidth
  * @example niivue.crosshairWidth(2)
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
 Niivue.prototype.setCrosshairWidth = function (crosshairWidth) {
   this.opts.crosshairWidth = crosshairWidth;
@@ -2917,6 +2939,20 @@ Niivue.prototype.setCrosshairWidth = function (crosshairWidth) {
   this.drawScene();
 }; // setCrosshairColor()
 
+/*
+ * set colors and labels for different drawing values
+ * @param {array} cmap a structure mapping indices to colors and labels
+ * @example
+ * let cmap = {
+ *    R: [0, 255, 0],
+ *    G: [0, 20, 0],
+ *    B: [0, 20, 80],
+ *    A: [0, 255, 255],
+ *    labels: ["", "white-matter", "delete T1"],
+ *  };
+ *  nv.setDrawColormap(cmap);
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
+ */
 Niivue.prototype.setDrawColormap = function (name) {
   this.drawLut = cmapper.makeDrawLut(name);
   this.updateGLVolume();
@@ -2926,6 +2962,7 @@ Niivue.prototype.setDrawColormap = function (name) {
  * does dragging over a 2D slice create a drawing?
  * @param {boolean} drawing enabled (true) or not (false)
  * @example niivue.setDrawingEnabled(true)
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
   this.opts.drawingEnabled = trueOrFalse;
@@ -2940,6 +2977,7 @@ Niivue.prototype.setDrawingEnabled = function (trueOrFalse) {
  * @param {number} penValue sets the color of the pen
  * @param {boolean} [false] isFilledPen determines if dragging creates flood-filled shape
  * @example niivue.setPenValue(1, true)
+ * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.setPenValue = function (penValue, isFilledPen = false) {
   this.opts.penValue = penValue;
@@ -2959,11 +2997,12 @@ Niivue.prototype.setDrawOpacity = function (opacity) {
 };
 
 /**
- * set the selection box color. A selection box is drawn when you right click and drag to change image intensity
+ * set the selection box color. A selection box is drawn when you right click and drag to change image contrast
  * @param {array} color an RGBA array. values range from 0 to 1
  * @example
  * niivue = new Niivue()
  * niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
 Niivue.prototype.setSelectionBoxColor = function (color) {
   this.opts.selectionBoxColor = color;
@@ -3003,6 +3042,7 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
  * @example
  * niivue = new Niivue()
  * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
+ * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html|live demo usage}
  */
 Niivue.prototype.setSliceType = function (st) {
   this.opts.sliceType = st;
@@ -3017,6 +3057,7 @@ Niivue.prototype.setSliceType = function (st) {
  * @example
  * niivue = new Niivue()
  * niivue.setOpacity(0, 0.5) // make the first volume transparent
+ * @see {@link https://niivue.github.io/niivue/features/atlas.html|live demo usage}
  */
 Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
   this.volumes[volIdx].opacity = newOpacity;
@@ -3034,8 +3075,8 @@ Niivue.prototype.setOpacity = function (volIdx, newOpacity) {
  * set the scale of the 3D rendering. Larger numbers effectively zoom.
  * @param {number} scale the new scale value
  * @example
- * niivue = new Niivue()
  * niivue.setScale(2) // zoom some
+ * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
  */
 Niivue.prototype.setScale = function (scale) {
   this.scene.volScaleMultiplier = scale;
@@ -3055,8 +3096,8 @@ Object.defineProperty(Niivue.prototype, "volScaleMultiplier", {
  * set the color of the 3D clip plane
  * @param {array} color the new color. expects an array of RGBA values. values can range from 0 to 1
  * @example
- * niivue = new Niivue()
  * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
+ * @see {@link https://niivue.github.io/niivue/features/clipplanes.html|live demo usage}
  */
 Niivue.prototype.setClipPlaneColor = function (color) {
   this.opts.clipPlaneColor = color;
@@ -3068,6 +3109,13 @@ Niivue.prototype.setClipPlaneColor = function (color) {
   this.drawScene();
 }; // setClipPlaneColor()
 
+/**
+ * set proportion of volume rendering influenced by selected matcap.
+ * @param {number} amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
+ * @example
+ * niivue.setVolumeRenderIllumination(0.6);
+ * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
+ */
 Niivue.prototype.setVolumeRenderIllumination = function (gradientAmount = 0.0) {
   this.renderShader = this.renderVolumeShader;
   if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader;
@@ -3144,6 +3192,7 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  * Loads an NVDocument
  * @param {NVDocument} document
  * @returns {Niivue} returns the Niivue instance
+ * @see {@link https://niivue.github.io/niivue/features/document.load.html|live demo usage}
  */
 Niivue.prototype.loadDocument = function (document) {
   this.document = document;
@@ -3202,6 +3251,13 @@ Niivue.prototype.loadDocument = function (document) {
   return this;
 };
 
+/**
+ * save the entire scene (objects and settings) as a document
+ * @param {string} fileName the name of the document storing the scene
+ * @example
+ * niivue.saveDocument("niivue.basic.nvd")
+ * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
+ */
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.title = fileName;
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
@@ -3230,6 +3286,7 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
  * @property {boolean} trustCalMinMax - whether to trust the cal_min and cal_max values in the header
  * @property {boolean} isManifest - whether the image is a manifest file
  * @property {number} frame4D - the index of the 4D data to load
+ * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.loadVolumes = async function (volumeList) {
   this.on("loading", (isLoading) => {
@@ -3281,6 +3338,7 @@ Niivue.prototype.loadVolumes = async function (volumeList) {
  * Add mesh and notify subscribers
  * @param {NVMeshFromUrlOptions} meshOptions
  * @returns {NVMesh}
+ * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
  */
 Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
   let options = new NVMeshFromUrlOptions();
@@ -3301,6 +3359,7 @@ Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
  * @example
  * niivue = new Niivue()
  * niivue.loadMeshes([{url: 'someMesh.gii}])
+ * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
 Niivue.prototype.loadMeshes = async function (meshList) {
   this.on("loading", (isLoading) => {
@@ -3338,6 +3397,7 @@ Niivue.prototype.loadMeshes = async function (meshList) {
  * load a connectome specified by json
  * @param {object} connectome model
  * @returns {Niivue} returns the Niivue instance
+ * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
  */
 Niivue.prototype.loadConnectome = async function (json) {
   this.on("loading", (isLoading) => {
@@ -3369,6 +3429,7 @@ Niivue.prototype.loadConnectome = async function (json) {
 /**
  * generate a blank canvas for the pen tool
  * @example niivue.createEmptyDrawing()
+ * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
  */
 Niivue.prototype.createEmptyDrawing = async function () {
   if (!this.back.hasOwnProperty("dims")) return;
@@ -3511,6 +3572,7 @@ function img2ras16(volume) {
  * dilate drawing so all voxels are colored.
  * works on drawing with multiple colors
  * @example niivue.drawGrowCut();
+ * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
 Niivue.prototype.drawGrowCut = function () {
   let hdr = this.back.hdr;
@@ -4091,8 +4153,12 @@ Niivue.prototype.closeDrawing = function () {
   this.drawScene();
 };
 
-// not included in public docs
-// Copy drawing bitmap from CPU to GPU storage and redraw the screen
+/**
+ * copy drawing bitmap from CPU to GPU storage and redraw the screen
+ * @param {boolean} isForceRedraw refreshes scene immediately (default true)
+ * @example niivue.refreshDrawing();
+ * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
+ */
 Niivue.prototype.refreshDrawing = function (isForceRedraw = true) {
   let dims = this.back.dims.slice();
   //let dims = this.volumes[0].hdr.dims.slice();
@@ -4330,8 +4396,14 @@ Niivue.prototype.loadFontTexture = function (fontUrl) {
 Niivue.prototype.loadBmpTexture = async function (bmpUrl) {
   await this.loadPngAsTexture(bmpUrl, 4);
 };
-// not included in public docs
-// load font stored as JPG/PNG bitmap with texture unit 5
+
+/**
+ * Load matcap for illumination model.
+ * @param {string} name of matcap to load ("Shiny", "Cortex", "Cream")
+ * @example
+ * niivue.loadMatCapTexture("Cortex");
+ * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
+ */
 Niivue.prototype.loadMatCapTexture = function (bmpUrl) {
   this.loadPngAsTexture(bmpUrl, 5);
 };
@@ -4369,7 +4441,13 @@ Niivue.prototype.initFontMets = function () {
   }
 };
 
-// not included in public docs
+/**
+ * Load typeface for colorbars, measurements and orientation text.
+ * @param {string} name of matcap to load ("Roboto", "Garamond", "Ubuntu")
+ * @example
+ * niivue.loadMatCapTexture("Cortex");
+ * @see {@link https://niivue.github.io/niivue/features/selectfont.html|live demo usage}
+ */
 Niivue.prototype.loadFont = async function (
   fontSheetUrl = defaultFontPNG,
   metricsUrl = defaultFontMetrics
@@ -4490,6 +4568,7 @@ Niivue.prototype.createCustomMeshShader = function (
 };
 
 /**
+ * Define a new GLSL shader program to influence mesh coloration
  * @param {string} [""] fragmentShaderText custom fragment shader.
  * @param {string} ["Custom"] name title for new shader.
  * @returns {number} index of the new shader (for setMeshShader)
@@ -4912,13 +4991,14 @@ Niivue.prototype.gradientGL = function (hdr) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   return;
 }; // gradientGL()
+
 /**
  * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
  * @example
  * niivue = new Niivue()
  * niivue.updateGLVolume()
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
-
 Niivue.prototype.updateGLVolume = function () {
   //load volume or change contrast
   let visibleLayers = 0;
@@ -5697,6 +5777,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   //this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
   //this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
 }; // refreshLayers()
+
 /**
  * query all available color maps that can be applied to volumes
  * @param {boolean} [sort=true] whether or not to sort the returned array
@@ -5704,6 +5785,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
  * @example
  * niivue = new Niivue()
  * colormaps = niivue.colormaps()
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
 Niivue.prototype.colormaps = function () {
   return cmapper.colormaps();
@@ -5726,6 +5808,7 @@ Niivue.prototype.addColormap = function (key, cmap) {
  * @example
  * niivue = new Niivue()
  * niivue.setColormap(someImage.id, 'red')
+ * @see {@link https://niivue.github.io/niivue/features/test_images.html|live demo usage}
  */
 Niivue.prototype.setColormap = function (id, colormap) {
   let idx = this.getVolumeIndexByID(id);
@@ -5733,7 +5816,11 @@ Niivue.prototype.setColormap = function (id, colormap) {
   this.updateGLVolume();
 };
 
-//see issue616
+/**
+ * darken crevices and brighten corners when 3D rendering drawings.
+ * @param {value} amount of ambient occlusion (default 0.4)
+ * @see {@link https://niivue.github.io/niivue/features/torso.html|live demo usage}
+ */
 Niivue.prototype.setRenderDrawAmbientOcclusion = function (ao) {
   this.renderDrawAmbientOcclusion = ao;
   this.renderShader.use(this.gl);
@@ -5801,7 +5888,7 @@ Niivue.prototype.setGamma = function (gamma = 1.0) {
   this.updateGLVolume();
 };
 
-/**Load all volumes for image opened with `limitFrames4D`
+/**Load all volumes for image opened with `limitFrames4D`, the user can also click the `...` on a 4D timeline to load deferred volumes
  * @param {string} id the ID of the 4D NVImage
  **/
 Niivue.prototype.loadDeferred4DVolumes = async function (id) {
@@ -6172,6 +6259,7 @@ Niivue.prototype.deleteThumbnail = function () {
   this.thumbnailVisible = false;
 };
 
+// not included in public docs
 Niivue.prototype.inGraphTile = function (x, y) {
   if (
     this.graph.opacity <= 0 ||
@@ -6374,6 +6462,7 @@ Niivue.prototype.drawRuler10cm = function (startXYendXY) {
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 };
 
+// not included in public docs
 Niivue.prototype.screenXY2mm = function (x, y, forceSlice = -1) {
   let texFrac = [];
   for (let s = 0; s < this.screenSlices.length; s++) {
@@ -6399,7 +6488,7 @@ Niivue.prototype.screenXY2mm = function (x, y, forceSlice = -1) {
   return [NaN, NaN, NaN, NaN];
 };
 
-//dragForPanZoom
+// not included in public docs
 Niivue.prototype.dragForPanZoom = function (startXYendXY) {
   let endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
   if (isNaN(endMM[0])) {
@@ -6887,6 +6976,7 @@ Niivue.prototype.drawTextBelow = function (xy, str, scale = 1, color = null) {
   this.drawText(xy, str, scale, color);
 }; // drawTextBelow()
 
+// not included in public docs
 Niivue.prototype.updateInterpolation = function (layer, isForceLinear = false) {
   let interp = this.gl.LINEAR;
   if (!isForceLinear && this.opts.isNearestInterpolation)
@@ -7006,6 +7096,7 @@ Niivue.prototype.swizzleVec3MM = function (v3, axCorSag) {
   return v3;
 }; // swizzleVec3MM()
 
+// not included in public docs
 Niivue.prototype.screenFieldOfViewVox = function (axCorSag = 0) {
   let fov = this.volumeObject3D.fieldOfViewDeObliqueMM.slice();
   return this.swizzleVec3MM(fov, axCorSag);
@@ -7032,6 +7123,7 @@ Niivue.prototype.screenFieldOfViewMM = function (
   return fovMM;
 }; // screenFieldOfViewMM()
 
+// not included in public docs
 Niivue.prototype.screenFieldOfViewExtendedVox = function (axCorSag = 0) {
   //extent of volume/mesh (in orthographic alignment for rectangular voxels) in screen space
   //let fov = [frac2mmTexture[0], frac2mmTexture[5], frac2mmTexture[10]];
@@ -7414,6 +7506,7 @@ Niivue.prototype.calculateMvpMatrix = function (
   return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
 }; // calculateMvpMatrix()
 
+// not included in public docs
 Niivue.prototype.calculateModelMatrix = function (azimuth, elevation) {
   const modelMatrix = mat.mat4.create();
   modelMatrix[0] = -1; //mirror X coordinate
@@ -7547,6 +7640,7 @@ Niivue.prototype.setPivot3D = function () {
   this.furthestFromPivot = mat.vec3.length(pivot) * 0.5; //pivot is half way between the extreme vertices
 }; // setPivot3D()
 
+// not included in public docs
 Niivue.prototype.getMaxVols = function () {
   if (this.volumes.length < 1) return 0;
   let maxVols = 0;
@@ -7555,6 +7649,7 @@ Niivue.prototype.getMaxVols = function () {
   return maxVols;
 };
 
+// not included in public docs
 Niivue.prototype.detectPartialllyLoaded4D = function () {
   if (this.volumes.length < 1) return false;
   for (let i = 0; i < this.volumes.length; i++)
@@ -8027,6 +8122,8 @@ Niivue.prototype.drawOrientationCube = function (
   this.gl.disable(this.gl.CULL_FACE);
 }; // drawOrientationCube()
 
+// not included in public docs
+// fills data returned with the onLocationChanvge() callback
 Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   //first: provide a string representation
   let [mn, mx, range] = this.sceneExtentsMinMax(true);
@@ -8442,8 +8539,8 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
  * @param {number} x translate left (-) or right (+)
  * @param {number} y translate posterior (-) or +anterior (+)
  * @param {number} z translate inferior (-) or superior (+)
- * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  * @example niivue.moveCrosshairInVox(1, 0, 0)
+ * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
  */
 Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   let vox = this.frac2vox(this.scene.crosshairPos);
@@ -8601,6 +8698,7 @@ Niivue.prototype.drawLine = function (
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 }; // drawLine()
 
+// not included in public docs
 Niivue.prototype.drawGraphLine = function (
   LTRB,
   color = [1, 0, 0, 0.5],
@@ -9165,6 +9263,8 @@ Niivue.prototype.drawSceneCore = function () {
   return posString;
 }; // drawSceneCore()
 
+// not included in public docs
+// called to refresh canvas
 Niivue.prototype.drawScene = async function () {
   if (this.isBusy) {
     //limit concurrent draw calls (chrome v FireFox)

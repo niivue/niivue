@@ -17,18 +17,27 @@
       <select id="renderMode">
         <option value="0">matte</option>
         <option value="0.3">low</option>
-        <option value="0.6" selected>medium</option>
-        <option value="1.0">high</option>
+        <option value="0.6">medium</option>
+        <option value="1.0" selected>high</option>
       </select>
       <label for="matCaps">Choose a MatCap:</label>
       <select id="matCaps">
         <option value="Shiny">Shiny</option>
-        <option value="Cortex">Cortex</option>
+        <option value="Cortex" selected>Cortex</option>
         <option value="Cream">Cream</option>
         <option value="Fuzzy">Fuzzy</option>
         <option value="Peach">Peach</option>
         <option value="Plastic">Plastic</option>
       </select>
+      <label for="zoomSlider">Opacity</label>
+      <input
+        type="range"
+        min="10"
+        max="200"
+        value="100"
+        class="slider"
+        id="zoomSlider"
+      />
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -36,10 +45,13 @@
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
       import * as niivue from "./niivue.es.js";
-      document.getElementById("renderMode").onchange = function () {
+      zoomSlider.oninput = function () {
+        nv1.setScale(this.value / 100);
+      };
+      renderMode.onchange = function () {
         nv1.setVolumeRenderIllumination(this.value);
       };
-      document.getElementById("matCaps").onchange = function () {
+      matCaps.onchange = function () {
         let matCapName = document.getElementById("matCaps").value;
         nv1.loadMatCapTexture("../matcaps/" + matCapName + ".jpg");
       };
@@ -63,9 +75,10 @@
       nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeRender);
       nv1.opts.multiplanarForceRender = true;
-      nv1.setVolumeRenderIllumination(0.6);
+      nv1.setVolumeRenderIllumination(1.0);
       nv1.setClipPlane([0.3, 180, 20]);
       await nv1.loadVolumes(volumeList1);
+      matCaps.dispatchEvent(new Event("change"));
     </script>
   </body>
 </html>
