@@ -471,19 +471,23 @@ out vec4 fColor;
   kRenderInit +
   `
 	float startPos = samplePos.a;
-	float clipClose = clipPos.a + 2.0 * deltaDir.a; //do not apply gradients near clip plane
-	float brighten = 1.0 + gradientAmount / 2.0; //modulating makes average intensity darker
+	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
+	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 2.25
+	//vec4 prevGrad = vec4(0.0);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
-		if (colorSample.a >= 0.01) {
+		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
 			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
+			//if (grad.a < prevGrad.a)
+			//	grad.rgb = prevGrad.rgb;
+			//prevGrad = grad;
 			vec3 n = mat3(normMtx) * grad.rgb;
 			n.y = - n.y;
-			vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb;
-			mc.rgb = colorSample.rgb * mc * brighten;
+			vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb * brighten;
+			mc.rgb = mix(vec3(1.0), mc, gradientAmount);
 			if (samplePos.a > clipClose)
-				colorSample.rgb = mix(colorSample.rgb, mc, gradientAmount);
+				colorSample.rgb *= mc;
 			if (firstHit.a > lenNoClip)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
