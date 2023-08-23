@@ -29,12 +29,12 @@
         <option value="Peach">Peach</option>
         <option value="Plastic">Plastic</option>
       </select>
-      <label for="zoomSlider">Opacity</label>
+      <label for="zoomSlider">Zoom</label>
       <input
         type="range"
         min="10"
-        max="200"
-        value="100"
+        max="300"
+        value="200"
         class="slider"
         id="zoomSlider"
       />
@@ -79,6 +79,7 @@
       nv1.setClipPlane([0.3, 180, 20]);
       await nv1.loadVolumes(volumeList1);
       matCaps.dispatchEvent(new Event("change"));
+      nv1.setScale(2);
     </script>
   </body>
 </html>

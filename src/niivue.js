@@ -4935,11 +4935,11 @@ Niivue.prototype.gradientGL = function (hdr) {
 
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture);
-
+  let blurRadius = 0.7;
   gl.uniform1i(blurShader.uniforms["intensityVol"], 0);
-  gl.uniform1f(blurShader.uniforms["dX"], 0.7 / hdr.dims[1]);
-  gl.uniform1f(blurShader.uniforms["dY"], 0.7 / hdr.dims[2]);
-  gl.uniform1f(blurShader.uniforms["dZ"], 0.7 / hdr.dims[3]);
+  gl.uniform1f(blurShader.uniforms["dX"], blurRadius / hdr.dims[1]);
+  gl.uniform1f(blurShader.uniforms["dY"], blurRadius / hdr.dims[2]);
+  gl.uniform1f(blurShader.uniforms["dZ"], blurRadius / hdr.dims[3]);
   gl.bindVertexArray(vao2);
   for (let i = 0; i < hdr.dims[3] - 1; i++) {
     var coordZ = (1 / hdr.dims[3]) * (i + 0.5);
@@ -4959,9 +4959,10 @@ Niivue.prototype.gradientGL = function (hdr) {
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_3D, tempTex3D); //input texture
   gl.uniform1i(sobelShader.uniforms["intensityVol"], 1);
-  gl.uniform1f(sobelShader.uniforms["dX"], 0.7 / hdr.dims[1]);
-  gl.uniform1f(sobelShader.uniforms["dY"], 0.7 / hdr.dims[2]);
-  gl.uniform1f(sobelShader.uniforms["dZ"], 0.7 / hdr.dims[3]);
+  let sobelRadius = 0.7;
+  gl.uniform1f(sobelShader.uniforms["dX"], sobelRadius / hdr.dims[1]);
+  gl.uniform1f(sobelShader.uniforms["dY"], sobelRadius / hdr.dims[2]);
+  gl.uniform1f(sobelShader.uniforms["dZ"], sobelRadius / hdr.dims[3]);
   gl.uniform1f(sobelShader.uniforms["coordZ"], 0.5);
   gl.bindVertexArray(vao2);
   gl.activeTexture(gl.TEXTURE0);
@@ -5806,9 +5807,8 @@ Niivue.prototype.addColormap = function (key, cmap) {
  * @param {string} id the ID of the NVImage
  * @param {string} colormap the name of the colormap to use
  * @example
- * niivue = new Niivue()
- * niivue.setColormap(someImage.id, 'red')
- * @see {@link https://niivue.github.io/niivue/features/test_images.html|live demo usage}
+ * niivue.setColormap(niivue.volumes[0].id,, 'red')
+ * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
  */
 Niivue.prototype.setColormap = function (id, colormap) {
   let idx = this.getVolumeIndexByID(id);
@@ -5955,13 +5955,7 @@ Niivue.prototype.colormapFromKey = function (name) {
   return cmapper.colormapFromKey(name);
 };
 
-/**
- * determine active 3D volume from 4D time series
- * @param {string} id the ID of the 4D NVImage
- * @returns {number} currently selected volume (indexed from 0)
- * @example nv1.getFrame4D(nv1.volumes[0].id);
- * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
- */
+// not included in public docs
 Niivue.prototype.colormap = function (lutName = "", isInvert = false) {
   return cmapper.colormap(lutName, isInvert);
 }; // colormap()
