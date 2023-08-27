@@ -2617,7 +2617,7 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
  */
 Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
   this.uiData.pan2Dxyzmm = xyzmmZoom;
-  this.drawScene(); //borg
+  this.drawScene();
 };
 
 /**
