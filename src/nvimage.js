@@ -1473,17 +1473,21 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
     throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
   var bytes = new Uint8Array(buffer);
   let pos = 0;
+  function eol(c) {
+    return c === 10 || c === 13; // c is either a line feed character (10) or carriage return character (13)
+  }
   function readStr() {
-    while (pos < len && bytes[pos] === 10) pos++; //skip blank lines
+    while (pos < len && eol(bytes[pos])) pos++; // Skip blank lines
     let startPos = pos;
-    while (pos < len && bytes[pos] !== 10) pos++;
-    pos++; //skip EOLN
-    if (pos - startPos < 1) return "";
-    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+    while (pos < len && !eol(bytes[pos])) pos++; // Forward until end of line
+    if (pos - startPos < 2) return "";
+    return new TextDecoder().decode(buffer.slice(startPos, pos));
   }
   let line = readStr(); //1st line: signature
   this.hdr = new nifti.NIFTI1();
   let hdr = this.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
   hdr.littleEndian = true;
   let isGz = false;
   let isDetached = false;
@@ -1505,20 +1509,17 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
       for (var d = 0; d < 9; d++) mat33[d] = parseFloat(items[d]);
     }
     if (line.startsWith("Offset")) {
-      offset[0] = parseFloat(items[0]);
-      offset[1] = parseFloat(items[1]);
-      offset[2] = parseFloat(items[2]);
+      for (let d = 0; d < Math.min(items.length, 3); d++)
+        offset[d] = parseFloat(items[d]);
     }
     //if (line.startsWith("AnatomicalOrientation")) //we can ignore, tested with Slicer3D converting NIfTIspace images
     if (line.startsWith("ElementSpacing")) {
-      hdr.pixDims[1] = parseFloat(items[0]);
-      hdr.pixDims[2] = parseFloat(items[1]);
-      hdr.pixDims[3] = parseFloat(items[2]);
-      if (items.length > 3) hdr.pixDims[4] = parseFloat(items[3]);
+      for (let d = 0; d < items.length; d++)
+        hdr.pixDims[d + 1] = parseFloat(items[d]);
     }
     if (line.startsWith("DimSize")) {
       hdr.dims[0] = items.length;
-      for (var d = 0; d < items.length; d++)
+      for (let d = 0; d < items.length; d++)
         hdr.dims[d + 1] = parseInt(items[d]);
     }
     if (line.startsWith("ElementType")) {
@@ -1578,7 +1579,7 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
     0,
     hdr.pixDims[3]
   );
-  mat3.multiply(mat33, mmMat, mat33);
+  mat3.multiply(mat33, mat33, mmMat);
   hdr.affine = [
     [-mat33[0], -mat33[3], -mat33[6], -offset[0]],
     [-mat33[1], -mat33[4], -mat33[7], -offset[1]],
@@ -1588,7 +1589,7 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
   hdr.vox_offset = pos;
   if (isDetached && pairedImgData) {
     if (isGz)
-      return fflate.decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset)))
+      return fflate.decompressSync(new Uint8Array(pairedImgData.slice()))
         .buffer;
     return pairedImgData.slice();
   }
