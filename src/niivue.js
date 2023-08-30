@@ -378,7 +378,6 @@ export function Niivue(options = {}) {
    * }
    */
   this.onLocationChange = () => {};
-
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
    * @type {function}
@@ -1129,6 +1128,7 @@ Niivue.prototype.generateMouseUpCallback = function (fracStart, fracEnd) {
   let mmLength = mat.vec3.len(v);
   let voxStart = this.frac2vox(fracStart);
   let voxEnd = this.frac2vox(fracEnd);
+
   this.onDragRelease({
     fracStart,
     fracEnd,

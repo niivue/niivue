@@ -46,7 +46,7 @@
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML = data.string;
       }
-      var nv1 = new niivue.Niivue({backColor: [1, 1, 1, 1], onLocationChange: handleLocationChange });
+      var nv1 = new niivue.Niivue({backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange });
       nv1.attachTo("gl1");
       await nv1.loadVolumes(volumeList1);
       async function fetchJSON(fnm) {
@@ -66,7 +66,7 @@
       }
       check2.onchange = function() {
         if (this.checked)
-            nv1.opts.backColor = [0, 0, 0, 1];
+            nv1.opts.backColor = [0.5, 0.5, 0.5, 1];
         else
             nv1.opts.backColor = [1, 1, 1, 1];
         nv1.drawScene();
