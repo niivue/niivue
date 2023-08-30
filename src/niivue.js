@@ -1491,31 +1491,25 @@ Niivue.prototype.keyDownListener = function (e) {
       this.scene.renderElevation - 1
     );
   } else if (e.code === "KeyH" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(-1, 0, 0);
   } else if (e.code === "KeyL" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(1, 0, 0);
   } else if (
     e.code === "KeyU" &&
     this.opts.sliceType !== SLICE_TYPE.RENDER &&
     e.ctrlKey
   ) {
-    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, 0, 1);
   } else if (
     e.code === "KeyD" &&
     this.opts.sliceType !== SLICE_TYPE.RENDER &&
     e.ctrlKey
   ) {
-    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, 0, -1);
   } else if (e.code === "KeyJ" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, -1, 0);
   } else if (e.code === "KeyK" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, 1, 0);
   } else if (e.code === "ArrowLeft") {
     // only works for background (first loaded image is index 0)
     this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1);
