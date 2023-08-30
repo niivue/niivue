@@ -1842,6 +1842,17 @@ Niivue.prototype.dropListener = async function (e) {
 };
 
 /**
+ * insert a gap between slices of a mutliplanar view.
+ * @param {number} pixels spacing between tiles of multiplanar view
+ * @example niivue.setMultiplanarPadPixels(4)
+ * @see {@link https://niivue.github.io/niivue/features/atlas.html|live demo usage}
+ */
+Niivue.prototype.setMultiplanarPadPixels = function (pixels) {
+  this.opts.multiplanarPadPixels = pixels;
+  this.drawScene();
+};
+
+/**
  * determine if text appears at corner (true) or sides of 2D slice.
  * @param {boolean} isCornerOrientationText controls position of text
  * @example niivue.setCornerOrientationText(true)
