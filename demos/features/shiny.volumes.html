@@ -13,8 +13,11 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <label for="checkXRay">XRay</label>
+      <input type="checkbox" id="checkXRay" unchecked />
       <label for="renderMode">Volume Render Mode</label>
       <select id="renderMode">
+        <option value="-1">slices</option>
         <option value="0">matte</option>
         <option value="0.3">low</option>
         <option value="0.6">medium</option>
@@ -34,7 +37,7 @@
         type="range"
         min="10"
         max="300"
-        value="200"
+        value="100"
         class="slider"
         id="zoomSlider"
       />
@@ -45,6 +48,10 @@
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
       import * as niivue from "./niivue.es.js";
+      checkXRay.onchange = function () {
+        nv1.opts.meshXRay = this.checked * 0.05;
+        nv1.drawScene();
+      }
       zoomSlider.oninput = function () {
         nv1.setScale(this.value / 100);
       };
@@ -67,7 +74,6 @@
         loadingText: "there are no images",
         backColor: [1, 1, 1, 1],
         show3Dcrosshair: true,
-        logging: true,
         limitFrames4D: 3,
         onLocationChange: handleLocationChange,
       };
@@ -78,8 +84,15 @@
       nv1.setVolumeRenderIllumination(1.0);
       nv1.setClipPlane([0.3, 180, 20]);
       await nv1.loadVolumes(volumeList1);
+      await nv1.loadMeshes([
+        { url: "../images/connectome.jcon" },
+        { url: "../images/dpsv.trx", rgba255: [0, 142, 0, 255] },
+      ]);
       matCaps.dispatchEvent(new Event("change"));
-      nv1.setScale(2);
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.graph.autoSizeMultiplanar = true;
+      nv1.opts.multiplanarForceRender = true;
     </script>
   </body>
 </html>

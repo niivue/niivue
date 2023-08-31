@@ -15,6 +15,7 @@ import {
   vertRenderShader,
   fragRenderShader,
   fragRenderGradientShader,
+  fragRenderSliceShader,
 } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
@@ -212,6 +213,7 @@ export function Niivue(options = {}) {
   this.rectShader = null;
   this.renderShader = null;
   this.renderGradientShader = null;
+  this.renderSliceShader = null;
   this.renderVolumeShader = null;
   this.pickingMeshShader = null;
   this.pickingImageShader = null;
@@ -3124,6 +3126,7 @@ Niivue.prototype.setClipPlaneColor = function (color) {
 Niivue.prototype.setVolumeRenderIllumination = function (gradientAmount = 0.0) {
   this.renderShader = this.renderVolumeShader;
   if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader;
+  if (gradientAmount < 0.0) this.renderShader = this.renderSliceShader;
   this.initRenderShader(this.renderShader, gradientAmount);
   this.renderShader.use(this.gl);
   this.setClipPlaneColor(this.opts.clipPlaneColor);
@@ -4806,6 +4809,12 @@ Niivue.prototype.init = async function () {
     fragRenderShader
   );
   this.initRenderShader(this.renderVolumeShader);
+  this.renderSliceShader = new Shader(
+    this.gl,
+    vertRenderShader,
+    fragRenderSliceShader
+  );
+  this.initRenderShader(this.renderSliceShader);
   this.renderGradientShader = new Shader(
     this.gl,
     vertRenderShader,
@@ -8066,7 +8075,16 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.uniformMatrix4fv(shader.mvpLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirLoc, rayDir);
-    gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane);
+
+    if (this.gradientTextureAmount < 0.0)
+      //use slice shader
+      gl.uniform4fv(shader.clipPlaneLoc, [
+        this.scene.crosshairPos[0],
+        this.scene.crosshairPos[1],
+        this.scene.crosshairPos[2],
+        30,
+      ]);
+    else gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane);
     gl.bindVertexArray(object3D.vao);
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(this.unusedVAO);

@@ -399,6 +399,91 @@ const kRenderTail = `
 	fColor.a = max(fColor.a, colAcc.a);
 }`; // kRenderTail
 
+//https://github.com/niivue/niivue/issues/679
+export var fragRenderSliceShader =
+  `#version 300 es
+#line 215
+precision highp int;
+precision highp float;
+uniform vec3 rayDir;
+uniform vec3 texVox;
+uniform int backgroundMasksOverlays;
+uniform vec3 volScale;
+uniform vec4 clipPlane;
+uniform highp sampler3D volume, overlay;
+uniform float overlays;
+uniform float backOpacity;
+uniform mat4 mvpMtx;
+uniform mat4 matRAS;
+uniform vec4 clipPlaneColor;
+uniform float drawOpacity;
+uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
+uniform float renderDrawAmbientOcclusion;
+in vec3 vColor;
+out vec4 fColor;
+` +
+  kRenderFunc +
+  `
+	void main() {
+	vec3 start = vColor;
+	gl_FragDepth = 0.0;
+	vec3 backPosition = GetBackPosition(start);
+	vec3 dir = backPosition - start;
+	float len = length(dir);
+	float lenVox = length((texVox * start) - (texVox * backPosition));
+	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
+		fColor = vec4(0.0,0.0,0.0,0.0);
+		return;
+	}
+	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
+	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
+	float opacityCorrection = stepSize/sliceSize;
+	dir = normalize(dir);
+	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
+	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
+	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * len);
+	const float earlyTermination = 0.95;
+	float backNearest = len; //assume no hit
+	float dis = len;
+	//check if axial plane is closest
+	vec4 aClip = vec4(0.0, 0.0, 1.0, (1.0- clipPlane.z) - 0.5);
+	float adis = (-aClip.a - dot(aClip.xyz, samplePos.xyz-0.5)) / dot(dir,aClip.xyz);
+	if (adis > 0.0)
+		dis = min(adis, dis);
+	//check of coronal plane is closest
+	vec4 cClip = vec4(0.0, 1.0, 0.0, (1.0- clipPlane.y) - 0.5);
+	float cdis = (-cClip.a - dot(cClip.xyz, samplePos.xyz-0.5)) / dot(dir,cClip.xyz);
+	if (cdis > 0.0)
+		dis = min(cdis, dis);
+	//check if coronal slice is closest
+	vec4 sClip = vec4(1.0, 0.0, 0.0, (1.0- clipPlane.x) - 0.5);
+	float sdis = (-sClip.a - dot(sClip.xyz, samplePos.xyz-0.5)) / dot(dir,sClip.xyz);
+	if (sdis > 0.0)
+		dis = min(sdis, dis);
+	if ((dis > 0.0) && (dis < len)) {
+		samplePos = vec4(samplePos.xyz+dir * dis, dis);
+		colAcc = texture(volume, samplePos.xyz);
+		colAcc.a = earlyTermination;
+		firstHit = samplePos;
+		backNearest = min(backNearest, samplePos.a);
+	}
+	//the following are only used by overlays
+	vec4 clipPlaneColorX = clipPlaneColor;
+	bool isColorPlaneInVolume = false;
+	float lenNoClip = len;
+	bool isClip = false;
+	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	float stepSizeFast = sliceSize * 1.9;
+	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	if (samplePos.a < 0.0)
+		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
+	samplePos += deltaDir * ran; //jitter ray
+` +
+  kRenderTail;
+
 export var fragRenderShader =
   `#version 300 es
 #line 215
@@ -472,7 +557,7 @@ out vec4 fColor;
   `
 	float startPos = samplePos.a;
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
-	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 2.25
+	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
 	//vec4 prevGrad = vec4(0.0);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
@@ -484,10 +569,10 @@ out vec4 fColor;
 			//prevGrad = grad;
 			vec3 n = mat3(normMtx) * grad.rgb;
 			n.y = - n.y;
-			vec3 mc = texture(matCap, n.xy * 0.5 + 0.5).rgb * brighten;
-			mc.rgb = mix(vec3(1.0), mc, gradientAmount);
+			vec4 mc = vec4(texture(matCap, n.xy * 0.5 + 0.5).rgb, 1.0) * brighten;
+			mc = mix(vec4(1.0), mc, gradientAmount);
 			if (samplePos.a > clipClose)
-				colorSample.rgb *= mc;
+				colorSample *= mc;
 			if (firstHit.a > lenNoClip)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
