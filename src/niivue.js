@@ -3291,7 +3291,7 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   // https://stackoverflow.com/questions/68849233/convert-a-string-to-base64-in-javascript-btoa-and-atob-are-deprecated
   const base64 = NVUtilities.uint8tob64(compressed);
   const javascript = `
-  import * as niivue from "http://127.0.0.1:8080/features/niivue.es.js";
+  import * as niivue from "https://niivue.github.io/niivue/features/niivue.es.js";
   import * as fflate from 'https://cdn.skypack.dev/fflate@0.8.0?min';
 
   function saveNiivueAsHtml(pageName) {
