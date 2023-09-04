@@ -3269,9 +3269,14 @@ Niivue.prototype.loadDocument = function (document) {
 };
 
 /**
- * generates HTML of current scene
+ * generates JavaScript to load the current scene as a document
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ * @example
+ * const javascript = this.generateLoadDocumentJavaScript("gl1");
+ * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+        ${javascript}</script></body></html>`;
  */
-Niivue.prototype.generateHTML = function () {
+Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   this.document.opts = this.opts;
   let json = this.document.json();
   json.sceneData = { ...this.scene };
@@ -3285,8 +3290,53 @@ Niivue.prototype.generateHTML = function () {
 
   // https://stackoverflow.com/questions/68849233/convert-a-string-to-base64-in-javascript-btoa-and-atob-are-deprecated
   const base64 = NVUtilities.uint8tob64(compressed);
+  const javascript = `
+  import * as niivue from "http://127.0.0.1:8080/features/niivue.es.js";
+  import * as fflate from 'https://cdn.skypack.dev/fflate@0.8.0?min';
 
-  const html = `<!DOCTYPE html>
+  function saveNiivueAsHtml(pageName) {
+    nv1.saveHTML(pageName);
+  }
+
+  function base64ToArrayBuffer(base64) {
+    var binaryString = atob(base64);
+    var bytes = new Uint8Array(binaryString.length);
+    for (var i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  var nv1 = new niivue.Niivue();
+  nv1.attachTo("${canvasId}");
+  var base64 = "${base64}";
+  var compressed = base64ToArrayBuffer(base64); // string -> u8c
+  const decompressed = fflate.decompressSync(compressed); // u8c -> u8d
+  const origText = fflate.strFromU8(decompressed); // u8d -> string
+  var json = JSON.parse(origText); // string -> JSON
+  var doc = niivue.NVDocument.loadFromJSON(json);                
+  nv1.loadDocument(doc);
+  nv1.updateGLVolume();
+
+`;
+  return javascript;
+};
+
+/**
+ * generates HTML of current scene
+ * @param template {string} HTML template
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ * @returns {string} HTML with javascript of the current scene
+ * @example 
+ * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+ *       %%javascript%%</script></body></html>`;
+ * nv1.saveHTMLTemplate("page.html", template);  
+ */
+Niivue.prototype.generateHTML = function (template, canvasId = "gl1") {
+  const javascript = this.generateLoadDocumentJavaScript(canvasId);
+  const html = template
+    ? template.replace("%%javascript%%", javascript)
+    : `<!DOCTYPE html>
   <html lang="en">
     <head>
       <meta charset="utf-8" />
@@ -3304,43 +3354,33 @@ Niivue.prototype.generateHTML = function () {
       <main>
         <canvas id="gl1"></canvas>
       </main>
-      
-      <script type="module" async>
-        import * as niivue from "http://127.0.0.1:8080/features/niivue.es.js";
-        import * as fflate from 'https://cdn.skypack.dev/fflate@0.8.0?min';
-
+      <script type="module" async>        
+        ${javascript}
         function saveAsHtml() {
-          nv1.saveHTML("page.html");
-        }
-
-        function base64ToArrayBuffer(base64) {
-          var binaryString = atob(base64);
-          var bytes = new Uint8Array(binaryString.length);
-          for (var i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-          }
-          return bytes;
-        }
-
+          saveNiivueAsHtml("page.html");
+        }        
         // assign our event handler
         var button = document.getElementById("save");
-        button.onclick = saveAsHtml;
-
-        var nv1 = new niivue.Niivue();
-        nv1.attachTo("gl1");
-        var base64 = "${base64}";
-        var compressed = base64ToArrayBuffer(base64); // string -> u8c
-        const decompressed = fflate.decompressSync(compressed); // u8c -> u8d
-        const origText = fflate.strFromU8(decompressed); // u8d -> string
-        var json = JSON.parse(origText); // string -> JSON
-        var doc = niivue.NVDocument.loadFromJSON(json);                
-        nv1.loadDocument(doc);
-        nv1.updateGLVolume();
-      
+        button.onclick = saveAsHtml;      
       </script>
     </body>
   </html>`;
   return html;
+};
+
+/**
+ * save current scene as HTML
+ * @param {string} fileName the name of the HTML file
+ * @param template {string} HTML template
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ */
+Niivue.prototype.saveHTMLTemplate = async function (
+  fileName = "untitled.html",
+  template,
+  canvasId = "gl1"
+) {
+  const html = this.generateHTML(template, canvasId);
+  NVUtilities.download(html, fileName, "application/html");
 };
 
 /**
