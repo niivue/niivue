@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Save as HTML</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>niivue requires JavaScript.</noscript>
+  <header>
+    Save the current scene as HTML
+    <button id="save">Save as HTML</button>
+  </header>
+  <main>
+    <canvas id="gl1"></canvas>
+
+  </main>
+  <script type="module" async>
+    import * as niivue from "./niivue.es.js";
+    function saveAsHtml() {
+      nv1.saveHTML("page.html");
+    }
+    var volumeList1 = [
+      {
+        url: "../images/mni152.nii.gz",
+        colormap: "gray",
+        visible: true,
+        opacity: 1
+      },
+      {
+        url: "../images/hippo.nii.gz",
+        colormap: "red",
+        visible: true,
+        opacity: 1
+      }
+    ];
+
+    // assign our event handler
+    var button = document.getElementById("save");
+    button.onclick = saveAsHtml;
+    var nv1 = new niivue.Niivue();
+    nv1.attachTo("gl1");
+    nv1.loadVolumes(volumeList1);
+    nv1.setSliceType(nv1.sliceTypeRender);
+  </script>
+</body>
+
+</html>
