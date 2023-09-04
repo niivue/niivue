@@ -3393,6 +3393,19 @@ Niivue.prototype.saveHTML = async function (fileName = "untitled.html") {
 };
 
 /**
+ * Converts NiiVue scene to JSON
+ * @returns {NVDocumentData}
+ */
+Niivue.prototype.json = function () {
+  this.document.opts = this.opts;
+  this.document.scene = this.scene;
+  // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
+  this.drawScene();
+  this.document.previewImageDataURL = this.canvas.toDataURL();
+  return this.document.json();
+};
+
+/**
  * save the entire scene (objects and settings) as a document
  * @param {string} fileName the name of the document storing the scene
  * @example
@@ -3400,6 +3413,9 @@ Niivue.prototype.saveHTML = async function (fileName = "untitled.html") {
  * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
+  this.document.opts = this.opts;
+  this.document.scene = this.scene;
+
   this.document.title = fileName;
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
   this.drawScene();
