@@ -3259,8 +3259,9 @@ Niivue.prototype.loadDocument = function (document) {
     this.addMesh(meshToAdd);
   }
 
-  this.scene = document.scene.sceneData;
-  this.opts = document.opts;
+  // handle older documents that don't have options/scene fields defined
+  this.scene = { ...this.scene, ...document.scene.sceneData };
+  this.opts = { ...this.opts, ...document.opts };
 
   this.updateGLVolume();
   this.onDocumentLoaded(document);
