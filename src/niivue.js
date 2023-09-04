@@ -3327,10 +3327,10 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
  * @param template {string} HTML template
  * @param {string} canvasId id of canvas NiiVue will be attached to
  * @returns {string} HTML with javascript of the current scene
- * @example 
- * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+ * @example
+ * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>
  *       %%javascript%%</script></body></html>`;
- * nv1.saveHTMLTemplate("page.html", template);  
+ * nv1.saveHTMLTemplate("page.html", template);
  */
 Niivue.prototype.generateHTML = function (template, canvasId = "gl1") {
   const javascript = this.generateLoadDocumentJavaScript(canvasId);
