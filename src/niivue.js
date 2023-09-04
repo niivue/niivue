@@ -15,6 +15,7 @@ import {
   vertRenderShader,
   fragRenderShader,
   fragRenderGradientShader,
+  fragRenderSliceShader,
 } from "./shader-srcs.js";
 import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
@@ -212,6 +213,7 @@ export function Niivue(options = {}) {
   this.rectShader = null;
   this.renderShader = null;
   this.renderGradientShader = null;
+  this.renderSliceShader = null;
   this.renderVolumeShader = null;
   this.pickingMeshShader = null;
   this.pickingImageShader = null;
@@ -378,7 +380,6 @@ export function Niivue(options = {}) {
    * }
    */
   this.onLocationChange = () => {};
-
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
    * @type {function}
@@ -1129,6 +1130,7 @@ Niivue.prototype.generateMouseUpCallback = function (fracStart, fracEnd) {
   let mmLength = mat.vec3.len(v);
   let voxStart = this.frac2vox(fracStart);
   let voxEnd = this.frac2vox(fracEnd);
+
   this.onDragRelease({
     fracStart,
     fracEnd,
@@ -1491,31 +1493,25 @@ Niivue.prototype.keyDownListener = function (e) {
       this.scene.renderElevation - 1
     );
   } else if (e.code === "KeyH" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] - 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(-1, 0, 0);
   } else if (e.code === "KeyL" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[0] = this.scene.crosshairPos[0] + 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(1, 0, 0);
   } else if (
     e.code === "KeyU" &&
     this.opts.sliceType !== SLICE_TYPE.RENDER &&
     e.ctrlKey
   ) {
-    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] + 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, 0, 1);
   } else if (
     e.code === "KeyD" &&
     this.opts.sliceType !== SLICE_TYPE.RENDER &&
     e.ctrlKey
   ) {
-    this.scene.crosshairPos[2] = this.scene.crosshairPos[2] - 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, 0, -1);
   } else if (e.code === "KeyJ" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] - 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, -1, 0);
   } else if (e.code === "KeyK" && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-    this.scene.crosshairPos[1] = this.scene.crosshairPos[1] + 0.001;
-    this.drawScene();
+    this.moveCrosshairInVox(0, 1, 0);
   } else if (e.code === "ArrowLeft") {
     // only works for background (first loaded image is index 0)
     this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1);
@@ -1845,6 +1841,17 @@ Niivue.prototype.dropListener = async function (e) {
   }
   //this.createEmptyDrawing();
   this.drawScene(); //<- this seems to be required if you drag and drop a mesh, not a volume
+};
+
+/**
+ * insert a gap between slices of a mutliplanar view.
+ * @param {number} pixels spacing between tiles of multiplanar view
+ * @example niivue.setMultiplanarPadPixels(4)
+ * @see {@link https://niivue.github.io/niivue/features/atlas.html|live demo usage}
+ */
+Niivue.prototype.setMultiplanarPadPixels = function (pixels) {
+  this.opts.multiplanarPadPixels = pixels;
+  this.drawScene();
 };
 
 /**
@@ -2617,7 +2624,7 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
  */
 Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
   this.uiData.pan2Dxyzmm = xyzmmZoom;
-  this.drawScene(); //borg
+  this.drawScene();
 };
 
 /**
@@ -3119,6 +3126,7 @@ Niivue.prototype.setClipPlaneColor = function (color) {
 Niivue.prototype.setVolumeRenderIllumination = function (gradientAmount = 0.0) {
   this.renderShader = this.renderVolumeShader;
   if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader;
+  if (gradientAmount < 0.0) this.renderShader = this.renderSliceShader;
   this.initRenderShader(this.renderShader, gradientAmount);
   this.renderShader.use(this.gl);
   this.setClipPlaneColor(this.opts.clipPlaneColor);
@@ -4801,6 +4809,12 @@ Niivue.prototype.init = async function () {
     fragRenderShader
   );
   this.initRenderShader(this.renderVolumeShader);
+  this.renderSliceShader = new Shader(
+    this.gl,
+    vertRenderShader,
+    fragRenderSliceShader
+  );
+  this.initRenderShader(this.renderSliceShader);
   this.renderGradientShader = new Shader(
     this.gl,
     vertRenderShader,
@@ -8061,7 +8075,16 @@ Niivue.prototype.drawImage3D = function (mvpMatrix, azimuth, elevation) {
     gl.uniformMatrix4fv(shader.mvpLoc, false, mvpMatrix);
     gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS);
     gl.uniform3fv(shader.rayDirLoc, rayDir);
-    gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane);
+
+    if (this.gradientTextureAmount < 0.0)
+      //use slice shader
+      gl.uniform4fv(shader.clipPlaneLoc, [
+        this.scene.crosshairPos[0],
+        this.scene.crosshairPos[1],
+        this.scene.crosshairPos[2],
+        30,
+      ]);
+    else gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane);
     gl.bindVertexArray(object3D.vao);
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(this.unusedVAO);

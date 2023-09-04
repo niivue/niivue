@@ -2746,6 +2746,39 @@ NVMesh.readFreeSurfer = function (buffer) {
     indices[i] = view.getUint32(offset, false);
     offset += 4;
   }
+  //read undocumented footer
+  //https://github.com/nipy/nibabel/blob/8fea2a8e50aaf4d8b0d4bfff7a21b132914120ee/nibabel/freesurfer/io.py#L58C5-L58C9
+  let head0 = view.getUint32(offset, false);
+  offset += 4;
+  let headOK = head0 === 20;
+  if (headOK !== 20) {
+    //read two more int32s
+    let head1 = view.getUint32(offset, false);
+    offset += 4;
+    let head2 = view.getUint32(offset, false);
+    offset += 4;
+    headOK = head0 === 2 && head1 === 0 && head2 === 20;
+  }
+  if (!headOK) console.log("Unknown FreeSurfer Mesh extension code.");
+  else {
+    let footer = new TextDecoder().decode(buffer.slice(offset)).trim();
+    let strings = footer.split("\n");
+    for (let s = 0; s < strings.length; s++) {
+      if (!strings[s].startsWith("cras")) continue;
+      let cras = strings[s].split("=")[1].trim();
+      var FreeSurferTranlate = cras.split(" ").map(Number);
+      let nvert = Math.floor(positions.length / 3);
+      let i = 0;
+      for (var v = 0; v < nvert; v++) {
+        positions[i] += FreeSurferTranlate[0];
+        i++;
+        positions[i] += FreeSurferTranlate[1];
+        i++;
+        positions[i] += FreeSurferTranlate[2];
+        i++;
+      }
+    }
+  }
   return {
     positions,
     indices,

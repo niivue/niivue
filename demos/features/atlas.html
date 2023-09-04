@@ -5,13 +5,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Atlas</title>
-    <link rel="stylesheet" href="niivue.css" />
+    <link rel="stylesheet" href="light.css" />
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
       <label for="check1">Outline</label>
-      <input type="checkbox" id="check1" name="check1" unchecked />
+      <input type="checkbox" id="check1" unchecked />
+      <label for="check2">Dark Background</label>
+      <input type="checkbox" id="check2" unchecked />
       <label for="alphaSlider">Opacity</label>
       <input
         type="range"
@@ -20,6 +22,15 @@
         value="255"
         class="slider"
         id="alphaSlider"
+      />
+      <label for="padSlider">Padding</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="5"
+        class="slider"
+        id="padSlider"
       />
     </header>
     <main>
@@ -35,7 +46,7 @@
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML = data.string;
       }
-      var nv1 = new niivue.Niivue({ onLocationChange: handleLocationChange });
+      var nv1 = new niivue.Niivue({backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange });
       nv1.attachTo("gl1");
       await nv1.loadVolumes(volumeList1);
       async function fetchJSON(fnm) {
@@ -46,15 +57,25 @@
       let cmap = await fetchJSON("../images/aal.json");
       nv1.volumes[1].setColormapLabel(cmap);
       nv1.updateGLVolume();
+      nv1.setMultiplanarPadPixels(5);
       document
         .getElementById("check1")
         .addEventListener("change", doCheckClick);
       function doCheckClick() {
         nv1.setAtlasOutline(this.checked);
       }
-      var slider = document.getElementById("alphaSlider");
-      slider.oninput = function () {
+      check2.onchange = function() {
+        if (this.checked)
+            nv1.opts.backColor = [0.5, 0.5, 0.5, 1];
+        else
+            nv1.opts.backColor = [1, 1, 1, 1];
+        nv1.drawScene();
+      }
+      alphaSlider.oninput = function () {
         nv1.setOpacity(1, this.value / 255);
+      };
+      padSlider.oninput = function () {
+        nv1.setMultiplanarPadPixels(this.value);
       };
     </script>
   </body>

@@ -26,7 +26,7 @@ function isPlatformLittleEndian() {
  */
 
 /**
- * Enum for supported image types
+ * Enum for supported image types (e.g. NII, NRRD, DICOM)
  * @readonly
  * @enum {number}
  */
