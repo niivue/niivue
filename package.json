@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./src/niivue.js",
   "unpkg": "./dist/niivue.umd.js",
