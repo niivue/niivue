@@ -21,7 +21,7 @@ function seconds(n) {
 }
 
 function ensureDownloadFolder() {
-  const downloadPath = path.resolve('downloads');
+  const downloadPath = path.resolve('./downloads');
   if (!fs.existsSync(downloadPath)){
     fs.mkdirSync(downloadPath, { recursive: true });
 }
