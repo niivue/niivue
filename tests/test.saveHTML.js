@@ -1,4 +1,4 @@
-const { snapshot, httpServerAddress, seconds } = require("./helpers");
+const { httpServerAddress, ensureDownloadFolder } = require("./helpers");
 const path = require("path");
 const fs = require("fs");
 const {waitForDownload} = require("puppeteer-utilz");
@@ -13,7 +13,7 @@ function getFilesizeInBytes(filename) {
 }
 
 beforeEach(async () => {
-
+  ensureDownloadFolder();
   await page.goto(httpServerAddress, { timeout: 0 });
   const client = await page.target().createCDPSession();
   await client.send("Page.setDownloadBehavior", {
