@@ -36,7 +36,6 @@ test("saveImageDocument", async () => {
     return document;
   });
 
-  console.log(document);
   expect(document.data.encodedImageBlobs.length).toBe(2);
   expect(document.data.opts.sliceType).toBe(2);
 });
