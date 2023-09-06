@@ -1,7 +1,7 @@
 # This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
-name: test-linux-node14
+name: test-macOS-node20
 
 on:
   push:
@@ -11,11 +11,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [20.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
@@ -29,8 +29,6 @@ jobs:
       - run: npm install
       - run: npm i puppeteer-core
       - run: npm run build --if-present
-        #- run: sudo apt-get install xvfb
-        #- run: xvfb-run --auto-servernum npm run test
       - run: npm run test
       - uses: actions/upload-artifact@v2
         if: failure()
