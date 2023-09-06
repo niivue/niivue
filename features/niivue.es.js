@@ -61165,7 +61165,7 @@ Niivue.prototype.attachToCanvas = async function(m, h = null) {
     "unable to get webgl2 context. Perhaps this browser does not support webgl2"
   )), console.log(
     "NIIVUE VERSION ",
-    "0.36.0"
+    "0.37.0"
   ), this.canvas.parentElement.style.backgroundColor = "black", this.opts.isResizeCanvas && (this.canvas.style.width = "100%", this.canvas.style.height = "100%", this.canvas.width = this.canvas.offsetWidth, this.canvas.height = this.canvas.offsetHeight, window.addEventListener("resize", this.resizeListener.bind(this))), this.registerInteractions(), await this.init(), this.drawScene(), this;
 };
 Niivue.prototype.syncWith = function(m, h = { "2d": !0, "3d": !0 }) {
@@ -61474,7 +61474,7 @@ Niivue.prototype.keyDownListener = function(m) {
   ) : m.code === "KeyK" && this.opts.sliceType === SLICE_TYPE.RENDER ? this.setRenderAzimuthElevation(
     this.scene.renderAzimuth,
     this.scene.renderElevation - 1
-  ) : m.code === "KeyH" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(-1, 0, 0) : m.code === "KeyL" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(1, 0, 0) : m.code === "KeyU" && this.opts.sliceType !== SLICE_TYPE.RENDER && m.ctrlKey ? this.moveCrosshairInVox(0, 0, 1) : m.code === "KeyD" && this.opts.sliceType !== SLICE_TYPE.RENDER && m.ctrlKey ? this.moveCrosshairInVox(0, 0, -1) : m.code === "KeyJ" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(0, -1, 0) : m.code === "KeyK" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(0, 1, 0) : m.code === "ArrowLeft" ? this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1) : m.code === "ArrowRight" ? this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1) : m.code === "Slash" && m.shiftKey && alert("NIIVUE VERSION: 0.36.0");
+  ) : m.code === "KeyH" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(-1, 0, 0) : m.code === "KeyL" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(1, 0, 0) : m.code === "KeyU" && this.opts.sliceType !== SLICE_TYPE.RENDER && m.ctrlKey ? this.moveCrosshairInVox(0, 0, 1) : m.code === "KeyD" && this.opts.sliceType !== SLICE_TYPE.RENDER && m.ctrlKey ? this.moveCrosshairInVox(0, 0, -1) : m.code === "KeyJ" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(0, -1, 0) : m.code === "KeyK" && this.opts.sliceType !== SLICE_TYPE.RENDER ? this.moveCrosshairInVox(0, 1, 0) : m.code === "ArrowLeft" ? this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1) : m.code === "ArrowRight" ? this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1) : m.code === "Slash" && m.shiftKey && alert("NIIVUE VERSION: 0.37.0");
 };
 Niivue.prototype.wheelListener = function(m) {
   if (m.preventDefault(), m.stopPropagation(), !this.thumbnailVisible) {
