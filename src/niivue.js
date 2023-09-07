@@ -80,7 +80,9 @@ import {
 } from "./nvdocument.js";
 
 import { NVUtilities } from "./nvutilities.js";
+
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
+export { NVUtilities } from "./nvutilities.js";
 
 const log = new Log();
 
@@ -762,22 +764,8 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
   if (!UMD_AVAIL) {
     return "";
   }
-  let umdBase64 = __NIIVUE_UMD__;
-  // use fflate to decompress the compressed base64 string.
-  // undo the base64 encoding
-  let compressed = atob(umdBase64);
-  // convert to an array buffer
-  let compressedBuffer = new ArrayBuffer(compressed.length);
-  let compressedView = new Uint8Array(compressedBuffer);
-  for (let i = 0; i < compressed.length; i++) {
-    compressedView[i] = compressed.charCodeAt(i);
-  }
-  // decompress the array buffer
-  let decompressedBuffer = fflate.decompressSync(compressedView);
-  // convert the array buffer to a string
-  let decompressed = new TextDecoder("utf-8").decode(decompressedBuffer);
-  // console.log(decompressed);
-  return decompressed;
+  
+  return NVUtilities.decompressBase64String(__NIIVUE_UMD__);
 };
 
 /**
@@ -3320,10 +3308,10 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
 
   // https://stackoverflow.com/questions/68849233/convert-a-string-to-base64-in-javascript-btoa-and-atob-are-deprecated
   const base64 = NVUtilities.uint8tob64(compressed);
+  const umd = this.decodeEmbeddedUMD();
   const javascript = `
-  import * as niivue from "https://niivue.github.io/niivue/features/niivue.es.js";
-  import * as fflate from 'https://cdn.skypack.dev/fflate@0.8.0?min';
-
+  ${umd}
+  
   function saveNiivueAsHtml(pageName) {
     nv1.saveHTML(pageName);
   }
@@ -3340,15 +3328,14 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   var nv1 = new niivue.Niivue();
   nv1.attachTo("${canvasId}");
   var base64 = "${base64}";
-  var compressed = base64ToArrayBuffer(base64); // string -> u8c
-  const decompressed = fflate.decompressSync(compressed); // u8c -> u8d
-  const origText = fflate.strFromU8(decompressed); // u8d -> string
-  var json = JSON.parse(origText); // string -> JSON
+  var jsonText = niivue.NVUtilities.decompressBase64String(base64);
+  var json = JSON.parse(jsonText); // string -> JSON
   var doc = niivue.NVDocument.loadFromJSON(json);                
   nv1.loadDocument(doc);
   nv1.updateGLVolume();
 
 `;
+
   return javascript;
 };
 
