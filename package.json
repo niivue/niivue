@@ -13,8 +13,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npx prettier --write src/ && npx vite build --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
-    "build-win": "npx prettier --write src/ && npx vite build --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
+    "build": "npx prettier --write src/ && npx vite build --config vite.config.js --emptyOutDir --base=./ && vite build --config vite.config_inject.js --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
+    "build-win": "npx prettier --write src/ && npx vite build --config vite.config.js --emptyOutDir && vite build --config vite.config_inject.js --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
     "demo": "npm run build && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
