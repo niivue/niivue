@@ -80,8 +80,6 @@ import {
 } from "./nvdocument.js";
 
 import { NVUtilities } from "./nvutilities.js";
-import * as fflate from "fflate";
-
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 
 const log = new Log();
