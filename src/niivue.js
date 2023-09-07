@@ -80,6 +80,7 @@ import {
 } from "./nvdocument.js";
 
 import { NVUtilities } from "./nvutilities.js";
+import { v4 as uuidv4 } from "uuid";
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
@@ -764,7 +765,7 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
   if (!UMD_AVAIL) {
     return "";
   }
-  
+
   return NVUtilities.decompressBase64String(__NIIVUE_UMD__);
 
 };
@@ -3296,38 +3297,28 @@ Niivue.prototype.loadDocument = function (document) {
         ${javascript}</script></body></html>`;
  */
 Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
-  this.document.opts = this.opts;
-  let json = this.document.json();
-  json.sceneData = { ...this.scene };
-  delete json.sceneData["sceneData"];
-  delete json.sceneData["onZoom3DChange"];
-  delete json.sceneData["onAzimuthElevationChange"];
+  let json = this.json();
 
-  let docString = JSON.stringify(json);
-  const buf = fflate.strToU8(docString, { level: 6, mem: 4 });
-  const compressed = fflate.compressSync(buf);
-
-  // https://stackoverflow.com/questions/68849233/convert-a-string-to-base64-in-javascript-btoa-and-atob-are-deprecated
-  const base64 = NVUtilities.uint8tob64(compressed);
+  const base64 = NVUtilities.compressToBase64String(JSON.stringify(json));
   const umd = this.decodeEmbeddedUMD();
   const javascript = `
   ${umd}
   
   function saveNiivueAsHtml(pageName) {
-    nv1.saveHTML(pageName);
+    //nv1.saveHTML(pageName);
+    
+    //get new docstring
+    const docString = nv1.json();
+    // create a unique id
+    const html = 
+    document.getElementsByTagName("html")[0]
+        .innerHTML.replace(base64, niivue.NVUtilities.compressToBase64String(JSON.stringify(docString)));
+    niivue.NVUtilities.download(html, pageName, "application/html");
   }
 
-  function base64ToArrayBuffer(base64) {
-    var binaryString = atob(base64);
-    var bytes = new Uint8Array(binaryString.length);
-    for (var i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  }
-
+  
   var nv1 = new niivue.Niivue();
-  nv1.attachTo("${canvasId}");
+  nv1.attachTo("${canvasId}");  
   var base64 = "${base64}";
   var jsonText = niivue.NVUtilities.decompressBase64String(base64);
   var json = JSON.parse(jsonText); // string -> JSON
@@ -3420,7 +3411,13 @@ Niivue.prototype.json = function () {
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
   this.drawScene();
   this.document.previewImageDataURL = this.canvas.toDataURL();
-  return this.document.json();
+  const json = this.document.json();
+  json.sceneData = { ...this.scene };
+  delete json.sceneData["sceneData"];
+  delete json.sceneData["onZoom3DChange"];
+  delete json.sceneData["onAzimuthElevationChange"];
+
+  return json;
 };
 
 /**

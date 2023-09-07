@@ -113,4 +113,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     // console.log(decompressed);
     return decompressed;
   }
+
+  static compressToBase64String(string) {
+    const buf = fflate.strToU8(string, { level: 6, mem: 4 });
+    const compressed = fflate.compressSync(buf);
+    const base64 = NVUtilities.uint8tob64(compressed);
+    return base64;
+  }
 }
