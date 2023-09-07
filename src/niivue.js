@@ -774,7 +774,6 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
   let decompressedBuffer = fflate.decompressSync(compressedView);
   // convert the array buffer to a string
   let decompressed = new TextDecoder("utf-8").decode(decompressedBuffer);
-  // eval the string to get the umd code
   // console.log(decompressed);
   return decompressed;
 };
