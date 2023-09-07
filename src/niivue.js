@@ -1,5 +1,6 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
+import * as fflate from "fflate";
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -748,6 +749,38 @@ Niivue.prototype.off = function (event) {
       return;
     }
   }
+};
+
+/**
+ * decode the compressed embedded UMD string of the bundled Niivue code
+ * @param {string} umdBase64 the base64 encoded compressed UMD string
+ * @returns {string} the uncompressed UMD string
+ * @example
+ * niivue = new Niivue()
+ * niivue.decodeEmbeddedUMD()
+ */
+Niivue.prototype.decodeEmbeddedUMD = function () {
+  let UMD_AVAIL = typeof __NIIVUE_UMD__ === "undefined" ? false : true;
+  if (!UMD_AVAIL) {
+    return "";
+  }
+  let umdBase64 = __NIIVUE_UMD__;
+  // use fflate to decompress the compressed base64 string.
+  // undo the base64 encoding
+  let compressed = atob(umdBase64);
+  // convert to an array buffer
+  let compressedBuffer = new ArrayBuffer(compressed.length);
+  let compressedView = new Uint8Array(compressedBuffer);
+  for (let i = 0; i < compressed.length; i++) {
+    compressedView[i] = compressed.charCodeAt(i);
+  }
+  // decompress the array buffer
+  let decompressedBuffer = fflate.decompressSync(compressedView);
+  // convert the array buffer to a string
+  let decompressed = new TextDecoder("utf-8").decode(decompressedBuffer);
+  // eval the string to get the umd code
+  // console.log(decompressed);
+  return decompressed;
 };
 
 /**
