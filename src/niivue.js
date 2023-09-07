@@ -766,6 +766,7 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
   }
   
   return NVUtilities.decompressBase64String(__NIIVUE_UMD__);
+
 };
 
 /**
