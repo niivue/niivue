@@ -3325,10 +3325,6 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   return javascript;
 };
 
-const fillTemplate = function (templateString, templateVars) {
-  return new Function("return `" + templateString + "`;").call(templateVars);
-};
-
 /**
  * generates HTML of current scene
  * @param template {string} HTML template
