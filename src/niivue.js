@@ -767,7 +767,6 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
   }
 
   return NVUtilities.decompressBase64String(__NIIVUE_UMD__);
-
 };
 
 /**
@@ -3325,7 +3324,7 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   var doc = niivue.NVDocument.loadFromJSON(json);                
   nv1.loadDocument(doc);
   nv1.updateGLVolume();
-
+  
 `;
 
   return javascript;
@@ -3352,7 +3351,47 @@ Niivue.prototype.generateHTML = function (template, canvasId = "gl1") {
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <meta name="viewport" content="width=device-width,initial-scale=1.0" />
       <title>Save as HTML</title>
-      <link rel="stylesheet" href="https://niivue.github.io/niivue/features/light.css" />
+      <style>
+      html {
+        height: auto;
+        min-height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        min-height: 100%;
+        width: 100%;
+        position: absolute;
+        font-family: system-ui, Arial, Helvetica, sans-serif;
+        background: #ffffff;
+        color: black;
+        user-select: none; /* Standard syntax */
+      }
+      header {
+        margin: 10px;
+      }
+      main {
+        flex: 1;
+        background: #000000;
+        position: relative;
+      }
+      footer {
+        margin: 10px;
+      }
+      canvas {
+        position: absolute;
+        cursor: crosshair;
+      }
+      canvas:focus {
+        outline: 0px;
+      }
+      div {
+        display: table-row;
+        background-color: blue;
+      }
+      </style>
     </head>
     <body>
       <noscript>niivue requires JavaScript.</noscript>
