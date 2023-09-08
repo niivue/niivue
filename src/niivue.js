@@ -1,6 +1,5 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
-import * as fflate from "fflate";
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -80,7 +79,6 @@ import {
 } from "./nvdocument.js";
 
 import { NVUtilities } from "./nvutilities.js";
-import { v4 as uuidv4 } from "uuid";
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
@@ -3306,7 +3304,6 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   function saveNiivueAsHtml(pageName) {    
     //get new docstring
     const docString = nv1.json();
-    // create a unique id
     const html = 
     document.getElementsByTagName("html")[0]
         .innerHTML.replace(base64, niivue.NVUtilities.compressToBase64String(JSON.stringify(docString)));
@@ -3342,11 +3339,9 @@ const fillTemplate = function (templateString, templateVars) {
  *       %%javascript%%</script></body></html>`;
  * nv1.saveHTMLTemplate("page.html", template);
  */
-Niivue.prototype.generateHTML = function (template, canvasId = "gl1") {
+Niivue.prototype.generateHTML = function (canvasId = "gl1") {
   const javascript = this.generateLoadDocumentJavaScript(canvasId);
-  const html = template
-    ? fillTemplate(template, javascript)
-    : `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
   <html lang="en">
     <head>
       <meta charset="utf-8" />
