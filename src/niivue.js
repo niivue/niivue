@@ -3414,7 +3414,10 @@ Niivue.prototype.generateHTML = function (canvasId = "gl1") {
  * @param {string} fileName the name of the HTML file
  * @param {string} canvasId id of canvas NiiVue will be attached to
  */
-Niivue.prototype.saveHTML = async function (fileName = "untitled.html", canvasId = "gl1") {
+Niivue.prototype.saveHTML = async function (
+  fileName = "untitled.html",
+  canvasId = "gl1"
+) {
   const html = this.generateHTML(canvasId);
   NVUtilities.download(html, fileName, "application/html");
 };
