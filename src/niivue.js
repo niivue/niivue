@@ -1,6 +1,5 @@
 import { Shader } from "./shader.js";
 import * as mat from "gl-matrix";
-import * as fflate from "fflate";
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -78,7 +77,11 @@ import {
   DRAG_MODE,
   DEFAULT_OPTIONS,
 } from "./nvdocument.js";
+
+import { NVUtilities } from "./nvutilities.js";
+
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
+export { NVUtilities } from "./nvutilities.js";
 
 const log = new Log();
 
@@ -760,22 +763,8 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
   if (!UMD_AVAIL) {
     return "";
   }
-  let umdBase64 = __NIIVUE_UMD__;
-  // use fflate to decompress the compressed base64 string.
-  // undo the base64 encoding
-  let compressed = atob(umdBase64);
-  // convert to an array buffer
-  let compressedBuffer = new ArrayBuffer(compressed.length);
-  let compressedView = new Uint8Array(compressedBuffer);
-  for (let i = 0; i < compressed.length; i++) {
-    compressedView[i] = compressed.charCodeAt(i);
-  }
-  // decompress the array buffer
-  let decompressedBuffer = fflate.decompressSync(compressedView);
-  // convert the array buffer to a string
-  let decompressed = new TextDecoder("utf-8").decode(decompressedBuffer);
-  // console.log(decompressed);
-  return decompressed;
+
+  return NVUtilities.decompressBase64String(__NIIVUE_UMD__);
 };
 
 /**
@@ -3286,9 +3275,170 @@ Niivue.prototype.loadDocument = function (document) {
     log.debug(meshToAdd);
     this.addMesh(meshToAdd);
   }
+
+  // handle older documents that don't have options/scene fields defined
+  this.scene = { ...this.scene, ...document.scene.sceneData };
+  this.opts = { ...this.opts, ...document.opts };
+
   this.updateGLVolume();
   this.onDocumentLoaded(document);
   return this;
+};
+
+/**
+ * generates JavaScript to load the current scene as a document
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ * @example
+ * const javascript = this.generateLoadDocumentJavaScript("gl1");
+ * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+        ${javascript}</script></body></html>`;
+ */
+Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
+  let json = this.json();
+
+  const base64 = NVUtilities.compressToBase64String(JSON.stringify(json));
+  const umd = this.decodeEmbeddedUMD();
+  const javascript = `
+  ${umd}
+  
+  function saveNiivueAsHtml(pageName) {    
+    //get new docstring
+    const docString = nv1.json();
+    const html = 
+    document.getElementsByTagName("html")[0]
+        .innerHTML.replace(base64, niivue.NVUtilities.compressToBase64String(JSON.stringify(docString)));
+    niivue.NVUtilities.download(html, pageName, "application/html");
+  }
+
+  
+  var nv1 = new niivue.Niivue();
+  nv1.attachTo("${canvasId}");  
+  var base64 = "${base64}";
+  var jsonText = niivue.NVUtilities.decompressBase64String(base64);
+  var json = JSON.parse(jsonText); // string -> JSON
+  var doc = niivue.NVDocument.loadFromJSON(json);                
+  nv1.loadDocument(doc);
+  nv1.updateGLVolume();
+
+`;
+
+  return javascript;
+};
+
+/**
+ * generates HTML of current scene
+ * @param template {string} HTML template
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ * @returns {string} HTML with javascript of the current scene
+ * @example
+ * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>
+ *       %%javascript%%</script></body></html>`;
+ * nv1.saveHTMLTemplate("page.html", template);
+ */
+Niivue.prototype.generateHTML = function (canvasId = "gl1") {
+  const javascript = this.generateLoadDocumentJavaScript(canvasId);
+  const html = `<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+      <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+      <title>Save as HTML</title>
+      <style>
+      html {
+        height: auto;
+        min-height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        min-height: 100%;
+        width: 100%;
+        position: absolute;
+        font-family: system-ui, Arial, Helvetica, sans-serif;
+        background: #ffffff;
+        color: black;
+        user-select: none; /* Standard syntax */
+      }
+      header {
+        margin: 10px;
+      }
+      main {
+        flex: 1;
+        background: #000000;
+        position: relative;
+      }
+      footer {
+        margin: 10px;
+      }
+      canvas {
+        position: absolute;
+        cursor: crosshair;
+      }
+      canvas:focus {
+        outline: 0px;
+      }
+      div {
+        display: table-row;
+        background-color: blue;
+      }
+      </style>
+    </head>
+    <body>
+      <noscript>niivue requires JavaScript.</noscript>
+      <header>
+      Save the current scene as HTML
+      <button id="save">Save as HTML</button>
+      </header>
+      <main>
+        <canvas id="gl1"></canvas>
+      </main>
+      <script type="module" async>        
+        ${javascript}
+        function saveAsHtml() {
+          saveNiivueAsHtml("page.html");
+        }        
+        // assign our event handler
+        var button = document.getElementById("save");
+        button.onclick = saveAsHtml;      
+      </script>
+    </body>
+  </html>`;
+  return html;
+};
+
+/**
+ * save current scene as HTML
+ * @param {string} fileName the name of the HTML file
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ */
+Niivue.prototype.saveHTML = async function (
+  fileName = "untitled.html",
+  canvasId = "gl1"
+) {
+  const html = this.generateHTML(canvasId);
+  NVUtilities.download(html, fileName, "application/html");
+};
+
+/**
+ * Converts NiiVue scene to JSON
+ * @returns {NVDocumentData}
+ */
+Niivue.prototype.json = function () {
+  this.document.opts = this.opts;
+  this.document.scene = this.scene;
+  // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
+  this.drawScene();
+  this.document.previewImageDataURL = this.canvas.toDataURL();
+  const json = this.document.json();
+  json.sceneData = { ...this.scene };
+  delete json.sceneData["sceneData"];
+  delete json.sceneData["onZoom3DChange"];
+  delete json.sceneData["onAzimuthElevationChange"];
+
+  return json;
 };
 
 /**
@@ -3299,6 +3449,9 @@ Niivue.prototype.loadDocument = function (document) {
  * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
  */
 Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
+  this.document.opts = this.opts;
+  this.document.scene = this.scene;
+
   this.document.title = fileName;
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
   this.drawScene();

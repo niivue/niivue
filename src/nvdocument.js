@@ -389,14 +389,12 @@ export class NVDocument {
           imageOptions.name = "untitled.nii";
         }
       }
-      imageOptions.imageType = NVIMAGE_TYPE.NII;
-
-      this.data.imageOptionsArray.push(imageOptions);
-      this.imageOptionsMap.set(
-        image.id,
-        this.data.imageOptionsArray.length - 1
-      );
     }
+
+    imageOptions.imageType = NVIMAGE_TYPE.NII;
+
+    this.data.imageOptionsArray.push(imageOptions);
+    this.imageOptionsMap.set(image.id, this.data.imageOptionsArray.length - 1);
   }
 
   /**
@@ -457,6 +455,27 @@ export class NVDocument {
     // volumes
     if (this.volumes.length) {
       let imageOptions = this.imageOptionsArray[0];
+      if (!imageOptions) {
+        console.log("no image options for base image");
+        imageOptions = {
+          name: "",
+          colormap: "gray",
+          opacity: 1.0,
+          pairedImgData: null,
+          cal_min: NaN,
+          cal_max: NaN,
+          trustCalMinMax: true,
+          percentileFrac: 0.02,
+          ignoreZeroVoxels: false,
+          visible: true,
+          useQFormNotSForm: false,
+          colormapNegative: "",
+          colormapLabel: [],
+          imageType: NVIMAGE_TYPE.NII,
+          frame4D: 0,
+          limitFrames4D: NaN,
+        };
+      }
       if (imageOptions) {
         imageOptionsArray.push(imageOptions);
         let encodedImageBlob = NVUtilities.uint8tob64(
@@ -477,7 +496,9 @@ export class NVDocument {
       for (let i = 1; i < this.volumes.length; i++) {
         const volume = this.volumes[i];
         let imageOptions = this.getImageOptions(volume);
+
         if (!imageOptions) {
+          console.log("no options found for image, using default");
           imageOptions = {
             name: "",
             colormap: "gray",
@@ -496,6 +517,10 @@ export class NVDocument {
             frame4D: 0,
             limitFrames4D: NaN,
           };
+        } else {
+          if (!("imageType" in imageOptions)) {
+            imageOptions.imageType = NVIMAGE_TYPE.NII;
+          }
         }
         // update image options on current image settings
         imageOptions.colormap = volume.colormap;
@@ -509,7 +534,7 @@ export class NVDocument {
       }
     }
     // Add it even if it's empty
-    data.imageOptionsArray = imageOptionsArray;
+    data.imageOptionsArray = [...imageOptionsArray];
 
     // meshes
     const meshes = [];

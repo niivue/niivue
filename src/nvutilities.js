@@ -1,3 +1,5 @@
+import * as fflate from "fflate";
+
 /**
  * Namespace for utility functions
  */
@@ -94,5 +96,28 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
+  }
+
+  static decompressBase64String(base64) {
+    let compressed = atob(base64);
+    // convert to an array buffer
+    let compressedBuffer = new ArrayBuffer(compressed.length);
+    let compressedView = new Uint8Array(compressedBuffer);
+    for (let i = 0; i < compressed.length; i++) {
+      compressedView[i] = compressed.charCodeAt(i);
+    }
+    // decompress the array buffer
+    let decompressedBuffer = fflate.decompressSync(compressedView);
+    // convert the array buffer to a string
+    let decompressed = new TextDecoder("utf-8").decode(decompressedBuffer);
+    // console.log(decompressed);
+    return decompressed;
+  }
+
+  static compressToBase64String(string) {
+    const buf = fflate.strToU8(string, { level: 6, mem: 4 });
+    const compressed = fflate.compressSync(buf);
+    const base64 = NVUtilities.uint8tob64(compressed);
+    return base64;
   }
 }

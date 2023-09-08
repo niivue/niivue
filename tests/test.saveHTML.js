@@ -1,10 +1,10 @@
-const { snapshot, httpServerAddress, ensureDownloadFolder } = require("./helpers");
+const { httpServerAddress, ensureDownloadFolder } = require("./helpers");
 const path = require("path");
 const fs = require("fs");
 const {waitForDownload} = require("puppeteer-utilz");
 
 const downloadPath = path.resolve('./downloads');
-const fileName = "test.nii";
+const fileName = "test.html";
 
 function getFilesizeInBytes(filename) {
   var stats = fs.statSync(filename);
@@ -22,7 +22,7 @@ beforeEach(async () => {
   });
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 });
-test("saveImage", async () => {
+test("saveHTML", async () => {
   await page.evaluate(async () => {
     let nv = new niivue.Niivue();
     await nv.attachTo("gl", false);
@@ -38,17 +38,16 @@ test("saveImage", async () => {
       },
     ];
     await nv.loadVolumes(volumeList);
-    await nv.saveImage("test.nii");
+    await nv.saveHTML("test.html");
     
     return;
   });
     
   // // wait until we navigate or the test will not wait for the downloaded file
-  // await page.goto(httpServerAddress, {waitUntil: 'networkidle2'});
   const filePath = path.join(downloadPath, fileName);
   waitForDownload(downloadPath);
   const fileSize = getFilesizeInBytes(filePath);
-  expect(fileSize).toBeGreaterThan(4336029);
+  expect(fileSize).toBeGreaterThan(6700000);
   fs.unlinkSync(filePath);
 
 
