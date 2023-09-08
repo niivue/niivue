@@ -29,13 +29,14 @@ test("saveImageDocument", async () => {
     await nv.loadVolumes(volumeList);
     // SAGITTAL: 2
     nv.setSliceType(2);
+    nv.scene.crosshairPos = [0.1, 0.2, 0.3];
     const json = nv.json();    
     let document = niivue.NVDocument.loadFromJSON(json);
-    
     
     return document;
   });
 
   expect(document.data.encodedImageBlobs.length).toBe(2);
   expect(document.data.opts.sliceType).toBe(2);
+  expect(document.scene.crosshairPos).toEqual([0.1, 0.2, 0.3]);
 });
