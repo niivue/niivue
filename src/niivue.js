@@ -3412,24 +3412,10 @@ Niivue.prototype.generateHTML = function (canvasId = "gl1") {
 /**
  * save current scene as HTML
  * @param {string} fileName the name of the HTML file
- * @param template {string} HTML template
  * @param {string} canvasId id of canvas NiiVue will be attached to
  */
-Niivue.prototype.saveHTMLTemplate = async function (
-  fileName = "untitled.html",
-  template,
-  canvasId = "gl1"
-) {
-  const html = this.generateHTML(template, canvasId);
-  NVUtilities.download(html, fileName, "application/html");
-};
-
-/**
- * save current scene as HTML
- * @param {string} fileName the name of the HTML file
- */
-Niivue.prototype.saveHTML = async function (fileName = "untitled.html") {
-  const html = this.generateHTML();
+Niivue.prototype.saveHTML = async function (fileName = "untitled.html", canvasId = "gl1") {
+  const html = this.generateHTML(canvasId);
   NVUtilities.download(html, fileName, "application/html");
 };
 
