@@ -3303,9 +3303,7 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   const javascript = `
   ${umd}
   
-  function saveNiivueAsHtml(pageName) {
-    //nv1.saveHTML(pageName);
-    
+  function saveNiivueAsHtml(pageName) {    
     //get new docstring
     const docString = nv1.json();
     // create a unique id
@@ -3324,10 +3322,14 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
   var doc = niivue.NVDocument.loadFromJSON(json);                
   nv1.loadDocument(doc);
   nv1.updateGLVolume();
-  
+
 `;
 
   return javascript;
+};
+
+const fillTemplate = function (templateString, templateVars) {
+  return new Function("return `" + templateString + "`;").call(templateVars);
 };
 
 /**
@@ -3343,7 +3345,7 @@ Niivue.prototype.generateLoadDocumentJavaScript = function (canvasId) {
 Niivue.prototype.generateHTML = function (template, canvasId = "gl1") {
   const javascript = this.generateLoadDocumentJavaScript(canvasId);
   const html = template
-    ? template.replace("%%javascript%%", javascript)
+    ? fillTemplate(template, javascript)
     : `<!DOCTYPE html>
   <html lang="en">
     <head>
