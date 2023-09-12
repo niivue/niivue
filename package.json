@@ -25,7 +25,7 @@
     "test-win": "npm run build-win && jest --maxWorkers=1",
     "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
-    "pub": "npm publish --access public"
+    "pub": "npm run build && npm publish --access public"
   },
   "files": [
     "src",
