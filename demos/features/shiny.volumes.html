@@ -15,6 +15,14 @@
     <header>
       <label for="checkXRay">XRay</label>
       <input type="checkbox" id="checkXRay" unchecked />
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="slicer3D">slicer3D</option>
+        <option value="none">none</option>
+      </select>
       <label for="renderMode">Volume Render Mode</label>
       <select id="renderMode">
         <option value="-1">slices</option>
@@ -52,6 +60,25 @@
         nv1.opts.meshXRay = this.checked * 0.05;
         nv1.drawScene();
       }
+      dragMode.onchange = function () {
+        switch (document.getElementById("dragMode").value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break;
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break;
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break;
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break;
+          case "slicer3D":
+            nv1.opts.dragMode = nv1.dragModes.slicer3D;
+            break;
+        }
+      };
       zoomSlider.oninput = function () {
         nv1.setScale(this.value / 100);
       };
@@ -90,7 +117,6 @@
       ]);
       matCaps.dispatchEvent(new Event("change"));
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      nv1.opts.dragMode = nv1.dragModes.pan;
       nv1.graph.autoSizeMultiplanar = true;
       nv1.opts.multiplanarForceRender = true;
     </script>
