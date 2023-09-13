@@ -1333,7 +1333,6 @@ Niivue.prototype.mouseMoveListener = async function (e) {
     let x = pos.x * this.uiData.dpr;
     let y = pos.y * this.uiData.dpr;
     let tile = this.tileIndex(x, y);
-    console.log('>>>', tile, this.uiData.clickedTile);
     if (tile !== this.uiData.clickedTile) return;
     if (this.uiData.mouseButtonLeftDown) {
       this.mouseMove(pos.x, pos.y);
@@ -6014,7 +6013,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   if (hdr.intent_code === 1002) {
     let x = 1.0 / this.back.dims[1];
     if (!this.opts.isAtlasOutline) x = -x;
-    console.log("ATLAS>>>", x);
     this.gl.uniform3fv(orientShader.uniforms["xyzFrac"], [
       x,
       1.0 / this.back.dims[2],
