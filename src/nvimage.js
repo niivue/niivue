@@ -304,7 +304,7 @@ export function NVImage(
       break;
     case NVIMAGE_TYPE.MHD:
     case NVIMAGE_TYPE.MHA:
-      imgRaw = this.readMHA(dataBuffer); //to do: pairedImgData
+      imgRaw = this.readMHA(dataBuffer, pairedImgData);
       break;
     case NVIMAGE_TYPE.MGH:
     case NVIMAGE_TYPE.MGZ:
