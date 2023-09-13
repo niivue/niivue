@@ -2927,10 +2927,11 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
  * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
-  // azimuthElevation is 2 component vector [a, e, d]
+  //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
+  //  azimuthElevation is 2 component vector [a, e, d]
   //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
   //  elevation: camera height in degrees, range -90..90
-  //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
+
   let v = this.sph2cartDeg(
     depthAzimuthElevation[1] + 180,
     depthAzimuthElevation[2]
@@ -7044,6 +7045,26 @@ Niivue.prototype.textWidth = function (scale, str) {
   return w;
 }; // textWidth()
 
+Niivue.prototype.textHeight = function (scale, str) {
+  const byteSet = new Set(Array.from(str));
+  console.log("bytes set", byteSet);
+  const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
+  console.log("bytes", bytes);
+
+  for (let i = 0; i < byteSet.size; i++)
+    console.log("metric", this.fontMets[bytes[i]]);
+
+  const filteredMetrics = this.fontMets.filter((element, index) =>
+    bytes.includes(index)
+  );
+
+  console.log("filtered metrics:", filteredMetrics);
+  const height = this.fontMets
+    .filter((element, index) => bytes.includes(index))
+    .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b)).lbwh[3];
+  return scale * height;
+};
+
 // not included in public docs
 Niivue.prototype.drawChar = function (xy, scale, char) {
   //draw single character, never call directly: ALWAYS call from drawText()
@@ -7105,7 +7126,7 @@ Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
 
 // not included in public docs
 Niivue.prototype.drawTextLeft = function (xy, str, scale = 1, color = null) {
-  //to right of x, vertically centered on y
+  //to left of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= this.textWidth(size, str);
@@ -8396,6 +8417,193 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   this.onLocationChange(msg);
 };
 
+/**
+ * Determines if the clip plane is visible
+ * @param {mat4} mvpMatrix model view project matrix of base volume
+ */
+Niivue.prototype.isPlaneVisible = function (mvpMatrix) {
+  // Calculate the plane's normal
+  const planeNormal = mat.vec3.create();
+  mat.vec3.normalize(planeNormal, this.scene.clipPlane);
+
+  // Calculate the plane's vertices
+  const halfWidth = 0.5; // Adjust this as needed
+  const halfHeight = 0.5; // Adjust this as needed
+
+  const vertices = [
+    mat.vec3.scale(mat.vec3.create(), planeNormal, halfWidth),
+    mat.vec3.scale(mat.vec3.create(), planeNormal, -halfWidth),
+    mat.vec3.scaleAndAdd(
+      mat.vec3.create(),
+      planeNormal,
+      mat.vec3.fromValues(0, 1, 0),
+      halfHeight
+    ),
+    mat.vec3.scaleAndAdd(
+      mat.vec3.create(),
+      planeNormal,
+      mat.vec3.fromValues(0, -1, 0),
+      -halfHeight
+    ),
+  ];
+
+  let isVisible = false;
+
+  // Check each vertex of the plane
+  for (const vertex of vertices) {
+    // Transform the vertex by the MVP matrix
+    const transformedVertex = mat.vec4.create();
+    mat.vec4.transformMat4(
+      transformedVertex,
+      mat.vec4.fromValues(...vertex, 1),
+      mvpMatrix
+    );
+
+    // Check if the transformed vertex is inside the clip space and in front of the clip plane
+    if (
+      transformedVertex[0] >= -1 &&
+      transformedVertex[0] <= 1 &&
+      transformedVertex[1] >= -1 &&
+      transformedVertex[1] <= 1 &&
+      transformedVertex[2] >= -1 &&
+      transformedVertex[2] <= 1
+    ) {
+      isVisible = true;
+      break; // If any vertex is visible, consider the plane visible
+    }
+  }
+
+  return isVisible;
+};
+
+// Check if a point is visible
+Niivue.prototype.isLabelPointVisible = function (point) {
+  // xyz
+  const xyz = this.scene.clipPlane.slice(1);
+  const planeNormal = mat.vec3.create();
+  mat.vec3.normalize(planeNormal, xyz);
+  const planeLength = mat.vec3.length(planeNormal);
+  const unitNormal = mat.vec3.divide(unitNormal, planeNormal, planeLength);
+  const vecPoint = mat.vec3.fromValues(...point);
+  // Calculate the distance between the point and the clip plane
+  // const pointToPlaneDistance = mat.vec3.dot(
+  //   mat.vec3.subtract(
+  //     mat.vec3.create(),
+  //     mat.vec3.fromValues(...point),
+  //     mat.vec3.fromValues(...this.scene.clipPlane.slice(1))
+  //   ),
+  //   this.scene.clipPlane
+  // );
+  const pointToPlaneDistance = mat.vec3.dot(vecPoint, unitNormal);
+  console.log("distance from clip plane: ", pointToPlaneDistance);
+  // Check if the point is within 0.1 units of the clip plane
+  return Math.abs(pointToPlaneDistance) <= 0.1;
+};
+
+Niivue.prototype.calculateScreenPoint = function (
+  point,
+  mvpMatrix,
+  leftTopWidthHeight
+) {
+  const screenPoint = mat.vec4.create();
+  // Multiply the 3D point by the model-view-projection matrix
+  mat.vec4.transformMat4(screenPoint, [...point, 1.0], mvpMatrix);
+  // Convert the 4D point to 2D screen coordinates
+
+  if (screenPoint[3] !== 0.0) {
+    screenPoint[0] =
+      (screenPoint[0] / screenPoint[3] + 1.0) * 0.5 * leftTopWidthHeight[2];
+    screenPoint[1] =
+      (1.0 - screenPoint[1] / screenPoint[3]) * 0.5 * leftTopWidthHeight[3];
+    screenPoint[2] /= screenPoint[3];
+
+    const scaleX = this.canvas.width / leftTopWidthHeight[2];
+    const scaleY = this.canvas.height / leftTopWidthHeight[3];
+    screenPoint[0] *= scaleX;
+    // screenPoint[0] += leftTopWidthHeight[0] * scaleX;
+    screenPoint[1] *= scaleY;
+    // screenPoint[1] += leftTopWidthHeight[1] * scaleY;
+  }
+  return screenPoint;
+};
+
+Niivue.prototype.draw3DLabel = function (
+  text,
+  top,
+  point,
+  mvpMatrix,
+  leftTopWidthHeight
+) {
+  const padding = 10;
+  this.drawTextLeft(
+    [this.canvas.width - padding, top],
+    text,
+    1.01,
+    [1, 1, 1, 1]
+  );
+  this.drawTextLeft(
+    [this.canvas.width - padding, top],
+    text,
+    undefined,
+    this.opts.fontColor
+  );
+
+  const scale = 1.0;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
+  const width = this.textWidth(1.0, text) * size;
+  // draw line
+  const screenPoint = this.calculateScreenPoint(
+    point,
+    mvpMatrix,
+    leftTopWidthHeight
+  );
+  const firstLetterHeight = this.textHeight(scale, text.substr(0, 1)) * size;
+  this.drawLine(
+    [
+      this.canvas.width - width - padding,
+      top + firstLetterHeight / 2,
+      screenPoint[0],
+      screenPoint[1],
+    ],
+    undefined,
+    [0.0, 0.0, 1.0, 1.0]
+  );
+};
+
+Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
+  let gl = this.gl;
+  gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+  const scale = 1.0;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
+
+  let text = "center label";
+  this.draw3DLabel(
+    text,
+    this.canvas.height / 2,
+    [0.0, 0.0, 0.0],
+    mvpMatrix,
+    leftTopWidthHeight
+  );
+  const height = this.textHeight(scale, text) * size;
+
+  text = "hippo label";
+
+  this.draw3DLabel(
+    text,
+    this.canvas.height / 2 + height * 2,
+    [-25, -15.0, -25.0],
+    mvpMatrix,
+    leftTopWidthHeight
+  );
+};
+
 // not included in public docs
 Niivue.prototype.draw3D = function (
   leftTopWidthHeight = [0, 0, 0, 0],
@@ -8442,6 +8650,7 @@ Niivue.prototype.draw3D = function (
     leftTopWidthHeight[1] =
       gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1];
   }
+  console.log("viewport ", leftTopWidthHeight);
   gl.viewport(
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
@@ -8478,6 +8687,11 @@ Niivue.prototype.draw3D = function (
       modelMatrix,
       normalMatrix
     );
+
+  // const labelVisible = this.isLabelPointVisible([0.0, 0.0, 0.0]);
+  // if (labelVisible) {
+  //   console.log("label is visible: ", labelVisible);
+  // }
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
@@ -8490,6 +8704,7 @@ Niivue.prototype.draw3D = function (
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
+  this.draw3DLabels(mvpMatrix, leftTopWidthHeight);
   return posString;
 }; // draw3D()
 
