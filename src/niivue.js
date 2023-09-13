@@ -7047,18 +7047,8 @@ Niivue.prototype.textWidth = function (scale, str) {
 
 Niivue.prototype.textHeight = function (scale, str) {
   const byteSet = new Set(Array.from(str));
-  console.log("bytes set", byteSet);
   const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
-  console.log("bytes", bytes);
 
-  for (let i = 0; i < byteSet.size; i++)
-    console.log("metric", this.fontMets[bytes[i]]);
-
-  const filteredMetrics = this.fontMets.filter((element, index) =>
-    bytes.includes(index)
-  );
-
-  console.log("filtered metrics:", filteredMetrics);
   const height = this.fontMets
     .filter((element, index) => bytes.includes(index))
     .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b)).lbwh[3];
@@ -8500,9 +8490,9 @@ Niivue.prototype.isLabelPointVisible = function (point) {
   return Math.abs(pointToPlaneDistance) <= 0.1;
 };
 
-Niivue.prototype.addLabel = function(text, point) {
-  this.document.labels.push({text, point});
-}
+Niivue.prototype.addLabel = function (text, point) {
+  this.document.labels.push({ text, point });
+};
 
 // not included in public docs
 Niivue.prototype.calculateScreenPoint = function (
@@ -8514,7 +8504,6 @@ Niivue.prototype.calculateScreenPoint = function (
   // Multiply the 3D point by the model-view-projection matrix
   mat.vec4.transformMat4(screenPoint, [...point, 1.0], mvpMatrix);
   // Convert the 4D point to 2D screen coordinates
-
   if (screenPoint[3] !== 0.0) {
     screenPoint[0] =
       (screenPoint[0] / screenPoint[3] + 1.0) * 0.5 * leftTopWidthHeight[2];
@@ -8522,12 +8511,8 @@ Niivue.prototype.calculateScreenPoint = function (
       (1.0 - screenPoint[1] / screenPoint[3]) * 0.5 * leftTopWidthHeight[3];
     screenPoint[2] /= screenPoint[3];
 
-    const scaleX = this.canvas.width / leftTopWidthHeight[2];
-    const scaleY = this.canvas.height / leftTopWidthHeight[3];
-    screenPoint[0] *= scaleX;
-    // screenPoint[0] += leftTopWidthHeight[0] * scaleX;
-    screenPoint[1] *= scaleY;
-    // screenPoint[1] += leftTopWidthHeight[1] * scaleY;
+    screenPoint[0] += leftTopWidthHeight[0];
+    screenPoint[1] += leftTopWidthHeight[1];
   }
   return screenPoint;
 };
@@ -8634,9 +8619,12 @@ Niivue.prototype.draw3D = function (
       azimuth,
       elevation
     );
+
+  let relativeLTWH = [...leftTopWidthHeight];
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
     //use full canvas
     leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
+    relativeLTWH = [...leftTopWidthHeight];
     this.screenSlices.push({
       leftTopWidthHeight: leftTopWidthHeight,
       axCorSag: SLICE_TYPE.RENDER,
@@ -8711,7 +8699,7 @@ Niivue.prototype.draw3D = function (
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
-  this.draw3DLabels(mvpMatrix, leftTopWidthHeight);
+  this.draw3DLabels(mvpMatrix, relativeLTWH);
   return posString;
 }; // draw3D()
 
