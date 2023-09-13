@@ -8645,7 +8645,7 @@ Niivue.prototype.draw3D = function (
     leftTopWidthHeight[1] =
       gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1];
   }
-  console.log("viewport ", leftTopWidthHeight);
+  
   gl.viewport(
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
