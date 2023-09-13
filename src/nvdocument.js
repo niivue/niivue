@@ -145,6 +145,12 @@ export const DEFAULT_OPTIONS = {
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
 };
 
+/**
+ * @typedef NVLabel3D
+ * @property {string} text
+ * @property {number[]} point
+ */
+
 /**Creates and instance of NVDocument
  * @class NVDocument
  * @type NVDocument
@@ -368,13 +374,17 @@ export class NVDocument {
 
   /**
    * Gets the 3D labels of the {@link Niivue} instance
+<<<<<<< HEAD
    * @returns {NVLabel3D}
+=======
+>>>>>>> 15d9a00 (Add 3d labels to document)
    */
   get labels() {
     return this.data.labels;
   }
 
   /**
+<<<<<<< HEAD
    * Sets the 3D labels of the {@link Niivue} instance
    * @param {NVLabel3D[]} labels
    */
@@ -383,6 +393,8 @@ export class NVDocument {
   }
 
   /**
+=======
+>>>>>>> 15d9a00 (Add 3d labels to document)
    * Checks if document has an image by id
    * @param {NVImage} image
    * @returns {boolean}
@@ -490,7 +502,11 @@ export class NVDocument {
     data.opts = { ...this.opts };
 
     // save our labels
+<<<<<<< HEAD
     data.labels = [...this.data.labels];
+=======
+    data.labels = { ...this.labels };
+>>>>>>> 15d9a00 (Add 3d labels to document)
 
     // volumes
     if (this.volumes.length) {
