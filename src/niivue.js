@@ -8500,6 +8500,11 @@ Niivue.prototype.isLabelPointVisible = function (point) {
   return Math.abs(pointToPlaneDistance) <= 0.1;
 };
 
+Niivue.prototype.addLabel = function(text, point) {
+  this.document.labels.push({text, point});
+}
+
+// not included in public docs
 Niivue.prototype.calculateScreenPoint = function (
   point,
   mvpMatrix,
@@ -8527,6 +8532,7 @@ Niivue.prototype.calculateScreenPoint = function (
   return screenPoint;
 };
 
+// not included in public docs
 Niivue.prototype.draw3DLabel = function (
   text,
   top,
@@ -8573,6 +8579,7 @@ Niivue.prototype.draw3DLabel = function (
   );
 };
 
+// not included in public docs
 Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
   let gl = this.gl;
   gl.viewport(0, 0, this.canvas.width, this.canvas.height);

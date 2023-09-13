@@ -129,6 +129,12 @@ export const DEFAULT_OPTIONS = {
   isAdditiveBlend: false,
 };
 
+/**
+ * @typedef NVLabel3D
+ * @property {string} text
+ * @property {number[]} point
+ */
+
 /**Creates and instance of NVDocument
  * @class NVDocument
  * @type NVDocument
@@ -142,6 +148,11 @@ export class NVDocument {
     this.data.meshOptionsArray = [];
     this.data.opts = { ...DEFAULT_OPTIONS };
     this.data.previewImageDataURL = "";
+
+    /**
+     * @type {NVLabel3D[]}
+     */
+    this.data.labels = [];
 
     /**
      * @typedef {Object} NVSceneData
@@ -346,6 +357,13 @@ export class NVDocument {
   }
 
   /**
+   * Gets the 3D labels of the {@link Niivue} instance
+   */
+  get labels() {
+    return this.data.labels;
+  }
+
+  /**
    * Checks if document has an image by id
    * @param {NVImage} image
    * @returns {boolean}
@@ -451,6 +469,9 @@ export class NVDocument {
 
     // save our options
     data.opts = { ...this.opts };
+
+    // save our labels
+    data.labels = { ...this.labels };
 
     // volumes
     if (this.volumes.length) {
