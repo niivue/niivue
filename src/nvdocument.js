@@ -132,7 +132,9 @@ export const DEFAULT_OPTIONS = {
 /**
  * @typedef NVLabel3D
  * @property {string} text
+ * @property {number[]} color
  * @property {number[]} point
+ * @property {number} bulletSize
  */
 
 /**Creates and instance of NVDocument

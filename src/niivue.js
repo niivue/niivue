@@ -83,6 +83,9 @@ import { NVUtilities } from "./nvutilities.js";
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
 
+const LEGEND_PADDING = 20;
+const LEGEND_VERTICAL_SPACING = 10;
+
 const log = new Log();
 
 /**
@@ -6871,6 +6874,38 @@ Niivue.prototype.effectiveCanvasHeight = function () {
   return this.gl.canvas.height - this.colorbarHeight;
 };
 
+Niivue.prototype.effectiveCanvasWidth = function() {
+  return this.gl.canvas.width - this.getLegendPanelWidth();
+}
+
+Niivue.prototype.getLegendPanelWidth = function() {
+  let width = 0;
+  for(const label of this.document.labels) {
+    width += this.textWidth(label.text);
+    // add bullet size width + padding
+  }
+
+  if(width) {
+    // add padding
+    width += LEGEND_PADDING;
+  }
+
+  return width;
+}
+
+Niivue.prototype.getLegendPanelHeight = function() {
+  let height = 0;
+  for(const label of this.document.labels) {
+    height += this.textHeight(label.text);
+  }
+
+  if(height) {
+    height += LEGEND_VERTICAL_SPACING * (this.document.labels.length + 1);
+  }
+
+  return height;
+}
+
 // not included in public docs
 // determine canvas pixels required for colorbar
 Niivue.prototype.reserveColorbarPanel = function () {
@@ -8559,7 +8594,7 @@ Niivue.prototype.draw3DLabel = function (
       screenPoint[0],
       screenPoint[1],
     ],
-    undefined,
+    2,
     [0.0, 0.0, 1.0, 1.0]
   );
 };
@@ -8645,7 +8680,7 @@ Niivue.prototype.draw3D = function (
     leftTopWidthHeight[1] =
       gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1];
   }
-  
+
   gl.viewport(
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
@@ -9049,7 +9084,7 @@ Niivue.prototype.scaleSlice = function (
   widthPadPixels = 0,
   heightPadPixels = 0
 ) {
-  let canvasW = this.canvas.width - widthPadPixels;
+  let canvasW = this.effectiveCanvasWidth() - widthPadPixels;
   let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
   let scalePix = canvasW / w;
   if (h * scalePix > canvasH) scalePix = canvasH / h;
