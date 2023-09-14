@@ -84,7 +84,7 @@ export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
 
 const LEGEND_PADDING = 20;
-const LEGEND_VERTICAL_SPACING = 10;
+const LEGEND_VERTICAL_SPACING = 20;
 
 const log = new Log();
 
@@ -6874,37 +6874,47 @@ Niivue.prototype.effectiveCanvasHeight = function () {
   return this.gl.canvas.height - this.colorbarHeight;
 };
 
-Niivue.prototype.effectiveCanvasWidth = function() {
+Niivue.prototype.effectiveCanvasWidth = function () {
   return this.gl.canvas.width - this.getLegendPanelWidth();
-}
+};
 
-Niivue.prototype.getLegendPanelWidth = function() {
+Niivue.prototype.getLegendPanelWidth = function () {
+  if (!this.opts.showLegend) {
+    return 0;
+  }
+  const scale = 1.0; // we may want to make this adjustable in the future
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
   let width = 0;
-  for(const label of this.document.labels) {
-    width += this.textWidth(label.text);
-    // add bullet size width + padding
+  for (const label of this.document.labels) {
+    const textWidth = this.textWidth(size, label.text);
+    if (textWidth > width) {
+      width = textWidth;
+    }
+    // TODO: add bullet size width + padding
   }
 
-  if(width) {
-    // add padding
-    width += LEGEND_PADDING;
+  if (width) {
+    // add padding (left and right)
+    width += LEGEND_PADDING * 2;
   }
 
   return width;
-}
+};
 
-Niivue.prototype.getLegendPanelHeight = function() {
+Niivue.prototype.getLegendPanelHeight = function () {
   let height = 0;
-  for(const label of this.document.labels) {
-    height += this.textHeight(label.text);
+  const scale = 1.0; // we may want to make this adjustable in the future
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  for (const label of this.document.labels) {
+    height += this.textHeight(size, label.text);
   }
 
-  if(height) {
+  if (height) {
     height += LEGEND_VERTICAL_SPACING * (this.document.labels.length + 1);
   }
 
   return height;
-}
+};
 
 // not included in public docs
 // determine canvas pixels required for colorbar
@@ -8525,8 +8535,13 @@ Niivue.prototype.isLabelPointVisible = function (point) {
   return Math.abs(pointToPlaneDistance) <= 0.1;
 };
 
-Niivue.prototype.addLabel = function (text, point) {
-  this.document.labels.push({ text, point });
+Niivue.prototype.addLabel = function (
+  text,
+  lineWidth = 1.0,
+  point = [0, 0, 0],
+  lineColor = this.opts.legendFontColor
+) {
+  this.document.labels.push({ text, point, lineColor, lineWidth });
 };
 
 // not included in public docs
@@ -8554,81 +8569,81 @@ Niivue.prototype.calculateScreenPoint = function (
 
 // not included in public docs
 Niivue.prototype.draw3DLabel = function (
-  text,
+  label,
+  left,
   top,
-  point,
   mvpMatrix,
   leftTopWidthHeight
 ) {
-  const padding = 10;
-  this.drawTextLeft(
-    [this.canvas.width - padding, top],
-    text,
-    1.01,
-    [1, 1, 1, 1]
-  );
-  this.drawTextLeft(
-    [this.canvas.width - padding, top],
-    text,
-    undefined,
-    this.opts.fontColor
-  );
+  const text = label.text;
+  const point = label.point;
+
+  // const padding = 10;
 
   const scale = 1.0;
   let size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
-  const width = this.textWidth(1.0, text) * size;
+  const firstLetterHeight = this.textHeight(scale, text.substr(0, 1)) * size;
+  this.drawText(
+    [left, top - firstLetterHeight / 2],
+    text,
+    1.0,
+    label.lineColor
+  );
+
+  // const width = this.textWidth(1.0, text) * size;
   // draw line
   const screenPoint = this.calculateScreenPoint(
     point,
     mvpMatrix,
     leftTopWidthHeight
   );
-  const firstLetterHeight = this.textHeight(scale, text.substr(0, 1)) * size;
-  this.drawLine(
-    [
-      this.canvas.width - width - padding,
-      top + firstLetterHeight / 2,
-      screenPoint[0],
-      screenPoint[1],
-    ],
-    2,
-    [0.0, 0.0, 1.0, 1.0]
-  );
+
+  if (label.lineWidth > 0.0) {
+    this.drawLine(
+      [
+        left - LEGEND_PADDING,
+        top + firstLetterHeight / 2,
+        screenPoint[0],
+        screenPoint[1],
+      ],
+      label.lineWidth,
+      label.lineColor
+    );
+  }
 };
 
 // not included in public docs
 Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
+  if (!this.opts.showLegend) {
+    return;
+  }
+
   let gl = this.gl;
   gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
+  const panelHeight = this.getLegendPanelHeight();
+  const panelWidth = this.getLegendPanelWidth();
+  const left = gl.canvas.width - panelWidth + LEGEND_PADDING;
+  let top = (this.canvas.height - panelHeight) / 2;
+  this.drawRect(
+    [gl.canvas.width - panelWidth, top, panelWidth, panelHeight],
+    this.opts.legendBackgroundColor
+  );
   const scale = 1.0;
   let size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
+  top += LEGEND_VERTICAL_SPACING;
+  for (const label of this.document.labels) {
+    this.draw3DLabel(label, left, top, mvpMatrix, leftTopWidthHeight);
 
-  let text = "center label";
-  this.draw3DLabel(
-    text,
-    this.canvas.height / 2,
-    [0.0, 0.0, 0.0],
-    mvpMatrix,
-    leftTopWidthHeight
-  );
-  const height = this.textHeight(scale, text) * size;
-
-  text = "hippo label";
-
-  this.draw3DLabel(
-    text,
-    this.canvas.height / 2 + height * 2,
-    [-25, -15.0, -25.0],
-    mvpMatrix,
-    leftTopWidthHeight
-  );
+    top += this.textHeight(size, label.text);
+    top += LEGEND_VERTICAL_SPACING;
+  }
 };
 
 // not included in public docs

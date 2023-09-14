@@ -127,6 +127,9 @@ export const DEFAULT_OPTIONS = {
   isAntiAlias: null,
   limitFrames4D: NaN,
   isAdditiveBlend: false,
+  showLegend: true, // if a document has labels the default is to show them
+  legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
+  legendFontColor: [1.0, 1.0, 1.0, 1.0],
 };
 
 /**
@@ -473,7 +476,7 @@ export class NVDocument {
     data.opts = { ...this.opts };
 
     // save our labels
-    data.labels = { ...this.labels };
+    data.labels = [...this.data.labels];
 
     // volumes
     if (this.volumes.length) {
@@ -656,6 +659,7 @@ export class NVDocument {
   static loadFromJSON(data) {
     let document = new NVDocument();
     document.data = data;
+    console.log(document.data);
     document.scene.sceneData = data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);

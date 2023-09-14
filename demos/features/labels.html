@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Labels</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>niivue requires JavaScript.</noscript>
+  <header>
+    <select id="sliceType">      
+      <option value="4">Render</option>
+      <option value="3" selected>A+C+S+R</option>
+    </select>
+    Save the current scene as HTML
+    <button id="save">Save as HTML</button>
+  </header>
+  <main>
+    <canvas id="gl1"></canvas>
+
+  </main>
+  <script type="module" async>
+    import * as niivue from "./niivue.es.js";
+    function saveAsHtml() {
+      nv1.saveHTML("page.html");
+    }
+
+    function setSliceType() {
+      let st = parseInt(document.getElementById("sliceType").value);
+      nv1.setSliceType(st);
+    }
+
+    var volumeList1 = [
+      {
+        url: "../images/mni152.nii.gz",
+        colormap: "gray",
+        visible: true,
+        opacity: 1
+      },
+      {
+        url: "../images/hippo.nii.gz",
+        colormap: "red",
+        visible: true,
+        opacity: 1
+      }
+    ];
+
+    // assign our event handler
+    var button = document.getElementById("save");
+    button.onclick = saveAsHtml;
+    var drop = document.getElementById("sliceType");
+    drop.onchange = setSliceType;
+
+    var nv1 = new niivue.Niivue();
+    nv1.attachTo("gl1");
+    nv1.loadVolumes(volumeList1);
+    nv1.addLabel("center", 2.0, [0.0, 0.0, 0.0]);
+    nv1.addLabel("hippocampus", 2.0, [-25, -15.0, -25.0], [1, 0, 0, 1]);
+    nv1.addLabel("no line", 0.0)
+  </script>
+</body>
+
+</html>
