@@ -143,6 +143,9 @@ export const DEFAULT_OPTIONS = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
+  showLegend: true, // if a document has labels the default is to show them
+  legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
+  legendFontColor: [1.0, 1.0, 1.0, 1.0],
 };
 
 /**
@@ -503,10 +506,14 @@ export class NVDocument {
 
     // save our labels
 <<<<<<< HEAD
+<<<<<<< HEAD
     data.labels = [...this.data.labels];
 =======
     data.labels = { ...this.labels };
 >>>>>>> 15d9a00 (Add 3d labels to document)
+=======
+    data.labels = [...this.data.labels];
+>>>>>>> 5d68cfb (Added legend for labels)
 
     // volumes
     if (this.volumes.length) {

@@ -92,12 +92,18 @@ import {
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
+<<<<<<< HEAD
 export {
   LabelTextAlignment,
   LabelLineTerminator,
   NVLabel3DStyle,
   NVLabel3D,
 } from "./nvlabel.js";
+=======
+
+const LEGEND_PADDING = 20;
+const LEGEND_VERTICAL_SPACING = 20;
+>>>>>>> 5d68cfb (Added legend for labels)
 
 const log = new Log();
 
@@ -7078,6 +7084,7 @@ Niivue.prototype.effectiveCanvasWidth = function () {
   return this.gl.canvas.width - this.getLegendPanelWidth();
 };
 
+<<<<<<< HEAD
 Niivue.prototype.getBulletMarginWidth = function () {
   const widestBulletScale = this.document.labels.reduce((a, b) =>
     a.style.bulletScale > b.style.bulletScale ? a : b
@@ -7121,6 +7128,27 @@ Niivue.prototype.getLegendPanelWidth = function () {
       this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b;
     return longer;
   });
+=======
+Niivue.prototype.getLegendPanelWidth = function () {
+  if (!this.opts.showLegend) {
+    return 0;
+  }
+  const scale = 1.0; // we may want to make this adjustable in the future
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let width = 0;
+  for (const label of this.document.labels) {
+    const textWidth = this.textWidth(size, label.text);
+    if (textWidth > width) {
+      width = textWidth;
+    }
+    // TODO: add bullet size width + padding
+  }
+
+  if (width) {
+    // add padding (left and right)
+    width += LEGEND_PADDING * 2;
+  }
+>>>>>>> 5d68cfb (Added legend for labels)
 
   const longestTextSize =
     this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale;
@@ -7138,6 +7166,7 @@ Niivue.prototype.getLegendPanelWidth = function () {
 Niivue.prototype.getLegendPanelHeight = function () {
   let height = 0;
   const scale = 1.0; // we may want to make this adjustable in the future
+<<<<<<< HEAD
   let verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
   for (const label of this.document.labels) {
     const labelSize =
@@ -7148,6 +7177,15 @@ Niivue.prototype.getLegendPanelHeight = function () {
 
   if (height) {
     height += (verticalMargin / 2) * (this.document.labels.length + 1);
+=======
+  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  for (const label of this.document.labels) {
+    height += this.textHeight(size, label.text);
+  }
+
+  if (height) {
+    height += LEGEND_VERTICAL_SPACING * (this.document.labels.length + 1);
+>>>>>>> 5d68cfb (Added legend for labels)
   }
 
   return height;
@@ -8748,6 +8786,7 @@ Niivue.prototype.isPlaneVisible = function (mvpMatrix) {
   return isVisible;
 };
 
+<<<<<<< HEAD
 /**
  * Add a 3D Label
  * @param {string} text text of the label
@@ -8775,6 +8814,39 @@ Niivue.prototype.addLabel = function (text, style, points = undefined) {
   const label = new NVLabel3D(text, labelStyle, points);
   this.document.labels.push(label);
   return label;
+=======
+// Check if a point is visible
+Niivue.prototype.isLabelPointVisible = function (point) {
+  // xyz
+  const xyz = this.scene.clipPlane.slice(1);
+  const planeNormal = mat.vec3.create();
+  mat.vec3.normalize(planeNormal, xyz);
+  const planeLength = mat.vec3.length(planeNormal);
+  const unitNormal = mat.vec3.divide(unitNormal, planeNormal, planeLength);
+  const vecPoint = mat.vec3.fromValues(...point);
+  // Calculate the distance between the point and the clip plane
+  // const pointToPlaneDistance = mat.vec3.dot(
+  //   mat.vec3.subtract(
+  //     mat.vec3.create(),
+  //     mat.vec3.fromValues(...point),
+  //     mat.vec3.fromValues(...this.scene.clipPlane.slice(1))
+  //   ),
+  //   this.scene.clipPlane
+  // );
+  const pointToPlaneDistance = mat.vec3.dot(vecPoint, unitNormal);
+  console.log("distance from clip plane: ", pointToPlaneDistance);
+  // Check if the point is within 0.1 units of the clip plane
+  return Math.abs(pointToPlaneDistance) <= 0.1;
+};
+
+Niivue.prototype.addLabel = function (
+  text,
+  lineWidth = 1.0,
+  point = [0, 0, 0],
+  lineColor = this.opts.legendFontColor
+) {
+  this.document.labels.push({ text, point, lineColor, lineWidth });
+>>>>>>> 5d68cfb (Added legend for labels)
 };
 
 // not included in public docs
@@ -8838,7 +8910,12 @@ Niivue.prototype.drawLabelLine = function (
 // not included in public docs
 Niivue.prototype.draw3DLabel = function (
   label,
+<<<<<<< HEAD
   pos,
+=======
+  left,
+  top,
+>>>>>>> 5d68cfb (Added legend for labels)
   mvpMatrix,
   leftTopWidthHeight,
   bulletMargin,
@@ -8846,6 +8923,12 @@ Niivue.prototype.draw3DLabel = function (
   secondPass = false
 ) {
   const text = label.text;
+<<<<<<< HEAD
+=======
+  const point = label.point;
+
+  // const padding = 10;
+>>>>>>> 5d68cfb (Added legend for labels)
 
   let left = pos[0];
   let top = pos[1];
@@ -8854,6 +8937,7 @@ Niivue.prototype.draw3DLabel = function (
   const size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+<<<<<<< HEAD
     1.0;
 
   const textHeight = this.textHeight(label.style.textScale, text) * size;
@@ -8909,18 +8993,66 @@ Niivue.prototype.draw3DLabels = function (
   secondPass = false
 ) {
   if (!this.opts.showLegend || this.document.labels.length == 0) {
+=======
+    scale;
+  const firstLetterHeight = this.textHeight(scale, text.substr(0, 1)) * size;
+  this.drawText(
+    [left, top - firstLetterHeight / 2],
+    text,
+    1.0,
+    label.lineColor
+  );
+
+  // const width = this.textWidth(1.0, text) * size;
+  // draw line
+  const screenPoint = this.calculateScreenPoint(
+    point,
+    mvpMatrix,
+    leftTopWidthHeight
+  );
+
+  if (label.lineWidth > 0.0) {
+    this.drawLine(
+      [
+        left - LEGEND_PADDING,
+        top + firstLetterHeight / 2,
+        screenPoint[0],
+        screenPoint[1],
+      ],
+      label.lineWidth,
+      label.lineColor
+    );
+  }
+};
+
+// not included in public docs
+Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
+  if (!this.opts.showLegend) {
+>>>>>>> 5d68cfb (Added legend for labels)
     return;
   }
 
   let gl = this.gl;
   gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
+  const panelHeight = this.getLegendPanelHeight();
+  const panelWidth = this.getLegendPanelWidth();
+  const left = gl.canvas.width - panelWidth + LEGEND_PADDING;
+  let top = (this.canvas.height - panelHeight) / 2;
+  this.drawRect(
+    [gl.canvas.width - panelWidth, top, panelWidth, panelHeight],
+    this.opts.legendBackgroundColor
+  );
   const scale = 1.0;
   let size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
+  top += LEGEND_VERTICAL_SPACING;
+  for (const label of this.document.labels) {
+    this.draw3DLabel(label, left, top, mvpMatrix, leftTopWidthHeight);
 
+<<<<<<< HEAD
   const bulletMargin = this.getBulletMarginWidth();
   const panelHeight = this.getLegendPanelHeight();
   const panelWidth = this.getLegendPanelWidth();
@@ -8962,6 +9094,10 @@ Niivue.prototype.draw3DLabels = function (
     if (blend) {
       gl.enable(gl.BLEND);
     }
+=======
+    top += this.textHeight(size, label.text);
+    top += LEGEND_VERTICAL_SPACING;
+>>>>>>> 5d68cfb (Added legend for labels)
   }
 };
 
