@@ -15,6 +15,7 @@
       it to continue.</strong>
   </noscript>
   <header>
+<<<<<<< HEAD
     <label for="xRaySlider">XRay</label>
       <input
         type="range"
@@ -60,6 +61,14 @@ let connectome = {
 </textarea>
     &nbsp;<button id="custom">Custom Connectome</button>&nbsp;
     </footer>  
+=======
+    <label for="nodeSlider">Size</label>
+    <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>  
+>>>>>>> 86ef886 (Added bullets)
 </body>
 
 </html>
@@ -69,6 +78,7 @@ let connectome = {
     nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", this.value * 0.1);
   };
 
+<<<<<<< HEAD
   xRaySlider.onchange = function () {
     nv1.opts.meshXRay = this.value / 10;
     nv1.drawScene();
@@ -78,6 +88,8 @@ let connectome = {
       nv1.saveHTML("connectome.html");
   }
 
+=======
+>>>>>>> 86ef886 (Added bullets)
   var volumeList1 = [
     // first item is background image
     {
@@ -85,6 +97,7 @@ let connectome = {
       colormap: "gray",
     },
   ];
+<<<<<<< HEAD
   
   var nv1 = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true });
   nv1.attachTo("gl1");
@@ -92,6 +105,17 @@ let connectome = {
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.opts.multiplanarForceRender = true;
   nv1.opts.meshXRay = 0.2;
+=======
+  let opts = {
+    show3Dcrosshair: true,
+    backColor: [0.8, 0.8, 1, 1],
+  };
+  var nv1 = new niivue.Niivue(opts);
+  nv1.attachTo("gl1");
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.opts.multiplanarForceRender = true;
+  nv1.opts.meshXRay = 0.3;
+>>>>>>> 86ef886 (Added bullets)
   await nv1.loadVolumes(volumeList1);
 
   let connectome = {
@@ -121,6 +145,7 @@ let connectome = {
   nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", 3);
   nv1.setClipPlane([-0.1, 270, 0]);
 
+<<<<<<< HEAD
   let custom = document.getElementById("custom");
   custom.onclick = () => {
     let val = document.getElementById("scriptText").value;
@@ -130,5 +155,7 @@ let connectome = {
 
   let saveButton = document.getElementById("save");
     saveButton.onclick = saveAsHtml;
+=======
+>>>>>>> 86ef886 (Added bullets)
     
 </script>
