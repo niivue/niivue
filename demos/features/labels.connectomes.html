@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Connectome</title>
+  <link rel="stylesheet" href="niivue.css" />
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable
+      it to continue.</strong>
+  </noscript>
+  <header>
+    <label for="nodeSlider">Size</label>
+    <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>  
+</body>
+
+</html>
+<script src="./niivue.umd.js"></script>
+<script type="module" async>
+  nodeSlider.oninput = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", this.value * 0.1);
+  };
+
+  var volumeList1 = [
+    // first item is background image
+    {
+      url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+      colormap: "gray",
+    },
+  ];
+  let opts = {
+    show3Dcrosshair: true,
+    backColor: [0.8, 0.8, 1, 1],
+  };
+  var nv1 = new niivue.Niivue(opts);
+  nv1.attachTo("gl1");
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.opts.multiplanarForceRender = true;
+  nv1.opts.meshXRay = 0.3;
+  await nv1.loadVolumes(volumeList1);
+
+  let connectome = {
+      name: "simpleConnectome",
+      nodeColormap: "warm",
+      nodeColormapNegative: "winter",
+      nodeMinColor: 2,
+      nodeMaxColor: 4,
+      nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+      edgeColormap: "warm",
+      edgeColormapNegative: "winter",
+      edgeMin: 2,
+      edgeMax: 6,
+      edgeScale: 1,
+      nodes: {
+        names: ["RF", "LF", "RP", "LP"], //currently unused
+        X: [40, -40, 40, -40], //Xmm for each node
+        Y: [40, 40, -40, -40], //Ymm for each node
+        Z: [30, 20, 50, 50], //Zmm for each node
+        Color: [2, 2, 3, 4], //Used to interpolate color
+        Size: [2, 2, 3, 4], //Size of node
+      },
+      edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
+    };
+
+  await nv1.loadConnectome(connectome);
+  nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", 3);
+  nv1.setClipPlane([-0.1, 270, 0]);
+
+    
+</script>

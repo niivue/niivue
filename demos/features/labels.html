@@ -58,9 +58,13 @@
     var nv1 = new niivue.Niivue();
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
-    nv1.addLabel("center", 2.0, [0.0, 0.0, 0.0]);
-    nv1.addLabel("hippocampus", 2.0, [-25, -15.0, -25.0], [1, 0, 0, 1]);
-    nv1.addLabel("no line", 0.0)
+    nv1.addLabel("center", undefined, undefined, undefined, 2.0, undefined, [0.0, 0.0, 0.0]);
+    nv1.addLabel("hippocampus", undefined, undefined, undefined, 2.0, [1, 0, 0, 1], [-25, -15.0, -25.0]);
+    // nv1.addLabel("no line", [0, 0, 1, 1], undefined, undefined, 0.0);
+    nv1.addLabel("small bullet", [0, 1, 0, 1], [10, 10], [0, 1, 0, 1], 0.0);
+    nv1.addLabel("big bullet", [0, 0, 1, 1], [50, 50], [0, 0, 1, 1], 0.0);
+    nv1.addLabel("normal bullet", [1, 0, 1, 1], [30, 30], [1, 0, 1, 1], 0.0);
+    nv1.addLabel("another bullet", [1, 1, 0, 1], [20, 20], [1, 1, 0, 1], 0.0);
   </script>
 </body>
 

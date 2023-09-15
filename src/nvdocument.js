@@ -129,15 +129,18 @@ export const DEFAULT_OPTIONS = {
   isAdditiveBlend: false,
   showLegend: true, // if a document has labels the default is to show them
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
-  legendFontColor: [1.0, 1.0, 1.0, 1.0],
+  legendTextColor: [1.0, 1.0, 1.0, 1.0],
 };
 
 /**
  * @typedef NVLabel3D
  * @property {string} text
- * @property {number[]} color
+ * @property {number[]} textColor
+ * @property {number[]} bulletSize width and height of bullets in pixels
+ * @property {number[]} bulletColor
+ * @property {number} lineWidth
+ * @property {number[]} lineColor
  * @property {number[]} point
- * @property {number} bulletSize
  */
 
 /**Creates and instance of NVDocument
