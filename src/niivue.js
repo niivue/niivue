@@ -8604,32 +8604,26 @@ Niivue.prototype.draw3DLabel = function (
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
 
-  const firstLetter = text.substr(0, 1);
-  const firstLetterHeight = this.textHeight(scale, firstLetter) * size;
+  // const firstLetter = text.substr(0, 1);
+  const textHeight = this.textHeight(scale, text) * size;
 
   if (label.bulletSize && label.bulletSize[1]) {
-    const rectLeft = left + (bulletMargin - label.bulletSize[0]) / 2;
     let rectTop = top;
-    console.log("bullet size", label.bulletSize);
-
-    if (label.bulletSize[1] > firstLetterHeight) {
-      // move the text down
-      top -= (label.bulletSize[1] - firstLetterHeight) / 2;
-    } else {
-      // move the bullet down
-      rectTop += firstLetterHeight - label.bulletSize[1];
+    const diff = label.bulletSize[1] - textHeight;
+    const rectLeft = left + (bulletMargin - label.bulletSize[0]) / 2;
+    if (diff < 0) {
+      rectTop += label.bulletSize[1] / 2;
     }
-
+    top += label.bulletSize[1] / 2;
     this.drawRect([rectLeft, rectTop, ...label.bulletSize], label.bulletColor);
   }
 
   let textLeft = left;
-  textLeft += bulletMargin; //label.bulletSize[0];
+  textLeft += bulletMargin;
   textLeft += LEGEND_PADDING;
 
-  this.drawText([textLeft, top], text, 1.0, label.textColor);
+  this.drawTextRight([textLeft, top], text, 1.0, label.textColor);
 
-  // const width = this.textWidth(1.0, text) * size;
   // draw line
   const screenPoint = this.calculateScreenPoint(
     point,
@@ -8641,7 +8635,7 @@ Niivue.prototype.draw3DLabel = function (
     this.drawLine(
       [
         left - LEGEND_PADDING,
-        top + firstLetterHeight / 2,
+        top + textHeight / 2,
         screenPoint[0],
         screenPoint[1],
       ],
