@@ -976,7 +976,7 @@ Niivue.prototype.mouseDownListener = function (e) {
     e,
     this.gl.canvas
   );
-  let [x,y] = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+  let [x, y] = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
   this.uiData.clickedTile = this.tileIndex(x, y);
   //respond to different types of mouse clicks
   if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
@@ -8530,7 +8530,6 @@ Niivue.prototype.drawMesh3D = function (
 
   gl.disable(gl.BLEND);
   gl.depthFunc(gl.GREATER);
-
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
@@ -8538,7 +8537,11 @@ Niivue.prototype.drawMesh3D = function (
     gl.enable(gl.BLEND);
     gl.depthFunc(gl.ALWAYS);
   }
-  gl.disable(gl.CULL_FACE); //show front and back faces
+  gl.cullFace(gl.BACK); //CR: issue700
+  //show front and back face for mesh clipping https://niivue.github.io/niivue/features/worldspace2.html
+  if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
+  else gl.enable(gl.CULL_FACE); //issue700: only show front faces
+  //gl.frontFace(gl.CCW); //issue700: we now require CCW
   //Draw the mesh
   let shader = this.meshShaders[0];
   //this.meshShaderIndex
