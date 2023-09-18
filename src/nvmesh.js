@@ -423,7 +423,7 @@ NVMesh.prototype.updateFibers = function (gl) {
     new Uint32Array(indices),
     gl.STATIC_DRAW
   );
-};
+}; // updateFibers()
 
 // not included in public docs
 // internal function filters connectome to identify which color, size and visibility of nodes and edges
@@ -1804,7 +1804,7 @@ NVMesh.readNV = function (buffer) {
   let positions = [];
   let indices = [];
   while (pos < len) {
-    let line = readStr(); //1st line: '#!ascii version of lh.pial'
+    let line = readStr();
     if (line.startsWith("#")) continue;
     let items = line.trim().split(/\s+/);
     if (nvert < 1) {

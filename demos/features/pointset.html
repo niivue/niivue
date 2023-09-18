@@ -46,10 +46,16 @@
         id="nodeSlider"
       />
       <label for="checkEdit">Edit</label>
-      <input type="checkbox" id="checkEdit" unchecked />
-      <label for="checkXRay">XRay</label>
-      <input type="checkbox" id="checkXRay" unchecked />
-
+      <input type="checkbox" id="checkEdit" checked />
+      <label for="xRaySlider">XRay</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="2"
+        class="slider"
+        id="xRaySlider"
+      />
       <button id="about">About</button>
     </header>
     <main>
@@ -64,7 +70,11 @@
         );
       }
       nodeSlider.onchange = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", nodeSlider.value);
+        nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", this.value);
+      };
+      xRaySlider.onchange = function () {
+        nv1.opts.meshXRay = this.value / 10;
+        nv1.drawScene();
       };
       pointID.onchange = function () {
         let num = this.value;
@@ -177,10 +187,6 @@
             document.getElementById("dragMode").dispatchEvent(new Event("change"));
         }
       }
-      checkXRay.onchange = function () {
-        nv1.opts.meshXRay = this.checked * 0.8;
-        nv1.drawScene();
-      }
       let defaults = {
         loadingText: "there are no images",
         backColor: [1, 1, 1, 1],
@@ -191,10 +197,10 @@
       nv1.setRadiologicalConvention(false);
       nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      nv1.graph.autoSizeMultiplanar = true;
       nv1.opts.multiplanarForceRender = true;
-      nv1.graph.normalizeValues = false;
       nv1.graph.opacity = 1.0;
+      nv1.opts.meshXRay = 0.2;
+      nv1.setClipPlane([0.09, 180, 20]);
       await nv1.loadVolumes(volumeList1);
       await nv1.loadMeshes([
         { url: "../images/FreeSurferControlPoints.json" },
