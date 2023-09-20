@@ -26,7 +26,7 @@
   <script type="module" async>
     import * as niivue from "./niivue.es.js";
     function saveAsHtml() {
-      nv1.saveHTML("page.html");
+      nv1.saveHTML("labels.html");
     }
 
     function setSliceType() {
@@ -58,13 +58,16 @@
     var nv1 = new niivue.Niivue();
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
-    nv1.addLabel("center", undefined, undefined, undefined, 2.0, undefined, [0.0, 0.0, 0.0]);
-    nv1.addLabel("hippocampus", undefined, undefined, undefined, 2.0, [1, 0, 0, 1], [-25, -15.0, -25.0]);
-    // nv1.addLabel("no line", [0, 0, 1, 1], undefined, undefined, 0.0);
-    nv1.addLabel("small bullet", [0, 1, 0, 1], [10, 10], [0, 1, 0, 1], 0.0);
-    nv1.addLabel("big bullet", [0, 0, 1, 1], [50, 50], [0, 0, 1, 1], 0.0);
-    nv1.addLabel("normal bullet", [1, 0, 1, 1], [30, 30], [1, 0, 1, 1], 0.0);
-    nv1.addLabel("another bullet", [1, 1, 0, 1], [20, 20], [1, 1, 0, 1], 0.0);
+    nv1.addLabel("center", undefined, undefined, undefined, 3.0, undefined, [0.0, 0.0, 0.0]);
+    nv1.addLabel("hippocampus", undefined, undefined, undefined, 3.0, [1, 0, 0, 1], [-25, -15.0, -25.0]);
+    nv1.addLabel("no line", [0, 0, 1, 1], undefined, undefined, 0.0);
+    nv1.addLabel("small bullet", [0, 1, 0, 1], .1, [0, 1, 0, 1], 0.0);
+    nv1.addLabel("big bullet", [0, 0, 1, 1], .5, [0, 0, 1, 1], 0.0);
+    nv1.addLabel("normal bullet", undefined, .3, [1, 0, 1, 1], 0.0);
+    nv1.addLabel("another bullet", [1, 1, 0, 1], .2, [1, 1, 0, 1], 0.0);
+    nv1.addLabel("big bullet", undefined, .8, [1, 1, 0, 1], 0.0);
+    nv1.addLabel("super tall bullet", undefined, 1.0, [1, 0, 1, 1], 0.0);
+    nv1.addLabel("jkl bullet", undefined, 1.0, [1, 0, 0, 1], 0.0);
   </script>
 </body>
 

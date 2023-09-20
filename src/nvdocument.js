@@ -136,7 +136,7 @@ export const DEFAULT_OPTIONS = {
  * @typedef NVLabel3D
  * @property {string} text
  * @property {number[]} textColor
- * @property {number[]} bulletSize width and height of bullets in pixels
+ * @property {number[]} bulletScale scale of bullets size with respect to text size
  * @property {number[]} bulletColor
  * @property {number} lineWidth
  * @property {number[]} lineColor
