@@ -142,6 +142,7 @@ export function NVMesh(
     return;
   } //if fiber not mesh
   if (connectome) {
+    this.connectome = connectome;
     this.hasConnectome = true;
     var keysArray = Object.keys(connectome);
     for (var i = 0, len = keysArray.length; i < len; i++) {
@@ -1010,8 +1011,12 @@ following conditions are met:
 // Each streamline vertex has color, normal and position attributes
 // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
 NVMesh.prototype.generatePosNormClr = function (pts, tris, rgba255) {
-  if (pts.length < 3 || rgba255.length < 4)
+  if (pts.length < 3 || rgba255.length < 4) {
     log.error("Catastrophic failure generatePosNormClr()");
+    console.log("this", this);
+    console.log("pts", pts);
+    console.log("rgba", rgba255);
+  }
   let norms = generateNormals(pts, tris);
   let npt = pts.length / 3;
   let isPerVertexColors = npt === rgba255.length / 4;

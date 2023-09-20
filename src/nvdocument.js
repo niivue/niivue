@@ -366,9 +366,18 @@ export class NVDocument {
 
   /**
    * Gets the 3D labels of the {@link Niivue} instance
+   * @returns {NVLabel3D}
    */
   get labels() {
     return this.data.labels;
+  }
+
+  /**
+   * Sets the 3D labels of the {@link Niivue} instance
+   * @param {NVLabel3D[]} labels
+   */
+  set labels(labels) {
+    this.data.labels = labels;
   }
 
   /**
@@ -574,13 +583,29 @@ export class NVDocument {
       copyMesh.name = mesh.name;
       copyMesh.rgba255 = mesh.rgba255;
       copyMesh.opacity = mesh.opacity;
-      copyMesh.connectome = mesh.connectome;
+      copyMesh.connectome = { ...mesh.connectome };
       copyMesh.dpg = mesh.dpg;
       copyMesh.dps = mesh.dps;
       copyMesh.dpv = mesh.dpv;
       copyMesh.meshShaderIndex = mesh.meshShaderIndex;
       copyMesh.layers = [];
-
+      copyMesh.hasConnectome = mesh.hasConnectome;
+      copyMesh.edgeColormap = mesh.edgeColormap;
+      copyMesh.edgeColormapNegative = mesh.edgeColormapNegative;
+      copyMesh.edgeMax = mesh.edgeMax;
+      copyMesh.edgeMin = mesh.edgeMin;
+      copyMesh.edges = [...mesh.edges];
+      copyMesh.extentsMax = [...mesh.extentsMax];
+      copyMesh.extentsMin = [...mesh.extentsMin];
+      copyMesh.fiberGroupColormap = mesh.fiberGroupColormap;
+      copyMesh.furthestVertexFromOrigin = mesh.furthestVertexFromOrigin;
+      copyMesh.nodeColormap = mesh.nodeColormap;
+      copyMesh.nodeColormapNegative = mesh.nodeColormapNegative;
+      copyMesh.nodeMaxColor = mesh.nodeMaxColor;
+      copyMesh.nodeMinColor = mesh.nodeMinColor;
+      copyMesh.nodeScale = mesh.nodeScale;
+      copyMesh.offsetPt0 = mesh.offsetPt0;
+      copyMesh.nodes = { ...mesh.nodes };
       for (const layer of mesh.layers) {
         const copyLayer = {};
         copyLayer.values = layer.values;

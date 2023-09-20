@@ -83,9 +83,6 @@ import { NVUtilities } from "./nvutilities.js";
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
 
-const LEGEND_PADDING = 20;
-const LEGEND_VERTICAL_SPACING = 20;
-
 const log = new Log();
 
 /**
@@ -3616,6 +3613,79 @@ Niivue.prototype.loadConnectome = async function (json) {
   let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
   this.uiData.loading$.next(false);
   this.addMesh(mesh);
+
+  // add labels for each node
+  if (json.nodes) {
+    // remove any previous node labels
+    // if (this.nodeLabels) {
+    //   this.document.labels = this.document.labels.filter(
+    //     (l) => !this.nodeLabels.includes(l)
+    //   );
+    // }
+
+    // this.nodeLabels = [];
+    this.document.labels = [];
+    const nodes = json.nodes;
+    if (
+      "names" in nodes &&
+      "X" in nodes &&
+      "Y" in nodes &&
+      "Z" in nodes &&
+      "Color" in nodes &&
+      "Size" in nodes
+    ) {
+      // largest node
+      const largest = nodes.Size.reduce((a, b) => (a > b ? a : b));
+      const min = json.nodeMinColor
+        ? json.nodeMinColor
+        : nodes.Color.reduce((a, b) => (a < b ? a : b));
+      const max = json.nodeMaxColor
+        ? json.nodeMaxColor
+        : nodes.Color.reduce((a, b) => (a > b ? a : b));
+      let lut = cmapper.colormap(json.nodeColormap, mesh.colormapInvert);
+      let lutNeg = cmapper.colormap(
+        json.nodeColormapNegative,
+        mesh.colormapInvert
+      );
+
+      const hasNeg = "nodeColormapNegative" in nodes;
+      const lineThickness = nodes.lineThickness ? nodes.lineThickness : 0.0;
+
+      for (let i = 0; i < nodes.names.length; i++) {
+        let color = nodes.Color[i];
+        let isNeg = false;
+        if (hasNeg && color < 0) {
+          isNeg = true;
+          color = -color;
+        }
+
+        if (min < max) {
+          if (color < min) continue;
+          color = (color - min) / (max - min);
+        } else color = 1.0;
+
+        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg) {
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+        }
+        rgba = rgba.map((c) => c / 255);
+
+        // const label =
+        this.addLabel(
+          nodes.names[i],
+          undefined,
+          nodes.Size[i] / largest,
+          rgba,
+          lineThickness,
+          rgba,
+          [nodes.Z[i], nodes.Y[i], nodes.X[i]]
+        );
+        // this.nodeLabels.push(label);
+      }
+    }
+  }
+
   //this.meshes.push(mesh);
   //this.updateGLVolume();
   // } // for
@@ -8576,7 +8646,7 @@ Niivue.prototype.addLabel = function (
   lineColor = this.opts.legendTextColor,
   point = [0, 0, 0]
 ) {
-  this.document.labels.push({
+  const label = {
     text,
     textColor,
     bulletScale: Math.min(1.0, bulletScale),
@@ -8584,7 +8654,9 @@ Niivue.prototype.addLabel = function (
     lineWidth,
     lineColor,
     point,
-  });
+  };
+  this.document.labels.push(label);
+  return label;
 };
 
 // not included in public docs
@@ -8646,7 +8718,6 @@ Niivue.prototype.draw3DLabel = function (
 
   let textLeft = left;
   textLeft += bulletMargin;
-  textLeft += LEGEND_PADDING;
 
   this.drawText([textLeft, top], text, 1.0, label.textColor);
 
@@ -8659,7 +8730,7 @@ Niivue.prototype.draw3DLabel = function (
 
   if (label.lineWidth > 0.0) {
     this.drawLine(
-      [left - LEGEND_PADDING, top + size / 2, screenPoint[0], screenPoint[1]],
+      [left - size, top + size / 2, screenPoint[0], screenPoint[1]],
       label.lineWidth,
       label.lineColor
     );
@@ -8684,7 +8755,7 @@ Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
   const bulletMargin = this.getBulletMarginWidth();
   const panelHeight = this.getLegendPanelHeight();
   const panelWidth = this.getLegendPanelWidth();
-  const left = gl.canvas.width - panelWidth + LEGEND_PADDING;
+  const left = gl.canvas.width - panelWidth;
   let top = (this.canvas.height - panelHeight) / 2;
   this.drawRect(
     [gl.canvas.width - panelWidth, top, panelWidth - size, panelHeight],
