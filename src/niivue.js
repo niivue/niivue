@@ -8688,10 +8688,16 @@ Niivue.prototype.draw3DLabel = function (
   pos,
   mvpMatrix,
   leftTopWidthHeight,
-  bulletMargin
+  bulletMargin,
+  secondPass = false
 ) {
   const text = label.text;
   const point = label.point;
+  const screenPoint = this.calculateScreenPoint(
+    point,
+    mvpMatrix,
+    leftTopWidthHeight
+  );
   let left = pos[0];
   let top = pos[1];
 
@@ -8700,6 +8706,16 @@ Niivue.prototype.draw3DLabel = function (
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
+
+  if (!secondPass) {
+    // draw line
+    this.drawLine(
+      [left, top + size / 2, screenPoint[0], screenPoint[1]],
+      label.lineWidth,
+      label.lineColor
+    );
+    return;
+  }
 
   // const firstLetter = text.substr(0, 1);
   const textHeight = this.textHeight(scale, text) * size;
@@ -8721,15 +8737,8 @@ Niivue.prototype.draw3DLabel = function (
 
   this.drawText([textLeft, top], text, 1.0, label.textColor);
 
-  // draw line
-  const screenPoint = this.calculateScreenPoint(
-    point,
-    mvpMatrix,
-    leftTopWidthHeight
-  );
-
   if (label.lineWidth > 0.0) {
-    this.drawLine(
+    this.drawDottedLine(
       [left, top + size / 2, screenPoint[0], screenPoint[1]],
       label.lineWidth,
       label.lineColor
@@ -8738,7 +8747,11 @@ Niivue.prototype.draw3DLabel = function (
 };
 
 // not included in public docs
-Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
+Niivue.prototype.draw3DLabels = function (
+  mvpMatrix,
+  leftTopWidthHeight,
+  secondPass = false
+) {
   if (!this.opts.showLegend || this.document.labels.length == 0) {
     return;
   }
@@ -8762,6 +8775,16 @@ Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
     this.opts.legendBackgroundColor
   );
 
+  const blend = gl.getParameter(gl.BLEND);
+  const depthFunc = gl.getParameter(gl.DEPTH_FUNC);
+
+  if (!secondPass) {
+    const gl = this.gl;
+
+    gl.disable(gl.BLEND);
+    gl.depthFunc(gl.GREATER);
+  }
+
   // top += size / 2;
   for (const label of this.document.labels) {
     this.draw3DLabel(
@@ -8769,12 +8792,21 @@ Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
       [left, top],
       mvpMatrix,
       leftTopWidthHeight,
-      bulletMargin
+      bulletMargin,
+      secondPass
     );
+
     let textHeight = this.textHeight(size, label.text);
 
     top += textHeight; //Math.max(textHeight, bulletHeight);
     top += size / 2;
+  }
+
+  if (!secondPass) {
+    gl.depthFunc(depthFunc);
+    if (blend) {
+      gl.enable(gl.BLEND);
+    }
   }
 };
 
@@ -8837,6 +8869,7 @@ Niivue.prototype.draw3D = function (
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
   gl.clearDepth(0.0);
+  this.draw3DLabels(mvpMatrix, relativeLTWH, false);
   this.updateInterpolation(0, true); // force background interpolation
   if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
   this.updateInterpolation(0); //use default interpolation for 2D slices
@@ -8881,7 +8914,7 @@ Niivue.prototype.draw3D = function (
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
-  this.draw3DLabels(mvpMatrix, relativeLTWH);
+  this.draw3DLabels(mvpMatrix, relativeLTWH, true);
   return posString;
 }; // draw3D()
 
@@ -9289,6 +9322,83 @@ Niivue.prototype.drawLine = function (
   this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
   this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+}; // drawLine()
+
+Niivue.prototype.drawDottedLine = function (
+  startXYendXY,
+  thickness = 1,
+  lineColor = [1, 0, 0, -1]
+) {
+  this.gl.bindVertexArray(this.genericVAO);
+  this.lineShader.use(this.gl);
+  let dottedLineColor =
+    lineColor[3] < 0 ? [...this.opts.crosshairColor] : [...lineColor];
+
+  dottedLineColor[3] = 0.3;
+
+  // get vector
+  const segment = mat.vec2.fromValues(
+    startXYendXY[2] - startXYendXY[0],
+    startXYendXY[3] - startXYendXY[1]
+  );
+  const totalLength = mat.vec2.length(segment);
+  mat.vec2.normalize(segment, segment);
+  const scale = 1.0;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
+  mat.vec2.scale(segment, segment, size / 2);
+  const segmentLength = mat.vec2.length(segment);
+  let segmentCount = Math.floor(totalLength / segmentLength);
+
+  if (totalLength % segmentLength) {
+    segmentCount++;
+  }
+
+  let currentSegmentXY = [startXYendXY[0], startXYendXY[1]];
+
+  this.gl.uniform4fv(this.lineShader.lineColorLoc, dottedLineColor);
+  this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
+
+  // draw all segments except for the last one
+  for (let i = 0; i < segmentCount - 1; i++) {
+    if (i % 2) {
+      currentSegmentXY[0] += segment[0];
+      currentSegmentXY[1] += segment[1];
+      continue;
+    }
+
+    const segmentStartXYendXY = [
+      currentSegmentXY[0],
+      currentSegmentXY[1],
+      currentSegmentXY[0] + segment[0],
+      currentSegmentXY[1] + segment[1],
+    ];
+
+    //draw Line
+
+    this.gl.uniform4fv(this.lineShader.startXYendXYLoc, segmentStartXYendXY);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    // this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+    currentSegmentXY[0] += segment[0];
+    currentSegmentXY[1] += segment[1];
+  }
+
+  // this.gl.uniform4fv(this.lineShader.lineColorLoc, lineColor);
+  // this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
+  //   this.gl.canvas.width,
+  //   this.gl.canvas.height,
+  // ]);
+  // //draw Line
+  // this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
+  // this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
+  // this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 }; // drawLine()
 
