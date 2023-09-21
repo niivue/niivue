@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Connectome</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+      <label for="renderCheck">Force Render</label>
+      <input type="checkbox" id="renderCheck" unchecked />
+      <label for="timelineCheck">Timeline</label>
+      <input type="checkbox" id="timelineCheck" unchecked />
+      <label for="padSlider">Padding</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="5"
+        class="slider"
+        id="padSlider"
+      />
+      <label for="layout">Layout</label>
+      <select id="layout">
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
+        <option value="2">Grid</option>
+        <option value="3">Row</option>
+      </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "./niivue.es.js";
+  padSlider.oninput = function () {
+    nv1.setMultiplanarPadPixels(this.value);
+  };
+  renderCheck.onchange = function () {
+    nv1.opts.multiplanarForceRender = this.checked;
+    nv1.drawScene();
+  }
+  timelineCheck.onchange = function () {
+    nv1.graph.autoSizeMultiplanar = this.checked;
+    nv1.drawScene();
+  }
+  layout.onchange = function () {
+    nv1.setMultiplanarLayout(this.value);
+  }
+  var volumeList1 = [{url: "../images/pcasl.nii.gz"},];
+  let opts = {
+    show3Dcrosshair: true,
+    backColor: [0.64, 0.76, 0.68, 1],
+  };
+  var nv1 = new niivue.Niivue(opts);
+  nv1.attachTo("gl1");
+  nv1.setMultiplanarPadPixels(5);
+  nv1.graph.opacity = 1.0;
+  await nv1.loadVolumes(volumeList1);
+</script>
