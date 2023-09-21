@@ -3679,7 +3679,7 @@ Niivue.prototype.loadConnectome = async function (json) {
           rgba,
           lineThickness,
           rgba,
-          [nodes.Z[i], nodes.Y[i], nodes.X[i]]
+          [nodes.X[i], nodes.Y[i], nodes.Z[i]]
         );
         // this.nodeLabels.push(label);
       }
@@ -8730,7 +8730,7 @@ Niivue.prototype.draw3DLabel = function (
 
   if (label.lineWidth > 0.0) {
     this.drawLine(
-      [left - size, top + size / 2, screenPoint[0], screenPoint[1]],
+      [left, top + size / 2, screenPoint[0], screenPoint[1]],
       label.lineWidth,
       label.lineColor
     );
