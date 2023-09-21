@@ -261,6 +261,7 @@ export function Niivue(options = {}) {
   this.uiData.mouseButtonCenterDown = false;
   this.uiData.mouseButtonRightDown = false;
   this.uiData.mouseDepthPicker = false;
+  this.uiData.clickedTile = -1;
   this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
   this.uiData.pan2DxyzmmAtMouseDown = [0, 0, 0, 1];
   this.uiData.prevX = 0;
@@ -686,6 +687,7 @@ Niivue.prototype.saveScene = function (filename = "niivue.png") {
 /**
  * attach the Niivue instance to the webgl2 canvas by element id
  * @param {string} id the id of an html canvas element
+ * @param {boolean} isAntiAlias determines if anti-aliasing is requested (if not specified, AA usage depends on hardware)
  * @example niivue = new Niivue().attachTo('gl')
  * @example niivue.attachTo('gl')
  * @see {@link https://niivue.github.io/niivue/features/multiplanar.html|live demo usage}
@@ -969,6 +971,14 @@ Niivue.prototype.mouseDownListener = function (e) {
   this.uiData.mousedown = true;
   log.debug("mouse down");
   log.debug(e);
+  //record tile where mouse clicked
+  let pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(
+    e,
+    this.gl.canvas
+  );
+  let [x, y] = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+  this.uiData.clickedTile = this.tileIndex(x, y);
+  //respond to different types of mouse clicks
   if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
     this.uiData.mouseButtonCenterDown = true;
     this.mouseCenterButtonHandler(e);
@@ -1303,6 +1313,11 @@ Niivue.prototype.mouseMoveListener = async function (e) {
       e,
       this.gl.canvas
     );
+    //ignore if mouse moves outside of tile of initial click
+    let x = pos.x * this.uiData.dpr;
+    let y = pos.y * this.uiData.dpr;
+    let tile = this.tileIndex(x, y);
+    if (tile !== this.uiData.clickedTile) return;
     if (this.uiData.mouseButtonLeftDown) {
       this.mouseMove(pos.x, pos.y);
       this.mouseClick(pos.x, pos.y);
@@ -5888,7 +5903,6 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   if (hdr.intent_code === 1002) {
     let x = 1.0 / this.back.dims[1];
     if (!this.opts.isAtlasOutline) x = -x;
-    console.log("ATLAS>>>", x);
     this.gl.uniform3fv(orientShader.uniforms["xyzFrac"], [
       x,
       1.0 / this.back.dims[2],
@@ -8516,7 +8530,6 @@ Niivue.prototype.drawMesh3D = function (
 
   gl.disable(gl.BLEND);
   gl.depthFunc(gl.GREATER);
-
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
@@ -8524,7 +8537,11 @@ Niivue.prototype.drawMesh3D = function (
     gl.enable(gl.BLEND);
     gl.depthFunc(gl.ALWAYS);
   }
-  gl.disable(gl.CULL_FACE); //show front and back faces
+  gl.cullFace(gl.BACK); //CR: issue700
+  //show front and back face for mesh clipping https://niivue.github.io/niivue/features/worldspace2.html
+  if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
+  else gl.enable(gl.CULL_FACE); //issue700: only show front faces
+  //gl.frontFace(gl.CCW); //issue700: we now require CCW
   //Draw the mesh
   let shader = this.meshShaders[0];
   //this.meshShaderIndex
