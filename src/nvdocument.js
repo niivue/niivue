@@ -18,6 +18,18 @@ export const SLICE_TYPE = Object.freeze({
 });
 
 /**
+ * Multi-planar layout
+ * @enum
+ * @readonly
+ */
+export const MULTIPLANAR_TYPE = Object.freeze({
+  AUTO: 0,
+  COLUMN: 1,
+  GRID: 2,
+  ROW: 3,
+});
+
+/**
  * @enum
  * @readonly
  */
@@ -130,6 +142,7 @@ export const DEFAULT_OPTIONS = {
   showLegend: true, // if a document has labels the default is to show them
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
+  multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
 };
 
 /**Creates and instance of NVDocument

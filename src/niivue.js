@@ -78,6 +78,7 @@ import {
   NVDocument,
   SLICE_TYPE,
   DRAG_MODE,
+  MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
 } from "./nvdocument.js";
 
@@ -1903,6 +1904,17 @@ Niivue.prototype.dropListener = async function (e) {
  */
 Niivue.prototype.setMultiplanarPadPixels = function (pixels) {
   this.opts.multiplanarPadPixels = pixels;
+  this.drawScene();
+};
+
+/**
+ * control placement of 2D slices.
+ * @param {number} Layout AUTO: 0, COLUMN: 1, GRID: 2, ROW: 3,
+ * @example niivue.setMultiplanarLayout(2)
+ * @see {@link https://niivue.github.io/niivue/features/layout.html|live demo usage}
+ */
+Niivue.prototype.setMultiplanarLayout = function (layout) {
+  this.opts.multiplanarLayout = layout;
   this.drawScene();
 };
 
@@ -9051,17 +9063,19 @@ Niivue.prototype.drawMesh3D = function (
 
   gl.disable(gl.BLEND);
   gl.depthFunc(gl.GREATER);
+  gl.disable(gl.CULL_FACE);
   if (isDepthTest) {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
   } else {
     gl.enable(gl.BLEND);
     gl.depthFunc(gl.ALWAYS);
+    gl.enable(gl.CULL_FACE); //issue700
   }
   gl.cullFace(gl.BACK); //CR: issue700
   //show front and back face for mesh clipping https://niivue.github.io/niivue/features/worldspace2.html
-  if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
-  else gl.enable(gl.CULL_FACE); //issue700: only show front faces
+  //if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
+  //else gl.enable(gl.CULL_FACE); //issue700: only show front faces
   //gl.frontFace(gl.CCW); //issue700: we now require CCW
   //Draw the mesh
   let shader = this.meshShaders[0];
@@ -9389,6 +9403,7 @@ Niivue.prototype.scaleSlice = function (
     (canvasH - hPix) * 0.5,
     wPix,
     hPix,
+    scalePix,
   ];
   return leftTopWidthHeight;
 }; // scaleSlice()
@@ -9969,73 +9984,108 @@ Niivue.prototype.drawSceneCore = function () {
         log.debug("multiplanarPadPixels must be numeric");
       let pad = parseFloat(this.opts.multiplanarPadPixels);
       // size for 2 rows, 2 columns
-      let ltwh = this.scaleSlice(
+      let ltwh2x2 = this.scaleSlice(
         volScale[0] + volScale[1],
         volScale[1] + volScale[2],
         pad * 1,
         pad * 1
       );
-      let wX = (ltwh[2] * volScale[0]) / (volScale[0] + volScale[1]);
-      // size for 1 row, 3 columns
+      let mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0]);
+      // size for 3 columns and 1 row
       let ltwh3x1 = this.scaleSlice(
         volScale[0] + volScale[0] + volScale[1],
         Math.max(volScale[1], volScale[2]),
         pad * 2
       );
-      let mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0]);
-      // size for 1 row, 4 columns
+      // size for 4 columns and 1 row
       let ltwh4x1 = this.scaleSlice(
         volScale[0] + volScale[0] + volScale[1] + mx,
-        mx,
+        Math.max(volScale[1], volScale[2]),
         pad * 3
       );
-      let wX1 =
-        (ltwh3x1[2] * volScale[0]) / (volScale[0] + volScale[0] + volScale[1]);
-      if (this.opts.multiplanarForceRender) {
-        //issue404
-        ltwh3x1 = ltwh4x1;
-        wX1 =
-          (ltwh3x1[2] * volScale[0]) /
-          (volScale[0] + volScale[0] + volScale[1] + mx);
+      // size for 1 column * 3 rows
+      let ltwh1x3 = this.scaleSlice(
+        mx,
+        volScale[1] + volScale[2] + volScale[2],
+        0,
+        pad * 2
+      );
+      // size for 1 column * 4 rows
+      let ltwh1x4 = this.scaleSlice(
+        mx,
+        volScale[1] + volScale[2] + volScale[2] + mx,
+        0,
+        pad * 3
+      );
+      let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph);
+      let isDrawColumn = false;
+      let isDrawGrid = false;
+      let isDrawRow = false;
+      if (this.opts.multiplanarLayout == MULTIPLANAR_TYPE.COLUMN)
+        isDrawColumn = true;
+      else if (this.opts.multiplanarLayout == MULTIPLANAR_TYPE.GRID)
+        isDrawGrid = true;
+      else if (this.opts.multiplanarLayout == MULTIPLANAR_TYPE.ROW)
+        isDrawRow = true;
+      else {
+        //auto select layout based on canvas size
+        if (ltwh1x3[4] > ltwh3x1[4] && ltwh1x3[4] > ltwh2x2[4])
+          isDrawColumn = true;
+        else if (ltwh3x1[4] > ltwh2x2[4]) isDrawRow = true;
+        else isDrawGrid = true;
       }
-      if (wX1 > wX) {
-        //landscape screen ratio: 3 slices in single row
-        let pixScale = wX1 / volScale[0];
-        let hY1 = volScale[1] * pixScale;
-        let hZ1 = volScale[2] * pixScale;
-        if (ltwh3x1[3] === ltwh4x1[3]) {
-          ltwh3x1 = ltwh4x1;
-          if (!isDrawPenDown && (maxVols < 2 || !isDrawGraph)) {
-            this.draw3D([
-              ltwh3x1[0] + wX1 + wX1 + hY1 + pad * 3,
-              ltwh3x1[1],
-              ltwh4x1[3],
-              ltwh4x1[3],
-            ]);
-          }
-        }
+      if (isDrawColumn) {
+        let ltwh = ltwh1x3;
+        if (this.opts.multiplanarForceRender || ltwh1x4[4] >= ltwh1x3[4])
+          ltwh = ltwh1x4;
+        else isDraw3D = false;
+        let sX = volScale[0] * ltwh[4];
+        let sY = volScale[1] * ltwh[4];
+        let sZ = volScale[2] * ltwh[4];
+        let sMx = mx * ltwh[4];
         //draw axial
-        this.draw2D([ltwh3x1[0], ltwh3x1[1], wX1, hY1], 0);
+        this.draw2D([ltwh[0], ltwh[1], sX, sY], 0);
         //draw coronal
-        this.draw2D([ltwh3x1[0] + wX1 + pad, ltwh3x1[1], wX1, hZ1], 1);
+        this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1);
         //draw sagittal
-        this.draw2D(
-          [ltwh3x1[0] + wX1 + wX1 + pad * 2, ltwh3x1[1], hY1, hZ1],
-          2
-        );
-      } else {
-        let wY = ltwh[2] - wX;
-        let hY = (ltwh[3] * volScale[1]) / (volScale[1] + volScale[2]);
-        let hZ = ltwh[3] - hY;
+        this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2);
+        if (isDraw3D)
+          this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx]);
+      } else if (isDrawRow) {
+        let ltwh = ltwh3x1;
+        if (this.opts.multiplanarForceRender || ltwh4x1[4] >= ltwh3x1[4])
+          ltwh = ltwh4x1;
+        else isDraw3D = false;
+        let sX = volScale[0] * ltwh[4];
+        let sY = volScale[1] * ltwh[4];
+        let sZ = volScale[2] * ltwh[4];
         //draw axial
-        this.draw2D([ltwh[0], ltwh[1] + hZ + pad, wX, hY], 0);
+        this.draw2D([ltwh[0], ltwh[1], sX, sY], 0);
         //draw coronal
-        this.draw2D([ltwh[0], ltwh[1], wX, hZ], 1);
+        this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1);
         //draw sagittal
-        this.draw2D([ltwh[0] + wX + pad, ltwh[1], wY, hZ], 2);
-        if (!isDrawPenDown && (maxVols < 2 || !this.graph.autoSizeMultiplanar))
-          this.draw3D([ltwh[0] + wX + pad, ltwh[1] + hZ + pad, wY, hY]);
-      } //if landscape else portrait
+        this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2);
+        if (isDraw3D)
+          this.draw3D([
+            ltwh[0] + sX + sX + sY + pad * 3,
+            ltwh[1],
+            ltwh[3],
+            ltwh[3],
+          ]);
+      } else if (isDrawGrid) {
+        let ltwh = ltwh2x2;
+        let sX = volScale[0] * ltwh[4];
+        let sY = volScale[1] * ltwh[4];
+        let sZ = volScale[2] * ltwh[4];
+        //draw axial
+        this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0);
+        //draw coronal
+        this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1);
+        //draw sagittal
+        this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2);
+        if (isDraw3D)
+          this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY]);
+      } //if isDrawGrid
     } //if multiplanar
   } //if mosaic not 2D
   if (this.opts.isRuler) this.drawRuler();
