@@ -8860,16 +8860,18 @@ Niivue.prototype.draw3D = function (
       gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1];
   }
 
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.ALWAYS);
+  gl.clearDepth(0.0);
+  this.draw3DLabels(mvpMatrix, relativeLTWH, false);
+
   gl.viewport(
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.ALWAYS);
-  gl.clearDepth(0.0);
-  this.draw3DLabels(mvpMatrix, relativeLTWH, false);
+
   this.updateInterpolation(0, true); // force background interpolation
   if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
   this.updateInterpolation(0); //use default interpolation for 2D slices

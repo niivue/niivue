@@ -56,6 +56,7 @@
     drop.onchange = setSliceType;
 
     var nv1 = new niivue.Niivue();
+    nv1.opts.multiplanarForceRender = true;
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
     nv1.addLabel("center", undefined, undefined, undefined, 3.0, undefined, [0.0, 0.0, 0.0]);
