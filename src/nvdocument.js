@@ -18,6 +18,18 @@ export const SLICE_TYPE = Object.freeze({
 });
 
 /**
+ * Multi-planar layout
+ * @enum
+ * @readonly
+ */
+export const MULTIPLANAR_TYPE = Object.freeze({
+  AUTO: 0,
+  COLUMN: 1,
+  GRID: 2,
+  ROW: 3,
+});
+
+/**
  * @enum
  * @readonly
  */
@@ -127,6 +139,7 @@ export const DEFAULT_OPTIONS = {
   isAntiAlias: null,
   limitFrames4D: NaN,
   isAdditiveBlend: false,
+  multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
 };
 
 /**Creates and instance of NVDocument
