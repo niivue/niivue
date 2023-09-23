@@ -858,6 +858,8 @@ Niivue.prototype.sync = function () {
   if (!this.otherNV.readyForSync || !this.readyForSync) {
     return;
   }
+  //canvas must have focus to send messages issue706
+  if (!this.gl.canvas.matches(":focus")) return;
   let thisMM = this.frac2mm(this.scene.crosshairPos);
   if (this.syncOpts["2d"]) {
     this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
