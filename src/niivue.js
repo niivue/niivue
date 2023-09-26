@@ -9,6 +9,7 @@ import {
 import {
   vertRectShader,
   vertLineShader,
+  vertLine3DShader,
   fragRectShader,
 } from "./shader-srcs.js";
 import {
@@ -5061,6 +5062,15 @@ Niivue.prototype.init = async function () {
     this.lineShader.uniforms["canvasWidthHeight"];
   this.lineShader.thicknessLoc = this.lineShader.uniforms["thickness"];
   this.lineShader.startXYendXYLoc = this.lineShader.uniforms["startXYendXY"];
+  // 3D line shader
+  this.line3DShader = new Shader(this.gl, vertLine3DShader, fragRectShader);
+  this.line3DShader.use(this.gl);
+  this.line3DShader.lineColorLoc = this.line3DShader.uniforms["lineColor"];
+  this.line3DShader.canvasWidthHeightLoc =
+    this.line3DShader.uniforms["canvasWidthHeight"];
+  this.line3DShader.thicknessLoc = this.line3DShader.uniforms["thickness"];
+  this.line3DShader.startXYLoc = this.line3DShader.uniforms["startXY"];
+  this.line3DShader.endXYZLoc = this.line3DShader.uniforms["endXYZ"];
   // render shader (3D)
   this.renderVolumeShader = new Shader(
     this.gl,
@@ -8698,6 +8708,7 @@ Niivue.prototype.draw3DLabel = function (
     mvpMatrix,
     leftTopWidthHeight
   );
+  // console.log("screen point", screenPoint);
   let left = pos[0];
   let top = pos[1];
 
@@ -8709,8 +8720,9 @@ Niivue.prototype.draw3DLabel = function (
 
   if (!secondPass) {
     // draw line
-    this.drawLine(
-      [left, top + size / 2, screenPoint[0], screenPoint[1]],
+    this.draw3DLine(
+      [left, top + size / 2],
+      [screenPoint[0], screenPoint[1], screenPoint[2]],
       label.lineWidth,
       label.lineColor
     );
@@ -8779,8 +8791,6 @@ Niivue.prototype.draw3DLabels = function (
   const depthFunc = gl.getParameter(gl.DEPTH_FUNC);
 
   if (!secondPass) {
-    const gl = this.gl;
-
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
   }
@@ -8862,6 +8872,7 @@ Niivue.prototype.draw3D = function (
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.ALWAYS);
+  gl.depthMask(true);
   gl.clearDepth(0.0);
   this.draw3DLabels(mvpMatrix, relativeLTWH, false);
 
@@ -8900,10 +8911,16 @@ Niivue.prototype.draw3D = function (
       normalMatrix
     );
 
-  // const labelVisible = this.isLabelPointVisible([0.0, 0.0, 0.0]);
-  // if (labelVisible) {
-  //   console.log("label is visible: ", labelVisible);
-  // }
+  //
+  this.draw3DLabels(mvpMatrix, relativeLTWH, false);
+
+  gl.viewport(
+    leftTopWidthHeight[0],
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[2],
+    leftTopWidthHeight[3]
+  );
+  //
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
@@ -9323,6 +9340,31 @@ Niivue.prototype.drawLine = function (
   //draw Line
   this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
   this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+}; // drawLine()
+
+// not included in public docs
+// draw line (can be diagonal)
+// unless Alpha is > 0, default color is opts.crosshairColor
+Niivue.prototype.draw3DLine = function (
+  startXY,
+  endXYZ,
+  thickness = 1,
+  lineColor = [1, 0, 0, -1]
+) {
+  this.gl.bindVertexArray(this.genericVAO);
+  this.line3DShader.use(this.gl);
+  if (lineColor[3] < 0) lineColor = this.opts.crosshairColor;
+  this.gl.uniform4fv(this.line3DShader.lineColorLoc, lineColor);
+  this.gl.uniform2fv(this.line3DShader.canvasWidthHeightLoc, [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  //draw Line
+  this.gl.uniform1f(this.line3DShader.thicknessLoc, thickness);
+  this.gl.uniform2fv(this.line3DShader.startXYLoc, startXY);
+  this.gl.uniform3fv(this.line3DShader.endXYZLoc, endXYZ);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 }; // drawLine()

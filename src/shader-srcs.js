@@ -816,6 +816,27 @@ void main(void) {
 	gl_Position = vec4((posXY * 2.0) - 1.0, 0.0, 1.0);
 }`;
 
+export var vertLine3DShader = `#version 300 es
+#line 534
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float thickness;
+uniform vec2 startXY;
+uniform vec3 endXYZ; // transformed XYZ point
+void main(void) {	
+	vec2 posXY = mix(startXY.xy, endXYZ.xy, pos.x);
+	vec2 startDiff = endXYZ.xy - startXY.xy;
+	float startDistance = length(startDiff);
+	vec2 diff = endXYZ.xy - posXY;
+	float currentDistance = length(diff);
+	vec2 dir = normalize(startXY.xy - endXYZ.xy);
+	posXY += vec2(-dir.y, dir.x) * thickness * (pos.y - 0.5);
+	posXY.x = (posXY.x) / canvasWidthHeight.x; //0..1
+	posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y); //1..0	
+	float z = endXYZ.z * ( 1.0 - abs(currentDistance/startDistance)); 
+	gl_Position = vec4((posXY * 2.0) - 1.0, z, 1.0);
+}`;
+
 export var vertBmpShader = `#version 300 es
 #line 549
 layout(location=0) in vec3 pos;
