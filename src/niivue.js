@@ -2602,7 +2602,10 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
 
 // not included in public docs
 Niivue.prototype.getMeshIndexByID = function (id) {
-  if (typeof id === "number") return id;
+  if (typeof id === "number") {
+    if (id >= this.meshes.length) return -1; //range 0..len-1
+    return id;
+  }
   let n = this.meshes.length;
   for (let i = 0; i < n; i++) {
     let id_i = this.meshes[i].id;
@@ -3262,6 +3265,8 @@ Niivue.prototype.loadDocument = function (document) {
     const imageOptions = document.imageOptionsArray[i];
     const base64 = encodedImageBlobs[i];
     if (base64) {
+      if (imageOptions.hasOwnProperty("colorMap"))
+        imageOptions.colormap = imageOptions.colorMap;
       let image = NVImage.loadFromBase64({ base64, ...imageOptions });
       if (image) {
         this.addVolume(image);
