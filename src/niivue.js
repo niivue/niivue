@@ -848,9 +848,29 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
  * niivue1 = new Niivue()
  * niivue2 = new Niivue()
  * niivue2.syncWith(niivue1)
+ * @deprecated use broadcastTo instead
  * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
  */
 Niivue.prototype.syncWith = function (
+  otherNV,
+  syncOpts = { "2d": true, "3d": true }
+) {
+  this.otherNV = otherNV;
+  this.syncOpts = syncOpts;
+};
+
+/**
+ * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to others. useful for using one canvas to drive another.
+ * @param {(object|array)} otherNV the other Niivue instance(s)
+ * @example
+ * niivue1 = new Niivue()
+ * niivue2 = new Niivue()
+ * niivue3 = new Niivue()
+ * niivue1.broadcastTo(niivue2)
+ * niivue1.broadcastTo([niivue2, niivue3])
+ * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
+ */
+Niivue.prototype.broadcastTo = function (
   otherNV,
   syncOpts = { "2d": true, "3d": true }
 ) {
@@ -871,21 +891,36 @@ Niivue.prototype.sync = function () {
   if (!this.otherNV || typeof this.otherNV === "undefined") {
     return;
   }
-  if (!this.otherNV.readyForSync || !this.readyForSync) {
-    return;
-  }
+  // if (!this.otherNV.readyForSync || !this.readyForSync) {
+  //   return;
+  // }
   //canvas must have focus to send messages issue706
   if (!this.gl.canvas.matches(":focus")) return;
   let thisMM = this.frac2mm(this.scene.crosshairPos);
-  if (this.syncOpts["2d"]) {
-    this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
+  // if this.otherNV is an object, then it is a single Niivue instance
+  if (this.otherNV instanceof Niivue) {
+    if (this.syncOpts["2d"]) {
+      this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM);
+    }
+    if (this.syncOpts["3d"]) {
+      this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
+      this.otherNV.scene.renderElevation = this.scene.renderElevation;
+    }
+    this.otherNV.drawScene();
+    this.otherNV.createOnLocationChange();
+  } else if (Array.isArray(this.otherNV)) {
+    for (let i = 0; i < this.otherNV.length; i++) {
+      if (this.syncOpts["2d"]) {
+        this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM);
+      }
+      if (this.syncOpts["3d"]) {
+        this.otherNV[i].scene.renderAzimuth = this.scene.renderAzimuth;
+        this.otherNV[i].scene.renderElevation = this.scene.renderElevation;
+      }
+      this.otherNV[i].drawScene();
+      this.otherNV[i].createOnLocationChange();
+    }
   }
-  if (this.syncOpts["3d"]) {
-    this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth;
-    this.otherNV.scene.renderElevation = this.scene.renderElevation;
-  }
-  this.otherNV.drawScene();
-  this.otherNV.createOnLocationChange();
 };
 
 /* Not documented publicly for now
