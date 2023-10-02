@@ -82,24 +82,33 @@
               <canvas id="gl2" height="512">
             </div>
           </div>
+          <div class='column'>
+            <div>
+              <canvas id="gl3" height="512">
+            </div>
+          </div>
         </div>
       </div>
     </main>
     <footer>
       <x id="intensity"> &nbsp;</x>
       <x id="intensity2"> &nbsp;</x>
+      <x id="intensity3"> &nbsp;</x>
     </footer>
     <script type="module" async>
       import * as niivue from "./niivue.es.js";
       layout.onchange = function () {
         nv1.setMultiplanarLayout(this.value);
         nv2.setMultiplanarLayout(this.value);
+        nv3.setMultiplanarLayout(this.value);
       }
       canvasHeight.onchange = function () {
         gl1.height = this.value;
         gl2.height = this.value;
+        gl3.height = this.value;
         nv1.resizeListener();
         nv2.resizeListener();
+        nv3.resizeListener();
       }
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML =
@@ -107,6 +116,10 @@
       }
       function handleIntensityChange2(data) {
         document.getElementById("intensity2").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      function handleIntensityChange3(data) {
+        document.getElementById("intensity3").innerHTML =
           "&nbsp;&nbsp;" + data.string;
       }
       var nv1 = new niivue.Niivue({
@@ -123,10 +136,20 @@
         backColor: [1, 1, 1, 1],
       });
       nv2.attachTo("gl2");
-      var volumeList1 = [{ url: "../images/mni152.nii.gz" }];
-      await nv2.loadVolumes(volumeList1);
-      nv1.syncWith(nv2, { "3d": true, "2d": true });
-      nv2.syncWith(nv1, { "3d": true, "2d": true });
+      var nv3 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange3,
+        backColor: [1, 1, 1, 1],
+      });
+      nv3.attachTo("gl3");
+      var volumeList2 = [{ url: "../images/mni152.nii.gz" }];
+      var volumeList3 = [{ url: "../images/mni152.nii.gz" }];
+      await nv2.loadVolumes(volumeList2);
+      await nv3.loadVolumes(volumeList3);
+      // make sure all views can control each other
+      nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true });
+      nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true });
+      nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
     </script>
   </body>
 </html>
