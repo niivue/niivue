@@ -22,6 +22,8 @@ import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
   vertFontShader,
   fragFontShader,
+  vertCircleShader,
+  fragCircleShader,
   vertBmpShader,
   fragBmpShader,
 } from "./shader-srcs.js";
@@ -225,6 +227,7 @@ export function Niivue(options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
+  this.circleShader = null;
   this.matCapTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
@@ -5071,6 +5074,15 @@ Niivue.prototype.init = async function () {
   this.line3DShader.thicknessLoc = this.line3DShader.uniforms["thickness"];
   this.line3DShader.startXYLoc = this.line3DShader.uniforms["startXY"];
   this.line3DShader.endXYZLoc = this.line3DShader.uniforms["endXYZ"];
+  // circle shader
+  this.circleShader = new Shader(this.gl, vertCircleShader, fragCircleShader);
+  this.circleShader.use(this.gl);
+  this.circleShader.circleColorLoc = this.circleShader.uniforms["circleColor"];
+  this.circleShader.canvasWidthHeightLoc =
+    this.circleShader.uniforms["canvasWidthHeight"];
+  this.circleShader.leftTopWidthHeightLoc =
+    this.circleShader.uniforms["leftTopWidthHeight"];
+  this.circleShader.fillPercentLoc = this.circleShader.uniforms["fillPercent"];
   // render shader (3D)
   this.renderVolumeShader = new Shader(
     this.gl,
@@ -6889,6 +6901,32 @@ Niivue.prototype.drawRect = function (
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+};
+
+Niivue.prototype.drawCircle = function (
+  leftTopWidthHeight,
+  circleColor = this.opts.fontColor,
+  fillPercent = 1.0
+) {
+  this.circleShader.use(this.gl);
+  this.gl.enable(this.gl.BLEND);
+  this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor);
+  this.gl.uniform2fv(this.circleShader.canvasWidthHeightLoc, [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform4f(
+    this.circleShader.leftTopWidthHeightLoc,
+    leftTopWidthHeight[0],
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[2],
+    leftTopWidthHeight[3]
+  );
+  this.gl.uniform1f(this.circleShader.fillPercentLoc, fillPercent);
+  this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
@@ -8738,7 +8776,11 @@ Niivue.prototype.draw3DLabel = function (
     let rectTop = top + diff / 2 + size / 4;
     const rectLeft = left + (bulletMargin - bulletSize) / 2;
 
-    this.drawRect(
+    // this.drawRect(
+    //   [rectLeft, rectTop, bulletSize, bulletSize],
+    //   label.bulletColor
+    // );
+    this.drawCircle(
       [rectLeft, rectTop, bulletSize, bulletSize],
       label.bulletColor
     );

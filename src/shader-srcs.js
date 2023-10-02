@@ -901,6 +901,44 @@ void main() {
 	color = vec4(fontColor.rgb , fontColor.a * opacity);
 }`;
 
+export var vertCircleShader = `#version 300 es
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+uniform vec4 uvLeftTopWidthHeight;
+out vec2 vUV;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
+	vUV = pos.xy;
+}`;
+
+export var fragCircleShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 circleColor;
+uniform float fillPercent;
+in vec2 vUV;
+out vec4 color;
+void main() {
+	/* Check if the pixel is inside the circle
+		 and color it with a gradient. Otherwise, color it 
+		 transparent   */
+	float distance = length(vUV-vec2(0.5,0.5));
+	if ( distance < 0.5 && distance >= (1.0 - fillPercent) / 2.0){
+			color = vec4(vUV.x*circleColor.r,vUV.x*circleColor.g,vUV.x*circleColor.b,circleColor.a) ;
+			// color = vec4(1.0, 0.0, 0.0, 1.0);
+	}else{
+			color = vec4(0.0,0.0,0.0,0.0);
+	}
+	// color = vec4(circleColor.r,circleColor.g,circleColor.b,circleColor.a * vUV.x) ;
+}
+`;
+
 export var vertOrientShader = `#version 300 es
 #line 613
 precision highp int;
