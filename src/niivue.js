@@ -8651,30 +8651,6 @@ Niivue.prototype.isPlaneVisible = function (mvpMatrix) {
   return isVisible;
 };
 
-// Check if a point is visible
-Niivue.prototype.isLabelPointVisible = function (point) {
-  // xyz
-  const xyz = this.scene.clipPlane.slice(1);
-  const planeNormal = mat.vec3.create();
-  mat.vec3.normalize(planeNormal, xyz);
-  const planeLength = mat.vec3.length(planeNormal);
-  const unitNormal = mat.vec3.divide(unitNormal, planeNormal, planeLength);
-  const vecPoint = mat.vec3.fromValues(...point);
-  // Calculate the distance between the point and the clip plane
-  // const pointToPlaneDistance = mat.vec3.dot(
-  //   mat.vec3.subtract(
-  //     mat.vec3.create(),
-  //     mat.vec3.fromValues(...point),
-  //     mat.vec3.fromValues(...this.scene.clipPlane.slice(1))
-  //   ),
-  //   this.scene.clipPlane
-  // );
-  const pointToPlaneDistance = mat.vec3.dot(vecPoint, unitNormal);
-  console.log("distance from clip plane: ", pointToPlaneDistance);
-  // Check if the point is within 0.1 units of the clip plane
-  return Math.abs(pointToPlaneDistance) <= 0.1;
-};
-
 /**
  * Add a 3D Label
  * @param {string} text text of the label
@@ -8730,6 +8706,41 @@ Niivue.prototype.calculateScreenPoint = function (
   return screenPoint;
 };
 
+Niivue.prototype.drawLabelLine = function (
+  label,
+  pos,
+  mvpMatrix,
+  leftTopWidthHeight,
+  secondPass = false
+) {
+  let points =
+    Array.isArray(label.point) && Array.isArray(label.point[0])
+      ? label.point
+      : [label.point];
+  for (const point of points) {
+    const screenPoint = this.calculateScreenPoint(
+      point,
+      mvpMatrix,
+      leftTopWidthHeight
+    );
+    if (!secondPass) {
+      // draw line
+      this.draw3DLine(
+        pos,
+        [screenPoint[0], screenPoint[1], screenPoint[2]],
+        label.lineWidth,
+        label.lineColor
+      );
+    } else {
+      this.drawDottedLine(
+        [...pos, screenPoint[0], screenPoint[1]],
+        label.lineWidth,
+        label.lineColor
+      );
+    }
+  }
+};
+
 // not included in public docs
 Niivue.prototype.draw3DLabel = function (
   label,
@@ -8740,13 +8751,7 @@ Niivue.prototype.draw3DLabel = function (
   secondPass = false
 ) {
   const text = label.text;
-  const point = label.point;
-  const screenPoint = this.calculateScreenPoint(
-    point,
-    mvpMatrix,
-    leftTopWidthHeight
-  );
-  // console.log("screen point", screenPoint);
+
   let left = pos[0];
   let top = pos[1];
 
@@ -8756,18 +8761,16 @@ Niivue.prototype.draw3DLabel = function (
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
 
-  if (!secondPass) {
-    // draw line
-    this.draw3DLine(
+  if (label.lineWidth > 0.0 && Array.isArray(label.point)) {
+    this.drawLabelLine(
+      label,
       [left, top + size / 2],
-      [screenPoint[0], screenPoint[1], screenPoint[2]],
-      label.lineWidth,
-      label.lineColor
+      mvpMatrix,
+      leftTopWidthHeight,
+      secondPass
     );
-    return;
   }
 
-  // const firstLetter = text.substr(0, 1);
   const textHeight = this.textHeight(scale, text) * size;
 
   if (label.bulletScale) {
@@ -8776,10 +8779,6 @@ Niivue.prototype.draw3DLabel = function (
     let rectTop = top + diff / 2 + size / 4;
     const rectLeft = left + (bulletMargin - bulletSize) / 2;
 
-    // this.drawRect(
-    //   [rectLeft, rectTop, bulletSize, bulletSize],
-    //   label.bulletColor
-    // );
     this.drawCircle(
       [rectLeft, rectTop, bulletSize, bulletSize],
       label.bulletColor
@@ -8787,17 +8786,9 @@ Niivue.prototype.draw3DLabel = function (
   }
 
   let textLeft = left;
-  textLeft += bulletMargin;
+  textLeft += bulletMargin ? bulletMargin : size / 2;
 
   this.drawText([textLeft, top], text, 1.0, label.textColor);
-
-  if (label.lineWidth > 0.0) {
-    this.drawDottedLine(
-      [left, top + size / 2, screenPoint[0], screenPoint[1]],
-      label.lineWidth,
-      label.lineColor
-    );
-  }
 };
 
 // not included in public docs

@@ -59,16 +59,12 @@
     nv1.opts.multiplanarForceRender = true;
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
-    nv1.addLabel("center", undefined, undefined, undefined, 3.0, undefined, [0.0, 0.0, 0.0]);
+    nv1.addLabel("insula", undefined, undefined, undefined, 0.0, undefined, undefined);
+    nv1.addLabel("ventral anterior insula", undefined, undefined, undefined, 3.0, undefined, [[-33, 13, -7], [32, 10, -6]]);
+    nv1.addLabel("dorsal anterior insula", undefined, undefined, undefined, 3.0, [0.0, 1.0, 0.0, 1.0], [[-38, 6, 2], [35, 7, 3]]);
+    nv1.addLabel("posterior insula", undefined, undefined, undefined, 3.0, [0.0, 0.0, 1.0, 1.0], [[-38, -6, 5], [35, -11, 6]]);
     nv1.addLabel("hippocampus", undefined, undefined, undefined, 3.0, [1, 0, 0, 1], [-25, -15.0, -25.0]);
-    nv1.addLabel("no line", [0, 0, 1, 1], undefined, undefined, 0.0);
-    nv1.addLabel("small bullet", [0, 1, 0, 1], .1, [0, 1, 0, 1], 0.0);
-    nv1.addLabel("big bullet", [0, 0, 1, 1], .5, [0, 0, 1, 1], 0.0);
-    nv1.addLabel("normal bullet", undefined, .3, [1, 0, 1, 1], 0.0);
-    nv1.addLabel("another bullet", [1, 1, 0, 1], .2, [1, 1, 0, 1], 0.0);
-    nv1.addLabel("big bullet", undefined, .8, [1, 1, 0, 1], 0.0);
-    nv1.addLabel("super tall bullet", undefined, 1.0, [1, 0, 1, 1], 0.0);
-    nv1.addLabel("jkl bullet", undefined, 1.0, [1, 0, 0, 1], 0.0);
+    
   </script>
 </body>
 

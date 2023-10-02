@@ -930,12 +930,10 @@ void main() {
 		 transparent   */
 	float distance = length(vUV-vec2(0.5,0.5));
 	if ( distance < 0.5 && distance >= (1.0 - fillPercent) / 2.0){
-			color = vec4(vUV.x*circleColor.r,vUV.x*circleColor.g,vUV.x*circleColor.b,circleColor.a) ;
-			// color = vec4(1.0, 0.0, 0.0, 1.0);
+			color = vec4(circleColor.r,circleColor.g,circleColor.b,circleColor.a) ;			
 	}else{
 			color = vec4(0.0,0.0,0.0,0.0);
 	}
-	// color = vec4(circleColor.r,circleColor.g,circleColor.b,circleColor.a * vUV.x) ;
 }
 `;
 
