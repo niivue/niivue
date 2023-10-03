@@ -7011,23 +7011,28 @@ Niivue.prototype.effectiveCanvasWidth = function () {
 };
 
 Niivue.prototype.getBulletMarginWidth = function () {
-  const scale = 1.0; // we may want to make this adjustable in the future
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
-  console.log("labels", this.document.labels);
   const widestBulletScale = this.document.labels.reduce((a, b) =>
     a.style.bulletScale > b.style.bulletScale ? a : b
   ).style.bulletScale;
-  console.log("widest bullet scale", widestBulletScale);
-  const tallestLabel = this.document.labels.reduce((a, b) =>
-    this.textHeight(size, a.text) > this.textHeight(size, b.text) ? a : b
-  );
+  const tallestLabel = this.document.labels.reduce((a, b) => {
+    const aSize =
+      this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
+    const bSize =
+      this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+    const taller =
+      this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b;
+    return taller;
+  });
+
+  let size =
+    this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale;
   let bulletMargin =
     this.textHeight(size, tallestLabel.text) * widestBulletScale;
 
+  size = this.opts.textHeight * this.gl.canvas.height;
   if (bulletMargin) {
     bulletMargin += size;
   }
-  console.log("bulletMargin", bulletMargin);
   return bulletMargin;
 };
 
@@ -7036,20 +7041,28 @@ Niivue.prototype.getLegendPanelWidth = function () {
     return 0;
   }
   const scale = 1.0; // we may want to make this adjustable in the future
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let horizontalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
   let width = 0;
 
-  const longestLabel = this.document.labels.reduce((a, b) =>
-    this.textWidth(size, a.text) > this.textWidth(size, b.text) ? a : b
-  );
+  const longestLabel = this.document.labels.reduce((a, b) => {
+    const aSize =
+      this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
+    const bSize =
+      this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+    const longer =
+      this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b;
+    return longer;
+  });
 
-  const longestTextLength = this.textWidth(size, longestLabel.text);
+  const longestTextSize =
+    this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale;
+  const longestTextLength = this.textWidth(longestTextSize, longestLabel.text);
 
   let bulletMargin = this.getBulletMarginWidth();
 
   if (longestTextLength) {
     width = bulletMargin + longestTextLength;
-    width += size * 2;
+    width += horizontalMargin * 2;
   }
   return width;
 };
@@ -7057,14 +7070,16 @@ Niivue.prototype.getLegendPanelWidth = function () {
 Niivue.prototype.getLegendPanelHeight = function () {
   let height = 0;
   const scale = 1.0; // we may want to make this adjustable in the future
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  let verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
   for (const label of this.document.labels) {
-    let textHeight = this.textHeight(size, label.text);
+    const labelSize =
+      this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+    let textHeight = this.textHeight(labelSize, label.text);
     height += textHeight;
   }
 
   if (height) {
-    height += (size / 2) * (this.document.labels.length + 1);
+    height += (verticalMargin / 2) * (this.document.labels.length + 1);
   }
 
   return height;
@@ -7252,8 +7267,7 @@ Niivue.prototype.textHeight = function (scale, str) {
     .filter((element, index) => bytes.includes(index))
     .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b));
   const height = tallest.lbwh[3];
-  // const base = tallest.lbwh[1];
-  return scale * height; //(height + base + 1);
+  return scale * height;
 };
 
 // not included in public docs
@@ -8768,28 +8782,28 @@ Niivue.prototype.draw3DLabel = function (
   let left = pos[0];
   let top = pos[1];
 
-  const scale = 1.0;
+  // const scale = label.style.textScale;
   const size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
-    scale;
+    1.0;
+
+  const textHeight = this.textHeight(label.style.textScale, text) * size;
 
   if (label.style.lineWidth > 0.0 && Array.isArray(label.points)) {
     this.drawLabelLine(
       label,
-      [left, top + size / 2],
+      [left, top + textHeight],
       mvpMatrix,
       leftTopWidthHeight,
       secondPass
     );
   }
 
-  const textHeight = this.textHeight(scale, text) * size;
-
   if (label.style.bulletScale) {
-    const bulletSize = label.style.bulletScale * size;
+    const bulletSize = label.style.bulletScale * textHeight;
     const diff = textHeight - bulletSize;
-    let rectTop = top + diff / 2 + size / 4;
+    let rectTop = top + diff / 2 + bulletSize / 2;
     const rectLeft = left + (bulletMargin - bulletSize) / 2;
 
     this.drawCircle(
@@ -8799,9 +8813,25 @@ Niivue.prototype.draw3DLabel = function (
   }
 
   let textLeft = left;
-  textLeft += bulletMargin ? bulletMargin : size / 2;
 
-  this.drawText([textLeft, top], text, 1.0, label.style.textColor);
+  if (label.style.textAlignment != LabelTextAlignment.LEFT) {
+    const textWidth = this.textWidth(label.style.textScale, label.text) * size;
+    if (label.style.textAlignment === LabelTextAlignment.RIGHT) {
+      textLeft = left + legendWidth - size * 1.5 - textWidth;
+    } else {
+      const remaining = legendWidth - (bulletMargin || size);
+      textLeft += (remaining - textWidth) / 2;
+    }
+  } else {
+    textLeft += bulletMargin ? bulletMargin : size / 2;
+  }
+
+  this.drawText(
+    [textLeft, top],
+    text,
+    label.style.textScale,
+    label.style.textColor
+  );
 };
 
 // not included in public docs
@@ -8832,7 +8862,6 @@ Niivue.prototype.draw3DLabels = function (
     [gl.canvas.width - panelWidth, top, panelWidth - size, panelHeight],
     this.opts.legendBackgroundColor
   );
-  console.log("panelwidth", panelWidth);
   const blend = gl.getParameter(gl.BLEND);
   const depthFunc = gl.getParameter(gl.DEPTH_FUNC);
 
@@ -8852,7 +8881,9 @@ Niivue.prototype.draw3DLabels = function (
       secondPass
     );
 
-    let textHeight = this.textHeight(size, label.text);
+    const labelSize =
+      this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+    let textHeight = this.textHeight(labelSize, label.text);
 
     top += textHeight; //Math.max(textHeight, bulletHeight);
     top += size / 2;
