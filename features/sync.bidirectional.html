@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Bidirectional Sync</title>
+<style>
+  html {
+    height: auto;
+    min-height: 100%;
+    margin: 0;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    min-height: 100%;
+    width: 100%;
+    position: absolute;
+    font-family: system-ui, Arial, Helvetica, sans-serif;
+    user-select: none; /* Standard syntax */
+    color: white;
+    background: #202020;
+  }
+  header {
+    margin: 10px;
+  }
+  footer {
+    margin: 5px;
+  }
+  .page-wrapper {
+    margin: 2px;
+  }
+  .row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    min-height: 100%;
+    margin: 2px;
+  }
+  .column {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 100%;
+    flex: 1;
+    background: #404040;
+  }
+  canvas:focus {
+    outline: red 1px solid;
+  }
+</style>
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="layout">Layout</label>
+      <select id="layout">
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
+        <option value="2">Grid</option>
+        <option value="3">Row</option>
+      </select>
+      <label for="canvasHeight">Height</label>
+      <select id="canvasHeight">
+        <option value="256">256</option>
+        <option value="640" selected>512</option>
+        <option value="768">768</option>
+      </select>
+    </header>
+    <main>
+      <div class='page-wrapper'>
+        <div class='row'>
+          <div class='column'>
+            <div>
+              <canvas id="gl1" height="512">
+            </div>
+          </div>
+          <div class='column'>
+            <div>
+              <canvas id="gl2" height="512">
+            </div>
+          </div>
+          <div class='column'>
+            <div>
+              <canvas id="gl3" height="512">
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <x id="intensity"> &nbsp;</x>
+      <x id="intensity2"> &nbsp;</x>
+      <x id="intensity3"> &nbsp;</x>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "./niivue.es.js";
+      layout.onchange = function () {
+        nv1.setMultiplanarLayout(this.value);
+        nv2.setMultiplanarLayout(this.value);
+        nv3.setMultiplanarLayout(this.value);
+      }
+      canvasHeight.onchange = function () {
+        gl1.height = this.value;
+        gl2.height = this.value;
+        gl3.height = this.value;
+        nv1.resizeListener();
+        nv2.resizeListener();
+        nv3.resizeListener();
+      }
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      function handleIntensityChange2(data) {
+        document.getElementById("intensity2").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      function handleIntensityChange3(data) {
+        document.getElementById("intensity3").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange,
+        backColor: [1, 1, 1, 1],
+      });
+      nv1.attachTo("gl1");
+      var volumeList1 = [{ url: "../images/pcasl.nii.gz" }];
+      await nv1.loadVolumes(volumeList1);
+      var nv2 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange2,
+        backColor: [1, 1, 1, 1],
+      });
+      nv2.attachTo("gl2");
+      var nv3 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange3,
+        backColor: [1, 1, 1, 1],
+      });
+      nv3.attachTo("gl3");
+      var volumeList2 = [{ url: "../images/mni152.nii.gz" }];
+      var volumeList3 = [{ url: "../images/mni152.nii.gz" }];
+      await nv2.loadVolumes(volumeList2);
+      await nv3.loadVolumes(volumeList3);
+      // make sure all views can control each other
+      nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true });
+      nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true });
+      nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
+    </script>
+  </body>
+</html>
