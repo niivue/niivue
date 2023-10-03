@@ -59,11 +59,11 @@
     nv1.opts.multiplanarForceRender = true;
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
-    nv1.addLabel("insula", undefined, undefined, undefined, 0.0, undefined, undefined);
-    nv1.addLabel("ventral anterior insula", undefined, undefined, undefined, 3.0, undefined, [[-33, 13, -7], [32, 10, -6]]);
-    nv1.addLabel("dorsal anterior insula", [0.0, 1.0, 0.0, 1.0], undefined, undefined, 3.0, [0.0, 1.0, 0.0, 1.0], [[-38, 6, 2], [35, 7, 3]]);
-    nv1.addLabel("posterior insula", [0.0, 0.0, 1.0, 1.0], undefined, undefined, 3.0, [0.0, 0.0, 1.0, 1.0], [[-38, -6, 5], [35, -11, 6]]);
-    nv1.addLabel("hippocampus", [1, 0, 0, 1], undefined, undefined, 3.0, [1, 0, 0, 1], [-25, -15.0, -25.0]);
+    nv1.addLabel("insula", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.CENTER}, undefined);
+    nv1.addLabel("ventral anterior insula", {lineWidth: 3.0}, [[-33, 13, -7], [32, 10, -6]]);
+    nv1.addLabel("dorsal anterior insula", {textColor: [0.0, 1.0, 0.0, 1.0], lineWidth: 3.0, lineColor: [0.0, 1.0, 0.0, 1.0]}, [[-38, 6, 2], [35, 7, 3]]);
+    nv1.addLabel("posterior insula", {textColor: [0.0, 0.0, 1.0, 1.0], undefined, undefined, lineWidth: 3.0, lineColor: [0.0, 0.0, 1.0, 1.0]}, [[-38, -6, 5], [35, -11, 6]]);
+    nv1.addLabel("hippocampus", {textColor:[1, 0, 0, 1], lineWidth: 3.0, lineColor: [1, 0, 0, 1]}, [-25, -15.0, -25.0]);
     
   </script>
 </body>

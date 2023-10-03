@@ -82,9 +82,21 @@ import {
 } from "./nvdocument.js";
 
 import { NVUtilities } from "./nvutilities.js";
+import {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3DStyle,
+  NVLabel3D,
+} from "./nvlabel.js";
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
+export {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3DStyle,
+  NVLabel3D,
+} from "./nvlabel.js";
 
 const log = new Log();
 
@@ -3678,11 +3690,13 @@ Niivue.prototype.loadConnectome = async function (json) {
         // const label =
         this.addLabel(
           nodes.names[i],
-          undefined,
-          nodes.Size[i] / largest,
-          rgba,
-          lineThickness,
-          rgba,
+          {
+            textColor: rgba,
+            bulletScale: nodes.Size[i] / largest,
+            bulletColor: rgba,
+            lineWidth: lineThickness,
+            lineColor: rgba,
+          },
           [nodes.X[i], nodes.Y[i], nodes.Z[i]]
         );
         // this.nodeLabels.push(label);
@@ -6999,10 +7013,11 @@ Niivue.prototype.effectiveCanvasWidth = function () {
 Niivue.prototype.getBulletMarginWidth = function () {
   const scale = 1.0; // we may want to make this adjustable in the future
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
+  console.log("labels", this.document.labels);
   const widestBulletScale = this.document.labels.reduce((a, b) =>
-    a.bulletScale > b.bulletScale ? a : b
-  ).bulletScale;
-
+    a.style.bulletScale > b.style.bulletScale ? a : b
+  ).style.bulletScale;
+  console.log("widest bullet scale", widestBulletScale);
   const tallestLabel = this.document.labels.reduce((a, b) =>
     this.textHeight(size, a.text) > this.textHeight(size, b.text) ? a : b
   );
@@ -7012,7 +7027,7 @@ Niivue.prototype.getBulletMarginWidth = function () {
   if (bulletMargin) {
     bulletMargin += size;
   }
-
+  console.log("bulletMargin", bulletMargin);
   return bulletMargin;
 };
 
@@ -8659,26 +8674,23 @@ Niivue.prototype.isPlaneVisible = function (mvpMatrix) {
  * @param {number[]} bulletColor color of the bullet
  * @param {number} lineWidth thickness of the line
  * @param {number[]} lineColor color of the line
- * @param {number[]} point 3D point on the model
+ * @param {number[] | number[][]} point 3D point on the model
  */
-Niivue.prototype.addLabel = function (
-  text,
-  textColor = this.opts.legendTextColor,
-  bulletScale = 0.0, // 0.0..1.0 scaled to font size
-  bulletColor = this.opts.legendTextColor,
-  lineWidth = 1.0,
-  lineColor = this.opts.legendTextColor,
-  point = [0, 0, 0]
-) {
-  const label = {
-    text,
-    textColor,
-    bulletScale: Math.min(1.0, bulletScale),
-    bulletColor,
-    lineWidth,
-    lineColor,
-    point,
+Niivue.prototype.addLabel = function (text, style, points = undefined) {
+  const defaultStyle = {
+    textColor: this.opts.legendTextColor,
+    textScale: 1.0,
+    textAlignment: LabelTextAlignment.LEFT,
+    lineWidth: 0.0,
+    lineColor: this.opts.legendTextColor,
+    lineTerminator: LabelLineTerminator.NONE,
+    bulletScale: 0.0,
+    bulletColor: this.opts.legendTextColor,
   };
+  const labelStyle = style
+    ? { ...defaultStyle, ...style }
+    : { ...defaultStyle };
+  const label = new NVLabel3D(text, labelStyle, points);
   this.document.labels.push(label);
   return label;
 };
@@ -8714,9 +8726,9 @@ Niivue.prototype.drawLabelLine = function (
   secondPass = false
 ) {
   let points =
-    Array.isArray(label.point) && Array.isArray(label.point[0])
-      ? label.point
-      : [label.point];
+    Array.isArray(label.points) && Array.isArray(label.points[0])
+      ? label.points
+      : [label.points];
   for (const point of points) {
     const screenPoint = this.calculateScreenPoint(
       point,
@@ -8728,14 +8740,14 @@ Niivue.prototype.drawLabelLine = function (
       this.draw3DLine(
         pos,
         [screenPoint[0], screenPoint[1], screenPoint[2]],
-        label.lineWidth,
-        label.lineColor
+        label.style.lineWidth,
+        label.style.lineColor
       );
     } else {
       this.drawDottedLine(
         [...pos, screenPoint[0], screenPoint[1]],
-        label.lineWidth,
-        label.lineColor
+        label.style.lineWidth,
+        label.style.lineColor
       );
     }
   }
@@ -8748,6 +8760,7 @@ Niivue.prototype.draw3DLabel = function (
   mvpMatrix,
   leftTopWidthHeight,
   bulletMargin,
+  legendWidth,
   secondPass = false
 ) {
   const text = label.text;
@@ -8761,7 +8774,7 @@ Niivue.prototype.draw3DLabel = function (
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
 
-  if (label.lineWidth > 0.0 && Array.isArray(label.point)) {
+  if (label.style.lineWidth > 0.0 && Array.isArray(label.points)) {
     this.drawLabelLine(
       label,
       [left, top + size / 2],
@@ -8773,22 +8786,22 @@ Niivue.prototype.draw3DLabel = function (
 
   const textHeight = this.textHeight(scale, text) * size;
 
-  if (label.bulletScale) {
-    const bulletSize = label.bulletScale * size;
+  if (label.style.bulletScale) {
+    const bulletSize = label.style.bulletScale * size;
     const diff = textHeight - bulletSize;
     let rectTop = top + diff / 2 + size / 4;
     const rectLeft = left + (bulletMargin - bulletSize) / 2;
 
     this.drawCircle(
       [rectLeft, rectTop, bulletSize, bulletSize],
-      label.bulletColor
+      label.style.bulletColor
     );
   }
 
   let textLeft = left;
   textLeft += bulletMargin ? bulletMargin : size / 2;
 
-  this.drawText([textLeft, top], text, 1.0, label.textColor);
+  this.drawText([textLeft, top], text, 1.0, label.style.textColor);
 };
 
 // not included in public docs
@@ -8819,7 +8832,7 @@ Niivue.prototype.draw3DLabels = function (
     [gl.canvas.width - panelWidth, top, panelWidth - size, panelHeight],
     this.opts.legendBackgroundColor
   );
-
+  console.log("panelwidth", panelWidth);
   const blend = gl.getParameter(gl.BLEND);
   const depthFunc = gl.getParameter(gl.DEPTH_FUNC);
 
@@ -8828,7 +8841,6 @@ Niivue.prototype.draw3DLabels = function (
     gl.depthFunc(gl.GREATER);
   }
 
-  // top += size / 2;
   for (const label of this.document.labels) {
     this.draw3DLabel(
       label,
@@ -8836,6 +8848,7 @@ Niivue.prototype.draw3DLabels = function (
       mvpMatrix,
       leftTopWidthHeight,
       bulletMargin,
+      panelWidth,
       secondPass
     );
 
