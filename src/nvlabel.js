@@ -1,15 +1,15 @@
 /** enum for text alignment */
 export const LabelTextAlignment = Object.freeze({
-  LEFT: Symbol("left"),
-  RIGHT: Symbol("right"),
-  CENTER: Symbol("center"),
+  LEFT: "left",
+  RIGHT: "right",
+  CENTER: "center",
 });
 
 /** enum for line terminators */
 export const LabelLineTerminator = Object.freeze({
-  NONE: Symbol("none"),
-  CIRCLE: Symbol("circle"),
-  RING: Symbol("ring"),
+  NONE: "none",
+  CIRCLE: "circle",
+  RING: "ring",
 });
 
 /**  Class representing label style */
