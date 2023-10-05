@@ -15,6 +15,15 @@
       it to continue.</strong>
   </noscript>
   <header>
+    <label for="xRaySlider">XRay</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="2"
+        class="slider"
+        id="xRaySlider"
+      />
     <label for="nodeSlider">Size</label>
     <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
     <label for="save">Save the current scene as HTML</label>
@@ -60,6 +69,11 @@ let connectome = {
     nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", this.value * 0.1);
   };
 
+  xRaySlider.onchange = function () {
+    nv1.opts.meshXRay = this.value / 10;
+    nv1.drawScene();
+  };
+
   function saveAsHtml() {
       nv1.saveHTML("connectome.html");
   }
@@ -71,15 +85,13 @@ let connectome = {
       colormap: "gray",
     },
   ];
-  let opts = {
-    show3Dcrosshair: true,
-    backColor: [0.8, 0.8, 1, 1],
-  };
-  var nv1 = new niivue.Niivue(opts);
+  
+  var nv1 = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true });
   nv1.attachTo("gl1");
-  nv1.setSliceType(nv1.sliceTypeRender);
+  // nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.opts.multiplanarForceRender = true;
-  nv1.opts.meshXRay = 0.3;
+  nv1.opts.meshXRay = 0.2;
   await nv1.loadVolumes(volumeList1);
 
   let connectome = {
