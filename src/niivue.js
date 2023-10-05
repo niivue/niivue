@@ -92,18 +92,12 @@ import {
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
-<<<<<<< HEAD
 export {
   LabelTextAlignment,
   LabelLineTerminator,
   NVLabel3DStyle,
   NVLabel3D,
 } from "./nvlabel.js";
-=======
-
-const LEGEND_PADDING = 20;
-const LEGEND_VERTICAL_SPACING = 20;
->>>>>>> 5d68cfb (Added legend for labels)
 
 const log = new Log();
 
@@ -1709,6 +1703,7 @@ Niivue.prototype.dragOverListener = function (e) {
 
 // not included in public docs
 Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
+  console.log("fullname: ", fullname);
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(fullname)[1];
   ext = ext.toUpperCase();
@@ -3704,7 +3699,6 @@ Niivue.prototype.loadConnectome = async function (json) {
   let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
   this.uiData.loading$.next(false);
   this.addMesh(mesh);
-<<<<<<< HEAD
 
   // add labels for each node
   if (json.nodes) {
@@ -3780,8 +3774,6 @@ Niivue.prototype.loadConnectome = async function (json) {
     }
   }
 
-=======
->>>>>>> 86ef886 (Added bullets)
   //this.meshes.push(mesh);
   //this.updateGLVolume();
   // } // for
@@ -7087,7 +7079,6 @@ Niivue.prototype.effectiveCanvasWidth = function () {
   return this.gl.canvas.width - this.getLegendPanelWidth();
 };
 
-<<<<<<< HEAD
 Niivue.prototype.getBulletMarginWidth = function () {
   const widestBulletScale = this.document.labels.reduce((a, b) =>
     a.style.bulletScale > b.style.bulletScale ? a : b
@@ -7115,7 +7106,11 @@ Niivue.prototype.getBulletMarginWidth = function () {
 };
 
 Niivue.prototype.getLegendPanelWidth = function () {
-  if (!this.opts.showLegend || this.document.labels.length == 0) {
+  if (
+    !this.opts.showLegend ||
+    !this.document.labels ||
+    this.document.labels.length == 0
+  ) {
     return 0;
   }
   const scale = 1.0; // we may want to make this adjustable in the future
@@ -7131,39 +7126,6 @@ Niivue.prototype.getLegendPanelWidth = function () {
       this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b;
     return longer;
   });
-=======
-Niivue.prototype.getLegendPanelWidth = function () {
-  if (!this.opts.showLegend || this.document.labels.length == 0) {
-    return 0;
-  }
-  const scale = 1.0; // we may want to make this adjustable in the future
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
-  let width = 0;
-  const widestBullet = this.document.labels.reduce((a, b) =>
-    Array.isArray(a.bulletSize) &&
-    (!Array.isArray(b.bulletSize) || a.bulletSize[0] > b.bulletSize[0])
-      ? a
-      : b
-  );
-
-<<<<<<< HEAD
-  if (width) {
-    // add padding (left and right)
-    width += LEGEND_PADDING * 2;
-  }
->>>>>>> 5d68cfb (Added legend for labels)
-=======
-  const bulletMargin =
-    widestBullet.bulletSize && widestBullet.bulletSize.length > 0
-      ? widestBullet.bulletSize[0]
-      : 0;
-  const longestLabel = this.document.labels.reduce((a, b) =>
-    this.textWidth(size, a.text) > this.textWidth(size, b.text) ? a : b
-  );
-  const longestTextLength = this.textWidth(size, longestLabel.text);
-  width = bulletMargin + longestTextLength;
-  width += LEGEND_PADDING * 2;
->>>>>>> 86ef886 (Added bullets)
 
   const longestTextSize =
     this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale;
@@ -7181,7 +7143,6 @@ Niivue.prototype.getLegendPanelWidth = function () {
 Niivue.prototype.getLegendPanelHeight = function () {
   let height = 0;
   const scale = 1.0; // we may want to make this adjustable in the future
-<<<<<<< HEAD
   let verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
   for (const label of this.document.labels) {
     const labelSize =
@@ -7192,17 +7153,6 @@ Niivue.prototype.getLegendPanelHeight = function () {
 
   if (height) {
     height += (verticalMargin / 2) * (this.document.labels.length + 1);
-=======
-  let size = this.opts.textHeight * this.gl.canvas.height * scale;
-  for (const label of this.document.labels) {
-    let textHeight = this.textHeight(size, label.text);
-    let bulletHeight = label.bulletSize ? label.bulletSize[1] : 0;
-    height += Math.max(textHeight, bulletHeight);
-  }
-
-  if (height) {
-    height += LEGEND_VERTICAL_SPACING * (this.document.labels.length + 1);
->>>>>>> 5d68cfb (Added legend for labels)
   }
 
   return height;
@@ -8745,66 +8695,6 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
 };
 
 /**
- * Determines if the clip plane is visible
- * @param {mat4} mvpMatrix model view project matrix of base volume
- */
-Niivue.prototype.isPlaneVisible = function (mvpMatrix) {
-  // Calculate the plane's normal
-  const planeNormal = mat.vec3.create();
-  mat.vec3.normalize(planeNormal, this.scene.clipPlane);
-
-  // Calculate the plane's vertices
-  const halfWidth = 0.5; // Adjust this as needed
-  const halfHeight = 0.5; // Adjust this as needed
-
-  const vertices = [
-    mat.vec3.scale(mat.vec3.create(), planeNormal, halfWidth),
-    mat.vec3.scale(mat.vec3.create(), planeNormal, -halfWidth),
-    mat.vec3.scaleAndAdd(
-      mat.vec3.create(),
-      planeNormal,
-      mat.vec3.fromValues(0, 1, 0),
-      halfHeight
-    ),
-    mat.vec3.scaleAndAdd(
-      mat.vec3.create(),
-      planeNormal,
-      mat.vec3.fromValues(0, -1, 0),
-      -halfHeight
-    ),
-  ];
-
-  let isVisible = false;
-
-  // Check each vertex of the plane
-  for (const vertex of vertices) {
-    // Transform the vertex by the MVP matrix
-    const transformedVertex = mat.vec4.create();
-    mat.vec4.transformMat4(
-      transformedVertex,
-      mat.vec4.fromValues(...vertex, 1),
-      mvpMatrix
-    );
-
-    // Check if the transformed vertex is inside the clip space and in front of the clip plane
-    if (
-      transformedVertex[0] >= -1 &&
-      transformedVertex[0] <= 1 &&
-      transformedVertex[1] >= -1 &&
-      transformedVertex[1] <= 1 &&
-      transformedVertex[2] >= -1 &&
-      transformedVertex[2] <= 1
-    ) {
-      isVisible = true;
-      break; // If any vertex is visible, consider the plane visible
-    }
-  }
-
-  return isVisible;
-};
-
-<<<<<<< HEAD
-/**
  * Add a 3D Label
  * @param {string} text text of the label
  * @param {number[]} textColor color of the text
@@ -8831,54 +8721,6 @@ Niivue.prototype.addLabel = function (text, style, points = undefined) {
   const label = new NVLabel3D(text, labelStyle, points);
   this.document.labels.push(label);
   return label;
-=======
-// Check if a point is visible
-Niivue.prototype.isLabelPointVisible = function (point) {
-  // xyz
-  const xyz = this.scene.clipPlane.slice(1);
-  const planeNormal = mat.vec3.create();
-  mat.vec3.normalize(planeNormal, xyz);
-  const planeLength = mat.vec3.length(planeNormal);
-  const unitNormal = mat.vec3.divide(unitNormal, planeNormal, planeLength);
-  const vecPoint = mat.vec3.fromValues(...point);
-  // Calculate the distance between the point and the clip plane
-  // const pointToPlaneDistance = mat.vec3.dot(
-  //   mat.vec3.subtract(
-  //     mat.vec3.create(),
-  //     mat.vec3.fromValues(...point),
-  //     mat.vec3.fromValues(...this.scene.clipPlane.slice(1))
-  //   ),
-  //   this.scene.clipPlane
-  // );
-  const pointToPlaneDistance = mat.vec3.dot(vecPoint, unitNormal);
-  console.log("distance from clip plane: ", pointToPlaneDistance);
-  // Check if the point is within 0.1 units of the clip plane
-  return Math.abs(pointToPlaneDistance) <= 0.1;
-};
-
-Niivue.prototype.addLabel = function (
-  text,
-  textColor = this.opts.legendTextColor,
-  bulletSize = [0.0, 0.0],
-  bulletColor = this.opts.legendTextColor,
-  lineWidth = 1.0,
-  lineColor = this.opts.legendTextColor,
-  point = [0, 0, 0]
-) {
-<<<<<<< HEAD
-  this.document.labels.push({ text, point, lineColor, lineWidth });
->>>>>>> 5d68cfb (Added legend for labels)
-=======
-  this.document.labels.push({
-    text,
-    textColor,
-    bulletSize,
-    bulletColor,
-    lineWidth,
-    lineColor,
-    point,
-  });
->>>>>>> 86ef886 (Added bullets)
 };
 
 // not included in public docs
@@ -8942,37 +8784,14 @@ Niivue.prototype.drawLabelLine = function (
 // not included in public docs
 Niivue.prototype.draw3DLabel = function (
   label,
-<<<<<<< HEAD
-<<<<<<< HEAD
   pos,
-=======
-  left,
-  top,
->>>>>>> 5d68cfb (Added legend for labels)
   mvpMatrix,
   leftTopWidthHeight,
   bulletMargin,
   legendWidth,
   secondPass = false
-=======
-  pos,
-  mvpMatrix,
-  leftTopWidthHeight,
-  bulletMargin
->>>>>>> 86ef886 (Added bullets)
 ) {
   const text = label.text;
-<<<<<<< HEAD
-=======
-  const point = label.point;
-<<<<<<< HEAD
-
-  // const padding = 10;
->>>>>>> 5d68cfb (Added legend for labels)
-=======
-  let left = pos[0];
-  let top = pos[1];
->>>>>>> 86ef886 (Added bullets)
 
   let left = pos[0];
   let top = pos[1];
@@ -8981,7 +8800,6 @@ Niivue.prototype.draw3DLabel = function (
   const size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
-<<<<<<< HEAD
     1.0;
 
   const textHeight = this.textHeight(label.style.textScale, text) * size;
@@ -9036,103 +8854,24 @@ Niivue.prototype.draw3DLabels = function (
   leftTopWidthHeight,
   secondPass = false
 ) {
-  if (!this.opts.showLegend || this.document.labels.length == 0) {
-=======
-    scale;
-
-  const firstLetter = text.substr(0, 1);
-  const firstLetterHeight = this.textHeight(scale, firstLetter) * size;
-
-  if (label.bulletSize && label.bulletSize[1]) {
-    const rectLeft = left + (bulletMargin - label.bulletSize[0]) / 2;
-    let rectTop = top;
-    console.log("bullet size", label.bulletSize);
-
-    if (label.bulletSize[1] > firstLetterHeight) {
-      // move the text down
-      top -= (label.bulletSize[1] - firstLetterHeight) / 2;
-    } else {
-      // move the bullet down
-      rectTop += firstLetterHeight - label.bulletSize[1];
-    }
-
-    this.drawRect([rectLeft, rectTop, ...label.bulletSize], label.bulletColor);
-  }
-
-  let textLeft = left;
-  textLeft += bulletMargin; //label.bulletSize[0];
-  textLeft += LEGEND_PADDING;
-
-  this.drawText([textLeft, top], text, 1.0, label.textColor);
-
-  // const width = this.textWidth(1.0, text) * size;
-  // draw line
-  const screenPoint = this.calculateScreenPoint(
-    point,
-    mvpMatrix,
-    leftTopWidthHeight
-  );
-
-  if (label.lineWidth > 0.0) {
-    this.drawLine(
-      [
-        left - LEGEND_PADDING,
-        top + firstLetterHeight / 2,
-        screenPoint[0],
-        screenPoint[1],
-      ],
-      label.lineWidth,
-      label.lineColor
-    );
-  }
-};
-
-// not included in public docs
-Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
-<<<<<<< HEAD
-  if (!this.opts.showLegend) {
->>>>>>> 5d68cfb (Added legend for labels)
-=======
-  if (!this.opts.showLegend || this.document.labels.length == 0) {
->>>>>>> 86ef886 (Added bullets)
+  if (
+    !this.opts.showLegend ||
+    !this.document.labels ||
+    this.document.labels.length == 0
+  ) {
     return;
   }
 
   let gl = this.gl;
+  gl.disable(gl.CULL_FACE);
   gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-  const bulletMargin = this.document.labels.reduce((a, b) =>
-    Array.isArray(a.bulletSize) &&
-    (!Array.isArray(b.bulletSize) || a.bulletSize[0] > b.bulletSize[0])
-      ? a
-      : b
-  ).bulletSize[0];
-  const panelHeight = this.getLegendPanelHeight();
-  const panelWidth = this.getLegendPanelWidth();
-  const left = gl.canvas.width - panelWidth + LEGEND_PADDING;
-  let top = (this.canvas.height - panelHeight) / 2;
-  this.drawRect(
-    [gl.canvas.width - panelWidth, top, panelWidth, panelHeight],
-    this.opts.legendBackgroundColor
-  );
+
   const scale = 1.0;
   let size =
     this.opts.textHeight *
     Math.min(this.gl.canvas.height, this.gl.canvas.width) *
     scale;
-  top += LEGEND_VERTICAL_SPACING;
-  for (const label of this.document.labels) {
-    this.draw3DLabel(
-      label,
-      [left, top],
-      mvpMatrix,
-      leftTopWidthHeight,
-      bulletMargin
-    );
-    let textHeight = this.textHeight(size, label.text);
-    let bulletHeight = label.bulletSize ? label.bulletSize[1] : 0;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   const bulletMargin = this.getBulletMarginWidth();
   const panelHeight = this.getLegendPanelHeight();
   const panelWidth = this.getLegendPanelWidth();
@@ -9174,13 +8913,6 @@ Niivue.prototype.draw3DLabels = function (mvpMatrix, leftTopWidthHeight) {
     if (blend) {
       gl.enable(gl.BLEND);
     }
-=======
-    top += this.textHeight(size, label.text);
-=======
-    top += Math.max(textHeight, bulletHeight);
->>>>>>> 86ef886 (Added bullets)
-    top += LEGEND_VERTICAL_SPACING;
->>>>>>> 5d68cfb (Added legend for labels)
   }
 };
 

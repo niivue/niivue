@@ -151,14 +151,11 @@ export const DEFAULT_OPTIONS = {
 /**
  * @typedef NVLabel3D
  * @property {string} text
-<<<<<<< HEAD
-=======
  * @property {number[]} textColor
  * @property {number[]} bulletSize width and height of bullets in pixels
  * @property {number[]} bulletColor
  * @property {number} lineWidth
  * @property {number[]} lineColor
->>>>>>> 86ef886 (Added bullets)
  * @property {number[]} point
  */
 
@@ -385,17 +382,13 @@ export class NVDocument {
 
   /**
    * Gets the 3D labels of the {@link Niivue} instance
-<<<<<<< HEAD
    * @returns {NVLabel3D}
-=======
->>>>>>> 15d9a00 (Add 3d labels to document)
    */
   get labels() {
     return this.data.labels;
   }
 
   /**
-<<<<<<< HEAD
    * Sets the 3D labels of the {@link Niivue} instance
    * @param {NVLabel3D[]} labels
    */
@@ -404,8 +397,6 @@ export class NVDocument {
   }
 
   /**
-=======
->>>>>>> 15d9a00 (Add 3d labels to document)
    * Checks if document has an image by id
    * @param {NVImage} image
    * @returns {boolean}
@@ -513,15 +504,7 @@ export class NVDocument {
     data.opts = { ...this.opts };
 
     // save our labels
-<<<<<<< HEAD
-<<<<<<< HEAD
     data.labels = [...this.data.labels];
-=======
-    data.labels = { ...this.labels };
->>>>>>> 15d9a00 (Add 3d labels to document)
-=======
-    data.labels = [...this.data.labels];
->>>>>>> 5d68cfb (Added legend for labels)
 
     // volumes
     if (this.volumes.length) {
@@ -627,7 +610,8 @@ export class NVDocument {
       copyMesh.edgeColormapNegative = mesh.edgeColormapNegative;
       copyMesh.edgeMax = mesh.edgeMax;
       copyMesh.edgeMin = mesh.edgeMin;
-      copyMesh.edges = [...mesh.edges];
+      copyMesh.edges =
+        mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [];
       copyMesh.extentsMax = [...mesh.extentsMax];
       copyMesh.extentsMin = [...mesh.extentsMin];
       copyMesh.fiberGroupColormap = mesh.fiberGroupColormap;
