@@ -139,6 +139,7 @@ export const DEFAULT_OPTIONS = {
   isAntiAlias: null,
   limitFrames4D: NaN,
   isAdditiveBlend: false,
+
   showLegend: true, // if a document has labels the default is to show them
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
