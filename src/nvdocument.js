@@ -3,7 +3,7 @@ import { NVUtilities } from "./nvutilities";
 // eslint-disable-next-line no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 import { serialize, deserialize } from "@ungap/structured-clone";
-
+import { NVLabel3D } from "./nvlabel";
 /**
  * Slice Type
  * @enum
@@ -139,8 +139,22 @@ export const DEFAULT_OPTIONS = {
   isAntiAlias: null,
   limitFrames4D: NaN,
   isAdditiveBlend: false,
-  multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
+  showLegend: true, // if a document has labels the default is to show them
+  legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
+  legendTextColor: [1.0, 1.0, 1.0, 1.0],
+  multiplanarLayout: MULTIPLANAR_TYPE.AUTO
 };
+
+/**
+ * @typedef NVLabel3D
+ * @property {string} text
+ * @property {number[]} textColor
+ * @property {number[]} bulletSize width and height of bullets in pixels
+ * @property {number[]} bulletColor
+ * @property {number} lineWidth
+ * @property {number[]} lineColor
+ * @property {number[]} point
+ */
 
 /**Creates and instance of NVDocument
  * @class NVDocument
@@ -155,6 +169,11 @@ export class NVDocument {
     this.data.meshOptionsArray = [];
     this.data.opts = { ...DEFAULT_OPTIONS };
     this.data.previewImageDataURL = "";
+
+    /**
+     * @type {NVLabel3D[]}
+     */
+    this.data.labels = [];
 
     /**
      * @typedef {Object} NVSceneData
@@ -359,6 +378,22 @@ export class NVDocument {
   }
 
   /**
+   * Gets the 3D labels of the {@link Niivue} instance
+   * @returns {NVLabel3D}
+   */
+  get labels() {
+    return this.data.labels;
+  }
+
+  /**
+   * Sets the 3D labels of the {@link Niivue} instance
+   * @param {NVLabel3D[]} labels
+   */
+  set labels(labels) {
+    this.data.labels = labels;
+  }
+
+  /**
    * Checks if document has an image by id
    * @param {NVImage} image
    * @returns {boolean}
@@ -465,6 +500,9 @@ export class NVDocument {
     // save our options
     data.opts = { ...this.opts };
 
+    // save our labels
+    data.labels = [...this.data.labels];
+
     // volumes
     if (this.volumes.length) {
       let imageOptions = this.imageOptionsArray[0];
@@ -558,13 +596,30 @@ export class NVDocument {
       copyMesh.name = mesh.name;
       copyMesh.rgba255 = mesh.rgba255;
       copyMesh.opacity = mesh.opacity;
-      copyMesh.connectome = mesh.connectome;
+      copyMesh.connectome = { ...mesh.connectome };
       copyMesh.dpg = mesh.dpg;
       copyMesh.dps = mesh.dps;
       copyMesh.dpv = mesh.dpv;
       copyMesh.meshShaderIndex = mesh.meshShaderIndex;
       copyMesh.layers = [];
-
+      copyMesh.hasConnectome = mesh.hasConnectome;
+      copyMesh.edgeColormap = mesh.edgeColormap;
+      copyMesh.edgeColormapNegative = mesh.edgeColormapNegative;
+      copyMesh.edgeMax = mesh.edgeMax;
+      copyMesh.edgeMin = mesh.edgeMin;
+      copyMesh.edges =
+        mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [];
+      copyMesh.extentsMax = [...mesh.extentsMax];
+      copyMesh.extentsMin = [...mesh.extentsMin];
+      copyMesh.fiberGroupColormap = mesh.fiberGroupColormap;
+      copyMesh.furthestVertexFromOrigin = mesh.furthestVertexFromOrigin;
+      copyMesh.nodeColormap = mesh.nodeColormap;
+      copyMesh.nodeColormapNegative = mesh.nodeColormapNegative;
+      copyMesh.nodeMaxColor = mesh.nodeMaxColor;
+      copyMesh.nodeMinColor = mesh.nodeMinColor;
+      copyMesh.nodeScale = mesh.nodeScale;
+      copyMesh.offsetPt0 = mesh.offsetPt0;
+      copyMesh.nodes = { ...mesh.nodes };
       for (const layer of mesh.layers) {
         const copyLayer = {};
         copyLayer.values = layer.values;
@@ -646,6 +701,7 @@ export class NVDocument {
   static loadFromJSON(data) {
     let document = new NVDocument();
     document.data = data;
+    console.log(document.data);
     document.scene.sceneData = data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);
