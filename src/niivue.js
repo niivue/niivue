@@ -9281,6 +9281,12 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   return vox;
 }; // frac2vox()
 
+// not included in public docs
+// https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
+Number.prototype.clamp = function(min, max) {
+  return Math.min(Math.max(this, min), max);
+}; //clamp()
+
 /**
  * move crosshair a fixed number of voxels (not mm)
  * @param {number} x translate left (-) or right (+)
@@ -9294,6 +9300,9 @@ Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   vox[0] += x;
   vox[1] += y;
   vox[2] += z;
+  vox[0] = vox[0].clamp(0,this.volumes[0].dimsRAS[1]-1);
+  vox[1] = vox[1].clamp(0,this.volumes[0].dimsRAS[2]-1);
+  vox[2] = vox[2].clamp(0,this.volumes[0].dimsRAS[3]-1);
   this.scene.crosshairPos = this.vox2frac(vox);
   this.createOnLocationChange();
   this.drawScene();
