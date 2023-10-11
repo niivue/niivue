@@ -9,6 +9,7 @@ import {
 import {
   vertRectShader,
   vertLineShader,
+  vertLine3DShader,
   fragRectShader,
 } from "./shader-srcs.js";
 import {
@@ -21,6 +22,8 @@ import { vertColorbarShader, fragColorbarShader } from "./shader-srcs.js";
 import {
   vertFontShader,
   fragFontShader,
+  vertCircleShader,
+  fragCircleShader,
   vertBmpShader,
   fragBmpShader,
 } from "./shader-srcs.js";
@@ -80,9 +83,21 @@ import {
 } from "./nvdocument.js";
 
 import { NVUtilities } from "./nvutilities.js";
+import {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3DStyle,
+  NVLabel3D,
+} from "./nvlabel.js";
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
+export {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3DStyle,
+  NVLabel3D,
+} from "./nvlabel.js";
 
 const log = new Log();
 
@@ -225,6 +240,7 @@ export function Niivue(options = {}) {
   this.colorbarShader = null;
   this.fontShader = null;
   this.fontTexture = null;
+  this.circleShader = null;
   this.matCapTexture = null;
   this.bmpShader = null;
   this.bmpTexture = null; //thumbnail WebGLTexture object
@@ -1687,6 +1703,7 @@ Niivue.prototype.dragOverListener = function (e) {
 
 // not included in public docs
 Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
+  console.log("fullname: ", fullname);
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(fullname)[1];
   ext = ext.toUpperCase();
@@ -2994,10 +3011,11 @@ Niivue.prototype.sph2cartDeg = function sph2cartDeg(azimuth, elevation) {
  * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
  */
 Niivue.prototype.setClipPlane = function (depthAzimuthElevation) {
-  // azimuthElevation is 2 component vector [a, e, d]
+  //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
+  //  azimuthElevation is 2 component vector [a, e, d]
   //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
   //  elevation: camera height in degrees, range -90..90
-  //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
+
   let v = this.sph2cartDeg(
     depthAzimuthElevation[1] + 180,
     depthAzimuthElevation[2]
@@ -3676,14 +3694,89 @@ Niivue.prototype.loadConnectome = async function (json) {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   this.uiData.loading$.next(false);
   // for loop to load all volumes in volumeList
-  for (let i = 0; i < 1; i++) {
-    this.uiData.loading$.next(true);
-    let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
-    this.uiData.loading$.next(false);
-    this.addMesh(mesh);
-    //this.meshes.push(mesh);
-    //this.updateGLVolume();
-  } // for
+  // for (let i = 0; i < 1; i++) {
+  this.uiData.loading$.next(true);
+  let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
+  this.uiData.loading$.next(false);
+  this.addMesh(mesh);
+
+  // add labels for each node
+  if (json.nodes) {
+    // remove any previous node labels
+    // if (this.nodeLabels) {
+    //   this.document.labels = this.document.labels.filter(
+    //     (l) => !this.nodeLabels.includes(l)
+    //   );
+    // }
+
+    // this.nodeLabels = [];
+    this.document.labels = [];
+    const nodes = json.nodes;
+    if (
+      "names" in nodes &&
+      "X" in nodes &&
+      "Y" in nodes &&
+      "Z" in nodes &&
+      "Color" in nodes &&
+      "Size" in nodes
+    ) {
+      // largest node
+      const largest = nodes.Size.reduce((a, b) => (a > b ? a : b));
+      const min = json.nodeMinColor
+        ? json.nodeMinColor
+        : nodes.Color.reduce((a, b) => (a < b ? a : b));
+      const max = json.nodeMaxColor
+        ? json.nodeMaxColor
+        : nodes.Color.reduce((a, b) => (a > b ? a : b));
+      let lut = cmapper.colormap(json.nodeColormap, mesh.colormapInvert);
+      let lutNeg = cmapper.colormap(
+        json.nodeColormapNegative,
+        mesh.colormapInvert
+      );
+
+      const hasNeg = "nodeColormapNegative" in nodes;
+      const lineThickness = nodes.lineThickness ? nodes.lineThickness : 0.0;
+
+      for (let i = 0; i < nodes.names.length; i++) {
+        let color = nodes.Color[i];
+        let isNeg = false;
+        if (hasNeg && color < 0) {
+          isNeg = true;
+          color = -color;
+        }
+
+        if (min < max) {
+          if (color < min) continue;
+          color = (color - min) / (max - min);
+        } else color = 1.0;
+
+        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg) {
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+        }
+        rgba = rgba.map((c) => c / 255);
+
+        // const label =
+        this.addLabel(
+          nodes.names[i],
+          {
+            textColor: rgba,
+            bulletScale: nodes.Size[i] / largest,
+            bulletColor: rgba,
+            lineWidth: lineThickness,
+            lineColor: rgba,
+          },
+          [nodes.X[i], nodes.Y[i], nodes.Z[i]]
+        );
+        // this.nodeLabels.push(label);
+      }
+    }
+  }
+
+  //this.meshes.push(mesh);
+  //this.updateGLVolume();
+  // } // for
   this.drawScene();
   return this;
 }; // loadMeshes
@@ -5056,6 +5149,24 @@ Niivue.prototype.init = async function () {
     this.lineShader.uniforms["canvasWidthHeight"];
   this.lineShader.thicknessLoc = this.lineShader.uniforms["thickness"];
   this.lineShader.startXYendXYLoc = this.lineShader.uniforms["startXYendXY"];
+  // 3D line shader
+  this.line3DShader = new Shader(this.gl, vertLine3DShader, fragRectShader);
+  this.line3DShader.use(this.gl);
+  this.line3DShader.lineColorLoc = this.line3DShader.uniforms["lineColor"];
+  this.line3DShader.canvasWidthHeightLoc =
+    this.line3DShader.uniforms["canvasWidthHeight"];
+  this.line3DShader.thicknessLoc = this.line3DShader.uniforms["thickness"];
+  this.line3DShader.startXYLoc = this.line3DShader.uniforms["startXY"];
+  this.line3DShader.endXYZLoc = this.line3DShader.uniforms["endXYZ"];
+  // circle shader
+  this.circleShader = new Shader(this.gl, vertCircleShader, fragCircleShader);
+  this.circleShader.use(this.gl);
+  this.circleShader.circleColorLoc = this.circleShader.uniforms["circleColor"];
+  this.circleShader.canvasWidthHeightLoc =
+    this.circleShader.uniforms["canvasWidthHeight"];
+  this.circleShader.leftTopWidthHeightLoc =
+    this.circleShader.uniforms["leftTopWidthHeight"];
+  this.circleShader.fillPercentLoc = this.circleShader.uniforms["fillPercent"];
   // render shader (3D)
   this.renderVolumeShader = new Shader(
     this.gl,
@@ -6878,6 +6989,32 @@ Niivue.prototype.drawRect = function (
   this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
 };
 
+Niivue.prototype.drawCircle = function (
+  leftTopWidthHeight,
+  circleColor = this.opts.fontColor,
+  fillPercent = 1.0
+) {
+  this.circleShader.use(this.gl);
+  this.gl.enable(this.gl.BLEND);
+  this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor);
+  this.gl.uniform2fv(this.circleShader.canvasWidthHeightLoc, [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform4f(
+    this.circleShader.leftTopWidthHeightLoc,
+    leftTopWidthHeight[0],
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[2],
+    leftTopWidthHeight[3]
+  );
+  this.gl.uniform1f(this.circleShader.fillPercentLoc, fillPercent);
+  this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor);
+  this.gl.bindVertexArray(this.genericVAO);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //switch off to avoid tampering with settings
+};
+
 // not included in public docs
 // draw a rectangle at desired location
 Niivue.prototype.drawSelectionBox = function (leftTopWidthHeight) {
@@ -6936,6 +7073,89 @@ function tickSpacing(mn, mx) {
 Niivue.prototype.effectiveCanvasHeight = function () {
   //available canvas height differs from actual height if bottom colorbar is shown
   return this.gl.canvas.height - this.colorbarHeight;
+};
+
+Niivue.prototype.effectiveCanvasWidth = function () {
+  return this.gl.canvas.width - this.getLegendPanelWidth();
+};
+
+Niivue.prototype.getBulletMarginWidth = function () {
+  const widestBulletScale = this.document.labels.reduce((a, b) =>
+    a.style.bulletScale > b.style.bulletScale ? a : b
+  ).style.bulletScale;
+  const tallestLabel = this.document.labels.reduce((a, b) => {
+    const aSize =
+      this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
+    const bSize =
+      this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+    const taller =
+      this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b;
+    return taller;
+  });
+
+  let size =
+    this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale;
+  let bulletMargin =
+    this.textHeight(size, tallestLabel.text) * widestBulletScale;
+
+  size = this.opts.textHeight * this.gl.canvas.height;
+  if (bulletMargin) {
+    bulletMargin += size;
+  }
+  return bulletMargin;
+};
+
+Niivue.prototype.getLegendPanelWidth = function () {
+  if (
+    !this.opts.showLegend ||
+    !this.document.labels ||
+    this.document.labels.length == 0
+  ) {
+    return 0;
+  }
+  const scale = 1.0; // we may want to make this adjustable in the future
+  let horizontalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
+  let width = 0;
+
+  const longestLabel = this.document.labels.reduce((a, b) => {
+    const aSize =
+      this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
+    const bSize =
+      this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+    const longer =
+      this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b;
+    return longer;
+  });
+
+  const longestTextSize =
+    this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale;
+  const longestTextLength = this.textWidth(longestTextSize, longestLabel.text);
+
+  let bulletMargin = this.getBulletMarginWidth();
+
+  if (longestTextLength) {
+    width = bulletMargin + longestTextLength;
+    width += horizontalMargin * 2;
+  }
+  return width;
+};
+
+Niivue.prototype.getLegendPanelHeight = function () {
+  let height = 0;
+  const scale = 1.0; // we may want to make this adjustable in the future
+  let verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
+  for (const label of this.document.labels) {
+    const labelSize =
+      this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+    let textHeight = this.textHeight(labelSize, label.text);
+    height += textHeight;
+  }
+
+  if (height) {
+    height += (verticalMargin / 2) * (this.document.labels.length + 1);
+  }
+
+  return height;
 };
 
 // not included in public docs
@@ -7112,6 +7332,17 @@ Niivue.prototype.textWidth = function (scale, str) {
   return w;
 }; // textWidth()
 
+Niivue.prototype.textHeight = function (scale, str) {
+  const byteSet = new Set(Array.from(str));
+  const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
+
+  const tallest = this.fontMets
+    .filter((element, index) => bytes.includes(index))
+    .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b));
+  const height = tallest.lbwh[3];
+  return scale * height;
+};
+
 // not included in public docs
 Niivue.prototype.drawChar = function (xy, scale, char) {
   //draw single character, never call directly: ALWAYS call from drawText()
@@ -7137,7 +7368,6 @@ Niivue.prototype.drawLoadingText = function (text) {
 
 // not included in public docs
 Niivue.prototype.drawText = function (xy, str, scale = 1, color = null) {
-  //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   this.fontShader.use(this.gl);
   //let size = this.opts.textHeight * this.gl.canvas.height * scale;
@@ -7164,16 +7394,16 @@ Niivue.prototype.drawText = function (xy, str, scale = 1, color = null) {
 }; // drawText()
 
 // not included in public docs
-Niivue.prototype.drawTextRight = function (xy, str, scale = 1) {
+Niivue.prototype.drawTextRight = function (xy, str, scale = 1, color = null) {
   //to right of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
-  this.drawText(xy, str, scale);
+  this.drawText(xy, str, scale, color);
 }; // drawTextRight()
 
 // not included in public docs
 Niivue.prototype.drawTextLeft = function (xy, str, scale = 1, color = null) {
-  //to right of x, vertically centered on y
+  //to left of x, vertically centered on y
   if (this.opts.textHeight <= 0) return;
   let size = this.opts.textHeight * this.gl.canvas.height * scale;
   xy[0] -= this.textWidth(size, str);
@@ -8464,6 +8694,228 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   this.onLocationChange(msg);
 };
 
+/**
+ * Add a 3D Label
+ * @param {string} text text of the label
+ * @param {number[]} textColor color of the text
+ * @param {number} bulletScale relative scale of the bullet to the text size
+ * @param {number[]} bulletColor color of the bullet
+ * @param {number} lineWidth thickness of the line
+ * @param {number[]} lineColor color of the line
+ * @param {number[] | number[][]} point 3D point on the model
+ */
+Niivue.prototype.addLabel = function (text, style, points = undefined) {
+  const defaultStyle = {
+    textColor: this.opts.legendTextColor,
+    textScale: 1.0,
+    textAlignment: LabelTextAlignment.LEFT,
+    lineWidth: 0.0,
+    lineColor: this.opts.legendTextColor,
+    lineTerminator: LabelLineTerminator.NONE,
+    bulletScale: 0.0,
+    bulletColor: this.opts.legendTextColor,
+  };
+  const labelStyle = style
+    ? { ...defaultStyle, ...style }
+    : { ...defaultStyle };
+  const label = new NVLabel3D(text, labelStyle, points);
+  this.document.labels.push(label);
+  return label;
+};
+
+// not included in public docs
+Niivue.prototype.calculateScreenPoint = function (
+  point,
+  mvpMatrix,
+  leftTopWidthHeight
+) {
+  const screenPoint = mat.vec4.create();
+  // Multiply the 3D point by the model-view-projection matrix
+  mat.vec4.transformMat4(screenPoint, [...point, 1.0], mvpMatrix);
+  // Convert the 4D point to 2D screen coordinates
+  if (screenPoint[3] !== 0.0) {
+    screenPoint[0] =
+      (screenPoint[0] / screenPoint[3] + 1.0) * 0.5 * leftTopWidthHeight[2];
+    screenPoint[1] =
+      (1.0 - screenPoint[1] / screenPoint[3]) * 0.5 * leftTopWidthHeight[3];
+    screenPoint[2] /= screenPoint[3];
+
+    screenPoint[0] += leftTopWidthHeight[0];
+    screenPoint[1] += leftTopWidthHeight[1];
+  }
+  return screenPoint;
+};
+
+Niivue.prototype.drawLabelLine = function (
+  label,
+  pos,
+  mvpMatrix,
+  leftTopWidthHeight,
+  secondPass = false
+) {
+  let points =
+    Array.isArray(label.points) && Array.isArray(label.points[0])
+      ? label.points
+      : [label.points];
+  for (const point of points) {
+    const screenPoint = this.calculateScreenPoint(
+      point,
+      mvpMatrix,
+      leftTopWidthHeight
+    );
+    if (!secondPass) {
+      // draw line
+      this.draw3DLine(
+        pos,
+        [screenPoint[0], screenPoint[1], screenPoint[2]],
+        label.style.lineWidth,
+        label.style.lineColor
+      );
+    } else {
+      this.drawDottedLine(
+        [...pos, screenPoint[0], screenPoint[1]],
+        label.style.lineWidth,
+        label.style.lineColor
+      );
+    }
+  }
+};
+
+// not included in public docs
+Niivue.prototype.draw3DLabel = function (
+  label,
+  pos,
+  mvpMatrix,
+  leftTopWidthHeight,
+  bulletMargin,
+  legendWidth,
+  secondPass = false
+) {
+  const text = label.text;
+
+  let left = pos[0];
+  let top = pos[1];
+
+  // const scale = label.style.textScale;
+  const size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    1.0;
+
+  const textHeight = this.textHeight(label.style.textScale, text) * size;
+
+  if (label.style.lineWidth > 0.0 && Array.isArray(label.points)) {
+    this.drawLabelLine(
+      label,
+      [left, top + textHeight],
+      mvpMatrix,
+      leftTopWidthHeight,
+      secondPass
+    );
+  }
+
+  if (label.style.bulletScale) {
+    const bulletSize = label.style.bulletScale * textHeight;
+    const diff = textHeight - bulletSize;
+    let rectTop = top + diff / 2 + bulletSize / 2;
+    const rectLeft = left + (bulletMargin - bulletSize) / 2;
+
+    this.drawCircle(
+      [rectLeft, rectTop, bulletSize, bulletSize],
+      label.style.bulletColor
+    );
+  }
+
+  let textLeft = left;
+
+  if (label.style.textAlignment != LabelTextAlignment.LEFT) {
+    const textWidth = this.textWidth(label.style.textScale, label.text) * size;
+    if (label.style.textAlignment === LabelTextAlignment.RIGHT) {
+      textLeft = left + legendWidth - size * 1.5 - textWidth;
+    } else {
+      const remaining = legendWidth - (bulletMargin || size);
+      textLeft += (remaining - textWidth) / 2;
+    }
+  } else {
+    textLeft += bulletMargin ? bulletMargin : size / 2;
+  }
+
+  this.drawText(
+    [textLeft, top],
+    text,
+    label.style.textScale,
+    label.style.textColor
+  );
+};
+
+// not included in public docs
+Niivue.prototype.draw3DLabels = function (
+  mvpMatrix,
+  leftTopWidthHeight,
+  secondPass = false
+) {
+  if (
+    !this.opts.showLegend ||
+    !this.document.labels ||
+    this.document.labels.length == 0
+  ) {
+    return;
+  }
+
+  let gl = this.gl;
+  gl.disable(gl.CULL_FACE);
+  gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+  const scale = 1.0;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
+
+  const bulletMargin = this.getBulletMarginWidth();
+  const panelHeight = this.getLegendPanelHeight();
+  const panelWidth = this.getLegendPanelWidth();
+  const left = gl.canvas.width - panelWidth;
+  let top = (this.canvas.height - panelHeight) / 2;
+  this.drawRect(
+    [gl.canvas.width - panelWidth, top, panelWidth - size, panelHeight],
+    this.opts.legendBackgroundColor
+  );
+  const blend = gl.getParameter(gl.BLEND);
+  const depthFunc = gl.getParameter(gl.DEPTH_FUNC);
+
+  if (!secondPass) {
+    gl.disable(gl.BLEND);
+    gl.depthFunc(gl.GREATER);
+  }
+
+  for (const label of this.document.labels) {
+    this.draw3DLabel(
+      label,
+      [left, top],
+      mvpMatrix,
+      leftTopWidthHeight,
+      bulletMargin,
+      panelWidth,
+      secondPass
+    );
+
+    const labelSize =
+      this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+    let textHeight = this.textHeight(labelSize, label.text);
+
+    top += textHeight; //Math.max(textHeight, bulletHeight);
+    top += size / 2;
+  }
+
+  if (!secondPass) {
+    gl.depthFunc(depthFunc);
+    if (blend) {
+      gl.enable(gl.BLEND);
+    }
+  }
+};
+
 // not included in public docs
 Niivue.prototype.draw3D = function (
   leftTopWidthHeight = [0, 0, 0, 0],
@@ -8487,9 +8939,12 @@ Niivue.prototype.draw3D = function (
       azimuth,
       elevation
     );
+
+  let relativeLTWH = [...leftTopWidthHeight];
   if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
     //use full canvas
     leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
+    relativeLTWH = [...leftTopWidthHeight];
     this.screenSlices.push({
       leftTopWidthHeight: leftTopWidthHeight,
       axCorSag: SLICE_TYPE.RENDER,
@@ -8510,15 +8965,20 @@ Niivue.prototype.draw3D = function (
     leftTopWidthHeight[1] =
       gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1];
   }
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.ALWAYS);
+  gl.depthMask(true);
+  gl.clearDepth(0.0);
+  this.draw3DLabels(mvpMatrix, relativeLTWH, false);
+
   gl.viewport(
     leftTopWidthHeight[0],
     leftTopWidthHeight[1],
     leftTopWidthHeight[2],
     leftTopWidthHeight[3]
   );
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.ALWAYS);
-  gl.clearDepth(0.0);
+
   this.updateInterpolation(0, true); // force background interpolation
   if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation);
   this.updateInterpolation(0); //use default interpolation for 2D slices
@@ -8546,6 +9006,17 @@ Niivue.prototype.draw3D = function (
       modelMatrix,
       normalMatrix
     );
+
+  //
+  this.draw3DLabels(mvpMatrix, relativeLTWH, false);
+
+  gl.viewport(
+    leftTopWidthHeight[0],
+    leftTopWidthHeight[1],
+    leftTopWidthHeight[2],
+    leftTopWidthHeight[3]
+  );
+  //
   if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
@@ -8558,6 +9029,7 @@ Niivue.prototype.draw3D = function (
   //bus.$emit('crosshair-pos-change', posString);
   this.readyForSync = true;
   this.sync();
+  this.draw3DLabels(mvpMatrix, relativeLTWH, true);
   return posString;
 }; // draw3D()
 
@@ -8912,7 +9384,7 @@ Niivue.prototype.scaleSlice = function (
   widthPadPixels = 0,
   heightPadPixels = 0
 ) {
-  let canvasW = this.canvas.width - widthPadPixels;
+  let canvasW = this.effectiveCanvasWidth() - widthPadPixels;
   let canvasH = this.effectiveCanvasHeight() - heightPadPixels;
   let scalePix = canvasW / w;
   if (h * scalePix > canvasH) scalePix = canvasH / h;
@@ -8971,6 +9443,108 @@ Niivue.prototype.drawLine = function (
   this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
   this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+}; // drawLine()
+
+// not included in public docs
+// draw line (can be diagonal)
+// unless Alpha is > 0, default color is opts.crosshairColor
+Niivue.prototype.draw3DLine = function (
+  startXY,
+  endXYZ,
+  thickness = 1,
+  lineColor = [1, 0, 0, -1]
+) {
+  this.gl.bindVertexArray(this.genericVAO);
+  this.line3DShader.use(this.gl);
+  if (lineColor[3] < 0) lineColor = this.opts.crosshairColor;
+  this.gl.uniform4fv(this.line3DShader.lineColorLoc, lineColor);
+  this.gl.uniform2fv(this.line3DShader.canvasWidthHeightLoc, [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  //draw Line
+  this.gl.uniform1f(this.line3DShader.thicknessLoc, thickness);
+  this.gl.uniform2fv(this.line3DShader.startXYLoc, startXY);
+  this.gl.uniform3fv(this.line3DShader.endXYZLoc, endXYZ);
+  this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+}; // drawLine()
+
+Niivue.prototype.drawDottedLine = function (
+  startXYendXY,
+  thickness = 1,
+  lineColor = [1, 0, 0, -1]
+) {
+  this.gl.bindVertexArray(this.genericVAO);
+  this.lineShader.use(this.gl);
+  let dottedLineColor =
+    lineColor[3] < 0 ? [...this.opts.crosshairColor] : [...lineColor];
+
+  dottedLineColor[3] = 0.3;
+
+  // get vector
+  const segment = mat.vec2.fromValues(
+    startXYendXY[2] - startXYendXY[0],
+    startXYendXY[3] - startXYendXY[1]
+  );
+  const totalLength = mat.vec2.length(segment);
+  mat.vec2.normalize(segment, segment);
+  const scale = 1.0;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
+  mat.vec2.scale(segment, segment, size / 2);
+  const segmentLength = mat.vec2.length(segment);
+  let segmentCount = Math.floor(totalLength / segmentLength);
+
+  if (totalLength % segmentLength) {
+    segmentCount++;
+  }
+
+  let currentSegmentXY = [startXYendXY[0], startXYendXY[1]];
+
+  this.gl.uniform4fv(this.lineShader.lineColorLoc, dottedLineColor);
+  this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
+    this.gl.canvas.width,
+    this.gl.canvas.height,
+  ]);
+  this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
+
+  // draw all segments except for the last one
+  for (let i = 0; i < segmentCount - 1; i++) {
+    if (i % 2) {
+      currentSegmentXY[0] += segment[0];
+      currentSegmentXY[1] += segment[1];
+      continue;
+    }
+
+    const segmentStartXYendXY = [
+      currentSegmentXY[0],
+      currentSegmentXY[1],
+      currentSegmentXY[0] + segment[0],
+      currentSegmentXY[1] + segment[1],
+    ];
+
+    //draw Line
+
+    this.gl.uniform4fv(this.lineShader.startXYendXYLoc, segmentStartXYendXY);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    // this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
+    currentSegmentXY[0] += segment[0];
+    currentSegmentXY[1] += segment[1];
+  }
+
+  // this.gl.uniform4fv(this.lineShader.lineColorLoc, lineColor);
+  // this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
+  //   this.gl.canvas.width,
+  //   this.gl.canvas.height,
+  // ]);
+  // //draw Line
+  // this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
+  // this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
+  // this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
 }; // drawLine()
 

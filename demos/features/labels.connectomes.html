@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Connectome</title>
+  <link rel="stylesheet" href="niivue.css" />
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable
+      it to continue.</strong>
+  </noscript>
+  <header>
+    <label for="xRaySlider">XRay</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="2"
+        class="slider"
+        id="xRaySlider"
+      />
+    <label for="nodeSlider">Size</label>
+    <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
+    <label for="save">Save the current scene as HTML</label>
+    <button id="save">Save as HTML</button>
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer>
+    <textarea id="scriptText" name="customText" rows="10" cols="60">
+let connectome = {
+  name: "simpleConnectome",
+  nodeColormap: "warm",
+  nodeColormapNegative: "winter",
+  nodeMinColor: 2,
+  nodeMaxColor: 4,
+  nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+  edgeColormap: "warm",
+  edgeColormapNegative: "winter",
+  edgeMin: 2,
+  edgeMax: 6,
+  edgeScale: 1,
+  nodes: {
+    lineThickness: 3.0,
+    names: ["RF", "LF", "RP", "LP"], //currently unused
+    X: [40, -40, 40, -40], //Xmm for each node
+    Y: [40, 40, -40, -40], //Ymm for each node
+    Z: [30, 20, 50, 50], //Zmm for each node
+    Color: [2, 2, 3, 4], //Used to interpolate color
+    Size: [2, 2, 3, 4], //Size of node
+  },
+  edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
+};
+</textarea>
+    &nbsp;<button id="custom">Custom Connectome</button>&nbsp;
+    </footer>  
+</body>
+
+</html>
+<script src="./niivue.umd.js"></script>
+<script type="module" async>
+  nodeSlider.oninput = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", this.value * 0.1);
+  };
+
+  xRaySlider.onchange = function () {
+    nv1.opts.meshXRay = this.value / 10;
+    nv1.drawScene();
+  };
+
+  function saveAsHtml() {
+      nv1.saveHTML("connectome.html");
+  }
+
+  var volumeList1 = [
+    // first item is background image
+    {
+      url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+      colormap: "gray",
+    },
+  ];
+  
+  var nv1 = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true });
+  nv1.attachTo("gl1");
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  nv1.opts.multiplanarForceRender = true;
+  nv1.opts.meshXRay = 0.2;
+  await nv1.loadVolumes(volumeList1);
+
+  let connectome = {
+      name: "simpleConnectome",
+      nodeColormap: "warm",
+      nodeColormapNegative: "winter",
+      nodeMinColor: 2,
+      nodeMaxColor: 4,
+      nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+      edgeColormap: "warm",
+      edgeColormapNegative: "winter",
+      edgeMin: 2,
+      edgeMax: 6,
+      edgeScale: 1,
+      nodes: {
+        names: ["RF", "LF", "RP", "LP"], //currently unused
+        X: [40, -40, 40, -40], //Xmm for each node
+        Y: [40, 40, -40, -40], //Ymm for each node
+        Z: [30, 20, 50, 50], //Zmm for each node
+        Color: [2, 2, 3, 4], //Used to interpolate color
+        Size: [2, 2, 3, 4], //Size of node
+      },
+      edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
+    };
+
+  await nv1.loadConnectome(connectome);
+  nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", 3);
+  nv1.setClipPlane([-0.1, 270, 0]);
+
+  let custom = document.getElementById("custom");
+  custom.onclick = () => {
+    let val = document.getElementById("scriptText").value;
+    val += '; nv1.loadConnectome(connectome);';
+    val && eval(val);
+  }
+
+  let saveButton = document.getElementById("save");
+    saveButton.onclick = saveAsHtml;
+    
+</script>

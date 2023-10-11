@@ -120,4 +120,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const base64 = NVUtilities.uint8tob64(compressed);
     return base64;
   }
+
+  static arraysAreEqual(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
 }

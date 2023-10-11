@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Labels</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>niivue requires JavaScript.</noscript>
+  <header>
+    <select id="sliceType">      
+      <option value="4">Render</option>
+      <option value="3" selected>A+C+S+R</option>
+    </select>
+    Save the current scene as HTML
+    <button id="save">Save as HTML</button>
+  </header>
+  <main>
+    <canvas id="gl1"></canvas>
+
+  </main>
+  <script type="module" async>
+    import * as niivue from "./niivue.es.js";
+    function saveAsHtml() {
+      nv1.saveHTML("labels.html");
+    }
+
+    function setSliceType() {
+      let st = parseInt(document.getElementById("sliceType").value);
+      nv1.setSliceType(st);
+    }
+
+    var volumeList1 = [
+      {
+        url: "../images/mni152.nii.gz",
+        colormap: "gray",
+        visible: true,
+        opacity: 1
+      },
+      {
+        url: "../images/hippo.nii.gz",
+        colormap: "red",
+        visible: true,
+        opacity: 1
+      }
+    ];
+
+    // assign our event handler
+    var button = document.getElementById("save");
+    button.onclick = saveAsHtml;
+    var drop = document.getElementById("sliceType");
+    drop.onchange = setSliceType;
+
+    var nv1 = new niivue.Niivue();
+    nv1.opts.multiplanarForceRender = true;
+    nv1.attachTo("gl1");
+    nv1.loadVolumes(volumeList1);
+    nv1.addLabel("Insula", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.CENTER}, [0.0, 0.0, 0.0]);
+    nv1.addLabel("ventral anterior insula", {lineWidth: 3.0, textColor: [1.0, 1.0, 0.0, 1.0], lineColor: [1.0, 1.0, 0.0, 1.0]}, [[-33, 13, -7], [32, 10, -6]]);
+    nv1.addLabel("dorsal anterior insula", {textColor: [0.0, 1.0, 0.0, 1.0], lineWidth: 3.0, lineColor: [0.0, 1.0, 0.0, 1.0]}, [[-38, 6, 2], [35, 7, 3]]);
+    nv1.addLabel("posterior insula", {textColor: [0.0, 0.0, 1.0, 1.0], lineWidth: 3.0, lineColor: [0.0, 0.0, 1.0, 1.0]}, [[-38, -6, 5], [35, -11, 6]]);
+    nv1.addLabel("hippocampus", {textColor:[1, 0, 0, 1], lineWidth: 3.0, lineColor: [1, 0, 0, 1]}, [-25, -15.0, -25.0]);
+    nv1.addLabel("right justified footnote", {textScale: 0.5, textAlignment: niivue.LabelTextAlignment.RIGHT, bulletColor: [1.0, 0.0, 1.0, 1.0], bulletScale: 0.5}, [0.0, 0.0, 0.0]);
+  </script>
+</body>
+
+</html>

@@ -816,6 +816,27 @@ void main(void) {
 	gl_Position = vec4((posXY * 2.0) - 1.0, 0.0, 1.0);
 }`;
 
+export var vertLine3DShader = `#version 300 es
+#line 534
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float thickness;
+uniform vec2 startXY;
+uniform vec3 endXYZ; // transformed XYZ point
+void main(void) {	
+	vec2 posXY = mix(startXY.xy, endXYZ.xy, pos.x);
+	vec2 startDiff = endXYZ.xy - startXY.xy;
+	float startDistance = length(startDiff);
+	vec2 diff = endXYZ.xy - posXY;
+	float currentDistance = length(diff);
+	vec2 dir = normalize(startXY.xy - endXYZ.xy);
+	posXY += vec2(-dir.y, dir.x) * thickness * (pos.y - 0.5);
+	posXY.x = (posXY.x) / canvasWidthHeight.x; //0..1
+	posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y); //1..0	
+	float z = endXYZ.z * ( 1.0 - abs(currentDistance/startDistance)); 
+	gl_Position = vec4((posXY * 2.0) - 1.0, z, 1.0);
+}`;
+
 export var vertBmpShader = `#version 300 es
 #line 549
 layout(location=0) in vec3 pos;
@@ -879,6 +900,42 @@ void main() {
 	float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 	color = vec4(fontColor.rgb , fontColor.a * opacity);
 }`;
+
+export var vertCircleShader = `#version 300 es
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+uniform vec4 uvLeftTopWidthHeight;
+out vec2 vUV;
+void main(void) {
+	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	gl_Position = vec4(frac, 0.0, 1.0);
+	vUV = pos.xy;
+}`;
+
+export var fragCircleShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform vec4 circleColor;
+uniform float fillPercent;
+in vec2 vUV;
+out vec4 color;
+void main() {
+	/* Check if the pixel is inside the circle
+		 and color it with a gradient. Otherwise, color it 
+		 transparent   */
+	float distance = length(vUV-vec2(0.5,0.5));
+	if ( distance < 0.5 && distance >= (1.0 - fillPercent) / 2.0){
+			color = vec4(circleColor.r,circleColor.g,circleColor.b,circleColor.a) ;			
+	}else{
+			color = vec4(0.0,0.0,0.0,0.0);
+	}
+}
+`;
 
 export var vertOrientShader = `#version 300 es
 #line 613
