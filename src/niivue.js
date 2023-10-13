@@ -86,7 +86,7 @@ import { NVUtilities } from "./nvutilities.js";
 import {
   LabelTextAlignment,
   LabelLineTerminator,
-  NVLabel3DStyle,
+  // NVLabel3DStyle,
   NVLabel3D,
 } from "./nvlabel.js";
 
@@ -783,6 +783,7 @@ Niivue.prototype.decodeEmbeddedUMD = function () {
     return "";
   }
 
+  // eslint-disable-next-line no-undef
   return NVUtilities.decompressBase64String(__NIIVUE_UMD__);
 };
 
@@ -821,7 +822,8 @@ Niivue.prototype.attachToCanvas = async function (canvas, isAntiAlias = null) {
     "NIIVUE VERSION ",
     typeof __NIIVUE_VERSION__ === "undefined"
       ? "null (niivue was likely built in a parent project rather than using the pre-bundled version)"
-      : __NIIVUE_VERSION__
+      : // eslint-disable-next-line no-undef
+        __NIIVUE_VERSION__
   ); // TH added this rare console.log via suggestion from CR. Don't remove
 
   // set parent background container to black (default empty canvas color)
@@ -963,7 +965,7 @@ Niivue.prototype.resizeListener = function () {
   } else {
     this.uiData.dpr = 1;
   }
-  if (this.canvas.parentElement.hasOwnProperty("width")) {
+  if ("width" in this.canvas.parentElement) {
     this.canvas.width = this.canvas.parentElement.width * this.uiData.dpr;
     this.canvas.height = this.canvas.parentElement.height * this.uiData.dpr;
   } else {
@@ -1127,8 +1129,8 @@ function intensityRaw2Scaled(hdr, raw) {
 // not included in public docs
 // note: no test yet
 Niivue.prototype.calculateNewRange = function ({
-  fracStart = null,
-  fracEnd = null,
+  // fracStart = null,
+  // fracEnd = null,
   volIdx = 0,
 } = {}) {
   if (
@@ -1609,6 +1611,7 @@ Niivue.prototype.keyDownListener = function (e) {
     // only works for background (first loaded image is index 0)
     this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
   } else if (e.code === "Slash" && e.shiftKey) {
+    // eslint-disable-next-line no-undef
     alert(`NIIVUE VERSION: ${__NIIVUE_VERSION__}`);
   }
 };
@@ -2255,7 +2258,7 @@ function decodeRLE(rle, decodedlen) {
 
 // not included in public docs
 // Internal function to store drawings that can be used for undo operations
-Niivue.prototype.drawAddUndoBitmap = async function (fnm) {
+Niivue.prototype.drawAddUndoBitmap = async function (/*fnm*/) {
   if (!this.drawBitmap || this.drawBitmap.length < 1) {
     log.debug("drawAddUndoBitmap error: No drawing open");
     return false;
@@ -2579,7 +2582,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
-  if (!this.back.hasOwnProperty("dims")) {
+  if (!("dims" in this.back)) {
     log.debug("No voxelwise image open");
     return false;
   }
@@ -3318,7 +3321,7 @@ Niivue.prototype.loadDocument = function (document) {
     const imageOptions = document.imageOptionsArray[i];
     const base64 = encodedImageBlobs[i];
     if (base64) {
-      if (imageOptions.hasOwnProperty("colorMap"))
+      if ("colorMap" in imageOptions)
         imageOptions.colormap = imageOptions.colorMap;
       let image = NVImage.loadFromBase64({ base64, ...imageOptions });
       if (image) {
@@ -3787,7 +3790,7 @@ Niivue.prototype.loadConnectome = async function (json) {
  * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
  */
 Niivue.prototype.createEmptyDrawing = async function () {
-  if (!this.back.hasOwnProperty("dims")) return;
+  if (!("dims" in this.back)) return;
   let mn = Math.min(
     Math.min(this.back.dims[1], this.back.dims[2]),
     this.back.dims[3]
@@ -4201,6 +4204,7 @@ Niivue.prototype.drawFloodFillCore = async function (
     //6. Test six neighbors of n (left,right,anterior,posterior,inferior, superior
     //   If any is is unfound part of cluster (value = 1) set it to found (value 2) and add to Q
     let xyz = vx2xyz(vx);
+    // eslint-disable-next-line no-inner-declarations
     function testNeighbor(offset) {
       let xyzN = xyz.slice();
       xyzN[0] += offset[0];
@@ -4352,7 +4356,7 @@ Niivue.prototype.drawPenFilled = function () {
   //create bitmap of horizontal*vertical voxels:
   var img2D = new Uint8Array(dims2D[0] * dims2D[1]);
   var pen = 1; //do not use this.opts.penValue, as "erase" is zero
-  function drawLine2D(ptA, ptB, penValue) {
+  function drawLine2D(ptA, ptB /*penValue*/) {
     let dx = Math.abs(ptA[0] - ptB[0]);
     let dy = Math.abs(ptA[1] - ptB[1]);
     img2D[ptA[0] + ptA[1] * dims2D[0]] = pen;
@@ -4898,8 +4902,8 @@ Niivue.prototype.setMeshShader = function (id, meshShaderNameOrNumber = 2) {
  */
 Niivue.prototype.createCustomMeshShader = function (
   fragmentShaderText,
-  name = "Custom",
-  vertexShaderText = ""
+  name = "Custom"
+  // vertexShaderText = ""
 ) {
   if (!fragmentShaderText) {
     throw "Need fragment shader";
@@ -5352,7 +5356,7 @@ Niivue.prototype.gradientGL = function (hdr) {
     hdr.dims
   );
   for (let i = 0; i < hdr.dims[3] - 1; i++) {
-    var coordZ = (1 / hdr.dims[3]) * (i + 0.5);
+    // var coordZ = (1 / hdr.dims[3]) * (i + 0.5);
     gl.uniform1f(sobelShader.uniforms["coordZ"], coordZ);
     //console.log(coordZ);
     gl.framebufferTextureLayer(
@@ -5432,11 +5436,11 @@ Niivue.prototype.getDescriptives = function (
   let nv = imgRaw.length; //number of voxels
   //create mask
   let img = new Float32Array(nv);
-  for (var i = 0; i < nv; i++) img[i] = imgRaw[i] * slope + inter; //assume all voxels survive
+  for (let i = 0; i < nv; i++) img[i] = imgRaw[i] * slope + inter; //assume all voxels survive
   let mask = new Uint8Array(nv);
-  for (var i = 0; i < nv; i++) mask[i] = 1; //assume all voxels survive
+  for (let i = 0; i < nv; i++) mask[i] = 1; //assume all voxels survive
   if (masks.length > 0) {
-    for (var m = 0; m < masks.length; m++) {
+    for (let m = 0; m < masks.length; m++) {
       let imgMask = this.volumes[masks[m]].img;
       if (imgMask.length !== nv) {
         log.debug(
@@ -5445,7 +5449,7 @@ Niivue.prototype.getDescriptives = function (
         );
         continue;
       }
-      for (var i = 0; i < nv; i++) {
+      for (let i = 0; i < nv; i++) {
         if (imgMask[i] === 0 || isNaN(imgMask[i])) mask[i] = 0;
       } //for each voxel in mask
     } //for each mask
@@ -5897,7 +5901,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   //for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
   let colormapLabelTexture = null;
   if (
-    overlayItem.colormapLabel.hasOwnProperty("lut") &&
+    "lut" in overlayItem.colormapLabel &&
     overlayItem.colormapLabel.lut.length > 7
   ) {
     let nLabel =
@@ -6455,7 +6459,7 @@ Niivue.prototype.refreshColormaps = function () {
       let mesh = this.meshes[i];
       if (!mesh.colorbarVisible) continue;
       let nlayers = mesh.layers.length;
-      if (mesh.hasOwnProperty("edgeColormap")) {
+      if ("edgeColormap" in mesh) {
         let neg = negMinMax(mesh.edgeMin, mesh.edgeMax, NaN, NaN);
         this.addColormapList(
           mesh.edgeColormapNegative,
@@ -6655,8 +6659,8 @@ Niivue.prototype.inGraphTile = function (x, y) {
 Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   x *= this.uiData.dpr;
   y *= this.uiData.dpr;
-  var posNow;
-  var posFuture;
+  // var posNow;
+  // var posFuture;
   this.canvas.focus();
   if (this.thumbnailVisible) {
     //we will simply hide the thmubnail
@@ -6708,77 +6712,77 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
     let texFrac = this.screenXY2TextureFrac(x, y, i);
     if (texFrac[0] < 0) continue; //click not on slice i
-    if (true) {
-      //user clicked on slice i
-      if (!isDelta) {
-        this.scene.crosshairPos[2 - axCorSag] = posChange;
-        this.drawScene();
-        return;
-      }
-      // scrolling... not mouse
-      if (posChange !== 0) {
-        let posNeg = 1;
-        if (posChange < 0) posNeg = -1;
-        let xyz = [0, 0, 0];
-        xyz[2 - axCorSag] = posNeg;
-        this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
-        this.drawScene();
-        this.createOnLocationChange(axCorSag);
-        return;
-      }
-      this.scene.crosshairPos = texFrac.slice();
-      if (this.opts.drawingEnabled) {
-        let pt = this.frac2vox(this.scene.crosshairPos);
-
-        if (
-          !isFinite(this.opts.penValue) ||
-          this.opts.penValue < 0 ||
-          Object.is(this.opts.penValue, -0)
-        ) {
-          if (!isFinite(this.opts.penValue))
-            //NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-            this.drawFloodFill(
-              pt,
-              0,
-              this.opts.penValue,
-              this.opts.floodFillNeighbors
-            );
-          else
-            this.drawFloodFill(
-              pt,
-              Math.abs(this.opts.penValue, this.opts.floodFillNeighbors)
-            );
-          return;
-        }
-        if (isNaN(this.drawPenLocation[0])) {
-          this.drawPenAxCorSag = axCorSag;
-          this.drawPenFillPts = [];
-          this.drawPt(...pt, this.opts.penValue);
-        } else {
-          if (
-            pt[0] === this.drawPenLocation[0] &&
-            pt[1] === this.drawPenLocation[1] &&
-            pt[2] === this.drawPenLocation[2]
-          )
-            return;
-          this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue);
-        }
-        this.drawPenLocation = pt;
-        if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
-        this.refreshDrawing(false);
-      }
+    // if (true) {
+    //user clicked on slice i
+    if (!isDelta) {
+      this.scene.crosshairPos[2 - axCorSag] = posChange;
+      this.drawScene();
+      return;
+    }
+    // scrolling... not mouse
+    if (posChange !== 0) {
+      let posNeg = 1;
+      if (posChange < 0) posNeg = -1;
+      let xyz = [0, 0, 0];
+      xyz[2 - axCorSag] = posNeg;
+      this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
       this.drawScene();
       this.createOnLocationChange(axCorSag);
       return;
-    } else {
-      //if click in slice i
-      // if x and y are null, likely due to a slider widget sending the posChange (no mouse info in that case)
-      if (x === null && y === null) {
-        this.scene.crosshairPos[2 - axCorSag] = posChange;
-        this.drawScene();
+    }
+    this.scene.crosshairPos = texFrac.slice();
+    if (this.opts.drawingEnabled) {
+      let pt = this.frac2vox(this.scene.crosshairPos);
+
+      if (
+        !isFinite(this.opts.penValue) ||
+        this.opts.penValue < 0 ||
+        Object.is(this.opts.penValue, -0)
+      ) {
+        if (!isFinite(this.opts.penValue))
+          //NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
+          this.drawFloodFill(
+            pt,
+            0,
+            this.opts.penValue,
+            this.opts.floodFillNeighbors
+          );
+        else
+          this.drawFloodFill(
+            pt,
+            Math.abs(this.opts.penValue, this.opts.floodFillNeighbors)
+          );
         return;
       }
+      if (isNaN(this.drawPenLocation[0])) {
+        this.drawPenAxCorSag = axCorSag;
+        this.drawPenFillPts = [];
+        this.drawPt(...pt, this.opts.penValue);
+      } else {
+        if (
+          pt[0] === this.drawPenLocation[0] &&
+          pt[1] === this.drawPenLocation[1] &&
+          pt[2] === this.drawPenLocation[2]
+        )
+          return;
+        this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue);
+      }
+      this.drawPenLocation = pt;
+      if (this.opts.isFilledPen) this.drawPenFillPts.push(pt);
+      this.refreshDrawing(false);
     }
+    this.drawScene();
+    this.createOnLocationChange(axCorSag);
+    return;
+    // } else {
+    //   //if click in slice i
+    //   // if x and y are null, likely due to a slider widget sending the posChange (no mouse info in that case)
+    //   if (x === null && y === null) {
+    //     this.scene.crosshairPos[2 - axCorSag] = posChange;
+    //     this.drawScene();
+    //     return;
+    //   }
+    // }
   } //for i: each slice on screen
 }; // mouseClick()
 
@@ -8626,6 +8630,7 @@ Niivue.prototype.drawOrientationCube = function (
 // fills data returned with the onLocationChanvge() callback
 Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
   //first: provide a string representation
+  // eslint-disable-next-line no-unused-vars
   let [mn, mx, range] = this.sceneExtentsMinMax(true);
   let fov = Math.max(Math.max(range[0], range[1]), range[2]);
   function dynamicDecimals(flt) {
@@ -8652,13 +8657,13 @@ Niivue.prototype.createOnLocationChange = function (axCorSag = NaN) {
       let vox = this.volumes[i].mm2vox(mm);
       let flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D);
       deci = 3;
-      if (this.volumes[i].colormapLabel.hasOwnProperty("labels")) {
+      if ("labels" in this.volumes[i].colormapLabel) {
         let v = Math.round(flt);
         if (v >= 0 && v < this.volumes[i].colormapLabel.labels.length)
           valStr += this.volumes[i].colormapLabel.labels[v];
         else valStr += "undefined(" + flt2str(flt, deci) + ")";
       } else valStr += flt2str(flt, deci);
-      if (this.volumes[i].hasOwnProperty("imaginary")) {
+      if ("imaginary" in this.volumes[i]) {
         flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D, true);
         if (flt >= 0) valStr += "+";
         valStr += flt2str(flt, deci);
@@ -9180,6 +9185,7 @@ Niivue.prototype.drawCrosshairs3D = function (
   let modelMtx, normMtx;
   // eslint-disable-next-line no-unused-vars
   if (mvpMtx == null)
+    // eslint-disable-next-line no-unused-vars
     [mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(
       this.crosshairs3D,
       this.scene.renderAzimuth,
@@ -9216,6 +9222,7 @@ Niivue.prototype.mm2frac = function (mm, volIdx = 0, isForceSliceMM = false) {
   //given mm, return volume fraction
   if (this.volumes.length < 1) {
     let frac = [0.1, 0.5, 0.5];
+    // eslint-disable-next-line no-unused-vars
     let [mn, mx, range] = this.sceneExtentsMinMax();
     frac[0] = (mm[0] - mn[0]) / range[0];
     frac[1] = (mm[1] - mn[1]) / range[1];
@@ -9791,7 +9798,7 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
   let items = mosaicStr.split(/\s+/);
   let scale = 1.0; //e.g. if 1.0 1mm per pixel
   let labelSize = this.opts.textHeight;
-  let isCrossLinesUsed = false;
+  // let isCrossLinesUsed = false;
   for (let pass = 0; pass < 2; pass++) {
     //two pass: first calculate dimensions to determine scale, second draw items
     let isRender = false;
@@ -9865,7 +9872,7 @@ Niivue.prototype.drawMosaic = function (mosaicStr) {
             corMM,
             sagMM
           );
-          isCrossLinesUsed = true;
+          // isCrossLinesUsed = true;
         }
         isRender = false;
         isCrossLines = false;
@@ -9917,7 +9924,7 @@ Niivue.prototype.drawSceneCore = function () {
     this.drawLoadingText(this.loadingText);
     return;
   }
-  if (!this.back.hasOwnProperty("dims")) return;
+  if (!("dims" in this.back)) return;
   if (
     this.uiData.isDragging &&
     this.scene.clipPlaneDepthAziElev[0] < 1.8 &&
