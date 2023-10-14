@@ -2659,17 +2659,28 @@ NVImage.prototype.saveToUint8Array = async function (fnm, drawing8 = null) {
   }
   return saveData;
 };
+
+// not included in public docs
+// save image as NIfTI volume
+// if fnm is empty, data is returned
 NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
   let saveData = await this.saveToUint8Array(fnm, drawing8);
-  let blob = new Blob([saveData.buffer], { type: "application/octet-stream" });
-  let blobUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", blobUrl);
-  link.setAttribute("download", fnm);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  let isString =
+    (typeof fnm === "string" || fnm instanceof String) && fnm.length > 0;
+  if (isString) {
+    let blob = new Blob([saveData.buffer], {
+      type: "application/octet-stream",
+    });
+    let blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", blobUrl);
+    link.setAttribute("download", fnm);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  return saveData;
 }; // saveToDisk()
 
 NVImage.fetchDicomData = async function (url) {
@@ -2755,6 +2766,12 @@ NVImage.loadFromUrl = async function ({
   }
   let nvimage = null;
   let dataBuffer = null;
+  if (url instanceof ArrayBuffer) {
+    dataBuffer = url;
+    url = "array.nii";
+    var bytes = new Uint8Array(dataBuffer);
+    if (bytes[0] === 31 && bytes[1] === 139) url = "array.nii.gz";
+  }
   // fetch data associated with image
   if (!isNaN(limitFrames4D)) {
     //let response = await fetch(url, { headers: { range: "bytes=0-352" } });

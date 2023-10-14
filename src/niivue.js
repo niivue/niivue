@@ -2578,6 +2578,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
  * save voxel-based image to disk
  * @param {string} fnm filename of NIfTI image to create
  * @param {boolean} [false] isSaveDrawing determines whether drawing or background image is saved
+ * @param {number} [0] volumeByIndex determines layer to save (0 for background)
  * @example niivue.saveImage('test.nii', true);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
@@ -2651,8 +2652,11 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
       return true;
     } //if native image not RAS
   } //save bitmap drawing
-  await this.volumes[0].saveToDisk(fnm);
-  return true;
+  let img = await this.volumes[volumeByIndex].saveToDisk(fnm);
+  let isString =
+    (typeof fnm === "string" || fnm instanceof String) && fnm.length > 0;
+  if (isString) return true;
+  return img;
 };
 
 // not included in public docs
@@ -6695,7 +6699,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
     if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag)
       continue; //if mouse is drawing on axial slice, ignore any entry to coronal slice
     if (axCorSag > SLICE_TYPE.SAGITTAL) continue;
-    let texFrac = this.screenXY2TextureFrac(x, y, i);
+    let texFrac = this.screenXY2TextureFrac(x, y, i, false);
     if (texFrac[0] < 0) continue; //click not on slice i
     // if (true) {
     //user clicked on slice i
@@ -9288,7 +9292,7 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
 
 // not included in public docs
 // https://stackoverflow.com/questions/11409895/whats-the-most-elegant-way-to-cap-a-number-to-a-segment
-Number.prototype.clamp = function(min, max) {
+Number.prototype.clamp = function (min, max) {
   return Math.min(Math.max(this, min), max);
 }; //clamp()
 
@@ -9305,9 +9309,9 @@ Niivue.prototype.moveCrosshairInVox = function (x, y, z) {
   vox[0] += x;
   vox[1] += y;
   vox[2] += z;
-  vox[0] = vox[0].clamp(0,this.volumes[0].dimsRAS[1]-1);
-  vox[1] = vox[1].clamp(0,this.volumes[0].dimsRAS[2]-1);
-  vox[2] = vox[2].clamp(0,this.volumes[0].dimsRAS[3]-1);
+  vox[0] = vox[0].clamp(0, this.volumes[0].dimsRAS[1] - 1);
+  vox[1] = vox[1].clamp(0, this.volumes[0].dimsRAS[2] - 1);
+  vox[2] = vox[2].clamp(0, this.volumes[0].dimsRAS[3] - 1);
   this.scene.crosshairPos = this.vox2frac(vox);
   this.createOnLocationChange();
   this.drawScene();
@@ -9363,7 +9367,6 @@ Niivue.prototype.screenXY2TextureFrac = function (
   if (axCorSag === SLICE_TYPE.CORONAL) xyzMM = swizzleVec3(xyzMM, [0, 2, 1]); //screen RSA to NIfTI RAS
   if (axCorSag === SLICE_TYPE.SAGITTAL) xyzMM = swizzleVec3(xyzMM, [2, 0, 1]); //screen ASR to NIfTI RAS
   let xyz = this.mm2frac(xyzMM);
-
   if (restrict0to1) {
     if (
       xyz[0] < 0 ||
