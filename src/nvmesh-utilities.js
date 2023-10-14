@@ -59,7 +59,7 @@ export class NVMeshUtilities {
 
   // return spatial extremes for vertices
   static getExtents(pts) {
-    if (!ArrayBuffer.isView(pts) || pts.length < 3) {
+    if ((!ArrayBuffer.isView(pts) && !Array.isArray(pts)) || pts.length < 3) {
       return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 };
     }
 

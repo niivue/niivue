@@ -89,6 +89,7 @@ import {
   // NVLabel3DStyle,
   NVLabel3D,
 } from "./nvlabel.js";
+import { NVConnectome } from "./nvconnectome.js";
 
 export { NVDocument, SLICE_TYPE } from "./nvdocument.js";
 export { NVUtilities } from "./nvutilities.js";
@@ -3677,6 +3678,42 @@ Niivue.prototype.loadMeshes = async function (meshList) {
 }; // loadMeshes
 
 /**
+ * load a connectome specified by url
+ * @param {string} url
+ * @returns {Niivue} returns the Niivue instance
+ * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
+ */
+Niivue.prototype.loadConnectomeFromUrl = async function (url) {
+  const response = await fetch(url);
+  const json = await response.json();
+  return this.loadConnectome(json);
+};
+
+/**
+ * load a connectome specified by url
+ * @param {string} url
+ * @returns {Niivue} returns the Niivue instance
+ * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
+ */
+Niivue.prototype.loadFreeSurferConnectomeFromUrl = async function (url) {
+  const response = await fetch(url);
+  const json = await response.json();
+  return this.loadFreeSurferConnectome(json);
+};
+
+/**
+ * load a connectome specified by json
+ * @param {object} connectome freesurfer model
+ * @returns {Niivue} returns the Niivue instance
+ * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
+ */
+Niivue.prototype.loadFreeSurferConnectome = async function (json) {
+  const connectome = NVConnectome.convertFreeSurferConnectome(json);
+  console.log("connectome from freesurfer", connectome);
+  return this.loadConnectome(connectome);
+};
+
+/**
  * load a connectome specified by json
  * @param {object} connectome model
  * @returns {Niivue} returns the Niivue instance
@@ -3699,7 +3736,8 @@ Niivue.prototype.loadConnectome = async function (json) {
   // for loop to load all volumes in volumeList
   // for (let i = 0; i < 1; i++) {
   this.uiData.loading$.next(true);
-  let mesh = await NVMesh.loadConnectomeFromJSON(json, this.gl);
+  let mesh = new NVConnectome(this.gl, json);
+  console.log("connectome mesh", mesh);
   this.uiData.loading$.next(false);
   this.addMesh(mesh);
 
@@ -3715,22 +3753,19 @@ Niivue.prototype.loadConnectome = async function (json) {
     // this.nodeLabels = [];
     this.document.labels = [];
     const nodes = json.nodes;
-    if (
-      "names" in nodes &&
-      "X" in nodes &&
-      "Y" in nodes &&
-      "Z" in nodes &&
-      "Color" in nodes &&
-      "Size" in nodes
-    ) {
+    if (nodes.length > 0) {
       // largest node
-      const largest = nodes.Size.reduce((a, b) => (a > b ? a : b));
+      const largest = nodes.reduce((a, b) =>
+        a.sizeValue > b.sizeValue ? a : b
+      ).sizeValue;
       const min = json.nodeMinColor
         ? json.nodeMinColor
-        : nodes.Color.reduce((a, b) => (a < b ? a : b));
+        : nodes.reduce((a, b) => (a.colorValue < b.colorValue ? a : b))
+            .colorValue;
       const max = json.nodeMaxColor
         ? json.nodeMaxColor
-        : nodes.Color.reduce((a, b) => (a > b ? a : b));
+        : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b))
+            .colorValue;
       let lut = cmapper.colormap(json.nodeColormap, mesh.colormapInvert);
       let lutNeg = cmapper.colormap(
         json.nodeColormapNegative,
@@ -3740,8 +3775,8 @@ Niivue.prototype.loadConnectome = async function (json) {
       const hasNeg = "nodeColormapNegative" in nodes;
       const lineThickness = nodes.lineThickness ? nodes.lineThickness : 0.0;
 
-      for (let i = 0; i < nodes.names.length; i++) {
-        let color = nodes.Color[i];
+      for (let i = 0; i < nodes.length; i++) {
+        let color = nodes[i].colorValue;
         let isNeg = false;
         if (hasNeg && color < 0) {
           isNeg = true;
@@ -3762,15 +3797,15 @@ Niivue.prototype.loadConnectome = async function (json) {
 
         // const label =
         this.addLabel(
-          nodes.names[i],
+          nodes[i].name,
           {
             textColor: rgba,
-            bulletScale: nodes.Size[i] / largest,
+            bulletScale: nodes[i].sizeValue / largest,
             bulletColor: rgba,
             lineWidth: lineThickness,
             lineColor: rgba,
           },
-          [nodes.X[i], nodes.Y[i], nodes.Z[i]]
+          [nodes[i].x, nodes[i].y, nodes[i].z]
         );
         // this.nodeLabels.push(label);
       }

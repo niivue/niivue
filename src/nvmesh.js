@@ -548,10 +548,12 @@ export class NVMesh {
       this.updateFibers(gl);
       return; //fiber not mesh
     }
+
     if (this.hasConnectome) {
-      this.updateConnectome(gl);
+      // this.updateConnectome(gl);
       return; //connectome not mesh
     }
+
     if (!this.pts || !this.tris || !this.rgba255) {
       console.log("underspecified mesh");
       return;
@@ -884,12 +886,10 @@ export class NVMesh {
     json,
     gl,
     name = "",
-    // colormap = "",
+    colormap = "",
     opacity = 1.0,
     visible = true
   ) {
-    // let rgb255 = [255, 0, 0];
-    // if ("color" in json) rgb255 = json.color;
     let isValid = true;
     if (!("data_type" in json)) isValid = false;
     else if (json.data_type !== "fs_pointset") isValid = false;
@@ -897,34 +897,26 @@ export class NVMesh {
     if (!isValid) {
       throw Error("not a valid FreeSurfer json pointset");
     }
-    let jcon = [];
-    jcon.nodes = [];
-    jcon.nodes.names = [];
-    jcon.nodes.prefilled = [];
-    jcon.nodes.X = [];
-    jcon.nodes.Y = [];
-    jcon.nodes.Z = [];
-    jcon.nodes.Color = [];
-    jcon.nodes.Size = [];
-    jcon.name = json.data_type;
-    for (let i = 0; i < json.points.length; i++) {
-      let name = "";
-      if ("comments" in json.points[i])
-        if ("text" in json.points[i].comments[0])
-          name = json.points[i].comments[0].text;
-      jcon.nodes.names.push(name);
-      let prefilled = "";
-      if ("comments" in json.points[i])
-        if ("prefilled" in json.points[i].comments[0])
-          prefilled = json.points[i].comments[0].prefilled;
-      jcon.nodes.prefilled.push(prefilled);
-      jcon.nodes.X.push(json.points[i].coordinates.x);
-      jcon.nodes.Y.push(json.points[i].coordinates.y);
-      jcon.nodes.Z.push(json.points[i].coordinates.z);
-      jcon.nodes.Color.push(1);
-      jcon.nodes.Size.push(1);
-    }
-    return new NVMesh([], [], name, [], opacity, visible, gl, jcon);
+
+    const nodes = json.points.map((p) => ({
+      name:
+        Array.isArray(p.comments) &&
+        p.comments.length > 0 &&
+        "text" in p.comments[0]
+          ? p.comments[0].text
+          : "",
+      point: [p.coordinates.x, p.coordinates.y, p.coordinates.z],
+      colorValue: 1,
+      sizeValue: 1,
+      metadata: p.comments,
+    }));
+    const connectome = {
+      name,
+      nodeColormap: colormap,
+      edgeColormap: colormap,
+      nodes,
+    };
+    return new NVMesh([], [], name, [], opacity, visible, gl, connectome);
   } // loadConnectomeFromFreeSurfer
 
   // read connectome saved as JSON
@@ -1056,7 +1048,7 @@ export class NVMesh {
     } else {
       obj = NVMeshLoaders.readFreeSurfer(buffer);
     } // freesurfer hail mary
-    
+
     pts = obj.positions.slice();
     tris = obj.indices.slice();
     if ("rgba255" in obj && obj.rgba255.length > 0)

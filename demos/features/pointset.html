@@ -77,17 +77,17 @@
         nv1.drawScene();
       };
       pointID.onchange = function () {
-        let num = this.value;
-        let nodes = nv1.meshes[0].nodes;
-        let name = nodes.names[num];
-        let XYZ = [nodes.X[num], nodes.Y[num], nodes.Z[num]];
-        console.log("Selected point name: " + name);
-        //nb prefilled property unique to FreeSurfer: does not exist for jcon format
-        // therefore, check to ensure this property exists
-        if (nodes.hasOwnProperty("prefilled"))
-          console.log("Selected point prefilled: " + nodes.prefilled[num]);
-        nv1.scene.crosshairPos = nv1.mm2frac(XYZ);
-        //nv1.updateGLVolume();
+        // let num = this.value;
+        // let nodes = nv1.meshes[0].nodes;
+        // let name = nodes.names[num];
+        // let XYZ = [nodes.X[num], nodes.Y[num], nodes.Z[num]];
+        // console.log("Selected point name: " + name);
+        // //nb prefilled property unique to FreeSurfer: does not exist for jcon format
+        // // therefore, check to ensure this property exists
+        // if (nodes.hasOwnProperty("prefilled"))
+        //   console.log("Selected point prefilled: " + nodes.prefilled[num]);
+        // nv1.scene.crosshairPos = nv1.mm2frac(XYZ);
+        nv1.updateGLVolume();
         nv1.drawScene();
       };
       colorMode.onchange = function () {
@@ -202,9 +202,10 @@
       nv1.opts.meshXRay = 0.2;
       nv1.setClipPlane([0.09, 180, 20]);
       await nv1.loadVolumes(volumeList1);
-      await nv1.loadMeshes([
-        { url: "../images/FreeSurferControlPoints.json" },
-      ]);
+      // await nv1.loadMeshes([
+      //   { url: "../images/FreeSurferControlPoints.json" },
+      // ]);
+      await nv1.loadFreeSurferConnectomeFromUrl("../images/FreeSurferControlPoints.json");
       document.getElementById("pointID").dispatchEvent(new Event("change"));
       document.getElementById("dragMode").dispatchEvent(new Event("change"));
       nv1.onMouseUp = doMouseUp;
