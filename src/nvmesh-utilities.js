@@ -59,9 +59,10 @@ export class NVMeshUtilities {
 
   // return spatial extremes for vertices
   static getExtents(pts) {
-    if (!Array.isArray(pts) || pts.length < 3) {
+    if (!ArrayBuffer.isView(pts) || pts.length < 3) {
       return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 };
     }
+
     //each vertex has 3 coordinates: XYZ
     let mxDx = 0.0;
     let mn = vec3.fromValues(pts[0], pts[1], pts[2]);

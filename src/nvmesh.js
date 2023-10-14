@@ -1056,8 +1056,7 @@ export class NVMesh {
     } else {
       obj = NVMeshLoaders.readFreeSurfer(buffer);
     } // freesurfer hail mary
-    console.log("mesh loaded");
-    console.log("obj", obj);
+    
     pts = obj.positions.slice();
     tris = obj.indices.slice();
     if ("rgba255" in obj && obj.rgba255.length > 0)
