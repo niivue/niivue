@@ -2579,11 +2579,16 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
  * @param {string} fnm filename of NIfTI image to create
  * @param {boolean} [false] isSaveDrawing determines whether drawing or background image is saved
  * @param {number} [0] volumeByIndex determines layer to save (0 for background)
+ * @param {number} [0] volumeByIndex determines layer to save (0 for background)
  * @example niivue.saveImage('test.nii', true);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
-Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false, volumeByIndex = 0) {
-  if (!("dims" in this.back)) {
+Niivue.prototype.saveImage = async function (
+  fnm,
+  isSaveDrawing = false,
+  volumeByIndex = 0
+) {
+  if (!this.back.hasOwnProperty("dims")) {
     log.debug("No voxelwise image open");
     return false;
   }
