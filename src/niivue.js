@@ -2582,8 +2582,12 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
  * @example niivue.saveImage('test.nii', true);
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
-Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false) {
-  if (!("dims" in this.back)) {
+Niivue.prototype.saveImage = async function (
+  fnm,
+  isSaveDrawing = false,
+  volumeByIndex = 0
+) {
+  if (!this.back.hasOwnProperty("dims")) {
     log.debug("No voxelwise image open");
     return false;
   }

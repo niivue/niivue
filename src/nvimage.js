@@ -2663,6 +2663,10 @@ NVImage.prototype.saveToUint8Array = async function (fnm, drawing8 = null) {
 // not included in public docs
 // save image as NIfTI volume
 // if fnm is empty, data is returned
+
+// not included in public docs
+// save image as NIfTI volume
+// if fnm is empty, data is returned
 NVImage.prototype.saveToDisk = async function (fnm, drawing8 = null) {
   let saveData = await this.saveToUint8Array(fnm, drawing8);
   let isString =
