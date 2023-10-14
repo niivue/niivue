@@ -142,7 +142,7 @@ export const DEFAULT_OPTIONS = {
   showLegend: true, // if a document has labels the default is to show them
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
-  multiplanarLayout: MULTIPLANAR_TYPE.AUTO
+  multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
 };
 
 /**
