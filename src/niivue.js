@@ -86,7 +86,7 @@ import { NVUtilities } from "./nvutilities.js";
 import {
   LabelTextAlignment,
   LabelLineTerminator,
-  // NVLabel3DStyle,
+  NVLabel3DStyle,
   NVLabel3D,
 } from "./nvlabel.js";
 import { NVConnectome } from "./nvconnectome.js";
@@ -3709,8 +3709,25 @@ Niivue.prototype.loadFreeSurferConnectomeFromUrl = async function (url) {
  */
 Niivue.prototype.loadFreeSurferConnectome = async function (json) {
   const connectome = NVConnectome.convertFreeSurferConnectome(json);
-  console.log("connectome from freesurfer", connectome);
   return this.loadConnectome(connectome);
+};
+
+Niivue.prototype.handleNodeAdded = function (event) {
+  const node = event.detail.node;
+  const rgba = [1, 1, 1, 1];
+  const label = this.addLabel(
+    node.name,
+    {
+      textColor: rgba,
+      bulletScale: 1,
+      bulletColor: rgba,
+      lineWidth: 0,
+      lineColor: rgba,
+    },
+    [node.x, node.y, node.z]
+  );
+  console.log(label);
+  this.drawScene();
 };
 
 /**
@@ -3732,89 +3749,14 @@ Niivue.prototype.loadConnectome = async function (json) {
   this.meshes = [];
   this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-  this.uiData.loading$.next(false);
-  // for loop to load all volumes in volumeList
-  // for (let i = 0; i < 1; i++) {
+
   this.uiData.loading$.next(true);
   let mesh = new NVConnectome(this.gl, json);
-  console.log("connectome mesh", mesh);
-  this.uiData.loading$.next(false);
+  // mesh.nodesChanged.addEventListener("nodeAdded", (event) => {
+  //   this.handleNodeAdded(event);
+  // });
   this.addMesh(mesh);
-
-  // add labels for each node
-  if (json.nodes) {
-    // remove any previous node labels
-    // if (this.nodeLabels) {
-    //   this.document.labels = this.document.labels.filter(
-    //     (l) => !this.nodeLabels.includes(l)
-    //   );
-    // }
-
-    // this.nodeLabels = [];
-    this.document.labels = [];
-    const nodes = json.nodes;
-    if (nodes.length > 0) {
-      // largest node
-      const largest = nodes.reduce((a, b) =>
-        a.sizeValue > b.sizeValue ? a : b
-      ).sizeValue;
-      const min = json.nodeMinColor
-        ? json.nodeMinColor
-        : nodes.reduce((a, b) => (a.colorValue < b.colorValue ? a : b))
-            .colorValue;
-      const max = json.nodeMaxColor
-        ? json.nodeMaxColor
-        : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b))
-            .colorValue;
-      let lut = cmapper.colormap(json.nodeColormap, mesh.colormapInvert);
-      let lutNeg = cmapper.colormap(
-        json.nodeColormapNegative,
-        mesh.colormapInvert
-      );
-
-      const hasNeg = "nodeColormapNegative" in nodes;
-      const lineThickness = nodes.lineThickness ? nodes.lineThickness : 0.0;
-
-      for (let i = 0; i < nodes.length; i++) {
-        let color = nodes[i].colorValue;
-        let isNeg = false;
-        if (hasNeg && color < 0) {
-          isNeg = true;
-          color = -color;
-        }
-
-        if (min < max) {
-          if (color < min) continue;
-          color = (color - min) / (max - min);
-        } else color = 1.0;
-
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-        if (isNeg) {
-          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-        }
-        rgba = rgba.map((c) => c / 255);
-
-        // const label =
-        this.addLabel(
-          nodes[i].name,
-          {
-            textColor: rgba,
-            bulletScale: nodes[i].sizeValue / largest,
-            bulletColor: rgba,
-            lineWidth: lineThickness,
-            lineColor: rgba,
-          },
-          [nodes[i].x, nodes[i].y, nodes[i].z]
-        );
-        // this.nodeLabels.push(label);
-      }
-    }
-  }
-
-  //this.meshes.push(mesh);
-  //this.updateGLVolume();
-  // } // for
+  this.uiData.loading$.next(false);
   this.drawScene();
   return this;
 }; // loadMeshes
@@ -7008,6 +6950,7 @@ Niivue.prototype.drawRect = function (
   leftTopWidthHeight,
   lineColor = [1, 0, 0, -1]
 ) {
+  console.log("drawrect", leftTopWidthHeight);
   if (lineColor[3] < 0) lineColor = this.opts.crosshairColor;
   this.rectShader.use(this.gl);
   this.gl.enable(this.gl.BLEND);
@@ -7118,11 +7061,20 @@ Niivue.prototype.effectiveCanvasWidth = function () {
   return this.gl.canvas.width - this.getLegendPanelWidth();
 };
 
+Niivue.prototype.getAllLabels = function () {
+  const meshNodes = this.meshes.flatMap((m) => m.nodes);
+  const meshLabels = meshNodes.map((n) => n.label);
+  let labels = [...this.document.labels, ...meshLabels];
+  return labels;
+};
+
 Niivue.prototype.getBulletMarginWidth = function () {
-  const widestBulletScale = this.document.labels.reduce((a, b) =>
+  let bulletMargin = 0;
+  const labels = this.getAllLabels();
+  const widestBulletScale = labels.reduce((a, b) =>
     a.style.bulletScale > b.style.bulletScale ? a : b
   ).style.bulletScale;
-  const tallestLabel = this.document.labels.reduce((a, b) => {
+  const tallestLabel = labels.reduce((a, b) => {
     const aSize =
       this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
     const bSize =
@@ -7134,8 +7086,7 @@ Niivue.prototype.getBulletMarginWidth = function () {
 
   let size =
     this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale;
-  let bulletMargin =
-    this.textHeight(size, tallestLabel.text) * widestBulletScale;
+  bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale;
 
   size = this.opts.textHeight * this.gl.canvas.height;
   if (bulletMargin) {
@@ -7145,18 +7096,15 @@ Niivue.prototype.getBulletMarginWidth = function () {
 };
 
 Niivue.prototype.getLegendPanelWidth = function () {
-  if (
-    !this.opts.showLegend ||
-    !this.document.labels ||
-    this.document.labels.length == 0
-  ) {
+  const labels = this.getAllLabels();
+  if (!this.opts.showLegend || labels.length == 0) {
     return 0;
   }
   const scale = 1.0; // we may want to make this adjustable in the future
   let horizontalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
   let width = 0;
 
-  const longestLabel = this.document.labels.reduce((a, b) => {
+  const longestLabel = labels.reduce((a, b) => {
     const aSize =
       this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
     const bSize =
@@ -7180,20 +7128,23 @@ Niivue.prototype.getLegendPanelWidth = function () {
 };
 
 Niivue.prototype.getLegendPanelHeight = function () {
+  const labels = this.getAllLabels();
   let height = 0;
   const scale = 1.0; // we may want to make this adjustable in the future
   let verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale;
-  for (const label of this.document.labels) {
+  for (const label of labels) {
     const labelSize =
       this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
     let textHeight = this.textHeight(labelSize, label.text);
     height += textHeight;
+    console.log("text", label.text);
+    console.log("text height", textHeight);
   }
 
   if (height) {
-    height += (verticalMargin / 2) * (this.document.labels.length + 1);
+    height += (verticalMargin / 2) * (labels.length + 1);
   }
-
+  console.log(labels);
   return height;
 };
 
@@ -7364,6 +7315,10 @@ Niivue.prototype.drawColorbar = function () {
 
 // not included in public docs
 Niivue.prototype.textWidth = function (scale, str) {
+  if (!str) {
+    return 0;
+  }
+
   let w = 0;
   var bytes = new TextEncoder().encode(str);
   for (let i = 0; i < str.length; i++)
@@ -7372,6 +7327,9 @@ Niivue.prototype.textWidth = function (scale, str) {
 }; // textWidth()
 
 Niivue.prototype.textHeight = function (scale, str) {
+  if (!str) {
+    return 0;
+  }
   const byteSet = new Set(Array.from(str));
   const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
 
@@ -8832,7 +8790,7 @@ Niivue.prototype.draw3DLabel = function (
   secondPass = false
 ) {
   const text = label.text;
-
+  console.log("bullet margin", bulletMargin);
   let left = pos[0];
   let top = pos[1];
 
@@ -8894,11 +8852,9 @@ Niivue.prototype.draw3DLabels = function (
   leftTopWidthHeight,
   secondPass = false
 ) {
-  if (
-    !this.opts.showLegend ||
-    !this.document.labels ||
-    this.document.labels.length == 0
-  ) {
+  const labels = this.getAllLabels();
+  if (!this.opts.showLegend || labels.length === 0) {
+    console.log("show legend false", this.opts.showLegend);
     return;
   }
 
@@ -8929,7 +8885,7 @@ Niivue.prototype.draw3DLabels = function (
     gl.depthFunc(gl.GREATER);
   }
 
-  for (const label of this.document.labels) {
+  for (const label of labels) {
     this.draw3DLabel(
       label,
       [left, top],
@@ -8947,6 +8903,8 @@ Niivue.prototype.draw3DLabels = function (
     top += textHeight; //Math.max(textHeight, bulletHeight);
     top += size / 2;
   }
+
+  // connectome labels
 
   if (!secondPass) {
     gl.depthFunc(depthFunc);
