@@ -4,6 +4,7 @@ import { NiivueObject3D } from "./niivue-object3D";
 import { NVMeshUtilities } from "./nvmesh-utilities";
 import { cmapper } from "./colortables";
 import { NVLabel3D, LabelTextAlignment } from "./nvlabel";
+import { MeshType } from "./nvmesh";
 
 /**
  * Representes the vertices of a connectome
@@ -75,6 +76,7 @@ export class NVConnectome extends NVMesh {
     // this.nodes = connectome.nodes;
     // this.edges = connectome.edges;
     // this.options = { ...defaultOptions, ...connectome };
+    this.type = MeshType.CONNECTOME;
     if (this.nodes) {
       this.updateLabels();
     }
@@ -350,7 +352,15 @@ export class NVConnectome extends NVMesh {
     this.updateConnectome(gl);
   }
 
-  json() {}
+  json() {
+    const json = {};
+    for (const prop in this) {
+      if (prop in defaultOptions || prop === "nodes" || prop === "edges") {
+        json[prop] = this[prop];
+      }
+    }
+    return json;
+  }
 
   /**
    * Factory method to create connectome from options

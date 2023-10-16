@@ -3366,6 +3366,14 @@ Niivue.prototype.loadDocument = function (document) {
     this.addMesh(meshToAdd);
   }
 
+  // load connectomes
+  console.log("connectomes", document.data.connectomes);
+  for (const connectomeString of document.data.connectomes) {
+    const connectome = JSON.parse(connectomeString);
+    console.log("loading connectome", connectome);
+    this.loadConnectome(connectome);
+  }
+
   // handle older documents that don't have options/scene fields defined
   this.scene = { ...this.scene, ...document.scene.sceneData };
   this.opts = { ...this.opts, ...document.opts };
@@ -3755,6 +3763,7 @@ Niivue.prototype.loadConnectome = async function (json) {
   //   this.handleNodeAdded(event);
   // });
   this.addMesh(mesh);
+  console.log("mesh added", mesh);
   this.uiData.loading$.next(false);
   this.drawScene();
   return this;

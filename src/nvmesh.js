@@ -10,6 +10,16 @@ import { NVMeshLoaders } from "./nvmesh-loaders";
 
 const log = new Log();
 
+/** Enum for text alignment
+ * @enum
+ * @readonly
+ */
+export const MeshType = Object.freeze({
+  MESH: "mesh",
+  CONNECTOME: "connectome",
+  FIBER: "fiber",
+});
+
 /**
  * @typedef {Object} NVMeshLayer
  * @property {string} url
@@ -119,6 +129,7 @@ export class NVMesh {
     this.fiberGroupColormap = null;
     this.pts = pts;
     this.layers = [];
+    this.type = MeshType.MESH;
     if (rgba255[3] < 1) {
       this.rgba255 = rgba255;
       this.fiberLength = 2;

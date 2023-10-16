@@ -3,6 +3,8 @@ import { NVUtilities } from "./nvutilities";
 // eslint-disable-next-line no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 import { serialize, deserialize } from "@ungap/structured-clone";
+import { MeshType } from "./nvmesh";
+
 // import { NVLabel3D } from "./nvlabel";
 /**
  * Slice Type
@@ -499,6 +501,10 @@ export class NVDocument {
 
     // save our options
     data.opts = { ...this.opts };
+    // infinity is a symbol
+    if (this.opts.meshThicknessOn2D === Infinity) {
+      data.opts.meshThicknessOn2D = "infinity";
+    }
 
     // save our labels
     data.labels = [...this.data.labels];
@@ -589,7 +595,12 @@ export class NVDocument {
 
     // meshes
     const meshes = [];
+    data.connectomes = [];
     for (const mesh of this.meshes) {
+      if (mesh.type === MeshType.CONNECTOME) {
+        data.connectomes.push(JSON.stringify(mesh.json()));
+        continue;
+      }
       const copyMesh = {};
       copyMesh.pts = mesh.pts;
       copyMesh.tris = mesh.tris;
@@ -691,7 +702,6 @@ export class NVDocument {
     document.scene.sceneData = document.data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);
-
     return document;
   }
 
@@ -701,7 +711,10 @@ export class NVDocument {
   static loadFromJSON(data) {
     let document = new NVDocument();
     document.data = data;
-    console.log(document.data);
+    // console.log(document.data);
+    if (document.data.opts.meshThicknessOn2D === "infinity") {
+      document.data.opts.meshThicknessOn2D = Infinity;
+    }
     document.scene.sceneData = data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);

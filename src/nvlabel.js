@@ -1,11 +1,17 @@
-/** enum for text alignment */
+/** Enum for text alignment
+ * @enum
+ * @readonly
+ */
 export const LabelTextAlignment = Object.freeze({
   LEFT: "left",
   RIGHT: "right",
   CENTER: "center",
 });
 
-/** enum for line terminators */
+/** Enum for line terminators
+ * @enum
+ * @readonly
+ */
 export const LabelLineTerminator = Object.freeze({
   NONE: "none",
   CIRCLE: "circle",
