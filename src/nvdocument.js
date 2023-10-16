@@ -5,6 +5,7 @@ import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 import { serialize, deserialize } from "@ungap/structured-clone";
 import { MeshType } from "./nvmesh";
 
+
 // import { NVLabel3D } from "./nvlabel";
 /**
  * Slice Type
@@ -712,7 +713,6 @@ export class NVDocument {
   static loadFromJSON(data) {
     let document = new NVDocument();
     document.data = data;
-    // console.log(document.data);
     if (document.data.opts.meshThicknessOn2D === "infinity") {
       document.data.opts.meshThicknessOn2D = Infinity;
     }
