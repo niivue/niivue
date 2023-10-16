@@ -912,6 +912,7 @@ Niivue.prototype.sync = function () {
     this.otherNV.createOnLocationChange();
   } else if (Array.isArray(this.otherNV)) {
     for (let i = 0; i < this.otherNV.length; i++) {
+      if (this.otherNV[i] === this) continue;
       if (this.syncOpts["2d"]) {
         this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM);
       }
