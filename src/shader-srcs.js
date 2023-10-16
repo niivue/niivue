@@ -84,7 +84,7 @@ uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity;
+uniform float drawOpacity, renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 in vec3 vColor;
@@ -369,6 +369,7 @@ const kRenderTail = `
 		if (colorSample.a >= 0.01) {
 			if (overFirstHit.a > len)
 				overFirstHit = samplePos;
+			colorSample.a *= renderOverlayBlend;
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -383,7 +384,6 @@ const kRenderTail = `
 			fColor += clipPlaneColorX;
 		return;
 	}
-
 	if (overFirstHit.a < firstHit.a)
 		gl_FragDepth = frac2ndc(overFirstHit.xyz);
 	float overMix = colAcc.a;
@@ -416,7 +416,7 @@ uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity;
+uniform float drawOpacity, renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 uniform float renderDrawAmbientOcclusion;
@@ -500,7 +500,7 @@ uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity;
+uniform float drawOpacity, renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 uniform float renderDrawAmbientOcclusion;
@@ -543,7 +543,7 @@ uniform mat4 mvpMtx;
 uniform mat4 normMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity;
+uniform float drawOpacity, renderOverlayBlend;
 uniform highp sampler3D drawing, gradient;
 uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
@@ -1599,7 +1599,7 @@ uniform highp sampler3D volume, overlay;
 uniform float overlays;
 uniform mat4 matRAS;
 uniform mat4 mvpMtx;
-uniform float drawOpacity;
+uniform float drawOpacity, renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 uniform int backgroundMasksOverlays;
