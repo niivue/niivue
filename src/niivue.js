@@ -86,7 +86,6 @@ import { NVUtilities } from "./nvutilities.js";
 import {
   LabelTextAlignment,
   LabelLineTerminator,
-  NVLabel3DStyle,
   NVLabel3D,
 } from "./nvlabel.js";
 import { NVConnectome } from "./nvconnectome.js";
@@ -6950,7 +6949,6 @@ Niivue.prototype.drawRect = function (
   leftTopWidthHeight,
   lineColor = [1, 0, 0, -1]
 ) {
-  console.log("drawrect", leftTopWidthHeight);
   if (lineColor[3] < 0) lineColor = this.opts.crosshairColor;
   this.rectShader.use(this.gl);
   this.gl.enable(this.gl.BLEND);
@@ -7071,6 +7069,10 @@ Niivue.prototype.getAllLabels = function () {
 Niivue.prototype.getBulletMarginWidth = function () {
   let bulletMargin = 0;
   const labels = this.getAllLabels();
+  if (labels.length === 0) {
+    return 0;
+  }
+
   const widestBulletScale = labels.reduce((a, b) =>
     a.style.bulletScale > b.style.bulletScale ? a : b
   ).style.bulletScale;
@@ -7083,15 +7085,13 @@ Niivue.prototype.getBulletMarginWidth = function () {
       this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b;
     return taller;
   });
-
   let size =
     this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale;
   bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale;
-
-  size = this.opts.textHeight * this.gl.canvas.height;
-  if (bulletMargin) {
-    bulletMargin += size;
-  }
+  // size = this.opts.textHeight * this.gl.canvas.height;
+  // if (bulletMargin) {
+  bulletMargin += size;
+  // }
   return bulletMargin;
 };
 
@@ -7137,14 +7137,11 @@ Niivue.prototype.getLegendPanelHeight = function () {
       this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
     let textHeight = this.textHeight(labelSize, label.text);
     height += textHeight;
-    console.log("text", label.text);
-    console.log("text height", textHeight);
   }
 
   if (height) {
     height += (verticalMargin / 2) * (labels.length + 1);
   }
-  console.log(labels);
   return height;
 };
 
@@ -8785,12 +8782,11 @@ Niivue.prototype.draw3DLabel = function (
   pos,
   mvpMatrix,
   leftTopWidthHeight,
-  bulletMargin,
+  bulletMargin = 0,
   legendWidth,
   secondPass = false
 ) {
   const text = label.text;
-  console.log("bullet margin", bulletMargin);
   let left = pos[0];
   let top = pos[1];
 
@@ -8835,7 +8831,8 @@ Niivue.prototype.draw3DLabel = function (
       textLeft += (remaining - textWidth) / 2;
     }
   } else {
-    textLeft += bulletMargin ? bulletMargin : size / 2;
+    // textLeft += size / 2;
+    textLeft += bulletMargin;
   }
 
   this.drawText(
@@ -8854,7 +8851,6 @@ Niivue.prototype.draw3DLabels = function (
 ) {
   const labels = this.getAllLabels();
   if (!this.opts.showLegend || labels.length === 0) {
-    console.log("show legend false", this.opts.showLegend);
     return;
   }
 

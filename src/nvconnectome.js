@@ -3,7 +3,7 @@ import { NVUtilities } from "./nvutilities";
 import { NiivueObject3D } from "./niivue-object3D";
 import { NVMeshUtilities } from "./nvmesh-utilities";
 import { cmapper } from "./colortables";
-import { NVLabel3D } from "./nvlabel";
+import { NVLabel3D, LabelTextAlignment } from "./nvlabel";
 
 /**
  * Representes the vertices of a connectome
@@ -141,7 +141,7 @@ export class NVConnectome extends NVMesh {
         : 0.0;
 
       for (let i = 0; i < nodes.length; i++) {
-        let color = nodes[i].colorValue;
+        let color = nodes[i].colorValue * 255;
         let isNeg = false;
         if (hasNeg && color < 0) {
           isNeg = true;
@@ -149,7 +149,10 @@ export class NVConnectome extends NVMesh {
         }
 
         if (min < max) {
-          if (color < min) continue;
+          if (color < min) {
+            // console.log("color value lower than min");
+            continue;
+          }
           color = (color - min) / (max - min);
         } else color = 1.0;
 
@@ -159,7 +162,6 @@ export class NVConnectome extends NVMesh {
           rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
         }
         rgba = rgba.map((c) => c / 255);
-
         nodes[i].label = new NVLabel3D(
           nodes[i].name,
           {
@@ -169,6 +171,7 @@ export class NVConnectome extends NVMesh {
             lineWidth: legendLineThickness,
             lineColor: rgba,
             textScale: 1.0,
+            textAlignment: LabelTextAlignment.LEFT,
           },
           [nodes[i].x, nodes[i].y, nodes[i].z]
         );
@@ -186,9 +189,13 @@ export class NVConnectome extends NVMesh {
 
   deleteConnectomeNode(node) {
     this.nodes = this.nodes.filter((n) => n != node);
-    this.edges = this.edges.filter(
-      (e) => e.firstNode != node && e.secondNode != node
-    );
+    if (this.edges && this.edges.length > 0) {
+      this.edges = this.edges.filter(
+        (e) => e.firstNode != node && e.secondNode != node
+      );
+    } else {
+      console.log("connectome", this);
+    }
     this.updateLabels();
     this.nodesChanged.dispatchEvent(
       new CustomEvent("nodeDeleted", { detail: { node } })

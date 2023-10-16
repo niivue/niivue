@@ -57,6 +57,8 @@
         id="xRaySlider"
       />
       <button id="about">About</button>
+      <label for="save">Save the current scene as HTML</label>
+      <button id="save">Save</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -64,6 +66,9 @@
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
       import * as niivue from "./niivue.es.js";
+      save.onclick = function() {
+        nv1.saveHTML("page.html");
+      }
       about.onclick = function () {
         window.alert(
           "The demo loads FreeSurfer Control Points. When `Edit` is checked, you can click and right-click to add and remove nodes."
@@ -92,6 +97,8 @@
       };
       colorMode.onchange = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "nodeColormap", this.value);
+        nv1.meshes[0].updateLabels();
+        nv1.drawScene();
       };
       dragMode.onchange = function () {
         nv1.onDragRelease = () => {};
@@ -128,13 +135,14 @@
         console.log("DragRelease", fracStart, fracEnd);
       }*/
       function deleteNode(XYZmm) {
+        console.log('delete node called');
         let nodes = nv1.meshes[0].nodes;
-        if (nodes.X.length < 1) return;
+        if (nodes.length < 1) return;
         console.log("Deleting ", XYZmm);
         let minDx = Number.POSITIVE_INFINITY;
         let minIdx = 0;
         //check distance of each node from clicked location
-        for (let i = 0; i < nodes.X.length; i++) {
+        for (let i = 0; i < nodes.length; i++) {
           let dx = Math.sqrt(
             Math.pow(XYZmm[0] - nodes[i].x, 2) +
               Math.pow(XYZmm[1] - nodes[i].y, 2) +
@@ -155,7 +163,8 @@
         // nodes.Z.splice(minIdx, 1);
         // nodes.Color.splice(minIdx, 1);
         // nodes.Size.splice(minIdx, 1);
-        nodes.splice(minIdx, 1);
+        // nodes.splice(minIdx, 1);
+        nv1.meshes[0].deleteConnectomeNode(nv1.meshes[0].nodes[minIdx])
         nv1.meshes[0].updateMesh(nv1.gl);
         nv1.updateGLVolume();
       }
