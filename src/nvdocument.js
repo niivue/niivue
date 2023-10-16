@@ -145,6 +145,7 @@ export const DEFAULT_OPTIONS = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
+  renderOverlayBlend: 1.0,
 };
 
 /**

@@ -1706,7 +1706,7 @@ Niivue.prototype.dragOverListener = function (e) {
 
 // not included in public docs
 Niivue.prototype.getFileExt = function (fullname, upperCase = true) {
-  console.log("fullname: ", fullname);
+  log.debug("fullname: ", fullname);
   var re = /(?:\.([^.]+))?$/;
   let ext = re.exec(fullname)[1];
   ext = ext.toUpperCase();
@@ -4966,6 +4966,7 @@ Niivue.prototype.initRenderShader = async function (
   );
   shader.mvpLoc = shader.uniforms["mvpMtx"];
   shader.clipPlaneClrLoc = shader.uniforms["clipPlaneColor"];
+  shader.renderOverlayBlendLoc = shader.uniforms["renderOverlayBlend"];
   shader.mvpMatRASLoc = shader.uniforms["matRAS"];
   shader.rayDirLoc = shader.uniforms["rayDir"];
   shader.clipPlaneLoc = shader.uniforms["clipPlane"];
@@ -6113,6 +6114,10 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
   this.gl.uniform1f(
     this.renderShader.uniforms["backOpacity"],
     this.volumes[0].opacity
+  );
+  this.gl.uniform1f(
+    this.renderShader.renderOverlayBlendLoc,
+    this.opts.renderOverlayBlend
   );
 
   this.gl.uniform4fv(

@@ -2766,6 +2766,7 @@ NVImage.loadFromUrl = async function ({
   }
   let nvimage = null;
   let dataBuffer = null;
+  if (url instanceof Uint8Array) url = url.buffer; //convert Uint8Array -> ArrayBuffer
   if (url instanceof ArrayBuffer) {
     dataBuffer = url;
     url = "array.nii";
