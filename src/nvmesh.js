@@ -611,6 +611,10 @@ NVMesh.prototype.updateMesh = function (gl) {
   if (this.layers && this.layers.length > 0) {
     for (let i = 0; i < this.layers.length; i++) {
       let layer = this.layers[i];
+      //compatibility: colorMap -> colormap niivue.mesh.nvd
+      if (layer.hasOwnProperty("colorMap")) layer.colormap = layer.colorMap;
+      if (layer.hasOwnProperty("colorMapNegative"))
+        layer.colormapNegative = layer.colorMapNegative;
       let opacity = layer.opacity;
       if (opacity <= 0.0 || layer.cal_min > layer.cal_max) continue;
       if (!layer.hasOwnProperty("isAdditiveBlend"))
@@ -4372,7 +4376,6 @@ NVMesh.loadLayer = async function (layer, nvmesh) {
   if (layerName.indexOf("?") > -1) {
     layerName = layerName.slice(0, layerName.indexOf("?")); //remove query string if any
   }
-
   let opacity = 0.5;
   if (layer.hasOwnProperty("opacity")) opacity = layer.opacity;
   let colormap = "warm";

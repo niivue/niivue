@@ -143,6 +143,7 @@ export const DEFAULT_OPTIONS = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
+  renderOverlayBlend: 1.0,
 };
 
 /**
@@ -691,7 +692,6 @@ export class NVDocument {
     document.scene.sceneData = document.data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);
-
     return document;
   }
 
@@ -701,7 +701,6 @@ export class NVDocument {
   static loadFromJSON(data) {
     let document = new NVDocument();
     document.data = data;
-    console.log(document.data);
     document.scene.sceneData = data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);
