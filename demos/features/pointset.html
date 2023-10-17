@@ -35,6 +35,7 @@
         <option value="red">red</option>
         <option value="blue">blue</option>
         <option value="green">green</option>
+        <option value="viridis">viridis</option>
       </select>
       <label for="nodeSlider">Size</label>
       <input
@@ -57,6 +58,8 @@
         id="xRaySlider"
       />
       <button id="about">About</button>
+      <label for="save">Save the current scene as HTML</label>
+      <button id="save">Save</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -64,6 +67,9 @@
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
       import * as niivue from "./niivue.es.js";
+      save.onclick = function() {
+        nv1.saveHTML("page.html");
+      }
       about.onclick = function () {
         window.alert(
           "The demo loads FreeSurfer Control Points. When `Edit` is checked, you can click and right-click to add and remove nodes."
@@ -79,19 +85,21 @@
       pointID.onchange = function () {
         let num = this.value;
         let nodes = nv1.meshes[0].nodes;
-        let name = nodes.names[num];
-        let XYZ = [nodes.X[num], nodes.Y[num], nodes.Z[num]];
+        let name = nodes[num].name;
+        let XYZ = [nodes[num].x, nodes[num].y, nodes[num].z];
         console.log("Selected point name: " + name);
         //nb prefilled property unique to FreeSurfer: does not exist for jcon format
         // therefore, check to ensure this property exists
         if (nodes.hasOwnProperty("prefilled"))
           console.log("Selected point prefilled: " + nodes.prefilled[num]);
         nv1.scene.crosshairPos = nv1.mm2frac(XYZ);
-        //nv1.updateGLVolume();
+        nv1.updateGLVolume();
         nv1.drawScene();
       };
       colorMode.onchange = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "nodeColormap", this.value);
+        nv1.meshes[0].updateLabels();
+        nv1.drawScene();
       };
       dragMode.onchange = function () {
         nv1.onDragRelease = () => {};
@@ -128,17 +136,18 @@
         console.log("DragRelease", fracStart, fracEnd);
       }*/
       function deleteNode(XYZmm) {
+        console.log('delete node called');
         let nodes = nv1.meshes[0].nodes;
-        if (nodes.X.length < 1) return;
+        if (nodes.length < 1) return;
         console.log("Deleting ", XYZmm);
         let minDx = Number.POSITIVE_INFINITY;
         let minIdx = 0;
         //check distance of each node from clicked location
-        for (let i = 0; i < nodes.X.length; i++) {
+        for (let i = 0; i < nodes.length; i++) {
           let dx = Math.sqrt(
-            Math.pow(XYZmm[0] - nodes.X[i], 2) +
-              Math.pow(XYZmm[1] - nodes.Y[i], 2) +
-              Math.pow(XYZmm[2] - nodes.Z[i], 2)
+            Math.pow(XYZmm[0] - nodes[i].x, 2) +
+              Math.pow(XYZmm[1] - nodes[i].y, 2) +
+              Math.pow(XYZmm[2] - nodes[i].z, 2)
           );
           if (dx < minDx) {
             minDx = dx;
@@ -148,26 +157,36 @@
         console.log("Node " + minIdx + " is " + minDx + "mm from the click");
         const tolerance = 15.0; //e.g. only 15mm from clicked location
         if (minDx > tolerance) return;
-        nodes.names.splice(minIdx, 1);
-        nodes.prefilled.splice(minIdx, 1);
-        nodes.X.splice(minIdx, 1);
-        nodes.Y.splice(minIdx, 1);
-        nodes.Z.splice(minIdx, 1);
-        nodes.Color.splice(minIdx, 1);
-        nodes.Size.splice(minIdx, 1);
+        // nodes.names.splice(minIdx, 1);
+        // nodes.prefilled.splice(minIdx, 1);
+        // nodes.X.splice(minIdx, 1);
+        // nodes.Y.splice(minIdx, 1);
+        // nodes.Z.splice(minIdx, 1);
+        // nodes.Color.splice(minIdx, 1);
+        // nodes.Size.splice(minIdx, 1);
+        // nodes.splice(minIdx, 1);
+        nv1.meshes[0].deleteConnectomeNode(nv1.meshes[0].nodes[minIdx])
         nv1.meshes[0].updateMesh(nv1.gl);
         nv1.updateGLVolume();
       }
       function addNode(XYZmm) {
         let nodes = nv1.meshes[0].nodes;
         console.log("Adding ", XYZmm);
-        nodes.names.push("");
-        nodes.prefilled.push("");
-        nodes.X.push(XYZmm[0]);
-        nodes.Y.push(XYZmm[1]);
-        nodes.Z.push(XYZmm[2]);
-        nodes.Color.push(1);
-        nodes.Size.push(1);
+        // nodes.names.push("");
+        // nodes.prefilled.push("");
+        // nodes.X.push(XYZmm[0]);
+        // nodes.Y.push(XYZmm[1]);
+        // nodes.Z.push(XYZmm[2]);
+        // nodes.Color.push(1);
+        // nodes.Size.push(1);
+        nv1.meshes[0].addConnectomeNode({
+          name: "node",
+          x: XYZmm[0],
+          y: XYZmm[1],
+          z: XYZmm[2],
+          colorValue: 1,
+          sizeValue: 1
+        })
         nv1.meshes[0].updateMesh(nv1.gl);
         nv1.updateGLVolume();
       }
@@ -191,7 +210,7 @@
         loadingText: "there are no images",
         backColor: [1, 1, 1, 1],
         show3Dcrosshair: true,
-        //onLocationChange: handleLocationChange,
+        onLocationChange: handleLocationChange,
       };
       var nv1 = new niivue.Niivue(defaults);
       nv1.setRadiologicalConvention(false);
@@ -201,10 +220,8 @@
       nv1.graph.opacity = 1.0;
       nv1.opts.meshXRay = 0.2;
       nv1.setClipPlane([0.09, 180, 20]);
-      await nv1.loadVolumes(volumeList1);
-      await nv1.loadMeshes([
-        { url: "../images/FreeSurferControlPoints.json" },
-      ]);
+      await nv1.loadVolumes(volumeList1);      
+      await nv1.loadFreeSurferConnectomeFromUrl("../images/FreeSurferControlPoints.json");
       document.getElementById("pointID").dispatchEvent(new Event("change"));
       document.getElementById("dragMode").dispatchEvent(new Event("change"));
       nv1.onMouseUp = doMouseUp;

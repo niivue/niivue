@@ -1,58 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Connectome</title>
-    <link rel="stylesheet" href="light.css" />
-  </head>
-  <body>
-    <noscript>
-      <strong
-        >niivue doesn't work properly without JavaScript enabled. Please enable
-        it to continue.</strong
-      >
-    </noscript>
-    <header>
-      <label for="invertCheck">Invert</label>
-      <input type="checkbox" id="invertCheck" unchecked />
-      <label for="edgeSlider">Edge</label>
-      <input
-        type="range"
-        min="5"
-        max="30"
-        value="10"
-        class="slider"
-        id="edgeSlider"
-      />
-      <label for="nodeSlider">Node</label>
-      <input
-        type="range"
-        min="5"
-        max="80"
-        value="30"
-        class="slider"
-        id="nodeSlider"
-      />
-      <label for="threshSlider">Threshold</label>
-      <input
-        type="range"
-        min="1"
-        max="59"
-        value="20"
-        class="slider"
-        id="threshSlider"
-      />
-      <button id="reset">reset</button>
-    </header>
-    <main id="container">
-      <canvas id="gl1"></canvas>
-    </main>
-    <footer>
-      <label id="shaders"></label>
-    </footer>
-  </body>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Connectome</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable
+      it to continue.</strong>
+  </noscript>
+  <header>
+    <label for="invertCheck">Invert</label>
+    <input type="checkbox" id="invertCheck" unchecked />
+    <label for="edgeSlider">Edge</label>
+    <input type="range" min="5" max="30" value="10" class="slider" id="edgeSlider" />
+    <label for="nodeSlider">Node</label>
+    <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
+    <label for="threshSlider">Threshold</label>
+    <input type="range" min="1" max="59" value="20" class="slider" id="threshSlider" />
+    <button id="reset">reset</button>
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer>
+    <label id="shaders"></label>
+  </footer>
+</body>
+
 </html>
 <script src="./niivue.umd.js"></script>
 <script type="module" async>
@@ -85,16 +65,42 @@
     edgeMin: 2,
     edgeMax: 6,
     edgeScale: 1,
-    nodes: {
-      names: ["RF", "LF", "RP", "LP"], //currently unused
-      X: [40, -40, 40, -40], //Xmm for each node
-      Y: [40, 40, -40, -40], //Ymm for each node
-      Z: [30, 20, 50, 50], //Zmm for each node
-      Color: [2, 2, 3, 4], //Used to interpolate color
-      Size: [2, 2, 3, 4], //Size of node
-    },
+    nodes: [
+      {
+        name: "RF",
+        x: 40,
+        y: 40,
+        z: 30,
+        colorValue: 2,
+        sizeValue: 2
+      },
+      {
+        name: "LF",
+        x: -40,
+        y: 40,
+        z: 20,
+        colorValue: 2,
+        sizeValue: 2
+      },
+      {
+        name: "RP",
+        x: 40,
+        y: -40,
+        z: 50,
+        colorValue: 3,
+        sizeValue: 3
+      },
+      {
+        name: "LP",
+        x: -40,
+        y: -40,
+        z: 50,
+        colorValue: 4,
+        sizeValue: 4
+      }
+    ],
     edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
-  }; //connectome{}
+  };   //connectome{}
   var volumeList1 = [
     // first item is background image
     {

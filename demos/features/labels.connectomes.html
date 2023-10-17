@@ -32,24 +32,54 @@
   </main>
   <footer>
     <textarea id="scriptText" name="customText" rows="16" cols="60">
-let connectome = {
-  nodeMinColor: 2,
-  nodeMaxColor: 4,
-  nodeColormap: "warm",
-  nodeColormapNegative: "winter",
-  edgeMin: 2,
-  edgeMax: 6,
-  nodes: {
-    lineThickness: 3.0, //from legend
-    names: ["RF", "LF", "RP", "LP"], //for legend
-    X: [40, -40, 40, -40], //Xmm for each node
-    Y: [40, 40, -40, -40], //Ymm for each node
-    Z: [30, 20, 50, 50], //Zmm for each node
-    Color: [2, 2, 3, 4], //Used to interpolate color
-    Size: [2, 2, 3, 4], //Size of node
-  },
-  edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
-};
+      let connectome = {
+        name: "simpleConnectome",
+        nodeColormap: "warm",
+        nodeColormapNegative: "winter",
+        nodeMinColor: 2,
+        nodeMaxColor: 4,
+        nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+        edgeColormap: "warm",
+        edgeColormapNegative: "winter",
+        edgeMin: 2,
+        edgeMax: 6,
+        edgeScale: 1,
+        nodes: [
+          {
+            name: "RF",
+            x: 40,
+            y: 40,
+            z: 30,
+            colorValue: 2,
+            sizeValue: 2
+          },
+          {
+            name: "LF",
+            x: -40,
+            y: 40,
+            z: 20,
+            colorValue: 2,
+            sizeValue: 2
+          },
+          {
+            name: "RP",
+            x: 40,
+            y: -40,
+            z: 50,
+            colorValue: 3,
+            sizeValue: 3
+          },
+          {
+            name: "LP",
+            x: -40,
+            y: -40,
+            z: 50,
+            colorValue: 4,
+            sizeValue: 4
+          }
+        ],
+        edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
+      };
 </textarea>
     &nbsp;<button id="custom">Custom Connectome</button>&nbsp;
     </footer>  

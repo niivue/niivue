@@ -33,32 +33,51 @@ test("labelsReplacedForNewConnectome", async () => {
       edgeMin: 2,
       edgeMax: 6,
       edgeScale: 1,
-      nodes: {
-        names: ["RF", "LF", "RP", "LP"], //currently unused
-        X: [40, -40, 40, -40], //Xmm for each node
-        Y: [40, 40, -40, -40], //Ymm for each node
-        Z: [30, 20, 50, 50], //Zmm for each node
-        Color: [2, 2, 3, 4], //Used to interpolate color
-        Size: [2, 2, 3, 4], //Size of node
-      },
+      nodes: [
+        {
+          name: "RF",
+          x: 40,
+          y: 40,
+          z: 30,
+          colorValue: 2,
+          sizeValue: 2
+        },
+        {
+          name: "LF",
+          x: -40,
+          y: 40,
+          z: 20,
+          colorValue: 2,
+          sizeValue: 2
+        },
+        {
+          name: "RP",
+          x: 40,
+          y: -40,
+          z: 50,
+          colorValue: 3,
+          sizeValue: 3
+        },
+        {
+          name: "LP",
+          x: -40,
+          y: -40,
+          z: 50,
+          colorValue: 4,
+          sizeValue: 4
+        }
+      ],
       edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
     };
 
     await nv.loadConnectome(connectome);
     // load the connectome again to verify that no new labels are added
-    connectome.nodes = {
-      names: ["NewRF", "NewLF", "NewRP", "NewLP"], //currently unused
-      X: [40, -40, 40, -40], //Xmm for each node
-      Y: [40, 40, -40, -40], //Ymm for each node
-      Z: [30, 20, 50, 50], //Zmm for each node
-      Color: [2, 2, 3, 4], //Used to interpolate color
-      Size: [2, 2, 3, 4], //Size of node
-    },
+    connectome.nodes[0].name = "NewRF";
     await nv.loadConnectome(connectome);
     nv.setMeshProperty(nv.meshes[0].id, "nodeScale", 3);
     nv.setClipPlane([-0.1, 270, 0]);
 
-    return nv.document.labels;
+    return nv.getAllLabels();
   });
   expect(labels.length).toBe(4);
   expect(labels[0].text).toEqual("NewRF");
