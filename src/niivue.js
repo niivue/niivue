@@ -8827,7 +8827,10 @@ Niivue.prototype.getLabelAtPoint = function (screenPoint) {
       this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
     let textHeight = this.textHeight(labelSize, label.text);
     console.log("label top bottom", top, top + textHeight);
-    if (screenPoint[1] >= top && screenPoint[1] <= top + textHeight) {
+    if (
+      screenPoint[1] >= top &&
+      screenPoint[1] <= top + textHeight + size / 2
+    ) {
       return label;
     }
     top += textHeight;
