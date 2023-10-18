@@ -499,7 +499,8 @@ export class NVDocument {
     let imageOptionsArray = [];
     // save our scene object
     data.sceneData = { ...this.scene.sceneData };
-
+    data.pan2Dxyzmm = [...this.pan2Dxyzmm];
+    console.log("document.json", data.pan2Dxyzmm);
     // save our options
     data.opts = { ...this.opts };
     // infinity is a symbol
@@ -534,6 +535,13 @@ export class NVDocument {
           limitFrames4D: NaN,
         };
       }
+
+      // update image options on current image settings
+      imageOptions.colormap = this.volumes[0].colormap;
+      imageOptions.opacity = this.volumes[0].opacity;
+      imageOptions.cal_max = this.volumes[0].cal_max;
+      imageOptions.cal_min = this.volumes[0].cal_min;
+
       if (imageOptions) {
         imageOptionsArray.push(imageOptions);
         let encodedImageBlob = NVUtilities.uint8tob64(
@@ -583,6 +591,8 @@ export class NVDocument {
         // update image options on current image settings
         imageOptions.colormap = volume.colormap;
         imageOptions.opacity = volume.opacity;
+        imageOptions.cal_max = volume.cal_max;
+        imageOptions.cal_min = volume.cal_min;
 
         imageOptionsArray.push(imageOptions);
 

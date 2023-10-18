@@ -1195,6 +1195,11 @@ Niivue.prototype.calculateNewRange = function ({
   var mxScale = intensityRaw2Scaled(hdr, hi);
   this.volumes[volIdx].cal_min = mnScale;
   this.volumes[volIdx].cal_max = mxScale;
+  console.log(
+    "new min max",
+    this.volumes[volIdx].cal_max,
+    this.volumes[volIdx].cal_max
+  );
   this.onIntensityChange(this.volumes[volIdx]);
 };
 
@@ -3322,6 +3327,7 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  */
 Niivue.prototype.loadDocument = function (document) {
   this.document = document;
+  console.log("load document", document);
   this.mediaUrlMap.clear();
   this.createEmptyDrawing();
   // load our images and meshes
@@ -3376,18 +3382,20 @@ Niivue.prototype.loadDocument = function (document) {
   }
 
   // load connectomes
-  console.log("connectomes", document.data.connectomes);
+  // console.log("connectomes", document.data.connectomes);
   for (const connectomeString of document.data.connectomes) {
     const connectome = JSON.parse(connectomeString);
-    console.log("loading connectome", connectome);
+    // console.log("loading connectome", connectome);
     this.loadConnectome(connectome);
   }
 
   // handle older documents that don't have options/scene fields defined
   this.scene = { ...this.scene, ...document.scene.sceneData };
   this.opts = { ...this.opts, ...document.opts };
-
   this.updateGLVolume();
+  this.uiData.pan2Dxyzmm = [...document.data.pan2Dxyzmm];
+  console.log("this.uiData", this.uiData);
+  this.drawScene();
   this.onDocumentLoaded(document);
   return this;
 };
@@ -3534,12 +3542,17 @@ Niivue.prototype.saveHTML = async function (
  * @returns {NVDocumentData}
  */
 Niivue.prototype.json = function () {
+  console.log("saveHTML", this.volumes[0]);
   this.document.opts = this.opts;
   this.document.scene = this.scene;
+  this.document.volumes = this.volumes;
+  this.document.meshes = this.meshes;
+  this.document.pan2Dxyzmm = [...this.uiData.pan2Dxyzmm];
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
   this.drawScene();
   this.document.previewImageDataURL = this.canvas.toDataURL();
   const json = this.document.json();
+  console.log("json", json);
   json.sceneData = { ...this.scene };
   delete json.sceneData["sceneData"];
   delete json.sceneData["onZoom3DChange"];
@@ -3560,6 +3573,7 @@ Niivue.prototype.saveDocument = async function (fileName = "untitled.nvd") {
   this.document.scene = this.scene;
 
   this.document.title = fileName;
+  console.log("saveDocument", this.volumes[0]);
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
   this.drawScene();
   this.document.previewImageDataURL = this.canvas.toDataURL();
