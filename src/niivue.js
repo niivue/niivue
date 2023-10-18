@@ -64,7 +64,7 @@ import { Subject } from "rxjs";
 import { orientCube } from "./orientCube.js";
 import { NiivueObject3D } from "./niivue-object3D.js";
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage.js";
-import { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
+import { MeshType, NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVMesh, NVMeshFromUrlOptions } from "./nvmesh.js";
 export { NVImage, NVImageFromUrlOptions } from "./nvimage";
 export { NVController } from "./nvcontroller";
@@ -1032,7 +1032,26 @@ Niivue.prototype.mouseDownListener = function (e) {
     e,
     this.gl.canvas
   );
+
   let [x, y] = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+  const label = this.getLabelAtPoint([x, y]);
+  if (label) {
+    console.log("label clicked", label);
+    // find associated mesh
+    for (const mesh of this.meshes) {
+      if (mesh.type != MeshType.CONNECTOME) {
+        continue;
+      }
+      for (const node of mesh.nodes) {
+        if (node.label == label) {
+          console.log("node", node);
+          this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z]);
+          this.updateGLVolume();
+          this.drawScene();
+        }
+      }
+    }
+  }
   this.uiData.clickedTile = this.tileIndex(x, y);
   //respond to different types of mouse clicks
   if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
@@ -6675,6 +6694,7 @@ Niivue.prototype.mouseClick = function (x, y, posChange = 0, isDelta = true) {
   // var posNow;
   // var posFuture;
   this.canvas.focus();
+
   if (this.thumbnailVisible) {
     //we will simply hide the thmubnail
     // use deleteThumbnail() to close the thumbnail and free resources
@@ -8776,6 +8796,44 @@ Niivue.prototype.calculateScreenPoint = function (
     screenPoint[1] += leftTopWidthHeight[1];
   }
   return screenPoint;
+};
+
+Niivue.prototype.getLabelAtPoint = function (screenPoint) {
+  console.log("screenPoint", screenPoint);
+  const panelHeight = this.getLegendPanelHeight();
+  const panelWidth = this.getLegendPanelWidth();
+  const left = this.gl.canvas.width - panelWidth;
+  let top = (this.canvas.height - panelHeight) / 2;
+  console.log("panelrect", left, top, left + panelWidth, top + panelHeight);
+  if (
+    screenPoint[0] < left ||
+    screenPoint[1] < top ||
+    screenPoint[0] > left + panelWidth ||
+    screenPoint[1] > top + panelHeight
+  ) {
+    return null;
+  }
+
+  const scale = 1.0;
+  let size =
+    this.opts.textHeight *
+    Math.min(this.gl.canvas.height, this.gl.canvas.width) *
+    scale;
+
+  const labels = this.getAllLabels();
+  console.log("checking labels");
+  for (const label of labels) {
+    const labelSize =
+      this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+    let textHeight = this.textHeight(labelSize, label.text);
+    console.log("label top bottom", top, top + textHeight);
+    if (screenPoint[1] >= top && screenPoint[1] <= top + textHeight) {
+      return label;
+    }
+    top += textHeight;
+    top += size / 2;
+  }
+  return null;
 };
 
 Niivue.prototype.drawLabelLine = function (
