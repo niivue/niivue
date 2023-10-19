@@ -8821,7 +8821,6 @@ Niivue.prototype.getLabelAtPoint = function (screenPoint) {
     scale;
 
   const labels = this.getAllLabels();
-  console.log("checking labels");
   for (const label of labels) {
     const labelSize =
       this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
