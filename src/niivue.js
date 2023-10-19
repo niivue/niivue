@@ -3800,7 +3800,21 @@ Niivue.prototype.loadConnectome = async function (json) {
   this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
   this.uiData.loading$.next(true);
-  let mesh = new NVConnectome(this.gl, json);
+  let connectome = json;
+  const nodes = json.nodes;
+  if (
+    "names" in nodes &&
+    "X" in nodes &&
+    "Y" in nodes &&
+    "Z" in nodes &&
+    "Color" in nodes &&
+    "Size" in nodes
+  ) {
+    // legacy format
+    connectome = NVConnectome.convertLegacyConnectome(json);
+    console.log("converted legacy connectome", connectome);
+  }
+  let mesh = new NVConnectome(this.gl, connectome);
   // mesh.nodesChanged.addEventListener("nodeAdded", (event) => {
   //   this.handleNodeAdded(event);
   // });

@@ -84,6 +84,28 @@ export class NVConnectome extends NVMesh {
     this.nodesChanged = new EventTarget();
   }
 
+  static convertLegacyConnectome(json) {
+    let connectome = { nodes: [], edges: json.edges };
+    for (const prop in json) {
+      if (prop in defaultOptions) {
+        connectome[prop] = json[prop];
+      }
+    }
+    const nodes = json.nodes;
+    for (let i = 0; i < nodes.names.length; i++) {
+      connectome.nodes.push({
+        name: nodes.names[i],
+        x: nodes.X[i],
+        y: nodes.Y[i],
+        z: nodes.Z[i],
+        colorValue: nodes.Color[i],
+        sizeValue: nodes.Size[i],
+      });
+    }
+
+    return connectome;
+  }
+
   static convertFreeSurferConnectome(json, colormap = "warm") {
     let isValid = true;
     if (!("data_type" in json)) isValid = false;
@@ -164,7 +186,6 @@ export class NVConnectome extends NVMesh {
           rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
         }
         rgba = rgba.map((c) => c / 255);
-        console.log("rgba update label", rgba);
 
         nodes[i].label = new NVLabel3D(
           nodes[i].name,

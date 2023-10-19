@@ -112,6 +112,7 @@
   nv1.opts.meshXRay = 0.2;
   await nv1.loadVolumes(volumeList1);
   nv1.setClipPlane([-0.1, 270, 0]);
+  var custom = document.getElementById("custom");
   custom.onclick = () => {
     let val = document.getElementById("scriptText").value;
     val += '; nv1.loadConnectome(connectome);';
