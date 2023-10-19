@@ -3346,6 +3346,7 @@ Niivue.prototype.loadDocumentFromUrl = async function (url) {
  */
 Niivue.prototype.loadDocument = function (document) {
   this.document = document;
+  this.document.labels = this.document.labels ? this.document.labels : []; // for older documents w/o labels
   console.log("load document", document);
   this.mediaUrlMap.clear();
   this.createEmptyDrawing();
@@ -3402,10 +3403,12 @@ Niivue.prototype.loadDocument = function (document) {
 
   // load connectomes
   // console.log("connectomes", document.data.connectomes);
-  for (const connectomeString of document.data.connectomes) {
-    const connectome = JSON.parse(connectomeString);
-    // console.log("loading connectome", connectome);
-    this.loadConnectome(connectome);
+  if (document.data.connectomes) {
+    for (const connectomeString of document.data.connectomes) {
+      const connectome = JSON.parse(connectomeString);
+      // console.log("loading connectome", connectome);
+      this.loadConnectome(connectome);
+    }
   }
 
   // handle older documents that don't have options/scene fields defined
@@ -7111,7 +7114,8 @@ Niivue.prototype.effectiveCanvasWidth = function () {
 };
 
 Niivue.prototype.getAllLabels = function () {
-  const meshNodes = this.meshes.flatMap((m) => m.nodes);
+  const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME);
+  const meshNodes = connectomes.flatMap((m) => m.nodes);
   const meshLabels = meshNodes.map((n) => n.label);
   let labels = [...this.document.labels, ...meshLabels];
   return labels;
