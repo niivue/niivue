@@ -6,6 +6,7 @@ beforeEach(async () => {
 test("labelsForConnectome", async () => {
   let nlabels = await page.evaluate(async () => {
     let nv = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true });
+    nv.opts.multiplanarForceRender = true;
     await nv.attachTo("gl", false);
     // load one volume object in an array
     var volumeList = [
