@@ -197,6 +197,7 @@ export class NVDocument {
         clipPlane: [0, 0, 0, 0],
         clipPlaneDepthAziElev: [2, 0, 0],
         volScaleMultiplier: 1.0,
+        pan2Dxyzmm: [0, 0, 0, 1],
       },
 
       /**
@@ -302,6 +303,20 @@ export class NVDocument {
        */
       set clipPlaneDepthAziElev(clipPlaneDepthAziElev) {
         this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev;
+      },
+
+      /**
+       * Gets current 2D pan in 3D mm
+       */
+      get pan2Dxyzmm() {
+        return this.sceneData.pan2Dxyzmm;
+      },
+
+      /**
+       * Sets current 2D pan in 3D mm
+       */
+      set pan2Dxyzmm(pan2Dxyzmm) {
+        this.sceneData.pan2Dxyzmm = pan2Dxyzmm;
       },
     };
     this.volumes = [];
@@ -499,8 +514,6 @@ export class NVDocument {
     let imageOptionsArray = [];
     // save our scene object
     data.sceneData = { ...this.scene.sceneData };
-    data.pan2Dxyzmm = [...this.pan2Dxyzmm];
-    console.log("document.json", data.pan2Dxyzmm);
     // save our options
     data.opts = { ...this.opts };
     // infinity is a symbol

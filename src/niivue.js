@@ -279,7 +279,7 @@ export function Niivue(options = {}) {
   this.uiData.mouseButtonRightDown = false;
   this.uiData.mouseDepthPicker = false;
   this.uiData.clickedTile = -1;
-  this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
+
   this.uiData.pan2DxyzmmAtMouseDown = [0, 0, 0, 1];
   this.uiData.prevX = 0;
   this.uiData.prevY = 0;
@@ -1094,7 +1094,7 @@ Niivue.prototype.mouseCenterButtonHandler = function (e) {
   if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.uiData.isDragging)
-    this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+    this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
   this.uiData.isDragging = true;
   this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
@@ -1112,7 +1112,7 @@ Niivue.prototype.mouseRightButtonHandler = function (e) {
   if (this.opts.dragMode === DRAG_MODE.none) return;
   this.setDragStart(pos.x, pos.y);
   if (!this.uiData.isDragging)
-    this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+    this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
   this.uiData.isDragging = true;
   this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   return;
@@ -1479,7 +1479,7 @@ Niivue.prototype.touchMoveListener = function (e) {
   if (this.uiData.touchdown && e.touches.length < 2) {
     var rect = this.canvas.getBoundingClientRect();
     if (!this.uiData.isDragging)
-      this.uiData.pan2DxyzmmAtMouseDown = this.uiData.pan2Dxyzmm.slice();
+      this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice();
     this.uiData.isDragging = true;
     if (this.uiData.doubleTouch && this.uiData.isDragging) {
       this.setDragEnd(
@@ -2029,7 +2029,7 @@ Niivue.prototype.setDefaults = function (options = {}, resetBriCon = false) {
           : options[name];
     }
   }
-  this.uiData.pan2Dxyzmm = [0, 0, 0, 1];
+  this.scene.pan2Dxyzmm = [0, 0, 0, 1];
   //optional: reset volume contrast and brightness
   if (resetBriCon && this.volumes && this.volumes.length > 0) {
     for (let i = 0; i < this.volumes.length; i++) {
@@ -2764,7 +2764,7 @@ Niivue.prototype.setMeshLayerProperty = function (mesh, layer, key, val) {
  * @example niivue.setPan2Dxyzmm([5,-4, 2, 1.5])
  */
 Niivue.prototype.setPan2Dxyzmm = function (xyzmmZoom) {
-  this.uiData.pan2Dxyzmm = xyzmmZoom;
+  this.scene.pan2Dxyzmm = xyzmmZoom;
   this.drawScene();
 };
 
@@ -3171,14 +3171,14 @@ Niivue.prototype.sliceScroll2D = function (posChange, x, y, isDelta = true) {
     this.opts.dragMode === DRAG_MODE.pan &&
     this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1
   ) {
-    let zoom = this.uiData.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
+    let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange);
     zoom = Math.round(zoom * 10) / 10;
-    let zoomChange = this.uiData.pan2Dxyzmm[3] - zoom;
-    this.uiData.pan2Dxyzmm[3] = zoom;
+    let zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
+    this.scene.pan2Dxyzmm[3] = zoom;
     let mm = this.frac2mm(this.scene.crosshairPos);
-    this.uiData.pan2Dxyzmm[0] += zoomChange * mm[0];
-    this.uiData.pan2Dxyzmm[1] += zoomChange * mm[1];
-    this.uiData.pan2Dxyzmm[2] += zoomChange * mm[2];
+    this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
+    this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
+    this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
     this.drawScene();
     return;
   }
@@ -3412,8 +3412,6 @@ Niivue.prototype.loadDocument = function (document) {
   this.scene = { ...this.scene, ...document.scene.sceneData };
   this.opts = { ...this.opts, ...document.opts };
   this.updateGLVolume();
-  this.uiData.pan2Dxyzmm = [...document.data.pan2Dxyzmm];
-  console.log("this.uiData", this.uiData);
   this.drawScene();
   this.onDocumentLoaded(document);
   return this;
@@ -3566,7 +3564,6 @@ Niivue.prototype.json = function () {
   this.document.scene = this.scene;
   this.document.volumes = this.volumes;
   this.document.meshes = this.meshes;
-  this.document.pan2Dxyzmm = [...this.uiData.pan2Dxyzmm];
   // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
   this.drawScene();
   this.document.previewImageDataURL = this.canvas.toDataURL();
@@ -6910,12 +6907,9 @@ Niivue.prototype.dragForPanZoom = function (startXYendXY) {
   let v = mat.vec3.create();
   let zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
   mat.vec3.sub(v, endMM, startMM);
-  this.uiData.pan2Dxyzmm[0] =
-    this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0];
-  this.uiData.pan2Dxyzmm[1] =
-    this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1];
-  this.uiData.pan2Dxyzmm[2] =
-    this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
+  this.scene.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0];
+  this.scene.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1];
+  this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
 };
 
 Niivue.prototype.dragForCenterButton = function (startXYendXY) {
@@ -6930,12 +6924,12 @@ Niivue.prototype.dragForSlicer3D = function (startXYendXY) {
   zoom += y * pixelScale;
   zoom = Math.max(zoom, 0.1);
   zoom = Math.min(zoom, 10.0);
-  let zoomChange = this.uiData.pan2Dxyzmm[3] - zoom;
-  this.uiData.pan2Dxyzmm[3] = zoom;
+  let zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
+  this.scene.pan2Dxyzmm[3] = zoom;
   let mm = this.frac2mm(this.scene.crosshairPos);
-  this.uiData.pan2Dxyzmm[0] += zoomChange * mm[0];
-  this.uiData.pan2Dxyzmm[1] += zoomChange * mm[1];
-  this.uiData.pan2Dxyzmm[2] += zoomChange * mm[2];
+  this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
+  this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
+  this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
 };
 
 // not included in public docs
@@ -7825,8 +7819,8 @@ Niivue.prototype.draw2D = function (
     leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
   }
   if (isNaN(customMM)) {
-    let panXY = this.swizzleVec3MM(this.uiData.pan2Dxyzmm, axCorSag);
-    let zoom = this.uiData.pan2Dxyzmm[3];
+    let panXY = this.swizzleVec3MM(this.scene.pan2Dxyzmm, axCorSag);
+    let zoom = this.scene.pan2Dxyzmm[3];
     screen.mnMM[0] -= panXY[0];
     screen.mxMM[0] -= panXY[0];
     screen.mnMM[1] -= panXY[1];
@@ -8825,7 +8819,6 @@ Niivue.prototype.getLabelAtPoint = function (screenPoint) {
     const labelSize =
       this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
     let textHeight = this.textHeight(labelSize, label.text);
-    console.log("label top bottom", top, top + textHeight);
     if (
       screenPoint[1] >= top &&
       screenPoint[1] <= top + textHeight + size / 2
