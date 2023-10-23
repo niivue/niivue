@@ -21,13 +21,14 @@ import { MeshType } from "./nvmesh";
 /**
  * Represents edges between connectome nodes
  * @typedef {Object} NVConnectomeEdge
- * @property {NVConnectomeNode[]} nodes - connected nodes
+ * @property {number[]} firstNodeIndex - index of first node
+ * @property {number[]} secondNodeIndex - index of second node
  * @property {number} colorValue - color value to determin color of edge based on color map
  */
 export class NVConnectomeEdge {
-  contructor(firstNode, secondNode, colorValue) {
-    this.firstNode = firstNode;
-    this.secondNode = secondNode;
+  contructor(first, second, colorValue) {
+    this.first = first;
+    this.second = second;
     this.colorValue = colorValue;
   }
 }
@@ -85,7 +86,7 @@ export class NVConnectome extends NVMesh {
   }
 
   static convertLegacyConnectome(json) {
-    let connectome = { nodes: [], edges: json.edges };
+    let connectome = { nodes: [], edges: [] };
     for (const prop in json) {
       if (prop in defaultOptions) {
         connectome[prop] = json[prop];
@@ -101,6 +102,17 @@ export class NVConnectome extends NVMesh {
         colorValue: nodes.Color[i],
         sizeValue: nodes.Size[i],
       });
+    }
+
+    for (let i = 0; i < nodes.length - 1; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let colorValue = this.edges[i * nodes.length + j];
+        connectome.edges.push({
+          first: i,
+          second: j,
+          colorValue,
+        });
+      }
     }
 
     return connectome;
@@ -134,6 +146,7 @@ export class NVConnectome extends NVMesh {
       nodeColormap: colormap,
       edgeColormap: colormap,
       nodes,
+      edges: [],
     };
     return connectome;
   }
@@ -174,7 +187,7 @@ export class NVConnectome extends NVMesh {
 
         if (min < max) {
           if (color < min) {
-            // console.log("color value lower than min");
+            console.log("color value lower than min");
             continue;
           }
           color = (color - min) / (max - min);
@@ -186,7 +199,7 @@ export class NVConnectome extends NVMesh {
           rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
         }
         rgba = rgba.map((c) => c / 255);
-
+        console.log("adding label for ", nodes[i]);
         nodes[i].label = new NVLabel3D(
           nodes[i].name,
           {
@@ -200,11 +213,13 @@ export class NVConnectome extends NVMesh {
           },
           [nodes[i].x, nodes[i].y, nodes[i].z]
         );
+        console.log("label for node:", nodes[i].label);
       }
     }
   }
 
   addConnectomeNode(node) {
+    console.log("adding node", node);
     this.nodes.push(node);
     this.updateLabels();
     this.nodesChanged.dispatchEvent(
@@ -213,15 +228,17 @@ export class NVConnectome extends NVMesh {
   }
 
   deleteConnectomeNode(node) {
+    // delete any connected edges
+    const index = this.nodes.indexOf(node);
+    console.log("index of node to delete", index);
+    this.edges = this.edges.filter(
+      (e) => e.first != index && e.second != index
+    );
+    console.log("edges after delete", this.edges);
     this.nodes = this.nodes.filter((n) => n != node);
-    if (this.edges && this.edges.length > 0) {
-      this.edges = this.edges.filter(
-        (e) => e.firstNode != node && e.secondNode != node
-      );
-    } else {
-      console.log("connectome", this);
-    }
+
     this.updateLabels();
+    this.updateConnectome(this.gl);
     this.nodesChanged.dispatchEvent(
       new CustomEvent("nodeDeleted", { detail: { node } })
     );
@@ -254,18 +271,30 @@ export class NVConnectome extends NVMesh {
    *
    * @param {number[]} point
    * @param {number} distance
-   * @returns {NVConnectomeNode[]}
+   * @returns {NVConnectomeNode|null}
    */
-  findCloseNodes(point, distance) {
-    return this.nodes.filter(
-      (n) =>
-        distance <=
-        Math.sqrt(
-          Math.pow(n.x - point[0], 2) +
-            Math.pow(n.y - point[1], 2) +
-            Math.pow(n.z - point[2], 2)
-        )
-    );
+  findClosestConnectomeNode(point, distance) {
+    if (!this.nodes || this.nodes.length == 0) {
+      return null;
+    }
+
+    let closeNodes = this.nodes.map((n, i) => ({
+      distance: Math.sqrt(
+        Math.pow(n.x - point[0], 2) +
+          Math.pow(n.y - point[1], 2) +
+          Math.pow(n.z - point[2], 2)
+      ),
+      index: i,
+    }));
+
+    closeNodes = closeNodes.filter((n) => n.distance < distance);
+    if (closeNodes) {
+      closeNodes.sort((a, b) => a.distance - b.distance);
+    } else {
+      return null;
+    }
+
+    return this.nodes[closeNodes[0].index];
   }
 
   updateConnectome(gl) {
@@ -277,7 +306,6 @@ export class NVConnectome extends NVMesh {
       this.nodeColormapNegative,
       this.colormapInvert
     );
-    let hasEdges = false;
     let hasNeg = "nodeColormapNegative" in this;
     let min = this.nodeMinColor;
     let max = this.nodeMaxColor;
@@ -304,50 +332,48 @@ export class NVConnectome extends NVMesh {
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
     }
 
-    if (nNode > 1 && "edges" in this) {
-      let nEdges = this.edges.length;
-      if ((nEdges = nNode * nNode)) hasEdges = true;
-      else console.log("Expected %d edges not %d", nNode * nNode, nEdges);
+    lut = cmapper.colormap(this.edgeColormap, this.colormapInvert);
+    lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert);
+    hasNeg = "edgeColormapNegative" in this;
+    min = this.edgeMin;
+    max = this.edgeMax;
+    for (const edge of this.edges) {
+      let color = edge.colorValue;
+      let isNeg = hasNeg && color < 0;
+      if (isNeg) {
+        color = -color;
+      }
+      let radius = color * this.edgeScale;
+      if (radius <= 0) continue;
+      if (min < max) {
+        if (color < min) continue;
+        color = (color - min) / (max - min);
+      } else color = 1.0;
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+      if (isNeg)
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+      let pti = [
+        this.nodes[edge.first].x,
+        this.nodes[edge.first].y,
+        this.nodes[edge.first].z,
+      ];
+      let ptj = [
+        this.nodes[edge.second].x,
+        this.nodes[edge.second].y,
+        this.nodes[edge.second].z,
+      ];
+      NiivueObject3D.makeColoredCylinder(
+        pts,
+        tris,
+        rgba255,
+        pti,
+        ptj,
+        radius,
+        rgba
+      );
     }
-    //draw all edges
-    if (hasEdges) {
-      lut = cmapper.colormap(this.edgeColormap, this.colormapInvert);
-      lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert);
-      hasNeg = "edgeColormapNegative" in this;
-      min = this.edgeMin;
-      max = this.edgeMax;
-      for (let i = 0; i < nNode - 1; i++) {
-        for (let j = i + 1; j < nNode; j++) {
-          let color = this.edges[i * nNode + j];
-          let isNeg = false;
-          if (hasNeg && color < 0) {
-            isNeg = true;
-            color = -color;
-          }
-          let radius = color * this.edgeScale;
-          if (radius <= 0) continue;
-          if (min < max) {
-            if (color < min) continue;
-            color = (color - min) / (max - min);
-          } else color = 1.0;
-          color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-          let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-          if (isNeg)
-            rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-          let pti = [this.nodes[i].x, this.nodes[i].y, this.nodes[i].z];
-          let ptj = [this.nodes[j].x, this.nodes[j].y, this.nodes[j].z];
-          NiivueObject3D.makeColoredCylinder(
-            pts,
-            tris,
-            rgba255,
-            pti,
-            ptj,
-            radius,
-            rgba
-          );
-        } //for j
-      } //for i
-    } //hasEdges
+
     //calculate spatial extent of connectome: user adjusting node sizes may influence size
     let obj = NVMeshUtilities.getExtents(pts);
 

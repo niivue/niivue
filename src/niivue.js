@@ -7131,7 +7131,9 @@ Niivue.prototype.getAllLabels = function () {
   const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME);
   const meshNodes = connectomes.flatMap((m) => m.nodes);
   const meshLabels = meshNodes.map((n) => n.label);
-  let labels = [...this.document.labels, ...meshLabels];
+  // filter our undefined labels
+  const definedMeshLabels = meshLabels.filter((l) => l);
+  let labels = [...this.document.labels, ...definedMeshLabels];
   return labels;
 };
 
@@ -7142,18 +7144,26 @@ Niivue.prototype.getBulletMarginWidth = function () {
     return 0;
   }
 
-  const widestBulletScale = labels.reduce((a, b) =>
-    a.style.bulletScale > b.style.bulletScale ? a : b
-  ).style.bulletScale;
-  const tallestLabel = labels.reduce((a, b) => {
-    const aSize =
-      this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
-    const bSize =
-      this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
-    const taller =
-      this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b;
-    return taller;
-  });
+  const widestBulletScale =
+    labels.length === 1
+      ? labels[0].style.bulletScale
+      : labels.reduce((a, b) =>
+          a.style.bulletScale > b.style.bulletScale ? a : b
+        ).style.bulletScale;
+  const tallestLabel =
+    labels.length === 1
+      ? labels[0]
+      : labels.reduce((a, b) => {
+          const aSize =
+            this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
+          const bSize =
+            this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+          const taller =
+            this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text)
+              ? a
+              : b;
+          return taller;
+        });
   let size =
     this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale;
   bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale;

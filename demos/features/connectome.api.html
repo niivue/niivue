@@ -5,8 +5,8 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Connectome</title>
-  <link rel="stylesheet" href="light.css" />
+  <title>Connectome API</title>
+  <link rel="stylesheet" href="niivue.css" />
 </head>
 
 <body>
@@ -14,16 +14,15 @@
     <strong>niivue doesn't work properly without JavaScript enabled. Please enable
       it to continue.</strong>
   </noscript>
-  <header>
-    <label for="invertCheck">Invert</label>
-    <input type="checkbox" id="invertCheck" unchecked />
-    <label for="edgeSlider">Edge</label>
-    <input type="range" min="5" max="30" value="10" class="slider" id="edgeSlider" />
-    <label for="nodeSlider">Node</label>
-    <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
-    <label for="threshSlider">Threshold</label>
-    <input type="range" min="1" max="59" value="20" class="slider" id="threshSlider" />
-    <button id="reset">reset</button>
+  <header>    
+    <label for="nodeName">New Node Name</label>
+    <input type="text" id="nodeName" value="node"></input>
+    <label for="nodeColor">New Node Color Value</label>
+    <input type="text" id="nodeColor"></input>
+    <label for="nodeSize">New Node Size Value</label>
+    <input type="text" id="nodeSize"></input>
+    <button id="addNode">Add Node</button>
+    <button id="deleteNode">Delete Node</button>
   </header>
   <main id="container">
     <canvas id="gl1"></canvas>
@@ -35,29 +34,49 @@
 
 </html>
 <script src="./niivue.umd.js"></script>
-<script type="module" async>
-  invertCheck.onchange = function () {
-    nv1.setMeshProperty(nv1.meshes[0].id, "colormapInvert", this.checked);
+<script type="module" async>  
+  
+  var addNode = document.getElementById("addNode");
+  var deleteNode = document.getElementById("deleteNode");
+  var nodeName = document.getElementById("nodeName");
+  var nodeColor = document.getElementById("nodeColor");
+  nodeColor.value = 1;
+  var nodeSize = document.getElementById("nodeSize");
+  nodeSize.value = 1;
+  
+
+  addNode.onclick = function () {
+    var posMM = nv1.frac2mm(nv1.scene.crosshairPos);
+    // nv1.meshes[0].addConnectomeNode({ name: nodeName.value, x: posMM[0], y: posMM[1], z: posMM[2], size: parseInt(nodeSize.value), color: parseInt(nodeColor.value) });
+    
+    nv1.meshes[0].addConnectomeNode({
+          name: nodeName.value,
+          x: posMM[0],
+          y: posMM[1],
+          z: posMM[2],
+          colorValue: parseInt(nodeColor.value),
+          sizeValue: parseInt(nodeSize.value)
+        })
+    nv1.meshes[0].updateMesh(nv1.gl);
     nv1.updateGLVolume();
-  };
-  var sliderE = document.getElementById("edgeSlider");
-  var sliderN = document.getElementById("nodeSlider");
-  var sliderT = document.getElementById("threshSlider");
-  // Update the current slider value (each time you drag the slider handle)
-  sliderE.oninput = function () {
-    nv1.setMeshProperty(nv1.meshes[0].id, "edgeScale", this.value * 0.1);
-  };
-  sliderN.oninput = function () {
-    nv1.setMeshProperty(nv1.meshes[0].id, "nodeScale", this.value * 0.1);
-  };
-  sliderT.oninput = function () {
-    nv1.setMeshProperty(nv1.meshes[0].id, "edgeMin", this.value * 0.1);
-  };
+  }
+
+  deleteNode.onclick = function() {
+    var posMM = nv1.frac2mm(nv1.scene.crosshairPos);
+    console.log("posMM", posMM);
+    var node = nv1.meshes[0].findClosestConnectomeNode(posMM, 15);
+    if(node) {
+      console.log("close node", node);
+      nv1.meshes[0].deleteConnectomeNode(node);
+    }
+    nv1.drawScene();
+  }
+
   let connectome = {
     name: "simpleConnectome",
     nodeColormap: "warm",
     nodeColormapNegative: "winter",
-    nodeMinColor: 2,
+    nodeMinColor: 1,
     nodeMaxColor: 4,
     nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
     edgeColormap: "warm",
@@ -105,7 +124,7 @@
       colorValue: 2
     },
     {
-      first: 0, 
+      first: 0,
       second: 2,
       colorValue: -3
     },
@@ -151,9 +170,5 @@
     };
     cmapEl.appendChild(btn);
   }
-  document.getElementById("reset").addEventListener("click", doReset);
-  function doReset() {
-    nv1.setDefaults(opts, true);
-    nv1.setClipPlane([-0.1, 270, 0]);
-  }
+  
 </script>
