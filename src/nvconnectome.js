@@ -230,11 +230,9 @@ export class NVConnectome extends NVMesh {
   deleteConnectomeNode(node) {
     // delete any connected edges
     const index = this.nodes.indexOf(node);
-    console.log("index of node to delete", index);
     this.edges = this.edges.filter(
       (e) => e.first != index && e.second != index
     );
-    console.log("edges after delete", this.edges);
     this.nodes = this.nodes.filter((n) => n != node);
 
     this.updateLabels();
@@ -265,6 +263,36 @@ export class NVConnectome extends NVMesh {
     }
     const index = this.connectome.nodes.findIndex((n) => n === node);
     this.updateConnectomeNodeByIndex(index, updatedNode);
+  }
+
+  addConnectomeEdge(first, second, colorValue) {
+    let edge = this.edges.find(
+      (f) =>
+        (f.first === first || f.second === first) &&
+        f.first + f.second === first + second
+    );
+    if (edge) {
+      return edge;
+    }
+    edge = { first, second, colorValue };
+    this.edges.push(edge);
+    this.updateConnectome(this.gl);
+    return edge;
+  }
+
+  deleteConnectomeEdge(first, second) {
+    let edge = this.edges.find(
+      (f) =>
+        (f.first === first || f.first === second) &&
+        f.first + f.second === first + second
+    );
+    if (edge) {
+      this.edges = this.edges.filter((e) => e != edge);
+    } else {
+      throw new Error(`edge between ${first} and ${second} not found`);
+    }
+    this.updateConnectome(this.gl);
+    return edge;
   }
 
   /**

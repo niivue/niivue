@@ -7,6 +7,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Connectome API</title>
   <link rel="stylesheet" href="niivue.css" />
+  <style>
+    input {
+      margin: auto;
+    }
+  </style>
 </head>
 
 <body>
@@ -15,6 +20,8 @@
       it to continue.</strong>
   </noscript>
   <header>    
+    <p>
+      
     <label for="nodeName">New Node Name</label>
     <input type="text" id="nodeName" value="node"></input>
     <label for="nodeColor">New Node Color Value</label>
@@ -23,6 +30,17 @@
     <input type="text" id="nodeSize"></input>
     <button id="addNode">Add Node</button>
     <button id="deleteNode">Delete Node</button>
+    </p>
+  <p>
+    <label for="firstIndex">First Node Index</label>
+    <input type="number" id="firstIndex" value="0"></input>
+    <label for="secondIndex">Second Node Index</label>
+    <input type="number" id="secondIndex" value="1"></input>
+    <label for="edgeColor">Color Value</label>
+    <input type="number" id="edgeColor" value="1"></input>
+    <button id="addEdge">Add Edge</button>
+    <button id="deleteEdge">Delete Edge</button>
+  </p>
   </header>
   <main id="container">
     <canvas id="gl1"></canvas>
@@ -39,11 +57,15 @@
   var addNode = document.getElementById("addNode");
   var deleteNode = document.getElementById("deleteNode");
   var nodeName = document.getElementById("nodeName");
-  var nodeColor = document.getElementById("nodeColor");
+  var nodeColor = document.getElementById("nodeColor");  
   nodeColor.value = 1;
   var nodeSize = document.getElementById("nodeSize");
   nodeSize.value = 1;
-  
+  var addEdge = document.getElementById("addEdge");
+  var deleteEdge = document.getElementById("deleteEdge");
+  var firstIndex = document.getElementById("firstIndex");
+  var seceondIndex = document.getElementById("secondIndex");
+  var edgeColor = document.getElementById("edgeColor");
 
   addNode.onclick = function () {
     var posMM = nv1.frac2mm(nv1.scene.crosshairPos);
@@ -63,12 +85,20 @@
 
   deleteNode.onclick = function() {
     var posMM = nv1.frac2mm(nv1.scene.crosshairPos);
-    console.log("posMM", posMM);
     var node = nv1.meshes[0].findClosestConnectomeNode(posMM, 15);
     if(node) {
-      console.log("close node", node);
       nv1.meshes[0].deleteConnectomeNode(node);
     }
+    nv1.drawScene();
+  }
+
+  addEdge.onclick = function() {
+    nv1.meshes[0].addConnectomeEdge(parseInt(firstIndex.value), parseInt(seceondIndex.value), parseInt(edgeColor.value));
+    nv1.drawScene();
+  }
+
+  deleteEdge.onclick = function() {
+    nv1.meshes[0].deleteConnectomeEdge(parseInt(firstIndex.value), parseInt(seceondIndex.value));
     nv1.drawScene();
   }
 
