@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>Home - Documentation</title>
+    <title>NVConnectome - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,17 +35,86 @@
 
 <div id="main">
     
+    <h1 class="page-title">NVConnectome</h1>
+    
 
     
 
 
 
+
+<section>
+
+<header>
+    
+        <h2>
+        
+            NVConnectome
+        
+        </h2>
+        
+            <div class="class-description usertext">Represents a connectome</div>
+        
+    
+</header>
+
+<article>
+    
+        <div class="container-overview">
+        
+            
+
+    
+    <h2>Constructor</h2>
+    
+
+    <h4 class="name" id="NVConnectome"><span class="type-signature"></span>new NVConnectome<span class="signature">(connectome)</span><span class="type-signature"></span></h4>
+
     
 
 
-    <section class="package">
-        <h3> </h3>		
-    </section>
+
+
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvconnectome.js.html">nvconnectome.js</a>, <a href="nvconnectome.js.html#line69">line 69</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
 
@@ -54,58 +123,471 @@
 
 
 
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>connectome</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#NVConnectomeOptions">NVConnectomeOptions</a></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        </div>
+    
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Classes</h3>
+
+        <dl>
+            <dt><a href="NVConnectome.html">NVConnectome</a></dt>
+            <dd></dd>
+        </dl>
+    
+    
+    
+
+     
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="findClosestConnectomeNode"><span class="type-signature"></span>findClosestConnectomeNode<span class="signature">(point, distance)</span><span class="type-signature"> &rarr; {<a href="global.html#NVConnectomeNode">NVConnectomeNode</a>|null}</span></h4>
 
     
 
 
 
-    <section class="readme usertext">
-        <article><h1>NiiVue</h1>
-<p>NiiVue is web-based visualization tool for neuroimaging that can run on any operating system and any web device (phone, tablet, computer). This repository contains only the <strong>core NiiVue package</strong> that can be embedded into other projects. We have additional <a href="https://github.com/niivue">repositories</a> that wrap NiiVue for use in jupyter notebooks, vscode, and electron applications.</p>
-<p><a href="https://niivue.github.io/niivue/">Click here to see NiiVue live demos</a></p>
-<p>What makes NiiVue unique is its ability to simultaneously display all the datatypes popular with neuroimaging: voxels, meshes, tractography streamlines, statistical maps and connectomes. Alternative voxel-based web tools include <a href="https://fnndsc.github.io/ami/">ami</a>, <a href="https://bioimagesuiteweb.github.io/webapp/viewer.html">BioImage Suite Web</a>, <a href="https://brainbrowser.cbrain.mcgill.ca/volume-viewer">BrainBrowser</a>, <a href="http://vsoch.github.io/nifti-drop">nifti-drop</a>, <a href="https://viewer.ohif.org/">OHIF DICOM Viewer</a>, <a href="https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html">Papaya</a>, <a href="https://kitware.github.io/paraview-glance/app/">VTK.js</a>, and <a href="https://slicedrop.com/">slicedrop</a>.</p>
-<h2>Local Development</h2>
-<p>To run a hot-loading development that is updated whenever you save changes to any source files, you can run:</p>
-<pre class="prettyprint source"><code>git clone git@github.com:niivue/niivue.git
-cd niivue
-npm install
-npm run dev
-</code></pre>
-<p>The command <code>npm run demo</code> will minify the project and locally host all of the <a href="https://niivue.github.io/niivue/">live demos</a>. The <a href="./DEVELOP.md">DEVELOP.md file provides more details for developers</a>.</p>
-<h1>Developer Documentation</h1>
-<p><a href="https://niivue.github.io/niivue/devdocs/">Click here for the docs web page</a></p>
-<h1>Projects and People using NiiVue</h1>
-<ul>
-<li>Analysis of Functional NeuroImages (AFNI) <a href="https://afni.nimh.nih.gov/">Scientific and Statistical Computing Core</a> (National Institutes of Health)</li>
-<li><a href="https://cstar.sc.edu/">Center for the Study of Aphasia Recovery</a> (University of South Carolina)</li>
-<li>FMRIB's Software Library (FSL) <a href="https://www.win.ox.ac.uk/">Wellcome Centre for Integrative Neuroimaging</a> (University of Oxford)</li>
-<li>FreeSurfer <a href="https://lcn.martinos.org/">Laboratories for Computational Neuroimaging</a> (Massachusetts General Hospital)</li>
-<li><a href="https://openneuro.org">OpenNeuro.org</a> uses NiiVue to visualize datasets</li>
-<li><a href="https://brainlife.io/about/">BrainLife.io</a> integrates NiiVue into <a href="https://brainlife.io/ezbids/">ezbids</a></li>
-<li><a href="https://nilearn.github.io/stable/index.html">nilearn</a> is extending <a href="https://github.com/niivue/ipyniivue">ipyniivue</a></li>
-<li><a href="https://www.neurodesk.org/">neurodesk</a> uses NiiVue for their <a href="https://github.com/QSMxT/QSMxT-UI">QSMxT Quantitative Susceptibility Mapping toolbox</a></li>
-<li><a href="https://github.com/niivue/niivue-vscode">niivue-vscode</a> is a VSCode extension for displaying images</li>
-<li><a href="http://neuroinformatics.uw.edu/">Neuroinformatics Research and Development Group</a> embeds NiiVue in <a href="https://github.com/nrdg/tractoscope">tractoscope</a></li>
-<li><a href="https://github.com/mpsych/CACTAS">CACTAS</a> from <a href="https://danielhaehn.com/">Daniel Haehn's team</a> is extending NiiVue drawing and segmentation capabilities</li>
-<li><a href="https://elifesciences.org/articles/73153">Digital Brain Bank</a> for navigating MRI datasets</li>
-</ul>
-<h1>Funding</h1>
-<ul>
-<li>2021-2022 <a href="https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10094384">P50 DC014664</a> NIH NIDCD <a href="https://grants.nih.gov/grants/guide/notice-files/NOT-OD-21-091.html#:~:text=NOT%2DOD%2D21%2D091,Software%20Tools%20for%20Open%20Science">NOT-OD-21-091</a></li>
-<li>2023-2026 <a href="https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10724895">RF1 MH133701</a> NIH NIMH</li>
-</ul>
-<h1>Supported Formats</h1>
-<p>NiiVue supports many popular brain imaging formats:</p>
-<ul>
-<li>Voxel-based formats: <a href="https://brainder.org/2012/09/23/the-nifti-file-format/">NIfTI</a>, <a href="http://teem.sourceforge.net/nrrd/format.html">NRRD</a>, <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats">MRtrix MIF</a>, <a href="https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html">AFNI HEAD/BRIK</a>, <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat">MGH/MGZ</a>, <a href="https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29">ITK MHD</a>, <a href="https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info">ECAT7</a>.</li>
-<li>Mesh-based formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ASC</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">BYU/GEO/G</a>, <a href="http://brainsuite.org/formats/dfs/">BrainSuite DFS</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ICO/TRI</a>, <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY</a>, <a href="https://www.nitrc.org/projects/bnv/">BrainNet NV</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files">BrainVoyager SRF</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">FreeSurfer</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://en.wikipedia.org/wiki/OFF_(file_format)">OFF</a>, <a href="https://brainder.org/tag/obj/">Wavefront OBJ</a>, <a href="https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45">STL</a>, <a href="https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf">Legacy VTK</a>, <a href="https://3dprint.nih.gov/">X3D</a>.</li>
-<li>Mesh overlay formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="https://balsa.wustl.edu/about/fileTypes">CIfTI-2</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files">SMP</a>, STC, FreeSurfer (CURV/ANNOT)</li>
-<li>Tractography formats: <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck">TCK</a>, <a href="http://trackvis.org/docs/?subsect=fileformat">TRK</a>, <a href="https://github.com/frheault/tractography_file_format">TRX</a>, VTK, AFNI .niml.tract</li>
-<li>DICOM: <a href="https://dicom.nema.org/medical/dicom/current/output/chtml/part10/chapter_7.html">DICOM</a> and <a href="docs/development-notes/dicom-manifests.md">DICOM Manifests</a></li>
-</ul></article>
-    </section>
+
+<dl class="details">
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvconnectome.js.html">nvconnectome.js</a>, <a href="nvconnectome.js.html#line304">line 304</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
 
 
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>point</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;number></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>distance</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type"><a href="global.html#NVConnectomeNode">NVConnectomeNode</a></span>
+|
+
+<span class="param-type">null</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".loadConnectomeFromUrl"><span class="type-signature type-signature-async, static">(async, static) </span>loadConnectomeFromUrl<span class="signature">(gl, url)</span><span class="type-signature"> &rarr; {<a href="NVConnectome.html">NVConnectome</a>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li>Factory method to create connectome from options</li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="nvconnectome.js.html">nvconnectome.js</a>, <a href="nvconnectome.js.html#line449">line 449</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>gl</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">WebGL2RenderingContext</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>url</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type"><a href="NVConnectome.html">NVConnectome</a></span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+    
+
+    
+
+    
+</article>
+
+</section>
 
 
 

@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>Home - Documentation</title>
+    <title>nvconnectome.js - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,77 +35,473 @@
 
 <div id="main">
     
+    <h1 class="page-title">nvconnectome.js</h1>
+    
 
     
 
 
 
     
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { NVMesh } from "./nvmesh";
+import { NVUtilities } from "./nvutilities";
+import { NiivueObject3D } from "./niivue-object3D";
+import { NVMeshUtilities } from "./nvmesh-utilities";
+import { cmapper } from "./colortables";
+import { NVLabel3D, LabelTextAlignment } from "./nvlabel";
+import { MeshType } from "./nvmesh";
 
+/**
+ * Representes the vertices of a connectome
+ * @typedef {Object} NVConnectomeNode
+ * @property {string} name - name of node
+ * @property {number} x
+ * @property {number} y
+ * @property {number} z
+ * @property {number} colorValue - color value of node (actual color determined by colormap)
+ * @property {number} sizeValue - size value of node (actual size determined by node scale times this value in mms)
+ * @property {NVLabel3D} label
+ */
 
-    <section class="package">
-        <h3> </h3>		
-    </section>
+/**
+ * Represents edges between connectome nodes
+ * @typedef {Object} NVConnectomeEdge
+ * @property {number[]} firstNodeIndex - index of first node
+ * @property {number[]} secondNodeIndex - index of second node
+ * @property {number} colorValue - color value to determin color of edge based on color map
+ */
+export class NVConnectomeEdge {
+  contructor(first, second, colorValue) {
+    this.first = first;
+    this.second = second;
+    this.colorValue = colorValue;
+  }
+}
 
+const defaultOptions = {
+  name: "untitled connectome",
+  nodeColormap: "warm",
+  nodeColormapNegative: "winter",
+  nodeMinColor: 0,
+  nodeMaxColor: 4,
+  nodeScale: 3,
+  edgeColormap: "warm",
+  edgeColormapNegative: "winter",
+  edgeMin: 2,
+  edgeMax: 6,
+  edgeScale: 1,
+};
 
+/**
+ * @typedef {Object} NVConnectomeOptions
+ * @property {string} name
+ * @property {string} nodeColormap
+ * @property {string} nodeColormapNegative
+ * @property {number} nodeMinColor
+ * @property {number} nodeMaxColor
+ * @property {number} nodeScale - scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+ * @property {string} edgeColormap
+ * @property {string} edgeColormapNegative
+ * @property {number} edgeMin
+ * @property {number} edgeMax
+ * @property {number} edgeScale
+ * @property {number} legendLineThickness
+ */
+// export class NVConnectomeOptions extends NVMeshOptions {}
+/**
+ * Represents a connectome
+ */
+export class NVConnectome extends NVMesh {
+  /**
+   * @constructor
+   * @param {NVConnectomeOptions} connectome
+   */
+  constructor(gl, connectome) {
+    super([], [], connectome.name, [], 1.0, true, gl, connectome);
+    this.gl = gl;
+    // this.nodes = connectome.nodes;
+    // this.edges = connectome.edges;
+    // this.options = { ...defaultOptions, ...connectome };
+    this.type = MeshType.CONNECTOME;
+    if (this.nodes) {
+      this.updateLabels();
+    }
 
+    this.nodesChanged = new EventTarget();
+  }
 
+  static convertLegacyConnectome(json) {
+    let connectome = { nodes: [], edges: [] };
+    for (const prop in json) {
+      if (prop in defaultOptions) {
+        connectome[prop] = json[prop];
+      }
+    }
+    const nodes = json.nodes;
+    for (let i = 0; i &lt; nodes.names.length; i++) {
+      connectome.nodes.push({
+        name: nodes.names[i],
+        x: nodes.X[i],
+        y: nodes.Y[i],
+        z: nodes.Z[i],
+        colorValue: nodes.Color[i],
+        sizeValue: nodes.Size[i],
+      });
+    }
 
+    for (let i = 0; i &lt; nodes.length - 1; i++) {
+      for (let j = i + 1; j &lt; nodes.length; j++) {
+        let colorValue = this.edges[i * nodes.length + j];
+        connectome.edges.push({
+          first: i,
+          second: j,
+          colorValue,
+        });
+      }
+    }
 
+    return connectome;
+  }
 
+  static convertFreeSurferConnectome(json, colormap = "warm") {
+    let isValid = true;
+    if (!("data_type" in json)) isValid = false;
+    else if (json.data_type !== "fs_pointset") isValid = false;
+    if (!("points" in json)) isValid = false;
+    if (!isValid) {
+      throw Error("not a valid FreeSurfer json pointset");
+    }
 
+    const nodes = json.points.map((p) => ({
+      name:
+        Array.isArray(p.comments) &amp;&amp;
+        p.comments.length > 0 &amp;&amp;
+        "text" in p.comments[0]
+          ? p.comments[0].text
+          : "",
+      x: p.coordinates.x,
+      y: p.coordinates.y,
+      z: p.coordinates.z,
+      colorValue: 1,
+      sizeValue: 1,
+      metadata: p.comments,
+    }));
+    const connectome = {
+      ...defaultOptions,
+      nodeColormap: colormap,
+      edgeColormap: colormap,
+      nodes,
+      edges: [],
+    };
+    return connectome;
+  }
 
-    
+  updateLabels() {
+    const nodes = this.nodes;
+    if (nodes.length > 0) {
+      // largest node
+      const largest = nodes.reduce((a, b) =>
+        a.sizeValue > b.sizeValue ? a : b
+      ).sizeValue;
+      const min = this.nodeMinColor
+        ? this.nodeMinColor
+        : nodes.reduce((a, b) => (a.colorValue &lt; b.colorValue ? a : b))
+            .colorValue;
+      const max = this.nodeMaxColor
+        ? this.nodeMaxColor
+        : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b))
+            .colorValue;
+      let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
+      let lutNeg = cmapper.colormap(
+        this.nodeColormapNegative,
+        this.colormapInvert
+      );
 
+      const hasNeg = "nodeColormapNegative" in this;
+      const legendLineThickness = this.legendLineThickness
+        ? this.legendLineThickness
+        : 0.0;
 
+      for (let i = 0; i &lt; nodes.length; i++) {
+        let color = nodes[i].colorValue;
+        let isNeg = false;
+        if (hasNeg &amp;&amp; color &lt; 0) {
+          isNeg = true;
+          color = -color;
+        }
 
-    <section class="readme usertext">
-        <article><h1>NiiVue</h1>
-<p>NiiVue is web-based visualization tool for neuroimaging that can run on any operating system and any web device (phone, tablet, computer). This repository contains only the <strong>core NiiVue package</strong> that can be embedded into other projects. We have additional <a href="https://github.com/niivue">repositories</a> that wrap NiiVue for use in jupyter notebooks, vscode, and electron applications.</p>
-<p><a href="https://niivue.github.io/niivue/">Click here to see NiiVue live demos</a></p>
-<p>What makes NiiVue unique is its ability to simultaneously display all the datatypes popular with neuroimaging: voxels, meshes, tractography streamlines, statistical maps and connectomes. Alternative voxel-based web tools include <a href="https://fnndsc.github.io/ami/">ami</a>, <a href="https://bioimagesuiteweb.github.io/webapp/viewer.html">BioImage Suite Web</a>, <a href="https://brainbrowser.cbrain.mcgill.ca/volume-viewer">BrainBrowser</a>, <a href="http://vsoch.github.io/nifti-drop">nifti-drop</a>, <a href="https://viewer.ohif.org/">OHIF DICOM Viewer</a>, <a href="https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html">Papaya</a>, <a href="https://kitware.github.io/paraview-glance/app/">VTK.js</a>, and <a href="https://slicedrop.com/">slicedrop</a>.</p>
-<h2>Local Development</h2>
-<p>To run a hot-loading development that is updated whenever you save changes to any source files, you can run:</p>
-<pre class="prettyprint source"><code>git clone git@github.com:niivue/niivue.git
-cd niivue
-npm install
-npm run dev
+        if (min &lt; max) {
+          if (color &lt; min) {
+            console.log("color value lower than min");
+            continue;
+          }
+          color = (color - min) / (max - min);
+        } else color = 1.0;
+
+        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg) {
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+        }
+        rgba = rgba.map((c) => c / 255);
+        console.log("adding label for ", nodes[i]);
+        nodes[i].label = new NVLabel3D(
+          nodes[i].name,
+          {
+            textColor: rgba,
+            bulletScale: nodes[i].sizeValue / largest,
+            bulletColor: rgba,
+            lineWidth: legendLineThickness,
+            lineColor: rgba,
+            textScale: 1.0,
+            textAlignment: LabelTextAlignment.LEFT,
+          },
+          [nodes[i].x, nodes[i].y, nodes[i].z]
+        );
+        console.log("label for node:", nodes[i].label);
+      }
+    }
+  }
+
+  addConnectomeNode(node) {
+    console.log("adding node", node);
+    this.nodes.push(node);
+    this.updateLabels();
+    this.nodesChanged.dispatchEvent(
+      new CustomEvent("nodeAdded", { detail: { node } })
+    );
+  }
+
+  deleteConnectomeNode(node) {
+    // delete any connected edges
+    const index = this.nodes.indexOf(node);
+    this.edges = this.edges.filter(
+      (e) => e.first != index &amp;&amp; e.second != index
+    );
+    this.nodes = this.nodes.filter((n) => n != node);
+
+    this.updateLabels();
+    this.updateConnectome(this.gl);
+    this.nodesChanged.dispatchEvent(
+      new CustomEvent("nodeDeleted", { detail: { node } })
+    );
+  }
+
+  updateConnectomeNodeByIndex(index, updatedNode) {
+    this.nodes[index] = updatedNode;
+    this.updateLabels();
+    this.updateConnectome(this.gl);
+    this.nodesChanged.dispatchEvent(
+      new CustomEvent("nodeChanged", { detail: { node: updatedNode } })
+    );
+  }
+
+  updateConnectomeNodeByPoint(point, updatedNode) {
+    if (!this.connectome.nodes) {
+      throw new Error("Node to update does not exist");
+    }
+    const node = this.connectome.nodes.find((node) =>
+      NVUtilities.arraysAreEqual([node.x, node.y, node.z], point)
+    );
+    if (!node) {
+      throw new Error(`Node with point ${point} to update does not exist`);
+    }
+    const index = this.connectome.nodes.findIndex((n) => n === node);
+    this.updateConnectomeNodeByIndex(index, updatedNode);
+  }
+
+  addConnectomeEdge(first, second, colorValue) {
+    let edge = this.edges.find(
+      (f) =>
+        (f.first === first || f.second === first) &amp;&amp;
+        f.first + f.second === first + second
+    );
+    if (edge) {
+      return edge;
+    }
+    edge = { first, second, colorValue };
+    this.edges.push(edge);
+    this.updateConnectome(this.gl);
+    return edge;
+  }
+
+  deleteConnectomeEdge(first, second) {
+    let edge = this.edges.find(
+      (f) =>
+        (f.first === first || f.first === second) &amp;&amp;
+        f.first + f.second === first + second
+    );
+    if (edge) {
+      this.edges = this.edges.filter((e) => e != edge);
+    } else {
+      throw new Error(`edge between ${first} and ${second} not found`);
+    }
+    this.updateConnectome(this.gl);
+    return edge;
+  }
+
+  /**
+   *
+   * @param {number[]} point
+   * @param {number} distance
+   * @returns {NVConnectomeNode|null}
+   */
+  findClosestConnectomeNode(point, distance) {
+    if (!this.nodes || this.nodes.length == 0) {
+      return null;
+    }
+
+    let closeNodes = this.nodes.map((n, i) => ({
+      distance: Math.sqrt(
+        Math.pow(n.x - point[0], 2) +
+          Math.pow(n.y - point[1], 2) +
+          Math.pow(n.z - point[2], 2)
+      ),
+      index: i,
+    }));
+
+    closeNodes = closeNodes.filter((n) => n.distance &lt; distance);
+    if (closeNodes) {
+      closeNodes.sort((a, b) => a.distance - b.distance);
+    } else {
+      return null;
+    }
+
+    return this.nodes[closeNodes[0].index];
+  }
+
+  updateConnectome(gl) {
+    let tris = [];
+    let pts = [];
+    let rgba255 = [];
+    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
+    let lutNeg = cmapper.colormap(
+      this.nodeColormapNegative,
+      this.colormapInvert
+    );
+    let hasNeg = "nodeColormapNegative" in this;
+    let min = this.nodeMinColor;
+    let max = this.nodeMaxColor;
+    const nNode = this.nodes.length;
+    for (let i = 0; i &lt; nNode; i++) {
+      let radius = this.nodes[i].sizeValue * this.nodeScale;
+      if (radius &lt;= 0.0) continue;
+      let color = this.nodes[i].colorValue;
+      let isNeg = false;
+      if (hasNeg &amp;&amp; color &lt; 0) {
+        isNeg = true;
+        color = -color;
+      }
+      if (min &lt; max) {
+        if (color &lt; min) continue;
+        color = (color - min) / (max - min);
+      } else color = 1.0;
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+      if (isNeg)
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+      let pt = [this.nodes[i].x, this.nodes[i].y, this.nodes[i].z];
+
+      NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
+    }
+
+    lut = cmapper.colormap(this.edgeColormap, this.colormapInvert);
+    lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert);
+    hasNeg = "edgeColormapNegative" in this;
+    min = this.edgeMin;
+    max = this.edgeMax;
+    for (const edge of this.edges) {
+      let color = edge.colorValue;
+      let isNeg = hasNeg &amp;&amp; color &lt; 0;
+      if (isNeg) {
+        color = -color;
+      }
+      let radius = color * this.edgeScale;
+      if (radius &lt;= 0) continue;
+      if (min &lt; max) {
+        if (color &lt; min) continue;
+        color = (color - min) / (max - min);
+      } else color = 1.0;
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
+      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+      if (isNeg)
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+      let pti = [
+        this.nodes[edge.first].x,
+        this.nodes[edge.first].y,
+        this.nodes[edge.first].z,
+      ];
+      let ptj = [
+        this.nodes[edge.second].x,
+        this.nodes[edge.second].y,
+        this.nodes[edge.second].z,
+      ];
+      NiivueObject3D.makeColoredCylinder(
+        pts,
+        tris,
+        rgba255,
+        pti,
+        ptj,
+        radius,
+        rgba
+      );
+    }
+
+    //calculate spatial extent of connectome: user adjusting node sizes may influence size
+    let obj = NVMeshUtilities.getExtents(pts);
+
+    this.furthestVertexFromOrigin = obj.mxDx;
+    this.extentsMin = obj.extentsMin;
+    this.extentsMax = obj.extentsMax;
+    let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
+    //generate webGL buffers and vao
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.bufferData(
+      gl.ELEMENT_ARRAY_BUFFER,
+      new Int32Array(tris),
+      gl.STATIC_DRAW
+    );
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(posNormClr),
+      gl.STATIC_DRAW
+    );
+    this.indexCount = tris.length;
+  }
+
+  updateMesh(gl) {
+    this.updateConnectome(gl);
+  }
+
+  json() {
+    const json = {};
+    for (const prop in this) {
+      if (prop in defaultOptions || prop === "nodes" || prop === "edges") {
+        json[prop] = this[prop];
+      }
+    }
+    return json;
+  }
+
+  /**
+   * Factory method to create connectome from options
+   * @static
+   * @param {WebGL2RenderingContext} gl
+   * @param {string} url
+   * @returns {NVConnectome}
+   */
+  static async loadConnectomeFromUrl(gl, url) {
+    const response = await fetch(url);
+    const json = await response.json();
+    return new NVConnectome(gl, json);
+  }
+}
 </code></pre>
-<p>The command <code>npm run demo</code> will minify the project and locally host all of the <a href="https://niivue.github.io/niivue/">live demos</a>. The <a href="./DEVELOP.md">DEVELOP.md file provides more details for developers</a>.</p>
-<h1>Developer Documentation</h1>
-<p><a href="https://niivue.github.io/niivue/devdocs/">Click here for the docs web page</a></p>
-<h1>Projects and People using NiiVue</h1>
-<ul>
-<li>Analysis of Functional NeuroImages (AFNI) <a href="https://afni.nimh.nih.gov/">Scientific and Statistical Computing Core</a> (National Institutes of Health)</li>
-<li><a href="https://cstar.sc.edu/">Center for the Study of Aphasia Recovery</a> (University of South Carolina)</li>
-<li>FMRIB's Software Library (FSL) <a href="https://www.win.ox.ac.uk/">Wellcome Centre for Integrative Neuroimaging</a> (University of Oxford)</li>
-<li>FreeSurfer <a href="https://lcn.martinos.org/">Laboratories for Computational Neuroimaging</a> (Massachusetts General Hospital)</li>
-<li><a href="https://openneuro.org">OpenNeuro.org</a> uses NiiVue to visualize datasets</li>
-<li><a href="https://brainlife.io/about/">BrainLife.io</a> integrates NiiVue into <a href="https://brainlife.io/ezbids/">ezbids</a></li>
-<li><a href="https://nilearn.github.io/stable/index.html">nilearn</a> is extending <a href="https://github.com/niivue/ipyniivue">ipyniivue</a></li>
-<li><a href="https://www.neurodesk.org/">neurodesk</a> uses NiiVue for their <a href="https://github.com/QSMxT/QSMxT-UI">QSMxT Quantitative Susceptibility Mapping toolbox</a></li>
-<li><a href="https://github.com/niivue/niivue-vscode">niivue-vscode</a> is a VSCode extension for displaying images</li>
-<li><a href="http://neuroinformatics.uw.edu/">Neuroinformatics Research and Development Group</a> embeds NiiVue in <a href="https://github.com/nrdg/tractoscope">tractoscope</a></li>
-<li><a href="https://github.com/mpsych/CACTAS">CACTAS</a> from <a href="https://danielhaehn.com/">Daniel Haehn's team</a> is extending NiiVue drawing and segmentation capabilities</li>
-<li><a href="https://elifesciences.org/articles/73153">Digital Brain Bank</a> for navigating MRI datasets</li>
-</ul>
-<h1>Funding</h1>
-<ul>
-<li>2021-2022 <a href="https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10094384">P50 DC014664</a> NIH NIDCD <a href="https://grants.nih.gov/grants/guide/notice-files/NOT-OD-21-091.html#:~:text=NOT%2DOD%2D21%2D091,Software%20Tools%20for%20Open%20Science">NOT-OD-21-091</a></li>
-<li>2023-2026 <a href="https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10724895">RF1 MH133701</a> NIH NIMH</li>
-</ul>
-<h1>Supported Formats</h1>
-<p>NiiVue supports many popular brain imaging formats:</p>
-<ul>
-<li>Voxel-based formats: <a href="https://brainder.org/2012/09/23/the-nifti-file-format/">NIfTI</a>, <a href="http://teem.sourceforge.net/nrrd/format.html">NRRD</a>, <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats">MRtrix MIF</a>, <a href="https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html">AFNI HEAD/BRIK</a>, <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat">MGH/MGZ</a>, <a href="https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29">ITK MHD</a>, <a href="https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info">ECAT7</a>.</li>
-<li>Mesh-based formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ASC</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">BYU/GEO/G</a>, <a href="http://brainsuite.org/formats/dfs/">BrainSuite DFS</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ICO/TRI</a>, <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY</a>, <a href="https://www.nitrc.org/projects/bnv/">BrainNet NV</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files">BrainVoyager SRF</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">FreeSurfer</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://en.wikipedia.org/wiki/OFF_(file_format)">OFF</a>, <a href="https://brainder.org/tag/obj/">Wavefront OBJ</a>, <a href="https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45">STL</a>, <a href="https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf">Legacy VTK</a>, <a href="https://3dprint.nih.gov/">X3D</a>.</li>
-<li>Mesh overlay formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="https://balsa.wustl.edu/about/fileTypes">CIfTI-2</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files">SMP</a>, STC, FreeSurfer (CURV/ANNOT)</li>
-<li>Tractography formats: <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck">TCK</a>, <a href="http://trackvis.org/docs/?subsect=fileformat">TRK</a>, <a href="https://github.com/frheault/tractography_file_format">TRX</a>, VTK, AFNI .niml.tract</li>
-<li>DICOM: <a href="https://dicom.nema.org/medical/dicom/current/output/chtml/part10/chapter_7.html">DICOM</a> and <a href="docs/development-notes/dicom-manifests.md">DICOM Manifests</a></li>
-</ul></article>
+        </article>
     </section>
-
-
 
 
 

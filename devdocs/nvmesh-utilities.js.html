@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>Home - Documentation</title>
+    <title>nvmesh-utilities.js - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,77 +35,208 @@
 
 <div id="main">
     
+    <h1 class="page-title">nvmesh-utilities.js</h1>
+    
 
     
 
 
 
     
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { vec3 } from "gl-matrix";
 
+/**
+ * Utilities class for common mesh functions
+ */
+export class NVMeshUtilities {
+  static getClusterBoundaryU8(u8, faces) {
+    //assume all vertices are not near a border
+    const border = new Array(u8.length).fill(false);
+    const binary = new Array(u8.length).fill(false);
+    for (let i = 0; i &lt; u8.length; i++) if (u8[i] > 0) binary[i] = true;
+    let nTri = faces.length / 3;
+    let j = 0;
+    //interior: a triangle where all three vertices are the same color
+    //else, all three vertices are on a border
+    for (let i = 0; i &lt; nTri; i++) {
+      let v0 = faces[j];
+      let v1 = faces[j + 1];
+      let v2 = faces[j + 2];
+      j += 3;
+      if (
+        binary[v0] === binary[v1] &amp;&amp;
+        binary[v0] === binary[v2] &amp;&amp;
+        binary[v1] === binary[v2]
+      )
+        continue;
+      border[v0] = true;
+      border[v1] = true;
+      border[v2] = true;
+    }
+    return border;
+  }
 
-    <section class="package">
-        <h3> </h3>		
-    </section>
+  static getClusterBoundary(rgba8, faces) {
+    var rgba32 = new Uint32Array(rgba8.buffer);
+    //assume all vertices are not near a border
+    const border = new Array(rgba32.length).fill(false);
+    let nTri = faces.length / 3;
+    let j = 0;
+    //interior: a triangle where all three vertices are the same color
+    //else, all three vertices are on a border
+    for (let i = 0; i &lt; nTri; i++) {
+      let v0 = faces[j];
+      let v1 = faces[j + 1];
+      let v2 = faces[j + 2];
+      j += 3;
+      if (
+        rgba32[v0] === rgba32[v1] &amp;&amp;
+        rgba32[v0] === rgba32[v2] &amp;&amp;
+        rgba32[v1] === rgba32[v2]
+      )
+        continue;
+      border[v0] = true;
+      border[v1] = true;
+      border[v2] = true;
+    }
+    return border;
+  }
 
+  // return spatial extremes for vertices
+  static getExtents(pts) {
+    if ((!ArrayBuffer.isView(pts) &amp;&amp; !Array.isArray(pts)) || pts.length &lt; 3) {
+      return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 };
+    }
 
+    //each vertex has 3 coordinates: XYZ
+    let mxDx = 0.0;
+    let mn = vec3.fromValues(pts[0], pts[1], pts[2]);
+    let mx = vec3.fromValues(pts[0], pts[1], pts[2]);
+    for (let i = 0; i &lt; pts.length; i += 3) {
+      let v = vec3.fromValues(pts[i], pts[i + 1], pts[i + 2]);
+      mxDx = Math.max(mxDx, vec3.len(v));
+      vec3.min(mn, mn, v);
+      vec3.max(mx, mx, v);
+    }
+    let extentsMin = [mn[0], mn[1], mn[2]];
+    let extentsMax = [mx[0], mx[1], mx[2]];
+    return { mxDx, extentsMin, extentsMax };
+  }
 
+  // determine vector orthogonal to plane defined by triangle
+  // triangle winding determines front/back face
+  static generateNormals(pts, tris) {
+    //from https://github.com/rii-mango/Papaya
+    /*
+Copyright (c) 2012-2015, RII-UTHSCSA
+All rights reserved.
 
+THIS PRODUCT IS NOT FOR CLINICAL USE.
 
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+following conditions are met:
 
+ - Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+   disclaimer.
 
+ - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided with the distribution.
 
+ - Neither the name of the RII-UTHSCSA nor the names of its contributors may be used to endorse or promote products
+   derived from this software without specific prior written permission.
 
-    
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+    var p1 = [],
+      p2 = [],
+      p3 = [],
+      normal = [],
+      //nn = [],
+      ctr,
+      normalsDataLength = pts.length,
+      numIndices,
+      qx,
+      qy,
+      qz,
+      px,
+      py,
+      pz,
+      index1,
+      index2,
+      index3;
 
+    let norms = new Float32Array(normalsDataLength);
+    numIndices = tris.length;
+    for (ctr = 0; ctr &lt; numIndices; ctr += 3) {
+      index1 = tris[ctr] * 3;
+      index2 = tris[ctr + 1] * 3;
+      index3 = tris[ctr + 2] * 3;
 
+      p1.x = pts[index1];
+      p1.y = pts[index1 + 1];
+      p1.z = pts[index1 + 2];
 
-    <section class="readme usertext">
-        <article><h1>NiiVue</h1>
-<p>NiiVue is web-based visualization tool for neuroimaging that can run on any operating system and any web device (phone, tablet, computer). This repository contains only the <strong>core NiiVue package</strong> that can be embedded into other projects. We have additional <a href="https://github.com/niivue">repositories</a> that wrap NiiVue for use in jupyter notebooks, vscode, and electron applications.</p>
-<p><a href="https://niivue.github.io/niivue/">Click here to see NiiVue live demos</a></p>
-<p>What makes NiiVue unique is its ability to simultaneously display all the datatypes popular with neuroimaging: voxels, meshes, tractography streamlines, statistical maps and connectomes. Alternative voxel-based web tools include <a href="https://fnndsc.github.io/ami/">ami</a>, <a href="https://bioimagesuiteweb.github.io/webapp/viewer.html">BioImage Suite Web</a>, <a href="https://brainbrowser.cbrain.mcgill.ca/volume-viewer">BrainBrowser</a>, <a href="http://vsoch.github.io/nifti-drop">nifti-drop</a>, <a href="https://viewer.ohif.org/">OHIF DICOM Viewer</a>, <a href="https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html">Papaya</a>, <a href="https://kitware.github.io/paraview-glance/app/">VTK.js</a>, and <a href="https://slicedrop.com/">slicedrop</a>.</p>
-<h2>Local Development</h2>
-<p>To run a hot-loading development that is updated whenever you save changes to any source files, you can run:</p>
-<pre class="prettyprint source"><code>git clone git@github.com:niivue/niivue.git
-cd niivue
-npm install
-npm run dev
+      p2.x = pts[index2];
+      p2.y = pts[index2 + 1];
+      p2.z = pts[index2 + 2];
+
+      p3.x = pts[index3];
+      p3.y = pts[index3 + 1];
+      p3.z = pts[index3 + 2];
+
+      qx = p2.x - p1.x;
+      qy = p2.y - p1.y;
+      qz = p2.z - p1.z;
+      px = p3.x - p1.x;
+      py = p3.y - p1.y;
+      pz = p3.z - p1.z;
+
+      normal[0] = py * qz - pz * qy;
+      normal[1] = pz * qx - px * qz;
+      normal[2] = px * qy - py * qx;
+
+      norms[index1] += normal[0];
+      norms[index1 + 1] += normal[1];
+      norms[index1 + 2] += normal[2];
+
+      norms[index2] += normal[0];
+      norms[index2 + 1] += normal[1];
+      norms[index2 + 2] += normal[2];
+
+      norms[index3] += normal[0];
+      norms[index3 + 1] += normal[1];
+      norms[index3 + 2] += normal[2];
+    }
+    for (ctr = 0; ctr &lt; normalsDataLength; ctr += 3) {
+      normal[0] = -1 * norms[ctr];
+      normal[1] = -1 * norms[ctr + 1];
+      normal[2] = -1 * norms[ctr + 2];
+      let len =
+        normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2];
+      if (len > 0) {
+        len = 1.0 / Math.sqrt(len);
+        normal[0] *= len;
+        normal[1] *= len;
+        normal[2] *= len;
+      }
+      norms[ctr] = normal[0];
+      norms[ctr + 1] = normal[1];
+      norms[ctr + 2] = normal[2];
+    }
+    return norms;
+  }
+}
 </code></pre>
-<p>The command <code>npm run demo</code> will minify the project and locally host all of the <a href="https://niivue.github.io/niivue/">live demos</a>. The <a href="./DEVELOP.md">DEVELOP.md file provides more details for developers</a>.</p>
-<h1>Developer Documentation</h1>
-<p><a href="https://niivue.github.io/niivue/devdocs/">Click here for the docs web page</a></p>
-<h1>Projects and People using NiiVue</h1>
-<ul>
-<li>Analysis of Functional NeuroImages (AFNI) <a href="https://afni.nimh.nih.gov/">Scientific and Statistical Computing Core</a> (National Institutes of Health)</li>
-<li><a href="https://cstar.sc.edu/">Center for the Study of Aphasia Recovery</a> (University of South Carolina)</li>
-<li>FMRIB's Software Library (FSL) <a href="https://www.win.ox.ac.uk/">Wellcome Centre for Integrative Neuroimaging</a> (University of Oxford)</li>
-<li>FreeSurfer <a href="https://lcn.martinos.org/">Laboratories for Computational Neuroimaging</a> (Massachusetts General Hospital)</li>
-<li><a href="https://openneuro.org">OpenNeuro.org</a> uses NiiVue to visualize datasets</li>
-<li><a href="https://brainlife.io/about/">BrainLife.io</a> integrates NiiVue into <a href="https://brainlife.io/ezbids/">ezbids</a></li>
-<li><a href="https://nilearn.github.io/stable/index.html">nilearn</a> is extending <a href="https://github.com/niivue/ipyniivue">ipyniivue</a></li>
-<li><a href="https://www.neurodesk.org/">neurodesk</a> uses NiiVue for their <a href="https://github.com/QSMxT/QSMxT-UI">QSMxT Quantitative Susceptibility Mapping toolbox</a></li>
-<li><a href="https://github.com/niivue/niivue-vscode">niivue-vscode</a> is a VSCode extension for displaying images</li>
-<li><a href="http://neuroinformatics.uw.edu/">Neuroinformatics Research and Development Group</a> embeds NiiVue in <a href="https://github.com/nrdg/tractoscope">tractoscope</a></li>
-<li><a href="https://github.com/mpsych/CACTAS">CACTAS</a> from <a href="https://danielhaehn.com/">Daniel Haehn's team</a> is extending NiiVue drawing and segmentation capabilities</li>
-<li><a href="https://elifesciences.org/articles/73153">Digital Brain Bank</a> for navigating MRI datasets</li>
-</ul>
-<h1>Funding</h1>
-<ul>
-<li>2021-2022 <a href="https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10094384">P50 DC014664</a> NIH NIDCD <a href="https://grants.nih.gov/grants/guide/notice-files/NOT-OD-21-091.html#:~:text=NOT%2DOD%2D21%2D091,Software%20Tools%20for%20Open%20Science">NOT-OD-21-091</a></li>
-<li>2023-2026 <a href="https://reporter.nih.gov/search/D3sOjJtXwkSRKLpYf1ctBg/project-details/10724895">RF1 MH133701</a> NIH NIMH</li>
-</ul>
-<h1>Supported Formats</h1>
-<p>NiiVue supports many popular brain imaging formats:</p>
-<ul>
-<li>Voxel-based formats: <a href="https://brainder.org/2012/09/23/the-nifti-file-format/">NIfTI</a>, <a href="http://teem.sourceforge.net/nrrd/format.html">NRRD</a>, <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats">MRtrix MIF</a>, <a href="https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html">AFNI HEAD/BRIK</a>, <a href="https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat">MGH/MGZ</a>, <a href="https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29">ITK MHD</a>, <a href="https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info">ECAT7</a>.</li>
-<li>Mesh-based formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ASC</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">BYU/GEO/G</a>, <a href="http://brainsuite.org/formats/dfs/">BrainSuite DFS</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">ICO/TRI</a>, <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY</a>, <a href="https://www.nitrc.org/projects/bnv/">BrainNet NV</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files">BrainVoyager SRF</a>, <a href="http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm">FreeSurfer</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://en.wikipedia.org/wiki/OFF_(file_format)">OFF</a>, <a href="https://brainder.org/tag/obj/">Wavefront OBJ</a>, <a href="https://medium.com/3d-printing-stories/why-stl-format-is-bad-fea9ecf5e45">STL</a>, <a href="https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf">Legacy VTK</a>, <a href="https://3dprint.nih.gov/">X3D</a>.</li>
-<li>Mesh overlay formats: <a href="https://www.nitrc.org/projects/gifti/">GIfTI</a>, <a href="https://balsa.wustl.edu/about/fileTypes">CIfTI-2</a>, <a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3">MZ3</a>, <a href="https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files">SMP</a>, STC, FreeSurfer (CURV/ANNOT)</li>
-<li>Tractography formats: <a href="https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck">TCK</a>, <a href="http://trackvis.org/docs/?subsect=fileformat">TRK</a>, <a href="https://github.com/frheault/tractography_file_format">TRX</a>, VTK, AFNI .niml.tract</li>
-<li>DICOM: <a href="https://dicom.nema.org/medical/dicom/current/output/chtml/part10/chapter_7.html">DICOM</a> and <a href="docs/development-notes/dicom-manifests.md">DICOM Manifests</a></li>
-</ul></article>
+        </article>
     </section>
-
-
 
 
 

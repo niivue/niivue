@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Connectome API</title>
+  <link rel="stylesheet" href="niivue.css" />
+  <style>
+    input {
+      margin: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable
+      it to continue.</strong>
+  </noscript>
+  <header>    
+    <p>
+      
+    <label for="nodeName">New Node Name</label>
+    <input type="text" id="nodeName" value="node"></input>
+    <label for="nodeColor">New Node Color Value</label>
+    <input type="text" id="nodeColor"></input>
+    <label for="nodeSize">New Node Size Value</label>
+    <input type="text" id="nodeSize"></input>
+    <button id="addNode">Add Node</button>
+    <button id="deleteNode">Delete Node</button>
+    </p>
+  <p>
+    <label for="firstIndex">First Node Index</label>
+    <input type="number" id="firstIndex" value="0"></input>
+    <label for="secondIndex">Second Node Index</label>
+    <input type="number" id="secondIndex" value="1"></input>
+    <label for="edgeColor">Color Value</label>
+    <input type="number" id="edgeColor" value="1"></input>
+    <button id="addEdge">Add Edge</button>
+    <button id="deleteEdge">Delete Edge</button>
+  </p>
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer>
+    <label id="shaders"></label>
+  </footer>
+</body>
+
+</html>
+<script src="./niivue.umd.js"></script>
+<script type="module" async>  
+  
+  var addNode = document.getElementById("addNode");
+  var deleteNode = document.getElementById("deleteNode");
+  var nodeName = document.getElementById("nodeName");
+  var nodeColor = document.getElementById("nodeColor");  
+  nodeColor.value = 1;
+  var nodeSize = document.getElementById("nodeSize");
+  nodeSize.value = 1;
+  var addEdge = document.getElementById("addEdge");
+  var deleteEdge = document.getElementById("deleteEdge");
+  var firstIndex = document.getElementById("firstIndex");
+  var seceondIndex = document.getElementById("secondIndex");
+  var edgeColor = document.getElementById("edgeColor");
+
+  addNode.onclick = function () {
+    var posMM = nv1.frac2mm(nv1.scene.crosshairPos);
+    // nv1.meshes[0].addConnectomeNode({ name: nodeName.value, x: posMM[0], y: posMM[1], z: posMM[2], size: parseInt(nodeSize.value), color: parseInt(nodeColor.value) });
+    
+    nv1.meshes[0].addConnectomeNode({
+          name: nodeName.value,
+          x: posMM[0],
+          y: posMM[1],
+          z: posMM[2],
+          colorValue: parseInt(nodeColor.value),
+          sizeValue: parseInt(nodeSize.value)
+        })
+    nv1.meshes[0].updateMesh(nv1.gl);
+    nv1.updateGLVolume();
+  }
+
+  deleteNode.onclick = function() {
+    var posMM = nv1.frac2mm(nv1.scene.crosshairPos);
+    var node = nv1.meshes[0].findClosestConnectomeNode(posMM, 15);
+    if(node) {
+      nv1.meshes[0].deleteConnectomeNode(node);
+    }
+    nv1.drawScene();
+  }
+
+  addEdge.onclick = function() {
+    nv1.meshes[0].addConnectomeEdge(parseInt(firstIndex.value), parseInt(seceondIndex.value), parseInt(edgeColor.value));
+    nv1.drawScene();
+  }
+
+  deleteEdge.onclick = function() {
+    nv1.meshes[0].deleteConnectomeEdge(parseInt(firstIndex.value), parseInt(seceondIndex.value));
+    nv1.drawScene();
+  }
+
+  let connectome = {
+    name: "simpleConnectome",
+    nodeColormap: "warm",
+    nodeColormapNegative: "winter",
+    nodeMinColor: 1,
+    nodeMaxColor: 4,
+    nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+    edgeColormap: "warm",
+    edgeColormapNegative: "winter",
+    edgeMin: 2,
+    edgeMax: 6,
+    edgeScale: 1,
+    nodes: [
+      {
+        name: "RF",
+        x: 40,
+        y: 40,
+        z: 30,
+        colorValue: 2,
+        sizeValue: 2
+      },
+      {
+        name: "LF",
+        x: -40,
+        y: 40,
+        z: 20,
+        colorValue: 2,
+        sizeValue: 2
+      },
+      {
+        name: "RP",
+        x: 40,
+        y: -40,
+        z: 50,
+        colorValue: 3,
+        sizeValue: 3
+      },
+      {
+        name: "LP",
+        x: -40,
+        y: -40,
+        z: 50,
+        colorValue: 4,
+        sizeValue: 4
+      }
+    ],
+    edges: [{
+      first: 0,
+      second: 1,
+      colorValue: 2
+    },
+    {
+      first: 0,
+      second: 2,
+      colorValue: -3
+    },
+    {
+      first: 0,
+      second: 3,
+      colorValue: 4
+    },
+    {
+      first: 1,
+      second: 3,
+      colorValue: 6
+    }],
+  };   //connectome{}
+  var volumeList1 = [
+    // first item is background image
+    {
+      url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+      colormap: "gray",
+    },
+  ];
+  let opts = {
+    show3Dcrosshair: true,
+    isColorbar: true,
+    backColor: [0.8, 0.8, 1, 1],
+    sliceType: niivue.SLICE_TYPE.RENDER,
+  };
+  var nv1 = new niivue.Niivue(opts);
+  nv1.attachTo("gl1");
+  await nv1.loadVolumes(volumeList1);
+  nv1.volumes[0].colorbarVisible = false;
+  await nv1.loadConnectome(connectome);
+  nv1.setClipPlane([-0.1, 270, 0]);
+  let cmaps = nv1.meshShaderNames();
+  let cmapEl = document.getElementById("shaders");
+  for (let i = 0; i < cmaps.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = cmaps[i];
+    btn.onclick = function (e) {
+      let id = nv1.meshes[0].id;
+      if (e.shiftKey) id = nv1.meshes[1].id;
+      nv1.setMeshShader(id, cmaps[i]);
+    };
+    cmapEl.appendChild(btn);
+  }
+  
+</script>
