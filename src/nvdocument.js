@@ -3,7 +3,9 @@ import { NVUtilities } from "./nvutilities";
 // eslint-disable-next-line no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
 import { serialize, deserialize } from "@ungap/structured-clone";
-import { NVLabel3D } from "./nvlabel";
+import { MeshType } from "./nvmesh";
+
+// import { NVLabel3D } from "./nvlabel";
 /**
  * Slice Type
  * @enum
@@ -195,6 +197,7 @@ export class NVDocument {
         clipPlane: [0, 0, 0, 0],
         clipPlaneDepthAziElev: [2, 0, 0],
         volScaleMultiplier: 1.0,
+        pan2Dxyzmm: [0, 0, 0, 1],
       },
 
       /**
@@ -300,6 +303,20 @@ export class NVDocument {
        */
       set clipPlaneDepthAziElev(clipPlaneDepthAziElev) {
         this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev;
+      },
+
+      /**
+       * Gets current 2D pan in 3D mm
+       */
+      get pan2Dxyzmm() {
+        return this.sceneData.pan2Dxyzmm;
+      },
+
+      /**
+       * Sets current 2D pan in 3D mm
+       */
+      set pan2Dxyzmm(pan2Dxyzmm) {
+        this.sceneData.pan2Dxyzmm = pan2Dxyzmm;
       },
     };
     this.volumes = [];
@@ -497,9 +514,12 @@ export class NVDocument {
     let imageOptionsArray = [];
     // save our scene object
     data.sceneData = { ...this.scene.sceneData };
-
     // save our options
     data.opts = { ...this.opts };
+    // infinity is a symbol
+    if (this.opts.meshThicknessOn2D === Infinity) {
+      data.opts.meshThicknessOn2D = "infinity";
+    }
 
     // save our labels
     data.labels = [...this.data.labels];
@@ -528,6 +548,13 @@ export class NVDocument {
           limitFrames4D: NaN,
         };
       }
+
+      // update image options on current image settings
+      imageOptions.colormap = this.volumes[0].colormap;
+      imageOptions.opacity = this.volumes[0].opacity;
+      imageOptions.cal_max = this.volumes[0].cal_max;
+      imageOptions.cal_min = this.volumes[0].cal_min;
+
       if (imageOptions) {
         imageOptionsArray.push(imageOptions);
         let encodedImageBlob = NVUtilities.uint8tob64(
@@ -577,6 +604,8 @@ export class NVDocument {
         // update image options on current image settings
         imageOptions.colormap = volume.colormap;
         imageOptions.opacity = volume.opacity;
+        imageOptions.cal_max = volume.cal_max;
+        imageOptions.cal_min = volume.cal_min;
 
         imageOptionsArray.push(imageOptions);
 
@@ -590,7 +619,12 @@ export class NVDocument {
 
     // meshes
     const meshes = [];
+    data.connectomes = [];
     for (const mesh of this.meshes) {
+      if (mesh.type === MeshType.CONNECTOME) {
+        data.connectomes.push(JSON.stringify(mesh.json()));
+        continue;
+      }
       const copyMesh = {};
       copyMesh.pts = mesh.pts;
       copyMesh.tris = mesh.tris;
@@ -701,6 +735,9 @@ export class NVDocument {
   static loadFromJSON(data) {
     let document = new NVDocument();
     document.data = data;
+    if (document.data.opts.meshThicknessOn2D === "infinity") {
+      document.data.opts.meshThicknessOn2D = Infinity;
+    }
     document.scene.sceneData = data.sceneData;
     delete document.data["sceneData"];
     NVDocument.deserializeMeshDataObjects(document);

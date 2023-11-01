@@ -3,7 +3,7 @@ beforeEach(async () => {
   await page.goto(httpServerAddress, { timeout: 0 });
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 });
-test("labelsForConnectome", async () => {
+test("connectomeLoadLegacy", async () => {
   let nlabels = await page.evaluate(async () => {
     let nv = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true });
     nv.opts.multiplanarForceRender = true;
@@ -23,7 +23,7 @@ test("labelsForConnectome", async () => {
     nv.opts.meshXRay = 0.2;
 
     let connectome = {
-      name: "simpleConnectome",
+      name: "legacyConnectome",
       nodeColormap: "warm",
       nodeColormapNegative: "winter",
       nodeMinColor: 2,
@@ -34,61 +34,18 @@ test("labelsForConnectome", async () => {
       edgeMin: 2,
       edgeMax: 6,
       edgeScale: 1,
-      nodes: [
-        {
-          name: "RF",
-          x: 40,
-          y: 40,
-          z: 30,
-          colorValue: 2,
-          sizeValue: 2,
-        },
-        {
-          name: "LF",
-          x: -40,
-          y: 40,
-          z: 20,
-          colorValue: 2,
-          sizeValue: 2,
-        },
-        {
-          name: "RP",
-          x: 40,
-          y: -40,
-          z: 50,
-          colorValue: 3,
-          sizeValue: 3,
-        },
-        {
-          name: "LP",
-          x: -40,
-          y: -40,
-          z: 50,
-          colorValue: 4,
-          sizeValue: 4,
-        },
-      ],
-      edges: [{
-        first: 0,
-        second: 1,
-        colorValue: 2
+      nodes: {
+        names: ["RF", "LF", "RP", "LP"], //currently unused
+        X: [40, -40, 40, -40], //Xmm for each node
+        Y: [40, 40, -40, -40], //Ymm for each node
+        Z: [30, 20, 50, 50], //Zmm for each node
+        Color: [2, 2, 3, 4], //Used to interpolate color
+        Size: [2, 2, 3, 4], //Size of node
       },
-      {
-        first: 0, 
-        second: 2,
-        colorValue: -3
-      },
-      {
-        first: 0,
-        second: 3,
-        colorValue: 4
-      },
-      {
-        first: 1,
-        second: 3,
-        colorValue: 6
-      }],
+      edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
     };
+    
+     
 
     await nv.loadConnectome(connectome);
     nv.setMeshProperty(nv.meshes[0].id, "nodeScale", 3);
