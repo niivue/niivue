@@ -33,9 +33,14 @@ test("sobelShader", async ({ page }) => {
       { url: "./images/dpsv.trx", rgba255: [0, 142, 0, 255] },
     ]);
     nv.loadMatCapTexture("./matcaps/Cortex.jpg");
+
+    nv.drawScene();
     return nv.volumes.length;
   });
   console.log(nvols);
+  // await orderSent.waitFor();
   expect(nvols).toBe(2);
+  // await page.waitForTimeout(10000);
+
   await expect(page).toHaveScreenshot();
 });
