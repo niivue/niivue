@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 test("sobelShader", async ({ page }) => {
   let nvols = await page.evaluate(async () => {
     // eslint-disable-next-line no-undef
+    // @ts-ignore
     let nv = new niivue.Niivue();
     await nv.attachTo("gl", false);
     // load one volume object in an array
