@@ -572,7 +572,7 @@ out vec4 fColor;
 			vec4 mc = vec4(texture(matCap, n.xy * 0.5 + 0.5).rgb, 1.0) * brighten;
 			mc = mix(vec4(1.0), mc, gradientAmount);
 			if (samplePos.a > clipClose)
-				colorSample *= mc;
+				colorSample.rgb *= mc.rgb;
 			if (firstHit.a > lenNoClip)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
