@@ -23,6 +23,7 @@
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
+    "test-playwright": "npx playwright test",
     "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public"
@@ -58,7 +59,9 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.39.0",
     "@rollup/plugin-commonjs": "^24.0.1",
+    "@types/node": "^20.8.10",
     "clean-jsdoc-theme": "^4.2.6",
     "docdash": "^2.0.1",
     "eslint": "^8.36.0",
