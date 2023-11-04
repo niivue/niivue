@@ -5399,7 +5399,7 @@ Niivue.prototype.gradientGL = function (hdr) {
     hdr.dims
   );
   for (let i = 0; i < hdr.dims[3] - 1; i++) {
-    // var coordZ = (1 / hdr.dims[3]) * (i + 0.5);
+    let coordZ = (1 / hdr.dims[3]) * (i + 0.5);
     gl.uniform1f(sobelShader.uniforms["coordZ"], coordZ);
     //console.log(coordZ);
     gl.framebufferTextureLayer(
