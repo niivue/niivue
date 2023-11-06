@@ -973,6 +973,8 @@ Niivue.prototype.resizeListener = function () {
     this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr;
     this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr;
   }
+  //issue723: we need to call gl.viewport https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.drawScene();
 };
 
@@ -9528,18 +9530,15 @@ Niivue.prototype.scaleSlice = function (
 // display 2D image to defer loading of (slow) 3D data
 Niivue.prototype.drawThumbnail = function () {
   this.bmpShader.use(this.gl);
-  this.gl.uniform2f(
-    this.bmpShader.uniforms["canvasWidthHeight"],
-    this.gl.canvas.width,
-    this.gl.canvas.height
-  );
   let h = this.gl.canvas.height;
-  let w = this.gl.canvas.height * this.bmpTextureWH;
-  if (w > this.gl.canvas.width) {
-    //constrained by width
-    h = this.gl.canvas.width / this.bmpTextureWH;
-    w = this.gl.canvas.width;
-  }
+  let w = this.gl.canvas.width;
+  this.gl.uniform2f(this.bmpShader.uniforms["canvasWidthHeight"], w, h);
+  if (h < 1 || w < 1) return;
+  let screenWH = w / h;
+  // if wide screen use full height
+  // else if tall screen use full width
+  if (screenWH >= this.bmpTextureWH) w = h * this.bmpTextureWH;
+  else h = w / this.bmpTextureWH;
   this.gl.uniform4f(this.bmpShader.uniforms["leftTopWidthHeight"], 0, 0, w, h);
   this.gl.bindVertexArray(this.genericVAO);
   this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
