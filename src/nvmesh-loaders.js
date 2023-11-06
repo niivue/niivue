@@ -1803,11 +1803,52 @@ export class NVMeshLoaders {
     };
   } // readOFF()
 
+static readMniOBJ(buffer) {
+    //This is for MNI Obj files, not the WaveFront Obj format
+    //This code only reads the most popular ASCII polygon mesh that starts with 'P'
+    //Like AFNI SurfMesh we only handle the ASCII variant of this format
+    // http://www.stat.wisc.edu/~mchung/softwares/mesh/mesh.html
+    // https://bigbrain.loris.ca/main.php?test_name=brainsurfaces
+    // http://www.bic.mni.mcgill.ca/users/mishkin/mni_obj_format.pdf
+    //n.b. space and newline characters serve as separators for data fields, but have no other significance to the format
+    var enc = new TextDecoder("utf-8");
+    var txt = enc.decode(buffer);
+    if (txt[0] != "P") {
+      utiltiesLogger.debug("Not a ASCII MNI OBJ mesh.");
+      return;
+    }
+    var items = txt.split(/\s+/);
+    // ignore P and 5*surfprop [ambient, diffuse, specular, shininess, transparency)
+    let j = 6;
+    let num_v = parseInt(items[j++]);
+    var positions = new Float32Array(num_v * 3);
+    for (let i = 0; i < num_v * 3; i++) positions[i] = parseFloat(items[j++]);
+    j += num_v * 3; //ignore normals: three components X,Y,Z
+    let num_f = parseInt(items[j++]);
+    let colour_flag = parseInt(items[j++]);
+    if (num_f < 1 || colour_flag < 0 || colour_flag > 2) {
+      utiltiesLogger.debug("Unsupported MNI OBJ mesh colour_flag.");
+      return;
+    }
+    //0 = 1 color for all items, 1 = per line, 2 = per vertex
+    let num_c = num_v;
+    if (colour_flag === 0) num_c = 1;
+    if (colour_flag === 1) num_c = num_f;
+    j += num_c * 4; //ignore colors: four components R,G,B,A
+    j += num_f;
+    var indices = new Int32Array(num_f * 3);
+    for (let i = 0; i < num_f * 3; i++) indices[i] = parseInt(items[j++]);
+    return {
+      positions,
+      indices,
+    };
+  } // readMniOBJ()
+
   static readOBJ(buffer) {
     //WaveFront OBJ format
     var enc = new TextDecoder("utf-8");
     var txt = enc.decode(buffer);
-    //let txt = await response.text();
+    if (txt[0] === "P") return this.readMniOBJ(buffer);
     var lines = txt.split("\n");
     var n = lines.length;
     let pts = [];
