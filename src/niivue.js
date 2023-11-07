@@ -3693,7 +3693,7 @@ Niivue.prototype.addMeshFromUrl = async function (meshOptions) {
  * @returns {Niivue} returns the Niivue instance
  * @example
  * niivue = new Niivue()
- * niivue.loadMeshes([{url: 'someMesh.gii}])
+ * niivue.loadMeshes([{url: 'someMesh.gii'}])
  * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
  */
 Niivue.prototype.loadMeshes = async function (meshList) {
