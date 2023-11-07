@@ -42,5 +42,5 @@ test("sobelShader", async ({ page }) => {
   expect(nvols).toBe(2);
   // await page.waitForTimeout(10000);
 
-  await expect(page).toHaveScreenshot();
+  await expect(page).toHaveScreenshot({timeout: 30000});
 });

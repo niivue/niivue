@@ -1344,27 +1344,39 @@ export class NVMeshLoaders {
     //var isAOMap = attr & 32;
     if (attr > 63) throw new Error("Unsupported future version of MZ3 file");
     let bytesPerScalar = 4;
+    if (isDOUBLE) bytesPerScalar = 8;
     if (isDOUBLE)
-        bytesPerScalar = 8;
-    if (isDOUBLE) throw new Error("Float64 not yet supported (provide exemplar)");
+      throw new Error("Float64 not yet supported (provide exemplar)");
     let NSCALAR = 0;
     if (isSCALAR) {
-        let FSizeWoScalars = 16 + nskip + isFace * nface * 12 + isVert * n_vert * 12 + isRGBA * n_vert * 4;
-        let scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar);
-        if ((nvert != n_vert) && (scalarFloats % n_vert === 0)) {
-            console.log('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT');
-            nvert = n_vert;
-        }
-        NSCALAR = Math.floor(scalarFloats / nvert);
-        if (NSCALAR < 1) {
-            console.log('Corrupt MZ3: file reports NSCALAR but not enough bytes');
-            isSCALAR = false;
-        }
-        if (NSCALAR > 1) {
-            console.log('ToDo: NiiVue will only read the first scalar of this multi-scalar MZ3');
-        }
+      let FSizeWoScalars =
+        16 +
+        nskip +
+        isFace * nface * 12 +
+        isVert * n_vert * 12 +
+        isRGBA * n_vert * 4;
+      let scalarFloats = Math.floor(
+        (_buffer.byteLength - FSizeWoScalars) / bytesPerScalar
+      );
+      if (nvert != n_vert && scalarFloats % n_vert === 0) {
+        console.log(
+          "Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT"
+        );
+        nvert = n_vert;
+      }
+      NSCALAR = Math.floor(scalarFloats / nvert);
+      if (NSCALAR < 1) {
+        console.log("Corrupt MZ3: file reports NSCALAR but not enough bytes");
+        isSCALAR = false;
+      }
+      if (NSCALAR > 1) {
+        console.log(
+          "ToDo: NiiVue will only read the first scalar of this multi-scalar MZ3"
+        );
+      }
     }
-    if ((nvert < 3) && (n_vert < 3)) throw new Error("Not a mesh MZ3 file (maybe scalar)");
+    if (nvert < 3 && n_vert < 3)
+      throw new Error("Not a mesh MZ3 file (maybe scalar)");
     if (n_vert > 0 && n_vert !== nvert) {
       console.log(
         "Layer has " + nvert + "vertices, but background mesh has " + n_vert
@@ -1824,7 +1836,7 @@ export class NVMeshLoaders {
     };
   } // readOFF()
 
-static readMniOBJ(buffer) {
+  static readMniOBJ(buffer) {
     //This is for MNI Obj files, not the WaveFront Obj format
     //This code only reads the most popular ASCII polygon mesh that starts with 'P'
     //Like AFNI SurfMesh we only handle the ASCII variant of this format
