@@ -973,6 +973,8 @@ Niivue.prototype.resizeListener = function () {
     this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr;
     this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr;
   }
+  //issue723: we need to call gl.viewport https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+  this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   this.drawScene();
 };
 
