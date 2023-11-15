@@ -1345,9 +1345,8 @@ export class NVMeshLoaders {
     if (attr > 63) throw new Error("Unsupported future version of MZ3 file");
     let bytesPerScalar = 4;
     if (isDOUBLE) bytesPerScalar = 8;
-    if (isDOUBLE)
-      throw new Error("Float64 not yet supported (provide exemplar)");
     let NSCALAR = 0;
+    if (n_vert > 0 && !isFace && nface < 1 && !isRGBA) isSCALAR = true;
     if (isSCALAR) {
       let FSizeWoScalars =
         16 +
@@ -1368,11 +1367,6 @@ export class NVMeshLoaders {
       if (NSCALAR < 1) {
         console.log("Corrupt MZ3: file reports NSCALAR but not enough bytes");
         isSCALAR = false;
-      }
-      if (NSCALAR > 1) {
-        console.log(
-          "ToDo: NiiVue will only read the first scalar of this multi-scalar MZ3"
-        );
       }
     }
     if (nvert < 3 && n_vert < 3)
@@ -1411,14 +1405,12 @@ export class NVMeshLoaders {
       } //for i
     } //if isRGBA
     let scalars = [];
-    if (!isRGBA && isSCALAR) {
-      let nFrame4D = Math.floor((_buffer.byteLength - filepos) / 4 / nvert);
-      if (nFrame4D < 1) {
-        console.log("MZ3 corrupted");
-        return;
-      }
-      scalars = new Float32Array(_buffer, filepos, nFrame4D * nvert);
-      filepos += nvert * 4;
+    if (!isRGBA && isSCALAR && NSCALAR > 0) {
+      if (isDOUBLE) {
+        let flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert);
+        scalars = Float32Array.from(flt64);
+      } else scalars = new Float32Array(_buffer, filepos, NSCALAR * nvert);
+      filepos += bytesPerScalar * NSCALAR * nvert;
     }
     if (n_vert > 0) return scalars;
     return {

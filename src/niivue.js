@@ -6689,6 +6689,7 @@ Niivue.prototype.deleteThumbnail = function () {
 Niivue.prototype.inGraphTile = function (x, y) {
   if (
     this.graph.opacity <= 0 ||
+    this.volumes.length < 1 ||
     this.volumes[0].nFrame4D < 1 ||
     !this.graph.plotLTWH
   )
