@@ -1909,6 +1909,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
         let pixdims = value.split(/[ ,]+/);
         for (var d = 0; d < pixdims.length; d++)
           hdr.pixDims[d + 1] = parseFloat(dims[d]);
+        break;
       case "sizes":
         let dims = value.split(/[ ,]+/);
         hdr.dims[0] = dims.length;
