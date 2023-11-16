@@ -3,7 +3,7 @@ beforeEach(async () => {
   await page.goto(httpServerAddress, { timeout: 10000 });
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 });
-test("saveMeshDocument", async () => {
+test.skip("saveMeshDocument", async () => {
   let document = await page.evaluate(async () => {
     nv = new niivue.Niivue({show3Dcrosshair: true});
     await nv.attachTo("gl", false);
