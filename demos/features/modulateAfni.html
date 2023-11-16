@@ -25,7 +25,7 @@
       <label for="modulateSlider">Modulation</label>
       <input
         type="range"
-        min="0"
+        min="1"
         max="4"
         value="2"
         class="slider"
@@ -134,7 +134,7 @@
         nv1.overlayAlphaShader = 1.0;
         if (mode === 3) {
           nv1.overlayAlphaShader = opacity;
-          let modulateAlpha = document.getElementById("modulateSlider").value;
+          let modulateAlpha = modulateSlider.value;
           nv1.setModulationImage(
             nv1.volumes[2].id,
             nv1.volumes[1].id,

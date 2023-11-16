@@ -36,39 +36,28 @@
       />
       <label for="check">ClipDark</label>
       <input type="checkbox" id="check" checked />
-      <label for="check2">ModulateAlpha</label>
-      <input type="checkbox" id="check2" unchecked />
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script src="./niivue.umd.js"></script>
     <script type="module" async>
-      var slider = document.getElementById("slide");
-      var sliderX = document.getElementById("slideX");
       function minMax() {
-        let mn = 0.01 * slider.value;
-        let mx = 0.01 * sliderX.value;
+        let mn = 0.01 * slide.value;
+        let mx = 0.01 * slideX.value;
         nv1.volumes[1].cal_min = Math.min(mn, mx);
         nv1.volumes[1].cal_max = Math.max(mn, mx);
         nv1.updateGLVolume();
       }
-      slider.oninput = function () {
+      slide.oninput = function () {
         minMax();
       };
-      sliderX.oninput = function () {
+      slideX.oninput = function () {
         minMax();
       };
-      document.getElementById("check").addEventListener("change", doCheckClick);
-      function doCheckClick() {
+      check.onchange = function () {
         nv1.isAlphaClipDark = this.checked;
         nv1.updateGLVolume();
-      }
-      document
-        .getElementById("check2")
-        .addEventListener("change", doCheck2Click);
-      function doCheck2Click() {
-        drop.onchange();
       }
       var volumeList1 = [
         {
@@ -85,7 +74,6 @@
       ];
       var nv1 = new niivue.Niivue({ backColor: [0.4, 0.2, 0.5, 1] });
       nv1.attachTo("gl1");
-      nv1.isAlphaClipDark = true;
       await nv1.loadVolumes(volumeList1);
       nv1.opts.isColorbar = true;
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
@@ -100,15 +88,11 @@
           nv1.setOpacity(1, 0.0); //hide FA
         }
         if (mode === 2) {
-          let modulateAlpha = document.getElementById("check2").checked;
-          nv1.setModulationImage(
-            nv1.volumes[0].id,
-            nv1.volumes[1].id,
-            modulateAlpha
-          );
+          nv1.setModulationImage(nv1.volumes[0].id,nv1.volumes[1].id);
         } else nv1.setModulationImage(nv1.volumes[0].id, null);
       };
       drop.onchange();
+      check.onchange();
     </script>
   </body>
 </html>

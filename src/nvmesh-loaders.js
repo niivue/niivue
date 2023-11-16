@@ -1336,14 +1336,41 @@ export class NVMeshLoaders {
       nskip
     );
     if (magic != 23117) throw new Error("Invalid MZ3 file");
-    var isFace = attr & 1;
-    var isVert = attr & 2;
-    var isRGBA = attr & 4;
-    var isSCALAR = attr & 8;
-    //var isDOUBLE = attr & 16;
+    var isFace = (attr & 1) != 0;
+    var isVert = (attr & 2) != 0;
+    var isRGBA = (attr & 4) != 0;
+    var isSCALAR = (attr & 8) != 0;
+    var isDOUBLE = (attr & 16) != 0;
     //var isAOMap = attr & 32;
     if (attr > 63) throw new Error("Unsupported future version of MZ3 file");
-    if (nvert < 3) throw new Error("Not a mesh MZ3 file (maybe scalar)");
+    let bytesPerScalar = 4;
+    if (isDOUBLE) bytesPerScalar = 8;
+    let NSCALAR = 0;
+    if (n_vert > 0 && !isFace && nface < 1 && !isRGBA) isSCALAR = true;
+    if (isSCALAR) {
+      let FSizeWoScalars =
+        16 +
+        nskip +
+        isFace * nface * 12 +
+        isVert * n_vert * 12 +
+        isRGBA * n_vert * 4;
+      let scalarFloats = Math.floor(
+        (_buffer.byteLength - FSizeWoScalars) / bytesPerScalar
+      );
+      if (nvert != n_vert && scalarFloats % n_vert === 0) {
+        console.log(
+          "Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT"
+        );
+        nvert = n_vert;
+      }
+      NSCALAR = Math.floor(scalarFloats / nvert);
+      if (NSCALAR < 1) {
+        console.log("Corrupt MZ3: file reports NSCALAR but not enough bytes");
+        isSCALAR = false;
+      }
+    }
+    if (nvert < 3 && n_vert < 3)
+      throw new Error("Not a mesh MZ3 file (maybe scalar)");
     if (n_vert > 0 && n_vert !== nvert) {
       console.log(
         "Layer has " + nvert + "vertices, but background mesh has " + n_vert
@@ -1378,14 +1405,12 @@ export class NVMeshLoaders {
       } //for i
     } //if isRGBA
     let scalars = [];
-    if (!isRGBA && isSCALAR) {
-      let nFrame4D = Math.floor((_buffer.byteLength - filepos) / 4 / nvert);
-      if (nFrame4D < 1) {
-        console.log("MZ3 corrupted");
-        return;
-      }
-      scalars = new Float32Array(_buffer, filepos, nFrame4D * nvert);
-      filepos += nvert * 4;
+    if (!isRGBA && isSCALAR && NSCALAR > 0) {
+      if (isDOUBLE) {
+        let flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert);
+        scalars = Float32Array.from(flt64);
+      } else scalars = new Float32Array(_buffer, filepos, NSCALAR * nvert);
+      filepos += bytesPerScalar * NSCALAR * nvert;
     }
     if (n_vert > 0) return scalars;
     return {
