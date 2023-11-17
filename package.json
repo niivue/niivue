@@ -70,6 +70,7 @@
     "jsdoc": "^4.0.2",
     "prettier": "^2.8.4",
     "puppeteer": "^19.7.5",
+    "puppeteer-core": "^21.5.2",
     "puppeteer-utilz": "^4.0.8",
     "regenerator-runtime": "^0.13.11",
     "vite": "^4.2.0"
