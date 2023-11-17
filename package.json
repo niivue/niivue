@@ -25,7 +25,8 @@
     "test-win": "npm run build-win && jest --maxWorkers=1",
     "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
-    "pub": "npm run build && npm publish --access public"
+    "pub": "npm run build && npm publish --access public",
+    "lint": "eslint ."
   },
   "files": [
     "src",
@@ -62,13 +63,16 @@
     "clean-jsdoc-theme": "^4.2.6",
     "docdash": "^2.0.1",
     "eslint": "^8.36.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-prettier": "^5.0.1",
     "express": "^4.18.2",
     "http-server": "^14.1.1",
     "jest": "^29.5.0",
     "jest-image-snapshot": "^6.1.0",
     "jest-puppeteer": "^8.0.5",
     "jsdoc": "^4.0.2",
-    "prettier": "^2.8.4",
+    "prettier": "^3.1.0",
     "puppeteer": "^19.7.5",
     "puppeteer-core": "^21.5.2",
     "puppeteer-utilz": "^4.0.8",
