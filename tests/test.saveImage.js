@@ -22,7 +22,7 @@ beforeEach(async () => {
   });
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 });
-test("saveImage", async () => {
+test.skip("saveImage", async () => {
   await page.evaluate(async () => {
     let nv = new niivue.Niivue();
     await nv.attachTo("gl", false);

@@ -6086,6 +6086,7 @@ Niivue.prototype.refreshLayers = function (overlayItem, layer) {
       if (mnNeg > mxNeg) [mnNeg, mxNeg] = [mxNeg, mnNeg];
       let scaleNeg = 1.0 / (mxNeg - mnNeg);
       let mpow = Math.abs(overlayItem.modulateAlpha); // can convert bool, too
+      mpow = Math.max(mpow, 1.0);
       //volOffset selects the correct frame
       let volOffset = this.volumes[overlayItem.modulationImage].frame4D * vx;
       for (let i = 0; i < vx; i++) {
@@ -6285,14 +6286,15 @@ Niivue.prototype.setColormapNegative = function (id, colormapNegative) {
  * modulate intensity of one image based on intensity of another
  * @param {string} idTarget the ID of the NVImage to be biased
  * @param {string} idModulation the ID of the NVImage that controls bias (null to disable modulation)
- * @param {boolean} [false] modulateAlpha does the modulation influence alpha transparency (true) or RGB color (false) components.
+ * @param {number} [0] modulateAlpha does the modulation influence alpha transparency (values greater than 1).
  * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
- * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo usage}
+ * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo scalar usage}
+ * @see {@link https://niivue.github.io/niivue/features/modulateAfni.html|live demo usage}
  */
 Niivue.prototype.setModulationImage = function (
   idTarget,
   idModulation,
-  modulateAlpha = false
+  modulateAlpha = 0
 ) {
   //to set:
   // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
@@ -6687,6 +6689,7 @@ Niivue.prototype.deleteThumbnail = function () {
 Niivue.prototype.inGraphTile = function (x, y) {
   if (
     this.graph.opacity <= 0 ||
+    this.volumes.length < 1 ||
     this.volumes[0].nFrame4D < 1 ||
     !this.graph.plotLTWH
   )
