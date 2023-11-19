@@ -2596,9 +2596,6 @@ Niivue.prototype.getOverlayIndexByID = function (id) {
  * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
  */
 Niivue.prototype.setVolume = function (volume, toIndex = 0) {
-  // this.volumes.map((v) => {
-  //   log.debug(v.name);
-  // });
   const numberOfLoadedImages = this.volumes.length
   if (toIndex > numberOfLoadedImages) {
     return
@@ -2627,14 +2624,11 @@ Niivue.prototype.setVolume = function (volume, toIndex = 0) {
     this.back = this.volumes[0]
   }
   this.updateGLVolume()
-  // this.volumes.map((v) => {
-  //   log.debug(v.name);
-  // });
 }
 
 // not included in public docs
 Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
-  this.meshes.map((m) => {
+  this.meshes.forEach((m) => {
     log.debug('MESH: ', m.name)
   })
   const numberOfLoadedMeshes = this.meshes.length
@@ -2652,7 +2646,7 @@ Niivue.prototype.setMesh = function (mesh, toIndex = 0) {
     this.meshes.splice(toIndex, 0, mesh)
   }
   this.updateGLVolume()
-  this.meshes.map((m) => {
+  this.meshes.forEach((m) => {
     log.debug(m.name)
   })
 }
@@ -7399,9 +7393,6 @@ Niivue.prototype.depthPicker = function (leftTopWidthHeight, mvpMatrix) {
   this.selectedObjectId = rgbaPixel[3]
   if (this.selectedObjectId === this.VOLUME_ID) {
     this.scene.crosshairPos = new Float32Array(rgbaPixel.slice(0, 3)).map((x) => x / 255.0)
-    // let mm = this.frac2mm(this.scene.crosshairPos, 0);
-    // this.scene.crosshairPos = this.mm2frac(mm);
-    // let mm = this.frac2mm(this.scene.crosshairPos, 0, true); //true: rendering ALWAYS in world space
     return
   }
   const depthZ = unpackFloatFromVec4i(rgbaPixel)

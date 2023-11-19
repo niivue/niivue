@@ -5,16 +5,6 @@ beforeEach(async () => {
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
 })
 
-// get a list of cmap json file names. dont include files that start with "_"
-// let files = fs.readdirSync("./src/cmaps").filter((file) => {
-//     return file.endsWith(".json") && !file.startsWith("_");
-// });
-
-// now just get the file name without the .json extension
-// files = files.map((file) => {
-//     return file.replace(".json", "");
-// });
-
 // construct an object with file types as keys and an file names as values
 const files = [
   { fileType: 'nifti', fileName: 'mni152.nii.gz', meshOrVolume: 'volume' },
