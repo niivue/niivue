@@ -114,13 +114,12 @@ export class NVController {
         }
         break
       case NVMESSAGE.VOLUME_ADDED_FROM_URL:
-        {
-          if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
-            NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
-              this.addVolume(volume, msg.imageOptions.url)
-            })
-          }
+        if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
+          NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
+            this.addVolume(volume, msg.imageOptions.url)
+          })
         }
+
         break
       case NVMESSAGE.VOLUME_WITH_URL_REMOVED:
         {
