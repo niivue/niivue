@@ -2,3 +2,5 @@ dist_intermediate
 demos
 niivue.es.js
 niivue.umd.js
+
+tests
