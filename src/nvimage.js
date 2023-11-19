@@ -173,9 +173,6 @@ export function NVImageFromUrlOptions(
     cal_maxNeg,
     colorbarVisible,
     frame4D,
-    cal_minNeg,
-    cal_maxNeg,
-    colorbarVisible,
     alphaThreshold,
     colormapLabel
   }
@@ -845,7 +842,6 @@ NVImage.prototype.readDICOM = function (buf) {
   hdr.scl_slope = 1
   if (this.series.images[0].getDataScaleIntercept()) hdr.scl_inter = this.series.images[0].getDataScaleIntercept()
   if (this.series.images[0].getDataScaleSlope()) hdr.scl_slope = this.series.images[0].getDataScaleSlope()
-  if (hdr.scl_slope === 0) hdr.scl_slope
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
   hdr.dims[1] = this.series.images[0].getCols()
@@ -1293,18 +1289,20 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
         else if (items[0].includes('MSB_FIRST')) hdr.littleEndian = false
         break
       case 'BRICK_TYPES':
-        hdr.dims[4] = count
-        const datatype = parseInt(items[0])
-        if (datatype === 0) {
-          hdr.numBitsPerVoxel = 8
-          hdr.datatypeCode = this.DT_UNSIGNED_CHAR
-        } else if (datatype === 1) {
-          hdr.numBitsPerVoxel = 16
-          hdr.datatypeCode = this.DT_SIGNED_SHORT
-        } else if (datatype === 3) {
-          hdr.numBitsPerVoxel = 32
-          hdr.datatypeCode = this.DT_FLOAT
-        } else console.log('Unknown BRICK_TYPES ', datatype)
+        {
+          hdr.dims[4] = count
+          const datatype = parseInt(items[0])
+          if (datatype === 0) {
+            hdr.numBitsPerVoxel = 8
+            hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+          } else if (datatype === 1) {
+            hdr.numBitsPerVoxel = 16
+            hdr.datatypeCode = this.DT_SIGNED_SHORT
+          } else if (datatype === 3) {
+            hdr.numBitsPerVoxel = 32
+            hdr.datatypeCode = this.DT_FLOAT
+          } else console.log('Unknown BRICK_TYPES ', datatype)
+        }
         break
       case 'IJK_TO_DICOM_REAL':
         if (count < 12) break
@@ -1376,7 +1374,6 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
   hdr.littleEndian = true
   let isGz = false
   let isDetached = false
-  let compressedDataSize = 0
   const mat33 = mat3.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1)
   const offset = vec3.fromValues(0, 0, 0)
   while (line !== '') {
@@ -1385,7 +1382,6 @@ NVImage.prototype.readMHA = function (buffer, pairedImgData) {
     if (line.startsWith('BinaryDataByteOrderMSB') && items[0].includes('False')) hdr.littleEndian = true
     if (line.startsWith('BinaryDataByteOrderMSB') && items[0].includes('True')) hdr.littleEndian = false
     if (line.startsWith('CompressedData') && items[0].includes('True')) isGz = true
-    if (line.startsWith('CompressedDataSize')) compressedDataSize = parseInt(items[0])
     if (line.startsWith('TransformMatrix')) {
       for (let d = 0; d < 9; d++) mat33[d] = parseFloat(items[d])
     }
@@ -1523,23 +1519,25 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
         for (let i = 0; i < items.length; i++) layout.push(parseInt(items[i])) // n.b. JavaScript preserves sign for -0
         break
       case 'datatype':
-        const dt = items[0]
-        if (dt.startsWith('Int8')) hdr.datatypeCode = this.DT_INT8
-        else if (dt.startsWith('UInt8')) hdr.datatypeCode = this.DT_UNSIGNED_CHAR
-        else if (dt.startsWith('Int16')) hdr.datatypeCode = this.DT_SIGNED_SHORT
-        else if (dt.startsWith('UInt16')) hdr.datatypeCode = this.DT_UINT16
-        else if (dt.startsWith('Int32')) hdr.datatypeCode = this.DT_SIGNED_INT
-        else if (dt.startsWith('UInt32')) hdr.datatypeCode = this.DT_UINT32
-        else if (dt.startsWith('Float32')) hdr.datatypeCode = this.DT_FLOAT
-        else if (dt.startsWith('Float64')) hdr.datatypeCode = this.DT_DOUBLE
-        else console.log('Unsupported datatype ' + dt)
-        if (dt.includes('8')) hdr.numBitsPerVoxel = 8
-        else if (dt.includes('16')) hdr.numBitsPerVoxel = 16
-        else if (dt.includes('32')) hdr.numBitsPerVoxel = 32
-        else if (dt.includes('64')) hdr.numBitsPerVoxel = 64
-        hdr.littleEndian = true // native, to do support big endian readers
-        if (dt.endsWith('LE')) hdr.littleEndian = true
-        if (dt.endsWith('BE')) hdr.littleEndian = false
+        {
+          const dt = items[0]
+          if (dt.startsWith('Int8')) hdr.datatypeCode = this.DT_INT8
+          else if (dt.startsWith('UInt8')) hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+          else if (dt.startsWith('Int16')) hdr.datatypeCode = this.DT_SIGNED_SHORT
+          else if (dt.startsWith('UInt16')) hdr.datatypeCode = this.DT_UINT16
+          else if (dt.startsWith('Int32')) hdr.datatypeCode = this.DT_SIGNED_INT
+          else if (dt.startsWith('UInt32')) hdr.datatypeCode = this.DT_UINT32
+          else if (dt.startsWith('Float32')) hdr.datatypeCode = this.DT_FLOAT
+          else if (dt.startsWith('Float64')) hdr.datatypeCode = this.DT_DOUBLE
+          else console.log('Unsupported datatype ' + dt)
+          if (dt.includes('8')) hdr.numBitsPerVoxel = 8
+          else if (dt.includes('16')) hdr.numBitsPerVoxel = 16
+          else if (dt.includes('32')) hdr.numBitsPerVoxel = 32
+          else if (dt.includes('64')) hdr.numBitsPerVoxel = 64
+          hdr.littleEndian = true // native, to do support big endian readers
+          if (dt.endsWith('LE')) hdr.littleEndian = true
+          if (dt.endsWith('BE')) hdr.littleEndian = false
+        }
         break
       case 'transform':
         if (nTransform > 2 || items.length !== 4) break
@@ -1757,29 +1755,37 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
         }
         break
       case 'spacings':
-        const pixdims = value.split(/[ ,]+/)
-        for (let d = 0; d < pixdims.length; d++) hdr.pixDims[d + 1] = parseFloat(dims[d])
+        {
+          const values = value.split(/[ ,]+/)
+          for (let d = 0; d < values.length; d++) hdr.pixDims[d + 1] = parseFloat(values[d])
+        }
         break
       case 'sizes':
-        const dims = value.split(/[ ,]+/)
-        hdr.dims[0] = dims.length
-        for (let d = 0; d < dims.length; d++) hdr.dims[d + 1] = parseInt(dims[d])
+        {
+          const dims = value.split(/[ ,]+/)
+          hdr.dims[0] = dims.length
+          for (let d = 0; d < dims.length; d++) hdr.dims[d + 1] = parseInt(dims[d])
+        }
         break
       case 'endian':
         if (value.includes('little')) hdr.littleEndian = true
         else if (value.includes('big')) hdr.littleEndian = false
         break
       case 'space directions':
-        const vs = value.split(/[ ,]+/)
-        if (vs.length !== 9) break
-        for (let d = 0; d < 9; d++) mat33[d] = parseFloat(vs[d])
+        {
+          const vs = value.split(/[ ,]+/)
+          if (vs.length !== 9) break
+          for (let d = 0; d < 9; d++) mat33[d] = parseFloat(vs[d])
+        }
         break
       case 'space origin':
-        const ts = value.split(/[ ,]+/)
-        if (ts.length !== 3) break
-        offset[0] = parseFloat(ts[0])
-        offset[1] = parseFloat(ts[1])
-        offset[2] = parseFloat(ts[2])
+        {
+          const ts = value.split(/[ ,]+/)
+          if (ts.length !== 3) break
+          offset[0] = parseFloat(ts[0])
+          offset[1] = parseFloat(ts[1])
+          offset[2] = parseFloat(ts[2])
+        }
         break
       case 'space units':
         if (value.includes('microns')) isMicron = true
@@ -2300,7 +2306,7 @@ NVImage.prototype.calMinMax = function () {
 // not included in public docs
 // convert voxel intensity from stored value to scaled intensity
 NVImage.prototype.intensityRaw2Scaled = function (raw) {
-  if (this.hdr.scl_slope === 0) hdr.scl_slope = 1.0
+  if (this.hdr.scl_slope === 0) this.hdr.scl_slope = 1.0
   return raw * this.hdr.scl_slope + this.hdr.scl_inter
 }
 
@@ -2558,7 +2564,7 @@ NVImage.loadFromUrl = async function ({
   if (url instanceof ArrayBuffer) {
     dataBuffer = url
     url = 'array.nii'
-    var bytes = new Uint8Array(dataBuffer)
+    const bytes = new Uint8Array(dataBuffer)
     if (bytes[0] === 31 && bytes[1] === 139) url = 'array.nii.gz'
   }
   // fetch data associated with image
@@ -2568,7 +2574,7 @@ NVImage.loadFromUrl = async function ({
     // however, GZip header might can add bloat https://en.wikipedia.org/wiki/Gzip
     let response = await this.fetchPartial(url, 512)
     dataBuffer = await response.arrayBuffer()
-    var bytes = new Uint8Array(dataBuffer)
+    let bytes = new Uint8Array(dataBuffer)
     let isGz = false
     if (bytes[0] === 31 && bytes[1] === 139) {
       isGz = true
@@ -2576,7 +2582,7 @@ NVImage.loadFromUrl = async function ({
         // console.log('decoded:', chunk);
         bytes = chunk
       })
-      await dcmpStrm.push(bytes)
+      dcmpStrm.push(bytes)
       dataBuffer = bytes.buffer
     }
     let isNifti1 = bytes[0] === 92 && bytes[1] === 1
@@ -2595,11 +2601,11 @@ NVImage.loadFromUrl = async function ({
         response = await this.fetchPartial(url, bytesToLoad)
         dataBuffer = await response.arrayBuffer()
         if (isGz) {
-          var bytes = new Uint8Array(dataBuffer)
+          let bytes = new Uint8Array(dataBuffer)
           const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
             bytes = chunk
           })
-          await dcmpStrm2.push(bytes)
+          dcmpStrm2.push(bytes)
           dataBuffer = bytes.buffer
         }
       } // load image data
@@ -2629,10 +2635,8 @@ NVImage.loadFromUrl = async function ({
   } else {
     ext = re.exec(name)[1]
   }
-  if (ext.toUpperCase() === 'NHDR') {
-    if (urlImgData === '') {
-    }
-  } else if (ext.toUpperCase() === 'HEAD') {
+
+  if (ext.toUpperCase() === 'HEAD') {
     if (urlImgData === '') {
       urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + 'BRIK'
     }
@@ -3000,17 +3004,6 @@ NVImage.zerosLike = function (nvImage, dataType = 'same') {
 }
 
 // not included in public docs
-String.prototype.getBytes = function () {
-  // CR??? What does this do?
-  const bytes = []
-  for (let i = 0; i < this.length; i++) {
-    bytes.push(this.charCodeAt(i))
-  }
-
-  return bytes
-}
-
-// not included in public docs
 // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
 NVImage.prototype.getValue = function (x, y, z, frame4D = 0, isReadImaginary = false) {
   // const { nx, ny, nz } = this.getImageMetadata();
@@ -3299,7 +3292,7 @@ NVImage.prototype.toUint8Array = function (drawingBytes = null) {
       for (let i = 0; i < layout.length; i++) {
         for (let j = 0; j < layout.length; j++) {
           const a = Math.abs(layout[j])
-          if (a != i) continue
+          if (a !== i) continue
           instride[j] = stride
           // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
           if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
