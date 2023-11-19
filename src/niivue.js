@@ -6021,7 +6021,7 @@ Niivue.prototype.dragForPanZoom = function (startXYendXY) {
     return
   }
   const startMM = this.screenXY2mm(startXYendXY[0], startXYendXY[1], endMM[3])
-  if (isNaN(startMM[0]) || isNaN(endMM[0]) || endMM[3] !== endMM[3]) {
+  if (isNaN(startMM[0]) || isNaN(endMM[0]) || isNaN(endMM[3])) {
     return
   }
   const v = mat.vec3.create()
@@ -7230,11 +7230,13 @@ Niivue.prototype.drawGraph = function () {
   let maxTextWid = 0
   let lineH = ticMin
   // determine widest label in vertical axis
-  while (fntSize > 0 && lineH <= mx) {
-    const str = lineH.toFixed(digits)
-    const w = this.textWidth(fntSize, str)
-    maxTextWid = Math.max(w, maxTextWid)
-    lineH += spacing
+  if (fntSize > 0) {
+    while (lineH <= mx) {
+      const str = lineH.toFixed(digits)
+      const w = this.textWidth(fntSize, str)
+      maxTextWid = Math.max(w, maxTextWid)
+      lineH += spacing
+    }
   }
   const margin = 0.05
   // frame is the entire region including labels, plot is the inner lines
