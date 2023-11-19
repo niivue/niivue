@@ -711,7 +711,7 @@ Niivue.prototype.attachTo = async function (id, isAntiAlias = null) {
  */
 Niivue.prototype.on = function (event, callback) {
   const knownEvents = Object.keys(this.eventsToSubjects)
-  if (knownEvents.indexOf(event) == -1) {
+  if (!knownEvents.includes(event)) {
     return
   }
   const subject = this.eventsToSubjects[event]
@@ -730,7 +730,7 @@ Niivue.prototype.on = function (event, callback) {
  */
 Niivue.prototype.off = function (event) {
   const knownEvents = Object.keys(this.eventsToSubjects)
-  if (knownEvents.indexOf(event) == -1) {
+  if (!knownEvents.includes(event)) {
     return
   }
   const nsubs = this.subscriptions.length
@@ -990,11 +990,11 @@ Niivue.prototype.mouseDownListener = function (e) {
     console.log('label clicked', label)
     // find associated mesh
     for (const mesh of this.meshes) {
-      if (mesh.type != MeshType.CONNECTOME) {
+      if (mesh.type !== MeshType.CONNECTOME) {
         continue
       }
       for (const node of mesh.nodes) {
-        if (node.label == label) {
+        if (node.label === label) {
           console.log('node', node)
           this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z])
           this.updateGLVolume()
@@ -1394,7 +1394,7 @@ Niivue.prototype.touchMoveListener = function (e) {
 
 // not included in public docs
 Niivue.prototype.handlePinchZoom = function (e) {
-  if (e.targetTouches.length == 2 && e.changedTouches.length == 2) {
+  if (e.targetTouches.length === 2 && e.changedTouches.length === 2) {
     const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY)
 
     const rect = this.canvas.getBoundingClientRect()
@@ -1603,7 +1603,7 @@ Niivue.prototype.addVolumeFromUrl = async function (imageOptions) {
  */
 Niivue.prototype.getMediaByUrl = function (url) {
   return [...this.mediaUrlMap.entries()]
-    .filter((v) => v[1] == url)
+    .filter((v) => v[1] === url)
     .map((v) => v[0])
     .pop()
 }
@@ -2166,7 +2166,7 @@ Niivue.prototype.loadDrawing = function (drawingBitmap) {
   for (let i = 0; i < layout.length; i++) {
     for (let j = 0; j < layout.length; j++) {
       const a = Math.abs(layout[j])
-      if (a != i) continue
+      if (a !== i) continue
       instride[j] = stride
       // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
       if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
@@ -2433,7 +2433,7 @@ Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false, volumeB
       for (let i = 0; i < layout.length; i++) {
         for (let j = 0; j < layout.length; j++) {
           const a = Math.abs(layout[j])
-          if (a != i) continue
+          if (a !== i) continue
           instride[j] = stride
           // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
           if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
@@ -3660,7 +3660,7 @@ function img2ras16(volume) {
   for (let i = 0; i < layout.length; i++) {
     for (let j = 0; j < layout.length; j++) {
       const a = Math.abs(layout[j])
-      if (a != i) continue
+      if (a !== i) continue
       instride[j] = stride
       // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
       if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
@@ -3737,7 +3737,7 @@ Niivue.prototype.drawGrowCut = function () {
       this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength1, 0, i)
       gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-      if (status != gl.FRAMEBUFFER_COMPLETE) console.error('Incomplete framebuffer')
+      if (status !== gl.FRAMEBUFFER_COMPLETE) console.error('Incomplete framebuffer')
 
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     } // for i: each slice
@@ -3752,7 +3752,7 @@ Niivue.prototype.drawGrowCut = function () {
       this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength0, 0, i)
       gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-      if (status != gl.FRAMEBUFFER_COMPLETE) console.error('Incomplete framebuffer')
+      if (status !== gl.FRAMEBUFFER_COMPLETE) console.error('Incomplete framebuffer')
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     } // for i: each slice
   } // for j: each iteration
@@ -3844,7 +3844,7 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
     // Driving axis is X-axis"
     let p1 = 2 * dy - dx
     let p2 = 2 * dz - dx
-    while (x1 != x2) {
+    while (x1 !== x2) {
       x1 += xs
       if (p1 >= 0) {
         y1 += ys
@@ -3862,7 +3862,7 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
     // Driving axis is Y-axis"
     let p1 = 2 * dx - dy
     let p2 = 2 * dz - dy
-    while (y1 != y2) {
+    while (y1 !== y2) {
       y1 += ys
       if (p1 >= 0) {
         x1 += xs
@@ -3880,7 +3880,7 @@ Niivue.prototype.drawPenLine = function (ptA, ptB, penValue) {
     // # Driving axis is Z-axis
     let p1 = 2 * dy - dz
     let p2 = 2 * dx - dz
-    while (z1 != z2) {
+    while (z1 !== z2) {
       z1 += zs
       if (p1 >= 0) {
         y1 += ys
@@ -4031,8 +4031,8 @@ Niivue.prototype.drawFloodFill = function (
           mn = Math.min(mn, backImg[i])
         }
       }
-      if (growSelectedCluster == Number.POSITIVE_INFINITY) mx = growSelectedCluster
-      if (growSelectedCluster == Number.NEGATIVE_INFINITY) mn = growSelectedCluster
+      if (growSelectedCluster === Number.POSITIVE_INFINITY) mx = growSelectedCluster
+      if (growSelectedCluster === Number.NEGATIVE_INFINITY) mn = growSelectedCluster
     }
     log.debug('Intensity range of selected cluster :', mn, mx)
     // second pass:
@@ -4093,7 +4093,7 @@ Niivue.prototype.drawPenFilled = function () {
     if (dx >= dy) {
       // Driving axis is X-axis"
       let p1 = 2 * dy - dx
-      while (x1 != x2) {
+      while (x1 !== x2) {
         x1 += xs
         if (p1 >= 0) {
           y1 += ys
@@ -4105,7 +4105,7 @@ Niivue.prototype.drawPenFilled = function () {
     } else {
       // Driving axis is Y-axis"
       let p1 = 2 * dx - dy
-      while (y1 != y2) {
+      while (y1 !== y2) {
         y1 += ys
         if (p1 >= 0) {
           x1 += xs
@@ -5588,7 +5588,7 @@ Niivue.prototype.setFrame4D = function (id, frame4D) {
   if (frame4D < 0) {
     frame4D = 0
   }
-  if (frame4D == volume.frame4D) return // no change
+  if (frame4D === volume.frame4D) return // no change
   volume.frame4D = frame4D
   this.updateGLVolume()
   this.onFrameChange(volume, frame4D)
@@ -6251,7 +6251,7 @@ Niivue.prototype.getBulletMarginWidth = function () {
 
 Niivue.prototype.getLegendPanelWidth = function () {
   const labels = this.getAllLabels()
-  if (!this.opts.showLegend || labels.length == 0) {
+  if (!this.opts.showLegend || labels.length === 0) {
     return 0
   }
   const scale = 1.0 // we may want to make this adjustable in the future
@@ -7700,7 +7700,7 @@ Niivue.prototype.draw3DLabel = function (
 
   let textLeft = left
 
-  if (label.style.textAlignment != LabelTextAlignment.LEFT) {
+  if (label.style.textAlignment !== LabelTextAlignment.LEFT) {
     const textWidth = this.textWidth(label.style.textScale, label.text) * size
     if (label.style.textAlignment === LabelTextAlignment.RIGHT) {
       textLeft = left + legendWidth - size * 1.5 - textWidth
@@ -8062,9 +8062,9 @@ Niivue.prototype.frac2vox = function (frac, volIdx = 0) {
   // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
   if (this.volumes.length <= volIdx) return [0, 0, 0]
   const vox = [
-    Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims == RAS
-    Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims == RAS
-    Math.round(frac[2] * this.volumes[volIdx].dims[3] - 0.5) // dims == RAS
+    Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims === RAS
+    Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims === RAS
+    Math.round(frac[2] * this.volumes[volIdx].dims[3] - 0.5) // dims === RAS
   ]
   return vox
 } // frac2vox()
@@ -8678,9 +8678,9 @@ Niivue.prototype.drawSceneCore = function () {
       let isDrawColumn = false
       let isDrawGrid = false
       let isDrawRow = false
-      if (this.opts.multiplanarLayout == MULTIPLANAR_TYPE.COLUMN) isDrawColumn = true
-      else if (this.opts.multiplanarLayout == MULTIPLANAR_TYPE.GRID) isDrawGrid = true
-      else if (this.opts.multiplanarLayout == MULTIPLANAR_TYPE.ROW) isDrawRow = true
+      if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.COLUMN) isDrawColumn = true
+      else if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.GRID) isDrawGrid = true
+      else if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.ROW) isDrawRow = true
       else {
         // auto select layout based on canvas size
         if (ltwh1x3[4] > ltwh3x1[4] && ltwh1x3[4] > ltwh2x2[4]) isDrawColumn = true

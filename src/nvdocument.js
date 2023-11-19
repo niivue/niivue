@@ -469,7 +469,7 @@ export class NVDocument {
       }
       this.imageOptionsMap.delete(image.id)
     }
-    this.volumes = this.volumes.filter((i) => i.id != image.id)
+    this.volumes = this.volumes.filter((i) => i.id !== image.id)
   }
 
   /**

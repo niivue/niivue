@@ -213,8 +213,8 @@ export class NVConnectome extends NVMesh {
   deleteConnectomeNode(node) {
     // delete any connected edges
     const index = this.nodes.indexOf(node)
-    this.edges = this.edges.filter((e) => e.first != index && e.second != index)
-    this.nodes = this.nodes.filter((n) => n != node)
+    this.edges = this.edges.filter((e) => e.first !== index && e.second !== index)
+    this.nodes = this.nodes.filter((n) => n !== node)
 
     this.updateLabels()
     this.updateConnectome(this.gl)
@@ -258,7 +258,7 @@ export class NVConnectome extends NVMesh {
       (f) => (f.first === first || f.first === second) && f.first + f.second === first + second
     )
     if (edge) {
-      this.edges = this.edges.filter((e) => e != edge)
+      this.edges = this.edges.filter((e) => e !== edge)
     } else {
       throw new Error(`edge between ${first} and ${second} not found`)
     }
@@ -273,7 +273,7 @@ export class NVConnectome extends NVMesh {
    * @returns {NVConnectomeNode|null}
    */
   findClosestConnectomeNode(point, distance) {
-    if (!this.nodes || this.nodes.length == 0) {
+    if (!this.nodes || this.nodes.length === 0) {
       return null
     }
 

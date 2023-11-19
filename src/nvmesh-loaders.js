@@ -915,7 +915,7 @@ export class NVMeshLoaders {
       let txt = ''
       for (let c = 0; c < labelLen; c++) {
         const val = view.getUint8(pos++)
-        if (val == 0) break
+        if (val === 0) break
         txt += String.fromCharCode(val)
       }
       pos -= 4
@@ -1274,12 +1274,12 @@ export class NVMeshLoaders {
     let nvert = reader.getUint32(8, true)
     const nskip = reader.getUint32(12, true)
     utiltiesLogger.debug('MZ3 magic %d attr %d face %d vert %d skip %d', magic, attr, nface, nvert, nskip)
-    if (magic != 23117) throw new Error('Invalid MZ3 file')
-    const isFace = (attr & 1) != 0
-    const isVert = (attr & 2) != 0
-    const isRGBA = (attr & 4) != 0
-    let isSCALAR = (attr & 8) != 0
-    const isDOUBLE = (attr & 16) != 0
+    if (magic !== 23117) throw new Error('Invalid MZ3 file')
+    const isFace = (attr & 1) !== 0
+    const isVert = (attr & 2) !== 0
+    const isRGBA = (attr & 4) !== 0
+    let isSCALAR = (attr & 8) !== 0
+    const isDOUBLE = (attr & 16) !== 0
     // var isAOMap = attr & 32;
     if (attr > 63) throw new Error('Unsupported future version of MZ3 file')
     let bytesPerScalar = 4
@@ -1289,7 +1289,7 @@ export class NVMeshLoaders {
     if (isSCALAR) {
       const FSizeWoScalars = 16 + nskip + isFace * nface * 12 + isVert * n_vert * 12 + isRGBA * n_vert * 4
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar)
-      if (nvert != n_vert && scalarFloats % n_vert === 0) {
+      if (nvert !== n_vert && scalarFloats % n_vert === 0) {
         console.log('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT')
         nvert = n_vert
       }
@@ -1511,7 +1511,7 @@ export class NVMeshLoaders {
     const indices = new Int32Array(nface * 3) // assume triangular mesh: pre-allocation optimization
     let isTriangular = true
     let j = 0
-    if (indexCountBytes === 1 && indexBytes === 4 && indexStrideBytes == 13) {
+    if (indexCountBytes === 1 && indexBytes === 4 && indexStrideBytes === 13) {
       // default mode: "list uchar int vertex_indices" without other properties
       for (let i = 0; i < nface; i++) {
         const nIdx = reader.getUint8(pos)
@@ -2356,7 +2356,7 @@ export class NVMeshLoaders {
               let txt = ''
               for (let c = 0; c < labelLen; c++) {
                 const val = reader.getUint8(pos++)
-                if (val == 0) break
+                if (val === 0) break
                 txt += String.fromCharCode(val)
               } // for labelLen
               voxoffset += labelLen
@@ -2548,7 +2548,7 @@ export class NVMeshLoaders {
                 indices.push(coordIndex[j - 0] + idx0)
                 j += 1
               } else {
-                // coordIndex[j] == -1, next polygon
+                // coordIndex[j] === -1, next polygon
                 j += 3
                 triStart = j - 2
               }
@@ -2563,7 +2563,7 @@ export class NVMeshLoaders {
                 indices.push(coordIndex[j - 0] + idx0)
                 j += 1
               } else {
-                // coordIndex[j] == -1, next polygon
+                // coordIndex[j] === -1, next polygon
                 j += 3
               }
             }
@@ -2618,7 +2618,7 @@ export class NVMeshLoaders {
     let len = buffer.byteLength
     if (len < 20) throw new Error('File too small to be GII: bytes = ' + len)
     let chars = new TextDecoder('ascii').decode(buffer)
-    if (chars[0].charCodeAt(0) == 31) {
+    if (chars[0].charCodeAt(0) === 31) {
       // raw GIFTI saved as .gii.gz is smaller than gz GIFTI due to base64 overhead
       const raw = fflate.decompressSync(new Uint8Array(buffer))
       buffer = raw.buffer
@@ -2633,7 +2633,7 @@ export class NVMeshLoaders {
         while (pos < len && chars[pos] !== '<') pos++ // find tag start symbol: '<' e.g. "<tag>"
         startPos = pos
         while (pos < len && chars[pos] !== '>') pos++ // find tag end symbol: '>' e.g. "<tag>"
-        isEmptyTag = chars[pos - 1] == '/' // empty tag ends "/>" e.g. "<br/>"
+        isEmptyTag = chars[pos - 1] === '/' // empty tag ends "/>" e.g. "<br/>"
         if (startPos + 1 < len && chars[startPos + 1] === '/') {
           // skip end tag "</"
           pos += 1
@@ -2676,7 +2676,7 @@ export class NVMeshLoaders {
     while (!tag.name.startsWith('GIFTI') && tag.endPos < len) {
       tag = readXMLtag()
     }
-    if (!tag.name.startsWith('GIFTI') || tag.contentStartPos == tag.contentEndPos) {
+    if (!tag.name.startsWith('GIFTI') || tag.contentStartPos === tag.contentEndPos) {
       console.log('readGII: XML file does not include GIFTI tag')
       return null
     }
@@ -2878,7 +2878,7 @@ export class NVMeshLoaders {
     if (
       positions.length > 2 &&
       !isDataSpaceScanner &&
-      (FreeSurferTranlate[0] != 0 || FreeSurferTranlate[1] != 0 || FreeSurferTranlate[2] != 0)
+      (FreeSurferTranlate[0] !== 0 || FreeSurferTranlate[1] !== 0 || FreeSurferTranlate[2] !== 0)
     ) {
       nvert = Math.floor(positions.length / 3)
       let i = 0

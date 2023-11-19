@@ -974,19 +974,19 @@ NVImage.prototype.readECAT = function (buffer) {
       frame_duration.push(hdr.pixDims[4])
       const nvox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
       const newImg = new Float32Array(nvox3D) // convert to float32 as scale varies
-      if (data_type == 1)
+      if (data_type === 1)
         // uint8
         for (let i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint8(ipos) * scale_factor
           ipos++
         }
-      else if (data_type == 6) {
+      else if (data_type === 6) {
         // uint16
         for (let i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint16(ipos, false) * scale_factor
           ipos += 2
         }
-      } else if (data_type == 7) {
+      } else if (data_type === 7) {
         // uint32
         for (let i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint32(ipos, false) * scale_factor
@@ -1580,7 +1580,7 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
   if (isDetached) rawImg = pairedImgData.slice()
   // n.b. mrconvert can pad files? See dtitest_Siemens_SC 4_dti_nopf_x2_pitch
   else rawImg = buffer.slice(hdr.vox_offset, hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8))
-  if (layout.length != hdr.dims[0]) console.log('dims does not match layout')
+  if (layout.length !== hdr.dims[0]) console.log('dims does not match layout')
   // estimate strides:
   let stride = 1
   const instride = [1, 1, 1, 1, 1]
@@ -1588,7 +1588,7 @@ NVImage.prototype.readMIF = function (buffer, pairedImgData) {
   for (let i = 0; i < layout.length; i++) {
     for (let j = 0; j < layout.length; j++) {
       const a = Math.abs(layout[j])
-      if (a != i) continue
+      if (a !== i) continue
       instride[j] = stride
       // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
       if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
@@ -1662,7 +1662,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
   let txt = null
   const bytes = new Uint8Array(dataBuffer)
   for (let i = 1; i < len; i++) {
-    if (bytes[i - 1] == 10 && bytes[i] == 10) {
+    if (bytes[i - 1] === 10 && bytes[i] === 10) {
       const v = dataBuffer.slice(0, i - 1)
       txt = new TextDecoder().decode(v)
       hdr.vox_offset = i + 1
@@ -2192,7 +2192,7 @@ NVImage.prototype.calMinMax = function () {
     return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
   }
   // if color map specifies non zero values for min and max then use them
-  if (cmMin != cmMax) {
+  if (cmMin !== cmMax) {
     this.cal_min = cmMin
     this.cal_max = cmMax
     this.robust_min = this.cal_min
@@ -2267,7 +2267,7 @@ NVImage.prototype.calMinMax = function () {
     hi--
     n += hist[hi]
   }
-  if (lo == hi) {
+  if (lo === hi) {
     // MAJORITY are not black or white
     let ok = -1
     while (ok !== 0) {
@@ -2275,13 +2275,13 @@ NVImage.prototype.calMinMax = function () {
         lo--
         if (hist[lo] > 0) ok = 0
       }
-      if (ok != 0 && hi < nBins - 1) {
+      if (ok !== 0 && hi < nBins - 1) {
         hi++
         if (hist[hi] > 0) ok = 0
       }
-      if (lo == 0 && hi == nBins - 1) ok = 0
+      if (lo === 0 && hi === nBins - 1) ok = 0
     } // while not ok
-  } // if lo == hi
+  } // if lo === hi
   let pct2 = this.intensityRaw2Scaled(lo / scl + mn)
   let pct98 = this.intensityRaw2Scaled(hi / scl + mn)
   if (this.hdr.cal_min < this.hdr.cal_max && this.hdr.cal_min >= mnScale && this.hdr.cal_max <= mxScale) {
@@ -2424,7 +2424,7 @@ function hdrToArrayBuffer(hdr, isDrawing8 = false) {
 // not included in public docs
 // see niivue.saveImage() for wrapper of this function
 NVImage.prototype.saveToUint8Array = async function (fnm, drawing8 = null) {
-  const isDrawing8 = !(drawing8 == null)
+  const isDrawing8 = drawing8 !== null
   const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8)
   const opad = new Uint8Array(4)
   let img8 = new Uint8Array(this.img.buffer)
@@ -3282,7 +3282,7 @@ NVImage.prototype.toUint8Array = function (drawingBytes = null) {
   let drawingBytesToBeConverted = drawingBytes
   if (isDrawing) {
     const perm = this.permRAS
-    if (perm[0] != 1 || perm[1] != 2 || perm[2] != 3) {
+    if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
       const dims = this.hdr.dims // reverse to original
       // reverse RAS to native space, layout is mrtrix MIF format
       // for details see NVImage.readMIF()
