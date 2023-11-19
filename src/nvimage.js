@@ -2180,8 +2180,8 @@ NVImage.prototype.calMinMax = function () {
   const cmap = cmapper.colormapFromKey(this._colormap)
   let cmMin = 0
   let cmMax = 0
-  if (cmap.hasOwn('min')) cmMin = cmap.min
-  if (cmap.hasOwn('max')) cmMax = cmap.max
+  if (cmap.min !== undefined) cmMin = cmap.min
+  if (cmap.max !== undefined) cmMax = cmap.max
   if (
     cmMin === cmMax &&
     this.trustCalMinMax &&

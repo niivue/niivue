@@ -62,21 +62,21 @@ colortables.prototype.colormap = function (key = '', isInvert = false) {
 } // colormap()
 
 colortables.prototype.makeLabelLut = function (cm, alphaFill = 64) {
-  if (!cm.hasOwn('R') || !cm.hasOwn('G') || !cm.hasOwn('B')) {
+  if (cm.R === undefined || cm.G === undefined || cm.B === undefined) {
     console.log('Invalid colormap table.', cm)
     return []
   }
   const nLabels = cm.R.length
   // if indices not provided, indices default to 0..(nLabels-1)
   let idxs = Array.apply(null, { length: nLabels }).map(Number.call, Number)
-  if (cm.hasOwn('I')) idxs = cm.I
+  if (cm.I !== undefined) idxs = cm.I
   if (nLabels !== cm.G.length || nLabels !== cm.B.length || nLabels !== idxs.length) {
     console.log('colormap does not make sense.', cm)
     return []
   }
   let As = new Uint8ClampedArray(nLabels).fill(alphaFill)
   As[0] = 0
-  if (cm.hasOwn('A')) As = cm.A
+  if (cm.A !== undefined) As = cm.A
   const mnIdx = Math.min(...idxs)
   const mxIdx = Math.max(...idxs)
   // n.b. number of input labels can be sparse: I:[0,3,4] output is dense [0,1,2,3,4]
@@ -91,7 +91,7 @@ colortables.prototype.makeLabelLut = function (cm, alphaFill = 64) {
   }
   const cmap = []
   // labels are optional
-  if (cm.hasOwn('labels')) {
+  if (cm.labels) {
     const nL = cm.labels.length
     if (nL === nLabelsDense) cmap.labels = cm.labels
     else if (nL === nLabels) {
@@ -135,7 +135,7 @@ colortables.prototype.makeDrawLut = function (name) {
     }
   }
   const cm = this.makeLabelLut(cmap, 255)
-  if (!cm.hasOwn('labels')) cm.labels = []
+  if (cm.labels === undefined) cm.labels = []
   if (cm.labels.length < 256) {
     const j = cm.labels.length
     for (let i = j; i < 256; i++) {
