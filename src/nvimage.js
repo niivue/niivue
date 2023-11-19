@@ -562,7 +562,7 @@ export function NVImage(
       break
     }
     default:
-      throw 'datatype ' + this.hdr.datatypeCode + ' not supported'
+      throw new Error('datatype ' + this.hdr.datatypeCode + ' not supported')
   }
   this.calculateRAS()
   if (!isNaN(cal_min)) this.hdr.cal_min = cal_min

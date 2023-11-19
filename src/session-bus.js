@@ -92,7 +92,7 @@ export function SessionBus(name, user, onMessageCallback, serverURL = '', sessio
   } else {
     // local
     if (!storageAvailable('localStorage')) {
-      throw 'Local storage unavailable'
+      throw new Error('Local storage unavailable')
     }
 
     this.userQueueName = `user-${this.user.id}-q`

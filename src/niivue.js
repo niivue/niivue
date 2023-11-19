@@ -1618,7 +1618,7 @@ Niivue.prototype.removeVolumeByUrl = function (url) {
   if (volume) {
     this.removeVolume(volume)
   } else {
-    throw 'No volume with URL present'
+    throw new Error('No volume with URL present')
   }
 }
 
@@ -2685,7 +2685,7 @@ Niivue.prototype.removeVolume = function (volume) {
  */
 Niivue.prototype.removeVolumeByIndex = function (index) {
   if (index >= this.volumes.length) {
-    throw 'Index of volume out of bounds'
+    throw new Error('Index of volume out of bounds')
   }
   this.removeVolume(this.volumes[index])
 }
@@ -4511,7 +4511,7 @@ Niivue.prototype.createCustomMeshShader = function (
   // vertexShaderText = ""
 ) {
   if (!fragmentShaderText) {
-    throw 'Need fragment shader'
+    throw new Error('Need fragment shader')
   }
 
   const num = this.meshShaderNameToNumber(name)
