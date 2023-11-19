@@ -4469,10 +4469,9 @@ Niivue.prototype.initText = async function () {
 // not included in public docs
 Niivue.prototype.meshShaderNameToNumber = function (meshShaderName = 'Phong') {
   const name = meshShaderName.toLowerCase()
-  for (var i = 0; i < this.meshShaders.length; i++) {
+  for (let i = 0; i < this.meshShaders.length; i++) {
     if (this.meshShaders[i].Name.toLowerCase() === name) return i
   }
-  i = -1
 }
 
 /**

@@ -976,19 +976,19 @@ NVImage.prototype.readECAT = function (buffer) {
       const newImg = new Float32Array(nvox3D) // convert to float32 as scale varies
       if (data_type == 1)
         // uint8
-        for (var i = 0; i < nvox3D; i++) {
+        for (let i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint8(ipos) * scale_factor
           ipos++
         }
       else if (data_type == 6) {
         // uint16
-        for (var i = 0; i < nvox3D; i++) {
+        for (let i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint16(ipos, false) * scale_factor
           ipos += 2
         }
       } else if (data_type == 7) {
         // uint32
-        for (var i = 0; i < nvox3D; i++) {
+        for (let i = 0; i < nvox3D; i++) {
           newImg[i] = reader.getUint32(ipos, false) * scale_factor
           ipos += 4
         }
@@ -1007,7 +1007,7 @@ NVImage.prototype.readECAT = function (buffer) {
   if (vols > 1) {
     hdr.dims[0] = 4
     let isFDvaries = false
-    for (var i = 0; i < vols; i++) if (frame_duration[i] !== frame_duration[0]) isFDvaries = true
+    for (let i = 0; i < vols; i++) if (frame_duration[i] !== frame_duration[0]) isFDvaries = true
     if (isFDvaries) console.log('Frame durations vary')
   }
   hdr.sform_code = 1
@@ -1285,7 +1285,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
         const items2 = line.trim().split(/\s+/)
         items.push(...items2)
       }
-      for (var j = 0; j < count; j++) items[j] = parseFloat(items[j])
+      for (let j = 0; j < count; j++) items[j] = parseFloat(items[j])
     }
     switch (key) {
       case 'BYTEORDER_STRING':
@@ -1320,7 +1320,7 @@ NVImage.prototype.readHEAD = function (dataBuffer, pairedImgData) {
         break
       case 'DATASET_DIMENSIONS':
         count = Math.max(count, 3)
-        for (var j = 0; j < count; j++) hdr.dims[j + 1] = items[j]
+        for (let j = 0; j < count; j++) hdr.dims[j + 1] = items[j]
         break
       case 'ORIENT_SPECIFIC':
         orientSpecific = items
@@ -1758,7 +1758,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
         break
       case 'spacings':
         const pixdims = value.split(/[ ,]+/)
-        for (var d = 0; d < pixdims.length; d++) hdr.pixDims[d + 1] = parseFloat(dims[d])
+        for (let d = 0; d < pixdims.length; d++) hdr.pixDims[d + 1] = parseFloat(dims[d])
         break
       case 'sizes':
         const dims = value.split(/[ ,]+/)
@@ -1772,7 +1772,7 @@ NVImage.prototype.readNRRD = function (dataBuffer, pairedImgData) {
       case 'space directions':
         const vs = value.split(/[ ,]+/)
         if (vs.length !== 9) break
-        for (var d = 0; d < 9; d++) mat33[d] = parseFloat(vs[d])
+        for (let d = 0; d < 9; d++) mat33[d] = parseFloat(vs[d])
         break
       case 'space origin':
         const ts = value.split(/[ ,]+/)

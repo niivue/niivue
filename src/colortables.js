@@ -82,7 +82,7 @@ colortables.prototype.makeLabelLut = function (cm, alphaFill = 64) {
   // n.b. number of input labels can be sparse: I:[0,3,4] output is dense [0,1,2,3,4]
   const nLabelsDense = mxIdx - mnIdx + 1
   const lut = new Uint8ClampedArray(nLabelsDense * 4).fill(0)
-  for (var i = 0; i < nLabels; i++) {
+  for (let i = 0; i < nLabels; i++) {
     let k = (idxs[i] - mnIdx) * 4
     lut[k++] = cm.R[i] // Red
     lut[k++] = cm.G[i] // Green
@@ -96,7 +96,7 @@ colortables.prototype.makeLabelLut = function (cm, alphaFill = 64) {
     if (nL === nLabelsDense) cmap.labels = cm.labels
     else if (nL === nLabels) {
       cmap.labels = Array(nLabelsDense).fill('?')
-      for (var i = 0; i < nLabels; i++) {
+      for (let i = 0; i < nLabels; i++) {
         const idx = idxs[i]
         cmap.labels[idx] = cm.labels[i]
       }
@@ -175,7 +175,7 @@ colortables.prototype.makeLut = function (Rsi, Gsi, Bsi, Asi, Isi, isInvert) {
   let As = [...Asi]
   let Is = [...Isi]
   if (isInvert) {
-    for (var i = 0; i < nIdx; i++) {
+    for (let i = 0; i < nIdx; i++) {
       Rs[i] = Rsi[nIdx - 1 - i]
       Gs[i] = Gsi[nIdx - 1 - i]
       Bs[i] = Bsi[nIdx - 1 - i]
@@ -186,14 +186,13 @@ colortables.prototype.makeLut = function (Rsi, Gsi, Bsi, Asi, Isi, isInvert) {
   const lut = new Uint8ClampedArray(256 * 4)
   if (typeof Is === 'undefined') {
     Is = new Uint8ClampedArray(nIdx).fill(0)
-    for (var i = 0; i < nIdx; i++) Is[i] = Math.round((i * 255.0) / (nIdx - 1))
+    for (let i = 0; i < nIdx; i++) Is[i] = Math.round((i * 255.0) / (nIdx - 1))
   }
   if (typeof As === 'undefined') {
     As = new Uint8ClampedArray(nIdx).fill(64)
     As[0] = 0
   }
-  for (var i = 0; i < nIdx - 1; i++) {
-    // return a + f * (b - a);
+  for (let i = 0; i < nIdx - 1; i++) {
     const idxLo = Is[i]
     let idxHi = Is[i + 1]
     if (i === 0 && idxLo !== 0) console.log('colormap issue: indices expected to start with 0 not ', idxLo)
@@ -212,7 +211,7 @@ colortables.prototype.makeLut = function (Rsi, Gsi, Bsi, Asi, Isi, isInvert) {
     }
   }
   if (this.gamma === 1.0) return lut
-  for (var i = 0; i < 255 * 4; i++) {
+  for (let i = 0; i < 255 * 4; i++) {
     if (i % 4 === 3) continue // gamma changes RGB, not Alpha
     lut[i] = Math.pow(lut[i] / 255, 1 / this.gamma) * 255
   }
