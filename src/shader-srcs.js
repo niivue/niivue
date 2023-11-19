@@ -1,4 +1,4 @@
-export var vertRenderShader = `#version 300 es
+export const vertRenderShader = `#version 300 es
 #line 4
 layout(location=0) in vec3 pos;
 layout(location=1) in vec3 texCoords;
@@ -69,7 +69,7 @@ float frac2ndc(vec3 frac) {
 	return (z_ndc + 1.0) / 2.0;
 }` + kDrawFunc
 
-export var fragRenderShaderMIP =
+export const fragRenderShaderMIP =
   `#version 300 es
 #line 73
 precision highp int;
@@ -400,7 +400,7 @@ const kRenderTail = `
 }` // kRenderTail
 
 // https://github.com/niivue/niivue/issues/679
-export var fragRenderSliceShader =
+export const fragRenderSliceShader =
   `#version 300 es
 #line 215
 precision highp int;
@@ -484,7 +484,7 @@ out vec4 fColor;
 ` +
   kRenderTail
 
-export var fragRenderShader =
+export const fragRenderShader =
   `#version 300 es
 #line 215
 precision highp int;
@@ -526,7 +526,7 @@ out vec4 fColor;
 ` +
   kRenderTail
 
-export var fragRenderGradientShader =
+export const fragRenderGradientShader =
   `#version 300 es
 #line 215
 precision highp int;
@@ -587,7 +587,7 @@ out vec4 fColor;
 ` +
   kRenderTail
 
-export var vertSliceMMShader = `#version 300 es
+export const vertSliceMMShader = `#version 300 es
 #line 392
 layout(location=0) in vec3 pos;
 uniform int axCorSag;
@@ -605,7 +605,7 @@ void main(void) {
 	gl_Position = mvpMtx * mm;
 }`
 
-export var fragSliceMMShader =
+export const fragSliceMMShader =
   `#version 300 es
 #line 411
 precision highp int;
@@ -747,7 +747,7 @@ out vec4 color;` +
 	color.a = a;
 }`
 
-export var fragRectShader = `#version 300 es
+export const fragRectShader = `#version 300 es
 #line 480
 precision highp int;
 precision highp float;
@@ -757,7 +757,7 @@ void main() {
 	color = lineColor;
 }`
 
-export var vertColorbarShader = `#version 300 es
+export const vertColorbarShader = `#version 300 es
 #line 490
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -773,7 +773,7 @@ void main(void) {
 	vColor = pos.xy;
 }`
 
-export var fragColorbarShader = `#version 300 es
+export const fragColorbarShader = `#version 300 es
 #line 506
 precision highp int;
 precision highp float;
@@ -787,7 +787,7 @@ void main() {
 	color = vec4(texture(colormap, vec2(vColor.x, fmap)).rgb, 1.0);
 }`
 
-export var vertRectShader = `#version 300 es
+export const vertRectShader = `#version 300 es
 #line 520
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -801,7 +801,7 @@ void main(void) {
 	gl_Position = vec4(frac, 0.0, 1.0);
 }`
 
-export var vertLineShader = `#version 300 es
+export const vertLineShader = `#version 300 es
 #line 534
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -816,7 +816,7 @@ void main(void) {
 	gl_Position = vec4((posXY * 2.0) - 1.0, 0.0, 1.0);
 }`
 
-export var vertLine3DShader = `#version 300 es
+export const vertLine3DShader = `#version 300 es
 #line 534
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -837,7 +837,7 @@ void main(void) {
 	gl_Position = vec4((posXY * 2.0) - 1.0, z, 1.0);
 }`
 
-export var vertBmpShader = `#version 300 es
+export const vertBmpShader = `#version 300 es
 #line 549
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -853,7 +853,7 @@ void main(void) {
 	vUV = vec2(pos.x, 1.0 - pos.y);
 }`
 
-export var fragBmpShader = `#version 300 es
+export const fragBmpShader = `#version 300 es
 #line 565
 precision highp int;
 precision highp float;
@@ -864,7 +864,7 @@ void main() {
 	color = texture(bmpTexture, vUV);
 }`
 
-export var vertFontShader = `#version 300 es
+export const vertFontShader = `#version 300 es
 #line 576
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
@@ -881,7 +881,7 @@ void main(void) {
 	vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y  + ((1.0 - pos.y) * uvLeftTopWidthHeight.w) );
 }`
 
-export var fragFontShader = `#version 300 es
+export const fragFontShader = `#version 300 es
 #line 593
 precision highp int;
 precision highp float;
@@ -901,7 +901,7 @@ void main() {
 	color = vec4(fontColor.rgb , fontColor.a * opacity);
 }`
 
-export var vertCircleShader = `#version 300 es
+export const vertCircleShader = `#version 300 es
 layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
@@ -917,7 +917,7 @@ void main(void) {
 	vUV = pos.xy;
 }`
 
-export var fragCircleShader = `#version 300 es
+export const fragCircleShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform vec4 circleColor;
@@ -937,7 +937,7 @@ void main() {
 }
 `
 
-export var vertOrientShader = `#version 300 es
+export const vertOrientShader = `#version 300 es
 #line 613
 precision highp int;
 precision highp float;
@@ -948,20 +948,20 @@ void main() {
 	gl_Position = vec4( (vPos.xy-vec2(0.5,0.5)) * 2.0, 0.0, 1.0);
 }`
 
-export var fragOrientShaderU = `#version 300 es
+export const fragOrientShaderU = `#version 300 es
 uniform highp usampler3D intensityVol;
 `
 
-export var fragOrientShaderI = `#version 300 es
+export const fragOrientShaderI = `#version 300 es
 uniform highp isampler3D intensityVol;
 `
 
-export var fragOrientShaderF = `#version 300 es
+export const fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
 `
 
 // uniform vec2 canvasWidthHeight;
-export var fragOrientShaderAtlas = `#line 636
+export const fragOrientShaderAtlas = `#line 636
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -1016,7 +1016,7 @@ void main(void) {
 	FragColor.a = aout;
 }`
 
-export var fragOrientShader = `#line 691
+export const fragOrientShader = `#line 691
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -1102,7 +1102,7 @@ void main(void) {
 	FragColor.a = aout;
 }`
 
-export var fragRGBOrientShader = `#line 773
+export const fragRGBOrientShader = `#line 773
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -1136,7 +1136,7 @@ void main(void) {
 	FragColor.a *= opacity;
 }`
 
-export var vertGrowCutShader = `#version 300 es
+export const vertGrowCutShader = `#version 300 es
 #line 808
 precision highp int;
 precision highp float;
@@ -1149,7 +1149,7 @@ void main() {
 
 // https://github.com/pieper/step/blob/master/src/growcut.js
 // Steve Pieper 2022: Apache License 2.0
-export var fragGrowCutShader = `#version 300 es
+export const fragGrowCutShader = `#version 300 es
 #line 829
 	precision highp float;
 	precision highp int;
@@ -1212,14 +1212,14 @@ void main(void) {
 	label = maxIdx;
 }` // inputTexture0
 
-export var vertSurfaceShader = `#version 300 es
+export const vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
 uniform mat4 mvpMtx;
 void main(void) {
 	gl_Position = mvpMtx * vec4(pos, 1.0);
 }`
 
-export var fragSurfaceShader = `#version 300 es
+export const fragSurfaceShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform vec4 surfaceColor;
@@ -1228,7 +1228,7 @@ void main() {
 	color = surfaceColor;
 }`
 
-export var vertFiberShader = `#version 300 es
+export const vertFiberShader = `#version 300 es
 layout(location=0) in vec3 pos;
 layout(location=1) in vec4 clr;
 out vec4 vClr;
@@ -1238,7 +1238,7 @@ void main(void) {
 	vClr = clr;
 }`
 
-export var fragFiberShader = `#version 300 es
+export const fragFiberShader = `#version 300 es
 precision highp int;
 precision highp float;
 in vec4 vClr;
@@ -1248,7 +1248,7 @@ void main() {
 	color = vec4(vClr.rgb, opacity);
 }`
 
-export var vertMeshShader = `#version 300 es
+export const vertMeshShader = `#version 300 es
 layout(location=0) in vec3 pos;
 layout(location=1) in vec4 norm;
 layout(location=2) in vec4 clr;
@@ -1267,7 +1267,7 @@ void main(void) {
 
 // report depth for fragment
 // https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/viewer/screensurface.js#L89
-export var fragMeshDepthShader = `#version 300 es
+export const fragMeshDepthShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1284,7 +1284,7 @@ void main() {
 }`
 
 // ToonShader https://prideout.net/blog/old/blog/index.html@tag=toon-shader.html
-export var fragMeshToonShader = `#version 300 es
+export const fragMeshToonShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1329,30 +1329,8 @@ void main() {
 	color.a = opacity;
 }`
 
-// unused: requires gl.Disable(GL_DEPTH_TEST)
-// however, depth test must be ENABLED for meshes not using this shader
-// since fragments computed in parallel, this leads to artifacts when multiple meshes loaded with different shaders
-/* export var fragMeshXRayShader = `#version 300 es
-precision highp int;
-precision highp float;
-uniform float opacity;
-in vec4 vClr;
-in vec3 vN, vV;
-out vec4 color;
-void main() {
-	float Ambient = 0.5;
-	float EdgeFallOff = 1.0;
-	float Intensity = 0.5;
-	bool DimBackfaces = false;
-	float opac = abs(dot(normalize(-vN), normalize(-vV)));
-	opac = Ambient + Intensity*(1.0-pow(opac, EdgeFallOff));
-	float backface = 1.0 - step(0.0, vN.z);
-	opac = mix(opac, 0.0, backface * float(DimBackfaces)); //reverse normal if backface AND two-sided lighting
-	color = vec4(opac * vClr.rgb, opac);
-}`; */
-
 // outline
-export var fragMeshOutlineShader = `#version 300 es
+export const fragMeshOutlineShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1380,7 +1358,7 @@ void main() {
 }`
 
 // Phong headlight shader for edge enhancement, opposite of fresnel rim lighting
-export var fragMeshEdgeShader = `#version 300 es
+export const fragMeshEdgeShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1402,7 +1380,7 @@ void main() {
 }`
 
 // Phong: default
-export var fragMeshShader = `#version 300 es
+export const fragMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1426,7 +1404,7 @@ void main() {
 }`
 
 // Matcap: modulate mesh color with spherical matcap image
-export var fragMeshMatcapShader = `#version 300 es
+export const fragMeshMatcapShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1443,7 +1421,7 @@ void main() {
 }`
 
 // matte: same as phong without specular and a bit more diffuse
-export var fragMeshMatteShader = `#version 300 es
+export const fragMeshMatteShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1463,7 +1441,7 @@ void main() {
 }`
 
 // Hemispheric
-export var fragMeshHemiShader = `#version 300 es
+export const fragMeshHemiShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1491,7 +1469,7 @@ void main() {
 	color = vec4(a + d + s, opacity);
 }`
 
-export var fragMeshShaderSHBlue = `#version 300 es
+export const fragMeshShaderSHBlue = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1547,7 +1525,7 @@ void main() {
 	color = vec4(a + d + s, opacity);
 }`
 
-export var vertFlatMeshShader = `#version 300 es
+export const vertFlatMeshShader = `#version 300 es
 layout(location=0) in vec3 pos;
 layout(location=1) in vec4 norm;
 layout(location=2) in vec4 clr;
@@ -1563,7 +1541,7 @@ void main(void) {
 	vClr = clr;
 }`
 
-export var fragFlatMeshShader = `#version 300 es
+export const fragFlatMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
 uniform float opacity;
@@ -1586,7 +1564,7 @@ void main() {
 	color = vec4(a + d + s, opacity);
 }`
 
-export var fragVolumePickingShader =
+export const fragVolumePickingShader =
   `#version 300 es
 #line 1260
 //precision highp int;
@@ -1660,7 +1638,7 @@ void main() {
 	//you only get here if there is a hit with the background that is closer than any overlay
 }`
 
-export var vertOrientCubeShader = `#version 300 es
+export const vertOrientCubeShader = `#version 300 es
 // an attribute is an input (in) to a vertex shader.
 // It will receive data from a buffer
 layout(location=0)  in vec3 a_position;
@@ -1677,7 +1655,7 @@ void main() {
 }
 `
 
-export var fragOrientCubeShader = `#version 300 es
+export const fragOrientCubeShader = `#version 300 es
 precision highp float;
 uniform vec4 u_color;
 in vec3 vColor;
@@ -1686,7 +1664,7 @@ void main() {
 	outColor = vec4(vColor, 1.0);
 }`
 
-export var vertPassThroughShader = `#version 300 es
+export const vertPassThroughShader = `#version 300 es
 #line 1359
 precision highp int;
 precision highp float;
@@ -1698,7 +1676,7 @@ void main() {
 	gl_Position = vec4((vPos.xy - 0.5) * 2.0, 0.0, 1.0);
 }`
 
-export var fragPassThroughShader = `#version 300 es
+export const fragPassThroughShader = `#version 300 es
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -1709,7 +1687,7 @@ void main(void) {
  FragColor = texture(in3D, vec3(TexCoord.xy, coordZ));
 }`
 
-export var blurVertShader = `#version 300 es
+export const blurVertShader = `#version 300 es
 #line 286
 precision highp int;
 precision highp float;
@@ -1720,7 +1698,7 @@ void main() {
     gl_Position = vec4( (vPos.xy-vec2(0.5,0.5))* 2.0, 0.0, 1.0);
 }`
 
-export var blurFragShader = `#version 300 es
+export const blurFragShader = `#version 300 es
 #line 298
 precision highp int;
 precision highp float;
@@ -1744,7 +1722,7 @@ void main(void) {
  FragColor = samp*0.125;
 }`
 
-export var sobelFragShader = `#version 300 es
+export const sobelFragShader = `#version 300 es
 #line 323
 precision highp int;
 precision highp float;

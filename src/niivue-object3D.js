@@ -20,7 +20,7 @@ import { mat4, vec3 } from 'gl-matrix'
  * @param {WebGLVertexArrayObject} indexBuffer
  * @param {WebGLVertexArrayObject} textureCoordinateBuffer
  **/
-export var NiivueObject3D = function (id, vertexBuffer, mode, indexCount, indexBuffer = null, vao = null) {
+export const NiivueObject3D = function (id, vertexBuffer, mode, indexCount, indexBuffer = null, vao = null) {
   this.BLEND = 1
   this.CULL_FACE = 2
   this.CULL_FRONT = 4

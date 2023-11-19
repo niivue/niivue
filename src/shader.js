@@ -45,7 +45,7 @@ Shader.prototype.use = function (gl) {
 // Compile and link the shaders vert and frag. vert and frag should contain
 // the shader source code for the vertex and fragment shaders respectively
 // Returns the compiled and linked program, or null if compilation or linking failed
-export var compileShader = function (gl, vert, frag) {
+export const compileShader = function (gl, vert, frag) {
   const vs = gl.createShader(gl.VERTEX_SHADER)
   gl.shaderSource(vs, vert)
   gl.compileShader(vs)
@@ -76,7 +76,7 @@ export var compileShader = function (gl, vert, frag) {
   return program
 }
 
-export var getGLExtension = function (gl, ext) {
+export const getGLExtension = function (gl, ext) {
   if (!gl.getExtension(ext)) {
     alert('Missing ' + ext + ' WebGL extension')
     return false
