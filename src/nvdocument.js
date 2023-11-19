@@ -432,7 +432,7 @@ export class NVDocument {
     if (!this.hasImage(image)) {
       if (!imageOptions.name) {
         if (imageOptions.url) {
-          const absoluteUrlRE = new RegExp('^(?:[a-z+]+:)?//', 'i')
+          const absoluteUrlRE = /^(?:[a-z+]+:)?\/\//i
           const url = absoluteUrlRE.test(imageOptions.url)
             ? new URL(imageOptions.url)
             : new URL(imageOptions.url, window.location.href)

@@ -2479,10 +2479,10 @@ NVImage.fetchDicomData = async function (url) {
   }
 
   // https://stackoverflow.com/questions/10687099/how-to-test-if-a-url-string-is-absolute-or-relative
-  const absoluteUrlRE = new RegExp('^(?:[a-z+]+:)?//', 'i')
+  const absoluteUrlRE = /^(?:[a-z+]+:)?\/\//i
 
   let manifestUrl = absoluteUrlRE.test(url) ? url : new URL(url, window.location.href)
-  const extensionRE = new RegExp('(?:.([^.]+))?$')
+  const extensionRE = /(?:.([^.]+))?$/
   const extension = extensionRE.exec(manifestUrl.pathname)
   if (!extension) {
     manifestUrl = new URL('niivue-manifest.txt', url)
@@ -2495,7 +2495,7 @@ NVImage.fetchDicomData = async function (url) {
   const text = await response.text()
   const lines = text.split('\n')
 
-  const baseUrlRE = new RegExp('(.*/).*')
+  const baseUrlRE = /(.*\/).*/
   const folderUrl = baseUrlRE.exec(manifestUrl)[0]
   const dataBuffer = []
   for (const line of lines) {
