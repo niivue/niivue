@@ -2110,8 +2110,6 @@ export class NVMeshLoaders {
           if (items.length < indexCount) console.log('Error parsing VertexIndices')
           vertexIndices = new Int32Array(indexCount)
           for (let i = 0; i < indexCount; i++) vertexIndices[i] = parseInt(items[i])
-          // console.log(surfaceNumberOfVertices, brainStructure, indexOffset, indexCount, indexOffset, this.AnatomicalStructurePrimary);
-          // continue;
         } // read <BrainModel
       } // while (pos < len) or reached </CIFTI>
       if (surfaceNumberOfVertices === 0 || vertexIndices.length === 0) {
@@ -2123,15 +2121,7 @@ export class NVMeshLoaders {
         return scalars
       }
       const nFrame4D = dim[5] // number of timepoints/frames per vertex
-      let vals = []
-      // if (false) {
-      //   vals = new Float32Array(
-      //     buffer,
-      //     voxoffset + nFrame4D * indexOffset * 4,
-      //     indexCount * nFrame4D
-      //   );
-      // } else {
-      vals = new Float32Array(indexCount * nFrame4D)
+      const vals = new Float32Array(indexCount * nFrame4D)
       const off = voxoffset + nFrame4D * indexOffset * 4
       for (let i = 0; i < indexCount * nFrame4D; i++) vals[i] = reader.getFloat32(off + i * 4, isLittleEndian)
       // }
@@ -2469,10 +2459,8 @@ export class NVMeshLoaders {
       if (length.def < 1) return
       appearanceStyles[def] = rgba
     }
-    // let globs;
     while (pos < len) {
       line = readStr()
-      // rgbaGlobal = [255,0,0,255]
       rgba = rgbaGlobal.slice()
       if (line.startsWith('<Transform')) {
         translation = readNumericTag('translation')
@@ -2486,7 +2474,6 @@ export class NVMeshLoaders {
         let radius = 1.0
         let height = 1.0
         let coordIndex = []
-        // let index = [];
         let point = []
         while (pos < len) {
           line = readStr()

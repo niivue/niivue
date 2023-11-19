@@ -105,7 +105,6 @@ following conditions are met:
     // nn = [],
     let ctr
     const normalsDataLength = pts.length
-    let numIndices
     let qx
     let qy
     let qz
@@ -117,7 +116,7 @@ following conditions are met:
     let index3
 
     const norms = new Float32Array(normalsDataLength)
-    numIndices = tris.length
+    const numIndices = tris.length
     for (ctr = 0; ctr < numIndices; ctr += 3) {
       index1 = tris[ctr] * 3
       index2 = tris[ctr + 1] * 3

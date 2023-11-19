@@ -1330,12 +1330,3 @@ export class NVMesh {
     return NVMeshLoaders.readTRACT(buffer)
   }
 }
-// not included in public docs
-String.prototype.getBytes = function () {
-  // CR??? What does this do?
-  const bytes = []
-  for (let i = 0; i < this.length; i++) {
-    bytes.push(this.charCodeAt(i))
-  }
-  return bytes
-}

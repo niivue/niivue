@@ -218,4 +218,5 @@ colortables.prototype.makeLut = function (Rsi, Gsi, Bsi, Asi, Isi, isInvert) {
   return lut
 } // makeLut()
 
+// eslint-disable-next-line new-cap
 export const cmapper = new colortables()
