@@ -2403,7 +2403,7 @@ Niivue.prototype.removeHaze = async function (level = 5, volIndex = 0) {
  * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
  */
 Niivue.prototype.saveImage = async function (fnm, isSaveDrawing = false, volumeByIndex = 0) {
-  if (!this.back.hasOwnProperty('dims')) {
+  if (!this.back.hasOwn('dims')) {
     log.debug('No voxelwise image open')
     return false
   }
@@ -4192,29 +4192,6 @@ Niivue.prototype.drawPenFilled = function () {
   this.drawAddUndoBitmap()
   this.refreshDrawing(false)
 } // drawPenFilled()
-
-/*
-//Demonstrate how to create drawing
-Niivue.prototype.createRandomDrawing = function () {
-  if (!this.drawBitmap) this.createEmptyDrawing();
-  if (!this.back.hasOwnProperty("dims")) return;
-  let vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-  if (vx !== this.drawBitmap.length) {
-    log.error("Epic drawing failure");
-  }
-  let dx = this.back.dims[1] - 1;
-  let dy = this.back.dims[2] - 1;
-  let dz = this.back.dims[3];
-  let ptA = [0, 0, 0];
-  let ptB = [dx, dy, 0];
-
-  for (let i = 0; i < dz; i++) {
-    ptA[2] = i;
-    ptB[2] = i;
-    this.drawRect(ptA, ptB, (i % 3) + 1);
-  }
-  this.refreshDrawing(true);
-}; */
 
 /**
  * close drawing: make sure you have saved any changes before calling this!
