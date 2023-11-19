@@ -2048,7 +2048,7 @@ export class NVMeshLoaders {
       let vertexIndices = []
       const bytes = new Uint8Array(buffer)
       let pos = 552
-      // eslint-disable-next-line no-inner-declarations
+
       function readStrX() {
         while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
         const startPos = pos
@@ -2057,7 +2057,7 @@ export class NVMeshLoaders {
         if (pos - startPos < 1) return ''
         return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
       }
-      // eslint-disable-next-line no-inner-declarations
+
       function readStr() {
         // concatenate lines to return tag <...>
         let line = readStrX()
@@ -2079,6 +2079,11 @@ export class NVMeshLoaders {
         if (asString) return str
         return parseInt(str)
       } // readNumericTag
+
+      const nFrame4D = dim[5] // number of timepoints/frames per vertex
+      const scalars = new Float32Array(n_vert * nFrame4D)
+
+      // eslint-disable-next-line no-unmodified-loop-condition -- pos is modified within readStr
       while (pos < len) {
         line = readStr()
         if (line.includes('</CIFTI>')) break
@@ -2112,6 +2117,7 @@ export class NVMeshLoaders {
           for (let i = 0; i < indexCount; i++) vertexIndices[i] = parseInt(items[i])
         } // read <BrainModel
       } // while (pos < len) or reached </CIFTI>
+
       if (surfaceNumberOfVertices === 0 || vertexIndices.length === 0) {
         console.log('Unable to find CIfTI structure that matches the mesh.')
         return scalars
@@ -2120,12 +2126,11 @@ export class NVMeshLoaders {
         console.log('Only able to read float32 CIfTI (only known datatype).')
         return scalars
       }
-      const nFrame4D = dim[5] // number of timepoints/frames per vertex
+
       const vals = new Float32Array(indexCount * nFrame4D)
       const off = voxoffset + nFrame4D * indexOffset * 4
       for (let i = 0; i < indexCount * nFrame4D; i++) vals[i] = reader.getFloat32(off + i * 4, isLittleEndian)
       // }
-      const scalars = new Float32Array(n_vert * nFrame4D)
       let j = 0
 
       for (let i = 0; i < indexCount; i++) {
@@ -2439,8 +2444,10 @@ export class NVMeshLoaders {
     function readAppearance() {
       if (!line.endsWith('/>')) {
         if (line.startsWith('<Appearance>')) {
+          // eslint-disable-next-line no-unmodified-loop-condition -- modified within readStr
           while (pos < len && !line.endsWith('</Appearance>')) line += readStr()
         } else {
+          // eslint-disable-next-line no-unmodified-loop-condition -- modified within readStr
           while (pos < len && !line.endsWith('/>')) line += readStr()
         }
       }
@@ -2459,6 +2466,7 @@ export class NVMeshLoaders {
       if (length.def < 1) return
       appearanceStyles[def] = rgba
     }
+    // eslint-disable-next-line no-unmodified-loop-condition -- modified within readStr
     while (pos < len) {
       line = readStr()
       rgba = rgbaGlobal.slice()
@@ -2475,6 +2483,8 @@ export class NVMeshLoaders {
         let height = 1.0
         let coordIndex = []
         let point = []
+
+        // eslint-disable-next-line no-unmodified-loop-condition -- modified within readAppearance
         while (pos < len) {
           line = readStr()
           if (line.startsWith('<Appearance')) readAppearance()
