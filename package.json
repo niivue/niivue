@@ -13,16 +13,18 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npx prettier --write src/ && npx vite build --config vite.config.js --emptyOutDir --base=./ && vite build --config vite.config_inject.js --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
+    "build": "npx prettier --write src/ && npx vite build --config vite.config.js --emptyOutDir --base=./ && vite build --config vite.config_inject.js --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo && npm run copy-test-playwright",
     "build-win": "npx prettier --write src/ && npx vite build --config vite.config.js --emptyOutDir && vite build --config vite.config_inject.js --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
     "demo": "npm run build && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
     "copy-test": "cp ./dist/niivue.umd.js ./tests/niivue.umd.js",
     "copy-test-win": "copy .\\dist\\niivue.umd.js .\\tests\\niivue.umd.js",
+    "copy-test-playwright": "cp ./dist/niivue.umd.js ./playwright/e2e/niivue.umd.js",
     "copy-demo": "cp -r ./dist/* ./demos/features",
     "copy-demo-win": "copy .\\dist\\niivue.umd.js .\\demos\\features\\niivue.umd.js",
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
+    "test-playwright": "npm run build && npx playwright test",
     "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public"
@@ -58,7 +60,9 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@rollup/plugin-commonjs": "^24.0.1",
+    "@types/node": "^20.9.2",
     "clean-jsdoc-theme": "^4.2.6",
     "docdash": "^2.0.1",
     "eslint": "^8.36.0",
