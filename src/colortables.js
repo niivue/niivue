@@ -10,7 +10,6 @@ export class ColorTables {
    */
   constructor() {
     const cmapKeys = Object.keys(cmaps)
-    if (cmapKeys.length > 0) return
 
     const cmapsSorted = cmapKeys
       .filter((k) => !k.startsWith('$')) // ignore drawing maps
