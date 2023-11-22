@@ -153,7 +153,7 @@
   document.getElementById("gl1").ondblclick = async function () {
     if (!isCustomDraw) return;
     if (!lastPos) return;
-    if (!lastPos.hasOwnProperty("values")) return;
+    if (!lastPos.hasOwn("values")) return;
     if (!nv1.drawBitmap) nv1.createEmptyDrawing();
     if (!isFinite(lastPos.axCorSag)) return;
     if (lastPos.axCorSag < 0 || lastPos.axCorSag > 2) return;

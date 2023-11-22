@@ -45,90 +45,80 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import { vec3 } from "gl-matrix";
+            <pre class="prettyprint source linenums"><code>import { vec3 } from 'gl-matrix'
 
 /**
  * Utilities class for common mesh functions
  */
 export class NVMeshUtilities {
   static getClusterBoundaryU8(u8, faces) {
-    //assume all vertices are not near a border
-    const border = new Array(u8.length).fill(false);
-    const binary = new Array(u8.length).fill(false);
-    for (let i = 0; i &lt; u8.length; i++) if (u8[i] > 0) binary[i] = true;
-    let nTri = faces.length / 3;
-    let j = 0;
-    //interior: a triangle where all three vertices are the same color
-    //else, all three vertices are on a border
+    // assume all vertices are not near a border
+    const border = new Array(u8.length).fill(false)
+    const binary = new Array(u8.length).fill(false)
+    for (let i = 0; i &lt; u8.length; i++) if (u8[i] > 0) binary[i] = true
+    const nTri = faces.length / 3
+    let j = 0
+    // interior: a triangle where all three vertices are the same color
+    // else, all three vertices are on a border
     for (let i = 0; i &lt; nTri; i++) {
-      let v0 = faces[j];
-      let v1 = faces[j + 1];
-      let v2 = faces[j + 2];
-      j += 3;
-      if (
-        binary[v0] === binary[v1] &amp;&amp;
-        binary[v0] === binary[v2] &amp;&amp;
-        binary[v1] === binary[v2]
-      )
-        continue;
-      border[v0] = true;
-      border[v1] = true;
-      border[v2] = true;
+      const v0 = faces[j]
+      const v1 = faces[j + 1]
+      const v2 = faces[j + 2]
+      j += 3
+      if (binary[v0] === binary[v1] &amp;&amp; binary[v0] === binary[v2] &amp;&amp; binary[v1] === binary[v2]) continue
+      border[v0] = true
+      border[v1] = true
+      border[v2] = true
     }
-    return border;
+    return border
   }
 
   static getClusterBoundary(rgba8, faces) {
-    var rgba32 = new Uint32Array(rgba8.buffer);
-    //assume all vertices are not near a border
-    const border = new Array(rgba32.length).fill(false);
-    let nTri = faces.length / 3;
-    let j = 0;
-    //interior: a triangle where all three vertices are the same color
-    //else, all three vertices are on a border
+    const rgba32 = new Uint32Array(rgba8.buffer)
+    // assume all vertices are not near a border
+    const border = new Array(rgba32.length).fill(false)
+    const nTri = faces.length / 3
+    let j = 0
+    // interior: a triangle where all three vertices are the same color
+    // else, all three vertices are on a border
     for (let i = 0; i &lt; nTri; i++) {
-      let v0 = faces[j];
-      let v1 = faces[j + 1];
-      let v2 = faces[j + 2];
-      j += 3;
-      if (
-        rgba32[v0] === rgba32[v1] &amp;&amp;
-        rgba32[v0] === rgba32[v2] &amp;&amp;
-        rgba32[v1] === rgba32[v2]
-      )
-        continue;
-      border[v0] = true;
-      border[v1] = true;
-      border[v2] = true;
+      const v0 = faces[j]
+      const v1 = faces[j + 1]
+      const v2 = faces[j + 2]
+      j += 3
+      if (rgba32[v0] === rgba32[v1] &amp;&amp; rgba32[v0] === rgba32[v2] &amp;&amp; rgba32[v1] === rgba32[v2]) continue
+      border[v0] = true
+      border[v1] = true
+      border[v2] = true
     }
-    return border;
+    return border
   }
 
   // return spatial extremes for vertices
   static getExtents(pts) {
     if ((!ArrayBuffer.isView(pts) &amp;&amp; !Array.isArray(pts)) || pts.length &lt; 3) {
-      return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 };
+      return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 }
     }
 
-    //each vertex has 3 coordinates: XYZ
-    let mxDx = 0.0;
-    let mn = vec3.fromValues(pts[0], pts[1], pts[2]);
-    let mx = vec3.fromValues(pts[0], pts[1], pts[2]);
+    // each vertex has 3 coordinates: XYZ
+    let mxDx = 0.0
+    const mn = vec3.fromValues(pts[0], pts[1], pts[2])
+    const mx = vec3.fromValues(pts[0], pts[1], pts[2])
     for (let i = 0; i &lt; pts.length; i += 3) {
-      let v = vec3.fromValues(pts[i], pts[i + 1], pts[i + 2]);
-      mxDx = Math.max(mxDx, vec3.len(v));
-      vec3.min(mn, mn, v);
-      vec3.max(mx, mx, v);
+      const v = vec3.fromValues(pts[i], pts[i + 1], pts[i + 2])
+      mxDx = Math.max(mxDx, vec3.len(v))
+      vec3.min(mn, mn, v)
+      vec3.max(mx, mx, v)
     }
-    let extentsMin = [mn[0], mn[1], mn[2]];
-    let extentsMax = [mx[0], mx[1], mx[2]];
-    return { mxDx, extentsMin, extentsMax };
+    const extentsMin = [mn[0], mn[1], mn[2]]
+    const extentsMax = [mx[0], mx[1], mx[2]]
+    return { mxDx, extentsMin, extentsMax }
   }
 
   // determine vector orthogonal to plane defined by triangle
   // triangle winding determines front/back face
   static generateNormals(pts, tris) {
-    //from https://github.com/rii-mango/Papaya
+    // from https://github.com/rii-mango/Papaya
     /*
 Copyright (c) 2012-2015, RII-UTHSCSA
 All rights reserved.
@@ -155,83 +145,81 @@ following conditions are met:
  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-    var p1 = [],
-      p2 = [],
-      p3 = [],
-      normal = [],
-      //nn = [],
-      ctr,
-      normalsDataLength = pts.length,
-      numIndices,
-      qx,
-      qy,
-      qz,
-      px,
-      py,
-      pz,
-      index1,
-      index2,
-      index3;
+    const p1 = []
+    const p2 = []
+    const p3 = []
+    const normal = []
+    // nn = [],
+    let ctr
+    const normalsDataLength = pts.length
+    let qx
+    let qy
+    let qz
+    let px
+    let py
+    let pz
+    let index1
+    let index2
+    let index3
 
-    let norms = new Float32Array(normalsDataLength);
-    numIndices = tris.length;
+    const norms = new Float32Array(normalsDataLength)
+    const numIndices = tris.length
     for (ctr = 0; ctr &lt; numIndices; ctr += 3) {
-      index1 = tris[ctr] * 3;
-      index2 = tris[ctr + 1] * 3;
-      index3 = tris[ctr + 2] * 3;
+      index1 = tris[ctr] * 3
+      index2 = tris[ctr + 1] * 3
+      index3 = tris[ctr + 2] * 3
 
-      p1.x = pts[index1];
-      p1.y = pts[index1 + 1];
-      p1.z = pts[index1 + 2];
+      p1.x = pts[index1]
+      p1.y = pts[index1 + 1]
+      p1.z = pts[index1 + 2]
 
-      p2.x = pts[index2];
-      p2.y = pts[index2 + 1];
-      p2.z = pts[index2 + 2];
+      p2.x = pts[index2]
+      p2.y = pts[index2 + 1]
+      p2.z = pts[index2 + 2]
 
-      p3.x = pts[index3];
-      p3.y = pts[index3 + 1];
-      p3.z = pts[index3 + 2];
+      p3.x = pts[index3]
+      p3.y = pts[index3 + 1]
+      p3.z = pts[index3 + 2]
 
-      qx = p2.x - p1.x;
-      qy = p2.y - p1.y;
-      qz = p2.z - p1.z;
-      px = p3.x - p1.x;
-      py = p3.y - p1.y;
-      pz = p3.z - p1.z;
+      qx = p2.x - p1.x
+      qy = p2.y - p1.y
+      qz = p2.z - p1.z
+      px = p3.x - p1.x
+      py = p3.y - p1.y
+      pz = p3.z - p1.z
 
-      normal[0] = py * qz - pz * qy;
-      normal[1] = pz * qx - px * qz;
-      normal[2] = px * qy - py * qx;
+      normal[0] = py * qz - pz * qy
+      normal[1] = pz * qx - px * qz
+      normal[2] = px * qy - py * qx
 
-      norms[index1] += normal[0];
-      norms[index1 + 1] += normal[1];
-      norms[index1 + 2] += normal[2];
+      norms[index1] += normal[0]
+      norms[index1 + 1] += normal[1]
+      norms[index1 + 2] += normal[2]
 
-      norms[index2] += normal[0];
-      norms[index2 + 1] += normal[1];
-      norms[index2 + 2] += normal[2];
+      norms[index2] += normal[0]
+      norms[index2 + 1] += normal[1]
+      norms[index2 + 2] += normal[2]
 
-      norms[index3] += normal[0];
-      norms[index3 + 1] += normal[1];
-      norms[index3 + 2] += normal[2];
+      norms[index3] += normal[0]
+      norms[index3 + 1] += normal[1]
+      norms[index3 + 2] += normal[2]
     }
     for (ctr = 0; ctr &lt; normalsDataLength; ctr += 3) {
-      normal[0] = -1 * norms[ctr];
-      normal[1] = -1 * norms[ctr + 1];
-      normal[2] = -1 * norms[ctr + 2];
-      let len =
-        normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2];
+      normal[0] = -1 * norms[ctr]
+      normal[1] = -1 * norms[ctr + 1]
+      normal[2] = -1 * norms[ctr + 2]
+      let len = normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]
       if (len > 0) {
-        len = 1.0 / Math.sqrt(len);
-        normal[0] *= len;
-        normal[1] *= len;
-        normal[2] *= len;
+        len = 1.0 / Math.sqrt(len)
+        normal[0] *= len
+        normal[1] *= len
+        normal[2] *= len
       }
-      norms[ctr] = normal[0];
-      norms[ctr + 1] = normal[1];
-      norms[ctr + 2] = normal[2];
+      norms[ctr] = normal[0]
+      norms[ctr + 1] = normal[1]
+      norms[ctr + 2] = normal[2]
     }
-    return norms;
+    return norms
   }
 }
 </code></pre>
@@ -248,7 +236,7 @@ following conditions are met:
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Fri Nov 17 2023 10:45:58 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Wed Nov 22 2023 18:28:55 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
