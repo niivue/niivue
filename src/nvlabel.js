@@ -1,16 +1,16 @@
 /** enum for text alignment */
 export const LabelTextAlignment = Object.freeze({
-  LEFT: "left",
-  RIGHT: "right",
-  CENTER: "center",
-});
+  LEFT: 'left',
+  RIGHT: 'right',
+  CENTER: 'center'
+})
 
 /** enum for line terminators */
 export const LabelLineTerminator = Object.freeze({
-  NONE: "none",
-  CIRCLE: "circle",
-  RING: "ring",
-});
+  NONE: 'none',
+  CIRCLE: 'circle',
+  RING: 'ring'
+})
 
 /**  Class representing label style */
 export class NVLabel3DStyle {
@@ -35,15 +35,15 @@ export class NVLabel3DStyle {
     bulletColor = undefined,
     backgroundColor = undefined
   ) {
-    this.textColor = textColor;
-    this.textScale = textScale;
-    this.textAlignment = textAlignment;
-    this.lineWidth = lineWidth;
-    this.lineColor = lineColor;
-    this.lineTerminator = lineTerminator;
-    this.bulletScale = bulletScale;
-    this.bulletColor = bulletColor;
-    this.backgroundColor = backgroundColor;
+    this.textColor = textColor
+    this.textScale = textScale
+    this.textAlignment = textAlignment
+    this.lineWidth = lineWidth
+    this.lineColor = lineColor
+    this.lineTerminator = lineTerminator
+    this.bulletScale = bulletScale
+    this.bulletColor = bulletColor
+    this.backgroundColor = backgroundColor
   }
 }
 
@@ -56,8 +56,8 @@ export class NVLabel3D {
    * @param {number[][]} points - An array of points label for label lines
    */
   constructor(text, style, points) {
-    this.text = text;
-    this.style = style;
-    this.points = points;
+    this.text = text
+    this.style = style
+    this.points = points
   }
 }

@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
-import { webSocket } from "rxjs/webSocket";
+import { v4 as uuidv4 } from 'uuid'
+import { webSocket } from 'rxjs/webSocket'
 
 /**
  * @class SessionUser
@@ -16,10 +16,10 @@ export function SessionUser(
   userKey = undefined,
   userProperties = undefined
 ) {
-  this.id = userId || uuidv4();
-  this.displayName = displayName || `user-${this.id}`;
-  this.key = userKey || uuidv4();
-  this.properties = userProperties || new Map();
+  this.id = userId || uuidv4()
+  this.displayName = displayName || `user-${this.id}`
+  this.key = userKey || uuidv4()
+  this.properties = userProperties || new Map()
 }
 
 /**
@@ -28,13 +28,13 @@ export function SessionUser(
  * @returns {boolean}
  */
 function storageAvailable(type) {
-  let storage;
+  let storage
   try {
-    storage = window[type];
-    const x = "__storage_test__";
-    storage.setItem(x, x);
-    storage.removeItem(x);
-    return true;
+    storage = window[type]
+    const x = '__storage_test__'
+    storage.setItem(x, x)
+    storage.removeItem(x)
+    return true
   } catch (e) {
     return (
       e instanceof DOMException &&
@@ -44,13 +44,13 @@ function storageAvailable(type) {
         e.code === 1014 ||
         // test name field too, because code might not be present
         // everything except Firefox
-        e.name === "QuotaExceededError" ||
+        e.name === 'QuotaExceededError' ||
         // Firefox
-        e.name === "NS_ERROR_DOM_QUOTA_REACHED") &&
+        e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
       // acknowledge QuotaExceededError only if there's something already stored
       storage &&
       storage.length !== 0
-    );
+    )
   }
 }
 
@@ -64,142 +64,133 @@ function storageAvailable(type) {
  * @param {function} onMessageCallback  call back for new messages
  * @param {string} serverURL
  */
-export function SessionBus(
-  name,
-  user,
-  onMessageCallback,
-  serverURL = "",
-  sessionKey = ""
-) {
-  this.userList = [];
-  this.user = user || new SessionUser("anonymous");
+export function SessionBus(name, user, onMessageCallback, serverURL = '', sessionKey = '') {
+  this.userList = []
+  this.user = user || new SessionUser('anonymous')
 
-  this.onMessageCallBack = onMessageCallback;
+  this.onMessageCallBack = onMessageCallback
 
-  this.isConnectedToServer = false;
-  this.isController = false;
+  this.isConnectedToServer = false
+  this.isController = false
 
-  this.sessionScene = {};
-  this.sessionKey = sessionKey ? sessionKey : uuidv4();
+  this.sessionScene = {}
+  this.sessionKey = sessionKey || uuidv4()
 
-  this.sessionName = name;
-  this.sessionSceneName = `session-${name}-scene`;
+  this.sessionName = name
+  this.sessionSceneName = `session-${name}-scene`
 
   if (serverURL) {
     // remote
-    this.serverConnection$ = null;
-    this.connectToServer(serverURL, name);
-    this.subscribeToServer();
-    this.isConnectedToServer = true;
+    this.serverConnection$ = null
+    this.connectToServer(serverURL, name)
+    this.subscribeToServer()
+    this.isConnectedToServer = true
     this.serverConnection$.next({
       op: SessionBus.MESSAGE.CREATE,
-      key: this.sessionKey,
-    });
+      key: this.sessionKey
+    })
   } else {
     // local
-    if (!storageAvailable("localStorage")) {
-      throw "Local storage unavailable";
+    if (!storageAvailable('localStorage')) {
+      throw new Error('Local storage unavailable')
     }
 
-    this.userQueueName = `user-${this.user.id}-q`;
-    this.userListName = `${name}-user-list`;
+    this.userQueueName = `user-${this.user.id}-q`
+    this.userListName = `${name}-user-list`
 
     // add our user to the list
-    this.userList = JSON.parse(localStorage.getItem(this.userListName) || "[]");
-    this.userList.push(this.user);
-    localStorage.setItem(this.userListName, JSON.stringify(this.userList));
+    this.userList = JSON.parse(localStorage.getItem(this.userListName) || '[]')
+    this.userList.push(this.user)
+    localStorage.setItem(this.userListName, JSON.stringify(this.userList))
 
     // create our message queue
-    localStorage.setItem(this.userQueueName, JSON.stringify([]));
+    localStorage.setItem(this.userQueueName, JSON.stringify([]))
 
-    window.addEventListener(
-      "storage",
-      this.localStorageEventListener.bind(this)
-    );
+    window.addEventListener('storage', this.localStorageEventListener.bind(this))
   }
 }
 
 SessionBus.prototype.sendSessionMessage = function (message) {
-  message.from = this.userId;
+  message.from = this.userId
   if (this.isConnectedToServer) {
     this.serverConnection$.next({
       ...message,
       key: this.sessionKey,
-      userKey: this.userKey,
-    });
+      userKey: this.userKey
+    })
   } else {
-    this.sendLocalMessage(message);
+    this.sendLocalMessage(message)
   }
-};
+}
 
 // Remote
 // not included in public docs
 // Internal function to connect to web socket server
 SessionBus.prototype.connectToServer = function (serverURL, sessionName) {
-  const url = new URL(serverURL);
-  url.pathname = "websockets";
-  url.search = "?session=" + sessionName;
-  this.serverConnection$ = webSocket(url.href);
-  console.log(url.href);
-};
+  const url = new URL(serverURL)
+  url.pathname = 'websockets'
+  url.search = '?session=' + sessionName
+  this.serverConnection$ = webSocket(url.href)
+  console.log(url.href)
+}
 
 // Internal function called after a connection with the server has been made
 SessionBus.prototype.subscribeToServer = function () {
   this.serverConnection$.subscribe({
     next: (msg) => {
-      this.onMessageCallBack(msg);
+      this.onMessageCallBack(msg)
     }, // Called whenever there is a message from the server.
     error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
-    complete: () => console.log("complete"), // Called when connection is closed (for whatever reason).
-  });
-};
+    complete: () => console.log('complete') // Called when connection is closed (for whatever reason).
+  })
+}
 
 SessionBus.prototype.sendLocalMessage = function (message) {
   // add the message for each client
   for (const user of this.userList) {
     if (user.id === this.userId) {
-      continue;
+      continue
     }
-    let userQueueName = `user-${user.id}-q`;
-    let userQueueText = localStorage.getItem(userQueueName);
-    let userQueue = userQueueText ? JSON.parse(userQueueText) : [];
-    userQueue.push(message);
-    localStorage.setItem(userQueueName, JSON.stringify(userQueue));
+    const userQueueName = `user-${user.id}-q`
+    const userQueueText = localStorage.getItem(userQueueName)
+    const userQueue = userQueueText ? JSON.parse(userQueueText) : []
+    userQueue.push(message)
+    localStorage.setItem(userQueueName, JSON.stringify(userQueue))
   }
-};
+}
 
 SessionBus.prototype.localStorageEventListener = function (e) {
   // is this message for us?
   switch (e.key) {
     case this.userListName:
       {
-        this.userList = JSON.parse(e.newValue);
+        this.userList = JSON.parse(e.newValue)
         // compare new and old values
-        let newUsers = JSON.parse(e.newValue).filter(
+        const newUsers = JSON.parse(e.newValue).filter(
           (u) =>
             !JSON.parse(e.oldValue)
               .map((o) => o.id)
               .includes(u.id)
-        );
+        )
         for (const newUser of newUsers) {
           this.onMessageCallBack({
-            op: "user joined",
-            user: newUser,
-          });
+            op: 'user joined',
+            user: newUser
+          })
         }
       }
-      break;
+      break
     case this.userQueueName:
       {
-        let messages = JSON.parse(e.newValue);
+        const messages = JSON.parse(e.newValue)
         for (const message of messages) {
           if (this.onMessageCallBack) {
-            this.onMessageCallBack(message);
+            this.onMessageCallBack(message)
           }
         }
         // reset our message queue
-        localStorage.setItem(this.userQueueName, []);
+        localStorage.setItem(this.userQueueName, [])
       }
-      break;
+      break
   }
-};
+}

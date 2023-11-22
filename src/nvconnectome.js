@@ -1,10 +1,9 @@
-import { NVMesh } from "./nvmesh";
-import { NVUtilities } from "./nvutilities";
-import { NiivueObject3D } from "./niivue-object3D";
-import { NVMeshUtilities } from "./nvmesh-utilities";
-import { cmapper } from "./colortables";
-import { NVLabel3D, LabelTextAlignment } from "./nvlabel";
-import { MeshType } from "./nvmesh";
+import { NVMesh, MeshType } from './nvmesh'
+import { NVUtilities } from './nvutilities'
+import { NiivueObject3D } from './niivue-object3D'
+import { NVMeshUtilities } from './nvmesh-utilities'
+import { cmapper } from './colortables'
+import { NVLabel3D, LabelTextAlignment } from './nvlabel'
 
 /**
  * Representes the vertices of a connectome
@@ -27,25 +26,25 @@ import { MeshType } from "./nvmesh";
  */
 export class NVConnectomeEdge {
   contructor(first, second, colorValue) {
-    this.first = first;
-    this.second = second;
-    this.colorValue = colorValue;
+    this.first = first
+    this.second = second
+    this.colorValue = colorValue
   }
 }
 
 const defaultOptions = {
-  name: "untitled connectome",
-  nodeColormap: "warm",
-  nodeColormapNegative: "winter",
+  name: 'untitled connectome',
+  nodeColormap: 'warm',
+  nodeColormapNegative: 'winter',
   nodeMinColor: 0,
   nodeMaxColor: 4,
   nodeScale: 3,
-  edgeColormap: "warm",
-  edgeColormapNegative: "winter",
+  edgeColormap: 'warm',
+  edgeColormapNegative: 'winter',
   edgeMin: 2,
   edgeMax: 6,
-  edgeScale: 1,
-};
+  edgeScale: 1
+}
 
 /**
  * @typedef {Object} NVConnectomeOptions
@@ -72,27 +71,27 @@ export class NVConnectome extends NVMesh {
    * @param {NVConnectomeOptions} connectome
    */
   constructor(gl, connectome) {
-    super([], [], connectome.name, [], 1.0, true, gl, connectome);
-    this.gl = gl;
+    super([], [], connectome.name, [], 1.0, true, gl, connectome)
+    this.gl = gl
     // this.nodes = connectome.nodes;
     // this.edges = connectome.edges;
     // this.options = { ...defaultOptions, ...connectome };
-    this.type = MeshType.CONNECTOME;
+    this.type = MeshType.CONNECTOME
     if (this.nodes) {
-      this.updateLabels();
+      this.updateLabels()
     }
 
-    this.nodesChanged = new EventTarget();
+    this.nodesChanged = new EventTarget()
   }
 
   static convertLegacyConnectome(json) {
-    let connectome = { nodes: [], edges: [] };
+    const connectome = { nodes: [], edges: [] }
     for (const prop in json) {
       if (prop in defaultOptions) {
-        connectome[prop] = json[prop];
+        connectome[prop] = json[prop]
       }
     }
-    const nodes = json.nodes;
+    const nodes = json.nodes
     for (let i = 0; i < nodes.names.length; i++) {
       connectome.nodes.push({
         name: nodes.names[i],
@@ -100,106 +99,92 @@ export class NVConnectome extends NVMesh {
         y: nodes.Y[i],
         z: nodes.Z[i],
         colorValue: nodes.Color[i],
-        sizeValue: nodes.Size[i],
-      });
+        sizeValue: nodes.Size[i]
+      })
     }
 
     for (let i = 0; i < nodes.length - 1; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
-        let colorValue = this.edges[i * nodes.length + j];
+        const colorValue = this.edges[i * nodes.length + j]
         connectome.edges.push({
           first: i,
           second: j,
-          colorValue,
-        });
+          colorValue
+        })
       }
     }
 
-    return connectome;
+    return connectome
   }
 
-  static convertFreeSurferConnectome(json, colormap = "warm") {
-    let isValid = true;
-    if (!("data_type" in json)) isValid = false;
-    else if (json.data_type !== "fs_pointset") isValid = false;
-    if (!("points" in json)) isValid = false;
+  static convertFreeSurferConnectome(json, colormap = 'warm') {
+    let isValid = true
+    if (!('data_type' in json)) isValid = false
+    else if (json.data_type !== 'fs_pointset') isValid = false
+    if (!('points' in json)) isValid = false
     if (!isValid) {
-      throw Error("not a valid FreeSurfer json pointset");
+      throw Error('not a valid FreeSurfer json pointset')
     }
 
     const nodes = json.points.map((p) => ({
-      name:
-        Array.isArray(p.comments) &&
-        p.comments.length > 0 &&
-        "text" in p.comments[0]
-          ? p.comments[0].text
-          : "",
+      name: Array.isArray(p.comments) && p.comments.length > 0 && 'text' in p.comments[0] ? p.comments[0].text : '',
       x: p.coordinates.x,
       y: p.coordinates.y,
       z: p.coordinates.z,
       colorValue: 1,
       sizeValue: 1,
-      metadata: p.comments,
-    }));
+      metadata: p.comments
+    }))
     const connectome = {
       ...defaultOptions,
       nodeColormap: colormap,
       edgeColormap: colormap,
       nodes,
-      edges: [],
-    };
-    return connectome;
+      edges: []
+    }
+    return connectome
   }
 
   updateLabels() {
-    const nodes = this.nodes;
+    const nodes = this.nodes
     if (nodes.length > 0) {
       // largest node
-      const largest = nodes.reduce((a, b) =>
-        a.sizeValue > b.sizeValue ? a : b
-      ).sizeValue;
+      const largest = nodes.reduce((a, b) => (a.sizeValue > b.sizeValue ? a : b)).sizeValue
       const min = this.nodeMinColor
         ? this.nodeMinColor
-        : nodes.reduce((a, b) => (a.colorValue < b.colorValue ? a : b))
-            .colorValue;
+        : nodes.reduce((a, b) => (a.colorValue < b.colorValue ? a : b)).colorValue
       const max = this.nodeMaxColor
         ? this.nodeMaxColor
-        : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b))
-            .colorValue;
-      let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
-      let lutNeg = cmapper.colormap(
-        this.nodeColormapNegative,
-        this.colormapInvert
-      );
+        : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b)).colorValue
+      const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
+      const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
 
-      const hasNeg = "nodeColormapNegative" in this;
-      const legendLineThickness = this.legendLineThickness
-        ? this.legendLineThickness
-        : 0.0;
+      const hasNeg = 'nodeColormapNegative' in this
+      const legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0.0
 
       for (let i = 0; i < nodes.length; i++) {
-        let color = nodes[i].colorValue;
-        let isNeg = false;
+        let color = nodes[i].colorValue
+        let isNeg = false
         if (hasNeg && color < 0) {
-          isNeg = true;
-          color = -color;
+          isNeg = true
+          color = -color
         }
 
         if (min < max) {
           if (color < min) {
-            console.log("color value lower than min");
-            continue;
+            console.log('color value lower than min')
+            continue
           }
-          color = (color - min) / (max - min);
-        } else color = 1.0;
+          color = (color - min) / (max - min)
+        } else color = 1.0
 
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
         if (isNeg) {
-          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
         }
-        rgba = rgba.map((c) => c / 255);
-        console.log("adding label for ", nodes[i]);
+        rgba = rgba.map((c) => c / 255)
+        console.log('adding label for ', nodes[i])
         nodes[i].label = new NVLabel3D(
           nodes[i].name,
           {
@@ -209,90 +194,76 @@ export class NVConnectome extends NVMesh {
             lineWidth: legendLineThickness,
             lineColor: rgba,
             textScale: 1.0,
-            textAlignment: LabelTextAlignment.LEFT,
+            textAlignment: LabelTextAlignment.LEFT
           },
           [nodes[i].x, nodes[i].y, nodes[i].z]
-        );
-        console.log("label for node:", nodes[i].label);
+        )
+        console.log('label for node:', nodes[i].label)
       }
     }
   }
 
   addConnectomeNode(node) {
-    console.log("adding node", node);
-    this.nodes.push(node);
-    this.updateLabels();
-    this.nodesChanged.dispatchEvent(
-      new CustomEvent("nodeAdded", { detail: { node } })
-    );
+    console.log('adding node', node)
+    this.nodes.push(node)
+    this.updateLabels()
+    this.nodesChanged.dispatchEvent(new CustomEvent('nodeAdded', { detail: { node } }))
   }
 
   deleteConnectomeNode(node) {
     // delete any connected edges
-    const index = this.nodes.indexOf(node);
-    this.edges = this.edges.filter(
-      (e) => e.first != index && e.second != index
-    );
-    this.nodes = this.nodes.filter((n) => n != node);
+    const index = this.nodes.indexOf(node)
+    this.edges = this.edges.filter((e) => e.first !== index && e.second !== index)
+    this.nodes = this.nodes.filter((n) => n !== node)
 
-    this.updateLabels();
-    this.updateConnectome(this.gl);
-    this.nodesChanged.dispatchEvent(
-      new CustomEvent("nodeDeleted", { detail: { node } })
-    );
+    this.updateLabels()
+    this.updateConnectome(this.gl)
+    this.nodesChanged.dispatchEvent(new CustomEvent('nodeDeleted', { detail: { node } }))
   }
 
   updateConnectomeNodeByIndex(index, updatedNode) {
-    this.nodes[index] = updatedNode;
-    this.updateLabels();
-    this.updateConnectome(this.gl);
-    this.nodesChanged.dispatchEvent(
-      new CustomEvent("nodeChanged", { detail: { node: updatedNode } })
-    );
+    this.nodes[index] = updatedNode
+    this.updateLabels()
+    this.updateConnectome(this.gl)
+    this.nodesChanged.dispatchEvent(new CustomEvent('nodeChanged', { detail: { node: updatedNode } }))
   }
 
   updateConnectomeNodeByPoint(point, updatedNode) {
     if (!this.connectome.nodes) {
-      throw new Error("Node to update does not exist");
+      throw new Error('Node to update does not exist')
     }
-    const node = this.connectome.nodes.find((node) =>
-      NVUtilities.arraysAreEqual([node.x, node.y, node.z], point)
-    );
+    const node = this.connectome.nodes.find((node) => NVUtilities.arraysAreEqual([node.x, node.y, node.z], point))
     if (!node) {
-      throw new Error(`Node with point ${point} to update does not exist`);
+      throw new Error(`Node with point ${point} to update does not exist`)
     }
-    const index = this.connectome.nodes.findIndex((n) => n === node);
-    this.updateConnectomeNodeByIndex(index, updatedNode);
+    const index = this.connectome.nodes.findIndex((n) => n === node)
+    this.updateConnectomeNodeByIndex(index, updatedNode)
   }
 
   addConnectomeEdge(first, second, colorValue) {
     let edge = this.edges.find(
-      (f) =>
-        (f.first === first || f.second === first) &&
-        f.first + f.second === first + second
-    );
+      (f) => (f.first === first || f.second === first) && f.first + f.second === first + second
+    )
     if (edge) {
-      return edge;
+      return edge
     }
-    edge = { first, second, colorValue };
-    this.edges.push(edge);
-    this.updateConnectome(this.gl);
-    return edge;
+    edge = { first, second, colorValue }
+    this.edges.push(edge)
+    this.updateConnectome(this.gl)
+    return edge
   }
 
   deleteConnectomeEdge(first, second) {
-    let edge = this.edges.find(
-      (f) =>
-        (f.first === first || f.first === second) &&
-        f.first + f.second === first + second
-    );
+    const edge = this.edges.find(
+      (f) => (f.first === first || f.first === second) && f.first + f.second === first + second
+    )
     if (edge) {
-      this.edges = this.edges.filter((e) => e != edge);
+      this.edges = this.edges.filter((e) => e !== edge)
     } else {
-      throw new Error(`edge between ${first} and ${second} not found`);
+      throw new Error(`edge between ${first} and ${second} not found`)
     }
-    this.updateConnectome(this.gl);
-    return edge;
+    this.updateConnectome(this.gl)
+    return edge
   }
 
   /**
@@ -302,141 +273,108 @@ export class NVConnectome extends NVMesh {
    * @returns {NVConnectomeNode|null}
    */
   findClosestConnectomeNode(point, distance) {
-    if (!this.nodes || this.nodes.length == 0) {
-      return null;
+    if (!this.nodes || this.nodes.length === 0) {
+      return null
     }
 
     let closeNodes = this.nodes.map((n, i) => ({
-      distance: Math.sqrt(
-        Math.pow(n.x - point[0], 2) +
-          Math.pow(n.y - point[1], 2) +
-          Math.pow(n.z - point[2], 2)
-      ),
-      index: i,
-    }));
+      distance: Math.sqrt(Math.pow(n.x - point[0], 2) + Math.pow(n.y - point[1], 2) + Math.pow(n.z - point[2], 2)),
+      index: i
+    }))
 
-    closeNodes = closeNodes.filter((n) => n.distance < distance);
+    closeNodes = closeNodes.filter((n) => n.distance < distance)
     if (closeNodes) {
-      closeNodes.sort((a, b) => a.distance - b.distance);
+      closeNodes.sort((a, b) => a.distance - b.distance)
     } else {
-      return null;
+      return null
     }
 
-    return this.nodes[closeNodes[0].index];
+    return this.nodes[closeNodes[0].index]
   }
 
   updateConnectome(gl) {
-    let tris = [];
-    let pts = [];
-    let rgba255 = [];
-    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
-    let lutNeg = cmapper.colormap(
-      this.nodeColormapNegative,
-      this.colormapInvert
-    );
-    let hasNeg = "nodeColormapNegative" in this;
-    let min = this.nodeMinColor;
-    let max = this.nodeMaxColor;
-    const nNode = this.nodes.length;
+    const tris = []
+    const pts = []
+    const rgba255 = []
+    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
+    let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
+    let hasNeg = 'nodeColormapNegative' in this
+    let min = this.nodeMinColor
+    let max = this.nodeMaxColor
+    const nNode = this.nodes.length
     for (let i = 0; i < nNode; i++) {
-      let radius = this.nodes[i].sizeValue * this.nodeScale;
-      if (radius <= 0.0) continue;
-      let color = this.nodes[i].colorValue;
-      let isNeg = false;
+      const radius = this.nodes[i].sizeValue * this.nodeScale
+      if (radius <= 0.0) continue
+      let color = this.nodes[i].colorValue
+      let isNeg = false
       if (hasNeg && color < 0) {
-        isNeg = true;
-        color = -color;
+        isNeg = true
+        color = -color
       }
       if (min < max) {
-        if (color < min) continue;
-        color = (color - min) / (max - min);
-      } else color = 1.0;
-      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-      if (isNeg)
-        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-      let pt = [this.nodes[i].x, this.nodes[i].y, this.nodes[i].z];
+        if (color < min) continue
+        color = (color - min) / (max - min)
+      } else color = 1.0
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
+      if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      const pt = [this.nodes[i].x, this.nodes[i].y, this.nodes[i].z]
 
-      NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
+      NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
     }
 
-    lut = cmapper.colormap(this.edgeColormap, this.colormapInvert);
-    lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert);
-    hasNeg = "edgeColormapNegative" in this;
-    min = this.edgeMin;
-    max = this.edgeMax;
+    lut = cmapper.colormap(this.edgeColormap, this.colormapInvert)
+    lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert)
+    hasNeg = 'edgeColormapNegative' in this
+    min = this.edgeMin
+    max = this.edgeMax
     for (const edge of this.edges) {
-      let color = edge.colorValue;
-      let isNeg = hasNeg && color < 0;
+      let color = edge.colorValue
+      const isNeg = hasNeg && color < 0
       if (isNeg) {
-        color = -color;
+        color = -color
       }
-      let radius = color * this.edgeScale;
-      if (radius <= 0) continue;
+      const radius = color * this.edgeScale
+      if (radius <= 0) continue
       if (min < max) {
-        if (color < min) continue;
-        color = (color - min) / (max - min);
-      } else color = 1.0;
-      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4;
-      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-      if (isNeg)
-        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-      let pti = [
-        this.nodes[edge.first].x,
-        this.nodes[edge.first].y,
-        this.nodes[edge.first].z,
-      ];
-      let ptj = [
-        this.nodes[edge.second].x,
-        this.nodes[edge.second].y,
-        this.nodes[edge.second].z,
-      ];
-      NiivueObject3D.makeColoredCylinder(
-        pts,
-        tris,
-        rgba255,
-        pti,
-        ptj,
-        radius,
-        rgba
-      );
+        if (color < min) continue
+        color = (color - min) / (max - min)
+      } else color = 1.0
+      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
+      if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      const pti = [this.nodes[edge.first].x, this.nodes[edge.first].y, this.nodes[edge.first].z]
+      const ptj = [this.nodes[edge.second].x, this.nodes[edge.second].y, this.nodes[edge.second].z]
+      NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
     }
 
-    //calculate spatial extent of connectome: user adjusting node sizes may influence size
-    let obj = NVMeshUtilities.getExtents(pts);
+    // calculate spatial extent of connectome: user adjusting node sizes may influence size
+    const obj = NVMeshUtilities.getExtents(pts)
 
-    this.furthestVertexFromOrigin = obj.mxDx;
-    this.extentsMin = obj.extentsMin;
-    this.extentsMax = obj.extentsMax;
-    let posNormClr = this.generatePosNormClr(pts, tris, rgba255);
-    //generate webGL buffers and vao
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(
-      gl.ELEMENT_ARRAY_BUFFER,
-      new Int32Array(tris),
-      gl.STATIC_DRAW
-    );
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array(posNormClr),
-      gl.STATIC_DRAW
-    );
-    this.indexCount = tris.length;
+    this.furthestVertexFromOrigin = obj.mxDx
+    this.extentsMin = obj.extentsMin
+    this.extentsMax = obj.extentsMax
+    const posNormClr = this.generatePosNormClr(pts, tris, rgba255)
+    // generate webGL buffers and vao
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
+    this.indexCount = tris.length
   }
 
   updateMesh(gl) {
-    this.updateConnectome(gl);
+    this.updateConnectome(gl)
   }
 
   json() {
-    const json = {};
+    const json = {}
     for (const prop in this) {
-      if (prop in defaultOptions || prop === "nodes" || prop === "edges") {
-        json[prop] = this[prop];
+      if (prop in defaultOptions || prop === 'nodes' || prop === 'edges') {
+        json[prop] = this[prop]
       }
     }
-    return json;
+    return json
   }
 
   /**
@@ -447,8 +385,8 @@ export class NVConnectome extends NVMesh {
    * @returns {NVConnectome}
    */
   static async loadConnectomeFromUrl(gl, url) {
-    const response = await fetch(url);
-    const json = await response.json();
-    return new NVConnectome(gl, json);
+    const response = await fetch(url)
+    const json = await response.json()
+    return new NVConnectome(gl, json)
   }
 }

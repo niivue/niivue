@@ -1,4 +1,4 @@
-import * as fflate from "fflate";
+import * as fflate from 'fflate'
 
 /**
  * Namespace for utility functions
@@ -13,115 +13,114 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
   static arrayBufferToBase64(arrayBuffer) {
-    var bytes = new Uint8Array(arrayBuffer);
-    return NVUtilities.uint8tob64(bytes);
+    const bytes = new Uint8Array(arrayBuffer)
+    return NVUtilities.uint8tob64(bytes)
   }
 
   static uint8tob64(bytes) {
-    var base64 = "";
-    var encodings =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    var byteLength = bytes.byteLength;
-    var byteRemainder = byteLength % 3;
-    var mainLength = byteLength - byteRemainder;
+    let base64 = ''
+    const encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    const byteLength = bytes.byteLength
+    const byteRemainder = byteLength % 3
+    const mainLength = byteLength - byteRemainder
 
-    var a, b, c, d;
-    var chunk;
+    let a, b, c, d
+    let chunk
 
     // Main loop deals with bytes in chunks of 3
-    for (var i = 0; i < mainLength; i = i + 3) {
+    for (let i = 0; i < mainLength; i = i + 3) {
       // Combine the three bytes into a single integer
-      chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+      chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2]
 
       // Use bitmasks to extract 6-bit segments from the triplet
-      a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
-      b = (chunk & 258048) >> 12; // 258048   = (2^6 - 1) << 12
-      c = (chunk & 4032) >> 6; // 4032     = (2^6 - 1) << 6
-      d = chunk & 63; // 63       = 2^6 - 1
+      a = (chunk & 16515072) >> 18 // 16515072 = (2^6 - 1) << 18
+      b = (chunk & 258048) >> 12 // 258048   = (2^6 - 1) << 12
+      c = (chunk & 4032) >> 6 // 4032     = (2^6 - 1) << 6
+      d = chunk & 63 // 63       = 2^6 - 1
 
       // Convert the raw binary segments to the appropriate ASCII encoding
-      base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+      base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d]
     }
 
     // Deal with the remaining bytes and padding
-    if (byteRemainder == 1) {
-      chunk = bytes[mainLength];
+    if (byteRemainder === 1) {
+      chunk = bytes[mainLength]
 
-      a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
+      a = (chunk & 252) >> 2 // 252 = (2^6 - 1) << 2
 
       // Set the 4 least significant bits to zero
-      b = (chunk & 3) << 4; // 3   = 2^2 - 1
+      b = (chunk & 3) << 4 // 3   = 2^2 - 1
 
-      base64 += encodings[a] + encodings[b] + "==";
-    } else if (byteRemainder == 2) {
-      chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+      base64 += encodings[a] + encodings[b] + '=='
+    } else if (byteRemainder === 2) {
+      chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1]
 
-      a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
-      b = (chunk & 1008) >> 4; // 1008  = (2^6 - 1) << 4
+      a = (chunk & 64512) >> 10 // 64512 = (2^6 - 1) << 10
+      b = (chunk & 1008) >> 4 // 1008  = (2^6 - 1) << 4
 
       // Set the 2 least significant bits to zero
-      c = (chunk & 15) << 2; // 15    = 2^4 - 1
+      c = (chunk & 15) << 2 // 15    = 2^4 - 1
 
-      base64 += encodings[a] + encodings[b] + encodings[c] + "=";
+      base64 += encodings[a] + encodings[b] + encodings[c] + '='
     }
 
-    return base64;
+    return base64
   }
 
   // https://stackoverflow.com/questions/34156282/how-do-i-save-json-to-local-text-file
   static download(content, fileName, contentType) {
-    var a = document.createElement("a");
-    var file = new Blob([content], { type: contentType });
-    a.href = URL.createObjectURL(file);
-    a.download = fileName;
-    a.click();
+    const a = document.createElement('a')
+    const file = new Blob([content], { type: contentType })
+    a.href = URL.createObjectURL(file)
+    a.download = fileName
+    a.click()
   }
 
   static readFileAsync(file) {
     return new Promise((resolve, reject) => {
-      let reader = new FileReader();
+      const reader = new FileReader()
       reader.onload = () => {
-        resolve(reader.result);
-      };
+        resolve(reader.result)
+      }
 
-      reader.onerror = reject;
+      reader.onerror = reject
 
-      reader.readAsArrayBuffer(file);
-    });
+      reader.readAsArrayBuffer(file)
+    })
   }
 
   static blobToBase64(blob) {
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    })
   }
 
   static decompressBase64String(base64) {
-    let compressed = atob(base64);
+    const compressed = atob(base64)
     // convert to an array buffer
-    let compressedBuffer = new ArrayBuffer(compressed.length);
-    let compressedView = new Uint8Array(compressedBuffer);
+    const compressedBuffer = new ArrayBuffer(compressed.length)
+    const compressedView = new Uint8Array(compressedBuffer)
     for (let i = 0; i < compressed.length; i++) {
-      compressedView[i] = compressed.charCodeAt(i);
+      compressedView[i] = compressed.charCodeAt(i)
     }
     // decompress the array buffer
-    let decompressedBuffer = fflate.decompressSync(compressedView);
+    const decompressedBuffer = fflate.decompressSync(compressedView)
     // convert the array buffer to a string
-    let decompressed = new TextDecoder("utf-8").decode(decompressedBuffer);
+    const decompressed = new TextDecoder('utf-8').decode(decompressedBuffer)
     // console.log(decompressed);
-    return decompressed;
+    return decompressed
   }
 
   static compressToBase64String(string) {
-    const buf = fflate.strToU8(string, { level: 6, mem: 4 });
-    const compressed = fflate.compressSync(buf);
-    const base64 = NVUtilities.uint8tob64(compressed);
-    return base64;
+    const buf = fflate.strToU8(string, { level: 6, mem: 4 })
+    const compressed = fflate.compressSync(buf)
+    const base64 = NVUtilities.uint8tob64(compressed)
+    return base64
   }
 
   static arraysAreEqual(a, b) {
-    return JSON.stringify(a) === JSON.stringify(b);
+    return JSON.stringify(a) === JSON.stringify(b)
   }
 }

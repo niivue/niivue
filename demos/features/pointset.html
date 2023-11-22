@@ -90,7 +90,7 @@
         console.log("Selected point name: " + name);
         //nb prefilled property unique to FreeSurfer: does not exist for jcon format
         // therefore, check to ensure this property exists
-        if (nodes.hasOwnProperty("prefilled"))
+        if (nodes.hasOwn("prefilled"))
           console.log("Selected point prefilled: " + nodes.prefilled[num]);
         nv1.scene.crosshairPos = nv1.mm2frac(XYZ);
         nv1.updateGLVolume();

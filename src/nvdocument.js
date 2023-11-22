@@ -1,9 +1,9 @@
-import { NVUtilities } from "./nvutilities";
+import { serialize, deserialize } from '@ungap/structured-clone'
+import { NVUtilities } from './nvutilities'
 // Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
 // eslint-disable-next-line no-unused-vars
-import { NVImageFromUrlOptions, NVIMAGE_TYPE } from "./nvimage";
-import { serialize, deserialize } from "@ungap/structured-clone";
-import { MeshType } from "./nvmesh";
+import { NVImageFromUrlOptions, NVIMAGE_TYPE } from './nvimage'
+import { MeshType } from './nvmesh'
 
 // import { NVLabel3D } from "./nvlabel";
 /**
@@ -16,8 +16,8 @@ export const SLICE_TYPE = Object.freeze({
   CORONAL: 1,
   SAGITTAL: 2,
   MULTIPLANAR: 3,
-  RENDER: 4,
-});
+  RENDER: 4
+})
 
 /**
  * Multi-planar layout
@@ -28,8 +28,8 @@ export const MULTIPLANAR_TYPE = Object.freeze({
   AUTO: 0,
   COLUMN: 1,
   GRID: 2,
-  ROW: 3,
-});
+  ROW: 3
+})
 
 /**
  * @enum
@@ -41,8 +41,8 @@ export const DRAG_MODE = Object.freeze({
   measurement: 2,
   pan: 3,
   slicer3D: 4,
-  callbackOnly: 5,
-});
+  callbackOnly: 5
+})
 
 /**
  * @typedef {Object} NVConfigOptions
@@ -106,13 +106,13 @@ export const DEFAULT_OPTIONS = {
   rulerColor: [1, 0, 0, 0.8],
   colorbarMargin: 0.05, // x axis margin around color bar, clip space coordinates
   trustCalMinMax: true, // trustCalMinMax: if true do not calculate cal_min or cal_max if set in image header. If false, always calculate display intensity range.
-  clipPlaneHotKey: "KeyC", // keyboard short cut to activate the clip plane
-  viewModeHotKey: "KeyV", // keyboard shortcut to switch view modes
+  clipPlaneHotKey: 'KeyC', // keyboard short cut to activate the clip plane
+  viewModeHotKey: 'KeyV', // keyboard shortcut to switch view modes
   doubleTouchTimeout: 500,
   longTouchTimeout: 1000,
   keyDebounceTime: 50, // default debounce time used in keyup listeners
   isNearestInterpolation: false,
-  isResizeCanvas: true, //Allow canvas width ahd height to resize (false for fixed size)
+  isResizeCanvas: true, // Allow canvas width ahd height to resize (false for fixed size)
   isAtlasOutline: false,
   isRuler: false,
   isColorbar: false,
@@ -124,17 +124,17 @@ export const DEFAULT_OPTIONS = {
   dragMode: DRAG_MODE.contrast,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
-  sagittalNoseLeft: false, //sagittal slices can have Y+ going left or right
+  sagittalNoseLeft: false, // sagittal slices can have Y+ going left or right
   isSliceMM: false,
   isHighResolutionCapable: true,
   logging: false,
-  loadingText: "waiting for images...",
+  loadingText: 'waiting for images...',
   dragAndDropEnabled: true,
   drawingEnabled: false, // drawing disabled by default
   penValue: 1, // sets drawing color. see "drawPt"
-  floodFillNeighbors: 6, //does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors
+  floodFillNeighbors: 6, // does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors
   isFilledPen: false,
-  thumbnail: "",
+  thumbnail: '',
   maxDrawUndoBitmaps: 8,
   sliceType: SLICE_TYPE.MULTIPLANAR,
   meshXRay: 0.0,
@@ -145,8 +145,8 @@ export const DEFAULT_OPTIONS = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
-  renderOverlayBlend: 1.0,
-};
+  renderOverlayBlend: 1.0
+}
 
 /**
  * @typedef NVLabel3D
@@ -159,24 +159,24 @@ export const DEFAULT_OPTIONS = {
  * @property {number[]} point
  */
 
-/**Creates and instance of NVDocument
+/** Creates and instance of NVDocument
  * @class NVDocument
  * @type NVDocument
  * @constructor
  */
 export class NVDocument {
   constructor() {
-    this.data = {};
-    this.data.title = "Untitled document";
-    this.data.imageOptionsArray = [];
-    this.data.meshOptionsArray = [];
-    this.data.opts = { ...DEFAULT_OPTIONS };
-    this.data.previewImageDataURL = "";
+    this.data = {}
+    this.data.title = 'Untitled document'
+    this.data.imageOptionsArray = []
+    this.data.meshOptionsArray = []
+    this.data.opts = { ...DEFAULT_OPTIONS }
+    this.data.previewImageDataURL = ''
 
     /**
      * @type {NVLabel3D[]}
      */
-    this.data.labels = [];
+    this.data.labels = []
 
     /**
      * @typedef {Object} NVSceneData
@@ -197,7 +197,7 @@ export class NVDocument {
         clipPlane: [0, 0, 0, 0],
         clipPlaneDepthAziElev: [2, 0, 0],
         volScaleMultiplier: 1.0,
-        pan2Dxyzmm: [0, 0, 0, 1],
+        pan2Dxyzmm: [0, 0, 0, 1]
       },
 
       /**
@@ -205,18 +205,15 @@ export class NVDocument {
        * @returns {number}
        */
       get renderAzimuth() {
-        return this.sceneData.azimuth;
+        return this.sceneData.azimuth
       },
       /**
        * @param {number} azimuth
        */
       set renderAzimuth(azimuth) {
-        this.sceneData.azimuth = azimuth;
+        this.sceneData.azimuth = azimuth
         if (this.onAzimuthElevationChange) {
-          this.onAzimuthElevationChange(
-            this.sceneData.azimuth,
-            this.sceneData.elevation
-          );
+          this.onAzimuthElevationChange(this.sceneData.azimuth, this.sceneData.elevation)
         }
       },
       /**
@@ -224,19 +221,16 @@ export class NVDocument {
        * @returns {number}
        */
       get renderElevation() {
-        return this.sceneData.elevation;
+        return this.sceneData.elevation
       },
 
       /**
        * @param {number} elevation
        */
       set renderElevation(elevation) {
-        this.sceneData.elevation = elevation;
+        this.sceneData.elevation = elevation
         if (this.onAzimuthElevationChange) {
-          this.onAzimuthElevationChange(
-            this.sceneData.azimuth,
-            this.sceneData.elevation
-          );
+          this.onAzimuthElevationChange(this.sceneData.azimuth, this.sceneData.elevation)
         }
       },
 
@@ -245,7 +239,7 @@ export class NVDocument {
        * @returns {number}
        */
       get volScaleMultiplier() {
-        return this.sceneData.volScaleMultiplier;
+        return this.sceneData.volScaleMultiplier
       },
 
       /**
@@ -253,8 +247,8 @@ export class NVDocument {
        * @param {number} scale
        */
       set volScaleMultiplier(scale) {
-        this.sceneData.volScaleMultiplier = scale;
-        this.onZoom3DChange(scale);
+        this.sceneData.volScaleMultiplier = scale
+        this.onZoom3DChange(scale)
       },
 
       /**
@@ -262,7 +256,7 @@ export class NVDocument {
        * @returns {number[]}
        */
       get crosshairPos() {
-        return this.sceneData.crosshairPos;
+        return this.sceneData.crosshairPos
       },
 
       /**
@@ -270,7 +264,7 @@ export class NVDocument {
        * @param {number[]} crosshairPos
        */
       set crosshairPos(crosshairPos) {
-        this.sceneData.crosshairPos = crosshairPos;
+        this.sceneData.crosshairPos = crosshairPos
       },
 
       /**
@@ -278,7 +272,7 @@ export class NVDocument {
        * @returns {number[]}
        */
       get clipPlane() {
-        return this.sceneData.clipPlane;
+        return this.sceneData.clipPlane
       },
 
       /**
@@ -286,7 +280,7 @@ export class NVDocument {
        * @param {number[]} clipPlane
        */
       set clipPlane(clipPlane) {
-        this.sceneData.clipPlane = clipPlane;
+        this.sceneData.clipPlane = clipPlane
       },
 
       /**
@@ -294,7 +288,7 @@ export class NVDocument {
        * @returns {number[]}
        */
       get clipPlaneDepthAziElev() {
-        return this.sceneData.clipPlaneDepthAziElev;
+        return this.sceneData.clipPlaneDepthAziElev
       },
 
       /**
@@ -302,28 +296,28 @@ export class NVDocument {
        * @param {number[]} clipPlaneDepthAziElev
        */
       set clipPlaneDepthAziElev(clipPlaneDepthAziElev) {
-        this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev;
+        this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev
       },
 
       /**
        * Gets current 2D pan in 3D mm
        */
       get pan2Dxyzmm() {
-        return this.sceneData.pan2Dxyzmm;
+        return this.sceneData.pan2Dxyzmm
       },
 
       /**
        * Sets current 2D pan in 3D mm
        */
       set pan2Dxyzmm(pan2Dxyzmm) {
-        this.sceneData.pan2Dxyzmm = pan2Dxyzmm;
-      },
-    };
-    this.volumes = [];
-    this.meshes = [];
-    this.drawBitmap = null;
-    this.imageOptionsMap = new Map();
-    this.meshOptionsMap = new Map();
+        this.sceneData.pan2Dxyzmm = pan2Dxyzmm
+      }
+    }
+    this.volumes = []
+    this.meshes = []
+    this.drawBitmap = null
+    this.imageOptionsMap = new Map()
+    this.meshOptionsMap = new Map()
   }
 
   /**
@@ -331,7 +325,7 @@ export class NVDocument {
    * @returns {string}
    */
   get title() {
-    return this.data.title;
+    return this.data.title
   }
 
   /**
@@ -339,7 +333,7 @@ export class NVDocument {
    * @returns {string} dataURL of preview image
    */
   get previewImageDataURL() {
-    return this.data.previewImageDataURL;
+    return this.data.previewImageDataURL
   }
 
   /**
@@ -347,21 +341,21 @@ export class NVDocument {
    * @param {string} dataURL encoded preview image
    */
   set previewImageDataURL(dataURL) {
-    this.data.previewImageDataURL = dataURL;
+    this.data.previewImageDataURL = dataURL
   }
 
   /**
    * @param {string} title title of document
    */
   set title(title) {
-    this.data.title = title;
+    this.data.title = title
   }
 
   /**
    * @returns {NVImageFromUrlOptions[]}
    */
   get imageOptionsArray() {
-    return this.data.imageOptionsArray;
+    return this.data.imageOptionsArray
   }
 
   /**
@@ -369,7 +363,7 @@ export class NVDocument {
    * @returns {string[]}
    */
   get encodedImageBlobs() {
-    return this.data.encodedImageBlobs;
+    return this.data.encodedImageBlobs
   }
 
   /**
@@ -377,7 +371,7 @@ export class NVDocument {
    * @returns {string[]}
    */
   get encodedDrawingBlob() {
-    return this.data.encodedDrawingBlob;
+    return this.data.encodedDrawingBlob
   }
 
   /**
@@ -385,14 +379,14 @@ export class NVDocument {
    * @returns {Object}
    */
   get opts() {
-    return this.data.opts;
+    return this.data.opts
   }
 
   /**
    * Sets the options of the {@link Niivue} instance
    */
   set opts(opts) {
-    this.data.opts = { ...opts };
+    this.data.opts = { ...opts }
   }
 
   /**
@@ -400,7 +394,7 @@ export class NVDocument {
    * @returns {NVLabel3D}
    */
   get labels() {
-    return this.data.labels;
+    return this.data.labels
   }
 
   /**
@@ -408,7 +402,7 @@ export class NVDocument {
    * @param {NVLabel3D[]} labels
    */
   set labels(labels) {
-    this.data.labels = labels;
+    this.data.labels = labels
   }
 
   /**
@@ -417,7 +411,7 @@ export class NVDocument {
    * @returns {boolean}
    */
   hasImage(image) {
-    return this.volumes.find((i) => i.id === image.id);
+    return this.volumes.find((i) => i.id === image.id)
   }
 
   /**
@@ -426,7 +420,7 @@ export class NVDocument {
    * @returns {boolean}
    */
   hasImageFromUrl(url) {
-    return this.data.imageOptionsArray.find((i) => i.url === url);
+    return this.data.imageOptionsArray.find((i) => i.url === url)
   }
 
   /**
@@ -438,29 +432,29 @@ export class NVDocument {
     if (!this.hasImage(image)) {
       if (!imageOptions.name) {
         if (imageOptions.url) {
-          let absoluteUrlRE = new RegExp("^(?:[a-z+]+:)?//", "i");
-          let url = absoluteUrlRE.test(imageOptions.url)
+          const absoluteUrlRE = /^(?:[a-z+]+:)?\/\//i
+          const url = absoluteUrlRE.test(imageOptions.url)
             ? new URL(imageOptions.url)
-            : new URL(imageOptions.url, window.location.href);
+            : new URL(imageOptions.url, window.location.href)
 
-          imageOptions.name = url.pathname.split("/").pop();
-          if (imageOptions.name.toLowerCase().endsWith(".gz")) {
-            imageOptions.name = imageOptions.name.slice(0, -3);
+          imageOptions.name = url.pathname.split('/').pop()
+          if (imageOptions.name.toLowerCase().endsWith('.gz')) {
+            imageOptions.name = imageOptions.name.slice(0, -3)
           }
 
-          if (!imageOptions.name.toLowerCase().endsWith(".nii")) {
-            imageOptions.name += ".nii";
+          if (!imageOptions.name.toLowerCase().endsWith('.nii')) {
+            imageOptions.name += '.nii'
           }
         } else {
-          imageOptions.name = "untitled.nii";
+          imageOptions.name = 'untitled.nii'
         }
       }
     }
 
-    imageOptions.imageType = NVIMAGE_TYPE.NII;
+    imageOptions.imageType = NVIMAGE_TYPE.NII
 
-    this.data.imageOptionsArray.push(imageOptions);
-    this.imageOptionsMap.set(image.id, this.data.imageOptionsArray.length - 1);
+    this.data.imageOptionsArray.push(imageOptions)
+    this.imageOptionsMap.set(image.id, this.data.imageOptionsArray.length - 1)
   }
 
   /**
@@ -469,13 +463,13 @@ export class NVDocument {
    */
   removeImage(image) {
     if (this.imageOptionsMap.has(image.id)) {
-      let index = this.imageOptionsMap.get(image.id);
+      const index = this.imageOptionsMap.get(image.id)
       if (this.data.imageOptionsArray.length > index) {
-        this.data.imageOptionsArray.splice(index, 1);
+        this.data.imageOptionsArray.splice(index, 1)
       }
-      this.imageOptionsMap.delete(image.id);
+      this.imageOptionsMap.delete(image.id)
     }
-    this.volumes = this.volumes.filter((i) => i.id != image.id);
+    this.volumes = this.volumes.filter((i) => i.id !== image.id)
   }
 
   /**
@@ -484,9 +478,7 @@ export class NVDocument {
    * @returns {NVImageFromUrlOptions}
    */
   getImageOptions(image) {
-    return this.imageOptionsMap.has(image.id)
-      ? this.data.imageOptionsArray[this.imageOptionsMap.get(image.id)]
-      : null;
+    return this.imageOptionsMap.has(image.id) ? this.data.imageOptionsArray[this.imageOptionsMap.get(image.id)] : null
   }
 
   /**
@@ -506,32 +498,32 @@ export class NVDocument {
    * @returns {NVDocumentData}
    */
   json() {
-    let data = {};
-    data.encodedImageBlobs = [];
-    data.encodedDrawingBlob = null;
-    data.previewImageDataURL = this.data.previewImageDataURL;
-    data.imageOptionsMap = [];
-    let imageOptionsArray = [];
+    const data = {}
+    data.encodedImageBlobs = []
+    data.encodedDrawingBlob = null
+    data.previewImageDataURL = this.data.previewImageDataURL
+    data.imageOptionsMap = []
+    const imageOptionsArray = []
     // save our scene object
-    data.sceneData = { ...this.scene.sceneData };
+    data.sceneData = { ...this.scene.sceneData }
     // save our options
-    data.opts = { ...this.opts };
+    data.opts = { ...this.opts }
     // infinity is a symbol
     if (this.opts.meshThicknessOn2D === Infinity) {
-      data.opts.meshThicknessOn2D = "infinity";
+      data.opts.meshThicknessOn2D = 'infinity'
     }
 
     // save our labels
-    data.labels = [...this.data.labels];
+    data.labels = [...this.data.labels]
 
     // volumes
     if (this.volumes.length) {
-      let imageOptions = this.imageOptionsArray[0];
+      let imageOptions = this.imageOptionsArray[0]
       if (!imageOptions) {
-        console.log("no image options for base image");
+        console.log('no image options for base image')
         imageOptions = {
-          name: "",
-          colormap: "gray",
+          name: '',
+          colormap: 'gray',
           opacity: 1.0,
           pairedImgData: null,
           cal_min: NaN,
@@ -541,46 +533,42 @@ export class NVDocument {
           ignoreZeroVoxels: false,
           visible: true,
           useQFormNotSForm: false,
-          colormapNegative: "",
+          colormapNegative: '',
           colormapLabel: [],
           imageType: NVIMAGE_TYPE.NII,
           frame4D: 0,
-          limitFrames4D: NaN,
-        };
+          limitFrames4D: NaN
+        }
       }
 
       // update image options on current image settings
-      imageOptions.colormap = this.volumes[0].colormap;
-      imageOptions.opacity = this.volumes[0].opacity;
-      imageOptions.cal_max = this.volumes[0].cal_max;
-      imageOptions.cal_min = this.volumes[0].cal_min;
+      imageOptions.colormap = this.volumes[0].colormap
+      imageOptions.opacity = this.volumes[0].opacity
+      imageOptions.cal_max = this.volumes[0].cal_max
+      imageOptions.cal_min = this.volumes[0].cal_min
 
       if (imageOptions) {
-        imageOptionsArray.push(imageOptions);
-        let encodedImageBlob = NVUtilities.uint8tob64(
-          this.volumes[0].toUint8Array()
-        );
-        data.encodedImageBlobs.push(encodedImageBlob);
+        imageOptionsArray.push(imageOptions)
+        const encodedImageBlob = NVUtilities.uint8tob64(this.volumes[0].toUint8Array())
+        data.encodedImageBlobs.push(encodedImageBlob)
         if (this.drawBitmap) {
-          data.encodedDrawingBlob = NVUtilities.uint8tob64(
-            this.volumes[0].toUint8Array(this.drawBitmap)
-          );
+          data.encodedDrawingBlob = NVUtilities.uint8tob64(this.volumes[0].toUint8Array(this.drawBitmap))
         }
 
-        data.imageOptionsMap.push([this.volumes[0].id, 0]);
+        data.imageOptionsMap.push([this.volumes[0].id, 0])
       } else {
-        throw new Error("image options for base layer not found");
+        throw new Error('image options for base layer not found')
       }
 
       for (let i = 1; i < this.volumes.length; i++) {
-        const volume = this.volumes[i];
-        let imageOptions = this.getImageOptions(volume);
+        const volume = this.volumes[i]
+        let imageOptions = this.getImageOptions(volume)
 
         if (!imageOptions) {
-          console.log("no options found for image, using default");
+          console.log('no options found for image, using default')
           imageOptions = {
-            name: "",
-            colormap: "gray",
+            name: '',
+            colormap: 'gray',
             opacity: 1.0,
             pairedImgData: null,
             cal_min: NaN,
@@ -590,93 +578,92 @@ export class NVDocument {
             ignoreZeroVoxels: false,
             visible: true,
             useQFormNotSForm: false,
-            colormapNegative: "",
+            colormapNegative: '',
             colormapLabel: [],
             imageType: NVIMAGE_TYPE.NII,
             frame4D: 0,
-            limitFrames4D: NaN,
-          };
+            limitFrames4D: NaN
+          }
         } else {
-          if (!("imageType" in imageOptions)) {
-            imageOptions.imageType = NVIMAGE_TYPE.NII;
+          if (!('imageType' in imageOptions)) {
+            imageOptions.imageType = NVIMAGE_TYPE.NII
           }
         }
         // update image options on current image settings
-        imageOptions.colormap = volume.colormap;
-        imageOptions.opacity = volume.opacity;
-        imageOptions.cal_max = volume.cal_max;
-        imageOptions.cal_min = volume.cal_min;
+        imageOptions.colormap = volume.colormap
+        imageOptions.opacity = volume.opacity
+        imageOptions.cal_max = volume.cal_max
+        imageOptions.cal_min = volume.cal_min
 
-        imageOptionsArray.push(imageOptions);
+        imageOptionsArray.push(imageOptions)
 
-        let encodedImageBlob = NVUtilities.uint8tob64(volume.toUint8Array());
-        data.encodedImageBlobs.push(encodedImageBlob);
-        data.imageOptionsMap.push([volume.id, i]);
+        const encodedImageBlob = NVUtilities.uint8tob64(volume.toUint8Array())
+        data.encodedImageBlobs.push(encodedImageBlob)
+        data.imageOptionsMap.push([volume.id, i])
       }
     }
     // Add it even if it's empty
-    data.imageOptionsArray = [...imageOptionsArray];
+    data.imageOptionsArray = [...imageOptionsArray]
 
     // meshes
-    const meshes = [];
-    data.connectomes = [];
+    const meshes = []
+    data.connectomes = []
     for (const mesh of this.meshes) {
       if (mesh.type === MeshType.CONNECTOME) {
-        data.connectomes.push(JSON.stringify(mesh.json()));
-        continue;
+        data.connectomes.push(JSON.stringify(mesh.json()))
+        continue
       }
-      const copyMesh = {};
-      copyMesh.pts = mesh.pts;
-      copyMesh.tris = mesh.tris;
-      copyMesh.name = mesh.name;
-      copyMesh.rgba255 = mesh.rgba255;
-      copyMesh.opacity = mesh.opacity;
-      copyMesh.connectome = { ...mesh.connectome };
-      copyMesh.dpg = mesh.dpg;
-      copyMesh.dps = mesh.dps;
-      copyMesh.dpv = mesh.dpv;
-      copyMesh.meshShaderIndex = mesh.meshShaderIndex;
-      copyMesh.layers = [];
-      copyMesh.hasConnectome = mesh.hasConnectome;
-      copyMesh.edgeColormap = mesh.edgeColormap;
-      copyMesh.edgeColormapNegative = mesh.edgeColormapNegative;
-      copyMesh.edgeMax = mesh.edgeMax;
-      copyMesh.edgeMin = mesh.edgeMin;
-      copyMesh.edges =
-        mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [];
-      copyMesh.extentsMax = [...mesh.extentsMax];
-      copyMesh.extentsMin = [...mesh.extentsMin];
-      copyMesh.fiberGroupColormap = mesh.fiberGroupColormap;
-      copyMesh.furthestVertexFromOrigin = mesh.furthestVertexFromOrigin;
-      copyMesh.nodeColormap = mesh.nodeColormap;
-      copyMesh.nodeColormapNegative = mesh.nodeColormapNegative;
-      copyMesh.nodeMaxColor = mesh.nodeMaxColor;
-      copyMesh.nodeMinColor = mesh.nodeMinColor;
-      copyMesh.nodeScale = mesh.nodeScale;
-      copyMesh.offsetPt0 = mesh.offsetPt0;
-      copyMesh.nodes = { ...mesh.nodes };
+      const copyMesh = {}
+      copyMesh.pts = mesh.pts
+      copyMesh.tris = mesh.tris
+      copyMesh.name = mesh.name
+      copyMesh.rgba255 = mesh.rgba255
+      copyMesh.opacity = mesh.opacity
+      copyMesh.connectome = { ...mesh.connectome }
+      copyMesh.dpg = mesh.dpg
+      copyMesh.dps = mesh.dps
+      copyMesh.dpv = mesh.dpv
+      copyMesh.meshShaderIndex = mesh.meshShaderIndex
+      copyMesh.layers = []
+      copyMesh.hasConnectome = mesh.hasConnectome
+      copyMesh.edgeColormap = mesh.edgeColormap
+      copyMesh.edgeColormapNegative = mesh.edgeColormapNegative
+      copyMesh.edgeMax = mesh.edgeMax
+      copyMesh.edgeMin = mesh.edgeMin
+      copyMesh.edges = mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : []
+      copyMesh.extentsMax = [...mesh.extentsMax]
+      copyMesh.extentsMin = [...mesh.extentsMin]
+      copyMesh.fiberGroupColormap = mesh.fiberGroupColormap
+      copyMesh.furthestVertexFromOrigin = mesh.furthestVertexFromOrigin
+      copyMesh.nodeColormap = mesh.nodeColormap
+      copyMesh.nodeColormapNegative = mesh.nodeColormapNegative
+      copyMesh.nodeMaxColor = mesh.nodeMaxColor
+      copyMesh.nodeMinColor = mesh.nodeMinColor
+      copyMesh.nodeScale = mesh.nodeScale
+      copyMesh.offsetPt0 = mesh.offsetPt0
+      copyMesh.nodes = { ...mesh.nodes }
       for (const layer of mesh.layers) {
-        const copyLayer = {};
-        copyLayer.values = layer.values;
-        copyLayer.nFrame4D = layer.nFrame4D;
-        copyLayer.frame4D = 0;
-        copyLayer.isOutlineBorder = layer.isOutlineBorder;
-        copyLayer.global_min = layer.global_min;
-        copyLayer.global_max = layer.global_max;
-        copyLayer.cal_min = layer.cal_min;
-        copyLayer.cal_max = layer.cal_max;
-        copyLayer.opacity = layer.opacity;
-        copyLayer.colormap = layer.colormap;
-        copyLayer.colormapNegative = layer.colormapNegative;
-        copyLayer.colormapLabel = layer.colormapLabel;
-        copyLayer.useNegativeCmap = layer.useNegativeCmap;
-        copyMesh.layers.push(copyLayer);
+        const copyLayer = {}
+        copyLayer.values = layer.values
+        copyLayer.nFrame4D = layer.nFrame4D
+        copyLayer.frame4D = 0
+        copyLayer.isOutlineBorder = layer.isOutlineBorder
+        copyLayer.global_min = layer.global_min
+        copyLayer.global_max = layer.global_max
+        copyLayer.cal_min = layer.cal_min
+        copyLayer.cal_max = layer.cal_max
+        copyLayer.opacity = layer.opacity
+        copyLayer.colormap = layer.colormap
+        copyLayer.colormapNegative = layer.colormapNegative
+        copyLayer.colormapLabel = layer.colormapLabel
+        copyLayer.useNegativeCmap = layer.useNegativeCmap
+        copyMesh.layers.push(copyLayer)
       }
 
-      meshes.push(copyMesh);
+      meshes.push(copyMesh)
     }
-    data.meshesString = JSON.stringify(serialize(meshes));
-    return data;
+    data.meshesString = JSON.stringify(serialize(meshes))
+    return data
   }
 
   /**
@@ -684,8 +671,8 @@ export class NVDocument {
    * @param {string} fileName
    */
   download(fileName) {
-    let data = this.json();
-    NVUtilities.download(JSON.stringify(data), fileName, "application/json");
+    const data = this.json()
+    NVUtilities.download(JSON.stringify(data), fileName, 'application/json')
   }
 
   /**
@@ -694,10 +681,8 @@ export class NVDocument {
    */
   static deserializeMeshDataObjects(document) {
     if (document.data.meshesString) {
-      document.meshDataObjects = deserialize(
-        JSON.parse(document.data.meshesString)
-      );
-      delete document.data["meshesString"];
+      document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
+      delete document.data.meshesString
     }
   }
 
@@ -707,9 +692,9 @@ export class NVDocument {
    * @constructs NVDocument
    */
   static async loadFromUrl(url) {
-    let response = await fetch(url);
-    let data = await response.json();
-    return NVDocument.loadFromJSON(data);
+    const response = await fetch(url)
+    const data = await response.json()
+    return NVDocument.loadFromJSON(data)
   }
 
   /**
@@ -718,29 +703,29 @@ export class NVDocument {
    * @constructs NVDocument
    */
   static async loadFromFile(file) {
-    let arrayBuffer = await NVUtilities.readFileAsync(file);
-    let document = new NVDocument();
-    let utf8decoder = new TextDecoder();
-    let dataString = utf8decoder.decode(arrayBuffer);
-    document.data = JSON.parse(dataString);
-    document.scene.sceneData = document.data.sceneData;
-    delete document.data["sceneData"];
-    NVDocument.deserializeMeshDataObjects(document);
-    return document;
+    const arrayBuffer = await NVUtilities.readFileAsync(file)
+    const document = new NVDocument()
+    const utf8decoder = new TextDecoder()
+    const dataString = utf8decoder.decode(arrayBuffer)
+    document.data = JSON.parse(dataString)
+    document.scene.sceneData = document.data.sceneData
+    delete document.data.sceneData
+    NVDocument.deserializeMeshDataObjects(document)
+    return document
   }
 
   /**
    * Factory method to return an instance of NVDocument from JSON
    */
   static loadFromJSON(data) {
-    let document = new NVDocument();
-    document.data = data;
-    if (document.data.opts.meshThicknessOn2D === "infinity") {
-      document.data.opts.meshThicknessOn2D = Infinity;
+    const document = new NVDocument()
+    document.data = data
+    if (document.data.opts.meshThicknessOn2D === 'infinity') {
+      document.data.opts.meshThicknessOn2D = Infinity
     }
-    document.scene.sceneData = data.sceneData;
-    delete document.data["sceneData"];
-    NVDocument.deserializeMeshDataObjects(document);
-    return document;
+    document.scene.sceneData = data.sceneData
+    delete document.data.sceneData
+    NVDocument.deserializeMeshDataObjects(document)
+    return document
   }
 }

@@ -9,77 +9,77 @@
  * @param {string} fragmentSrc
  */
 export function Shader(gl, vertexSrc, fragmentSrc) {
-  var self = this;
-  this.program = compileShader(gl, vertexSrc, fragmentSrc);
+  const self = this
+  this.program = compileShader(gl, vertexSrc, fragmentSrc)
 
-  var regexUniform = /uniform[^;]+[ ](\w+);/g;
-  var matchUniformName = /uniform[^;]+[ ](\w+);/;
+  const regexUniform = /uniform[^;]+[ ](\w+);/g
+  const matchUniformName = /uniform[^;]+[ ](\w+);/
 
-  this.uniforms = {};
+  this.uniforms = {}
 
-  var vertexUnifs = vertexSrc.match(regexUniform);
-  var fragUnifs = fragmentSrc.match(regexUniform);
+  const vertexUnifs = vertexSrc.match(regexUniform)
+  const fragUnifs = fragmentSrc.match(regexUniform)
 
   if (vertexUnifs) {
     vertexUnifs.forEach(function (unif) {
-      var m = unif.match(matchUniformName);
-      self.uniforms[m[1]] = -1;
-    });
+      const m = unif.match(matchUniformName)
+      self.uniforms[m[1]] = -1
+    })
   }
   if (fragUnifs) {
     fragUnifs.forEach(function (unif) {
-      var m = unif.match(matchUniformName);
-      self.uniforms[m[1]] = -1;
-    });
+      const m = unif.match(matchUniformName)
+      self.uniforms[m[1]] = -1
+    })
   }
 
-  for (var unif in this.uniforms) {
-    this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
+  for (const unif in this.uniforms) {
+    this.uniforms[unif] = gl.getUniformLocation(this.program, unif)
   }
 }
 
 Shader.prototype.use = function (gl) {
-  gl.useProgram(this.program);
-};
+  gl.useProgram(this.program)
+}
 
 // Compile and link the shaders vert and frag. vert and frag should contain
 // the shader source code for the vertex and fragment shaders respectively
 // Returns the compiled and linked program, or null if compilation or linking failed
-export var compileShader = function (gl, vert, frag) {
-  var vs = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vs, vert);
-  gl.compileShader(vs);
+export const compileShader = function (gl, vert, frag) {
+  const vs = gl.createShader(gl.VERTEX_SHADER)
+  gl.shaderSource(vs, vert)
+  gl.compileShader(vs)
   if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-    alert("Vertex shader failed to compile, see console for log");
-    console.log(gl.getShaderInfoLog(vs));
-    return null;
+    alert('Vertex shader failed to compile, see console for log')
+    console.log(gl.getShaderInfoLog(vs))
+    return null
   }
 
-  var fs = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fs, frag);
-  gl.compileShader(fs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER)
+  gl.shaderSource(fs, frag)
+  gl.compileShader(fs)
   if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-    alert("Fragment shader failed to compile, see console for log");
-    console.log(gl.getShaderInfoLog(fs));
-    return null;
+    alert('Fragment shader failed to compile, see console for log')
+    console.log(gl.getShaderInfoLog(fs))
+    return null
   }
 
-  var program = gl.createProgram();
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
+  const program = gl.createProgram()
+  gl.attachShader(program, vs)
+  gl.attachShader(program, fs)
+  gl.linkProgram(program)
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    alert("Shader failed to link, see console for log");
-    console.log(gl.getProgramInfoLog(program));
-    return null;
+    alert('Shader failed to link, see console for log')
+    console.log(gl.getProgramInfoLog(program))
+    return null
   }
-  return program;
-};
+  return program
+}
 
-export var getGLExtension = function (gl, ext) {
+export const getGLExtension = function (gl, ext) {
   if (!gl.getExtension(ext)) {
-    alert("Missing " + ext + " WebGL extension");
-    return false;
+    alert('Missing ' + ext + ' WebGL extension')
+    return false
   }
-  return true;
-};
+  return true
+}
