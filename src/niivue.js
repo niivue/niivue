@@ -71,7 +71,7 @@ import { NVConnectome } from './nvconnectome.js'
 export { NVMesh, NVMeshFromUrlOptions } from './nvmesh.js'
 export { NVImage, NVImageFromUrlOptions } from './nvimage'
 export { NVController } from './nvcontroller'
-export { colortables, cmapper } from './colortables'
+export { ColorTables as colortables, cmapper } from './colortables'
 
 export { NVDocument, SLICE_TYPE } from './nvdocument.js'
 export { NVUtilities } from './nvutilities.js'
