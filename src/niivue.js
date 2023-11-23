@@ -56,7 +56,6 @@ import {
 } from './shader-srcs.js'
 import { orientCube } from './orientCube.js'
 import { NiivueObject3D } from './niivue-object3D.js'
-import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from './nvimage.js'
 import { MeshType, NVMesh, NVMeshFromUrlOptions } from './nvmesh.js'
 import { Log } from './logger'
 import defaultMatCap from './matcaps/Shiny.jpg'
@@ -68,8 +67,9 @@ import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } 
 import { NVUtilities } from './nvutilities.js'
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from './nvlabel.js'
 import { NVConnectome } from './nvconnectome.js'
+import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from './nvimage/index.js'
 export { NVMesh, NVMeshFromUrlOptions } from './nvmesh.js'
-export { NVImage, NVImageFromUrlOptions } from './nvimage'
+export { NVImage, NVImageFromUrlOptions } from './nvimage/index.js'
 export { NVController } from './nvcontroller'
 export { ColorTables as colortables, cmapper } from './colortables'
 
