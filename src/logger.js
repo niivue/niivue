@@ -3,46 +3,49 @@
  * @type Log
  * @param {number} logLevel
  */
-export const Log = function (logLevel) {
-  // log levels:
-  // - 'debug'
-  // - 'info'
-  // - 'warn'
-  // - 'error'
-  this.LOGGING_ON = true
-  this.LOGGING_OFF = false
-  this.LOG_PREFIX = 'NiiVue:'
-  this.logLevel = logLevel // true or false
+export class Log {
+  static LOGGING_ON = true
+  static LOGGING_OFF = false
+  static LOG_PREFIX = 'NiiVue:'
 
-  // logs take the form of `NiiVue: <unix_time> ...arguments` when printed to the console
-}
+  constructor(logLevel) {
+    // log levels:
+    // - 'debug'
+    // - 'info'
+    // - 'warn'
+    // - 'error'
+    this.logLevel = logLevel // true or false
 
-Log.prototype.getTimeStamp = function () {
-  return `${this.LOG_PREFIX} `
-}
-
-Log.prototype.debug = function () {
-  if (this.logLevel === this.LOGGING_ON) {
-    console.log(this.getTimeStamp(), 'DEBUG', ...arguments)
+    // logs take the form of `NiiVue: <unix_time> ...arguments` when printed to the console
   }
-}
 
-Log.prototype.info = function () {
-  if (this.logLevel === this.LOGGING_ON) {
-    console.log(this.getTimeStamp(), 'INFO', ...arguments)
+  getTimeStamp() {
+    return `${this.LOG_PREFIX} `
   }
-}
 
-Log.prototype.warn = function () {
-  if (this.logLevel === this.LOGGING_ON) {
-    console.warn(this.getTimeStamp(), 'WARN', ...arguments)
+  debug() {
+    if (this.logLevel === Log.LOGGING_ON) {
+      console.log(this.getTimeStamp(), 'DEBUG', ...arguments)
+    }
   }
-}
 
-Log.prototype.error = function () {
-  console.error(this.getTimeStamp(), 'ERROR', ...arguments)
-}
+  info() {
+    if (this.logLevel === Log.LOGGING_ON) {
+      console.log(this.getTimeStamp(), 'INFO', ...arguments)
+    }
+  }
 
-Log.prototype.setLogLevel = function (logLevel) {
-  this.logLevel = logLevel
+  warn() {
+    if (this.logLevel === Log.LOGGING_ON) {
+      console.warn(this.getTimeStamp(), 'WARN', ...arguments)
+    }
+  }
+
+  error() {
+    console.error(this.getTimeStamp(), 'ERROR', ...arguments)
+  }
+
+  setLogLevel(logLevel) {
+    this.logLevel = logLevel
+  }
 }

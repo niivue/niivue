@@ -8,38 +8,39 @@
  * @param {string} vertexSrc
  * @param {string} fragmentSrc
  */
-export function Shader(gl, vertexSrc, fragmentSrc) {
-  const self = this
-  this.program = compileShader(gl, vertexSrc, fragmentSrc)
+export class Shader {
+  constructor(gl, vertexSrc, fragmentSrc) {
+    this.program = compileShader(gl, vertexSrc, fragmentSrc)
 
-  const regexUniform = /uniform[^;]+[ ](\w+);/g
-  const matchUniformName = /uniform[^;]+[ ](\w+);/
+    const regexUniform = /uniform[^;]+[ ](\w+);/g
+    const matchUniformName = /uniform[^;]+[ ](\w+);/
 
-  this.uniforms = {}
+    this.uniforms = {}
 
-  const vertexUnifs = vertexSrc.match(regexUniform)
-  const fragUnifs = fragmentSrc.match(regexUniform)
+    const vertexUnifs = vertexSrc.match(regexUniform)
+    const fragUnifs = fragmentSrc.match(regexUniform)
 
-  if (vertexUnifs) {
-    vertexUnifs.forEach(function (unif) {
-      const m = unif.match(matchUniformName)
-      self.uniforms[m[1]] = -1
-    })
+    if (vertexUnifs) {
+      vertexUnifs.forEach((unif) => {
+        const m = unif.match(matchUniformName)
+        this.uniforms[m[1]] = -1
+      })
+    }
+    if (fragUnifs) {
+      fragUnifs.forEach((unif) => {
+        const m = unif.match(matchUniformName)
+        this.uniforms[m[1]] = -1
+      })
+    }
+
+    for (const unif in this.uniforms) {
+      this.uniforms[unif] = gl.getUniformLocation(this.program, unif)
+    }
   }
-  if (fragUnifs) {
-    fragUnifs.forEach(function (unif) {
-      const m = unif.match(matchUniformName)
-      self.uniforms[m[1]] = -1
-    })
-  }
 
-  for (const unif in this.uniforms) {
-    this.uniforms[unif] = gl.getUniformLocation(this.program, unif)
+  use(gl) {
+    gl.useProgram(this.program)
   }
-}
-
-Shader.prototype.use = function (gl) {
-  gl.useProgram(this.program)
 }
 
 // Compile and link the shaders vert and frag. vert and frag should contain
