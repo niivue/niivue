@@ -6,8 +6,14 @@ import * as fflate from 'fflate'
 import { cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
-import { NVUtilities } from '../nvutilities.js'
-import { NVIMAGE_TYPE, NVImageFromUrlOptions, getBestTransform, getExtents, hdrToArrayBuffer } from './utils.js'
+import {
+  NVIMAGE_TYPE,
+  NVImageFromUrlOptions,
+  getBestTransform,
+  getExtents,
+  hdrToArrayBuffer,
+  isPlatformLittleEndian
+} from './utils.js'
 const log = new Log()
 
 export * from './utils.js'
@@ -290,7 +296,7 @@ export function NVImage(
   if (
     this.hdr.datatypeCode !== this.DT_RGB &&
     this.hdr.datatypeCode !== this.DT_RGBA32 &&
-    this.hdr.littleEndian !== NVUtilities.isPlatformLittleEndian() &&
+    this.hdr.littleEndian !== isPlatformLittleEndian() &&
     this.hdr.numBitsPerVoxel > 8
   ) {
     if (this.hdr.numBitsPerVoxel === 16) {
