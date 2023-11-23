@@ -4,15 +4,16 @@
  * @param {number} logLevel
  */
 export class Log {
+  static LOGGING_ON = true
+  static LOGGING_OFF = false
+  static LOG_PREFIX = 'NiiVue:'
+
   constructor(logLevel) {
     // log levels:
     // - 'debug'
     // - 'info'
     // - 'warn'
     // - 'error'
-    this.LOGGING_ON = true
-    this.LOGGING_OFF = false
-    this.LOG_PREFIX = 'NiiVue:'
     this.logLevel = logLevel // true or false
 
     // logs take the form of `NiiVue: <unix_time> ...arguments` when printed to the console
@@ -23,19 +24,19 @@ export class Log {
   }
 
   debug() {
-    if (this.logLevel === this.LOGGING_ON) {
+    if (this.logLevel === Log.LOGGING_ON) {
       console.log(this.getTimeStamp(), 'DEBUG', ...arguments)
     }
   }
 
   info() {
-    if (this.logLevel === this.LOGGING_ON) {
+    if (this.logLevel === Log.LOGGING_ON) {
       console.log(this.getTimeStamp(), 'INFO', ...arguments)
     }
   }
 
   warn() {
-    if (this.logLevel === this.LOGGING_ON) {
+    if (this.logLevel === Log.LOGGING_ON) {
       console.warn(this.getTimeStamp(), 'WARN', ...arguments)
     }
   }
