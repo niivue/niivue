@@ -72,6 +72,7 @@ export { NVMesh, NVMeshFromUrlOptions } from './nvmesh.js'
 export { NVController } from './nvcontroller'
 export { ColorTables as colortables, cmapper } from './colortables'
 
+export { NVImage, NVImageFromUrlOptions } from './nvimage'
 export { NVDocument, SLICE_TYPE } from './nvdocument.js'
 export { NVUtilities } from './nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from './nvlabel.js'
