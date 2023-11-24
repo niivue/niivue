@@ -1,4 +1,4 @@
-import * as fflate from 'fflate'
+import { compressSync, decompressSync, strToU8 } from 'fflate/browser'
 
 /**
  * Namespace for utility functions
@@ -106,7 +106,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       compressedView[i] = compressed.charCodeAt(i)
     }
     // decompress the array buffer
-    const decompressedBuffer = fflate.decompressSync(compressedView)
+    const decompressedBuffer = decompressSync(compressedView)
     // convert the array buffer to a string
     const decompressed = new TextDecoder('utf-8').decode(decompressedBuffer)
     // console.log(decompressed);
@@ -114,8 +114,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 
   static compressToBase64String(string) {
-    const buf = fflate.strToU8(string, { level: 6, mem: 4 })
-    const compressed = fflate.compressSync(buf)
+    const buf = strToU8(string, { level: 6, mem: 4 })
+    const compressed = compressSync(buf)
     const base64 = NVUtilities.uint8tob64(compressed)
     return base64
   }

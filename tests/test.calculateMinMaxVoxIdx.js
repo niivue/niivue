@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('calculateMinMaxVoxIdx', async () => {
   const minmax = await page.evaluate(() => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     const minmax = nv.calculateMinMaxVoxIdx([10, 1])
     return minmax
   })

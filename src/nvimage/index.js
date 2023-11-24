@@ -1,8 +1,7 @@
 import * as nifti from 'nifti-reader-js'
 import daikon from 'daikon'
-import { v4 as uuidv4 } from 'uuid'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
-import * as fflate from 'fflate'
+import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
 import { cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
@@ -61,8 +60,7 @@ export class NVImage {
     cal_minNeg = NaN,
     cal_maxNeg = NaN,
     colorbarVisible = true,
-    colormapLabel = [],
-    colormapInvert = false
+    colormapLabel = []
   ) {
     // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
     this.DT_NONE = 0
@@ -86,7 +84,7 @@ export class NVImage {
     this.DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
     this.DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
     this.name = name
-    this.id = uuidv4()
+    this.id = crypto.randomUUID()
     this._colormap = colormap
     this._opacity = opacity > 1.0 ? 1.0 : opacity // make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
     this.percentileFrac = percentileFrac
@@ -924,7 +922,7 @@ export class NVImage {
     let raw = buffer
     let reader = new DataView(raw)
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      const raw8 = fflate.decompressSync(new Uint8Array(buffer))
+      const raw8 = decompressSync(new Uint8Array(buffer))
       raw = raw8.buffer
       reader = new DataView(raw)
     }
@@ -1128,7 +1126,7 @@ export class NVImage {
     if (pairedImgData.byteLength < nBytes) {
       // n.b. npm run dev implicitly extracts gz, npm run demo does not!
       // assume gz compressed
-      const raw = fflate.decompressSync(new Uint8Array(pairedImgData))
+      const raw = decompressSync(new Uint8Array(pairedImgData))
       return raw.buffer
     }
     return pairedImgData.slice()
@@ -1238,10 +1236,10 @@ export class NVImage {
     ]
     hdr.vox_offset = pos
     if (isDetached && pairedImgData) {
-      if (isGz) return fflate.decompressSync(new Uint8Array(pairedImgData.slice())).buffer
+      if (isGz) return decompressSync(new Uint8Array(pairedImgData.slice())).buffer
       return pairedImgData.slice()
     }
-    if (isGz) return fflate.decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset))).buffer
+    if (isGz) return decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset))).buffer
     return buffer.slice(hdr.vox_offset)
   } // readMHA()
 
@@ -1260,7 +1258,7 @@ export class NVImage {
     const bytes = new Uint8Array(buffer)
     if (bytes[0] === 31 && bytes[1] === 139) {
       console.log('MIF with GZ decompression')
-      const raw = fflate.decompressSync(new Uint8Array(buffer))
+      const raw = decompressSync(new Uint8Array(buffer))
       buffer = raw.buffer
       len = buffer.byteLength
     }
@@ -1680,7 +1678,7 @@ export class NVImage {
       return pairedImgData.slice()
     }
     if (isDetached) console.log('Missing data: NRRD header describes detached data file but only one URL provided')
-    if (isGz) return fflate.decompressSync(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer
+    if (isGz) return decompressSync(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer
     else return dataBuffer.slice(hdr.vox_offset)
   } // readNRRD()
 
@@ -2085,7 +2083,7 @@ export class NVImage {
     let saveData = null
     const compress = fnm.endsWith('.gz') // true if name ends with .gz
     if (compress) {
-      saveData = fflate.gzipSync(odata, {
+      saveData = gzipSync(odata, {
         // GZIP-specific: the filename to use when decompressed
         filename: fnm,
         // GZIP-specific: the modification time. Can be a Date, date string,
@@ -2220,7 +2218,7 @@ export class NVImage {
       let isGz = false
       if (bytes[0] === 31 && bytes[1] === 139) {
         isGz = true
-        const dcmpStrm = new fflate.Decompress((chunk, final) => {
+        const dcmpStrm = new Decompress((chunk) => {
           // console.log('decoded:', chunk);
           bytes = chunk
         })
@@ -2244,7 +2242,7 @@ export class NVImage {
           dataBuffer = await response.arrayBuffer()
           if (isGz) {
             let bytes = new Uint8Array(dataBuffer)
-            const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
+            const dcmpStrm2 = new Decompress((chunk) => {
               bytes = chunk
             })
             dcmpStrm2.push(bytes)
@@ -2410,7 +2408,7 @@ export class NVImage {
           let isGz = false
           if (bytes[0] === 31 && bytes[1] === 139) {
             isGz = true
-            const dcmpStrm = new fflate.Decompress((chunk, final) => {
+            const dcmpStrm = new Decompress((chunk) => {
               // console.log('decoded:', chunk);
               bytes = chunk
             })
@@ -2435,7 +2433,7 @@ export class NVImage {
               dataBuffer = await this.readFileAsync(file, bytesToLoad)
               if (isGz) {
                 let bytes = new Uint8Array(dataBuffer)
-                const dcmpStrm2 = new fflate.Decompress((chunk, final) => {
+                const dcmpStrm2 = new Decompress((chunk) => {
                   bytes = chunk
                 })
                 await dcmpStrm2.push(bytes)

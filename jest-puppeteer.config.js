@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   launch: {
     dumpio: true,
     headless: !(process.arch === 'arm64' && process.platform === 'darwin'),

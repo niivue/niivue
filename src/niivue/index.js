@@ -3082,7 +3082,7 @@ export class Niivue {
   }
 
   
-  var nv1 = new niivue.Niivue();
+  var nv1 = new Niivue();
   nv1.attachTo("${canvasId}");  
   var base64 = "${base64}";
   var jsonText = niivue.NVUtilities.decompressBase64String(base64);

@@ -19,6 +19,9 @@
       <canvas id="gl" height="480" width="640"> </canvas>
     </div>
 
-    <script src="../dist/index.js"></script>
+    <script type="module">
+      import { Niivue } from '../dist/index.js'
+      globalThis.Niivue = Niivue
+    </script>
   </body>
 </html>

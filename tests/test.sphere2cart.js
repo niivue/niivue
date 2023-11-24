@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('sph2cartDe', async () => {
   const xyz = await page.evaluate(() => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     const xyz = nv.sph2cartDeg(42, 42)
     return xyz
   })

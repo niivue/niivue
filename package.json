@@ -3,6 +3,7 @@
   "version": "0.38.3",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./dist/index.js",
+  "type": "module",
   "module": "./dist/index.mjs",
   "exports": {
     ".": {
@@ -12,7 +13,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsup --format esm,cjs",
+    "build": "tsup",
     "demo": "npm run build && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
     "test": "npm run build && jest --maxWorkers=1",
@@ -51,8 +52,7 @@
     "fflate": "^0.7.4",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.6.8",
-    "rxjs": "^7.8.0",
-    "uuid": "^9.0.0"
+    "rxjs": "^7.8.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

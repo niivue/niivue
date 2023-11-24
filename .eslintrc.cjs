@@ -1,5 +1,8 @@
 module.exports = {
   root: true,
+  env: {
+    browser: true
+  },
   ignorePatterns: ['dist/**/*'],
   extends: ['standard', 'plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   parser: '@typescript-eslint/parser',

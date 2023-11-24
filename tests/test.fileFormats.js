@@ -23,7 +23,7 @@ const files = [
 
 test.each(files)('file_format_$fileType', async (file) => {
   await page.evaluate(async (file) => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const imageList = [

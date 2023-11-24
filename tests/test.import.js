@@ -7,7 +7,7 @@ test('is available', async () => {
   let opts = null
   // test if nv.opts is defined to make sure niivue is imported and loaded
   opts = await page.evaluate(() => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     return nv.opts
   })
   expect(opts).toBeDefined()

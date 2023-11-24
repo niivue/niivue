@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('embedUMD', async () => {
   const umd = await page.evaluate(async () => {
-    nv = new niivue.Niivue()
+    nv = new Niivue()
     return nv.decodeEmbeddedUMD()
   })
   expect(umd.trim().endsWith('{value:"Module"})});')).toBe(true)

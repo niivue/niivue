@@ -17,7 +17,7 @@ var volumeList1 = [
     isManifest: true,
   },
 ];
-var nv1 = new niivue.Niivue();
+var nv1 = new Niivue();
 nv1.setRadiologicalConvention(false);
 nv1.attachTo("gl1");
 nv1.loadVolumes(volumeList1);
