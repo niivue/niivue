@@ -2,7 +2,7 @@
   "name": "@niivue/niivue",
   "version": "0.38.3",
   "description": "minimal webgl2 nifti image viewer",
-  "main": "./src/niivue.js",
+  "main": "./src/niivue/index.js",
   "unpkg": "./dist/niivue.umd.js",
   "module": "./dist/niivue.es.js",
   "exports": {
