@@ -2,17 +2,17 @@
   "name": "@niivue/niivue",
   "version": "0.38.3",
   "description": "minimal webgl2 nifti image viewer",
-  "main": "./src/niivue/index.js",
-  "unpkg": "./dist/niivue.umd.js",
-  "module": "./dist/niivue.es.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": {
-      "require": "./dist/niivue.umd.js",
-      "import": "./dist/niivue.es.js"
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
     }
   },
   "scripts": {
     "dev": "vite",
+    "build:ts": "tsup --format esm,cjs",
     "build": "npx vite build --config vite.config.js --emptyOutDir --base=./ && vite build --config vite.config_inject.js --emptyOutDir --base=./ && npm run copy-test && npm run copy-demo",
     "build-win": "npx vite build --config vite.config.js --emptyOutDir && vite build --config vite.config_inject.js --emptyOutDir && npm run copy-test-win && npm run copy-demo-win",
     "demo": "npm run build && npx http-server demos/ --cors",
@@ -63,7 +63,9 @@
   "devDependencies": {
     "@playwright/test": "^1.40.0",
     "@rollup/plugin-commonjs": "^24.0.1",
-    "@types/node": "^20.9.2",
+    "@types/node": "^20.9.5",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
     "clean-jsdoc-theme": "^4.2.6",
     "docdash": "^2.0.1",
     "eslint": "^8.36.0",
@@ -81,6 +83,8 @@
     "puppeteer-core": "^21.5.2",
     "puppeteer-utilz": "^4.0.8",
     "regenerator-runtime": "^0.13.11",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2",
     "vite": "^4.2.0"
   }
 }
