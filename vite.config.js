@@ -1,9 +1,8 @@
-// vite.config.js
+import { resolve } from 'path'
 import commonjs from '@rollup/plugin-commonjs'
-const path = require('path')
-const { defineConfig } = require('vite')
+import { defineConfig } from 'vite'
 
-module.exports = defineConfig({
+export default defineConfig({
   define: {
     __NIIVUE_VERSION__: JSON.stringify(process.env.npm_package_version)
   },
@@ -26,7 +25,7 @@ module.exports = defineConfig({
   build: {
     outDir: './dist_intermediate',
     lib: {
-      entry: path.resolve(__dirname, 'src/niivue/index.js'),
+      entry: resolve(__dirname, 'src/niivue/index.js'),
       name: 'niivue',
       fileName: (format) => `niivue.${format}.js`
     }

@@ -689,11 +689,6 @@ export class NVMeshLoaders {
     const nvert = reader.getUint32(2, true)
     if (nvert !== n_vert) console.log('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
     const nMaps = reader.getUint16(6, true)
-
-    const scalars = new Float32Array(nvert * nMaps)
-    const maps = []
-    // read Name of SRF
-    let pos = 9
     function readStr() {
       const startPos = pos
       while (pos < len && reader.getUint8(pos) !== 0) {
@@ -702,7 +697,10 @@ export class NVMeshLoaders {
       pos++ // skip null termination
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     } // readStr: read variable length string
-
+    const scalars = new Float32Array(nvert * nMaps)
+    const maps = []
+    // read Name of SRF
+    let pos = 9
     // let filenameSRF = readStr();
     for (let i = 0; i < nMaps; i++) {
       const m = []
