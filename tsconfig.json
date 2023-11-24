@@ -11,5 +11,5 @@
     "forceConsistentCasingInFileNames": true,
     "allowJs": true
   },
-  "exclude": ["release"]
+  "exclude": ["release", "dist", "./**/*.js"]
 }
