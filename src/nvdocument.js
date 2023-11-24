@@ -1,7 +1,7 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
 import { NVUtilities } from './nvutilities'
 // Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
-// eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { NVImageFromUrlOptions, NVIMAGE_TYPE } from './nvimage'
 import { MeshType } from './nvmesh'
 

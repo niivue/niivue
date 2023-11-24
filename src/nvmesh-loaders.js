@@ -31,6 +31,8 @@ export class NVMeshLoaders {
       if (pos - startPos < 1) return ''
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
     }
+
+    let line = readStr() // 1st line: signature '<network'
     function readNumericTag(TagName) {
       // Tag 'Dim1' will return 3 for Dim1="3"
       const pos = line.indexOf(TagName)
@@ -40,7 +42,6 @@ export class NVMeshLoaders {
       const str = line.slice(spos, epos)
       return parseInt(str)
     }
-    let line = readStr() // 1st line: signature '<network'
     const n_tracts = readNumericTag('N_tracts=')
     if (!line.startsWith('<network') || n_tracts < 1) console.log('This is not a valid niml.tract file ' + line)
     let npt = 0
@@ -689,6 +690,12 @@ export class NVMeshLoaders {
     const nvert = reader.getUint32(2, true)
     if (nvert !== n_vert) console.log('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
     const nMaps = reader.getUint16(6, true)
+
+    const scalars = new Float32Array(nvert * nMaps)
+    const maps = []
+    // read Name of SRF
+    let pos = 9
+
     function readStr() {
       const startPos = pos
       while (pos < len && reader.getUint8(pos) !== 0) {
@@ -697,11 +704,7 @@ export class NVMeshLoaders {
       pos++ // skip null termination
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     } // readStr: read variable length string
-    const scalars = new Float32Array(nvert * nMaps)
-    const maps = []
-    // read Name of SRF
-    let pos = 9
-    // let filenameSRF = readStr();
+
     for (let i = 0; i < nMaps; i++) {
       const m = []
       m.mapType = reader.getUint32(pos, true)

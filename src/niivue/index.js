@@ -7216,7 +7216,7 @@ export class Niivue {
   createOnLocationChange(axCorSag = NaN) {
     // first: provide a string representation
     // eslint-disable-next-line no-unused-vars
-    const [mn, mx, range] = this.sceneExtentsMinMax(true)
+    const [_mn, _mx, range] = this.sceneExtentsMinMax(true)
     const fov = Math.max(Math.max(range[0], range[1]), range[2])
     function dynamicDecimals(flt) {
       return Math.max(0.0, -Math.ceil(Math.log10(Math.abs(flt))))
@@ -7649,15 +7649,10 @@ export class Niivue {
     }
     const crosshairsShader = this.surfaceShader
     crosshairsShader.use(this.gl)
-    let modelMtx, normMtx
     // eslint-disable-next-line no-unused-vars
     if (mvpMtx == null)
       // eslint-disable-next-line no-unused-vars
-      [mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(
-        this.crosshairs3D,
-        this.scene.renderAzimuth,
-        this.scene.renderElevation
-      )
+      [mvpMtx] = this.calculateMvpMatrix(this.crosshairs3D, this.scene.renderAzimuth, this.scene.renderElevation)
     gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer)
@@ -7690,7 +7685,7 @@ export class Niivue {
     if (this.volumes.length < 1) {
       const frac = [0.1, 0.5, 0.5]
       // eslint-disable-next-line no-unused-vars
-      const [mn, mx, range] = this.sceneExtentsMinMax()
+      const [mn, _mx, range] = this.sceneExtentsMinMax()
       frac[0] = (mm[0] - mn[0]) / range[0]
       frac[1] = (mm[1] - mn[1]) / range[1]
       frac[2] = (mm[2] - mn[2]) / range[2]
