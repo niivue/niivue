@@ -34,9 +34,7 @@
     </main>
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
-      import { Niivue } from "./niivue";
-      import { NVImage } from "./nvimage";
-      import { NVMesh } from "./nvmesh";
+      import { Niivue, NVImage, NVMesh } from "../dist/index.js";
       document.getElementById("reset").addEventListener("click", doReset);
       var dropDrag = document.getElementById("dragMode");
       dropDrag.onchange = function () {
