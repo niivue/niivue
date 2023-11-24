@@ -1,38 +1,15 @@
 import * as cmaps from './cmaps'
 
-type CMap = {
-  labels?: string[]
-  lut: Uint8ClampedArray
-  min: number
-  max: number
-}
-
-type RGBAI = {
-  min?: number
-  max?: number
-  R: number[]
-  G: number[]
-  B: number[]
-  A: number[]
-  I: number[]
-  labels?: string[]
-}
-
-type DrawLut = {
-  lut: Uint8ClampedArray
-  labels: string[]
-}
-
 export class ColorTables {
   gamma = 1.0
   version = 0.1
-  cluts: Record<string, RGBAI> = {}
+  cluts = {}
 
   /**
    * Sets cluts to alphabetically sorted cmaps
    */
   constructor() {
-    const cmapKeys = Object.keys(cmaps) as Array<keyof typeof cmaps>
+    const cmapKeys = Object.keys(cmaps)
 
     const cmapsSorted = cmapKeys
       .filter((k) => !k.startsWith('$')) // ignore drawing maps
@@ -43,21 +20,21 @@ export class ColorTables {
     }
   }
 
-  addColormap(key: string, cmap: RGBAI): void {
+  addColormap(key, cmap) {
     this.cluts[key] = cmap
   }
 
-  colormaps(): Array<keyof typeof this.cluts> {
+  colormaps() {
     return Object.keys(this.cluts)
   }
 
   // for backward compatibility: prior to v0.34 "colormaps" used to be "colorMaps"
-  colorMaps(): string[] {
+  colorMaps() {
     return this.colormaps()
   }
 
   // returns key name if it exists, otherwise returns default "gray"
-  colormapFromKey(name: string): RGBAI {
+  colormapFromKey(name) {
     let cmap = this.cluts[name]
     if (cmap !== undefined) return cmap
 
@@ -77,14 +54,15 @@ export class ColorTables {
   }
 
   // not included in public docs
-  colormap(key = '', isInvert = false): Uint8ClampedArray {
+  colormap(key = '', isInvert = false) {
     const cmap = this.colormapFromKey(key)
     return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I, isInvert)
   }
 
-  makeLabelLut(cm: RGBAI, alphaFill = 64): CMap {
+  makeLabelLut(cm, alphaFill = 64) {
     if (cm.R === undefined || cm.G === undefined || cm.B === undefined) {
-      throw new Error('Invalid colormap table.')
+      console.log('Invalid colormap table.', cm)
+      return []
     }
     const nLabels = cm.R.length
 
@@ -92,12 +70,13 @@ export class ColorTables {
     const idxs = cm.I ?? [...Array(nLabels).keys()]
 
     if (nLabels !== cm.G.length || nLabels !== cm.B.length || nLabels !== idxs.length) {
-      throw new Error('colormap does not make sense.')
+      console.log('colormap does not make sense.', cm)
+      return []
     }
 
     let As = new Uint8ClampedArray(nLabels).fill(alphaFill)
     As[0] = 0
-    if (cm.A !== undefined) As = Uint8ClampedArray.from(cm.A)
+    if (cm.A !== undefined) As = cm.A
 
     const mnIdx = Math.min(...idxs)
     const mxIdx = Math.max(...idxs)
@@ -113,12 +92,7 @@ export class ColorTables {
       lut[k++] = As[i] // Alpha
     }
 
-    const cmap: CMap = {
-      lut,
-      min: mnIdx,
-      max: mxIdx
-    }
-
+    const cmap = []
     // labels are optional
     if (cm.labels) {
       const nL = cm.labels.length
@@ -131,19 +105,22 @@ export class ColorTables {
         }
       }
     }
+    cmap.lut = lut
+    cmap.min = mnIdx
+    cmap.max = mxIdx
     return cmap
   }
 
-  async makeLabelLutFromUrl(name: string): Promise<CMap> {
+  async makeLabelLutFromUrl(name) {
     const response = await fetch(name)
-    const cm = (await response.json()) as RGBAI
+    const cm = await response.json()
     return this.makeLabelLut(cm)
   }
 
   // not included in public docs
   // The drawing colormap is a variant of the label colormap with precisely 256 colors
-  makeDrawLut(name?: keyof typeof cmaps | RGBAI): DrawLut {
-    let cmap = typeof name === 'string' ? cmaps[name] : name
+  makeDrawLut(name) {
+    let cmap = typeof name === 'object' ? name : cmaps[name]
 
     if (cmap === undefined) {
       cmap = {
@@ -190,14 +167,7 @@ export class ColorTables {
   }
 
   // not included in public docs
-  makeLut(
-    Rsi: number[],
-    Gsi: number[],
-    Bsi: number[],
-    Asi: number[],
-    Isi: number[],
-    isInvert: boolean
-  ): Uint8ClampedArray {
+  makeLut(Rsi, Gsi, Bsi, Asi, Isi, isInvert) {
     // create color lookup table provided arrays of reds, greens, blues, alphas and intensity indices
     // intensity indices should be in increasing order with the first value 0 and the last 255.
     // this.makeLut([0, 255], [0, 0], [0,0], [0,128],[0,255]); //red gradient
@@ -205,8 +175,8 @@ export class ColorTables {
     const Rs = [...Rsi]
     const Gs = [...Gsi]
     const Bs = [...Bsi]
-    let As: Uint8ClampedArray = Uint8ClampedArray.from(Asi)
-    let Is: Uint8ClampedArray = Uint8ClampedArray.from(Isi)
+    let As = [...Asi]
+    let Is = [...Isi]
     if (isInvert) {
       for (let i = 0; i < nIdx; i++) {
         Rs[i] = Rsi[nIdx - 1 - i]
