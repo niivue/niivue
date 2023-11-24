@@ -17,17 +17,14 @@ test('zeroLike creates clone of object with all zeros', async () => {
       }
     ]
 
-    async function load() {
-      const nv1 = new Niivue()
-      await nv1.attachTo('gl1', false)
-      await nv1.loadVolumes(volumeList1)
-      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+    const nv1 = new Niivue()
+    await nv1.attachTo('gl1', false)
+    await nv1.loadVolumes(volumeList1)
+    nv1.setSliceType(nv1.sliceTypeMultiplanar)
 
-      const nv2 = new Niivue()
-      await nv2.attachTo('gl2', false)
-      nv2.addVolume(niivue.NVImage.zerosLike(nv1.volumes[0]))
-    }
-    await load()
+    const nv2 = new Niivue()
+    await nv2.attachTo('gl2', false)
+    nv2.addVolume(niivue.NVImage.zerosLike(nv1.volumes[0]))
   })
   await snapshot('#gl2')
 })
