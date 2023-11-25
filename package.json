@@ -17,7 +17,6 @@
     "demo": "npm run build && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
     "test": "npm run build && jest --maxWorkers=1",
-    "test-dev": "npm run build && jest --maxWorkers=1 tests/test.sphere2cart.js",
     "test-win": "npm run build-win && jest --maxWorkers=1",
     "test-playwright": "npm run build && npx playwright test",
     "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",

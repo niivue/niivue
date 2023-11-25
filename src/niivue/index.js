@@ -744,24 +744,6 @@ export class Niivue {
   }
 
   /**
-   * decode the compressed embedded UMD string of the bundled Niivue code
-   * @param {string} umdBase64 the base64 encoded compressed UMD string
-   * @returns {string} the uncompressed UMD string
-   * @example
-   * niivue = new Niivue()
-   * niivue.decodeEmbeddedUMD()
-   */
-  decodeEmbeddedUMD() {
-    const UMD_AVAIL = typeof __NIIVUE_UMD__ !== 'undefined'
-    if (!UMD_AVAIL) {
-      return ''
-    }
-
-    // eslint-disable-next-line no-undef
-    return NVUtilities.decompressBase64String(__NIIVUE_UMD__)
-  }
-
-  /**
    * attach the Niivue instance to a canvas element directly
    * @param {object} canvas the canvas element reference
    * @example
