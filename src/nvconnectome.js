@@ -119,9 +119,14 @@ export class NVConnectome extends NVMesh {
 
   static convertFreeSurferConnectome(json, colormap = 'warm') {
     let isValid = true
-    if (!('data_type' in json)) isValid = false
-    else if (json.data_type !== 'fs_pointset') isValid = false
-    if (!('points' in json)) isValid = false
+    if (!('data_type' in json)) {
+      isValid = false
+    } else if (json.data_type !== 'fs_pointset') {
+      isValid = false
+    }
+    if (!('points' in json)) {
+      isValid = false
+    }
     if (!isValid) {
       throw Error('not a valid FreeSurfer json pointset')
     }
@@ -176,7 +181,9 @@ export class NVConnectome extends NVMesh {
             continue
           }
           color = (color - min) / (max - min)
-        } else color = 1.0
+        } else {
+          color = 1.0
+        }
 
         color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
         let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
@@ -304,7 +311,9 @@ export class NVConnectome extends NVMesh {
     const nNode = this.nodes.length
     for (let i = 0; i < nNode; i++) {
       const radius = this.nodes[i].sizeValue * this.nodeScale
-      if (radius <= 0.0) continue
+      if (radius <= 0.0) {
+        continue
+      }
       let color = this.nodes[i].colorValue
       let isNeg = false
       if (hasNeg && color < 0) {
@@ -312,12 +321,18 @@ export class NVConnectome extends NVMesh {
         color = -color
       }
       if (min < max) {
-        if (color < min) continue
+        if (color < min) {
+          continue
+        }
         color = (color - min) / (max - min)
-      } else color = 1.0
+      } else {
+        color = 1.0
+      }
       color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
       let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-      if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      if (isNeg) {
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      }
       const pt = [this.nodes[i].x, this.nodes[i].y, this.nodes[i].z]
 
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
@@ -335,14 +350,22 @@ export class NVConnectome extends NVMesh {
         color = -color
       }
       const radius = color * this.edgeScale
-      if (radius <= 0) continue
+      if (radius <= 0) {
+        continue
+      }
       if (min < max) {
-        if (color < min) continue
+        if (color < min) {
+          continue
+        }
         color = (color - min) / (max - min)
-      } else color = 1.0
+      } else {
+        color = 1.0
+      }
       color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
       let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-      if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      if (isNeg) {
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      }
       const pti = [this.nodes[edge.first].x, this.nodes[edge.first].y, this.nodes[edge.first].z]
       const ptj = [this.nodes[edge.second].x, this.nodes[edge.second].y, this.nodes[edge.second].z]
       NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)

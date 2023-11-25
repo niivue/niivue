@@ -111,10 +111,13 @@ NiivueObject3D.generateCrosshairsGeometry = function (gl, xyzMM, xyzMin, xyzMax,
 
 NiivueObject3D.getFirstPerpVector = function (v1) {
   const v2 = vec3.fromValues(0.0, 0.0, 0.0)
-  if (v1[0] === 0.0) v2[0] = 1.0
-  else if (v1[1] === 0.0) v2[1] = 1.0
-  else if (v1[2] === 0.0) v2[2] = 1.0
-  else {
+  if (v1[0] === 0.0) {
+    v2[0] = 1.0
+  } else if (v1[1] === 0.0) {
+    v2[1] = 1.0
+  } else if (v1[2] === 0.0) {
+    v2[2] = 1.0
+  } else {
     // If xyz is all set, we set the z coordinate as first and second argument .
     // As the scalar product must be zero, we add the negated sum of x and y as third argument
     v2[0] = v1[2] // scalp = z*x
@@ -174,7 +177,9 @@ NiivueObject3D.weldVertices = function (verts, faces) {
   // var remap = new Array();
   const remap = new Int32Array(nv)
   for (let i = 0; i < nv - 1; i++) {
-    if (remap[i] !== 0) continue // previously tested
+    if (remap[i] !== 0) {
+      continue
+    } // previously tested
     remap[i] = nUnique
     let v = i * 3
     const x = verts[v]
@@ -182,14 +187,20 @@ NiivueObject3D.weldVertices = function (verts, faces) {
     const z = verts[v + 2]
     for (let j = i + 1; j < nv; j++) {
       v += 3
-      if (x === verts[v] && y === verts[v + 1] && z === verts[v + 2]) remap[j] = nUnique
+      if (x === verts[v] && y === verts[v + 1] && z === verts[v + 2]) {
+        remap[j] = nUnique
+      }
     }
     nUnique++ // another new vertex
   } // for i
-  if (nUnique === nv) return verts
+  if (nUnique === nv) {
+    return verts
+  }
   // console.log('welding vertices removed redundant positions ', nv, '->', nUnique);
   const nf = faces.length
-  for (let f = 0; f < nf; f++) faces[f] = remap[faces[f]]
+  for (let f = 0; f < nf; f++) {
+    faces[f] = remap[faces[f]]
+  }
   const vtx = verts.slice(0, nUnique * 3 - 1)
   for (let i = 0; i < nv - 1; i++) {
     const v = i * 3
@@ -225,7 +236,9 @@ NiivueObject3D.makeSphere = function (vertices, indices, radius, origin = [0, 0,
     this.sphereVtx = vtx.slice()
     this.sphereIdx = idx.slice()
   }
-  for (let i = 0; i < vtx.length; i++) vtx[i] = vtx[i] * radius
+  for (let i = 0; i < vtx.length; i++) {
+    vtx[i] = vtx[i] * radius
+  }
   const nvtx = vtx.length / 3
   let j = 0
   for (let i = 0; i < nvtx; i++) {
@@ -237,14 +250,18 @@ NiivueObject3D.makeSphere = function (vertices, indices, radius, origin = [0, 0,
     j++
   }
   const idx0 = Math.floor(vertices.length / 3) // first new vertex will be AFTER previous vertices
-  for (let i = 0; i < idx.length; i++) idx[i] = idx[i] + idx0
+  for (let i = 0; i < idx.length; i++) {
+    idx[i] = idx[i] + idx0
+  }
 
   indices.push(...idx)
   vertices.push(...vtx)
 }
 
 NiivueObject3D.makeCylinder = function (vertices, indices, start, dest, radius, sides = 20, endcaps = true) {
-  if (sides < 3) sides = 3 // prism is minimal 3D cylinder
+  if (sides < 3) {
+    sides = 3
+  } // prism is minimal 3D cylinder
   const v1 = vec3.create()
   vec3.subtract(v1, dest, start)
   vec3.normalize(v1, v1) // principle axis of cylinder
@@ -291,7 +308,9 @@ NiivueObject3D.makeCylinder = function (vertices, indices, start, dest, radius, 
     vec3.add(pt2, dest, pt1)
     setV(i + sides, pt2)
     let nxt = 0
-    if (i < sides - 1) nxt = i + 1
+    if (i < sides - 1) {
+      nxt = i + 1
+    }
     setI(i * 2, i, nxt, i + sides)
     setI(i * 2 + 1, nxt, nxt + sides, i + sides)
     if (endcaps) {

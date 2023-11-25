@@ -856,7 +856,9 @@ export class Niivue {
     //   return;
     // }
     // canvas must have focus to send messages issue706
-    if (!this.gl.canvas.matches(':focus')) return
+    if (!this.gl.canvas.matches(':focus')) {
+      return
+    }
     const thisMM = this.frac2mm(this.scene.crosshairPos)
     // if this.otherNV is an object, then it is a single Niivue instance
     if (this.otherNV instanceof Niivue) {
@@ -871,7 +873,9 @@ export class Niivue {
       this.otherNV.createOnLocationChange()
     } else if (Array.isArray(this.otherNV)) {
       for (let i = 0; i < this.otherNV.length; i++) {
-        if (this.otherNV[i] === this) continue
+        if (this.otherNV[i] === this) {
+          continue
+        }
         if (this.syncOpts['2d']) {
           this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM)
         }
@@ -1035,9 +1039,13 @@ export class Niivue {
     // this.uiData.isDragging = true;
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr]
-    if (this.opts.dragMode === DRAG_MODE.none) return
+    if (this.opts.dragMode === DRAG_MODE.none) {
+      return
+    }
     this.setDragStart(pos.x, pos.y)
-    if (!this.uiData.isDragging) this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+    if (!this.uiData.isDragging) {
+      this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+    }
     this.uiData.isDragging = true
     this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
   }
@@ -1049,9 +1057,13 @@ export class Niivue {
     // this.uiData.isDragging = true;
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr]
-    if (this.opts.dragMode === DRAG_MODE.none) return
+    if (this.opts.dragMode === DRAG_MODE.none) {
+      return
+    }
     this.setDragStart(pos.x, pos.y)
-    if (!this.uiData.isDragging) this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+    if (!this.uiData.isDragging) {
+      this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+    }
     this.uiData.isDragging = true
     this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
   }
@@ -1078,14 +1090,19 @@ export class Niivue {
     if (this.opts.sliceType === SLICE_TYPE.RENDER && this.sliceMosaicString.length < 1) {
       return
     }
-    if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1])
+    if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
       return
+    }
     // calculate our box
     let frac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
-    if (frac[0] < 0) return
+    if (frac[0] < 0) {
+      return
+    }
     const startVox = this.frac2vox(frac, volIdx)
     frac = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
-    if (frac[0] < 0) return
+    if (frac[0] < 0) {
+      return
+    }
     const endVox = this.frac2vox(frac, volIdx)
 
     let hi = -Number.MAX_VALUE
@@ -1123,7 +1140,9 @@ export class Niivue {
         }
       }
     }
-    if (lo >= hi) return // no variability or outside volume
+    if (lo >= hi) {
+      return
+    } // no variability or outside volume
     const mnScale = intensityRaw2Scaled(hdr, lo)
     const mxScale = intensityRaw2Scaled(hdr, hi)
     this.volumes[volIdx].cal_min = mnScale
@@ -1138,9 +1157,13 @@ export class Niivue {
     const tileEnd = this.tileIndex(this.uiData.dragEnd[0], this.uiData.dragEnd[1])
     // a tile index of -1 indicates invalid: drag not constrained to one tile
     let tileIdx = -1
-    if (tileStart === tileEnd) tileIdx = tileEnd
+    if (tileStart === tileEnd) {
+      tileIdx = tileEnd
+    }
     let axCorSag = -1
-    if (tileIdx >= 0) axCorSag = this.screenSlices[tileIdx].axCorSag
+    if (tileIdx >= 0) {
+      axCorSag = this.screenSlices[tileIdx].axCorSag
+    }
     const mmStart = this.frac2mm(fracStart)
     const mmEnd = this.frac2mm(fracEnd)
     const v = mat.vec3.create()
@@ -1183,21 +1206,33 @@ export class Niivue {
     const wasCenterDown = this.uiData.mouseButtonCenterDown
     this.uiData.mouseButtonCenterDown = false
     this.uiData.mouseButtonLeftDown = false
-    if (this.drawPenFillPts.length > 0) this.drawPenFilled()
-    else if (this.drawPenAxCorSag >= 0) this.drawAddUndoBitmap()
+    if (this.drawPenFillPts.length > 0) {
+      this.drawPenFilled()
+    } else if (this.drawPenAxCorSag >= 0) {
+      this.drawAddUndoBitmap()
+    }
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
-    if (isFunction(this.onMouseUp)) this.onMouseUp(uiData)
+    if (isFunction(this.onMouseUp)) {
+      this.onMouseUp(uiData)
+    }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false
-      if (this.opts.dragMode === DRAG_MODE.callbackOnly) this.drawScene() // hide selectionbox
+      if (this.opts.dragMode === DRAG_MODE.callbackOnly) {
+        this.drawScene()
+      } // hide selectionbox
       const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
       const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
       this.generateMouseUpCallback(fracStart, fracEnd)
-      if (this.opts.dragMode !== DRAG_MODE.contrast) return
-      if (wasCenterDown) return
-      if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1])
+      if (this.opts.dragMode !== DRAG_MODE.contrast) {
         return
+      }
+      if (wasCenterDown) {
+        return
+      }
+      if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+        return
+      }
       this.calculateNewRange({ fracStart, fracEnd, volIdx: 0 })
       this.refreshLayers(this.volumes[0], 0, this.volumes.length)
     }
@@ -1267,7 +1302,9 @@ export class Niivue {
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false
       // if (this.opts.isDragShowsMeasurementTool) return;
-      if (this.opts.dragMode !== DRAG_MODE.contrast) return
+      if (this.opts.dragMode !== DRAG_MODE.contrast) {
+        return
+      }
       this.calculateNewRange()
       this.refreshLayers(this.volumes[0], 0, this.volumes.length)
     }
@@ -1286,7 +1323,9 @@ export class Niivue {
       const x = pos.x * this.uiData.dpr
       const y = pos.y * this.uiData.dpr
       const tile = this.tileIndex(x, y)
-      if (tile !== this.uiData.clickedTile) return
+      if (tile !== this.uiData.clickedTile) {
+        return
+      }
       if (this.uiData.mouseButtonLeftDown) {
         this.mouseMove(pos.x, pos.y)
         this.mouseClick(pos.x, pos.y)
@@ -1307,9 +1346,13 @@ export class Niivue {
     // this.volumes[0].cal_min = this.volumes[0].global_min;
     // this.volumes[0].cal_max = this.volumes[0].global_max;
     // don't reset bri/con if the user is in 3D mode and double clicks
-    if (this.uiData.isDragging) return
+    if (this.uiData.isDragging) {
+      return
+    }
     let isRender = false
-    if (this.opts.sliceType === SLICE_TYPE.RENDER) isRender = true
+    if (this.opts.sliceType === SLICE_TYPE.RENDER) {
+      isRender = true
+    }
     let x = 0
     let y = 0
     if (msg !== null) {
@@ -1325,7 +1368,9 @@ export class Niivue {
       x *= this.uiData.dpr
       y *= this.uiData.dpr
       // test if render is one of the tiles
-      if (this.inRenderTile(x, y) >= 0) isRender = true
+      if (this.inRenderTile(x, y) >= 0) {
+        isRender = true
+      }
     }
     if (isRender) {
       this.uiData.mouseDepthPicker = true
@@ -1333,9 +1378,15 @@ export class Niivue {
       this.drawScene() // this duplicate drawScene is necessary for depth picking. DO NOT REMOVE
       return
     }
-    if (this.opts.dragMode === DRAG_MODE.slicer3D) return
-    if (this.volumes.length < 1) return // issue468, AFTER render depth picking
-    if (this.uiData.doubleTouch) return
+    if (this.opts.dragMode === DRAG_MODE.slicer3D) {
+      return
+    }
+    if (this.volumes.length < 1) {
+      return
+    } // issue468, AFTER render depth picking
+    if (this.uiData.doubleTouch) {
+      return
+    }
     this.volumes[0].cal_min = this.volumes[0].robust_min
     this.volumes[0].cal_max = this.volumes[0].robust_max
     this.onIntensityChange(this.volumes[0])
@@ -1363,7 +1414,9 @@ export class Niivue {
   touchMoveListener(e) {
     if (this.uiData.touchdown && e.touches.length < 2) {
       const rect = this.canvas.getBoundingClientRect()
-      if (!this.uiData.isDragging) this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+      if (!this.uiData.isDragging) {
+        this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+      }
       this.uiData.isDragging = true
       if (this.uiData.doubleTouch && this.uiData.isDragging) {
         this.setDragEnd(
@@ -1763,7 +1816,9 @@ export class Niivue {
                   log.debug('alt key detected: assuming this is a drawing overlay')
                   this.drawClearAllUndoBitmaps()
                   this.loadDrawing(volume)
-                } else this.addVolume(volume)
+                } else {
+                  this.addVolume(volume)
+                }
               }
             })
           } else if (entry.isDirectory) {
@@ -1983,7 +2038,9 @@ export class Niivue {
     // let rle = encodeRLE(this.drawBitmap);
     // the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
     this.currentDrawUndoBitmap++
-    if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps) this.currentDrawUndoBitmap = 0
+    if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps) {
+      this.currentDrawUndoBitmap = 0
+    }
     this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap)
   }
 
@@ -1991,8 +2048,12 @@ export class Niivue {
   // Internal function to delete all drawing undo images
   async drawClearAllUndoBitmaps() {
     this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps // next add will be cylinder 0
-    if (this.drawUndoBitmaps.length < 1) return
-    for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) this.drawUndoBitmaps[i] = []
+    if (this.drawUndoBitmaps.length < 1) {
+      return
+    }
+    for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) {
+      this.drawUndoBitmaps[i] = []
+    }
   }
 
   /**
@@ -2006,8 +2067,12 @@ export class Niivue {
       return
     }
     this.currentDrawUndoBitmap--
-    if (this.currentDrawUndoBitmap < 0) this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1
-    if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length) this.currentDrawUndoBitmap = 0
+    if (this.currentDrawUndoBitmap < 0) {
+      this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1
+    }
+    if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length) {
+      this.currentDrawUndoBitmap = 0
+    }
     if (this.drawUndoBitmaps[this.currentDrawUndoBitmap].length < 2) {
       log.debug('drawUndo is misbehaving')
       return
@@ -2018,14 +2083,18 @@ export class Niivue {
 
   // not included in public docs
   loadDrawing(drawingBitmap) {
-    if (this.drawBitmap) log.debug('Overwriting open drawing!')
+    if (this.drawBitmap) {
+      log.debug('Overwriting open drawing!')
+    }
     this.drawClearAllUndoBitmaps()
     const dims = drawingBitmap.hdr.dims
     if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
       log.debug('drawing dimensions do not match background image')
       return false
     }
-    if (drawingBitmap.img.constructor !== Uint8Array) log.debug('Drawings should be UINT8')
+    if (drawingBitmap.img.constructor !== Uint8Array) {
+      log.debug('Drawings should be UINT8')
+    }
     const perm = drawingBitmap.permRAS
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
@@ -2033,7 +2102,9 @@ export class Niivue {
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
-        if (Math.abs(perm[i]) - 1 !== j) continue
+        if (Math.abs(perm[i]) - 1 !== j) {
+          continue
+        }
         layout[j] = i * Math.sign(perm[i])
       }
     }
@@ -2043,24 +2114,40 @@ export class Niivue {
     for (let i = 0; i < layout.length; i++) {
       for (let j = 0; j < layout.length; j++) {
         const a = Math.abs(layout[j])
-        if (a !== i) continue
+        if (a !== i) {
+          continue
+        }
         instride[j] = stride
         // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-        if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
+        if (layout[j] < 0 || Object.is(layout[j], -0)) {
+          inflip[j] = true
+        }
         stride *= dims[j + 1]
       }
     }
     // lookup table for flips and stride offsets:
     const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
     let xlut = range(0, dims[1] - 1, 1)
-    if (inflip[0]) xlut = range(dims[1] - 1, 0, -1)
-    for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0]
+    if (inflip[0]) {
+      xlut = range(dims[1] - 1, 0, -1)
+    }
+    for (let i = 0; i < dims[1]; i++) {
+      xlut[i] *= instride[0]
+    }
     let ylut = range(0, dims[2] - 1, 1)
-    if (inflip[1]) ylut = range(dims[2] - 1, 0, -1)
-    for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1]
+    if (inflip[1]) {
+      ylut = range(dims[2] - 1, 0, -1)
+    }
+    for (let i = 0; i < dims[2]; i++) {
+      ylut[i] *= instride[1]
+    }
     let zlut = range(0, dims[3] - 1, 1)
-    if (inflip[2]) zlut = range(dims[3] - 1, 0, -1)
-    for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2]
+    if (inflip[2]) {
+      zlut = range(dims[3] - 1, 0, -1)
+    }
+    for (let i = 0; i < dims[3]; i++) {
+      zlut[i] *= instride[2]
+    }
     // convert data
     const inVs = drawingBitmap.img // new Uint8Array(this.drawBitmap);
     const outVs = this.drawBitmap
@@ -2087,7 +2174,9 @@ export class Niivue {
     const vx = dims[1] * dims[2] * dims[3]
     const img = new Uint8Array(vx)
     for (let i = 0; i < vx; i++) {
-      if (volume.img[i] !== 0) img[i] = 1
+      if (volume.img[i] !== 0) {
+        img[i] = 1
+      }
     }
     volume.img = null
     volume.img = img
@@ -2104,12 +2193,16 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
   async loadDrawingFromUrl(fnm, isBinarize = false) {
-    if (this.drawBitmap) log.debug('Overwriting open drawing!')
+    if (this.drawBitmap) {
+      log.debug('Overwriting open drawing!')
+    }
     this.drawClearAllUndoBitmaps()
     let ok = false
     try {
       const volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm))
-      if (isBinarize) await this.binarize(volume)
+      if (isBinarize) {
+        await this.binarize(volume)
+      }
       ok = this.loadDrawing(volume)
     } catch (err) {
       console.error('loadDrawingFromUrl() failed to load ' + fnm)
@@ -2122,17 +2215,23 @@ export class Niivue {
   async findOtsu(mlevel = 2) {
     // C: https://github.com/rordenlab/niimath
     // Java: https://github.com/stevenjwest/Multi_OTSU_Segmentation
-    if (this.volumes.length < 1) return []
+    if (this.volumes.length < 1) {
+      return []
+    }
     const img = this.volumes[0].img
     const nvox = img.length
-    if (nvox < 1) return []
+    if (nvox < 1) {
+      return []
+    }
     const nBin = 256
     const maxBin = nBin - 1 // bins indexed from 0: if 256 bins then 0..255
     const h = new Array(nBin).fill(0)
     // build 1D histogram
     const mn = this.volumes[0].cal_min
     const mx = this.volumes[0].cal_max
-    if (mx <= mn) return false
+    if (mx <= mn) {
+      return false
+    }
     const scale2raw = (mx - mn) / nBin
     function bin2raw(bin) {
       return bin * scale2raw + mn
@@ -2167,16 +2266,20 @@ export class Niivue {
       S[1][i + 1] = S[1][i] + (i + 1) * h[i + 1]
     }
     // using row 1 to calculate others
-    for (let i = 2; i < nBin; i++)
+    for (let i = 2; i < nBin; i++) {
       for (let j = i + 1; j < nBin; j++) {
         P[i][j] = P[1][j] - P[1][i - 1]
         S[i][j] = S[1][j] - S[1][i - 1]
       }
+    }
     // now calculate H[i][j]
-    for (let i = 1; i < nBin; ++i)
+    for (let i = 1; i < nBin; ++i) {
       for (let j = i + 1; j < nBin; j++) {
-        if (P[i][j] !== 0) P[i][j] = (S[i][j] * S[i][j]) / P[i][j]
+        if (P[i][j] !== 0) {
+          P[i][j] = (S[i][j] * S[i][j]) / P[i][j]
+        }
       }
+    }
     let max = 0
     const t = [Infinity, Infinity, Infinity]
     if (mlevel > 3) {
@@ -2225,16 +2328,28 @@ export class Niivue {
   async drawOtsu(levels = 2) {
     const nvox = this.volumes[0].img.length
     const thresholds = await this.findOtsu(levels)
-    if (thresholds.length < 3) return
-    if (!this.drawBitmap) this.createEmptyDrawing()
+    if (thresholds.length < 3) {
+      return
+    }
+    if (!this.drawBitmap) {
+      this.createEmptyDrawing()
+    }
     const drawImg = this.drawBitmap
     const img = this.volumes[0].img
     for (let i = 0; i < nvox; i++) {
-      if (drawImg[i] !== 0) continue
+      if (drawImg[i] !== 0) {
+        continue
+      }
       const v = img[i]
-      if (v > thresholds[0]) drawImg[i] = 1
-      if (v > thresholds[1]) drawImg[i] = 2
-      if (v > thresholds[2]) drawImg[i] = 3
+      if (v > thresholds[0]) {
+        drawImg[i] = 1
+      }
+      if (v > thresholds[1]) {
+        drawImg[i] = 2
+      }
+      if (v > thresholds[2]) {
+        drawImg[i] = 3
+      }
     }
     this.drawAddUndoBitmap()
     this.refreshDrawing(true)
@@ -2250,13 +2365,23 @@ export class Niivue {
   async removeHaze(level = 5, volIndex = 0) {
     const nvox = this.volumes[volIndex].img.length
     let otsu = 2
-    if (level === 5 || level === 1) otsu = 4
-    if (level === 4 || level === 2) otsu = 3
+    if (level === 5 || level === 1) {
+      otsu = 4
+    }
+    if (level === 4 || level === 2) {
+      otsu = 3
+    }
     const thresholds = await this.findOtsu(otsu)
-    if (thresholds.length < 3) return
+    if (thresholds.length < 3) {
+      return
+    }
     let threshold = thresholds[0]
-    if (level === 1) threshold = thresholds[2]
-    if (level === 2) threshold = thresholds[1]
+    if (level === 1) {
+      threshold = thresholds[2]
+    }
+    if (level === 2) {
+      threshold = thresholds[1]
+    }
 
     const inter = this.volumes[volIndex].hdr.scl_inter
     const slope = this.volumes[volIndex].hdr.scl_slope
@@ -2264,7 +2389,9 @@ export class Niivue {
     const img = this.volumes[volIndex].img
     for (let v = 0; v < nvox; v++) {
       const val = img[v] * slope + inter
-      if (val < threshold) img[v] = mn
+      if (val < threshold) {
+        img[v] = mn
+      }
     }
     this.refreshLayers(this.volumes[volIndex], 0, this.volumes.length)
     this.drawScene()
@@ -2300,7 +2427,9 @@ export class Niivue {
         const layout = [0, 0, 0]
         for (let i = 0; i < 3; i++) {
           for (let j = 0; j < 3; j++) {
-            if (Math.abs(perm[i]) - 1 !== j) continue
+            if (Math.abs(perm[i]) - 1 !== j) {
+              continue
+            }
             layout[j] = i * Math.sign(perm[i])
           }
         }
@@ -2310,10 +2439,14 @@ export class Niivue {
         for (let i = 0; i < layout.length; i++) {
           for (let j = 0; j < layout.length; j++) {
             const a = Math.abs(layout[j])
-            if (a !== i) continue
+            if (a !== i) {
+              continue
+            }
             instride[j] = stride
             // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-            if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
+            if (layout[j] < 0 || Object.is(layout[j], -0)) {
+              inflip[j] = true
+            }
             stride *= dims[j + 1]
           }
         }
@@ -2321,14 +2454,26 @@ export class Niivue {
         const range = (start, stop, step) =>
           Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
         let xlut = range(0, dims[1] - 1, 1)
-        if (inflip[0]) xlut = range(dims[1] - 1, 0, -1)
-        for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0]
+        if (inflip[0]) {
+          xlut = range(dims[1] - 1, 0, -1)
+        }
+        for (let i = 0; i < dims[1]; i++) {
+          xlut[i] *= instride[0]
+        }
         let ylut = range(0, dims[2] - 1, 1)
-        if (inflip[1]) ylut = range(dims[2] - 1, 0, -1)
-        for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1]
+        if (inflip[1]) {
+          ylut = range(dims[2] - 1, 0, -1)
+        }
+        for (let i = 0; i < dims[2]; i++) {
+          ylut[i] *= instride[1]
+        }
         let zlut = range(0, dims[3] - 1, 1)
-        if (inflip[2]) zlut = range(dims[3] - 1, 0, -1)
-        for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2]
+        if (inflip[2]) {
+          zlut = range(dims[3] - 1, 0, -1)
+        }
+        for (let i = 0; i < dims[3]; i++) {
+          zlut[i] *= instride[2]
+        }
         // convert data
 
         const inVs = new Uint8Array(this.drawBitmap)
@@ -2348,14 +2493,18 @@ export class Niivue {
     }
     const img = await this.volumes[volumeByIndex].saveToDisk(fnm)
     const isString = (typeof fnm === 'string' || fnm instanceof String) && fnm.length > 0
-    if (isString) return true
+    if (isString) {
+      return true
+    }
     return img
   }
 
   // not included in public docs
   getMeshIndexByID(id) {
     if (typeof id === 'number') {
-      if (id >= this.meshes.length) return -1 // range 0..len-1
+      if (id >= this.meshes.length) {
+        return -1
+      } // range 0..len-1
       return id
     }
     const n = this.meshes.length
@@ -2659,9 +2808,13 @@ export class Niivue {
     const dy = (y - this.mousePos[1]) / this.uiData.dpr
     this.mousePos = [x, y]
 
-    if (this.inRenderTile(x, y) < 0) return
+    if (this.inRenderTile(x, y) < 0) {
+      return
+    }
 
-    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+      return
+    }
     this.scene.renderAzimuth += dx
     this.scene.renderElevation += dy
 
@@ -2685,7 +2838,9 @@ export class Niivue {
     const Theta = ((azimuth - 90) % 360) * (Math.PI / 180)
     const ret = [Math.cos(Phi) * Math.cos(Theta), Math.cos(Phi) * Math.sin(Theta), Math.sin(Phi)]
     const len = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2])
-    if (len <= 0.0) return ret
+    if (len <= 0.0) {
+      return ret
+    }
     ret[0] /= len
     ret[1] /= len
     ret[2] /= len
@@ -2767,7 +2922,9 @@ export class Niivue {
   setDrawingEnabled(trueOrFalse) {
     this.opts.drawingEnabled = trueOrFalse
     if (this.opts.drawingEnabled) {
-      if (!this.drawBitmap) this.createEmptyDrawing()
+      if (!this.drawBitmap) {
+        this.createEmptyDrawing()
+      }
     }
     this.drawScene()
   }
@@ -2812,8 +2969,12 @@ export class Niivue {
   sliceScroll2D(posChange, x, y, isDelta = true) {
     if (this.inGraphTile(x, y)) {
       let vol = this.volumes[0].frame4D
-      if (posChange > 0) vol++
-      if (posChange < 0) vol--
+      if (posChange > 0) {
+        vol++
+      }
+      if (posChange < 0) {
+        vol--
+      }
       this.setFrame4D(this.volumes[0].id, vol)
       return
     }
@@ -2906,8 +3067,12 @@ export class Niivue {
    */
   setVolumeRenderIllumination(gradientAmount = 0.0) {
     this.renderShader = this.renderVolumeShader
-    if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader
-    if (gradientAmount < 0.0) this.renderShader = this.renderSliceShader
+    if (gradientAmount > 0.0) {
+      this.renderShader = this.renderGradientShader
+    }
+    if (gradientAmount < 0.0) {
+      this.renderShader = this.renderSliceShader
+    }
     this.initRenderShader(this.renderShader, gradientAmount)
     this.renderShader.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
@@ -2935,7 +3100,9 @@ export class Niivue {
           const dz = Math.abs(z - halfZ)
           const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
           let v = 0
-          if (dist < radius) v = 255
+          if (dist < radius) {
+            v = 255
+          }
           imgRGBA[j++] = 0 // Red
           imgRGBA[j++] = v // Green
           imgRGBA[j++] = 0 // Blue
@@ -2995,7 +3162,9 @@ export class Niivue {
       const imageOptions = document.imageOptionsArray[i]
       const base64 = encodedImageBlobs[i]
       if (base64) {
-        if ('colorMap' in imageOptions) imageOptions.colormap = imageOptions.colorMap
+        if ('colorMap' in imageOptions) {
+          imageOptions.colormap = imageOptions.colorMap
+        }
         const image = NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
           this.addVolume(image)
@@ -3276,8 +3445,12 @@ export class Niivue {
     // for loop to load all volumes in volumeList
     for (let i = 0; i < volumeList.length; i++) {
       this.uiData.loading$.next(true)
-      if (volumeList[i].colorMap !== undefined) volumeList[i].colormap = volumeList[i].colorMap
-      if (volumeList[i].colorMapNegative !== undefined) volumeList[i].colormapNegative = volumeList[i].colorMapNegative
+      if (volumeList[i].colorMap !== undefined) {
+        volumeList[i].colormap = volumeList[i].colorMap
+      }
+      if (volumeList[i].colorMapNegative !== undefined) {
+        volumeList[i].colormapNegative = volumeList[i].colorMapNegative
+      }
       const imageOptions = {
         url: volumeList[i].url,
         name: volumeList[i].name,
@@ -3455,9 +3628,13 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
    */
   async createEmptyDrawing() {
-    if (!('dims' in this.back)) return
+    if (!('dims' in this.back)) {
+      return
+    }
     const mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3])
-    if (mn < 1) return // something is horribly wrong!
+    if (mn < 1) {
+      return
+    } // something is horribly wrong!
     const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
     this.drawBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
@@ -3469,7 +3646,9 @@ export class Niivue {
   // not included in public docs
   // create a 1-component (red) 16-bit signed integer texture on the GPU
   r16Tex(texID, activeID, dims, img16 = []) {
-    if (texID) this.gl.deleteTexture(texID)
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
     texID = this.gl.createTexture()
     this.gl.activeTexture(activeID)
     this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
@@ -3481,7 +3660,9 @@ export class Niivue {
     this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
     this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, dims[1], dims[2], dims[3]) // output background dimensions
     const nv = dims[1] * dims[2] * dims[3]
-    if (img16.length !== nv) img16 = new Int16Array(nv)
+    if (img16.length !== nv) {
+      img16 = new Int16Array(nv)
+    }
     this.gl.texSubImage3D(
       this.gl.TEXTURE_3D,
       0,
@@ -3522,11 +3703,17 @@ export class Niivue {
     // we need to devote 5 textures to this shader 3,4,5,6,7
     let img16 = img2ras16(this.back)
     const background = this.r16Tex(null, gl.TEXTURE3, this.back.dims, img16)
-    for (let i = 1; i < nv; i++) img16[i] = this.drawBitmap[i]
+    for (let i = 1; i < nv; i++) {
+      img16[i] = this.drawBitmap[i]
+    }
     const label0 = this.r16Tex(null, gl.TEXTURE6, this.back.dims, img16)
     const label1 = this.r16Tex(null, gl.TEXTURE7, this.back.dims, img16) // TEXTURE7 = draw Texture
     const kMAX_STRENGTH = 10000
-    for (let i = 1; i < nv; i++) if (img16[i] > 0) img16[i] = kMAX_STRENGTH
+    for (let i = 1; i < nv; i++) {
+      if (img16[i] > 0) {
+        img16[i] = kMAX_STRENGTH
+      }
+    }
     const strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16)
     const strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16)
     this.gl.bindVertexArray(this.genericVAO)
@@ -3545,12 +3732,16 @@ export class Niivue {
         this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength1, 0, i)
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-        if (status !== gl.FRAMEBUFFER_COMPLETE) console.error('Incomplete framebuffer')
+        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+          console.error('Incomplete framebuffer')
+        }
 
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
       }
       // reverse order strength1/label1 and strength0/label0 for reading and writing:
-      if (j === iterations - 1) gl.uniform1i(shader.uniforms.finalPass, 1)
+      if (j === iterations - 1) {
+        gl.uniform1i(shader.uniforms.finalPass, 1)
+      }
       gl.uniform1i(shader.uniforms.inputTexture1, 7) // label1 is TEXTURE7
       gl.uniform1i(shader.uniforms.inputTexture2, 5) // strength1 is TEXTURE5
       for (let i = 0; i < this.back.dims[3]; i++) {
@@ -3560,7 +3751,9 @@ export class Niivue {
         this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength0, 0, i)
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-        if (status !== gl.FRAMEBUFFER_COMPLETE) console.error('Incomplete framebuffer')
+        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+          console.error('Incomplete framebuffer')
+        }
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
       }
     }
@@ -3572,7 +3765,9 @@ export class Niivue {
     // assuming a framebuffer is bound with the texture to read attached
     const format = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT)
     const type = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE)
-    if (format !== gl.RED_INTEGER || type !== gl.SHORT) log.debug('readPixels will fail.')
+    if (format !== gl.RED_INTEGER || type !== gl.SHORT) {
+      log.debug('readPixels will fail.')
+    }
     img16 = []
     const nv2D = this.back.dims[1] * this.back.dims[2]
     const slice16 = new Int16Array(nv2D)
@@ -3589,8 +3784,12 @@ export class Niivue {
       img16 = [...img16, ...slice16]
     }
     let mx = img16[0]
-    for (let i = 0; i < img16.length; i++) mx = Math.max(mx, img16[i])
-    for (let i = 1; i < nv; i++) this.drawBitmap[i] = img16[i]
+    for (let i = 0; i < img16.length; i++) {
+      mx = Math.max(mx, img16[i])
+    }
+    for (let i = 1; i < nv; i++) {
+      this.drawBitmap[i] = img16[i]
+    }
     // clean up
     // restore textures
     gl.activeTexture(gl.TEXTURE2)
@@ -3639,9 +3838,15 @@ export class Niivue {
     let xs = -1
     let ys = -1
     let zs = -1
-    if (ptB[0] > ptA[0]) xs = 1
-    if (ptB[1] > ptA[1]) ys = 1
-    if (ptB[2] > ptA[2]) zs = 1
+    if (ptB[0] > ptA[0]) {
+      xs = 1
+    }
+    if (ptB[1] > ptA[1]) {
+      ys = 1
+    }
+    if (ptB[2] > ptA[2]) {
+      zs = 1
+    }
     let x1 = ptA[0]
     let y1 = ptA[1]
     let z1 = ptA[2]
@@ -3744,10 +3949,16 @@ export class Niivue {
         xyzN[0] += offset[0]
         xyzN[1] += offset[1]
         xyzN[2] += offset[2]
-        if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0) return
-        if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2]) return
+        if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0) {
+          return
+        }
+        if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2]) {
+          return
+        }
         const vxT = xyz2vx(xyzN)
-        if (img[vxT] !== 1) return
+        if (img[vxT] !== 1) {
+          return
+        }
         img[vxT] = 2 // part of cluster
         Q.push(vxT)
       }
@@ -3758,7 +3969,9 @@ export class Niivue {
       testNeighbor([0, 1, 0]) // anterior
       testNeighbor([-1, 0, 0]) // left
       testNeighbor([1, 0, 0]) // right
-      if (neighbors <= 6) continue
+      if (neighbors <= 6) {
+        continue
+      }
       // test voxels that share edge
       testNeighbor([-1, -1, 0]) // left posterior
       testNeighbor([1, 1, 0]) // right posterior
@@ -3772,7 +3985,9 @@ export class Niivue {
       testNeighbor([0, 1, 1]) // anterior superior
       testNeighbor([-1, 0, 1]) // left superior
       testNeighbor([1, 0, 1]) // right superior
-      if (neighbors <= 18) continue
+      if (neighbors <= 18) {
+        continue
+      }
       // test neighbors that share a corner
       testNeighbor([-1, -1, -1]) // left posterior inferior
       testNeighbor([1, -1, -1]) // right posterior inferior
@@ -3801,13 +4016,19 @@ export class Niivue {
     // https://en.wikipedia.org/wiki/Flood_fill
     newColor = Math.abs(newColor)
     const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]] // +1: dims indexed from 0!
-    if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) return
-    if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2]) return
+    if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) {
+      return
+    }
+    if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2]) {
+      return
+    }
     const nx = dims[0]
     const nxy = nx * dims[1]
     const nxyz = nxy * dims[2]
     const img = this.drawBitmap.slice()
-    if (img.length !== nxy * dims[2]) return
+    if (img.length !== nxy * dims[2]) {
+      return
+    }
     function xyz2vx(pt) {
       // provided an XYZ 3D point, provide address in 1D array
       return pt[0] + pt[1] * nx + pt[2] * nxy
@@ -3815,13 +4036,18 @@ export class Niivue {
     const seedVx = xyz2vx(seedXYZ)
     const seedColor = img[seedVx]
     if (seedColor === newColor) {
-      if (growSelectedCluster !== 0) log.debug('drawFloodFill selected voxel is not part of a drawing')
-      else log.debug('drawFloodFill selected voxel is already desired color')
+      if (growSelectedCluster !== 0) {
+        log.debug('drawFloodFill selected voxel is not part of a drawing')
+      } else {
+        log.debug('drawFloodFill selected voxel is already desired color')
+      }
       return
     }
     for (let i = 1; i < nxyz; i++) {
       img[i] = 0
-      if (this.drawBitmap[i] === seedColor) img[i] = 1
+      if (this.drawBitmap[i] === seedColor) {
+        img[i] = 1
+      }
     }
     this.drawFloodFillCore(img, seedVx, neighbors)
     // 8. (Optional) work out intensity of selected cluster
@@ -3839,23 +4065,31 @@ export class Niivue {
             mn = Math.min(mn, backImg[i])
           }
         }
-        if (growSelectedCluster === Number.POSITIVE_INFINITY) mx = growSelectedCluster
-        if (growSelectedCluster === Number.NEGATIVE_INFINITY) mn = growSelectedCluster
+        if (growSelectedCluster === Number.POSITIVE_INFINITY) {
+          mx = growSelectedCluster
+        }
+        if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
+          mn = growSelectedCluster
+        }
       }
       log.debug('Intensity range of selected cluster :', mn, mx)
       // second pass:
       for (let i = 1; i < nxyz; i++) {
         img[i] = 0
-        if (backImg[i] >= mn && backImg[i] <= mx) img[i] = 1
+        if (backImg[i] >= mn && backImg[i] <= mx) {
+          img[i] = 1
+        }
       }
       this.drawFloodFillCore(img, seedVx, neighbors)
       newColor = seedColor
     }
     // 8. Return
-    for (let i = 1; i < nxyz; i++)
-      if (img[i] === 2)
+    for (let i = 1; i < nxyz; i++) {
+      if (img[i] === 2) {
         // if part of cluster
         this.drawBitmap[i] = newColor
+      }
+    }
     this.drawAddUndoBitmap()
     this.refreshDrawing(false)
   }
@@ -3875,7 +4109,9 @@ export class Niivue {
     // axial is x(0)*y(1) horizontal*vertical
     let h = 0
     let v = 1
-    if (axCorSag === 1) v = 2 // coronal is x(0)*z(0)
+    if (axCorSag === 1) {
+      v = 2
+    } // coronal is x(0)*z(0)
     if (axCorSag === 2) {
       // sagittal is y(1)*z(2)
       h = 1
@@ -3892,8 +4128,12 @@ export class Niivue {
       img2D[ptB[0] + ptB[1] * dims2D[0]] = pen
       let xs = -1
       let ys = -1
-      if (ptB[0] > ptA[0]) xs = 1
-      if (ptB[1] > ptA[1]) ys = 1
+      if (ptB[0] > ptA[0]) {
+        xs = 1
+      }
+      if (ptB[1] > ptA[1]) {
+        ys = 1
+      }
       let x1 = ptA[0]
       let y1 = ptA[1]
       const x2 = ptB[0]
@@ -3935,22 +4175,34 @@ export class Niivue {
     // flood fill
     const seeds = []
     function setSeed(pt) {
-      if (pt[0] < 0 || pt[1] < 0 || pt[0] >= dims2D[0] || pt[1] >= dims2D[1]) return
+      if (pt[0] < 0 || pt[1] < 0 || pt[0] >= dims2D[0] || pt[1] >= dims2D[1]) {
+        return
+      }
       const pxl = pt[0] + pt[1] * dims2D[0]
-      if (img2D[pxl] !== 0) return // not blank
+      if (img2D[pxl] !== 0) {
+        return
+      } // not blank
       seeds.push(pt)
       img2D[pxl] = 2
     }
     // https://en.wikipedia.org/wiki/Flood_fill
     // first seed all edges
     // bottom row
-    for (let i = 0; i < dims2D[0]; i++) setSeed([i, 0])
+    for (let i = 0; i < dims2D[0]; i++) {
+      setSeed([i, 0])
+    }
     // top row
-    for (let i = 0; i < dims2D[0]; i++) setSeed([i, dims2D[1] - 1])
+    for (let i = 0; i < dims2D[0]; i++) {
+      setSeed([i, dims2D[1] - 1])
+    }
     // left column
-    for (let i = 0; i < dims2D[1]; i++) setSeed([0, i])
+    for (let i = 0; i < dims2D[1]; i++) {
+      setSeed([0, i])
+    }
     // right columns
-    for (let i = 0; i < dims2D[1]; i++) setSeed([dims2D[0] - 1, i])
+    for (let i = 0; i < dims2D[1]; i++) {
+      setSeed([dims2D[0] - 1, i])
+    }
     // now retire first in first out
     while (seeds.length > 0) {
       // always remove one seed, plant 0..4 new ones
@@ -3968,7 +4220,9 @@ export class Niivue {
       // axial
       const offset = slice * dims2D[0] * dims2D[1]
       for (let i = 0; i < dims2D[0] * dims2D[1]; i++) {
-        if (img2D[i] !== 2) this.drawBitmap[i + offset] = pen
+        if (img2D[i] !== 2) {
+          this.drawBitmap[i + offset] = pen
+        }
       }
     } else {
       let xStride = 1 // coronal: horizontal LR pixels contiguous
@@ -3982,7 +4236,9 @@ export class Niivue {
       let i = 0
       for (let y = 0; y < dims2D[1]; y++) {
         for (let x = 0; x < dims2D[0]; x++) {
-          if (img2D[i] !== 2) this.drawBitmap[x * xStride + y * yStride + zOffset] = pen
+          if (img2D[i] !== 2) {
+            this.drawBitmap[x * xStride + y * yStride + zOffset] = pen
+          }
           i++
         }
       }
@@ -3992,7 +4248,9 @@ export class Niivue {
       const nv = this.drawBitmap.length
       const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], nv)
       for (let i = 0; i < nv; i++) {
-        if (bmp[i] === 0) continue
+        if (bmp[i] === 0) {
+          continue
+        }
         this.drawBitmap[i] = bmp[i]
       }
     }
@@ -4045,13 +4303,17 @@ export class Niivue {
       this.gl.UNSIGNED_BYTE,
       this.drawBitmap
     )
-    if (isForceRedraw) this.drawScene()
+    if (isForceRedraw) {
+      this.drawScene()
+    }
   }
 
   // not included in public docs
   // create 3D 1-component (red) uint8 texture on GPU
   r8Tex(texID, activeID, dims, isInit = false) {
-    if (texID) this.gl.deleteTexture(texID)
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
     texID = this.gl.createTexture()
     this.gl.activeTexture(activeID)
     this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
@@ -4084,7 +4346,9 @@ export class Niivue {
   // not included in public docs
   // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
   rgbaTex(texID, activeID, dims, isInit = false) {
-    if (texID) this.gl.deleteTexture(texID)
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
     texID = this.gl.createTexture()
     this.gl.activeTexture(activeID)
     this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
@@ -4130,7 +4394,9 @@ export class Niivue {
       img.onload = () => {
         let pngTexture = []
         if (textureNum === 4) {
-          if (this.bmpTexture !== null) this.gl.deleteTexture(this.bmpTexture)
+          if (this.bmpTexture !== null) {
+            this.gl.deleteTexture(this.bmpTexture)
+          }
           this.bmpTexture = this.gl.createTexture()
           pngTexture = this.bmpTexture
           this.bmpTextureWH = img.width / img.height
@@ -4139,14 +4405,18 @@ export class Niivue {
           this.gl.uniform1i(this.bmpShader.uniforms.bmpTexture, 4)
         } else if (textureNum === 5) {
           this.gl.activeTexture(this.gl.TEXTURE5)
-          if (this.matCapTexture !== null) this.gl.deleteTexture(this.matCapTexture)
+          if (this.matCapTexture !== null) {
+            this.gl.deleteTexture(this.matCapTexture)
+          }
           this.matCapTexture = this.gl.createTexture()
           pngTexture = this.matCapTexture
         } else {
           this.fontShader.use(this.gl)
           this.gl.activeTexture(this.gl.TEXTURE3)
           this.gl.uniform1i(this.fontShader.uniforms.fontTexture, 3)
-          if (this.fontTexture !== null) this.gl.deleteTexture(this.fontTexture)
+          if (this.fontTexture !== null) {
+            this.gl.deleteTexture(this.fontTexture)
+          }
           this.fontTexture = this.gl.createTexture()
           pngTexture = this.fontTexture
         }
@@ -4159,7 +4429,9 @@ export class Niivue {
         // Upload the image into the texture.
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img)
         resolve(pngTexture)
-        if (textureNum !== 4) this.drawScene() // draw the font
+        if (textureNum !== 4) {
+          this.drawScene()
+        } // draw the font
       }
       img.onerror = reject
       this.requestCORSIfNotSameOrigin(img, pngUrl)
@@ -4209,7 +4481,9 @@ export class Niivue {
       const glyph = this.fontMetrics.glyphs[i]
       const id = glyph.unicode
       this.fontMets[id].xadv = glyph.advance
-      if (glyph.planeBounds === undefined) continue
+      if (glyph.planeBounds === undefined) {
+        continue
+      }
       let l = glyph.atlasBounds.left / scaleW
       let b = (scaleH - glyph.atlasBounds.top) / scaleH
       let w = (glyph.atlasBounds.right - glyph.atlasBounds.left) / scaleW
@@ -4279,7 +4553,9 @@ export class Niivue {
   meshShaderNameToNumber(meshShaderName = 'Phong') {
     const name = meshShaderName.toLowerCase()
     for (let i = 0; i < this.meshShaders.length; i++) {
-      if (this.meshShaders[i].Name.toLowerCase() === name) return i
+      if (this.meshShaders[i].Name.toLowerCase() === name) {
+        return i
+      }
     }
   }
 
@@ -4292,8 +4568,9 @@ export class Niivue {
    */
   setMeshShader(id, meshShaderNameOrNumber = 2) {
     let shaderIndex = 0
-    if (typeof meshShaderNameOrNumber === 'number') shaderIndex = meshShaderNameOrNumber
-    else {
+    if (typeof meshShaderNameOrNumber === 'number') {
+      shaderIndex = meshShaderNameOrNumber
+    } else {
       shaderIndex = this.meshShaderNameToNumber(meshShaderNameOrNumber)
     }
     shaderIndex = Math.min(shaderIndex, this.meshShaders.length - 1)
@@ -4364,7 +4641,9 @@ export class Niivue {
    */
   meshShaderNames(sort = true) {
     const cm = []
-    for (let i = 0; i < this.meshShaders.length; i++) cm.push(this.meshShaders[i].Name)
+    for (let i = 0; i < this.meshShaders.length; i++) {
+      cm.push(this.meshShaders[i].Name)
+    }
     return sort === true ? cm.sort() : cm
   }
 
@@ -4569,14 +4848,19 @@ export class Niivue {
     // compile all mesh shaders
     for (let i = 0; i < this.meshShaders.length; i++) {
       const m = this.meshShaders[i]
-      if (m.Name === 'Flat') m.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader)
-      else m.shader = new Shader(this.gl, vertMeshShader, m.Frag)
+      if (m.Name === 'Flat') {
+        m.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader)
+      } else {
+        m.shader = new Shader(this.gl, vertMeshShader, m.Frag)
+      }
       m.shader.use(this.gl)
       m.shader.mvpLoc = m.shader.uniforms.mvpMtx
       m.shader.normLoc = m.shader.uniforms.normMtx
       m.shader.opacityLoc = m.shader.uniforms.opacity
       m.shader.isMatcap = m.Name === 'Matcap'
-      if (m.shader.isMatcap) this.gl.uniform1i(m.shader.uniforms.matCap, 5)
+      if (m.shader.isMatcap) {
+        this.gl.uniform1i(m.shader.uniforms.matCap, 5)
+      }
     }
     this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader)
     await this.initText()
@@ -4638,7 +4922,9 @@ export class Niivue {
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
     gl.activeTexture(gl.TEXTURE0)
-    if (this.gradientTexture !== null) gl.deleteTexture(this.gradientTexture)
+    if (this.gradientTexture !== null) {
+      gl.deleteTexture(this.gradientTexture)
+    }
     this.gradientTexture = this.rgbaTex(this.gradientTexture, this.gl.TEXTURE6, hdr.dims)
     for (let i = 0; i < hdr.dims[3] - 1; i++) {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
@@ -4676,10 +4962,14 @@ export class Niivue {
       visibleLayers++
     }
     this.furthestVertexFromOrigin = 0.0
-    if (numLayers > 0) this.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin
-    if (this.meshes)
-      for (let i = 0; i < this.meshes.length; i++)
+    if (numLayers > 0) {
+      this.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin
+    }
+    if (this.meshes) {
+      for (let i = 0; i < this.meshes.length; i++) {
         this.furthestVertexFromOrigin = Math.max(this.furthestVertexFromOrigin, this.meshes[i].furthestVertexFromOrigin)
+      }
+    }
 
     if (this.onVolumeUpdated) {
       this.onVolumeUpdated()
@@ -4698,16 +4988,24 @@ export class Niivue {
   getDescriptives(layer = 0, masks = [], drawingIsMask = false) {
     const hdr = this.volumes[layer].hdr
     let slope = hdr.scl_slope
-    if (isNaN(slope)) slope = 1
+    if (isNaN(slope)) {
+      slope = 1
+    }
     let inter = hdr.scl_inter
-    if (isNaN(inter)) inter = 1
+    if (isNaN(inter)) {
+      inter = 1
+    }
     const imgRaw = this.volumes[layer].img
     const nv = imgRaw.length // number of voxels
     // create mask
     const img = new Float32Array(nv)
-    for (let i = 0; i < nv; i++) img[i] = imgRaw[i] * slope + inter // assume all voxels survive
+    for (let i = 0; i < nv; i++) {
+      img[i] = imgRaw[i] * slope + inter
+    } // assume all voxels survive
     const mask = new Uint8Array(nv)
-    for (let i = 0; i < nv; i++) mask[i] = 1 // assume all voxels survive
+    for (let i = 0; i < nv; i++) {
+      mask[i] = 1
+    } // assume all voxels survive
     if (masks.length > 0) {
       for (let m = 0; m < masks.length; m++) {
         const imgMask = this.volumes[masks[m]].img
@@ -4716,12 +5014,16 @@ export class Niivue {
           continue
         }
         for (let i = 0; i < nv; i++) {
-          if (imgMask[i] === 0 || isNaN(imgMask[i])) mask[i] = 0
+          if (imgMask[i] === 0 || isNaN(imgMask[i])) {
+            mask[i] = 0
+          }
         }
       }
     } else if (masks.length < 1 && drawingIsMask) {
       for (let i = 0; i < nv; i++) {
-        if (this.drawBitmap[i] === 0 || isNaN(this.drawBitmap[i])) mask[i] = 0
+        if (this.drawBitmap[i] === 0 || isNaN(this.drawBitmap[i])) {
+          mask[i] = 0
+        }
       }
     }
     // Welfords method
@@ -4737,13 +5039,17 @@ export class Niivue {
     let SNot0 = 0
 
     for (let i = 0; i < nv; i++) {
-      if (mask[i] < 1) continue
+      if (mask[i] < 1) {
+        continue
+      }
       const x = img[i]
       k++
       let Mnext = M + (x - M) / k
       S = S + (x - M) * (x - Mnext)
       M = Mnext
-      if (x === 0) continue
+      if (x === 0) {
+        continue
+      }
       kNot0++
       Mnext = MNot0 + (x - MNot0) / kNot0
       SNot0 = SNot0 + (x - MNot0) * (x - Mnext)
@@ -4787,19 +5093,26 @@ export class Niivue {
   // apply slow computations when image properties have changed
   refreshLayers(overlayItem, layer) {
     this.refreshColormaps()
-    if (this.volumes.length < 1) return // e.g. only meshes
+    if (this.volumes.length < 1) {
+      return
+    } // e.g. only meshes
     const hdr = overlayItem.hdr
     let img = overlayItem.img
-    if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D)
+    if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D) {
       img = overlayItem.img.slice(
         overlayItem.frame4D * overlayItem.nVox3D,
         (overlayItem.frame4D + 1) * overlayItem.nVox3D
       )
+    }
     const opacity = overlayItem.opacity
-    if (layer > 1 && opacity === 0) return // skip completely transparent layers
+    if (layer > 1 && opacity === 0) {
+      return
+    } // skip completely transparent layers
     let outTexture = null
     this.gl.bindVertexArray(this.unusedVAO)
-    if (this.crosshairs3D !== null) this.crosshairs3D.mm[0] = NaN // force crosshairs3D redraw
+    if (this.crosshairs3D !== null) {
+      this.crosshairs3D.mm[0] = NaN
+    } // force crosshairs3D redraw
     let mtx = mat.mat4.clone(overlayItem.toRAS)
     if (layer === 0) {
       this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl)
@@ -4827,8 +5140,9 @@ export class Niivue {
       this.gl.uniform3fv(pickingShader.uniforms.volScale, volScale)
       log.debug(this.volumeObject3D)
     } else {
-      if (this.back.dims === undefined)
+      if (this.back.dims === undefined) {
         log.error('Fatal error: Unable to render overlay: background dimensions not defined!')
+      }
       const f000 = this.mm2frac(overlayItem.mm000, 0, true) // origin in output space
       let f100 = this.mm2frac(overlayItem.mm100, 0, true)
       let f010 = this.mm2frac(overlayItem.mm010, 0, true)
@@ -4861,7 +5175,9 @@ export class Niivue {
         outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back.dims)
         this.overlayTexture = outTexture
         this.overlayTextureID = outTexture
-      } else outTexture = this.overlayTextureID
+      } else {
+        outTexture = this.overlayTextureID
+      }
     }
     const fb = this.gl.createFramebuffer()
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb)
@@ -4882,7 +5198,9 @@ export class Niivue {
     let orientShader = this.orientShaderU
     if (hdr.datatypeCode === 2) {
       // raw input data
-      if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU
+      if (hdr.intent_code === 1002) {
+        orientShader = this.orientShaderAtlasU
+      }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -4899,7 +5217,9 @@ export class Niivue {
       )
     } else if (hdr.datatypeCode === 4) {
       orientShader = this.orientShaderI
-      if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasI
+      if (hdr.intent_code === 1002) {
+        orientShader = this.orientShaderAtlasI
+      }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -4967,7 +5287,9 @@ export class Niivue {
         img
       )
     } else if (hdr.datatypeCode === 512) {
-      if (hdr.intent_code === 1002) orientShader = this.orientShaderAtlasU
+      if (hdr.intent_code === 1002) {
+        orientShader = this.orientShaderAtlasU
+      }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -5025,7 +5347,9 @@ export class Niivue {
           this.gl.activeTexture(this.gl.TEXTURE5) // write to blend texture 5
           this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i, 0, 0, this.back.dims[1], this.back.dims[2])
         }
-      } else blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true)
+      } else {
+        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true)
+      }
     } else {
       // console.log("Using pass through shader (issue 501)");
       if (layer > 1) {
@@ -5043,7 +5367,9 @@ export class Niivue {
           // this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
           this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
         }
-      } else blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2])
+      } else {
+        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2])
+      }
     }
     orientShader.use(this.gl)
     this.gl.activeTexture(this.gl.TEXTURE1)
@@ -5114,7 +5440,9 @@ export class Niivue {
         if (overlayItem.modulateAlpha) {
           this.gl.uniform1i(orientShader.uniforms.modulation, 2)
           this.gl.uniform1f(orientShader.uniforms.opacity, 1.0)
-        } else this.gl.uniform1i(orientShader.uniforms.modulation, 1)
+        } else {
+          this.gl.uniform1i(orientShader.uniforms.modulation, 1)
+        }
         // r8Tex(texID, activeID, dims, isInit = false)
         modulateTexture = this.r8Tex(modulateTexture, this.gl.TEXTURE7, hdr.dims, true)
         this.gl.activeTexture(this.gl.TEXTURE7)
@@ -5157,7 +5485,9 @@ export class Niivue {
         }
         mnNeg = Math.abs(mnNeg)
         mxNeg = Math.abs(mxNeg)
-        if (mnNeg > mxNeg) [mnNeg, mxNeg] = [mxNeg, mnNeg]
+        if (mnNeg > mxNeg) {
+          ;[mnNeg, mxNeg] = [mxNeg, mnNeg]
+        }
         const scaleNeg = 1.0 / (mxNeg - mnNeg)
         let mpow = Math.abs(overlayItem.modulateAlpha) // can convert bool, too
         mpow = Math.max(mpow, 1.0)
@@ -5166,7 +5496,9 @@ export class Niivue {
         for (let i = 0; i < vx; i++) {
           const vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter
           let v = (vRaw - mn) * scale
-          if (isColormapNegative && vRaw < 0.0) v = (Math.abs(vRaw) - mnNeg) * scaleNeg
+          if (isColormapNegative && vRaw < 0.0) {
+            v = (Math.abs(vRaw) - mnNeg) * scaleNeg
+          }
           v = Math.min(Math.max(v, 0.0), 1.0)
           v = Math.pow(v, mpow) * 255.0
           modulateVolume[i] = v
@@ -5184,12 +5516,18 @@ export class Niivue {
           this.gl.UNSIGNED_BYTE,
           modulateVolume
         )
-      } else log.debug('Modulation image dimensions do not match target')
-    } else this.gl.uniform1i(orientShader.uniforms.modulation, 0)
+      } else {
+        log.debug('Modulation image dimensions do not match target')
+      }
+    } else {
+      this.gl.uniform1i(orientShader.uniforms.modulation, 0)
+    }
     this.gl.uniformMatrix4fv(orientShader.uniforms.mtx, false, mtx)
     if (hdr.intent_code === 1002) {
       let x = 1.0 / this.back.dims[1]
-      if (!this.opts.isAtlasOutline) x = -x
+      if (!this.opts.isAtlasOutline) {
+        x = -x
+      }
       this.gl.uniform3fv(orientShader.uniforms.xyzFrac, [x, 1.0 / this.back.dims[2], 1.0 / this.back.dims[3]])
     }
     log.debug('back dims: ', this.back.dims)
@@ -5212,9 +5550,12 @@ export class Niivue {
 
     if (layer === 0) {
       this.volumeTexture = outTexture
-      if (this.gradientTextureAmount > 0.0) this.gradientGL(hdr, tempTex3D)
-      else {
-        if (this.gradientTexture !== null) this.gl.deleteTexture(this.gradientTexture)
+      if (this.gradientTextureAmount > 0.0) {
+        this.gradientGL(hdr, tempTex3D)
+      } else {
+        if (this.gradientTexture !== null) {
+          this.gl.deleteTexture(this.gradientTexture)
+        }
         this.gradientTexture = null
       }
     }
@@ -5360,7 +5701,9 @@ export class Niivue {
   async loadDeferred4DVolumes(id) {
     const idx = this.getVolumeIndexByID(id)
     const volume = this.volumes[idx]
-    if (volume.nTotalFrame4D <= volume.nFrame4D) return
+    if (volume.nTotalFrame4D <= volume.nFrame4D) {
+      return
+    }
     // only load image data: do not change other settings like contrast
     // check if volume has the property fileObject
     let v
@@ -5397,7 +5740,9 @@ export class Niivue {
     if (frame4D < 0) {
       frame4D = 0
     }
-    if (frame4D === volume.frame4D) return // no change
+    if (frame4D === volume.frame4D) {
+      return
+    } // no change
     volume.frame4D = frame4D
     this.updateGLVolume()
     this.onFrameChange(volume, frame4D)
@@ -5430,8 +5775,12 @@ export class Niivue {
   // note a single volume can have two colormaps (positive and negative)
   // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
   createColormapTexture(texture = null, nRow = 0, nCol = 256) {
-    if (texture !== null) this.gl.deleteTexture(texture)
-    if (nRow < 1 || nCol < 1) return null
+    if (texture !== null) {
+      this.gl.deleteTexture(texture)
+    }
+    if (nRow < 1 || nCol < 1) {
+      return null
+    }
     texture = this.gl.createTexture()
     this.gl.activeTexture(this.gl.TEXTURE1)
     this.gl.bindTexture(this.gl.TEXTURE_2D, texture)
@@ -5449,7 +5798,9 @@ export class Niivue {
   addColormapList(nm = '', mn = NaN, mx = NaN, alpha = false, neg = false, vis = true, inv = false) {
     // if (nm.length < 1) return;
     // issue583 unused colormap: e.g. a volume without a negative colormap
-    if (nm.length < 1) vis = false
+    if (nm.length < 1) {
+      vis = false
+    }
     this.colormapLists.push({
       name: nm,
       min: mn,
@@ -5464,7 +5815,9 @@ export class Niivue {
   // not included in public docs
   refreshColormaps() {
     this.colormapLists = [] // one entry per colorbar: min, max, tic
-    if (this.volumes.length < 1 && this.meshes.length < 1) return
+    if (this.volumes.length < 1 && this.meshes.length < 1) {
+      return
+    }
     const nVol = this.volumes.length
     if (nVol > 0) {
       // add colorbars for volumes
@@ -5497,7 +5850,9 @@ export class Niivue {
       // add colorbars for volumes
       for (let i = 0; i < nmesh; i++) {
         const mesh = this.meshes[i]
-        if (!mesh.colorbarVisible) continue
+        if (!mesh.colorbarVisible) {
+          continue
+        }
         const nlayers = mesh.layers.length
         if ('edgeColormap' in mesh) {
           const neg = negMinMax(mesh.edgeMin, mesh.edgeMax, NaN, NaN)
@@ -5505,11 +5860,17 @@ export class Niivue {
           //  alpha = false,
           this.addColormapList(mesh.edgeColormap, mesh.edgeMin, mesh.edgeMax, false, false, true, mesh.colormapInvert)
         }
-        if (nlayers < 1) continue
+        if (nlayers < 1) {
+          continue
+        }
         for (let j = 0; j < nlayers; j++) {
           const layer = this.meshes[i].layers[j]
-          if (!layer.colorbarVisible) continue
-          if (layer.colormap.length < 1) continue
+          if (!layer.colorbarVisible) {
+            continue
+          }
+          if (layer.colormap.length < 1) {
+            continue
+          }
           const neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg)
           this.addColormapList(
             layer.colormapNegative,
@@ -5533,7 +5894,9 @@ export class Niivue {
       }
     }
     const nMaps = this.colormapLists.length
-    if (nMaps < 1) return
+    if (nMaps < 1) {
+      return
+    }
     this.colormapTexture = this.createColormapTexture(this.colormapTexture, nMaps + 1)
     let luts = []
     function addColormap(lut) {
@@ -5542,7 +5905,9 @@ export class Niivue {
       c.set(lut, luts.length)
       luts = c
     }
-    for (let i = 0; i < nMaps; i++) addColormap(this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert))
+    for (let i = 0; i < nMaps; i++) {
+      addColormap(this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert))
+    }
     addColormap(this.drawLut.lut)
     this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nMaps + 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts)
     return this
@@ -5551,7 +5916,9 @@ export class Niivue {
   // not included in public docs
   sliceScale(forceVox = false) {
     let dimsMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL)
-    if (forceVox) dimsMM = this.screenFieldOfViewVox(SLICE_TYPE.AXIAL)
+    if (forceVox) {
+      dimsMM = this.screenFieldOfViewVox(SLICE_TYPE.AXIAL)
+    }
     const longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]))
     const volScale = [dimsMM[0] / longestAxis, dimsMM[1] / longestAxis, dimsMM[2] / longestAxis]
     const vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
@@ -5562,7 +5929,9 @@ export class Niivue {
   tileIndex(x, y) {
     for (let i = 0; i < this.screenSlices.length; i++) {
       const ltwh = this.screenSlices[i].leftTopWidthHeight
-      if (x > ltwh[0] && y > ltwh[1] && x < ltwh[0] + ltwh[2] && y < ltwh[1] + ltwh[3]) return i
+      if (x > ltwh[0] && y > ltwh[1] && x < ltwh[0] + ltwh[2] && y < ltwh[1] + ltwh[3]) {
+        return i
+      }
     }
     return -1 // mouse position not in rendering tile
   }
@@ -5581,30 +5950,42 @@ export class Niivue {
   // if clip plane is active, change depth of clip plane
   // otherwise, set zoom factor for rendering size
   sliceScroll3D(posChange = 0) {
-    if (posChange === 0) return
+    if (posChange === 0) {
+      return
+    }
     // n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
     if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
       // clipping mode: change clip plane depth
       // if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
       const depthAziElev = this.scene.clipPlaneDepthAziElev.slice()
       // bound clip sqrt(3) = 1.73
-      if (posChange > 0) depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025)
-      if (posChange < 0) depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025) // Math.max(-1.7,
+      if (posChange > 0) {
+        depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025)
+      }
+      if (posChange < 0) {
+        depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025)
+      } // Math.max(-1.7,
       if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
         this.scene.clipPlaneDepthAziElev = depthAziElev
         return this.setClipPlane(this.scene.clipPlaneDepthAziElev)
       }
       return
     }
-    if (posChange > 0) this.scene.volScaleMultiplier = Math.min(2.0, this.scene.volScaleMultiplier * 1.1)
-    if (posChange < 0) this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.9)
+    if (posChange > 0) {
+      this.scene.volScaleMultiplier = Math.min(2.0, this.scene.volScaleMultiplier * 1.1)
+    }
+    if (posChange < 0) {
+      this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.9)
+    }
     this.drawScene()
   }
 
   // not included in public docs
   // if a thumbnail is loaded: close thumbnail and release memory
   deleteThumbnail() {
-    if (!this.bmpTexture) return
+    if (!this.bmpTexture) {
+      return
+    }
     this.gl.deleteTexture(this.bmpTexture)
     this.bmpTexture = null
     this.thumbnailVisible = false
@@ -5612,9 +5993,12 @@ export class Niivue {
 
   // not included in public docs
   inGraphTile(x, y) {
-    if (this.graph.opacity <= 0 || this.volumes.length < 1 || this.volumes[0].nFrame4D < 1 || !this.graph.plotLTWH)
+    if (this.graph.opacity <= 0 || this.volumes.length < 1 || this.volumes[0].nFrame4D < 1 || !this.graph.plotLTWH) {
       return false
-    if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) return false
+    }
+    if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) {
+      return false
+    }
     // this.graph.LTWH is tile
     // this.graph.plotLTWH is body of plot
     const pos = [(x - this.graph.LTWH[0]) / this.graph.LTWH[2], (y - this.graph.LTWH[1]) / this.graph.LTWH[3]]
@@ -5654,9 +6038,10 @@ export class Niivue {
         this.setFrame4D(this.volumes[0].id, vol)
         return
       }
-      if (pos[0] > 0.5 && pos[1] > 1.0)
+      if (pos[0] > 0.5 && pos[1] > 1.0) {
         // load full 4D series if user clicks on lower right of plot tile
         this.loadDeferred4DVolumes(this.volumes[0].id)
+      }
       return
     }
     if (this.inRenderTile(x, y) >= 0) {
@@ -5664,17 +6049,25 @@ export class Niivue {
       this.drawScene() // TODO: twice?
       return
     }
-    if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) return
+    if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) {
+      return
+    }
     // mouse click X,Y in screen coordinates, origin at top left
     // webGL clip space L,R,T,B = [-1, 1, 1, 1]
     // n.b. webGL Y polarity reversed
     // https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
     for (let i = 0; i < this.screenSlices.length; i++) {
       const axCorSag = this.screenSlices[i].axCorSag
-      if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag) continue // if mouse is drawing on axial slice, ignore any entry to coronal slice
-      if (axCorSag > SLICE_TYPE.SAGITTAL) continue
+      if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag) {
+        continue
+      } // if mouse is drawing on axial slice, ignore any entry to coronal slice
+      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+        continue
+      }
       const texFrac = this.screenXY2TextureFrac(x, y, i, false)
-      if (texFrac[0] < 0) continue // click not on slice i
+      if (texFrac[0] < 0) {
+        continue
+      } // click not on slice i
       // if (true) {
       // user clicked on slice i
       if (!isDelta) {
@@ -5685,7 +6078,9 @@ export class Niivue {
       // scrolling... not mouse
       if (posChange !== 0) {
         let posNeg = 1
-        if (posChange < 0) posNeg = -1
+        if (posChange < 0) {
+          posNeg = -1
+        }
         const xyz = [0, 0, 0]
         xyz[2 - axCorSag] = posNeg
         this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2])
@@ -5698,10 +6093,12 @@ export class Niivue {
         const pt = this.frac2vox(this.scene.crosshairPos)
 
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
-          if (!isFinite(this.opts.penValue))
+          if (!isFinite(this.opts.penValue)) {
             // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
             this.drawFloodFill(pt, 0, this.opts.penValue, this.opts.floodFillNeighbors)
-          else this.drawFloodFill(pt, Math.abs(this.opts.penValue, this.opts.floodFillNeighbors))
+          } else {
+            this.drawFloodFill(pt, Math.abs(this.opts.penValue, this.opts.floodFillNeighbors))
+          }
           return
         }
         if (isNaN(this.drawPenLocation[0])) {
@@ -5713,12 +6110,15 @@ export class Niivue {
             pt[0] === this.drawPenLocation[0] &&
             pt[1] === this.drawPenLocation[1] &&
             pt[2] === this.drawPenLocation[2]
-          )
+          ) {
             return
+          }
           this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
         }
         this.drawPenLocation = pt
-        if (this.opts.isFilledPen) this.drawPenFillPts.push(pt)
+        if (this.opts.isFilledPen) {
+          this.drawPenFillPts.push(pt)
+        }
         this.refreshDrawing(false)
       }
       this.drawScene()
@@ -5742,7 +6142,9 @@ export class Niivue {
     let fovMM = []
     let ltwh = []
     for (let i = 0; i < this.screenSlices.length; i++) {
-      if (this.screenSlices[i].axCorSag === SLICE_TYPE.RENDER) continue
+      if (this.screenSlices[i].axCorSag === SLICE_TYPE.RENDER) {
+        continue
+      }
       // let ltwh = this.screenSlices[i].leftTopWidthHeight;
       if (this.screenSlices[i].fovMM.length > 1) {
         ltwh = this.screenSlices[i].leftTopWidthHeight
@@ -5750,7 +6152,9 @@ export class Niivue {
         break
       }
     }
-    if (ltwh.length < 4) return
+    if (ltwh.length < 4) {
+      return
+    }
     const frac10cm = 100.0 / fovMM[0]
     const pix10cm = frac10cm * ltwh[2]
     const pixLeft = ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm
@@ -5778,7 +6182,9 @@ export class Niivue {
     for (let i = 0; i < 11; i++) {
       const l = startXYendXY[0] + i * w1cm
       const xyxy = [l, b, l, t]
-      if (i % 5 === 0) xyxy[3] = t2
+      if (i % 5 === 0) {
+        xyxy[3] = t2
+      }
       this.gl.uniform4fv(this.lineShader.startXYendXYLoc, xyxy)
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     }
@@ -5790,14 +6196,22 @@ export class Niivue {
     let texFrac = []
     for (let s = 0; s < this.screenSlices.length; s++) {
       let i = s
-      if (forceSlice >= 0) i = forceSlice
+      if (forceSlice >= 0) {
+        i = forceSlice
+      }
       const axCorSag = this.screenSlices[i].axCorSag
-      if (axCorSag > SLICE_TYPE.SAGITTAL) continue
+      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+        continue
+      }
 
       const ltwh = this.screenSlices[i].leftTopWidthHeight
-      if (x < ltwh[0] || y < ltwh[1] || x > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3]) continue
+      if (x < ltwh[0] || y < ltwh[1] || x > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3]) {
+        continue
+      }
       texFrac = this.screenXY2TextureFrac(x, y, i, false)
-      if (texFrac[0] < 0.0) continue
+      if (texFrac[0] < 0.0) {
+        continue
+      }
       const mm = this.frac2mm(texFrac)
 
       return [mm[0], mm[1], mm[2], i]
@@ -5883,8 +6297,12 @@ export class Niivue {
       mat.vec3.sub(v, startXY, endXY)
       const lenMM = mat.vec3.len(v)
       let decimals = 2
-      if (lenMM > 9) decimals = 1
-      if (lenMM > 99) decimals = 0
+      if (lenMM > 9) {
+        decimals = 1
+      }
+      if (lenMM > 99) {
+        decimals = 0
+      }
       const stringMM = lenMM.toFixed(decimals)
       this.drawTextBetween(startXYendXY, stringMM, 1, color)
     }
@@ -5895,7 +6313,9 @@ export class Niivue {
   // draw a rectangle at specified location
   // unless Alpha is > 0, default color is opts.crosshairColor
   drawRect(leftTopWidthHeight, lineColor = [1, 0, 0, -1]) {
-    if (lineColor[3] < 0) lineColor = this.opts.crosshairColor
+    if (lineColor[3] < 0) {
+      lineColor = this.opts.crosshairColor
+    }
     this.rectShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform4fv(this.rectShader.lineColorLoc, lineColor)
@@ -6054,7 +6474,9 @@ export class Niivue {
     max = 1,
     isAlphaThreshold
   ) {
-    if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) return
+    if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
+      return
+    }
     let txtHt = Math.max(this.opts.textHeight, 0.01)
     txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
     let margin = txtHt
@@ -6062,7 +6484,9 @@ export class Niivue {
     let barHt = txtHt
     if (leftTopWidthHeight[3] < fullHt) {
       // no space for text
-      if (leftTopWidthHeight[3] < 3) return
+      if (leftTopWidthHeight[3] < 3) {
+        return
+      }
       margin = 1
       barHt = leftTopWidthHeight[3] - 2
     }
@@ -6083,7 +6507,9 @@ export class Niivue {
     if (isNegativeColor) {
       const flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]]
       this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip)
-    } else this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH)
+    } else {
+      this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH)
+    }
     this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
@@ -6097,10 +6523,14 @@ export class Niivue {
       thresholdTic = min
       min = 0.0
     }
-    if (min === max || txtHt < 1) return
+    if (min === max || txtHt < 1) {
+      return
+    }
     const range = Math.abs(max - min)
     let [spacing, ticMin] = tickSpacing(min, max)
-    if (ticMin < min) ticMin += spacing
+    if (ticMin < min) {
+      ticMin += spacing
+    }
     // determine font size
     function humanize(x) {
       // drop trailing zeros from numerical string
@@ -6135,10 +6565,18 @@ export class Niivue {
   drawColorbar() {
     const maps = this.colormapLists
     const nmaps = maps.length
-    if (nmaps < 1) return
+    if (nmaps < 1) {
+      return
+    }
     let nVisible = 0 // not all colorbars may be visible
-    for (let i = 0; i < nmaps; i++) if (maps[i].visible) nVisible++
-    if (nVisible < 1) return
+    for (let i = 0; i < nmaps; i++) {
+      if (maps[i].visible) {
+        nVisible++
+      }
+    }
+    if (nVisible < 1) {
+      return
+    }
     let leftTopWidthHeight = this.reserveColorbarPanel()
     let txtHt = Math.max(this.opts.textHeight, 0.01)
     txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
@@ -6150,7 +6588,9 @@ export class Niivue {
     }
     leftTopWidthHeight[2] = wid
     for (let i = 0; i < nmaps; i++) {
-      if (!maps[i].visible) continue
+      if (!maps[i].visible) {
+        continue
+      }
       this.drawColorbarCore(i, leftTopWidthHeight, maps[i].negative, maps[i].min, maps[i].max, maps[i].alphaThreshold)
       leftTopWidthHeight[0] += wid
     }
@@ -6164,7 +6604,9 @@ export class Niivue {
 
     let w = 0
     const bytes = new TextEncoder().encode(str)
-    for (let i = 0; i < str.length; i++) w += scale * this.fontMets[bytes[i]].xadv
+    for (let i = 0; i < str.length; i++) {
+      w += scale * this.fontMets[bytes[i]].xadv
+    }
     return w
   }
 
@@ -6207,27 +6649,35 @@ export class Niivue {
 
   // not included in public docs
   drawText(xy, str, scale = 1, color = null) {
-    if (this.opts.textHeight <= 0) return
+    if (this.opts.textHeight <= 0) {
+      return
+    }
     this.fontShader.use(this.gl)
     // let size = this.opts.textHeight * this.gl.canvas.height * scale;
     const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform2f(this.fontShader.canvasWidthHeightLoc, this.gl.canvas.width, this.gl.canvas.height)
-    if (color === null) color = this.opts.fontColor
+    if (color === null) {
+      color = this.opts.fontColor
+    }
     this.gl.uniform4fv(this.fontShader.fontColorLoc, color)
     let screenPxRange = (size / this.fontMets.size) * this.fontMets.distanceRange
     screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
     this.gl.uniform1f(this.fontShader.screenPxRangeLoc, screenPxRange)
     const bytes = new TextEncoder().encode(str)
     this.gl.bindVertexArray(this.genericVAO)
-    for (let i = 0; i < str.length; i++) xy[0] += this.drawChar(xy, size, bytes[i])
+    for (let i = 0; i < str.length; i++) {
+      xy[0] += this.drawChar(xy, size, bytes[i])
+    }
     this.gl.bindVertexArray(this.unusedVAO)
   }
 
   // not included in public docs
   drawTextRight(xy, str, scale = 1, color = null) {
     // to right of x, vertically centered on y
-    if (this.opts.textHeight <= 0) return
+    if (this.opts.textHeight <= 0) {
+      return
+    }
     xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height
     this.drawText(xy, str, scale, color)
   }
@@ -6235,7 +6685,9 @@ export class Niivue {
   // not included in public docs
   drawTextLeft(xy, str, scale = 1, color = null) {
     // to left of x, vertically centered on y
-    if (this.opts.textHeight <= 0) return
+    if (this.opts.textHeight <= 0) {
+      return
+    }
     const size = this.opts.textHeight * this.gl.canvas.height * scale
     xy[0] -= this.textWidth(size, str)
     xy[1] -= 0.5 * size
@@ -6245,7 +6697,9 @@ export class Niivue {
   // not included in public docs
   drawTextRightBelow(xy, str, scale = 1, color = null) {
     // to right of x, vertically centered on y
-    if (this.opts.textHeight <= 0) return
+    if (this.opts.textHeight <= 0) {
+      return
+    }
 
     this.drawText(xy, str, scale, color)
   }
@@ -6253,7 +6707,9 @@ export class Niivue {
   // not included in public docs
   drawTextBetween(startXYendXY, str, scale = 1, color = null) {
     // horizontally centered on x, below y
-    if (this.opts.textHeight <= 0) return
+    if (this.opts.textHeight <= 0) {
+      return
+    }
     const xy = [(startXYendXY[0] + startXYendXY[2]) * 0.5, (startXYendXY[1] + startXYendXY[3]) * 0.5]
     const size = this.opts.textHeight * this.gl.canvas.height * scale
     const w = this.textWidth(size, str)
@@ -6261,9 +6717,14 @@ export class Niivue {
     xy[1] -= 0.5 * size
     const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2]
     let clr = color
-    if (clr === null) clr = this.opts.crosshairColor
-    if (clr[0] + clr[1] + clr[2] > 0.8) clr = [0, 0, 0, 0.5]
-    else clr = [1, 1, 1, 0.5]
+    if (clr === null) {
+      clr = this.opts.crosshairColor
+    }
+    if (clr[0] + clr[1] + clr[2] > 0.8) {
+      clr = [0, 0, 0, 0.5]
+    } else {
+      clr = [1, 1, 1, 0.5]
+    }
     this.drawRect(LTWH, clr)
     this.drawText(xy, str, scale, color)
   }
@@ -6271,7 +6732,9 @@ export class Niivue {
   // not included in public docs
   drawTextBelow(xy, str, scale = 1, color = null) {
     // horizontally centered on x, below y
-    if (this.opts.textHeight <= 0) return
+    if (this.opts.textHeight <= 0) {
+      return
+    }
     let size = this.opts.textHeight * this.gl.canvas.height * scale
     let width = this.textWidth(size, str)
     if (width > this.canvas.width) {
@@ -6288,7 +6751,9 @@ export class Niivue {
   // not included in public docs
   updateInterpolation(layer, isForceLinear = false) {
     let interp = this.gl.LINEAR
-    if (!isForceLinear && this.opts.isNearestInterpolation) interp = this.gl.NEAREST
+    if (!isForceLinear && this.opts.isNearestInterpolation) {
+      interp = this.gl.NEAREST
+    }
     if (layer === 0) {
       this.gl.activeTexture(this.gl.TEXTURE0) // background
     } else {
@@ -6314,8 +6779,12 @@ export class Niivue {
   setInterpolation(isNearest) {
     this.opts.isNearestInterpolation = isNearest
     const numLayers = this.volumes.length
-    if (numLayers < 1) return
-    for (let i = 0; i < numLayers; i++) this.updateInterpolation(i)
+    if (numLayers < 1) {
+      return
+    }
+    for (let i = 0; i < numLayers; i++) {
+      this.updateInterpolation(i)
+    }
     this.drawScene()
   }
 
@@ -6353,9 +6822,13 @@ export class Niivue {
     let far = scale * 8.0
     if (clipTolerance !== Infinity) {
       let r = isRadiolgical
-      if (elevation === 0 && (azimuth === 0 || azimuth === 180)) r = !r
+      if (elevation === 0 && (azimuth === 0 || azimuth === 180)) {
+        r = !r
+      }
       let dx = scale * 1.8 - clipDepth
-      if (!r) dx = scale * 1.8 + clipDepth
+      if (!r) {
+        dx = scale * 1.8 + clipDepth
+      }
       near = dx - clipTolerance
       far = dx + clipTolerance
     }
@@ -6462,9 +6935,13 @@ export class Niivue {
   drawSliceOrientationText(leftTopWidthHeight, axCorSag) {
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     let topText = 'S'
-    if (axCorSag === SLICE_TYPE.AXIAL) topText = 'A'
+    if (axCorSag === SLICE_TYPE.AXIAL) {
+      topText = 'A'
+    }
     let leftText = this.opts.isRadiologicalConvention ? 'R' : 'L'
-    if (axCorSag === SLICE_TYPE.SAGITTAL) leftText = this.opts.sagittalNoseLeft ? 'A' : 'P'
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
+      leftText = this.opts.sagittalNoseLeft ? 'A' : 'P'
+    }
     if (this.opts.isCornerOrientationText) {
       this.drawTextRightBelow([leftTopWidthHeight[0], leftTopWidthHeight[1]], leftText + topText)
       return
@@ -6479,8 +6956,12 @@ export class Niivue {
     // given X and Y, find Z for a plane defined by 3 points (a,b,c)
     // https://math.stackexchange.com/questions/851742/calculate-coordinate-of-any-point-on-triangle-in-3d-plane
     let sliceDim = 2 // axial depth is NIfTI k dimension
-    if (axCorSag === SLICE_TYPE.CORONAL) sliceDim = 1 // sagittal depth is NIfTI j dimension
-    if (axCorSag === SLICE_TYPE.SAGITTAL) sliceDim = 0 // sagittal depth is NIfTI i dimension
+    if (axCorSag === SLICE_TYPE.CORONAL) {
+      sliceDim = 1
+    } // sagittal depth is NIfTI j dimension
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
+      sliceDim = 0
+    } // sagittal depth is NIfTI i dimension
     let a = [0, 0, 0]
     let b = [1, 1, 0]
     let c = [1, 0, 1]
@@ -6522,8 +7003,12 @@ export class Niivue {
     let isRadiolgical = this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL
     if (customMM === Infinity || customMM === -Infinity) {
       isRadiolgical = customMM !== Infinity
-      if (axCorSag === SLICE_TYPE.CORONAL) isRadiolgical = !isRadiolgical
-    } else if (this.opts.sagittalNoseLeft && axCorSag === SLICE_TYPE.SAGITTAL) isRadiolgical = !isRadiolgical
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        isRadiolgical = !isRadiolgical
+      }
+    } else if (this.opts.sagittalNoseLeft && axCorSag === SLICE_TYPE.SAGITTAL) {
+      isRadiolgical = !isRadiolgical
+    }
     let elevation = 0
     let azimuth = 0
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
@@ -6570,8 +7055,12 @@ export class Niivue {
     }
 
     let sliceDim = 2 // axial depth is NIfTI k dimension
-    if (axCorSag === SLICE_TYPE.CORONAL) sliceDim = 1 // sagittal depth is NIfTI j dimension
-    if (axCorSag === SLICE_TYPE.SAGITTAL) sliceDim = 0 // sagittal depth is NIfTI i dimension
+    if (axCorSag === SLICE_TYPE.CORONAL) {
+      sliceDim = 1
+    } // sagittal depth is NIfTI j dimension
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
+      sliceDim = 0
+    } // sagittal depth is NIfTI i dimension
     let sliceFrac = this.scene.crosshairPos[sliceDim]
     let mm = this.frac2mm(this.scene.crosshairPos)
     if (!isNaN(customMM) && customMM !== Infinity && customMM !== -Infinity) {
@@ -6654,7 +7143,7 @@ export class Niivue {
       this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
     }
     if (this.opts.meshThicknessOn2D > 0.0) {
-      if (this.opts.meshThicknessOn2D !== Infinity)
+      if (this.opts.meshThicknessOn2D !== Infinity) {
         obj = this.calculateMvpMatrix2D(
           leftTopWidthHeight,
           screen.mnMM,
@@ -6665,6 +7154,7 @@ export class Niivue {
           elevation,
           isRadiolgical
         )
+      }
       // we may need to transform mesh vertices to the orthogonal voxel space
       const mx = mat.mat4.clone(obj.modelViewProjectionMatrix)
       mat.mat4.multiply(mx, mx, mesh2ortho)
@@ -6676,9 +7166,10 @@ export class Niivue {
         obj.normalMatrix
       )
     }
-    if (isNaN(customMM))
+    if (isNaN(customMM)) {
       // no crossbars for mosaic view
       this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
+    }
     this.drawSliceOrientationText(leftTopWidthHeight, axCorSag)
     this.readyForSync = true
   }
@@ -6686,9 +7177,10 @@ export class Niivue {
   // not included in public docs
   // determine 3D model view projection matrix
   calculateMvpMatrix(unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation) {
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)
+    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // use full canvas
       leftTopWidthHeight = [0, 0, this.gl.canvas.width, this.gl.canvas.height]
+    }
     const whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3]
     // let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
     // pivot from center of objects
@@ -6698,18 +7190,23 @@ export class Niivue {
     const origin = this.pivot3D
     const projectionMatrix = mat.mat4.create()
     scale = (0.8 * scale) / this.scene.volScaleMultiplier // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
-    if (whratio < 1)
+    if (whratio < 1) {
       // tall window: "portrait" mode, width constrains
       mat.mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 0.01, scale * 8.0)
+    }
     // Wide window: "landscape" mode, height constrains
-    else mat.mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
+    else {
+      mat.mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
+    }
 
     const modelMatrix = mat.mat4.create()
     modelMatrix[0] = -1 // mirror X coordinate
     // push the model away from the camera so camera not inside model
     const translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
     mat.mat4.translate(modelMatrix, modelMatrix, translateVec3)
-    if (this.position) mat.mat4.translate(modelMatrix, modelMatrix, this.position)
+    if (this.position) {
+      mat.mat4.translate(modelMatrix, modelMatrix, this.position)
+    }
     // apply elevation
     mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
@@ -6759,9 +7256,15 @@ export class Niivue {
     mat.vec3.normalize(rayDir, rayDir)
     // defuzz, avoid divide by zero
     const tiny = 0.00005
-    if (Math.abs(rayDir[0]) < tiny) rayDir[0] = tiny
-    if (Math.abs(rayDir[1]) < tiny) rayDir[1] = tiny
-    if (Math.abs(rayDir[2]) < tiny) rayDir[2] = tiny
+    if (Math.abs(rayDir[0]) < tiny) {
+      rayDir[0] = tiny
+    }
+    if (Math.abs(rayDir[1]) < tiny) {
+      rayDir[1] = tiny
+    }
+    if (Math.abs(rayDir[2]) < tiny) {
+      rayDir[2] = tiny
+    }
     return rayDir
   }
 
@@ -6846,31 +7349,46 @@ export class Niivue {
 
   // not included in public docs
   getMaxVols() {
-    if (this.volumes.length < 1) return 0
+    if (this.volumes.length < 1) {
+      return 0
+    }
     let maxVols = 0
-    for (let i = 0; i < this.volumes.length; i++) maxVols = Math.max(maxVols, this.volumes[i].nFrame4D)
+    for (let i = 0; i < this.volumes.length; i++) {
+      maxVols = Math.max(maxVols, this.volumes[i].nFrame4D)
+    }
     return maxVols
   }
 
   // not included in public docs
   detectPartialllyLoaded4D() {
-    if (this.volumes.length < 1) return false
-    for (let i = 0; i < this.volumes.length; i++)
-      if (this.volumes[i].nFrame4D < this.volumes[i].hdr.dims[4]) return true
+    if (this.volumes.length < 1) {
+      return false
+    }
+    for (let i = 0; i < this.volumes.length; i++) {
+      if (this.volumes[i].nFrame4D < this.volumes[i].hdr.dims[4]) {
+        return true
+      }
+    }
     return false
   }
 
   // not included in public docs
   // draw graph for 4D NVImage: time across horizontal, intensity is vertical
   drawGraph() {
-    if (this.getMaxVols() < 2) return
+    if (this.getMaxVols() < 2) {
+      return
+    }
     const graph = this.graph
     let axialTop = 0
     if (this.graph.autoSizeMultiplanar && this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
       for (let i = 0; i < this.screenSlices.length; i++) {
         const axCorSag = this.screenSlices[i].axCorSag
-        if (axCorSag === SLICE_TYPE.AXIAL) axialTop = this.screenSlices[i].leftTopWidthHeight[1]
-        if (axCorSag !== SLICE_TYPE.SAGITTAL) continue
+        if (axCorSag === SLICE_TYPE.AXIAL) {
+          axialTop = this.screenSlices[i].leftTopWidthHeight[1]
+        }
+        if (axCorSag !== SLICE_TYPE.SAGITTAL) {
+          continue
+        }
         const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
         if (ltwh[1] === axialTop) {
           graph.LTWH[0] = ltwh[0] + ltwh[2]
@@ -6898,17 +7416,25 @@ export class Niivue {
     graph.lines = []
     const vols = []
     if (graph.vols.length < 1) {
-      if (this.volumes[0] != null) vols.push(0)
+      if (this.volumes[0] != null) {
+        vols.push(0)
+      }
     } else {
       for (let i = 0; i < graph.vols.length; i++) {
         const j = graph.vols[i]
-        if (this.volumes[j] == null) continue
+        if (this.volumes[j] == null) {
+          continue
+        }
         const n = this.volumes[j].nFrame4D
-        if (n < 2) continue
+        if (n < 2) {
+          continue
+        }
         vols.push(j)
       }
     }
-    if (vols.length < 1) return
+    if (vols.length < 1) {
+      return
+    }
     const maxVols = this.volumes[vols[0]].nFrame4D
     this.graph.selectedColumn = this.volumes[vols[0]].frame4D
     if (maxVols < 2) {
@@ -6939,19 +7465,21 @@ export class Niivue {
     // find min, max, range for all lines
     let mn = graph.lines[0][0]
     let mx = graph.lines[0][0]
-    for (let j = 0; j < graph.lines.length; j++)
+    for (let j = 0; j < graph.lines.length; j++) {
       for (let i = 0; i < graph.lines[j].length; i++) {
         const v = graph.lines[j][i]
         mn = Math.min(v, mn)
         mx = Math.max(v, mx)
       }
+    }
     if (graph.normalizeValues && mx > mn) {
       const range = mx - mn
-      for (let j = 0; j < graph.lines.length; j++)
+      for (let j = 0; j < graph.lines.length; j++) {
         for (let i = 0; i < graph.lines[j].length; i++) {
           const v = graph.lines[j][i]
           graph.lines[j][i] = (v - mn) / range
         }
+      }
       mn = 0
       mx = 1
     }
@@ -6972,7 +7500,9 @@ export class Niivue {
     // n.b. dpr encodes retina displays
     const fntScale = 0.07 * (minWH / (this.fontMets.size * this.uiData.dpr))
     let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale
-    if (fntSize < 16) fntSize = 0
+    if (fntSize < 16) {
+      fntSize = 0
+    }
     let maxTextWid = 0
     let lineH = ticMin
     // determine widest label in vertical axis
@@ -7023,7 +7553,9 @@ export class Niivue {
         graph.lineColor
       )
       const str = lineH.toFixed(digits)
-      if (fntSize > 0) this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor)
+      if (fntSize > 0) {
+        this.drawTextLeft([plotLTWH[0] - 6, y], str, fntScale, graph.textColor)
+      }
       // this.drawTextRight([plotLTWH[0], y], str, fntScale)
       lineH += spacing
     }
@@ -7040,7 +7572,9 @@ export class Niivue {
         this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], thick, thinColor)
       } else {
         const str = humanize(i)
-        if (fntSize > 0) this.drawTextBelow([x, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor)
+        if (fntSize > 0) {
+          this.drawTextBelow([x, 2 + plotLTWH[1] + plotLTWH[3]], str, fntScale, graph.textColor)
+        }
         this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], thick, graph.lineColor)
       }
     }
@@ -7088,7 +7622,9 @@ export class Niivue {
   // not included in public docs
   depthPicker(leftTopWidthHeight, mvpMatrix) {
     // use color of screen pixel to infer X,Y,Z coordinates
-    if (!this.uiData.mouseDepthPicker) return
+    if (!this.uiData.mouseDepthPicker) {
+      return
+    }
     // start PICKING: picking shader and reading values is slow
     this.uiData.mouseDepthPicker = false
     const gl = this.gl
@@ -7110,21 +7646,27 @@ export class Niivue {
       return
     }
     const depthZ = unpackFloatFromVec4i(rgbaPixel)
-    if (depthZ > 1.0) return
+    if (depthZ > 1.0) {
+      return
+    }
     const fracX = (this.mousePos[0] - leftTopWidthHeight[0]) / leftTopWidthHeight[2]
     const fracY = (gl.canvas.height - this.mousePos[1] - leftTopWidthHeight[1]) / leftTopWidthHeight[3]
     // todo: check when top is not zero: leftTopWidthHeight[1]
     const mm = unProject(fracX, fracY, depthZ, mvpMatrix)
     // n.b. true as renderings are ALWAYS in MM world space. not fractional
     const frac = this.mm2frac(mm, 0, true)
-    if (frac[0] < 0 || frac[0] > 1 || frac[1] < 0 || frac[1] > 1 || frac[2] < 0 || frac[2] > 1) return
+    if (frac[0] < 0 || frac[0] > 1 || frac[1] < 0 || frac[1] > 1 || frac[2] < 0 || frac[2] > 1) {
+      return
+    }
     this.scene.crosshairPos = this.mm2frac(mm, 0, true)
   }
 
   // not included in public docs
   // display 3D volume rendering of NVImage
   drawImage3D(mvpMatrix, azimuth, elevation) {
-    if (this.volumes.length === 0) return
+    if (this.volumes.length === 0) {
+      return
+    }
     const gl = this.gl
     const rayDir = this.calculateRayDirection(azimuth, elevation)
     const object3D = this.volumeObject3D
@@ -7142,7 +7684,9 @@ export class Niivue {
       // this.gl.activeTexture(this.gl.TEXTURE7);
       // this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
       let shader = this.renderShader
-      if (this.uiData.mouseDepthPicker) shader = this.pickingImageShader
+      if (this.uiData.mouseDepthPicker) {
+        shader = this.pickingImageShader
+      }
       shader.use(this.gl)
       gl.uniform1i(shader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0) {
@@ -7155,13 +7699,16 @@ export class Niivue {
         mat.mat4.transpose(normalMatrix, iModelMatrix)
         gl.uniformMatrix4fv(shader.normLoc, false, normalMatrix)
       }
-      if (this.drawBitmap && this.drawBitmap.length > 8) gl.uniform1f(shader.drawOpacityLoc, this.drawOpacity)
-      else gl.uniform1f(shader.drawOpacityLoc, 0.0)
+      if (this.drawBitmap && this.drawBitmap.length > 8) {
+        gl.uniform1f(shader.drawOpacityLoc, this.drawOpacity)
+      } else {
+        gl.uniform1f(shader.drawOpacityLoc, 0.0)
+      }
       gl.uniformMatrix4fv(shader.mvpLoc, false, mvpMatrix)
       gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back.matRAS)
       gl.uniform3fv(shader.rayDirLoc, rayDir)
 
-      if (this.gradientTextureAmount < 0.0)
+      if (this.gradientTextureAmount < 0.0) {
         // use slice shader
         gl.uniform4fv(shader.clipPlaneLoc, [
           this.scene.crosshairPos[0],
@@ -7169,7 +7716,9 @@ export class Niivue {
           this.scene.crosshairPos[2],
           30
         ])
-      else gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane)
+      } else {
+        gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane)
+      }
       gl.bindVertexArray(object3D.vao)
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
       gl.bindVertexArray(this.unusedVAO)
@@ -7179,9 +7728,13 @@ export class Niivue {
   // not included in public docs
   // draw cube that shows L/R, A/P, I/S directions
   drawOrientationCube(leftTopWidthHeight, azimuth = 0, elevation = 0) {
-    if (!this.opts.isOrientCube) return
+    if (!this.opts.isOrientCube) {
+      return
+    }
     const sz = 0.05 * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3])
-    if (sz < 5) return
+    if (sz < 5) {
+      return
+    }
     const gl = this.gl
     gl.enable(gl.CULL_FACE)
     gl.cullFace(gl.BACK)
@@ -7192,7 +7745,9 @@ export class Niivue {
     // ortho(out, left, right, bottom, top, near, far)
     mat.mat4.ortho(projectionMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -10 * sz, 10 * sz)
     let translateUpForColorbar = 0
-    if (leftTopWidthHeight[1] === 0) translateUpForColorbar = gl.canvas.height - this.effectiveCanvasHeight()
+    if (leftTopWidthHeight[1] === 0) {
+      translateUpForColorbar = gl.canvas.height - this.effectiveCanvasHeight()
+    }
     mat.mat4.translate(modelMatrix, modelMatrix, [
       1.8 * sz + leftTopWidthHeight[0],
       translateUpForColorbar + 1.8 * sz + leftTopWidthHeight[1],
@@ -7228,7 +7783,9 @@ export class Niivue {
       return parseFloat(flt.toFixed(decimals))
     }
     let str = flt2str(mm[0], deci) + '×' + flt2str(mm[1], deci) + '×' + flt2str(mm[2], deci)
-    if (this.volumes.length > 0 && this.volumes[0].nFrame4D > 0) str += '×' + flt2str(this.volumes[0].frame4D)
+    if (this.volumes.length > 0 && this.volumes[0].nFrame4D > 0) {
+      str += '×' + flt2str(this.volumes[0].frame4D)
+    }
     // voxel based layer intensity
     if (this.volumes.length > 0) {
       let valStr = ' = '
@@ -7238,13 +7795,19 @@ export class Niivue {
         deci = 3
         if ('labels' in this.volumes[i].colormapLabel) {
           const v = Math.round(flt)
-          if (v >= 0 && v < this.volumes[i].colormapLabel.labels.length)
+          if (v >= 0 && v < this.volumes[i].colormapLabel.labels.length) {
             valStr += this.volumes[i].colormapLabel.labels[v]
-          else valStr += 'undefined(' + flt2str(flt, deci) + ')'
-        } else valStr += flt2str(flt, deci)
+          } else {
+            valStr += 'undefined(' + flt2str(flt, deci) + ')'
+          }
+        } else {
+          valStr += flt2str(flt, deci)
+        }
         if ('imaginary' in this.volumes[i]) {
           flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D, true)
-          if (flt >= 0) valStr += '+'
+          if (flt >= 0) {
+            valStr += '+'
+          }
           valStr += flt2str(flt, deci)
         }
         valStr += '   '
@@ -7471,8 +8034,9 @@ export class Niivue {
       elevation = this.scene.renderElevation
     }
     const gl = this.gl
-    if (mvpMatrix === null)
-      [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth, elevation)
+    if (mvpMatrix === null) {
+      ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth, elevation)
+    }
 
     let relativeLTWH = [...leftTopWidthHeight]
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
@@ -7508,9 +8072,13 @@ export class Niivue {
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
 
     this.updateInterpolation(0, true) // force background interpolation
-    if (this.volumes.length > 0) this.drawImage3D(mvpMatrix, azimuth, elevation)
+    if (this.volumes.length > 0) {
+      this.drawImage3D(mvpMatrix, azimuth, elevation)
+    }
     this.updateInterpolation(0) // use default interpolation for 2D slices
-    if (!isMosaic) this.drawCrosshairs3D(true, 1.0, mvpMatrix)
+    if (!isMosaic) {
+      this.drawCrosshairs3D(true, 1.0, mvpMatrix)
+    }
     this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix)
     if (this.uiData.mouseDepthPicker) {
       this.depthPicker(leftTopWidthHeight, mvpMatrix, true)
@@ -7519,14 +8087,18 @@ export class Niivue {
       this.draw3D(leftTopWidthHeight, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
       return
     }
-    if (this.opts.meshXRay > 0.0) this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix, normalMatrix)
+    if (this.opts.meshXRay > 0.0) {
+      this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix, normalMatrix)
+    }
 
     //
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
     //
-    if (!isMosaic) this.drawCrosshairs3D(false, 0.15, mvpMatrix)
+    if (!isMosaic) {
+      this.drawCrosshairs3D(false, 0.15, mvpMatrix)
+    }
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
     this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation)
     const posString =
@@ -7542,15 +8114,18 @@ export class Niivue {
   // not included in public docs
   // create 3D rendering of NVMesh on canvas
   drawMesh3D(isDepthTest = true, alpha = 1.0, m, modelMtx, normMtx) {
-    if (this.meshes.length < 1) return
+    if (this.meshes.length < 1) {
+      return
+    }
     const gl = this.gl
     // let m, modelMtx, normMtx;
-    if (!m)
-      [m, modelMtx, normMtx] = this.calculateMvpMatrix(
+    if (!m) {
+      ;[m, modelMtx, normMtx] = this.calculateMvpMatrix(
         this.volumeObject3D,
         this.scene.renderAzimuth,
         this.scene.renderElevation
       )
+    }
     gl.enable(gl.DEPTH_TEST)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
@@ -7576,7 +8151,9 @@ export class Niivue {
     let hasFibers = false
     for (let i = 0; i < this.meshes.length; i++) {
       shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader
-      if (this.uiData.mouseDepthPicker) shader = this.pickingMeshShader
+      if (this.uiData.mouseDepthPicker) {
+        shader = this.pickingMeshShader
+      }
       shader.use(this.gl) // set Shader
       // set shader uniforms
       gl.uniformMatrix4fv(shader.mvpLoc, false, m)
@@ -7585,7 +8162,9 @@ export class Niivue {
       // gl.uniform1f(shader.uniforms["opacity"], alpha);
       gl.uniformMatrix4fv(shader.normLoc, false, normMtx)
       gl.uniform1f(shader.opacityLoc, alpha)
-      if (this.meshes[i].indexCount < 3) continue
+      if (this.meshes[i].indexCount < 3) {
+        continue
+      }
       if (this.meshes[i].offsetPt0) {
         hasFibers = true
         continue
@@ -7610,8 +8189,12 @@ export class Niivue {
     gl.uniformMatrix4fv(shader.mvpLoc, false, m)
     gl.uniform1f(shader.uniforms.opacity, alpha)
     for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].indexCount < 3) continue
-      if (!this.meshes[i].offsetPt0) continue
+      if (this.meshes[i].indexCount < 3) {
+        continue
+      }
+      if (!this.meshes[i].offsetPt0) {
+        continue
+      }
       gl.bindVertexArray(this.meshes[i].vao)
       gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
@@ -7623,8 +8206,12 @@ export class Niivue {
 
   // not included in public docs
   drawCrosshairs3D(isDepthTest = true, alpha = 1.0, mvpMtx = null, is2DView = false, isSliceMM = true) {
-    if (!this.opts.show3Dcrosshair && !is2DView) return
-    if (this.opts.crosshairWidth <= 0.0 && is2DView) return
+    if (!this.opts.show3Dcrosshair && !is2DView) {
+      return
+    }
+    if (this.opts.crosshairWidth <= 0.0 && is2DView) {
+      return
+    }
     const gl = this.gl
     const mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM)
     // generate our crosshairs for the base volume
@@ -7640,9 +8227,11 @@ export class Niivue {
       }
       const [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM)
       let radius = 1
-      if (this.volumes.length > 0)
+      if (this.volumes.length > 0) {
         radius = 0.5 * Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3])
-      else if (range[0] < 50 || range[0] > 1000) radius = range[0] * 0.02 // 2% of first dimension
+      } else if (range[0] < 50 || range[0] > 1000) {
+        radius = range[0] * 0.02
+      } // 2% of first dimension
       radius *= this.opts.crosshairWidth
       this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius)
       this.crosshairs3D.mm = mm
@@ -7651,13 +8240,14 @@ export class Niivue {
     crosshairsShader.use(this.gl)
     let modelMtx, normMtx
     // eslint-disable-next-line no-unused-vars
-    if (mvpMtx == null)
+    if (mvpMtx == null) {
       // eslint-disable-next-line no-unused-vars
-      [mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(
+      ;[mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(
         this.crosshairs3D,
         this.scene.renderAzimuth,
         this.scene.renderElevation
       )
+    }
     gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer)
@@ -7695,10 +8285,18 @@ export class Niivue {
       frac[1] = (mm[1] - mn[1]) / range[1]
       frac[2] = (mm[2] - mn[2]) / range[2]
       if (!isFinite(frac)) {
-        if (!isFinite(frac[0])) frac[0] = 0.5
-        if (!isFinite(frac[1])) frac[1] = 0.5
-        if (!isFinite(frac[2])) frac[2] = 0.5
-        if (this.meshes.length < 1) console.error('mm2frac() not finite: objects not (yet) loaded.')
+        if (!isFinite(frac[0])) {
+          frac[0] = 0.5
+        }
+        if (!isFinite(frac[1])) {
+          frac[1] = 0.5
+        }
+        if (!isFinite(frac[2])) {
+          frac[2] = 0.5
+        }
+        if (this.meshes.length < 1) {
+          console.error('mm2frac() not finite: objects not (yet) loaded.')
+        }
       }
       return frac
     }
@@ -7718,7 +8316,9 @@ export class Niivue {
       frac[2] = mm4[2]
       return frac
     }
-    if (d[1] < 1 || d[2] < 1 || d[3] < 1) return frac
+    if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
+      return frac
+    }
     const sform = mat.mat4.clone(this.volumes[volIdx].matRAS)
     mat.mat4.invert(sform, sform)
     mat.mat4.transpose(sform, sform)
@@ -7745,7 +8345,9 @@ export class Niivue {
   frac2vox(frac, volIdx = 0) {
     // convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
     // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
-    if (this.volumes.length <= volIdx) return [0, 0, 0]
+    if (this.volumes.length <= volIdx) {
+      return [0, 0, 0]
+    }
     const vox = [
       Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims === RAS
       Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims === RAS
@@ -7779,8 +8381,11 @@ export class Niivue {
   frac2mm(frac, volIdx = 0, isForceSliceMM = false) {
     const pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (this.volumes.length > 0) {
-      if (isForceSliceMM || this.opts.isSliceMM) mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm)
-      else mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho)
+      if (isForceSliceMM || this.opts.isSliceMM) {
+        mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm)
+      } else {
+        mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho)
+      }
     } else {
       const [mn, mx] = this.sceneExtentsMinMax()
       const lerp = (x, y, a) => x * (1 - a) + y * a
@@ -7795,7 +8400,9 @@ export class Niivue {
   screenXY2TextureFrac(x, y, i, restrict0to1 = true) {
     const texFrac = [-1, -1, -1] // texture 0..1 so -1 is out of bounds
     const axCorSag = this.screenSlices[i].axCorSag
-    if (axCorSag > SLICE_TYPE.SAGITTAL) return texFrac
+    if (axCorSag > SLICE_TYPE.SAGITTAL) {
+      return texFrac
+    }
     const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
     let isMirror = false
     if (ltwh[2] < 0) {
@@ -7804,21 +8411,33 @@ export class Niivue {
       ltwh[2] = -ltwh[2]
     }
     let fracX = (x - ltwh[0]) / ltwh[2]
-    if (isMirror) fracX = 1.0 - fracX
+    if (isMirror) {
+      fracX = 1.0 - fracX
+    }
     const fracY = 1.0 - (y - ltwh[1]) / ltwh[3]
-    if (fracX < 0.0 || fracX > 1.0 || fracY < 0.0 || fracY > 1.0) return texFrac
-    if (this.screenSlices[i].AxyzMxy.length < 4) return texFrac
+    if (fracX < 0.0 || fracX > 1.0 || fracY < 0.0 || fracY > 1.0) {
+      return texFrac
+    }
+    if (this.screenSlices[i].AxyzMxy.length < 4) {
+      return texFrac
+    }
     let xyzMM = [0, 0, 0]
     xyzMM[0] = this.screenSlices[i].leftTopMM[0] + fracX * this.screenSlices[i].fovMM[0]
     xyzMM[1] = this.screenSlices[i].leftTopMM[1] + fracY * this.screenSlices[i].fovMM[1]
     // let xyz = mat.vec3.fromValues(30, 30, 0);
     const v = this.screenSlices[i].AxyzMxy
     xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
-    if (axCorSag === SLICE_TYPE.CORONAL) xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // screen RSA to NIfTI RAS
-    if (axCorSag === SLICE_TYPE.SAGITTAL) xyzMM = swizzleVec3(xyzMM, [2, 0, 1]) // screen ASR to NIfTI RAS
+    if (axCorSag === SLICE_TYPE.CORONAL) {
+      xyzMM = swizzleVec3(xyzMM, [0, 2, 1])
+    } // screen RSA to NIfTI RAS
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
+      xyzMM = swizzleVec3(xyzMM, [2, 0, 1])
+    } // screen ASR to NIfTI RAS
     const xyz = this.mm2frac(xyzMM)
     if (restrict0to1) {
-      if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1) return texFrac
+      if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1) {
+        return texFrac
+      }
     }
     texFrac[0] = xyz[0]
     texFrac[1] = xyz[1]
@@ -7830,7 +8449,9 @@ export class Niivue {
   canvasPos2frac(canvasPos) {
     for (let i = 0; i < this.screenSlices.length; i++) {
       const texFrac = this.screenXY2TextureFrac(canvasPos[0], canvasPos[1], i)
-      if (texFrac[0] >= 0) return texFrac
+      if (texFrac[0] >= 0) {
+        return texFrac
+      }
     }
     return [-1, -1, -1] // texture 0..1 so -1 is out of bounds
   }
@@ -7841,7 +8462,9 @@ export class Niivue {
     const canvasW = this.effectiveCanvasWidth() - widthPadPixels
     const canvasH = this.effectiveCanvasHeight() - heightPadPixels
     let scalePix = canvasW / w
-    if (h * scalePix > canvasH) scalePix = canvasH / h
+    if (h * scalePix > canvasH) {
+      scalePix = canvasH / h
+    }
     // canvas space is 0,0...w,h with origin at upper left
     const wPix = w * scalePix
     const hPix = h * scalePix
@@ -7873,7 +8496,9 @@ export class Niivue {
   drawLine(startXYendXY, thickness = 1, lineColor = [1, 0, 0, -1]) {
     this.gl.bindVertexArray(this.genericVAO)
     this.lineShader.use(this.gl)
-    if (lineColor[3] < 0) lineColor = this.opts.crosshairColor
+    if (lineColor[3] < 0) {
+      lineColor = this.opts.crosshairColor
+    }
     this.gl.uniform4fv(this.lineShader.lineColorLoc, lineColor)
     this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
@@ -7889,7 +8514,9 @@ export class Niivue {
   draw3DLine(startXY, endXYZ, thickness = 1, lineColor = [1, 0, 0, -1]) {
     this.gl.bindVertexArray(this.genericVAO)
     this.line3DShader.use(this.gl)
-    if (lineColor[3] < 0) lineColor = this.opts.crosshairColor
+    if (lineColor[3] < 0) {
+      lineColor = this.opts.crosshairColor
+    }
     this.gl.uniform4fv(this.line3DShader.lineColorLoc, lineColor)
     this.gl.uniform2fv(this.line3DShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
@@ -7970,16 +8597,24 @@ export class Niivue {
 
   // not included in public docs
   drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM) {
-    if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return
+    if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) {
+      return
+    }
     const tile = this.screenSlices[sliceIndex]
     let sliceFrac = tile.sliceFrac
     const isRender = sliceFrac === Infinity
-    if (isRender) log.warn('Rendering approximate cross lines in world view mode')
-    if (sliceFrac === Infinity) sliceFrac = 0.5
+    if (isRender) {
+      log.warn('Rendering approximate cross lines in world view mode')
+    }
+    if (sliceFrac === Infinity) {
+      sliceFrac = 0.5
+    }
     let linesH = corMM.slice()
     let linesV = sagMM.slice()
     const thick = Math.max(1, this.opts.crosshairWidth)
-    if (axCorSag === SLICE_TYPE.CORONAL) linesH = axiMM.slice()
+    if (axCorSag === SLICE_TYPE.CORONAL) {
+      linesH = axiMM.slice()
+    }
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
       linesH = axiMM.slice()
       linesV = corMM.slice()
@@ -8100,16 +8735,23 @@ export class Niivue {
 
   // not included in public docs
   drawCrossLines(sliceIndex, axCorSag, axiMM, corMM, sagMM) {
-    if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) return
-    if (this.opts.isSliceMM) return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM)
-    if (this.screenSlices[sliceIndex].sliceFrac === Infinity)
+    if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) {
+      return
+    }
+    if (this.opts.isSliceMM) {
+      return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM)
+    }
+    if (this.screenSlices[sliceIndex].sliceFrac === Infinity) {
       // render views always world space
       return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM)
+    }
     const tile = this.screenSlices[sliceIndex]
     let linesH = corMM.slice()
     let linesV = sagMM.slice()
 
-    if (axCorSag === SLICE_TYPE.CORONAL) linesH = axiMM.slice()
+    if (axCorSag === SLICE_TYPE.CORONAL) {
+      linesH = axiMM.slice()
+    }
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
       linesH = axiMM.slice()
       linesV = corMM.slice()
@@ -8118,7 +8760,9 @@ export class Niivue {
       // draw horizontal lines
       const LTWH = tile.leftTopWidthHeight.slice()
       let sliceDim = 2 // vertical axis is Zmm
-      if (axCorSag === SLICE_TYPE.AXIAL) sliceDim = 1 // vertical axis is Ymm
+      if (axCorSag === SLICE_TYPE.AXIAL) {
+        sliceDim = 1
+      } // vertical axis is Ymm
       const mm = this.frac2mm([0.5, 0.5, 0.5])
       for (let i = 0; i < linesH.length; i++) {
         mm[sliceDim] = linesH[i]
@@ -8131,13 +8775,18 @@ export class Niivue {
       const LTWH = tile.leftTopWidthHeight.slice()
       const isRadiolgical = tile.fovMM[0] < 0
       let sliceDim = 0 // vertical lines on axial/coronal are L/R axis
-      if (axCorSag === SLICE_TYPE.SAGITTAL) sliceDim = 1 // vertical lines on sagittal are A/P
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        sliceDim = 1
+      } // vertical lines on sagittal are A/P
       const mm = this.frac2mm([0.5, 0.5, 0.5])
       for (let i = 0; i < linesV.length; i++) {
         mm[sliceDim] = linesV[i]
         const frac = this.mm2frac(mm)
-        if (isRadiolgical) this.drawRect([LTWH[0] + (LTWH[2] - frac[sliceDim] * LTWH[2]), LTWH[1], 1, LTWH[3]])
-        else this.drawRect([LTWH[0] + frac[sliceDim] * LTWH[2], LTWH[1], 1, LTWH[3]])
+        if (isRadiolgical) {
+          this.drawRect([LTWH[0] + (LTWH[2] - frac[sliceDim] * LTWH[2]), LTWH[1], 1, LTWH[3]])
+        } else {
+          this.drawRect([LTWH[0] + frac[sliceDim] * LTWH[2], LTWH[1], 1, LTWH[3]])
+        }
       }
     }
   }
@@ -8195,10 +8844,18 @@ export class Niivue {
           i++ // skip numeric value for vertical/horizontal overlap
           continue
         }
-        if (item.includes('A')) axCorSag = SLICE_TYPE.AXIAL
-        if (item.includes('C')) axCorSag = SLICE_TYPE.CORONAL
-        if (item.includes('S')) axCorSag = SLICE_TYPE.SAGITTAL
-        if (item.includes('R')) isRender = true
+        if (item.includes('A')) {
+          axCorSag = SLICE_TYPE.AXIAL
+        }
+        if (item.includes('C')) {
+          axCorSag = SLICE_TYPE.CORONAL
+        }
+        if (item.includes('S')) {
+          axCorSag = SLICE_TYPE.SAGITTAL
+        }
+        if (item.includes('R')) {
+          isRender = true
+        }
         if (item.includes(';')) {
           // EOLN
           top += rowHt
@@ -8207,23 +8864,39 @@ export class Niivue {
           left = 0
         }
         const sliceMM = parseFloat(item, NaN)
-        if (isNaN(sliceMM)) continue
+        if (isNaN(sliceMM)) {
+          continue
+        }
         let w = 0
         let h = 0
         let fov = fovSliceMM
-        if (isRender) fov = fovRenderMM
+        if (isRender) {
+          fov = fovRenderMM
+        }
         // draw the slice
-        if (axCorSag === SLICE_TYPE.SAGITTAL) w = fov[1]
-        else w = fov[0]
-        if (axCorSag === SLICE_TYPE.AXIAL) h = fov[1]
-        else h = fov[2]
+        if (axCorSag === SLICE_TYPE.SAGITTAL) {
+          w = fov[1]
+        } else {
+          w = fov[0]
+        }
+        if (axCorSag === SLICE_TYPE.AXIAL) {
+          h = fov[1]
+        } else {
+          h = fov[2]
+        }
         // console.log("w" + w + " h" + h + "::", fov);
         if (pass === 0) {
           // 1st pass: record slice locations in world space
           if (!isRender) {
-            if (axCorSag === SLICE_TYPE.AXIAL) axiMM.push(sliceMM)
-            if (axCorSag === SLICE_TYPE.CORONAL) corMM.push(sliceMM)
-            if (axCorSag === SLICE_TYPE.SAGITTAL) sagMM.push(sliceMM)
+            if (axCorSag === SLICE_TYPE.AXIAL) {
+              axiMM.push(sliceMM)
+            }
+            if (axCorSag === SLICE_TYPE.CORONAL) {
+              corMM.push(sliceMM)
+            }
+            if (axCorSag === SLICE_TYPE.SAGITTAL) {
+              sagMM.push(sliceMM)
+            }
           }
         } else {
           // 2nd pass draw
@@ -8231,9 +8904,13 @@ export class Niivue {
           this.opts.textHeight = isLabel ? labelSize : 0
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity
-            if (Object.is(sliceMM, -0)) inf = -Infinity // catch negative zero
+            if (Object.is(sliceMM, -0)) {
+              inf = -Infinity
+            } // catch negative zero
             this.draw2D(ltwh, axCorSag, inf, isLabel)
-          } else this.draw2D(ltwh, axCorSag, sliceMM, isLabel)
+          } else {
+            this.draw2D(ltwh, axCorSag, sliceMM, isLabel)
+          }
           if (isCrossLines) {
             this.drawCrossLines(this.screenSlices.length - 1, axCorSag, axiMM, corMM, sagMM)
             // isCrossLinesUsed = true;
@@ -8246,7 +8923,9 @@ export class Niivue {
       }
       top += rowHt
       mxRowWid = Math.max(mxRowWid, left)
-      if (mxRowWid <= 0 || top <= 0) break
+      if (mxRowWid <= 0 || top <= 0) {
+        break
+      }
       const scaleW = this.gl.canvas.width / mxRowWid
       const scaleH = this.effectiveCanvasHeight() / top
       scale = Math.min(scaleW, scaleH)
@@ -8274,13 +8953,17 @@ export class Niivue {
         this.screenSlices = [] // empty array
         this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
         this.draw3D() // meshes loaded but no volume
-        if (this.opts.isColorbar) this.drawColorbar()
+        if (this.opts.isColorbar) {
+          this.drawColorbar()
+        }
         return
       }
       this.drawLoadingText(this.loadingText)
       return
     }
-    if (!('dims' in this.back)) return
+    if (!('dims' in this.back)) {
+      return
+    }
     if (
       this.uiData.isDragging &&
       this.scene.clipPlaneDepthAziElev[0] < 1.8 &&
@@ -8302,13 +8985,19 @@ export class Niivue {
       }
     }
     if (this.sliceMosaicString.length < 1 && this.opts.sliceType === SLICE_TYPE.RENDER) {
-      if (this.opts.isColorbar) this.reserveColorbarPanel()
+      if (this.opts.isColorbar) {
+        this.reserveColorbarPanel()
+      }
       this.screenSlices = [] // empty array
       this.draw3D()
-      if (this.opts.isColorbar) this.drawColorbar()
+      if (this.opts.isColorbar) {
+        this.drawColorbar()
+      }
       return
     }
-    if (this.opts.isColorbar) this.reserveColorbarPanel()
+    if (this.opts.isColorbar) {
+      this.reserveColorbarPanel()
+    }
     const maxVols = this.getMaxVols()
     const isDrawGraph =
       this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
@@ -8332,7 +9021,9 @@ export class Niivue {
         // sliceTypeMultiplanar
         const isDrawPenDown = isFinite(this.drawPenLocation[0]) && this.opts.drawingEnabled
         const { volScale } = this.sliceScale()
-        if (typeof this.opts.multiplanarPadPixels !== 'number') log.debug('multiplanarPadPixels must be numeric')
+        if (typeof this.opts.multiplanarPadPixels !== 'number') {
+          log.debug('multiplanarPadPixels must be numeric')
+        }
         const pad = parseFloat(this.opts.multiplanarPadPixels)
         // size for 2 rows, 2 columns
         const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1)
@@ -8357,19 +9048,29 @@ export class Niivue {
         let isDrawColumn = false
         let isDrawGrid = false
         let isDrawRow = false
-        if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.COLUMN) isDrawColumn = true
-        else if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.GRID) isDrawGrid = true
-        else if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.ROW) isDrawRow = true
-        else {
+        if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.COLUMN) {
+          isDrawColumn = true
+        } else if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.GRID) {
+          isDrawGrid = true
+        } else if (this.opts.multiplanarLayout === MULTIPLANAR_TYPE.ROW) {
+          isDrawRow = true
+        } else {
           // auto select layout based on canvas size
-          if (ltwh1x3[4] > ltwh3x1[4] && ltwh1x3[4] > ltwh2x2[4]) isDrawColumn = true
-          else if (ltwh3x1[4] > ltwh2x2[4]) isDrawRow = true
-          else isDrawGrid = true
+          if (ltwh1x3[4] > ltwh3x1[4] && ltwh1x3[4] > ltwh2x2[4]) {
+            isDrawColumn = true
+          } else if (ltwh3x1[4] > ltwh2x2[4]) {
+            isDrawRow = true
+          } else {
+            isDrawGrid = true
+          }
         }
         if (isDrawColumn) {
           let ltwh = ltwh1x3
-          if (this.opts.multiplanarForceRender || ltwh1x4[4] >= ltwh1x3[4]) ltwh = ltwh1x4
-          else isDraw3D = false
+          if (this.opts.multiplanarForceRender || ltwh1x4[4] >= ltwh1x3[4]) {
+            ltwh = ltwh1x4
+          } else {
+            isDraw3D = false
+          }
           const sX = volScale[0] * ltwh[4]
           const sY = volScale[1] * ltwh[4]
           const sZ = volScale[2] * ltwh[4]
@@ -8380,11 +9081,16 @@ export class Niivue {
           this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1)
           // draw sagittal
           this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2)
-          if (isDraw3D) this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
+          if (isDraw3D) {
+            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
+          }
         } else if (isDrawRow) {
           let ltwh = ltwh3x1
-          if (this.opts.multiplanarForceRender || ltwh4x1[4] >= ltwh3x1[4]) ltwh = ltwh4x1
-          else isDraw3D = false
+          if (this.opts.multiplanarForceRender || ltwh4x1[4] >= ltwh3x1[4]) {
+            ltwh = ltwh4x1
+          } else {
+            isDraw3D = false
+          }
           const sX = volScale[0] * ltwh[4]
           const sY = volScale[1] * ltwh[4]
           const sZ = volScale[2] * ltwh[4]
@@ -8394,7 +9100,9 @@ export class Niivue {
           this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1)
           // draw sagittal
           this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2)
-          if (isDraw3D) this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], ltwh[3], ltwh[3]])
+          if (isDraw3D) {
+            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], ltwh[3], ltwh[3]])
+          }
         } else if (isDrawGrid) {
           const ltwh = ltwh2x2
           const sX = volScale[0] * ltwh[4]
@@ -8406,13 +9114,21 @@ export class Niivue {
           this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1)
           // draw sagittal
           this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2)
-          if (isDraw3D) this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY])
+          if (isDraw3D) {
+            this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY])
+          }
         }
       }
     }
-    if (this.opts.isRuler) this.drawRuler()
-    if (this.opts.isColorbar) this.drawColorbar()
-    if (isDrawGraph) this.drawGraph()
+    if (this.opts.isRuler) {
+      this.drawRuler()
+    }
+    if (this.opts.isColorbar) {
+      this.drawColorbar()
+    }
+    if (isDrawGraph) {
+      this.drawGraph()
+    }
     if (this.uiData.isDragging) {
       if (this.uiData.mouseButtonCenterDown) {
         this.dragForCenterButton([
@@ -8441,7 +9157,9 @@ export class Niivue {
         ])
         return
       }
-      if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) return
+      if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
+        return
+      }
       if (this.opts.dragMode === DRAG_MODE.measurement) {
         // if (this.opts.isDragShowsMeasurementTool) {
         this.drawMeasurementTool([
@@ -8485,7 +9203,9 @@ export class Niivue {
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
     // await this.gl.finish();
     await this.gl.finish()
-    if (this.needsRefresh) posString = this.drawScene()
+    if (this.needsRefresh) {
+      posString = this.drawScene()
+    }
     return posString
   }
 }
