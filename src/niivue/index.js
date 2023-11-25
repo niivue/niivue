@@ -8451,7 +8451,9 @@ export class Niivue {
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
     // await this.gl.finish();
-    await this.gl.finish()
+    if (this.gl !== null) {
+      await this.gl.finish()
+    }
     if (this.needsRefresh) posString = this.drawScene()
     return posString
   }
