@@ -1456,8 +1456,7 @@ export class Niivue {
       // only works for background (first loaded image is index 0)
       this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1)
     } else if (e.code === 'Slash' && e.shiftKey) {
-      // eslint-disable-next-line no-undef
-      alert(`NIIVUE VERSION: ${__NIIVUE_VERSION__}`)
+      alert(`NIIVUE VERSION: ${version}`)
     }
   }
 
