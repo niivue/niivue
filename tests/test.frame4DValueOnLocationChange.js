@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('frame4DValueOnLocationChange', async () => {
   const frameVoxVal = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

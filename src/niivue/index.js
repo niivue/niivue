@@ -1,5 +1,6 @@
 import * as mat from 'gl-matrix'
 import { Subject } from 'rxjs'
+import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import {
   vertOrientCubeShader,
@@ -652,7 +653,7 @@ export class Niivue {
    * @example niivue.saveScene('test.png');
    * @see {@link https://niivue.github.io/niivue/features/ui.html|live demo usage}
    */
-  saveScene(filename = 'niivue.png') {
+  async saveScene(filename = 'niivue.png') {
     function saveBlob(blob, name) {
       const a = document.createElement('a')
       document.body.appendChild(a)
@@ -665,7 +666,7 @@ export class Niivue {
     }
 
     const canvas = this.canvas
-    this.drawScene()
+    await this.drawScene()
     canvas.toBlob((blob) => {
       if (filename === '') {
         filename = `niivue-screenshot-${new Date().toString()}.png`
@@ -744,24 +745,6 @@ export class Niivue {
   }
 
   /**
-   * decode the compressed embedded UMD string of the bundled Niivue code
-   * @param {string} umdBase64 the base64 encoded compressed UMD string
-   * @returns {string} the uncompressed UMD string
-   * @example
-   * niivue = new Niivue()
-   * niivue.decodeEmbeddedUMD()
-   */
-  decodeEmbeddedUMD() {
-    const UMD_AVAIL = typeof __NIIVUE_UMD__ !== 'undefined'
-    if (!UMD_AVAIL) {
-      return ''
-    }
-
-    // eslint-disable-next-line no-undef
-    return NVUtilities.decompressBase64String(__NIIVUE_UMD__)
-  }
-
-  /**
    * attach the Niivue instance to a canvas element directly
    * @param {object} canvas the canvas element reference
    * @example
@@ -783,13 +766,7 @@ export class Niivue {
       log.warn('unable to get webgl2 context. Perhaps this browser does not support webgl2')
     }
 
-    console.log(
-      'NIIVUE VERSION ',
-      typeof __NIIVUE_VERSION__ === 'undefined'
-        ? 'null (niivue was likely built in a parent project rather than using the pre-bundled version)'
-        : // eslint-disable-next-line no-undef
-          __NIIVUE_VERSION__
-    ) // TH added this rare console.log via suggestion from CR. Don't remove
+    console.log('NIIVUE VERSION ', version) // TH added this rare console.log via suggestion from CR. Don't remove
 
     // set parent background container to black (default empty canvas color)
     // avoids white cube around image in 3D render mode
@@ -1479,8 +1456,7 @@ export class Niivue {
       // only works for background (first loaded image is index 0)
       this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1)
     } else if (e.code === 'Slash' && e.shiftKey) {
-      // eslint-disable-next-line no-undef
-      alert(`NIIVUE VERSION: ${__NIIVUE_VERSION__}`)
+      alert(`NIIVUE VERSION: ${version}`)
     }
   }
 
@@ -1702,8 +1678,8 @@ export class Niivue {
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              entry.file((file) => {
-                this.loadBmpTexture(file)
+              entry.file(async (file) => {
+                await this.loadBmpTexture(file)
               })
               continue
             }
@@ -2700,7 +2676,7 @@ export class Niivue {
    * niivue.setClipPlane([42, 42])
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  setClipPlane(depthAzimuthElevation) {
+  async setClipPlane(depthAzimuthElevation) {
     //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
     //  azimuthElevation is 2 component vector [a, e, d]
     //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
@@ -2711,7 +2687,7 @@ export class Niivue {
     this.scene.clipPlaneDepthAziElev = depthAzimuthElevation
     this.onClipPlaneChange(this.scene.clipPlane)
     // if (this.opts.sliceType!= SLICE_TYPE.RENDER) return;
-    this.drawScene()
+    await this.drawScene()
   }
 
   /**
@@ -2844,9 +2820,9 @@ export class Niivue {
    * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
    * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html|live demo usage}
    */
-  setSliceType(st) {
+  async setSliceType(st) {
     this.opts.sliceType = st
-    this.drawScene()
+    await this.drawScene()
     return this
   }
 
@@ -2904,7 +2880,7 @@ export class Niivue {
    * niivue.setVolumeRenderIllumination(0.6);
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  setVolumeRenderIllumination(gradientAmount = 0.0) {
+  async setVolumeRenderIllumination(gradientAmount = 0.0) {
     this.renderShader = this.renderVolumeShader
     if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader
     if (gradientAmount < 0.0) this.renderShader = this.renderSliceShader
@@ -2913,7 +2889,7 @@ export class Niivue {
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
     this.refreshLayers(this.volumes[0], 0, this.volumes.length)
-    this.drawScene()
+    await this.drawScene()
   }
 
   // not included in public docs.
@@ -3082,7 +3058,7 @@ export class Niivue {
   }
 
   
-  var nv1 = new niivue.Niivue();
+  var nv1 = new Niivue();
   nv1.attachTo("${canvasId}");  
   var base64 = "${base64}";
   var jsonText = niivue.NVUtilities.decompressBase64String(base64);
@@ -3738,7 +3714,7 @@ export class Niivue {
       // 6. Test six neighbors of n (left,right,anterior,posterior,inferior, superior
       //   If any is is unfound part of cluster (value = 1) set it to found (value 2) and add to Q
       const xyz = vx2xyz(vx)
-      // eslint-disable-next-line no-inner-declarations
+
       function testNeighbor(offset) {
         const xyzN = xyz.slice()
         xyzN[0] += offset[0]
@@ -4169,8 +4145,8 @@ export class Niivue {
 
   // not included in public docs
   // load font stored as PNG bitmap with texture unit 3
-  loadFontTexture(fontUrl) {
-    this.loadPngAsTexture(fontUrl, 3)
+  async loadFontTexture(fontUrl) {
+    await this.loadPngAsTexture(fontUrl, 3)
   }
 
   // not included in public docs
@@ -4186,8 +4162,8 @@ export class Niivue {
    * niivue.loadMatCapTexture("Cortex");
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  loadMatCapTexture(bmpUrl) {
-    this.loadPngAsTexture(bmpUrl, 5)
+  async loadMatCapTexture(bmpUrl) {
+    await this.loadPngAsTexture(bmpUrl, 5)
   }
 
   // not included in public docs
@@ -7215,8 +7191,7 @@ export class Niivue {
   // fills data returned with the onLocationChanvge() callback
   createOnLocationChange(axCorSag = NaN) {
     // first: provide a string representation
-    // eslint-disable-next-line no-unused-vars
-    const [mn, mx, range] = this.sceneExtentsMinMax(true)
+    const [_mn, _mx, range] = this.sceneExtentsMinMax(true)
     const fov = Math.max(Math.max(range[0], range[1]), range[2])
     function dynamicDecimals(flt) {
       return Math.max(0.0, -Math.ceil(Math.log10(Math.abs(flt))))
@@ -7649,15 +7624,8 @@ export class Niivue {
     }
     const crosshairsShader = this.surfaceShader
     crosshairsShader.use(this.gl)
-    let modelMtx, normMtx
-    // eslint-disable-next-line no-unused-vars
     if (mvpMtx == null)
-      // eslint-disable-next-line no-unused-vars
-      [mvpMtx, modelMtx, normMtx] = this.calculateMvpMatrix(
-        this.crosshairs3D,
-        this.scene.renderAzimuth,
-        this.scene.renderElevation
-      )
+      [mvpMtx] = this.calculateMvpMatrix(this.crosshairs3D, this.scene.renderAzimuth, this.scene.renderElevation)
     gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer)
@@ -7689,8 +7657,7 @@ export class Niivue {
     // given mm, return volume fraction
     if (this.volumes.length < 1) {
       const frac = [0.1, 0.5, 0.5]
-      // eslint-disable-next-line no-unused-vars
-      const [mn, mx, range] = this.sceneExtentsMinMax()
+      const [mn, _mx, range] = this.sceneExtentsMinMax()
       frac[0] = (mm[0] - mn[0]) / range[0]
       frac[1] = (mm[1] - mn[1]) / range[1]
       frac[2] = (mm[2] - mn[2]) / range[2]
@@ -8479,13 +8446,15 @@ export class Niivue {
     }
     this.isBusy = false
     this.needsRefresh = false
-    let posString = await this.drawSceneCore()
+    let posString = this.drawSceneCore()
     // Chrome and Safari get much more bogged down by concurrent draw calls than Safari
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
     // await this.gl.finish();
-    await this.gl.finish()
-    if (this.needsRefresh) posString = this.drawScene()
+    if (this.gl !== null) {
+      await this.gl.finish()
+    }
+    if (this.needsRefresh) posString = await this.drawScene()
     return posString
   }
 }

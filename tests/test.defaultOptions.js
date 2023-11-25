@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('defaultOptions', async () => {
   const opts = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     return nv.opts
   })

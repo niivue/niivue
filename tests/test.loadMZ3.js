@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('loadMZ3Mesh', async () => {
   const nmeshes = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     const layersList = [
       {

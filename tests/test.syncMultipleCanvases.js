@@ -9,9 +9,9 @@ test('crosshairs synced on click', async () => {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // blue
     }
-    nv1 = new niivue.Niivue((opts = opts))
+    nv1 = new Niivue((opts = opts))
     nv1.attachTo('gl1', false)
-    nv2 = new niivue.Niivue((opts = opts))
+    nv2 = new Niivue((opts = opts))
     nv2.attachTo('gl2', false)
     // load one volume object in an array
     const volumeList1 = [

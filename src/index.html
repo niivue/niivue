@@ -34,9 +34,7 @@
     </main>
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
-      import { Niivue } from "./niivue";
-      import { NVImage } from "./nvimage";
-      import { NVMesh } from "./nvmesh";
+      import { Niivue, NVImage, NVMesh } from "../dist/index.js";
       document.getElementById("reset").addEventListener("click", doReset);
       var dropDrag = document.getElementById("dragMode");
       dropDrag.onchange = function () {
@@ -100,7 +98,6 @@
       nv1.graph.normalizeValues = false;
       nv1.graph.opacity = 1.0;
       await nv1.loadVolumes(volumeList1);
-      //await nv1.loadMeshes([{ url: "../demos/images/connectome.jcon" }]);
       nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
       function doReset() {
         nv1.setDefaults(defaults, true);

@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
 import { webSocket } from 'rxjs/webSocket'
 
 /**
@@ -12,9 +11,9 @@ import { webSocket } from 'rxjs/webSocket'
  */
 export class SessionUser {
   constructor(displayName = undefined, userId = undefined, userKey = undefined, userProperties = undefined) {
-    this.id = userId || uuidv4()
+    this.id = userId || crypto.randomUUID()
     this.displayName = displayName || `user-${this.id}`
-    this.key = userKey || uuidv4()
+    this.key = userKey || crypto.randomUUID()
     this.properties = userProperties || new Map()
   }
 }
@@ -72,7 +71,7 @@ export class SessionBus {
     this.isController = false
 
     this.sessionScene = {}
-    this.sessionKey = sessionKey || uuidv4()
+    this.sessionKey = sessionKey || crypto.randomUUID()
 
     this.sessionName = name
     this.sessionSceneName = `session-${name}-scene`

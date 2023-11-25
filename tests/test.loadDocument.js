@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('loadDocument', async () => {
   const nvols = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     await nv.loadDocumentFromUrl('./images/document/niivue.basic.nvd')
     return nv.volumes.length

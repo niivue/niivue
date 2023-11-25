@@ -35,3 +35,5 @@ pnpm-debug.log*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/playwright/e2e/index.js
+/tests/index.js

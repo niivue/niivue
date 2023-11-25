@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('attachTo', async () => {
   const gl = await page.evaluate(async () => {
-    nv = new niivue.Niivue()
+    nv = new Niivue()
     nv = await nv.attachTo('gl', false)
     return nv.gl
   })

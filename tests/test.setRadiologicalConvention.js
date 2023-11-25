@@ -8,7 +8,7 @@ test('set radiological convention', async () => {
     const opts = {
       isRadiologicalConvention: true // right of the image will be on the left of the display space
     }
-    const nv = new niivue.Niivue((options = opts))
+    const nv = new Niivue((options = opts))
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

@@ -9,7 +9,7 @@ test('frac2vox', async () => {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new niivue.Niivue((opts = opts))
+    const nv = new Niivue((opts = opts))
     await nv.attachTo('gl', false)
 
     // load one volume object in an array

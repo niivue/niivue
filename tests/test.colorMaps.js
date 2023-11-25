@@ -17,7 +17,7 @@ files = files.map((file) => {
 
 test.each(files)('colormap_%s', async (file) => {
   const retFile = await page.evaluate(async (file) => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     console.log(`${file}`)
@@ -38,7 +38,7 @@ test.each(files)('colormap_%s', async (file) => {
 
 test.each(files)('colormap_inverted_%s', async (file) => {
   const retFile = await page.evaluate(async (file) => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     console.log(`${file}`)

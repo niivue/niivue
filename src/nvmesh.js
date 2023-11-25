@@ -1,5 +1,4 @@
 // import * as gifti from "gifti-reader-js/release/current/gifti-reader";
-import { v4 as uuidv4 } from 'uuid'
 import { vec3 } from 'gl-matrix'
 import { Log } from './logger'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
@@ -111,7 +110,7 @@ export class NVMesh {
   ) {
     this.name = name
     this.colorbarVisible = colorbarVisible
-    this.id = uuidv4()
+    this.id = crypto.randomUUID()
     const obj = NVMeshUtilities.getExtents(pts)
     this.furthestVertexFromOrigin = obj.mxDx
     this.extentsMin = obj.extentsMin
@@ -407,33 +406,31 @@ export class NVMesh {
   // internal function filters connectome to identify which color, size and visibility of nodes and edges
   updateConnectome(gl) {
     // draw nodes
-    const json = this
-    // draw nodes
     const tris = []
-    const nNode = json.nodes.X.length
+    const nNode = this.nodes.X.length
     let hasEdges = false
-    if (nNode > 1 && 'edges' in json) {
-      let nEdges = json.edges.length
+    if (nNode > 1 && 'edges' in this) {
+      let nEdges = this.edges.length
       if ((nEdges = nNode * nNode)) hasEdges = true
       else console.log('Expected %d edges not %d', nNode * nNode, nEdges)
     }
-    if (!('nodeScale' in json.hasOwnProperty)) json.nodeScale = 4
-    if (!('edgeScale' in json)) json.edgeScale = 1
-    if (!('nodeColormap' in json)) json.nodeColormap = 'warm'
-    if (!('edgeColormap' in json)) json.edgeColormap = 'warm'
+    if (!('nodeScale' in this.hasOwnProperty)) this.nodeScale = 4
+    if (!('edgeScale' in this)) this.edgeScale = 1
+    if (!('nodeColormap' in this)) this.nodeColormap = 'warm'
+    if (!('edgeColormap' in this)) this.edgeColormap = 'warm'
 
     // draw all nodes
     const pts = []
     const rgba255 = []
-    let lut = cmapper.colormap(json.nodeColormap, this.colormapInvert)
-    let lutNeg = cmapper.colormap(json.nodeColormapNegative, this.colormapInvert)
-    let hasNeg = 'nodeColormapNegative' in json
-    let min = json.nodeMinColor
-    let max = json.nodeMaxColor
+    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
+    let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
+    let hasNeg = 'nodeColormapNegative' in this
+    let min = this.nodeMinColor
+    let max = this.nodeMaxColor
     for (let i = 0; i < nNode; i++) {
-      const radius = json.nodes.Size[i] * json.nodeScale
+      const radius = this.nodes.Size[i] * this.nodeScale
       if (radius <= 0.0) continue
-      let color = json.nodes.Color[i]
+      let color = this.nodes.Color[i]
       let isNeg = false
       if (hasNeg && color < 0) {
         isNeg = true
@@ -446,25 +443,25 @@ export class NVMesh {
       color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
       let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
       if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
-      const pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]]
+      const pt = [this.nodes.X[i], this.nodes.Y[i], this.nodes.Z[i]]
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
     }
     // draw all edges
     if (hasEdges) {
-      lut = cmapper.colormap(json.edgeColormap, this.colormapInvert)
-      lutNeg = cmapper.colormap(json.edgeColormapNegative, this.colormapInvert)
-      hasNeg = 'edgeColormapNegative' in json
-      min = json.edgeMin
-      max = json.edgeMax
+      lut = cmapper.colormap(this.edgeColormap, this.colormapInvert)
+      lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert)
+      hasNeg = 'edgeColormapNegative' in this
+      min = this.edgeMin
+      max = this.edgeMax
       for (let i = 0; i < nNode - 1; i++) {
         for (let j = i + 1; j < nNode; j++) {
-          let color = json.edges[i * nNode + j]
+          let color = this.edges[i * nNode + j]
           let isNeg = false
           if (hasNeg && color < 0) {
             isNeg = true
             color = -color
           }
-          const radius = color * json.edgeScale
+          const radius = color * this.edgeScale
           if (radius <= 0) continue
           if (min < max) {
             if (color < min) continue
@@ -473,8 +470,8 @@ export class NVMesh {
           color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
           let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
           if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
-          const pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]]
-          const ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]]
+          const pti = [this.nodes.X[i], this.nodes.Y[i], this.nodes.Z[i]]
+          const ptj = [this.nodes.X[j], this.nodes.Y[j], this.nodes.Z[j]]
           NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
         } // for j
       } // for i
@@ -698,7 +695,6 @@ export class NVMesh {
         const v = j * 4 // additiveRGBA is 4 bytes stride, RGBA color at offset 0,
         const opacity = Math.min(maxAdditiveBlend, additiveRGBA[v + 3] / 255)
         if (opacity <= 0) continue
-        // eslint-disable-next-line no-inner-declarations
         function modulate(x, y) {
           return Math.min(x * y * (1 / 255), 255.0)
         }
@@ -799,10 +795,10 @@ export class NVMesh {
     visible = true
   ) {
     // let rgb255 = [255, 0, 0];
-    // if ("color" in json) rgb255 = json.color;
+    // if ("color" in json) rgb255 = this.color;
     let isValid = true
     if (!('data_type' in json)) isValid = false
-    else if (json.data_type !== 'fs_pointset') isValid = false
+    else if (this.data_type !== 'fs_pointset') isValid = false
     if (!('points' in json)) isValid = false
     if (!isValid) {
       throw Error('not a valid FreeSurfer json pointset')
@@ -816,18 +812,18 @@ export class NVMesh {
     jcon.nodes.Z = []
     jcon.nodes.Color = []
     jcon.nodes.Size = []
-    jcon.name = json.data_type
-    for (let i = 0; i < json.points.length; i++) {
+    jcon.name = this.data_type
+    for (let i = 0; i < this.points.length; i++) {
       let name = ''
-      if ('comments' in json.points[i]) if ('text' in json.points[i].comments[0]) name = json.points[i].comments[0].text
+      if ('comments' in this.points[i]) if ('text' in this.points[i].comments[0]) name = this.points[i].comments[0].text
       jcon.nodes.names.push(name)
       let prefilled = ''
-      if ('comments' in json.points[i])
-        if ('prefilled' in json.points[i].comments[0]) prefilled = json.points[i].comments[0].prefilled
+      if ('comments' in this.points[i])
+        if ('prefilled' in this.points[i].comments[0]) prefilled = this.points[i].comments[0].prefilled
       jcon.nodes.prefilled.push(prefilled)
-      jcon.nodes.X.push(json.points[i].coordinates.x)
-      jcon.nodes.Y.push(json.points[i].coordinates.y)
-      jcon.nodes.Z.push(json.points[i].coordinates.z)
+      jcon.nodes.X.push(this.points[i].coordinates.x)
+      jcon.nodes.Y.push(this.points[i].coordinates.y)
+      jcon.nodes.Z.push(this.points[i].coordinates.z)
       jcon.nodes.Color.push(1)
       jcon.nodes.Size.push(1)
     }
@@ -843,7 +839,7 @@ export class NVMesh {
     opacity = 1.0,
     visible = true
   ) {
-    if ('name' in json) name = json.name
+    if ('name' in json) name = this.name
     if (!('nodes' in json)) {
       throw Error('not a valid jcon connectome file')
     }

@@ -3,13 +3,13 @@ beforeEach(async () => {
   await page.goto(httpServerAddress, { timeout: 0 })
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
 })
-it('nv = new niivue.Niivue(opts=opts)', async () => {
+it('nv = new Niivue(opts=opts)', async () => {
   const opts = await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new niivue.Niivue((opts = opts))
+    const nv = new Niivue((opts = opts))
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

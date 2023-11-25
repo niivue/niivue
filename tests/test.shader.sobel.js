@@ -5,24 +5,22 @@ beforeEach(async () => {
 })
 test('sobelShader', async () => {
   const nvols = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [
       { url: './images/mni152.nii.gz', cal_min: 30, cal_max: 80 },
       { url: './images/spmMotor.nii.gz', cal_min: 3, cal_max: 8, colormap: 'warm' }
     ]
-    nv.setSliceType(nv.sliceTypeRender)
+    await nv.setSliceType(nv.sliceTypeRender)
     nv.opts.multiplanarForceRender = true
-    nv.setVolumeRenderIllumination(1.0)
-    nv.setClipPlane([0.3, 180, 20])
+    await nv.setVolumeRenderIllumination(1.0)
+    await nv.setClipPlane([0.3, 180, 20])
     await nv.loadVolumes(volumeList)
     await nv.loadMeshes([{ url: './images/connectome.jcon' }, { url: './images/dpsv.trx', rgba255: [0, 142, 0, 255] }])
-    nv.loadMatCapTexture('./matcaps/Cortex.jpg')
+    await nv.loadMatCapTexture('./matcaps/Cortex.jpg')
     return nv.volumes.length
   })
-  console.log(nvols)
   expect(nvols).toBe(2)
-  // expect(nv.meshes.length).toBe(1);
   await snapshot()
 })

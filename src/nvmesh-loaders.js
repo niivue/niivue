@@ -1,5 +1,5 @@
 import { mat4, vec4 } from 'gl-matrix'
-import * as fflate from 'fflate'
+import { decompressSync, unzipSync } from 'fflate/browser'
 import { Log } from './logger'
 import { cmapper } from './colortables'
 import { NiivueObject3D } from './niivue-object3D'
@@ -31,6 +31,8 @@ export class NVMeshLoaders {
       if (pos - startPos < 1) return ''
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
     }
+
+    let line = readStr() // 1st line: signature '<network'
     function readNumericTag(TagName) {
       // Tag 'Dim1' will return 3 for Dim1="3"
       const pos = line.indexOf(TagName)
@@ -40,7 +42,6 @@ export class NVMeshLoaders {
       const str = line.slice(spos, epos)
       return parseInt(str)
     }
-    let line = readStr() // 1st line: signature '<network'
     const n_tracts = readNumericTag('N_tracts=')
     if (!line.startsWith('<network') || n_tracts < 1) console.log('This is not a valid niml.tract file ' + line)
     let npt = 0
@@ -121,7 +122,7 @@ export class NVMeshLoaders {
       if (!response.ok) throw Error(response.statusText);
       data = await response.arrayBuffer();
     } */
-    const decompressed = fflate.unzipSync(new Uint8Array(buffer), {
+    const decompressed = unzipSync(new Uint8Array(buffer), {
       filter(file) {
         return file.originalSize > 0
       }
@@ -323,7 +324,7 @@ export class NVMeshLoaders {
         // raw = fzstd.decompress(new Uint8Array(buffer));
         // raw = new Uint8Array(raw);
         throw new Error('zstd TRK decompression is not supported')
-      } else raw = fflate.decompressSync(new Uint8Array(buffer))
+      } else raw = decompressSync(new Uint8Array(buffer))
       buffer = raw.buffer
       reader = new DataView(buffer)
       magic = reader.getUint32(0, true) // 'TRAC'
@@ -504,7 +505,7 @@ export class NVMeshLoaders {
         offsetPt0[0] = 0 // 1st streamline starts at 0
         let asciiInts = []
         let asciiIntsPos = 0
-        // eslint-disable-next-line no-inner-declarations
+
         function lineToInts() {
           // VTK can save one array across multiple ASCII lines
           str = lines[pos].trim()
@@ -514,6 +515,7 @@ export class NVMeshLoaders {
           asciiIntsPos = 0
           pos++
         }
+
         lineToInts()
         for (let c = 0; c < n_count; c++) {
           if (asciiIntsPos >= asciiInts.length) lineToInts()
@@ -680,7 +682,7 @@ export class NVMeshLoaders {
     let vers = reader.getUint16(0, true)
     if (vers > 5) {
       // assume gzip
-      const raw = fflate.decompressSync(new Uint8Array(buffer))
+      const raw = decompressSync(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       vers = reader.getUint16(0, true)
       buffer = raw.buffer
@@ -689,6 +691,12 @@ export class NVMeshLoaders {
     const nvert = reader.getUint32(2, true)
     if (nvert !== n_vert) console.log('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
     const nMaps = reader.getUint16(6, true)
+
+    const scalars = new Float32Array(nvert * nMaps)
+    const maps = []
+    // read Name of SRF
+    let pos = 9
+
     function readStr() {
       const startPos = pos
       while (pos < len && reader.getUint8(pos) !== 0) {
@@ -697,11 +705,7 @@ export class NVMeshLoaders {
       pos++ // skip null termination
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     } // readStr: read variable length string
-    const scalars = new Float32Array(nvert * nMaps)
-    const maps = []
-    // read Name of SRF
-    let pos = 9
-    // let filenameSRF = readStr();
+
     for (let i = 0; i < nMaps; i++) {
       const m = []
       m.mapType = reader.getUint32(pos, true)
@@ -1263,7 +1267,7 @@ export class NVMeshLoaders {
     let _buffer = buffer
     if (magic === 35615 || magic === 8075) {
       // gzip signature 0x1F8B in little and big endian
-      const raw = fflate.decompressSync(new Uint8Array(buffer))
+      const raw = decompressSync(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       magic = reader.getUint16(0, true)
       _buffer = raw.buffer
@@ -1858,7 +1862,7 @@ export class NVMeshLoaders {
     }
     if (bytes[0] === 31 && bytes[1] === 139) {
       // handle .srf.gz
-      const raw = fflate.decompressSync(new Uint8Array(buffer))
+      const raw = decompressSync(new Uint8Array(buffer))
       buffer = raw.buffer
     }
     const reader = new DataView(buffer)
@@ -2068,7 +2072,7 @@ export class NVMeshLoaders {
         return line
       }
       let line = []
-      // eslint-disable-next-line no-inner-declarations
+
       function readNumericTag(TagName, asString = false) {
         // Tag 'Dim1' will return 3 for Dim1="3"
         const tpos = line.indexOf(TagName)
@@ -2191,7 +2195,7 @@ export class NVMeshLoaders {
     }
     if (magic !== 348) {
       // gzip signature 0x1F8B in little and big endian
-      const raw = fflate.decompressSync(new Uint8Array(buffer))
+      const raw = decompressSync(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       buffer = raw.buffer
       magic = reader.getUint16(0, isLittleEndian)
@@ -2248,7 +2252,7 @@ export class NVMeshLoaders {
     let reader = new DataView(buffer)
     const raw = buffer
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      const decompressed = fflate.decompressSync(new Uint8Array(buffer))
+      const decompressed = decompressSync(new Uint8Array(buffer))
       reader = new DataView(decompressed.buffer)
     }
     const version = reader.getInt32(0, false)
@@ -2617,7 +2621,7 @@ export class NVMeshLoaders {
     let chars = new TextDecoder('ascii').decode(buffer)
     if (chars[0].charCodeAt(0) === 31) {
       // raw GIFTI saved as .gii.gz is smaller than gz GIFTI due to base64 overhead
-      const raw = fflate.decompressSync(new Uint8Array(buffer))
+      const raw = decompressSync(new Uint8Array(buffer))
       buffer = raw.buffer
       chars = new TextDecoder('ascii').decode(raw.buffer)
     }
@@ -2750,7 +2754,6 @@ export class NVMeshLoaders {
           }
         } else if (typeof Buffer === 'undefined') {
           // raw.gii
-          // eslint-disable-next-line no-inner-declarations
           function base64ToUint8(base64) {
             const binary_string = atob(base64)
             const len = binary_string.length
@@ -2762,13 +2765,13 @@ export class NVMeshLoaders {
           }
           if (isGzip) {
             const datZ = base64ToUint8(line.slice())
-            datBin = fflate.decompressSync(new Uint8Array(datZ))
+            datBin = decompressSync(new Uint8Array(datZ))
           } else datBin = base64ToUint8(line.slice())
         } else {
           // if Buffer not defined
           if (isGzip) {
             const datZ = Buffer.from(line.slice(), 'base64')
-            datBin = fflate.decompressSync(new Uint8Array(datZ))
+            datBin = decompressSync(new Uint8Array(datZ))
           } else datBin = Buffer.from(line.slice(), 'base64')
         }
         if (isPts) {
@@ -2804,7 +2807,6 @@ export class NVMeshLoaders {
             if (nvert % n_vert !== 0)
               console.log('Number of vertices in scalar overlay (' + nvert + ') does not match mesh (' + n_vert + ')')
           }
-          // eslint-disable-next-line no-inner-declarations
           function Float32Concat(first, second) {
             const firstLength = first.length
             const result = new Float32Array(firstLength + second.length)

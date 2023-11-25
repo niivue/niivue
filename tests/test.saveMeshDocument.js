@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test.skip('saveMeshDocument', async () => {
   const document = await page.evaluate(async () => {
-    nv = new niivue.Niivue({ show3Dcrosshair: true })
+    nv = new Niivue({ show3Dcrosshair: true })
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const meshList = [
