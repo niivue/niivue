@@ -653,7 +653,7 @@ export class Niivue {
    * @example niivue.saveScene('test.png');
    * @see {@link https://niivue.github.io/niivue/features/ui.html|live demo usage}
    */
-  saveScene(filename = 'niivue.png') {
+  async saveScene(filename = 'niivue.png') {
     function saveBlob(blob, name) {
       const a = document.createElement('a')
       document.body.appendChild(a)
@@ -666,7 +666,7 @@ export class Niivue {
     }
 
     const canvas = this.canvas
-    this.drawScene()
+    await this.drawScene()
     canvas.toBlob((blob) => {
       if (filename === '') {
         filename = `niivue-screenshot-${new Date().toString()}.png`
@@ -2676,7 +2676,7 @@ export class Niivue {
    * niivue.setClipPlane([42, 42])
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  setClipPlane(depthAzimuthElevation) {
+  async setClipPlane(depthAzimuthElevation) {
     //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
     //  azimuthElevation is 2 component vector [a, e, d]
     //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
@@ -2687,7 +2687,7 @@ export class Niivue {
     this.scene.clipPlaneDepthAziElev = depthAzimuthElevation
     this.onClipPlaneChange(this.scene.clipPlane)
     // if (this.opts.sliceType!= SLICE_TYPE.RENDER) return;
-    this.drawScene()
+    await this.drawScene()
   }
 
   /**
@@ -2880,7 +2880,7 @@ export class Niivue {
    * niivue.setVolumeRenderIllumination(0.6);
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  setVolumeRenderIllumination(gradientAmount = 0.0) {
+  async setVolumeRenderIllumination(gradientAmount = 0.0) {
     this.renderShader = this.renderVolumeShader
     if (gradientAmount > 0.0) this.renderShader = this.renderGradientShader
     if (gradientAmount < 0.0) this.renderShader = this.renderSliceShader
@@ -2889,7 +2889,7 @@ export class Niivue {
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
     this.refreshLayers(this.volumes[0], 0, this.volumes.length)
-    this.drawScene()
+    await this.drawScene()
   }
 
   // not included in public docs.
@@ -8454,7 +8454,7 @@ export class Niivue {
     if (this.gl !== null) {
       await this.gl.finish()
     }
-    if (this.needsRefresh) posString = this.drawScene()
+    if (this.needsRefresh) posString = await this.drawScene()
     return posString
   }
 }

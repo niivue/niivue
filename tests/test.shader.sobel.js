@@ -14,8 +14,8 @@ test('sobelShader', async () => {
     ]
     await nv.setSliceType(nv.sliceTypeRender)
     nv.opts.multiplanarForceRender = true
-    nv.setVolumeRenderIllumination(1.0)
-    nv.setClipPlane([0.3, 180, 20])
+    await nv.setVolumeRenderIllumination(1.0)
+    await nv.setClipPlane([0.3, 180, 20])
     await nv.loadVolumes(volumeList)
     await nv.loadMeshes([{ url: './images/connectome.jcon' }, { url: './images/dpsv.trx', rgba255: [0, 142, 0, 255] }])
     await nv.loadMatCapTexture('./matcaps/Cortex.jpg')
