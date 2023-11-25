@@ -1,7 +1,7 @@
 export default {
   launch: {
     dumpio: true,
-    headless: !(process.arch === 'arm64' && process.platform === 'darwin'),
+    headless: 'new',
     defaultViewport: null,
     args: [`--window-size=1920,1080`, '--no-sandbox', '--disable-setuid-sandbox'],
     product: 'chrome'
