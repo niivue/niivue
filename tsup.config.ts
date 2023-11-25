@@ -9,8 +9,8 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   loader: {
-    '.jpg': 'base64',
-    '.png': 'base64'
+    '.jpg': 'dataurl',
+    '.png': 'dataurl'
   },
   // TODO: remove this once UMD isn't needed anymore
   noExternal: [/(.*)/]
