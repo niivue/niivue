@@ -5,7 +5,6 @@ const { toMatchImageSnapshot } = require('jest-image-snapshot')
 expect.extend({ toMatchImageSnapshot })
 
 async function snapshot(id = '#gl', failureThreshold = 0.1) {
-  await new Promise((r) => setTimeout(r, 1000)) // wait a little longer to ensure image loaded (some images were not loading in time)
   const canvas = await page.$(id)
   const image = await canvas.screenshot()
 
