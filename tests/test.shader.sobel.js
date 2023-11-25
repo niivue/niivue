@@ -18,11 +18,9 @@ test('sobelShader', async () => {
     nv.setClipPlane([0.3, 180, 20])
     await nv.loadVolumes(volumeList)
     await nv.loadMeshes([{ url: './images/connectome.jcon' }, { url: './images/dpsv.trx', rgba255: [0, 142, 0, 255] }])
-    nv.loadMatCapTexture('./matcaps/Cortex.jpg')
+    await nv.loadMatCapTexture('./matcaps/Cortex.jpg')
     return nv.volumes.length
   })
-  console.log(nvols)
   expect(nvols).toBe(2)
-  // expect(nv.meshes.length).toBe(1);
   await snapshot()
 })

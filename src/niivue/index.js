@@ -1678,8 +1678,8 @@ export class Niivue {
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              entry.file((file) => {
-                this.loadBmpTexture(file)
+              entry.file(async (file) => {
+                await this.loadBmpTexture(file)
               })
               continue
             }
@@ -4145,8 +4145,8 @@ export class Niivue {
 
   // not included in public docs
   // load font stored as PNG bitmap with texture unit 3
-  loadFontTexture(fontUrl) {
-    this.loadPngAsTexture(fontUrl, 3)
+  async loadFontTexture(fontUrl) {
+    await this.loadPngAsTexture(fontUrl, 3)
   }
 
   // not included in public docs
@@ -4162,8 +4162,8 @@ export class Niivue {
    * niivue.loadMatCapTexture("Cortex");
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  loadMatCapTexture(bmpUrl) {
-    this.loadPngAsTexture(bmpUrl, 5)
+  async loadMatCapTexture(bmpUrl) {
+    await this.loadPngAsTexture(bmpUrl, 5)
   }
 
   // not included in public docs
