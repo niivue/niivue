@@ -8446,7 +8446,7 @@ export class Niivue {
     }
     this.isBusy = false
     this.needsRefresh = false
-    let posString = await this.drawSceneCore()
+    let posString = this.drawSceneCore()
     // Chrome and Safari get much more bogged down by concurrent draw calls than Safari
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
