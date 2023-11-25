@@ -374,7 +374,6 @@ export class NVImage {
         break
       }
       case this.DT_INT64: {
-        // eslint-disable-next-line no-undef
         const i64 = new BigInt64Array(imgRaw)
         const vx = i64.length
         this.img = new Float64Array(vx)

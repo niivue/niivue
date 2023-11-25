@@ -695,7 +695,6 @@ export class NVMesh {
         const v = j * 4 // additiveRGBA is 4 bytes stride, RGBA color at offset 0,
         const opacity = Math.min(maxAdditiveBlend, additiveRGBA[v + 3] / 255)
         if (opacity <= 0) continue
-        // eslint-disable-next-line no-inner-declarations
         function modulate(x, y) {
           return Math.min(x * y * (1 / 255), 255.0)
         }

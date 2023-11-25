@@ -3714,7 +3714,7 @@ export class Niivue {
       // 6. Test six neighbors of n (left,right,anterior,posterior,inferior, superior
       //   If any is is unfound part of cluster (value = 1) set it to found (value 2) and add to Q
       const xyz = vx2xyz(vx)
-      // eslint-disable-next-line no-inner-declarations
+
       function testNeighbor(offset) {
         const xyzN = xyz.slice()
         xyzN[0] += offset[0]
@@ -7191,7 +7191,6 @@ export class Niivue {
   // fills data returned with the onLocationChanvge() callback
   createOnLocationChange(axCorSag = NaN) {
     // first: provide a string representation
-    // eslint-disable-next-line no-unused-vars
     const [_mn, _mx, range] = this.sceneExtentsMinMax(true)
     const fov = Math.max(Math.max(range[0], range[1]), range[2])
     function dynamicDecimals(flt) {
@@ -7625,9 +7624,7 @@ export class Niivue {
     }
     const crosshairsShader = this.surfaceShader
     crosshairsShader.use(this.gl)
-    // eslint-disable-next-line no-unused-vars
     if (mvpMtx == null)
-      // eslint-disable-next-line no-unused-vars
       [mvpMtx] = this.calculateMvpMatrix(this.crosshairs3D, this.scene.renderAzimuth, this.scene.renderElevation)
     gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx)
 
@@ -7660,7 +7657,6 @@ export class Niivue {
     // given mm, return volume fraction
     if (this.volumes.length < 1) {
       const frac = [0.1, 0.5, 0.5]
-      // eslint-disable-next-line no-unused-vars
       const [mn, _mx, range] = this.sceneExtentsMinMax()
       frac[0] = (mm[0] - mn[0]) / range[0]
       frac[1] = (mm[1] - mn[1]) / range[1]

@@ -505,7 +505,7 @@ export class NVMeshLoaders {
         offsetPt0[0] = 0 // 1st streamline starts at 0
         let asciiInts = []
         let asciiIntsPos = 0
-        // eslint-disable-next-line no-inner-declarations
+
         function lineToInts() {
           // VTK can save one array across multiple ASCII lines
           str = lines[pos].trim()
@@ -515,6 +515,7 @@ export class NVMeshLoaders {
           asciiIntsPos = 0
           pos++
         }
+
         lineToInts()
         for (let c = 0; c < n_count; c++) {
           if (asciiIntsPos >= asciiInts.length) lineToInts()
@@ -2071,7 +2072,7 @@ export class NVMeshLoaders {
         return line
       }
       let line = []
-      // eslint-disable-next-line no-inner-declarations
+
       function readNumericTag(TagName, asString = false) {
         // Tag 'Dim1' will return 3 for Dim1="3"
         const tpos = line.indexOf(TagName)
@@ -2753,7 +2754,6 @@ export class NVMeshLoaders {
           }
         } else if (typeof Buffer === 'undefined') {
           // raw.gii
-          // eslint-disable-next-line no-inner-declarations
           function base64ToUint8(base64) {
             const binary_string = atob(base64)
             const len = binary_string.length
@@ -2807,7 +2807,6 @@ export class NVMeshLoaders {
             if (nvert % n_vert !== 0)
               console.log('Number of vertices in scalar overlay (' + nvert + ') does not match mesh (' + n_vert + ')')
           }
-          // eslint-disable-next-line no-inner-declarations
           function Float32Concat(first, second) {
             const firstLength = first.length
             const result = new Float32Array(firstLength + second.length)
