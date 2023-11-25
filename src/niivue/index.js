@@ -2820,9 +2820,9 @@ export class Niivue {
    * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
    * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html|live demo usage}
    */
-  setSliceType(st) {
+  async setSliceType(st) {
     this.opts.sliceType = st
-    this.drawScene()
+    await this.drawScene()
     return this
   }
 
