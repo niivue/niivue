@@ -1,5 +1,6 @@
 import * as mat from 'gl-matrix'
 import { Subject } from 'rxjs'
+import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import {
   vertOrientCubeShader,
@@ -765,13 +766,7 @@ export class Niivue {
       log.warn('unable to get webgl2 context. Perhaps this browser does not support webgl2')
     }
 
-    console.log(
-      'NIIVUE VERSION ',
-      typeof __NIIVUE_VERSION__ === 'undefined'
-        ? 'null (niivue was likely built in a parent project rather than using the pre-bundled version)'
-        : // eslint-disable-next-line no-undef
-          __NIIVUE_VERSION__
-    ) // TH added this rare console.log via suggestion from CR. Don't remove
+    console.log('NIIVUE VERSION ', version) // TH added this rare console.log via suggestion from CR. Don't remove
 
     // set parent background container to black (default empty canvas color)
     // avoids white cube around image in 3D render mode
