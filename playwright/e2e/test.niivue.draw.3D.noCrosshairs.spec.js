@@ -6,9 +6,8 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('loadSingleImage', async ({ page }) => {
+test('niivue draw 3D no crosshair', async ({page}) => {
   const nvols = await page.evaluate(async () => {
-    // eslint-disable-next-line no-undef
     const nv = new niivue.Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
@@ -23,6 +22,7 @@ test('loadSingleImage', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
+    nv.setSliceType(nv.sliceTypeRender)
     return nv.volumes.length
   })
   expect(nvols).toBe(1)
