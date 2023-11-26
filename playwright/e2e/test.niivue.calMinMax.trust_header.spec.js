@@ -1,0 +1,40 @@
+const { test, expect } = require('@playwright/test')
+const { httpServerAddress } = require('./helpers')
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await page.goto(httpServerAddress)
+  console.log(`Running ${testInfo.title}`)
+})
+
+test('niivue calMinMax trust header cal min max', async ({page}) => {
+  const minmax = await page.evaluate(async () => {
+    let opts = {
+      textHeight: 0.05, // larger text
+      crosshairColor: [0, 0, 1, 1] // green
+    }
+    const nv = new niivue.Niivue((opts = opts))
+    await nv.attachTo('gl', false)
+
+    // load one volume object in an array
+    const volumeList = [
+      {
+        url: './images/mni152.nii.gz', // "./RAS.nii.gz", "./spm152.nii.gz",
+        volume: { hdr: null, img: null },
+        name: 'mni152.nii.gz',
+        colormap: 'gray',
+        opacity: 1,
+        visible: true
+      }
+    ]
+
+    await nv.loadVolumes(volumeList)
+    const overlayItem = nv.volumes[0]
+    const minmax = overlayItem.calMinMax()
+    return minmax
+  })
+  const expected = [40, 80, 40, 80]
+  for (let i = 0; i < minmax.length; i++) {
+    expect(minmax[i]).toBeCloseTo(expected[i])
+  }
+})
+
