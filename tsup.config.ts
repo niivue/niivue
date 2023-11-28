@@ -11,7 +11,9 @@ export default defineConfig({
   loader: {
     '.jpg': 'dataurl',
     '.png': 'dataurl'
-  }
+  },
+  // TODO: remove this once testing setup doesn't rely on one single JS file
+  noExternal: [/(.*)/]
   // TODO: enable this as soon as TS port is completed
   // dts: true
 })
