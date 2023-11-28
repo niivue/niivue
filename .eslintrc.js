@@ -4,10 +4,11 @@ module.exports = {
     jest: true
   },
   root: true,
-  ignorePatterns: ['dist/**/*'],
+  ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
   extends: ['standard', 'plugin:prettier/recommended'],
   plugins: ['prettier'],
   rules: {
+    curly: ['error', 'all'],
     camelcase: 'off',
     'import/order': 'error',
     'prettier/prettier': [
