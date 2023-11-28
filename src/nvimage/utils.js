@@ -355,7 +355,9 @@ export function getExtents(positions, forceOriginInVolume = true) {
   const mx = vec3.create()
   let mxDx = 0.0
   let nLoops = 1
-  if (forceOriginInVolume) nLoops = 2 // second pass to reposition origin
+  if (forceOriginInVolume) {
+    nLoops = 2
+  } // second pass to reposition origin
   for (let loop = 0; loop < nLoops; loop++) {
     mxDx = 0.0
     for (let i = 0; i < nV; i++) {
@@ -370,13 +372,21 @@ export function getExtents(positions, forceOriginInVolume = true) {
       const dx = vec3.len(v)
       mxDx = Math.max(mxDx, dx)
     }
-    if (loop + 1 >= nLoops) break
+    if (loop + 1 >= nLoops) {
+      break
+    }
     let ok = true
     for (let j = 0; j < 3; ++j) {
-      if (mn[j] > origin[j]) ok = false
-      if (mx[j] < origin[j]) ok = false
+      if (mn[j] > origin[j]) {
+        ok = false
+      }
+      if (mx[j] < origin[j]) {
+        ok = false
+      }
     }
-    if (ok) break
+    if (ok) {
+      break
+    }
     vec3.lerp(origin, mn, mx, 0.5)
     log.debug('origin moved inside volume: ', origin)
   }

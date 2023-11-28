@@ -3,11 +3,12 @@ module.exports = {
   env: {
     browser: true
   },
-  ignorePatterns: ['dist/**/*'],
+  ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
   extends: ['standard', 'plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint', 'prettier'],
   rules: {
+    curly: ['error', 'all'],
     camelcase: 'off',
     'import/order': 'error',
     'no-use-before-define': 'off',

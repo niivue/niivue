@@ -36,12 +36,18 @@ export class ColorTables {
   // returns key name if it exists, otherwise returns default "gray"
   colormapFromKey(name) {
     let cmap = this.cluts[name]
-    if (cmap !== undefined) return cmap
+    if (cmap !== undefined) {
+      return cmap
+    }
 
     cmap = this.cluts[name.toLowerCase()]
-    if (cmap !== undefined) return cmap
+    if (cmap !== undefined) {
+      return cmap
+    }
 
-    if (name.length > 0) console.log('No color map named ' + name)
+    if (name.length > 0) {
+      console.log('No color map named ' + name)
+    }
     return {
       min: 0,
       max: 0,
@@ -76,7 +82,9 @@ export class ColorTables {
 
     let As = new Uint8ClampedArray(nLabels).fill(alphaFill)
     As[0] = 0
-    if (cm.A !== undefined) As = cm.A
+    if (cm.A !== undefined) {
+      As = cm.A
+    }
 
     const mnIdx = Math.min(...idxs)
     const mxIdx = Math.max(...idxs)
@@ -96,8 +104,9 @@ export class ColorTables {
     // labels are optional
     if (cm.labels) {
       const nL = cm.labels.length
-      if (nL === nLabelsDense) cmap.labels = cm.labels
-      else if (nL === nLabels) {
+      if (nL === nLabelsDense) {
+        cmap.labels = cm.labels
+      } else if (nL === nLabels) {
         cmap.labels = Array(nLabelsDense).fill('?')
         for (let i = 0; i < nLabels; i++) {
           const idx = idxs[i]
@@ -135,7 +144,9 @@ export class ColorTables {
 
     const cm = this.makeLabelLut(cmap, 255)
 
-    if (cm.labels === undefined) cm.labels = []
+    if (cm.labels === undefined) {
+      cm.labels = []
+    }
     if (cm.labels.length < 256) {
       const j = cm.labels.length
       for (let i = j; i < 256; i++) {
@@ -157,7 +168,9 @@ export class ColorTables {
     // drawings can have no more than 256 colors
     const explicitLUTbytes = Math.min(cm.lut.length, 256 * 4)
     if (explicitLUTbytes > 0) {
-      for (let i = 0; i < explicitLUTbytes; i++) lut[i] = cm.lut[i]
+      for (let i = 0; i < explicitLUTbytes; i++) {
+        lut[i] = cm.lut[i]
+      }
     }
 
     return {
@@ -189,7 +202,9 @@ export class ColorTables {
     const lut = new Uint8ClampedArray(256 * 4)
     if (typeof Is === 'undefined') {
       Is = new Uint8ClampedArray(nIdx).fill(0)
-      for (let i = 0; i < nIdx; i++) Is[i] = Math.round((i * 255.0) / (nIdx - 1))
+      for (let i = 0; i < nIdx; i++) {
+        Is[i] = Math.round((i * 255.0) / (nIdx - 1))
+      }
     }
     if (typeof As === 'undefined') {
       As = new Uint8ClampedArray(nIdx).fill(64)
@@ -198,7 +213,9 @@ export class ColorTables {
     for (let i = 0; i < nIdx - 1; i++) {
       const idxLo = Is[i]
       let idxHi = Is[i + 1]
-      if (i === 0 && idxLo !== 0) console.log('colormap issue: indices expected to start with 0 not ', idxLo)
+      if (i === 0 && idxLo !== 0) {
+        console.log('colormap issue: indices expected to start with 0 not ', idxLo)
+      }
       if (i === Is.length - 2 && idxHi !== 255) {
         console.log('padding colormap: indices expected end with 255 not ', idxHi)
         idxHi = 255
@@ -213,9 +230,13 @@ export class ColorTables {
         lut[k++] = As[i] + f * (As[i + 1] - As[i]) // Alpha
       }
     }
-    if (this.gamma === 1.0) return lut
+    if (this.gamma === 1.0) {
+      return lut
+    }
     for (let i = 0; i < 255 * 4; i++) {
-      if (i % 4 === 3) continue // gamma changes RGB, not Alpha
+      if (i % 4 === 3) {
+        continue
+      } // gamma changes RGB, not Alpha
       lut[i] = Math.pow(lut[i] / 255, 1 / this.gamma) * 255
     }
     return lut

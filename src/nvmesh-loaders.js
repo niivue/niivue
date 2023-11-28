@@ -18,17 +18,25 @@ export class NVMeshLoaders {
   // read undocumented AFNI tract.niml format streamlines
   static readTRACT(buffer) {
     const len = buffer.byteLength
-    if (len < 20) throw new Error('File too small to be niml.tract: bytes = ' + len)
+    if (len < 20) {
+      throw new Error('File too small to be niml.tract: bytes = ' + len)
+    }
     const reader = new DataView(buffer)
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr() {
       // read until right angle bracket ">"
-      while (pos < len && bytes[pos] !== 60) pos++ // start with "<"
+      while (pos < len && bytes[pos] !== 60) {
+        pos++
+      } // start with "<"
       const startPos = pos
-      while (pos < len && bytes[pos] !== 62) pos++
+      while (pos < len && bytes[pos] !== 62) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
     }
 
@@ -36,14 +44,18 @@ export class NVMeshLoaders {
     function readNumericTag(TagName) {
       // Tag 'Dim1' will return 3 for Dim1="3"
       const pos = line.indexOf(TagName)
-      if (pos < 0) return 0
+      if (pos < 0) {
+        return 0
+      }
       const spos = line.indexOf('"', pos) + 1
       const epos = line.indexOf('"', spos)
       const str = line.slice(spos, epos)
       return parseInt(str)
     }
     const n_tracts = readNumericTag('N_tracts=')
-    if (!line.startsWith('<network') || n_tracts < 1) console.log('This is not a valid niml.tract file ' + line)
+    if (!line.startsWith('<network') || n_tracts < 1) {
+      console.log('This is not a valid niml.tract file ' + line)
+    }
     let npt = 0
     const offsetPt0 = []
     offsetPt0.push(npt) // 1st streamline starts at 0
@@ -131,7 +143,9 @@ export class NVMeshLoaders {
     for (let i = 0, len = keys.length; i < len; i++) {
       const parts = keys[i].split('/')
       const fname = parts.slice(-1)[0] // my.trx/dpv/fx.float32 -> fx.float32
-      if (fname.startsWith('.')) continue
+      if (fname.startsWith('.')) {
+        continue
+      }
       const pname = parts.slice(-2)[0] // my.trx/dpv/fx.float32 -> dpv
       const tag = fname.split('.')[0] // "positions.3.float16 -> "positions"
       // todo: should tags be censored for invalid characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
@@ -155,7 +169,9 @@ export class NVMeshLoaders {
         let j = 0
         for (let i = 0; i < nval; i++) {
           vals[i] = u32[j]
-          if (u32[j + 1] !== 0) isOverflowUint64 = true
+          if (u32[j + 1] !== 0) {
+            isOverflowUint64 = true
+          }
           j += 2
         }
       } else if (fname.endsWith('.uint32')) {
@@ -179,8 +195,12 @@ export class NVMeshLoaders {
         nval = data.length / 2 // 2 bytes per 16bit input
         vals = new Float32Array(nval)
         const u16 = new Uint16Array(data.buffer)
-        for (let i = 0; i < nval; i++) vals[i] = decodeFloat16(u16[i])
-      } else continue // not a data array
+        for (let i = 0; i < nval; i++) {
+          vals[i] = decodeFloat16(u16[i])
+        }
+      } else {
+        continue
+      } // not a data array
       nval = vals.length
 
       // next: read data_per_group
@@ -220,7 +240,9 @@ export class NVMeshLoaders {
         noff = nval // 8 bytes per 64bit input
         // we need to solve the fence post problem, so we can not use slice
         offsetPt0 = new Uint32Array(nval + 1)
-        for (let i = 0; i < nval; i++) offsetPt0[i] = vals[i]
+        for (let i = 0; i < nval; i++) {
+          offsetPt0[i] = vals[i]
+        }
       }
       if (fname.startsWith('positions.3.')) {
         npt = nval // 4 bytes per 32bit input
@@ -231,7 +253,9 @@ export class NVMeshLoaders {
       utiltiesLogger.error('Failure reading TRX format (no offsets or points).')
       return
     }
-    if (isOverflowUint64) alert('Too many vertices: JavaScript does not support 64 bit integers')
+    if (isOverflowUint64) {
+      alert('Too many vertices: JavaScript does not support 64 bit integers')
+    }
     offsetPt0[noff] = npt / 3 // solve fence post problem, offset for final streamline
     return {
       pts,
@@ -247,15 +271,23 @@ export class NVMeshLoaders {
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
   static readTCK(buffer) {
     const len = buffer.byteLength
-    if (len < 20) throw new Error('File too small to be TCK: bytes = ' + len)
+    if (len < 20) {
+      throw new Error('File too small to be TCK: bytes = ' + len)
+    }
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr() {
-      while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+      while (pos < len && bytes[pos] === 10) {
+        pos++
+      } // skip blank lines
       const startPos = pos
-      while (pos < len && bytes[pos] !== 10) pos++
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     }
     let line = readStr() // 1st line: signature 'mrtrix tracks'
@@ -291,9 +323,10 @@ export class NVMeshLoaders {
       if (!isFinite(ptx)) {
         // both NaN and Infinity are not finite
         offsetPt0.push(npt)
-        if (!isNaN(ptx))
+        if (!isNaN(ptx)) {
           // terminate if infinity
           break
+        }
       } else {
         pts.push(ptx)
         pts.push(pty)
@@ -324,14 +357,18 @@ export class NVMeshLoaders {
         // raw = fzstd.decompress(new Uint8Array(buffer));
         // raw = new Uint8Array(raw);
         throw new Error('zstd TRK decompression is not supported')
-      } else raw = decompressSync(new Uint8Array(buffer))
+      } else {
+        raw = decompressSync(new Uint8Array(buffer))
+      }
       buffer = raw.buffer
       reader = new DataView(buffer)
       magic = reader.getUint32(0, true) // 'TRAC'
     }
     const vers = reader.getUint32(992, true) // 2
     const hdr_sz = reader.getUint32(996, true) // 1000
-    if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388) throw new Error('Not a valid TRK file')
+    if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388) {
+      throw new Error('Not a valid TRK file')
+    }
     const dps = []
     const dpv = []
     const n_scalars = reader.getInt16(36, true)
@@ -379,7 +416,9 @@ export class NVMeshLoaders {
       }
     }
     const mat = mat4.create()
-    for (let i = 0; i < 16; i++) mat[i] = reader.getFloat32(440 + i * 4, true)
+    for (let i = 0; i < 16; i++) {
+      mat[i] = reader.getFloat32(440 + i * 4, true)
+    }
     if (mat[15] === 0.0) {
       // vox_to_ras[3][3] is 0, it means the matrix is not recorded
       console.log('TRK vox_to_ras not set')
@@ -447,14 +486,26 @@ export class NVMeshLoaders {
     const txt = enc.decode(buffer)
     const lines = txt.split('\n')
     const n = lines.length
-    if (n < 7 || !lines[0].startsWith('# vtk DataFile')) alert('Invalid VTK image')
-    if (!lines[2].startsWith('ASCII')) alert('Not ASCII VTK mesh')
+    if (n < 7 || !lines[0].startsWith('# vtk DataFile')) {
+      alert('Invalid VTK image')
+    }
+    if (!lines[2].startsWith('ASCII')) {
+      alert('Not ASCII VTK mesh')
+    }
     let pos = 3
-    while (lines[pos].length < 1) pos++ // skip blank lines
-    if (!lines[pos].includes('POLYDATA')) alert('Not ASCII VTK polydata')
+    while (lines[pos].length < 1) {
+      pos++
+    } // skip blank lines
+    if (!lines[pos].includes('POLYDATA')) {
+      alert('Not ASCII VTK polydata')
+    }
     pos++
-    while (lines[pos].length < 1) pos++ // skip blank lines
-    if (!lines[pos].startsWith('POINTS')) alert('Not VTK POINTS')
+    while (lines[pos].length < 1) {
+      pos++
+    } // skip blank lines
+    if (!lines[pos].startsWith('POINTS')) {
+      alert('Not VTK POINTS')
+    }
     let items = lines[pos].trim().split(/\s+/)
     const nvert = parseInt(items[1]) // POINTS 10261 float
     const nvert3 = nvert * 3
@@ -465,19 +516,25 @@ export class NVMeshLoaders {
       const str = lines[pos].trim()
       const pts = str.trim().split(/\s+/)
       for (let i = 0; i < pts.length; i++) {
-        if (v >= nvert3) break
+        if (v >= nvert3) {
+          break
+        }
         positions[v] = parseFloat(pts[i])
         v++
       }
     }
     const tris = []
     pos++
-    while (lines[pos].length < 1) pos++ // skip blank lines
+    while (lines[pos].length < 1) {
+      pos++
+    } // skip blank lines
     items = lines[pos].trim().split(/\s+/)
     pos++
     if (items[0].includes('LINES')) {
       const n_count = parseInt(items[1])
-      if (n_count < 1) alert('Corrupted VTK ASCII')
+      if (n_count < 1) {
+        alert('Corrupted VTK ASCII')
+      }
       let str = lines[pos].trim()
       let offsetPt0 = []
       let pts = []
@@ -493,7 +550,9 @@ export class NVMeshLoaders {
           for (let i = 0; i < items.length; i++) {
             offsetPt0[c] = parseInt(items[i])
             c++
-            if (c >= n_count) break
+            if (c >= n_count) {
+              break
+            }
           } // for each line
         } // while offset array not filled
         pts = positions
@@ -511,19 +570,25 @@ export class NVMeshLoaders {
           str = lines[pos].trim()
           const items = str.trim().split(/\s+/)
           asciiInts = []
-          for (let i = 0; i < items.length; i++) asciiInts.push(parseInt(items[i]))
+          for (let i = 0; i < items.length; i++) {
+            asciiInts.push(parseInt(items[i]))
+          }
           asciiIntsPos = 0
           pos++
         }
 
         lineToInts()
         for (let c = 0; c < n_count; c++) {
-          if (asciiIntsPos >= asciiInts.length) lineToInts()
+          if (asciiIntsPos >= asciiInts.length) {
+            lineToInts()
+          }
           const numPoints = asciiInts[asciiIntsPos++]
           npt += numPoints
           offsetPt0[c + 1] = npt
           for (let i = 0; i < numPoints; i++) {
-            if (asciiIntsPos >= asciiInts.length) lineToInts()
+            if (asciiIntsPos >= asciiInts.length) {
+              lineToInts()
+            }
             const idx = asciiInts[asciiIntsPos++] * 3
             pts.push(positions[idx + 0]) // X
             pts.push(positions[idx + 1]) // Y
@@ -574,7 +639,9 @@ export class NVMeshLoaders {
           fy = fz
         }
       }
-    } else alert('Unsupported ASCII VTK datatype ' + items[0])
+    } else {
+      alert('Unsupported ASCII VTK datatype ' + items[0])
+    }
     const indices = new Int32Array(tris)
     return {
       positions,
@@ -604,7 +671,9 @@ export class NVMeshLoaders {
     layer.colormapLabel = []
     const isReadColortables = true
     const n_vert = nvmesh.vertexCount / 3 // each vertex has XYZ component
-    if (n_vert < 3) return
+    if (n_vert < 3) {
+      return
+    }
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(name)[1]
     ext = ext.toUpperCase()
@@ -612,16 +681,20 @@ export class NVMeshLoaders {
       ext = re.exec(name.slice(0, -3))[1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
-    if (ext === 'MZ3') layer.values = NVMeshLoaders.readMZ3(buffer, n_vert)
-    else if (ext === 'ANNOT') {
-      if (!isReadColortables) layer.values = NVMeshLoaders.readANNOT(buffer, n_vert)
-      else {
+    if (ext === 'MZ3') {
+      layer.values = NVMeshLoaders.readMZ3(buffer, n_vert)
+    } else if (ext === 'ANNOT') {
+      if (!isReadColortables) {
+        layer.values = NVMeshLoaders.readANNOT(buffer, n_vert)
+      } else {
         const obj = NVMeshLoaders.readANNOT(buffer, n_vert, true)
         if ('scalars' in obj) {
           layer.values = obj.scalars
           layer.colormapLabel = obj.colormapLabel
         } // unable to decode colormapLabel
-        else layer.values = obj
+        else {
+          layer.values = obj
+        }
       }
     } else if (ext === 'CRV' || ext === 'CURV') {
       layer.values = NVMeshLoaders.readCURV(buffer, n_vert)
@@ -631,23 +704,31 @@ export class NVMeshLoaders {
       layer.values = obj.scalars // colormapLabel
       layer.colormapLabel = obj.colormapLabel
     } else if (ext === 'MGH' || ext === 'MGZ') {
-      if (!isReadColortables) layer.values = NVMeshLoaders.readMGH(buffer, n_vert)
-      else {
+      if (!isReadColortables) {
+        layer.values = NVMeshLoaders.readMGH(buffer, n_vert)
+      } else {
         const obj = NVMeshLoaders.readMGH(buffer, n_vert, true)
         if ('scalars' in obj) {
           layer.values = obj.scalars
           layer.colormapLabel = obj.colormapLabel
         } // unable to decode colormapLabel
-        else layer.values = obj
+        else {
+          layer.values = obj
+        }
       }
-    } else if (ext === 'NII') layer.values = NVMeshLoaders.readNII(buffer, n_vert)
-    else if (ext === 'SMP') layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
-    else if (ext === 'STC') layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
-    else {
+    } else if (ext === 'NII') {
+      layer.values = NVMeshLoaders.readNII(buffer, n_vert)
+    } else if (ext === 'SMP') {
+      layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
+    } else if (ext === 'STC') {
+      layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
+    } else {
       console.log('Unknown layer overlay format ' + name)
       return
     }
-    if (!layer.values) return
+    if (!layer.values) {
+      return
+    }
     layer.nFrame4D = layer.values.length / n_vert
     layer.frame4D = 0
     layer.isOutlineBorder = isOutlineBorder
@@ -662,9 +743,13 @@ export class NVMeshLoaders {
     layer.global_min = mn
     layer.global_max = mx
     layer.cal_min = cal_min
-    if (!cal_min) layer.cal_min = mn
+    if (!cal_min) {
+      layer.cal_min = mn
+    }
     layer.cal_max = cal_max
-    if (!cal_max) layer.cal_max = mx
+    if (!cal_max) {
+      layer.cal_max = mx
+    }
     layer.cal_minNeg = NaN
     layer.cal_maxNeg = NaN
     layer.opacity = opacity
@@ -687,9 +772,13 @@ export class NVMeshLoaders {
       vers = reader.getUint16(0, true)
       buffer = raw.buffer
     }
-    if (vers > 5) console.log('Unsupported or invalid BrainVoyager SMP version ' + vers)
+    if (vers > 5) {
+      console.log('Unsupported or invalid BrainVoyager SMP version ' + vers)
+    }
     const nvert = reader.getUint32(2, true)
-    if (nvert !== n_vert) console.log('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
+    if (nvert !== n_vert) {
+      console.log('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
+    }
     const nMaps = reader.getUint16(6, true)
 
     const scalars = new Float32Array(nvert * nMaps)
@@ -740,7 +829,9 @@ export class NVMeshLoaders {
       if (vers >= 5) {
         m.posNegFlag = reader.getUint32(pos, true)
         pos += 4
-      } else m.posNegFlag = 3
+      } else {
+        m.posNegFlag = 3
+      }
       m.cortexBonferroni = reader.getUint32(pos, true)
       pos += 4
       m.posMinRGB = [0, 0, 0]
@@ -776,7 +867,9 @@ export class NVMeshLoaders {
         } // vers >= 4
         m.enableSMPColor = reader.getUint8(pos)
         pos++
-        if (vers >= 4) m.lut = readStr()
+        if (vers >= 4) {
+          m.lut = readStr()
+        }
         m.colorAlpha = reader.getFloat32(pos, true)
         pos += 4
       } // vers >= 2
@@ -829,8 +922,9 @@ export class NVMeshLoaders {
     const n_vertex = view.getUint32(3, false)
     // let num_f = view.getUint32(7, false);
     const n_time = view.getUint32(11, false)
-    if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255)
+    if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255) {
       utiltiesLogger.debug('Unable to recognize file type: does not appear to be FreeSurfer format.')
+    }
     if (n_vert !== n_vertex) {
       utiltiesLogger.debug('CURV file has different number of vertices ( ' + n_vertex + ')than mesh (' + n_vert + ')')
       return
@@ -854,7 +948,9 @@ export class NVMeshLoaders {
     }
     // normalize
     const scale = 1.0 / (mx - mn)
-    for (let i = 0; i < f32.length; i++) f32[i] = 1.0 - (f32[i] - mn) * scale
+    for (let i = 0; i < f32.length; i++) {
+      f32[i] = 1.0 - (f32[i] - mn) * scale
+    }
     return f32
   } // readCURV()
 
@@ -879,9 +975,10 @@ export class NVMeshLoaders {
       const idx = view.getUint32((pos += 4), false)
       rgba32[idx] = view.getUint32((pos += 4), false)
     }
-    if (!isReadColortables)
+    if (!isReadColortables) {
       // only read label colors, ignore labels
       return rgba32
+    }
     let tag = 0
     try {
       tag = view.getInt32((pos += 4), false)
@@ -889,20 +986,23 @@ export class NVMeshLoaders {
       return rgba32
     }
     const TAG_OLD_COLORTABLE = 1
-    if (tag !== TAG_OLD_COLORTABLE)
+    if (tag !== TAG_OLD_COLORTABLE) {
       // undocumented old format
       return rgba32
+    }
     const ctabversion = view.getInt32((pos += 4), false)
-    if (ctabversion > 0)
+    if (ctabversion > 0) {
       // undocumented old format
       return rgba32
+    }
     const maxstruc = view.getInt32((pos += 4), false)
     const len = view.getInt32((pos += 4), false)
     pos += len
     const num_entries = view.getInt32((pos += 4), false)
-    if (num_entries < 1)
+    if (num_entries < 1) {
       // undocumented old format
       return rgba32
+    }
     // preallocate lookuptable
     const LUT = {
       R: Array(maxstruc).fill(0),
@@ -919,7 +1019,9 @@ export class NVMeshLoaders {
       let txt = ''
       for (let c = 0; c < labelLen; c++) {
         const val = view.getUint8(pos++)
-        if (val === 0) break
+        if (val === 0) {
+          break
+        }
         txt += String.fromCharCode(val)
       }
       pos -= 4
@@ -954,8 +1056,12 @@ export class NVMeshLoaders {
         scalars[i] = 0
       }
     }
-    if (nError > 0) console.log(`annot vertex colors do not match ${nError} of ${n_vertex} vertices.`)
-    for (let i = 0; i < maxstruc; i++) LUT.I[i] = i
+    if (nError > 0) {
+      console.log(`annot vertex colors do not match ${nError} of ${n_vertex} vertices.`)
+    }
+    for (let i = 0; i < maxstruc; i++) {
+      LUT.I[i] = i
+    }
     const colormapLabel = cmapper.makeLabelLut(LUT)
     return {
       scalars,
@@ -971,11 +1077,17 @@ export class NVMeshLoaders {
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr() {
-      while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+      while (pos < len && bytes[pos] === 10) {
+        pos++
+      } // skip blank lines
       const startPos = pos
-      while (pos < len && bytes[pos] !== 10) pos++
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     }
     let nvert = 0 // 173404 346804
@@ -986,7 +1098,9 @@ export class NVMeshLoaders {
     let indices = []
     while (pos < len) {
       const line = readStr()
-      if (line.startsWith('#')) continue
+      if (line.startsWith('#')) {
+        continue
+      }
       const items = line.trim().split(/\s+/)
       if (nvert < 1) {
         nvert = parseInt(items[0])
@@ -1005,7 +1119,9 @@ export class NVMeshLoaders {
         indices = new Int32Array(ntri * 3)
         continue
       }
-      if (t >= ntri * 3) break
+      if (t >= ntri * 3) {
+        break
+      }
       indices[t + 2] = parseInt(items[0]) - 1
       indices[t + 1] = parseInt(items[1]) - 1
       indices[t + 0] = parseInt(items[2]) - 1
@@ -1025,15 +1141,23 @@ export class NVMeshLoaders {
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr() {
-      while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+      while (pos < len && bytes[pos] === 10) {
+        pos++
+      } // skip blank lines
       const startPos = pos
-      while (pos < len && bytes[pos] !== 10) pos++
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     }
     let line = readStr() // 1st line: '#!ascii version of lh.pial'
-    if (!line.startsWith('#!ascii')) console.log('Invalid ASC mesh')
+    if (!line.startsWith('#!ascii')) {
+      console.log('Invalid ASC mesh')
+    }
     line = readStr() // 1st line: signature
     let items = line.trim().split(/\s+/)
     const nvert = parseInt(items[0]) // 173404 346804
@@ -1067,28 +1191,46 @@ export class NVMeshLoaders {
   // read legacy VTK format
   static readVTK(buffer) {
     const len = buffer.byteLength
-    if (len < 20) throw new Error('File too small to be VTK: bytes = ' + buffer.byteLength)
+    if (len < 20) {
+      throw new Error('File too small to be VTK: bytes = ' + buffer.byteLength)
+    }
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr(isSkipBlank = true) {
-      if (isSkipBlank) while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+      if (isSkipBlank) {
+        while (pos < len && bytes[pos] === 10) {
+          pos++
+        }
+      } // skip blank lines
       const startPos = pos
-      while (pos < len && bytes[pos] !== 10) pos++
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     }
     let line = readStr() // 1st line: signature
-    if (!line.startsWith('# vtk DataFile')) alert('Invalid VTK mesh')
+    if (!line.startsWith('# vtk DataFile')) {
+      alert('Invalid VTK mesh')
+    }
     line = readStr(false) // 2nd line comment, n.b. MRtrix stores empty line
     line = readStr() // 3rd line ASCII/BINARY
-    if (line.startsWith('ASCII')) return NVMeshLoaders.readTxtVTK(buffer)
-    else if (!line.startsWith('BINARY')) alert('Invalid VTK image, expected ASCII or BINARY', line)
+    if (line.startsWith('ASCII')) {
+      return NVMeshLoaders.readTxtVTK(buffer)
+    } else if (!line.startsWith('BINARY')) {
+      alert('Invalid VTK image, expected ASCII or BINARY', line)
+    }
     line = readStr() // 5th line "DATASET POLYDATA"
-    if (!line.includes('POLYDATA')) alert('Only able to read VTK POLYDATA', line)
+    if (!line.includes('POLYDATA')) {
+      alert('Only able to read VTK POLYDATA', line)
+    }
     line = readStr() // 6th line "POINTS 10261 float"
-    if (!line.includes('POINTS') || (!line.includes('double') && !line.includes('float')))
+    if (!line.includes('POINTS') || (!line.includes('double') && !line.includes('float'))) {
       console.log('Only able to read VTK float or double POINTS' + line)
+    }
     const isFloat64 = line.includes('double')
     let items = line.trim().split(/\s+/)
     const nvert = parseInt(items[1]) // POINTS 10261 float
@@ -1117,19 +1259,25 @@ export class NVMeshLoaders {
       if (line.startsWith('OFFSETS')) {
         // console.log("invalid VTK file created by DiPy");
         let isInt64 = false
-        if (line.includes('int64')) isInt64 = true
+        if (line.includes('int64')) {
+          isInt64 = true
+        }
         const offsetPt0 = new Uint32Array(n_count)
         if (isInt64) {
           let isOverflowInt32 = false
           for (let c = 0; c < n_count; c++) {
             let idx = reader.getInt32(pos, false)
-            if (idx !== 0) isOverflowInt32 = true
+            if (idx !== 0) {
+              isOverflowInt32 = true
+            }
             pos += 4
             idx = reader.getInt32(pos, false)
             pos += 4
             offsetPt0[c] = idx
           }
-          if (isOverflowInt32) console.log('int32 overflow: JavaScript does not support int64')
+          if (isOverflowInt32) {
+            console.log('int32 overflow: JavaScript does not support int64')
+          }
         } else {
           for (let c = 0; c < n_count; c++) {
             const idx = reader.getInt32(pos, false)
@@ -1207,7 +1355,9 @@ export class NVMeshLoaders {
           fy = fz
         } // for each triangle
       } // for each polygon
-    } else alert('Unsupported binary VTK datatype ', items[0])
+    } else {
+      alert('Unsupported binary VTK datatype ', items[0])
+    }
     const indices = new Int32Array(tris)
     return {
       positions,
@@ -1222,7 +1372,9 @@ export class NVMeshLoaders {
     const reader = new DataView(buffer)
     const magic = reader.getUint32(0, true) // "DFS_"
     const LE = reader.getUint16(4, true) // "LE"
-    if (magic !== 1599292996 || LE !== 17740) console.log('Not a little-endian brainsuite DFS mesh')
+    if (magic !== 1599292996 || LE !== 17740) {
+      console.log('Not a little-endian brainsuite DFS mesh')
+    }
     const hdrBytes = reader.getUint32(12, true)
     // var mdoffset = reader.getUint32(16, true);
     // var pdoffset = reader.getUint32(20, true);
@@ -1246,7 +1398,9 @@ export class NVMeshLoaders {
       positions[i + 1] = tmp
     }
     let colors = null
-    if (vcoffset >= 0) colors = new Float32Array(buffer, vcoffset, nvert * 3, true)
+    if (vcoffset >= 0) {
+      colors = new Float32Array(buffer, vcoffset, nvert * 3, true)
+    }
     return {
       positions,
       indices,
@@ -1258,9 +1412,10 @@ export class NVMeshLoaders {
   // https://github.com/neurolabusc/surf-ice/tree/master/mz3
   static readMZ3(buffer, n_vert = 0) {
     // ToDo: mz3 always little endian: support big endian? endian https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
-    if (buffer.byteLength < 20)
+    if (buffer.byteLength < 20) {
       // 76 for raw, not sure of gzip
       throw new Error('File too small to be mz3: bytes = ' + buffer.byteLength)
+    }
     let reader = new DataView(buffer)
     // get number of vertices and faces
     let magic = reader.getUint16(0, true)
@@ -1278,18 +1433,26 @@ export class NVMeshLoaders {
     let nvert = reader.getUint32(8, true)
     const nskip = reader.getUint32(12, true)
     utiltiesLogger.debug('MZ3 magic %d attr %d face %d vert %d skip %d', magic, attr, nface, nvert, nskip)
-    if (magic !== 23117) throw new Error('Invalid MZ3 file')
+    if (magic !== 23117) {
+      throw new Error('Invalid MZ3 file')
+    }
     const isFace = (attr & 1) !== 0
     const isVert = (attr & 2) !== 0
     const isRGBA = (attr & 4) !== 0
     let isSCALAR = (attr & 8) !== 0
     const isDOUBLE = (attr & 16) !== 0
     // var isAOMap = attr & 32;
-    if (attr > 63) throw new Error('Unsupported future version of MZ3 file')
+    if (attr > 63) {
+      throw new Error('Unsupported future version of MZ3 file')
+    }
     let bytesPerScalar = 4
-    if (isDOUBLE) bytesPerScalar = 8
+    if (isDOUBLE) {
+      bytesPerScalar = 8
+    }
     let NSCALAR = 0
-    if (n_vert > 0 && !isFace && nface < 1 && !isRGBA) isSCALAR = true
+    if (n_vert > 0 && !isFace && nface < 1 && !isRGBA) {
+      isSCALAR = true
+    }
     if (isSCALAR) {
       const FSizeWoScalars = 16 + nskip + isFace * nface * 12 + isVert * n_vert * 12 + isRGBA * n_vert * 4
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar)
@@ -1303,7 +1466,9 @@ export class NVMeshLoaders {
         isSCALAR = false
       }
     }
-    if (nvert < 3 && n_vert < 3) throw new Error('Not a mesh MZ3 file (maybe scalar)')
+    if (nvert < 3 && n_vert < 3) {
+      throw new Error('Not a mesh MZ3 file (maybe scalar)')
+    }
     if (n_vert > 0 && n_vert !== nvert) {
       console.log('Layer has ' + nvert + 'vertices, but background mesh has ' + n_vert)
     }
@@ -1340,10 +1505,14 @@ export class NVMeshLoaders {
       if (isDOUBLE) {
         const flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert)
         scalars = Float32Array.from(flt64)
-      } else scalars = new Float32Array(_buffer, filepos, NSCALAR * nvert)
+      } else {
+        scalars = new Float32Array(_buffer, filepos, NSCALAR * nvert)
+      }
       filepos += bytesPerScalar * NSCALAR * nvert
     }
-    if (n_vert > 0) return scalars
+    if (n_vert > 0) {
+      return scalars
+    }
     return {
       positions,
       indices,
@@ -1359,11 +1528,17 @@ export class NVMeshLoaders {
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr() {
-      while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+      while (pos < len && bytes[pos] === 10) {
+        pos++
+      } // skip blank lines
       const startPos = pos
-      while (pos < len && bytes[pos] !== 10) pos++
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     }
     let line = readStr() // 1st line: magic 'ply'
@@ -1374,8 +1549,12 @@ export class NVMeshLoaders {
     line = readStr() // 2nd line: format 'format binary_little_endian 1.0'
     const isAscii = line.includes('ascii')
     function dataTypeBytes(str) {
-      if (str === 'char' || str === 'uchar' || str === 'int8' || str === 'uint8') return 1
-      if (str === 'short' || str === 'ushort' || str === 'int16' || str === 'uint16') return 2
+      if (str === 'char' || str === 'uchar' || str === 'int8' || str === 'uint8') {
+        return 1
+      }
+      if (str === 'short' || str === 'ushort' || str === 'int16' || str === 'uint16') {
+        return 2
+      }
       if (
         str === 'int' ||
         str === 'uint' ||
@@ -1383,9 +1562,12 @@ export class NVMeshLoaders {
         str === 'uint32' ||
         str === 'float' ||
         str === 'float32'
-      )
+      ) {
         return 4
-      if (str === 'double') return 8
+      }
+      if (str === 'double') {
+        return 8
+      }
       console.log('Unknown data type: ' + str)
     }
     const isLittleEndian = line.includes('binary_little_endian')
@@ -1400,7 +1582,9 @@ export class NVMeshLoaders {
     let nface = 0
     while (pos < len && !line.startsWith('end_header')) {
       line = readStr()
-      if (line.startsWith('comment')) continue
+      if (line.startsWith('comment')) {
+        continue
+      }
       // line = line.replaceAll('\t', ' '); // ?are tabs valid white space?
       let items = line.split(/\s/)
       if (line.startsWith('element vertex')) {
@@ -1410,9 +1594,11 @@ export class NVMeshLoaders {
         items = line.split(/\s/)
         while (line.startsWith('property')) {
           const datatype = items[1]
-          if (items[2] === 'x' && datatype.startsWith('double')) vertIsDouble = true
-          else if (items[2] === 'x' && !datatype.startsWith('float'))
+          if (items[2] === 'x' && datatype.startsWith('double')) {
+            vertIsDouble = true
+          } else if (items[2] === 'x' && !datatype.startsWith('float')) {
             console.log('Error: expect ply xyz to be float or double: ' + line)
+          }
           vertStride += dataTypeBytes(datatype)
           line = readStr()
           items = line.split(/\s/)
@@ -1444,7 +1630,9 @@ export class NVMeshLoaders {
       }
     } // while reading all lines of header
     if (isAscii) {
-      if (nface < 1) console.log(`Malformed ply format: faces ${nface} `)
+      if (nface < 1) {
+        console.log(`Malformed ply format: faces ${nface} `)
+      }
       const positions = new Float32Array(nvert * 3)
       let v = 0
       for (let i = 0; i < nvert; i++) {
@@ -1461,7 +1649,9 @@ export class NVMeshLoaders {
         line = readStr()
         const items = line.split(/\s/)
         const nTri = parseInt(items[nIndexPadding]) - 2
-        if (nTri < 1) break // error
+        if (nTri < 1) {
+          break
+        } // error
         if (f + nTri * 3 > indices.length) {
           const c = new Int32Array(indices.length + indices.length)
           c.set(indices)
@@ -1478,16 +1668,19 @@ export class NVMeshLoaders {
           f += 3
         }
       }
-      if (indices.length !== f) indices = indices.slice(0, f)
+      if (indices.length !== f) {
+        indices = indices.slice(0, f)
+      }
       return {
         positions,
         indices
       }
     } // if isAscii
-    if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1)
+    if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1) {
       console.log(
         `Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`
       )
+    }
     const reader = new DataView(buffer)
     let positions = []
     if (pos % 4 === 0 && vertStride === 12 && isLittleEndian) {
@@ -1520,7 +1713,9 @@ export class NVMeshLoaders {
       for (let i = 0; i < nface; i++) {
         const nIdx = reader.getUint8(pos)
         pos += indexCountBytes
-        if (nIdx !== 3) isTriangular = false
+        if (nIdx !== 3) {
+          isTriangular = false
+        }
         indices[j] = reader.getUint32(pos, isLittleEndian)
         pos += 4
         indices[j + 1] = reader.getUint32(pos, isLittleEndian)
@@ -1535,22 +1730,34 @@ export class NVMeshLoaders {
       for (let i = 0; i < nface; i++) {
         pos = startPos + indexPaddingBytes
         let nIdx = 0
-        if (indexCountBytes === 1) nIdx = reader.getUint8(pos)
-        else if (indexCountBytes === 2) nIdx = reader.getUint16(pos, isLittleEndian)
-        else if (indexCountBytes === 4) nIdx = reader.getUint32(pos, isLittleEndian)
+        if (indexCountBytes === 1) {
+          nIdx = reader.getUint8(pos)
+        } else if (indexCountBytes === 2) {
+          nIdx = reader.getUint16(pos, isLittleEndian)
+        } else if (indexCountBytes === 4) {
+          nIdx = reader.getUint32(pos, isLittleEndian)
+        }
         pos += indexCountBytes
-        if (nIdx !== 3) isTriangular = false
+        if (nIdx !== 3) {
+          isTriangular = false
+        }
         for (let k = 0; k < 3; k++) {
-          if (indexBytes === 1) indices[j] = reader.getUint8(pos, isLittleEndian)
-          else if (indexBytes === 2) indices[j] = reader.getUint16(pos, isLittleEndian)
-          else if (indexBytes === 4) indices[j] = reader.getUint32(pos, isLittleEndian)
+          if (indexBytes === 1) {
+            indices[j] = reader.getUint8(pos, isLittleEndian)
+          } else if (indexBytes === 2) {
+            indices[j] = reader.getUint16(pos, isLittleEndian)
+          } else if (indexBytes === 4) {
+            indices[j] = reader.getUint32(pos, isLittleEndian)
+          }
           j++
           pos += indexBytes
         }
         startPos += indexStrideBytes
       } // for each face
     } // if not 1:4 datatype
-    if (!isTriangular) console.log('Only able to read PLY meshes limited to triangles.')
+    if (!isTriangular) {
+      console.log('Only able to read PLY meshes limited to triangles.')
+    }
     return {
       positions,
       indices
@@ -1569,7 +1776,9 @@ export class NVMeshLoaders {
     // read line 0: header
     // FreeSurfer header has one item: [0]'num_verts'
     // Bourke header has 2 items: [0]'num_verts', [1]'num_faces'
-    if (header.length > 1) console.log('This is not a valid FreeSurfer ICO/TRI mesh.')
+    if (header.length > 1) {
+      console.log('This is not a valid FreeSurfer ICO/TRI mesh.')
+    }
     const num_v = parseInt(header[0])
     // read vertices: each line has 4 values: index, x, y, z
     const positions = new Float32Array(num_v * 3)
@@ -1660,7 +1869,9 @@ export class NVMeshLoaders {
       for (let i = 0; i < items.length; i++) {
         pts.push(parseFloat(items[i]))
         v++
-        if (v >= num_v) break
+        if (v >= num_v) {
+          break
+        }
       } // for each item
     } // read all vertices
     // next read faces (triangles)
@@ -1673,7 +1884,9 @@ export class NVMeshLoaders {
       for (let i = 0; i < items.length; i++) {
         t.push(Math.abs(parseInt(items[i])) - 1)
         f++
-        if (f >= num_f) break
+        if (f >= num_f) {
+          break
+        }
       } // for each item
     } // read all faces
     // FreeSurfer seems to enforce clockwise winding: reverse to CCW
@@ -1707,7 +1920,9 @@ export class NVMeshLoaders {
     // first line signature "OFF", but R freesurfer package uses "# OFF"
     if (!lines[i].includes('OFF')) {
       console.log('File does not start with OFF')
-    } else i++
+    } else {
+      i++
+    }
     let items = lines[i].trim().split(/\s+/)
     const num_v = parseInt(items[0])
     const num_f = parseInt(items[1])
@@ -1724,7 +1939,9 @@ export class NVMeshLoaders {
       const str = lines[i]
       items = str.trim().split(/\s+/)
       const n = parseInt(items[0])
-      if (n !== 3) console.log('Only able to read OFF files with triangular meshes')
+      if (n !== 3) {
+        console.log('Only able to read OFF files with triangular meshes')
+      }
       t.push(parseInt(items[1]))
       t.push(parseInt(items[2]))
       t.push(parseInt(items[3]))
@@ -1760,7 +1977,9 @@ export class NVMeshLoaders {
       if (str[0] === 'f') {
         const items = str.trim().split(/\s+/)
         const new_t = items.length - 3 // number of new triangles created
-        if (new_t < 1) break // error
+        if (new_t < 1) {
+          break
+        } // error
         let tn = items[1].split('/')
         const t0 = parseInt(tn[0]) - 1 // first vertex
         tn = items[2].split('/')
@@ -1792,10 +2011,13 @@ export class NVMeshLoaders {
     const view = new DataView(buffer) // ArrayBuffer to dataview
     const sig0 = view.getUint32(0, false)
     const sig1 = view.getUint32(4, false)
-    if (sig0 !== 4294966883 || sig1 !== 1919246708)
+    if (sig0 !== 4294966883 || sig1 !== 1919246708) {
       utiltiesLogger.debug('Unable to recognize file type: does not appear to be FreeSurfer format.')
+    }
     let offset = 0
-    while (view.getUint8(offset) !== 10) offset++
+    while (view.getUint8(offset) !== 10) {
+      offset++
+    }
     offset += 2
     let nv = view.getUint32(offset, false) // number of vertices
     offset += 4
@@ -1826,12 +2048,15 @@ export class NVMeshLoaders {
       offset += 4
       headOK = head0 === 2 && head1 === 0 && head2 === 20
     }
-    if (!headOK) console.log('Unknown FreeSurfer Mesh extension code.')
-    else {
+    if (!headOK) {
+      console.log('Unknown FreeSurfer Mesh extension code.')
+    } else {
       const footer = new TextDecoder().decode(buffer.slice(offset)).trim()
       const strings = footer.split('\n')
       for (let s = 0; s < strings.length; s++) {
-        if (!strings[s].startsWith('cras')) continue
+        if (!strings[s].startsWith('cras')) {
+          continue
+        }
         const cras = strings[s].split('=')[1].trim()
         const FreeSurferTranlate = cras.split(' ').map(Number)
         const nvert = Math.floor(positions.length / 3)
@@ -1942,7 +2167,9 @@ export class NVMeshLoaders {
       indices[i] = reader.getInt32(pos, true)
       pos += 4
     }
-    if (ver !== 4) console.log('Not valid SRF')
+    if (ver !== 4) {
+      console.log('Not valid SRF')
+    }
 
     return {
       positions,
@@ -1963,9 +2190,13 @@ export class NVMeshLoaders {
     }
     const pts = []
     for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].includes('vertex')) continue
+      if (!lines[i].includes('vertex')) {
+        continue
+      }
       const items = lines[i].trim().split(/\s+/)
-      for (let j = 1; j < items.length; j++) pts.push(parseFloat(items[j]))
+      for (let j = 1; j < items.length; j++) {
+        pts.push(parseFloat(items[j]))
+      }
     }
     const npts = Math.floor(pts.length / 3) // each vertex has x,y,z
     if (npts * 3 !== pts.length) {
@@ -1974,7 +2205,9 @@ export class NVMeshLoaders {
     }
     const positions = new Float32Array(pts)
     const indices = new Int32Array(npts)
-    for (let i = 0; i < npts; i++) indices[i] = i
+    for (let i = 0; i < npts; i++) {
+      indices[i] = i
+    }
     return {
       positions,
       indices
@@ -1984,13 +2217,19 @@ export class NVMeshLoaders {
   // read STL format, nb this format does not reuse vertices
   // https://en.wikipedia.org/wiki/STL_(file_format)
   static readSTL(buffer) {
-    if (buffer.byteLength < 80 + 4 + 50) throw new Error('File too small to be STL: bytes = ' + buffer.byteLength)
+    if (buffer.byteLength < 80 + 4 + 50) {
+      throw new Error('File too small to be STL: bytes = ' + buffer.byteLength)
+    }
     const reader = new DataView(buffer)
     const sig = reader.getUint32(0, true)
-    if (sig === 1768714099) return NVMeshLoaders.readTxtSTL(buffer)
+    if (sig === 1768714099) {
+      return NVMeshLoaders.readTxtSTL(buffer)
+    }
     const ntri = reader.getUint32(80, true)
     const ntri3 = 3 * ntri
-    if (buffer.byteLength < 80 + 4 + ntri * 50) throw new Error('STL file too small to store triangles = ', ntri)
+    if (buffer.byteLength < 80 + 4 + ntri * 50) {
+      throw new Error('STL file too small to store triangles = ', ntri)
+    }
     const indices = new Int32Array(ntri3)
     const positions = new Float32Array(ntri3 * 3)
     let pos = 80 + 4 + 12
@@ -2003,7 +2242,9 @@ export class NVMeshLoaders {
       }
       pos += 14 // 50 bytes for triangle, only 36 used for position
     }
-    for (let i = 0; i < ntri3; i++) indices[i] = i
+    for (let i = 0; i < ntri3; i++) {
+      indices[i] = i
+    }
     return {
       positions,
       indices
@@ -2030,7 +2271,9 @@ export class NVMeshLoaders {
     const voxoffset = Number(reader.getBigInt64(168, isLittleEndian))
     const scl_slope = reader.getFloat64(176, isLittleEndian)
     const scl_inter = reader.getFloat64(184, isLittleEndian)
-    if (scl_slope !== 1 || scl_inter !== 0) console.log('ignoring scale slope and intercept')
+    if (scl_slope !== 1 || scl_inter !== 0) {
+      console.log('ignoring scale slope and intercept')
+    }
     const intent_code = reader.getUint32(504, isLittleEndian)
     const datatype = reader.getUint16(12, isLittleEndian)
     if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
@@ -2054,11 +2297,17 @@ export class NVMeshLoaders {
       let pos = 552
 
       function readStrX() {
-        while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+        while (pos < len && bytes[pos] === 10) {
+          pos++
+        } // skip blank lines
         const startPos = pos
-        while (pos < len && bytes[pos] !== 10) pos++
+        while (pos < len && bytes[pos] !== 10) {
+          pos++
+        }
         pos++ // skip EOLN
-        if (pos - startPos < 1) return ''
+        if (pos - startPos < 1) {
+          return ''
+        }
         return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
       }
 
@@ -2068,7 +2317,9 @@ export class NVMeshLoaders {
         if (!line.startsWith('<') || line.endsWith('>')) {
           return line
         }
-        while (pos < len && !line.endsWith('>')) line += readStrX()
+        while (pos < len && !line.endsWith('>')) {
+          line += readStrX()
+        }
         return line
       }
       let line = []
@@ -2076,11 +2327,15 @@ export class NVMeshLoaders {
       function readNumericTag(TagName, asString = false) {
         // Tag 'Dim1' will return 3 for Dim1="3"
         const tpos = line.indexOf(TagName)
-        if (tpos < 0) return 1
+        if (tpos < 0) {
+          return 1
+        }
         const spos = line.indexOf('"', tpos) + 1
         const epos = line.indexOf('"', spos)
         const str = line.slice(spos, epos)
-        if (asString) return str
+        if (asString) {
+          return str
+        }
         return parseInt(str)
       } // readNumericTag
 
@@ -2090,35 +2345,55 @@ export class NVMeshLoaders {
       // eslint-disable-next-line no-unmodified-loop-condition -- pos is modified within readStr
       while (pos < len) {
         line = readStr()
-        if (line.includes('</CIFTI>')) break
+        if (line.includes('</CIFTI>')) {
+          break
+        }
         if (line.includes('<BrainModel')) {
           const nv = readNumericTag('SurfaceNumberOfVertices=')
           const bStruct = readNumericTag('BrainStructure=', true).toUpperCase()
-          if (nv % n_vert !== 0) continue
+          if (nv % n_vert !== 0) {
+            continue
+          }
           // a single CIfTI file can contain multiple structures, but only one structure per mesh
           // The big kludge: try to find CIfTI structure that matches GIfTI mesh
           let isMatch = false
-          if (this.AnatomicalStructurePrimary.includes('CORTEX') && bStruct.includes('CORTEX')) isMatch = true
+          if (this.AnatomicalStructurePrimary.includes('CORTEX') && bStruct.includes('CORTEX')) {
+            isMatch = true
+          }
           // to do: other anatomy: cerebellum
-          if (!isMatch) continue
+          if (!isMatch) {
+            continue
+          }
           isMatch = false
-          if (this.AnatomicalStructurePrimary.includes('LEFT') && bStruct.includes('LEFT')) isMatch = true
-          if (this.AnatomicalStructurePrimary.includes('RIGHT') && bStruct.includes('RIGHT')) isMatch = true
-          if (!isMatch) continue
+          if (this.AnatomicalStructurePrimary.includes('LEFT') && bStruct.includes('LEFT')) {
+            isMatch = true
+          }
+          if (this.AnatomicalStructurePrimary.includes('RIGHT') && bStruct.includes('RIGHT')) {
+            isMatch = true
+          }
+          if (!isMatch) {
+            continue
+          }
           surfaceNumberOfVertices = nv
           indexOffset = readNumericTag('IndexOffset=')
           indexCount = readNumericTag('IndexCount=')
           brainStructure = bStruct
-          if (!line.includes('<VertexIndices>')) line = readStr()
+          if (!line.includes('<VertexIndices>')) {
+            line = readStr()
+          }
           if (!line.startsWith('<VertexIndices>') || !line.endsWith('</VertexIndices>')) {
             console.log('Unable to find CIfTI <VertexIndices>')
             return scalars
           }
           line = line.slice(15, -16)
           const items = line.trim().split(/\s+/)
-          if (items.length < indexCount) console.log('Error parsing VertexIndices')
+          if (items.length < indexCount) {
+            console.log('Error parsing VertexIndices')
+          }
           vertexIndices = new Int32Array(indexCount)
-          for (let i = 0; i < indexCount; i++) vertexIndices[i] = parseInt(items[i])
+          for (let i = 0; i < indexCount; i++) {
+            vertexIndices[i] = parseInt(items[i])
+          }
         } // read <BrainModel
       } // while (pos < len) or reached </CIFTI>
 
@@ -2133,7 +2408,9 @@ export class NVMeshLoaders {
 
       const vals = new Float32Array(indexCount * nFrame4D)
       const off = voxoffset + nFrame4D * indexOffset * 4
-      for (let i = 0; i < indexCount * nFrame4D; i++) vals[i] = reader.getFloat32(off + i * 4, isLittleEndian)
+      for (let i = 0; i < indexCount * nFrame4D; i++) {
+        vals[i] = reader.getFloat32(off + i * 4, isLittleEndian)
+      }
       // }
       let j = 0
 
@@ -2161,23 +2438,35 @@ export class NVMeshLoaders {
     }
     if (isLittleEndian) {
       // block read native endian
-      if (datatype === 16) scalars = new Float32Array(buffer, voxoffset, nvert)
-      else if (datatype === 8) scalars = new Int32Array(buffer, voxoffset, nvert)
-      else if (datatype === 4) scalars = new Int16Array(buffer, voxoffset, nvert)
+      if (datatype === 16) {
+        scalars = new Float32Array(buffer, voxoffset, nvert)
+      } else if (datatype === 8) {
+        scalars = new Int32Array(buffer, voxoffset, nvert)
+      } else if (datatype === 4) {
+        scalars = new Int16Array(buffer, voxoffset, nvert)
+      }
     } else {
       // if isLittleEndian
       if (datatype === 16) {
         scalars = new Float32Array(nvert)
-        for (let i = 0; i < nvert; i++) scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
+        for (let i = 0; i < nvert; i++) {
+          scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
+        }
       } else if (datatype === 8) {
         scalars = new Int32Array(nvert)
-        for (let i = 0; i < nvert; i++) scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
+        for (let i = 0; i < nvert; i++) {
+          scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
+        }
       } else if (datatype === 4) {
         scalars = new Int16Array(nvert)
-        for (let i = 0; i < nvert; i++) scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
+        for (let i = 0; i < nvert; i++) {
+          scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
+        }
       }
     } // if isLittleEndian else big end
-    if (datatype === 2) scalars = new Uint8Array(buffer, voxoffset, nvert)
+    if (datatype === 2) {
+      scalars = new Uint8Array(buffer, voxoffset, nvert)
+    }
     return scalars
   } // readNII2()
 
@@ -2188,7 +2477,9 @@ export class NVMeshLoaders {
     let isLittleEndian = true
     let reader = new DataView(buffer)
     let magic = reader.getUint16(0, isLittleEndian)
-    if (magic === 540 || magic === 469893120) return NVMeshLoaders.readNII2(buffer, n_vert)
+    if (magic === 540 || magic === 469893120) {
+      return NVMeshLoaders.readNII2(buffer, n_vert)
+    }
     if (magic === 23553) {
       isLittleEndian = false
       magic = reader.getUint16(0, isLittleEndian)
@@ -2199,17 +2490,23 @@ export class NVMeshLoaders {
       reader = new DataView(raw.buffer)
       buffer = raw.buffer
       magic = reader.getUint16(0, isLittleEndian)
-      if (magic === 540 || magic === 469893120) return NVMeshLoaders.readNII2(buffer)
+      if (magic === 540 || magic === 469893120) {
+        return NVMeshLoaders.readNII2(buffer)
+      }
       if (magic === 23553) {
         isLittleEndian = false
         magic = reader.getUint16(0, isLittleEndian)
       }
     }
-    if (magic !== 348) console.log('Not a valid NIfTI image.')
+    if (magic !== 348) {
+      console.log('Not a valid NIfTI image.')
+    }
     const voxoffset = reader.getFloat32(108, isLittleEndian)
     const scl_slope = reader.getFloat32(112, isLittleEndian)
     const scl_inter = reader.getFloat32(116, isLittleEndian)
-    if (scl_slope !== 1 || scl_inter !== 0) console.log('ignoring scale slope and intercept')
+    if (scl_slope !== 1 || scl_inter !== 0) {
+      console.log('ignoring scale slope and intercept')
+    }
     const datatype = reader.getUint16(70, isLittleEndian)
     if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
       console.log('Unsupported NIfTI datatype ' + datatype)
@@ -2226,23 +2523,35 @@ export class NVMeshLoaders {
     }
     if (isLittleEndian) {
       // block read native endian
-      if (datatype === 16) scalars = new Float32Array(buffer, voxoffset, nvert)
-      else if (datatype === 8) scalars = new Int32Array(buffer, voxoffset, nvert)
-      else if (datatype === 4) scalars = new Int16Array(buffer, voxoffset, nvert)
+      if (datatype === 16) {
+        scalars = new Float32Array(buffer, voxoffset, nvert)
+      } else if (datatype === 8) {
+        scalars = new Int32Array(buffer, voxoffset, nvert)
+      } else if (datatype === 4) {
+        scalars = new Int16Array(buffer, voxoffset, nvert)
+      }
     } else {
       // if isLittleEndian
       if (datatype === 16) {
         scalars = new Float32Array(nvert)
-        for (let i = 0; i < nvert; i++) scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
+        for (let i = 0; i < nvert; i++) {
+          scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
+        }
       } else if (datatype === 8) {
         scalars = new Int32Array(nvert)
-        for (let i = 0; i < nvert; i++) scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
+        for (let i = 0; i < nvert; i++) {
+          scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
+        }
       } else if (datatype === 4) {
         scalars = new Int16Array(nvert)
-        for (let i = 0; i < nvert; i++) scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
+        for (let i = 0; i < nvert; i++) {
+          scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
+        }
       }
     } // if isLittleEndian else big end
-    if (datatype === 2) scalars = new Uint8Array(buffer, voxoffset, nvert)
+    if (datatype === 2) {
+      scalars = new Uint8Array(buffer, voxoffset, nvert)
+    }
     return scalars
   } // readNII();
 
@@ -2263,7 +2572,9 @@ export class NVMeshLoaders {
     const mtype = reader.getInt32(20, false)
     let voxoffset = 284 // ALWAYS fixed header size
     const isLittleEndian = false // ALWAYS byte order is BIG ENDIAN
-    if (version !== 1 || mtype < 0 || mtype > 4) console.log('Not a valid MGH file')
+    if (version !== 1 || mtype < 0 || mtype > 4) {
+      console.log('Not a valid MGH file')
+    }
     const nvert = width * height * depth * nframes
     let scalars = []
     if (nvert % n_vert !== 0) {
@@ -2272,19 +2583,33 @@ export class NVMeshLoaders {
     }
     if (mtype === 3) {
       scalars = new Float32Array(nvert)
-      for (let i = 0; i < nvert; i++) scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
+      for (let i = 0; i < nvert; i++) {
+        scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
+      }
     } else if (mtype === 1) {
       scalars = new Int32Array(nvert)
-      for (let i = 0; i < nvert; i++) scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
+      for (let i = 0; i < nvert; i++) {
+        scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
+      }
     } else if (mtype === 4) {
       scalars = new Int16Array(nvert)
-      for (let i = 0; i < nvert; i++) scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
-    } else if (mtype === 0) scalars = new Uint8Array(buffer, voxoffset, nvert)
-    if (!isReadColortables) return scalars
+      for (let i = 0; i < nvert; i++) {
+        scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
+      }
+    } else if (mtype === 0) {
+      scalars = new Uint8Array(buffer, voxoffset, nvert)
+    }
+    if (!isReadColortables) {
+      return scalars
+    }
     // next: read footer
     let bytesPerVertex = 4
-    if (mtype === 4) bytesPerVertex = 2
-    if (mtype === 0) bytesPerVertex = 1
+    if (mtype === 4) {
+      bytesPerVertex = 2
+    }
+    if (mtype === 0) {
+      bytesPerVertex = 1
+    }
     voxoffset += bytesPerVertex * nvert
     voxoffset += 4 * 4 // skip TR, FlipAngle, TE, TI, FOV
     const TAG_OLD_COLORTABLE = 1
@@ -2345,7 +2670,9 @@ export class NVMeshLoaders {
             const len = reader.getInt32((voxoffset += 4), isLittleEndian)
             voxoffset += len
             const num_entries_to_read = reader.getInt32((voxoffset += 4), isLittleEndian)
-            if (num_entries_to_read < 0) return scalars
+            if (num_entries_to_read < 0) {
+              return scalars
+            }
             // Allocate our table.
             const Labels = { R: [], G: [], B: [], A: [], I: [], labels: [] }
             for (let i = 0; i < num_entries_to_read; i++) {
@@ -2355,7 +2682,9 @@ export class NVMeshLoaders {
               let txt = ''
               for (let c = 0; c < labelLen; c++) {
                 const val = reader.getUint8(pos++)
-                if (val === 0) break
+                if (val === 0) {
+                  break
+                }
                 txt += String.fromCharCode(val)
               } // for labelLen
               voxoffset += labelLen
@@ -2391,15 +2720,23 @@ export class NVMeshLoaders {
     // n.b. only plain text ".x3d", not binary ".x3db"
     // beware: The values of XML attributes are delimited by either single or double quotes
     const len = buffer.byteLength
-    if (len < 20) throw new Error('File too small to be GII: bytes = ' + len)
+    if (len < 20) {
+      throw new Error('File too small to be GII: bytes = ' + len)
+    }
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStrX() {
-      while (pos < len && bytes[pos] === 10) pos++ // skip blank lines
+      while (pos < len && bytes[pos] === 10) {
+        pos++
+      } // skip blank lines
       const startPos = pos
-      while (pos < len && bytes[pos] !== 10) pos++
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
       pos++ // skip EOLN
-      if (pos - startPos < 1) return ''
+      if (pos - startPos < 1) {
+        return ''
+      }
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
     }
     function readStr() {
@@ -2408,14 +2745,18 @@ export class NVMeshLoaders {
       if (!line.startsWith('<') || line.endsWith('>')) {
         return line
       }
-      while (pos < len && !line.endsWith('>')) line += readStrX()
+      while (pos < len && !line.endsWith('>')) {
+        line += readStrX()
+      }
       return line
     }
     let line = readStr() // 1st line: signature 'mrtrix tracks'
     function readStringTag(TagName) {
       // Tag 'DEF' will return l3 for DEF='l3'
       const fpos = line.indexOf(TagName + '=')
-      if (fpos < 0) return ''
+      if (fpos < 0) {
+        return ''
+      }
       const delimiter = line[fpos + TagName.length + 1]
       const spos = line.indexOf(delimiter, fpos) + 1
       const epos = line.indexOf(delimiter, spos)
@@ -2424,18 +2765,26 @@ export class NVMeshLoaders {
     function readNumericTag(TagName) {
       // Tag 'Dim1' will return 3 for Dim1="3"
       const fpos = line.indexOf(TagName + '=')
-      if (fpos < 0) return 1
+      if (fpos < 0) {
+        return 1
+      }
       const delimiter = line[fpos + TagName.length + 1]
       const spos = line.indexOf(delimiter, fpos) + 1
       const epos = line.indexOf(delimiter, spos)
       const str = line.slice(spos, epos).trim()
       const items = str.trim().split(/\s+/)
-      if (items.length < 2) return parseFloat(str)
+      if (items.length < 2) {
+        return parseFloat(str)
+      }
       const ret = []
-      for (let i = 0; i < items.length; i++) ret.push(parseFloat(items[i]))
+      for (let i = 0; i < items.length; i++) {
+        ret.push(parseFloat(items[i]))
+      }
       return ret
     }
-    if (!line.includes('xml version')) console.log('Not a X3D image')
+    if (!line.includes('xml version')) {
+      console.log('Not a X3D image')
+    }
     let positions = []
     let indices = []
     let rgba255 = []
@@ -2449,25 +2798,36 @@ export class NVMeshLoaders {
       if (!line.endsWith('/>')) {
         if (line.startsWith('<Appearance>')) {
           // eslint-disable-next-line no-unmodified-loop-condition -- modified within readStr
-          while (pos < len && !line.endsWith('</Appearance>')) line += readStr()
+          while (pos < len && !line.endsWith('</Appearance>')) {
+            line += readStr()
+          }
         } else {
           // eslint-disable-next-line no-unmodified-loop-condition -- modified within readStr
-          while (pos < len && !line.endsWith('/>')) line += readStr()
+          while (pos < len && !line.endsWith('/>')) {
+            line += readStr()
+          }
         }
       }
       const ref = readStringTag('USE')
       if (ref.length > 1) {
-        if (ref in appearanceStyles) rgba = appearanceStyles[ref]
-        else console.log('Unable to find DEF for ' + ref)
+        if (ref in appearanceStyles) {
+          rgba = appearanceStyles[ref]
+        } else {
+          console.log('Unable to find DEF for ' + ref)
+        }
         return
       }
       const diffuseColor = readNumericTag('diffuseColor')
-      if (diffuseColor.length < 3) return
+      if (diffuseColor.length < 3) {
+        return
+      }
       rgba[0] = Math.round(diffuseColor[0] * 255)
       rgba[1] = Math.round(diffuseColor[1] * 255)
       rgba[2] = Math.round(diffuseColor[2] * 255)
       const def = readStringTag('DEF')
-      if (length.def < 1) return
+      if (length.def < 1) {
+        return
+      }
       appearanceStyles[def] = rgba
     }
     // eslint-disable-next-line no-unmodified-loop-condition -- modified within readStr
@@ -2491,8 +2851,12 @@ export class NVMeshLoaders {
         // eslint-disable-next-line no-unmodified-loop-condition -- modified within readAppearance
         while (pos < len) {
           line = readStr()
-          if (line.startsWith('<Appearance')) readAppearance()
-          if (line.startsWith('</Shape')) break
+          if (line.startsWith('<Appearance')) {
+            readAppearance()
+          }
+          if (line.startsWith('</Shape')) {
+            break
+          }
           if (line.startsWith('<Sphere')) {
             radius = readNumericTag('radius')
             height = -1.0
@@ -2511,8 +2875,12 @@ export class NVMeshLoaders {
             // https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#IndexedFaceSet
             coordIndex = readNumericTag('index')
           }
-          if (line.startsWith('<Coordinate')) point = readNumericTag('point') // Coordinate point
-          if (line.startsWith('<Color')) color = readNumericTag('color') // Coordinate point
+          if (line.startsWith('<Coordinate')) {
+            point = readNumericTag('point')
+          } // Coordinate point
+          if (line.startsWith('<Color')) {
+            color = readNumericTag('color')
+          } // Coordinate point
           if (line.startsWith('<Box')) {
             height = -4
             console.log('Unsupported x3d shape: Box')
@@ -2617,7 +2985,9 @@ export class NVMeshLoaders {
   // https://www.nitrc.org/projects/gifti/
   static readGII(buffer, n_vert = 0) {
     let len = buffer.byteLength
-    if (len < 20) throw new Error('File too small to be GII: bytes = ' + len)
+    if (len < 20) {
+      throw new Error('File too small to be GII: bytes = ' + len)
+    }
     let chars = new TextDecoder('ascii').decode(buffer)
     if (chars[0].charCodeAt(0) === 31) {
       // raw GIFTI saved as .gii.gz is smaller than gz GIFTI due to base64 overhead
@@ -2631,9 +3001,13 @@ export class NVMeshLoaders {
       let startPos = pos
       while (isEmptyTag) {
         // while (pos < len && chars[pos] === 10) pos++; //skip blank lines
-        while (pos < len && chars[pos] !== '<') pos++ // find tag start symbol: '<' e.g. "<tag>"
+        while (pos < len && chars[pos] !== '<') {
+          pos++
+        } // find tag start symbol: '<' e.g. "<tag>"
         startPos = pos
-        while (pos < len && chars[pos] !== '>') pos++ // find tag end symbol: '>' e.g. "<tag>"
+        while (pos < len && chars[pos] !== '>') {
+          pos++
+        } // find tag end symbol: '>' e.g. "<tag>"
         isEmptyTag = chars[pos - 1] === '/' // empty tag ends "/>" e.g. "<br/>"
         if (startPos + 1 < len && chars[startPos + 1] === '/') {
           // skip end tag "</"
@@ -2641,7 +3015,9 @@ export class NVMeshLoaders {
           isEmptyTag = true
         }
         // let endTagPos = pos;
-        if (pos >= len) break
+        if (pos >= len) {
+          break
+        }
       }
       const tagString = new TextDecoder().decode(buffer.slice(startPos + 1, pos)).trim()
       const startTag = tagString.split(' ')[0].trim()
@@ -2706,16 +3082,23 @@ export class NVMeshLoaders {
     function readNumericTag(TagName, isFloat = false) {
       // Tag 'Dim1' will return 3 for Dim1="3"
       const pos = line.indexOf(TagName)
-      if (pos < 0) return 1
+      if (pos < 0) {
+        return 1
+      }
       const spos = line.indexOf('"', pos) + 1
       const epos = line.indexOf('"', spos)
       const str = line.slice(spos, epos)
-      if (isFloat) return parseFloat(str)
-      else return parseInt(str)
+      if (isFloat) {
+        return parseFloat(str)
+      } else {
+        return parseInt(str)
+      }
     }
     function readBracketTag(TagName) {
       const pos = line.indexOf(TagName)
-      if (pos < 0) return ''
+      if (pos < 0) {
+        return ''
+      }
       const spos = pos + TagName.length
       const epos = line.indexOf(']', spos)
       return line.slice(spos, epos)
@@ -2734,23 +3117,35 @@ export class NVMeshLoaders {
         Labels.labels.push(readBracketTag('<![CDATA['))
       }
       if (tag.name.trim() === 'Data') {
-        if (isVectors) continue
+        if (isVectors) {
+          continue
+        }
         line = new TextDecoder().decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos)).trim()
         // Data can be on one to three lines...
         let datBin = []
         if (isASCII) {
           const nvert = Dims[0] * Dims[1] * Dims[2]
           const lines = line.split(/\s+/) // .split(/[ ,]+/);
-          if (nvert !== lines.length) throw new Error('Unable to parse ASCII GIfTI')
-          if (dataType === 2) dataType = 8 // UInt8 -> Int32
-          if (dataType === 32) dataType = 16 // float64 -> float32
+          if (nvert !== lines.length) {
+            throw new Error('Unable to parse ASCII GIfTI')
+          }
+          if (dataType === 2) {
+            dataType = 8
+          } // UInt8 -> Int32
+          if (dataType === 32) {
+            dataType = 16
+          } // float64 -> float32
           if (dataType === 8) {
             datBin = new Int32Array(nvert)
-            for (let v = 0; v < nvert; v++) datBin[v] = parseInt(lines[v])
+            for (let v = 0; v < nvert; v++) {
+              datBin[v] = parseInt(lines[v])
+            }
           }
           if (dataType === 16) {
             datBin = new Float32Array(nvert)
-            for (let v = 0; v < nvert; v++) datBin[v] = parseFloat(lines[v])
+            for (let v = 0; v < nvert; v++) {
+              datBin[v] = parseFloat(lines[v])
+            }
           }
         } else if (typeof Buffer === 'undefined') {
           // raw.gii
@@ -2766,46 +3161,57 @@ export class NVMeshLoaders {
           if (isGzip) {
             const datZ = base64ToUint8(line.slice())
             datBin = decompressSync(new Uint8Array(datZ))
-          } else datBin = base64ToUint8(line.slice())
+          } else {
+            datBin = base64ToUint8(line.slice())
+          }
         } else {
           // if Buffer not defined
           if (isGzip) {
             const datZ = Buffer.from(line.slice(), 'base64')
             datBin = decompressSync(new Uint8Array(datZ))
-          } else datBin = Buffer.from(line.slice(), 'base64')
+          } else {
+            datBin = Buffer.from(line.slice(), 'base64')
+          }
         }
         if (isPts) {
-          if (dataType !== 16) console.log('expect positions as FLOAT32')
+          if (dataType !== 16) {
+            console.log('expect positions as FLOAT32')
+          }
           positions = new Float32Array(datBin.buffer)
           if (isColMajor) {
             const tmp = positions.slice()
             const np = tmp.length / 3
             let j = 0
-            for (let p = 0; p < np; p++)
+            for (let p = 0; p < np; p++) {
               for (let i = 0; i < 3; i++) {
                 positions[j] = tmp[i * np + p]
                 j++
               }
+            }
           } // isColMajor
         } else if (isIdx) {
-          if (dataType !== 8) console.log('expect indices as INT32')
+          if (dataType !== 8) {
+            console.log('expect indices as INT32')
+          }
           indices = new Int32Array(datBin.buffer)
           if (isColMajor) {
             const tmp = indices.slice()
             const np = tmp.length / 3
             let j = 0
-            for (let p = 0; p < np; p++)
+            for (let p = 0; p < np; p++) {
               for (let i = 0; i < 3; i++) {
                 indices[j] = tmp[i * np + p]
                 j++
               }
+            }
           } // isColMajor
         } else {
           // not position or indices: assume scalars NIFTI_INTENT_NONE
           nvert = Dims[0] * Dims[1] * Dims[2]
           if (n_vert !== 0) {
-            if (nvert % n_vert !== 0)
+            if (nvert % n_vert !== 0) {
               console.log('Number of vertices in scalar overlay (' + nvert + ') does not match mesh (' + n_vert + ')')
+            }
           }
           function Float32Concat(first, second) {
             const firstLength = first.length
@@ -2835,7 +3241,9 @@ export class NVMeshLoaders {
       }
       if (tag.name.trim() === 'DataSpace') {
         line = new TextDecoder().decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos)).trim()
-        if (line.includes('NIFTI_XFORM_SCANNER_ANAT')) isDataSpaceScanner = true
+        if (line.includes('NIFTI_XFORM_SCANNER_ANAT')) {
+          isDataSpaceScanner = true
+        }
       }
       if (tag.name.trim() === 'MD') {
         line = new TextDecoder().decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos)).trim()
@@ -2844,15 +3252,25 @@ export class NVMeshLoaders {
         }
         if (line.includes('VolGeom') && line.includes('CDATA[')) {
           let e = -1
-          if (line.includes('VolGeomC_R')) e = 0
-          if (line.includes('VolGeomC_A')) e = 1
-          if (line.includes('VolGeomC_S')) e = 2
-          if (e < 0) continue
+          if (line.includes('VolGeomC_R')) {
+            e = 0
+          }
+          if (line.includes('VolGeomC_A')) {
+            e = 1
+          }
+          if (line.includes('VolGeomC_S')) {
+            e = 2
+          }
+          if (e < 0) {
+            continue
+          }
           FreeSurferTranlate[e] = parseFloat(readBracketTag('<Value><![CDATA['))
         }
       }
       // read DataArray properties
-      if (!tag.name.startsWith('DataArray')) continue
+      if (!tag.name.startsWith('DataArray')) {
+        continue
+      }
       line = tag.name
       Dims = [1, 1, 1]
       isGzip = line.includes('Encoding="GZipBase64Binary"')
@@ -2862,18 +3280,30 @@ export class NVMeshLoaders {
       isVectors = line.includes('Intent="NIFTI_INTENT_VECTOR"')
       isColMajor = line.includes('ArrayIndexingOrder="ColumnMajorOrder"')
       // isLittleEndian = line.includes('Endian="LittleEndian"');
-      if (line.includes('DataType="NIFTI_TYPE_UINT8"')) dataType = 2 // DT_UINT8
-      if (line.includes('DataType="NIFTI_TYPE_INT32"')) dataType = 8 // DT_INT32
-      if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) dataType = 16 // DT_FLOAT32
-      if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) dataType = 32 // DT_FLOAT64
+      if (line.includes('DataType="NIFTI_TYPE_UINT8"')) {
+        dataType = 2
+      } // DT_UINT8
+      if (line.includes('DataType="NIFTI_TYPE_INT32"')) {
+        dataType = 8
+      } // DT_INT32
+      if (line.includes('DataType="NIFTI_TYPE_FLOAT32"')) {
+        dataType = 16
+      } // DT_FLOAT32
+      if (line.includes('DataType="NIFTI_TYPE_FLOAT64"')) {
+        dataType = 32
+      } // DT_FLOAT64
       Dims[0] = readNumericTag('Dim0=')
       Dims[1] = readNumericTag('Dim1=')
       Dims[2] = readNumericTag('Dim2=')
     }
     // console.log(`p=${positions.length} i=${indices.length} s=${scalars.length}`);
     let colormapLabel = []
-    if (Labels.I.length > 1) colormapLabel = cmapper.makeLabelLut(Labels)
-    if (n_vert > 0) return { scalars, colormapLabel }
+    if (Labels.I.length > 1) {
+      colormapLabel = cmapper.makeLabelLut(Labels)
+    }
+    if (n_vert > 0) {
+      return { scalars, colormapLabel }
+    }
     if (
       positions.length > 2 &&
       !isDataSpaceScanner &&

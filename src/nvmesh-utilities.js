@@ -8,7 +8,11 @@ export class NVMeshUtilities {
     // assume all vertices are not near a border
     const border = new Array(u8.length).fill(false)
     const binary = new Array(u8.length).fill(false)
-    for (let i = 0; i < u8.length; i++) if (u8[i] > 0) binary[i] = true
+    for (let i = 0; i < u8.length; i++) {
+      if (u8[i] > 0) {
+        binary[i] = true
+      }
+    }
     const nTri = faces.length / 3
     let j = 0
     // interior: a triangle where all three vertices are the same color
@@ -18,7 +22,9 @@ export class NVMeshUtilities {
       const v1 = faces[j + 1]
       const v2 = faces[j + 2]
       j += 3
-      if (binary[v0] === binary[v1] && binary[v0] === binary[v2] && binary[v1] === binary[v2]) continue
+      if (binary[v0] === binary[v1] && binary[v0] === binary[v2] && binary[v1] === binary[v2]) {
+        continue
+      }
       border[v0] = true
       border[v1] = true
       border[v2] = true
@@ -39,7 +45,9 @@ export class NVMeshUtilities {
       const v1 = faces[j + 1]
       const v2 = faces[j + 2]
       j += 3
-      if (rgba32[v0] === rgba32[v1] && rgba32[v0] === rgba32[v2] && rgba32[v1] === rgba32[v2]) continue
+      if (rgba32[v0] === rgba32[v1] && rgba32[v0] === rgba32[v2] && rgba32[v1] === rgba32[v2]) {
+        continue
+      }
       border[v0] = true
       border[v1] = true
       border[v2] = true
