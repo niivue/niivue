@@ -232,7 +232,9 @@ export class NVMesh {
   // not included in public docs
   // internal function filters tractogram to identify which color and visibility of streamlines
   updateFibers(gl) {
-    if (!this.offsetPt0 || !this.fiberLength) return
+    if (!this.offsetPt0 || !this.fiberLength) {
+      return
+    }
     const pts = this.pts
     const offsetPt0 = this.offsetPt0
     const n_count = offsetPt0.length - 1
@@ -283,7 +285,9 @@ export class NVMesh {
       const v = vec3.fromValues(Math.abs(x1 - x2), Math.abs(y1 - y2), Math.abs(z1 - z2))
       vec3.normalize(v, v)
       const r = ditherFrac - ditherHalf
-      for (let j = 0; j &lt; 3; j++) v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0)
+      for (let j = 0; j &lt; 3; j++) {
+        v[j] = 255 * Math.max(Math.min(Math.abs(v[j]) + r, 1.0), 0.0)
+      }
       return v[0] + (v[1] &lt;&lt; 8) + (v[2] &lt;&lt; 16)
     } // direction2rgb()
     // Determine color: local, global, dps0, dpv0, etc.
@@ -292,11 +296,15 @@ export class NVMesh {
     let dpv = null
     if (fiberColor.startsWith('dps') &amp;&amp; this.dps.length > 0) {
       const n = parseInt(fiberColor.substring(3))
-      if (n &lt; this.dps.length &amp;&amp; this.dps[n].vals.length === n_count) dps = this.dps[n].vals
+      if (n &lt; this.dps.length &amp;&amp; this.dps[n].vals.length === n_count) {
+        dps = this.dps[n].vals
+      }
     }
     if (fiberColor.startsWith('dpv') &amp;&amp; this.dpv.length > 0) {
       const n = parseInt(fiberColor.substring(3))
-      if (n &lt; this.dpv.length &amp;&amp; this.dpv[n].vals.length === npt) dpv = this.dpv[n].vals
+      if (n &lt; this.dpv.length &amp;&amp; this.dpv[n].vals.length === npt) {
+        dpv = this.dpv[n].vals
+      }
     }
     const streamlineVisible = new Int16Array(n_count)
     // if ((this.dpg !== null) &amp;&amp; (this.fiberGroupMask !== null) &amp;&amp; (this.fiberGroupMask.length === this.dpg.length)) {
@@ -304,11 +312,17 @@ export class NVMesh {
       const lut = new Uint8ClampedArray(this.dpg.length * 4) // 4 component RGBA for each group
       const groupVisible = new Array(this.dpg.length).fill(false)
       const cmap = this.fiberGroupColormap
-      if (!('A' in cmap)) cmap.A = new Uint8ClampedArray(cmap.I.length).fill(255)
+      if (!('A' in cmap)) {
+        cmap.A = new Uint8ClampedArray(cmap.I.length).fill(255)
+      }
       for (let i = 0; i &lt; cmap.I.length; i++) {
         let idx = cmap.I[i]
-        if (idx &lt; 0 || idx >= this.dpg.length) continue
-        if (cmap.A[i] &lt; 1) continue
+        if (idx &lt; 0 || idx >= this.dpg.length) {
+          continue
+        }
+        if (cmap.A[i] &lt; 1) {
+          continue
+        }
         groupVisible[idx] = true
         idx *= 4
         lut[idx] = cmap.R[i]
@@ -318,11 +332,17 @@ export class NVMesh {
       }
       streamlineVisible.fill(-1) // -1 assume streamline not visible
       for (let i = 0; i &lt; this.dpg.length; i++) {
-        if (!groupVisible[i]) continue // this group is not visible
-        for (let v = 0; v &lt; this.dpg[i].vals.length; v++) streamlineVisible[this.dpg[i].vals[v]] = i
+        if (!groupVisible[i]) {
+          continue
+        } // this group is not visible
+        for (let v = 0; v &lt; this.dpg[i].vals.length; v++) {
+          streamlineVisible[this.dpg[i].vals[v]] = i
+        }
       }
       for (let i = 0; i &lt; n_count; i++) {
-        if (streamlineVisible[i] &lt; 0) continue // hidden
+        if (streamlineVisible[i] &lt; 0) {
+          continue
+        } // hidden
         const color = (streamlineVisible[i] % 256) * 4
         // let RGBA = lut[color] + (lut[color + 1] &lt;&lt; 8) + (lut[color + 2] &lt;&lt; 16);
         const RGBA = rgb2int32(lut[color], lut[color + 1], lut[color + 2])
@@ -330,7 +350,9 @@ export class NVMesh {
         const vEnd = offsetPt0[i + 1] - 1 // last vertex in streamline
         const vStart4 = vStart * 4 + 3 // +3: fill 4th component colors: XYZC = 0123
         const vEnd4 = vEnd * 4 + 3
-        for (let j = vStart4; j &lt;= vEnd4; j += 4) posClrU32[j] = RGBA
+        for (let j = vStart4; j &lt;= vEnd4; j += 4) {
+          posClrU32[j] = RGBA
+        }
       }
     } else if (dpv) {
       // color per vertex
@@ -358,7 +380,9 @@ export class NVMesh {
         mn = Math.min(mn, dps[i])
         mx = Math.max(mx, dps[i])
       }
-      if (mx === mn) mn -= 1 // avoid divide by zero
+      if (mx === mn) {
+        mn -= 1
+      } // avoid divide by zero
       for (let i = 0; i &lt; n_count; i++) {
         let color = (dps[i] - mn) / (mx - mn)
         color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
@@ -367,7 +391,9 @@ export class NVMesh {
         const vEnd = offsetPt0[i + 1] - 1 // last vertex in streamline
         const vStart4 = vStart * 4 + 3 // +3: fill 4th component colors: XYZC = 0123
         const vEnd4 = vEnd * 4 + 3
-        for (let j = vStart4; j &lt;= vEnd4; j += 4) posClrU32[j] = RGBA
+        for (let j = vStart4; j &lt;= vEnd4; j += 4) {
+          posClrU32[j] = RGBA
+        }
       }
     } else if (fiberColor.includes('fixed')) {
       if (dither === 0.0) {
@@ -384,7 +410,9 @@ export class NVMesh {
           const vEnd = offsetPt0[i + 1] - 1 // last vertex in streamline
           const vStart4 = vStart * 4 + 3 // +3: fill 4th component colors: XYZC = 0123
           const vEnd4 = vEnd * 4 + 3
-          for (let j = vStart4; j &lt;= vEnd4; j += 4) posClrU32[j] = RGBA
+          for (let j = vStart4; j &lt;= vEnd4; j += 4) {
+            posClrU32[j] = RGBA
+          }
         }
       } // else fixed with dither
     } else if (fiberColor.includes('local')) {
@@ -426,7 +454,9 @@ export class NVMesh {
         )
         const vStart4 = vStart * 4 + 3 // +3: fill 4th component colors: XYZC = 0123
         const vEnd4 = vEnd * 4 + 3
-        for (let j = vStart4; j &lt;= vEnd4; j += 4) posClrU32[j] = RGBA
+        for (let j = vStart4; j &lt;= vEnd4; j += 4) {
+          posClrU32[j] = RGBA
+        }
       }
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
@@ -439,11 +469,19 @@ export class NVMesh {
     let stride = -1
     for (let i = 0; i &lt; n_count; i++) {
       // let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
-      if (streamlineVisible[i] &lt; 0) continue
-      if (this.fiberLengths[i] &lt; min_mm) continue
+      if (streamlineVisible[i] &lt; 0) {
+        continue
+      }
+      if (this.fiberLengths[i] &lt; min_mm) {
+        continue
+      }
       stride++
-      if (stride % this.fiberDecimationStride !== 0) continue // e.g. if stride is 2 then half culled
-      for (let j = offsetPt0[i]; j &lt; offsetPt0[i + 1]; j++) indices.push(j)
+      if (stride % this.fiberDecimationStride !== 0) {
+        continue
+      } // e.g. if stride is 2 then half culled
+      for (let j = offsetPt0[i]; j &lt; offsetPt0[i + 1]; j++) {
+        indices.push(j)
+      }
       indices.push(primitiveRestart)
     }
     this.indexCount = indices.length
@@ -461,13 +499,24 @@ export class NVMesh {
     let hasEdges = false
     if (nNode > 1 &amp;&amp; 'edges' in json) {
       let nEdges = json.edges.length
-      if ((nEdges = nNode * nNode)) hasEdges = true
-      else console.log('Expected %d edges not %d', nNode * nNode, nEdges)
+      if ((nEdges = nNode * nNode)) {
+        hasEdges = true
+      } else {
+        console.log('Expected %d edges not %d', nNode * nNode, nEdges)
+      }
     }
-    if (!('nodeScale' in json.hasOwnProperty)) json.nodeScale = 4
-    if (!('edgeScale' in json)) json.edgeScale = 1
-    if (!('nodeColormap' in json)) json.nodeColormap = 'warm'
-    if (!('edgeColormap' in json)) json.edgeColormap = 'warm'
+    if (!('nodeScale' in json.hasOwnProperty)) {
+      json.nodeScale = 4
+    }
+    if (!('edgeScale' in json)) {
+      json.edgeScale = 1
+    }
+    if (!('nodeColormap' in json)) {
+      json.nodeColormap = 'warm'
+    }
+    if (!('edgeColormap' in json)) {
+      json.edgeColormap = 'warm'
+    }
 
     // draw all nodes
     const pts = []
@@ -479,7 +528,9 @@ export class NVMesh {
     let max = json.nodeMaxColor
     for (let i = 0; i &lt; nNode; i++) {
       const radius = json.nodes.Size[i] * json.nodeScale
-      if (radius &lt;= 0.0) continue
+      if (radius &lt;= 0.0) {
+        continue
+      }
       let color = json.nodes.Color[i]
       let isNeg = false
       if (hasNeg &amp;&amp; color &lt; 0) {
@@ -487,12 +538,18 @@ export class NVMesh {
         color = -color
       }
       if (min &lt; max) {
-        if (color &lt; min) continue
+        if (color &lt; min) {
+          continue
+        }
         color = (color - min) / (max - min)
-      } else color = 1.0
+      } else {
+        color = 1.0
+      }
       color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
       let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-      if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      if (isNeg) {
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+      }
       const pt = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]]
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
     }
@@ -512,14 +569,22 @@ export class NVMesh {
             color = -color
           }
           const radius = color * json.edgeScale
-          if (radius &lt;= 0) continue
+          if (radius &lt;= 0) {
+            continue
+          }
           if (min &lt; max) {
-            if (color &lt; min) continue
+            if (color &lt; min) {
+              continue
+            }
             color = (color - min) / (max - min)
-          } else color = 1.0
+          } else {
+            color = 1.0
+          }
           color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
           let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-          if (isNeg) rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+          if (isNeg) {
+            rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+          }
           const pti = [json.nodes.X[i], json.nodes.Y[i], json.nodes.Z[i]]
           const ptj = [json.nodes.X[j], json.nodes.Y[j], json.nodes.Z[j]]
           NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
@@ -573,9 +638,15 @@ export class NVMesh {
       for (let i = 0; i &lt; this.layers.length; i++) {
         const layer = this.layers[i]
         const opacity = layer.opacity
-        if (opacity &lt;= 0.0 || layer.cal_min > layer.cal_max) continue
-        if (!('isAdditiveBlend' in layer)) layer.isAdditiveBlend = false
-        if (!('colormapLabel' in layer)) layer.colormapLabel = []
+        if (opacity &lt;= 0.0 || layer.cal_min > layer.cal_max) {
+          continue
+        }
+        if (!('isAdditiveBlend' in layer)) {
+          layer.isAdditiveBlend = false
+        }
+        if (!('colormapLabel' in layer)) {
+          layer.colormapLabel = []
+        }
         if ('R' in layer.colormapLabel &amp;&amp; !('lut' in layer.colormapLabel)) {
           // convert colormap JSON to RGBA LUT
           layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel)
@@ -600,7 +671,9 @@ export class NVMesh {
         if (layer.values.constructor === Uint32Array) {
           const rgba8 = new Uint8Array(layer.values.buffer)
           let opaque = new Array(nvtx).fill(true)
-          if (layer.isOutlineBorder) opaque = NVMeshUtilities.getClusterBoundary(rgba8, this.tris)
+          if (layer.isOutlineBorder) {
+            opaque = NVMeshUtilities.getClusterBoundary(rgba8, this.tris)
+          }
           let k = 0
           for (let j = 0; j &lt; layer.values.length; j++) {
             const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -619,27 +692,39 @@ export class NVMesh {
         const lut = cmapper.colormap(layer.colormap, layer.colormapInvert)
         const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1)
         const frameOffset = nvtx * frame
-        if (layer.isAdditiveBlend) maxAdditiveBlend = Math.max(maxAdditiveBlend, opacity)
+        if (layer.isAdditiveBlend) {
+          maxAdditiveBlend = Math.max(maxAdditiveBlend, opacity)
+        }
         if (layer.useNegativeCmap) {
           layer.cal_min = Math.max(0, layer.cal_min)
           layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max)
         }
-        if (!('isTransparentBelowCalMin' in layer)) layer.isTransparentBelowCalMin = true
+        if (!('isTransparentBelowCalMin' in layer)) {
+          layer.isTransparentBelowCalMin = true
+        }
         let mn = layer.cal_min
         // let mnVisible = mn;
-        if (layer.alphaThreshold) mn = Math.min(mn, 0.0)
+        if (layer.alphaThreshold) {
+          mn = Math.min(mn, 0.0)
+        }
 
         const scale255 = 255.0 / (layer.cal_max - mn)
         let mnCal = layer.cal_min
-        if (!layer.isTransparentBelowCalMin) mnCal = Number.NEGATIVE_INFINITY
+        if (!layer.isTransparentBelowCalMin) {
+          mnCal = Number.NEGATIVE_INFINITY
+        }
 
         if (!layer.isOutlineBorder) {
           // blend colors for each voxel
           for (let j = 0; j &lt; nvtx; j++) {
             const v = layer.values[j + frameOffset]
-            if (v &lt; mnCal) continue
+            if (v &lt; mnCal) {
+              continue
+            }
             let v255 = Math.round((v - mn) * scale255)
-            if (v255 &lt; 0 &amp;&amp; layer.isTransparentBelowCalMin) continue
+            if (v255 &lt; 0 &amp;&amp; layer.isTransparentBelowCalMin) {
+              continue
+            }
             v255 = Math.max(0.0, v255)
             v255 = Math.min(255.0, v255) * 4
             const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
@@ -661,14 +746,18 @@ export class NVMesh {
           const v255s = new Uint8Array(nvtx)
           for (let j = 0; j &lt; nvtx; j++) {
             let v255 = Math.round((layer.values[j + frameOffset] - layer.cal_min) * scale255)
-            if (v255 &lt; 0) continue
+            if (v255 &lt; 0) {
+              continue
+            }
             v255 = Math.min(255.0, v255)
             v255s[j] = v255
           }
           const opaque = NVMeshUtilities.getClusterBoundaryU8(v255s, this.tris)
           for (let j = 0; j &lt; nvtx; j++) {
             let v255 = 255 // v255s[j];
-            if (!opaque[j]) continue
+            if (!opaque[j]) {
+              continue
+            }
             v255 = Math.min(255.0, v255) * 4
             const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
             u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity)
@@ -690,17 +779,25 @@ export class NVMesh {
               ;[mn, mx] = [mx, mn]
             }
             let mnVisible = mn
-            if (mnVisible === 0.0) mnVisible = Number.EPSILON // do not shade 0.0 twice with positive and negative colormap
-            if (layer.alphaThreshold) mn = 0.0
+            if (mnVisible === 0.0) {
+              mnVisible = Number.EPSILON
+            } // do not shade 0.0 twice with positive and negative colormap
+            if (layer.alphaThreshold) {
+              mn = 0.0
+            }
             const scale255neg = 255.0 / (mx - mn)
             for (let j = 0; j &lt; nvtx; j++) {
               const v = -layer.values[j + frameOffset]
-              if (v &lt; mnVisible) continue
+              if (v &lt; mnVisible) {
+                continue
+              }
               let v255 = Math.round((v - mn) * scale255neg)
               /* let v255 = Math.round(
                 (-layer.values[j + frameOffset] - layer.cal_min) * scale255
               ); */
-              if (v255 &lt; 0) continue
+              if (v255 &lt; 0) {
+                continue
+              }
               v255 = Math.min(255.0, v255) * 4
               const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
 
@@ -722,13 +819,17 @@ export class NVMesh {
             const v255s = new Uint8Array(nvtx)
             for (let j = 0; j &lt; nvtx; j++) {
               const v255 = Math.round((-layer.values[j + frameOffset] - layer.cal_min) * scale255)
-              if (v255 &lt; 0) continue
+              if (v255 &lt; 0) {
+                continue
+              }
               v255s[j] = Math.min(255.0, v255)
             }
             const opaque = NVMeshUtilities.getClusterBoundaryU8(v255s, this.tris)
             for (let j = 0; j &lt; nvtx; j++) {
               let v255 = 255 // v255s[j];
-              if (!opaque[j]) continue
+              if (!opaque[j]) {
+                continue
+              }
               v255 = Math.min(255.0, v255) * 4
               const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
               u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity)
@@ -744,7 +845,9 @@ export class NVMesh {
         const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
         const v = j * 4 // additiveRGBA is 4 bytes stride, RGBA color at offset 0,
         const opacity = Math.min(maxAdditiveBlend, additiveRGBA[v + 3] / 255)
-        if (opacity &lt;= 0) continue
+        if (opacity &lt;= 0) {
+          continue
+        }
         // eslint-disable-next-line no-inner-declarations
         function modulate(x, y) {
           return Math.min(x * y * (1 / 255), 255.0)
@@ -768,8 +871,12 @@ export class NVMesh {
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
   reverseFaces(gl) {
-    if (this.offsetPt0) return // fiber not mesh
-    if (this.hasConnectome) return // connectome not mesh
+    if (this.offsetPt0) {
+      return
+    } // fiber not mesh
+    if (this.hasConnectome) {
+      return
+    } // connectome not mesh
     const tris = this.tris
     for (let j = 0; j &lt; tris.length; j += 3) {
       const tri = tris[j]
@@ -829,7 +936,9 @@ export class NVMesh {
       u8[u + 1] = rgba255[c + 1]
       u8[u + 2] = rgba255[c + 2]
       u8[u + 3] = rgba255[c + 3]
-      if (isPerVertexColors) c += 4
+      if (isPerVertexColors) {
+        c += 4
+      }
       p += 3 // read 3 input components: XYZ
       f += 7 // write 7 output components: 3*Position, 3*Normal, 1*RGBA
       u += 28 // stride of 28 bytes
@@ -848,9 +957,14 @@ export class NVMesh {
     // let rgb255 = [255, 0, 0];
     // if ("color" in json) rgb255 = json.color;
     let isValid = true
-    if (!('data_type' in json)) isValid = false
-    else if (json.data_type !== 'fs_pointset') isValid = false
-    if (!('points' in json)) isValid = false
+    if (!('data_type' in json)) {
+      isValid = false
+    } else if (json.data_type !== 'fs_pointset') {
+      isValid = false
+    }
+    if (!('points' in json)) {
+      isValid = false
+    }
     if (!isValid) {
       throw Error('not a valid FreeSurfer json pointset')
     }
@@ -866,11 +980,18 @@ export class NVMesh {
     jcon.name = json.data_type
     for (let i = 0; i &lt; json.points.length; i++) {
       let name = ''
-      if ('comments' in json.points[i]) if ('text' in json.points[i].comments[0]) name = json.points[i].comments[0].text
+      if ('comments' in json.points[i]) {
+        if ('text' in json.points[i].comments[0]) {
+          name = json.points[i].comments[0].text
+        }
+      }
       jcon.nodes.names.push(name)
       let prefilled = ''
-      if ('comments' in json.points[i])
-        if ('prefilled' in json.points[i].comments[0]) prefilled = json.points[i].comments[0].prefilled
+      if ('comments' in json.points[i]) {
+        if ('prefilled' in json.points[i].comments[0]) {
+          prefilled = json.points[i].comments[0].prefilled
+        }
+      }
       jcon.nodes.prefilled.push(prefilled)
       jcon.nodes.X.push(json.points[i].coordinates.x)
       jcon.nodes.Y.push(json.points[i].coordinates.y)
@@ -890,7 +1011,9 @@ export class NVMesh {
     opacity = 1.0,
     visible = true
   ) {
-    if ('name' in json) name = json.name
+    if ('name' in json) {
+      name = json.name
+    }
     if (!('nodes' in json)) {
       throw Error('not a valid jcon connectome file')
     }
@@ -909,7 +1032,7 @@ export class NVMesh {
       ext = re.exec(name.slice(0, -3))[1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
-    if (ext === 'JCON')
+    if (ext === 'JCON') {
       return await this.loadConnectomeFromJSON(
         JSON.parse(new TextDecoder().decode(buffer)),
         gl,
@@ -918,7 +1041,8 @@ export class NVMesh {
         opacity,
         visible
       )
-    if (ext === 'JSON')
+    }
+    if (ext === 'JSON') {
       return await this.loadConnectomeFromFreeSurfer(
         JSON.parse(new TextDecoder().decode(buffer)),
         gl,
@@ -927,12 +1051,18 @@ export class NVMesh {
         opacity,
         visible
       )
+    }
     rgba255[3] = Math.max(0, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TRX' || ext === 'TRACT') {
-      if (ext === 'TCK') obj = NVMeshLoaders.readTCK(buffer)
-      else if (ext === 'TRACT') obj = NVMeshLoaders.readTRACT(buffer)
-      else if (ext === 'TRX') obj = await NVMeshLoaders.readTRX(buffer)
-      else obj = NVMeshLoaders.readTRK(buffer)
+      if (ext === 'TCK') {
+        obj = NVMeshLoaders.readTCK(buffer)
+      } else if (ext === 'TRACT') {
+        obj = NVMeshLoaders.readTRACT(buffer)
+      } else if (ext === 'TRX') {
+        obj = await NVMeshLoaders.readTRX(buffer)
+      } else {
+        obj = NVMeshLoaders.readTRK(buffer)
+      }
       if (typeof obj === 'undefined') {
         const pts = [0, 0, 0, 0, 0, 0]
         const offsetPt0 = [0]
@@ -943,9 +1073,15 @@ export class NVMesh {
       // let pts = new Float32Array(obj.pts.slice());
       const offsetPt0 = new Int32Array(obj.offsetPt0.slice())
       const pts = new Float32Array(obj.pts.slice())
-      if (!('dpg' in obj)) obj.dpg = null
-      if (!('dps' in obj)) obj.dps = null
-      if (!('dpv' in obj)) obj.dpv = null
+      if (!('dpg' in obj)) {
+        obj.dpg = null
+      }
+      if (!('dps' in obj)) {
+        obj.dps = null
+      }
+      if (!('dpv' in obj)) {
+        obj.dpv = null
+      }
       rgba255[3] = -1.0
       return new NVMesh(
         pts,
@@ -965,18 +1101,30 @@ export class NVMesh {
       obj = NVMeshLoaders.readGII(buffer)
     } else if (ext === 'MZ3') {
       obj = NVMeshLoaders.readMZ3(buffer)
-      if (obj.positions === null) console.log('MZ3 does not have positions (statistical overlay?)')
-    } else if (ext === 'ASC') obj = NVMeshLoaders.readASC(buffer)
-    else if (ext === 'DFS') obj = NVMeshLoaders.readDFS(buffer)
-    else if (ext === 'BYU' || ext === 'G') obj = NVMeshLoaders.readGEO(buffer)
-    else if (ext === 'GEO') obj = NVMeshLoaders.readGEO(buffer, true)
-    else if (ext === 'ICO' || ext === 'TRI') obj = NVMeshLoaders.readICO(buffer)
-    else if (ext === 'OFF') obj = NVMeshLoaders.readOFF(buffer)
-    else if (ext === 'NV') obj = NVMeshLoaders.readNV(buffer)
-    else if (ext === 'OBJ') obj = NVMeshLoaders.readOBJ(buffer)
-    else if (ext === 'PLY') obj = NVMeshLoaders.readPLY(buffer)
-    else if (ext === 'X3D') obj = NVMeshLoaders.readX3D(buffer)
-    else if (ext === 'FIB' || ext === 'VTK') {
+      if (obj.positions === null) {
+        console.log('MZ3 does not have positions (statistical overlay?)')
+      }
+    } else if (ext === 'ASC') {
+      obj = NVMeshLoaders.readASC(buffer)
+    } else if (ext === 'DFS') {
+      obj = NVMeshLoaders.readDFS(buffer)
+    } else if (ext === 'BYU' || ext === 'G') {
+      obj = NVMeshLoaders.readGEO(buffer)
+    } else if (ext === 'GEO') {
+      obj = NVMeshLoaders.readGEO(buffer, true)
+    } else if (ext === 'ICO' || ext === 'TRI') {
+      obj = NVMeshLoaders.readICO(buffer)
+    } else if (ext === 'OFF') {
+      obj = NVMeshLoaders.readOFF(buffer)
+    } else if (ext === 'NV') {
+      obj = NVMeshLoaders.readNV(buffer)
+    } else if (ext === 'OBJ') {
+      obj = NVMeshLoaders.readOBJ(buffer)
+    } else if (ext === 'PLY') {
+      obj = NVMeshLoaders.readPLY(buffer)
+    } else if (ext === 'X3D') {
+      obj = NVMeshLoaders.readX3D(buffer)
+    } else if (ext === 'FIB' || ext === 'VTK') {
       obj = NVMeshLoaders.readVTK(buffer)
       if ('offsetPt0' in obj) {
         // VTK files used both for meshes and streamlines
@@ -1005,9 +1153,10 @@ export class NVMesh {
     console.log('obj', obj)
     pts = obj.positions.slice()
     tris = obj.indices.slice()
-    if ('rgba255' in obj &amp;&amp; obj.rgba255.length > 0)
+    if ('rgba255' in obj &amp;&amp; obj.rgba255.length > 0) {
       // e.g. x3D format
       rgba255 = obj.rgba255.slice()
+    }
     if (obj.colors &amp;&amp; obj.colors.length === pts.length) {
       rgba255 = []
       const n = pts.length / 3
@@ -1065,7 +1214,9 @@ export class NVMesh {
     } else {
       // fetch url otherwise
       const response = await fetch(layer.url)
-      if (!response.ok) throw Error(response.statusText)
+      if (!response.ok) {
+        throw Error(response.statusText)
+      }
       buffer = await response.arrayBuffer()
     }
 
@@ -1092,17 +1243,29 @@ export class NVMesh {
     }
 
     let opacity = 0.5
-    if ('opacity' in layer) opacity = layer.opacity
+    if ('opacity' in layer) {
+      opacity = layer.opacity
+    }
     let colormap = 'warm'
-    if ('colormap' in layer) colormap = layer.colormap
+    if ('colormap' in layer) {
+      colormap = layer.colormap
+    }
     let colormapNegative = 'winter'
-    if ('colormapNegative' in layer) colormapNegative = layer.colormapNegative
+    if ('colormapNegative' in layer) {
+      colormapNegative = layer.colormapNegative
+    }
     let useNegativeCmap = false
-    if ('useNegativeCmap' in layer) useNegativeCmap = layer.useNegativeCmap
+    if ('useNegativeCmap' in layer) {
+      useNegativeCmap = layer.useNegativeCmap
+    }
     let cal_min = null
-    if ('cal_min' in layer) cal_min = layer.cal_min
+    if ('cal_min' in layer) {
+      cal_min = layer.cal_min
+    }
     let cal_max = null
-    if ('cal_max' in layer) cal_max = layer.cal_max
+    if ('cal_max' in layer) {
+      cal_max = layer.cal_max
+    }
 
     NVMeshLoaders.readLayer(
       layerName,
@@ -1153,17 +1316,25 @@ export class NVMesh {
         name = name.slice(0, name.indexOf('?')) // remove query string if any
       }
     }
-    if (url === '') throw Error('url must not be empty')
-    if (gl === null) throw Error('gl context is null')
+    if (url === '') {
+      throw Error('url must not be empty')
+    }
+    if (gl === null) {
+      throw Error('gl context is null')
+    }
     // TRX format is special (its a zip archive of multiple files)
     const response = await fetch(url)
-    if (!response.ok) throw Error(response.statusText)
+    if (!response.ok) {
+      throw Error(response.statusText)
+    }
     // let tris = [];
     // var pts = [];
     const buffer = await response.arrayBuffer()
     const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible)
 
-    if (!layers || layers.length &lt; 1) return nvmesh
+    if (!layers || layers.length &lt; 1) {
+      return nvmesh
+    }
 
     for (let i = 0; i &lt; layers.length; i++) {
       await this.loadLayer(layers[i], nvmesh)
@@ -1213,7 +1384,9 @@ export class NVMesh {
     const buffer = await this.readFileAsync(file)
     const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
 
-    if (!layers || layers.length &lt; 1) return nvmesh
+    if (!layers || layers.length &lt; 1) {
+      return nvmesh
+    }
 
     for (let i = 0; i &lt; layers.length; i++) {
       await this.loadLayer(layers[i], nvmesh)
@@ -1258,7 +1431,9 @@ export class NVMesh {
     const buffer = base64ToArrayBuffer(base64)
     const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
 
-    if (!layers || layers.length &lt; 1) return nvmesh
+    if (!layers || layers.length &lt; 1) {
+      return nvmesh
+    }
     for (let i = 0; i &lt; layers.length; i++) {
       await this.loadLayer(layers[i], nvmesh)
     }
@@ -1391,7 +1566,7 @@ export class NVMesh {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Sat Nov 25 2023 08:47:07 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Tue Nov 28 2023 09:04:36 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
