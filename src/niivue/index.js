@@ -65,7 +65,6 @@ import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { cmapper } from '../colortables'
 import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } from '../nvdocument.js'
 
-import { NVUtilities } from '../nvutilities.js'
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.js'
 import { NVConnectome } from '../nvconnectome.js'
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from '../nvimage'
