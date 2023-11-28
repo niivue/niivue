@@ -14,7 +14,9 @@ export function img2ras16(volume) {
   const layout = [0, 0, 0]
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
-      if (Math.abs(perm[i]) - 1 !== j) continue
+      if (Math.abs(perm[i]) - 1 !== j) {
+        continue
+      }
       layout[j] = i * Math.sign(perm[i])
     }
   }
@@ -24,24 +26,40 @@ export function img2ras16(volume) {
   for (let i = 0; i < layout.length; i++) {
     for (let j = 0; j < layout.length; j++) {
       const a = Math.abs(layout[j])
-      if (a !== i) continue
+      if (a !== i) {
+        continue
+      }
       instride[j] = stride
       // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-      if (layout[j] < 0 || Object.is(layout[j], -0)) inflip[j] = true
+      if (layout[j] < 0 || Object.is(layout[j], -0)) {
+        inflip[j] = true
+      }
       stride *= dims[j + 1]
     }
   }
   // lookup table for flips and stride offsets:
   const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
   let xlut = range(0, dims[1] - 1, 1)
-  if (inflip[0]) xlut = range(dims[1] - 1, 0, -1)
-  for (let i = 0; i < dims[1]; i++) xlut[i] *= instride[0]
+  if (inflip[0]) {
+    xlut = range(dims[1] - 1, 0, -1)
+  }
+  for (let i = 0; i < dims[1]; i++) {
+    xlut[i] *= instride[0]
+  }
   let ylut = range(0, dims[2] - 1, 1)
-  if (inflip[1]) ylut = range(dims[2] - 1, 0, -1)
-  for (let i = 0; i < dims[2]; i++) ylut[i] *= instride[1]
+  if (inflip[1]) {
+    ylut = range(dims[2] - 1, 0, -1)
+  }
+  for (let i = 0; i < dims[2]; i++) {
+    ylut[i] *= instride[1]
+  }
   let zlut = range(0, dims[3] - 1, 1)
-  if (inflip[2]) zlut = range(dims[3] - 1, 0, -1)
-  for (let i = 0; i < dims[3]; i++) zlut[i] *= instride[2]
+  if (inflip[2]) {
+    zlut = range(dims[3] - 1, 0, -1)
+  }
+  for (let i = 0; i < dims[3]; i++) {
+    zlut[i] *= instride[2]
+  }
   // convert data
   let j = 0
   for (let z = 0; z < dims[3]; z++) {
@@ -96,10 +114,18 @@ function loose_label(min, max, ntick = 4) {
 // https://github.com/cenfun/nice-ticks/blob/master/docs/Nice-Numbers-for-Graph-Labels.pdf
 export function tickSpacing(mn, mx) {
   let v = loose_label(mn, mx, 3)
-  if (!v[3]) v = loose_label(mn, mx, 5)
-  if (!v[3]) v = loose_label(mn, mx, 4)
-  if (!v[3]) v = loose_label(mn, mx, 3)
-  if (!v[3]) v = loose_label(mn, mx, 5)
+  if (!v[3]) {
+    v = loose_label(mn, mx, 5)
+  }
+  if (!v[3]) {
+    v = loose_label(mn, mx, 4)
+  }
+  if (!v[3]) {
+    v = loose_label(mn, mx, 3)
+  }
+  if (!v[3]) {
+    v = loose_label(mn, mx, 5)
+  }
   return [v[0], v[1], v[2]]
 }
 
@@ -115,7 +141,9 @@ export function negMinMax(min, max, minNeg, maxNeg) {
     mn = minNeg
     mx = maxNeg
   }
-  if (mn > mx) [mn, mx] = [mx, mn]
+  if (mn > mx) {
+    ;[mn, mx] = [mx, mn]
+  }
   return [mn, mx]
 }
 
@@ -149,7 +177,9 @@ export function unProject(winX, winY, winZ, mvpMatrix) {
   inp[2] = inp[2] * 2 - 1
   const out = vec4.create()
   vec4.transformMat4(out, inp, finalMatrix)
-  if (out[3] === 0.0) return out // error
+  if (out[3] === 0.0) {
+    return out
+  } // error
   out[0] /= out[3]
   out[1] /= out[3]
   out[2] /= out[3]
@@ -204,10 +234,14 @@ export function encodeRLE(data) {
     }
     // count literal length
     while (dp < dl) {
-      if (rl > 127) break
+      if (rl > 127) {
+        break
+      }
       if (dp + 2 < dl) {
         // console.log(':', v, data[dp], data[dp+1]);
-        if (v !== data[dp] && data[dp + 2] === data[dp] && data[dp + 1] === data[dp]) break
+        if (v !== data[dp] && data[dp + 2] === data[dp] && data[dp + 1] === data[dp]) {
+          break
+        }
       }
       v = data[dp]
       dp++
@@ -270,6 +304,8 @@ export function decodeRLE(rle, decodedlen) {
  * @private
  */
 export function intensityRaw2Scaled(hdr, raw) {
-  if (hdr.scl_slope === 0) hdr.scl_slope = 1.0
+  if (hdr.scl_slope === 0) {
+    hdr.scl_slope = 1.0
+  }
   return raw * hdr.scl_slope + hdr.scl_inter
 }
