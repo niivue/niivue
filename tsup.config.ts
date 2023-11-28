@@ -11,9 +11,7 @@ export default defineConfig({
   loader: {
     '.jpg': 'dataurl',
     '.png': 'dataurl'
-  },
-  // TODO: remove this once UMD isn't needed anymore
-  noExternal: [/(.*)/]
+  }
   // TODO: enable this as soon as TS port is completed
   // dts: true
 })
