@@ -1,4 +1,5 @@
-const { snapshot, httpServerAddress, seconds } = require('./helpers')
+const { snapshot, httpServerAddress } = require('./helpers')
+
 beforeEach(async () => {
   await page.goto(httpServerAddress, { timeout: 0 })
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
@@ -6,6 +7,7 @@ beforeEach(async () => {
 test('sobelShader', async () => {
   const nvols = await page.evaluate(async () => {
     const nv = new Niivue()
+    nv.opts.multiplanarForceRender = true
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [
@@ -13,7 +15,6 @@ test('sobelShader', async () => {
       { url: './images/spmMotor.nii.gz', cal_min: 3, cal_max: 8, colormap: 'warm' }
     ]
     await nv.setSliceType(nv.sliceTypeRender)
-    nv.opts.multiplanarForceRender = true
     await nv.setVolumeRenderIllumination(1.0)
     await nv.setClipPlane([0.3, 180, 20])
     await nv.loadVolumes(volumeList)
