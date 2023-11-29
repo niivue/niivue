@@ -4,13 +4,9 @@
   "description": "minimal webgl2 nifti image viewer",
   "main": "./dist/index.js",
   "type": "module",
-  "module": "./dist/index.mjs",
-  "exports": {
-    ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
-    }
-  },
+  "unpkg": "./dist/index.min.js",
+  "module": "./dist/index.js",
+
   "scripts": {
     "dev": "vite",
     "build": "tsup && npm run build:min",
