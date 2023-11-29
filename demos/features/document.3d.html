@@ -58,8 +58,9 @@
       </div>
     </main>
 
-    <script src="../../dist/index.js"></script>
-    <script>
+    <script type="module">
+      import * as niivue from "../index.js";
+      
       function toggleHippo() {
         let buttonElem = document.getElementById("toggleHippoButton");
         if (isHippoShowing) {

@@ -36,8 +36,9 @@
     ></canvas>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
   var nv1 = new niivue.Niivue({
     isResizeCanvas: false,

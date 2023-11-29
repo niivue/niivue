@@ -60,8 +60,9 @@
         <button onclick="localStorage.clear()">Reset</button>
       </div>
     </section>
-    <script src="../../dist/index.js"></script>
     <script type="module" async>
+      import * as niivue from "../index.js";
+      
       const meshOptions = {
         url: "../images/CIT168.mz3",
         rgba255: [0, 0, 255, 255],

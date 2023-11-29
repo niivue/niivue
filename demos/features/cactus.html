@@ -146,14 +146,14 @@
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "./niivue.es.js";
+  import * as niivue from "../index.js";
   var isFilled = true;
   var isCustomDraw = true;
   var lastPos = null;
   document.getElementById("gl1").ondblclick = async function () {
     if (!isCustomDraw) return;
     if (!lastPos) return;
-    if (!lastPos.hasOwn("values")) return;
+    if (!lastPos.values) return;
     if (!nv1.drawBitmap) nv1.createEmptyDrawing();
     if (!isFinite(lastPos.axCorSag)) return;
     if (lastPos.axCorSag < 0 || lastPos.axCorSag > 2) return;

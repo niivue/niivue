@@ -32,8 +32,9 @@
     </footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
-<script>
+<script type="module">
+  import * as niivue from "../index.js";
+  
   document.getElementById("check10").addEventListener("change", doCheck10Click);
   function doCheck10Click() {
     nv1.setHighResolutionCapable(this.checked);

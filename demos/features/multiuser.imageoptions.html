@@ -55,8 +55,9 @@
       <p>available color maps:</p>
       <p id="colormaps"></p>
     </section>
-    <script src="../../dist/index.js"></script>
-    <script>
+    <script type="module">
+      import * as niivue from "../index.js";
+      
       var opacitySlider = document.getElementById("opacitySlider");
 
       opacitySlider.oninput = function () {

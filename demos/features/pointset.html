@@ -66,7 +66,7 @@
     </main>
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
-      import * as niivue from "./niivue.es.js";
+      import * as niivue from "../index.js";
       save.onclick = function() {
         nv1.saveHTML("page.html");
       }
@@ -90,7 +90,7 @@
         console.log("Selected point name: " + name);
         //nb prefilled property unique to FreeSurfer: does not exist for jcon format
         // therefore, check to ensure this property exists
-        if (nodes.hasOwn("prefilled"))
+        if (nodes.prefilled)
           console.log("Selected point prefilled: " + nodes.prefilled[num]);
         nv1.scene.crosshairPos = nv1.mm2frac(XYZ);
         nv1.updateGLVolume();

@@ -24,8 +24,9 @@
         <canvas id="gl1" height="480" width="640"> </canvas>
       </div>
     </section>
-    <script src="../../dist/index.js"></script>
-    <script>
+    <script type="module">
+      import * as niivue from "../index.js";
+      
       let query = window.location.search;
       const params = new URLSearchParams(query);
       let url = params.get("url");

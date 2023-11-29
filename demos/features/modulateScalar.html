@@ -53,8 +53,9 @@
       <canvas id="gl1"></canvas>
     </main>
     <footer id="location">&nbsp;</footer>
-    <script src="../../dist/index.js"></script>
     <script type="module" async>
+      import * as niivue from "../index.js";
+      
       var sliderT = document.getElementById("slideT");
       sliderT.oninput = function () {
         nv1.volumes[2].cal_max = 0.1 * this.value;

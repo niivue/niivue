@@ -34,8 +34,9 @@
     </main>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
-<script>
+<script type="module">
+  import * as niivue from "../index.js";
+
   var dropDrag = document.getElementById("dragMode");
   dropDrag.onchange = function () {
     switch (document.getElementById("dragMode").value) {

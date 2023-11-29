@@ -28,8 +28,9 @@
     <footer id="intensity">&nbsp;</footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   var drop = document.getElementById("sliceType");
   drop.onchange = function () {
     let st = parseInt(document.getElementById("sliceType").value);

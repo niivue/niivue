@@ -28,7 +28,8 @@
 </html>
 <!-- <script type="module" async></script> -->
 <script type="module" async>
-  import * as niivue from "./niivue.es.js";
+  import * as niivue from "../index.js";
+
   var drop = document.getElementById("sliceType");
   drop.onchange = function () {
     let st = parseInt(document.getElementById("sliceType").value);

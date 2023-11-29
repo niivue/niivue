@@ -10,7 +10,6 @@
         margin: 20px;
       }
     </style>
-    <script src="../../dist/index.js"></script>
   </head>
 
   <body style="font-family: sans-serif">
@@ -54,7 +53,9 @@
         <button onclick="localStorage.clear()">Reset Session</button>
       </div>
     </section>
-    <script>
+    <script type="module">
+      import * as niivue from "../index.js";
+      
       var volumeList1 = [
         // first item is background image
         {

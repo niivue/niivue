@@ -36,8 +36,9 @@
     <footer id="location">Click on `...` below graph to see all volumes</footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
-<script>
+<script type="module">
+  import * as niivue from "../index.js";
+  
   var volumeList1 = [
     {
       url: "../images/pcasl.nii.gz",

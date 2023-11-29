@@ -33,8 +33,9 @@
         <canvas id="gl1" height="480" width="640"> </canvas>
       </div>
     </section>
-    <script src="../../dist/index.js"></script>
-    <script>
+    <script type="module">
+      import * as niivue from "../index.js";
+      
       var volumeList1 = [
         {
           url: "../images/mni152.nii.gz", //"./RAS.nii.gz", "./spm152.nii.gz",

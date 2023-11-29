@@ -40,8 +40,9 @@
     <main>
       <canvas id="gl1"></canvas>
     </main>
-    <script src="../../dist/index.js"></script>
     <script type="module" async>
+      import * as niivue from "../index.js";
+      
       function minMax() {
         let mn = 0.01 * slide.value;
         let mx = 0.01 * slideX.value;

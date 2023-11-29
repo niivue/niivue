@@ -52,8 +52,9 @@
     </main>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   zoomSlider.onchange = function () {
     nv1.scene.volScaleMultiplier = zoomSlider.value * 0.1;
     nv1.drawScene();

@@ -42,8 +42,9 @@
     </footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
-<script>
+<script type="module">
+  import * as niivue from "../index.js";
+  
   var slider = document.getElementById("meshSlider");
   slider.oninput = function () {
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "frame4D", this.value);

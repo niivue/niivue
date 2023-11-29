@@ -105,8 +105,9 @@
 </body>
 
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   xRaySlider.onchange = function () {
     nv1.opts.meshXRay = this.value / 10;
     nv1.drawScene();

@@ -51,8 +51,9 @@
     </main>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   var slider = document.getElementById("fiberLengthSlider");
   slider.oninput = function () {
     nv1.setMeshProperty(nv1.meshes[0].id, "fiberLength", this.value);

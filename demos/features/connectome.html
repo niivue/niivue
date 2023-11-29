@@ -34,8 +34,8 @@
 </body>
 
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
   invertCheck.onchange = function () {
     nv1.setMeshProperty(nv1.meshes[0].id, "colormapInvert", this.checked);
     nv1.updateGLVolume();

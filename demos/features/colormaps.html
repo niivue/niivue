@@ -47,8 +47,9 @@ let cmap = {&#10; R: [0, 255, 0],&#10; G: [0, 0, 255],&#10; B: [0, 0, 0],&#10; A
     </footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   var slider = document.getElementById("gammaSlider");
   slider.oninput = function () {
     nv1.setGamma(this.value * 0.01);

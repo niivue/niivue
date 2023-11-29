@@ -42,8 +42,9 @@
     </footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   var slider2 = document.getElementById("meshSlider2");
   slider2.oninput = function () {
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1);

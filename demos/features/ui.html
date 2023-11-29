@@ -91,8 +91,9 @@
     <footer id="intensity">&nbsp;</footer>
   </body>
 </html>
-<script src="../../dist/index.js"></script>
 <script type="module" async>
+  import * as niivue from "../index.js";
+  
   const isTouchDevice =
     "ontouchstart" in window ||
     navigator.maxTouchPoints > 0 ||
