@@ -7157,13 +7157,18 @@ export class Niivue {
         )
       }
       for (let i = 0; i < this.meshes.length; i++) {
-        const v = mat.vec3.fromValues(
+        const vmn = mat.vec3.fromValues(
           this.meshes[i].extentsMin[0],
           this.meshes[i].extentsMin[1],
           this.meshes[i].extentsMin[2]
         )
-        mat.vec3.min(mn, mn, v)
-        mat.vec3.max(mx, mx, v)
+        mat.vec3.min(mn, mn, vmn)
+        const vmx = mat.vec3.fromValues(
+          this.meshes[i].extentsMax[0],
+          this.meshes[i].extentsMax[1],
+          this.meshes[i].extentsMax[2]
+        )
+        mat.vec3.max(mx, mx, vmx)
       }
     }
     const range = mat.vec3.create()

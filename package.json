@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.38.3",
+  "version": "0.38.4",
   "description": "minimal webgl2 nifti image viewer",
   "main": "./dist/index.js",
   "type": "module",
@@ -19,7 +19,7 @@
     "test": "npm run build && jest",
     "test-win": "npm run build-win && jest",
     "test-playwright": "npm run build && npx playwright test",
-    "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
+    "docs": "npx jsdoc --readme ./README.md -d devdocs -r src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",
     "lint": "eslint .",
