@@ -8,11 +8,11 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('niivue canvasPos2frac', async ({ page }) => {
   const frac = await page.evaluate(async () => {
-    let opts = {
+    const opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new niivue.Niivue((opts = opts))
+    const nv = new niivue.Niivue(opts)
     await nv.attachTo('gl', false)
 
     // load one volume object in an array

@@ -8,8 +8,8 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('niivue attachTo', async ({ page }) => {
   const gl = await page.evaluate(async () => {
-    nv = new niivue.Niivue()
-    nv = await nv.attachTo('gl', false)
+    const nv = new niivue.Niivue()
+    await nv.attachTo('gl', false)
     return nv.gl
   })
   expect(gl).toBeDefined()

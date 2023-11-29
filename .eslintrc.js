@@ -5,6 +5,9 @@ module.exports = {
   },
   root: true,
   ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
+  globals: {
+    niivue: true
+  },
   extends: ['standard', 'plugin:prettier/recommended'],
   plugins: ['prettier'],
   rules: {
