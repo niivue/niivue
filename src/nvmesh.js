@@ -1,4 +1,3 @@
-// import * as gifti from "gifti-reader-js/release/current/gifti-reader";
 import { vec3 } from 'gl-matrix'
 import { Log } from './logger'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome

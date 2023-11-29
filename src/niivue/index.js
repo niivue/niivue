@@ -1,5 +1,5 @@
-import * as mat from 'gl-matrix'
 import { Subject } from 'rxjs'
+import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import {
@@ -1143,9 +1143,9 @@ export class Niivue {
     }
     const mmStart = this.frac2mm(fracStart)
     const mmEnd = this.frac2mm(fracEnd)
-    const v = mat.vec3.create()
-    mat.vec3.sub(v, mmStart, mmEnd)
-    const mmLength = mat.vec3.len(v)
+    const v = vec3.create()
+    vec3.sub(v, mmStart, mmEnd)
+    const mmLength = vec3.len(v)
     const voxStart = this.frac2vox(fracStart)
     const voxEnd = this.frac2vox(fracEnd)
 
@@ -3091,11 +3091,11 @@ export class Niivue {
 
   // not included in public docs
   vox2mm(XYZ, mtx) {
-    const sform = mat.mat4.clone(mtx)
-    mat.mat4.transpose(sform, sform)
-    const pos = mat.vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
-    mat.vec4.transformMat4(pos, pos, sform)
-    const pos3 = mat.vec3.fromValues(pos[0], pos[1], pos[2])
+    const sform = mat4.clone(mtx)
+    mat4.transpose(sform, sform)
+    const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
+    vec4.transformMat4(pos, pos, sform)
+    const pos3 = vec3.fromValues(pos[0], pos[1], pos[2])
     return pos3
   }
 
@@ -5088,10 +5088,10 @@ export class Niivue {
     if (this.crosshairs3D !== null) {
       this.crosshairs3D.mm[0] = NaN
     } // force crosshairs3D redraw
-    let mtx = mat.mat4.clone(overlayItem.toRAS)
+    let mtx = mat4.clone(overlayItem.toRAS)
     if (layer === 0) {
       this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl)
-      mat.mat4.invert(mtx, mtx)
+      mat4.invert(mtx, mtx)
       // log.debug(`mtx layer ${layer}`, mtx);
       this.back.matRAS = overlayItem.matRAS
       this.back.dims = overlayItem.dimsRAS
@@ -5122,10 +5122,10 @@ export class Niivue {
       let f100 = this.mm2frac(overlayItem.mm100, 0, true)
       let f010 = this.mm2frac(overlayItem.mm010, 0, true)
       let f001 = this.mm2frac(overlayItem.mm001, 0, true)
-      f100 = mat.vec3.subtract(f100, f100, f000) // direction of i dimension from origin
-      f010 = mat.vec3.subtract(f010, f010, f000) // direction of j dimension from origin
-      f001 = mat.vec3.subtract(f001, f001, f000) // direction of k dimension from origin
-      mtx = mat.mat4.fromValues(
+      f100 = vec3.subtract(f100, f100, f000) // direction of i dimension from origin
+      f010 = vec3.subtract(f010, f010, f000) // direction of j dimension from origin
+      f001 = vec3.subtract(f001, f001, f000) // direction of k dimension from origin
+      mtx = mat4.fromValues(
         f100[0],
         f010[0],
         f001[0],
@@ -5145,7 +5145,7 @@ export class Niivue {
         0,
         1
       )
-      mat.mat4.invert(mtx, mtx)
+      mat4.invert(mtx, mtx)
       if (layer === 1) {
         outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back.dims)
         this.overlayTexture = outTexture
@@ -6204,9 +6204,9 @@ export class Niivue {
     if (isNaN(startMM[0]) || isNaN(endMM[0]) || isNaN(endMM[3])) {
       return
     }
-    const v = mat.vec3.create()
+    const v = vec3.create()
     const zoom = this.uiData.pan2DxyzmmAtMouseDown[3]
-    mat.vec3.sub(v, endMM, startMM)
+    vec3.sub(v, endMM, startMM)
     this.scene.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0]
     this.scene.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1]
     this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2]
@@ -6268,9 +6268,9 @@ export class Niivue {
     if (startXY[0] >= 0 && endXY[0] >= 0) {
       startXY = this.frac2mm(startXY)
       endXY = this.frac2mm(endXY)
-      const v = mat.vec3.create()
-      mat.vec3.sub(v, startXY, endXY)
-      const lenMM = mat.vec3.len(v)
+      const v = vec3.create()
+      vec3.sub(v, startXY, endXY)
+      const lenMM = vec3.len(v)
       let decimals = 2
       if (lenMM > 9) {
         decimals = 1
@@ -6792,7 +6792,7 @@ export class Niivue {
       right = -mn[0]
     }
     const scale = 2 * Math.max(Math.abs(mn[2]), Math.abs(mx[2])) // 3rd dimension is near/far from camera
-    const projectionMatrix = mat.mat4.create()
+    const projectionMatrix = mat4.create()
     let near = 0.01
     let far = scale * 8.0
     if (clipTolerance !== Infinity) {
@@ -6807,22 +6807,22 @@ export class Niivue {
       near = dx - clipTolerance
       far = dx + clipTolerance
     }
-    mat.mat4.ortho(projectionMatrix, left, right, mn[1], mx[1], near, far)
-    const modelMatrix = mat.mat4.create()
+    mat4.ortho(projectionMatrix, left, right, mn[1], mx[1], near, far)
+    const modelMatrix = mat4.create()
     modelMatrix[0] = -1 // mirror X coordinate
     // push the model away from the camera so camera not inside model
-    const translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
-    mat.mat4.translate(modelMatrix, modelMatrix, translateVec3)
+    const translateVec3 = vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
+    mat4.translate(modelMatrix, modelMatrix, translateVec3)
     // apply elevation
-    mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
+    mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
-    mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
-    const iModelMatrix = mat.mat4.create()
-    mat.mat4.invert(iModelMatrix, modelMatrix)
-    const normalMatrix = mat.mat4.create()
-    mat.mat4.transpose(normalMatrix, iModelMatrix)
-    const modelViewProjectionMatrix = mat.mat4.create()
-    mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
+    mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
+    const iModelMatrix = mat4.create()
+    mat4.invert(iModelMatrix, modelMatrix)
+    const normalMatrix = mat4.create()
+    mat4.transpose(normalMatrix, iModelMatrix)
+    const modelViewProjectionMatrix = mat4.create()
+    mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
 
     return {
       modelViewProjectionMatrix,
@@ -6865,8 +6865,8 @@ export class Niivue {
 
     mnMM = this.swizzleVec3MM(mnMM, axCorSag)
     mxMM = this.swizzleVec3MM(mxMM, axCorSag)
-    const fovMM = mat.vec3.create()
-    mat.vec3.subtract(fovMM, mxMM, mnMM)
+    const fovMM = vec3.create()
+    vec3.subtract(fovMM, mxMM, mnMM)
     return fovMM
   }
 
@@ -6884,11 +6884,11 @@ export class Niivue {
       this.volumes[0].extentsMaxOrtho[1],
       this.volumes[0].extentsMaxOrtho[2]
     ]
-    const rotation = mat.mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
+    const rotation = mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
     mnMM = this.swizzleVec3MM(mnMM, axCorSag)
     mxMM = this.swizzleVec3MM(mxMM, axCorSag)
-    const fovMM = mat.vec3.create()
-    mat.vec3.subtract(fovMM, mxMM, mnMM)
+    const fovMM = vec3.create()
+    vec3.subtract(fovMM, mxMM, mnMM)
     return { mnMM, mxMM, rotation, fovMM }
   }
 
@@ -6897,11 +6897,11 @@ export class Niivue {
     // extent of volume/mesh (in millimeters) in screen space
     let mnMM = this.volumeObject3D.extentsMin.slice()
     let mxMM = this.volumeObject3D.extentsMax.slice()
-    const rotation = mat.mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
+    const rotation = mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
     mnMM = this.swizzleVec3MM(mnMM, axCorSag)
     mxMM = this.swizzleVec3MM(mxMM, axCorSag)
-    const fovMM = mat.vec3.create()
-    mat.vec3.subtract(fovMM, mxMM, mnMM)
+    const fovMM = vec3.create()
+    vec3.subtract(fovMM, mxMM, mnMM)
     return { mnMM, mxMM, rotation, fovMM }
   }
 
@@ -6969,10 +6969,10 @@ export class Niivue {
   draw2D(leftTopWidthHeight, axCorSag, customMM = NaN) {
     let frac2mmTexture = this.volumes[0].frac2mm.slice()
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
-    let mesh2ortho = mat.mat4.create()
+    let mesh2ortho = mat4.create()
     if (!this.opts.isSliceMM) {
       frac2mmTexture = this.volumes[0].frac2mmOrtho.slice()
-      mesh2ortho = mat.mat4.clone(this.volumes[0].mm2ortho)
+      mesh2ortho = mat4.clone(this.volumes[0].mm2ortho)
       screen = this.screenFieldOfViewExtendedVox(axCorSag)
     }
     let isRadiolgical = this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL
@@ -7131,8 +7131,8 @@ export class Niivue {
         )
       }
       // we may need to transform mesh vertices to the orthogonal voxel space
-      const mx = mat.mat4.clone(obj.modelViewProjectionMatrix)
-      mat.mat4.multiply(mx, mx, mesh2ortho)
+      const mx = mat4.clone(obj.modelViewProjectionMatrix)
+      mat4.multiply(mx, mx, mesh2ortho)
       this.drawMesh3D(
         true,
         1,
@@ -7163,54 +7163,54 @@ export class Niivue {
     // let origin = [0,0,0];
     let scale = this.furthestFromPivot
     const origin = this.pivot3D
-    const projectionMatrix = mat.mat4.create()
+    const projectionMatrix = mat4.create()
     scale = (0.8 * scale) / this.scene.volScaleMultiplier // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
     if (whratio < 1) {
       // tall window: "portrait" mode, width constrains
-      mat.mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 0.01, scale * 8.0)
+      mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 0.01, scale * 8.0)
     }
     // Wide window: "landscape" mode, height constrains
     else {
-      mat.mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
+      mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
     }
 
-    const modelMatrix = mat.mat4.create()
+    const modelMatrix = mat4.create()
     modelMatrix[0] = -1 // mirror X coordinate
     // push the model away from the camera so camera not inside model
-    const translateVec3 = mat.vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
-    mat.mat4.translate(modelMatrix, modelMatrix, translateVec3)
+    const translateVec3 = vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
+    mat4.translate(modelMatrix, modelMatrix, translateVec3)
     if (this.position) {
-      mat.mat4.translate(modelMatrix, modelMatrix, this.position)
+      mat4.translate(modelMatrix, modelMatrix, this.position)
     }
     // apply elevation
-    mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
+    mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
-    mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
+    mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
 
-    mat.mat4.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]])
+    mat4.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]])
 
     //
-    const iModelMatrix = mat.mat4.create()
-    mat.mat4.invert(iModelMatrix, modelMatrix)
-    const normalMatrix = mat.mat4.create()
-    mat.mat4.transpose(normalMatrix, iModelMatrix)
-    const modelViewProjectionMatrix = mat.mat4.create()
-    mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
+    const iModelMatrix = mat4.create()
+    mat4.invert(iModelMatrix, modelMatrix)
+    const normalMatrix = mat4.create()
+    mat4.transpose(normalMatrix, iModelMatrix)
+    const modelViewProjectionMatrix = mat4.create()
+    mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
     return [modelViewProjectionMatrix, modelMatrix, normalMatrix]
   }
 
   // not included in public docs
   calculateModelMatrix(azimuth, elevation) {
-    const modelMatrix = mat.mat4.create()
+    const modelMatrix = mat4.create()
     modelMatrix[0] = -1 // mirror X coordinate
     // push the model away from the camera so camera not inside model
     // apply elevation
-    mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
+    mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
-    mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
+    mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
     if (this.back.obliqueRAS) {
-      const oblique = mat.mat4.clone(this.back.obliqueRAS)
-      mat.mat4.multiply(modelMatrix, modelMatrix, oblique)
+      const oblique = mat4.clone(this.back.obliqueRAS)
+      mat4.multiply(modelMatrix, modelMatrix, oblique)
     }
     return modelMatrix
   }
@@ -7220,15 +7220,15 @@ export class Niivue {
   calculateRayDirection(azimuth, elevation) {
     const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
     // from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
-    const projectionMatrix = mat.mat4.fromValues(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1)
-    const mvpMatrix = mat.mat4.create()
-    mat.mat4.multiply(mvpMatrix, projectionMatrix, modelMatrix)
-    const inv = mat.mat4.create()
-    mat.mat4.invert(inv, mvpMatrix)
-    const rayDir4 = mat.vec4.fromValues(0, 0, -1, 1)
-    mat.vec4.transformMat4(rayDir4, rayDir4, inv)
-    const rayDir = mat.vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2])
-    mat.vec3.normalize(rayDir, rayDir)
+    const projectionMatrix = mat4.fromValues(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1)
+    const mvpMatrix = mat4.create()
+    mat4.multiply(mvpMatrix, projectionMatrix, modelMatrix)
+    const inv = mat4.create()
+    mat4.invert(inv, mvpMatrix)
+    const rayDir4 = vec4.fromValues(0, 0, -1, 1)
+    vec4.transformMat4(rayDir4, rayDir4, inv)
+    const rayDir = vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2])
+    vec3.normalize(rayDir, rayDir)
     // defuzz, avoid divide by zero
     const tiny = 0.00005
     if (Math.abs(rayDir[0]) < tiny) {
@@ -7245,26 +7245,26 @@ export class Niivue {
 
   // not included in public docs
   sceneExtentsMinMax(isSliceMM = true) {
-    let mn = mat.vec3.fromValues(0, 0, 0)
-    let mx = mat.vec3.fromValues(0, 0, 0)
+    let mn = vec3.fromValues(0, 0, 0)
+    let mx = vec3.fromValues(0, 0, 0)
     if (this.volumes.length > 0) {
-      mn = mat.vec3.fromValues(
+      mn = vec3.fromValues(
         this.volumeObject3D.extentsMin[0],
         this.volumeObject3D.extentsMin[1],
         this.volumeObject3D.extentsMin[2]
       )
-      mx = mat.vec3.fromValues(
+      mx = vec3.fromValues(
         this.volumeObject3D.extentsMax[0],
         this.volumeObject3D.extentsMax[1],
         this.volumeObject3D.extentsMax[2]
       )
       if (!isSliceMM) {
-        mn = mat.vec3.fromValues(
+        mn = vec3.fromValues(
           this.volumes[0].extentsMinOrtho[0],
           this.volumes[0].extentsMinOrtho[1],
           this.volumes[0].extentsMinOrtho[2]
         )
-        mx = mat.vec3.fromValues(
+        mx = vec3.fromValues(
           this.volumes[0].extentsMaxOrtho[0],
           this.volumes[0].extentsMaxOrtho[1],
           this.volumes[0].extentsMaxOrtho[2]
@@ -7279,34 +7279,26 @@ export class Niivue {
       console.log(this.meshes.length);
       console.log("this.meshes[0].extentsMin");
       console.log(this.meshes[0].extentsMin); */
-        mn = mat.vec3.fromValues(
-          this.meshes[0].extentsMin[0],
-          this.meshes[0].extentsMin[1],
-          this.meshes[0].extentsMin[2]
-        )
-        mx = mat.vec3.fromValues(
-          this.meshes[0].extentsMax[0],
-          this.meshes[0].extentsMax[1],
-          this.meshes[0].extentsMax[2]
-        )
+        mn = vec3.fromValues(this.meshes[0].extentsMin[0], this.meshes[0].extentsMin[1], this.meshes[0].extentsMin[2])
+        mx = vec3.fromValues(this.meshes[0].extentsMax[0], this.meshes[0].extentsMax[1], this.meshes[0].extentsMax[2])
       }
       for (let i = 0; i < this.meshes.length; i++) {
-        const vmn = mat.vec3.fromValues(
+        const vmn = vec3.fromValues(
           this.meshes[i].extentsMin[0],
           this.meshes[i].extentsMin[1],
           this.meshes[i].extentsMin[2]
         )
-        mat.vec3.min(mn, mn, vmn)
-        const vmx = mat.vec3.fromValues(
+        vec3.min(mn, mn, vmn)
+        const vmx = vec3.fromValues(
           this.meshes[i].extentsMax[0],
           this.meshes[i].extentsMax[1],
           this.meshes[i].extentsMax[2]
         )
-        mat.vec3.max(mx, mx, vmx)
+        vec3.max(mx, mx, vmx)
       }
     }
-    const range = mat.vec3.create()
-    mat.vec3.subtract(range, mx, mn)
+    const range = vec3.create()
+    vec3.subtract(range, mx, mn)
     return [mn, mx, range]
   }
 
@@ -7315,16 +7307,16 @@ export class Niivue {
     // compute extents of all volumes and meshes in scene
     // pivot around center of these.
     const [mn, mx] = this.sceneExtentsMinMax()
-    const pivot = mat.vec3.create()
+    const pivot = vec3.create()
     // pivot is half way between min and max:
-    mat.vec3.add(pivot, mn, mx)
-    mat.vec3.scale(pivot, pivot, 0.5)
+    vec3.add(pivot, mn, mx)
+    vec3.scale(pivot, pivot, 0.5)
     this.pivot3D = [pivot[0], pivot[1], pivot[2]]
     // find scale of scene
-    mat.vec3.subtract(pivot, mx, mn)
+    vec3.subtract(pivot, mx, mn)
     this.extentsMin = mn
     this.extentsMax = mx
-    this.furthestFromPivot = mat.vec3.length(pivot) * 0.5 // pivot is half way between the extreme vertices
+    this.furthestFromPivot = vec3.length(pivot) * 0.5 // pivot is half way between the extreme vertices
   }
 
   // not included in public docs
@@ -7673,10 +7665,10 @@ export class Niivue {
         gl.activeTexture(gl.TEXTURE6)
         gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
         const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
-        const iModelMatrix = mat.mat4.create()
-        mat.mat4.invert(iModelMatrix, modelMatrix)
-        const normalMatrix = mat.mat4.create()
-        mat.mat4.transpose(normalMatrix, iModelMatrix)
+        const iModelMatrix = mat4.create()
+        mat4.invert(iModelMatrix, modelMatrix)
+        const normalMatrix = mat4.create()
+        mat4.transpose(normalMatrix, iModelMatrix)
         gl.uniformMatrix4fv(shader.normLoc, false, normalMatrix)
       }
       if (this.drawBitmap && this.drawBitmap.length > 8) {
@@ -7720,26 +7712,26 @@ export class Niivue {
     gl.cullFace(gl.BACK)
     this.orientCubeShader.use(this.gl)
     gl.bindVertexArray(this.orientCubeShaderVAO)
-    const modelMatrix = mat.mat4.create()
-    const projectionMatrix = mat.mat4.create()
+    const modelMatrix = mat4.create()
+    const projectionMatrix = mat4.create()
     // ortho(out, left, right, bottom, top, near, far)
-    mat.mat4.ortho(projectionMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -10 * sz, 10 * sz)
+    mat4.ortho(projectionMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -10 * sz, 10 * sz)
     let translateUpForColorbar = 0
     if (leftTopWidthHeight[1] === 0) {
       translateUpForColorbar = gl.canvas.height - this.effectiveCanvasHeight()
     }
-    mat.mat4.translate(modelMatrix, modelMatrix, [
+    mat4.translate(modelMatrix, modelMatrix, [
       1.8 * sz + leftTopWidthHeight[0],
       translateUpForColorbar + 1.8 * sz + leftTopWidthHeight[1],
       0
     ])
-    mat.mat4.scale(modelMatrix, modelMatrix, [sz, sz, sz])
+    mat4.scale(modelMatrix, modelMatrix, [sz, sz, sz])
     // apply elevation
-    mat.mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
+    mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
-    mat.mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth))
-    const modelViewProjectionMatrix = mat.mat4.create()
-    mat.mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
+    mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth))
+    const modelViewProjectionMatrix = mat4.create()
+    mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
     gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 168)
     gl.bindVertexArray(this.unusedVAO)
@@ -7849,9 +7841,9 @@ export class Niivue {
 
   // not included in public docs
   calculateScreenPoint(point, mvpMatrix, leftTopWidthHeight) {
-    const screenPoint = mat.vec4.create()
+    const screenPoint = vec4.create()
     // Multiply the 3D point by the model-view-projection matrix
-    mat.vec4.transformMat4(screenPoint, [...point, 1.0], mvpMatrix)
+    vec4.transformMat4(screenPoint, [...point, 1.0], mvpMatrix)
     // Convert the 4D point to 2D screen coordinates
     if (screenPoint[3] !== 0.0) {
       screenPoint[0] = (screenPoint[0] / screenPoint[3] + 1.0) * 0.5 * leftTopWidthHeight[2]
@@ -8278,16 +8270,16 @@ export class Niivue {
       return frac
     }
     // convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
-    const mm4 = mat.vec4.fromValues(mm[0], mm[1], mm[2], 1)
+    const mm4 = vec4.fromValues(mm[0], mm[1], mm[2], 1)
     const d = this.volumes[volIdx].dimsRAS
     const frac = [0, 0, 0]
     if (typeof d === 'undefined') {
       return frac
     }
     if (!isForceSliceMM && !this.opts.isSliceMM) {
-      const xform = mat.mat4.clone(this.volumes[volIdx].frac2mmOrtho)
-      mat.mat4.invert(xform, xform)
-      mat.vec4.transformMat4(mm4, mm4, xform)
+      const xform = mat4.clone(this.volumes[volIdx].frac2mmOrtho)
+      mat4.invert(xform, xform)
+      vec4.transformMat4(mm4, mm4, xform)
       frac[0] = mm4[0]
       frac[1] = mm4[1]
       frac[2] = mm4[2]
@@ -8296,10 +8288,10 @@ export class Niivue {
     if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
       return frac
     }
-    const sform = mat.mat4.clone(this.volumes[volIdx].matRAS)
-    mat.mat4.invert(sform, sform)
-    mat.mat4.transpose(sform, sform)
-    mat.vec4.transformMat4(mm4, mm4, sform)
+    const sform = mat4.clone(this.volumes[volIdx].matRAS)
+    mat4.invert(sform, sform)
+    mat4.transpose(sform, sform)
+    vec4.transformMat4(mm4, mm4, sform)
     frac[0] = (mm4[0] + 0.5) / d[1]
     frac[1] = (mm4[1] + 0.5) / d[2]
     frac[2] = (mm4[2] + 0.5) / d[3]
@@ -8356,12 +8348,12 @@ export class Niivue {
 
   // not included in public docs
   frac2mm(frac, volIdx = 0, isForceSliceMM = false) {
-    const pos = mat.vec4.fromValues(frac[0], frac[1], frac[2], 1)
+    const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (this.volumes.length > 0) {
       if (isForceSliceMM || this.opts.isSliceMM) {
-        mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm)
+        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm)
       } else {
-        mat.vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho)
+        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho)
       }
     } else {
       const [mn, mx] = this.sceneExtentsMinMax()
@@ -8401,7 +8393,7 @@ export class Niivue {
     let xyzMM = [0, 0, 0]
     xyzMM[0] = this.screenSlices[i].leftTopMM[0] + fracX * this.screenSlices[i].fovMM[0]
     xyzMM[1] = this.screenSlices[i].leftTopMM[1] + fracY * this.screenSlices[i].fovMM[1]
-    // let xyz = mat.vec3.fromValues(30, 30, 0);
+    // let xyz = vec3.fromValues(30, 30, 0);
     const v = this.screenSlices[i].AxyzMxy
     xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
     if (axCorSag === SLICE_TYPE.CORONAL) {
@@ -8512,13 +8504,13 @@ export class Niivue {
     dottedLineColor[3] = 0.3
 
     // get vector
-    const segment = mat.vec2.fromValues(startXYendXY[2] - startXYendXY[0], startXYendXY[3] - startXYendXY[1])
-    const totalLength = mat.vec2.length(segment)
-    mat.vec2.normalize(segment, segment)
+    const segment = vec2.fromValues(startXYendXY[2] - startXYendXY[0], startXYendXY[3] - startXYendXY[1])
+    const totalLength = vec2.length(segment)
+    vec2.normalize(segment, segment)
     const scale = 1.0
     const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    mat.vec2.scale(segment, segment, size / 2)
-    const segmentLength = mat.vec2.length(segment)
+    vec2.scale(segment, segment, size / 2)
+    const segmentLength = vec2.length(segment)
     let segmentCount = Math.floor(totalLength / segmentLength)
 
     if (totalLength % segmentLength) {
