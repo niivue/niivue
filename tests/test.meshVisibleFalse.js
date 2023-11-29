@@ -13,10 +13,13 @@ test('meshVisibleFalse', async () => {
         colormap: 'actc'
       }
     ]
-    await nv.loadMeshes([{ url: './images/mz3/3Mesh.mz3', layers: layersList, visible: false}])
+    await nv.loadMeshes([
+      { url: './images/mz3/3Mesh.mz3', layers: layersList, visible: false},
+      { url: "../demos/images/CIT168.mz3", rgba255: [0, 0, 255, 255], visible: true },
+    ])
     return nv.meshes.length
   })
-  expect(nmeshes).toBe(1)
+  expect(nmeshes).toBe(2)
   // snapshot should just be a blank canvas (no mesh present)
   await snapshot()
 })
