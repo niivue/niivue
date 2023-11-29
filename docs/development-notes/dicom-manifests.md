@@ -7,7 +7,7 @@ If no file name is specified in the URL, Niivue will append niivue-manifest.txt.
 Check out this [example](https://github.com/niivue/niivue-demo-images/blob/main/dicom/niivue-manifest.txt) to see how DICOM files should be listed.
 
 ```javascript
-import * as niivue from "../index.js";
+import * as niivue from "@niivue/niivue";
 var volumeList1 = [
   {
     url: "https://raw.githubusercontent.com/niivue/niivue-demo-images/main/dicom/niivue-manifest.txt",

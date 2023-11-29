@@ -17,12 +17,13 @@
   </header>
   <main>
     <canvas id="gl1"></canvas>
-
   </main>
   <script type="module" async>
-    import * as niivue from "../index.js";
+    import { Niivue } from "../dist/index.js";
+    import { esm } from "../dist/index.min.js";
+
     function saveAsHtml() {
-      nv1.saveHTML("page.html");
+      nv1.saveHTML("page.html", "gl1", decodeURIComponent(esm));
     }
     var volumeList1 = [
       {
@@ -42,7 +43,7 @@
     // assign our event handler
     var button = document.getElementById("save");
     button.onclick = saveAsHtml;
-    var nv1 = new niivue.Niivue();
+    var nv1 = new Niivue();
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
     nv1.setSliceType(nv1.sliceTypeRender);

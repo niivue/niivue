@@ -66,9 +66,11 @@
     </main>
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
-      import * as niivue from "../index.js";
+      import * as niivue from "../dist/index.js";
+      import { esm } from "../dist/index.min.js";
+      
       save.onclick = function() {
-        nv1.saveHTML("page.html");
+        nv1.saveHTML("page.html", "gl1", decodeURIComponent(esm));
       }
       about.onclick = function () {
         window.alert(

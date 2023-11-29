@@ -24,9 +24,11 @@
 
   </main>
   <script type="module" async>
-    import * as niivue from "../index.js";
+    import * as niivue from "../dist/index.js";
+    import { esm } from "../dist/index.min.js";
+    
     function saveAsHtml() {
-      nv1.saveHTML("labels.html");
+      nv1.saveHTML("labels.html", "gl1", decodeURIComponent(esm));
     }
 
     function setSliceType() {

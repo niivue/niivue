@@ -68,6 +68,7 @@ import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.js'
 import { NVConnectome } from '../nvconnectome.js'
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from '../nvimage'
+import { NVUtilities } from '../nvutilities.js'
 import {
   clamp,
   decodeRLE,
@@ -3201,11 +3202,144 @@ export class Niivue {
   }
 
   /**
+ * generates JavaScript to load the current scene as a document
+ * @param {string} canvasId id of canvas NiiVue will be attached to
+ * @param {string} esm bundled version of NiiVue
+ * @example
+ * const javascript = this.generateLoadDocumentJavaScript("gl1");
+ * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+        ${javascript}</script></body></html>`;
+ */
+  generateLoadDocumentJavaScript(canvasId, esm) {
+    const json = this.json()
+
+    const base64 = NVUtilities.compressToBase64String(JSON.stringify(json))
+    const javascript = `
+        ${esm}
+        
+        function saveNiivueAsHtml(pageName) {    
+          //get new docstring
+          const docString = nv1.json();
+          const html = 
+          document.getElementsByTagName("html")[0]
+              .innerHTML.replace(base64, NVUtilities.compressToBase64String(JSON.stringify(docString)));
+          NVUtilities.download(html, pageName, "application/html");
+        }
+        
+        var nv1 = new Niivue();
+        nv1.attachTo("${canvasId}");  
+        var base64 = "${base64}";
+        var jsonText = NVUtilities.decompressBase64String(base64);
+        var json = JSON.parse(jsonText); // string -> JSON
+        var doc = NVDocument.loadFromJSON(json);                
+        nv1.loadDocument(doc);
+        nv1.updateGLVolume();
+      `
+
+    return javascript
+  }
+
+  /**
+   * generates HTML of current scene
+   * @param template {string} HTML template
+   * @param {string} canvasId id of canvas NiiVue will be attached to
+   * @param {string} esm bundled version of NiiVue
+   * @returns {string} HTML with javascript of the current scene
+   * @example
+   * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>
+   *       %%javascript%%</script></body></html>`;
+   * nv1.generateHTML("page.html", esm);
+   */
+  generateHTML(canvasId = 'gl1', esm) {
+    const javascript = this.generateLoadDocumentJavaScript(canvasId, esm)
+    const html = `<!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+            <title>Save as HTML</title>
+            <style>
+            html {
+              height: auto;
+              min-height: 100%;
+              margin: 0;
+            }
+            body {
+              display: flex;
+              flex-direction: column;
+              margin: 0;
+              min-height: 100%;
+              width: 100%;
+              position: absolute;
+              font-family: system-ui, Arial, Helvetica, sans-serif;
+              background: #ffffff;
+              color: black;
+              user-select: none; /* Standard syntax */
+            }
+            header {
+              margin: 10px;
+            }
+            main {
+              flex: 1;
+              background: #000000;
+              position: relative;
+            }
+            footer {
+              margin: 10px;
+            }
+            canvas {
+              position: absolute;
+              cursor: crosshair;
+            }
+            canvas:focus {
+              outline: 0px;
+            }
+            div {
+              display: table-row;
+              background-color: blue;
+            }
+            </style>
+          </head>
+          <body>
+            <noscript>niivue requires JavaScript.</noscript>
+            <header>
+            Save the current scene as HTML
+            <button id="save">Save as HTML</button>
+            </header>
+            <main>
+              <canvas id="gl1"></canvas>
+            </main>
+            <script type="module" async>        
+              ${javascript}
+              function saveAsHtml() {
+                saveNiivueAsHtml("page.html");
+              }        
+              // assign our event handler
+              var button = document.getElementById("save");
+              button.onclick = saveAsHtml;      
+            </script>
+          </body>
+        </html>`
+    return html
+  }
+
+  /**
+   * save current scene as HTML
+   * @param {string} fileName the name of the HTML file
+   * @param {string} canvasId id of canvas NiiVue will be attached to
+   * @param {string} esm bundled version of NiiVue
+   */
+  async saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm) {
+    const html = this.generateHTML(canvasId, esm)
+    NVUtilities.download(html, fileName, 'application/html')
+  }
+
+  /**
    * Converts NiiVue scene to JSON
    * @returns {NVDocumentData}
    */
   json() {
-    console.log('json', this.volumes[0])
     this.document.opts = this.opts
     this.document.scene = this.scene
     this.document.volumes = this.volumes
