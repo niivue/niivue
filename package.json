@@ -6,6 +6,14 @@
   "type": "module",
   "unpkg": "./dist/index.min.js",
   "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    },
+    "./min": {
+      "import": "./dist/index.min.j"
+    }
+  },
 
   "scripts": {
     "dev": "vite",
