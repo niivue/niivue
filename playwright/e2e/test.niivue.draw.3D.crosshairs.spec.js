@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('niivue draw 3D no crosshair', async ({page}) => {
+test('niivue draw 3D no crosshair', async ({ page }) => {
   const nvols = await page.evaluate(async () => {
     const nv = new niivue.Niivue({ show3Dcrosshair: true })
     await nv.attachTo('gl', false)

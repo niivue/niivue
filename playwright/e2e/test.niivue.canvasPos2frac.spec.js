@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('niivue canvasPos2frac', async ({page}) => {
+test('niivue canvasPos2frac', async ({ page }) => {
   const frac = await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text

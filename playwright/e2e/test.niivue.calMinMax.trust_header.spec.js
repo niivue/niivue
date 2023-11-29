@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('niivue calMinMax trust header cal min max', async ({page}) => {
+test('niivue calMinMax trust header cal min max', async ({ page }) => {
   const minmax = await page.evaluate(async () => {
     let opts = {
       textHeight: 0.05, // larger text
@@ -37,4 +37,3 @@ test('niivue calMinMax trust header cal min max', async ({page}) => {
     expect(minmax[i]).toBeCloseTo(expected[i])
   }
 })
-

@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('niivue attachTo', async ({page}) => {
+test('niivue attachTo', async ({ page }) => {
   const gl = await page.evaluate(async () => {
     nv = new niivue.Niivue()
     nv = await nv.attachTo('gl', false)
@@ -15,4 +15,3 @@ test('niivue attachTo', async ({page}) => {
   expect(gl).toBeDefined()
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
-
