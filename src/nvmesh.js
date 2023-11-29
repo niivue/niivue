@@ -609,14 +609,31 @@ export class NVMesh {
           const nLabel = Math.floor(lut.length / 4)
           const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1)
           const frameOffset = nvtx * frame
-          let mx = 0
+          // let mx = 0
+          const rgba8 = new Uint8Array(nvtx * 4)
+          let k = 0
           for (let j = 0; j < layer.values.length; j++) {
+            // eslint-disable-next-line
+            let idx = 4 * Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1)
+            rgba8[k + 0] = lut[idx + 0]
+            rgba8[k + 1] = lut[idx + 1]
+            rgba8[k + 2] = lut[idx + 2]
+            k += 4
+          }
+          let opaque = new Array(nvtx).fill(true)
+          if (layer.isOutlineBorder) {
+            opaque = NVMeshUtilities.getClusterBoundary(rgba8, this.tris)
+          }
+          k = 0
+          for (let j = 0; j < layer.values.length; j++) {
+            if (!opaque[j]) {
+              k += 4
+              continue
+            }
             const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
-            let k = 4 * Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1)
-            mx = Math.max(mx, k)
-            u8[vtx + 0] = lerp(u8[vtx + 0], lut[k + 0], opacity)
-            u8[vtx + 1] = lerp(u8[vtx + 1], lut[k + 1], opacity)
-            u8[vtx + 2] = lerp(u8[vtx + 2], lut[k + 2], opacity)
+            u8[vtx + 0] = lerp(u8[vtx + 0], rgba8[k + 0], opacity)
+            u8[vtx + 1] = lerp(u8[vtx + 1], rgba8[k + 1], opacity)
+            u8[vtx + 2] = lerp(u8[vtx + 2], rgba8[k + 2], opacity)
             k += 4
           } // for each vertex
           continue
