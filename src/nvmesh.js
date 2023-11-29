@@ -455,7 +455,7 @@ export class NVMesh {
         console.log('Expected %d edges not %d', nNode * nNode, nEdges)
       }
     }
-    if (!this.nodeScale) {
+    if (!('nodeScale' in this.hasOwnProperty)) {
       this.nodeScale = 4
     }
     if (!('edgeScale' in this)) {
@@ -1164,7 +1164,7 @@ export class NVMesh {
   static async loadLayer(layer, nvmesh) {
     let buffer
 
-    function base64ToArrayBuffer(base64: string): ArrayBuffer {
+    function base64ToArrayBuffer(base64) {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -1313,12 +1313,12 @@ export class NVMesh {
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file: Blob): Promise<ArrayBuffer> {
+  static readFileAsync(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
 
-      reader.onload = (): void => {
-        resolve(reader.result as ArrayBuffer)
+      reader.onload = () => {
+        resolve(reader.result)
       }
 
       reader.onerror = reject
@@ -1346,15 +1346,7 @@ export class NVMesh {
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  }: {
-    file: Blob
-    gl: WebGL2RenderingContext
-    name?: string
-    opacity?: number
-    rgba255?: number[]
-    visible?: boolean
-    layers: unknown[]
-  }) {
+  } = {}) {
     const buffer = await this.readFileAsync(file)
     const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
 
