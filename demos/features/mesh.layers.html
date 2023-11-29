@@ -38,7 +38,7 @@
         id="meshCheckbox1"
         checked
       />
-      <label for="meshCheckbox1">Visible</label>
+      <label for="meshCheckbox1">Hemisphere Visible</label>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -71,6 +71,7 @@
     show3Dcrosshair: true,
     onLocationChange: handleLocationChange,
     backColor: [1, 1, 1, 1],
+    meshXRay: 0.3
   });
   nv1.attachTo("gl1");
   nv1.opts.isColorbar = true;
@@ -89,6 +90,7 @@
       rgba255: [255, 255, 255, 255],
       layers: meshLHLayersList1,
     },
+    { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
   ]);
   //n.b. one can also create asymmetric thresholds by explicitly setting negative values:
   // nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_maxNeg', -5.0)
