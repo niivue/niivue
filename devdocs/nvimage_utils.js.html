@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>nvcontroller.js - Documentation</title>
+    <title>nvimage/utils.js - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -35,7 +35,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">nvcontroller.js</h1>
+    <h1 class="page-title">nvimage/utils.js</h1>
     
 
     
@@ -45,419 +45,402 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import { SessionBus, SessionUser } from './session-bus'
-// Disabled warnings because of issue with JSDoc https://github.com/microsoft/TypeScript/issues/14377
-// eslint-disable-next-line no-unused-vars
-import { NVImage, NVImageFromUrlOptions } from './nvimage'
-// eslint-disable-next-line no-unused-vars
-import { NVMesh, NVMeshFromUrlOptions } from './nvmesh'
-// eslint-disable-next-line no-unused-vars
-import { Niivue } from './niivue'
+            <pre class="prettyprint source linenums"><code>import { vec3 } from 'gl-matrix'
+import { Log } from '../logger'
+
+const log = new Log()
+
+export const isPlatformLittleEndian = () => {
+  // inspired by https://github.com/rii-mango/Papaya
+  const buffer = new ArrayBuffer(2)
+  new DataView(buffer).setInt16(0, 256, true)
+  return new Int16Array(buffer)[0] === 256
+}
 
 /**
- * Enum for sync operations
+ * Enum for supported image types (e.g. NII, NRRD, DICOM)
  * @readonly
  * @enum {number}
  */
-const NVMESSAGE = Object.freeze({
-  ZOOM: 1, // "zoom",
-  CLIP_PLANE: 2, // "clipPlane",
-  AZIMUTH_ELEVATION: 3, // "ae",
-  FRAME_CHANGED: 4, // "frame changed",
-  VOLUME_ADDED_FROM_URL: 5, // "volume added from url",
-  VOLUME_WITH_URL_REMOVED: 6, // "volume with url removed",
-  COLORMAP_CHANGED: 7, // "color map has changed",
-  OPACITY_CHANGED: 8, // "opacity has changed",
-  MESH_FROM_URL_ADDED: 9, // "mesh added from url",
-  MESH_WITH_URL_REMOVED: 10, // "mesh with url removed",
-  CUSTOM_SHADER_ADDED: 11, // "custom shader added",
-  SHADER_CHANGED: 12, // "mesh shader changed",
-  MESH_PROPERTY_CHANGED: 13 // "mesh property changed",
+export const NVIMAGE_TYPE = Object.freeze({
+  UNKNOWN: 0,
+  NII: 1,
+  DCM: 2,
+  DCM_MANIFEST: 3,
+  MIH: 4,
+  MIF: 5,
+  NHDR: 6,
+  NRRD: 7,
+  MHD: 8,
+  MHA: 9,
+  MGH: 10,
+  MGZ: 11,
+  V: 12,
+  V16: 13,
+  VMR: 14,
+  HEAD: 15,
+  DCM_FOLDER: 16,
+  parse: (ext) => {
+    let imageType = NVIMAGE_TYPE.UNKNOWN
+    switch (ext.toUpperCase()) {
+      case '':
+      case 'DCM':
+        imageType = NVIMAGE_TYPE.DCM
+        break
+      case 'TXT':
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST
+        break
+      case 'NII':
+        imageType = NVIMAGE_TYPE.NII
+        break
+      case 'MIH':
+        imageType = NVIMAGE_TYPE.MIH
+        break
+      case 'MIF':
+        imageType = NVIMAGE_TYPE.MIF
+        break
+      case 'NHDR':
+        imageType = NVIMAGE_TYPE.NHDR
+        break
+      case 'NRRD':
+        imageType = NVIMAGE_TYPE.NRRD
+        break
+      case 'MHD':
+        imageType = NVIMAGE_TYPE.MHD
+        break
+      case 'MHA':
+        imageType = NVIMAGE_TYPE.MHA
+        break
+      case 'MGH':
+        imageType = NVIMAGE_TYPE.MGH
+        break
+      case 'MGZ':
+        imageType = NVIMAGE_TYPE.MGZ
+        break
+      case 'V':
+        imageType = NVIMAGE_TYPE.V
+        break
+      case 'V16':
+        imageType = NVIMAGE_TYPE.V16
+        break
+      case 'VMR':
+        imageType = NVIMAGE_TYPE.VMR
+        break
+      case 'HEAD':
+        imageType = NVIMAGE_TYPE.HEAD
+        break
+    }
+    return imageType
+  }
 })
 
 /**
- * @class NVController
- * @type NVController
- * @description NVController is for synchronizing both remote and local instances of Niivue
- * @constructor
- * @param {Niivue} niivue  Niivue object to conttrol
+ * NVImageFromUrlOptions
+ * @typedef  NVImageFromUrlOptions
+ * @type {object}
+ * @property {string} url - the resolvable URL pointing to a nifti image to load
+ * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+ * @property {string} [name=""] a name for this image. Default is an empty string
+ * @property {string} [colormap="gray"] a color map to use. default is gray
+ * @property {number} [opacity=1.0] the opacity for this image. default is 1
+ * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
+ * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
+ * @property {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+ * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+ * @property {boolean} [visible=true] whether or not this image is to be visible
+ * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
+ * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
+ * @property {string} [colormapNegative=""] a color map to use for negative intensities
+ * @property {number} [cal_minNeg=NaN] minimum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_min)
+ * @property {number} [cal_maxNeg=NaN] maximum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_max)
+ * @property {boolean} [colorbarVisible=true] hide colormaps 
+
+
+ * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
  */
-export class NVController {
-  constructor(niivue) {
-    this.niivue = niivue
-    this.mediaUrlMap = new Map()
-    this.isInSession = false
 
-    // events for external consumers
-    this.onFrameChange = () => {}
+/**
+ *
+ * @constructor
+ * @returns {NVImageFromUrlOptions}
+ */
+export function NVImageFromUrlOptions(
+  url,
+  urlImageData = '',
+  name = '',
+  colormap = 'gray',
+  opacity = 1.0,
+  cal_min = NaN,
+  cal_max = NaN,
+  trustCalMinMax = true,
+  percentileFrac = 0.02,
+  ignoreZeroVoxels = false,
+  visible = true,
+  useQFormNotSForm = false,
+  colormapNegative = '',
+  frame4D = 0,
+  imageType = NVIMAGE_TYPE.UNKNOWN,
+  cal_minNeg = NaN,
+  cal_maxNeg = NaN,
+  colorbarVisible = true,
+  alphaThreshold = false,
+  colormapLabel = []
+) {
+  return {
+    url,
+    urlImageData,
+    name,
+    colormap,
+    opacity,
+    cal_min,
+    cal_max,
+    trustCalMinMax,
+    percentileFrac,
+    ignoreZeroVoxels,
+    visible,
+    useQFormNotSForm,
+    colormapNegative,
+    imageType,
+    cal_minNeg,
+    cal_maxNeg,
+    colorbarVisible,
+    frame4D,
+    alphaThreshold,
+    colormapLabel
+  }
+}
 
-    // bind all of our events
+// not included in public docs
+// create NIfTI format SForm from DICOM frame of reference
+export function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
+  // https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/volume/dicom/header-dicom.js#L605
+  /* Copyright (c) 2012-2015, RII-UTHSCSA
+All rights reserved.
 
-    // 2D
-    this.niivue.onLocationChange = this.onLocationChangeHandler.bind(this)
+THIS PRODUCT IS NOT FOR CLINICAL USE.
 
-    // 3D
-    this.niivue.onZoom3DChange = this.onZoom3DChangeHandler.bind(this)
-    this.niivue.scene.onAzimuthElevationChange = this.onAzimuthElevationChangeHandler.bind(this)
-    this.niivue.onClipPlaneChange = this.onClipPlaneChangeHandler.bind(this)
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
+following conditions are met:
 
-    // volume handlers
-    this.niivue.onVolumeAddedFromUrl = this.onVolumeAddedFromUrlHandler.bind(this)
-    this.niivue.onVolumeWithUrlRemoved = this.onVolumeWithUrlRemovedHandler.bind(this)
+ - Redistributions of source code must retain the above copyright notice, this list of conditions and the following
+   disclaimer.
 
-    // mesh handlers
-    this.niivue.onMeshAddedFromUrl = this.onMeshAddedFromUrlHandler.bind(this)
-    this.niivue.onMeshWithUrlRemoved = this.onMeshWithUrlRemovedHandler.bind(this)
-    this.niivue.onCustomMeshShaderAdded = this.onCustomMeshShaderAddedHandler.bind(this)
-    this.niivue.onMeshShaderChanged = this.onMeshShaderChanged.bind(this)
-    this.niivue.onMeshPropertyChanged = this.onMeshPropertyChanged.bind(this)
+ - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
+   disclaimer in the documentation and/or other materials provided with the distribution.
 
-    // 4D
-    this.niivue.onFrameChange = this.onFrameChangeHandler.bind(this)
+ - Neither the name of the RII-UTHSCSA nor the names of its contributors may be used to endorse or promote products
+   derived from this software without specific prior written permission.
 
-    // volume specific handlers
-    for (const volume of this.niivue.volumes) {
-      volume.onColormapChange = this.onColormapChangeHandler.bind(this)
-      volume.onOpacityChange = this.onOpacityChangeHandler.bind(this)
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+  const cosines = imageDirections
+  let m = null
+  if (cosines) {
+    const vs = {
+      colSize: voxelDimensions[0],
+      rowSize: voxelDimensions[1],
+      sliceSize: voxelDimensions[2]
     }
+    const coord = imagePosition
+    const cosx = [cosines[0], cosines[1], cosines[2]]
+    const cosy = [cosines[3], cosines[4], cosines[5]]
+    const cosz = [
+      cosx[1] * cosy[2] - cosx[2] * cosy[1],
+      cosx[2] * cosy[0] - cosx[0] * cosy[2],
+      cosx[0] * cosy[1] - cosx[1] * cosy[0]
+    ]
+    m = [
+      [cosx[0] * vs.colSize * -1, cosy[0] * vs.rowSize * -1, cosz[0] * vs.sliceSize * -1, -1 * coord[0]],
+      [cosx[1] * vs.colSize * -1, cosy[1] * vs.rowSize * -1, cosz[1] * vs.sliceSize * -1, -1 * coord[1]],
+      [cosx[2] * vs.colSize, cosy[2] * vs.rowSize, cosz[2] * vs.sliceSize, coord[2]],
+      [0, 0, 0, 1]
+    ]
+  }
+  return m
+}
+
+function str2Buffer(str) {
+  // emulate node.js Buffer.from
+  const bytes = []
+  for (let i = 0; i &lt; str.length; i++) {
+    const char = str.charCodeAt(i)
+    bytes.push(char &amp; 0xff)
+  }
+  return bytes
+}
+
+// save NIfTI header into UINT8 array for saving to disk
+export function hdrToArrayBuffer(hdr, isDrawing8 = false) {
+  const SHORT_SIZE = 2
+  const FLOAT32_SIZE = 4
+
+  const byteArray = new Uint8Array(348)
+  const view = new DataView(byteArray.buffer)
+  // sizeof_hdr
+  view.setInt32(0, 348, hdr.littleEndian)
+
+  // data_type, db_name, extents, session_error, regular are not used
+
+  // dim_info
+  view.setUint8(39, hdr.dim_info)
+
+  // dims
+  for (let i = 0; i &lt; 8; i++) {
+    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], hdr.littleEndian)
   }
 
-  onLocationChangeHandler(location) {
-    console.log(location)
+  // intent_p1, intent_p2, intent_p3
+  view.setFloat32(56, hdr.intent_p1, hdr.littleEndian)
+  view.setFloat32(60, hdr.intent_p2, hdr.littleEndian)
+  view.setFloat32(64, hdr.intent_p3, hdr.littleEndian)
+  // intent_code, datatype, bitpix, slice_start
+  view.setInt16(68, hdr.intent_code, hdr.littleEndian)
+  if (isDrawing8) {
+    view.setInt16(70, 2, hdr.littleEndian) // 2 = DT_UNSIGNED_CHAR
+    view.setInt16(72, 8, hdr.littleEndian)
+  } else {
+    view.setInt16(70, hdr.datatypeCode, hdr.littleEndian)
+    view.setInt16(72, hdr.numBitsPerVoxel, hdr.littleEndian)
   }
+  view.setInt16(74, hdr.slice_start, hdr.littleEndian)
 
-  addVolume(volume, url) {
-    this.niivue.volumes.push(volume)
-    const idx = this.niivue.volumes.length === 1 ? 0 : this.niivue.volumes.length - 1
-    this.niivue.setVolume(volume, idx)
-    this.niivue.mediaUrlMap.set(volume, url)
+  // pixdim[8], vox_offset, scl_slope, scl_inter
+  for (let i = 0; i &lt; 8; i++) {
+    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], hdr.littleEndian)
   }
-
-  addMesh(mesh, url) {
-    this.niivue.meshes.push(mesh)
-    const idx = this.niivue.meshes.length === 1 ? 0 : this.niivue.meshes.length - 1
-    this.niivue.setMesh(mesh, idx)
-    this.niivue.mediaUrlMap.set(mesh, url)
+  if (isDrawing8) {
+    view.setFloat32(108, 352, hdr.littleEndian)
+    view.setFloat32(112, 1.0, hdr.littleEndian)
+    view.setFloat32(116, 0.0, hdr.littleEndian)
+  } else {
+    view.setFloat32(108, hdr.vox_offset, hdr.littleEndian)
+    view.setFloat32(112, hdr.scl_slope, hdr.littleEndian)
+    view.setFloat32(116, hdr.scl_inter, hdr.littleEndian)
   }
+  // slice_end
+  view.setInt16(120, hdr.slice_end, hdr.littleEndian)
 
-  onNewMessage(msg) {
-    switch (msg.op) {
-      case NVMESSAGE.ZOOM:
-        this.niivue._volScaleMultiplier = msg.zoom
-        break
-      case NVMESSAGE.CLIP_PLANE:
-        this.niivue.scene.clipPlane = msg.clipPlane
-        break
-      case NVMESSAGE.AZIMUTH_ELEVATION:
-        this.niivue.scene._elevation = msg.elevation
-        this.niivue.scene._azimuth = msg.azimuth
-        break
-      case NVMESSAGE.FRAME_CHANGED:
-        {
-          const volume = this.niivue.getMediaByUrl(msg.url)
-          if (volume) {
-            volume.frame4D = msg.index
-          }
-        }
-        break
-      case NVMESSAGE.VOLUME_ADDED_FROM_URL:
-        if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
-          NVImage.loadFromUrl(msg.imageOptions).then((volume) => {
-            this.addVolume(volume, msg.imageOptions.url)
-          })
-        }
+  // slice_code, xyzt_units
+  view.setUint8(122, hdr.slice_code)
+  view.setUint8(123, hdr.xyzt_units)
 
-        break
-      case NVMESSAGE.VOLUME_WITH_URL_REMOVED:
-        {
-          const volume = this.niivue.getMediaByUrl(msg.url)
-          if (volume) {
-            this.niivue.setVolume(volume, -1)
-            this.niivue.mediaUrlMap.delete(volume)
-          }
-        }
-        break
-      case NVMESSAGE.COLORMAP_CHANGED:
-        {
-          const volume = this.niivue.getMediaByUrl(msg.url)
-          volume._colormap = msg.colormap
-          this.niivue.updateGLVolume()
-        }
-        break
+  // cal_max, cal_min, slice_duration, toffset
+  if (isDrawing8) {
+    view.setFloat32(124, 0, hdr.littleEndian)
+    view.setFloat32(128, 0, hdr.littleEndian)
+  } else {
+    view.setFloat32(124, hdr.cal_max, hdr.littleEndian)
+    view.setFloat32(128, hdr.cal_min, hdr.littleEndian)
+  }
+  view.setFloat32(132, hdr.slice_duration, hdr.littleEndian)
+  view.setFloat32(136, hdr.toffset, hdr.littleEndian)
 
-      case NVMESSAGE.OPACITY_CHANGED:
-        {
-          const volume = this.niivue.getMediaByUrl(msg.url)
-          volume._opacity = msg.opacity
-          this.niivue.updateGLVolume()
-        }
-        break
-      case NVMESSAGE.MESH_FROM_URL_ADDED:
-        if (!this.niivue.getMediaByUrl(msg.meshOptions.url)) {
-          msg.meshOptions.gl = this.niivue.gl
-          NVMesh.loadFromUrl(msg.meshOptions).then((mesh) => {
-            this.addMesh(mesh, msg.meshOptions.url)
-          })
-        }
-        break
-      case NVMESSAGE.MESH_WITH_URL_REMOVED:
-        {
-          const mesh = this.niivue.getMediaByUrl(msg.url)
-          if (mesh) {
-            this.niivue.setMesh(mesh, -1)
-            this.niivue.mediaUrlMap.delete(mesh)
-          }
-        }
-        break
-      case NVMESSAGE.CUSTOM_SHADER_ADDED:
-        {
-          const shader = this.niivue.createCustomMeshShader(msg.fragmentShaderText, msg.name)
-          this.niivue.meshShaders.push(shader)
-        }
-        break
+  // glmax, glmin are unused
 
-      case NVMESSAGE.SHADER_CHANGED:
-        this.niivue.meshes[msg.meshIndex].meshShaderIndex = msg.shaderIndex
-        this.niivue.updateGLVolume()
-        break
+  // descrip and aux_file
+  // node.js byteArray.set(Buffer.from(hdr.description), 148);
+  byteArray.set(str2Buffer(hdr.description), 148)
+  // node.js: byteArray.set(Buffer.from(hdr.aux_file), 228);
+  byteArray.set(str2Buffer(hdr.aux_file), 228)
+  // qform_code, sform_code
+  view.setInt16(252, hdr.qform_code, hdr.littleEndian)
+  view.setInt16(254, hdr.sform_code, hdr.littleEndian)
 
-      case NVMESSAGE.MESH_PROPERTY_CHANGED:
-        this.niivue.meshes[msg.meshIndex].setProperty(msg.key, msg.val, this.niivue.gl)
-        break
+  // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
+  view.setFloat32(256, hdr.quatern_b, hdr.littleEndian)
+  view.setFloat32(260, hdr.quatern_c, hdr.littleEndian)
+  view.setFloat32(264, hdr.quatern_d, hdr.littleEndian)
+  view.setFloat32(268, hdr.qoffset_x, hdr.littleEndian)
+  view.setFloat32(272, hdr.qoffset_y, hdr.littleEndian)
+  view.setFloat32(276, hdr.qoffset_z, hdr.littleEndian)
+  const flattened = hdr.affine.flat()
+  // we only want the first three rows
+  for (let i = 0; i &lt; 12; i++) {
+    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], hdr.littleEndian)
+  }
+  // node.js https://www.w3schools.com/nodejs/met_buffer_from.asp
+  // intent_name and magic
+  // node.js byteArray.set(Buffer.from(hdr.intent_name), 328);
+  byteArray.set(str2Buffer(hdr.intent_name), 328)
+  // node.js byteArray.set(Buffer.from(hdr.magic), 344);
+  byteArray.set(str2Buffer(hdr.magic), 344)
+  return byteArray
+  // return byteArray.buffer;
+}
+
+/**
+ * @typedef {Object} NVImage~Extents
+ * @property {number[]} min - min bounding point
+ * @property {number[]} max - max bounding point
+ * @property {number} furthestVertexFromOrigin - point furthest from origin
+ */
+
+// returns the left, right, up, down, front and back via pixdims, qform or sform
+// +x = Right  +y = Anterior  +z = Superior.
+// https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/qsform.html
+
+/**
+ * calculate cuboid extents via pixdims * dims
+ * @returns {number[]}
+ */
+
+/**
+ *
+ * @param {number[]} positions
+ * @returns {NVImage~Extents}
+ */
+export function getExtents(positions, forceOriginInVolume = true) {
+  const nV = (positions.length / 3).toFixed() // each vertex has 3 components: XYZ
+  const origin = vec3.fromValues(0, 0, 0) // default center of rotation
+  const mn = vec3.create()
+  const mx = vec3.create()
+  let mxDx = 0.0
+  let nLoops = 1
+  if (forceOriginInVolume) {
+    nLoops = 2
+  } // second pass to reposition origin
+  for (let loop = 0; loop &lt; nLoops; loop++) {
+    mxDx = 0.0
+    for (let i = 0; i &lt; nV; i++) {
+      const v = vec3.fromValues(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2])
+      if (i === 0) {
+        vec3.copy(mn, v)
+        vec3.copy(mx, v)
+      }
+      vec3.min(mn, mn, v)
+      vec3.max(mx, mx, v)
+      vec3.subtract(v, v, origin)
+      const dx = vec3.len(v)
+      mxDx = Math.max(mxDx, dx)
     }
-    this.niivue.drawScene()
-  }
-
-  /**
-   *
-   * @param {string} serverBaseUrl
-   * @param {string} sessionName
-   * @param {string} sessionKey
-   * @param {SessionUser} user
-   * @description Connects to existing session or creates new session
-   */
-  connectToSession(sessionName, user = undefined, serverBaseUrl = undefined, sessionKey = undefined) {
-    this.user = user || new SessionUser()
-    this.sessionBus = new SessionBus(sessionName, this.user, this.onNewMessage.bind(this), serverBaseUrl, sessionKey)
-    this.isInSession = true
-  }
-
-  /**
-   * Zoom level has changed
-   * @param {number} zoom
-   */
-  async onZoom3DChangeHandler(zoom) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.ZOOM,
-        zoom
-      })
+    if (loop + 1 >= nLoops) {
+      break
     }
-  }
-
-  /**
-   * Azimuth and/or elevation has changed
-   * @param {number} azimuth
-   * @param {number} elevation
-   */
-  async onAzimuthElevationChangeHandler(azimuth, elevation) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.AZIMUTH_ELEVATION,
-        azimuth,
-        elevation
-      })
+    let ok = true
+    for (let j = 0; j &lt; 3; ++j) {
+      if (mn[j] > origin[j]) {
+        ok = false
+      }
+      if (mx[j] &lt; origin[j]) {
+        ok = false
+      }
     }
-  }
-
-  /**
-   * Clip plane has changed
-   * @param {number[]} clipPlane
-   */
-  async onClipPlaneChangeHandler(clipPlane) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.CLIP_PLANE,
-        clipPlane
-      })
+    if (ok) {
+      break
     }
+    vec3.lerp(origin, mn, mx, 0.5)
+    log.debug('origin moved inside volume: ', origin)
   }
-
-  /**
-   * Add an image and notify subscribers
-   * @param {NVImageFromUrlOptions} imageOptions
-   */
-  async onVolumeAddedFromUrlHandler(imageOptions, volume) {
-    if (this.isInSession) {
-      console.log(imageOptions)
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.VOLUME_ADDED_FROM_URL,
-        imageOptions
-      })
-    }
-    volume.onColormapChange = this.onColormapChangeHandler.bind(this)
-    volume.onOpacityChange = this.onOpacityChangeHandler.bind(this)
-  }
-
-  /**
-   * A volume has been added
-   * @param {NVImage} volume
-   */
-  async onImageLoadedHandler(volume) {
-    volume.onColormapChange = this.onColormapChangeHandler.bind(this)
-    volume.onOpacityChange = this.onOpacityChangeHandler.bind(this)
-    if (this.isInSession &amp;&amp; this.niivue.mediaUrlMap.has(volume)) {
-      const url = this.niivue.mediaUrlMap.get(volume)
-      this.sessionBus.sendSessionMessage({
-        op: 'volume with url added',
-        url
-      })
-    }
-  }
-
-  /**
-   * Notifies other users that a volume has been removed
-   * @param {string} url
-   */
-  async onVolumeWithUrlRemovedHandler(url) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.VOLUME_WITH_URL_REMOVED,
-        url
-      })
-    }
-  }
-
-  /**
-   * Notifies that a mesh has been loaded by URL
-   * @param {NVMeshFromUrlOptions} meshOptions
-   */
-  async onMeshAddedFromUrlHandler(meshOptions) {
-    console.log('mesh loaded from url')
-    console.log(meshOptions)
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.MESH_FROM_URL_ADDED,
-        meshOptions
-      })
-    }
-  }
-
-  /**
-   * Notifies that a mesh has been added
-   * @param {NVMesh} mesh
-   */
-  async onMeshLoadedHandler(mesh) {
-    console.log('mesh has been added')
-    console.log(mesh)
-  }
-
-  async onMeshWithUrlRemovedHandler(url) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.MESH_WITH_URL_REMOVED,
-        url
-      })
-    }
-  }
-
-  /**
-   *
-   * @param {NVImage} volume volume that has changed color maps
-   */
-  async onColormapChangeHandler(volume) {
-    if (this.isInSession &amp;&amp; this.niivue.mediaUrlMap.has(volume)) {
-      const url = this.niivue.mediaUrlMap.get(volume)
-      const colormap = volume.colormap
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.COLORMAP_CHANGED,
-        url,
-        colormap
-      })
-    }
-  }
-
-  /**
-   * @param {NVImage} volume volume that has changed opacity
-   */
-  async onOpacityChangeHandler(volume) {
-    if (this.isInSession &amp;&amp; this.niivue.mediaUrlMap.has(volume)) {
-      const url = this.niivue.mediaUrlMap.get(volume)
-      const opacity = volume.opacity
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.OPACITY_CHANGED,
-        url,
-        opacity
-      })
-    }
-  }
-
-  /**
-   * Frame for 4D image has changed
-   * @param {NVImage} volume
-   * @param {number} index
-   */
-  onFrameChangeHandler(volume, index) {
-    console.log('frame has changed to ' + index)
-    console.log(volume)
-    if (this.niivue.mediaUrlMap.has(volume) &amp;&amp; this.isInSession) {
-      const url = this.niivue.mediaUrlMap.get(volume)
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.FRAME_CHANGED,
-        url,
-        index
-      })
-    }
-    this.onFrameChange(volume, index)
-  }
-
-  /**
-   * Custom mesh shader has been added
-   * @param {string} fragmentShaderText shader code to be compiled
-   * @param {string} name name of shader, can be used as index
-   */
-  onCustomMeshShaderAddedHandler(fragmentShaderText, name) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.CUSTOM_SHADER_ADDED,
-        fragmentShaderText,
-        name
-      })
-    }
-  }
-
-  /**
-   * Mesh shader has changed
-   * @param {number} meshIndex index of mesh
-   * @param {number} shaderIndex index of shader
-   */
-  onMeshShaderChanged(meshIndex, shaderIndex) {
-    if (this.isInSession) {
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.SHADER_CHANGED,
-        meshIndex,
-        shaderIndex
-      })
-    }
-  }
-
-  /**
-   * Mesh property has been changed
-   * @param {number} meshIndex index of mesh
-   * @param {any} key property index
-   * @param {any} val property value
-   */
-  onMeshPropertyChanged(meshIndex, key, val) {
-    if (this.isInSession) {
-      console.log(NVMESSAGE.MESH_PROPERTY_CHANGED)
-      this.sessionBus.sendSessionMessage({
-        op: NVMESSAGE.MESH_PROPERTY_CHANGED,
-        meshIndex,
-        key,
-        val
-      })
-    }
-  }
+  const min = [mn[0], mn[1], mn[2]]
+  const max = [mx[0], mx[1], mx[2]]
+  const furthestVertexFromOrigin = mxDx
+  return { min, max, furthestVertexFromOrigin, origin }
 }
 </code></pre>
         </article>
