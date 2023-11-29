@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('niivue utilities arrayEquals', async ({ page }) => {
+test('niivue utilities arrayEquals', async ({page}) => {
   const val = await page.evaluate(() => {
     const nv = new niivue.Niivue()
     const arreq = nv.arrayEquals([1, 2, 3], [1, 2, 3])
