@@ -25,7 +25,7 @@
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest --maxWorkers=1",
     "test-playwright": "npm run build && npx playwright test",
-    "docs": "npx jsdoc --readme ./README.md -d devdocs src/ -t node_modules/docdash",
+    "docs": "npx jsdoc --readme ./README.md -d devdocs -r src/ -t node_modules/docdash",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",
     "lint": "eslint ."
