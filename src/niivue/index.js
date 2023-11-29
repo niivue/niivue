@@ -7995,6 +7995,9 @@ export class Niivue {
     // this.meshShaderIndex
     let hasFibers = false
     for (let i = 0; i < this.meshes.length; i++) {
+      if (this.meshes[i].visible === false) {
+        continue
+      }
       shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader
       if (this.uiData.mouseDepthPicker) {
         shader = this.pickingMeshShader
@@ -8034,6 +8037,9 @@ export class Niivue {
     gl.uniformMatrix4fv(shader.mvpLoc, false, m)
     gl.uniform1f(shader.uniforms.opacity, alpha)
     for (let i = 0; i < this.meshes.length; i++) {
+      if (this.meshes[i].visible === false) {
+        continue
+      }
       if (this.meshes[i].indexCount < 3) {
         continue
       }
