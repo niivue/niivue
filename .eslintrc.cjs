@@ -3,7 +3,7 @@ module.exports = {
   env: {
     browser: true
   },
-  global: {
+  globals: {
     niivue: true
   },
   ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
