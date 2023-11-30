@@ -2040,16 +2040,16 @@ export class NVMeshLoaders {
     // https://github.com/nipy/nibabel/blob/8fea2a8e50aaf4d8b0d4bfff7a21b132914120ee/nibabel/freesurfer/io.py#L58C5-L58C9
     const head0 = view.getUint32(offset, false)
     offset += 4
-    let headOK = head0 === 20
-    if (headOK !== 20) {
+    let isHeadOK = head0 === 20
+    if (!isHeadOK) {
       // read two more int32s
       const head1 = view.getUint32(offset, false)
       offset += 4
       const head2 = view.getUint32(offset, false)
       offset += 4
-      headOK = head0 === 2 && head1 === 0 && head2 === 20
+      isHeadOK = head0 === 2 && head1 === 0 && head2 === 20
     }
-    if (!headOK) {
+    if (!isHeadOK) {
       console.log('Unknown FreeSurfer Mesh extension code.')
     } else {
       const footer = new TextDecoder().decode(buffer.slice(offset)).trim()
