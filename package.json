@@ -11,7 +11,7 @@
       "import": "./dist/index.js"
     },
     "./min": {
-      "import": "./dist/index.min.j"
+      "import": "./dist/index.min.js"
     }
   },
 
