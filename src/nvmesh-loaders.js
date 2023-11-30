@@ -1,4 +1,4 @@
-import { mat4, vec4 } from 'gl-matrix'
+import { mat4, vec4, vec3 } from 'gl-matrix'
 import { decompressSync, unzipSync } from 'fflate/browser'
 import { Log } from './logger'
 import { cmapper } from './colortables'
@@ -2826,7 +2826,7 @@ export class NVMeshLoaders {
       rgba[1] = Math.round(diffuseColor[1] * 255)
       rgba[2] = Math.round(diffuseColor[2] * 255)
       const def = readStringTag('DEF')
-      if (length.def < 1) {
+      if (def.length < 1) {
         return
       }
       appearanceStyles[def] = rgba
@@ -2969,8 +2969,10 @@ export class NVMeshLoaders {
           vec4.transformMat4(ptj, ptj, r)
           vec4.add(pti, pti, translation)
           vec4.add(ptj, ptj, translation)
+          const pti3 = vec3.fromValues(pti[0], pti[1], pti[2])
+          const ptj3 = vec3.fromValues(ptj[0], ptj[1], ptj[2])
           // https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#Cylinder
-          NiivueObject3D.makeColoredCylinder(positions, indices, rgba255, pti, ptj, radius, rgba)
+          NiivueObject3D.makeColoredCylinder(positions, indices, rgba255, pti3, ptj3, radius, rgba)
         }
       } // while <shape
     }
