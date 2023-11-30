@@ -40,7 +40,7 @@
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "./niivue.es.js";
+  import * as niivue from "../dist/index.js";
   var slider = document.getElementById("meshSlider");
   slider.oninput = function () {
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1);

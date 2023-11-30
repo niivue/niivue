@@ -49,8 +49,9 @@
     <button id="toggleHippoButton" onclick="toggleHippo()">
       Add Hippocampus
     </button>
-    <script src="./niivue.umd.js"></script>
     <script>
+      import * as niivue from "../dist/index.js";
+      
       function toggleHippo() {
         let buttonElem = document.getElementById("toggleHippoButton");
         if (isHippoShowing) {

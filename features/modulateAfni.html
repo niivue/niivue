@@ -48,8 +48,9 @@
       <canvas id="gl1"></canvas>
     </main>
     <footer id="location">&nbsp;</footer>
-    <script src="./niivue.umd.js"></script>
     <script type="module" async>
+      import * as niivue from "../dist/index.js";
+      
       opacitySlider.onchange = function () {
         drop.onchange();
       };

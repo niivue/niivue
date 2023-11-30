@@ -105,15 +105,17 @@
 </body>
 
 </html>
-<script src="./niivue.umd.js"></script>
 <script type="module" async>
+  import * as niivue from "../dist/index.js";
+  import { esm } from "../dist/index.min.js";
+  
   xRaySlider.onchange = function () {
     nv1.opts.meshXRay = this.value / 10;
     nv1.drawScene();
   };
 
   function saveAsHtml() {
-      nv1.saveHTML("connectome.html");
+      nv1.saveHTML("connectome.html", "gl1", decodeURIComponent(esm));
   }
 
   var volumeList1 = [
