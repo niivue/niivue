@@ -717,7 +717,7 @@ export class NVMeshLoaders {
         }
       }
     } else if (ext === 'NII') {
-      layer.values = NVMeshLoaders.readNII(buffer, n_vert)
+      layer.values = NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary)
     } else if (ext === 'SMP') {
       layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
     } else if (ext === 'STC') {
@@ -2255,7 +2255,7 @@ export class NVMeshLoaders {
   // read NIfTI2 format with embedded CIfTI
   // this variation very specific to connectome workbench
   // https://brainder.org/2015/04/03/the-nifti-2-file-format/
-  static readNII2(buffer, n_vert = 0) {
+  static readNII2(buffer, n_vert = 0, anatomicalStructurePrimary = '') {
     let scalars = []
     const len = buffer.byteLength
     let isLittleEndian = true
@@ -2358,7 +2358,7 @@ export class NVMeshLoaders {
           // a single CIfTI file can contain multiple structures, but only one structure per mesh
           // The big kludge: try to find CIfTI structure that matches GIfTI mesh
           let isMatch = false
-          if (this.AnatomicalStructurePrimary.includes('CORTEX') && bStruct.includes('CORTEX')) {
+          if (anatomicalStructurePrimary.includes('CORTEX') && bStruct.includes('CORTEX')) {
             isMatch = true
           }
           // to do: other anatomy: cerebellum
@@ -2366,10 +2366,10 @@ export class NVMeshLoaders {
             continue
           }
           isMatch = false
-          if (this.AnatomicalStructurePrimary.includes('LEFT') && bStruct.includes('LEFT')) {
+          if (anatomicalStructurePrimary.includes('LEFT') && bStruct.includes('LEFT')) {
             isMatch = true
           }
-          if (this.AnatomicalStructurePrimary.includes('RIGHT') && bStruct.includes('RIGHT')) {
+          if (anatomicalStructurePrimary.includes('RIGHT') && bStruct.includes('RIGHT')) {
             isMatch = true
           }
           if (!isMatch) {
@@ -2428,7 +2428,7 @@ export class NVMeshLoaders {
         indexOffset,
         indexCount,
         indexOffset,
-        this.AnatomicalStructurePrimary
+        anatomicalStructurePrimary
       )
       //
       return scalars
@@ -2473,13 +2473,13 @@ export class NVMeshLoaders {
 
   // read NIfTI1/2 as vertex colors
   // https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
-  static readNII(buffer, n_vert = 0) {
+  static readNII(buffer, n_vert = 0, anatomicalStructurePrimary = '') {
     let scalars = []
     let isLittleEndian = true
     let reader = new DataView(buffer)
     let magic = reader.getUint16(0, isLittleEndian)
     if (magic === 540 || magic === 469893120) {
-      return NVMeshLoaders.readNII2(buffer, n_vert)
+      return NVMeshLoaders.readNII2(buffer, n_vert, anatomicalStructurePrimary)
     }
     if (magic === 23553) {
       isLittleEndian = false
@@ -2492,7 +2492,7 @@ export class NVMeshLoaders {
       buffer = raw.buffer
       magic = reader.getUint16(0, isLittleEndian)
       if (magic === 540 || magic === 469893120) {
-        return NVMeshLoaders.readNII2(buffer)
+        return NVMeshLoaders.readNII2(buffer, anatomicalStructurePrimary)
       }
       if (magic === 23553) {
         isLittleEndian = false
@@ -3064,6 +3064,7 @@ export class NVMeshLoaders {
     let positions = []
     let indices = []
     let scalars = []
+    let anatomicalStructurePrimary = ''
     let isIdx = false
     let isPts = false
     let isVectors = false
@@ -3251,7 +3252,8 @@ export class NVMeshLoaders {
       if (tag.name.trim() === 'MD') {
         line = new TextDecoder().decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos)).trim()
         if (line.includes('AnatomicalStructurePrimary') && line.includes('CDATA[')) {
-          this.AnatomicalStructurePrimary = readBracketTag('<Value><![CDATA[').toUpperCase()
+          anatomicalStructurePrimary = readBracketTag('<Value><![CDATA[').toUpperCase()
+          //this.AnatomicalStructurePrimary  = anatomicalStructurePrimary
         }
         if (line.includes('VolGeom') && line.includes('CDATA[')) {
           let e = -1
@@ -3305,7 +3307,7 @@ export class NVMeshLoaders {
       colormapLabel = cmapper.makeLabelLut(Labels)
     }
     if (n_vert > 0) {
-      return { scalars, colormapLabel }
+      return { scalars, colormapLabel, anatomicalStructurePrimary}
     }
     if (
       positions.length > 2 &&
@@ -3327,7 +3329,8 @@ export class NVMeshLoaders {
       positions,
       indices,
       scalars,
-      colormapLabel
+      colormapLabel,
+      anatomicalStructurePrimary
     } // MatrixData
   } // readGII()
 }
