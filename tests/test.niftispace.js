@@ -15,7 +15,7 @@ const files = fs.readdirSync('./tests/images/nifti_space')
 
 test.each(files)('niftispace_%s', async (file) => {
   const retFile = await page.evaluate(async (file) => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

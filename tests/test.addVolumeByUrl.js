@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('addVolumeByUrl', async () => {
   const nvols = await page.evaluate(async () => {
-    nv = new niivue.Niivue()
+    nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object by url with options
     const options = {

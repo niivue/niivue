@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test.skip('saveImageDocument', async () => {
   const document = await page.evaluate(async () => {
-    nv = new niivue.Niivue()
+    nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('mouseMoveUpdatesRenderElevationAzimuth', async () => {
   const scene = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     nv.setSliceType(nv.sliceTypeRender)
     await nv.attachTo('gl', false)
     // load one volume object in an array

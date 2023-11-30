@@ -7,7 +7,7 @@ If no file name is specified in the URL, Niivue will append niivue-manifest.txt.
 Check out this [example](https://github.com/niivue/niivue-demo-images/blob/main/dicom/niivue-manifest.txt) to see how DICOM files should be listed.
 
 ```javascript
-import * as niivue from "./niivue.es.js";
+import * as niivue from "@niivue/niivue";
 var volumeList1 = [
   {
     url: "https://raw.githubusercontent.com/niivue/niivue-demo-images/main/dicom/niivue-manifest.txt",
@@ -17,7 +17,7 @@ var volumeList1 = [
     isManifest: true,
   },
 ];
-var nv1 = new niivue.Niivue();
+var nv1 = new Niivue();
 nv1.setRadiologicalConvention(false);
 nv1.attachTo("gl1");
 nv1.loadVolumes(volumeList1);

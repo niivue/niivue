@@ -63,8 +63,10 @@
 </body>
 
 </html>
-<script src="./niivue.umd.js"></script>
 <script type="module" async>
+  import * as niivue from "../dist/index.js";
+  import { esm } from "../dist/index.min.js";
+  
   document
     .getElementById("drawOpacity")
     .addEventListener("change", doDrawOpacity);
@@ -149,7 +151,7 @@
       "&nbsp;&nbsp;" + data.string;
   }
   function saveAsHtml() {
-    const javascript = nv1.generateLoadDocumentJavaScript("gl1");
+    const javascript = nv1.generateLoadDocumentJavaScript("gl1", decodeURIComponent(esm));
     const html = `<!DOCTYPE html>
 <html lang="en">
   <head>

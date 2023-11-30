@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('labelsForConnectome', async () => {
   const nlabels = await page.evaluate(async () => {
-    const nv = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true })
+    const nv = new Niivue({ show3Dcrosshair: true, isColorbar: true })
     nv.opts.multiplanarForceRender = true
     await nv.attachTo('gl', false)
     // load one volume object in an array
@@ -93,8 +93,8 @@ test('labelsForConnectome', async () => {
     }
 
     await nv.loadConnectome(connectome)
-    nv.setMeshProperty(nv.meshes[0].id, 'nodeScale', 3)
-    nv.setClipPlane([-0.1, 270, 0])
+    await nv.setMeshProperty(nv.meshes[0].id, 'nodeScale', 3)
+    await nv.setClipPlane([-0.1, 270, 0])
     return nv.getAllLabels().length
   })
   expect(nlabels).toBe(4)

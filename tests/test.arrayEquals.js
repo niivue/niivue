@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('arrayEquals', async () => {
   const val = await page.evaluate(() => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     const arreq = nv.arrayEquals([1, 2, 3], [1, 2, 3])
     return arreq
   })

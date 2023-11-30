@@ -5,7 +5,7 @@ beforeEach(async () => {
 })
 test('loadDrawingDocument', async () => {
   const isDrawingPresent = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+    const nv = new Niivue()
     await nv.attachTo('gl', false)
     await nv.loadDocumentFromUrl('./images/document/niivue.drawing.nvd')
     return nv.drawBitmap != null
