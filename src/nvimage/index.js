@@ -2746,7 +2746,7 @@ export class NVImage {
             isNifti1 = bytes[1] === 92 && bytes[0] === 1
           }
           if (!isNifti1) {
-            dataBuffer = null
+            dataBuffer = await this.readFileAsync(file)
           } else {
             const hdr = nifti.readHeader(dataBuffer)
             const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
