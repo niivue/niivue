@@ -783,9 +783,7 @@ export class NVMeshLoaders {
 
     const scalars = new Float32Array(nvert * nMaps)
     const maps = []
-    // read Name of SRF
     let pos = 9
-
     function readStr() {
       const startPos = pos
       while (pos < len && reader.getUint8(pos) !== 0) {
@@ -794,6 +792,9 @@ export class NVMeshLoaders {
       pos++ // skip null termination
       return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
     } // readStr: read variable length string
+
+    // read Name of SRF
+    const _filenameSRF = readStr()
 
     for (let i = 0; i < nMaps; i++) {
       const m = []
