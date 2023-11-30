@@ -1,15 +1,14 @@
-import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+const { test, expect } = require('@playwright/test')
+const { httpServerAddress } = require('./helpers')
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(httpServerAddress)
   console.log(`Running ${testInfo.title}`)
 })
 
-test('loadSingleImage', async ({ page }) => {
+test('niivue draw 3D no crosshair', async ({ page }) => {
   const nvols = await page.evaluate(async () => {
-    // eslint-disable-next-line no-undef
-    const nv = new Niivue()
+    const nv = new niivue.Niivue({ show3Dcrosshair: true })
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [
@@ -23,6 +22,7 @@ test('loadSingleImage', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
+    nv.setSliceType(nv.sliceTypeRender)
     return nv.volumes.length
   })
   expect(nvols).toBe(1)
