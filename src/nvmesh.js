@@ -78,19 +78,21 @@ export class NVMeshFromUrlOptions {
  * @class NVMesh
  * @type NVMesh
  * @description
- * a NVImage encapsulates some images data and provides methods to query and operate on images
+ * a NVMesh encapsulates some mesh data and provides methods to query and operate on meshes
  * @constructor
  * @param {array} pts a 3xN array of vertex positions (X,Y,Z coordinates).
  * @param {array} tris a 3xN array of triangle indices (I,J,K; indexed from zero). Each triangle generated from three vertices.
  * @param {string} [name=''] a name for this image. Default is an empty string
  * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
- * @param {number} [opacity=1.0] the opacity for this image. default is 1
+ * @param {number} [opacity=1.0] the opacity for this mesh. default is 1
  * @param {boolean} [visible=true] whether or not this image is to be visible
  * @param {WebGLRenderingContext} gl - WebGL rendering context
  * @param {object} connectome specify connectome edges and nodes. Default is null (not a connectome).
  * @property {array} dpg Data per group for tractography, see TRK format. Default is null (not tractograpgy)
  * @property {array} dps  Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
  * @property {array} dpv Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
+ * @param {boolean} [colorbarVisible=true] does this mesh display a colorbar
+ * @param {string} [anatomicalStructurePrimary=''] region for mesh. Default is an empty string
  */
 export class NVMesh {
   constructor(
@@ -105,8 +107,10 @@ export class NVMesh {
     dpg = null,
     dps = null,
     dpv = null,
-    colorbarVisible = true
+    colorbarVisible = true,
+    anatomicalStructurePrimary = ''
   ) {
+    this.anatomicalStructurePrimary = anatomicalStructurePrimary
     this.name = name
     this.colorbarVisible = colorbarVisible
     this.id = crypto.randomUUID()
@@ -989,6 +993,7 @@ export class NVMesh {
   static async readMesh(buffer, name, gl, opacity = 1.0, rgba255 = [255, 255, 255, 255], visible = true) {
     let tris = []
     let pts = []
+    let anatomicalStructurePrimary = ''
     let obj = []
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(name)[1]
@@ -1114,8 +1119,9 @@ export class NVMesh {
     } else {
       obj = NVMeshLoaders.readFreeSurfer(buffer)
     } // freesurfer hail mary
-    console.log('mesh loaded')
-    console.log('obj', obj)
+    if (obj.anatomicalStructurePrimary) {
+      anatomicalStructurePrimary = obj.anatomicalStructurePrimary
+    }
     pts = obj.positions.slice()
     tris = obj.indices.slice()
     if ('rgba255' in obj && obj.rgba255.length > 0) {
@@ -1151,7 +1157,13 @@ export class NVMesh {
       rgba255, // colormap,
       opacity, // opacity,
       visible, // visible,
-      gl
+      gl,
+      null, // connectome
+      null, // dpg
+      null, // dps
+      null, // dpv
+      true, // colorbarVisible
+      anatomicalStructurePrimary
     )
     if ('scalars' in obj && obj.scalars.length > 0) {
       NVMeshLoaders.readLayer(name, buffer, nvm, opacity, 'gray')

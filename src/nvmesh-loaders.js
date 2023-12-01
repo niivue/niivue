@@ -1,4 +1,4 @@
-import { mat4, vec4 } from 'gl-matrix'
+import { mat4, vec4, vec3 } from 'gl-matrix'
 import { decompressSync, unzipSync } from 'fflate/browser'
 import { Log } from './logger'
 import { cmapper } from './colortables'
@@ -717,7 +717,7 @@ export class NVMeshLoaders {
         }
       }
     } else if (ext === 'NII') {
-      layer.values = NVMeshLoaders.readNII(buffer, n_vert)
+      layer.values = NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary)
     } else if (ext === 'SMP') {
       layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
     } else if (ext === 'STC') {
@@ -2040,16 +2040,16 @@ export class NVMeshLoaders {
     // https://github.com/nipy/nibabel/blob/8fea2a8e50aaf4d8b0d4bfff7a21b132914120ee/nibabel/freesurfer/io.py#L58C5-L58C9
     const head0 = view.getUint32(offset, false)
     offset += 4
-    let headOK = head0 === 20
-    if (headOK !== 20) {
+    let isHeadOK = head0 === 20
+    if (!isHeadOK) {
       // read two more int32s
       const head1 = view.getUint32(offset, false)
       offset += 4
       const head2 = view.getUint32(offset, false)
       offset += 4
-      headOK = head0 === 2 && head1 === 0 && head2 === 20
+      isHeadOK = head0 === 2 && head1 === 0 && head2 === 20
     }
-    if (!headOK) {
+    if (!isHeadOK) {
       console.log('Unknown FreeSurfer Mesh extension code.')
     } else {
       const footer = new TextDecoder().decode(buffer.slice(offset)).trim()
@@ -2255,7 +2255,7 @@ export class NVMeshLoaders {
   // read NIfTI2 format with embedded CIfTI
   // this variation very specific to connectome workbench
   // https://brainder.org/2015/04/03/the-nifti-2-file-format/
-  static readNII2(buffer, n_vert = 0) {
+  static readNII2(buffer, n_vert = 0, anatomicalStructurePrimary = '') {
     let scalars = []
     const len = buffer.byteLength
     let isLittleEndian = true
@@ -2358,7 +2358,7 @@ export class NVMeshLoaders {
           // a single CIfTI file can contain multiple structures, but only one structure per mesh
           // The big kludge: try to find CIfTI structure that matches GIfTI mesh
           let isMatch = false
-          if (this.AnatomicalStructurePrimary.includes('CORTEX') && bStruct.includes('CORTEX')) {
+          if (anatomicalStructurePrimary.includes('CORTEX') && bStruct.includes('CORTEX')) {
             isMatch = true
           }
           // to do: other anatomy: cerebellum
@@ -2366,10 +2366,10 @@ export class NVMeshLoaders {
             continue
           }
           isMatch = false
-          if (this.AnatomicalStructurePrimary.includes('LEFT') && bStruct.includes('LEFT')) {
+          if (anatomicalStructurePrimary.includes('LEFT') && bStruct.includes('LEFT')) {
             isMatch = true
           }
-          if (this.AnatomicalStructurePrimary.includes('RIGHT') && bStruct.includes('RIGHT')) {
+          if (anatomicalStructurePrimary.includes('RIGHT') && bStruct.includes('RIGHT')) {
             isMatch = true
           }
           if (!isMatch) {
@@ -2428,7 +2428,7 @@ export class NVMeshLoaders {
         indexOffset,
         indexCount,
         indexOffset,
-        this.AnatomicalStructurePrimary
+        anatomicalStructurePrimary
       )
       //
       return scalars
@@ -2473,13 +2473,13 @@ export class NVMeshLoaders {
 
   // read NIfTI1/2 as vertex colors
   // https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
-  static readNII(buffer, n_vert = 0) {
+  static readNII(buffer, n_vert = 0, anatomicalStructurePrimary = '') {
     let scalars = []
     let isLittleEndian = true
     let reader = new DataView(buffer)
     let magic = reader.getUint16(0, isLittleEndian)
     if (magic === 540 || magic === 469893120) {
-      return NVMeshLoaders.readNII2(buffer, n_vert)
+      return NVMeshLoaders.readNII2(buffer, n_vert, anatomicalStructurePrimary)
     }
     if (magic === 23553) {
       isLittleEndian = false
@@ -2492,7 +2492,7 @@ export class NVMeshLoaders {
       buffer = raw.buffer
       magic = reader.getUint16(0, isLittleEndian)
       if (magic === 540 || magic === 469893120) {
-        return NVMeshLoaders.readNII2(buffer)
+        return NVMeshLoaders.readNII2(buffer, anatomicalStructurePrimary)
       }
       if (magic === 23553) {
         isLittleEndian = false
@@ -2826,7 +2826,7 @@ export class NVMeshLoaders {
       rgba[1] = Math.round(diffuseColor[1] * 255)
       rgba[2] = Math.round(diffuseColor[2] * 255)
       const def = readStringTag('DEF')
-      if (length.def < 1) {
+      if (def.length < 1) {
         return
       }
       appearanceStyles[def] = rgba
@@ -2969,8 +2969,10 @@ export class NVMeshLoaders {
           vec4.transformMat4(ptj, ptj, r)
           vec4.add(pti, pti, translation)
           vec4.add(ptj, ptj, translation)
+          const pti3 = vec3.fromValues(pti[0], pti[1], pti[2])
+          const ptj3 = vec3.fromValues(ptj[0], ptj[1], ptj[2])
           // https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#Cylinder
-          NiivueObject3D.makeColoredCylinder(positions, indices, rgba255, pti, ptj, radius, rgba)
+          NiivueObject3D.makeColoredCylinder(positions, indices, rgba255, pti3, ptj3, radius, rgba)
         }
       } // while <shape
     }
@@ -3062,6 +3064,7 @@ export class NVMeshLoaders {
     let positions = []
     let indices = []
     let scalars = []
+    let anatomicalStructurePrimary = ''
     let isIdx = false
     let isPts = false
     let isVectors = false
@@ -3249,7 +3252,8 @@ export class NVMeshLoaders {
       if (tag.name.trim() === 'MD') {
         line = new TextDecoder().decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos)).trim()
         if (line.includes('AnatomicalStructurePrimary') && line.includes('CDATA[')) {
-          this.AnatomicalStructurePrimary = readBracketTag('<Value><![CDATA[').toUpperCase()
+          anatomicalStructurePrimary = readBracketTag('<Value><![CDATA[').toUpperCase()
+          // this.AnatomicalStructurePrimary  = anatomicalStructurePrimary
         }
         if (line.includes('VolGeom') && line.includes('CDATA[')) {
           let e = -1
@@ -3303,7 +3307,7 @@ export class NVMeshLoaders {
       colormapLabel = cmapper.makeLabelLut(Labels)
     }
     if (n_vert > 0) {
-      return { scalars, colormapLabel }
+      return { scalars, colormapLabel, anatomicalStructurePrimary }
     }
     if (
       positions.length > 2 &&
@@ -3325,7 +3329,8 @@ export class NVMeshLoaders {
       positions,
       indices,
       scalars,
-      colormapLabel
+      colormapLabel,
+      anatomicalStructurePrimary
     } // MatrixData
   } // readGII()
 }
