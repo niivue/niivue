@@ -11,15 +11,7 @@ export enum LabelLineTerminator {
 }
 
 /**
- * Class representing label style
- *
- * @param {number[]} textColor - Color of text
- * @param {number} textScale - Text Size (0.0..1.0)
- * @param {number} lineWidth - Line width
- * @param {number[]} lineColor - Line color
- * @param {number} bulletScale - Bullet size respective of text
- * @param {number[]} bulletColor - Bullet color
- * @param {number[]} backgroundColor - Background color of label
+ * Class representing label style.
  */
 export class NVLabel3DStyle {
   textColor: number[]
@@ -31,6 +23,16 @@ export class NVLabel3DStyle {
   bulletScale?: number
   bulletColor?: number[]
   backgroundColor?: number[]
+
+  /**
+   * @param textColor - Color of text
+   * @param textScale - Text Size (0.0..1.0)
+   * @param lineWidth - Line width
+   * @param lineColor - Line color
+   * @param bulletScale - Bullet size respective of text
+   * @param bulletColor - Bullet color
+   * @param backgroundColor - Background color of label
+   */
   constructor(
     textColor = [1.0, 1.0, 1.0, 1.0],
     textScale = 1.0,
@@ -38,9 +40,9 @@ export class NVLabel3DStyle {
     lineWidth = 0.0,
     lineColor = [0.0, 0.0, 0.0],
     lineTerminator = LabelLineTerminator.NONE,
-    bulletScale = undefined,
-    bulletColor = undefined,
-    backgroundColor = undefined
+    bulletScale?: number,
+    bulletColor?: number[],
+    backgroundColor?: number[]
   ) {
     this.textColor = textColor
     this.textScale = textScale
@@ -56,16 +58,17 @@ export class NVLabel3DStyle {
 
 /**
  * Label class
- * @constructor
- * @param {string} text - The text of the label
- * @param {NVLabel3DStyle} style - The style of the label
- * @param {number[][]} points - An array of points label for label lines
  */
 export class NVLabel3D {
   text: string
   style: NVLabel3DStyle
   points: number[][]
 
+  /**
+   * @param text - The text of the label
+   * @param style - The style of the label
+   * @param points - An array of points label for label lines
+   */
   constructor(text: string, style: NVLabel3DStyle, points: number[][]) {
     this.text = text
     this.style = style

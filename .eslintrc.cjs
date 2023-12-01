@@ -9,8 +9,9 @@ module.exports = {
   ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
   extends: ['standard', 'plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint', 'prettier'],
+  plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc', 'prettier'],
   rules: {
+    'tsdoc/syntax': 'warn',
     curly: ['error', 'all'],
     camelcase: 'off',
     'import/order': 'error',
