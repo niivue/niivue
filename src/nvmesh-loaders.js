@@ -3253,7 +3253,7 @@ export class NVMeshLoaders {
         line = new TextDecoder().decode(buffer.slice(tag.contentStartPos + 1, tag.contentEndPos)).trim()
         if (line.includes('AnatomicalStructurePrimary') && line.includes('CDATA[')) {
           anatomicalStructurePrimary = readBracketTag('<Value><![CDATA[').toUpperCase()
-          //this.AnatomicalStructurePrimary  = anatomicalStructurePrimary
+          // this.AnatomicalStructurePrimary  = anatomicalStructurePrimary
         }
         if (line.includes('VolGeom') && line.includes('CDATA[')) {
           let e = -1
@@ -3307,7 +3307,7 @@ export class NVMeshLoaders {
       colormapLabel = cmapper.makeLabelLut(Labels)
     }
     if (n_vert > 0) {
-      return { scalars, colormapLabel, anatomicalStructurePrimary}
+      return { scalars, colormapLabel, anatomicalStructurePrimary }
     }
     if (
       positions.length > 2 &&

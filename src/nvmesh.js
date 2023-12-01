@@ -108,7 +108,7 @@ export class NVMesh {
     dps = null,
     dpv = null,
     colorbarVisible = true,
-    anatomicalStructurePrimary = '',
+    anatomicalStructurePrimary = ''
   ) {
     this.anatomicalStructurePrimary = anatomicalStructurePrimary
     this.name = name
@@ -1119,8 +1119,9 @@ export class NVMesh {
     } else {
       obj = NVMeshLoaders.readFreeSurfer(buffer)
     } // freesurfer hail mary
-    if (Object.hasOwn(obj, 'anatomicalStructurePrimary'))
-        anatomicalStructurePrimary = obj.anatomicalStructurePrimary
+    if (Object.hasOwn(obj, 'anatomicalStructurePrimary')) {
+      anatomicalStructurePrimary = obj.anatomicalStructurePrimary
+    }
     pts = obj.positions.slice()
     tris = obj.indices.slice()
     if ('rgba255' in obj && obj.rgba255.length > 0) {
@@ -1157,12 +1158,12 @@ export class NVMesh {
       opacity, // opacity,
       visible, // visible,
       gl,
-      null, //connectome
-      null, //dpg
-      null, //dps
-      null, //dpv
-      true, //colorbarVisible
-      anatomicalStructurePrimary,
+      null, // connectome
+      null, // dpg
+      null, // dps
+      null, // dpv
+      true, // colorbarVisible
+      anatomicalStructurePrimary
     )
     if ('scalars' in obj && obj.scalars.length > 0) {
       NVMeshLoaders.readLayer(name, buffer, nvm, opacity, 'gray')
