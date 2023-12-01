@@ -92,7 +92,7 @@ export { NVDocument, SLICE_TYPE } from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 
-const log = new Log()
+const log = new Log();
 
 /**
  * mesh file formats that can be loaded
