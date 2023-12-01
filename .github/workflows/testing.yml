@@ -28,7 +28,9 @@ jobs:
       - run: npm run build --if-present
       - name: Lint
         if: matrix.os != 'windows-latest'
-        run: npm run lint
+        run: |
+          npm run lint
+          npm run lint:ts
       - run: npm run test
       - uses: actions/upload-artifact@v3
         if: failure()

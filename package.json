@@ -28,6 +28,7 @@
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",
     "lint": "eslint .",
+    "lint:ts": "tsc --noEmit",
     "lint:debug": "DEBUG=eslint:cli-engine eslint ."
   },
   "files": [
