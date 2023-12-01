@@ -1120,7 +1120,7 @@ export class NVMesh {
       obj = NVMeshLoaders.readFreeSurfer(buffer)
     } // freesurfer hail mary
     if (obj.anatomicalStructurePrimary) {
-        anatomicalStructurePrimary = obj.anatomicalStructurePrimary
+      anatomicalStructurePrimary = obj.anatomicalStructurePrimary
     }
     pts = obj.positions.slice()
     tris = obj.indices.slice()
