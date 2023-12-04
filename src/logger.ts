@@ -34,4 +34,8 @@ export class Log {
   error(...args: unknown[]) {
     console.error(this.getTimeStamp(), 'ERROR', ...args)
   }
+
+  setLogLevel(useLogging: boolean) {
+    this.useLogging = useLogging
+  }
 }
