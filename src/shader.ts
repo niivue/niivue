@@ -1,8 +1,15 @@
 // shader.js is taken from github user Twinklebear: https://github.com/Twinklebear/webgl-util
 
-// Compile and link the shaders vert and frag. vert and frag should contain
-// the shader source code for the vertex and fragment shaders respectively
-// Returns the compiled and linked program, or null if compilation or linking failed
+/**
+ * Compile and link the shaders vert and frag. vert and frag should contain
+ * the shader source code for the vertex and fragment shaders respectively.
+ *
+ * @param gl - WebGL rendering context
+ * @param vertexSource - vertex source
+ * @param fragmentSource - fragment source
+ * @returns the compiled and linked program
+ * @throws if compilation or linking failed
+ */
 export const compileShader = function (
   gl: WebGL2RenderingContext,
   vertexSource: string,
@@ -49,7 +56,7 @@ export const compileShader = function (
 
 export const getGLExtension = function (gl: WebGL2RenderingContext, ext: string): boolean {
   if (!gl.getExtension(ext)) {
-    alert('Missing ' + ext + ' WebGL extension')
+    console.error('Missing ' + ext + ' WebGL extension')
     return false
   }
   return true
