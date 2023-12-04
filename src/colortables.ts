@@ -1,6 +1,6 @@
 import * as cmaps from './cmaps/index.js'
 
-type ColorMap = {
+export type ColorMap = {
   R: number[]
   G: number[]
   B: number[]
@@ -12,7 +12,7 @@ type ColorMap = {
   labels?: string[]
 }
 
-type LUT = {
+export type LUT = {
   lut: Uint8ClampedArray
   min?: number
   max?: number

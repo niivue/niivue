@@ -1029,7 +1029,7 @@ export class NVMesh {
       } else if (ext === 'TRACT') {
         obj = NVMeshLoaders.readTRACT(buffer)
       } else if (ext === 'TRX') {
-        obj = await NVMeshLoaders.readTRX(buffer)
+        obj = NVMeshLoaders.readTRX(buffer)
       } else {
         obj = NVMeshLoaders.readTRK(buffer)
       }
@@ -1521,7 +1521,7 @@ export class NVMesh {
     return NVMeshLoaders.readTCK(buffer)
   }
 
-  static async readTRX(buffer) {
+  static readTRX(buffer) {
     return NVMeshLoaders.readTRX(buffer)
   }
 

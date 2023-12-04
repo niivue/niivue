@@ -1,4 +1,4 @@
-import { mat4, vec3 } from 'gl-matrix'
+import { mat4, vec3, vec4 } from 'gl-matrix'
 
 type Geometry = {
   vertexBuffer: WebGLBuffer
@@ -241,7 +241,12 @@ export class NiivueObject3D {
     return vtx
   }
 
-  static makeSphere = function (vertices: number[], indices: number[], radius: number, origin = [0, 0, 0]): void {
+  static makeSphere = function (
+    vertices: number[],
+    indices: number[],
+    radius: number,
+    origin: vec3 | vec4 = [0, 0, 0]
+  ): void {
     let vtx = [
       0.0, 0.0, 1.0, 0.894, 0.0, 0.447, 0.276, 0.851, 0.447, -0.724, 0.526, 0.447, -0.724, -0.526, 0.447, 0.276, -0.851,
       0.447, 0.724, 0.526, -0.447, -0.276, 0.851, -0.447, -0.894, 0.0, -0.447, -0.276, -0.851, -0.447, 0.724, -0.526,
@@ -379,7 +384,7 @@ export class NiivueObject3D {
     indices: number[],
     colors: number[],
     radius: number,
-    origin = [0, 0, 0],
+    origin: vec3 | vec4 = [0, 0, 0],
     rgba255 = [0, 0, 192, 255]
   ): void {
     let nv = vertices.length / 3
