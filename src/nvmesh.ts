@@ -564,44 +564,32 @@ export class NVMesh {
   // internal function filters connectome to identify which color, size and visibility of nodes and edges
   updateConnectome(gl: WebGL2RenderingContext): void {
     // draw nodes
-    const tris = []
-    const nNode = this.nodes.X.length
+    const tris: number[] = []
+    const nNode = this.nodes!.X.length
     let hasEdges = false
-    if (nNode > 1 && 'edges' in this) {
-      let nEdges = this.edges.length
+    if (nNode > 1 && this.edges) {
+      let nEdges = this.edges!.length
       if ((nEdges = nNode * nNode)) {
         hasEdges = true
       } else {
         console.log('Expected %d edges not %d', nNode * nNode, nEdges)
       }
     }
-    if (!('nodeScale' in this.hasOwnProperty)) {
-      this.nodeScale = 4
-    }
-    if (!('edgeScale' in this)) {
-      this.edgeScale = 1
-    }
-    if (!('nodeColormap' in this)) {
-      this.nodeColormap = 'warm'
-    }
-    if (!('edgeColormap' in this)) {
-      this.edgeColormap = 'warm'
-    }
 
     // draw all nodes
-    const pts = []
-    const rgba255 = []
+    const pts: number[] = []
+    const rgba255: number[] = []
     let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
     let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
-    let hasNeg = 'nodeColormapNegative' in this
-    let min = this.nodeMinColor
-    let max = this.nodeMaxColor
+    let hasNeg = this.nodeColormapNegative !== undefined
+    let min = this.nodeMinColor!
+    let max = this.nodeMaxColor!
     for (let i = 0; i < nNode; i++) {
-      const radius = this.nodes.Size[i] * this.nodeScale
+      const radius = this.nodes!.Size[i] * this.nodeScale
       if (radius <= 0.0) {
         continue
       }
-      let color = this.nodes.Color[i]
+      let color = this.nodes!.Color[i]
       let isNeg = false
       if (hasNeg && color < 0) {
         isNeg = true
@@ -615,24 +603,24 @@ export class NVMesh {
       } else {
         color = 1.0
       }
-      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+      color = Math.round(Math.max(Math.min(255, color * 255))) * 4
       let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
       if (isNeg) {
         rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
       }
-      const pt = [this.nodes.X[i], this.nodes.Y[i], this.nodes.Z[i]]
+      const pt: vec3 = [this.nodes!.X[i], this.nodes!.Y[i], this.nodes!.Z[i]] // TODO defined assertions should not be necessary here, this should be correctly assigned in the constructor
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
     }
     // draw all edges
     if (hasEdges) {
       lut = cmapper.colormap(this.edgeColormap, this.colormapInvert)
       lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert)
-      hasNeg = 'edgeColormapNegative' in this
-      min = this.edgeMin
-      max = this.edgeMax
+      hasNeg = this.edgeColormapNegative !== undefined
+      min = this.edgeMin!
+      max = this.edgeMax!
       for (let i = 0; i < nNode - 1; i++) {
         for (let j = i + 1; j < nNode; j++) {
-          let color = this.edges[i * nNode + j]
+          let color = this.edges![i * nNode + j]
           let isNeg = false
           if (hasNeg && color < 0) {
             isNeg = true
@@ -650,13 +638,13 @@ export class NVMesh {
           } else {
             color = 1.0
           }
-          color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+          color = Math.round(Math.max(Math.min(255, color * 255))) * 4
           let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
           if (isNeg) {
             rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
           }
-          const pti = [this.nodes.X[i], this.nodes.Y[i], this.nodes.Z[i]]
-          const ptj = [this.nodes.X[j], this.nodes.Y[j], this.nodes.Z[j]]
+          const pti: vec3 = [this.nodes!.X[i], this.nodes!.Y[i], this.nodes!.Z[i]]
+          const ptj: vec3 = [this.nodes!.X[j], this.nodes!.Y[j], this.nodes!.Z[j]]
           NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
         } // for j
       } // for i
@@ -676,7 +664,7 @@ export class NVMesh {
   }
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
-  updateMesh(gl) {
+  updateMesh(gl: WebGL2RenderingContext): void {
     if (this.offsetPt0) {
       this.updateFibers(gl)
       return // fiber not mesh
@@ -689,11 +677,11 @@ export class NVMesh {
       console.log('underspecified mesh')
       return
     }
-    function lerp(x, y, a) {
+    function lerp(x: number, y: number, a: number): number {
       // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
       return x * (1 - a) + y * a
     }
-    function additiveBlend(x, y) {
+    function additiveBlend(x: number, y: number): number {
       return Math.min(x + y, 255.0)
     }
     const posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255)
@@ -711,18 +699,17 @@ export class NVMesh {
         if (opacity <= 0.0 || layer.cal_min > layer.cal_max) {
           continue
         }
-        if (!('isAdditiveBlend' in layer)) {
+        if (layer.isAdditiveBlend === undefined) {
           layer.isAdditiveBlend = false
         }
-        if (!('colormapLabel' in layer)) {
-          layer.colormapLabel = []
-        }
-        if ('R' in layer.colormapLabel && !('lut' in layer.colormapLabel)) {
+        // build a label colormap
+        if (layer.colormapLabel && (layer.colormapLabel as ColorMap).R && !(layer.colormapLabel as LUT).lut) {
           // convert colormap JSON to RGBA LUT
-          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel)
+          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel as ColorMap)
         }
-        if ('lut' in layer.colormapLabel) {
-          const lut = layer.colormapLabel.lut
+        if (layer.colormapLabel && (layer.colormapLabel as LUT).lut) {
+          const colormapLabel = layer.colormapLabel as LUT
+          const lut = colormapLabel.lut
           const nLabel = Math.floor(lut.length / 4)
           const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1)
           const frameOffset = nvtx * frame
@@ -755,7 +742,7 @@ export class NVMesh {
           } // for each vertex
           continue
         } // if colormapLabel
-        if (layer.values.constructor === Uint32Array) {
+        if (layer.values instanceof Uint8Array) {
           const rgba8 = new Uint8Array(layer.values.buffer)
           let opaque = new Array(nvtx).fill(true)
           if (layer.isOutlineBorder) {
@@ -786,7 +773,7 @@ export class NVMesh {
           layer.cal_min = Math.max(0, layer.cal_min)
           layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max)
         }
-        if (!('isTransparentBelowCalMin' in layer)) {
+        if (layer.isTransparentBelowCalMin === undefined) {
           layer.isTransparentBelowCalMin = true
         }
         let mn = layer.cal_min
@@ -1041,56 +1028,64 @@ export class NVMesh {
     return f32
   }
 
-  static async loadConnectomeFromFreeSurfer(
-    json,
-    gl,
+  static loadConnectomeFromFreeSurfer(
+    json: {
+      points?: Point[]
+      data_type: string
+    },
+    gl: WebGL2RenderingContext,
     name = '',
     // colormap = "",
     opacity = 1.0,
     visible = true
-  ) {
-    // let rgb255 = [255, 0, 0];
-    // if ("color" in json) rgb255 = this.color;
+  ): NVMesh {
     let isValid = true
-    if (!('data_type' in json)) {
+    if (json.data_type === undefined) {
       isValid = false
-    } else if (this.data_type !== 'fs_pointset') {
+    } else if (json.data_type !== 'fs_pointset') {
       isValid = false
     }
-    if (!('points' in json)) {
+    if (json.points === undefined) {
       isValid = false
     }
     if (!isValid) {
       throw Error('not a valid FreeSurfer json pointset')
     }
-    const jcon = []
-    jcon.nodes = []
-    jcon.nodes.names = []
-    jcon.nodes.prefilled = []
-    jcon.nodes.X = []
-    jcon.nodes.Y = []
-    jcon.nodes.Z = []
-    jcon.nodes.Color = []
-    jcon.nodes.Size = []
-    jcon.name = this.data_type
-    for (let i = 0; i < this.points.length; i++) {
+    const jcon: Connectome = {
+      nodes: {
+        names: [],
+        prefilled: [],
+        X: [],
+        Y: [],
+        Z: [],
+        Color: [],
+        Size: []
+      },
+      // @ts-expect-error not sure where this should come from
+      name: this.data_type
+    }
+
+    if (!json.points) {
+      throw new Error('points are not set!')
+    }
+    for (let i = 0; i < json.points.length; i++) {
       let name = ''
-      if ('comments' in this.points[i]) {
-        if ('text' in this.points[i].comments[0]) {
-          name = this.points[i].comments[0].text
+      if (json.points[i].comments) {
+        if (json.points[i].comments[0].text) {
+          name = json.points[i].comments[0].text
         }
       }
       jcon.nodes.names.push(name)
       let prefilled = ''
-      if ('comments' in this.points[i]) {
-        if ('prefilled' in this.points[i].comments[0]) {
-          prefilled = this.points[i].comments[0].prefilled
+      if (json.points[i].comments) {
+        if (json.points[i].comments[0].prefilled) {
+          prefilled = json.points[i].comments[0].prefilled as string
         }
       }
       jcon.nodes.prefilled.push(prefilled)
-      jcon.nodes.X.push(this.points[i].coordinates.x)
-      jcon.nodes.Y.push(this.points[i].coordinates.y)
-      jcon.nodes.Z.push(this.points[i].coordinates.z)
+      jcon.nodes.X.push(json.points[i].coordinates.x)
+      jcon.nodes.Y.push(json.points[i].coordinates.y)
+      jcon.nodes.Z.push(json.points[i].coordinates.z)
       jcon.nodes.Color.push(1)
       jcon.nodes.Size.push(1)
     }
@@ -1098,36 +1093,36 @@ export class NVMesh {
   } // loadConnectomeFromFreeSurfer
 
   // read connectome saved as JSON
-  static async loadConnectomeFromJSON(
+  static loadConnectomeFromJSON(
     json: Record<string, unknown>,
     gl: WebGL2RenderingContext,
     name = '',
     // colormap = "",
     opacity = 1.0,
     visible = true
-  ): Promise<NVMesh> {
+  ): NVMesh {
     if ('name' in json) {
       name = this.name
     }
     if (!('nodes' in json)) {
       throw Error('not a valid jcon connectome file')
     }
-    return new NVMesh([], [], name, [], opacity, visible, gl, json)
+    return new NVMesh([], [], name, [], opacity, visible, gl, json as Connectome)
   } // loadConnectomeFromJSON()
 
   // wrapper to read meshes, tractograms and connectomes regardless of format
-  static async readMesh(
+  static readMesh(
     buffer: ArrayBuffer,
     name: string,
     gl: WebGL2RenderingContext,
     opacity = 1.0,
     rgba255 = [255, 255, 255, 255],
     visible = true
-  ): Promise<NVMesh> {
-    let tris = []
-    let pts = []
+  ): NVMesh {
+    let tris: number[] = []
+    let pts: number[] = []
     let anatomicalStructurePrimary = ''
-    let obj = []
+    let obj: TCK | TRACT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(name)![1]
     ext = ext.toUpperCase()
@@ -1136,16 +1131,10 @@ export class NVMesh {
       ext = ext.toUpperCase()
     }
     if (ext === 'JCON') {
-      return await this.loadConnectomeFromJSON(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity, visible)
+      return NVMesh.loadConnectomeFromJSON(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
     }
     if (ext === 'JSON') {
-      return await this.loadConnectomeFromFreeSurfer(
-        JSON.parse(new TextDecoder().decode(buffer)),
-        gl,
-        name,
-        opacity,
-        visible
-      )
+      return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
     }
     rgba255[3] = Math.max(0, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TRX' || ext === 'TRACT') {
@@ -1164,39 +1153,27 @@ export class NVMesh {
         obj = { pts, offsetPt0 }
         log.error('Creating empty tracts')
       }
-      // let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-      // let pts = new Float32Array(obj.pts.slice());
-      const offsetPt0 = new Int32Array(obj.offsetPt0.slice())
-      const pts = new Float32Array(obj.pts.slice())
-      if (!('dpg' in obj)) {
-        obj.dpg = null
-      }
-      if (!('dps' in obj)) {
-        obj.dps = null
-      }
-      if (!('dpv' in obj)) {
-        obj.dpv = null
-      }
+
       rgba255[3] = -1.0
       return new NVMesh(
-        pts,
-        offsetPt0,
+        obj.pts,
+        obj.offsetPt0,
         name,
         rgba255, // colormap,
         opacity, // opacity,
         visible, // visible,
         gl,
         'inferno',
-        obj.dpg,
-        obj.dps,
-        obj.dpv
+        (obj as TRX).dpg || null,
+        (obj as TRX).dps || null,
+        (obj as TRX).dpv || null
       )
     } // is fibers
     if (ext === 'GII') {
       obj = NVMeshLoaders.readGII(buffer)
     } else if (ext === 'MZ3') {
       obj = NVMeshLoaders.readMZ3(buffer)
-      if (obj.positions === null) {
+      if (obj instanceof Float32Array || obj.positions === null) {
         console.log('MZ3 does not have positions (statistical overlay?)')
       }
     } else if (ext === 'ASC') {
@@ -1223,12 +1200,10 @@ export class NVMesh {
       obj = NVMeshLoaders.readVTK(buffer)
       if ('offsetPt0' in obj) {
         // VTK files used both for meshes and streamlines
-        const offsetPt0 = new Int32Array(obj.offsetPt0.slice())
-        const pts = new Float32Array(obj.pts.slice())
         rgba255[3] = -1.0
         return new NVMesh(
-          pts,
-          offsetPt0,
+          Array.from(obj.pts),
+          Array.from(obj.offsetPt0),
           name,
           rgba255, // colormap,
           opacity, // opacity,
@@ -1244,16 +1219,28 @@ export class NVMesh {
     } else {
       obj = NVMeshLoaders.readFreeSurfer(buffer)
     } // freesurfer hail mary
-    if (obj.anatomicalStructurePrimary) {
-      anatomicalStructurePrimary = obj.anatomicalStructurePrimary
+    if ((obj as GII).anatomicalStructurePrimary) {
+      anatomicalStructurePrimary = (obj as GII).anatomicalStructurePrimary
     }
-    pts = obj.positions.slice()
-    tris = obj.indices.slice()
+    if (obj instanceof Float32Array) {
+      throw new Error('fatal: unknown mesh type loaded')
+    }
+
+    if (!obj.positions) {
+      throw new Error('positions not loaded')
+    }
+    if (!obj.indices) {
+      throw new Error('indices not loaded')
+    }
+
+    pts = Array.from(obj.positions)
+    tris = Array.from(obj.indices)
+
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
-      rgba255 = obj.rgba255.slice()
+      rgba255 = obj.rgba255
     }
-    if (obj.colors && obj.colors.length === pts.length) {
+    if ('colors' in obj && obj.colors && obj.colors.length === pts.length) {
       rgba255 = []
       const n = pts.length / 3
       let c = 0
@@ -1269,11 +1256,7 @@ export class NVMesh {
     const npt = pts.length / 3
     const ntri = tris.length / 3
     if (ntri < 1 || npt < 3) {
-      alert('Mesh should have at least one triangle and three vertices')
-      return
-    }
-    if (tris.constructor !== Int32Array) {
-      alert('Expected triangle indices to be of type INT32')
+      throw new Error('Mesh should have at least one triangle and three vertices')
     }
     const nvm = new NVMesh(
       pts,
