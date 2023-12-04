@@ -372,7 +372,7 @@ export class NVMesh {
         dps = this.dps[n].vals
       }
     }
-    if (fiberColor.startsWith('dpv') && this.dpv.length > 0) {
+    if (fiberColor.startsWith('dpv') && this.dpv && this.dpv.length > 0) {
       const n = parseInt(fiberColor.substring(3))
       if (n < this.dpv.length && this.dpv[n].vals.length === npt) {
         dpv = this.dpv[n].vals
@@ -1297,10 +1297,10 @@ export class NVMesh {
     return nvm
   }
 
-  static async loadLayer(layer, nvmesh) {
+  static async loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void> {
     let buffer
 
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -1314,6 +1314,9 @@ export class NVMesh {
       // populate buffer with base64 if exists
       buffer = base64ToArrayBuffer(layer.base64)
     } else {
+      if (!layer.url) {
+        throw new Error('layer: missing url')
+      }
       // fetch url otherwise
       const response = await fetch(layer.url)
       if (!response.ok) {
@@ -1322,11 +1325,14 @@ export class NVMesh {
       buffer = await response.arrayBuffer()
     }
 
-    let layerName = null
-    let urlParts = []
-    if ('name' in layer && layer.name !== '') {
+    let layerName: string
+    let urlParts: string[] = []
+    if (layer.name && layer.name !== '') {
       layerName = layer.name
     } else {
+      if (!layer.url) {
+        throw new Error('layer: missing url')
+      }
       // urlParts = layer.url.split("/");
       // layerName = urlParts.slice(-1)[0];
       try {
@@ -1412,7 +1418,7 @@ export class NVMesh {
     if (url === '') {
       throw Error('url must not be empty')
     }
-    if (gl === null) {
+    if (!gl) {
       throw Error('gl context is null')
     }
     // TRX format is special (its a zip archive of multiple files)
@@ -1440,12 +1446,12 @@ export class NVMesh {
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file) {
+  static async readFileAsync(file: Blob): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
 
-      reader.onload = () => {
-        resolve(reader.result)
+      reader.onload = (): void => {
+        resolve(reader.result as ArrayBuffer)
       }
 
       reader.onerror = reject
@@ -1468,15 +1474,22 @@ export class NVMesh {
     visible = true,
     layers = []
   }: Partial<LoadFromFileParams> = {}): Promise<NVMesh> {
-    const buffer = await this.readFileAsync(file)
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
+    if (!file) {
+      throw new Error('file must be set')
+    }
+    if (!gl) {
+      throw new Error('rendering context must be set')
+    }
+
+    const buffer = await NVMesh.readFileAsync(file)
+    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
     }
 
     for (let i = 0; i < layers.length; i++) {
-      await this.loadLayer(layers[i], nvmesh)
+      await NVMesh.loadLayer(layers[i], nvmesh)
     }
 
     // apply the new properties
@@ -1496,8 +1509,15 @@ export class NVMesh {
     visible = true,
     layers = []
   }: Partial<LoadFromBase64Params> = {}): Promise<NVMesh> {
+    if (!base64) {
+      throw new Error('base64 must bet set')
+    }
+    if (!gl) {
+      throw new Error('rendering context must be set')
+    }
+
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -1508,13 +1528,13 @@ export class NVMesh {
     }
 
     const buffer = base64ToArrayBuffer(base64)
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
+    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
     }
     for (let i = 0; i < layers.length; i++) {
-      await this.loadLayer(layers[i], nvmesh)
+      await NVMesh.loadLayer(layers[i], nvmesh)
     }
 
     // apply new properties
