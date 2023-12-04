@@ -1,6 +1,11 @@
 import { vec3 } from 'gl-matrix'
 import { LUT } from './colortables.js'
 
+export type ValuesArray = Array<{
+  id: string
+  vals: number[]
+}>
+
 export type AnyNumberArray =
   | number[]
   | Float64Array
@@ -13,49 +18,31 @@ export type AnyNumberArray =
   | Int8Array
 
 export type DefaultMeshType = {
-  positions: Float32Array
-  indices: Int32Array
+  positions: number[]
+  indices: number[]
   colors?: Float32Array
 }
 
 export type TRACT = {
   pts: number[]
   offsetPt0: number[]
-  dps: Array<{
-    id: string
-    vals: number[]
-  }>
+  dps: ValuesArray
 }
 
 export type TRX = {
   pts: number[]
   offsetPt0: number[]
-  dpg: Array<{
-    id: string
-    vals: number[]
-  }>
-  dps: Array<{
-    id: string
-    vals: number[]
-  }>
-  dpv: Array<{
-    id: string
-    vals: number[]
-  }>
+  dpg: ValuesArray
+  dps: ValuesArray
+  dpv: ValuesArray
   header: unknown
 }
 
 export type TRK = {
   pts: number[]
   offsetPt0: number[]
-  dps: Array<{
-    id: string
-    vals: number[]
-  }>
-  dpv: Array<{
-    id: string
-    vals: number[]
-  }>
+  dps: ValuesArray
+  dpv: ValuesArray
 }
 
 export type TCK = {
@@ -66,7 +53,7 @@ export type TCK = {
 export type VTK =
   | DefaultMeshType
   | {
-      pts: Float32Array
+      pts: number[]
       offsetPt0: Uint32Array
     }
 
@@ -80,16 +67,16 @@ export type ANNOT =
 export type MZ3 =
   | Float32Array
   | {
-      positions: Float32Array | null
-      indices: Int32Array | null
+      positions: number[] | null
+      indices: number[] | null
       scalars: Float32Array
       colors: Float32Array | null
     }
 
 export type GII = {
   scalars: Float32Array
-  positions?: Float32Array
-  indices?: Int32Array
+  positions?: number[]
+  indices?: number[]
   colormapLabel?: LUT
   anatomicalStructurePrimary: string
 }
@@ -103,32 +90,8 @@ export type MGH =
 
 export type X3D = {
   positions: number[] // TODO clean up number types
-  indices: Int32Array
+  indices: number[]
   rgba255: number[]
-}
-
-export type Layer = {
-  // TODO: check that these types aren't used by some other data structure that could be unified
-  colormapInvert: boolean
-  alphaThreshold: boolean
-  isTransparentBelowCalMin: boolean
-  isAdditiveBlend: boolean
-  colorbarVisible: boolean
-  colormapLabel: LUT
-  nFrame4D: number
-  frame4D: number
-  isOutlineBorder: boolean
-  global_min: number
-  global_max: number
-  cal_min: number | null
-  cal_max: number | null
-  values: AnyNumberArray // TODO clean up type?
-  cal_minNeg: number
-  cal_maxNeg: number
-  opacity: number
-  colormap: string
-  colormapNegative: string
-  useNegativeCmap: boolean
 }
 
 export type XmlTag = {

@@ -3,13 +3,12 @@ import { decompressSync, unzipSync } from 'fflate/browser'
 import { Log } from './logger.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
-import { NVMesh } from './nvmesh.js'
+import { NVMesh, NVMeshLayer } from './nvmesh.js'
 import {
   ANNOT,
   AnyNumberArray,
   DefaultMeshType,
   GII,
-  Layer,
   MGH,
   MZ3,
   SmpMap,
@@ -505,7 +504,7 @@ export class NVMeshLoaders {
     let items = lines[pos].trim().split(/\s+/)
     const nvert = parseInt(items[1]) // POINTS 10261 float
     const nvert3 = nvert * 3
-    const positions = new Float32Array(nvert * 3)
+    const positions = Array.from(new Float32Array(nvert * 3))
     let v = 0
     while (v < nvert * 3) {
       pos++
@@ -590,7 +589,7 @@ export class NVMeshLoaders {
         } // for n_count: number of streamlines
       }
       return {
-        pts: Float32Array.from(pts),
+        pts,
         offsetPt0: Uint32Array.from(offsetPt0)
       }
     } else if (items[0].includes('TRIANGLE_STRIPS')) {
@@ -635,10 +634,9 @@ export class NVMeshLoaders {
     } else {
       throw new Error('Unsupported ASCII VTK datatype ' + items[0])
     }
-    const indices = new Int32Array(tris)
     return {
       positions,
-      indices
+      indices: tris
     }
   } // readTxtVTK()
 
@@ -651,20 +649,20 @@ export class NVMeshLoaders {
     colormap = 'warm',
     colormapNegative = 'winter',
     useNegativeCmap = false,
-    cal_min = null,
-    cal_max = null,
+    cal_min: number | null = null,
+    cal_max: number | null = null,
     isOutlineBorder = false
   ): void {
-    const layer: Partial<Layer> = {
+    const layer: Partial<NVMeshLayer> = {
       colormapInvert: false,
       alphaThreshold: false,
       isTransparentBelowCalMin: true,
-      isAdditiveBlend: false,
-      colorbarVisible: true
+      isAdditiveBlend: false
     }
 
     const isReadColortables = true
-    const n_vert = nvmesh.vertexCount / 3 // each vertex has XYZ component
+    // TODO vertexCount should be deterministically assigned in the NVMesh constructor
+    const n_vert = nvmesh.vertexCount! / 3 // each vertex has XYZ component
     if (n_vert < 3) {
       return
     }
@@ -676,27 +674,27 @@ export class NVMeshLoaders {
       ext = ext.toUpperCase()
     }
     if (ext === 'MZ3') {
-      layer.values = NVMeshLoaders.readMZ3(buffer, n_vert) as Float32Array
+      layer.values = Array.from(NVMeshLoaders.readMZ3(buffer, n_vert) as Float32Array)
     } else if (ext === 'ANNOT') {
       if (!isReadColortables) {
         // TODO: bogus ANNOT return type
-        layer.values = NVMeshLoaders.readANNOT(buffer, n_vert) as unknown as Float32Array
+        layer.values = Array.from(NVMeshLoaders.readANNOT(buffer, n_vert) as Uint32Array)
       } else {
         const obj = NVMeshLoaders.readANNOT(buffer, n_vert, true)
         if (!(obj instanceof Uint32Array)) {
-          layer.values = obj.scalars
+          layer.values = Array.from(obj.scalars)
           layer.colormapLabel = obj.colormapLabel
         } // unable to decode colormapLabel
         else {
-          layer.values = obj
+          layer.values = Array.from(obj)
         }
       }
     } else if (ext === 'CRV' || ext === 'CURV') {
-      layer.values = NVMeshLoaders.readCURV(buffer, n_vert)
+      layer.values = Array.from(NVMeshLoaders.readCURV(buffer, n_vert))
       layer.isTransparentBelowCalMin = false
     } else if (ext === 'GII') {
       const obj = NVMeshLoaders.readGII(buffer, n_vert)
-      layer.values = obj.scalars // colormapLabel
+      layer.values = Array.from(obj.scalars) // colormapLabel
       layer.colormapLabel = obj.colormapLabel
     } else if (ext === 'MGH' || ext === 'MGZ') {
       if (!isReadColortables) {
@@ -704,19 +702,21 @@ export class NVMeshLoaders {
       } else {
         const obj = NVMeshLoaders.readMGH(buffer, n_vert, true)
         if ('scalars' in obj) {
-          layer.values = obj.scalars
+          layer.values = Array.from(obj.scalars)
           layer.colormapLabel = obj.colormapLabel
         } // unable to decode colormapLabel
         else {
-          layer.values = obj
+          layer.values = Array.from(obj)
         }
       }
     } else if (ext === 'NII') {
-      layer.values = NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary) as Float32Array
+      layer.values = Array.from(
+        NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary) as Float32Array
+      )
     } else if (ext === 'SMP') {
-      layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
+      layer.values = Array.from(NVMeshLoaders.readSMP(buffer, n_vert))
     } else if (ext === 'STC') {
-      layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
+      layer.values = Array.from(NVMeshLoaders.readSTC(buffer, n_vert))
     } else {
       console.log('Unknown layer overlay format ' + name)
       return
@@ -737,21 +737,15 @@ export class NVMeshLoaders {
     // console.log('layer range: ', mn, mx);
     layer.global_min = mn
     layer.global_max = mx
-    layer.cal_min = cal_min
-    if (!cal_min) {
-      layer.cal_min = mn
-    }
-    layer.cal_max = cal_max
-    if (!cal_max) {
-      layer.cal_max = mx
-    }
+    layer.cal_min = cal_min !== null ? cal_min : mn
+    layer.cal_max = cal_max !== null ? cal_max : mx
     layer.cal_minNeg = NaN
     layer.cal_maxNeg = NaN
     layer.opacity = opacity
     layer.colormap = colormap
     layer.colormapNegative = colormapNegative
     layer.useNegativeCmap = useNegativeCmap
-    nvmesh.layers.push(layer)
+    nvmesh.layers.push(layer as NVMeshLayer)
   } // readLayer()
 
   // read brainvoyager smp format file
@@ -1085,8 +1079,8 @@ export class NVMeshLoaders {
     let ntri = 0
     let v = 0
     let t = 0
-    let positions: Float32Array
-    let indices: Int32Array
+    let positions: number[] = []
+    let indices: number[] = []
     while (pos < len) {
       const line = readStr()
       if (line.startsWith('#')) {
@@ -1095,7 +1089,7 @@ export class NVMeshLoaders {
       const items = line.trim().split(/\s+/)
       if (nvert < 1) {
         nvert = parseInt(items[0])
-        positions = new Float32Array(nvert * 3)
+        positions = Array.from(new Float32Array(nvert * 3))
         continue
       }
       if (v < nvert * 3) {
@@ -1107,7 +1101,7 @@ export class NVMeshLoaders {
       }
       if (ntri < 1) {
         ntri = parseInt(items[0])
-        indices = new Int32Array(ntri * 3)
+        indices = Array.from(new Int32Array(ntri * 3))
         continue
       }
       if (t >= ntri * 3) {
@@ -1119,8 +1113,8 @@ export class NVMeshLoaders {
       t += 3
     }
     return {
-      positions: positions!,
-      indices: indices!
+      positions,
+      indices
     }
   } // readNV()
 
@@ -1153,7 +1147,7 @@ export class NVMeshLoaders {
     let items = line.trim().split(/\s+/)
     const nvert = parseInt(items[0]) // 173404 346804
     const ntri = parseInt(items[1])
-    const positions = new Float32Array(nvert * 3)
+    const positions = Array.from(new Float32Array(nvert * 3))
     let j = 0
     for (let i = 0; i < nvert; i++) {
       line = readStr() // 1st line: signature
@@ -1163,7 +1157,7 @@ export class NVMeshLoaders {
       positions[j + 2] = parseFloat(items[2])
       j += 3
     }
-    const indices = new Int32Array(ntri * 3)
+    const indices = Array.from(new Int32Array(ntri * 3))
     j = 0
     for (let i = 0; i < ntri; i++) {
       line = readStr() // 1st line: signature
@@ -1226,7 +1220,7 @@ export class NVMeshLoaders {
     let items = line.trim().split(/\s+/)
     const nvert = parseInt(items[1]) // POINTS 10261 float
     const nvert3 = nvert * 3
-    const positions = new Float32Array(nvert3)
+    const positions = Array.from(new Float32Array(nvert3))
     const reader = new DataView(buffer)
     if (isFloat64) {
       for (let i = 0; i < nvert3; i++) {
@@ -1276,9 +1270,8 @@ export class NVMeshLoaders {
             offsetPt0[c] = idx
           }
         }
-        const pts = positions
         return {
-          pts,
+          pts: positions,
           offsetPt0
         }
       }
@@ -1301,7 +1294,7 @@ export class NVMeshLoaders {
         } // for numPoints: number of segments in streamline
       } // for n_count: number of streamlines
       return {
-        pts: Float32Array.from(pts),
+        pts,
         offsetPt0: Uint32Array.from(offsetPt0)
       }
     } else if (items[0].includes('TRIANGLE_STRIPS')) {
@@ -1348,10 +1341,9 @@ export class NVMeshLoaders {
     } else {
       throw new Error('Unsupported binary VTK datatype ' + items[0])
     }
-    const indices = new Int32Array(tris)
     return {
       positions,
-      indices
+      indices: tris
     }
   } // readVTK()
 
@@ -1378,9 +1370,9 @@ export class NVMeshLoaders {
     // var precision = reader.getUint32(52, true);
     // float64 orientation[4][4]; //4x4 matrix, affine transformation to world coordinates*)
     let pos = hdrBytes
-    const indices = new Int32Array(buffer, pos, nface * 3)
+    const indices = Array.from(new Int32Array(buffer, pos, nface * 3))
     pos += nface * 3 * 4
-    const positions = new Float32Array(buffer, pos, nvert * 3)
+    const positions = Array.from(new Float32Array(buffer, pos, nvert * 3))
     // oops, triangle winding opposite of CCW convention
     for (let i = 0; i < nvert * 3; i += 3) {
       const tmp = positions[i]
@@ -1464,14 +1456,14 @@ export class NVMeshLoaders {
       console.log('Layer has ' + nvert + 'vertices, but background mesh has ' + n_vert)
     }
     let filepos = 16 + nskip
-    let indices = null
+    let indices: number[] | null = null
     if (isFace) {
-      indices = new Int32Array(_buffer, filepos, nface * 3)
+      indices = Array.from(new Int32Array(_buffer, filepos, nface * 3))
       filepos += nface * 3 * 4
     }
-    let positions = null
+    let positions: number[] | null = null
     if (isVert) {
-      positions = new Float32Array(_buffer, filepos, nvert * 3)
+      positions = Array.from(new Float32Array(_buffer, filepos, nvert * 3))
       filepos += nvert * 3 * 4
     }
     let colors = null
@@ -1623,7 +1615,7 @@ export class NVMeshLoaders {
       if (nface < 1) {
         console.log(`Malformed ply format: faces ${nface} `)
       }
-      const positions = new Float32Array(nvert * 3)
+      const positions = Array.from(new Float32Array(nvert * 3))
       let v = 0
       for (let i = 0; i < nvert; i++) {
         line = readStr()
@@ -1633,7 +1625,7 @@ export class NVMeshLoaders {
         positions[v + 2] = parseFloat(items[2])
         v += 3
       }
-      let indices = new Int32Array(nface * 3)
+      let indices = Array.from(new Int32Array(nface * 3))
       let f = 0
       for (let i = 0; i < nface; i++) {
         line = readStr()
@@ -1645,7 +1637,7 @@ export class NVMeshLoaders {
         if (f + nTri * 3 > indices.length) {
           const c = new Int32Array(indices.length + indices.length)
           c.set(indices)
-          indices = c.slice()
+          indices = Array.from(c)
         }
         const idx0 = parseInt(items[nIndexPadding + 1])
         let idx1 = parseInt(items[nIndexPadding + 2])
@@ -1672,14 +1664,14 @@ export class NVMeshLoaders {
       )
     }
     const reader = new DataView(buffer)
-    let positions
+    let positions: number[] = []
     if (pos % 4 === 0 && vertStride === 12 && isLittleEndian) {
       // optimization: vertices only store xyz position as float
       // n.b. start offset of Float32Array must be a multiple of 4
-      positions = new Float32Array(buffer, pos, nvert * 3)
+      positions = Array.from(new Float32Array(buffer, pos, nvert * 3))
       pos += nvert * vertStride
     } else {
-      positions = new Float32Array(nvert * 3)
+      positions = Array.from(new Float32Array(nvert * 3))
       let v = 0
       for (let i = 0; i < nvert; i++) {
         if (vertIsDouble) {
@@ -1695,7 +1687,7 @@ export class NVMeshLoaders {
         pos += vertStride
       }
     }
-    const indices = new Int32Array(nface * 3) // assume triangular mesh: pre-allocation optimization
+    const indices = Array.from(new Int32Array(nface * 3)) // assume triangular mesh: pre-allocation optimization
     let isTriangular = true
     let j = 0
     if (indexCountBytes === 1 && indexBytes === 4 && indexStrideBytes === 13) {
@@ -1771,7 +1763,7 @@ export class NVMeshLoaders {
     }
     const num_v = parseInt(header[0])
     // read vertices: each line has 4 values: index, x, y, z
-    const positions = new Float32Array(num_v * 3)
+    const positions = Array.from(new Float32Array(num_v * 3))
     // let v = 0;
     let line = 1 // line 0 is header
     for (let i = 0; i < num_v; i++) {
@@ -1795,7 +1787,7 @@ export class NVMeshLoaders {
     header = lines[line].trim().split(/\s+/)
     line++
     const num_f = parseInt(header[0])
-    const indices = new Int32Array(num_f * 3)
+    const indices = Array.from(new Int32Array(num_f * 3))
     for (let i = 0; i < num_f; i++) {
       const items = lines[line].trim().split(/\s+/)
       line++
@@ -1888,11 +1880,9 @@ export class NVMeshLoaders {
       }
     }
     // return results
-    const positions = new Float32Array(pts)
-    const indices = new Int32Array(t)
     return {
-      positions,
-      indices
+      positions: pts,
+      indices: t
     }
   } // readGEO()
 
@@ -1936,11 +1926,9 @@ export class NVMeshLoaders {
       t.push(parseInt(items[3]))
       i++
     }
-    const positions = new Float32Array(pts)
-    const indices = new Int32Array(t)
     return {
-      positions,
-      indices
+      positions: pts,
+      indices: t
     }
   } // readOFF()
 
@@ -1982,11 +1970,9 @@ export class NVMeshLoaders {
         }
       }
     } // for all lines
-    const positions = new Float32Array(pts)
-    const indices = new Int32Array(t)
     return {
-      positions,
-      indices
+      positions: pts,
+      indices: t
     }
   } // readOBJ()
 
@@ -2012,13 +1998,13 @@ export class NVMeshLoaders {
     let nf = view.getUint32(offset, false) // number of faces
     offset += 4
     nv *= 3 // each vertex has 3 positions: XYZ
-    const positions = new Float32Array(nv)
+    const positions = Array.from(new Float32Array(nv))
     for (let i = 0; i < nv; i++) {
       positions[i] = view.getFloat32(offset, false)
       offset += 4
     }
     nf *= 3 // each triangle face indexes 3 triangles
-    const indices = new Int32Array(nf)
+    const indices = Array.from(new Int32Array(nf))
     for (let i = 0; i < nf; i++) {
       indices[i] = view.getUint32(offset, false)
       offset += 4
@@ -2085,7 +2071,7 @@ export class NVMeshLoaders {
     const oriX = reader.getFloat32(16, true)
     const oriY = reader.getFloat32(20, true)
     const oriZ = reader.getFloat32(24, true)
-    const positions = new Float32Array(nVert * 3)
+    const positions = Array.from(new Float32Array(nVert * 3))
     // BrainVoyager does not use Talairach coordinates for XYZ!
     // read X component of each vertex
     let pos = 28
@@ -2150,7 +2136,7 @@ export class NVMeshLoaders {
       const nNearest = reader.getUint32(pos, true)
       pos += 4 + 4 * nNearest
     }
-    const indices = new Int32Array(nTri * 3)
+    const indices = Array.from(new Int32Array(nTri * 3))
     for (let i = 0; i < nTri * 3; i++) {
       indices[i] = reader.getInt32(pos, true)
       pos += 4
@@ -2189,13 +2175,12 @@ export class NVMeshLoaders {
     if (npts * 3 !== pts.length) {
       throw new Error('Unable to parse ASCII STL file.')
     }
-    const positions = new Float32Array(pts)
-    const indices = new Int32Array(npts)
+    const indices = Array.from(new Int32Array(npts))
     for (let i = 0; i < npts; i++) {
       indices[i] = i
     }
     return {
-      positions,
+      positions: pts,
       indices
     }
   } // readTxtSTL()
@@ -2216,8 +2201,8 @@ export class NVMeshLoaders {
     if (buffer.byteLength < 80 + 4 + ntri * 50) {
       throw new Error('STL file too small to store triangles = ' + ntri)
     }
-    const indices = new Int32Array(ntri3)
-    const positions = new Float32Array(ntri3 * 3)
+    const indices = Array.from(new Int32Array(ntri3))
+    const positions = Array.from(new Float32Array(ntri3 * 3))
     let pos = 80 + 4 + 12
     let v = 0 // vertex
     for (let i = 0; i < ntri; i++) {
@@ -2967,7 +2952,7 @@ export class NVMeshLoaders {
     }
     return {
       positions,
-      indices: Int32Array.from(indices),
+      indices,
       rgba255
     }
   } // readX3D()
@@ -3047,8 +3032,8 @@ export class NVMeshLoaders {
       throw new Error('readGII: XML file does not include GIFTI tag')
     }
     len = tag.contentEndPos // only read contents of GIfTI tag
-    let positions = new Float32Array()
-    let indices = new Int32Array()
+    let positions: number[] = []
+    let indices: number[] = []
     let scalars = new Float32Array()
     let anatomicalStructurePrimary = ''
     let isIdx = false
@@ -3167,7 +3152,7 @@ export class NVMeshLoaders {
           if (dataType !== 16) {
             console.log('expect positions as FLOAT32')
           }
-          positions = new Float32Array(datBin!.buffer) // TODO can we guarantee this?
+          positions = Array.from(new Float32Array(datBin!.buffer)) // TODO can we guarantee this?
           if (isColMajor) {
             const tmp = positions.slice()
             const np = tmp.length / 3
@@ -3183,7 +3168,7 @@ export class NVMeshLoaders {
           if (dataType !== 8) {
             console.log('expect indices as INT32')
           }
-          indices = new Int32Array(datBin!.buffer)
+          indices = Array.from(new Int32Array(datBin!.buffer))
           if (isColMajor) {
             const tmp = indices.slice()
             const np = tmp.length / 3
