@@ -35,3 +35,7 @@ export type NiftiHeader = {
   intent_name: string
   magic: string
 }
+
+// TODO: add volume type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Volume = Record<string, any>
