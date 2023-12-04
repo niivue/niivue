@@ -1,26 +1,15 @@
 // shader.js is taken from github user Twinklebear: https://github.com/Twinklebear/webgl-util
 
-/**
- * Compile and link the shaders vert and frag. vert and frag should contain
- * the shader source code for the vertex and fragment shaders respectively.
- *
- * @param gl - WebGL rendering context
- * @param vertexSource - vertex source
- * @param fragmentSource - fragment source
- * @returns the compiled and linked program
- * @throws if compilation or linking failed
- */
-export const compileShader = function (
-  gl: WebGL2RenderingContext,
-  vertexSource: string,
-  fragmentSource: string
-): WebGLProgram {
+// Compile and link the shaders vert and frag. vert and frag should contain
+// the shader source code for the vertex and fragment shaders respectively
+// Returns the compiled and linked program, or null if compilation or linking failed
+export const compileShader = function (gl: WebGL2RenderingContext, vert: string, frag: string): WebGLProgram {
   const vs = gl.createShader(gl.VERTEX_SHADER)
   if (vs === null) {
-    throw new Error('could not instantiate vertex shader')
+    throw new Error('could not create vertex shader')
   }
 
-  gl.shaderSource(vs, vertexSource)
+  gl.shaderSource(vs, vert)
   gl.compileShader(vs)
   if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
     console.error(gl.getShaderInfoLog(vs))
@@ -29,10 +18,10 @@ export const compileShader = function (
 
   const fs = gl.createShader(gl.FRAGMENT_SHADER)
   if (fs === null) {
-    throw new Error('could not instantiate fragment shader')
+    throw new Error('could not create fragment shader')
   }
 
-  gl.shaderSource(fs, fragmentSource)
+  gl.shaderSource(fs, frag)
   gl.compileShader(fs)
   if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
     console.error(gl.getShaderInfoLog(fs))
@@ -41,7 +30,7 @@ export const compileShader = function (
 
   const program = gl.createProgram()
   if (program === null) {
-    throw new Error('could not create webgl program')
+    throw new Error('could not create GL program')
   }
 
   gl.attachShader(program, vs)
@@ -64,42 +53,32 @@ export const getGLExtension = function (gl: WebGL2RenderingContext, ext: string)
 
 export class Shader {
   program: WebGLProgram
-  uniforms: Record<string, WebGLUniformLocation | -1> = {}
+  uniforms: Record<string, WebGLUniformLocation | null> = {}
 
-  constructor(gl: WebGL2RenderingContext, vertexSource: string, fragmentSource: string) {
-    this.program = compileShader(gl, vertexSource, fragmentSource)
+  constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
+    this.program = compileShader(gl, vertexSrc, fragmentSrc)
 
     const regexUniform = /uniform[^;]+[ ](\w+);/g
     const matchUniformName = /uniform[^;]+[ ](\w+);/
 
-    const vertexUnifs = vertexSource.match(regexUniform)
-    const fragUnifs = fragmentSource.match(regexUniform)
+    const vertexUnifs = vertexSrc.match(regexUniform)
+    const fragUnifs = fragmentSrc.match(regexUniform)
 
     if (vertexUnifs) {
       vertexUnifs.forEach((unif) => {
         const m = unif.match(matchUniformName)
-        if (m === null || m.length < 2) {
-          throw new Error(`invalid vertex unif: ${unif}`)
-        }
-        this.uniforms[m[1]] = -1
+        this.uniforms[m![1]] = -1 // TODO can we guarantee this?
       })
     }
     if (fragUnifs) {
       fragUnifs.forEach((unif) => {
         const m = unif.match(matchUniformName)
-        if (m === null || m.length < 2) {
-          throw new Error(`invalid fragment unif: ${unif}`)
-        }
-        this.uniforms[m[1]] = -1
+        this.uniforms[m![1]] = -1 // TODO can we guarantee this?
       })
     }
 
     for (const unif in this.uniforms) {
-      const uniformLocation = gl.getUniformLocation(this.program, unif)
-      if (uniformLocation === null) {
-        throw new Error(`could not get uniform location: ${unif}`)
-      }
-      this.uniforms[unif] = uniformLocation
+      this.uniforms[unif] = gl.getUniformLocation(this.program, unif)
     }
   }
 
