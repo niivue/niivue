@@ -2,9 +2,9 @@ import * as nifti from 'nifti-reader-js'
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
-import { cmapper } from '../colortables.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
-import { Log } from '../logger.js'
+import { cmapper } from '../colortables'
+import { NiivueObject3D } from '../niivue-object3D'
+import { Log } from '../logger'
 import {
   NVIMAGE_TYPE,
   NVImageFromUrlOptions,
@@ -12,10 +12,10 @@ import {
   getExtents,
   hdrToArrayBuffer,
   isPlatformLittleEndian
-} from './utils.js'
+} from './utils'
 const log = new Log()
 
-export * from './utils.js'
+export * from './utils'
 
 /**
  * @class NVImage
