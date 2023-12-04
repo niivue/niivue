@@ -1,9 +1,15 @@
+import arrayEqual from 'array-equal'
 import { compressSync, decompressSync, strToU8 } from 'fflate/browser'
 
 /**
  * Namespace for utility functions
  */
 export class NVUtilities {
+  static arrayBufferToBase64(arrayBuffer: ArrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer)
+    return NVUtilities.uint8tob64(bytes)
+  }
+
   /*
 https://gist.github.com/jonleighton/958841
 MIT LICENSE
@@ -12,12 +18,9 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-  static arrayBufferToBase64(arrayBuffer) {
-    const bytes = new Uint8Array(arrayBuffer)
-    return NVUtilities.uint8tob64(bytes)
-  }
+  static uint8tob64(bytes: Uint8Array) {
+    // TODO: use TextDecoder instead of shipping own implementation
 
-  static uint8tob64(bytes) {
     let base64 = ''
     const encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
     const byteLength = bytes.byteLength
@@ -68,7 +71,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 
   // https://stackoverflow.com/questions/34156282/how-do-i-save-json-to-local-text-file
-  static download(content, fileName, contentType) {
+  static download(content: Blob, fileName: string, contentType: string) {
     const a = document.createElement('a')
     const file = new Blob([content], { type: contentType })
     a.href = URL.createObjectURL(file)
@@ -76,7 +79,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     a.click()
   }
 
-  static readFileAsync(file) {
+  static readFileAsync(file: Blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => {
@@ -89,7 +92,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     })
   }
 
-  static blobToBase64(blob) {
+  static blobToBase64(blob: Blob) {
     return new Promise((resolve) => {
       const reader = new FileReader()
       reader.onloadend = () => resolve(reader.result)
@@ -97,7 +100,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     })
   }
 
-  static decompressBase64String(base64) {
+  static decompressBase64String(base64: string) {
     const compressed = atob(base64)
     // convert to an array buffer
     const compressedBuffer = new ArrayBuffer(compressed.length)
@@ -113,14 +116,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return decompressed
   }
 
-  static compressToBase64String(string) {
-    const buf = strToU8(string, { level: 6, mem: 4 })
+  static compressToBase64String(string: string) {
+    const buf = strToU8(string)
     const compressed = compressSync(buf)
     const base64 = NVUtilities.uint8tob64(compressed)
     return base64
   }
 
-  static arraysAreEqual(a, b) {
-    return JSON.stringify(a) === JSON.stringify(b)
+  static arraysAreEqual(a: unknown[], b: unknown[]) {
+    return arrayEqual(a, b)
   }
 }
