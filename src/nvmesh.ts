@@ -562,7 +562,7 @@ export class NVMesh {
   } // updateFibers()
 
   // internal function filters connectome to identify which color, size and visibility of nodes and edges
-  updateConnectome(gl) {
+  updateConnectome(gl: WebGL2RenderingContext): void {
     // draw nodes
     const tris = []
     const nNode = this.nodes.X.length
@@ -935,7 +935,7 @@ export class NVMesh {
         if (opacity <= 0) {
           continue
         }
-        function modulate(x, y) {
+        function modulate(x: number, y: number): number {
           return Math.min(x * y * (1 / 255), 255.0)
         }
         u8[vtx + 0] = modulate(u8[vtx + 0], additiveRGBA[v + 0])
@@ -956,14 +956,14 @@ export class NVMesh {
   }
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
-  reverseFaces(gl: WebGL2RenderingContext) {
+  reverseFaces(gl: WebGL2RenderingContext): void {
     if (this.offsetPt0) {
       return
     } // fiber not mesh
     if (this.hasConnectome) {
       return
     } // connectome not mesh
-    const tris = this.tris
+    const tris = this.tris || [] // TODO tris should probably be assigned in the constructor
     for (let j = 0; j < tris.length; j += 3) {
       const tri = tris[j]
       tris[j] = tris[j + 1]
@@ -973,22 +973,31 @@ export class NVMesh {
   }
 
   // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
-  setLayerProperty(id, key, val, gl) {
+  // TODO this method is a bit too generic
+  setLayerProperty(
+    id: number,
+    key: keyof NVMeshLayer,
+    val: number | string | boolean,
+    gl: WebGL2RenderingContext
+  ): void {
     const layer = this.layers[id]
-    if (!layer || !(key in layer)) {
+    if (!layer || !layer.key) {
       console.log('mesh does not have property ', key, ' for layer ', layer)
       return
     }
+    // @ts-expect-error TODO generic property access
     layer[key] = val
     this.updateMesh(gl) // apply the new properties...
   }
 
   // adjust mesh attributes. invoked by niivue.setMeshProperty(()
-  setProperty(key, val, gl) {
-    if (!(key in this)) {
+  // TODO this method is too generic
+  setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void {
+    if (!this[key]) {
       console.log('mesh does not have property ', key, this)
       return
     }
+    // @ts-expect-error TODO generic access
     this[key] = val
     this.updateMesh(gl) // apply the new properties...
   }
@@ -1375,25 +1384,16 @@ export class NVMesh {
 
   /**
    * factory function to load and return a new NVMesh instance from a given URL
-   * @param {string} url the resolvable URL pointing to a nifti image to load
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {string} [colormap='gray'] a color map to use. default is gray
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @param {NVMeshLayer[]} [layers=[]] layers of the mesh to load
-   * @returns {NVMesh} returns a NVImage instance
-   * @example
-   * myImage = NVMesh.loadFromUrl('./someURL/mesh.gii') // must be served from a server (local or remote)
    */
   static async loadFromUrl({
     url = '',
-    gl = null,
+    gl,
     name = '',
     opacity = 1.0,
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  } = {}) {
+  }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
     let urlParts = url.split('/') // split url parts at slash
     if (name === '') {
       try {
@@ -1456,16 +1456,10 @@ export class NVMesh {
 
   /**
    * factory function to load and return a new NVMesh instance from a file in the browser
-   * @param {string} file the file object
-   * @param {WebGLRenderingContext} gl - WebGL rendering context
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
-   * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @returns {NVMesh} returns a NVMesh instance
+   *
+   * @returns NVMesh instance
    */
-  static async loadFromFile({
+  async loadFromFile({
     file,
     gl,
     name = '',
@@ -1473,7 +1467,7 @@ export class NVMesh {
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  } = {}) {
+  }: Partial<LoadFromFileParams> = {}): Promise<NVMesh> {
     const buffer = await this.readFileAsync(file)
     const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
 
@@ -1492,24 +1486,16 @@ export class NVMesh {
 
   /**
    * load and return a new NVMesh instance from a base64 encoded string
-   * @param {string} [base64=null] the base64 encoded string
-   * @param {WebGLRenderingContext} gl - WebGL rendering context
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
-   * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @returns {NVMesh} returns a NVMesh instance
    */
-  static async loadFromBase64({
-    base64 = null,
-    gl = null,
+  async loadFromBase64({
+    base64,
+    gl,
     name = '',
     opacity = 1.0,
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  } = {}) {
+  }: Partial<LoadFromBase64Params> = {}): Promise<NVMesh> {
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
     function base64ToArrayBuffer(base64) {
       const binary_string = window.atob(base64)
