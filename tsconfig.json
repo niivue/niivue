@@ -15,5 +15,5 @@
     "allowJs": true,
     "resolveJsonModule": true
   },
-  "exclude": ["release", "dist", "tsup.config.ts"]
+  "include": ["src"]
 }

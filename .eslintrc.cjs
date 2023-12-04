@@ -11,7 +11,6 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc', 'prettier'],
   rules: {
-    'tsdoc/syntax': 'warn',
     curly: ['error', 'all'],
     camelcase: 'off',
     'import/order': 'error',
@@ -29,5 +28,15 @@ module.exports = {
         semi: false
       }
     ]
-  }
+  },
+  // separate ESLint rules for TS files for now
+  overrides: [
+    {
+      files: ['**/*.ts'],
+      rules: {
+        '@typescript-eslint/explicit-function-return-type': 'error',
+        'tsdoc/syntax': 'warn'
+      }
+    }
+  ]
 }
