@@ -39,3 +39,15 @@ export type NiftiHeader = {
 // TODO: add volume type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Volume = Record<string, any>
+
+export type Point = {
+  comments: Array<{
+    text: string
+    prefilled?: string
+  }>
+  coordinates: {
+    x: number
+    y: number
+    z: number
+  }
+}

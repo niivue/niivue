@@ -3,7 +3,7 @@ import { decompressSync, unzipSync } from 'fflate/browser'
 import { Log } from './logger.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
-import { NVMesh } from './nvmesh.js'
+import { NVMesh, NVMeshLayer } from './nvmesh.js'
 import {
   ANNOT,
   AnyNumberArray,
@@ -651,8 +651,8 @@ export class NVMeshLoaders {
     colormap = 'warm',
     colormapNegative = 'winter',
     useNegativeCmap = false,
-    cal_min = null,
-    cal_max = null,
+    cal_min: number | null = null,
+    cal_max: number | null = null,
     isOutlineBorder = false
   ): void {
     const layer: Partial<Layer> = {
@@ -751,7 +751,7 @@ export class NVMeshLoaders {
     layer.colormap = colormap
     layer.colormapNegative = colormapNegative
     layer.useNegativeCmap = useNegativeCmap
-    nvmesh.layers.push(layer)
+    nvmesh.layers.push(layer as NVMeshLayer)
   } // readLayer()
 
   // read brainvoyager smp format file
