@@ -380,12 +380,12 @@ export class NVMesh {
     }
     const streamlineVisible = new Int16Array(n_count)
     // if ((this.dpg !== null) && (this.fiberGroupMask !== null) && (this.fiberGroupMask.length === this.dpg.length)) {
-    if (this.dpg !== null && this.fiberGroupColormap !== null) {
+    if (this.dpg && this.fiberGroupColormap !== null) {
       const lut = new Uint8ClampedArray(this.dpg.length * 4) // 4 component RGBA for each group
       const groupVisible = new Array(this.dpg.length).fill(false)
       const cmap = this.fiberGroupColormap
-      if (!('A' in cmap)) {
-        cmap.A = new Uint8ClampedArray(cmap.I.length).fill(255)
+      if (cmap.A === undefined) {
+        cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255))
       }
       for (let i = 0; i < cmap.I.length; i++) {
         let idx = cmap.I[i]
@@ -428,7 +428,7 @@ export class NVMesh {
       }
     } else if (dpv) {
       // color per vertex
-      const lut = cmapper.colormap(this.colormap, this.colormapInvert)
+      const lut = cmapper.colormap(this.colormap as string, this.colormapInvert)
       let mn = dpv[0]
       let mx = dpv[0]
       for (let i = 0; i < npt; i++) {
@@ -438,14 +438,14 @@ export class NVMesh {
       let v4 = 3 // +3: fill 4th component colors: XYZC = 0123
       for (let i = 0; i < npt; i++) {
         let color = (dpv[i] - mn) / (mx - mn)
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4
         const RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16)
         posClrU32[v4] = RGBA
         v4 += 4
       }
     } else if (dps) {
       // color per streamline
-      const lut = cmapper.colormap(this.colormap, this.colormapInvert)
+      const lut = cmapper.colormap(this.colormap as string, this.colormapInvert)
       let mn = dps[0]
       let mx = dps[0]
       for (let i = 0; i < n_count; i++) {
@@ -457,7 +457,7 @@ export class NVMesh {
       } // avoid divide by zero
       for (let i = 0; i < n_count; i++) {
         let color = (dps[i] - mn) / (mx - mn)
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4
         const RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16)
         const vStart = offsetPt0[i] // first vertex in streamline
         const vEnd = offsetPt0[i + 1] - 1 // last vertex in streamline
@@ -1004,7 +1004,7 @@ export class NVMesh {
 
   // Each streamline vertex has color, normal and position attributes
   // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-  generatePosNormClr(pts, tris, rgba255) {
+  generatePosNormClr(pts: number[], tris: number[], rgba255: number[]): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
       console.log('this', this)
