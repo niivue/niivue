@@ -18,8 +18,9 @@ files = files.map((file) => {
 })
 
 for (const file of files) {
-  test(`testing with colormap ${file}`, async ({ page }) => {
+  test(`niivue colormap ${file}`, async ({ page }) => {
     const retFile = await page.evaluate(async (file) => {
+      // eslint-disable-next-line no-undef
       const nv = new Niivue()
       await nv.attachTo('gl', false)
       // load one volume object in an array
@@ -41,8 +42,9 @@ for (const file of files) {
 }
 
 for (const file of files) {
-  test(`testing with colormap ${file} inverted`, async ({ page }) => {
+  test(`niivue colormap ${file} inverted`, async ({ page }) => {
     const retFile = await page.evaluate(async (file) => {
+      // eslint-disable-next-line no-undef
       const nv = new Niivue()
       await nv.attachTo('gl', false)
       // load one volume object in an array

@@ -8,11 +8,12 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('niivue frac2vox', async ({ page }) => {
   const vox = await page.evaluate(async () => {
-    let opts = {
+    const opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new Niivue((opts = opts))
+    // eslint-disable-next-line no-undef
+    const nv = new Niivue(opts)
     await nv.attachTo('gl', false)
 
     // load one volume object in an array

@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('niivue load connectome tabular', async ({ page }) => {
   const nlabels = await page.evaluate(async () => {
+    // eslint-disable-next-line no-undef
     const nv = new Niivue({ show3Dcrosshair: true, isColorbar: true })
     nv.opts.multiplanarForceRender = true
     await nv.attachTo('gl', false)

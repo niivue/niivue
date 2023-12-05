@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('niivue event onLocationChange 4D', async ({ page }) => {
   const frameVoxVal = await page.evaluate(async () => {
+    // eslint-disable-next-line no-undef
     const nv = new Niivue()
     await nv.attachTo('gl', false)
     // load one volume object in an array
