@@ -1,38 +1,12 @@
-import { NVMesh, MeshType } from './nvmesh'
-import { NVUtilities } from './nvutilities'
-import { NiivueObject3D } from './niivue-object3D'
-import { NVMeshUtilities } from './nvmesh-utilities'
-import { cmapper } from './colortables'
-import { NVLabel3D, LabelTextAlignment } from './nvlabel'
+import { NVMesh, MeshType } from './nvmesh.js'
+import { NVUtilities } from './nvutilities.js'
+import { NiivueObject3D } from './niivue-object3D.js'
+import { NVMeshUtilities } from './nvmesh-utilities.js'
+import { cmapper } from './colortables.js'
+import { NVLabel3D, LabelTextAlignment } from './nvlabel.js'
+import { Connectome, ConnectomeOptions, LegacyConnectome } from './types.js'
 
-/**
- * Representes the vertices of a connectome
- * @typedef {Object} NVConnectomeNode
- * @property {string} name - name of node
- * @property {number} x
- * @property {number} y
- * @property {number} z
- * @property {number} colorValue - color value of node (actual color determined by colormap)
- * @property {number} sizeValue - size value of node (actual size determined by node scale times this value in mms)
- * @property {NVLabel3D} label
- */
-
-/**
- * Represents edges between connectome nodes
- * @typedef {Object} NVConnectomeEdge
- * @property {number[]} firstNodeIndex - index of first node
- * @property {number[]} secondNodeIndex - index of second node
- * @property {number} colorValue - color value to determin color of edge based on color map
- */
-export class NVConnectomeEdge {
-  contructor(first, second, colorValue) {
-    this.first = first
-    this.second = second
-    this.colorValue = colorValue
-  }
-}
-
-const defaultOptions = {
+const defaultOptions: ConnectomeOptions = {
   name: 'untitled connectome',
   nodeColormap: 'warm',
   nodeColormapNegative: 'winter',
@@ -46,31 +20,28 @@ const defaultOptions = {
   edgeScale: 1
 }
 
-/**
- * @typedef {Object} NVConnectomeOptions
- * @property {string} name
- * @property {string} nodeColormap
- * @property {string} nodeColormapNegative
- * @property {number} nodeMinColor
- * @property {number} nodeMaxColor
- * @property {number} nodeScale - scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
- * @property {string} edgeColormap
- * @property {string} edgeColormapNegative
- * @property {number} edgeMin
- * @property {number} edgeMax
- * @property {number} edgeScale
- * @property {number} legendLineThickness
- */
-// export class NVConnectomeOptions extends NVMeshOptions {}
+type FreeSurferConnectome = {
+  data_type: string
+  points: Array<{
+    comments?: Array<{
+      text: string
+    }>
+    coordinates: {
+      x: number
+      y: number
+      z: number
+    }
+  }>
+}
+
 /**
  * Represents a connectome
  */
 export class NVConnectome extends NVMesh {
-  /**
-   * @constructor
-   * @param {NVConnectomeOptions} connectome
-   */
-  constructor(gl, connectome) {
+  gl: WebGL2RenderingContext
+  nodesChanged: EventTarget
+
+  constructor(gl: WebGL2RenderingContext, connectome: LegacyConnectome) {
     super([], [], connectome.name, [], 1.0, true, gl, connectome)
     this.gl = gl
     // this.nodes = connectome.nodes;
@@ -84,11 +55,13 @@ export class NVConnectome extends NVMesh {
     this.nodesChanged = new EventTarget()
   }
 
-  static convertLegacyConnectome(json) {
-    const connectome = { nodes: [], edges: [] }
+  static convertLegacyConnectome(json: LegacyConnectome): Connectome {
+    const connectome: Connectome = { nodes: [], edges: [], ...defaultOptions }
     for (const prop in json) {
       if (prop in defaultOptions) {
-        connectome[prop] = json[prop]
+        const key = prop as keyof ConnectomeOptions
+        // @ts-expect-error -- this will work, as both extend ConnectomeOptions
+        connectome[key] = json[key]
       }
     }
     const nodes = json.nodes
@@ -103,9 +76,9 @@ export class NVConnectome extends NVMesh {
       })
     }
 
-    for (let i = 0; i < nodes.length - 1; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const colorValue = this.edges[i * nodes.length + j]
+    for (let i = 0; i < nodes.names.length - 1; i++) {
+      for (let j = i + 1; j < nodes.names.length; j++) {
+        const colorValue = json.edges[i * nodes.names.length + j]
         connectome.edges.push({
           first: i,
           second: j,
@@ -117,7 +90,7 @@ export class NVConnectome extends NVMesh {
     return connectome
   }
 
-  static convertFreeSurferConnectome(json, colormap = 'warm') {
+  static convertFreeSurferConnectome(json: FreeSurferConnectome, colormap = 'warm'): Connectome {
     let isValid = true
     if (!('data_type' in json)) {
       isValid = false
@@ -150,9 +123,9 @@ export class NVConnectome extends NVMesh {
     return connectome
   }
 
-  updateLabels() {
+  updateLabels(): void {
     const nodes = this.nodes
-    if (nodes.length > 0) {
+    if (nodes && nodes.length > 0) {
       // largest node
       const largest = nodes.reduce((a, b) => (a.sizeValue > b.sizeValue ? a : b)).sizeValue
       const min = this.nodeMinColor
