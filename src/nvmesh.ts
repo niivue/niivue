@@ -4,7 +4,7 @@ import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
-import { LegacyConnectome, LegacyNodes, NVConnectomeNode, Point } from './types.js'
+import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
 import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
 
 const log = new Log()
@@ -165,7 +165,7 @@ export class NVMesh {
 
   nodes?: LegacyNodes | NVConnectomeNode[]
 
-  edges?: number[]
+  edges?: number[] | NVConnectomeEdge[]
 
   points?: Point[]
 
@@ -605,7 +605,7 @@ export class NVMesh {
       max = this.edgeMax!
       for (let i = 0; i < nNode - 1; i++) {
         for (let j = i + 1; j < nNode; j++) {
-          let color = this.edges![i * nNode + j]
+          let color = (this.edges as number[])[i * nNode + j]
           let isNeg = false
           if (hasNeg && color < 0) {
             isNeg = true
