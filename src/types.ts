@@ -39,6 +39,7 @@ export type NiftiHeader = {
 }
 
 // TODO: add volume type
+// TODO: this seems to be simply NVImage
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Volume = Record<string, any>
 

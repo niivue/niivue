@@ -1,6 +1,5 @@
 import { WebSocketSubject, webSocket } from 'rxjs/webSocket'
-
-type Message = Record<string, unknown>
+import { Message, NVMESSAGE } from './nvmessage.js'
 
 /**
  * SessionUser specifies display name, user id and user key
@@ -79,7 +78,7 @@ export class SessionBus {
       this.isConnectedToServer = true
       if (this.serverConnection$ !== null) {
         this.serverConnection$.next({
-          op: 'create',
+          op: NVMESSAGE.CREATE,
           key: this.sessionKey
         })
       }
@@ -104,14 +103,14 @@ export class SessionBus {
     }
   }
 
-  sendSessionMessage(message: Record<string, unknown>): void {
+  sendSessionMessage(message: Message): void {
     message.from = this.user.id
     if (this.isConnectedToServer && this.serverConnection$ !== null) {
       this.serverConnection$.next({
         ...message,
         key: this.sessionKey,
         userKey: this.user.key
-      })
+      } as Message)
     } else {
       this.sendLocalMessage(message)
     }
@@ -172,7 +171,7 @@ export class SessionBus {
           const newUsers = newUserList.filter((u) => !oldUserList.map((o) => o.id).includes(u.id))
           for (const newUser of newUsers) {
             this.onMessageCallback({
-              op: 'user joined',
+              op: NVMESSAGE.USER_JOINED,
               user: newUser
             })
           }

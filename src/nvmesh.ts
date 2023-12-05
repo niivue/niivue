@@ -90,7 +90,7 @@ type BaseLoadParams = {
   layers: NVMeshLayer[]
 }
 
-type LoadFromUrlParams = BaseLoadParams & {
+export type LoadFromUrlParams = BaseLoadParams & {
   // the resolvable URL pointing to a nifti image to load
   url: string
 }
