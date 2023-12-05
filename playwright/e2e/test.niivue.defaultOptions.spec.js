@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 test('niivue defaultOptions set correctly', async ({ page }) => {
   const opts = await page.evaluate(async () => {
+    // eslint-disable-next-line no-undef
     const nv = new Niivue()
     await nv.attachTo('gl', false)
     return nv.opts

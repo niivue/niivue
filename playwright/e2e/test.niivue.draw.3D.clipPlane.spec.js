@@ -6,13 +6,14 @@ test.beforeEach(async ({ page }, testInfo) => {
   console.log(`Running ${testInfo.title}`)
 })
 
-test('niivue draw 3D clipPlane correct in axial plane', async ({page}) => {
+test('niivue draw 3D clipPlane correct in axial plane', async ({ page }) => {
   await page.evaluate(async () => {
-    let opts = {
+    const opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new Niivue((opts = opts))
+    // eslint-disable-next-line no-undef
+    const nv = new Niivue(opts)
     await nv.attachTo('gl', false)
     nv.setSliceType(nv.sliceTypeRender)
     nv.setClipPlane([0, 0, -90])
@@ -34,13 +35,14 @@ test('niivue draw 3D clipPlane correct in axial plane', async ({page}) => {
   await expect(page.locator('#gl')).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue draw 3D clipPlane correct in coronal plane', async ({page}) => {
+test('niivue draw 3D clipPlane correct in coronal plane', async ({ page }) => {
   await page.evaluate(async () => {
-    let opts = {
+    const opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new Niivue((opts = opts))
+    // eslint-disable-next-line no-undef
+    const nv = new Niivue(opts)
     await nv.attachTo('gl', false)
     nv.setSliceType(nv.sliceTypeRender)
     nv.setClipPlane([0, 0, 0])
@@ -62,13 +64,14 @@ test('niivue draw 3D clipPlane correct in coronal plane', async ({page}) => {
   await expect(page.locator('#gl')).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue draw 3D clipPlane correct in sagittal plane', async ({page}) => {
+test('niivue draw 3D clipPlane correct in sagittal plane', async ({ page }) => {
   await page.evaluate(async () => {
-    let opts = {
+    const opts = {
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }
-    const nv = new Niivue((opts = opts))
+    // eslint-disable-next-line no-undef
+    const nv = new Niivue(opts)
     await nv.attachTo('gl', false)
     nv.setSliceType(nv.sliceTypeRender)
     nv.setClipPlane([0, 270, 0])

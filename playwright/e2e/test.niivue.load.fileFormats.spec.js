@@ -1,4 +1,3 @@
-import fs from 'fs'
 import { test, expect } from '@playwright/test'
 import { httpServerAddress } from './helpers'
 
@@ -24,9 +23,10 @@ const files = [
 ]
 
 for (const file of files) {
-  test(`testing with file ${file.fileName}`, async ({ page }) => {
+  test(`niivue loadVolumes loadMeshes for file format ${file.fileName}`, async ({ page }) => {
     // eslint-disable-next-line prettier/prettier
     await page.evaluate(async (file) => {
+      // eslint-disable-next-line no-undef
       const nv = new Niivue()
       await nv.attachTo('gl', false)
       // load one volume object in an array
