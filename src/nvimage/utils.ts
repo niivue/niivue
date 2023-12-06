@@ -404,3 +404,35 @@ export function getExtents(positions: number[], forceOriginInVolume = true): Ext
   const furthestVertexFromOrigin = mxDx
   return { min, max, furthestVertexFromOrigin, origin }
 }
+
+export function isAffineOK(mtx: number[][]): boolean {
+  // A good matrix should not have any components that are not a number
+  // A good spatial transformation matrix should not have a row or column that is all zeros
+  const iOK = [false, false, false, false]
+  const jOK = [false, false, false, false]
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (isNaN(mtx[i][j])) {
+        return false
+      }
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (mtx[i][j] === 0.0) {
+        continue
+      }
+      iOK[i] = true
+      jOK[j] = true
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    if (!iOK[i]) {
+      return false
+    }
+    if (!jOK[i]) {
+      return false
+    }
+  }
+  return true
+}

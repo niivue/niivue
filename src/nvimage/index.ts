@@ -6,12 +6,15 @@ import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
 import { cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
+import { NVLabel3D } from '../nvlabel.js'
 import {
+  ImageType,
   NVIMAGE_TYPE,
   NVImageFromUrlOptions,
   getBestTransform,
   getExtents,
   hdrToArrayBuffer,
+  isAffineOK,
   isPlatformLittleEndian
 } from './utils.js'
 const log = new Log()
@@ -22,9 +25,59 @@ export * from './utils.js'
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  */
 export class NVImage {
+  name: string
+  id: string
+  _colormap: string
+  _opacity: number
+  percentileFrac: number
+  ignoreZeroVoxels: boolean
+  trustCalMinMax: boolean
+  colormapNegative: string
+  colormapLabel: NVLabel3D[]
+  nFrame4D?: number
+  frame4D: number // indexed from 0!
+  nTotalFrame4D?: number
+  cal_minNeg: number
+  cal_maxNeg: number
+  colorbarVisible = true
+  visible: boolean
+  modulationImage = null
+  modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
+  series: NVImage[] = [] // for concatenating dicom images
+  nVox3D?: number
+
+  hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
+  imageType?: ImageType
+
+  onColormapChange: () => void = () => {}
+  onOpacityChange: () => void = () => {}
+
   // TODO these were needed to fix nvdocument
-  cal_min
-  cal_max
+  cal_min?: number
+  cal_max?: number
+
+  // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+  // TODO move to enum
+  DT_NONE = 0
+  DT_UNKNOWN = 0 /* what it says, dude           */
+  DT_BINARY = 1 /* binary (1 bit/voxel)         */
+  DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
+  DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
+  DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
+  DT_FLOAT = 16 /* float (32 bits/voxel)        */
+  DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
+  DT_DOUBLE = 64 /* double (64 bits/voxel)       */
+  DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
+  DT_ALL = 255 /* not very useful (?)          */
+  DT_INT8 = 256 /* signed char (8 bits)         */
+  DT_UINT16 = 512 /* unsigned short (16 bits)     */
+  DT_UINT32 = 768 /* unsigned int (32 bits)       */
+  DT_INT64 = 1024 /* long long (64 bits)          */
+  DT_UINT64 = 1280 /* unsigned long long (64 bits) */
+  DT_FLOAT128 = 1536 /* long double (128 bits)       */
+  DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
+  DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
+  DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
 
   /**
    *
@@ -78,27 +131,6 @@ export class NVImage {
     colorbarVisible = true,
     colormapLabel = []
   ) {
-    // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
-    this.DT_NONE = 0
-    this.DT_UNKNOWN = 0 /* what it says, dude           */
-    this.DT_BINARY = 1 /* binary (1 bit/voxel)         */
-    this.DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
-    this.DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
-    this.DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
-    this.DT_FLOAT = 16 /* float (32 bits/voxel)        */
-    this.DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
-    this.DT_DOUBLE = 64 /* double (64 bits/voxel)       */
-    this.DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
-    this.DT_ALL = 255 /* not very useful (?)          */
-    this.DT_INT8 = 256 /* signed char (8 bits)         */
-    this.DT_UINT16 = 512 /* unsigned short (16 bits)     */
-    this.DT_UINT32 = 768 /* unsigned int (32 bits)       */
-    this.DT_INT64 = 1024 /* long long (64 bits)          */
-    this.DT_UINT64 = 1280 /* unsigned long long (64 bits) */
-    this.DT_FLOAT128 = 1536 /* long double (128 bits)       */
-    this.DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
-    this.DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
-    this.DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
     this.name = name
     this.id = crypto.randomUUID()
     this._colormap = colormap
@@ -113,26 +145,19 @@ export class NVImage {
     this.cal_maxNeg = cal_maxNeg
     this.colorbarVisible = colorbarVisible
     this.visible = visible
-    this.modulationImage = null
-    this.modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
-    this.series = [] // for concatenating dicom images
-
-    this.onColormapChange = () => {}
-    this.onOpacityChange = () => {}
 
     // Added to support zerosLike
     if (!dataBuffer) {
       return
     }
     const re = /(?:\.([^.]+))?$/
-    let ext = re.exec(name)[1] || ''
+    let ext = re.exec(name)![1] || '' // TODO ! guaranteed?
     ext = ext.toUpperCase()
     if (ext === 'GZ') {
-      ext = re.exec(name.slice(0, -3))[1] // img.trk.gz -> img.trk
+      ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
     let imgRaw = null
-    this.hdr = null
 
     if (imageType === NVIMAGE_TYPE.UNKNOWN) {
       imageType = NVIMAGE_TYPE.parse(ext)
@@ -176,32 +201,41 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.NII:
         this.hdr = nifti.readHeader(dataBuffer)
-        if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255) {
-          this.hdr.cal_max = 0.0
-        }
-        if (nifti.isCompressed(dataBuffer)) {
-          imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer))
-        } else {
-          imgRaw = nifti.readImage(this.hdr, dataBuffer)
+        if (this.hdr !== null) {
+          if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255) {
+            this.hdr.cal_max = 0.0
+          }
+          if (nifti.isCompressed(dataBuffer)) {
+            imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer))
+          } else {
+            imgRaw = nifti.readImage(this.hdr, dataBuffer)
+          }
         }
         break
       default:
         throw new Error('Image type not supported')
     }
-    if (typeof this.hdr.magic === 'number') {
+    if (this.hdr && typeof this.hdr.magic === 'number') {
       this.hdr.magic = 'n+1'
     } // fix for issue 481, where magic is set to the number 1 rather than a string
     this.nFrame4D = 1
-    for (let i = 4; i < 7; i++) {
-      if (this.hdr.dims[i] > 1) {
-        this.nFrame4D *= this.hdr.dims[i]
+    if (this.hdr) {
+      for (let i = 4; i < 7; i++) {
+        if (this.hdr.dims[i] > 1) {
+          this.nFrame4D *= this.hdr.dims[i]
+        }
       }
     }
     this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1)
+    this.nTotalFrame4D = this.nFrame4D
+
+    if (!this.hdr) {
+      return
+    }
+
     this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
     const bytesPerVol = this.nVox3D * (this.hdr.numBitsPerVoxel / 8)
     const nVol4D = imgRaw.byteLength / bytesPerVol
-    this.nTotalFrame4D = this.nFrame4D
     if (nVol4D !== this.nFrame4D) {
       if (nVol4D > 0 && nVol4D * bytesPerVol === imgRaw.byteLength) {
         console.log('Loading the first ' + nVol4D + ' of ' + this.nFrame4D + ' volumes')
@@ -210,6 +244,7 @@ export class NVImage {
       }
       this.nFrame4D = nVol4D
     }
+
     // 1007 = NIFTI_INTENT_VECTOR; 2003 = NIFTI_INTENT_RGB_VECTOR
     // n.b. NIfTI standard says "NIFTI_INTENT_RGB_VECTOR" should be RGBA, but FSL only stores RGB
     if (
@@ -243,40 +278,11 @@ export class NVImage {
         j += 3
       }
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
+
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
       console.log('pixDims not plausible', this.hdr)
     }
-    function isAffineOK(mtx) {
-      // A good matrix should not have any components that are not a number
-      // A good spatial transformation matrix should not have a row or column that is all zeros
-      const iOK = [false, false, false, false]
-      const jOK = [false, false, false, false]
-      for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          if (isNaN(mtx[i][j])) {
-            return false
-          }
-        }
-      }
-      for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 3; j++) {
-          if (mtx[i][j] === 0.0) {
-            continue
-          }
-          iOK[i] = true
-          jOK[j] = true
-        }
-      }
-      for (let i = 0; i < 3; i++) {
-        if (!iOK[i]) {
-          return false
-        }
-        if (!jOK[i]) {
-          return false
-        }
-      }
-      return true
-    } //
+
     if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0) {
       this.hdr.scl_slope = 1.0
     } // https://github.com/nipreps/fmriprep/issues/2507
