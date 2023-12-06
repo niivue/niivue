@@ -20,7 +20,7 @@
     "build:min": "node bundle.js",
     "demo": "npm run build && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
-    "test": "npm run build && jest",
+    "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
     "test-playwright": "npm run build && npx playwright test",
     "docs": "jsdoc -c jsdoc.json --readme ./README.md -d devdocs -r src/ -t node_modules/docdash",
