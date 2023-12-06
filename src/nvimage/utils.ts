@@ -123,14 +123,13 @@ export type ImageFromUrlOptions = {
   cal_maxNeg: number
   // show/hide colormaps (defaults to true)
   colorbarVisible: boolean
-  // TODO missing docs
+  // TODO the following fields were not documented
   ignoreZeroVoxels: boolean
-  // TODO missing docs
-  imageType: ImageType
-  // TODO missing docs
+  imageType?: ImageType
   frame4D: number
-  // TODO missing docs
   colormapLabel: string[]
+  pairedImgData?: null
+  limitFrames4D?: number
 }
 
 export function NVImageFromUrlOptions(

@@ -71,7 +71,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 
   // https://stackoverflow.com/questions/34156282/how-do-i-save-json-to-local-text-file
-  static download(content: Blob, fileName: string, contentType: string): void {
+  static download(content: string, fileName: string, contentType: string): void {
     const a = document.createElement('a')
     const file = new Blob([content], { type: contentType })
     a.href = URL.createObjectURL(file)
