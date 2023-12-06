@@ -69,8 +69,8 @@ export class NVImage {
   img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
   imaginary?: Float32Array
 
-  onColormapChange: () => void = () => {}
-  onOpacityChange: () => void = () => {}
+  onColormapChange: (img: NVImage) => void = () => {}
+  onOpacityChange: (img: NVImage) => void = () => {}
 
   mm000?: vec3
   mm100?: vec3
@@ -2255,7 +2255,7 @@ export class NVImage {
   // not included in public docs
   // base function for niivue.setColormap()
   // colormaps are continuously interpolated between 256 values (0..256)
-  setColormap(cm) {
+  setColormap(cm: string): void {
     this._colormap = cm
     this.calMinMax()
     if (this.onColormapChange) {
