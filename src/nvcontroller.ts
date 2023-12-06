@@ -74,7 +74,7 @@ export class NVController {
     this.niivue.mediaUrlMap.set(mesh, url)
   }
 
-  onNewMessage(msg: Message): void {
+  async onNewMessage(msg: Message): Promise<void> {
     switch (msg.op) {
       case NVMESSAGE.ZOOM:
         // TODO was _volScaleMultiplier, doesn't exist.
@@ -97,8 +97,10 @@ export class NVController {
         break
       case NVMESSAGE.VOLUME_ADDED_FROM_URL:
         if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
-          const volume = NVImage.loadFromUrl(msg.imageOptions)
-          this.addVolume(volume, msg.imageOptions.url)
+          const volume = await NVImage.loadFromUrl(msg.imageOptions)
+          if (volume) {
+            this.addVolume(volume, msg.imageOptions.url)
+          }
         }
 
         break
