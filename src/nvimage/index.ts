@@ -477,7 +477,7 @@ export class NVImage {
   // not included in public docs
   // detect difference between voxel grid and world space
   // https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
-  computeObliqueAngle = function (mtx44) {
+  computeObliqueAngle(mtx44) {
     const mtx = mat4.clone(mtx44)
     mat4.transpose(mtx, mtx44)
     const dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2])
@@ -498,7 +498,7 @@ export class NVImage {
 
   // not included in public docs
   // detect difference between voxel grid and world space
-  calculateOblique = function () {
+  calculateOblique() {
     this.oblique_angle = this.computeObliqueAngle(this.matRAS)
     const LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS)
     const X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS)
@@ -587,7 +587,7 @@ export class NVImage {
   // not included in public docs
   // convert AFNI head/brik space to NIfTI format
   // https://github.com/afni/afni/blob/d6997e71f2b625ac1199460576d48f3136dac62c/src/thd_niftiwrite.c#L315
-  THD_daxes_to_NIFTI = function (xyzDelta, xyzOrigin, orientSpecific) {
+  THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific) {
     const hdr = this.hdr
     hdr.sform_code = 2
     const ORIENT_xyz = 'xxyyzzg' // note strings indexed from 0!
@@ -634,7 +634,7 @@ export class NVImage {
 
   // not included in public docs
   // determine spacing voxel centers (rows, columns, slices)
-  SetPixDimFromSForm = function () {
+  SetPixDimFromSForm() {
     const m = this.hdr.affine
     const mat = mat4.fromValues(
       m[0][0],
@@ -668,7 +668,7 @@ export class NVImage {
 
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
-  readDICOM = function (buf) {
+  readDICOM(buf) {
     this.series = new daikon.Series()
     // parse DICOM file
     if (Array.isArray(buf)) {
@@ -803,7 +803,7 @@ export class NVImage {
   // not included in public docs
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
-  readECAT = function (buffer) {
+  readECAT(buffer) {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -911,7 +911,7 @@ export class NVImage {
     return rawImg
   } // readECAT()
 
-  readV16 = function (buffer) {
+  readV16(buffer) {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -940,7 +940,7 @@ export class NVImage {
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
-  readVMR = function (buffer) {
+  readVMR(buffer) {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1032,7 +1032,7 @@ export class NVImage {
 
   // not included in public docs
   // read FreeSurfer MGH format image
-  readMGH = function (buffer) {
+  readMGH(buffer) {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
@@ -1135,7 +1135,7 @@ export class NVImage {
 
   // not included in public docs
   // read AFNI head/brik format image
-  readHEAD = function (dataBuffer, pairedImgData) {
+  readHEAD(dataBuffer, pairedImgData) {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims[0] = 3
@@ -1278,7 +1278,7 @@ export class NVImage {
   // not included in public docs
   // read ITK MHA format image
   // https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
-  readMHA = function (buffer, pairedImgData) {
+  readMHA(buffer, pairedImgData) {
     const len = buffer.byteLength
     if (len < 20) {
       throw new Error('File too small to be VTK: bytes = ' + buffer.byteLength)
@@ -1420,7 +1420,7 @@ export class NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF = function (buffer, pairedImgData) {
+  readMIF(buffer, pairedImgData) {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
     this.hdr = new nifti.NIFTI1()
@@ -1683,7 +1683,7 @@ export class NVImage {
   // not included in public docs
   // read NRRD format image
   // http://teem.sourceforge.net/nrrd/format.html
-  readNRRD = function (dataBuffer, pairedImgData) {
+  readNRRD(dataBuffer, pairedImgData) {
     // inspired by parserNRRD.js in https://github.com/xtk
     // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
     // http://www.opensource.org/licenses/mit-license.php
@@ -1973,7 +1973,7 @@ export class NVImage {
 
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
-  calculateRAS = function () {
+  calculateRAS() {
     // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
     // not elegant, as JavaScript arrays are always 1D
     const a = this.hdr.affine
@@ -2123,7 +2123,7 @@ export class NVImage {
 
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
-  img2RAS = function () {
+  img2RAS() {
     const perm = this.permRAS.slice()
     if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
       return this.img
@@ -2160,7 +2160,7 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel location (row, column slice, indexed from 0) to world space
-  vox2mm = function (XYZ, mtx) {
+  vox2mm(XYZ, mtx) {
     const sform = mat4.clone(mtx)
     mat4.transpose(sform, sform)
     const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
@@ -2171,7 +2171,7 @@ export class NVImage {
 
   // not included in public docs
   // convert world space to voxel location (row, column slice, indexed from 0)
-  mm2vox = function (mm, frac = false) {
+  mm2vox(mm, frac = false) {
     const sform = mat4.clone(this.matRAS)
     const out = mat4.clone(sform)
     mat4.transpose(out, sform)
@@ -2187,14 +2187,14 @@ export class NVImage {
 
   // not included in public docs
   // returns boolean: are two arrays identical?
-  arrayEquals = function (a, b) {
+  arrayEquals(a, b) {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index])
   }
 
   // not included in public docs
   // base function for niivue.setColormap()
   // colormaps are continuously interpolated between 256 values (0..256)
-  setColormap = function (cm) {
+  setColormap(cm) {
     this._colormap = cm
     this.calMinMax()
     if (this.onColormapChange) {
@@ -2205,7 +2205,7 @@ export class NVImage {
   // not included in public docs
   // base function for niivue.setColormap()
   // label colormaps are discretely sampled from an arbitrary number of colors
-  setColormapLabel = function (cm) {
+  setColormapLabel(cm) {
     this.colormapLabel = cmapper.makeLabelLut(cm)
   }
 
@@ -2236,7 +2236,7 @@ export class NVImage {
   // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
   // clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
   // ToDo: convert to web assembly, this is slow in JavaScript
-  calMinMax = function () {
+  calMinMax() {
     const cmap = cmapper.colormapFromKey(this._colormap)
     let cmMin = 0
     let cmMax = 0
@@ -2381,7 +2381,7 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel intensity from stored value to scaled intensity
-  intensityRaw2Scaled = function (raw) {
+  intensityRaw2Scaled(raw) {
     if (this.hdr.scl_slope === 0) {
       this.hdr.scl_slope = 1.0
     }
@@ -2389,7 +2389,7 @@ export class NVImage {
   }
 
   // convert voxel intensity from scaled intensity to stored value
-  intensityScaled2Raw = function (scaled) {
+  intensityScaled2Raw(scaled) {
     if (this.hdr.scl_slope === 0) {
       this.hdr.scl_slope = 1.0
     }
@@ -2912,7 +2912,7 @@ export class NVImage {
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImage = myImage.clone()
    */
-  clone = function () {
+  clone() {
     const clonedImage = new NVImage()
     clonedImage.id = this.id
     clonedImage.hdr = Object.assign({}, this.hdr)
@@ -2928,7 +2928,7 @@ export class NVImage {
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImageWithZeros = myImage.clone().zeroImage()
    */
-  zeroImage = function () {
+  zeroImage() {
     this.img.fill(0)
   }
 
@@ -2952,7 +2952,7 @@ export class NVImage {
    * get nifti specific metadata about the image
    * @returns {NVImageMetadata} - {@link NVImageMetadata}
    */
-  getImageMetadata = function () {
+  getImageMetadata() {
     const id = this.id
     const datatypeCode = this.hdr.datatypeCode
     const dims = this.hdr.dims
@@ -3006,7 +3006,7 @@ export class NVImage {
 
   // not included in public docs
   // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
-  getValue = function (x, y, z, frame4D = 0, isReadImaginary = false) {
+  getValue(x, y, z, frame4D = 0, isReadImaginary = false) {
     // const { nx, ny, nz } = this.getImageMetadata();
     const nx = this.hdr.dims[1]
     const ny = this.hdr.dims[2]
@@ -3045,7 +3045,7 @@ export class NVImage {
    * @param {WebGLRenderingContext} gl - WebGL rendering context
    * @returns {NiivueObject3D} returns a new 3D object in model space
    */
-  toNiivueObject3D = function (id, gl) {
+  toNiivueObject3D(id, gl) {
     // cube has 8 vertices: left/right, posterior/anterior, inferior/superior
     // n.b. voxel coordinates are from VOXEL centers
     // add/subtract 0.5 to get full image field of view
@@ -3172,7 +3172,7 @@ export class NVImage {
    * Update options for image
    * @param {NVImageFromUrlOptions} options
    */
-  applyOptionsUpdate = function (options) {
+  applyOptionsUpdate(options) {
     this.hdr.cal_min = options.cal_min
     this.hdr.cal_max = options.cal_max
     delete options.url
@@ -3182,7 +3182,7 @@ export class NVImage {
     Object.assign(this, options)
   }
 
-  getImageOptions = function () {
+  getImageOptions() {
     let options = null
     try {
       options = NVImageFromUrlOptions(
@@ -3212,7 +3212,7 @@ export class NVImage {
    * Converts NVImage to NIfTI compliant byte array
    * @param {Uint8Array} drawingBytes
    */
-  toUint8Array = function (drawingBytes = null) {
+  toUint8Array(drawingBytes = null) {
     const isDrawing = drawingBytes
     const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing)
 
