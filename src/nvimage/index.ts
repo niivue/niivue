@@ -1,3 +1,4 @@
+import arrayEquals from 'array-equal'
 import * as nifti from 'nifti-reader-js'
 // @ts-expect-error -- https://github.com/rii-mango/Daikon/pull/57
 import daikon from 'daikon'
@@ -7,6 +8,7 @@ import { cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
 import {
+  ImageFromUrlOptions,
   NVIMAGE_TYPE,
   NVImageFromUrlOptions,
   getBestTransform,
@@ -18,10 +20,57 @@ const log = new Log()
 
 export * from './utils.js'
 
+type NVImageMetadata = {
+  // unique id of image
+  id: string
+  // data type
+  datatypeCode: number
+  // number of columns
+  nx: number
+  // number of rows
+  ny: number
+  // number of slices
+  nz: number
+  // number of volumes
+  nt: number
+  // space between columns
+  dx: number
+  // space between rows
+  dy: number
+  // space between slices
+  dz: number
+  // time between volumes
+  dt: number
+  // bits per voxel
+  bpx: number
+}
+
 /**
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  */
 export class NVImage {
+  // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+  static DT_NONE = 0
+  static DT_UNKNOWN = 0 /* what it says, dude           */
+  static DT_BINARY = 1 /* binary (1 bit/voxel)         */
+  static DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
+  static DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
+  static DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
+  static DT_FLOAT = 16 /* float (32 bits/voxel)        */
+  static DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
+  static DT_DOUBLE = 64 /* double (64 bits/voxel)       */
+  static DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
+  static DT_ALL = 255 /* not very useful (?)          */
+  static DT_INT8 = 256 /* signed char (8 bits)         */
+  static DT_UINT16 = 512 /* unsigned short (16 bits)     */
+  static DT_UINT32 = 768 /* unsigned int (32 bits)       */
+  static DT_INT64 = 1024 /* long long (64 bits)          */
+  static DT_UINT64 = 1280 /* unsigned long long (64 bits) */
+  static DT_FLOAT128 = 1536 /* long double (128 bits)       */
+  static DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
+  static DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
+  static DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
+
   // TODO these were needed to fix nvdocument
   cal_min
   cal_max
@@ -78,27 +127,6 @@ export class NVImage {
     colorbarVisible = true,
     colormapLabel = []
   ) {
-    // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
-    this.DT_NONE = 0
-    this.DT_UNKNOWN = 0 /* what it says, dude           */
-    this.DT_BINARY = 1 /* binary (1 bit/voxel)         */
-    this.DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
-    this.DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
-    this.DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
-    this.DT_FLOAT = 16 /* float (32 bits/voxel)        */
-    this.DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
-    this.DT_DOUBLE = 64 /* double (64 bits/voxel)       */
-    this.DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
-    this.DT_ALL = 255 /* not very useful (?)          */
-    this.DT_INT8 = 256 /* signed char (8 bits)         */
-    this.DT_UINT16 = 512 /* unsigned short (16 bits)     */
-    this.DT_UINT32 = 768 /* unsigned int (32 bits)       */
-    this.DT_INT64 = 1024 /* long long (64 bits)          */
-    this.DT_UINT64 = 1280 /* unsigned long long (64 bits) */
-    this.DT_FLOAT128 = 1536 /* long double (128 bits)       */
-    this.DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
-    this.DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
-    this.DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
     this.name = name
     this.id = crypto.randomUUID()
     this._colormap = colormap
@@ -2154,7 +2182,7 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel location (row, column slice, indexed from 0) to world space
-  vox2mm = function (XYZ, mtx) {
+  vox2mm(XYZ, mtx) {
     const sform = mat4.clone(mtx)
     mat4.transpose(sform, sform)
     const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
@@ -2165,7 +2193,7 @@ export class NVImage {
 
   // not included in public docs
   // convert world space to voxel location (row, column slice, indexed from 0)
-  mm2vox = function (mm, frac = false) {
+  mm2vox(mm: number[], frac = false): number[] | Float32Array {
     const sform = mat4.clone(this.matRAS)
     const out = mat4.clone(sform)
     mat4.transpose(out, sform)
@@ -2181,14 +2209,14 @@ export class NVImage {
 
   // not included in public docs
   // returns boolean: are two arrays identical?
-  arrayEquals = function (a, b) {
-    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index])
+  arrayEquals(a: unknown[], b: unknown[]): boolean {
+    return arrayEquals(a, b)
   }
 
   // not included in public docs
   // base function for niivue.setColormap()
   // colormaps are continuously interpolated between 256 values (0..256)
-  setColormap = function (cm) {
+  setColormap(cm): void {
     this._colormap = cm
     this.calMinMax()
     if (this.onColormapChange) {
@@ -2199,15 +2227,15 @@ export class NVImage {
   // not included in public docs
   // base function for niivue.setColormap()
   // label colormaps are discretely sampled from an arbitrary number of colors
-  setColormapLabel = function (cm) {
+  setColormapLabel(cm): void {
     this.colormapLabel = cmapper.makeLabelLut(cm)
   }
 
-  setColormapLabelFromUrl = async function (url) {
+  async setColormapLabelFromUrl(url: string): Promise<void> {
     this.colormapLabel = await cmapper.makeLabelLutFromUrl(url)
   }
 
-  get colormap() {
+  get colormap(): number[] {
     return this._colormap
   }
 
@@ -2215,7 +2243,7 @@ export class NVImage {
     this.setColormap(colormap)
   }
 
-  get opacity() {
+  get opacity(): number {
     return this._opacity
   }
 
@@ -2230,7 +2258,7 @@ export class NVImage {
   // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
   // clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
   // ToDo: convert to web assembly, this is slow in JavaScript
-  calMinMax = function () {
+  calMinMax(): number[] {
     const cmap = cmapper.colormapFromKey(this._colormap)
     let cmMin = 0
     let cmMax = 0
@@ -2375,7 +2403,7 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel intensity from stored value to scaled intensity
-  intensityRaw2Scaled = function (raw) {
+  intensityRaw2Scaled = function (raw: number): number {
     if (this.hdr.scl_slope === 0) {
       this.hdr.scl_slope = 1.0
     }
@@ -2383,7 +2411,7 @@ export class NVImage {
   }
 
   // convert voxel intensity from scaled intensity to stored value
-  intensityScaled2Raw = function (scaled) {
+  intensityScaled2Raw = function (scaled: number): number {
     if (this.hdr.scl_slope === 0) {
       this.hdr.scl_slope = 1.0
     }
@@ -2392,7 +2420,7 @@ export class NVImage {
 
   // not included in public docs
   // see niivue.saveImage() for wrapper of this function
-  saveToUint8Array = async function (fnm, drawing8 = null) {
+  saveToUint8Array = async function (fnm, drawing8 = null): Promise<Uint8Array> {
     const isDrawing8 = drawing8 !== null
     const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8)
     const opad = new Uint8Array(4)
@@ -2425,7 +2453,7 @@ export class NVImage {
   // not included in public docs
   // save image as NIfTI volume
   // if fnm is empty, data is returned
-  saveToDisk = async function (fnm, drawing8 = null) {
+  saveToDisk = async function (fnm, drawing8 = null): Promise<Uint8Array> {
     const saveData = await this.saveToUint8Array(fnm, drawing8)
     const isString = (typeof fnm === 'string' || fnm instanceof String) && fnm.length > 0
     if (isString) {
@@ -2444,7 +2472,7 @@ export class NVImage {
     return saveData
   } // saveToDisk()
 
-  static async fetchDicomData(url) {
+  static async fetchDicomData(url: string): Promise<ArrayBuffer[]> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -2481,7 +2509,7 @@ export class NVImage {
     return dataBuffer
   }
 
-  static async fetchPartial(url, bytesToLoad) {
+  static async fetchPartial(url, bytesToLoad): Promise<ArrayBuffer> {
     let response = []
     try {
       response = await fetch(url, {
@@ -2519,7 +2547,7 @@ export class NVImage {
     isManifest = false,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN
-  } = {}) {
+  } = {}): Promise<NVImage> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -2677,10 +2705,10 @@ export class NVImage {
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file, bytesToLoad = NaN) {
+  static readFileAsync(file, bytesToLoad = NaN): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => {
+      reader.onload = (): void => {
         if (file.name.lastIndexOf('gz') !== -1 && isNaN(bytesToLoad)) {
           resolve(nifti.decompress(reader.result))
         } else {
@@ -2735,7 +2763,7 @@ export class NVImage {
     frame4D = 0,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN
-  } = {}) {
+  } = {}): Promise<NVImage> {
     let nvimage = null
     let dataBuffer = []
     try {
@@ -2864,9 +2892,9 @@ export class NVImage {
     percentileFrac = 0.02,
     ignoreZeroVoxels = false,
     visible = true
-  } = {}) {
+  } = {}): NVImage {
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -2901,12 +2929,12 @@ export class NVImage {
 
   /**
    * make a clone of a NVImage instance and return a new NVImage
-   * @returns {NVImage} returns a NVImage instance
+   * @returns  NVImage instance
    * @example
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImage = myImage.clone()
    */
-  clone = function () {
+  clone(): NVImage {
     const clonedImage = new NVImage()
     clonedImage.id = this.id
     clonedImage.hdr = Object.assign({}, this.hdr)
@@ -2922,31 +2950,14 @@ export class NVImage {
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImageWithZeros = myImage.clone().zeroImage()
    */
-  zeroImage = function () {
+  zeroImage(): number[] {
     this.img.fill(0)
   }
 
   /**
-   * Image M.
-   * @typedef {Object} NVImageMetadata
-   * @property {string} id - unique if of image
-   * @property {number} datatypeCode - data type
-   * @property {number} nx - number of columns
-   * @property {number} ny - number of rows
-   * @property {number} nz - number of slices
-   * @property {number} nt - number of volumes
-   * @property {number} dx - space between columns
-   * @property {number} dy - space between rows
-   * @property {number} dz - space between slices
-   * @property {number} dt - time between volumes
-   * @property {number} bpx - bits per voxel
-   */
-
-  /**
    * get nifti specific metadata about the image
-   * @returns {NVImageMetadata} - {@link NVImageMetadata}
    */
-  getImageMetadata = function () {
+  getImageMetadata(): NVImageMetadata {
     const id = this.id
     const datatypeCode = this.hdr.datatypeCode
     const dims = this.hdr.dims
@@ -2978,14 +2989,14 @@ export class NVImage {
 
   /**
    * a factory function to make a zero filled image given a NVImage as a reference
-   * @param {NVImage} nvImage an existing NVImage as a reference
-   * @param {dataType} string the output data type. Options: 'same', 'uint8'
-   * @returns {NVImage} returns a new NVImage filled with zeros for the image data
+   * @param nvImage - an existing NVImage as a reference
+   * @param dataType - the output data type. Options: 'same', 'uint8'
+   * @returns a new NVImage filled with zeros for the image data
    * @example
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * newZeroImage = NVImage.zerosLike(myImage)
    */
-  static zerosLike(nvImage, dataType = 'same') {
+  static zerosLike(nvImage: NVImage, dataType = 'same'): NVImage {
     // dataType can be: 'same', 'uint8'
     // 'same' means that the zeroed image data type is the same as the input image
     const zeroClone = nvImage.clone()
@@ -3000,7 +3011,7 @@ export class NVImage {
 
   // not included in public docs
   // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
-  getValue = function (x, y, z, frame4D = 0, isReadImaginary = false) {
+  getValue(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number {
     // const { nx, ny, nz } = this.getImageMetadata();
     const nx = this.hdr.dims[1]
     const ny = this.hdr.dims[2]
@@ -3035,11 +3046,11 @@ export class NVImage {
   }
 
   /**
-   * @param {number} id - id of 3D Object (is this the base volume or an overlay?)
-   * @param {WebGLRenderingContext} gl - WebGL rendering context
-   * @returns {NiivueObject3D} returns a new 3D object in model space
+   * @param id - id of 3D Object (is this the base volume or an overlay?)
+   * @param gl - WebGL rendering context
+   * @returns a new 3D object in model space
    */
-  toNiivueObject3D = function (id, gl) {
+  toNiivueObject3D = function (id: number, gl: WebGL2RenderingContext): NiivueObject3D {
     // cube has 8 vertices: left/right, posterior/anterior, inferior/superior
     // n.b. voxel coordinates are from VOXEL centers
     // add/subtract 0.5 to get full image field of view
@@ -3164,9 +3175,8 @@ export class NVImage {
 
   /**
    * Update options for image
-   * @param {NVImageFromUrlOptions} options
    */
-  applyOptionsUpdate = function (options) {
+  applyOptionsUpdate(options: ImageFromUrlOptions): void {
     this.hdr.cal_min = options.cal_min
     this.hdr.cal_max = options.cal_max
     delete options.url
@@ -3176,7 +3186,7 @@ export class NVImage {
     Object.assign(this, options)
   }
 
-  getImageOptions = function () {
+  getImageOptions(): ImageFromUrlOptions {
     let options = null
     try {
       options = NVImageFromUrlOptions(
@@ -3204,9 +3214,8 @@ export class NVImage {
 
   /**
    * Converts NVImage to NIfTI compliant byte array
-   * @param {Uint8Array} drawingBytes
    */
-  toUint8Array = function (drawingBytes = null) {
+  toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
     const isDrawing = drawingBytes
     const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing)
 
@@ -3244,7 +3253,7 @@ export class NVImage {
           }
         }
         // lookup table for flips and stride offsets:
-        const range = (start, stop, step) =>
+        const range = (start, stop, step): number[] =>
           Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
         let xlut = range(0, dims[1] - 1, 1)
         if (inflip[0]) {
