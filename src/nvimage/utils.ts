@@ -130,6 +130,8 @@ export type ImageFromUrlOptions = {
   colormapLabel: string[]
   pairedImgData?: null
   limitFrames4D?: number
+  isManifest?: boolean
+  urlImgData?: string
 }
 
 export function NVImageFromUrlOptions(

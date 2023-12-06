@@ -7,6 +7,7 @@ import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
 import {
+  ImageFromUrlOptions,
   ImageType,
   NVIMAGE_TYPE,
   NVImageFromUrlOptions,
@@ -2544,7 +2545,7 @@ export class NVImage {
 
     let manifestUrl = absoluteUrlRE.test(url) ? url : new URL(url, window.location.href)
     const extensionRE = /(?:.([^.]+))?$/
-    const extension = extensionRE.exec(manifestUrl.pathname)
+    const extension = extensionRE.exec((manifestUrl as URL).pathname)
     if (!extension) {
       manifestUrl = new URL('niivue-manifest.txt', url)
     }
@@ -2557,7 +2558,7 @@ export class NVImage {
     const lines = text.split('\n')
 
     const baseUrlRE = /(.*\/).*/
-    const folderUrl = baseUrlRE.exec(manifestUrl)[0]
+    const folderUrl = baseUrlRE.exec(manifestUrl as string)![0]
     const dataBuffer = []
     for (const line of lines) {
       const fileUrl = new URL(line, folderUrl)
@@ -2607,14 +2608,14 @@ export class NVImage {
     isManifest = false,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN
-  } = {}): Promise<NVImage> {
+  }: Partial<Omir<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
     if (url === '') {
       throw Error('url must not be empty')
     }
     let nvimage = null
     let dataBuffer = null
     if (url instanceof Uint8Array) {
-      url = url.buffer
+      url = url.buffer as ArrayBuffer
     } // convert Uint8Array -> ArrayBuffer
     if (url instanceof ArrayBuffer) {
       dataBuffer = url
