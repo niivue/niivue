@@ -1,4 +1,5 @@
 import * as nifti from 'nifti-reader-js'
+// @ts-expect-error -- https://github.com/rii-mango/Daikon/pull/57
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
@@ -18,45 +19,56 @@ const log = new Log()
 export * from './utils.js'
 
 /**
- * @class NVImage
- * @type NVImage
- * @description
  * a NVImage encapsulates some images data and provides methods to query and operate on images
- * @constructor
- * @param {array} dataBuffer an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
- * @param {string} [name=''] a name for this image. Default is an empty string
- * @param {string} [colormap='gray'] a color map to use. default is gray
- * @param {number} [opacity=1.0] the opacity for this image. default is 1
- * @param {string} [pairedImgData=null] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
- * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
- * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
- * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
- * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
- * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
- * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {boolean} [useQFormNotSForm=true] give precedence to QForm (Quaternion) or SForm (Matrix)
- * @param {string} [colormapNegative=''] a color map to use for symmetrical negative intensities
- * @param {number} [frame4D = 0] volume displayed, 0 indexed, must be less than nFrame4D
- * @param {function} [onColormapChange=()=>{}] callback for color map change
- * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
 export class NVImage {
   // TODO these were needed to fix nvdocument
   cal_min
   cal_max
 
+  /**
+   *
+   * @param dataBuffer - an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
+   * @param name - a name for this image. Default is an empty string
+   * @param colormap - a color map to use. default is gray
+   * @param opacity - the opacity for this image. default is 1
+   * @param pairedImgData - Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+   * @param cal_min - minimum intensity for color brightness/contrast
+   * @param cal_max - maximum intensity for color brightness/contrast
+   * @param trustCalMinMax - whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+   * @param percentileFrac - the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+   * @param ignoreZeroVoxels - whether or not to ignore zero voxels in setting the robust range of display values
+   * @param visible - whether or not this image is to be visible
+   * @param useQFormNotSForm - give precedence to QForm (Quaternion) or SForm (Matrix)
+   * @param colormapNegative - a color map to use for symmetrical negative intensities
+   * @param frame4D - volume displayed, 0 indexed, must be less than nFrame4D
+   *
+   * FIXME the following params are documented but not included in the actual constructor
+   * @param onColormapChange - callback for color map change
+   * @param onOpacityChange -callback for color map change
+   *
+   * TODO the following parameters were not documented
+   * @param imageType
+   * @param cal_minNeg
+   * @param cal_maxNeg
+   * @param colorbarVisible
+   * @param colormapLabel
+   * @returns
+   */
   constructor(
-    dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
+    // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
+    dataBuffer: ArrayBuffer,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
-    pairedImgData = null,
+    pairedImgData: string | null = null,
     cal_min = NaN,
     cal_max = NaN,
     trustCalMinMax = true,
     percentileFrac = 0.02,
     ignoreZeroVoxels = false,
     visible = true,
+    // TODO this was marked as true by default in the docs!
     useQFormNotSForm = false,
     colormapNegative = '',
     frame4D = 0,
