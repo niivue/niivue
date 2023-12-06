@@ -3,10 +3,9 @@ import * as nifti from 'nifti-reader-js'
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
-import { ColorMap, cmapper } from '../colortables.js'
+import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
-import { NVLabel3D } from '../nvlabel.js'
 import {
   ImageType,
   NVIMAGE_TYPE,
@@ -33,7 +32,7 @@ export class NVImage {
   ignoreZeroVoxels: boolean
   trustCalMinMax: boolean
   colormapNegative: string
-  colormapLabel: NVLabel3D[]
+  colormapLabel: LUT | null
   nFrame4D?: number
   frame4D: number // indexed from 0!
   nTotalFrame4D?: number
@@ -157,7 +156,7 @@ export class NVImage {
     cal_minNeg = NaN,
     cal_maxNeg = NaN,
     colorbarVisible = true,
-    colormapLabel = []
+    colormapLabel: LUT | null = null
   ) {
     this.name = name
     this.id = crypto.randomUUID()
@@ -2477,9 +2476,12 @@ export class NVImage {
 
   // not included in public docs
   // see niivue.saveImage() for wrapper of this function
-  saveToUint8Array(fnm: string, drawing8 = null): Uint8Array {
+  saveToUint8Array(fnm: string, drawing8: Uint8Array | null = null): Uint8Array {
     if (!this.hdr) {
       throw new Error('hdr undefined')
+    }
+    if (!this.img) {
+      throw new Error('img undefined')
     }
 
     const isDrawing8 = drawing8 !== null
@@ -2515,21 +2517,20 @@ export class NVImage {
   // save image as NIfTI volume
   // if fnm is empty, data is returned
   saveToDisk(fnm: string, drawing8 = null): Uint8Array {
+    // TODO there was an unnecessary strict string check for fnm here,
+    // shouldn't be necessary anymore. Thanks TS! :)
     const saveData = this.saveToUint8Array(fnm, drawing8)
-    const isString = (typeof fnm === 'string' || fnm instanceof String) && fnm.length > 0
-    if (isString) {
-      const blob = new Blob([saveData.buffer], {
-        type: 'application/octet-stream'
-      })
-      const blobUrl = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.setAttribute('href', blobUrl)
-      link.setAttribute('download', fnm)
-      link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    }
+    const blob = new Blob([saveData.buffer], {
+      type: 'application/octet-stream'
+    })
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', blobUrl)
+    link.setAttribute('download', fnm)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
     return saveData
   } // saveToDisk()
 

@@ -5350,7 +5350,7 @@ export class Niivue {
     this.gl.activeTexture(this.gl.TEXTURE1)
     // for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
     let colormapLabelTexture = null
-    if ('lut' in overlayItem.colormapLabel && overlayItem.colormapLabel.lut.length > 7) {
+    if (overlayItem.colormapLabel !== null && overlayItem.colormapLabel.lut.length > 7) {
       const nLabel = overlayItem.colormapLabel.max - overlayItem.colormapLabel.min + 1
       colormapLabelTexture = this.createColormapTexture(colormapLabelTexture, 1, nLabel)
       this.gl.texSubImage2D(
@@ -7764,7 +7764,7 @@ export class Niivue {
         const vox = this.volumes[i].mm2vox(mm)
         let flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D)
         deci = 3
-        if ('labels' in this.volumes[i].colormapLabel) {
+        if (this.volumes[i].colormapLabel !== null) {
           const v = Math.round(flt)
           if (v >= 0 && v < this.volumes[i].colormapLabel.labels.length) {
             valStr += this.volumes[i].colormapLabel.labels[v]
