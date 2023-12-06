@@ -168,6 +168,55 @@ export type ImageFromFileOptions = {
   limitFrames4D?: number
 }
 
+export type ImageFromBase64 = {
+  // base64 string
+  base64: string
+  // a name for this image. Default is an empty string
+  name?: string
+  // a color map to use. default is gray
+  colormap?: string
+  // the opacity for this image. default is 1
+  opacity?: number
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+  percentileFrac?: number
+  // whether or not to ignore zero voxels in setting the robust range of display values
+  ignoreZeroVoxels?: boolean
+  // whether or not this image is to be visible
+  visible?: boolean
+}
+
+export type ImageMetadata = {
+  // unique if of image
+  id: string
+  // data type
+  datatypeCode: number
+  // number of columns
+  nx: number
+  // number of rows
+  ny: number
+  // number of slices
+  nz: number
+  // number of volumes
+  nt: number
+  // space between columns
+  dx: number
+  // space between rows
+  dy: number
+  // space between slices
+  dz: number
+  // time between volumes
+  dt: number
+  // bits per voxel
+  // TODO was documented as bpx
+  bpv: number
+}
+
 export function NVImageFromUrlOptions(
   url: string,
   urlImageData = '',

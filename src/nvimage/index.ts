@@ -7,8 +7,10 @@ import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
 import {
+  ImageFromBase64,
   ImageFromFileOptions,
   ImageFromUrlOptions,
+  ImageMetadata,
   ImageType,
   NVIMAGE_TYPE,
   NVImageFromUrlOptions,
@@ -141,7 +143,7 @@ export class NVImage {
    */
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[],
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -2915,23 +2917,13 @@ export class NVImage {
 
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
-   * @constructs NVImage
-   * @param {string} [base64=null] base64 string
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {string} [colormap='gray'] a color map to use. default is gray
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
-   * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
-   * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
-   * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
-   * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @returns {NVImage} returns a NVImage instance
+   *
+   * @returns NVImage instance
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
   static loadFromBase64({
-    base64 = null,
+    base64,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -2941,9 +2933,9 @@ export class NVImage {
     percentileFrac = 0.02,
     ignoreZeroVoxels = false,
     visible = true
-  } = {}) {
+  }: ImageFromBase64): NVImage {
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -2973,21 +2965,25 @@ export class NVImage {
       log.debug(err)
     }
 
+    if (nvimage === null) {
+      throw new Error('could not load NVImage')
+    }
+
     return nvimage
   }
 
   /**
    * make a clone of a NVImage instance and return a new NVImage
-   * @returns {NVImage} returns a NVImage instance
+   * @returns NVImage instance
    * @example
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImage = myImage.clone()
    */
-  clone() {
+  clone(): NVImage {
     const clonedImage = new NVImage()
     clonedImage.id = this.id
     clonedImage.hdr = Object.assign({}, this.hdr)
-    clonedImage.img = this.img.slice()
+    clonedImage.img = this.img!.slice()
     clonedImage.calculateRAS()
     clonedImage.calMinMax()
     return clonedImage
@@ -2999,31 +2995,17 @@ export class NVImage {
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImageWithZeros = myImage.clone().zeroImage()
    */
-  zeroImage() {
-    this.img.fill(0)
+  zeroImage(): void {
+    this.img!.fill(0)
   }
 
   /**
-   * Image M.
-   * @typedef {Object} NVImageMetadata
-   * @property {string} id - unique if of image
-   * @property {number} datatypeCode - data type
-   * @property {number} nx - number of columns
-   * @property {number} ny - number of rows
-   * @property {number} nz - number of slices
-   * @property {number} nt - number of volumes
-   * @property {number} dx - space between columns
-   * @property {number} dy - space between rows
-   * @property {number} dz - space between slices
-   * @property {number} dt - time between volumes
-   * @property {number} bpx - bits per voxel
-   */
-
-  /**
    * get nifti specific metadata about the image
-   * @returns {NVImageMetadata} - {@link NVImageMetadata}
    */
-  getImageMetadata() {
+  getImageMetadata(): ImageMetadata {
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
     const id = this.id
     const datatypeCode = this.hdr.datatypeCode
     const dims = this.hdr.dims
@@ -3055,37 +3037,43 @@ export class NVImage {
 
   /**
    * a factory function to make a zero filled image given a NVImage as a reference
-   * @param {NVImage} nvImage an existing NVImage as a reference
-   * @param {dataType} string the output data type. Options: 'same', 'uint8'
-   * @returns {NVImage} returns a new NVImage filled with zeros for the image data
+   * @param nvImage - an existing NVImage as a reference
+   * @param dataType - the output data type. Options: 'same', 'uint8'
+   * @returns new NVImage filled with zeros for the image data
    * @example
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * newZeroImage = NVImage.zerosLike(myImage)
    */
-  static zerosLike(nvImage, dataType = 'same') {
+  static zerosLike(nvImage: NVImage, dataType = 'same'): NVImage {
     // dataType can be: 'same', 'uint8'
     // 'same' means that the zeroed image data type is the same as the input image
     const zeroClone = nvImage.clone()
     zeroClone.zeroImage()
     if (dataType === 'uint8') {
-      zeroClone.img = Uint8Array.from(zeroClone.img)
-      zeroClone.hdr.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
-      zeroClone.hdr.numBitsPerVoxel = 8
+      zeroClone.img = Uint8Array.from(zeroClone.img!)
+      zeroClone.hdr!.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
+      zeroClone.hdr!.numBitsPerVoxel = 8
     }
     return zeroClone
   }
 
   // not included in public docs
   // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
-  getValue(x, y, z, frame4D = 0, isReadImaginary = false) {
-    // const { nx, ny, nz } = this.getImageMetadata();
+  getValue(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number {
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+    if (!this.img) {
+      throw new Error('img undefined')
+    }
+
     const nx = this.hdr.dims[1]
     const ny = this.hdr.dims[2]
     const nz = this.hdr.dims[3]
-    const perm = this.permRAS.slice()
+    const perm = this.permRAS!.slice()
     if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
       const pos = vec4.fromValues(x, y, z, 1)
-      vec4.transformMat4(pos, pos, this.toRASvox)
+      vec4.transformMat4(pos, pos, this.toRASvox!)
       x = pos[0]
       y = pos[1]
       z = pos[2]
@@ -3105,36 +3093,39 @@ export class NVImage {
     const vol = frame4D * nx * ny * nz
     let i = this.img[vx + vol]
     if (isReadImaginary) {
-      i = this.imaginary[vx + vol]
+      i = this.imaginary![vx + vol]
     }
 
     return this.hdr.scl_slope * i + this.hdr.scl_inter
   }
 
   /**
-   * @param {number} id - id of 3D Object (is this the base volume or an overlay?)
-   * @param {WebGLRenderingContext} gl - WebGL rendering context
-   * @returns {NiivueObject3D} returns a new 3D object in model space
+   * @param id - id of 3D Object (is this the base volume or an overlay?)
+   * @param gl - WebGL rendering context
+   * @returns new 3D object in model space
    */
-  toNiivueObject3D(id, gl) {
+  toNiivueObject3D(id: number, gl: WebGL2RenderingContext): NiivueObject3D {
+    // TODO somehow enforce that these fields are set
+    const dimsRAS = this.dimsRAS as number[]
+    const matRAS = this.matRAS as mat4
     // cube has 8 vertices: left/right, posterior/anterior, inferior/superior
     // n.b. voxel coordinates are from VOXEL centers
     // add/subtract 0.5 to get full image field of view
     const L = -0.5
     const P = -0.5
     const I = -0.5
-    const R = this.dimsRAS[1] - 1 + 0.5
-    const A = this.dimsRAS[2] - 1 + 0.5
-    const S = this.dimsRAS[3] - 1 + 0.5
+    const R = dimsRAS[1] - 1 + 0.5
+    const A = dimsRAS[2] - 1 + 0.5
+    const S = dimsRAS[3] - 1 + 0.5
 
-    const LPI = this.vox2mm([L, P, I], this.matRAS)
-    const LAI = this.vox2mm([L, A, I], this.matRAS)
-    const LPS = this.vox2mm([L, P, S], this.matRAS)
-    const LAS = this.vox2mm([L, A, S], this.matRAS)
-    const RPI = this.vox2mm([R, P, I], this.matRAS)
-    const RAI = this.vox2mm([R, A, I], this.matRAS)
-    const RPS = this.vox2mm([R, P, S], this.matRAS)
-    const RAS = this.vox2mm([R, A, S], this.matRAS)
+    const LPI = this.vox2mm([L, P, I], matRAS)
+    const LAI = this.vox2mm([L, A, I], matRAS)
+    const LPS = this.vox2mm([L, P, S], matRAS)
+    const LAS = this.vox2mm([L, A, S], matRAS)
+    const RPI = this.vox2mm([R, P, I], matRAS)
+    const RAI = this.vox2mm([R, A, I], matRAS)
+    const RPS = this.vox2mm([R, P, S], matRAS)
+    const RAS = this.vox2mm([R, A, S], matRAS)
     const posTex = [
       // spatial position (XYZ), texture coordinates UVW
       // Superior face
