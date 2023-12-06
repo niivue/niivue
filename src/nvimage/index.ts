@@ -3,7 +3,7 @@ import * as nifti from 'nifti-reader-js'
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
-import { cmapper } from '../colortables.js'
+import { ColorMap, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
 import { NVLabel3D } from '../nvlabel.js'
@@ -77,9 +77,12 @@ export class NVImage {
   mm010?: vec3
   mm001?: vec3
 
-  // TODO these were needed to fix nvdocument
   cal_min?: number
   cal_max?: number
+  robust_min?: number
+  robust_max?: number
+  global_min?: number
+  global_max?: number
 
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   // TODO move to enum
@@ -2266,23 +2269,23 @@ export class NVImage {
   // not included in public docs
   // base function for niivue.setColormap()
   // label colormaps are discretely sampled from an arbitrary number of colors
-  setColormapLabel(cm) {
+  setColormapLabel(cm: ColorMap): void {
     this.colormapLabel = cmapper.makeLabelLut(cm)
   }
 
-  setColormapLabelFromUrl = async function (url) {
+  async setColormapLabelFromUrl(url: string): Promise<void> {
     this.colormapLabel = await cmapper.makeLabelLutFromUrl(url)
   }
 
-  get colormap() {
+  get colormap(): string {
     return this._colormap
   }
 
-  set colormap(colormap) {
+  set colormap(colormap: string) {
     this.setColormap(colormap)
   }
 
-  get opacity() {
+  get opacity(): number {
     return this._opacity
   }
 
@@ -2297,7 +2300,14 @@ export class NVImage {
   // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
   // clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
   // ToDo: convert to web assembly, this is slow in JavaScript
-  calMinMax() {
+  calMinMax(): number[] {
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+    if (!this.img) {
+      throw new Error('img undefined')
+    }
+
     const cmap = cmapper.colormapFromKey(this._colormap)
     let cmMin = 0
     let cmMax = 0
@@ -2442,7 +2452,11 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel intensity from stored value to scaled intensity
-  intensityRaw2Scaled(raw) {
+  intensityRaw2Scaled(raw: number): number {
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+
     if (this.hdr.scl_slope === 0) {
       this.hdr.scl_slope = 1.0
     }
@@ -2450,7 +2464,11 @@ export class NVImage {
   }
 
   // convert voxel intensity from scaled intensity to stored value
-  intensityScaled2Raw(scaled) {
+  intensityScaled2Raw(scaled: number): number {
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+
     if (this.hdr.scl_slope === 0) {
       this.hdr.scl_slope = 1.0
     }
@@ -2459,7 +2477,11 @@ export class NVImage {
 
   // not included in public docs
   // see niivue.saveImage() for wrapper of this function
-  saveToUint8Array = async function (fnm, drawing8 = null) {
+  saveToUint8Array(fnm: string, drawing8 = null) {
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+
     const isDrawing8 = drawing8 !== null
     const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8)
     const opad = new Uint8Array(4)
