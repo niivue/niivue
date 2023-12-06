@@ -43,7 +43,9 @@ export class NVImage {
   visible: boolean
   modulationImage = null
   modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
-  series: NVImage[] = [] // for concatenating dicom images
+  // TODO this is some Daikon internal thing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  series: any = [] // for concatenating dicom images
   nVox3D?: number
   oblique_angle?: number
   maxShearDeg?: number
@@ -129,7 +131,7 @@ export class NVImage {
     name = '',
     colormap = 'gray',
     opacity = 1.0,
-    pairedImgData: string | null = null,
+    pairedImgData: ArrayBuffer | null = null,
     cal_min = NaN,
     cal_max = NaN,
     trustCalMinMax = true,
@@ -172,7 +174,7 @@ export class NVImage {
       ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
-    let imgRaw = null
+    let imgRaw: ArrayBufferLike | number[] | null = null
 
     if (imageType === NVIMAGE_TYPE.UNKNOWN) {
       imageType = NVIMAGE_TYPE.parse(ext)
@@ -658,7 +660,10 @@ export class NVImage {
 
   // not included in public docs
   // determine spacing voxel centers (rows, columns, slices)
-  SetPixDimFromSForm() {
+  SetPixDimFromSForm(): void {
+    if (!this.hdr) {
+      throw new Error('hdr not defined')
+    }
     const m = this.hdr.affine
     const mat = mat4.fromValues(
       m[0][0],
@@ -692,7 +697,7 @@ export class NVImage {
 
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
-  readDICOM(buf) {
+  readDICOM(buf: ArrayBuffer): ArrayBuffer {
     this.series = new daikon.Series()
     // parse DICOM file
     if (Array.isArray(buf)) {
@@ -750,8 +755,8 @@ export class NVImage {
     if (this.series.images.length > 1) {
       // Multiple slices. The depth of a pixel is the physical distance between offsets. This is not the same as slice
       // spacing for tilted slices (skew).
-      const p0 = vec3.fromValues(...this.series.images[0].getImagePosition())
-      const p1 = vec3.fromValues(...this.series.images[1].getImagePosition())
+      const p0 = vec3.fromValues(...(this.series.images[0].getImagePosition() as [number, number, number]))
+      const p1 = vec3.fromValues(...(this.series.images[1].getImagePosition() as [number, number, number]))
       const n = vec3.fromValues(0, 0, 0)
       vec3.subtract(n, p0, p1)
       hdr.pixDims[3] = vec3.length(n)
@@ -784,9 +789,6 @@ export class NVImage {
       console.log('Unsupported DICOM format: ' + dt + ' ' + bpv)
     }
     const voxelDimensions = hdr.pixDims.slice(1, 4)
-    // console.log("dir", this.series.images[0].getImageDirections());
-    // console.log("pos", this.series.images[0].getImagePosition());
-    // console.log("dims", voxelDimensions);
     const m = getBestTransform(
       this.series.images[0].getImageDirections(),
       voxelDimensions,
@@ -801,10 +803,6 @@ export class NVImage {
         [0, 0, 0, 1]
       ]
     }
-    // console.log("DICOM", this.series.images[0]);
-    // console.log("NIfTI", hdr);
-    let imgRaw = []
-    // let byteLength = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (bpv / 8);
     let data
     let length = this.series.validatePixelDataLength(this.series.images[0])
     const buffer = new Uint8Array(new ArrayBuffer(length * this.series.images.length))
@@ -820,14 +818,13 @@ export class NVImage {
       this.series.images[i].clearPixelData()
       buffer.set(new Uint8Array(data, 0, length), length * i)
     } // for images.length
-    imgRaw = buffer.buffer
-    return imgRaw
+    return buffer.buffer
   } // readDICOM()
 
   // not included in public docs
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
-  readECAT(buffer) {
+  readECAT(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -837,8 +834,7 @@ export class NVImage {
     const signature = reader.getInt32(0, false) // "MATR"
     const filetype = reader.getInt16(50, false)
     if (signature !== 1296127058 || filetype < 1 || filetype > 14) {
-      console.log('Not a valid ECAT file')
-      return
+      throw new Error('Not a valid ECAT file')
     }
     // list header, starts at 512 bytes: int32_t hdr[4], r[31][4];
     let pos = 512 // 512=main header, 4*32-bit hdr
@@ -935,7 +931,7 @@ export class NVImage {
     return rawImg
   } // readECAT()
 
-  readV16(buffer) {
+  readV16(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -964,7 +960,7 @@ export class NVImage {
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
-  readVMR(buffer) {
+  readVMR(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1056,7 +1052,7 @@ export class NVImage {
 
   // not included in public docs
   // read FreeSurfer MGH format image
-  readMGH(buffer) {
+  readMGH(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
@@ -1159,7 +1155,7 @@ export class NVImage {
 
   // not included in public docs
   // read AFNI head/brik format image
-  readHEAD(dataBuffer, pairedImgData) {
+  readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims[0] = 3
@@ -1198,12 +1194,12 @@ export class NVImage {
       if (!line.startsWith('name')) {
         continue
       }
-      let items = line.split('= ')
+      let items: Array<string | number> = line.split('= ')
       const key = items[1] // e.g. 'IDCODE_DATE'
       line = lines[i] // e.g. 'count = 5'
       i++
       items = line.split('= ')
-      let count = parseInt(items[1]) // e.g. '5'
+      let count = parseInt(items[1] as string) // e.g. '5'
       if (count < 1) {
         continue
       }
@@ -1219,21 +1215,21 @@ export class NVImage {
           items.push(...items2)
         }
         for (let j = 0; j < count; j++) {
-          items[j] = parseFloat(items[j])
+          items[j] = parseFloat(items[j] as string)
         }
       }
       switch (key) {
         case 'BYTEORDER_STRING':
-          if (items[0].includes('LSB_FIRST')) {
+          if ((items[0] as string).includes('LSB_FIRST')) {
             hdr.littleEndian = true
-          } else if (items[0].includes('MSB_FIRST')) {
+          } else if ((items[0] as string).includes('MSB_FIRST')) {
             hdr.littleEndian = false
           }
           break
         case 'BRICK_TYPES':
           {
             hdr.dims[4] = count
-            const datatype = parseInt(items[0])
+            const datatype = parseInt(items[0] as string)
             if (datatype === 0) {
               hdr.numBitsPerVoxel = 8
               hdr.datatypeCode = this.DT_UNSIGNED_CHAR
@@ -1258,27 +1254,28 @@ export class NVImage {
           hdr.affine = [
             [-items[0], -items[1], -items[2], -items[3]],
             [-items[4], -items[5], -items[6], -items[7]],
-            [items[8], items[9], items[10], items[11]],
+            // TODO don't re-use items for numeric values
+            [items[8] as number, items[9] as number, items[10] as number, items[11] as number],
             [0, 0, 0, 1]
           ]
           break
         case 'DATASET_DIMENSIONS':
           count = Math.max(count, 3)
           for (let j = 0; j < count; j++) {
-            hdr.dims[j + 1] = items[j]
+            hdr.dims[j + 1] = items[j] as number
           }
           break
         case 'ORIENT_SPECIFIC':
-          orientSpecific = items
+          orientSpecific = items as number[]
           break
         case 'ORIGIN':
-          xyzOrigin = items
+          xyzOrigin = items as number[]
           break
         case 'DELTA':
-          xyzDelta = items
+          xyzDelta = items as number[]
           break
         case 'TAXIS_FLOATS':
-          hdr.pixDims[4] = items[0]
+          hdr.pixDims[4] = items[0] as number
           break
         default:
         // console.log('Unknown:',key);
@@ -1290,6 +1287,9 @@ export class NVImage {
       this.SetPixDimFromSForm()
     }
     const nBytes = (hdr.numBitsPerVoxel / 8) * hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4]
+    if (!pairedImgData) {
+      throw new Error('pairedImgData not set')
+    }
     if (pairedImgData.byteLength < nBytes) {
       // n.b. npm run dev implicitly extracts gz, npm run demo does not!
       // assume gz compressed
@@ -1302,17 +1302,17 @@ export class NVImage {
   // not included in public docs
   // read ITK MHA format image
   // https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
-  readMHA(buffer, pairedImgData) {
+  readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     const len = buffer.byteLength
     if (len < 20) {
       throw new Error('File too small to be VTK: bytes = ' + buffer.byteLength)
     }
     const bytes = new Uint8Array(buffer)
     let pos = 0
-    function eol(c) {
+    function eol(c: number): boolean {
       return c === 10 || c === 13 // c is either a line feed character (10) or carriage return character (13)
     }
-    function readStr() {
+    function readStr(): string {
       while (pos < len && eol(bytes[pos])) {
         pos++
       } // Skip blank lines
@@ -1444,7 +1444,7 @@ export class NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF(buffer, pairedImgData) {
+  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
     this.hdr = new nifti.NIFTI1()
@@ -1463,7 +1463,7 @@ export class NVImage {
       len = buffer.byteLength
     }
     let pos = 0
-    function readStr() {
+    function readStr(): string {
       while (pos < len && bytes[pos] === 10) {
         pos++
       } // skip blank lines
@@ -1479,8 +1479,7 @@ export class NVImage {
     }
     let line = readStr() // 1st line: signature 'mrtrix tracks'
     if (!line.startsWith('mrtrix image')) {
-      console.log('Not a valid MIF file')
-      return
+      throw new Error('Not a valid MIF file')
     }
     const layout = []
     let nTransform = 0
@@ -1633,7 +1632,8 @@ export class NVImage {
       }
     }
     // lookup table for flips and stride offsets:
-    const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
+    const range = (start: number, stop: number, step: number): number[] =>
+      Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
     let xlut = range(0, hdr.dims[1] - 1, 1)
     if (inflip[0]) {
       xlut = range(hdr.dims[1] - 1, 0, -1)
@@ -1707,7 +1707,7 @@ export class NVImage {
   // not included in public docs
   // read NRRD format image
   // http://teem.sourceforge.net/nrrd/format.html
-  readNRRD(dataBuffer, pairedImgData) {
+  readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     // inspired by parserNRRD.js in https://github.com/xtk
     // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
     // http://www.opensource.org/licenses/mit-license.php
