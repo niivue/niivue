@@ -54,6 +54,9 @@ export class NVImage {
   pixDimsRAS?: number[]
   obliqueRAS?: mat4
   dimsRAS?: number[]
+  permRAS?: number[]
+  toRAS?: mat4
+  toRASvox?: mat4
 
   frac2mm?: mat4
   frac2mmOrtho?: mat4
@@ -68,6 +71,11 @@ export class NVImage {
 
   onColormapChange: () => void = () => {}
   onOpacityChange: () => void = () => {}
+
+  mm000?: vec3
+  mm100?: vec3
+  mm010?: vec3
+  mm001?: vec3
 
   // TODO these were needed to fix nvdocument
   cal_min?: number
@@ -2161,7 +2169,17 @@ export class NVImage {
 
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
-  img2RAS() {
+  img2RAS(): Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array {
+    if (!this.permRAS) {
+      throw new Error('permRAS undefined')
+    }
+    if (!this.img) {
+      throw new Error('img undefined')
+    }
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+
     const perm = this.permRAS.slice()
     if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
       return this.img
@@ -2198,7 +2216,7 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel location (row, column slice, indexed from 0) to world space
-  vox2mm(XYZ, mtx) {
+  vox2mm(XYZ: number[], mtx: mat4): vec3 {
     const sform = mat4.clone(mtx)
     mat4.transpose(sform, sform)
     const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
@@ -2209,7 +2227,11 @@ export class NVImage {
 
   // not included in public docs
   // convert world space to voxel location (row, column slice, indexed from 0)
-  mm2vox(mm, frac = false) {
+  mm2vox(mm: number[], frac = false): Float32Array | vec3 {
+    if (!this.matRAS) {
+      throw new Error('matRAS undefined')
+    }
+
     const sform = mat4.clone(this.matRAS)
     const out = mat4.clone(sform)
     mat4.transpose(out, sform)
@@ -2225,7 +2247,8 @@ export class NVImage {
 
   // not included in public docs
   // returns boolean: are two arrays identical?
-  arrayEquals(a, b) {
+  // TODO this won't work for complex objects. Maybe use array-equal from NPM
+  arrayEquals(a: unknown[], b: unknown[]): boolean {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index])
   }
 
