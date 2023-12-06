@@ -195,6 +195,9 @@ type DocumentData = {
   labels: NVLabel3D[]
   encodedImageBlobs: string[]
   encodedDrawingBlob: string
+  // TODO not sure if they should be here? They are needed for loadFromJSON
+  meshesString?: string
+  sceneData?: SceneData
 }
 
 type ExportDocumentData = {
@@ -237,6 +240,7 @@ export class NVDocument {
   scene: Scene
 
   volumes: NVImage[] = []
+  meshDataObjects?: Array<NVMesh | NVConnectome>
   meshes: Array<NVMesh | NVConnectome> = []
   drawBitmap = null
   imageOptionsMap = new Map()
@@ -660,7 +664,6 @@ export class NVDocument {
   static deserializeMeshDataObjects(document: NVDocument): void {
     if (document.data.meshesString) {
       document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
-      delete document.data.meshesString
     }
   }
 
@@ -682,8 +685,6 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
-    document.scene.sceneData = document.data.sceneData
-    delete document.data.sceneData
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
@@ -691,14 +692,13 @@ export class NVDocument {
   /**
    * Factory method to return an instance of NVDocument from JSON
    */
-  static loadFromJSON(data): NVDocument {
+  static loadFromJSON(data: DocumentData): NVDocument {
     const document = new NVDocument()
     document.data = data
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
       document.data.opts.meshThicknessOn2D = Infinity
     }
-    document.scene.sceneData = data.sceneData
-    delete document.data.sceneData
+    document.scene.sceneData = data.sceneData!
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
