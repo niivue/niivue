@@ -45,9 +45,24 @@ export class NVImage {
   modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
   series: NVImage[] = [] // for concatenating dicom images
   nVox3D?: number
+  oblique_angle?: number
+  maxShearDeg?: number
+
+  matRAS?: mat4
+  pixDimsRAS?: number[]
+  obliqueRAS?: mat4
+  dimsRAS?: number[]
+
+  frac2mm?: mat4
+  frac2mmOrtho?: mat4
+  extentsMinOrtho?: number[]
+  extentsMaxOrtho?: number[]
+  mm2ortho?: mat4
 
   hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
   imageType?: ImageType
+  img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
+  imaginary?: Float32Array
 
   onColormapChange: () => void = () => {}
   onOpacityChange: () => void = () => {}
@@ -477,7 +492,7 @@ export class NVImage {
   // not included in public docs
   // detect difference between voxel grid and world space
   // https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
-  computeObliqueAngle(mtx44) {
+  computeObliqueAngle(mtx44: mat4): number {
     const mtx = mat4.clone(mtx44)
     mat4.transpose(mtx, mtx44)
     const dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2])
@@ -498,7 +513,17 @@ export class NVImage {
 
   // not included in public docs
   // detect difference between voxel grid and world space
-  calculateOblique() {
+  calculateOblique(): void {
+    if (!this.matRAS) {
+      throw new Error('matRAS not defined')
+    }
+    if (this.pixDimsRAS === undefined) {
+      throw new Error('pixDimsRAS not defined')
+    }
+    if (!this.dimsRAS) {
+      throw new Error('dimsRAS not defined')
+    }
+
     this.oblique_angle = this.computeObliqueAngle(this.matRAS)
     const LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS)
     const X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS)
@@ -538,7 +563,8 @@ export class NVImage {
     const sform = mat4.clone(this.matRAS)
     mat4.transpose(sform, sform)
     const shim = vec4.fromValues(-0.5, -0.5, -0.5, 0) // bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
-    mat4.translate(sform, sform, shim)
+    // TODO was sform, sform, shim
+    mat4.translate(sform, sform, vec3.fromValues(shim[0], shim[1], shim[2]))
     // mat.mat4.scale(sform, sform, dim);
     sform[0] *= dim[0]
     sform[1] *= dim[0]
@@ -575,20 +601,18 @@ export class NVImage {
     this.extentsMaxOrtho = [oform[0] + oform[12], oform[5] + oform[13], oform[10] + oform[14]]
     this.mm2ortho = mat4.create()
     mat4.invert(this.mm2ortho, oblique)
-    /* function reportMat(m) {
-    console.log(
-      `m = [${m[0]} ${m[1]} ${m[2]} ${m[3]}; ${m[4]} ${m[5]} ${m[6]} ${m[7]}; ${m[8]} ${m[9]} ${m[10]} ${m[11]}; ${m[12]} ${m[13]} ${m[14]} ${m[15]}]`
-    );
-  }
-  reportMat(this.frac2mmOrtho);
-  reportMat(this.frac2mm); */
   }
 
   // not included in public docs
   // convert AFNI head/brik space to NIfTI format
   // https://github.com/afni/afni/blob/d6997e71f2b625ac1199460576d48f3136dac62c/src/thd_niftiwrite.c#L315
-  THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific) {
+  THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void {
     const hdr = this.hdr
+
+    if (hdr === null) {
+      throw new Error('HDR is not set')
+    }
+
     hdr.sform_code = 2
     const ORIENT_xyz = 'xxyyzzg' // note strings indexed from 0!
     let nif_x_axnum = -1

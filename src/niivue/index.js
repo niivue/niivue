@@ -7774,7 +7774,7 @@ export class Niivue {
         } else {
           valStr += flt2str(flt, deci)
         }
-        if ('imaginary' in this.volumes[i]) {
+        if (this.volumes[i].imaginary) {
           flt = this.volumes[i].getValue(...vox, this.volumes[i].frame4D, true)
           if (flt >= 0) {
             valStr += '+'
