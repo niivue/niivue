@@ -174,7 +174,7 @@ export class NVImage {
       ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
-    let imgRaw: ArrayBufferLike | number[] | null = null
+    let imgRaw: ArrayBufferLike | Uint8Array | null = null
 
     if (imageType === NVIMAGE_TYPE.UNKNOWN) {
       imageType = NVIMAGE_TYPE.parse(ext)
@@ -246,7 +246,7 @@ export class NVImage {
     this.frame4D = Math.min(this.frame4D, this.nFrame4D - 1)
     this.nTotalFrame4D = this.nFrame4D
 
-    if (!this.hdr) {
+    if (!this.hdr || !imgRaw) {
       return
     }
 
@@ -289,9 +289,10 @@ export class NVImage {
       const nVox3D2 = this.nVox3D * 2
       let j = 0
       for (let i = 0; i < this.nVox3D; i++) {
-        imgRaw[j] = 255.0 * Math.abs(f32[i] * slope)
-        imgRaw[j + 1] = 255.0 * Math.abs(f32[i + this.nVox3D] * slope)
-        imgRaw[j + 2] = 255.0 * Math.abs(f32[i + nVox3D2] * slope)
+        // TODO this should probably be avoided; is it really necessary to overwrite imgRaw with a new datatype mid-method?
+        ;(imgRaw as Uint8Array)[j] = 255.0 * Math.abs(f32[i] * slope)
+        ;(imgRaw as Uint8Array)[j + 1] = 255.0 * Math.abs(f32[i + this.nVox3D] * slope)
+        ;(imgRaw as Uint8Array)[j + 2] = 255.0 * Math.abs(f32[i + nVox3D2] * slope)
         j += 3
       }
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
@@ -840,7 +841,7 @@ export class NVImage {
     let pos = 512 // 512=main header, 4*32-bit hdr
     let vols = 0
     const frame_duration = []
-    let rawImg = []
+    let rawImg = new Float32Array()
     while (true) {
       // read 512 block lists
       const hdr0 = reader.getInt32(pos, false)
@@ -894,7 +895,7 @@ export class NVImage {
         } else {
           console.log('Unknown ECAT data type ' + data_type)
         }
-        const prevImg = rawImg.slice()
+        const prevImg = rawImg.slice(0)
         rawImg = new Float32Array(prevImg.length + newImg.length)
         rawImg.set(prevImg)
         rawImg.set(newImg, prevImg.length)
@@ -1296,7 +1297,7 @@ export class NVImage {
       const raw = decompressSync(new Uint8Array(pairedImgData))
       return raw.buffer
     }
-    return pairedImgData.slice()
+    return pairedImgData.slice(0)
   }
 
   // not included in public docs
@@ -1431,9 +1432,9 @@ export class NVImage {
     hdr.vox_offset = pos
     if (isDetached && pairedImgData) {
       if (isGz) {
-        return decompressSync(new Uint8Array(pairedImgData.slice())).buffer
+        return decompressSync(new Uint8Array(pairedImgData.slice(0))).buffer
       }
-      return pairedImgData.slice()
+      return pairedImgData.slice(0)
     }
     if (isGz) {
       return decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset))).buffer
@@ -1602,9 +1603,9 @@ export class NVImage {
     if (isDetached && !pairedImgData) {
       console.log('MIH header provided without paired image data')
     }
-    let rawImg = []
-    if (isDetached) {
-      rawImg = pairedImgData.slice()
+    let rawImg: ArrayBuffer
+    if (pairedImgData && isDetached) {
+      rawImg = pairedImgData.slice(0)
     }
     // n.b. mrconvert can pad files? See dtitest_Siemens_SC 4_dti_nopf_x2_pitch
     else {
@@ -1671,24 +1672,28 @@ export class NVImage {
     }
     // input and output arrays
     let j = 0
-    let inVs = []
-    let outVs = []
-    if (hdr.numBitsPerVoxel === 8) {
-      inVs = new Uint8Array(rawImg)
-      outVs = new Uint8Array(nvox)
-    } // 8bit
-    if (hdr.numBitsPerVoxel === 16) {
-      inVs = new Uint16Array(rawImg)
-      outVs = new Uint16Array(nvox)
+    let inVs: Uint8Array | Uint16Array | Uint32Array | BigUint64Array
+    let outVs: Uint8Array | Uint16Array | Uint32Array | BigUint64Array
+    switch (hdr.numBitsPerVoxel) {
+      case 8:
+        inVs = new Uint8Array(rawImg)
+        outVs = new Uint8Array(nvox)
+        break
+      case 16:
+        inVs = new Uint16Array(rawImg)
+        outVs = new Uint16Array(nvox)
+        break
+      case 32:
+        inVs = new Uint32Array(rawImg)
+        outVs = new Uint32Array(nvox)
+        break
+      case 64:
+        inVs = new BigUint64Array(rawImg)
+        outVs = new BigUint64Array(nvox)
+        break
+      default:
+        throw new Error('unknown numBitsPerVoxel')
     }
-    if (hdr.numBitsPerVoxel === 32) {
-      inVs = new Uint32Array(rawImg)
-      outVs = new Uint32Array(nvox)
-    } // 32bit
-    if (hdr.numBitsPerVoxel === 64) {
-      inVs = new BigUint64Array(rawImg)
-      outVs = new BigUint64Array(nvox)
-    } // 64bit
     for (let d = 0; d < hdr.dims[5]; d++) {
       for (let t = 0; t < hdr.dims[4]; t++) {
         for (let z = 0; z < hdr.dims[3]; z++) {
@@ -1726,6 +1731,11 @@ export class NVImage {
         break
       }
     }
+
+    if (txt === null) {
+      throw new Error('could not extract txt')
+    }
+
     const lines = txt.split('\n')
     if (!lines[0].startsWith('NRRD')) {
       alert('Invalid NRRD image')
@@ -1930,6 +1940,7 @@ export class NVImage {
       this.hdr.sform_code = 2
       if (isMicron) {
         // convert micron to mm
+        // @ts-expect-error FIXME: converting mat3 to mat4
         mat4.multiplyScalar(mat33, mat33, 0.001)
         offset[0] *= 0.001
         offset[1] *= 0.001
@@ -1983,7 +1994,7 @@ export class NVImage {
 
     if (isDetached && pairedImgData) {
       // ??? .gz files automatically decompressed?
-      return pairedImgData.slice()
+      return pairedImgData.slice(0)
     }
     if (isDetached) {
       console.log('Missing data: NRRD header describes detached data file but only one URL provided')
@@ -1997,7 +2008,10 @@ export class NVImage {
 
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
-  calculateRAS() {
+  calculateRAS(): void {
+    if (!this.hdr) {
+      throw new Error('hdr not set')
+    }
     // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
     // not elegant, as JavaScript arrays are always 1D
     const a = this.hdr.affine
