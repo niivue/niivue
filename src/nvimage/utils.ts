@@ -134,6 +134,40 @@ export type ImageFromUrlOptions = {
   urlImgData?: string
 }
 
+// TODO centralize shared options
+export type ImageFromFileOptions = {
+  // the file object
+  file: File | File[]
+  // a name for this image. Default is an empty string
+  name?: string
+  // a color map to use. default is gray
+  colormap?: string
+  // the opacity for this image. default is 1
+  opacity?: number
+  // Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+  urlImgData?: File | null
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+  percentileFrac?: number
+  // whether or not to ignore zero voxels in setting the robust range of display values
+  ignoreZeroVoxels?: boolean
+  // whether or not this image is to be visible
+  visible?: boolean
+  // whether or not to use QForm instead of SForm during construction
+  useQFormNotSForm?: boolean
+  // colormap negative for the image
+  colormapNegative?: string
+  // image type
+  imageType?: ImageType
+  frame4D?: number
+  limitFrames4D?: number
+}
+
 export function NVImageFromUrlOptions(
   url: string,
   urlImageData = '',

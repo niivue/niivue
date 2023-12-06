@@ -7,6 +7,7 @@ import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
 import {
+  ImageFromFileOptions,
   ImageFromUrlOptions,
   ImageType,
   NVIMAGE_TYPE,
@@ -27,6 +28,7 @@ export * from './utils.js'
 export class NVImage {
   name: string
   id: string
+  url?: string
   _colormap: string
   _opacity: number
   percentileFrac: number
@@ -68,6 +70,7 @@ export class NVImage {
   imageType?: ImageType
   img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
   imaginary?: Float32Array
+  fileObject?: File | File[]
 
   onColormapChange: (img: NVImage) => void = () => {}
   onOpacityChange: (img: NVImage) => void = () => {}
@@ -138,7 +141,7 @@ export class NVImage {
    */
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer,
+    dataBuffer: ArrayBuffer | ArrayBuffer[],
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -201,42 +204,42 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.MIH:
       case NVIMAGE_TYPE.MIF:
-        imgRaw = this.readMIF(dataBuffer, pairedImgData) // detached
+        imgRaw = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
         break
       case NVIMAGE_TYPE.NHDR:
       case NVIMAGE_TYPE.NRRD:
-        imgRaw = this.readNRRD(dataBuffer, pairedImgData) // detached
+        imgRaw = this.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
         break
       case NVIMAGE_TYPE.MHD:
       case NVIMAGE_TYPE.MHA:
-        imgRaw = this.readMHA(dataBuffer, pairedImgData)
+        imgRaw = this.readMHA(dataBuffer as ArrayBuffer, pairedImgData)
         break
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
-        imgRaw = this.readMGH(dataBuffer) // to do: pairedImgData
+        imgRaw = this.readMGH(dataBuffer as ArrayBuffer) // to do: pairedImgData
         break
       case NVIMAGE_TYPE.V:
-        imgRaw = this.readECAT(dataBuffer)
+        imgRaw = this.readECAT(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.V16:
-        imgRaw = this.readV16(dataBuffer)
+        imgRaw = this.readV16(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.VMR:
-        imgRaw = this.readVMR(dataBuffer)
+        imgRaw = this.readVMR(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.HEAD:
-        imgRaw = this.readHEAD(dataBuffer, pairedImgData) // paired = .BRIK
+        imgRaw = this.readHEAD(dataBuffer as ArrayBuffer, pairedImgData) // paired = .BRIK
         break
       case NVIMAGE_TYPE.NII:
-        this.hdr = nifti.readHeader(dataBuffer)
+        this.hdr = nifti.readHeader(dataBuffer as ArrayBuffer)
         if (this.hdr !== null) {
           if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255) {
             this.hdr.cal_max = 0.0
           }
-          if (nifti.isCompressed(dataBuffer)) {
-            imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer))
+          if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
+            imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer as ArrayBuffer))
           } else {
-            imgRaw = nifti.readImage(this.hdr, dataBuffer)
+            imgRaw = nifti.readImage(this.hdr, dataBuffer as ArrayBuffer)
           }
         }
         break
@@ -709,7 +712,7 @@ export class NVImage {
 
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
-  readDICOM(buf: ArrayBuffer): ArrayBuffer {
+  readDICOM(buf: ArrayBuffer | ArrayBuffer[]): ArrayBuffer {
     this.series = new daikon.Series()
     // parse DICOM file
     if (Array.isArray(buf)) {
@@ -2584,11 +2587,7 @@ export class NVImage {
 
   /**
    * factory function to load and return a new NVImage instance from a given URL
-   * @constructs NVImage
-   * @param {NVImageFromUrlOptions} options
-   * @returns {NVImage} returns a NVImage instance
-   * @example
-   * myImage = NVImage.loadFromUrl('./someURL/image.nii.gz') // must be served from a server (local or remote)
+   * @returns  NVImage instance
    */
   static async loadFromUrl({
     url = '',
@@ -2608,7 +2607,7 @@ export class NVImage {
     isManifest = false,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN
-  }: Partial<Omir<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
+  }: Partial<Omit<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -2651,6 +2650,9 @@ export class NVImage {
         dataBuffer = null
       } else {
         const hdr = nifti.readHeader(dataBuffer)
+        if (hdr === null) {
+          throw new Error('could not read nifti header')
+        }
         const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
         let nVox3D = 1
         for (let i = 1; i < 4; i++) {
@@ -2702,9 +2704,9 @@ export class NVImage {
     const re = /(?:\.([^.]+))?$/
     let ext = ''
     if (name === '') {
-      ext = re.exec(url)[1]
+      ext = re.exec(url)![1]
     } else {
-      ext = re.exec(name)[1]
+      ext = re.exec(name)![1]
     }
 
     if (ext.toUpperCase() === 'HEAD') {
@@ -2738,39 +2740,36 @@ export class NVImage {
       }
       pairedImgData = await resp.arrayBuffer()
     }
-    if (dataBuffer) {
-      nvimage = new NVImage(
-        dataBuffer,
-        name,
-        colormap,
-        opacity,
-        pairedImgData,
-        cal_min,
-        cal_max,
-        trustCalMinMax,
-        percentileFrac,
-        ignoreZeroVoxels,
-        visible,
-        useQFormNotSForm,
-        colormapNegative,
-        frame4D,
-        imageType
-      )
-      nvimage.url = url
-    } else {
-      alert('Unable to load buffer properly from volume')
+    if (!dataBuffer) {
+      throw new Error('Unable to load buffer properly from volume')
     }
-
+    nvimage = new NVImage(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      visible,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType
+    )
+    nvimage.url = url
     return nvimage
   }
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file: Blob, bytesToLoad = NaN): Promise<ArrayBuffer> {
+  static readFileAsync(file: File, bytesToLoad = NaN): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = (): void => {
-        // @ts-expect-error FIXME not sure what .name should be here
         if (file.name.lastIndexOf('gz') !== -1 && isNaN(bytesToLoad)) {
           resolve(nifti.decompress(reader.result as ArrayBuffer))
         } else {
@@ -2789,27 +2788,9 @@ export class NVImage {
 
   /**
    * factory function to load and return a new NVImage instance from a file in the browser
-   * @constructs NVImage
-   * @param {string} file the file object
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {string} [colormap='gray'] a color map to use. default is gray
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @param {string} [urlImgData=null] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
-   * @param {number} [cal_min=NaN] minimum intensity for color brightness/contrast
-   * @param {number} [cal_max=NaN] maximum intensity for color brightness/contrast
-   * @param {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
-   * @param {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
-   * @param {boolean} [ignoreZeroVoxels=false] whether or not to ignore zero voxels in setting the robust range of display values
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @param {boolean} [useQFormNotSForm=false] whether or not to use QForm instead of SForm during construction
-   * @param {string} [colormapNegative=""] colormap negative for the image
-   * @param {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type
-   * @returns {NVImage} returns a NVImage instance
-   * @example
-   * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    */
   static async loadFromFile({
-    file = null, // file can be an array of file objects or a single file object
+    file, // file can be an array of file objects or a single file object
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -2825,9 +2806,9 @@ export class NVImage {
     frame4D = 0,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN
-  } = {}) {
-    let nvimage = null
-    let dataBuffer = []
+  }: ImageFromFileOptions): Promise<NVImage> {
+    let nvimage: NVImage | null = null
+    let dataBuffer: ArrayBuffer | ArrayBuffer[] = []
     try {
       if (Array.isArray(file)) {
         for (let i = 0; i < file.length; i++) {
@@ -2844,7 +2825,7 @@ export class NVImage {
               // console.log('decoded:', chunk);
               bytes = chunk
             })
-            await dcmpStrm.push(bytes)
+            dcmpStrm.push(bytes)
             dataBuffer = bytes.buffer
           }
           let isNifti1 = bytes[0] === 92 && bytes[1] === 1
@@ -2855,6 +2836,9 @@ export class NVImage {
             dataBuffer = await this.readFileAsync(file)
           } else {
             const hdr = nifti.readHeader(dataBuffer)
+            if (!hdr) {
+              throw new Error('could not read nifti header')
+            }
             const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
             let nVox3D = 1
             for (let i = 1; i < 4; i++) {
@@ -2879,13 +2863,13 @@ export class NVImage {
                 const dcmpStrm2 = new Decompress((chunk) => {
                   bytes = chunk
                 })
-                await dcmpStrm2.push(bytes)
+                dcmpStrm2.push(bytes)
                 dataBuffer = bytes.buffer
               }
             } // load image data
             if (dataBuffer.byteLength < bytesToLoad) {
               // fail: e.g. incompressible data
-              dataBuffer = null
+              throw new Error('failed to load image data (e.g. incompressible data)')
             } else {
               dataBuffer = dataBuffer.slice(0, bytesToLoad)
             }
@@ -2922,6 +2906,9 @@ export class NVImage {
     } catch (err) {
       console.log(err)
       log.debug(err)
+    }
+    if (nvimage === null) {
+      throw new Error('could not build NVImage')
     }
     return nvimage
   }
