@@ -16,7 +16,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsup",
+    "build": "tsup && npm run build:min",
     "build:min": "node bundle.js",
     "demo": "npm run build && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
