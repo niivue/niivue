@@ -2477,7 +2477,7 @@ export class NVImage {
 
   // not included in public docs
   // see niivue.saveImage() for wrapper of this function
-  saveToUint8Array(fnm: string, drawing8 = null) {
+  saveToUint8Array(fnm: string, drawing8 = null): Uint8Array {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2514,8 +2514,8 @@ export class NVImage {
   // not included in public docs
   // save image as NIfTI volume
   // if fnm is empty, data is returned
-  saveToDisk = async function (fnm, drawing8 = null) {
-    const saveData = await this.saveToUint8Array(fnm, drawing8)
+  saveToDisk(fnm: string, drawing8 = null): Uint8Array {
+    const saveData = this.saveToUint8Array(fnm, drawing8)
     const isString = (typeof fnm === 'string' || fnm instanceof String) && fnm.length > 0
     if (isString) {
       const blob = new Blob([saveData.buffer], {
@@ -2533,7 +2533,7 @@ export class NVImage {
     return saveData
   } // saveToDisk()
 
-  static async fetchDicomData(url) {
+  static async fetchDicomData(url: string): Promise<ArrayBuffer[]> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -2570,16 +2570,14 @@ export class NVImage {
     return dataBuffer
   }
 
-  static async fetchPartial(url, bytesToLoad) {
-    let response = []
+  static async fetchPartial(url: string, bytesToLoad: number): Promise<Response> {
     try {
-      response = await fetch(url, {
+      return fetch(url, {
         headers: { range: 'bytes=0-' + bytesToLoad }
       })
     } catch {
-      response = await fetch(url)
+      return fetch(url)
     }
-    return response
   }
 
   /**
@@ -2608,7 +2606,7 @@ export class NVImage {
     isManifest = false,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN
-  } = {}) {
+  } = {}): Promise<NVImage> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -2766,14 +2764,15 @@ export class NVImage {
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file, bytesToLoad = NaN) {
+  static readFileAsync(file: Blob, bytesToLoad = NaN): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => {
+      reader.onload = (): void => {
+        // @ts-expect-error FIXME not sure what .name should be here
         if (file.name.lastIndexOf('gz') !== -1 && isNaN(bytesToLoad)) {
-          resolve(nifti.decompress(reader.result))
+          resolve(nifti.decompress(reader.result as ArrayBuffer))
         } else {
-          resolve(reader.result)
+          resolve(reader.result as ArrayBuffer)
         }
       }
 
@@ -3293,9 +3292,8 @@ export class NVImage {
 
   /**
    * Converts NVImage to NIfTI compliant byte array
-   * @param {Uint8Array} drawingBytes
    */
-  toUint8Array(drawingBytes = null) {
+  toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
     const isDrawing = drawingBytes
     const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing)
 
