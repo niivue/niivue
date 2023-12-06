@@ -6,6 +6,7 @@ import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
+import { NVUtilities } from '../nvutilities.js'
 import {
   ImageFromBase64,
   ImageFromFileOptions,
@@ -53,6 +54,7 @@ export class NVImage {
   nVox3D?: number
   oblique_angle?: number
   maxShearDeg?: number
+  useQFormNotSForm: boolean
 
   matRAS?: mat4
   pixDimsRAS?: number[]
@@ -134,12 +136,11 @@ export class NVImage {
    * @param onOpacityChange -callback for color map change
    *
    * TODO the following parameters were not documented
-   * @param imageType
-   * @param cal_minNeg
-   * @param cal_maxNeg
-   * @param colorbarVisible
-   * @param colormapLabel
-   * @returns
+   * @param imageType - TODO
+   * @param cal_minNeg - TODO
+   * @param cal_maxNeg - TODO
+   * @param colorbarVisible - TODO
+   * @param colormapLabel - TODO
    */
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
@@ -178,6 +179,9 @@ export class NVImage {
     this.cal_maxNeg = cal_maxNeg
     this.colorbarVisible = colorbarVisible
     this.visible = visible
+
+    // TODO this was missing
+    this.useQFormNotSForm = useQFormNotSForm
 
     // Added to support zerosLike
     if (!dataBuffer) {
@@ -1649,39 +1653,37 @@ export class NVImage {
       }
     }
     // lookup table for flips and stride offsets:
-    const range = (start: number, stop: number, step: number): number[] =>
-      Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
-    let xlut = range(0, hdr.dims[1] - 1, 1)
+    let xlut = NVUtilities.range(0, hdr.dims[1] - 1, 1)
     if (inflip[0]) {
-      xlut = range(hdr.dims[1] - 1, 0, -1)
+      xlut = NVUtilities.range(hdr.dims[1] - 1, 0, -1)
     }
     for (let i = 0; i < hdr.dims[1]; i++) {
       xlut[i] *= instride[0]
     }
-    let ylut = range(0, hdr.dims[2] - 1, 1)
+    let ylut = NVUtilities.range(0, hdr.dims[2] - 1, 1)
     if (inflip[1]) {
-      ylut = range(hdr.dims[2] - 1, 0, -1)
+      ylut = NVUtilities.range(hdr.dims[2] - 1, 0, -1)
     }
     for (let i = 0; i < hdr.dims[2]; i++) {
       ylut[i] *= instride[1]
     }
-    let zlut = range(0, hdr.dims[3] - 1, 1)
+    let zlut = NVUtilities.range(0, hdr.dims[3] - 1, 1)
     if (inflip[2]) {
-      zlut = range(hdr.dims[3] - 1, 0, -1)
+      zlut = NVUtilities.range(hdr.dims[3] - 1, 0, -1)
     }
     for (let i = 0; i < hdr.dims[3]; i++) {
       zlut[i] *= instride[2]
     }
-    let tlut = range(0, hdr.dims[4] - 1, 1)
+    let tlut = NVUtilities.range(0, hdr.dims[4] - 1, 1)
     if (inflip[3]) {
-      tlut = range(hdr.dims[4] - 1, 0, -1)
+      tlut = NVUtilities.range(hdr.dims[4] - 1, 0, -1)
     }
     for (let i = 0; i < hdr.dims[4]; i++) {
       tlut[i] *= instride[3]
     }
-    let dlut = range(0, hdr.dims[5] - 1, 1)
+    let dlut = NVUtilities.range(0, hdr.dims[5] - 1, 1)
     if (inflip[4]) {
-      dlut = range(hdr.dims[5] - 1, 0, -1)
+      dlut = NVUtilities.range(hdr.dims[5] - 1, 0, -1)
     }
     for (let i = 0; i < hdr.dims[5]; i++) {
       dlut[i] *= instride[4]
@@ -3108,6 +3110,7 @@ export class NVImage {
     // TODO somehow enforce that these fields are set
     const dimsRAS = this.dimsRAS as number[]
     const matRAS = this.matRAS as mat4
+    const pixDimsRAS = this.pixDimsRAS as number[]
     // cube has 8 vertices: left/right, posterior/anterior, inferior/superior
     // n.b. voxel coordinates are from VOXEL centers
     // add/subtract 0.5 to get full image field of view
@@ -3199,7 +3202,7 @@ export class NVImage {
 
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
 
-    const posTexBuffer = gl.createBuffer()
+    const posTexBuffer = gl.createBuffer()!
     gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW)
 
@@ -3222,51 +3225,37 @@ export class NVImage {
     obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin
     obj3D.originNegate = vec3.clone(extents.origin)
     vec3.negate(obj3D.originNegate, obj3D.originNegate)
-    obj3D.fieldOfViewDeObliqueMM = [
-      this.dimsRAS[1] * this.pixDimsRAS[1],
-      this.dimsRAS[2] * this.pixDimsRAS[2],
-      this.dimsRAS[3] * this.pixDimsRAS[3]
-    ]
+    obj3D.fieldOfViewDeObliqueMM = [dimsRAS[1] * pixDimsRAS[1], dimsRAS[2] * pixDimsRAS[2], dimsRAS[3] * pixDimsRAS[3]]
     return obj3D
   }
 
   /**
    * Update options for image
-   * @param {NVImageFromUrlOptions} options
    */
-  applyOptionsUpdate(options) {
-    this.hdr.cal_min = options.cal_min
-    this.hdr.cal_max = options.cal_max
-    delete options.url
-    delete options.urlImageData
-    delete options.cal_min
-    delete options.cal_max
+  applyOptionsUpdate(options: ImageFromUrlOptions): void {
+    this.hdr!.cal_min = options.cal_min
+    this.hdr!.cal_max = options.cal_max
     Object.assign(this, options)
   }
 
-  getImageOptions() {
-    let options = null
-    try {
-      options = NVImageFromUrlOptions(
-        '', // url,
-        '', // urlImageData
-        this.name, // name
-        this._colormap, // colormap
-        this.opacity, // opacity
-        this.hdr.cal_min, // cal_min
-        this.hdr.cal_max, // cal_max
-        this.trustCalMinMax, // trustCalMinMax,
-        this.percentileFrac, // percentileFrac
-        this.ignoreZeroVoxels, // ignoreZeroVoxels
-        this.visible, // visible
-        this.useQFormNotSForm, // useQFormNotSForm
-        this.colormapNegative, // colormapNegative
-        this.frame4D,
-        this.imageType // imageType
-      )
-    } catch (e) {
-      console.log(e)
-    }
+  getImageOptions(): ImageFromUrlOptions {
+    const options = NVImageFromUrlOptions(
+      '', // url,
+      '', // urlImageData
+      this.name, // name
+      this._colormap, // colormap
+      this.opacity, // opacity
+      this.hdr!.cal_min, // cal_min
+      this.hdr!.cal_max, // cal_max
+      this.trustCalMinMax, // trustCalMinMax,
+      this.percentileFrac, // percentileFrac
+      this.ignoreZeroVoxels, // ignoreZeroVoxels
+      this.visible, // visible
+      this.useQFormNotSForm, // useQFormNotSForm
+      this.colormapNegative, // colormapNegative
+      this.frame4D,
+      this.imageType // imageType
+    )
     return options
   }
 
@@ -3274,14 +3263,14 @@ export class NVImage {
    * Converts NVImage to NIfTI compliant byte array
    */
   toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
-    const isDrawing = drawingBytes
-    const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing)
+    const isDrawing = drawingBytes !== null
+    const hdrBytes = hdrToArrayBuffer(this.hdr!, isDrawing)
 
     let drawingBytesToBeConverted = drawingBytes
     if (isDrawing) {
-      const perm = this.permRAS
+      const perm = this.permRAS as number[]
       if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-        const dims = this.hdr.dims // reverse to original
+        const dims = this.hdr!.dims // reverse to original
         // reverse RAS to native space, layout is mrtrix MIF format
         // for details see NVImage.readMIF()
         const layout = [0, 0, 0]
@@ -3310,26 +3299,23 @@ export class NVImage {
             stride *= dims[j + 1]
           }
         }
-        // lookup table for flips and stride offsets:
-        const range = (start, stop, step) =>
-          Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
-        let xlut = range(0, dims[1] - 1, 1)
+        let xlut = NVUtilities.range(0, dims[1] - 1, 1)
         if (inflip[0]) {
-          xlut = range(dims[1] - 1, 0, -1)
+          xlut = NVUtilities.range(dims[1] - 1, 0, -1)
         }
         for (let i = 0; i < dims[1]; i++) {
           xlut[i] *= instride[0]
         }
-        let ylut = range(0, dims[2] - 1, 1)
+        let ylut = NVUtilities.range(0, dims[2] - 1, 1)
         if (inflip[1]) {
-          ylut = range(dims[2] - 1, 0, -1)
+          ylut = NVUtilities.range(dims[2] - 1, 0, -1)
         }
         for (let i = 0; i < dims[2]; i++) {
           ylut[i] *= instride[1]
         }
-        let zlut = range(0, dims[3] - 1, 1)
+        let zlut = NVUtilities.range(0, dims[3] - 1, 1)
         if (inflip[2]) {
-          zlut = range(dims[3] - 1, 0, -1)
+          zlut = NVUtilities.range(dims[3] - 1, 0, -1)
         }
         for (let i = 0; i < dims[3]; i++) {
           zlut[i] *= instride[2]
@@ -3352,7 +3338,7 @@ export class NVImage {
         console.log(drawingBytesToBeConverted)
       }
     }
-    const img8 = isDrawing ? drawingBytesToBeConverted : new Uint8Array(this.img.buffer)
+    const img8 = isDrawing ? (drawingBytesToBeConverted as Uint8Array) : new Uint8Array(this.img!.buffer)
     const opad = new Uint8Array(4)
     const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
     odata.set(hdrBytes)

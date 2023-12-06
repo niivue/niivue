@@ -40,6 +40,11 @@ export class NiivueObject3D {
   extentsMin: number[] = []
   extentsMax: number[] = []
 
+  // TODO needed through NVImage
+  furthestVertexFromOrigin?: number
+  originNegate?: vec3
+  fieldOfViewDeObliqueMM?: number[]
+
   constructor(
     id: number,
     vertexBuffer: WebGLBuffer,

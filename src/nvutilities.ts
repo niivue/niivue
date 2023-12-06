@@ -126,4 +126,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   static arraysAreEqual(a: unknown[], b: unknown[]): boolean {
     return arrayEqual(a, b)
   }
+
+  /**
+   * Generate a pre-filled number array.
+   *
+   * @param start - start value
+   * @param stop - stop value
+   * @param step - step value
+   * @returns filled number array
+   */
+  static range(start: number, stop: number, step: number): number[] {
+    return Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
+  }
 }
