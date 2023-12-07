@@ -224,6 +224,33 @@ type NiiVueOptions = {
   thumbnail?: string
 }
 
+type UIData = {
+  mousedown: boolean
+  touchdown: boolean
+  mouseButtonLeftDown: boolean
+  mouseButtonCenterDown: boolean
+  mouseButtonRightDown: boolean
+  mouseDepthPicker: boolean
+  clickedTile: number
+  pan2DxyzmmAtMouseDown: number[]
+  prevX: number
+  prevY: number
+  currX: number
+  currY: number
+  currentTouchTime: number
+  lastTouchTime: number
+  touchTimer: null
+  doubleTouch: boolean
+  isDragging: boolean
+  dragStart: [0.0, 0.0]
+  dragEnd: [0.0, 0.0]
+  dragClipPlaneStartDepthAziElev: number[]
+  lastTwoTouchDistance: 0
+  multiTouchGesture: boolean
+  loading$: Subject<unknown>
+  dpr?: number
+}
+
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -297,7 +324,7 @@ export class Niivue {
   readyForSync = false
 
   // UI Data
-  uiData = {
+  uiData: UIData = {
     mousedown: false,
     touchdown: false,
     mouseButtonLeftDown: false,
@@ -397,6 +424,24 @@ export class Niivue {
       Frag: fragMeshMatcapShader
     }
   ]
+
+  // TODO just let users use DRAG_MODE instead
+  dragModes = {
+    contrast: DRAG_MODE.contrast,
+    measurement: DRAG_MODE.measurement,
+    none: DRAG_MODE.none,
+    pan: DRAG_MODE.pan,
+    slicer3D: DRAG_MODE.slicer3D,
+    callbackOnly: DRAG_MODE.callbackOnly
+  }
+
+  // TODO just let users use SLICE_TYPE instead
+  sliceTypeAxial = SLICE_TYPE.AXIAL
+  sliceTypeCoronal = SLICE_TYPE.CORONAL
+  sliceTypeSagittal = SLICE_TYPE.SAGITTAL
+  sliceTypeMultiplanar = SLICE_TYPE.MULTIPLANAR
+  sliceTypeRender = SLICE_TYPE.RENDER
+  sliceMosaicString = ''
 
   // Event listeners
 
@@ -598,17 +643,26 @@ export class Niivue {
   opts = { ...DEFAULT_OPTIONS }
   scene = { ...this.document.scene }
 
+  mediaUrlMap: Map<string, string> = new Map()
+  initialized = false
+  currentDrawUndoBitmap: number
+  loadingText: string
+
+  // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
+  subscriptions = []
+
   /**
    * @param options - options object to set modifiable Niivue properties
    */
-  constructor(options = {}) {
+  constructor(options: Partial<NiiVueOptions> = {}) {
     // populate Niivue with user supplied options
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
-      if (typeof options[name] === 'function') {
+      if (typeof options[name as keyof typeof options] === 'function') {
+        // @ts-expect-error -- FIXME don't arbitrarily assign parameters
         this[name] = options[name]
       } else {
-        // this.opts[name] = options[name];
+        // @ts-expect-error -- FIXME don't arbitrarily assign parameters
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -618,24 +672,6 @@ export class Niivue {
     } else {
       this.uiData.dpr = 1
     }
-
-    this.dragModes = []
-    this.dragModes.contrast = DRAG_MODE.contrast
-    this.dragModes.measurement = DRAG_MODE.measurement
-    this.dragModes.none = DRAG_MODE.none
-    this.dragModes.pan = DRAG_MODE.pan
-    this.dragModes.slicer3D = DRAG_MODE.slicer3D
-    this.dragModes.callbackOnly = DRAG_MODE.callbackOnly
-    this.sliceTypeAxial = SLICE_TYPE.AXIAL
-    this.sliceTypeCoronal = SLICE_TYPE.CORONAL
-    this.sliceTypeSagittal = SLICE_TYPE.SAGITTAL
-    this.sliceTypeMultiplanar = SLICE_TYPE.MULTIPLANAR
-    this.sliceTypeRender = SLICE_TYPE.RENDER
-    this.sliceMosaicString = ''
-
-    this.mediaUrlMap = new Map()
-
-    this.initialized = false
 
     // now that opts have been parsed, set the current undo to max undo
     this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps // analogy: cylinder position of a revolver
@@ -650,9 +686,6 @@ export class Niivue {
 
     this.loadingText = this.opts.loadingText
     log.setLogLevel(this.opts.logging)
-
-    // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
-    this.subscriptions = []
   }
 
   get volumes() {
