@@ -214,7 +214,7 @@ type ExportDocumentData = {
   // array of image options to recreate images
   imageOptionsArray: ImageFromUrlOptions[]
   // data to recreate a scene
-  sceneData: SceneData
+  sceneData: Partial<SceneData>
   // configuration options of {@link Niivue} instance
   opts: NVConfigOptions
   // encoded meshes
@@ -244,7 +244,7 @@ export class NVDocument {
   volumes: NVImage[] = []
   meshDataObjects?: Array<NVMesh | NVConnectome>
   meshes: Array<NVMesh | NVConnectome> = []
-  drawBitmap = null
+  drawBitmap: Uint8Array | null = null
   imageOptionsMap = new Map()
   meshOptionsMap = new Map()
 

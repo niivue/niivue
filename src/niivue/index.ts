@@ -308,7 +308,7 @@ export class Niivue {
   fontTexture = null
   circleShader = null
   matCapTexture = null
-  bmpShader = null
+  bmpShader: WebGLShader | null = null
   bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
   thumbnailVisible = false
   bmpTextureWH = 1.0 // thumbnail width/height ratio
@@ -369,10 +369,10 @@ export class Niivue {
     loading: this.uiData.loading$
   }
 
-  back = {} // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
+  back: NVImage | {} = {} // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   overlays = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is necessary?
-  deferredVolumes = []
-  deferredMeshes = []
+  deferredVolumes: NVImage[] = []
+  deferredMeshes: NVMesh[] = []
   furthestVertexFromOrigin = 100
   volScale = []
   vox = []
@@ -1797,9 +1797,9 @@ export class Niivue {
 
   /**
    * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
-   * @param {string} url - filename
+   * @param url - filename
    */
-  isMeshExt(url) {
+  isMeshExt(url: string) {
     const ext = this.getFileExt(url)
     log.debug('dropped ext')
     log.debug(ext)
@@ -1807,7 +1807,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  async dropListener(e) {
+  async dropListener(e: DragEvent) {
     e.stopPropagation()
     e.preventDefault()
     // don't do anything if drag and drop has been turned off
@@ -1816,10 +1816,13 @@ export class Niivue {
     }
     const urlsToLoad = []
     const dt = e.dataTransfer
+    if (!dt) {
+      return
+    }
     const url = dt.getData('text/uri-list')
     if (url) {
       urlsToLoad.push(url)
-      const imageOptions = new NVImageFromUrlOptions(url)
+      const imageOptions = NVImageFromUrlOptions(url)
       const ext = this.getFileExt(url)
       log.debug('dropped ext')
       log.debug(ext)
@@ -2291,7 +2294,7 @@ export class Niivue {
     this.drawClearAllUndoBitmaps()
     let ok = false
     try {
-      const volume = await NVImage.loadFromUrl(new NVImageFromUrlOptions(fnm))
+      const volume = await NVImage.loadFromUrl(NVImageFromUrlOptions(fnm))
       if (isBinarize) {
         await this.binarize(volume)
       }
@@ -2325,14 +2328,14 @@ export class Niivue {
       return []
     }
     const scale2raw = (mx - mn) / nBin
-    function bin2raw(bin) {
+    function bin2raw(bin: number) {
       return bin * scale2raw + mn
     }
     const scale2bin = (nBin - 1) / Math.abs(mx - mn)
-    const inter = this.volumes[0].hdr.scl_inter
-    const slope = this.volumes[0].hdr.scl_slope
+    const inter = this.volumes[0].hdr!.scl_inter
+    const slope = this.volumes[0].hdr!.scl_slope
     for (let v = 0; v < nvox; v++) {
-      let val = img[v] * slope + inter
+      let val = img![v] * slope + inter
       val = Math.min(Math.max(val, mn), mx)
       val = Math.round((val - mn) * scale2bin)
       h[val]++
@@ -2429,8 +2432,8 @@ export class Niivue {
     if (!this.drawBitmap) {
       this.createEmptyDrawing()
     }
-    const drawImg = this.drawBitmap
-    const img = this.volumes[0].img
+    const drawImg = this.drawBitmap as Uint8Array
+    const img = this.volumes[0].img!
     for (let i = 0; i < nvox; i++) {
       if (drawImg[i] !== 0) {
         continue
@@ -2887,9 +2890,9 @@ export class Niivue {
   // not included in public docs
   // update mouse position from new mouse down coordinates
   // note: no test yet
-  mouseDown(x, y) {
-    x *= this.uiData.dpr
-    y *= this.uiData.dpr
+  mouseDown(x: number, y: number) {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
     this.mousePos = [x, y]
     // if (this.inRenderTile(x, y) < 0) return;
   }
@@ -2897,10 +2900,10 @@ export class Niivue {
   // not included in public docs
   // note: no test yet
   mouseMove(x: number, y: number) {
-    x *= this.uiData.dpr
-    y *= this.uiData.dpr
-    const dx = (x - this.mousePos[0]) / this.uiData.dpr
-    const dy = (y - this.mousePos[1]) / this.uiData.dpr
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
+    const dx = (x - this.mousePos[0]) / this.uiData.dpr!
+    const dy = (y - this.mousePos[1]) / this.uiData.dpr!
     this.mousePos = [x, y]
 
     if (this.inRenderTile(x, y) < 0) {
@@ -3465,13 +3468,10 @@ export class Niivue {
     this.document.meshes = this.meshes
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
     this.drawScene()
-    this.document.previewImageDataURL = this.canvas.toDataURL()
+    this.document.previewImageDataURL = this.canvas!.toDataURL()
     const json = this.document.json()
     console.log('json', json)
     json.sceneData = { ...this.scene }
-    delete json.sceneData.sceneData
-    delete json.sceneData.onZoom3DChange
-    delete json.sceneData.onAzimuthElevationChange
 
     return json
   }
@@ -3491,7 +3491,7 @@ export class Niivue {
     console.log('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
     this.drawScene()
-    this.document.previewImageDataURL = this.canvas.toDataURL()
+    this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.download(fileName)
   }
 
@@ -3517,7 +3517,7 @@ export class Niivue {
    * @property {number} frame4D - the index of the 4D data to load
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  async loadVolumes(volumeList) {
+  async loadVolumes(volumeList: NVImage[]) {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -3917,7 +3917,7 @@ export class Niivue {
 
   // not included in public docs
   // set color of single voxel in drawing
-  drawPt(x, y, z, penValue) {
+  drawPt(x: number, y: number, z: number, penValue: number) {
     const dx = this.back.dims[1]
     const dy = this.back.dims[2]
     const dz = this.back.dims[3]
@@ -4493,7 +4493,10 @@ export class Niivue {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
-        let pngTexture = []
+        if (!this.gl || !this.bmpShader) {
+          return
+        }
+        let pngTexture
         if (textureNum === 4) {
           if (this.bmpTexture !== null) {
             this.gl!.deleteTexture(this.bmpTexture)

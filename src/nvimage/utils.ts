@@ -217,7 +217,7 @@ export type ImageMetadata = {
   bpv: number
 }
 
-export function NVImageFromUrlOptions(
+export const NVImageFromUrlOptions = (
   url: string,
   urlImageData = '',
   name = '',
@@ -238,7 +238,7 @@ export function NVImageFromUrlOptions(
   colorbarVisible = true,
   alphaThreshold = false,
   colormapLabel: string[] = []
-): ImageFromUrlOptions {
+): ImageFromUrlOptions => {
   return {
     url,
     urlImageData,
