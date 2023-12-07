@@ -1,6 +1,11 @@
 import { vec3 } from 'gl-matrix'
 import { LUT } from './colortables.js'
 
+export type ValuesArray = Array<{
+  id: string
+  vals: number[]
+}>
+
 export type AnyNumberArray =
   | number[]
   | Float64Array
@@ -21,41 +26,23 @@ export type DefaultMeshType = {
 export type TRACT = {
   pts: number[]
   offsetPt0: number[]
-  dps: Array<{
-    id: string
-    vals: number[]
-  }>
+  dps: ValuesArray
 }
 
 export type TRX = {
   pts: number[]
   offsetPt0: number[]
-  dpg: Array<{
-    id: string
-    vals: number[]
-  }>
-  dps: Array<{
-    id: string
-    vals: number[]
-  }>
-  dpv: Array<{
-    id: string
-    vals: number[]
-  }>
+  dpg: ValuesArray
+  dps: ValuesArray
+  dpv: ValuesArray
   header: unknown
 }
 
 export type TRK = {
   pts: number[]
   offsetPt0: number[]
-  dps: Array<{
-    id: string
-    vals: number[]
-  }>
-  dpv: Array<{
-    id: string
-    vals: number[]
-  }>
+  dps: ValuesArray
+  dpv: ValuesArray
 }
 
 export type TCK = {
