@@ -90,7 +90,7 @@ type BaseLoadParams = {
   layers: NVMeshLayer[]
 }
 
-export type LoadFromUrlParams = BaseLoadParams & {
+export type LoadFromUrlParams = Partial<BaseLoadParams> & {
   // the resolvable URL pointing to a nifti image to load
   url: string
 }
@@ -251,6 +251,7 @@ export class NVMesh {
       this.hasConnectome = true
       const keysArray = Object.keys(connectome)
       for (let i = 0, len = keysArray.length; i < len; i++) {
+        // @ts-expect-error -- this should be done explicitly
         this[keysArray[i]] = connectome[keysArray[i]]
       }
     }

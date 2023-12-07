@@ -94,6 +94,11 @@ export class NVImage {
   global_min?: number
   global_max?: number
 
+  // TODO referenced by niivue/loadVolumes
+  urlImgData?: string
+  isManifest?: boolean
+  limitFrames4D?: boolean
+
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   // TODO move to enum
   DT_NONE = 0

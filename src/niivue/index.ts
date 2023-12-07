@@ -618,7 +618,7 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams) => void = () => {}
+  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => {}
 
   // seems redundant with onMeshLoaded
   onMeshAdded = () => {}
@@ -3561,7 +3561,7 @@ export class Niivue {
         volumeList[i].colormapNegative = volumeList[i].colorMapNegative
       }
       const imageOptions = {
-        url: volumeList[i].url,
+        url: volumeList[i].url!,
         name: volumeList[i].name,
         colormap: volumeList[i].colormap,
         colormapNegative: volumeList[i].colormapNegative,
@@ -3586,13 +3586,10 @@ export class Niivue {
    * @returns {NVMesh}
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
    */
-  async addMeshFromUrl(meshOptions) {
-    const options = new NVMeshFromUrlOptions()
-    options.gl = this.gl
-    Object.assign(options, meshOptions)
-    const mesh = await NVMesh.loadFromUrl(options)
-    this.mediaUrlMap.set(mesh, options.url)
-    this.onMeshAddedFromUrl(options, mesh)
+  async addMeshFromUrl(meshOptions: LoadFromUrlParams) {
+    const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl! })
+    this.mediaUrlMap.set(mesh, meshOptions.url)
+    this.onMeshAddedFromUrl(meshOptions, mesh)
     this.addMesh(mesh)
 
     return mesh
