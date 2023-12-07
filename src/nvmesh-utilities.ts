@@ -1,10 +1,16 @@
 import { vec3 } from 'gl-matrix'
 
+type Extents = {
+  mxDx: number
+  extentsMin: number | number[]
+  extentsMax: number | number[]
+}
+
 /**
  * Utilities class for common mesh functions
  */
 export class NVMeshUtilities {
-  static getClusterBoundaryU8(u8, faces) {
+  static getClusterBoundaryU8(u8: Uint8Array, faces: number[]): boolean[] {
     // assume all vertices are not near a border
     const border = new Array(u8.length).fill(false)
     const binary = new Array(u8.length).fill(false)
@@ -32,7 +38,7 @@ export class NVMeshUtilities {
     return border
   }
 
-  static getClusterBoundary(rgba8, faces) {
+  static getClusterBoundary(rgba8: Uint8Array, faces: number[]): boolean[] {
     const rgba32 = new Uint32Array(rgba8.buffer)
     // assume all vertices are not near a border
     const border = new Array(rgba32.length).fill(false)
@@ -56,7 +62,7 @@ export class NVMeshUtilities {
   }
 
   // return spatial extremes for vertices
-  static getExtents(pts) {
+  static getExtents(pts: number[]): Extents {
     if ((!ArrayBuffer.isView(pts) && !Array.isArray(pts)) || pts.length < 3) {
       return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 }
     }
@@ -78,7 +84,7 @@ export class NVMeshUtilities {
 
   // determine vector orthogonal to plane defined by triangle
   // triangle winding determines front/back face
-  static generateNormals(pts, tris) {
+  static generateNormals(pts: number[], tris: number[]): Float32Array {
     // from https://github.com/rii-mango/Papaya
     /*
 Copyright (c) 2012-2015, RII-UTHSCSA
@@ -106,9 +112,6 @@ following conditions are met:
  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-    const p1 = []
-    const p2 = []
-    const p3 = []
     const normal = []
     // nn = [],
     let ctr
@@ -130,24 +133,16 @@ following conditions are met:
       index2 = tris[ctr + 1] * 3
       index3 = tris[ctr + 2] * 3
 
-      p1.x = pts[index1]
-      p1.y = pts[index1 + 1]
-      p1.z = pts[index1 + 2]
+      const p1 = [pts[index1], pts[index1 + 1], pts[index1 + 2]]
+      const p2 = [pts[index2], pts[index2 + 1], pts[index2 + 2]]
+      const p3 = [pts[index3], pts[index3 + 1], pts[index3 + 2]]
 
-      p2.x = pts[index2]
-      p2.y = pts[index2 + 1]
-      p2.z = pts[index2 + 2]
-
-      p3.x = pts[index3]
-      p3.y = pts[index3 + 1]
-      p3.z = pts[index3 + 2]
-
-      qx = p2.x - p1.x
-      qy = p2.y - p1.y
-      qz = p2.z - p1.z
-      px = p3.x - p1.x
-      py = p3.y - p1.y
-      pz = p3.z - p1.z
+      qx = p2[0] - p1[0]
+      qy = p2[1] - p1[1]
+      qz = p2[2] - p1[2]
+      px = p3[0] - p1[0]
+      py = p3[1] - p1[1]
+      pz = p3[2] - p1[2]
 
       normal[0] = py * qz - pz * qy
       normal[1] = pz * qx - px * qz

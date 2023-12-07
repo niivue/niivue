@@ -9,8 +9,9 @@ module.exports = {
   ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
   extends: ['standard', 'plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint', 'prettier'],
+  plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc', 'prettier'],
   rules: {
+    'no-unreachable': 'error',
     curly: ['error', 'all'],
     camelcase: 'off',
     'import/order': 'error',
@@ -28,5 +29,15 @@ module.exports = {
         semi: false
       }
     ]
-  }
+  },
+  // separate ESLint rules for TS files for now
+  overrides: [
+    {
+      files: ['**/*.ts'],
+      rules: {
+        '@typescript-eslint/explicit-function-return-type': 'error',
+        'tsdoc/syntax': 'warn'
+      }
+    }
+  ]
 }
