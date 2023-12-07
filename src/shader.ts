@@ -54,6 +54,7 @@ export const getGLExtension = function (gl: WebGL2RenderingContext, ext: string)
 export class Shader {
   program: WebGLProgram
   uniforms: Record<string, WebGLUniformLocation | null> = {}
+  clipPlaneClrLoc?: WebGLUniformLocation
 
   constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
     this.program = compileShader(gl, vertexSrc, fragmentSrc)

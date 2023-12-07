@@ -98,6 +98,8 @@ export type ImageFromUrlOptions = {
   // a name for this image (defaults to empty)
   name: string
   // a color map to use (defaults to gray)
+  colorMap: string
+  // TODO see duplicate usage in niivue/loadDocument
   colormap: string
   // the opacity for this image (defaults to 1)
   opacity: number
@@ -244,6 +246,7 @@ export const NVImageFromUrlOptions = (
     urlImageData,
     name,
     colormap,
+    colorMap: colormap,
     opacity,
     cal_min,
     cal_max,

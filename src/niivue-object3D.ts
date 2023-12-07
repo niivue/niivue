@@ -45,6 +45,9 @@ export class NiivueObject3D {
   originNegate?: vec3
   fieldOfViewDeObliqueMM?: number[]
 
+  // TODO needed through crosshairs in NiiVue
+  mm?: number[]
+
   constructor(
     id: number,
     vertexBuffer: WebGLBuffer,

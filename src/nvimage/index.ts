@@ -38,6 +38,8 @@ export class NVImage {
   ignoreZeroVoxels: boolean
   trustCalMinMax: boolean
   colormapNegative: string
+  // TODO see niivue/loadDocument
+  colorMapNegative: string
   colormapLabel: LUT | null
   nFrame4D?: number
   frame4D: number // indexed from 0!
@@ -174,6 +176,7 @@ export class NVImage {
     this.ignoreZeroVoxels = ignoreZeroVoxels
     this.trustCalMinMax = trustCalMinMax
     this.colormapNegative = colormapNegative
+    this.colorMapNegative = colormapNegative
     this.colormapLabel = colormapLabel
     this.frame4D = frame4D // indexed from 0!
     this.cal_minNeg = cal_minNeg
@@ -2289,8 +2292,17 @@ export class NVImage {
     return this._colormap
   }
 
-  set colormap(colormap: string) {
-    this.setColormap(colormap)
+  get colorMap(): string {
+    return this._colormap
+  }
+
+  // TODO duplicate fields, see niivue/loadDocument
+  set colormap(cm: string) {
+    this.setColormap(cm)
+  }
+
+  set colorMap(cm: string) {
+    this.setColormap(cm)
   }
 
   get opacity(): number {

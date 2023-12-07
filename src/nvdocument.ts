@@ -201,6 +201,8 @@ type DocumentData = {
   // TODO not sure if they should be here? They are needed for loadFromJSON
   meshesString?: string
   sceneData?: SceneData
+  // TODO referenced in niivue/loadDocument
+  connectomes?: string[]
 }
 
 type ExportDocumentData = {
@@ -499,6 +501,7 @@ export class NVDocument {
         imageOptions = {
           name: '',
           colormap: 'gray',
+          colorMap: 'gray',
           opacity: 1.0,
           pairedImgData: null,
           cal_min: NaN,
@@ -551,6 +554,7 @@ export class NVDocument {
           imageOptions = {
             name: '',
             colormap: 'gray',
+            colorMap: 'gray',
             opacity: 1.0,
             pairedImgData: null,
             cal_min: NaN,
