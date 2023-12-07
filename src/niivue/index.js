@@ -3428,6 +3428,7 @@ export class Niivue {
       }
       const imageOptions = {
         url: volumeList[i].url,
+        headers: volumeList[i].headers,
         name: volumeList[i].name,
         colormap: volumeList[i].colormap,
         colormapNegative: volumeList[i].colormapNegative,
@@ -3511,8 +3512,8 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectomeFromUrl(url) {
-    const response = await fetch(url)
+  async loadConnectomeFromUrl(url, headers = {}) {
+    const response = await fetch(url, { headers })
     const json = await response.json()
     return this.loadConnectome(json)
   }
@@ -3523,8 +3524,8 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadFreeSurferConnectomeFromUrl(url) {
-    const response = await fetch(url)
+  async loadFreeSurferConnectomeFromUrl(url, headers = {}) {
+    const response = await fetch(url, { headers })
     const json = await response.json()
     return this.loadFreeSurferConnectome(json)
   }
