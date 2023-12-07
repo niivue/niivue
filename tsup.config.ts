@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/niivue/index.js'],
+  entry: ['src/niivue/index.ts'],
   outDir: 'dist',
   target: 'es2020',
   splitting: false,
