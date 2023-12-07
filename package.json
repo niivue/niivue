@@ -61,7 +61,8 @@
     "fflate": "^0.7.4",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.6.8",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

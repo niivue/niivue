@@ -1,4 +1,5 @@
 import { vec3 } from 'gl-matrix'
+import { v4 as uuidv4 } from 'uuid'
 import { Log } from './logger.js'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
@@ -202,7 +203,7 @@ export class NVMesh {
     this.anatomicalStructurePrimary = anatomicalStructurePrimary
     this.name = name
     this.colorbarVisible = colorbarVisible
-    this.id = crypto.randomUUID()
+    this.id = uuidv4()
     const obj = NVMeshUtilities.getExtents(pts)
     this.furthestVertexFromOrigin = obj.mxDx
     this.extentsMin = obj.extentsMin

@@ -3,6 +3,7 @@ import * as nifti from 'nifti-reader-js'
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
+import { v4 as uuidv4 } from 'uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { Log } from '../logger.js'
@@ -166,7 +167,7 @@ export class NVImage {
     colormapLabel: LUT | null = null
   ) {
     this.name = name
-    this.id = crypto.randomUUID()
+    this.id = uuidv4()
     this._colormap = colormap
     this._opacity = opacity > 1.0 ? 1.0 : opacity // make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
     this.percentileFrac = percentileFrac
