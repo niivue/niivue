@@ -1,6 +1,7 @@
 import { mat4, vec3, vec4 } from 'gl-matrix'
 import { Log } from '../logger.js'
 import { NiftiHeader, Volume } from '../types.js'
+import { NVUtilities } from '../nvutilities.js'
 
 const log = new Log()
 
@@ -38,27 +39,23 @@ export function img2ras16(volume: Volume): Int16Array {
       stride *= dims[j + 1]
     }
   }
-  // lookup table for flips and stride offsets:
-  const range = (start: number, stop: number, step: number): number[] =>
-    Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
-
-  let xlut = range(0, dims[1] - 1, 1)
+  let xlut = NVUtilities.range(0, dims[1] - 1, 1)
   if (inflip[0]) {
-    xlut = range(dims[1] - 1, 0, -1)
+    xlut = NVUtilities.range(dims[1] - 1, 0, -1)
   }
   for (let i = 0; i < dims[1]; i++) {
     xlut[i] *= instride[0]
   }
-  let ylut = range(0, dims[2] - 1, 1)
+  let ylut = NVUtilities.range(0, dims[2] - 1, 1)
   if (inflip[1]) {
-    ylut = range(dims[2] - 1, 0, -1)
+    ylut = NVUtilities.range(dims[2] - 1, 0, -1)
   }
   for (let i = 0; i < dims[2]; i++) {
     ylut[i] *= instride[1]
   }
-  let zlut = range(0, dims[3] - 1, 1)
+  let zlut = NVUtilities.range(0, dims[3] - 1, 1)
   if (inflip[2]) {
-    zlut = range(dims[3] - 1, 0, -1)
+    zlut = NVUtilities.range(dims[3] - 1, 0, -1)
   }
   for (let i = 0; i < dims[3]; i++) {
     zlut[i] *= instride[2]

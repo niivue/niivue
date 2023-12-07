@@ -130,6 +130,91 @@ export type ImageFromUrlOptions = {
   colormapLabel: string[]
   pairedImgData?: null
   limitFrames4D?: number
+  isManifest?: boolean
+  urlImgData?: string
+}
+
+// TODO centralize shared options
+export type ImageFromFileOptions = {
+  // the file object
+  file: File | File[]
+  // a name for this image. Default is an empty string
+  name?: string
+  // a color map to use. default is gray
+  colormap?: string
+  // the opacity for this image. default is 1
+  opacity?: number
+  // Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+  urlImgData?: File | null
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+  percentileFrac?: number
+  // whether or not to ignore zero voxels in setting the robust range of display values
+  ignoreZeroVoxels?: boolean
+  // whether or not this image is to be visible
+  visible?: boolean
+  // whether or not to use QForm instead of SForm during construction
+  useQFormNotSForm?: boolean
+  // colormap negative for the image
+  colormapNegative?: string
+  // image type
+  imageType?: ImageType
+  frame4D?: number
+  limitFrames4D?: number
+}
+
+export type ImageFromBase64 = {
+  // base64 string
+  base64: string
+  // a name for this image. Default is an empty string
+  name?: string
+  // a color map to use. default is gray
+  colormap?: string
+  // the opacity for this image. default is 1
+  opacity?: number
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+  percentileFrac?: number
+  // whether or not to ignore zero voxels in setting the robust range of display values
+  ignoreZeroVoxels?: boolean
+  // whether or not this image is to be visible
+  visible?: boolean
+}
+
+export type ImageMetadata = {
+  // unique if of image
+  id: string
+  // data type
+  datatypeCode: number
+  // number of columns
+  nx: number
+  // number of rows
+  ny: number
+  // number of slices
+  nz: number
+  // number of volumes
+  nt: number
+  // space between columns
+  dx: number
+  // space between rows
+  dy: number
+  // space between slices
+  dz: number
+  // time between volumes
+  dt: number
+  // bits per voxel
+  // TODO was documented as bpx
+  bpv: number
 }
 
 export function NVImageFromUrlOptions(
@@ -403,4 +488,36 @@ export function getExtents(positions: number[], forceOriginInVolume = true): Ext
   const max = [mx[0], mx[1], mx[2]]
   const furthestVertexFromOrigin = mxDx
   return { min, max, furthestVertexFromOrigin, origin }
+}
+
+export function isAffineOK(mtx: number[][]): boolean {
+  // A good matrix should not have any components that are not a number
+  // A good spatial transformation matrix should not have a row or column that is all zeros
+  const iOK = [false, false, false, false]
+  const jOK = [false, false, false, false]
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (isNaN(mtx[i][j])) {
+        return false
+      }
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (mtx[i][j] === 0.0) {
+        continue
+      }
+      iOK[i] = true
+      jOK[j] = true
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    if (!iOK[i]) {
+      return false
+    }
+    if (!jOK[i]) {
+      return false
+    }
+  }
+  return true
 }
