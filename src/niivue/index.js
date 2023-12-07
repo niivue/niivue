@@ -1,7 +1,7 @@
 import { Subject } from 'rxjs'
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
-import { Shader } from '../shader.js'
+import { Shader } from '../shader'
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -54,21 +54,21 @@ import {
   blurVertShader,
   blurFragShader,
   sobelFragShader
-} from '../shader-srcs.js'
-import { orientCube } from '../orientCube.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
-import { MeshType, NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+} from '../shader-srcs'
+import { orientCube } from '../orientCube'
+import { NiivueObject3D } from '../niivue-object3D'
+import { MeshType, NVMesh, NVMeshFromUrlOptions } from '../nvmesh'
 import { Log } from '../logger'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { cmapper } from '../colortables'
-import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } from '../nvdocument.js'
+import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } from '../nvdocument'
 
-import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.js'
-import { NVConnectome } from '../nvconnectome.js'
+import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel'
+import { NVConnectome } from '../nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from '../nvimage'
-import { NVUtilities } from '../nvutilities.js'
+import { NVUtilities } from '../nvutilities'
 import {
   clamp,
   decodeRLE,
@@ -82,15 +82,15 @@ import {
   tickSpacing,
   unProject,
   unpackFloatFromVec4i
-} from './utils.js'
-export { NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+} from './utils'
+export { NVMesh, NVMeshFromUrlOptions } from '../nvmesh'
 export { NVController } from '../nvcontroller'
 export { ColorTables as colortables, cmapper } from '../colortables'
 
 export { NVImage, NVImageFromUrlOptions } from '../nvimage'
-export { NVDocument, SLICE_TYPE } from '../nvdocument.js'
-export { NVUtilities } from '../nvutilities.js'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
+export { NVDocument, SLICE_TYPE } from '../nvdocument'
+export { NVUtilities } from '../nvutilities'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel'
 
 const log = new Log()
 
