@@ -1,4 +1,4 @@
-import { Subject } from 'rxjs'
+import { Subject, Subscription } from 'rxjs'
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
@@ -69,6 +69,7 @@ import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.j
 import { NVConnectome } from '../nvconnectome.js'
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
+import { Connectome, LegacyConnectome, NVConnectomeNode } from '../types.js'
 import {
   clamp,
   decodeRLE,
@@ -259,8 +260,8 @@ type UIData = {
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export class Niivue {
-  canvas = null // the reference to the canvas element on the page
-  gl = null // the gl context
+  canvas: HTMLCanvasElement | null = null // the reference to the canvas element on the page
+  gl: WebGL2RenderingContext | null = null // the gl context
   isBusy = false // flag to indicate if the scene is busy drawing
   needsRefresh = false // flag to indicate if the scene needs to be redrawn
   colormapTexture = null // the GPU memory storage of the colormap
@@ -320,7 +321,7 @@ export class Niivue {
   overlayAlphaShader = 1 // float, 1 for opaque
   isAlphaClipDark = false
 
-  syncOpts = {}
+  syncOpts: Record<string, unknown> = {}
   readyForSync = false
 
   // UI Data
@@ -352,7 +353,7 @@ export class Niivue {
   }
 
   // mapping of keys (event strings) to rxjs subjects
-  eventsToSubjects = {
+  eventsToSubjects: Record<string, Subject<unknown>> = {
     loading: this.uiData.loading$
   }
 
@@ -366,7 +367,7 @@ export class Niivue {
   mousePos = [0, 0]
   screenSlices = [] // empty array
 
-  otherNV = null // another niivue instance that we wish to sync position with
+  otherNV: Niivue | Niivue[] | null = null // another niivue instance that we wish to sync position with
   volumeObject3D = null
   pivot3D = [0, 0, 0] // center for rendering rotation
   furthestFromPivot = 10.0 // most distant point from pivot
@@ -649,7 +650,7 @@ export class Niivue {
   loadingText: string
 
   // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
-  subscriptions = []
+  subscriptions: Array<Record<string, Subscription>> = []
 
   /**
    * @param options - options object to set modifiable Niivue properties
@@ -727,7 +728,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/ui.html|live demo usage}
    */
   async saveScene(filename = 'niivue.png') {
-    function saveBlob(blob, name) {
+    function saveBlob(blob: Blob, name: string) {
       const a = document.createElement('a')
       document.body.appendChild(a)
       a.style.display = 'none'
@@ -739,8 +740,15 @@ export class Niivue {
     }
 
     const canvas = this.canvas
+
+    if (!canvas) {
+      throw new Error('canvas not defined')
+    }
     await this.drawScene()
     canvas.toBlob((blob) => {
+      if (!blob) {
+        return
+      }
       if (filename === '') {
         filename = `niivue-screenshot-${new Date().toString()}.png`
         filename = filename.replace(/\s/g, '_')
@@ -751,14 +759,14 @@ export class Niivue {
 
   /**
    * attach the Niivue instance to the webgl2 canvas by element id
-   * @param {string} id the id of an html canvas element
-   * @param {boolean} isAntiAlias determines if anti-aliasing is requested (if not specified, AA usage depends on hardware)
+   * @param id - the id of an html canvas element
+   * @param isAntiAlias - determines if anti-aliasing is requested (if not specified, AA usage depends on hardware)
    * @example niivue = new Niivue().attachTo('gl')
    * @example niivue.attachTo('gl')
    * @see {@link https://niivue.github.io/niivue/features/multiplanar.html|live demo usage}
    */
-  async attachTo(id, isAntiAlias = null) {
-    await this.attachToCanvas(document.getElementById(id), isAntiAlias)
+  async attachTo(id: string, isAntiAlias = null) {
+    await this.attachToCanvas(document.getElementById(id) as HTMLCanvasElement, isAntiAlias)
     log.debug('attached to element with id: ', id)
     return this
   }
@@ -782,7 +790,7 @@ export class Niivue {
    *    //...
    * }
    */
-  on(event, callback) {
+  on(event: string, callback: (data: unknown) => void) {
     const knownEvents = Object.keys(this.eventsToSubjects)
     if (!knownEvents.includes(event)) {
       return
@@ -796,12 +804,12 @@ export class Niivue {
 
   /**
    * off unsubscribes events and subjects (the opposite of on)
-   * @param {("location")} event the name of the event to watch for. Event names are shown in the type column
+   * @param event - the name of the event to watch for. Event names are shown in the type column
    * @example
    * niivue = new Niivue()
    * niivue.off('location')
    */
-  off(event) {
+  off(event: string) {
     const knownEvents = Object.keys(this.eventsToSubjects)
     if (!knownEvents.includes(event)) {
       return
@@ -824,7 +832,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.attachToCanvas(document.getElementById(id))
    */
-  async attachToCanvas(canvas, isAntiAlias = null) {
+  async attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean | null = null) {
     this.canvas = canvas
     if (isAntiAlias === null) {
       isAntiAlias = navigator.hardwareConcurrency > 6
@@ -843,7 +851,7 @@ export class Niivue {
 
     // set parent background container to black (default empty canvas color)
     // avoids white cube around image in 3D render mode
-    this.canvas.parentElement.style.backgroundColor = 'black'
+    this.canvas!.parentElement!.style.backgroundColor = 'black'
     // fill all space in parent
     if (this.opts.isResizeCanvas) {
       this.canvas.style.width = '100%'
@@ -868,7 +876,7 @@ export class Niivue {
    * @deprecated use broadcastTo instead
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
    */
-  syncWith(otherNV, syncOpts = { '2d': true, '3d': true }) {
+  syncWith(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }) {
     this.otherNV = otherNV
     this.syncOpts = syncOpts
   }
@@ -884,7 +892,7 @@ export class Niivue {
    * niivue1.broadcastTo([niivue2, niivue3])
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
    */
-  broadcastTo(otherNV, syncOpts = { '2d': true, '3d': true }) {
+  broadcastTo(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }) {
     this.otherNV = otherNV
     this.syncOpts = syncOpts
   }
@@ -899,14 +907,14 @@ export class Niivue {
    * niivue2.sync()
    */
   sync() {
-    if (!this.otherNV || typeof this.otherNV === 'undefined') {
+    if (!this.gl || !this.otherNV || typeof this.otherNV === 'undefined') {
       return
     }
     // if (!this.otherNV.readyForSync || !this.readyForSync) {
     //   return;
     // }
     // canvas must have focus to send messages issue706
-    if (!this.gl.canvas.matches(':focus')) {
+    if (!(this.gl.canvas as HTMLCanvasElement).matches(':focus')) {
       return
     }
     const thisMM = this.frac2mm(this.scene.crosshairPos)
@@ -944,17 +952,21 @@ export class Niivue {
    * @param {Array} a the first array
    * @param {Array} b the second array
    * @example Niivue.arrayEquals(a, b)
+   *
+   * TODO this should maybe just use array-equal from NPM
    */
-  arrayEquals(a, b) {
+  arrayEquals(a: unknown[], b: unknown[]) {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index])
   }
 
   /**
    * callback function to handle resize window events, redraws the scene.
-   * @type {function}
    * @private
    */
   resizeListener() {
+    if (!this.canvas || !this.gl) {
+      return
+    }
     if (!this.opts.isResizeCanvas) {
       if (this.opts.isHighResolutionCapable) {
         log.warn('isHighResolutionCapable requires isResizeCanvas')
@@ -974,8 +986,9 @@ export class Niivue {
     } else {
       this.uiData.dpr = 1
     }
-    if ('width' in this.canvas.parentElement) {
-      this.canvas.width = this.canvas.parentElement.width * this.uiData.dpr
+    if ('width' in this.canvas.parentElement!) {
+      this.canvas.width = (this.canvas.parentElement.width as number) * this.uiData.dpr
+      // @ts-expect-error not sure why height is not defined for HTMLElement
       this.canvas.height = this.canvas.parentElement.height * this.uiData.dpr
     } else {
       this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr
@@ -996,8 +1009,12 @@ export class Niivue {
    * @private
    * @returns {object} the mouse position relative to the canvas
    */
-  getRelativeMousePosition(event, target) {
+  getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null) {
     target = target || event.target
+    if (!target) {
+      return
+    }
+    // @ts-expect-error -- not sure how this works, this would be an EventTarget?
     const rect = target.getBoundingClientRect()
     return {
       x: event.clientX - rect.left,
@@ -1008,7 +1025,7 @@ export class Niivue {
   // not included in public docs
   // assumes target or event.target is canvas
   // note: no test yet
-  getNoPaddingNoBorderCanvasRelativeMousePosition(event, target) {
+  getNoPaddingNoBorderCanvasRelativeMousePosition(event: MouseEvent, target: EventTarget) {
     target = target || event.target
     const pos = this.getRelativeMousePosition(event, target)
     return pos
@@ -1019,14 +1036,14 @@ export class Niivue {
   // here, we disable the normal context menu so that
   // we can use some custom right click events
   // note: no test yet
-  mouseContextMenuListener(e) {
+  mouseContextMenuListener(e: MouseEvent) {
     e.preventDefault()
   }
 
   // not included in public docs
   // handler for all mouse button presses
   // note: no test yet
-  mouseDownListener(e) {
+  mouseDownListener(e: MouseEvent) {
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
@@ -1035,9 +1052,12 @@ export class Niivue {
     log.debug('mouse down')
     log.debug(e)
     // record tile where mouse clicked
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    if (!pos) {
+      return
+    }
 
-    const [x, y] = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr]
+    const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
     const label = this.getLabelAtPoint([x, y])
     if (label) {
       console.log('label clicked', label)
@@ -1046,7 +1066,7 @@ export class Niivue {
         if (mesh.type !== MeshType.CONNECTOME) {
           continue
         }
-        for (const node of mesh.nodes) {
+        for (const node of mesh.nodes as NVConnectomeNode[]) {
           if (node.label === label) {
             console.log('node', node)
             this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z])
@@ -2279,7 +2299,7 @@ export class Niivue {
     const mn = this.volumes[0].cal_min
     const mx = this.volumes[0].cal_max
     if (mx <= mn) {
-      return false
+      return []
     }
     const scale2raw = (mx - mn) / nBin
     function bin2raw(bin) {
@@ -2375,7 +2395,10 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
   async drawOtsu(levels = 2) {
-    const nvox = this.volumes[0].img.length
+    if (this.volumes.length === 0) {
+      return
+    }
+    const nvox = this.volumes[0].img!.length
     const thresholds = await this.findOtsu(levels)
     if (thresholds.length < 3) {
       return
@@ -2850,7 +2873,7 @@ export class Niivue {
 
   // not included in public docs
   // note: no test yet
-  mouseMove(x, y) {
+  mouseMove(x: number, y: number) {
     x *= this.uiData.dpr
     y *= this.uiData.dpr
     const dx = (x - this.mousePos[0]) / this.uiData.dpr
@@ -3199,7 +3222,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/document.load.html|live demo usage}
    */
-  loadDocument(document) {
+  loadDocument(document: NVDocument) {
     this.document = document
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
     console.log('load document', document)
@@ -3637,7 +3660,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectome(json) {
+  async loadConnectome(json: Connectome | LegacyConnectome) {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -3646,6 +3669,10 @@ export class Niivue {
         this.loadingText = this.opts.loadingText
       }
     })
+
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
 
     this.meshes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
@@ -3656,13 +3683,10 @@ export class Niivue {
     const nodes = json.nodes
     if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
       // legacy format
-      connectome = NVConnectome.convertLegacyConnectome(json)
+      connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
       console.log('converted legacy connectome', connectome)
     }
     const mesh = new NVConnectome(this.gl, connectome)
-    // mesh.nodesChanged.addEventListener("nodeAdded", (event) => {
-    //   this.handleNodeAdded(event);
-    // });
     this.addMesh(mesh)
     console.log('mesh added', mesh)
     this.uiData.loading$.next(false)
@@ -3696,6 +3720,9 @@ export class Niivue {
   r16Tex(texID, activeID, dims, img16 = []) {
     if (texID) {
       this.gl.deleteTexture(texID)
+    }
+    if (!this.gl) {
+      throw new Error('gl undefined')
     }
     texID = this.gl.createTexture()
     this.gl.activeTexture(activeID)
@@ -3742,6 +3769,9 @@ export class Niivue {
       return
     }
     // this.drawUndoBitmap = this.drawBitmap.slice();
+    if (!this.gl) {
+      throw new Error('gl not defined')
+    }
     const gl = this.gl
     const fb = gl.createFramebuffer()
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
