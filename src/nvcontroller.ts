@@ -108,7 +108,7 @@ export class NVController {
         {
           const volume = this.niivue.getMediaByUrl(msg.url)
           if (volume) {
-            this.niivue.setVolume(volume, -1)
+            this.niivue.setVolume(volume as NVImage, -1)
             this.niivue.mediaUrlMap.delete(volume)
           }
         }
@@ -140,7 +140,7 @@ export class NVController {
         {
           const mesh = this.niivue.getMediaByUrl(msg.url)
           if (mesh) {
-            this.niivue.setMesh(mesh, -1)
+            this.niivue.setMesh(mesh as NVMesh, -1)
             this.niivue.mediaUrlMap.delete(mesh)
           }
         }
