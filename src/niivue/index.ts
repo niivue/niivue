@@ -245,7 +245,7 @@ type UIData = {
   mouseButtonRightDown: boolean
   mouseDepthPicker: boolean
   clickedTile: number
-  pan2DxyzmmAtMouseDown: number[]
+  pan2DxyzmmAtMouseDown: vec4
   prevX: number
   prevY: number
   currX: number
@@ -304,7 +304,7 @@ export class Niivue {
   pickingMeshShader = null
   pickingImageShader = null
   colorbarShader = null
-  fontShader = null
+  fontShader: Shader | null = null
   fontTexture = null
   circleShader = null
   matCapTexture = null
@@ -1135,7 +1135,7 @@ export class Niivue {
     }
     this.setDragStart(pos!.x, pos!.y)
     if (!this.uiData.isDragging) {
-      this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+      this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
     }
     this.uiData.isDragging = true
     this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
@@ -1153,7 +1153,7 @@ export class Niivue {
     }
     this.setDragStart(pos!.x, pos!.y)
     if (!this.uiData.isDragging) {
-      this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+      this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
     }
     this.uiData.isDragging = true
     this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
@@ -1509,7 +1509,7 @@ export class Niivue {
     if (this.uiData.touchdown && e.touches.length < 2) {
       const rect = this.canvas!.getBoundingClientRect()
       if (!this.uiData.isDragging) {
-        this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
+        this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
       }
       this.uiData.isDragging = true
       if (this.uiData.doubleTouch && this.uiData.isDragging) {
@@ -2473,7 +2473,10 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
   async removeHaze(level = 5, volIndex = 0) {
-    const nvox = this.volumes[volIndex].img.length
+    const img = this.volumes[volIndex].img!
+    const hdr = this.volumes[volIndex].hdr!
+
+    const nvox = img.length
     let otsu = 2
     if (level === 5 || level === 1) {
       otsu = 4
@@ -2493,17 +2496,16 @@ export class Niivue {
       threshold = thresholds[1]
     }
 
-    const inter = this.volumes[volIndex].hdr.scl_inter
-    const slope = this.volumes[volIndex].hdr.scl_slope
-    const mn = this.volumes[volIndex].global_min
-    const img = this.volumes[volIndex].img
+    const inter = hdr.scl_inter
+    const slope = hdr.scl_slope
+    const mn = this.volumes[volIndex].global_min!
     for (let v = 0; v < nvox; v++) {
       const val = img[v] * slope + inter
       if (val < threshold) {
         img[v] = mn
       }
     }
-    this.refreshLayers(this.volumes[volIndex], 0, this.volumes.length)
+    this.refreshLayers(this.volumes[volIndex], 0)
     this.drawScene()
   }
 
@@ -2516,22 +2518,22 @@ export class Niivue {
    * @example niivue.saveImage('test.nii', true);
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  async saveImage(fnm, isSaveDrawing = false, volumeByIndex = 0) {
-    if (this.back.dims === undefined) {
+  async saveImage(fnm: string, isSaveDrawing = false, volumeByIndex = 0) {
+    if (this.back?.dims === undefined) {
       log.debug('No voxelwise image open')
-      return false
+      return
     }
     if (isSaveDrawing) {
       if (!this.drawBitmap) {
         log.debug('No drawing open')
         return false
       }
-      const perm = this.volumes[0].permRAS
+      const perm = this.volumes[0].permRAS!
       if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         await this.volumes[0].saveToDisk(fnm, this.drawBitmap) // createEmptyDrawing
         return true
       } else {
-        const dims = this.volumes[0].hdr.dims // reverse to original
+        const dims = this.volumes[0].hdr!.dims // reverse to original
         // reverse RAS to native space, layout is mrtrix MIF format
         // for details see NVImage.readMIF()
         const layout = [0, 0, 0]
@@ -2560,26 +2562,24 @@ export class Niivue {
             stride *= dims[j + 1]
           }
         }
-        // lookup table for flips and stride offsets:
-        const range = (start, stop, step) =>
-          Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
-        let xlut = range(0, dims[1] - 1, 1)
+
+        let xlut = NVUtilities.range(0, dims[1] - 1, 1)
         if (inflip[0]) {
-          xlut = range(dims[1] - 1, 0, -1)
+          xlut = NVUtilities.range(dims[1] - 1, 0, -1)
         }
         for (let i = 0; i < dims[1]; i++) {
           xlut[i] *= instride[0]
         }
-        let ylut = range(0, dims[2] - 1, 1)
+        let ylut = NVUtilities.range(0, dims[2] - 1, 1)
         if (inflip[1]) {
-          ylut = range(dims[2] - 1, 0, -1)
+          ylut = NVUtilities.range(dims[2] - 1, 0, -1)
         }
         for (let i = 0; i < dims[2]; i++) {
           ylut[i] *= instride[1]
         }
-        let zlut = range(0, dims[3] - 1, 1)
+        let zlut = NVUtilities.range(0, dims[3] - 1, 1)
         if (inflip[2]) {
-          zlut = range(dims[3] - 1, 0, -1)
+          zlut = NVUtilities.range(dims[3] - 1, 0, -1)
         }
         for (let i = 0; i < dims[3]; i++) {
           zlut[i] *= instride[2]
@@ -2602,7 +2602,7 @@ export class Niivue {
       }
     }
     const img = await this.volumes[volumeByIndex].saveToDisk(fnm)
-    const isString = (typeof fnm === 'string' || fnm instanceof String) && fnm.length > 0
+    const isString = typeof fnm === 'string' && fnm.length > 0
     if (isString) {
       return true
     }
@@ -2610,7 +2610,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  getMeshIndexByID(id) {
+  getMeshIndexByID(id: number) {
     if (typeof id === 'number') {
       if (id >= this.meshes.length) {
         return -1
@@ -2635,13 +2635,13 @@ export class Niivue {
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  setMeshProperty(id, key, val) {
+  setMeshProperty(id: number, key: keyof NVMesh, val: number) {
     const idx = this.getMeshIndexByID(id)
     if (idx < 0) {
       log.warn('setMeshProperty() id not loaded', id)
       return
     }
-    this.meshes[idx].setProperty(key, val, this.gl)
+    this.meshes[idx].setProperty(key, val, this.gl!)
     this.updateGLVolume()
     this.onMeshPropertyChanged(idx, key, val)
   }
@@ -2652,13 +2652,13 @@ export class Niivue {
    * @example niivue.reverseFaces(niivue.meshes[0].id)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  reverseFaces(mesh) {
+  reverseFaces(mesh: number) {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('reverseFaces() id not loaded', mesh)
       return
     }
-    this.meshes[idx].reverseFaces(this.gl)
+    this.meshes[idx].reverseFaces(this.gl!)
     this.updateGLVolume()
   }
 
@@ -2686,7 +2686,7 @@ export class Niivue {
    * @param {vec4} xyzmmZoom first three components are spatial, fourth is scaling
    * @example niivue.setPan2Dxyzmm([5,-4, 2, 1.5])
    */
-  setPan2Dxyzmm(xyzmmZoom) {
+  setPan2Dxyzmm(xyzmmZoom: vec4) {
     this.scene.pan2Dxyzmm = xyzmmZoom
     this.drawScene()
   }
@@ -4401,6 +4401,9 @@ export class Niivue {
     } else if (vx !== this.drawBitmap.length) {
       log.warn('Drawing bitmap must match the background image')
     }
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     this.gl.activeTexture(this.gl.TEXTURE7)
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.gl.texSubImage3D(
@@ -4424,6 +4427,9 @@ export class Niivue {
   // not included in public docs
   // create 3D 1-component (red) uint8 texture on GPU
   r8Tex(texID, activeID, dims, isInit = false) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     if (texID) {
       this.gl.deleteTexture(texID)
     }
@@ -4459,6 +4465,9 @@ export class Niivue {
   // not included in public docs
   // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
   rgbaTex(texID, activeID, dims, isInit = false) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     if (texID) {
       this.gl.deleteTexture(texID)
     }

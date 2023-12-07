@@ -1,4 +1,5 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
+import { vec4 } from 'gl-matrix'
 import { NVUtilities } from './nvutilities.js'
 import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvimage/index.js'
 import { MeshType, NVMesh } from './nvmesh.js'
@@ -170,7 +171,7 @@ type SceneData = {
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
   volScaleMultiplier: number
-  pan2Dxyzmm: number[]
+  pan2Dxyzmm: vec4
 }
 
 type Scene = {
@@ -183,7 +184,7 @@ type Scene = {
   crosshairPos: number[]
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
-  pan2Dxyzmm: number[]
+  pan2Dxyzmm: vec4
   _elevation?: number
   _azimuth?: number
 }
@@ -311,7 +312,7 @@ export class NVDocument {
         this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev
       },
 
-      get pan2Dxyzmm(): number[] {
+      get pan2Dxyzmm(): vec4 {
         return this.sceneData.pan2Dxyzmm
       },
 
