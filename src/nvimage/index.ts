@@ -75,6 +75,7 @@ export class NVImage {
   img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
   imaginary?: Float32Array
   fileObject?: File | File[]
+  dims?: number[]
 
   onColormapChange: (img: NVImage) => void = () => {}
   onOpacityChange: (img: NVImage) => void = () => {}

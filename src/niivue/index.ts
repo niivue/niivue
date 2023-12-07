@@ -2188,19 +2188,26 @@ export class Niivue {
     if (this.drawBitmap) {
       log.debug('Overwriting open drawing!')
     }
+    if (!this.back) {
+      throw new Error('back undefined')
+    }
     this.drawClearAllUndoBitmaps()
     const dims = drawingBitmap.hdr!.dims
-    if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
+    if (
+      dims[1] !== this.back.hdr!.dims[1] ||
+      dims[2] !== this.back.hdr!.dims[2] ||
+      dims[3] !== this.back.hdr!.dims[3]
+    ) {
       log.debug('drawing dimensions do not match background image')
       return false
     }
-    if (drawingBitmap.img.constructor !== Uint8Array) {
+    if (drawingBitmap.img!.constructor !== Uint8Array) {
       log.debug('Drawings should be UINT8')
     }
-    const perm = drawingBitmap.permRAS
+    const perm = drawingBitmap.permRAS!
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, this.gl!.TEXTURE7, this.back.dims, true)
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -2228,30 +2235,29 @@ export class Niivue {
       }
     }
     // lookup table for flips and stride offsets:
-    const range = (start, stop, step) => Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
-    let xlut = range(0, dims[1] - 1, 1)
+    let xlut = NVUtilities.range(0, dims[1] - 1, 1)
     if (inflip[0]) {
-      xlut = range(dims[1] - 1, 0, -1)
+      xlut = NVUtilities.range(dims[1] - 1, 0, -1)
     }
     for (let i = 0; i < dims[1]; i++) {
       xlut[i] *= instride[0]
     }
-    let ylut = range(0, dims[2] - 1, 1)
+    let ylut = NVUtilities.range(0, dims[2] - 1, 1)
     if (inflip[1]) {
-      ylut = range(dims[2] - 1, 0, -1)
+      ylut = NVUtilities.range(dims[2] - 1, 0, -1)
     }
     for (let i = 0; i < dims[2]; i++) {
       ylut[i] *= instride[1]
     }
-    let zlut = range(0, dims[3] - 1, 1)
+    let zlut = NVUtilities.range(0, dims[3] - 1, 1)
     if (inflip[2]) {
-      zlut = range(dims[3] - 1, 0, -1)
+      zlut = NVUtilities.range(dims[3] - 1, 0, -1)
     }
     for (let i = 0; i < dims[3]; i++) {
       zlut[i] *= instride[2]
     }
     // convert data
-    const inVs = drawingBitmap.img // new Uint8Array(this.drawBitmap);
+    const inVs = drawingBitmap.img! // new Uint8Array(this.drawBitmap);
     const outVs = this.drawBitmap
     // for (let i = 0; i < vx; i++)
     //  outVs[i] = i % 3;
@@ -2271,20 +2277,19 @@ export class Niivue {
   }
 
   // not included in public docs
-  async binarize(volume) {
-    const dims = volume.hdr.dims
+  async binarize(volume: NVImage) {
+    const dims = volume.hdr!.dims
     const vx = dims[1] * dims[2] * dims[3]
     const img = new Uint8Array(vx)
     for (let i = 0; i < vx; i++) {
-      if (volume.img[i] !== 0) {
+      if (volume.img![i] !== 0) {
         img[i] = 1
       }
     }
-    volume.img = null
     volume.img = img
-    volume.hdr.datatypeCode = 2 // DT_UNSIGNED_CHAR
-    volume.hdr.cal_min = 0
-    volume.hdr.cal_max = 1
+    volume.hdr!.datatypeCode = 2 // DT_UNSIGNED_CHAR
+    volume.hdr!.cal_min = 0
+    volume.hdr!.cal_max = 1
   }
 
   /**
@@ -2294,7 +2299,7 @@ export class Niivue {
    * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  async loadDrawingFromUrl(fnm, isBinarize = false) {
+  async loadDrawingFromUrl(fnm: string, isBinarize = false) {
     if (this.drawBitmap) {
       log.debug('Overwriting open drawing!')
     }
@@ -2320,7 +2325,7 @@ export class Niivue {
     if (this.volumes.length < 1) {
       return []
     }
-    const img = this.volumes[0].img
+    const img = this.volumes[0].img!
     const nvox = img.length
     if (nvox < 1) {
       return []
@@ -2329,8 +2334,8 @@ export class Niivue {
     const maxBin = nBin - 1 // bins indexed from 0: if 256 bins then 0..255
     const h = new Array(nBin).fill(0)
     // build 1D histogram
-    const mn = this.volumes[0].cal_min
-    const mx = this.volumes[0].cal_max
+    const mn = this.volumes[0].cal_min!
+    const mx = this.volumes[0].cal_max!
     if (mx <= mn) {
       return []
     }
@@ -2352,10 +2357,10 @@ export class Niivue {
     // for (let v = 0; v < nBin; v++)
     //  h[v] = h[v] / nvox;
     const P = Array(nBin)
-      .fill()
+      .fill(0)
       .map(() => Array(nBin).fill(0))
     const S = Array(nBin)
-      .fill()
+      .fill(0)
       .map(() => Array(nBin).fill(0))
     // diagonal
     for (let i = 1; i < nBin; ++i) {
