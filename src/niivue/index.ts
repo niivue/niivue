@@ -282,7 +282,7 @@ export class Niivue {
   gradientTexture = null // 3D texture for volume rnedering lighting
   gradientTextureAmount = 0.0
   drawTexture = null // the GPU memory storage of the drawing
-  drawUndoBitmaps = [] // array of drawBitmaps for undo
+  drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
   renderDrawAmbientOcclusion = 0.4
@@ -369,7 +369,7 @@ export class Niivue {
     loading: this.uiData.loading$
   }
 
-  back: NVImage | {} = {} // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
+  back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   overlays = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is necessary?
   deferredVolumes: NVImage[] = []
   deferredMeshes: NVMesh[] = []
@@ -682,8 +682,10 @@ export class Niivue {
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
       if (typeof options[name as keyof typeof options] === 'function') {
+        // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
+        // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -1842,7 +1844,7 @@ export class Niivue {
           this.meshes = []
         }
         this.closeDrawing()
-        for (const item of items) {
+        for (const item of Array.from(items)) {
           const entry = item.webkitGetAsEntry()
           log.debug(entry)
           if (!entry) {
@@ -1859,7 +1861,7 @@ export class Niivue {
             let pairedImageData: FileSystemEntry
             // check for afni HEAD BRIK pair
             if (entry.name.lastIndexOf('HEAD') !== -1) {
-              for (const pairedItem of items) {
+              for (const pairedItem of Array.from(items)) {
                 const pairedEntry = pairedItem.webkitGetAsEntry()
                 if (!pairedEntry) {
                   throw new Error('could not get paired entry')
@@ -1932,11 +1934,11 @@ export class Niivue {
 
   /**
    * insert a gap between slices of a mutliplanar view.
-   * @param {number} pixels spacing between tiles of multiplanar view
+   * @param pixels - spacing between tiles of multiplanar view
    * @example niivue.setMultiplanarPadPixels(4)
    * @see {@link https://niivue.github.io/niivue/features/atlas.html|live demo usage}
    */
-  setMultiplanarPadPixels(pixels) {
+  setMultiplanarPadPixels(pixels: number) {
     this.opts.multiplanarPadPixels = pixels
     this.drawScene()
   }
@@ -1947,7 +1949,7 @@ export class Niivue {
    * @example niivue.setMultiplanarLayout(2)
    * @see {@link https://niivue.github.io/niivue/features/layout.html|live demo usage}
    */
-  setMultiplanarLayout(layout) {
+  setMultiplanarLayout(layout: number) {
     this.opts.multiplanarLayout = layout
     this.drawScene()
   }
@@ -1958,7 +1960,7 @@ export class Niivue {
    * @example niivue.setCornerOrientationText(true)
    * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
    */
-  setCornerOrientationText(isCornerOrientationText) {
+  setCornerOrientationText(isCornerOrientationText: boolean) {
     this.opts.isCornerOrientationText = isCornerOrientationText
     this.updateGLVolume()
   }
@@ -1969,7 +1971,7 @@ export class Niivue {
    * @example niivue.setCornerOrientationText(true)
    * @see {@link https://niivue.github.io/niivue/features/worldspace.html|live demo usage}
    */
-  setRadiologicalConvention(isRadiologicalConvention) {
+  setRadiologicalConvention(isRadiologicalConvention: boolean) {
     this.opts.isRadiologicalConvention = isRadiologicalConvention
     this.updateGLVolume()
   }
@@ -1981,15 +1983,16 @@ export class Niivue {
    * @example niivue.nv1.setDefaults(opts, true);
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  setDefaults(options = {}, resetBriCon = false) {
+  setDefaults(options: Partial<NiiVueOptions> = {}, resetBriCon = false) {
     this.opts = { ...DEFAULT_OPTIONS }
     this.scene = { ...this.document.scene }
     // populate Niivue with user supplied options
     for (const name in options) {
-      if (typeof options[name] === 'function') {
+      if (typeof options[name as keyof NiiVueOptions] === 'function') {
+        // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
-        // this.opts[name] = options[name];
+        // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -2011,7 +2014,7 @@ export class Niivue {
    * @example niivue.setMeshThicknessOn2D(42)
    * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
    */
-  setMeshThicknessOn2D(meshThicknessOn2D) {
+  setMeshThicknessOn2D(meshThicknessOn2D: number) {
     this.opts.meshThicknessOn2D = meshThicknessOn2D
     this.updateGLVolume()
   }
@@ -2022,7 +2025,7 @@ export class Niivue {
    * @example niivue.setSliceMosaicString("A 0 20 C 30 S 42")
    * @see {@link https://niivue.github.io/niivue/features/mosaics.html|live demo usage}
    */
-  setSliceMosaicString(str) {
+  setSliceMosaicString(str: string) {
     this.sliceMosaicString = str
     this.updateGLVolume()
   }
@@ -2033,7 +2036,7 @@ export class Niivue {
    * @example niivue.setSliceMM(true)
    * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
    */
-  setSliceMM(isSliceMM) {
+  setSliceMM(isSliceMM: boolean) {
     this.opts.isSliceMM = isSliceMM
     this.updateGLVolume()
   }
@@ -2044,7 +2047,7 @@ export class Niivue {
    * @example niivue.isAdditiveBlend(true)
    * @see {@link https://niivue.github.io/niivue/features/additive.voxels.html|live demo usage}
    */
-  setAdditiveBlend(isAdditiveBlend) {
+  setAdditiveBlend(isAdditiveBlend: boolean) {
     this.opts.isAdditiveBlend = isAdditiveBlend
     this.updateGLVolume()
   }
@@ -2064,7 +2067,7 @@ export class Niivue {
    * @example niivue.setHighResolutionCapable(true);
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
    */
-  setHighResolutionCapable(isHighResolutionCapable) {
+  setHighResolutionCapable(isHighResolutionCapable: boolean) {
     this.opts.isHighResolutionCapable = isHighResolutionCapable
     if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
       log.warn('isHighResolutionCapable requires isResizeCanvas')
@@ -2085,7 +2088,7 @@ export class Niivue {
    * niivue.addVolume(NVImage.loadFromUrl({url:'../someURL.nii.gz'}))
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  addVolume(volume) {
+  addVolume(volume: NVImage) {
     this.volumes.push(volume)
     const idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1
     this.setVolume(volume, idx)
@@ -2116,7 +2119,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.getVolumeIndexByID(someVolume.id)
    */
-  getVolumeIndexByID(id) {
+  getVolumeIndexByID(id: string) {
     const n = this.volumes.length
     for (let i = 0; i < n; i++) {
       const id_i = this.volumes[i].id
@@ -2147,11 +2150,11 @@ export class Niivue {
   // Internal function to delete all drawing undo images
   async drawClearAllUndoBitmaps() {
     this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps // next add will be cylinder 0
-    if (this.drawUndoBitmaps.length < 1) {
+    if (!this.drawUndoBitmaps || this.drawUndoBitmaps.length < 1) {
       return
     }
     for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) {
-      this.drawUndoBitmaps[i] = []
+      this.drawUndoBitmaps[i] = new Uint8Array()
     }
   }
 
@@ -2176,17 +2179,17 @@ export class Niivue {
       log.debug('drawUndo is misbehaving')
       return
     }
-    this.drawBitmap = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], this.drawBitmap.length)
+    this.drawBitmap = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], this.drawBitmap!.length)
     this.refreshDrawing(true)
   }
 
   // not included in public docs
-  loadDrawing(drawingBitmap) {
+  loadDrawing(drawingBitmap: NVImage) {
     if (this.drawBitmap) {
       log.debug('Overwriting open drawing!')
     }
     this.drawClearAllUndoBitmaps()
-    const dims = drawingBitmap.hdr.dims
+    const dims = drawingBitmap.hdr!.dims
     if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
       log.debug('drawing dimensions do not match background image')
       return false
@@ -3727,7 +3730,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
    */
   async createEmptyDrawing() {
-    if (!('dims' in this.back)) {
+    if (this.back === null) {
       return
     }
     const mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3])
@@ -9063,7 +9066,7 @@ export class Niivue {
       this.drawLoadingText(this.loadingText)
       return
     }
-    if (!('dims' in this.back)) {
+    if (this.back === null) {
       return
     }
     if (
