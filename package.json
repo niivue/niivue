@@ -23,7 +23,7 @@
     "test": "npm run build && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
     "test-playwright": "npm run build && npx playwright test",
-    "docs": "jsdoc -c jsdoc.json --readme ./README.md -d devdocs -r src/ -t node_modules/docdash",
+    "docs": "jsdoc --readme ./README.md -d devdocs -r src/ -t node_modules/docdash",
     "docs:ts": "typedoc",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",

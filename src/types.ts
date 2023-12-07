@@ -1,3 +1,5 @@
+import { NVLabel3D } from './nvlabel.js'
+
 export type NiftiHeader = {
   littleEndian: boolean
   dim_info: number
@@ -50,4 +52,67 @@ export type Point = {
     y: number
     z: number
   }
+}
+
+/**
+ * Representes the vertices of a connectome
+ */
+export type NVConnectomeNode = {
+  // name of node
+  name: string
+  x: number
+  y: number
+  z: number
+  // color value of node (actual color determined by colormap)
+  colorValue: number
+  // size value of node (actual size determined by node scale times this value in mms)
+  sizeValue: number
+  label?: NVLabel3D
+}
+
+/**
+ * Represents edges between connectome nodes
+ */
+export type NVConnectomeEdge = {
+  // index of first node
+  first: number
+  // index of second node
+  second: number
+  // color value to determine color of edge based on color map
+  colorValue: number
+}
+
+export type ConnectomeOptions = {
+  name: string
+  nodeColormap: string
+  nodeColormapNegative: string
+  nodeMinColor: number
+  nodeMaxColor: number
+  // scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+  nodeScale: number
+  edgeColormap: string
+  edgeColormapNegative: string
+  edgeMin: number
+  edgeMax: number
+  edgeScale: number
+}
+
+export type Connectome = ConnectomeOptions & {
+  nodes: NVConnectomeNode[]
+  edges: NVConnectomeEdge[]
+}
+
+export type LegacyNodes = {
+  names: string[]
+  prefilled: unknown[]
+  X: number[]
+  Y: number[]
+  Z: number[]
+  Color: number[]
+  Size: number[]
+}
+
+export type LegacyConnectome = Partial<ConnectomeOptions> & {
+  nodes: LegacyNodes
+  edges: number[]
 }

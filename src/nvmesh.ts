@@ -4,7 +4,7 @@ import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
-import { Point } from './types.js'
+import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
 import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
 
 const log = new Log()
@@ -42,19 +42,6 @@ export type NVMeshLayer = {
   alphaThreshold: boolean
 
   base64?: string
-}
-
-type Connectome = {
-  nodes: {
-    names: string[]
-    prefilled: unknown[]
-    X: number[]
-    Y: number[]
-    Z: number[]
-    Color: number[]
-    Size: number[]
-  }
-  name: string
 }
 
 export class NVMeshFromUrlOptions {
@@ -154,13 +141,13 @@ export class NVMesh {
   fiberColor = 'Global'
   fiberDecimationStride = 1 // e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
   fiberMask?: unknown[]
-  colormap?: ColorMap | Connectome | string | null
+  colormap?: ColorMap | LegacyConnectome | string | null
   dpg?: ValuesArray | null
   dps?: ValuesArray | null
   dpv?: ValuesArray | null
 
   hasConnectome = false
-  connectome?: Connectome | string
+  connectome?: LegacyConnectome | string
 
   // TODO this should somehow get aligned with connectome
   indexCount?: number
@@ -176,15 +163,9 @@ export class NVMesh {
   edgeMin?: number
   edgeMax?: number
 
-  nodes?: {
-    X: number[]
-    Y: number[]
-    Z: number[]
-    Size: number[]
-    Color: number[]
-  }
+  nodes?: LegacyNodes | NVConnectomeNode[]
 
-  edges?: number[]
+  edges?: number[] | NVConnectomeEdge[]
 
   points?: Point[]
 
@@ -211,7 +192,7 @@ export class NVMesh {
     opacity = 1.0,
     visible = true,
     gl: WebGL2RenderingContext,
-    connectome: Connectome | string | null = null,
+    connectome: LegacyConnectome | string | null = null,
     dpg: ValuesArray | null = null,
     dps: ValuesArray | null = null,
     dpv: ValuesArray | null = null,
@@ -565,7 +546,7 @@ export class NVMesh {
   updateConnectome(gl: WebGL2RenderingContext): void {
     // draw nodes
     const tris: number[] = []
-    const nNode = this.nodes!.X.length
+    const nNode = (this.nodes as LegacyNodes).X.length
     let hasEdges = false
     if (nNode > 1 && this.edges) {
       let nEdges = this.edges!.length
@@ -585,11 +566,11 @@ export class NVMesh {
     let min = this.nodeMinColor!
     let max = this.nodeMaxColor!
     for (let i = 0; i < nNode; i++) {
-      const radius = this.nodes!.Size[i] * this.nodeScale
+      const radius = (this.nodes as LegacyNodes).Size[i] * this.nodeScale
       if (radius <= 0.0) {
         continue
       }
-      let color = this.nodes!.Color[i]
+      let color = (this.nodes as LegacyNodes).Color[i]
       let isNeg = false
       if (hasNeg && color < 0) {
         isNeg = true
@@ -608,7 +589,11 @@ export class NVMesh {
       if (isNeg) {
         rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
       }
-      const pt: vec3 = [this.nodes!.X[i], this.nodes!.Y[i], this.nodes!.Z[i]] // TODO defined assertions should not be necessary here, this should be correctly assigned in the constructor
+      const pt: vec3 = [
+        (this.nodes as LegacyNodes).X[i],
+        (this.nodes as LegacyNodes).Y[i],
+        (this.nodes as LegacyNodes).Z[i]
+      ] // TODO defined assertions should not be necessary here, this should be correctly assigned in the constructor
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
     }
     // draw all edges
@@ -620,7 +605,7 @@ export class NVMesh {
       max = this.edgeMax!
       for (let i = 0; i < nNode - 1; i++) {
         for (let j = i + 1; j < nNode; j++) {
-          let color = this.edges![i * nNode + j]
+          let color = (this.edges as number[])[i * nNode + j]
           let isNeg = false
           if (hasNeg && color < 0) {
             isNeg = true
@@ -643,8 +628,16 @@ export class NVMesh {
           if (isNeg) {
             rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
           }
-          const pti: vec3 = [this.nodes!.X[i], this.nodes!.Y[i], this.nodes!.Z[i]]
-          const ptj: vec3 = [this.nodes!.X[j], this.nodes!.Y[j], this.nodes!.Z[j]]
+          const pti: vec3 = [
+            (this.nodes as LegacyNodes).X[i],
+            (this.nodes as LegacyNodes).Y[i],
+            (this.nodes as LegacyNodes).Z[i]
+          ]
+          const ptj: vec3 = [
+            (this.nodes as LegacyNodes).X[j],
+            (this.nodes as LegacyNodes).Y[j],
+            (this.nodes as LegacyNodes).Z[j]
+          ]
           NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
         } // for j
       } // for i
@@ -1051,7 +1044,7 @@ export class NVMesh {
     if (!isValid) {
       throw Error('not a valid FreeSurfer json pointset')
     }
-    const jcon: Connectome = {
+    const jcon: LegacyConnectome = {
       nodes: {
         names: [],
         prefilled: [],
@@ -1061,6 +1054,7 @@ export class NVMesh {
         Color: [],
         Size: []
       },
+      edges: [],
       // @ts-expect-error not sure where this should come from
       name: this.data_type
     }
@@ -1107,7 +1101,7 @@ export class NVMesh {
     if (!('nodes' in json)) {
       throw Error('not a valid jcon connectome file')
     }
-    return new NVMesh([], [], name, [], opacity, visible, gl, json as Connectome)
+    return new NVMesh([], [], name, [], opacity, visible, gl, json as LegacyConnectome)
   } // loadConnectomeFromJSON()
 
   // wrapper to read meshes, tractograms and connectomes regardless of format

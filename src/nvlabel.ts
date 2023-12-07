@@ -62,14 +62,14 @@ export class NVLabel3DStyle {
 export class NVLabel3D {
   text: string
   style: NVLabel3DStyle
-  points: number[][]
+  points: number[]
 
   /**
    * @param text - The text of the label
    * @param style - The style of the label
    * @param points - An array of points label for label lines
    */
-  constructor(text: string, style: NVLabel3DStyle, points: number[][]) {
+  constructor(text: string, style: NVLabel3DStyle, points: number[]) {
     this.text = text
     this.style = style
     this.points = points
