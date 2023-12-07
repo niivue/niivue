@@ -517,7 +517,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onImageLoaded: () => void = () => {}
+  onImageLoaded: (volume: NVImage) => void = () => {}
 
   /**
    * callback function to run when a new mesh is loaded
@@ -528,7 +528,7 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshLoaded: () => void = () => {}
+  onMeshLoaded: (mesh: NVMesh) => void = () => {}
 
   /**
    * callback function to run when the user changes the volume when a 4D image is loaded
@@ -682,10 +682,8 @@ export class Niivue {
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
       if (typeof options[name as keyof typeof options] === 'function') {
-        // @ts-expect-error -- FIXME don't arbitrarily assign parameters
         this[name] = options[name]
       } else {
-        // @ts-expect-error -- FIXME don't arbitrarily assign parameters
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -1814,7 +1812,7 @@ export class Niivue {
     if (!this.opts.dragAndDropEnabled) {
       return
     }
-    const urlsToLoad = []
+    const urlsToLoad: string[] = []
     const dt = e.dataTransfer
     if (!dt) {
       return
@@ -1845,21 +1843,27 @@ export class Niivue {
         }
         this.closeDrawing()
         for (const item of items) {
-          const entry = item.getAsEntry || item.webkitGetAsEntry()
+          const entry = item.webkitGetAsEntry()
           log.debug(entry)
+          if (!entry) {
+            throw new Error('could not get entry from file')
+          }
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              entry.file(async (file) => {
+              ;(entry as FileSystemFileEntry).file(async (file) => {
                 await this.loadBmpTexture(file)
               })
               continue
             }
-            let pairedImageData = ''
+            let pairedImageData: FileSystemEntry
             // check for afni HEAD BRIK pair
             if (entry.name.lastIndexOf('HEAD') !== -1) {
               for (const pairedItem of items) {
-                const pairedEntry = pairedItem.getAsEntry || pairedItem.webkitGetAsEntry()
+                const pairedEntry = pairedItem.webkitGetAsEntry()
+                if (!pairedEntry) {
+                  throw new Error('could not get paired entry')
+                }
                 const fileBaseName = entry.name.substring(0, entry.name.lastIndexOf('HEAD'))
                 const pairedItemBaseName = pairedEntry.name.substring(0, pairedEntry.name.lastIndexOf('BRIK'))
                 if (fileBaseName === pairedItemBaseName) {
@@ -1871,10 +1875,10 @@ export class Niivue {
               continue
             }
             if (MESH_EXTENSIONS.includes(ext)) {
-              entry.file(async (file) => {
+              ;(entry as FileSystemFileEntry).file(async (file) => {
                 const mesh = await NVMesh.loadFromFile({
                   file,
-                  gl: this.gl,
+                  gl: this.gl!,
                   name: file.name
                 })
                 this.uiData.loading$.next(false)
@@ -1882,17 +1886,17 @@ export class Niivue {
               })
               continue
             } else if (ext === 'NVD') {
-              entry.file(async (file) => {
+              ;(entry as FileSystemFileEntry).file(async (file) => {
                 const nvdoc = await NVDocument.loadFromFile(file)
                 this.loadDocument(nvdoc)
                 log.debug('loaded document')
               })
               break
             }
-            entry.file(async (file) => {
-              if (pairedImageData !== '') {
+            ;(entry as FileSystemFileEntry).file(async (file) => {
+              if (pairedImageData) {
                 // if we have paired header/img data
-                pairedImageData.file(async (imgfile) => {
+                ;(pairedImageData as FileSystemFileEntry).file(async (imgfile) => {
                   const volume = await NVImage.loadFromFile({
                     file,
                     urlImgData: imgfile,
@@ -1917,7 +1921,7 @@ export class Niivue {
               }
             })
           } else if (entry.isDirectory) {
-            this.readDirectory(entry)
+            this.readDirectory(entry as FileSystemDirectoryEntry)
           }
         }
       }
@@ -2098,7 +2102,7 @@ export class Niivue {
    * niivue.addMesh(NVMesh.loadFromUrl({url:'../someURL.gii'}))
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  addMesh(mesh) {
+  addMesh(mesh: NVMesh) {
     this.meshes.push(mesh)
     const idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1
     this.setMesh(mesh, idx)

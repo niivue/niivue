@@ -251,7 +251,6 @@ export class NVMesh {
       this.hasConnectome = true
       const keysArray = Object.keys(connectome)
       for (let i = 0, len = keysArray.length; i < len; i++) {
-        // @ts-expect-error -- FIXME this is extremely illegal
         this[keysArray[i]] = connectome[keysArray[i]]
       }
     }
@@ -345,8 +344,8 @@ export class NVMesh {
     } // direction2rgb()
     // Determine color: local, global, dps0, dpv0, etc.
     const fiberColor = this.fiberColor.toLowerCase()
-    let dps = null
-    let dpv = null
+    let dps: number[] | null = null
+    let dpv: number[] | null = null
     if (fiberColor.startsWith('dps') && this.dps && this.dps.length > 0) {
       const n = parseInt(fiberColor.substring(3))
       if (n < this.dps.length && this.dps[n].vals.length === n_count) {
@@ -518,7 +517,7 @@ export class NVMesh {
     const min_mm = this.fiberLength
     //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
     const primitiveRestart = Math.pow(2, 32) - 1 // for gl.UNSIGNED_INT
-    const indices = []
+    const indices: number[] = []
     let stride = -1
     for (let i = 0; i < n_count; i++) {
       // let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
@@ -1343,11 +1342,11 @@ export class NVMesh {
     if ('useNegativeCmap' in layer) {
       useNegativeCmap = layer.useNegativeCmap
     }
-    let cal_min = null
+    let cal_min: number | null = null
     if ('cal_min' in layer) {
       cal_min = layer.cal_min
     }
-    let cal_max = null
+    let cal_max: number | null = null
     if ('cal_max' in layer) {
       cal_max = layer.cal_max
     }
@@ -1442,7 +1441,7 @@ export class NVMesh {
    *
    * @returns NVMesh instance
    */
-  async loadFromFile({
+  static async loadFromFile({
     file,
     gl,
     name = '',
@@ -1459,7 +1458,7 @@ export class NVMesh {
     }
 
     const buffer = await NVMesh.readFileAsync(file)
-    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
