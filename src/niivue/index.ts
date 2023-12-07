@@ -66,7 +66,7 @@ import { cmapper } from '../colortables.js'
 import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } from '../nvdocument.js'
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.js'
-import { NVConnectome } from '../nvconnectome.js'
+import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE, ImageFromUrlOptions } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { Connectome, LegacyConnectome, NVConnectomeNode } from '../types.js'
@@ -293,36 +293,37 @@ export class Niivue {
   drawPenFillPts = [] // store mouse points for filled pen
   overlayTexture = null
   overlayTextureID = []
-  sliceMMShader = null
-  orientCubeShader = null
-  orientCubeShaderVAO = null
-  rectShader = null
-  renderShader: Shader | null = null
-  renderGradientShader = null
-  renderSliceShader = null
-  renderVolumeShader = null
-  pickingMeshShader = null
-  pickingImageShader = null
-  colorbarShader = null
+  sliceMMShader?: Shader
+  orientCubeShader?: Shader
+  orientCubeShaderVAO?: WebGLVertexArrayObject
+  rectShader?: Shader
+  renderShader?: Shader
+  lineShader?: Shader
+  renderGradientShader?: Shader
+  renderSliceShader?: Shader
+  renderVolumeShader?: Shader
+  pickingMeshShader?: Shader
+  pickingImageShader?: Shader
+  colorbarShader?: Shader
   fontShader: Shader | null = null
   fontTexture = null
-  circleShader = null
+  circleShader?: Shader
   matCapTexture = null
   bmpShader: WebGLShader | null = null
   bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
   thumbnailVisible = false
   bmpTextureWH = 1.0 // thumbnail width/height ratio
-  growCutShader = null
+  growCutShader?: Shader
   orientShaderAtlasU = null
   orientShaderAtlasI = null
-  orientShaderU = null
-  orientShaderI = null
-  orientShaderF = null
-  orientShaderRGBU = null
-  surfaceShader = null
-  blurShader = null
-  sobelShader = null
-  genericVAO = null // used for 2D slices, 2D lines, 2D Fonts
+  orientShaderU?: Shader
+  orientShaderI?: Shader
+  orientShaderF?: Shader
+  orientShaderRGBU?: Shader
+  surfaceShader?: Shader
+  blurShader?: Shader
+  sobelShader?: Shader
+  genericVAO?: WebGLVertexArrayObject // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
   DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
@@ -372,7 +373,7 @@ export class Niivue {
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   overlays: NVImage[] = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is necessary?
   deferredVolumes: NVImage[] = []
-  deferredMeshes: NVMesh[] = []
+  deferredMeshes: LoadFromUrlParams[] = []
   furthestVertexFromOrigin = 100
   volScale = []
   vox = []
@@ -385,6 +386,8 @@ export class Niivue {
     leftTopMM: unknown[]
     fovMM: number[]
   }> = [] // empty array
+
+  cuboidVertexBuffer?: WebGLBuffer
 
   otherNV: Niivue | Niivue[] | null = null // another niivue instance that we wish to sync position with
   volumeObject3D = null
@@ -3604,7 +3607,7 @@ export class Niivue {
    * niivue.loadMeshes([{url: 'someMesh.gii'}])
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  async loadMeshes(meshList) {
+  async loadMeshes(meshList: LoadFromUrlParams[]) {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -3622,8 +3625,8 @@ export class Niivue {
       // await this.init();
     }
     this.meshes = []
-    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    this.gl!.clearColor(0.0, 0.0, 0.0, 1.0)
+    this.gl!.clear(this.gl!.COLOR_BUFFER_BIT)
 
     this.uiData.loading$.next(false)
     // for loop to load all volumes in volumeList
@@ -3642,7 +3645,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectomeFromUrl(url) {
+  async loadConnectomeFromUrl(url: string) {
     const response = await fetch(url)
     const json = await response.json()
     return this.loadConnectome(json)
@@ -3654,7 +3657,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadFreeSurferConnectomeFromUrl(url) {
+  async loadFreeSurferConnectomeFromUrl(url: string) {
     const response = await fetch(url)
     const json = await response.json()
     return this.loadFreeSurferConnectome(json)
@@ -3666,7 +3669,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadFreeSurferConnectome(json) {
+  async loadFreeSurferConnectome(json: FreeSurferConnectome) {
     const connectome = NVConnectome.convertFreeSurferConnectome(json)
     return this.loadConnectome(connectome)
   }
@@ -4837,12 +4840,16 @@ export class Niivue {
       0 // LPI
     ]
 
-    this.cuboidVertexBuffer = this.gl.createBuffer()
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
+
+    this.cuboidVertexBuffer = this.gl.createBuffer()!
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(rectStrip), this.gl.STATIC_DRAW)
 
     // setup generic VAO style sheet:
-    this.genericVAO = this.gl.createVertexArray() // 2D slices, fonts, lines
+    this.genericVAO = this.gl.createVertexArray()! // 2D slices, fonts, lines
     this.gl.bindVertexArray(this.genericVAO)
     // this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.cuboidVertexBuffer); //triangle strip does not need indices
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
@@ -5238,6 +5245,11 @@ export class Niivue {
       return
     } // skip completely transparent layers
     let outTexture = null
+
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
+
     this.gl.bindVertexArray(this.unusedVAO)
     if (this.crosshairs3D !== null) {
       this.crosshairs3D.mm[0] = NaN
@@ -5261,7 +5273,7 @@ export class Niivue {
       this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
       this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
       // add shader to object
-      const pickingShader = this.pickingImageShader
+      const pickingShader = this.pickingImageShader!
       pickingShader.use(this.gl)
       this.gl.uniform1i(pickingShader.uniforms.volume, 0)
       this.gl.uniform1i(pickingShader.uniforms.colormap, 1)
@@ -5542,18 +5554,21 @@ export class Niivue {
         mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
       }
     }
-    this.gl.uniform1f(orientShader.uniforms.layer, layer)
-    this.gl.uniform1f(orientShader.uniforms.cal_minNeg, mnNeg)
-    this.gl.uniform1f(orientShader.uniforms.cal_maxNeg, mxNeg)
+    if (!orientShader) {
+      throw new Error('orientShader undefined')
+    }
+    this.gl.uniform1f(orientShader.uniforms.layer ?? null, layer)
+    this.gl.uniform1f(orientShader.uniforms.cal_minNeg ?? null, mnNeg)
+    this.gl.uniform1f(orientShader.uniforms.cal_maxNeg ?? null, mxNeg)
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
-    this.gl.uniform1i(orientShader.uniforms.intensityVol, 6)
-    this.gl.uniform1i(orientShader.uniforms.blend3D, 5)
-    this.gl.uniform1i(orientShader.uniforms.colormap, 1)
+    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 6)
+    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 5)
+    this.gl.uniform1i(orientShader.uniforms.colormap ?? null, 1)
     // this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
-    this.gl.uniform1f(orientShader.uniforms.scl_inter, hdr.scl_inter)
-    this.gl.uniform1f(orientShader.uniforms.scl_slope, hdr.scl_slope)
-    this.gl.uniform1f(orientShader.uniforms.opacity, opacity)
-    this.gl.uniform1i(orientShader.uniforms.modulationVol, 7)
+    this.gl.uniform1f(orientShader.uniforms.scl_inter ?? null, hdr.scl_inter)
+    this.gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope)
+    this.gl.uniform1f(orientShader.uniforms.opacity ?? null, opacity)
+    this.gl.uniform1i(orientShader.uniforms.modulationVol ?? null, 7)
     //  this.gl.uniform1f(orientShader.uniforms["cal_min"], 2);
     //  this.gl.uniform1f(orientShader.uniforms["cal_max"], 3);
 

@@ -55,6 +55,8 @@ export class Shader {
   program: WebGLProgram
   uniforms: Record<string, WebGLUniformLocation | null> = {}
   clipPlaneClrLoc?: WebGLUniformLocation
+  mvpLoc?: WebGLUniformLocation
+  drawOpacityLoc?: WebGLUniformLocation
 
   constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
     this.program = compileShader(gl, vertexSrc, fragmentSrc)
@@ -79,7 +81,7 @@ export class Shader {
     }
 
     for (const unif in this.uniforms) {
-      this.uniforms[unif] = gl.getUniformLocation(this.program, unif)
+      this.uniforms[unif] = gl.getUniformLocation(this.program, unif)!
     }
   }
 
