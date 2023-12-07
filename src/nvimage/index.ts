@@ -2542,7 +2542,7 @@ export class NVImage {
     return saveData
   } // saveToDisk()
 
-  static async fetchDicomData(url: string): Promise<ArrayBuffer[]> {
+  static async fetchDicomData(url: string, headers: Record<string, string> = {}): Promise<ArrayBuffer[]> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -2557,7 +2557,7 @@ export class NVImage {
       manifestUrl = new URL('niivue-manifest.txt', url)
     }
 
-    let response = await fetch(manifestUrl)
+    let response = await fetch(manifestUrl, { headers })
     if (!response.ok) {
       throw Error(response.statusText)
     }
@@ -2569,7 +2569,7 @@ export class NVImage {
     const dataBuffer = []
     for (const line of lines) {
       const fileUrl = new URL(line, folderUrl)
-      response = await fetch(fileUrl)
+      response = await fetch(fileUrl, { headers })
       if (!response.ok) {
         throw Error(response.statusText)
       }
@@ -2579,13 +2579,13 @@ export class NVImage {
     return dataBuffer
   }
 
-  static async fetchPartial(url: string, bytesToLoad: number): Promise<Response> {
+  static async fetchPartial(url: string, bytesToLoad: number, headers: Record<string, string> = {}): Promise<Response> {
     try {
       return fetch(url, {
-        headers: { range: 'bytes=0-' + bytesToLoad }
+        headers: { range: 'bytes=0-' + bytesToLoad, ...headers }
       })
     } catch {
-      return fetch(url)
+      return fetch(url, { headers })
     }
   }
 
@@ -2596,6 +2596,7 @@ export class NVImage {
   static async loadFromUrl({
     url = '',
     urlImgData = '',
+    headers = {},
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -2633,7 +2634,7 @@ export class NVImage {
       // let response = await fetch(url, { headers: { range: "bytes=0-352" } });
       // NIfTI header first 352 bytes
       // however, GZip header might can add bloat https://en.wikipedia.org/wiki/Gzip
-      let response = await this.fetchPartial(url, 512)
+      let response = await this.fetchPartial(url, 512, headers)
       dataBuffer = await response.arrayBuffer()
       let bytes = new Uint8Array(dataBuffer)
       let isGz = false
@@ -2673,7 +2674,7 @@ export class NVImage {
         const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1)
         const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel
         if (dataBuffer.byteLength < bytesToLoad) {
-          response = await this.fetchPartial(url, bytesToLoad)
+          response = await this.fetchPartial(url, bytesToLoad, headers)
           dataBuffer = await response.arrayBuffer()
           if (isGz) {
             let bytes = new Uint8Array(dataBuffer)
@@ -2695,10 +2696,10 @@ export class NVImage {
     if (dataBuffer) {
       //
     } else if (isManifest) {
-      dataBuffer = await NVImage.fetchDicomData(url)
+      dataBuffer = await NVImage.fetchDicomData(url, headers)
       imageType = NVIMAGE_TYPE.DCM_MANIFEST
     } else {
-      const response = await fetch(url)
+      const response = await fetch(url, { headers })
       if (!response.ok) {
         throw Error(response.statusText)
       }
@@ -2736,10 +2737,10 @@ export class NVImage {
 
     let pairedImgData = null
     if (urlImgData.length > 0) {
-      let resp = await fetch(urlImgData)
+      let resp = await fetch(urlImgData, { headers })
       if (resp.status === 404) {
         if (urlImgData.lastIndexOf('BRIK') !== -1) {
-          resp = await fetch(urlImgData + '.gz')
+          resp = await fetch(urlImgData + '.gz', { headers })
         }
       }
       pairedImgData = await resp.arrayBuffer()

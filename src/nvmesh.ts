@@ -21,6 +21,7 @@ export type NVMeshLayer = {
   name?: string
   key?: string
   url?: string
+  headers?: Record<string, string>
   opacity: number
   colormap: string
   colormapNegative: string
@@ -91,8 +92,9 @@ type BaseLoadParams = {
 }
 
 export type LoadFromUrlParams = BaseLoadParams & {
-  // the resolvable URL pointing to a nifti image to load
+  // the resolvable URL pointing to a mesh to load
   url: string
+  headers?: Record<string, string>
 }
 
 type LoadFromFileParams = BaseLoadParams & {
@@ -1295,7 +1297,7 @@ export class NVMesh {
         throw new Error('layer: missing url')
       }
       // fetch url otherwise
-      const response = await fetch(layer.url)
+      const response = await fetch(layer.url, { headers: layer.headers })
       if (!response.ok) {
         throw Error(response.statusText)
       }
@@ -1370,6 +1372,7 @@ export class NVMesh {
    */
   static async loadFromUrl({
     url = '',
+    headers = {},
     gl,
     name = '',
     opacity = 1.0,
@@ -1399,7 +1402,7 @@ export class NVMesh {
       throw Error('gl context is null')
     }
     // TRX format is special (its a zip archive of multiple files)
-    const response = await fetch(url)
+    const response = await fetch(url, { headers })
     if (!response.ok) {
       throw Error(response.statusText)
     }

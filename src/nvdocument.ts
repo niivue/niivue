@@ -523,8 +523,8 @@ export class NVDocument {
       // update image options on current image settings
       imageOptions.colormap = this.volumes[0].colormap
       imageOptions.opacity = this.volumes[0].opacity
-      imageOptions.cal_max = this.volumes[0].cal_max
-      imageOptions.cal_min = this.volumes[0].cal_min
+      imageOptions.cal_max = this.volumes[0].cal_max || NaN
+      imageOptions.cal_min = this.volumes[0].cal_min || NaN
 
       if (imageOptions) {
         imageOptionsArray.push(imageOptions)
@@ -578,8 +578,8 @@ export class NVDocument {
         // update image options on current image settings
         imageOptions.colormap = volume.colormap
         imageOptions.opacity = volume.opacity
-        imageOptions.cal_max = volume.cal_max
-        imageOptions.cal_min = volume.cal_min
+        imageOptions.cal_max = volume.cal_max || NaN
+        imageOptions.cal_min = volume.cal_min || NaN
 
         imageOptionsArray.push(imageOptions)
 
