@@ -57,7 +57,7 @@ import {
 } from '../shader-srcs.js'
 import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
-import { MeshType, NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
 import { Log } from '../logger.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
@@ -67,7 +67,7 @@ import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } 
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.js'
 import { NVConnectome } from '../nvconnectome.js'
-import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE } from '../nvimage/index.js'
+import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE, ImageFromUrlOptions } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { Connectome, LegacyConnectome, NVConnectomeNode } from '../types.js'
 import {
@@ -297,7 +297,7 @@ export class Niivue {
   circleShader = null
   matCapTexture = null
   bmpShader = null
-  bmpTexture = null // thumbnail WebGLTexture object
+  bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
   thumbnailVisible = false
   bmpTextureWH = 1.0 // thumbnail width/height ratio
   growCutShader = null
@@ -387,7 +387,7 @@ export class Niivue {
     normalizeValues: false
   }
 
-  meshShaders = [
+  meshShaders: Array<{ Name: string; Frag: string }> = [
     {
       Name: 'Phong',
       Frag: fragMeshShader
@@ -477,7 +477,7 @@ export class Niivue {
    * console.log('values: ', data.values)
    * }
    */
-  onLocationChange = () => {}
+  onLocationChange: (location: unknown) => void = () => {}
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
    * @type {function}
@@ -487,7 +487,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onIntensityChange = () => {}
+  onIntensityChange: (volume: NVImage) => void = () => {}
 
   /**
    * callback function to run when a new volume is loaded
@@ -521,7 +521,7 @@ export class Niivue {
    * console.log('frameNumber: ', frameNumber)
    * }
    */
-  onFrameChange = () => {}
+  onFrameChange: (volume: NVImage, index: number) => void = () => {}
 
   /**
    * callback function to run when niivue reports an error
@@ -573,8 +573,8 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onVolumeAddedFromUrl = () => {}
-  onVolumeWithUrlRemoved = () => {}
+  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => {}
+  onVolumeWithUrlRemoved: (url: string) => void = () => {}
 
   /**
    * callback function to run when updateGLVolume is called (most users will not need to use
@@ -596,14 +596,14 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshAddedFromUrl = () => {}
+  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams) => void = () => {}
 
   // seems redundant with onMeshLoaded
   onMeshAdded = () => {}
-  onMeshWithUrlRemoved = () => {}
+  onMeshWithUrlRemoved: (url: string) => void = () => {}
 
   // not implemented anywhere...
-  onZoom3DChange = () => {}
+  onZoom3DChange: (zoom: number) => void = () => {}
 
   /**
    * callback function to run when the user changes the rotation of the 3D rendering
@@ -624,10 +624,10 @@ export class Niivue {
    * console.log('clipPlane: ', clipPlane)
    * }
    */
-  onClipPlaneChange = () => {}
-  onCustomMeshShaderAdded = () => {}
-  onMeshShaderChanged = () => {}
-  onMeshPropertyChanged = () => {}
+  onClipPlaneChange: (clipPlane: number[]) => void = () => {}
+  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
+  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => {}
+  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => {}
 
   /**
    * callback function to run when the user loads a new NiiVue document
@@ -644,7 +644,7 @@ export class Niivue {
   opts = { ...DEFAULT_OPTIONS }
   scene = { ...this.document.scene }
 
-  mediaUrlMap: Map<string, string> = new Map()
+  mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
   initialized = false
   currentDrawUndoBitmap: number
   loadingText: string
@@ -1096,23 +1096,22 @@ export class Niivue {
   // not included in public docs
   // handler for mouse left button down
   // note: no test yet
-  mouseLeftButtonHandler(e) {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-    this.mouseDown(pos.x, pos.y)
-    this.mouseClick(pos.x, pos.y)
+  mouseLeftButtonHandler(e: MouseEvent) {
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    this.mouseDown(pos!.x, pos!.y)
+    this.mouseClick(pos!.x, pos!.y)
   }
 
   // not included in public docs
   // handler for mouse center button down
   // note: no test yet
-  mouseCenterButtonHandler(e) {
-    // this.uiData.isDragging = true;
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr]
+  mouseCenterButtonHandler(e: MouseEvent) {
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
       return
     }
-    this.setDragStart(pos.x, pos.y)
+    this.setDragStart(pos!.x, pos!.y)
     if (!this.uiData.isDragging) {
       this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
     }
@@ -1123,14 +1122,14 @@ export class Niivue {
   // not included in public docs
   // handler for mouse right button down
   // note: no test yet
-  mouseRightButtonHandler(e) {
+  mouseRightButtonHandler(e: MouseEvent) {
     // this.uiData.isDragging = true;
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr]
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
       return
     }
-    this.setDragStart(pos.x, pos.y)
+    this.setDragStart(pos!.x, pos!.y)
     if (!this.uiData.isDragging) {
       this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
     }
@@ -1143,7 +1142,7 @@ export class Niivue {
    * @param {Array} array an array of two values
    * @returns {Array} an array of two values representing the min and max voxel indices
    */
-  calculateMinMaxVoxIdx(array) {
+  calculateMinMaxVoxIdx(array: number[]) {
     if (array.length > 2) {
       throw new Error('array must not contain more than two values')
     }
@@ -1192,6 +1191,9 @@ export class Niivue {
 
     const hdr = this.volumes[volIdx].hdr
     const img = this.volumes[volIdx].img
+    if (!hdr || !img) {
+      return
+    }
 
     const xdim = hdr.dims[1]
     const ydim = hdr.dims[2]
@@ -1221,7 +1223,7 @@ export class Niivue {
     this.onIntensityChange(this.volumes[volIdx])
   }
 
-  generateMouseUpCallback(fracStart, fracEnd) {
+  generateMouseUpCallback(fracStart: number[], fracEnd: unknown) {
     // calculate details for callback
     const tileStart = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
     const tileEnd = this.tileIndex(this.uiData.dragEnd[0], this.uiData.dragEnd[1])
@@ -1259,7 +1261,7 @@ export class Niivue {
   // handler for mouse button up (all buttons)
   // note: no test yet
   mouseUpListener() {
-    function isFunction(test) {
+    function isFunction(test: unknown) {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
     // let fracPos = this.canvasPos2frac(this.mousePos);
@@ -1527,7 +1529,7 @@ export class Niivue {
 
   // not included in public docs
   // handler for keyboard shortcuts
-  keyUpListener(e) {
+  keyUpListener(e: KeyboardEvent) {
     if (e.code === this.opts.clipPlaneHotKey) {
       /* if (this.opts.sliceType!= SLICE_TYPE.RENDER) {
       return;
@@ -1629,6 +1631,9 @@ export class Niivue {
   // setup interactions with the canvas. Mouse clicks and touches
   // note: no test yet
   registerInteractions() {
+    if (!this.canvas) {
+      throw new Error('canvas undefined')
+    }
     // add mousedown
     this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this))
     // add mouseup
@@ -1665,25 +1670,25 @@ export class Niivue {
   }
 
   // not included in public docs
-  dragEnterListener(e) {
+  dragEnterListener(e: MouseEvent) {
     e.stopPropagation()
     e.preventDefault()
   }
 
   // not included in public docs
-  dragOverListener(e) {
+  dragOverListener(e: MouseEvent) {
     e.stopPropagation()
     e.preventDefault()
   }
 
   // not included in public docs
-  getFileExt(fullname, upperCase = true) {
+  getFileExt(fullname: string, upperCase = true) {
     log.debug('fullname: ', fullname)
     const re = /(?:\.([^.]+))?$/
-    let ext = re.exec(fullname)[1]
+    let ext = re.exec(fullname)![1]
     ext = ext.toUpperCase()
     if (ext === 'GZ') {
-      ext = re.exec(fullname.slice(0, -3))[1] // img.trk.gz -> img.trk
+      ext = re.exec(fullname.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
     return upperCase ? ext : ext.toLowerCase() // developer can choose to have extensions as upper or lower
@@ -2895,14 +2900,14 @@ export class Niivue {
 
   /**
    * convert spherical AZIMUTH, ELEVATION to Cartesian
-   * @param {number} azimuth azimuth number
-   * @param {number} elevation elevation number
-   * @returns {array} the converted [x, y, z] coordinates
+   * @param azimuth - azimuth number
+   * @param elevation - elevation number
+   * @returns the converted [x, y, z] coordinates
    * @example
    * niivue = new Niivue()
    * xyz = niivue.sph2cartDeg(42, 42)
    */
-  sph2cartDeg(azimuth, elevation) {
+  sph2cartDeg(azimuth: number, elevation: number): number[] {
     // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesion
     // see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
     // reverse with cart2sph
@@ -2921,13 +2926,13 @@ export class Niivue {
 
   /**
    * update the clip plane orientation in 3D view mode
-   * @param {array} azimuthElevationDepth a two component vector. azimuth: camera position in degrees around object, typically 0..360 (or -180..+180). elevation: camera height in degrees, range -90..90
+   * @param azimuthElevationDepth - a two component vector. azimuth: camera position in degrees around object, typically 0..360 (or -180..+180). elevation: camera height in degrees, range -90..90
    * @example
    * niivue = new Niivue()
    * niivue.setClipPlane([42, 42])
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  async setClipPlane(depthAzimuthElevation) {
+  async setClipPlane(depthAzimuthElevation: number[]) {
     //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
     //  azimuthElevation is 2 component vector [a, e, d]
     //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
@@ -3155,8 +3160,8 @@ export class Niivue {
 
   // not included in public docs.
   // note: marked for removal at some point in the future (this just makes a test sphere)
-  overlayRGBA(volume) {
-    const hdr = volume.hdr
+  overlayRGBA(volume: NVImage) {
+    const hdr = volume.hdr!
     const vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
     const imgRGBA = new Uint8ClampedArray(vox * 4)
     const radius = 0.2 * Math.min(Math.min(hdr.dims[1], hdr.dims[2]), hdr.dims[3])
@@ -4466,16 +4471,16 @@ export class Niivue {
 
   // not included in public docs
   // creates 4-component (red,green,blue,alpha) uint8 texture on GPU
-  loadPngAsTexture(pngUrl, textureNum) {
+  loadPngAsTexture(pngUrl: string, textureNum: number) {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
         let pngTexture = []
         if (textureNum === 4) {
           if (this.bmpTexture !== null) {
-            this.gl.deleteTexture(this.bmpTexture)
+            this.gl!.deleteTexture(this.bmpTexture)
           }
-          this.bmpTexture = this.gl.createTexture()
+          this.bmpTexture = this.gl!.createTexture()
           pngTexture = this.bmpTexture
           this.bmpTextureWH = img.width / img.height
           this.gl.activeTexture(this.gl.TEXTURE4)
@@ -4673,7 +4678,7 @@ export class Niivue {
     fragmentShaderText,
     name = 'Custom'
     // vertexShaderText = ""
-  ) {
+  ): { Name: string; Frag: string } {
     if (!fragmentShaderText) {
       throw new Error('Need fragment shader')
     }
@@ -8450,7 +8455,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  frac2mm(frac, volIdx = 0, isForceSliceMM = false) {
+  frac2mm(frac: number[], volIdx = 0, isForceSliceMM = false) {
     const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (this.volumes.length > 0) {
       if (isForceSliceMM || this.opts.isSliceMM) {

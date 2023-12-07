@@ -3233,8 +3233,8 @@ export class NVImage {
    * Update options for image
    */
   applyOptionsUpdate(options: ImageFromUrlOptions): void {
-    this.hdr!.cal_min = options.cal_min
-    this.hdr!.cal_max = options.cal_max
+    this.hdr!.cal_min = options.cal_min!
+    this.hdr!.cal_max = options.cal_max!
     Object.assign(this, options)
   }
 

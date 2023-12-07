@@ -102,9 +102,9 @@ export type ImageFromUrlOptions = {
   // the opacity for this image (defaults to 1)
   opacity: number
   // minimum intensity for color brightness/contrast
-  cal_min: number
+  cal_min?: number
   // maximum intensity for color brightness/contrast
-  cal_max: number
+  cal_max?: number
   // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading, defaults to true)
   trustCalMinMax: boolean
   // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges, defaults to 0.02)

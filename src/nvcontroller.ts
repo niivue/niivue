@@ -89,7 +89,7 @@ export class NVController {
         break
       case NVMESSAGE.FRAME_CHANGED:
         {
-          const volume = this.niivue.getMediaByUrl(msg.url)
+          const volume = this.niivue.getMediaByUrl(msg.url) as NVImage
           if (volume) {
             volume.frame4D = msg.index
           }
@@ -115,7 +115,7 @@ export class NVController {
         break
       case NVMESSAGE.COLORMAP_CHANGED:
         {
-          const volume = this.niivue.getMediaByUrl(msg.url)
+          const volume = this.niivue.getMediaByUrl(msg.url) as NVImage
           volume._colormap = msg.colormap
           this.niivue.updateGLVolume()
         }
@@ -123,14 +123,14 @@ export class NVController {
 
       case NVMESSAGE.OPACITY_CHANGED:
         {
-          const volume = this.niivue.getMediaByUrl(msg.url)
+          const volume = this.niivue.getMediaByUrl(msg.url) as NVImage
           volume._opacity = msg.opacity
           this.niivue.updateGLVolume()
         }
         break
       case NVMESSAGE.MESH_FROM_URL_ADDED:
         if (!this.niivue.getMediaByUrl(msg.meshOptions.url)) {
-          msg.meshOptions.gl = this.niivue.gl
+          msg.meshOptions.gl = this.niivue.gl!
           NVMesh.loadFromUrl(msg.meshOptions).then((mesh) => {
             this.addMesh(mesh, msg.meshOptions.url)
           })
@@ -158,7 +158,7 @@ export class NVController {
         break
 
       case NVMESSAGE.MESH_PROPERTY_CHANGED:
-        this.niivue.meshes[msg.meshIndex].setProperty(msg.key, msg.val, this.niivue.gl)
+        this.niivue.meshes[msg.meshIndex].setProperty(msg.key as keyof NVMesh, msg.val, this.niivue.gl!)
         break
     }
     this.niivue.drawScene()
@@ -237,7 +237,7 @@ export class NVController {
         // TODO this was "volume with url added", but there is VOLUME_ADDED_FROM_URL -- not sure if that is meant?
         // That would break the switch statement above
         op: NVMESSAGE.VOLUME_LOADED_FROM_URL,
-        url
+        url: url!
       })
     }
   }
@@ -295,7 +295,7 @@ export class NVController {
       const colormap = volume.colormap
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.COLORMAP_CHANGED,
-        url,
+        url: url!,
         colormap
       })
     }
@@ -310,7 +310,7 @@ export class NVController {
       const opacity = volume.opacity
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.OPACITY_CHANGED,
-        url,
+        url: url!,
         opacity
       })
     }
@@ -326,7 +326,7 @@ export class NVController {
       const url = this.niivue.mediaUrlMap.get(volume)
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.FRAME_CHANGED,
-        url,
+        url: url!,
         index
       })
     }

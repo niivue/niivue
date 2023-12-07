@@ -184,6 +184,8 @@ type Scene = {
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
   pan2Dxyzmm: number[]
+  _elevation?: number
+  _azimuth?: number
 }
 
 type DocumentData = {
