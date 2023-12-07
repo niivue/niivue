@@ -55,14 +55,14 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "@lukeed/uuid": "^2.0.1",
     "@ungap/structured-clone": "^1.0.2",
     "array-equal": "^1.0.2",
     "daikon": "^1.2.43",
     "fflate": "^0.7.4",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.6.8",
-    "rxjs": "^7.8.0",
-    "uuid": "^9.0.1"
+    "rxjs": "^7.8.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
@@ -70,7 +70,6 @@
     "@types/array-equal": "^1.0.2",
     "@types/node": "^20.9.5",
     "@types/ungap__structured-clone": "^0.3.3",
-    "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "clean-jsdoc-theme": "^4.2.6",

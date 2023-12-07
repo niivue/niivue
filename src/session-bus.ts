@@ -1,5 +1,5 @@
 import { WebSocketSubject, webSocket } from 'rxjs/webSocket'
-import { v4 as uuidv4 } from 'uuid'
+import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Message, NVMESSAGE } from './nvmessage.js'
 
 /**

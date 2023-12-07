@@ -1,5 +1,5 @@
 import { vec3 } from 'gl-matrix'
-import { v4 as uuidv4 } from 'uuid'
+import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Log } from './logger.js'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
