@@ -41,6 +41,10 @@ export * from './utils.js'
  * @param {function} [onOpacityChange=()=>{}] callback for color map change
  */
 export class NVImage {
+  // TODO these were needed to fix nvdocument
+  cal_min
+  cal_max
+
   constructor(
     dataBuffer, // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     name = '',
