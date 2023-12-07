@@ -57,7 +57,7 @@ import {
 } from '../shader-srcs.js'
 import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshFromUrlOptions, NVMeshLayer } from '../nvmesh.js'
 import { Log } from '../logger.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
@@ -94,6 +94,18 @@ export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 
 const log = new Log()
+
+type DragReleaseParams = {
+  fracStart: number[]
+  fracEnd: number[]
+  voxStart: number[]
+  voxEnd: number[]
+  mmStart: vec4
+  mmEnd: vec4
+  mmLength: number
+  tileIdx: number
+  axCorSag: SLICE_TYPE
+}
 
 /**
  * mesh file formats that can be loaded
@@ -240,13 +252,13 @@ type UIData = {
   currY: number
   currentTouchTime: number
   lastTouchTime: number
-  touchTimer: null
+  touchTimer: NodeJS.Timeout | null
   doubleTouch: boolean
   isDragging: boolean
-  dragStart: [0.0, 0.0]
-  dragEnd: [0.0, 0.0]
+  dragStart: number[]
+  dragEnd: number[]
   dragClipPlaneStartDepthAziElev: number[]
-  lastTwoTouchDistance: 0
+  lastTwoTouchDistance: number
   multiTouchGesture: boolean
   loading$: Subject<unknown>
   dpr?: number
@@ -365,7 +377,14 @@ export class Niivue {
   volScale = []
   vox = []
   mousePos = [0, 0]
-  screenSlices = [] // empty array
+  screenSlices: Array<{
+    leftTopWidthHeight: number
+    axCorSag: SLICE_TYPE
+    sliceFrac: number
+    AxyzMxy: unknown[]
+    leftTopMM: unknown[]
+    fovMM: number[]
+  }> = [] // empty array
 
   otherNV: Niivue | Niivue[] | null = null // another niivue instance that we wish to sync position with
   volumeObject3D = null
@@ -454,7 +473,7 @@ export class Niivue {
    *   console.log('drag ended')
    * }
    */
-  onDragRelease = () => {} // function to call when contrast drag is released by default. Can be overridden by user
+  onDragRelease: (params: DragReleaseParams) => void = () => {} // function to call when contrast drag is released by default. Can be overridden by user
 
   /**
    * callback function to run when the left mouse button is released
@@ -464,7 +483,7 @@ export class Niivue {
    *   console.log('mouse up')
    * }
    */
-  onMouseUp = () => {}
+  onMouseUp: (data: Partial<UIData>) => void = () => {}
   /**
    * callback function to run when the crosshair location changes
    * @type {function}
@@ -498,7 +517,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onImageLoaded = () => {}
+  onImageLoaded: () => void = () => {}
 
   /**
    * callback function to run when a new mesh is loaded
@@ -509,7 +528,7 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshLoaded = () => {}
+  onMeshLoaded: () => void = () => {}
 
   /**
    * callback function to run when the user changes the volume when a 4D image is loaded
@@ -531,7 +550,10 @@ export class Niivue {
    * console.log('error: ', error)
    * }
    */
-  onError = () => {}
+  onError: () => void = () => {}
+
+  /// TODO was undocumented
+  onColormapChange: () => void = () => {}
 
   /**
    * callback function to run when niivue reports detailed info
@@ -541,7 +563,7 @@ export class Niivue {
    * console.log('info: ', info)
    * }
    */
-  onInfo = () => {}
+  onInfo: () => void = () => {}
 
   /**
    * callback function to run when niivue reports a warning
@@ -551,7 +573,7 @@ export class Niivue {
    * console.log('warn: ', warn)
    * }
    */
-  onWarn = () => {}
+  onWarn: () => void = () => {}
 
   /**
    * callback function to run when niivue reports a debug message
@@ -561,7 +583,7 @@ export class Niivue {
    * console.log('debug: ', debug)
    * }
    */
-  onDebug = () => {}
+  onDebug: () => void = () => {}
 
   /**
    * callback function to run when a volume is added from a url
@@ -1151,11 +1173,7 @@ export class Niivue {
 
   // not included in public docs
   // note: no test yet
-  calculateNewRange({
-    // fracStart = null,
-    // fracEnd = null,
-    volIdx = 0
-  } = {}) {
+  calculateNewRange({ volIdx = 0 } = {}) {
     if (this.opts.sliceType === SLICE_TYPE.RENDER && this.sliceMosaicString.length < 1) {
       return
     }
@@ -1223,7 +1241,7 @@ export class Niivue {
     this.onIntensityChange(this.volumes[volIdx])
   }
 
-  generateMouseUpCallback(fracStart: number[], fracEnd: unknown) {
+  generateMouseUpCallback(fracStart: number[], fracEnd: number[]) {
     // calculate details for callback
     const tileStart = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
     const tileEnd = this.tileIndex(this.uiData.dragEnd[0], this.uiData.dragEnd[1])
@@ -1239,7 +1257,7 @@ export class Niivue {
     const mmStart = this.frac2mm(fracStart)
     const mmEnd = this.frac2mm(fracEnd)
     const v = vec3.create()
-    vec3.sub(v, mmStart, mmEnd)
+    vec3.sub(v, vec3.fromValues(mmStart[0], mmStart[1], mmStart[2]), vec3.fromValues(mmEnd[0], mmEnd[1], mmEnd[2]))
     const mmLength = vec3.len(v)
     const voxStart = this.frac2vox(fracStart)
     const voxEnd = this.frac2vox(fracEnd)
@@ -1305,16 +1323,16 @@ export class Niivue {
       if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
         return
       }
-      this.calculateNewRange({ fracStart, fracEnd, volIdx: 0 })
-      this.refreshLayers(this.volumes[0], 0, this.volumes.length)
+      this.calculateNewRange({ volIdx: 0 })
+      this.refreshLayers(this.volumes[0], 0)
     }
     this.drawScene()
   }
 
   // not included in public docs
-  checkMultitouch(e) {
+  checkMultitouch(e: TouchEvent) {
     if (this.uiData.touchdown && !this.uiData.multiTouchGesture) {
-      const rect = this.canvas.getBoundingClientRect()
+      const rect = this.canvas!.getBoundingClientRect()
       this.mouseDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
 
       this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
@@ -1324,7 +1342,7 @@ export class Niivue {
   // not included in public docs
   // handler for single finger touch event (like mouse down)
   // note: no test yet
-  touchStartListener(e) {
+  touchStartListener(e: TouchEvent) {
     e.preventDefault()
     if (!this.uiData.touchTimer) {
       this.uiData.touchTimer = setTimeout(() => {
@@ -1338,8 +1356,8 @@ export class Niivue {
     if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
       this.uiData.doubleTouch = true
       this.setDragStart(
-        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
-        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+        e.targetTouches[0].clientX - (e.target as HTMLElement).getBoundingClientRect().left,
+        e.targetTouches[0].clientY - (e.target as HTMLElement).getBoundingClientRect().top
       )
       this.resetBriCon(e)
       this.uiData.lastTouchTime = this.uiData.currentTouchTime
@@ -1362,7 +1380,7 @@ export class Niivue {
   // not included in public docs
   // handler for touchend (finger lift off screen)
   // note: no test yet
-  touchEndListener(e) {
+  touchEndListener(e: TouchEvent) {
     e.preventDefault()
     this.uiData.touchdown = false
     this.uiData.lastTwoTouchDistance = 0
@@ -1378,7 +1396,7 @@ export class Niivue {
         return
       }
       this.calculateNewRange()
-      this.refreshLayers(this.volumes[0], 0, this.volumes.length)
+      this.refreshLayers(this.volumes[0], 0)
     }
     // mouseUp generates this.drawScene();
     this.mouseUpListener()
@@ -1387,13 +1405,17 @@ export class Niivue {
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
-  async mouseMoveListener(e) {
+  async mouseMoveListener(e: MouseEvent) {
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
       // ignore if mouse moves outside of tile of initial click
-      const x = pos.x * this.uiData.dpr
-      const y = pos.y * this.uiData.dpr
+      if (!pos) {
+        return
+      }
+
+      const x = pos.x * this.uiData.dpr!
+      const y = pos.y * this.uiData.dpr!
       const tile = this.tileIndex(x, y)
       if (tile !== this.uiData.clickedTile) {
         return
@@ -1414,7 +1436,7 @@ export class Niivue {
   // note: should update this to accept a volume index to reset a selected volume rather than only the background (TODO)
   // reset brightness and contrast to global min and max
   // note: no test yet
-  resetBriCon(msg = null) {
+  resetBriCon(msg: TouchEvent | MouseEvent | null = null) {
     // this.volumes[0].cal_min = this.volumes[0].global_min;
     // this.volumes[0].cal_max = this.volumes[0].global_max;
     // don't reset bri/con if the user is in 3D mode and double clicks
@@ -1429,16 +1451,16 @@ export class Niivue {
     let y = 0
     if (msg !== null) {
       // if a touch event
-      if (msg.targetTouches !== undefined) {
-        x = msg.targetTouches[0].clientX - msg.target.getBoundingClientRect().left
-        y = msg.targetTouches[0].clientY - msg.target.getBoundingClientRect().top
+      if ('targetTouches' in msg) {
+        x = msg.targetTouches[0].clientX - (msg.target as HTMLElement).getBoundingClientRect().left
+        y = msg.targetTouches[0].clientY - (msg.target as HTMLElement).getBoundingClientRect().top
       } else {
         // if a mouse event
         x = msg.offsetX
         y = msg.offsetY
       }
-      x *= this.uiData.dpr
-      y *= this.uiData.dpr
+      x *= this.uiData.dpr!
+      y *= this.uiData.dpr!
       // test if render is one of the tiles
       if (this.inRenderTile(x, y) >= 0) {
         isRender = true
@@ -1462,20 +1484,20 @@ export class Niivue {
     this.volumes[0].cal_min = this.volumes[0].robust_min
     this.volumes[0].cal_max = this.volumes[0].robust_max
     this.onIntensityChange(this.volumes[0])
-    this.refreshLayers(this.volumes[0], 0, this.volumes.length)
+    this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
   }
 
-  setDragStart(x, y) {
-    x *= this.uiData.dpr
-    y *= this.uiData.dpr
+  setDragStart(x: number, y: number) {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
     this.uiData.dragStart[0] = x
     this.uiData.dragStart[1] = y
   }
 
-  setDragEnd(x, y) {
-    x *= this.uiData.dpr
-    y *= this.uiData.dpr
+  setDragEnd(x: number, y: number) {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
     this.uiData.dragEnd[0] = x
     this.uiData.dragEnd[1] = y
   }
@@ -1483,17 +1505,17 @@ export class Niivue {
   // not included in public docs
   // handler for touch move (moving finger on screen)
   // note: no test yet
-  touchMoveListener(e) {
+  touchMoveListener(e: TouchEvent) {
     if (this.uiData.touchdown && e.touches.length < 2) {
-      const rect = this.canvas.getBoundingClientRect()
+      const rect = this.canvas!.getBoundingClientRect()
       if (!this.uiData.isDragging) {
         this.uiData.pan2DxyzmmAtMouseDown = this.scene.pan2Dxyzmm.slice()
       }
       this.uiData.isDragging = true
       if (this.uiData.doubleTouch && this.uiData.isDragging) {
         this.setDragEnd(
-          e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
-          e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
+          e.targetTouches[0].clientX - (e.target as HTMLElement).getBoundingClientRect().left,
+          e.targetTouches[0].clientY - (e.target as HTMLElement).getBoundingClientRect().top
         )
         this.drawScene()
         return
@@ -1507,11 +1529,11 @@ export class Niivue {
   }
 
   // not included in public docs
-  handlePinchZoom(e) {
+  handlePinchZoom(e: TouchEvent) {
     if (e.targetTouches.length === 2 && e.changedTouches.length === 2) {
       const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY)
 
-      const rect = this.canvas.getBoundingClientRect()
+      const rect = this.canvas!.getBoundingClientRect()
       this.mousePos = [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top]
 
       // scroll 2D slices
@@ -1576,7 +1598,7 @@ export class Niivue {
     }
   }
 
-  keyDownListener(e) {
+  keyDownListener(e: KeyboardEvent) {
     if (e.code === 'KeyH' && this.opts.sliceType === SLICE_TYPE.RENDER) {
       this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation)
     } else if (e.code === 'KeyL' && this.opts.sliceType === SLICE_TYPE.RENDER) {
@@ -1611,7 +1633,7 @@ export class Niivue {
   // not included in public docs
   // handler for scroll wheel events (slice scrolling)
   // note: no test yet
-  wheelListener(e) {
+  wheelListener(e: WheelEvent) {
     // scroll 2D slices
     e.preventDefault()
     e.stopPropagation()
@@ -1619,7 +1641,7 @@ export class Niivue {
     if (this.thumbnailVisible) {
       return
     }
-    const rect = this.canvas.getBoundingClientRect()
+    const rect = this.canvas!.getBoundingClientRect()
     if (e.deltaY < 0) {
       this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top)
     } else {
@@ -1662,7 +1684,7 @@ export class Niivue {
     this.canvas.addEventListener('drop', this.dropListener.bind(this), false)
 
     // add keyup
-    this.canvas.setAttribute('tabindex', 0)
+    this.canvas.setAttribute('tabindex', '0')
     this.canvas.addEventListener('keyup', this.keyUpListener.bind(this), false)
 
     // keydown
@@ -1700,7 +1722,7 @@ export class Niivue {
    * @returns {NVImage}
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  async addVolumeFromUrl(imageOptions) {
+  async addVolumeFromUrl(imageOptions: ImageFromUrlOptions) {
     const volume = await NVImage.loadFromUrl(imageOptions)
     this.document.addImageOptions(volume, imageOptions)
     volume.onColormapChange = this.onColormapChange
@@ -1717,7 +1739,7 @@ export class Niivue {
    * @param {string} url -
    * @returns {(NVImage|NVMesh)}
    */
-  getMediaByUrl(url) {
+  getMediaByUrl(url: string) {
     return [...this.mediaUrlMap.entries()]
       .filter((v) => v[1] === url)
       .map((v) => v[0])
@@ -1729,7 +1751,7 @@ export class Niivue {
    * @param {string} url - Volume added by url to remove
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  removeVolumeByUrl(url) {
+  removeVolumeByUrl(url: string) {
     const volume = this.getMediaByUrl(url)
     if (volume) {
       this.removeVolume(volume)
@@ -1738,21 +1760,17 @@ export class Niivue {
     }
   }
 
-  readDirectory(directory) {
+  readDirectory(directory: FileSystemDirectoryEntry) {
     const reader = directory.createReader()
-    let allEntiresInDir = []
-    const getFileObjects = async (fileSystemEntries) => {
-      const allFileObects = []
+    let allEntiresInDir: FileSystemEntry[] = []
+    const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
+      const allFileObects: File[] = []
       // https://stackoverflow.com/a/53113059
-      const getFile = async (fileEntry) => {
-        try {
-          return await new Promise((resolve, reject) => fileEntry.file(resolve, reject))
-        } catch (err) {
-          log.debug(err)
-        }
+      const getFile = async (fileEntry: FileSystemFileEntry): Promise<File> => {
+        return new Promise((resolve, reject) => fileEntry.file(resolve, reject))
       }
       for (let i = 0; i < fileSystemEntries.length; i++) {
-        allFileObects.push(await getFile(fileSystemEntries[i]))
+        allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
       }
       return allFileObects
     }
@@ -2631,20 +2649,20 @@ export class Niivue {
 
   /**
    * reverse triangle winding of mesh (swap front and back faces)
-   * @param {number} id identity of mesh to change
+   * @param mesh identity of mesh to change
    * @param {number} layer selects the mesh overlay (e.g. GIfTI or STC file)
-   * @param {str} key attribute to change
-   * @param {number} value for attribute
+   * @param key - attribute to change
+   * @param value - for attribute
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html|live demo usage}
    */
-  setMeshLayerProperty(mesh, layer, key, val) {
+  setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number) {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
       return
     }
-    this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
+    this.meshes[idx].setLayerProperty(layer, key, val, this.gl!)
     this.updateGLVolume()
   }
 
