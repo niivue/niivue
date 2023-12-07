@@ -1,4 +1,5 @@
 import { WebSocketSubject, webSocket } from 'rxjs/webSocket'
+import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Message, NVMESSAGE } from './nvmessage.js'
 
 /**
@@ -11,9 +12,9 @@ export class SessionUser {
   key: string
   properties: Map<string, string>
   constructor(displayName?: string, userId?: string, userKey?: string, userProperties?: Map<string, string>) {
-    this.id = userId || crypto.randomUUID()
+    this.id = userId || uuidv4()
     this.displayName = displayName || `user-${this.id}`
-    this.key = userKey || crypto.randomUUID()
+    this.key = userKey || uuidv4()
     this.properties = userProperties || new Map()
   }
 }
@@ -66,7 +67,7 @@ export class SessionBus {
     this.onMessageCallback = onMessageCallback
 
     this.sessionScene = {}
-    this.sessionKey = sessionKey || crypto.randomUUID()
+    this.sessionKey = sessionKey || uuidv4()
 
     this.sessionName = name
     this.sessionSceneName = `session-${name}-scene`

@@ -55,6 +55,7 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
+    "@lukeed/uuid": "^2.0.1",
     "@ungap/structured-clone": "^1.0.2",
     "array-equal": "^1.0.2",
     "daikon": "^1.2.43",
