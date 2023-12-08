@@ -323,7 +323,7 @@ export class Niivue {
   surfaceShader?: Shader
   blurShader?: Shader
   sobelShader?: Shader
-  genericVAO?: WebGLVertexArrayObject // used for 2D slices, 2D lines, 2D Fonts
+  genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
   DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
@@ -3674,7 +3674,7 @@ export class Niivue {
     return this.loadConnectome(connectome)
   }
 
-  handleNodeAdded(event) {
+  handleNodeAdded(event: { detail: { node: NVConnectomeNode } }) {
     const node = event.detail.node
     const rgba = [1, 1, 1, 1]
     const label = this.addLabel(
@@ -3724,7 +3724,7 @@ export class Niivue {
       connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
       console.log('converted legacy connectome', connectome)
     }
-    const mesh = new NVConnectome(this.gl, connectome)
+    const mesh = new NVConnectome(this.gl, connectome as LegacyConnectome)
     this.addMesh(mesh)
     console.log('mesh added', mesh)
     this.uiData.loading$.next(false)
@@ -3738,7 +3738,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
    */
   async createEmptyDrawing() {
-    if (this.back === null) {
+    if (this.back === null || !this.back.dims) {
       return
     }
     const mn = Math.min(Math.min(this.back.dims[1], this.back.dims[2]), this.back.dims[3])
@@ -3749,20 +3749,20 @@ export class Niivue {
     this.drawBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, this.gl!.TEXTURE7, this.back.dims, true)
     this.refreshDrawing(false)
   }
 
   // not included in public docs
   // create a 1-component (red) 16-bit signed integer texture on the GPU
-  r16Tex(texID, activeID, dims, img16 = []) {
+  r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array) {
     if (texID) {
-      this.gl.deleteTexture(texID)
+      this.gl!.deleteTexture(texID)
     }
     if (!this.gl) {
       throw new Error('gl undefined')
     }
-    texID = this.gl.createTexture()
+    texID = this.gl.createTexture()!
     this.gl.activeTexture(activeID)
     this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
@@ -3800,7 +3800,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
   drawGrowCut() {
-    if (!this.back) {
+    if (!this.back || !this.back.dims) {
       // TODO gl and back etc should be centrally guaranteed to be set
       throw new Error('back not defined')
     }
@@ -3837,7 +3837,7 @@ export class Niivue {
     const strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16)
     const strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16)
     this.gl.bindVertexArray(this.genericVAO)
-    const shader = this.growCutShader
+    const shader = this.growCutShader!
     shader.use(gl)
     const iterations = 128 // will run 2x this value
     gl.uniform1i(shader.uniforms.finalPass, 0)
@@ -3888,7 +3888,7 @@ export class Niivue {
     if (format !== gl.RED_INTEGER || type !== gl.SHORT) {
       log.debug('readPixels will fail.')
     }
-    img16 = []
+    img16 = new Int16Array()
     const nv2D = this.back.dims[1] * this.back.dims[2]
     const slice16 = new Int16Array(nv2D)
     for (let i = 0; i < this.back.dims[3]; i++) {
@@ -4724,7 +4724,7 @@ export class Niivue {
    * @returns {Shader} created custom mesh shader
    */
   createCustomMeshShader(
-    fragmentShaderText,
+    fragmentShaderText: string,
     name = 'Custom'
     // vertexShaderText = ""
   ): { Name: string; Frag: string } {
@@ -7991,7 +7991,7 @@ export class Niivue {
    * @param {number[]} lineColor color of the line
    * @param {number[] | number[][]} point 3D point on the model
    */
-  addLabel(text, style, points = undefined) {
+  addLabel(text, style, points?: number[] | number[][]) {
     const defaultStyle = {
       textColor: this.opts.legendTextColor,
       textScale: 1.0,
