@@ -57,7 +57,7 @@ import {
 } from '../shader-srcs.js'
 import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshFromUrlOptions, NVMeshLayer } from '../nvmesh.js'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
 import { Log } from '../logger.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
@@ -3564,7 +3564,8 @@ export class Niivue {
         volumeList[i].colormapNegative = volumeList[i].colorMapNegative
       }
       const imageOptions = {
-        url: volumeList[i].url!,
+        url: volumeList[i].url,
+        headers: volumeList[i].headers,
         name: volumeList[i].name,
         colormap: volumeList[i].colormap,
         colormapNegative: volumeList[i].colormapNegative,
@@ -3645,8 +3646,8 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectomeFromUrl(url: string) {
-    const response = await fetch(url)
+  async loadConnectomeFromUrl(url, headers = {}) {
+    const response = await fetch(url, { headers })
     const json = await response.json()
     return this.loadConnectome(json)
   }
@@ -3657,8 +3658,8 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadFreeSurferConnectomeFromUrl(url: string) {
-    const response = await fetch(url)
+  async loadFreeSurferConnectomeFromUrl(url, headers = {}) {
+    const response = await fetch(url, { headers })
     const json = await response.json()
     return this.loadFreeSurferConnectome(json)
   }

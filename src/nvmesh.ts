@@ -1,4 +1,5 @@
 import { vec3 } from 'gl-matrix'
+import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Log } from './logger.js'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
@@ -21,6 +22,7 @@ export type NVMeshLayer = {
   name?: string
   key?: string
   url?: string
+  headers?: Record<string, string>
   opacity: number
   colormap: string
   colormapNegative: string
@@ -90,9 +92,10 @@ type BaseLoadParams = {
   layers: NVMeshLayer[]
 }
 
-export type LoadFromUrlParams = Partial<BaseLoadParams> & {
-  // the resolvable URL pointing to a nifti image to load
+export type LoadFromUrlParams = BaseLoadParams & {
+  // the resolvable URL pointing to a mesh to load
   url: string
+  headers?: Record<string, string>
 }
 
 type LoadFromFileParams = BaseLoadParams & {
@@ -202,7 +205,7 @@ export class NVMesh {
     this.anatomicalStructurePrimary = anatomicalStructurePrimary
     this.name = name
     this.colorbarVisible = colorbarVisible
-    this.id = crypto.randomUUID()
+    this.id = uuidv4()
     const obj = NVMeshUtilities.getExtents(pts)
     this.furthestVertexFromOrigin = obj.mxDx
     this.extentsMin = obj.extentsMin
@@ -1295,7 +1298,7 @@ export class NVMesh {
         throw new Error('layer: missing url')
       }
       // fetch url otherwise
-      const response = await fetch(layer.url)
+      const response = await fetch(layer.url, { headers: layer.headers })
       if (!response.ok) {
         throw Error(response.statusText)
       }
@@ -1370,6 +1373,7 @@ export class NVMesh {
    */
   static async loadFromUrl({
     url = '',
+    headers = {},
     gl,
     name = '',
     opacity = 1.0,
@@ -1399,7 +1403,7 @@ export class NVMesh {
       throw Error('gl context is null')
     }
     // TRX format is special (its a zip archive of multiple files)
-    const response = await fetch(url)
+    const response = await fetch(url, { headers })
     if (!response.ok) {
       throw Error(response.statusText)
     }
