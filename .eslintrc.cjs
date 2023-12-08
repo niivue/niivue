@@ -33,9 +33,14 @@ module.exports = {
   // separate ESLint rules for TS files for now
   overrides: [
     {
-      files: ['**/*.ts'],
+      files: ['src/**/*.ts'],
+      parserOptions: {
+        project: ['./tsconfig.json']
+      },
       rules: {
         '@typescript-eslint/explicit-function-return-type': 'error',
+        '@typescript-eslint/no-floating-promises': 'error',
+        '@typescript-eslint/no-misused-promises': 'error',
         'tsdoc/syntax': 'warn'
       }
     }
