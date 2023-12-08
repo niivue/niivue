@@ -2582,7 +2582,6 @@ export class NVImage {
 
   static async fetchPartial(url: string, bytesToLoad: number, headers: Record<string, string> = {}): Promise<Response> {
     try {
-      console.log('**********', bytesToLoad)
       const response = await fetch(url, {
         headers: { range: `bytes=0-'${bytesToLoad}`, ...headers }
       })
