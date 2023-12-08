@@ -427,6 +427,7 @@ export class Niivue {
     AxyzMxy: unknown[]
     leftTopMM: unknown[]
     fovMM: number[]
+    screen2frac?: number[]
   }> = [] // empty array
 
   cuboidVertexBuffer?: WebGLBuffer
@@ -1810,19 +1811,27 @@ export class Niivue {
       return allFileObects
     }
     const readEntries = (): void => {
-      reader.readEntries(async (entries) => {
+      reader.readEntries((entries) => {
         if (entries.length) {
           allEntiresInDir = allEntiresInDir.concat(entries)
           readEntries()
         } else {
-          const allFileObects = await getFileObjects(allEntiresInDir)
-          const volume = await NVImage.loadFromFile({
-            file: allFileObects, // an array of file objects
-            name: directory.name,
-            urlImgData: null, // nothing
-            imageType: NVIMAGE_TYPE.DCM_FOLDER // signify that this is a dicom directory
-          })
-          this.addVolume(volume)
+          getFileObjects(allEntiresInDir)
+            .then((allFileObjects) => {
+              NVImage.loadFromFile({
+                file: allFileObjects, // an array of file objects
+                name: directory.name,
+                urlImgData: null, // nothing
+                imageType: NVIMAGE_TYPE.DCM_FOLDER // signify that this is a dicom directory
+              })
+                .then((volume) => this.addVolume(volume))
+                .catch((e) => {
+                  throw e
+                })
+            })
+            .catch((e) => {
+              throw e
+            })
         }
       })
     }
@@ -1842,7 +1851,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  async dropListener(e: DragEvent): Promise<void> {
+  dropListener(e: DragEvent): void {
     e.stopPropagation()
     e.preventDefault()
     // don't do anything if drag and drop has been turned off
@@ -3763,7 +3772,7 @@ export class Niivue {
    * @example niivue.createEmptyDrawing()
    * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
    */
-  async createEmptyDrawing(): Promise<void> {
+  createEmptyDrawing(): void {
     if (this.back === null || !this.back.dims) {
       return
     }
@@ -7263,13 +7272,13 @@ export class Niivue {
 
   // not included in public docs
   // draw 2D tile
-  draw2D(leftTopWidthHeight, axCorSag, customMM = NaN) {
-    let frac2mmTexture = this.volumes[0].frac2mm.slice()
+  draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN) {
+    let frac2mmTexture = this.volumes[0].frac2mm!.slice()
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
     let mesh2ortho = mat4.create()
     if (!this.opts.isSliceMM) {
-      frac2mmTexture = this.volumes[0].frac2mmOrtho.slice()
-      mesh2ortho = mat4.clone(this.volumes[0].mm2ortho)
+      frac2mmTexture = this.volumes[0].frac2mmOrtho!.slice()
+      mesh2ortho = mat4.clone(this.volumes[0].mm2ortho!)
       screen = this.screenFieldOfViewExtendedVox(axCorSag)
     }
     let isRadiolgical = this.opts.isRadiologicalConvention && axCorSag < SLICE_TYPE.SAGITTAL
@@ -7380,10 +7389,14 @@ export class Niivue {
     gl.disable(gl.BLEND)
     gl.depthFunc(gl.GREATER)
     gl.disable(gl.CULL_FACE) // show front and back faces
+
+    if (!this.sliceMMShader) {
+      throw new Error('sliceMMShader undefined')
+    }
     this.sliceMMShader.use(this.gl)
     gl.uniform1f(this.sliceMMShader.overlayOutlineWidthLoc, this.overlayOutlineWidth)
     gl.uniform1f(this.sliceMMShader.overlayAlphaShaderLoc, this.overlayAlphaShader)
-    gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark)
+    gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark ? 1 : 0)
     gl.uniform1i(this.sliceMMShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
     gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity)
     gl.enable(gl.BLEND)
@@ -7448,7 +7461,7 @@ export class Niivue {
 
   // not included in public docs
   // determine 3D model view projection matrix
-  calculateMvpMatrix(unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation) {
+  calculateMvpMatrix(_unused: unknown, leftTopWidthHeight = [0, 0, 0, 0], azimuth: number, elevation: number) {
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // use full canvas
       leftTopWidthHeight = [0, 0, this.gl.canvas.width, this.gl.canvas.height]
@@ -8294,7 +8307,14 @@ export class Niivue {
   }
 
   // not included in public docs
-  draw3D(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix = null, modelMatrix, normalMatrix, azimuth = null, elevation) {
+  draw3D(
+    leftTopWidthHeight = [0, 0, 0, 0],
+    mvpMatrix: mat4 | null = null,
+    modelMatrix: mat4 | null = null,
+    normalMatrix: mat4 | null = null,
+    azimuth: number | null = null,
+    elevation = 0
+  ) {
     const isMosaic = azimuth !== null
     this.setPivot3D()
     if (!isMosaic) {
@@ -8317,7 +8337,7 @@ export class Niivue {
         sliceFrac: 0,
         AxyzMxy: [],
         leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix), 0]
+        fovMM: [isRadiological(modelMatrix!), 0]
       })
     } else {
       this.screenSlices.push({
@@ -8326,7 +8346,7 @@ export class Niivue {
         sliceFrac: 0,
         AxyzMxy: [],
         leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix), 0]
+        fovMM: [isRadiological(modelMatrix!), 0]
       })
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
@@ -8349,7 +8369,7 @@ export class Niivue {
     }
     this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix)
     if (this.uiData.mouseDepthPicker) {
-      this.depthPicker(leftTopWidthHeight, mvpMatrix, true)
+      this.depthPicker(leftTopWidthHeight, mvpMatrix)
       this.createOnLocationChange()
       // redraw with render shader
       this.draw3D(leftTopWidthHeight, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
@@ -8479,7 +8499,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawCrosshairs3D(isDepthTest = true, alpha = 1.0, mvpMtx = null, is2DView = false, isSliceMM = true) {
+  drawCrosshairs3D(isDepthTest = true, alpha = 1.0, mvpMtx: mat4 | null = null, is2DView = false, isSliceMM = true) {
     if (!this.opts.show3Dcrosshair && !is2DView) {
       return
     }
@@ -8491,9 +8511,9 @@ export class Niivue {
     // generate our crosshairs for the base volume
     if (
       this.crosshairs3D === null ||
-      this.crosshairs3D.mm[0] !== mm[0] ||
-      this.crosshairs3D.mm[1] !== mm[1] ||
-      this.crosshairs3D.mm[2] !== mm[2]
+      this.crosshairs3D.mm![0] !== mm[0] ||
+      this.crosshairs3D.mm![1] !== mm[1] ||
+      this.crosshairs3D.mm![2] !== mm[2]
     ) {
       if (this.crosshairs3D !== null) {
         gl.deleteBuffer(this.crosshairs3D.indexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
@@ -8502,13 +8522,20 @@ export class Niivue {
       const [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM)
       let radius = 1
       if (this.volumes.length > 0) {
-        radius = 0.5 * Math.min(Math.min(this.back.pixDims[1], this.back.pixDims[2]), this.back.pixDims[3])
+        if (!this.back) {
+          throw new Error('back undefined')
+        }
+        radius = 0.5 * Math.min(Math.min(this.back.pixDims![1], this.back.pixDims![2]), this.back.pixDims![3])
       } else if (range[0] < 50 || range[0] > 1000) {
         radius = range[0] * 0.02
       } // 2% of first dimension
       radius *= this.opts.crosshairWidth
       this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius)
       this.crosshairs3D.mm = mm
+    }
+
+    if (!this.surfaceShader) {
+      throw new Error('surfaceShader undefined')
     }
     const crosshairsShader = this.surfaceShader
     crosshairsShader.use(this.gl)
@@ -8654,7 +8681,7 @@ export class Niivue {
       }
     } else {
       const [mn, mx] = this.sceneExtentsMinMax()
-      const lerp = (x, y, a) => x * (1 - a) + y * a
+      const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a
       pos[0] = lerp(mn[0], mx[0], frac[0])
       pos[1] = lerp(mn[1], mx[1], frac[1])
       pos[2] = lerp(mn[2], mx[2], frac[2])
@@ -8776,6 +8803,9 @@ export class Niivue {
   // unless Alpha is > 0, default color is opts.crosshairColor
   draw3DLine(startXY, endXYZ, thickness = 1, lineColor = [1, 0, 0, -1]) {
     this.gl.bindVertexArray(this.genericVAO)
+    if (!this.line3DShader) {
+      throw new Error('line3DShader undefined')
+    }
     this.line3DShader.use(this.gl)
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
@@ -8790,8 +8820,11 @@ export class Niivue {
     this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
 
-  drawDottedLine(startXYendXY, thickness = 1, lineColor = [1, 0, 0, -1]) {
+  drawDottedLine(startXYendXY: number[], thickness = 1, lineColor = [1, 0, 0, -1]) {
     this.gl.bindVertexArray(this.genericVAO)
+    if (!this.lineShader) {
+      throw new Error('lineShader undefined')
+    }
     this.lineShader.use(this.gl)
     const dottedLineColor = lineColor[3] < 0 ? [...this.opts.crosshairColor] : [...lineColor]
 
