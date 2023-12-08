@@ -44,6 +44,9 @@ export type NVMeshLayer = {
   alphaThreshold: boolean
 
   base64?: string
+
+  // TODO referenced in niivue/refreshColormaps
+  colorbarVisible?: boolean
 }
 
 export class NVMeshFromUrlOptions {

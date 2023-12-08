@@ -6093,13 +6093,13 @@ export class Niivue {
       // add colorbars for volumes
       for (let i = 0; i < nVol; i++) {
         const volume = this.volumes[i]
-        const neg = negMinMax(volume.cal_min, volume.cal_max, volume.cal_minNeg, volume.cal_maxNeg)
+        const neg = negMinMax(volume.cal_min!, volume.cal_max!, volume.cal_minNeg, volume.cal_maxNeg)
         // add negative colormaps BEFORE positive ones: we draw them in order from left to right
         this.addColormapList(
           volume.colormapNegative,
           neg[0],
           neg[1],
-          volume.alphaThreshold,
+          volume.alphaThreshold !== undefined,
           true,
           volume.colorbarVisible,
           volume.colormapInvert
@@ -6108,7 +6108,7 @@ export class Niivue {
           volume.colormap,
           volume.cal_min,
           volume.cal_max,
-          volume.alphaThreshold,
+          volume.alphaThreshold !== undefined,
           false,
           volume.colorbarVisible,
           volume.colormapInvert
@@ -6125,7 +6125,7 @@ export class Niivue {
         }
         const nlayers = mesh.layers.length
         if ('edgeColormap' in mesh) {
-          const neg = negMinMax(mesh.edgeMin, mesh.edgeMax, NaN, NaN)
+          const neg = negMinMax(mesh.edgeMin!, mesh.edgeMax!, NaN, NaN)
           this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true, true, mesh.colormapInvert)
           //  alpha = false,
           this.addColormapList(mesh.edgeColormap, mesh.edgeMin, mesh.edgeMax, false, false, true, mesh.colormapInvert)
@@ -6168,17 +6168,20 @@ export class Niivue {
       return
     }
     this.colormapTexture = this.createColormapTexture(this.colormapTexture, nMaps + 1)
-    let luts = []
-    function addColormap(lut) {
+    let luts: Uint8ClampedArray = new Uint8ClampedArray()
+    function addColormap(lut: number[]) {
       const c = new Uint8ClampedArray(luts.length + lut.length)
       c.set(luts)
       c.set(lut, luts.length)
       luts = c
     }
     for (let i = 0; i < nMaps; i++) {
-      addColormap(this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert))
+      addColormap(Array.from(this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert)))
     }
-    addColormap(this.drawLut.lut)
+    addColormap(Array.from(this.drawLut.lut))
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nMaps + 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts)
     return this
   }
@@ -6191,6 +6194,9 @@ export class Niivue {
     }
     const longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]))
     const volScale = [dimsMM[0] / longestAxis, dimsMM[1] / longestAxis, dimsMM[2] / longestAxis]
+    if (!this.back?.dims) {
+      throw new Error('back.dims undefined')
+    }
     const vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
     return { volScale, vox, longestAxis, dimsMM }
   }

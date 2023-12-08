@@ -43,6 +43,7 @@ export class NVImage {
   // TODO see niivue/loadDocument
   colorMapNegative: string
   colormapLabel: LUT | null
+  colormapInvert?: boolean
   nFrame4D?: number
   frame4D: number // indexed from 0!
   nTotalFrame4D?: number
