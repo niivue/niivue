@@ -116,6 +116,7 @@ type DragReleaseParams = {
 
 type FontMetrics = {
   distanceRange: number
+  size: number
   [id: number]: {
     xadv: number
     uv_lbwh: number[]
@@ -1865,6 +1866,7 @@ export class Niivue {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
               ;(entry as FileSystemFileEntry).file(async (file) => {
+                // @ts-expect-error FIXME looks like a file gets passed instead of a string
                 await this.loadBmpTexture(file)
               })
               continue
@@ -4633,16 +4635,18 @@ export class Niivue {
   // not included in public docs
   // load font bitmap and metrics
   initFontMets() {
-    this.fontMets = []
+    this.fontMets = {
+      distanceRange: this.fontMetrics.atlas.distanceRange,
+      size: this.fontMetrics.atlas.size
+    }
     for (let id = 0; id < 256; id++) {
       // clear ASCII codes 0..256
-      this.fontMets[id] = {}
-      this.fontMets[id].xadv = 0
-      this.fontMets[id].uv_lbwh = [0, 0, 0, 0]
-      this.fontMets[id].lbwh = [0, 0, 0, 0]
+      this.fontMets![id] = {
+        xadv: 0,
+        uv_lbwh: [0, 0, 0, 0],
+        lbwh: [0, 0, 0, 0]
+      }
     }
-    this.fontMets.distanceRange = this.fontMetrics.atlas.distanceRange
-    this.fontMets.size = this.fontMetrics.atlas.size
     const scaleW = this.fontMetrics.atlas.width
     const scaleH = this.fontMetrics.atlas.height
     for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
@@ -6797,7 +6801,7 @@ export class Niivue {
     const byteSet = new Set(Array.from(str))
     const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
 
-    const tallest = this.fontMets
+    const tallest = Object.values(this.fontMets)
       .filter((element, index) => bytes.includes(index))
       .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
     const height = tallest.lbwh[3]
