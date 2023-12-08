@@ -426,7 +426,7 @@ export class Niivue {
     normalizeValues: false
   }
 
-  meshShaders: Array<{ Name: string; Frag: string }> = [
+  meshShaders: Array<{ Name: string; Frag: string; shader?: Shader }> = [
     {
       Name: 'Phong',
       Frag: fragMeshShader
@@ -4635,6 +4635,10 @@ export class Niivue {
   // not included in public docs
   // load font bitmap and metrics
   initFontMets() {
+    if (!this.fontMetrics) {
+      throw new Error('fontMetrics undefined')
+    }
+
     this.fontMets = {
       distanceRange: this.fontMetrics.atlas.distanceRange,
       size: this.fontMetrics.atlas.size
@@ -4678,6 +4682,7 @@ export class Niivue {
    */
   async loadFont(fontSheetUrl = defaultFontPNG, metricsUrl = defaultFontMetrics) {
     await this.loadFontTexture(fontSheetUrl)
+    // @ts-expect-error FIXME this doesn't look right - metricsUrl is a huge object
     const response = await fetch(metricsUrl)
     if (!response.ok) {
       throw Error(response.statusText)
@@ -4688,7 +4693,7 @@ export class Niivue {
 
     this.initFontMets()
 
-    this.fontShader.use(this.gl)
+    this.fontShader!.use(this.gl!)
     this.drawScene()
   }
 
@@ -4706,6 +4711,9 @@ export class Niivue {
 
   // not included in public docs
   async initText() {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     // font shader
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
     this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
@@ -4738,13 +4746,18 @@ export class Niivue {
    * @example niivue.setMeshShader('toon');
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  setMeshShader(id, meshShaderNameOrNumber = 2) {
-    let shaderIndex = 0
+  setMeshShader(id: number, meshShaderNameOrNumber = 2) {
+    let shaderIndex: number | undefined = 0
     if (typeof meshShaderNameOrNumber === 'number') {
       shaderIndex = meshShaderNameOrNumber
     } else {
       shaderIndex = this.meshShaderNameToNumber(meshShaderNameOrNumber)
     }
+
+    if (shaderIndex === undefined) {
+      throw new Error('shaderIndex undefined')
+    }
+
     shaderIndex = Math.min(shaderIndex, this.meshShaders.length - 1)
     shaderIndex = Math.max(shaderIndex, 0)
     const index = this.getMeshIndexByID(id)
@@ -4767,26 +4780,29 @@ export class Niivue {
     fragmentShaderText: string,
     name = 'Custom'
     // vertexShaderText = ""
-  ): { Name: string; Frag: string } {
+  ): { Name: string; Frag: string; shader: Shader } {
     if (!fragmentShaderText) {
       throw new Error('Need fragment shader')
     }
 
-    const num = this.meshShaderNameToNumber(name)
+    const num = this.meshShaderNameToNumber(name)!
     if (num >= 0) {
       // prior shader uses this name: delete it!
-      this.gl.deleteProgram(this.meshShaders[num].shader.program)
+      this.gl!.deleteProgram(this.meshShaders[num].shader!.program)
       this.meshShaders.splice(num, 1)
     }
-    const m = []
-    m.Name = name
-    m.Frag = fragmentShaderText
-    m.shader = new Shader(this.gl, vertMeshShader, m.Frag)
-    m.shader.use(this.gl)
-    m.shader.mvpLoc = m.shader.uniforms.mvpMtx
-    m.shader.normLoc = m.shader.uniforms.normMtx
-    m.shader.opacityLoc = m.shader.uniforms.opacity
-    return m
+
+    const shader = new Shader(this.gl!, vertMeshShader, fragmentShaderText)
+    shader.use(this.gl!)
+    shader.mvpLoc = shader.uniforms.mvpMtx
+    shader.normLoc = shader.uniforms.normMtx
+    shader.opacityLoc = shader.uniforms.opacity
+
+    return {
+      Name: name,
+      Frag: fragmentShaderText,
+      shader
+    }
   }
 
   /**
@@ -4820,7 +4836,10 @@ export class Niivue {
   }
 
   // not included in public docs
-  async initRenderShader(shader, gradientAmount = 0.0) {
+  async initRenderShader(shader: Shader, gradientAmount = 0.0) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     shader.use(this.gl)
     shader.drawOpacityLoc = shader.uniforms.drawOpacity
     shader.backgroundMasksOverlaysLoc = shader.uniforms.backgroundMasksOverlays
@@ -4840,6 +4859,9 @@ export class Niivue {
 
   // not included in public docs
   async init() {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     // initial setup: only at the startup of the component
     // print debug info (gpu vendor and renderer)
     const rendererInfo = this.gl.getExtension('WEBGL_debug_renderer_info')

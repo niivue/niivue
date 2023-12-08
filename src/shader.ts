@@ -54,9 +54,23 @@ export const getGLExtension = function (gl: WebGL2RenderingContext, ext: string)
 export class Shader {
   program: WebGLProgram
   uniforms: Record<string, WebGLUniformLocation | null> = {}
-  clipPlaneClrLoc?: WebGLUniformLocation
-  mvpLoc?: WebGLUniformLocation
-  drawOpacityLoc?: WebGLUniformLocation
+  clipPlaneClrLoc: WebGLUniformLocation | null = null
+  mvpLoc: WebGLUniformLocation | null = null
+  drawOpacityLoc: WebGLUniformLocation | null = null
+  normLoc: WebGLUniformLocation | null = null
+  opacityLoc: WebGLUniformLocation | null = null
+
+  // TODO niivue font shader requires these fields
+  screenPxRangeLoc: WebGLUniformLocation | null = null
+  fontColorLoc: WebGLUniformLocation | null = null
+  canvasWidthHeightLoc: WebGLUniformLocation | null = null
+  leftTopWidthHeightLoc: WebGLUniformLocation | null = null
+  uvLeftTopWidthHeightLoc?: WebGLUniformLocation | null = null
+  backgroundMasksOverlaysLoc: WebGLUniformLocation | null = null
+  renderOverlayBlendLoc: WebGLUniformLocation | null = null
+  mvpMatRASLoc: WebGLUniformLocation | null = null
+  rayDirLoc: WebGLUniformLocation | null = null
+  clipPlaneLoc: WebGLUniformLocation | null = null
 
   constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
     this.program = compileShader(gl, vertexSrc, fragmentSrc)
