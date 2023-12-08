@@ -5414,14 +5414,17 @@ export class Niivue {
     this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
     // https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
     // https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexStorage3D.xhtml
-    let orientShader = this.orientShaderU
+    let orientShader = this.orientShaderU!
     if (!hdr) {
       throw new Error('hdr undefined')
+    }
+    if (!img) {
+      throw new Error('img undefined')
     }
     if (hdr.datatypeCode === 2) {
       // raw input data
       if (hdr.intent_code === 1002) {
-        orientShader = this.orientShaderAtlasU
+        orientShader = this.orientShaderAtlasU!
       }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
@@ -5435,12 +5438,12 @@ export class Niivue {
         hdr.dims[3],
         this.gl.RED_INTEGER,
         this.gl.UNSIGNED_BYTE,
-        img!
+        img
       )
     } else if (hdr.datatypeCode === 4) {
-      orientShader = this.orientShaderI
+      orientShader = this.orientShaderI!
       if (hdr.intent_code === 1002) {
-        orientShader = this.orientShaderAtlasI
+        orientShader = this.orientShaderAtlasI!
       }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
@@ -5471,7 +5474,7 @@ export class Niivue {
         this.gl.FLOAT,
         img
       )
-      orientShader = this.orientShaderF
+      orientShader = this.orientShaderF!
     } else if (hdr.datatypeCode === 64) {
       let img32f = new Float32Array()
       img32f = Float32Array.from(img)
@@ -5489,11 +5492,12 @@ export class Niivue {
         this.gl.FLOAT,
         img32f
       )
-      orientShader = this.orientShaderF
+      orientShader = this.orientShaderF!
     } else if (hdr.datatypeCode === 128) {
-      orientShader = this.orientShaderRGBU
+      orientShader = this.orientShaderRGBU!
       orientShader.use(this.gl)
-      this.gl.uniform1i(orientShader.uniforms.hasAlpha, false)
+      // TODO was false instead of 0
+      this.gl.uniform1i(orientShader.uniforms.hasAlpha, 0)
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -5510,7 +5514,7 @@ export class Niivue {
       )
     } else if (hdr.datatypeCode === 512) {
       if (hdr.intent_code === 1002) {
-        orientShader = this.orientShaderAtlasU
+        orientShader = this.orientShaderAtlasU!
       }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
@@ -5527,9 +5531,9 @@ export class Niivue {
         img
       )
     } else if (hdr.datatypeCode === 2304) {
-      orientShader = this.orientShaderRGBU
+      orientShader = this.orientShaderRGBU!
       orientShader.use(this.gl)
-      this.gl.uniform1i(orientShader.uniforms.hasAlpha, true)
+      this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1)
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -5561,13 +5565,13 @@ export class Niivue {
         // we can not simultaneously read and write to the same texture.
         // therefore, we must clone the overlay texture when we wish to add another layer
         // copy previous overlay texture to blend texture
-        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims, true)
+        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims!, true)
         this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
-        for (let i = 0; i < this.back.dims[3]; i++) {
+        for (let i = 0; i < this.back.dims![3]; i++) {
           // n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
           this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.overlayTexture, 0, i) // read from existing overlay texture 2
           this.gl.activeTexture(this.gl.TEXTURE5) // write to blend texture 5
-          this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i, 0, 0, this.back.dims[1], this.back.dims[2])
+          this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i, 0, 0, this.back.dims![1], this.back.dims![2])
         }
       } else {
         blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true)
@@ -5575,10 +5579,13 @@ export class Niivue {
     } else {
       // console.log("Using pass through shader (issue 501)");
       if (layer > 1) {
+        if (!this.back.dims) {
+          throw new Error('back.dims undefined')
+        }
         // use pass-through shader to copy previous color to temporary 2D texture
         blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims)
         this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
-        const passShader = this.passThroughShader
+        const passShader = this.passThroughShader!
         passShader.use(this.gl)
         this.gl.uniform1i(passShader.uniforms.in3D, 2) // overlay volume
         for (let i = 0; i < this.back.dims[3]; i++) {
@@ -5593,12 +5600,12 @@ export class Niivue {
         blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2])
       }
     }
-    orientShader.use(this.gl)
+    orientShader!.use(this.gl)
     this.gl.activeTexture(this.gl.TEXTURE1)
     // for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
     let colormapLabelTexture = null
     if (overlayItem.colormapLabel !== null && overlayItem.colormapLabel.lut.length > 7) {
-      const nLabel = overlayItem.colormapLabel.max - overlayItem.colormapLabel.min + 1
+      const nLabel = overlayItem.colormapLabel.max! - overlayItem.colormapLabel.min! + 1
       colormapLabelTexture = this.createColormapTexture(colormapLabelTexture, 1, nLabel)
       this.gl.texSubImage2D(
         this.gl.TEXTURE_2D,
@@ -5611,24 +5618,24 @@ export class Niivue {
         this.gl.UNSIGNED_BYTE,
         overlayItem.colormapLabel.lut
       )
-      this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.colormapLabel.min - 0.5)
-      this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.colormapLabel.max + 0.5)
+      this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.colormapLabel.min! - 0.5)
+      this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.colormapLabel.max! + 0.5)
       // this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
       this.gl.bindTexture(this.gl.TEXTURE_2D, colormapLabelTexture)
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
-      this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min)
-      this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max)
+      this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min!)
+      this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max!)
     }
-    this.gl.uniform1i(orientShader.uniforms.isAlphaThreshold, overlayItem.alphaThreshold)
-    this.gl.uniform1i(orientShader.uniforms.isAdditiveBlend, this.opts.isAdditiveBlend)
+    this.gl.uniform1i(orientShader.uniforms.isAlphaThreshold, overlayItem.alphaThreshold!)
+    this.gl.uniform1i(orientShader.uniforms.isAdditiveBlend, this.opts.isAdditiveBlend ? 1 : 0)
     // if unused colormapNegative https://github.com/niivue/niivue/issues/490
     let mnNeg = Number.POSITIVE_INFINITY
     let mxNeg = Number.NEGATIVE_INFINITY
     if (overlayItem.colormapNegative.length > 0) {
       // assume symmetrical
-      mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max)
-      mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max)
+      mnNeg = Math.min(-overlayItem.cal_min!, -overlayItem.cal_max!)
+      mxNeg = Math.max(-overlayItem.cal_min!, -overlayItem.cal_max!)
       if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
         // explicit range for negative colormap: allows asymmetric maps
         mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
@@ -5660,7 +5667,7 @@ export class Niivue {
       overlayItem.modulationImage < this.volumes.length
     ) {
       log.debug(this.volumes)
-      const mhdr = this.volumes[overlayItem.modulationImage].hdr
+      const mhdr = this.volumes[overlayItem.modulationImage].hdr!
       if (mhdr.dims[1] === hdr.dims[1] && mhdr.dims[2] === hdr.dims[2] && mhdr.dims[3] === hdr.dims[3]) {
         if (overlayItem.modulateAlpha) {
           this.gl.uniform1i(orientShader.uniforms.modulation, 2)
