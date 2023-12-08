@@ -477,7 +477,7 @@ export class Niivue {
     leftTopWidthHeight: number[]
     axCorSag: SLICE_TYPE
     sliceFrac: number
-    AxyzMxy: unknown[]
+    AxyzMxy: number[]
     leftTopMM: number[]
     fovMM: number[]
     screen2frac?: number[]
@@ -5399,10 +5399,10 @@ export class Niivue {
       if (this.back?.dims === undefined) {
         log.error('Fatal error: Unable to render overlay: background dimensions not defined!')
       }
-      const f000 = this.mm2frac(overlayItem.mm000, 0, true) // origin in output space
-      let f100 = this.mm2frac(overlayItem.mm100, 0, true)
-      let f010 = this.mm2frac(overlayItem.mm010, 0, true)
-      let f001 = this.mm2frac(overlayItem.mm001, 0, true)
+      const f000 = this.mm2frac(overlayItem.mm000!, 0, true) // origin in output space
+      let f100 = this.mm2frac(overlayItem.mm100!, 0, true)
+      let f010 = this.mm2frac(overlayItem.mm010!, 0, true)
+      let f001 = this.mm2frac(overlayItem.mm001!, 0, true)
       f100 = vec3.subtract(f100, f100, f000) // direction of i dimension from origin
       f010 = vec3.subtract(f010, f010, f000) // direction of j dimension from origin
       f001 = vec3.subtract(f001, f001, f000) // direction of k dimension from origin
@@ -8244,13 +8244,7 @@ export class Niivue {
     return null
   }
 
-  drawLabelLine(
-    label: NVLabel3D,
-    pos: number[],
-    mvpMatrix: mat4,
-    leftTopWidthHeight: number[],
-    secondPass = false
-  ): void {
+  drawLabelLine(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass = false): void {
     const points =
       Array.isArray(label.points) && Array.isArray(label.points[0])
         ? (label.points as Array<[number, number, number]>)
@@ -8434,7 +8428,7 @@ export class Niivue {
     if (!isMosaic) {
       this.drawCrosshairs3D(true, 1.0, mvpMatrix)
     }
-    this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix, normalMatrix)
+    this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix!, normalMatrix!)
     if (this.uiData.mouseDepthPicker) {
       this.depthPicker(leftTopWidthHeight, mvpMatrix)
       this.createOnLocationChange()
@@ -8443,7 +8437,7 @@ export class Niivue {
       return
     }
     if (this.opts.meshXRay > 0.0) {
-      this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix, normalMatrix)
+      this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
     }
 
     //
@@ -8468,7 +8462,7 @@ export class Niivue {
 
   // not included in public docs
   // create 3D rendering of NVMesh on canvas
-  drawMesh3D(isDepthTest = true, alpha = 1.0, m, modelMtx, normMtx): void {
+  drawMesh3D(isDepthTest = true, alpha = 1.0, m?: mat4, modelMtx?: mat4, normMtx?: mat4): void {
     if (this.meshes.length < 1) {
       return
     }
@@ -8520,7 +8514,7 @@ export class Niivue {
       // gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
       // gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
       // gl.uniform1f(shader.uniforms["opacity"], alpha);
-      gl.uniformMatrix4fv(shader.normLoc, false, normMtx)
+      gl.uniformMatrix4fv(shader.normLoc, false, normMtx!)
       gl.uniform1f(shader.opacityLoc, alpha)
       if (this.meshes[i].indexCount! < 3) {
         continue
@@ -8552,14 +8546,14 @@ export class Niivue {
       if (this.meshes[i].visible === false) {
         continue
       }
-      if (this.meshes[i].indexCount < 3) {
+      if (this.meshes[i].indexCount! < 3) {
         continue
       }
       if (!this.meshes[i].offsetPt0) {
         continue
       }
       gl.bindVertexArray(this.meshes[i].vao)
-      gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0)
+      gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
     gl.enable(gl.BLEND)
@@ -8568,7 +8562,13 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawCrosshairs3D(isDepthTest = true, alpha = 1.0, mvpMtx: mat4 | null = null, is2DView = false, isSliceMM = true) {
+  drawCrosshairs3D(
+    isDepthTest = true,
+    alpha = 1.0,
+    mvpMtx: mat4 | null = null,
+    is2DView = false,
+    isSliceMM = true
+  ): void {
     if (!this.opts.show3Dcrosshair && !is2DView) {
       return
     }
@@ -8609,7 +8609,13 @@ export class Niivue {
     const crosshairsShader = this.surfaceShader
     crosshairsShader.use(this.gl)
     if (mvpMtx == null) {
-      ;[mvpMtx] = this.calculateMvpMatrix(this.crosshairs3D, this.scene.renderAzimuth, this.scene.renderElevation)
+      // FIXME see above - I added the undefined, parameters were misaligned
+      ;[mvpMtx] = this.calculateMvpMatrix(
+        this.crosshairs3D,
+        undefined,
+        this.scene.renderAzimuth,
+        this.scene.renderElevation
+      )
     }
     gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx)
 
@@ -8638,14 +8644,16 @@ export class Niivue {
   }
 
   // not included in public docs
-  mm2frac(mm, volIdx = 0, isForceSliceMM = false): vec3 {
+  mm2frac(mm: vec3 | vec4, volIdx = 0, isForceSliceMM = false): vec3 {
     // given mm, return volume fraction
     if (this.volumes.length < 1) {
-      const frac = [0.1, 0.5, 0.5]
+      const frac = vec3.fromValues(0.1, 0.5, 0.5)
       const [mn, _mx, range] = this.sceneExtentsMinMax()
       frac[0] = (mm[0] - mn[0]) / range[0]
       frac[1] = (mm[1] - mn[1]) / range[1]
       frac[2] = (mm[2] - mn[2]) / range[2]
+      // FIXME this makes no sense, frac is an array
+      // @ts-expect-error -- not sure what should happen here
       if (!isFinite(frac)) {
         if (!isFinite(frac[0])) {
           frac[0] = 0.5
@@ -8665,12 +8673,12 @@ export class Niivue {
     // convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
     const mm4 = vec4.fromValues(mm[0], mm[1], mm[2], 1)
     const d = this.volumes[volIdx].dimsRAS
-    const frac = [0, 0, 0]
+    const frac = vec3.fromValues(0, 0, 0)
     if (typeof d === 'undefined') {
       return frac
     }
     if (!isForceSliceMM && !this.opts.isSliceMM) {
-      const xform = mat4.clone(this.volumes[volIdx].frac2mmOrtho)
+      const xform = mat4.clone(this.volumes[volIdx].frac2mmOrtho!)
       mat4.invert(xform, xform)
       vec4.transformMat4(mm4, mm4, xform)
       frac[0] = mm4[0]
@@ -8681,7 +8689,7 @@ export class Niivue {
     if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
       return frac
     }
-    const sform = mat4.clone(this.volumes[volIdx].matRAS)
+    const sform = mat4.clone(this.volumes[volIdx].matRAS!)
     mat4.invert(sform, sform)
     mat4.transpose(sform, sform)
     vec4.transformMat4(mm4, mm4, sform)
@@ -8704,7 +8712,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  frac2vox(frac, volIdx = 0): vec3 {
+  frac2vox(frac: vec3, volIdx = 0): vec3 {
     // convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
     // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
     if (this.volumes.length <= volIdx) {
@@ -8720,13 +8728,13 @@ export class Niivue {
 
   /**
    * move crosshair a fixed number of voxels (not mm)
-   * @param {number} x translate left (-) or right (+)
-   * @param {number} y translate posterior (-) or +anterior (+)
-   * @param {number} z translate inferior (-) or superior (+)
+   * @param x - translate left (-) or right (+)
+   * @param y - translate posterior (-) or +anterior (+)
+   * @param z - translate inferior (-) or superior (+)
    * @example niivue.moveCrosshairInVox(1, 0, 0)
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
-  moveCrosshairInVox(x: number, y: number, z: number) {
+  moveCrosshairInVox(x: number, y: number, z: number): void {
     const vox = this.frac2vox(this.scene.crosshairPos)
     vox[0] += x
     vox[1] += y
@@ -8740,17 +8748,17 @@ export class Niivue {
   }
 
   // not included in public docs
-  frac2mm(frac: vec3, volIdx = 0, isForceSliceMM = false) {
+  frac2mm(frac: vec3, volIdx = 0, isForceSliceMM = false): vec4 {
     const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (this.volumes.length > 0) {
       if (isForceSliceMM || this.opts.isSliceMM) {
-        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm)
+        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm!)
       } else {
-        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho)
+        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho!)
       }
     } else {
       const [mn, mx] = this.sceneExtentsMinMax()
-      const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a
+      const lerp = (x: number, y: number, a: number): number => x * (1 - a) + y * a
       pos[0] = lerp(mn[0], mx[0], frac[0])
       pos[1] = lerp(mn[1], mx[1], frac[1])
       pos[2] = lerp(mn[2], mx[2], frac[2])
@@ -8783,7 +8791,7 @@ export class Niivue {
     if (this.screenSlices[i].AxyzMxy.length < 4) {
       return texFrac
     }
-    let xyzMM = [0, 0, 0]
+    let xyzMM = vec3.fromValues(0, 0, 0)
     xyzMM[0] = this.screenSlices[i].leftTopMM[0] + fracX * this.screenSlices[i].fovMM[0]
     xyzMM[1] = this.screenSlices[i].leftTopMM[1] + fracY * this.screenSlices[i].fovMM[1]
     // let xyz = vec3.fromValues(30, 30, 0);
@@ -8817,7 +8825,7 @@ export class Niivue {
 
   // not included in public docs
   // note: we also have a "sliceScale" method, which could be confusing
-  scaleSlice(w: number, h: number, widthPadPixels = 0, heightPadPixels = 0) {
+  scaleSlice(w: number, h: number, widthPadPixels = 0, heightPadPixels = 0): number[] {
     const canvasW = this.effectiveCanvasWidth() - widthPadPixels
     const canvasH = this.effectiveCanvasHeight() - heightPadPixels
     let scalePix = canvasW / w
@@ -8833,7 +8841,10 @@ export class Niivue {
 
   // not included in public docs
   // display 2D image to defer loading of (slow) 3D data
-  drawThumbnail() {
+  drawThumbnail(): void {
+    if (!this.bmpShader) {
+      throw new Error('bmpShader undefined')
+    }
     this.bmpShader.use(this.gl)
     this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
     let h = this.gl.canvas.height
@@ -8852,7 +8863,7 @@ export class Niivue {
   // not included in public docs
   // draw line (can be diagonal)
   // unless Alpha is > 0, default color is opts.crosshairColor
-  drawLine(startXYendXY: number[], thickness = 1, lineColor = [1, 0, 0, -1]) {
+  drawLine(startXYendXY: number[], thickness = 1, lineColor = [1, 0, 0, -1]): void {
     this.gl.bindVertexArray(this.genericVAO)
     if (!this.lineShader) {
       throw new Error('lineShader undefined')
@@ -8873,7 +8884,7 @@ export class Niivue {
   // not included in public docs
   // draw line (can be diagonal)
   // unless Alpha is > 0, default color is opts.crosshairColor
-  draw3DLine(startXY, endXYZ, thickness = 1, lineColor = [1, 0, 0, -1]) {
+  draw3DLine(startXY: vec2, endXYZ: vec3, thickness = 1, lineColor = [1, 0, 0, -1]): void {
     this.gl.bindVertexArray(this.genericVAO)
     if (!this.line3DShader) {
       throw new Error('line3DShader undefined')
@@ -8892,7 +8903,7 @@ export class Niivue {
     this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
 
-  drawDottedLine(startXYendXY: number[], thickness = 1, lineColor = [1, 0, 0, -1]) {
+  drawDottedLine(startXYendXY: number[], thickness = 1, lineColor = [1, 0, 0, -1]): void {
     this.gl.bindVertexArray(this.genericVAO)
     if (!this.lineShader) {
       throw new Error('lineShader undefined')
@@ -8959,12 +8970,12 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawGraphLine(LTRB: number[], color = [1, 0, 0, 0.5], thickness = 2) {
+  drawGraphLine(LTRB: number[], color = [1, 0, 0, 0.5], thickness = 2): void {
     this.drawLine(LTRB, thickness, color)
   }
 
   // not included in public docs
-  drawCrossLinesMM(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]) {
+  drawCrossLinesMM(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]): void {
     if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) {
       return
     }
@@ -9103,7 +9114,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawCrossLines(sliceIndex, axCorSag, axiMM, corMM, sagMM) {
+  drawCrossLines(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]): void {
     if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) {
       return
     }
@@ -9162,11 +9173,11 @@ export class Niivue {
 
   /**
    * display a lightbox or montage view
-   * @param {string} mosaicStr specifies orientation (A,C,S) and location of slices.
+   * @param mosaicStr - specifies orientation (A,C,S) and location of slices.
    * @example niivue.setSliceMosaicString("A -10 0 20");
    * @see {@link https://niivue.github.io/niivue/features/mosaics.html|live demo usage}
    */
-  drawMosaic(mosaicStr) {
+  drawMosaic(mosaicStr: string): void {
     if (this.volumes.length === 0) {
       log.debug('Unable to draw mosaic until voxel-based image is loaded')
       return
@@ -9232,7 +9243,7 @@ export class Niivue {
           rowHt = 0
           left = 0
         }
-        const sliceMM = parseFloat(item, NaN)
+        const sliceMM = parseFloat(item)
         if (isNaN(sliceMM)) {
           continue
         }
@@ -9276,9 +9287,9 @@ export class Niivue {
             if (Object.is(sliceMM, -0)) {
               inf = -Infinity
             } // catch negative zero
-            this.draw2D(ltwh, axCorSag, inf, isLabel)
+            this.draw2D(ltwh, axCorSag, inf)
           } else {
-            this.draw2D(ltwh, axCorSag, sliceMM, isLabel)
+            this.draw2D(ltwh, axCorSag, sliceMM)
           }
           if (isCrossLines) {
             this.drawCrossLines(this.screenSlices.length - 1, axCorSag, axiMM, corMM, sagMM)
@@ -9393,7 +9404,8 @@ export class Niivue {
         if (typeof this.opts.multiplanarPadPixels !== 'number') {
           log.debug('multiplanarPadPixels must be numeric')
         }
-        const pad = parseFloat(this.opts.multiplanarPadPixels)
+        // TODO this was parseFloat without escaping - passing a number to parseFloat doesn't work
+        const pad = parseFloat(`${this.opts.multiplanarPadPixels}`)
         // size for 2 rows, 2 columns
         const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1)
         const mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0])
