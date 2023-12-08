@@ -74,7 +74,7 @@ export class NVController {
     this.niivue.mediaUrlMap.set(mesh, url)
   }
 
-  async onNewMessage(msg: Message): Promise<void> {
+  onNewMessage(msg: Message): void {
     switch (msg.op) {
       case NVMESSAGE.ZOOM:
         // TODO was _volScaleMultiplier, doesn't exist.
@@ -97,10 +97,17 @@ export class NVController {
         break
       case NVMESSAGE.VOLUME_ADDED_FROM_URL:
         if (!this.niivue.getMediaByUrl(msg.imageOptions.url)) {
-          const volume = await NVImage.loadFromUrl(msg.imageOptions)
-          if (volume) {
-            this.addVolume(volume, msg.imageOptions.url)
-          }
+          NVImage.loadFromUrl(msg.imageOptions)
+            .then((volume) => {
+              if (volume) {
+                this.addVolume(volume, msg.imageOptions.url)
+              }
+            })
+            .catch((e) => {
+              if (e) {
+                throw e
+              }
+            })
         }
 
         break
@@ -131,9 +138,15 @@ export class NVController {
       case NVMESSAGE.MESH_FROM_URL_ADDED:
         if (!this.niivue.getMediaByUrl(msg.meshOptions.url)) {
           msg.meshOptions.gl = this.niivue.gl!
-          NVMesh.loadFromUrl(msg.meshOptions).then((mesh) => {
-            this.addMesh(mesh, msg.meshOptions.url)
-          })
+          NVMesh.loadFromUrl(msg.meshOptions)
+            .then((mesh) => {
+              this.addMesh(mesh, msg.meshOptions.url)
+            })
+            .catch((e) => {
+              if (e) {
+                throw e
+              }
+            })
         }
         break
       case NVMESSAGE.MESH_WITH_URL_REMOVED:
