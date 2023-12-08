@@ -105,8 +105,8 @@ const log = new Log()
 type DragReleaseParams = {
   fracStart: vec3
   fracEnd: vec3
-  voxStart: number[]
-  voxEnd: number[]
+  voxStart: vec3
+  voxEnd: vec3
   mmStart: vec4
   mmEnd: vec4
   mmLength: number
@@ -144,6 +144,13 @@ type Graph = {
   vols: number[]
   autoSizeMultiplanar: boolean
   normalizeValues: boolean
+  backColor?: number[]
+  lineColor?: number[]
+  textColor?: number[]
+  lineThickness?: number
+  lineAlpha?: number
+  lines?: unknown[]
+  selectedColumn?: number
 }
 
 /**
@@ -375,6 +382,10 @@ export class Niivue {
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
   isAlphaClipDark = false
+  position?: vec3
+
+  extentsMin?: vec3
+  extentsMax?: vec3
 
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
@@ -425,7 +436,7 @@ export class Niivue {
     axCorSag: SLICE_TYPE
     sliceFrac: number
     AxyzMxy: unknown[]
-    leftTopMM: unknown[]
+    leftTopMM: number[]
     fovMM: number[]
     screen2frac?: number[]
   }> = [] // empty array
@@ -554,45 +565,41 @@ export class Niivue {
 
   /**
    * callback function to run when a new volume is loaded
-   * @type {function}
    * @example
-   * niivue.onImageLoaded = (volume) => {
+   * niivue.onImageLoaded = (volume) =\> \{
    * console.log('volume loaded')
    * console.log('volume: ', volume)
-   * }
+   * \}
    */
   onImageLoaded: (volume: NVImage) => void = () => {}
 
   /**
    * callback function to run when a new mesh is loaded
-   * @type {function}
    * @example
-   * niivue.onMeshLoaded = (mesh) => {
+   * niivue.onMeshLoaded = (mesh) =\> \{
    * console.log('mesh loaded')
    * console.log('mesh: ', mesh)
-   * }
+   * \}
    */
   onMeshLoaded: (mesh: NVMesh) => void = () => {}
 
   /**
    * callback function to run when the user changes the volume when a 4D image is loaded
-   * @type {function}
    * @example
-   * niivue.onFrameChange = (volume, frameNumber) => {
+   * niivue.onFrameChange = (volume, frameNumber) =\> \{
    * console.log('frame changed')
    * console.log('volume: ', volume)
    * console.log('frameNumber: ', frameNumber)
-   * }
+   * \}
    */
   onFrameChange: (volume: NVImage, index: number) => void = () => {}
 
   /**
    * callback function to run when niivue reports an error
-   * @type {function}
    * @example
-   * niivue.onError = (error) => {
+   * niivue.onError = (error) =\> \{
    * console.log('error: ', error)
-   * }
+   * \}
    */
   onError: () => void = () => {}
 
@@ -601,42 +608,39 @@ export class Niivue {
 
   /**
    * callback function to run when niivue reports detailed info
-   * @type {function}
    * @example
-   * niivue.onInfo = (info) => {
+   * niivue.onInfo = (info) =\> \{
    * console.log('info: ', info)
-   * }
+   * \}
    */
   onInfo: () => void = () => {}
 
   /**
    * callback function to run when niivue reports a warning
-   * @type {function}
    * @example
-   * niivue.onWarn = (warn) => {
+   * niivue.onWarn = (warn) =\> \{
    * console.log('warn: ', warn)
-   * }
+   * \}
    */
   onWarn: () => void = () => {}
 
   /**
    * callback function to run when niivue reports a debug message
-   * @type {function}
    * @example
-   * niivue.onDebug = (debug) => {
+   * niivue.onDebug = (debug) =\> \{
    * console.log('debug: ', debug)
-   * }
+   * \}
    */
   onDebug: () => void = () => {}
 
   /**
    * callback function to run when a volume is added from a url
    * @example
-   * niivue.onVolumeAddedFromUrl = (imageOptions, volume) => {
+   * niivue.onVolumeAddedFromUrl = (imageOptions, volume) =\> \{
    * console.log('volume added from url')
    * console.log('imageOptions: ', imageOptions)
    * console.log('volume: ', volume)
-   * }
+   * \}
    */
   onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => {}
   onVolumeWithUrlRemoved: (url: string) => void = () => {}
@@ -652,13 +656,12 @@ export class Niivue {
 
   /**
    * callback function to run when a mesh is added from a url
-   * @type {function}
    * @example
-   * niivue.onMeshAddedFromUrl = (meshOptions, mesh) => {
+   * niivue.onMeshAddedFromUrl = (meshOptions, mesh) =\> \{
    * console.log('mesh added from url')
    * console.log('meshOptions: ', meshOptions)
    * console.log('mesh: ', mesh)
-   * }
+   * \}
    */
   onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => {}
 
@@ -671,22 +674,20 @@ export class Niivue {
 
   /**
    * callback function to run when the user changes the rotation of the 3D rendering
-   * @type {function}
    * @example
-   * niivue.onAzimuthElevationChange = (azimuth, elevation) => {
+   * niivue.onAzimuthElevationChange = (azimuth, elevation) =\> \{
    * console.log('azimuth: ', azimuth)
    * console.log('elevation: ', elevation)
-   * }
+   * \}
    */
   onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => {}
 
   /**
    * callback function to run when the user changes the clip plane
-   * @type {function}
    * @example
-   * niivue.onClipPlaneChange = (clipPlane) => {
+   * niivue.onClipPlaneChange = (clipPlane) =\> \{
    * console.log('clipPlane: ', clipPlane)
-   * }
+   * \}
    */
   onClipPlaneChange: (clipPlane: number[]) => void = () => {}
   onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
@@ -695,11 +696,10 @@ export class Niivue {
 
   /**
    * callback function to run when the user loads a new NiiVue document
-   * @type {function}
    * @example
-   * niivue.onDocumentLoaded = (document) => {
+   * niivue.onDocumentLoaded = (document) =\> \{
    * console.log('document: ', document)
-   * }
+   * \}
    */
   onDocumentLoaded: (document: NVDocument) => void = () => {}
 
@@ -7070,8 +7070,8 @@ export class Niivue {
   // not included in public docs
   calculateMvpMatrix2D(
     leftTopWidthHeight: number[],
-    mn: number[],
-    mx: number[],
+    mn: vec3,
+    mx: vec3,
     clipTolerance = Infinity,
     clipDepth = 0,
     azimuth = 0,
@@ -7253,9 +7253,9 @@ export class Niivue {
     a = this.frac2mm(a)
     b = this.frac2mm(b)
     c = this.frac2mm(c)
-    a = this.swizzleVec3MM(a, axCorSag)
-    b = this.swizzleVec3MM(b, axCorSag)
-    c = this.swizzleVec3MM(c, axCorSag)
+    a = this.swizzleVec3MM(vec3.fromValues(a[0], a[1], a[2]), axCorSag)
+    b = this.swizzleVec3MM(vec3.fromValues(b[0], b[1], b[2]), axCorSag)
+    c = this.swizzleVec3MM(vec3.fromValues(c[0], c[1], c[2]), axCorSag)
     const denom = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
     let yMult = (b[0] - a[0]) * (c[2] - a[2]) - (c[0] - a[0]) * (b[2] - a[2])
     yMult /= denom
@@ -7323,7 +7323,8 @@ export class Niivue {
       leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height]
     }
     if (isNaN(customMM)) {
-      const panXY = this.swizzleVec3MM(this.scene.pan2Dxyzmm, axCorSag)
+      const pan = this.scene.pan2Dxyzmm
+      const panXY = this.swizzleVec3MM(vec3.fromValues(pan[0], pan[1], pan[2]), axCorSag)
       const zoom = this.scene.pan2Dxyzmm[3]
       screen.mnMM[0] -= panXY[0]
       screen.mxMM[0] -= panXY[0]
@@ -7427,13 +7428,14 @@ export class Niivue {
       // draw crosshairs
       this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
     }
-    if (this.opts.meshThicknessOn2D > 0.0) {
+    // TODO handle "infinity" for meshThicknessOn2D
+    if ((this.opts.meshThicknessOn2D as number) > 0.0) {
       if (this.opts.meshThicknessOn2D !== Infinity) {
         obj = this.calculateMvpMatrix2D(
           leftTopWidthHeight,
           screen.mnMM,
           screen.mxMM,
-          this.opts.meshThicknessOn2D,
+          this.opts.meshThicknessOn2D as number,
           sliceMM,
           azimuth,
           elevation,
@@ -7510,7 +7512,10 @@ export class Niivue {
   }
 
   // not included in public docs
-  calculateModelMatrix(azimuth, elevation) {
+  calculateModelMatrix(azimuth: number, elevation: number) {
+    if (!this.back) {
+      throw new Error('back undefined')
+    }
     const modelMatrix = mat4.create()
     modelMatrix[0] = -1 // mirror X coordinate
     // push the model away from the camera so camera not inside model
@@ -7527,7 +7532,7 @@ export class Niivue {
 
   // not included in public docs
   // calculate the near-far direction from the camera's perspective
-  calculateRayDirection(azimuth, elevation) {
+  calculateRayDirection(azimuth: number, elevation: number) {
     const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
     // from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
     const projectionMatrix = mat4.fromValues(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1)
@@ -7558,6 +7563,9 @@ export class Niivue {
     let mn = vec3.fromValues(0, 0, 0)
     let mx = vec3.fromValues(0, 0, 0)
     if (this.volumes.length > 0) {
+      if (!this.volumeObject3D) {
+        throw new Error('volumeObject3D undefined')
+      }
       mn = vec3.fromValues(
         this.volumeObject3D.extentsMin[0],
         this.volumeObject3D.extentsMin[1],
@@ -7570,40 +7578,30 @@ export class Niivue {
       )
       if (!isSliceMM) {
         mn = vec3.fromValues(
-          this.volumes[0].extentsMinOrtho[0],
-          this.volumes[0].extentsMinOrtho[1],
-          this.volumes[0].extentsMinOrtho[2]
+          this.volumes[0].extentsMinOrtho![0],
+          this.volumes[0].extentsMinOrtho![1],
+          this.volumes[0].extentsMinOrtho![2]
         )
         mx = vec3.fromValues(
-          this.volumes[0].extentsMaxOrtho[0],
-          this.volumes[0].extentsMaxOrtho[1],
-          this.volumes[0].extentsMaxOrtho[2]
+          this.volumes[0].extentsMaxOrtho![0],
+          this.volumes[0].extentsMaxOrtho![1],
+          this.volumes[0].extentsMaxOrtho![2]
         )
       }
     }
     if (this.meshes.length > 0) {
       if (this.volumes.length < 1) {
-        /* console.log("this.meshes");
-      console.log(this.meshes);
-      console.log("this.meshes.length");
-      console.log(this.meshes.length);
-      console.log("this.meshes[0].extentsMin");
-      console.log(this.meshes[0].extentsMin); */
-        mn = vec3.fromValues(this.meshes[0].extentsMin[0], this.meshes[0].extentsMin[1], this.meshes[0].extentsMin[2])
-        mx = vec3.fromValues(this.meshes[0].extentsMax[0], this.meshes[0].extentsMax[1], this.meshes[0].extentsMax[2])
+        const minExtents = this.meshes[0].extentsMin as number[]
+        const maxExtents = this.meshes[0].extentsMax as number[]
+        mn = vec3.fromValues(minExtents[0], minExtents[1], minExtents[2])
+        mx = vec3.fromValues(maxExtents[0], maxExtents[1], maxExtents[2])
       }
       for (let i = 0; i < this.meshes.length; i++) {
-        const vmn = vec3.fromValues(
-          this.meshes[i].extentsMin[0],
-          this.meshes[i].extentsMin[1],
-          this.meshes[i].extentsMin[2]
-        )
+        const minExtents = this.meshes[i].extentsMin as number[]
+        const maxExtents = this.meshes[i].extentsMax as number[]
+        const vmn = vec3.fromValues(minExtents[0], minExtents[1], minExtents[2])
         vec3.min(mn, mn, vmn)
-        const vmx = vec3.fromValues(
-          this.meshes[i].extentsMax[0],
-          this.meshes[i].extentsMax[1],
-          this.meshes[i].extentsMax[2]
-        )
+        const vmx = vec3.fromValues(maxExtents[0], maxExtents[1], maxExtents[2])
         vec3.max(mx, mx, vmx)
       }
     }
@@ -7636,7 +7634,7 @@ export class Niivue {
     }
     let maxVols = 0
     for (let i = 0; i < this.volumes.length; i++) {
-      maxVols = Math.max(maxVols, this.volumes[i].nFrame4D)
+      maxVols = Math.max(maxVols, this.volumes[i].nFrame4D!)
     }
     return maxVols
   }
@@ -7647,7 +7645,7 @@ export class Niivue {
       return false
     }
     for (let i = 0; i < this.volumes.length; i++) {
-      if (this.volumes[i].nFrame4D < this.volumes[i].hdr.dims[4]) {
+      if (this.volumes[i].nFrame4D! < this.volumes[i].hdr!.dims[4]) {
         return true
       }
     }
@@ -7717,7 +7715,7 @@ export class Niivue {
     if (vols.length < 1) {
       return
     }
-    const maxVols = this.volumes[vols[0]].nFrame4D
+    const maxVols = this.volumes[vols[0]].nFrame4D!
     this.graph.selectedColumn = this.volumes[vols[0]].frame4D
     if (maxVols < 2) {
       log.debug('Unable to generate a graph: Selected volume is 3D not 4D')
@@ -7728,7 +7726,7 @@ export class Niivue {
       const vox = this.frac2vox(this.scene.crosshairPos)
       const v = this.volumes[vols[i]]
       let n = v.nFrame4D
-      n = Math.min(n, maxVols)
+      n = Math.min(n!, maxVols)
       for (let j = 0; j < n; j++) {
         const val = v.getValue(...vox, j)
         graph.lines[i].push(val)
@@ -8623,29 +8621,29 @@ export class Niivue {
   }
 
   // not included in public docs
-  vox2frac(vox, volIdx = 0) {
+  vox2frac(vox: vec3, volIdx = 0): vec3 {
     // convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
     // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
-    const frac = [
-      (vox[0] + 0.5) / this.volumes[volIdx].dimsRAS[1],
-      (vox[1] + 0.5) / this.volumes[volIdx].dimsRAS[2],
-      (vox[2] + 0.5) / this.volumes[volIdx].dimsRAS[3]
-    ]
+    const frac = vec3.fromValues(
+      (vox[0] + 0.5) / this.volumes[volIdx].dimsRAS![1],
+      (vox[1] + 0.5) / this.volumes[volIdx].dimsRAS![2],
+      (vox[2] + 0.5) / this.volumes[volIdx].dimsRAS![3]
+    )
     return frac
   }
 
   // not included in public docs
-  frac2vox(frac, volIdx = 0) {
+  frac2vox(frac, volIdx = 0): vec3 {
     // convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
     // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
     if (this.volumes.length <= volIdx) {
       return [0, 0, 0]
     }
-    const vox = [
-      Math.round(frac[0] * this.volumes[volIdx].dims[1] - 0.5), // dims === RAS
-      Math.round(frac[1] * this.volumes[volIdx].dims[2] - 0.5), // dims === RAS
-      Math.round(frac[2] * this.volumes[volIdx].dims[3] - 0.5) // dims === RAS
-    ]
+    const vox = vec3.fromValues(
+      Math.round(frac[0] * this.volumes[volIdx].dims![1] - 0.5), // dims === RAS
+      Math.round(frac[1] * this.volumes[volIdx].dims![2] - 0.5), // dims === RAS
+      Math.round(frac[2] * this.volumes[volIdx].dims![3] - 0.5) // dims === RAS
+    )
     return vox
   }
 
@@ -8657,14 +8655,14 @@ export class Niivue {
    * @example niivue.moveCrosshairInVox(1, 0, 0)
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
-  moveCrosshairInVox(x, y, z) {
+  moveCrosshairInVox(x: number, y: number, z: number) {
     const vox = this.frac2vox(this.scene.crosshairPos)
     vox[0] += x
     vox[1] += y
     vox[2] += z
-    vox[0] = clamp(vox[0], 0, this.volumes[0].dimsRAS[1] - 1)
-    vox[1] = clamp(vox[1], 0, this.volumes[0].dimsRAS[2] - 1)
-    vox[2] = clamp(vox[2], 0, this.volumes[0].dimsRAS[3] - 1)
+    vox[0] = clamp(vox[0], 0, this.volumes[0].dimsRAS![1] - 1)
+    vox[1] = clamp(vox[1], 0, this.volumes[0].dimsRAS![2] - 1)
+    vox[2] = clamp(vox[2], 0, this.volumes[0].dimsRAS![3] - 1)
     this.scene.crosshairPos = this.vox2frac(vox)
     this.createOnLocationChange()
     this.drawScene()
@@ -8690,8 +8688,8 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenXY2TextureFrac(x, y, i, restrict0to1 = true): vec3 {
-    const texFrac = [-1, -1, -1] // texture 0..1 so -1 is out of bounds
+  screenXY2TextureFrac(x: number, y: number, i: number, restrict0to1 = true): vec3 {
+    const texFrac = vec3.fromValues(-1, -1, -1) // texture 0..1 so -1 is out of bounds
     const axCorSag = this.screenSlices[i].axCorSag
     if (axCorSag > SLICE_TYPE.SAGITTAL) {
       return texFrac
@@ -8783,8 +8781,11 @@ export class Niivue {
   // not included in public docs
   // draw line (can be diagonal)
   // unless Alpha is > 0, default color is opts.crosshairColor
-  drawLine(startXYendXY, thickness = 1, lineColor = [1, 0, 0, -1]) {
+  drawLine(startXYendXY: number[], thickness = 1, lineColor = [1, 0, 0, -1]) {
     this.gl.bindVertexArray(this.genericVAO)
+    if (!this.lineShader) {
+      throw new Error('lineShader undefined')
+    }
     this.lineShader.use(this.gl)
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
@@ -8887,12 +8888,12 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawGraphLine(LTRB, color = [1, 0, 0, 0.5], thickness = 2) {
+  drawGraphLine(LTRB: number[], color = [1, 0, 0, 0.5], thickness = 2) {
     this.drawLine(LTRB, thickness, color)
   }
 
   // not included in public docs
-  drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM) {
+  drawCrossLinesMM(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]) {
     if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) {
       return
     }
@@ -8915,8 +8916,8 @@ export class Niivue {
       linesH = axiMM.slice()
       linesV = corMM.slice()
     }
-    function mm2screen(mm) {
-      const screenXY = [0, 0]
+    function mm2screen(mm: vec2): vec2 {
+      const screenXY = vec2.fromValues(0, 0)
       screenXY[0] =
         tile.leftTopWidthHeight[0] + ((mm[0] - tile.leftTopMM[0]) / tile.fovMM[0]) * tile.leftTopWidthHeight[2]
       screenXY[1] =
@@ -8925,20 +8926,21 @@ export class Niivue {
         ((mm[1] - tile.leftTopMM[1]) / tile.fovMM[1]) * tile.leftTopWidthHeight[3]
       return screenXY
     }
+
     if (linesH.length > 0 && axCorSag === 0) {
       const fracZ = sliceFrac
       const dimV = 1
       for (let i = 0; i < linesH.length; i++) {
         const mmV = this.frac2mm([0.5, 0.5, 0.5])
         mmV[dimV] = linesH[i]
-        let fracY = this.mm2frac(mmV)
+        let fracY: vec3 | number = this.mm2frac(mmV)
         fracY = fracY[dimV]
-        let left = this.frac2mm([0.0, fracY, fracZ])
-        left = swizzleVec3(left, [0, 1, 2])
-        let right = this.frac2mm([1.0, fracY, fracZ])
-        right = swizzleVec3(right, [0, 1, 2])
-        left = mm2screen(left)
-        right = mm2screen(right)
+        let left: vec4 | vec3 | vec2 = this.frac2mm([0.0, fracY, fracZ])
+        left = swizzleVec3(left as vec3, [0, 1, 2])
+        let right: vec4 | vec3 | vec2 = this.frac2mm([1.0, fracY, fracZ])
+        right = swizzleVec3(right as vec3, [0, 1, 2])
+        left = mm2screen(left as vec2)
+        right = mm2screen(right as vec2)
         this.drawLine([left[0], left[1], right[0], right[1]], thick)
       }
     }
@@ -8948,14 +8950,14 @@ export class Niivue {
       for (let i = 0; i < linesH.length; i++) {
         const mmV = this.frac2mm([0.5, 0.5, 0.5])
         mmV[dimV] = linesH[i]
-        let fracV = this.mm2frac(mmV)
+        let fracV: vec3 | number = this.mm2frac(mmV)
         fracV = fracV[dimV]
-        let left = this.frac2mm([0.0, fracH, fracV])
-        left = swizzleVec3(left, [0, 2, 1])
-        let right = this.frac2mm([1.0, fracH, fracV])
-        right = swizzleVec3(right, [0, 2, 1])
-        left = mm2screen(left)
-        right = mm2screen(right)
+        let left: vec4 | vec3 | vec2 = this.frac2mm([0.0, fracH, fracV])
+        left = swizzleVec3(left as vec3, [0, 2, 1])
+        let right: vec4 | vec3 | vec2 = this.frac2mm([1.0, fracH, fracV])
+        right = swizzleVec3(right as vec3, [0, 2, 1])
+        left = mm2screen(left as vec2)
+        right = mm2screen(right as vec2)
         this.drawLine([left[0], left[1], right[0], right[1]], thick)
       }
     }
@@ -8965,14 +8967,14 @@ export class Niivue {
       for (let i = 0; i < linesH.length; i++) {
         const mmV = this.frac2mm([0.5, 0.5, 0.5])
         mmV[dimV] = linesH[i]
-        let fracZ = this.mm2frac(mmV)
+        let fracZ: vec3 | number = this.mm2frac(mmV)
         fracZ = fracZ[dimV]
-        let left = this.frac2mm([fracX, 0, fracZ])
-        left = swizzleVec3(left, [1, 2, 0])
-        let right = this.frac2mm([fracX, 1, fracZ])
-        right = swizzleVec3(right, [1, 2, 0])
-        left = mm2screen(left)
-        right = mm2screen(right)
+        let left: vec4 | vec3 | vec2 = this.frac2mm([fracX, 0, fracZ])
+        left = swizzleVec3(left as vec3, [1, 2, 0])
+        let right: vec4 | vec3 | vec2 = this.frac2mm([fracX, 1, fracZ])
+        right = swizzleVec3(right as vec3, [1, 2, 0])
+        left = mm2screen(left as vec2)
+        right = mm2screen(right as vec2)
         this.drawLine([left[0], left[1], right[0], right[1]], thick)
       }
     }
@@ -8982,14 +8984,14 @@ export class Niivue {
       for (let i = 0; i < linesV.length; i++) {
         const mm = this.frac2mm([0.5, 0.5, 0.5])
         mm[dimH] = linesV[i]
-        let frac = this.mm2frac(mm)
+        let frac: vec3 | number = this.mm2frac(mm)
         frac = frac[dimH]
-        let left = this.frac2mm([frac, 0, fracZ])
-        left = swizzleVec3(left, [0, 1, 2])
-        let right = this.frac2mm([frac, 1, fracZ])
-        right = swizzleVec3(right, [0, 1, 2])
-        left = mm2screen(left)
-        right = mm2screen(right)
+        let left: vec4 | vec3 | vec2 = this.frac2mm([frac, 0, fracZ])
+        left = swizzleVec3(left as vec3, [0, 1, 2])
+        let right: vec4 | vec3 | vec2 = this.frac2mm([frac, 1, fracZ])
+        right = swizzleVec3(right as vec3, [0, 1, 2])
+        left = mm2screen(left as vec2)
+        right = mm2screen(right as vec2)
         this.drawLine([left[0], left[1], right[0], right[1]], thick)
       }
     }
@@ -8999,14 +9001,14 @@ export class Niivue {
       for (let i = 0; i < linesV.length; i++) {
         const mm = this.frac2mm([0.5, 0.5, 0.5])
         mm[dimH] = linesV[i]
-        let frac = this.mm2frac(mm)
+        let frac: vec3 | number = this.mm2frac(mm)
         frac = frac[dimH]
-        let left = this.frac2mm([frac, fracY, 0])
-        left = swizzleVec3(left, [0, 2, 1])
-        let right = this.frac2mm([frac, fracY, 1])
-        right = swizzleVec3(right, [0, 2, 1])
-        left = mm2screen(left)
-        right = mm2screen(right)
+        let left: vec4 | vec3 | vec2 = this.frac2mm([frac, fracY, 0])
+        left = swizzleVec3(left as vec3, [0, 2, 1])
+        let right: vec4 | vec3 | vec2 = this.frac2mm([frac, fracY, 1])
+        right = swizzleVec3(right as vec3, [0, 2, 1])
+        left = mm2screen(left as vec2)
+        right = mm2screen(right as vec2)
         this.drawLine([left[0], left[1], right[0], right[1]], thick)
       }
     }
@@ -9016,14 +9018,14 @@ export class Niivue {
       for (let i = 0; i < linesV.length; i++) {
         const mm = this.frac2mm([0.5, 0.5, 0.5])
         mm[dimH] = linesV[i]
-        let frac = this.mm2frac(mm)
+        let frac: vec3 | number = this.mm2frac(mm)
         frac = frac[dimH]
-        let left = this.frac2mm([fracX, frac, 0])
-        left = swizzleVec3(left, [1, 2, 0])
-        let right = this.frac2mm([fracX, frac, 1])
-        right = swizzleVec3(right, [1, 2, 0])
-        left = mm2screen(left)
-        right = mm2screen(right)
+        let left: vec4 | vec3 | vec2 = this.frac2mm([fracX, frac as number, 0])
+        left = swizzleVec3(left as vec3, [1, 2, 0])
+        let right: vec4 | vec3 | vec2 = this.frac2mm([fracX, frac as number, 1])
+        right = swizzleVec3(right as vec3, [1, 2, 0])
+        left = mm2screen(left as vec2)
+        right = mm2screen(right as vec2)
         this.drawLine([left[0], left[1], right[0], right[1]], thick)
       }
     }
