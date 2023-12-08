@@ -109,7 +109,6 @@ type DragReleaseParams = {
 
 /**
  * mesh file formats that can be loaded
- * @type {string[]} MESH_EXTENSIONS
  */
 const MESH_EXTENSIONS = [
   'ASC',
@@ -269,7 +268,7 @@ type UIData = {
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
  *
  * @example
- * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
+ * let niivue = new Niivue(\{crosshairColor: [0,1,0,0.5], textHeight: 0.5\}) // a see-through green crosshair, and larger text labels
  */
 export class Niivue {
   canvas: HTMLCanvasElement | null = null // the reference to the canvas element on the page
@@ -470,44 +469,40 @@ export class Niivue {
 
   /**
    * callback function to run when the right mouse button is released after dragging
-   * @type {function}
    * @example
-   * niivue.onDragRelease = () => {
+   * niivue.onDragRelease = () =\> \{
    *   console.log('drag ended')
-   * }
+   * \}
    */
   onDragRelease: (params: DragReleaseParams) => void = () => {} // function to call when contrast drag is released by default. Can be overridden by user
 
   /**
    * callback function to run when the left mouse button is released
-   * @type {function}
    * @example
-   * niivue.onMouseUp = () => {
+   * niivue.onMouseUp = () =\> \{
    *   console.log('mouse up')
-   * }
+   * \}
    */
   onMouseUp: (data: Partial<UIData>) => void = () => {}
   /**
    * callback function to run when the crosshair location changes
-   * @type {function}
    * @example
-   * niivue.onLocationChange = (data) => {
+   * niivue.onLocationChange = (data) =\> \{
    * console.log('location changed')
    * console.log('mm: ', data.mm)
    * console.log('vox: ', data.vox)
    * console.log('frac: ', data.frac)
    * console.log('values: ', data.values)
-   * }
+   * \}
    */
   onLocationChange: (location: unknown) => void = () => {}
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
-   * @type {function}
    * @example
-   * niivue.onIntensityChange = (volume) => {
+   * niivue.onIntensityChange = (volume) =\> \{
    * console.log('intensity changed')
    * console.log('volume: ', volume)
-   * }
+   * \}
    */
   onIntensityChange: (volume: NVImage) => void = () => {}
 
@@ -590,7 +585,6 @@ export class Niivue {
 
   /**
    * callback function to run when a volume is added from a url
-   * @type {function}
    * @example
    * niivue.onVolumeAddedFromUrl = (imageOptions, volume) => {
    * console.log('volume added from url')
@@ -603,13 +597,12 @@ export class Niivue {
 
   /**
    * callback function to run when updateGLVolume is called (most users will not need to use
-   * @type {function}
    * @example
-   * niivue.onVolumeUpdated = () => {
+   * niivue.onVolumeUpdated = () =\> \{
    * console.log('volume updated')
-   * }
+   * \}
    */
-  onVolumeUpdated = () => {}
+  onVolumeUpdated: () => void = () => {}
 
   /**
    * callback function to run when a mesh is added from a url
@@ -623,8 +616,8 @@ export class Niivue {
    */
   onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => {}
 
-  // seems redundant with onMeshLoaded
-  onMeshAdded = () => {}
+  // TODO seems redundant with onMeshLoaded
+  onMeshAdded: () => void = () => {}
   onMeshWithUrlRemoved: (url: string) => void = () => {}
 
   // not implemented anywhere...
@@ -714,7 +707,7 @@ export class Niivue {
     log.setLogLevel(this.opts.logging)
   }
 
-  get volumes() {
+  get volumes(): NVImage[] {
     return this.document.volumes
   }
 
@@ -722,7 +715,7 @@ export class Niivue {
     this.document.volumes = volumes
   }
 
-  get meshes() {
+  get meshes(): NVMesh[] {
     return this.document.meshes
   }
 
@@ -730,7 +723,7 @@ export class Niivue {
     this.document.meshes = meshes
   }
 
-  get drawBitmap() {
+  get drawBitmap(): Uint8Array | null {
     return this.document.drawBitmap
   }
 
@@ -738,7 +731,7 @@ export class Niivue {
     this.document.drawBitmap = drawBitmap
   }
 
-  get volScaleMultiplier() {
+  get volScaleMultiplier(): number {
     return this.scene.volScaleMultiplier
   }
 
@@ -748,12 +741,12 @@ export class Niivue {
 
   /**
    * save webgl2 canvas as png format bitmap
-   * @param {string} [filename='niivue.png'] filename for screen capture
+   * @param filename - filename for screen capture
    * @example niivue.saveScene('test.png');
    * @see {@link https://niivue.github.io/niivue/features/ui.html|live demo usage}
    */
-  async saveScene(filename = 'niivue.png') {
-    function saveBlob(blob: Blob, name: string) {
+  async saveScene(filename = 'niivue.png'): Promise<void> {
+    function saveBlob(blob: Blob, name: string): void {
       const a = document.createElement('a')
       document.body.appendChild(a)
       a.style.display = 'none'
@@ -790,7 +783,7 @@ export class Niivue {
    * @example niivue.attachTo('gl')
    * @see {@link https://niivue.github.io/niivue/features/multiplanar.html|live demo usage}
    */
-  async attachTo(id: string, isAntiAlias = null) {
+  async attachTo(id: string, isAntiAlias = null): Promise<this> {
     await this.attachToCanvas(document.getElementById(id) as HTMLCanvasElement, isAntiAlias)
     log.debug('attached to element with id: ', id)
     return this
@@ -804,18 +797,18 @@ export class Niivue {
 
   /**
    * register a callback function to run when known Niivue events happen
-   * @param {("location")} event the name of the event to watch for. Event names are shown in the type column
-   * @param {function} callback the function to call when the event happens
+   * @param event - the name of the event to watch for. Event names are shown in the type column
+   * @param callback - the function to call when the event happens
    * @example
    * niivue = new Niivue()
    *
    * // 'location' update event is fired when the crosshair changes position via user input
-   * function doSomethingWithLocationData(data){
-   *    // data has the shape {mm: [N, N, N], vox: [N, N, N], frac: [N, N, N], values: this.volumes.map(v => {return val})}
+   * function doSomethingWithLocationData(data)\{
+   *    // data has the shape \{mm: [N, N, N], vox: [N, N, N], frac: [N, N, N], values: this.volumes.map(v =\> \{return val\})\}
    *    //...
-   * }
+   * \}
    */
-  on(event: string, callback: (data: unknown) => void) {
+  on(event: string, callback: (data: unknown) => void): void {
     const knownEvents = Object.keys(this.eventsToSubjects)
     if (!knownEvents.includes(event)) {
       return
@@ -834,7 +827,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.off('location')
    */
-  off(event: string) {
+  off(event: string): void {
     const knownEvents = Object.keys(this.eventsToSubjects)
     if (!knownEvents.includes(event)) {
       return
@@ -852,12 +845,12 @@ export class Niivue {
 
   /**
    * attach the Niivue instance to a canvas element directly
-   * @param {object} canvas the canvas element reference
+   * @param canvas - the canvas element reference
    * @example
    * niivue = new Niivue()
    * niivue.attachToCanvas(document.getElementById(id))
    */
-  async attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean | null = null) {
+  async attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean | null = null): Promise<this> {
     this.canvas = canvas
     if (isAntiAlias === null) {
       isAntiAlias = navigator.hardwareConcurrency > 6
@@ -893,7 +886,7 @@ export class Niivue {
 
   /**
    * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
-   * @param {object} otherNV the other Niivue instance that is the main controller
+   * @param otherNV - the other Niivue instance that is the main controller
    * @example
    * niivue1 = new Niivue()
    * niivue2 = new Niivue()
@@ -901,14 +894,14 @@ export class Niivue {
    * @deprecated use broadcastTo instead
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
    */
-  syncWith(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }) {
+  syncWith(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }): void {
     this.otherNV = otherNV
     this.syncOpts = syncOpts
   }
 
   /**
    * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to others. useful for using one canvas to drive another.
-   * @param {(object|array)} otherNV the other Niivue instance(s)
+   * @param otherNV - the other Niivue instance(s)
    * @example
    * niivue1 = new Niivue()
    * niivue2 = new Niivue()
@@ -917,21 +910,21 @@ export class Niivue {
    * niivue1.broadcastTo([niivue2, niivue3])
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
    */
-  broadcastTo(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }) {
+  broadcastTo(otherNV: Niivue | Niivue[], syncOpts = { '2d': true, '3d': true }): void {
     this.otherNV = otherNV
     this.syncOpts = syncOpts
   }
 
   /**
    * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
-   * @private
+   * @internal
    * @example
    * niivue1 = new Niivue()
    * niivue2 = new Niivue()
    * niivue2.syncWith(niivue1)
    * niivue2.sync()
    */
-  sync() {
+  sync(): void {
     if (!this.gl || !this.otherNV || typeof this.otherNV === 'undefined') {
       return
     }
@@ -980,15 +973,15 @@ export class Niivue {
    *
    * TODO this should maybe just use array-equal from NPM
    */
-  arrayEquals(a: unknown[], b: unknown[]) {
+  arrayEquals(a: unknown[], b: unknown[]): boolean {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index])
   }
 
   /**
    * callback function to handle resize window events, redraws the scene.
-   * @private
+   * @internal
    */
-  resizeListener() {
+  resizeListener(): void {
     if (!this.canvas || !this.gl) {
       return
     }
@@ -1030,11 +1023,10 @@ export class Niivue {
    */
   /**
    * callback to handle mouse move events relative to the canvas
-   * @type {function}
-   * @private
-   * @returns {object} the mouse position relative to the canvas
+   * @internal
+   * @returns the mouse position relative to the canvas
    */
-  getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null) {
+  getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null): { x: number; y: number } | undefined {
     target = target || event.target
     if (!target) {
       return
@@ -1050,7 +1042,10 @@ export class Niivue {
   // not included in public docs
   // assumes target or event.target is canvas
   // note: no test yet
-  getNoPaddingNoBorderCanvasRelativeMousePosition(event: MouseEvent, target: EventTarget) {
+  getNoPaddingNoBorderCanvasRelativeMousePosition(
+    event: MouseEvent,
+    target: EventTarget
+  ): { x: number; y: number } | undefined {
     target = target || event.target
     const pos = this.getRelativeMousePosition(event, target)
     return pos
@@ -1061,14 +1056,14 @@ export class Niivue {
   // here, we disable the normal context menu so that
   // we can use some custom right click events
   // note: no test yet
-  mouseContextMenuListener(e: MouseEvent) {
+  mouseContextMenuListener(e: MouseEvent): void {
     e.preventDefault()
   }
 
   // not included in public docs
   // handler for all mouse button presses
   // note: no test yet
-  mouseDownListener(e: MouseEvent) {
+  mouseDownListener(e: MouseEvent): void {
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
@@ -1121,7 +1116,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse left button down
   // note: no test yet
-  mouseLeftButtonHandler(e: MouseEvent) {
+  mouseLeftButtonHandler(e: MouseEvent): void {
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
     this.mouseDown(pos!.x, pos!.y)
     this.mouseClick(pos!.x, pos!.y)
@@ -1130,7 +1125,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse center button down
   // note: no test yet
-  mouseCenterButtonHandler(e: MouseEvent) {
+  mouseCenterButtonHandler(e: MouseEvent): void {
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
@@ -1147,7 +1142,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse right button down
   // note: no test yet
-  mouseRightButtonHandler(e: MouseEvent) {
+  mouseRightButtonHandler(e: MouseEvent): void {
     // this.uiData.isDragging = true;
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
@@ -1164,10 +1159,10 @@ export class Niivue {
 
   /**
    * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
-   * @param {Array} array an array of two values
-   * @returns {Array} an array of two values representing the min and max voxel indices
+   * @param array - an array of two values
+   * @returns an array of two values representing the min and max voxel indices
    */
-  calculateMinMaxVoxIdx(array: number[]) {
+  calculateMinMaxVoxIdx(array: number[]): number[] {
     if (array.length > 2) {
       throw new Error('array must not contain more than two values')
     }
@@ -1176,7 +1171,7 @@ export class Niivue {
 
   // not included in public docs
   // note: no test yet
-  calculateNewRange({ volIdx = 0 } = {}) {
+  calculateNewRange({ volIdx = 0 } = {}): void {
     if (this.opts.sliceType === SLICE_TYPE.RENDER && this.sliceMosaicString.length < 1) {
       return
     }
@@ -1244,7 +1239,7 @@ export class Niivue {
     this.onIntensityChange(this.volumes[volIdx])
   }
 
-  generateMouseUpCallback(fracStart: number[], fracEnd: number[]) {
+  generateMouseUpCallback(fracStart: number[], fracEnd: number[]): void {
     // calculate details for callback
     const tileStart = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
     const tileEnd = this.tileIndex(this.uiData.dragEnd[0], this.uiData.dragEnd[1])
@@ -1281,8 +1276,8 @@ export class Niivue {
   // not included in public docs
   // handler for mouse button up (all buttons)
   // note: no test yet
-  mouseUpListener() {
-    function isFunction(test: unknown) {
+  mouseUpListener(): void {
+    function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
     // let fracPos = this.canvasPos2frac(this.mousePos);
@@ -1333,7 +1328,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  checkMultitouch(e: TouchEvent) {
+  checkMultitouch(e: TouchEvent): void {
     if (this.uiData.touchdown && !this.uiData.multiTouchGesture) {
       const rect = this.canvas!.getBoundingClientRect()
       this.mouseDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
@@ -1345,7 +1340,7 @@ export class Niivue {
   // not included in public docs
   // handler for single finger touch event (like mouse down)
   // note: no test yet
-  touchStartListener(e: TouchEvent) {
+  touchStartListener(e: TouchEvent): void {
     e.preventDefault()
     if (!this.uiData.touchTimer) {
       this.uiData.touchTimer = setTimeout(() => {
@@ -1383,7 +1378,7 @@ export class Niivue {
   // not included in public docs
   // handler for touchend (finger lift off screen)
   // note: no test yet
-  touchEndListener(e: TouchEvent) {
+  touchEndListener(e: TouchEvent): void {
     e.preventDefault()
     this.uiData.touchdown = false
     this.uiData.lastTwoTouchDistance = 0
@@ -1408,7 +1403,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
-  async mouseMoveListener(e: MouseEvent) {
+  async mouseMoveListener(e: MouseEvent): Promise<void> {
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
@@ -1439,7 +1434,7 @@ export class Niivue {
   // note: should update this to accept a volume index to reset a selected volume rather than only the background (TODO)
   // reset brightness and contrast to global min and max
   // note: no test yet
-  resetBriCon(msg: TouchEvent | MouseEvent | null = null) {
+  resetBriCon(msg: TouchEvent | MouseEvent | null = null): void {
     // this.volumes[0].cal_min = this.volumes[0].global_min;
     // this.volumes[0].cal_max = this.volumes[0].global_max;
     // don't reset bri/con if the user is in 3D mode and double clicks
@@ -1491,14 +1486,14 @@ export class Niivue {
     this.drawScene()
   }
 
-  setDragStart(x: number, y: number) {
+  setDragStart(x: number, y: number): void {
     x *= this.uiData.dpr!
     y *= this.uiData.dpr!
     this.uiData.dragStart[0] = x
     this.uiData.dragStart[1] = y
   }
 
-  setDragEnd(x: number, y: number) {
+  setDragEnd(x: number, y: number): void {
     x *= this.uiData.dpr!
     y *= this.uiData.dpr!
     this.uiData.dragEnd[0] = x
@@ -1508,7 +1503,7 @@ export class Niivue {
   // not included in public docs
   // handler for touch move (moving finger on screen)
   // note: no test yet
-  touchMoveListener(e: TouchEvent) {
+  touchMoveListener(e: TouchEvent): void {
     if (this.uiData.touchdown && e.touches.length < 2) {
       const rect = this.canvas!.getBoundingClientRect()
       if (!this.uiData.isDragging) {
@@ -1532,7 +1527,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  handlePinchZoom(e: TouchEvent) {
+  handlePinchZoom(e: TouchEvent): void {
     if (e.targetTouches.length === 2 && e.changedTouches.length === 2) {
       const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY)
 
@@ -1554,7 +1549,7 @@ export class Niivue {
 
   // not included in public docs
   // handler for keyboard shortcuts
-  keyUpListener(e: KeyboardEvent) {
+  keyUpListener(e: KeyboardEvent): void {
     if (e.code === this.opts.clipPlaneHotKey) {
       /* if (this.opts.sliceType!= SLICE_TYPE.RENDER) {
       return;
@@ -1601,7 +1596,7 @@ export class Niivue {
     }
   }
 
-  keyDownListener(e: KeyboardEvent) {
+  keyDownListener(e: KeyboardEvent): void {
     if (e.code === 'KeyH' && this.opts.sliceType === SLICE_TYPE.RENDER) {
       this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation)
     } else if (e.code === 'KeyL' && this.opts.sliceType === SLICE_TYPE.RENDER) {
@@ -1636,7 +1631,7 @@ export class Niivue {
   // not included in public docs
   // handler for scroll wheel events (slice scrolling)
   // note: no test yet
-  wheelListener(e: WheelEvent) {
+  wheelListener(e: WheelEvent): void {
     // scroll 2D slices
     e.preventDefault()
     e.stopPropagation()
@@ -1655,7 +1650,7 @@ export class Niivue {
   // not included in public docs
   // setup interactions with the canvas. Mouse clicks and touches
   // note: no test yet
-  registerInteractions() {
+  registerInteractions(): void {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
@@ -1695,19 +1690,19 @@ export class Niivue {
   }
 
   // not included in public docs
-  dragEnterListener(e: MouseEvent) {
+  dragEnterListener(e: MouseEvent): void {
     e.stopPropagation()
     e.preventDefault()
   }
 
   // not included in public docs
-  dragOverListener(e: MouseEvent) {
+  dragOverListener(e: MouseEvent): void {
     e.stopPropagation()
     e.preventDefault()
   }
 
   // not included in public docs
-  getFileExt(fullname: string, upperCase = true) {
+  getFileExt(fullname: string, upperCase = true): string {
     log.debug('fullname: ', fullname)
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(fullname)![1]
@@ -1721,11 +1716,9 @@ export class Niivue {
 
   /**
    * Add an image and notify subscribers
-   * @param {NVImageFromUrlOptions} imageOptions
-   * @returns {NVImage}
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  async addVolumeFromUrl(imageOptions: ImageFromUrlOptions) {
+  async addVolumeFromUrl(imageOptions: ImageFromUrlOptions): Promise<NVImage> {
     const volume = await NVImage.loadFromUrl(imageOptions)
     this.document.addImageOptions(volume, imageOptions)
     volume.onColormapChange = this.onColormapChange
@@ -1739,10 +1732,8 @@ export class Niivue {
 
   /**
    * Find media by url
-   * @param {string} url -
-   * @returns {(NVImage|NVMesh)}
    */
-  getMediaByUrl(url: string) {
+  getMediaByUrl(url: string): NVImage | NVMesh | undefined {
     return [...this.mediaUrlMap.entries()]
       .filter((v) => v[1] === url)
       .map((v) => v[0])
@@ -1751,10 +1742,10 @@ export class Niivue {
 
   /**
    * Remove volume by url
-   * @param {string} url - Volume added by url to remove
+   * @param url - Volume added by url to remove
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  removeVolumeByUrl(url: string) {
+  removeVolumeByUrl(url: string): void {
     const volume = this.getMediaByUrl(url)
     if (volume) {
       this.removeVolume(volume as NVImage)
@@ -1763,7 +1754,7 @@ export class Niivue {
     }
   }
 
-  readDirectory(directory: FileSystemDirectoryEntry) {
+  readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
     const reader = directory.createReader()
     let allEntiresInDir: FileSystemEntry[] = []
     const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
@@ -1777,7 +1768,7 @@ export class Niivue {
       }
       return allFileObects
     }
-    const readEntries = () => {
+    const readEntries = (): void => {
       reader.readEntries(async (entries) => {
         if (entries.length) {
           allEntiresInDir = allEntiresInDir.concat(entries)
@@ -1802,7 +1793,7 @@ export class Niivue {
    * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
    * @param url - filename
    */
-  isMeshExt(url: string) {
+  isMeshExt(url: string): boolean {
     const ext = this.getFileExt(url)
     log.debug('dropped ext')
     log.debug(ext)
@@ -1810,7 +1801,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  async dropListener(e: DragEvent) {
+  async dropListener(e: DragEvent): Promise<void> {
     e.stopPropagation()
     e.preventDefault()
     // don't do anything if drag and drop has been turned off
@@ -1941,7 +1932,7 @@ export class Niivue {
    * @example niivue.setMultiplanarPadPixels(4)
    * @see {@link https://niivue.github.io/niivue/features/atlas.html|live demo usage}
    */
-  setMultiplanarPadPixels(pixels: number) {
+  setMultiplanarPadPixels(pixels: number): void {
     this.opts.multiplanarPadPixels = pixels
     this.drawScene()
   }
@@ -1952,7 +1943,7 @@ export class Niivue {
    * @example niivue.setMultiplanarLayout(2)
    * @see {@link https://niivue.github.io/niivue/features/layout.html|live demo usage}
    */
-  setMultiplanarLayout(layout: number) {
+  setMultiplanarLayout(layout: number): void {
     this.opts.multiplanarLayout = layout
     this.drawScene()
   }
@@ -1963,7 +1954,7 @@ export class Niivue {
    * @example niivue.setCornerOrientationText(true)
    * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
    */
-  setCornerOrientationText(isCornerOrientationText: boolean) {
+  setCornerOrientationText(isCornerOrientationText: boolean): void {
     this.opts.isCornerOrientationText = isCornerOrientationText
     this.updateGLVolume()
   }
@@ -1974,7 +1965,7 @@ export class Niivue {
    * @example niivue.setCornerOrientationText(true)
    * @see {@link https://niivue.github.io/niivue/features/worldspace.html|live demo usage}
    */
-  setRadiologicalConvention(isRadiologicalConvention: boolean) {
+  setRadiologicalConvention(isRadiologicalConvention: boolean): void {
     this.opts.isRadiologicalConvention = isRadiologicalConvention
     this.updateGLVolume()
   }
@@ -1986,7 +1977,7 @@ export class Niivue {
    * @example niivue.nv1.setDefaults(opts, true);
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  setDefaults(options: Partial<NiiVueOptions> = {}, resetBriCon = false) {
+  setDefaults(options: Partial<NiiVueOptions> = {}, resetBriCon = false): void {
     this.opts = { ...DEFAULT_OPTIONS }
     this.scene = { ...this.document.scene }
     // populate Niivue with user supplied options
@@ -2017,7 +2008,7 @@ export class Niivue {
    * @example niivue.setMeshThicknessOn2D(42)
    * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
    */
-  setMeshThicknessOn2D(meshThicknessOn2D: number) {
+  setMeshThicknessOn2D(meshThicknessOn2D: number): void {
     this.opts.meshThicknessOn2D = meshThicknessOn2D
     this.updateGLVolume()
   }
@@ -2028,7 +2019,7 @@ export class Niivue {
    * @example niivue.setSliceMosaicString("A 0 20 C 30 S 42")
    * @see {@link https://niivue.github.io/niivue/features/mosaics.html|live demo usage}
    */
-  setSliceMosaicString(str: string) {
+  setSliceMosaicString(str: string): void {
     this.sliceMosaicString = str
     this.updateGLVolume()
   }
@@ -2039,7 +2030,7 @@ export class Niivue {
    * @example niivue.setSliceMM(true)
    * @see {@link https://niivue.github.io/niivue/features/worldspace2.html|live demo usage}
    */
-  setSliceMM(isSliceMM: boolean) {
+  setSliceMM(isSliceMM: boolean): void {
     this.opts.isSliceMM = isSliceMM
     this.updateGLVolume()
   }
@@ -2050,7 +2041,7 @@ export class Niivue {
    * @example niivue.isAdditiveBlend(true)
    * @see {@link https://niivue.github.io/niivue/features/additive.voxels.html|live demo usage}
    */
-  setAdditiveBlend(isAdditiveBlend: boolean) {
+  setAdditiveBlend(isAdditiveBlend: boolean): void {
     this.opts.isAdditiveBlend = isAdditiveBlend
     this.updateGLVolume()
   }
@@ -2060,7 +2051,7 @@ export class Niivue {
    * @returns {boolean} radiological convention status
    * @example let rc = niivue.getRadiologicalConvention()
    */
-  getRadiologicalConvention() {
+  getRadiologicalConvention(): boolean {
     return this.opts.isRadiologicalConvention
   }
 
@@ -2070,7 +2061,7 @@ export class Niivue {
    * @example niivue.setHighResolutionCapable(true);
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html|live demo usage}
    */
-  setHighResolutionCapable(isHighResolutionCapable: boolean) {
+  setHighResolutionCapable(isHighResolutionCapable: boolean): void {
     this.opts.isHighResolutionCapable = isHighResolutionCapable
     if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
       log.warn('isHighResolutionCapable requires isResizeCanvas')
@@ -2091,7 +2082,7 @@ export class Niivue {
    * niivue.addVolume(NVImage.loadFromUrl({url:'../someURL.nii.gz'}))
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  addVolume(volume: NVImage) {
+  addVolume(volume: NVImage): void {
     this.volumes.push(volume)
     const idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1
     this.setVolume(volume, idx)
@@ -2108,7 +2099,7 @@ export class Niivue {
    * niivue.addMesh(NVMesh.loadFromUrl({url:'../someURL.gii'}))
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  addMesh(mesh: NVMesh) {
+  addMesh(mesh: NVMesh): void {
     this.meshes.push(mesh)
     const idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1
     this.setMesh(mesh, idx)
@@ -2122,7 +2113,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.getVolumeIndexByID(someVolume.id)
    */
-  getVolumeIndexByID(id: string) {
+  getVolumeIndexByID(id: string): number {
     const n = this.volumes.length
     for (let i = 0; i < n; i++) {
       const id_i = this.volumes[i].id
@@ -2135,10 +2126,10 @@ export class Niivue {
 
   // not included in public docs
   // Internal function to store drawings that can be used for undo operations
-  async drawAddUndoBitmap() {
+  drawAddUndoBitmap(): void {
     if (!this.drawBitmap || this.drawBitmap.length < 1) {
       log.debug('drawAddUndoBitmap error: No drawing open')
-      return false
+      return
     }
     // let rle = encodeRLE(this.drawBitmap);
     // the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
@@ -2151,7 +2142,7 @@ export class Niivue {
 
   // not included in public docs
   // Internal function to delete all drawing undo images
-  async drawClearAllUndoBitmaps() {
+  drawClearAllUndoBitmaps(): void {
     this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps // next add will be cylinder 0
     if (!this.drawUndoBitmaps || this.drawUndoBitmaps.length < 1) {
       return
@@ -2166,7 +2157,7 @@ export class Niivue {
    * @example niivue.drawUndo();
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  drawUndo() {
+  drawUndo(): void {
     if (this.drawUndoBitmaps.length < 1) {
       log.debug('undo bitmaps not loaded')
       return
@@ -2187,7 +2178,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  loadDrawing(drawingBitmap: NVImage) {
+  loadDrawing(drawingBitmap: NVImage): boolean {
     if (this.drawBitmap) {
       log.debug('Overwriting open drawing!')
     }
@@ -2280,7 +2271,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  async binarize(volume: NVImage) {
+  binarize(volume: NVImage): void {
     const dims = volume.hdr!.dims
     const vx = dims[1] * dims[2] * dims[3]
     const img = new Uint8Array(vx)
@@ -2302,7 +2293,7 @@ export class Niivue {
    * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  async loadDrawingFromUrl(fnm: string, isBinarize = false) {
+  async loadDrawingFromUrl(fnm: string, isBinarize = false): Promise<boolean> {
     if (this.drawBitmap) {
       log.debug('Overwriting open drawing!')
     }
@@ -3378,16 +3369,15 @@ export class Niivue {
 
   /**
    * generates HTML of current scene
-   * @param template {string} HTML template
-   * @param {string} canvasId id of canvas NiiVue will be attached to
-   * @param {string} esm bundled version of NiiVue
-   * @returns {string} HTML with javascript of the current scene
+   * @param canvasId - id of canvas NiiVue will be attached to
+   * @param esm - bundled version of NiiVue
+   * @returns HTML with javascript of the current scene
    * @example
-   * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-   *       %%javascript%%</script></body></html>`;
+   * const template = \`<html><body><canvas id="gl1"></canvas>\<script type="module" async\>
+   *       %%javascript%%</script></body></html>\`;
    * nv1.generateHTML("page.html", esm);
    */
-  generateHTML(canvasId = 'gl1', esm: string) {
+  generateHTML(canvasId = 'gl1', esm: string): string {
     const javascript = this.generateLoadDocumentJavaScript(canvasId, esm)
     const html = `<!DOCTYPE html>
         <html lang="en">

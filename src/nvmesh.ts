@@ -92,7 +92,7 @@ type BaseLoadParams = {
   layers: NVMeshLayer[]
 }
 
-export type LoadFromUrlParams = BaseLoadParams & {
+export type LoadFromUrlParams = Partial<BaseLoadParams> & {
   // the resolvable URL pointing to a mesh to load
   url: string
   headers?: Record<string, string>
