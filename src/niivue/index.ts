@@ -63,7 +63,14 @@ import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { cmapper } from '../colortables.js'
-import { NVDocument, SLICE_TYPE, DRAG_MODE, MULTIPLANAR_TYPE, DEFAULT_OPTIONS } from '../nvdocument.js'
+import {
+  NVDocument,
+  SLICE_TYPE,
+  DRAG_MODE,
+  MULTIPLANAR_TYPE,
+  DEFAULT_OPTIONS,
+  ExportDocumentData
+} from '../nvdocument.js'
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
@@ -2313,7 +2320,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  async findOtsu(mlevel = 2) {
+  findOtsu(mlevel = 2): number[] {
     // C: https://github.com/rordenlab/niimath
     // Java: https://github.com/stevenjwest/Multi_OTSU_Segmentation
     if (this.volumes.length < 1) {
@@ -2334,7 +2341,7 @@ export class Niivue {
       return []
     }
     const scale2raw = (mx - mn) / nBin
-    function bin2raw(bin: number) {
+    function bin2raw(bin: number): number {
       return bin * scale2raw + mn
     }
     const scale2bin = (nBin - 1) / Math.abs(mx - mn)
@@ -2426,12 +2433,12 @@ export class Niivue {
    * @example niivue.drawOtsu(3);
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  async drawOtsu(levels = 2) {
+  drawOtsu(levels = 2): void {
     if (this.volumes.length === 0) {
       return
     }
     const nvox = this.volumes[0].img!.length
-    const thresholds = await this.findOtsu(levels)
+    const thresholds = this.findOtsu(levels)
     if (thresholds.length < 3) {
       return
     }
@@ -2466,7 +2473,7 @@ export class Niivue {
    * @example niivue.removeHaze(3, 0);
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  async removeHaze(level = 5, volIndex = 0) {
+  removeHaze(level = 5, volIndex = 0): void {
     const img = this.volumes[volIndex].img!
     const hdr = this.volumes[volIndex].hdr!
 
@@ -2478,7 +2485,7 @@ export class Niivue {
     if (level === 4 || level === 2) {
       otsu = 3
     }
-    const thresholds = await this.findOtsu(otsu)
+    const thresholds = this.findOtsu(otsu)
     if (thresholds.length < 3) {
       return
     }
@@ -2512,10 +2519,10 @@ export class Niivue {
    * @example niivue.saveImage('test.nii', true);
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  async saveImage(fnm: string, isSaveDrawing = false, volumeByIndex = 0) {
+  saveImage(fnm: string, isSaveDrawing = false, volumeByIndex = 0): Uint8Array | boolean {
     if (this.back?.dims === undefined) {
       log.debug('No voxelwise image open')
-      return
+      return false
     }
     if (isSaveDrawing) {
       if (!this.drawBitmap) {
@@ -2524,7 +2531,7 @@ export class Niivue {
       }
       const perm = this.volumes[0].permRAS!
       if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-        await this.volumes[0].saveToDisk(fnm, this.drawBitmap) // createEmptyDrawing
+        this.volumes[0].saveToDisk(fnm, this.drawBitmap) // createEmptyDrawing
         return true
       } else {
         const dims = this.volumes[0].hdr!.dims // reverse to original
@@ -2591,11 +2598,11 @@ export class Niivue {
             }
           }
         }
-        await this.volumes[0].saveToDisk(fnm, outVs)
+        this.volumes[0].saveToDisk(fnm, outVs)
         return true
       }
     }
-    const img = await this.volumes[volumeByIndex].saveToDisk(fnm)
+    const img = this.volumes[volumeByIndex].saveToDisk(fnm)
     const isString = typeof fnm === 'string' && fnm.length > 0
     if (isString) {
       return true
@@ -2604,7 +2611,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  getMeshIndexByID(id: string | number) {
+  getMeshIndexByID(id: string | number): number {
     if (typeof id === 'number') {
       if (id >= this.meshes.length) {
         return -1
@@ -2629,7 +2636,7 @@ export class Niivue {
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  setMeshProperty(id: number, key: keyof NVMesh, val: number) {
+  setMeshProperty(id: number, key: keyof NVMesh, val: number): void {
     const idx = this.getMeshIndexByID(id)
     if (idx < 0) {
       log.warn('setMeshProperty() id not loaded', id)
@@ -2646,7 +2653,7 @@ export class Niivue {
    * @example niivue.reverseFaces(niivue.meshes[0].id)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  reverseFaces(mesh: number) {
+  reverseFaces(mesh: number): void {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('reverseFaces() id not loaded', mesh)
@@ -2665,7 +2672,7 @@ export class Niivue {
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html|live demo usage}
    */
-  setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number) {
+  setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): void {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
@@ -2680,7 +2687,7 @@ export class Niivue {
    * @param {vec4} xyzmmZoom first three components are spatial, fourth is scaling
    * @example niivue.setPan2Dxyzmm([5,-4, 2, 1.5])
    */
-  setPan2Dxyzmm(xyzmmZoom: vec4) {
+  setPan2Dxyzmm(xyzmmZoom: vec4): void {
     this.scene.pan2Dxyzmm = xyzmmZoom
     this.drawScene()
   }
@@ -2692,7 +2699,7 @@ export class Niivue {
    * @example niivue.setRenderAzimuthElevation(45, 15)
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  setRenderAzimuthElevation(a: number, e: number) {
+  setRenderAzimuthElevation(a: number, e: number): void {
     this.scene.renderAzimuth = a
     this.scene.renderElevation = e
     this.onAzimuthElevationChange(a, e)
@@ -2707,7 +2714,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.getOverlayIndexByID(someVolume.id)
    */
-  getOverlayIndexByID(id: string) {
+  getOverlayIndexByID(id: string): number {
     const n = this.overlays.length
     for (let i = 0; i < n; i++) {
       const id_i = this.overlays[i].id
@@ -2726,7 +2733,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
    */
-  setVolume(volume: NVImage, toIndex = 0) {
+  setVolume(volume: NVImage, toIndex = 0): void {
     const numberOfLoadedImages = this.volumes.length
     if (toIndex > numberOfLoadedImages) {
       return
@@ -2758,7 +2765,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  setMesh(mesh: NVMesh, toIndex = 0) {
+  setMesh(mesh: NVMesh, toIndex = 0): void {
     this.meshes.forEach((m) => {
       log.debug('MESH: ', m.name)
     })
@@ -2790,7 +2797,7 @@ export class Niivue {
    * niivue.removeVolume(this.volumes[3])
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  removeVolume(volume: NVImage) {
+  removeVolume(volume: NVImage): void {
     this.setVolume(volume, -1)
     // check if we have a url for this volume
     if (this.mediaUrlMap.has(volume)) {
@@ -2808,7 +2815,7 @@ export class Niivue {
    * Remove a volume by index
    * @param {number} index of volume to remove
    */
-  removeVolumeByIndex(index: number) {
+  removeVolumeByIndex(index: number): void {
     if (index >= this.volumes.length) {
       throw new Error('Index of volume out of bounds')
     }
@@ -2823,7 +2830,7 @@ export class Niivue {
    * niivue.removeMesh(this.meshes[3])
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
    */
-  removeMesh(mesh: NVMesh) {
+  removeMesh(mesh: NVMesh): void {
     this.setMesh(mesh, -1)
     if (this.mediaUrlMap.has(mesh)) {
       const url = this.mediaUrlMap.get(mesh)!
@@ -2838,7 +2845,7 @@ export class Niivue {
    * @example
    * niivue.removeMeshByUrl('../images/cit168.mz3')
    */
-  removeMeshByUrl(url: string) {
+  removeMeshByUrl(url: string): void {
     const mesh = this.getMediaByUrl(url)
     if (mesh) {
       this.removeMesh(mesh as NVMesh)
@@ -2854,7 +2861,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.moveVolumeToBottom(this.volumes[3]) // move the 4th volume to the 0 position. It will be the new background
    */
-  moveVolumeToBottom(volume: NVImage) {
+  moveVolumeToBottom(volume: NVImage): void {
     this.setVolume(volume, 0)
   }
 
@@ -2865,7 +2872,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.moveVolumeUp(this.volumes[0]) // move the background image to the second index position (it was 0 index, now will be 1)
    */
-  moveVolumeUp(volume: NVImage) {
+  moveVolumeUp(volume: NVImage): void {
     const volIdx = this.getVolumeIndexByID(volume.id)
     this.setVolume(volume, volIdx + 1)
   }
@@ -2877,7 +2884,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.moveVolumeDown(this.volumes[1]) // move the second image to the background position (it was 1 index, now will be 0)
    */
-  moveVolumeDown(volume: NVImage) {
+  moveVolumeDown(volume: NVImage): void {
     const volIdx = this.getVolumeIndexByID(volume.id)
     this.setVolume(volume, volIdx - 1)
   }
@@ -2889,14 +2896,14 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.moveVolumeToTop(this.volumes[0]) // move the background image to the top layer position
    */
-  moveVolumeToTop(volume: NVImage) {
+  moveVolumeToTop(volume: NVImage): void {
     this.setVolume(volume, this.volumes.length - 1)
   }
 
   // not included in public docs
   // update mouse position from new mouse down coordinates
   // note: no test yet
-  mouseDown(x: number, y: number) {
+  mouseDown(x: number, y: number): void {
     x *= this.uiData.dpr!
     y *= this.uiData.dpr!
     this.mousePos = [x, y]
@@ -2905,7 +2912,7 @@ export class Niivue {
 
   // not included in public docs
   // note: no test yet
-  mouseMove(x: number, y: number) {
+  mouseMove(x: number, y: number): void {
     x *= this.uiData.dpr!
     y *= this.uiData.dpr!
     const dx = (x - this.mousePos[0]) / this.uiData.dpr!
@@ -2959,7 +2966,7 @@ export class Niivue {
    * niivue.setClipPlane([42, 42])
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  async setClipPlane(depthAzimuthElevation: number[]) {
+  async setClipPlane(depthAzimuthElevation: number[]): Promise<void> {
     //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
     //  azimuthElevation is 2 component vector [a, e, d]
     //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
@@ -2981,9 +2988,9 @@ export class Niivue {
    * niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
    */
-  setCrosshairColor(color: number[]) {
+  async setCrosshairColor(color: number[]): Promise<void> {
     this.opts.crosshairColor = color
-    this.drawScene()
+    await this.drawScene()
   }
 
   /**
@@ -2992,7 +2999,7 @@ export class Niivue {
    * @example niivue.crosshairWidth(2)
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
    */
-  setCrosshairWidth(crosshairWidth: number) {
+  setCrosshairWidth(crosshairWidth: number): void {
     this.opts.crosshairWidth = crosshairWidth
     this.crosshairs3D!.mm![0] = NaN // force redraw
     this.drawScene()
@@ -3012,7 +3019,7 @@ export class Niivue {
    *  nv.setDrawColormap(cmap);
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  setDrawColormap(name: string) {
+  setDrawColormap(name: string): void {
     this.drawLut = cmapper.makeDrawLut(name)
     this.updateGLVolume()
   }
@@ -3023,7 +3030,7 @@ export class Niivue {
    * @example niivue.setDrawingEnabled(true)
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  setDrawingEnabled(trueOrFalse: boolean) {
+  setDrawingEnabled(trueOrFalse: boolean): void {
     this.opts.drawingEnabled = trueOrFalse
     if (this.opts.drawingEnabled) {
       if (!this.drawBitmap) {
@@ -3040,7 +3047,7 @@ export class Niivue {
    * @example niivue.setPenValue(1, true)
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  setPenValue(penValue: number, isFilledPen = false) {
+  setPenValue(penValue: number, isFilledPen = false): void {
     this.opts.penValue = penValue
     this.opts.isFilledPen = isFilledPen
     this.drawScene()
@@ -3052,7 +3059,7 @@ export class Niivue {
    * @example niivue.setDrawOpacity(0.7)
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  setDrawOpacity(opacity: number) {
+  setDrawOpacity(opacity: number): void {
     this.drawOpacity = opacity
     this.drawScene()
   }
@@ -3065,12 +3072,12 @@ export class Niivue {
    * niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
    */
-  setSelectionBoxColor(color: number[]) {
+  setSelectionBoxColor(color: number[]): void {
     this.opts.selectionBoxColor = color
   }
 
   // not included in public docs
-  sliceScroll2D(posChange: number, x: number, y: number, isDelta = true) {
+  sliceScroll2D(posChange: number, x: number, y: number, isDelta = true): void {
     if (this.inGraphTile(x, y)) {
       let vol = this.volumes[0].frame4D
       if (posChange > 0) {
@@ -3109,7 +3116,7 @@ export class Niivue {
    * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
    * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html|live demo usage}
    */
-  async setSliceType(st: SLICE_TYPE) {
+  async setSliceType(st: SLICE_TYPE): Promise<this> {
     this.opts.sliceType = st
     await this.drawScene()
     return this
@@ -3124,7 +3131,7 @@ export class Niivue {
    * niivue.setOpacity(0, 0.5) // make the first volume transparent
    * @see {@link https://niivue.github.io/niivue/features/atlas.html|live demo usage}
    */
-  setOpacity(volIdx: number, newOpacity: number) {
+  setOpacity(volIdx: number, newOpacity: number): void {
     this.volumes[volIdx].opacity = newOpacity
     if (volIdx === 0) {
       // background layer opacity set dynamically with shader
@@ -3143,7 +3150,7 @@ export class Niivue {
    * niivue.setScale(2) // zoom some
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  setScale(scale: number) {
+  setScale(scale: number): void {
     this.scene.volScaleMultiplier = scale
     this.drawScene()
   }
@@ -3155,7 +3162,7 @@ export class Niivue {
    * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
    * @see {@link https://niivue.github.io/niivue/features/clipplanes.html|live demo usage}
    */
-  setClipPlaneColor(color: number[]) {
+  setClipPlaneColor(color: number[]): void {
     this.opts.clipPlaneColor = color
     this.renderShader!.use(this.gl!)
     this.gl!.uniform4fv(this.renderShader!.clipPlaneClrLoc!, this.opts.clipPlaneColor)
@@ -3169,7 +3176,7 @@ export class Niivue {
    * niivue.setVolumeRenderIllumination(0.6);
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  async setVolumeRenderIllumination(gradientAmount = 0.0) {
+  async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
     this.renderShader = this.renderVolumeShader
     if (gradientAmount > 0.0) {
       this.renderShader = this.renderGradientShader
@@ -3187,7 +3194,7 @@ export class Niivue {
 
   // not included in public docs.
   // note: marked for removal at some point in the future (this just makes a test sphere)
-  overlayRGBA(volume: NVImage) {
+  overlayRGBA(volume: NVImage): Uint8ClampedArray {
     const hdr = volume.hdr!
     const vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
     const imgRGBA = new Uint8ClampedArray(vox * 4)
@@ -3218,7 +3225,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  vox2mm(XYZ: number[], mtx: mat4) {
+  vox2mm(XYZ: number[], mtx: mat4): vec3 {
     const sform = mat4.clone(mtx)
     mat4.transpose(sform, sform)
     const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
@@ -3235,7 +3242,7 @@ export class Niivue {
    * niivue = new Niivue()
    * niivue.cloneVolume(0)
    */
-  cloneVolume(index: number) {
+  cloneVolume(index: number): NVImage {
     return this.volumes[index].clone()
   }
 
@@ -3243,7 +3250,7 @@ export class Niivue {
    *
    * @param {string} url URL of NVDocument
    */
-  async loadDocumentFromUrl(url: string) {
+  async loadDocumentFromUrl(url: string): Promise<void> {
     const document = await NVDocument.loadFromUrl(url)
     this.loadDocument(document)
   }
@@ -3254,7 +3261,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/document.load.html|live demo usage}
    */
-  loadDocument(document: NVDocument) {
+  loadDocument(document: NVDocument): this {
     this.document = document
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
     console.log('load document', document)
@@ -3338,7 +3345,7 @@ export class Niivue {
  * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
         ${javascript}</script></body></html>`;
  */
-  generateLoadDocumentJavaScript(canvasId: string, esm: string) {
+  generateLoadDocumentJavaScript(canvasId: string, esm: string): string {
     const json = this.json()
 
     const base64 = NVUtilities.compressToBase64String(JSON.stringify(json))
@@ -3457,7 +3464,7 @@ export class Niivue {
    * @param {string} canvasId id of canvas NiiVue will be attached to
    * @param {string} esm bundled version of NiiVue
    */
-  async saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string) {
+  saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): void {
     const html = this.generateHTML(canvasId, esm)
     NVUtilities.download(html, fileName, 'application/html')
   }
@@ -3466,7 +3473,7 @@ export class Niivue {
    * Converts NiiVue scene to JSON
    * @returns {NVDocumentData}
    */
-  json() {
+  json(): ExportDocumentData {
     this.document.opts = this.opts
     this.document.scene = this.scene
     this.document.volumes = this.volumes
@@ -3488,14 +3495,14 @@ export class Niivue {
    * niivue.saveDocument("niivue.basic.nvd")
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html|live demo usage}
    */
-  async saveDocument(fileName = 'untitled.nvd') {
+  async saveDocument(fileName = 'untitled.nvd'): Promise<void> {
     this.document.opts = this.opts
     this.document.scene = this.scene
 
     this.document.title = fileName
     console.log('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
-    this.drawScene()
+    await this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.download(fileName)
   }
@@ -3522,11 +3529,11 @@ export class Niivue {
    * @property {number} frame4D - the index of the 4D data to load
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  async loadVolumes(volumeList: NVImage[]) {
-    this.on('loading', (isLoading) => {
+  async loadVolumes(volumeList: NVImage[]): Promise<this> {
+    this.on('loading', async (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
-        this.drawScene()
+        await this.drawScene()
       } else {
         this.loadingText = this.opts.loadingText
       }
@@ -3554,7 +3561,7 @@ export class Niivue {
         volumeList[i].colormapNegative = volumeList[i].colorMapNegative
       }
       const imageOptions = {
-        url: volumeList[i].url,
+        url: volumeList[i].url!,
         headers: volumeList[i].headers,
         name: volumeList[i].name,
         colormap: volumeList[i].colormap,
@@ -3580,7 +3587,7 @@ export class Niivue {
    * @returns {NVMesh}
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
    */
-  async addMeshFromUrl(meshOptions: LoadFromUrlParams) {
+  async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
     const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl! })
     this.mediaUrlMap.set(mesh, meshOptions.url)
     this.onMeshAddedFromUrl(meshOptions, mesh)
@@ -3598,7 +3605,7 @@ export class Niivue {
    * niivue.loadMeshes([{url: 'someMesh.gii'}])
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
-  async loadMeshes(meshList: LoadFromUrlParams[]) {
+  async loadMeshes(meshList: LoadFromUrlParams[]): Promise<this> {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -3636,7 +3643,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectomeFromUrl(url, headers = {}) {
+  async loadConnectomeFromUrl(url: string, headers = {}): Promise<this> {
     const response = await fetch(url, { headers })
     const json = await response.json()
     return this.loadConnectome(json)
@@ -3648,7 +3655,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadFreeSurferConnectomeFromUrl(url, headers = {}) {
+  async loadFreeSurferConnectomeFromUrl(url: string, headers = {}): Promise<this> {
     const response = await fetch(url, { headers })
     const json = await response.json()
     return this.loadFreeSurferConnectome(json)
@@ -3660,7 +3667,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadFreeSurferConnectome(json: FreeSurferConnectome) {
+  async loadFreeSurferConnectome(json: FreeSurferConnectome): Promise<this> {
     const connectome = NVConnectome.convertFreeSurferConnectome(json)
     return this.loadConnectome(connectome)
   }
@@ -3892,7 +3899,7 @@ export class Niivue {
       )
       gl.readPixels(0, 0, this.back.dims[1], this.back.dims[2], format, type, slice16)
       // img16.push(...slice16); // <- will elicit call stack limit error
-      img16 = [...img16, ...slice16]
+      img16 = Int16Array.from([...img16, ...slice16])
     }
     let mx = img16[0]
     for (let i = 0; i < img16.length; i++) {
@@ -6732,7 +6739,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  textWidth(scale, str) {
+  textWidth(scale, str): number {
     if (!str) {
       return 0
     }
@@ -6745,7 +6752,7 @@ export class Niivue {
     return w
   }
 
-  textHeight(scale, str) {
+  textHeight(scale, str): number {
     if (!str) {
       return 0
     }
@@ -6760,7 +6767,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawChar(xy, scale, char) {
+  drawChar(xy, scale, char): number {
     // draw single character, never call directly: ALWAYS call from drawText()
     const metrics = this.fontMets[char]
     const l = xy[0] + scale * metrics.lbwh[0]

@@ -94,7 +94,7 @@ export type ImageFromUrlOptions = {
   // the resolvable URL pointing to a nifti image to load
   url: string
   // Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
-  urlImageData: string
+  urlImageData?: string
   // headers to use in the fetch call
   headers?: Record<string, string>
   // a name for this image (defaults to empty)

@@ -205,7 +205,7 @@ type DocumentData = {
   connectomes?: string[]
 }
 
-type ExportDocumentData = {
+export type ExportDocumentData = {
   // base64 encoded images
   encodedImageBlobs: string[]
   // base64 encoded drawing

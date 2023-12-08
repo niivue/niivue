@@ -33,6 +33,7 @@ export class NVImage {
   name: string
   id: string
   url?: string
+  headers?: Record<string, string>
   _colormap: string
   _opacity: number
   percentileFrac: number
@@ -98,7 +99,7 @@ export class NVImage {
   // TODO referenced by niivue/loadVolumes
   urlImgData?: string
   isManifest?: boolean
-  limitFrames4D?: boolean
+  limitFrames4D?: number
 
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   // TODO move to enum
