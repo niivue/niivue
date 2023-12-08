@@ -76,7 +76,7 @@ import { LabelTextAlignment, LabelLineTerminator, NVLabel3D } from '../nvlabel.j
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
 import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE, ImageFromUrlOptions } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
-import { Connectome, LegacyConnectome, NVConnectomeNode } from '../types.js'
+import { Connectome, LegacyConnectome, NVConnectomeNode, NiftiHeader } from '../types.js'
 import {
   clamp,
   decodeRLE,
@@ -103,8 +103,8 @@ export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } fr
 const log = new Log()
 
 type DragReleaseParams = {
-  fracStart: number[]
-  fracEnd: number[]
+  fracStart: vec3
+  fracEnd: vec3
   voxStart: number[]
   voxEnd: number[]
   mmStart: vec4
@@ -308,13 +308,15 @@ export class Niivue {
   drawFillOverwrites = true // if true, fill overwrites existing drawing
   drawPenFillPts = [] // store mouse points for filled pen
   overlayTexture: WebGLTexture | null = null
-  overlayTextureID = []
+  overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
   orientCubeShader?: Shader
-  orientCubeShaderVAO?: WebGLVertexArrayObject
+  orientCubeShaderVAO: WebGLVertexArrayObject | null = null
   rectShader?: Shader
   renderShader?: Shader
   lineShader?: Shader
+  line3DShader?: Shader
+  passThroughShader?: Shader
   renderGradientShader?: Shader
   renderSliceShader?: Shader
   renderVolumeShader?: Shader
@@ -322,6 +324,7 @@ export class Niivue {
   pickingImageShader?: Shader
   colorbarShader?: Shader
   fontShader: Shader | null = null
+  fiberShader?: Shader
   fontTexture: WebGLTexture | null = null
   circleShader?: Shader
   matCapTexture: WebGLTexture | null = null
@@ -330,15 +333,15 @@ export class Niivue {
   thumbnailVisible = false
   bmpTextureWH = 1.0 // thumbnail width/height ratio
   growCutShader?: Shader
-  orientShaderAtlasU = null
-  orientShaderAtlasI = null
-  orientShaderU?: Shader
-  orientShaderI?: Shader
-  orientShaderF?: Shader
-  orientShaderRGBU?: Shader
-  surfaceShader?: Shader
-  blurShader?: Shader
-  sobelShader?: Shader
+  orientShaderAtlasU: Shader | null = null
+  orientShaderAtlasI: Shader | null = null
+  orientShaderU: Shader | null = null
+  orientShaderI: Shader | null = null
+  orientShaderF: Shader | null = null
+  orientShaderRGBU: Shader | null = null
+  surfaceShader: Shader | null = null
+  blurShader: Shader | null = null
+  sobelShader: Shader | null = null
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
@@ -392,8 +395,8 @@ export class Niivue {
   deferredVolumes: NVImage[] = []
   deferredMeshes: LoadFromUrlParams[] = []
   furthestVertexFromOrigin = 100
-  volScale = []
-  vox = []
+  volScale: number[] = []
+  vox: number[] = []
   mousePos = [0, 0]
   screenSlices: Array<{
     leftTopWidthHeight: number
@@ -407,12 +410,14 @@ export class Niivue {
   cuboidVertexBuffer?: WebGLBuffer
 
   otherNV: Niivue | Niivue[] | null = null // another niivue instance that we wish to sync position with
-  volumeObject3D = null
+  volumeObject3D: NiivueObject3D | null = null
   pivot3D = [0, 0, 0] // center for rendering rotation
   furthestFromPivot = 10.0 // most distant point from pivot
 
   currentClipPlaneIndex = 0
   lastCalled = new Date().getTime()
+
+  orientCubeMtxLoc: WebGLUniformLocation | null = null
 
   selectedObjectId = -1
   CLIP_PLANE_ID = 1
@@ -1257,7 +1262,7 @@ export class Niivue {
     this.onIntensityChange(this.volumes[volIdx])
   }
 
-  generateMouseUpCallback(fracStart: number[], fracEnd: number[]): void {
+  generateMouseUpCallback(fracStart: vec3, fracEnd: vec3): void {
     // calculate details for callback
     const tileStart = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
     const tileEnd = this.tileIndex(this.uiData.dragEnd[0], this.uiData.dragEnd[1])
@@ -3196,7 +3201,7 @@ export class Niivue {
     if (gradientAmount < 0.0) {
       this.renderShader = this.renderSliceShader
     }
-    this.initRenderShader(this.renderShader, gradientAmount)
+    this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl!)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
@@ -5073,7 +5078,10 @@ export class Niivue {
     return this
   }
 
-  gradientGL(hdr) {
+  gradientGL(hdr: NiftiHeader) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     const gl = this.gl
     const faceStrip = [0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0]
     const vao2 = gl.createVertexArray()
@@ -5090,7 +5098,7 @@ export class Niivue {
     gl.disable(gl.BLEND)
     const tempTex3D = this.rgbaTex(null, this.gl.TEXTURE5, hdr.dims)
     // tempTex3D = this.bindBlankGL(hdr);
-    const blurShader = this.blurShader
+    const blurShader = this.blurShader!
     blurShader.use(gl)
 
     gl.activeTexture(gl.TEXTURE0)
@@ -5108,7 +5116,7 @@ export class Niivue {
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
-    const sobelShader = this.sobelShader
+    const sobelShader = this.sobelShader!
     sobelShader.use(gl)
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
@@ -5156,12 +5164,12 @@ export class Niivue {
       if (!this.volumes[i].toRAS) {
         continue
       }
-      this.refreshLayers(this.volumes[i], visibleLayers, numLayers)
+      this.refreshLayers(this.volumes[i], visibleLayers)
       visibleLayers++
     }
     this.furthestVertexFromOrigin = 0.0
     if (numLayers > 0) {
-      this.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin
+      this.furthestVertexFromOrigin = this.volumeObject3D!.furthestVertexFromOrigin!
     }
     if (this.meshes) {
       for (let i = 0; i < this.meshes.length; i++) {
@@ -5184,7 +5192,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
   getDescriptives(layer = 0, masks = [], drawingIsMask = false) {
-    const hdr = this.volumes[layer].hdr
+    const hdr = this.volumes[layer].hdr!
     let slope = hdr.scl_slope
     if (isNaN(slope)) {
       slope = 1
@@ -5193,7 +5201,7 @@ export class Niivue {
     if (isNaN(inter)) {
       inter = 1
     }
-    const imgRaw = this.volumes[layer].img
+    const imgRaw = this.volumes[layer].img!
     const nv = imgRaw.length // number of voxels
     // create mask
     const img = new Float32Array(nv)
@@ -5206,7 +5214,7 @@ export class Niivue {
     } // assume all voxels survive
     if (masks.length > 0) {
       for (let m = 0; m < masks.length; m++) {
-        const imgMask = this.volumes[masks[m]].img
+        const imgMask = this.volumes[masks[m]].img!
         if (imgMask.length !== nv) {
           log.debug('Mask resolution does not match image. Skipping masking layer ' + masks[m])
           continue
@@ -5219,7 +5227,7 @@ export class Niivue {
       }
     } else if (masks.length < 1 && drawingIsMask) {
       for (let i = 0; i < nv; i++) {
-        if (this.drawBitmap[i] === 0 || isNaN(this.drawBitmap[i])) {
+        if (this.drawBitmap![i] === 0 || isNaN(this.drawBitmap![i])) {
           mask[i] = 0
         }
       }
@@ -5289,17 +5297,17 @@ export class Niivue {
 
   // not included in public docs
   // apply slow computations when image properties have changed
-  refreshLayers(overlayItem, layer) {
+  refreshLayers(overlayItem: NVImage, layer: number) {
     this.refreshColormaps()
     if (this.volumes.length < 1) {
       return
     } // e.g. only meshes
     const hdr = overlayItem.hdr
     let img = overlayItem.img
-    if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D) {
-      img = overlayItem.img.slice(
-        overlayItem.frame4D * overlayItem.nVox3D,
-        (overlayItem.frame4D + 1) * overlayItem.nVox3D
+    if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D!) {
+      img = overlayItem.img!.slice(
+        overlayItem.frame4D * overlayItem.nVox3D!,
+        (overlayItem.frame4D + 1) * overlayItem.nVox3D!
       )
     }
     const opacity = overlayItem.opacity
@@ -5311,26 +5319,34 @@ export class Niivue {
     if (!this.gl) {
       throw new Error('gl undefined')
     }
+    if (!this.back) {
+      throw new Error('back undefined')
+    }
 
     this.gl.bindVertexArray(this.unusedVAO)
-    if (this.crosshairs3D !== null) {
-      this.crosshairs3D.mm[0] = NaN
+    if (this.crosshairs3D) {
+      this.crosshairs3D.mm![0] = NaN
     } // force crosshairs3D redraw
-    let mtx = mat4.clone(overlayItem.toRAS)
+    let mtx = mat4.clone(overlayItem.toRAS!)
     if (layer === 0) {
       this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl)
       mat4.invert(mtx, mtx)
-      // log.debug(`mtx layer ${layer}`, mtx);
+
       this.back.matRAS = overlayItem.matRAS
       this.back.dims = overlayItem.dimsRAS
       this.back.pixDims = overlayItem.pixDimsRAS
-      outTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, overlayItem.dimsRAS) // this.back.dims)
+      outTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, overlayItem.dimsRAS!) // this.back.dims)
 
       const { volScale, vox } = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
 
       this.volScale = volScale
       this.vox = vox
       this.volumeObject3D.scale = volScale
+
+      if (!this.renderShader) {
+        throw new Error('renderShader undefined')
+      }
+
       this.renderShader.use(this.gl)
       this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
       this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
@@ -5343,7 +5359,7 @@ export class Niivue {
       this.gl.uniform3fv(pickingShader.uniforms.volScale, volScale)
       log.debug(this.volumeObject3D)
     } else {
-      if (this.back.dims === undefined) {
+      if (this.back?.dims === undefined) {
         log.error('Fatal error: Unable to render overlay: background dimensions not defined!')
       }
       const f000 = this.mm2frac(overlayItem.mm000, 0, true) // origin in output space
@@ -5375,7 +5391,7 @@ export class Niivue {
       )
       mat4.invert(mtx, mtx)
       if (layer === 1) {
-        outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back.dims)
+        outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back!.dims!)
         this.overlayTexture = outTexture
         this.overlayTextureID = outTexture
       } else {
@@ -5385,7 +5401,7 @@ export class Niivue {
     const fb = this.gl.createFramebuffer()
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb)
     this.gl.disable(this.gl.CULL_FACE)
-    this.gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]) // output in background dimensions
+    this.gl.viewport(0, 0, this.back.dims![1], this.back.dims![2]) // output in background dimensions
     this.gl.disable(this.gl.BLEND)
     const tempTex3D = this.gl.createTexture()
     this.gl.activeTexture(this.gl.TEXTURE6) // Temporary 3D Texture
@@ -5399,6 +5415,9 @@ export class Niivue {
     // https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
     // https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexStorage3D.xhtml
     let orientShader = this.orientShaderU
+    if (!hdr) {
+      throw new Error('hdr undefined')
+    }
     if (hdr.datatypeCode === 2) {
       // raw input data
       if (hdr.intent_code === 1002) {
@@ -5416,7 +5435,7 @@ export class Niivue {
         hdr.dims[3],
         this.gl.RED_INTEGER,
         this.gl.UNSIGNED_BYTE,
-        img
+        img!
       )
     } else if (hdr.datatypeCode === 4) {
       orientShader = this.orientShaderI
@@ -5766,6 +5785,9 @@ export class Niivue {
       }
     }
     // set slice scale for render shader
+    if (!this.renderShader) {
+      throw new Error('renderShader undefined')
+    }
     this.renderShader.use(this.gl)
     const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
     const vox = slicescl.vox
@@ -8476,7 +8498,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  mm2frac(mm, volIdx = 0, isForceSliceMM = false) {
+  mm2frac(mm, volIdx = 0, isForceSliceMM = false): vec3 {
     // given mm, return volume fraction
     if (this.volumes.length < 1) {
       const frac = [0.1, 0.5, 0.5]
@@ -8578,7 +8600,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  frac2mm(frac: number[], volIdx = 0, isForceSliceMM = false) {
+  frac2mm(frac: vec3, volIdx = 0, isForceSliceMM = false) {
     const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (this.volumes.length > 0) {
       if (isForceSliceMM || this.opts.isSliceMM) {
@@ -8646,7 +8668,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  canvasPos2frac(canvasPos) {
+  canvasPos2frac(canvasPos): vec3 {
     for (let i = 0; i < this.screenSlices.length; i++) {
       const texFrac = this.screenXY2TextureFrac(canvasPos[0], canvasPos[1], i)
       if (texFrac[0] >= 0) {

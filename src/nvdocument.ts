@@ -1,5 +1,5 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
-import { vec4 } from 'gl-matrix'
+import { vec3, vec4 } from 'gl-matrix'
 import { NVUtilities } from './nvutilities.js'
 import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvimage/index.js'
 import { MeshType, NVMesh } from './nvmesh.js'
@@ -167,7 +167,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
 type SceneData = {
   azimuth: number
   elevation: number
-  crosshairPos: number[]
+  crosshairPos: vec3
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
   volScaleMultiplier: number
@@ -181,7 +181,7 @@ type Scene = {
   renderAzimuth: number
   renderElevation: number
   volScaleMultiplier: number
-  crosshairPos: number[]
+  crosshairPos: vec3
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
   pan2Dxyzmm: vec4
@@ -293,10 +293,10 @@ export class NVDocument {
         this.onZoom3DChange(scale)
       },
 
-      get crosshairPos(): number[] {
+      get crosshairPos(): vec3 {
         return this.sceneData.crosshairPos
       },
-      set crosshairPos(crosshairPos: number[]) {
+      set crosshairPos(crosshairPos: vec3) {
         this.sceneData.crosshairPos = crosshairPos
       },
 

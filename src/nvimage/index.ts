@@ -60,6 +60,7 @@ export class NVImage {
   maxShearDeg?: number
   useQFormNotSForm: boolean
 
+  pixDims?: number[]
   matRAS?: mat4
   pixDimsRAS?: number[]
   obliqueRAS?: mat4
