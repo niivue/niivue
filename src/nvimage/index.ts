@@ -2582,11 +2582,16 @@ export class NVImage {
 
   static async fetchPartial(url: string, bytesToLoad: number, headers: Record<string, string> = {}): Promise<Response> {
     try {
-      return fetch(url, {
-        headers: { range: 'bytes=0-' + bytesToLoad, ...headers }
+      console.log('**********', bytesToLoad)
+      const response = await fetch(url, {
+        headers: { range: `bytes=0-'${bytesToLoad}`, ...headers }
       })
-    } catch {
-      return fetch(url, { headers })
+      return response
+    } catch (error) {
+      console.error(error)
+      console.error('fetchPartial failed, trying again without range header')
+      const response = await fetch(url, { headers })
+      return response
     }
   }
 
