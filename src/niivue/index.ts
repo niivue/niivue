@@ -902,10 +902,6 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
-    if (!this.gl) {
-      log.warn('unable to get webgl2 context. Perhaps this browser does not support webgl2')
-      throw new Error('unable to get webgl2 context. Perhaps this browser does not support webgl2')
-    }
 
     console.log('NIIVUE VERSION ', version) // TH added this rare console.log via suggestion from CR. Don't remove
 
@@ -1114,7 +1110,7 @@ export class Niivue {
     log.debug('mouse down')
     log.debug(e)
     // record tile where mouse clicked
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     if (!pos) {
       return
     }
@@ -1159,7 +1155,7 @@ export class Niivue {
   // handler for mouse left button down
   // note: no test yet
   mouseLeftButtonHandler(e: MouseEvent): void {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mouseDown(pos!.x, pos!.y)
     this.mouseClick(pos!.x, pos!.y)
   }
@@ -1168,7 +1164,7 @@ export class Niivue {
   // handler for mouse center button down
   // note: no test yet
   mouseCenterButtonHandler(e: MouseEvent): void {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
       return
@@ -1186,7 +1182,7 @@ export class Niivue {
   // note: no test yet
   mouseRightButtonHandler(e: MouseEvent): void {
     // this.uiData.isDragging = true;
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
       return
@@ -1448,7 +1444,7 @@ export class Niivue {
   async mouseMoveListener(e: MouseEvent): Promise<void> {
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl!.canvas)
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
       // ignore if mouse moves outside of tile of initial click
       if (!pos) {
         return
@@ -1917,7 +1913,7 @@ export class Niivue {
               ;(entry as FileSystemFileEntry).file(async (file) => {
                 const mesh = await NVMesh.loadFromFile({
                   file,
-                  gl: this.gl!,
+                  gl: this.gl,
                   name: file.name
                 })
                 this.uiData.loading$.next(false)
@@ -2244,7 +2240,7 @@ export class Niivue {
     const perm = drawingBitmap.permRAS!
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl!.TEXTURE7, this.back.dims!, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims!, true)
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -2678,7 +2674,7 @@ export class Niivue {
       log.warn('setMeshProperty() id not loaded', id)
       return
     }
-    this.meshes[idx].setProperty(key, val, this.gl!)
+    this.meshes[idx].setProperty(key, val, this.gl)
     this.updateGLVolume()
     this.onMeshPropertyChanged(idx, key, val)
   }
@@ -2695,7 +2691,7 @@ export class Niivue {
       log.warn('reverseFaces() id not loaded', mesh)
       return
     }
-    this.meshes[idx].reverseFaces(this.gl!)
+    this.meshes[idx].reverseFaces(this.gl)
     this.updateGLVolume()
   }
 
@@ -2714,7 +2710,7 @@ export class Niivue {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
       return
     }
-    this.meshes[idx].setLayerProperty(layer, key, val, this.gl!)
+    this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
     this.updateGLVolume()
   }
 
@@ -3200,8 +3196,8 @@ export class Niivue {
    */
   setClipPlaneColor(color: number[]): void {
     this.opts.clipPlaneColor = color
-    this.renderShader!.use(this.gl!)
-    this.gl!.uniform4fv(this.renderShader!.clipPlaneClrLoc!, this.opts.clipPlaneColor)
+    this.renderShader!.use(this.gl)
+    this.gl.uniform4fv(this.renderShader!.clipPlaneClrLoc!, this.opts.clipPlaneColor)
     this.drawScene()
   }
 
@@ -3221,7 +3217,7 @@ export class Niivue {
       this.renderShader = this.renderSliceShader
     }
     this.initRenderShader(this.renderShader!, gradientAmount)
-    this.renderShader!.use(this.gl!)
+    this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
     this.refreshLayers(this.volumes[0], 0)
@@ -3342,7 +3338,7 @@ export class Niivue {
         meshInit.rgba255,
         meshInit.opacity,
         meshInit.visible,
-        this.gl!,
+        this.gl,
         meshInit.connectome,
         meshInit.dpg,
         meshInit.dps,
@@ -3350,7 +3346,7 @@ export class Niivue {
       )
       meshToAdd.meshShaderIndex = meshInit.meshShaderIndex
       meshToAdd.layers = meshInit.layers
-      meshToAdd.updateMesh(this.gl!)
+      meshToAdd.updateMesh(this.gl)
       log.debug(meshToAdd)
       this.addMesh(meshToAdd)
     }
@@ -3581,9 +3577,6 @@ export class Niivue {
       return this
     }
     this.volumes = []
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
     this.uiData.loading$.next(false)
@@ -3624,7 +3617,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
    */
   async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
-    const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl! })
+    const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl })
     this.mediaUrlMap.set(mesh, meshOptions.url)
     this.onMeshAddedFromUrl(meshOptions, mesh)
     this.addMesh(mesh)
@@ -3659,8 +3652,8 @@ export class Niivue {
       // await this.init();
     }
     this.meshes = []
-    this.gl!.clearColor(0.0, 0.0, 0.0, 1.0)
-    this.gl!.clear(this.gl!.COLOR_BUFFER_BIT)
+    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
     this.uiData.loading$.next(false)
     // for loop to load all volumes in volumeList
@@ -3742,10 +3735,6 @@ export class Niivue {
       }
     })
 
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
-
     this.meshes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
@@ -3783,7 +3772,7 @@ export class Niivue {
     this.drawBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl!.TEXTURE7, this.back.dims, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true)
     this.refreshDrawing(false)
   }
 
@@ -3791,10 +3780,7 @@ export class Niivue {
   // create a 1-component (red) 16-bit signed integer texture on the GPU
   r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture {
     if (texID) {
-      this.gl!.deleteTexture(texID)
-    }
-    if (!this.gl) {
-      throw new Error('gl undefined')
+      this.gl.deleteTexture(texID)
     }
     texID = this.gl.createTexture()!
     this.gl.activeTexture(activeID)
@@ -4439,7 +4425,7 @@ export class Niivue {
    */
   closeDrawing() {
     this.drawClearAllUndoBitmaps()
-    this.rgbaTex(this.drawTexture, this.gl!.TEXTURE7, [2, 2, 2, 2], true)
+    this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true)
     this.drawBitmap = null
     this.drawScene()
   }
@@ -4467,9 +4453,6 @@ export class Niivue {
     } else if (vx !== this.drawBitmap.length) {
       log.warn('Drawing bitmap must match the background image')
     }
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     this.gl.activeTexture(this.gl.TEXTURE7)
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.gl.texSubImage3D(
@@ -4493,9 +4476,6 @@ export class Niivue {
   // not included in public docs
   // create 3D 1-component (red) uint8 texture on GPU
   r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     if (texID) {
       this.gl.deleteTexture(texID)
     }
@@ -4531,9 +4511,6 @@ export class Niivue {
   // not included in public docs
   // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
   rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     if (texID) {
       this.gl.deleteTexture(texID)
     }
@@ -4580,15 +4557,15 @@ export class Niivue {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
-        if (!this.gl || !this.bmpShader) {
+        if (!this.bmpShader) {
           return
         }
         let pngTexture
         if (textureNum === 4) {
           if (this.bmpTexture !== null) {
-            this.gl!.deleteTexture(this.bmpTexture)
+            this.gl.deleteTexture(this.bmpTexture)
           }
-          this.bmpTexture = this.gl!.createTexture()
+          this.bmpTexture = this.gl.createTexture()
           pngTexture = this.bmpTexture
           this.bmpTextureWH = img.width / img.height
           this.gl.activeTexture(this.gl.TEXTURE4)
@@ -4714,7 +4691,7 @@ export class Niivue {
 
     this.initFontMets()
 
-    this.fontShader!.use(this.gl!)
+    this.fontShader!.use(this.gl)
     this.drawScene()
   }
 
@@ -4732,9 +4709,6 @@ export class Niivue {
 
   // not included in public docs
   async initText() {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     // font shader
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
     this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
@@ -4809,12 +4783,12 @@ export class Niivue {
     const num = this.meshShaderNameToNumber(name)!
     if (num >= 0) {
       // prior shader uses this name: delete it!
-      this.gl!.deleteProgram(this.meshShaders[num].shader!.program)
+      this.gl.deleteProgram(this.meshShaders[num].shader!.program)
       this.meshShaders.splice(num, 1)
     }
 
-    const shader = new Shader(this.gl!, vertMeshShader, fragmentShaderText)
-    shader.use(this.gl!)
+    const shader = new Shader(this.gl, vertMeshShader, fragmentShaderText)
+    shader.use(this.gl)
     shader.mvpLoc = shader.uniforms.mvpMtx
     shader.normLoc = shader.uniforms.normMtx
     shader.opacityLoc = shader.uniforms.opacity
@@ -4858,9 +4832,6 @@ export class Niivue {
 
   // not included in public docs
   async initRenderShader(shader: Shader, gradientAmount = 0.0) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     shader.use(this.gl)
     shader.drawOpacityLoc = shader.uniforms.drawOpacity
     shader.backgroundMasksOverlaysLoc = shader.uniforms.backgroundMasksOverlays
@@ -5089,9 +5060,6 @@ export class Niivue {
   }
 
   gradientGL(hdr: NiftiHeader) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     const gl = this.gl
     const faceStrip = [0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0]
     const vao2 = gl.createVertexArray()
@@ -5326,9 +5294,6 @@ export class Niivue {
     } // skip completely transparent layers
     let outTexture = null
 
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     if (!this.back) {
       throw new Error('back undefined')
     }
@@ -5895,9 +5860,6 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/torso.html|live demo usage}
    */
   setRenderDrawAmbientOcclusion(ao: number) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     if (!this.renderShader) {
       throw new Error('renderShader undefined')
     }
@@ -6042,9 +6004,6 @@ export class Niivue {
   // note a single volume can have two colormaps (positive and negative)
   // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
   createColormapTexture(texture: WebGLTexture | null = null, nRow = 0, nCol = 256) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     if (texture !== null) {
       this.gl.deleteTexture(texture)
     }
@@ -6179,9 +6138,6 @@ export class Niivue {
       addColormap(Array.from(this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert)))
     }
     addColormap(Array.from(this.drawLut.lut))
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     this.gl.texSubImage2D(this.gl.TEXTURE_2D, 0, 0, 0, 256, nMaps + 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, luts)
     return this
   }
@@ -6262,7 +6218,7 @@ export class Niivue {
     if (!this.bmpTexture) {
       return
     }
-    this.gl!.deleteTexture(this.bmpTexture)
+    this.gl.deleteTexture(this.bmpTexture)
     this.bmpTexture = null
     this.thumbnailVisible = false
   }
@@ -6327,9 +6283,6 @@ export class Niivue {
       this.sliceScroll3D(posChange)
       this.drawScene() // TODO: twice?
       return
-    }
-    if (!this.gl) {
-      throw new Error('gl undefined')
     }
     if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) {
       return
@@ -6450,9 +6403,6 @@ export class Niivue {
   // not included in public docs
   // draw 10cm ruler at desired coordinates
   drawRuler10cm(startXYendXY: number[]) {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     if (!this.lineShader) {
       throw new Error('lineShader undefined')
     }
@@ -9507,7 +9457,7 @@ export class Niivue {
 
   get gl(): WebGL2RenderingContext {
     if (!this._gl) {
-      throw new Error('rendering context is not defined')
+      throw new Error("unable to get WebGL context. Maybe the browser doesn't support WebGL2.")
     }
     return this._gl
   }
