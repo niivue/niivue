@@ -50,7 +50,7 @@ export class NVImage {
   cal_maxNeg: number
   colorbarVisible = true
   visible: boolean
-  modulationImage = null
+  modulationImage: number | null = null
   modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
   // TODO this is some Daikon internal thing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -198,6 +198,7 @@ export class NVImage {
     this.useQFormNotSForm = useQFormNotSForm
 
     // Added to support zerosLike
+    // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
       return
     }

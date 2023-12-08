@@ -62,7 +62,7 @@ import { Log } from '../logger.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json'
-import { cmapper } from '../colortables.js'
+import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
   SLICE_TYPE,
@@ -122,6 +122,16 @@ type FontMetrics = {
     uv_lbwh: number[]
     lbwh: number[]
   }
+}
+
+type ColormapListEntry = {
+  name: string
+  min: number
+  max: number
+  alphaThreshold: boolean
+  negative: boolean
+  visible: boolean
+  invert: boolean
 }
 
 /**
@@ -293,7 +303,7 @@ export class Niivue {
   isBusy = false // flag to indicate if the scene is busy drawing
   needsRefresh = false // flag to indicate if the scene needs to be redrawn
   colormapTexture: WebGLTexture | null = null // the GPU memory storage of the colormap
-  colormapLists = [] // one entry per colorbar: min, max, tic
+  colormapLists: ColormapListEntry[] = [] // one entry per colorbar: min, max, tic
   volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
   gradientTexture: WebGLTexture | null = null // 3D texture for volume rnedering lighting
   gradientTextureAmount = 0.0
@@ -5681,10 +5691,12 @@ export class Niivue {
         this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture)
         const vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
         const modulateVolume = new Uint8Array(vx)
-        const mn = this.volumes[overlayItem.modulationImage].cal_min
-        const scale = 1.0 / (this.volumes[overlayItem.modulationImage].cal_max - mn)
-        const imgRaw = this.volumes[overlayItem.modulationImage].img.buffer
-        let img = new Uint8Array(imgRaw)
+        const mn = this.volumes[overlayItem.modulationImage].cal_min!
+        const scale = 1.0 / (this.volumes[overlayItem.modulationImage].cal_max! - mn)
+        const imgRaw = this.volumes[overlayItem.modulationImage].img!.buffer
+        let img: Uint8Array | Int16Array | Float32Array | Float64Array | Uint8Array | Uint16Array = new Uint8Array(
+          imgRaw
+        )
         switch (mhdr.datatypeCode) {
           case overlayItem.DT_SIGNED_SHORT:
             img = new Int16Array(imgRaw)
@@ -5715,8 +5727,8 @@ export class Niivue {
           mnNeg = this.volumes[overlayItem.modulationImage].cal_minNeg
           mxNeg = this.volumes[overlayItem.modulationImage].cal_minNeg
         }
-        mnNeg = Math.abs(mnNeg)
-        mxNeg = Math.abs(mxNeg)
+        mnNeg = Math.abs(mnNeg!)
+        mxNeg = Math.abs(mxNeg!)
         if (mnNeg > mxNeg) {
           ;[mnNeg, mxNeg] = [mxNeg, mnNeg]
         }
@@ -5755,6 +5767,9 @@ export class Niivue {
       this.gl.uniform1i(orientShader.uniforms.modulation, 0)
     }
     this.gl.uniformMatrix4fv(orientShader.uniforms.mtx, false, mtx)
+    if (!this.back.dims) {
+      throw new Error('back.dims undefined')
+    }
     if (hdr.intent_code === 1002) {
       let x = 1.0 / this.back.dims[1]
       if (!this.opts.isAtlasOutline) {
@@ -5783,7 +5798,7 @@ export class Niivue {
     if (layer === 0) {
       this.volumeTexture = outTexture
       if (this.gradientTextureAmount > 0.0) {
-        this.gradientGL(hdr, tempTex3D)
+        this.gradientGL(hdr)
       } else {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture)
@@ -5799,6 +5814,7 @@ export class Niivue {
     const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
     const vox = slicescl.vox
     const volScale = slicescl.volScale
+    // @ts-expect-error FIXME assigning this.overlays to a number field
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays)
     this.gl.uniform4fv(this.renderShader.clipPlaneClrLoc, this.opts.clipPlaneColor)
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
@@ -5807,9 +5823,18 @@ export class Niivue {
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane)
     this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
     this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
+
+    if (!this.pickingImageShader) {
+      throw new Error('pickingImageShader undefined')
+    }
     this.pickingImageShader.use(this.gl)
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
+
+    if (!this.sliceMMShader) {
+      throw new Error('sliceMMShader undefined')
+    }
+
     this.sliceMMShader.use(this.gl)
     this.gl.uniform1f(this.sliceMMShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
@@ -5846,7 +5871,7 @@ export class Niivue {
    * @param {object} colormap properties (Red, Green, Blue, Alpha and Indices)
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
    */
-  addColormap(key, cmap) {
+  addColormap(key: string, cmap: ColorMap) {
     cmapper.addColormap(key, cmap)
   }
 
@@ -5858,7 +5883,7 @@ export class Niivue {
    * niivue.setColormap(niivue.volumes[0].id,, 'red')
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
    */
-  setColormap(id, colormap) {
+  setColormap(id: string, colormap: string) {
     const idx = this.getVolumeIndexByID(id)
     this.volumes[idx].colormap = colormap
     this.updateGLVolume()
@@ -5869,7 +5894,14 @@ export class Niivue {
    * @param {value} amount of ambient occlusion (default 0.4)
    * @see {@link https://niivue.github.io/niivue/features/torso.html|live demo usage}
    */
-  setRenderDrawAmbientOcclusion(ao) {
+  setRenderDrawAmbientOcclusion(ao: number) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
+    if (!this.renderShader) {
+      throw new Error('renderShader undefined')
+    }
+
     this.renderDrawAmbientOcclusion = ao
     this.renderShader.use(this.gl)
     this.gl.uniform1f(this.renderShader.uniforms.renderDrawAmbientOcclusion, this.renderDrawAmbientOcclusion)
@@ -5877,7 +5909,7 @@ export class Niivue {
   }
 
   // compatibility alias for NiiVue < 0.35
-  setColorMap(id, colormap) {
+  setColorMap(id: string, colormap: string) {
     this.setColormap(id, colormap)
   }
 
@@ -5890,7 +5922,7 @@ export class Niivue {
    * niivue.setColormapNegative(niivue.volumes[1].id,"winter");
    * @see {@link https://niivue.github.io/niivue/features/mosaics2.html|live demo usage}
    */
-  setColormapNegative(id, colormapNegative) {
+  setColormapNegative(id: string, colormapNegative: string) {
     const idx = this.getVolumeIndexByID(id)
     this.volumes[idx].colormapNegative = colormapNegative
     this.updateGLVolume()
@@ -5905,7 +5937,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo scalar usage}
    * @see {@link https://niivue.github.io/niivue/features/modulateAfni.html|live demo usage}
    */
-  setModulationImage(idTarget, idModulation, modulateAlpha = 0) {
+  setModulationImage(idTarget: string, idModulation: string, modulateAlpha = 0) {
     // to set:
     // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
     // to clear:
@@ -5933,10 +5965,10 @@ export class Niivue {
   /** Load all volumes for image opened with `limitFrames4D`, the user can also click the `...` on a 4D timeline to load deferred volumes
    * @param {string} id the ID of the 4D NVImage
    **/
-  async loadDeferred4DVolumes(id) {
+  async loadDeferred4DVolumes(id: string) {
     const idx = this.getVolumeIndexByID(id)
     const volume = this.volumes[idx]
-    if (volume.nTotalFrame4D <= volume.nFrame4D) {
+    if (volume.nTotalFrame4D! <= volume.nFrame4D!) {
       return
     }
     // only load image data: do not change other settings like contrast
@@ -5950,7 +5982,7 @@ export class Niivue {
     }
     // if v is not undefined, then we have successfully loaded the image data
     if (v) {
-      volume.img = v.img.slice()
+      volume.img = v.img!.slice()
       volume.nTotalFrame4D = v.nTotalFrame4D
       volume.nFrame4D = v.nFrame4D
       this.updateGLVolume()
@@ -5964,12 +5996,12 @@ export class Niivue {
    * @example nv1.setFrame4D(nv1.volumes[0].id, 42);
    * @see {@link https://niivue.github.io/niivue/features/timeseries.html|live demo usage}
    */
-  setFrame4D(id, frame4D) {
+  setFrame4D(id: string, frame4D: number) {
     const idx = this.getVolumeIndexByID(id)
     const volume = this.volumes[idx]
     // don't allow indexing timepoints beyond the max number of time points.
-    if (frame4D > volume.nFrame4D - 1) {
-      frame4D = volume.nFrame4D - 1
+    if (frame4D > volume.nFrame4D! - 1) {
+      frame4D = volume.nFrame4D! - 1
     }
     // don't allow negative timepoints
     if (frame4D < 0) {
@@ -5991,13 +6023,13 @@ export class Niivue {
    * @example nv1.getFrame4D(nv1.volumes[0].id);
    * @see {@link https://niivue.github.io/niivue/features/timeseries.html|live demo usage}
    */
-  getFrame4D(id) {
+  getFrame4D(id: string) {
     const idx = this.getVolumeIndexByID(id)
     return this.volumes[idx].nFrame4D
   }
 
   // not included in public docs
-  colormapFromKey(name) {
+  colormapFromKey(name: string) {
     return cmapper.colormapFromKey(name)
   }
 
@@ -6009,7 +6041,10 @@ export class Niivue {
   // create TEXTURE1 a 2D bitmap with a nCol columns RGBA and nRow rows
   // note a single volume can have two colormaps (positive and negative)
   // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
-  createColormapTexture(texture = null, nRow = 0, nCol = 256) {
+  createColormapTexture(texture: WebGLTexture | null = null, nRow = 0, nCol = 256) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
     if (texture !== null) {
       this.gl.deleteTexture(texture)
     }
