@@ -1471,7 +1471,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
-  async mouseMoveListener(e: MouseEvent): Promise<void> {
+  mouseMoveListener(e: MouseEvent): void {
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
@@ -1492,7 +1492,7 @@ export class Niivue {
       } else if (this.uiData.mouseButtonRightDown || this.uiData.mouseButtonCenterDown) {
         this.setDragEnd(pos.x, pos.y)
       }
-      await this.drawScene()
+      this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
     }
@@ -1896,11 +1896,17 @@ export class Niivue {
       log.debug('dropped ext')
       log.debug(ext)
       if (MESH_EXTENSIONS.includes(ext)) {
-        this.addMeshFromUrl({ url })
+        this.addMeshFromUrl({ url }).catch((e) => {
+          throw e
+        })
       } else if (ext === 'NVD') {
-        this.loadDocumentFromUrl(url)
+        this.loadDocumentFromUrl(url).catch((e) => {
+          throw e
+        })
       } else {
-        this.addVolumeFromUrl(imageOptions)
+        this.addVolumeFromUrl(imageOptions).catch((e) => {
+          throw e
+        })
       }
     } else {
       // const files = dt.files;
@@ -1922,9 +1928,11 @@ export class Niivue {
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              ;(entry as FileSystemFileEntry).file(async (file) => {
+              ;(entry as FileSystemFileEntry).file((file) => {
                 // @ts-expect-error FIXME looks like a file gets passed instead of a string
-                await this.loadBmpTexture(file)
+                this.loadBmpTexture(file).catch((e) => {
+                  throw e
+                })
               })
               continue
             }
@@ -1947,49 +1955,69 @@ export class Niivue {
               continue
             }
             if (MESH_EXTENSIONS.includes(ext)) {
-              ;(entry as FileSystemFileEntry).file(async (file) => {
-                const mesh = await NVMesh.loadFromFile({
+              ;(entry as FileSystemFileEntry).file((file) => {
+                NVMesh.loadFromFile({
                   file,
                   gl: this.gl,
                   name: file.name
                 })
-                this.uiData.loading$.next(false)
-                this.addMesh(mesh)
+                  .then((mesh) => {
+                    this.uiData.loading$.next(false)
+                    this.addMesh(mesh)
+                  })
+                  .catch((e) => {
+                    throw e
+                  })
               })
               continue
             } else if (ext === 'NVD') {
-              ;(entry as FileSystemFileEntry).file(async (file) => {
-                const nvdoc = await NVDocument.loadFromFile(file)
-                this.loadDocument(nvdoc)
-                log.debug('loaded document')
+              ;(entry as FileSystemFileEntry).file((file) => {
+                NVDocument.loadFromFile(file)
+                  .then((nvdoc) => {
+                    this.loadDocument(nvdoc)
+                    log.debug('loaded document')
+                  })
+                  .catch((e) => {
+                    throw e
+                  })
               })
               break
             }
-            ;(entry as FileSystemFileEntry).file(async (file) => {
+            ;(entry as FileSystemFileEntry).file((file) => {
               if (pairedImageData) {
                 // if we have paired header/img data
-                ;(pairedImageData as FileSystemFileEntry).file(async (imgfile) => {
-                  const volume = await NVImage.loadFromFile({
+                ;(pairedImageData as FileSystemFileEntry).file((imgfile) => {
+                  NVImage.loadFromFile({
                     file,
                     urlImgData: imgfile,
                     limitFrames4D: this.opts.limitFrames4D
                   })
-                  this.addVolume(volume)
+                    .then((volume) => {
+                      this.addVolume(volume)
+                    })
+                    .catch((e) => {
+                      throw e
+                    })
                 })
               } else {
                 // else, just a single file to load (not a pair)
-                const volume = await NVImage.loadFromFile({
+                NVImage.loadFromFile({
                   file,
                   urlImgData: pairedImageData,
                   limitFrames4D: this.opts.limitFrames4D
                 })
-                if (e.altKey) {
-                  log.debug('alt key detected: assuming this is a drawing overlay')
-                  this.drawClearAllUndoBitmaps()
-                  this.loadDrawing(volume)
-                } else {
-                  this.addVolume(volume)
-                }
+                  .then((volume) => {
+                    if (e.altKey) {
+                      log.debug('alt key detected: assuming this is a drawing overlay')
+                      this.drawClearAllUndoBitmaps()
+                      this.loadDrawing(volume)
+                    } else {
+                      this.addVolume(volume)
+                    }
+                  })
+                  .catch((e) => {
+                    throw e
+                  })
               }
             })
           } else if (entry.isDirectory) {
@@ -3182,9 +3210,9 @@ export class Niivue {
    * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
    * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html|live demo usage}
    */
-  async setSliceType(st: SLICE_TYPE): Promise<this> {
+  setSliceType(st: SLICE_TYPE): this {
     this.opts.sliceType = st
-    await this.drawScene()
+    this.drawScene()
     return this
   }
 
@@ -3255,7 +3283,7 @@ export class Niivue {
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
     this.refreshLayers(this.volumes[0], 0)
-    await this.drawScene()
+    this.drawScene()
   }
 
   // not included in public docs.
@@ -3581,10 +3609,10 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
   async loadVolumes(volumeList: NVImage[]): Promise<this> {
-    this.on('loading', async (isLoading) => {
+    this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
-        await this.drawScene()
+        this.drawScene()
       } else {
         this.loadingText = this.opts.loadingText
       }
@@ -3740,7 +3768,7 @@ export class Niivue {
    * @returns Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectome(json: Connectome | LegacyConnectome): Promise<this> {
+  loadConnectome(json: Connectome | LegacyConnectome): this {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -4847,7 +4875,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  async initRenderShader(shader: Shader, gradientAmount = 0.0): Promise<void> {
+  initRenderShader(shader: Shader, gradientAmount = 0.0): void {
     shader.use(this.gl)
     shader.drawOpacityLoc = shader.uniforms.drawOpacity
     shader.backgroundMasksOverlaysLoc = shader.uniforms.backgroundMasksOverlays
