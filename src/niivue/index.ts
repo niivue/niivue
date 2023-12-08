@@ -134,6 +134,15 @@ type ColormapListEntry = {
   invert: boolean
 }
 
+type Graph = {
+  LTWH: number[]
+  plotLTWH?: number[]
+  opacity: number
+  vols: number[]
+  autoSizeMultiplanar: boolean
+  normalizeValues: boolean
+}
+
 /**
  * mesh file formats that can be loaded
  */
@@ -316,7 +325,7 @@ export class Niivue {
   drawPenLocation = [NaN, NaN, NaN]
   drawPenAxCorSag = -1 // do not allow pen to drag between Sagittal/Coronal/Axial
   drawFillOverwrites = true // if true, fill overwrites existing drawing
-  drawPenFillPts = [] // store mouse points for filled pen
+  drawPenFillPts: number[][] = [] // store mouse points for filled pen
   overlayTexture: WebGLTexture | null = null
   overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
@@ -409,7 +418,7 @@ export class Niivue {
   vox: number[] = []
   mousePos = [0, 0]
   screenSlices: Array<{
-    leftTopWidthHeight: number
+    leftTopWidthHeight: number[]
     axCorSag: SLICE_TYPE
     sliceFrac: number
     AxyzMxy: unknown[]
@@ -433,7 +442,7 @@ export class Niivue {
   CLIP_PLANE_ID = 1
   VOLUME_ID = 254
   DISTANCE_FROM_CAMERA = -0.54
-  graph = {
+  graph: Graph = {
     LTWH: [0, 0, 640, 480],
     opacity: 0.0,
     vols: [0], // e.g. timeline for background volume only, e.g. [0,2] for first and third volumes
@@ -6202,7 +6211,7 @@ export class Niivue {
   }
 
   // return tile at canvas coordinate(x,y)
-  tileIndex(x, y) {
+  tileIndex(x: number, y: number) {
     for (let i = 0; i < this.screenSlices.length; i++) {
       const ltwh = this.screenSlices[i].leftTopWidthHeight
       if (x > ltwh[0] && y > ltwh[1] && x < ltwh[0] + ltwh[2] && y < ltwh[1] + ltwh[3]) {
@@ -6214,7 +6223,7 @@ export class Niivue {
 
   // not included in public docs
   // report if screen space coordinates correspond with a 3D rendering
-  inRenderTile(x, y) {
+  inRenderTile(x: number, y: number) {
     const idx = this.tileIndex(x, y)
     if (idx >= 0 && this.screenSlices[idx].axCorSag === SLICE_TYPE.RENDER) {
       return idx
@@ -6262,14 +6271,14 @@ export class Niivue {
     if (!this.bmpTexture) {
       return
     }
-    this.gl.deleteTexture(this.bmpTexture)
+    this.gl!.deleteTexture(this.bmpTexture)
     this.bmpTexture = null
     this.thumbnailVisible = false
   }
 
   // not included in public docs
-  inGraphTile(x, y) {
-    if (this.graph.opacity <= 0 || this.volumes.length < 1 || this.volumes[0].nFrame4D < 1 || !this.graph.plotLTWH) {
+  inGraphTile(x: number, y: number) {
+    if (this.graph.opacity <= 0 || this.volumes.length < 1 || this.volumes[0].nFrame4D! < 1 || !this.graph.plotLTWH) {
       return false
     }
     if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) {
@@ -6284,12 +6293,12 @@ export class Niivue {
 
   // not included in public docs
   // handle mouse click event on canvas
-  mouseClick(x, y, posChange = 0, isDelta = true) {
-    x *= this.uiData.dpr
-    y *= this.uiData.dpr
+  mouseClick(x: number, y: number, posChange = 0, isDelta = true) {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
     // var posNow;
     // var posFuture;
-    this.canvas.focus()
+    this.canvas!.focus()
 
     if (this.thumbnailVisible) {
       // we will simply hide the thmubnail
@@ -6303,13 +6312,16 @@ export class Niivue {
       return
     }
     if (this.inGraphTile(x, y)) {
+      if (!this.graph.plotLTWH) {
+        throw new Error('plotLTWH undefined')
+      }
       const pos = [
         (x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2],
         (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3]
       ]
 
       if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
-        const vol = Math.round(pos[0] * (this.volumes[0].nFrame4D - 1))
+        const vol = Math.round(pos[0] * (this.volumes[0].nFrame4D! - 1))
         // this.graph.selectedColumn = vol;
         this.setFrame4D(this.volumes[0].id, vol)
         return
@@ -6324,6 +6336,9 @@ export class Niivue {
       this.sliceScroll3D(posChange)
       this.drawScene() // TODO: twice?
       return
+    }
+    if (!this.gl) {
+      throw new Error('gl undefined')
     }
     if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) {
       return
@@ -6364,16 +6379,18 @@ export class Niivue {
         this.createOnLocationChange(axCorSag)
         return
       }
-      this.scene.crosshairPos = texFrac.slice()
+      this.scene.crosshairPos = vec3.clone(texFrac)
       if (this.opts.drawingEnabled) {
-        const pt = this.frac2vox(this.scene.crosshairPos)
+        const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
 
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
           if (!isFinite(this.opts.penValue)) {
             // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
             this.drawFloodFill(pt, 0, this.opts.penValue, this.opts.floodFillNeighbors)
           } else {
-            this.drawFloodFill(pt, Math.abs(this.opts.penValue, this.opts.floodFillNeighbors))
+            // FIXME this was this.drawFloodFill(pt, Math.abs(this.opts.penValue, this.opts.floodFillNeighbors))
+            // FIXME this.opts.floodFillNeighbors therefore never affected this!
+            this.drawFloodFill(pt, Math.abs(this.opts.penValue), this.opts.floodFillNeighbors)
           }
           return
         }
@@ -6415,8 +6432,8 @@ export class Niivue {
   // not included in public docs
   // draw 10cm ruler on a 2D tile
   drawRuler() {
-    let fovMM = []
-    let ltwh = []
+    let fovMM: number[] = []
+    let ltwh: number[] = []
     for (let i = 0; i < this.screenSlices.length; i++) {
       if (this.screenSlices[i].axCorSag === SLICE_TYPE.RENDER) {
         continue
@@ -6441,7 +6458,13 @@ export class Niivue {
 
   // not included in public docs
   // draw 10cm ruler at desired coordinates
-  drawRuler10cm(startXYendXY) {
+  drawRuler10cm(startXYendXY: number[]) {
+    if (!this.gl) {
+      throw new Error('gl undefined')
+    }
+    if (!this.lineShader) {
+      throw new Error('lineShader undefined')
+    }
     this.gl.bindVertexArray(this.genericVAO)
     this.lineShader.use(this.gl)
     this.gl.uniform4fv(this.lineShader.lineColorLoc, this.opts.rulerColor)
@@ -6468,8 +6491,8 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenXY2mm(x, y, forceSlice = -1) {
-    let texFrac = []
+  screenXY2mm(x: number, y: number, forceSlice = -1): vec3 {
+    let texFrac: vec3
     for (let s = 0; s < this.screenSlices.length; s++) {
       let i = s
       if (forceSlice >= 0) {
@@ -6490,13 +6513,13 @@ export class Niivue {
       }
       const mm = this.frac2mm(texFrac)
 
-      return [mm[0], mm[1], mm[2], i]
+      return vec3.fromValues(mm[0], mm[1], mm[2], i)
     }
-    return [NaN, NaN, NaN, NaN]
+    return vec3.fromValues(NaN, NaN, NaN)
   }
 
   // not included in public docs
-  dragForPanZoom(startXYendXY) {
+  dragForPanZoom(startXYendXY: number[]) {
     const endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3])
     if (isNaN(endMM[0])) {
       return
@@ -8667,7 +8690,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenXY2TextureFrac(x, y, i, restrict0to1 = true) {
+  screenXY2TextureFrac(x, y, i, restrict0to1 = true): vec3 {
     const texFrac = [-1, -1, -1] // texture 0..1 so -1 is out of bounds
     const axCorSag = this.screenSlices[i].axCorSag
     if (axCorSag > SLICE_TYPE.SAGITTAL) {
