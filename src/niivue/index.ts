@@ -114,6 +114,15 @@ type DragReleaseParams = {
   axCorSag: SLICE_TYPE
 }
 
+type FontMetrics = {
+  distanceRange: number
+  [id: number]: {
+    xadv: number
+    uv_lbwh: number[]
+    lbwh: number[]
+  }
+}
+
 /**
  * mesh file formats that can be loaded
  */
@@ -282,12 +291,12 @@ export class Niivue {
   gl: WebGL2RenderingContext | null = null // the gl context
   isBusy = false // flag to indicate if the scene is busy drawing
   needsRefresh = false // flag to indicate if the scene needs to be redrawn
-  colormapTexture = null // the GPU memory storage of the colormap
+  colormapTexture: WebGLTexture | null = null // the GPU memory storage of the colormap
   colormapLists = [] // one entry per colorbar: min, max, tic
-  volumeTexture = null // the GPU memory storage of the volume
-  gradientTexture = null // 3D texture for volume rnedering lighting
+  volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
+  gradientTexture: WebGLTexture | null = null // 3D texture for volume rnedering lighting
   gradientTextureAmount = 0.0
-  drawTexture = null // the GPU memory storage of the drawing
+  drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
@@ -297,7 +306,7 @@ export class Niivue {
   drawPenAxCorSag = -1 // do not allow pen to drag between Sagittal/Coronal/Axial
   drawFillOverwrites = true // if true, fill overwrites existing drawing
   drawPenFillPts = [] // store mouse points for filled pen
-  overlayTexture = null
+  overlayTexture: WebGLTexture | null = null
   overlayTextureID = []
   sliceMMShader?: Shader
   orientCubeShader?: Shader
@@ -312,10 +321,10 @@ export class Niivue {
   pickingImageShader?: Shader
   colorbarShader?: Shader
   fontShader: Shader | null = null
-  fontTexture = null
+  fontTexture: WebGLTexture | null = null
   circleShader?: Shader
-  matCapTexture = null
-  bmpShader: WebGLShader | null = null
+  matCapTexture: WebGLTexture | null = null
+  bmpShader: Shader | null = null
   bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
   thumbnailVisible = false
   bmpTextureWH = 1.0 // thumbnail width/height ratio
@@ -334,7 +343,8 @@ export class Niivue {
   crosshairs3D: NiivueObject3D | null = null
   DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
   DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
-  fontMets = null
+  fontMetrics?: typeof defaultFontMetrics
+  fontMets: FontMetrics | null = null
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
@@ -2208,7 +2218,7 @@ export class Niivue {
     const perm = drawingBitmap.permRAS!
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl!.TEXTURE7, this.back.dims, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, this.gl!.TEXTURE7, this.back.dims!, true)
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -3672,7 +3682,7 @@ export class Niivue {
     return this.loadConnectome(connectome)
   }
 
-  handleNodeAdded(event: { detail: { node: NVConnectomeNode } }) {
+  handleNodeAdded(event: { detail: { node: NVConnectomeNode } }): void {
     const node = event.detail.node
     const rgba = [1, 1, 1, 1]
     const label = this.addLabel(
@@ -3696,7 +3706,7 @@ export class Niivue {
    * @returns {Niivue} returns the Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  async loadConnectome(json: Connectome | LegacyConnectome) {
+  async loadConnectome(json: Connectome | LegacyConnectome): Promise<this> {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -3735,7 +3745,7 @@ export class Niivue {
    * @example niivue.createEmptyDrawing()
    * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
    */
-  async createEmptyDrawing() {
+  async createEmptyDrawing(): Promise<void> {
     if (this.back === null || !this.back.dims) {
       return
     }
@@ -3753,7 +3763,7 @@ export class Niivue {
 
   // not included in public docs
   // create a 1-component (red) 16-bit signed integer texture on the GPU
-  r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array) {
+  r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture {
     if (texID) {
       this.gl!.deleteTexture(texID)
     }
@@ -3797,7 +3807,7 @@ export class Niivue {
    * @example niivue.drawGrowCut();
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
-  drawGrowCut() {
+  drawGrowCut(): void {
     if (!this.back || !this.back.dims) {
       // TODO gl and back etc should be centrally guaranteed to be set
       throw new Error('back not defined')
@@ -3934,14 +3944,17 @@ export class Niivue {
 
   // not included in public docs
   // set color of single voxel in drawing
-  drawPt(x: number, y: number, z: number, penValue: number) {
+  drawPt(x: number, y: number, z: number, penValue: number): void {
+    if (!this.back?.dims) {
+      throw new Error('back.dims not set')
+    }
     const dx = this.back.dims[1]
     const dy = this.back.dims[2]
     const dz = this.back.dims[3]
     x = Math.min(Math.max(x, 0), dx - 1)
     y = Math.min(Math.max(y, 0), dy - 1)
     z = Math.min(Math.max(z, 0), dz - 1)
-    this.drawBitmap[x + y * dx + z * dx * dy] = penValue
+    this.drawBitmap![x + y * dx + z * dx * dy] = penValue
   }
 
   // not included in public docs
@@ -3949,7 +3962,7 @@ export class Niivue {
   // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
   // https://www.geeksforgeeks.org/bresenhams-algorithm-for-3-d-line-drawing/
   // ptA, ptB are start and end points of line (each XYZ)
-  drawPenLine(ptA, ptB, penValue) {
+  drawPenLine(ptA: number[], ptB: number[], penValue: number): void {
     const dx = Math.abs(ptA[0] - ptB[0])
     const dy = Math.abs(ptA[1] - ptB[1])
     const dz = Math.abs(ptA[2] - ptB[2])
@@ -4032,15 +4045,18 @@ export class Niivue {
   //   6: neighbors share faces (distance=1)
   //  18: neighbors share faces (distance=1) or edges (1.4)
   //  26: neighbors share faces (distance=1), edges (1.4) or corners (1.7)
-  async drawFloodFillCore(img, seedVx, neighbors = 6) {
+  drawFloodFillCore(img: Uint8Array, seedVx: number, neighbors = 6): void {
+    if (!this.back?.dims) {
+      throw new Error('back.dims undefined')
+    }
     const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]] // +1: dims indexed from 0!
     const nx = dims[0]
     const nxy = nx * dims[1]
-    function xyz2vx(pt) {
+    function xyz2vx(pt: number[]) {
       // provided an XYZ 3D point, provide address in 1D array
       return pt[0] + pt[1] * nx + pt[2] * nxy
     }
-    function vx2xyz(vx) {
+    function vx2xyz(vx: number): number[] {
       // provided address in 1D array, return XYZ coordinate
       const Z = Math.floor(vx / nxy) // slice
       const Y = Math.floor((vx - Z * nxy) / nx) // column
@@ -4062,7 +4078,7 @@ export class Niivue {
       //   If any is is unfound part of cluster (value = 1) set it to found (value 2) and add to Q
       const xyz = vx2xyz(vx)
 
-      function testNeighbor(offset) {
+      function testNeighbor(offset: number[]) {
         const xyzN = xyz.slice()
         xyzN[0] += offset[0]
         xyzN[1] += offset[1]
@@ -4122,13 +4138,19 @@ export class Niivue {
   // not included in public docs
   // set all connected voxels in drawing to new color
   drawFloodFill(
-    seedXYZ,
+    seedXYZ: number[],
     newColor = 0,
     growSelectedCluster = 0, // if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
     forceMin = NaN,
     forceMax = NaN,
     neighbors = 6
   ) {
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap undefined')
+    }
+    if (!this.back?.dims) {
+      throw new Error('back.dims undefined')
+    }
     // 3D "paint bucket" fill:
     // set all voxels connected to seed point to newColor
     // https://en.wikipedia.org/wiki/Flood_fill
@@ -4147,7 +4169,7 @@ export class Niivue {
     if (img.length !== nxy * dims[2]) {
       return
     }
-    function xyz2vx(pt) {
+    function xyz2vx(pt: number[]) {
       // provided an XYZ 3D point, provide address in 1D array
       return pt[0] + pt[1] * nx + pt[2] * nxy
     }
@@ -4235,11 +4257,16 @@ export class Niivue {
       h = 1
       v = 2
     }
+
+    if (!this.back?.dims) {
+      throw new Error('back.dims undefined')
+    }
+
     const dims2D = [this.back.dims[h + 1], this.back.dims[v + 1]] // +1: dims indexed from 0!
     // create bitmap of horizontal*vertical voxels:
     const img2D = new Uint8Array(dims2D[0] * dims2D[1])
     let pen = 1 // do not use this.opts.penValue, as "erase" is zero
-    function drawLine2D(ptA, ptB /* penValue */) {
+    function drawLine2D(ptA: number[], ptB: number[]) {
       const dx = Math.abs(ptA[0] - ptB[0])
       const dy = Math.abs(ptA[1] - ptB[1])
       img2D[ptA[0] + ptA[1] * dims2D[0]] = pen
@@ -4291,8 +4318,8 @@ export class Niivue {
     }
     drawLine2D(startPt, prevPt) // close drawing
     // flood fill
-    const seeds = []
-    function setSeed(pt) {
+    const seeds: number[][] = []
+    function setSeed(pt: number[]) {
       if (pt[0] < 0 || pt[1] < 0 || pt[0] >= dims2D[0] || pt[1] >= dims2D[1]) {
         return
       }
@@ -4324,7 +4351,7 @@ export class Niivue {
     // now retire first in first out
     while (seeds.length > 0) {
       // always remove one seed, plant 0..4 new ones
-      const seed = seeds.shift()
+      const seed = seeds.shift()!
       setSeed([seed[0] - 1, seed[1]])
       setSeed([seed[0] + 1, seed[1]])
       setSeed([seed[0], seed[1] - 1])
@@ -4334,6 +4361,11 @@ export class Niivue {
     // insert surviving pixels from 2D bitmap into 3D bitmap
     pen = this.opts.penValue
     const slice = this.drawPenFillPts[0][3 - (h + v)]
+
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap undefined')
+    }
+
     if (axCorSag === 0) {
       // axial
       const offset = slice * dims2D[0] * dims2D[1]
@@ -4384,7 +4416,7 @@ export class Niivue {
    */
   closeDrawing() {
     this.drawClearAllUndoBitmaps()
-    this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true, true)
+    this.rgbaTex(this.drawTexture, this.gl!.TEXTURE7, [2, 2, 2, 2], true)
     this.drawBitmap = null
     this.drawScene()
   }
@@ -4396,6 +4428,12 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/cactus.html|live demo usage}
    */
   refreshDrawing(isForceRedraw = true) {
+    if (!this.back?.dims) {
+      throw new Error('back.dims undefined')
+    }
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap undefined')
+    }
     const dims = this.back.dims.slice()
     // let dims = this.volumes[0].hdr.dims.slice();
     const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
@@ -4431,7 +4469,7 @@ export class Niivue {
 
   // not included in public docs
   // create 3D 1-component (red) uint8 texture on GPU
-  r8Tex(texID, activeID, dims, isInit = false) {
+  r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false) {
     if (!this.gl) {
       throw new Error('gl undefined')
     }
@@ -4469,7 +4507,7 @@ export class Niivue {
 
   // not included in public docs
   // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
-  rgbaTex(texID, activeID, dims, isInit = false) {
+  rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false) {
     if (!this.gl) {
       throw new Error('gl undefined')
     }
@@ -4507,7 +4545,7 @@ export class Niivue {
 
   // not included in public docs
   // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
-  requestCORSIfNotSameOrigin(img, url) {
+  requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string) {
     if (new URL(url, window.location.href).origin !== window.location.origin) {
       img.crossOrigin = ''
     }
@@ -4541,9 +4579,9 @@ export class Niivue {
           this.matCapTexture = this.gl.createTexture()
           pngTexture = this.matCapTexture
         } else {
-          this.fontShader.use(this.gl)
+          this.fontShader!.use(this.gl)
           this.gl.activeTexture(this.gl.TEXTURE3)
-          this.gl.uniform1i(this.fontShader.uniforms.fontTexture, 3)
+          this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
           if (this.fontTexture !== null) {
             this.gl.deleteTexture(this.fontTexture)
           }
@@ -4571,13 +4609,13 @@ export class Niivue {
 
   // not included in public docs
   // load font stored as PNG bitmap with texture unit 3
-  async loadFontTexture(fontUrl) {
+  async loadFontTexture(fontUrl: string) {
     await this.loadPngAsTexture(fontUrl, 3)
   }
 
   // not included in public docs
   // load PNG bitmap with texture unit 4
-  async loadBmpTexture(bmpUrl) {
+  async loadBmpTexture(bmpUrl: string) {
     await this.loadPngAsTexture(bmpUrl, 4)
   }
 
@@ -4588,7 +4626,7 @@ export class Niivue {
    * niivue.loadMatCapTexture("Cortex");
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html|live demo usage}
    */
-  async loadMatCapTexture(bmpUrl) {
+  async loadMatCapTexture(bmpUrl: string) {
     await this.loadPngAsTexture(bmpUrl, 5)
   }
 
