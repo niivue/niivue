@@ -6863,7 +6863,7 @@ export class Niivue {
     let w = 0
     const bytes = new TextEncoder().encode(str)
     for (let i = 0; i < str.length; i++) {
-      w += scale * this.fontMets?.mets[bytes[i]].xadv
+      w += scale * this.fontMets?.mets[bytes[i]].xadv!
     }
     return w
   }
@@ -6883,22 +6883,28 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawChar(xy, scale, char): number {
+  drawChar(xy: number[], scale: number, char: number): number {
+    if (!this.fontShader) {
+      throw new Error('fontShader undefined')
+    }
     // draw single character, never call directly: ALWAYS call from drawText()
-    const metrics = this.fontMets?.mets[char]
+    const metrics = this.fontMets?.mets[char]!
     const l = xy[0] + scale * metrics.lbwh[0]
     const b = -(scale * metrics.lbwh[1])
     const w = scale * metrics.lbwh[2]
     const h = scale * metrics.lbwh[3]
     const t = xy[1] + (b - h) + scale
     this.gl.uniform4f(this.fontShader.leftTopWidthHeightLoc, l, t, w, h)
-    this.gl.uniform4fv(this.fontShader.uvLeftTopWidthHeightLoc, metrics.uv_lbwh)
+    this.gl.uniform4fv(this.fontShader.uvLeftTopWidthHeightLoc!, metrics.uv_lbwh)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     return scale * metrics.xadv
   }
 
   // not included in public docs
-  drawLoadingText(text) {
+  drawLoadingText(text: string) {
+    if (!this.canvas) {
+      throw new Error('canvas undefined')
+    }
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     this.gl.enable(this.gl.CULL_FACE)
     this.gl.enable(this.gl.BLEND)
@@ -6906,9 +6912,12 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawText(xy, str, scale = 1, color = null) {
+  drawText(xy: number[], str: string, scale = 1, color: number[] | null = null) {
     if (this.opts.textHeight <= 0) {
       return
+    }
+    if (!this.fontShader) {
+      throw new Error('fontShader undefined')
     }
     this.fontShader.use(this.gl)
     // let size = this.opts.textHeight * this.gl.canvas.height * scale;
@@ -6919,7 +6928,7 @@ export class Niivue {
       color = this.opts.fontColor
     }
     this.gl.uniform4fv(this.fontShader.fontColorLoc, color)
-    let screenPxRange = (size / this.fontMets.size) * this.fontMets.distanceRange
+    let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
     screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
     this.gl.uniform1f(this.fontShader.screenPxRangeLoc, screenPxRange)
     const bytes = new TextEncoder().encode(str)
@@ -6931,7 +6940,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextRight(xy, str, scale = 1, color = null) {
+  drawTextRight(xy: number[], str: string, scale = 1, color = null) {
     // to right of x, vertically centered on y
     if (this.opts.textHeight <= 0) {
       return
@@ -6941,7 +6950,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextLeft(xy, str, scale = 1, color = null) {
+  drawTextLeft(xy: number[], str: string, scale = 1, color = null) {
     // to left of x, vertically centered on y
     if (this.opts.textHeight <= 0) {
       return
@@ -6953,7 +6962,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextRightBelow(xy, str, scale = 1, color = null) {
+  drawTextRightBelow(xy: number[], str: string, scale = 1, color = null) {
     // to right of x, vertically centered on y
     if (this.opts.textHeight <= 0) {
       return
@@ -6963,7 +6972,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextBetween(startXYendXY, str, scale = 1, color: number[] | null = null) {
+  drawTextBetween(startXYendXY: number[], str: string, scale = 1, color: number[] | null = null) {
     // horizontally centered on x, below y
     if (this.opts.textHeight <= 0) {
       return
@@ -6988,10 +6997,13 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextBelow(xy, str, scale = 1, color = null) {
+  drawTextBelow(xy: number[], str: string, scale = 1, color = null) {
     // horizontally centered on x, below y
     if (this.opts.textHeight <= 0) {
       return
+    }
+    if (!this.canvas) {
+      throw new Error('canvas undefined')
     }
     let size = this.opts.textHeight * this.gl.canvas.height * scale
     let width = this.textWidth(size, str)
@@ -7007,8 +7019,8 @@ export class Niivue {
   }
 
   // not included in public docs
-  updateInterpolation(layer, isForceLinear = false) {
-    let interp = this.gl.LINEAR
+  updateInterpolation(layer: number, isForceLinear = false) {
+    let interp: number = this.gl.LINEAR
     if (!isForceLinear && this.opts.isNearestInterpolation) {
       interp = this.gl.NEAREST
     }
@@ -7022,7 +7034,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  setAtlasOutline(isOutline) {
+  setAtlasOutline(isOutline: boolean) {
     this.opts.isAtlasOutline = isOutline
     this.updateGLVolume()
     this.drawScene()
@@ -7034,7 +7046,7 @@ export class Niivue {
    * @example niivue.setInterpolation(true);
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
-  setInterpolation(isNearest) {
+  setInterpolation(isNearest: boolean) {
     this.opts.isNearestInterpolation = isNearest
     const numLayers = this.volumes.length
     if (numLayers < 1) {
@@ -7048,14 +7060,14 @@ export class Niivue {
 
   // not included in public docs
   calculateMvpMatrix2D(
-    leftTopWidthHeight,
-    mn,
-    mx,
+    leftTopWidthHeight: number[],
+    mn: number[],
+    mx: number[],
     clipTolerance = Infinity,
     clipDepth = 0,
     azimuth = null,
-    elevation = null,
-    isRadiolgical
+    elevation = 0,
+    isRadiolgical: boolean
   ) {
     const gl = this.gl
     gl.viewport(
@@ -7747,7 +7759,7 @@ export class Niivue {
     mn = Math.min(ticMin, mn)
     mx = Math.max(ticMax, mx)
     // determine font size
-    function humanize(x) {
+    function humanize(x: number) {
       // drop trailing zeros from numerical string
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
