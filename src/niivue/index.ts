@@ -6454,7 +6454,7 @@ export class Niivue {
       }
       const mm = this.frac2mm(texFrac)
 
-      return vec3.fromValues(mm[0], mm[1], mm[2], i)
+      return vec3.fromValues(mm[0], mm[1], mm[2])
     }
     return vec3.fromValues(NaN, NaN, NaN)
   }
@@ -6535,8 +6535,10 @@ export class Niivue {
     let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]])
     let endXY = this.canvasPos2frac([startXYendXY[2], startXYendXY[3]])
     if (startXY[0] >= 0 && endXY[0] >= 0) {
-      startXY = this.frac2mm(startXY)
-      endXY = this.frac2mm(endXY)
+      const startMm = this.frac2mm(startXY)
+      startXY = vec3.fromValues(startMm[0], startMm[1], startMm[2])
+      const endMm = this.frac2mm(endXY)
+      endXY = vec3.fromValues(endMm[0], endMm[1], endMm[2])
       const v = vec3.create()
       vec3.sub(v, startXY, endXY)
       const lenMM = vec3.len(v)
@@ -6623,7 +6625,7 @@ export class Niivue {
     const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
     const meshLabels = meshNodes.map((n) => n.label)
     // filter our undefined labels
-    const definedMeshLabels = meshLabels.filter((l) => l)
+    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
     const labels = [...this.document.labels, ...definedMeshLabels]
     return labels
   }
@@ -8683,14 +8685,11 @@ export class Niivue {
         return texFrac
       }
     }
-    texFrac[0] = xyz[0]
-    texFrac[1] = xyz[1]
-    texFrac[2] = xyz[2]
-    return texFrac
+    return xyz
   }
 
   // not included in public docs
-  canvasPos2frac(canvasPos): vec3 {
+  canvasPos2frac(canvasPos: number[]): vec3 {
     for (let i = 0; i < this.screenSlices.length; i++) {
       const texFrac = this.screenXY2TextureFrac(canvasPos[0], canvasPos[1], i)
       if (texFrac[0] >= 0) {
@@ -8702,7 +8701,7 @@ export class Niivue {
 
   // not included in public docs
   // note: we also have a "sliceScale" method, which could be confusing
-  scaleSlice(w, h, widthPadPixels = 0, heightPadPixels = 0) {
+  scaleSlice(w: number, h: number, widthPadPixels = 0, heightPadPixels = 0) {
     const canvasW = this.effectiveCanvasWidth() - widthPadPixels
     const canvasH = this.effectiveCanvasHeight() - heightPadPixels
     let scalePix = canvasW / w
