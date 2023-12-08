@@ -43,7 +43,7 @@ export class NiivueObject3D {
   // TODO needed through NVImage
   furthestVertexFromOrigin?: number
   originNegate?: vec3
-  fieldOfViewDeObliqueMM?: number[]
+  fieldOfViewDeObliqueMM?: vec3
 
   // TODO needed through crosshairs in NiiVue
   mm?: number[]

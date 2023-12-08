@@ -7065,7 +7065,7 @@ export class Niivue {
     mx: number[],
     clipTolerance = Infinity,
     clipDepth = 0,
-    azimuth = null,
+    azimuth = 0,
     elevation = 0,
     isRadiolgical: boolean
   ) {
@@ -7129,7 +7129,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  swizzleVec3MM(v3, axCorSag) {
+  swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE) {
     // change order of vector components
     if (axCorSag === SLICE_TYPE.CORONAL) {
       // 2D coronal screenXYZ = nifti [i,k,j]
@@ -7143,7 +7143,7 @@ export class Niivue {
 
   // not included in public docs
   screenFieldOfViewVox(axCorSag = 0) {
-    const fov = this.volumeObject3D.fieldOfViewDeObliqueMM.slice()
+    const fov = vec3.clone(this.volumeObject3D!.fieldOfViewDeObliqueMM!)
     return this.swizzleVec3MM(fov, axCorSag)
   }
 
@@ -7155,8 +7155,10 @@ export class Niivue {
       // return voxel space
       return this.screenFieldOfViewVox(axCorSag)
     }
-    let mnMM = this.volumeObject3D.extentsMin.slice()
-    let mxMM = this.volumeObject3D.extentsMax.slice()
+    const extentsMin = this.volumeObject3D!.extentsMin
+    const extentsMax = this.volumeObject3D!.extentsMax
+    let mnMM = vec3.fromValues(extentsMin[0], extentsMin[1], extentsMin[2])
+    let mxMM = vec3.fromValues(extentsMax[0], extentsMax[1], extentsMax[2])
 
     mnMM = this.swizzleVec3MM(mnMM, axCorSag)
     mxMM = this.swizzleVec3MM(mxMM, axCorSag)
@@ -7169,16 +7171,10 @@ export class Niivue {
   screenFieldOfViewExtendedVox(axCorSag = 0) {
     // extent of volume/mesh (in orthographic alignment for rectangular voxels) in screen space
     // let fov = [frac2mmTexture[0], frac2mmTexture[5], frac2mmTexture[10]];
-    let mnMM = [
-      this.volumes[0].extentsMinOrtho[0],
-      this.volumes[0].extentsMinOrtho[1],
-      this.volumes[0].extentsMinOrtho[2]
-    ]
-    let mxMM = [
-      this.volumes[0].extentsMaxOrtho[0],
-      this.volumes[0].extentsMaxOrtho[1],
-      this.volumes[0].extentsMaxOrtho[2]
-    ]
+    const extentsMinOrtho = this.volumes[0].extentsMinOrtho!
+    const extentsMaxOrtho = this.volumes[0].extentsMaxOrtho!
+    let mnMM = vec3.fromValues(extentsMinOrtho[0], extentsMinOrtho[1], extentsMinOrtho[2])
+    let mxMM = vec3.fromValues(extentsMaxOrtho[0], extentsMaxOrtho[1], extentsMaxOrtho[2])
     const rotation = mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
     mnMM = this.swizzleVec3MM(mnMM, axCorSag)
     mxMM = this.swizzleVec3MM(mxMM, axCorSag)
@@ -7189,9 +7185,15 @@ export class Niivue {
 
   // not included in public docs
   screenFieldOfViewExtendedMM(axCorSag = 0) {
+    if (!this.volumeObject3D) {
+      throw new Error('volumeObject3D undefined')
+    }
     // extent of volume/mesh (in millimeters) in screen space
-    let mnMM = this.volumeObject3D.extentsMin.slice()
-    let mxMM = this.volumeObject3D.extentsMax.slice()
+    // TODO align types
+    const eMin = this.volumeObject3D.extentsMin
+    const eMax = this.volumeObject3D.extentsMax
+    let mnMM = vec3.fromValues(eMin[0], eMin[1], eMin[2])
+    let mxMM = vec3.fromValues(eMax[0], eMax[1], eMax[2])
     const rotation = mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
     mnMM = this.swizzleVec3MM(mnMM, axCorSag)
     mxMM = this.swizzleVec3MM(mxMM, axCorSag)
@@ -7202,7 +7204,7 @@ export class Niivue {
 
   // not included in public docs
   // show text labels for L/R, A/P, I/S dimensions
-  drawSliceOrientationText(leftTopWidthHeight, axCorSag) {
+  drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE) {
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     let topText = 'S'
     if (axCorSag === SLICE_TYPE.AXIAL) {
@@ -7222,7 +7224,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  xyMM2xyzMM(axCorSag, sliceFrac) {
+  xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number) {
     // given X and Y, find Z for a plane defined by 3 points (a,b,c)
     // https://math.stackexchange.com/questions/851742/calculate-coordinate-of-any-point-on-triangle-in-3d-plane
     let sliceDim = 2 // axial depth is NIfTI k dimension
@@ -7232,9 +7234,9 @@ export class Niivue {
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
       sliceDim = 0
     } // sagittal depth is NIfTI i dimension
-    let a = [0, 0, 0]
-    let b = [1, 1, 0]
-    let c = [1, 0, 1]
+    let a: [number, number, number] | vec4 = [0, 0, 0]
+    let b: [number, number, number] | vec4 = [1, 1, 0]
+    let c: [number, number, number] | vec4 = [1, 0, 1]
 
     a[sliceDim] = sliceFrac
     b[sliceDim] = sliceFrac
