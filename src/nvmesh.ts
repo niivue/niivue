@@ -964,7 +964,7 @@ export class NVMesh {
     gl: WebGL2RenderingContext
   ): void {
     const layer = this.layers[id]
-    if (!layer || !layer.key) {
+    if (!layer || !(key in layer)) {
       console.log('mesh does not have property ', key, ' for layer ', layer)
       return
     }
