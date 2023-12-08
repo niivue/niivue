@@ -46,7 +46,7 @@
   nv1.setSliceType(nv1.sliceTypeRender);
   nv1.setClipPlane([0.35, 270, 0]);
   //nv1.setSliceType(nv1.sliceTypeMultiplanar)
-  imgs = [
+  let imgs = [
     "chris_MRA",
     "chris_PD",
     "chris_t1",
@@ -65,7 +65,7 @@
     "spmMotor",
     "visiblehuman",
   ];
-  imgEl = document.getElementById("images");
+  let imgEl = document.getElementById("images");
   for (let i = 0; i < imgs.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = imgs[i];
@@ -79,8 +79,8 @@
     };
     imgEl.appendChild(btn);
   }
-  cmaps = nv1.colormaps();
-  cmapEl = document.getElementById("colormaps");
+  let cmaps = nv1.colormaps();
+  let cmapEl = document.getElementById("colormaps");
   for (let i = 0; i < cmaps.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = cmaps[i];
