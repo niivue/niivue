@@ -117,11 +117,14 @@ type DragReleaseParams = {
 type FontMetrics = {
   distanceRange: number
   size: number
-  [id: number]: {
-    xadv: number
-    uv_lbwh: number[]
-    lbwh: number[]
-  }
+  mets: Record<
+    number,
+    {
+      xadv: number
+      uv_lbwh: number[]
+      lbwh: number[]
+    }
+  >
 }
 
 type ColormapListEntry = {
@@ -4639,11 +4642,12 @@ export class Niivue {
 
     this.fontMets = {
       distanceRange: this.fontMetrics.atlas.distanceRange,
-      size: this.fontMetrics.atlas.size
+      size: this.fontMetrics.atlas.size,
+      mets: {}
     }
     for (let id = 0; id < 256; id++) {
       // clear ASCII codes 0..256
-      this.fontMets![id] = {
+      this.fontMets.mets[id] = {
         xadv: 0,
         uv_lbwh: [0, 0, 0, 0],
         lbwh: [0, 0, 0, 0]
@@ -4654,7 +4658,7 @@ export class Niivue {
     for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
       const glyph = this.fontMetrics.glyphs[i]
       const id = glyph.unicode
-      this.fontMets[id].xadv = glyph.advance
+      this.fontMets.mets[id].xadv = glyph.advance
       if (glyph.planeBounds === undefined) {
         continue
       }
@@ -4662,12 +4666,12 @@ export class Niivue {
       let b = (scaleH - glyph.atlasBounds.top) / scaleH
       let w = (glyph.atlasBounds.right - glyph.atlasBounds.left) / scaleW
       let h = (glyph.atlasBounds.top - glyph.atlasBounds.bottom) / scaleH
-      this.fontMets[id].uv_lbwh = [l, b, w, h]
+      this.fontMets.mets[id].uv_lbwh = [l, b, w, h]
       l = glyph.planeBounds.left
       b = glyph.planeBounds.bottom
       w = glyph.planeBounds.right - glyph.planeBounds.left
       h = glyph.planeBounds.top - glyph.planeBounds.bottom
-      this.fontMets[id].lbwh = [l, b, w, h]
+      this.fontMets.mets[id].lbwh = [l, b, w, h]
     }
   }
 
@@ -6640,7 +6644,7 @@ export class Niivue {
     const widestBulletScale =
       labels.length === 1
         ? labels[0].style.bulletScale
-        : labels.reduce((a, b) => (a.style.bulletScale > b.style.bulletScale ? a : b)).style.bulletScale
+        : labels.reduce((a, b) => (a.style.bulletScale! > b.style.bulletScale! ? a : b)).style.bulletScale
     const tallestLabel =
       labels.length === 1
         ? labels[0]
@@ -6651,11 +6655,8 @@ export class Niivue {
             return taller
           })
     const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale
-    bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale
-    // size = this.opts.textHeight * this.gl.canvas.height;
-    // if (bulletMargin) {
+    bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
     bulletMargin += size
-    // }
     return bulletMargin
   }
 
@@ -6724,7 +6725,7 @@ export class Niivue {
     isNegativeColor = false,
     min = 0,
     max = 1,
-    isAlphaThreshold
+    isAlphaThreshold: boolean
   ) {
     if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
       return
@@ -6747,6 +6748,11 @@ export class Niivue {
     const barLTWH = [leftTopWidthHeight[0] + margin, leftTopWidthHeight[1], leftTopWidthHeight[2] - 2 * margin, barHt]
     const rimLTWH = [barLTWH[0] - 1, barLTWH[1] - 1, barLTWH[2] + 2, barLTWH[3] + 2]
     this.drawRect(rimLTWH, this.opts.crosshairColor)
+
+    if (!this.colorbarShader) {
+      throw new Error('colorbarShader undefined')
+    }
+
     this.colorbarShader.use(this.gl)
     this.gl.activeTexture(this.gl.TEXTURE1)
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
@@ -6784,7 +6790,7 @@ export class Niivue {
       ticMin += spacing
     }
     // determine font size
-    function humanize(x) {
+    function humanize(x: number) {
       // drop trailing zeros from numerical string
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
@@ -6849,7 +6855,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  textWidth(scale, str): number {
+  textWidth(scale: number, str: string): number {
     if (!str) {
       return 0
     }
@@ -6857,20 +6863,20 @@ export class Niivue {
     let w = 0
     const bytes = new TextEncoder().encode(str)
     for (let i = 0; i < str.length; i++) {
-      w += scale * this.fontMets[bytes[i]].xadv
+      w += scale * this.fontMets?.mets[bytes[i]].xadv
     }
     return w
   }
 
-  textHeight(scale, str): number {
+  textHeight(scale: number, str: string): number {
     if (!str) {
       return 0
     }
     const byteSet = new Set(Array.from(str))
     const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
 
-    const tallest = Object.values(this.fontMets)
-      .filter((element, index) => bytes.includes(index))
+    const tallest = Object.values(this.fontMets!.mets)
+      .filter((_, index) => bytes.includes(index))
       .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
     const height = tallest.lbwh[3]
     return scale * height
@@ -6879,7 +6885,7 @@ export class Niivue {
   // not included in public docs
   drawChar(xy, scale, char): number {
     // draw single character, never call directly: ALWAYS call from drawText()
-    const metrics = this.fontMets[char]
+    const metrics = this.fontMets?.mets[char]
     const l = xy[0] + scale * metrics.lbwh[0]
     const b = -(scale * metrics.lbwh[1])
     const w = scale * metrics.lbwh[2]
