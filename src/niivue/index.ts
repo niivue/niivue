@@ -308,7 +308,7 @@ type UIData = {
  */
 export class Niivue {
   canvas: HTMLCanvasElement | null = null // the reference to the canvas element on the page
-  gl: WebGL2RenderingContext | null = null // the gl context
+  _gl: WebGL2RenderingContext | null = null // the gl context
   isBusy = false // flag to indicate if the scene is busy drawing
   needsRefresh = false // flag to indicate if the scene needs to be redrawn
   colormapTexture: WebGLTexture | null = null // the GPU memory storage of the colormap
@@ -903,8 +903,8 @@ export class Niivue {
       antialias: isAntiAlias
     })
     if (!this.gl) {
-      alert('unable to get webgl2 context. Perhaps this browser does not support webgl2')
       log.warn('unable to get webgl2 context. Perhaps this browser does not support webgl2')
+      throw new Error('unable to get webgl2 context. Perhaps this browser does not support webgl2')
     }
 
     console.log('NIIVUE VERSION ', version) // TH added this rare console.log via suggestion from CR. Don't remove
@@ -3839,16 +3839,13 @@ export class Niivue {
       throw new Error('back not defined')
     }
     const hdr = this.back.hdr!
+    const gl = this.gl
     const nv = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
     if (!this.drawBitmap || this.drawBitmap.length !== nv) {
       log.debug('bitmap dims are wrong')
       return
     }
     // this.drawUndoBitmap = this.drawBitmap.slice();
-    if (!this.gl) {
-      throw new Error('gl not defined')
-    }
-    const gl = this.gl
     const fb = gl.createFramebuffer()
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
     gl.disable(gl.CULL_FACE)
@@ -3870,7 +3867,7 @@ export class Niivue {
     }
     const strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16)
     const strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16)
-    this.gl.bindVertexArray(this.genericVAO)
+    gl.bindVertexArray(this.genericVAO)
     const shader = this.growCutShader!
     shader.use(gl)
     const iterations = 128 // will run 2x this value
@@ -3881,16 +3878,16 @@ export class Niivue {
       gl.uniform1i(shader.uniforms.inputTexture2, 4) // strength0 is TEXTURE4
       for (let i = 0; i < this.back.dims[3]; i++) {
         const coordZ = (1 / this.back.dims[3]) * (i + 0.5)
-        this.gl.uniform1f(shader.uniforms.coordZ, coordZ)
-        this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, label1, 0, i)
-        this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength1, 0, i)
+        gl.uniform1f(shader.uniforms.coordZ, coordZ)
+        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, label1, 0, i)
+        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, strength1, 0, i)
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
         if (status !== gl.FRAMEBUFFER_COMPLETE) {
           console.error('Incomplete framebuffer')
         }
 
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
       // reverse order strength1/label1 and strength0/label0 for reading and writing:
       if (j === iterations - 1) {
@@ -3900,15 +3897,15 @@ export class Niivue {
       gl.uniform1i(shader.uniforms.inputTexture2, 5) // strength1 is TEXTURE5
       for (let i = 0; i < this.back.dims[3]; i++) {
         const coordZ = (1 / this.back.dims[3]) * (i + 0.5)
-        this.gl.uniform1f(shader.uniforms.coordZ, coordZ)
-        this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, label0, 0, i)
-        this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT1, strength0, 0, i)
+        gl.uniform1f(shader.uniforms.coordZ, coordZ)
+        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, label0, 0, i)
+        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, strength0, 0, i)
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
         if (status !== gl.FRAMEBUFFER_COMPLETE) {
           console.error('Incomplete framebuffer')
         }
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
     }
     // read data
@@ -4883,9 +4880,6 @@ export class Niivue {
 
   // not included in public docs
   async init() {
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
     // initial setup: only at the startup of the component
     // print debug info (gpu vendor and renderer)
     const rendererInfo = this.gl.getExtension('WEBGL_debug_renderer_info')
@@ -4926,41 +4920,39 @@ export class Niivue {
       0 // LPI
     ]
 
-    if (!this.gl) {
-      throw new Error('gl undefined')
-    }
+    const gl = this.gl
 
-    this.cuboidVertexBuffer = this.gl.createBuffer()!
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
-    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(rectStrip), this.gl.STATIC_DRAW)
+    this.cuboidVertexBuffer = gl.createBuffer()!
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rectStrip), gl.STATIC_DRAW)
 
     // setup generic VAO style sheet:
-    this.genericVAO = this.gl.createVertexArray()! // 2D slices, fonts, lines
-    this.gl.bindVertexArray(this.genericVAO)
-    // this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.cuboidVertexBuffer); //triangle strip does not need indices
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
-    this.gl.enableVertexAttribArray(0)
-    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0)
-    this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
-    this.pickingMeshShader = new Shader(this.gl, vertMeshShader, fragMeshDepthShader)
-    this.pickingMeshShader.use(this.gl)
+    this.genericVAO = gl.createVertexArray()! // 2D slices, fonts, lines
+    gl.bindVertexArray(this.genericVAO)
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.cuboidVertexBuffer); //triangle strip does not need indices
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
+    gl.enableVertexAttribArray(0)
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+    gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    this.pickingMeshShader = new Shader(gl, vertMeshShader, fragMeshDepthShader)
+    this.pickingMeshShader.use(gl)
     this.pickingMeshShader.mvpLoc = this.pickingMeshShader.uniforms.mvpMtx
-    this.pickingImageShader = new Shader(this.gl, vertRenderShader, fragVolumePickingShader)
-    this.pickingImageShader.use(this.gl)
+    this.pickingImageShader = new Shader(gl, vertRenderShader, fragVolumePickingShader)
+    this.pickingImageShader.use(gl)
     this.pickingImageShader.drawOpacityLoc = this.pickingImageShader.uniforms.drawOpacity
     this.pickingImageShader.backgroundMasksOverlaysLoc = this.pickingImageShader.uniforms.backgroundMasksOverlays
     this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms.mvpMtx
-    this.gl.uniform1i(this.pickingImageShader.uniforms.volume, 0)
-    this.gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
-    this.gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
-    this.gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7)
+    gl.uniform1i(this.pickingImageShader.uniforms.volume, 0)
+    gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
+    gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
+    gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7)
     this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms.mvpMtx
     this.pickingImageShader.rayDirLoc = this.pickingImageShader.uniforms.rayDir
     this.pickingImageShader.clipPlaneLoc = this.pickingImageShader.uniforms.clipPlane
     // slice shader
     // slice mm shader
-    this.sliceMMShader = new Shader(this.gl, vertSliceMMShader, fragSliceMMShader)
-    this.sliceMMShader.use(this.gl)
+    this.sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader)
+    this.sliceMMShader.use(gl)
     this.sliceMMShader.drawOpacityLoc = this.sliceMMShader.uniforms.drawOpacity
     this.sliceMMShader.isAlphaClipDarkLoc = this.sliceMMShader.uniforms.isAlphaClipDark
     this.sliceMMShader.overlayOutlineWidthLoc = this.sliceMMShader.uniforms.overlayOutlineWidth
@@ -4971,14 +4963,13 @@ export class Niivue {
     this.sliceMMShader.sliceLoc = this.sliceMMShader.uniforms.slice
     this.sliceMMShader.frac2mmLoc = this.sliceMMShader.uniforms.frac2mm
     this.sliceMMShader.mvpLoc = this.sliceMMShader.uniforms.mvpMtx
-    this.gl.uniform1i(this.sliceMMShader.uniforms.volume, 0)
-    this.gl.uniform1i(this.sliceMMShader.uniforms.colormap, 1)
-    this.gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2)
-    this.gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7)
-    this.gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
+    gl.uniform1i(this.sliceMMShader.uniforms.volume, 0)
+    gl.uniform1i(this.sliceMMShader.uniforms.colormap, 1)
+    gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2)
+    gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7)
+    gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
     // orient cube
-    this.orientCubeShader = new Shader(this.gl, vertOrientCubeShader, fragOrientCubeShader)
-    const gl = this.gl
+    this.orientCubeShader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader)
     this.orientCubeShaderVAO = gl.createVertexArray()
     gl.bindVertexArray(this.orientCubeShaderVAO)
     const program = this.orientCubeShader.program
@@ -4996,95 +4987,95 @@ export class Niivue {
     gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
     gl.bindVertexArray(this.unusedVAO)
     // rect shader (crosshair): horizontal and vertical lines only
-    this.rectShader = new Shader(this.gl, vertRectShader, fragRectShader)
-    this.rectShader.use(this.gl)
+    this.rectShader = new Shader(gl, vertRectShader, fragRectShader)
+    this.rectShader.use(gl)
     this.rectShader.lineColorLoc = this.rectShader.uniforms.lineColor
     this.rectShader.canvasWidthHeightLoc = this.rectShader.uniforms.canvasWidthHeight
     this.rectShader.leftTopWidthHeightLoc = this.rectShader.uniforms.leftTopWidthHeight
     // line shader: diagonal lines
-    this.lineShader = new Shader(this.gl, vertLineShader, fragRectShader)
-    this.lineShader.use(this.gl)
+    this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
+    this.lineShader.use(gl)
     this.lineShader.lineColorLoc = this.lineShader.uniforms.lineColor
     this.lineShader.canvasWidthHeightLoc = this.lineShader.uniforms.canvasWidthHeight
     this.lineShader.thicknessLoc = this.lineShader.uniforms.thickness
     this.lineShader.startXYendXYLoc = this.lineShader.uniforms.startXYendXY
     // 3D line shader
-    this.line3DShader = new Shader(this.gl, vertLine3DShader, fragRectShader)
-    this.line3DShader.use(this.gl)
+    this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader)
+    this.line3DShader.use(gl)
     this.line3DShader.lineColorLoc = this.line3DShader.uniforms.lineColor
     this.line3DShader.canvasWidthHeightLoc = this.line3DShader.uniforms.canvasWidthHeight
     this.line3DShader.thicknessLoc = this.line3DShader.uniforms.thickness
     this.line3DShader.startXYLoc = this.line3DShader.uniforms.startXY
     this.line3DShader.endXYZLoc = this.line3DShader.uniforms.endXYZ
     // circle shader
-    this.circleShader = new Shader(this.gl, vertCircleShader, fragCircleShader)
-    this.circleShader.use(this.gl)
+    this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
+    this.circleShader.use(gl)
     this.circleShader.circleColorLoc = this.circleShader.uniforms.circleColor
     this.circleShader.canvasWidthHeightLoc = this.circleShader.uniforms.canvasWidthHeight
     this.circleShader.leftTopWidthHeightLoc = this.circleShader.uniforms.leftTopWidthHeight
     this.circleShader.fillPercentLoc = this.circleShader.uniforms.fillPercent
     // render shader (3D)
-    this.renderVolumeShader = new Shader(this.gl, vertRenderShader, fragRenderShader)
+    this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader)
     this.initRenderShader(this.renderVolumeShader)
-    this.renderSliceShader = new Shader(this.gl, vertRenderShader, fragRenderSliceShader)
+    this.renderSliceShader = new Shader(gl, vertRenderShader, fragRenderSliceShader)
     this.initRenderShader(this.renderSliceShader)
-    this.renderGradientShader = new Shader(this.gl, vertRenderShader, fragRenderGradientShader)
+    this.renderGradientShader = new Shader(gl, vertRenderShader, fragRenderGradientShader)
     this.initRenderShader(this.renderGradientShader, 0.3)
-    this.gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5)
-    this.gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6)
+    gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5)
+    gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6)
     this.renderGradientShader.normLoc = this.renderGradientShader.uniforms.normMtx
     this.renderShader = this.renderVolumeShader
     // colorbar shader
-    this.colorbarShader = new Shader(this.gl, vertColorbarShader, fragColorbarShader)
-    this.colorbarShader.use(this.gl)
+    this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
+    this.colorbarShader.use(gl)
     this.colorbarShader.layerLoc = this.colorbarShader.uniforms.layer
     this.colorbarShader.canvasWidthHeightLoc = this.colorbarShader.uniforms.canvasWidthHeight
     this.colorbarShader.leftTopWidthHeightLoc = this.colorbarShader.uniforms.leftTopWidthHeight
-    this.gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
-    this.blurShader = new Shader(this.gl, blurVertShader, blurFragShader)
-    this.sobelShader = new Shader(this.gl, blurVertShader, sobelFragShader)
+    gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
+    this.blurShader = new Shader(gl, blurVertShader, blurFragShader)
+    this.sobelShader = new Shader(gl, blurVertShader, sobelFragShader)
 
-    this.growCutShader = new Shader(this.gl, vertGrowCutShader, fragGrowCutShader)
+    this.growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader)
 
     // pass through shaders
-    this.passThroughShader = new Shader(this.gl, vertPassThroughShader, fragPassThroughShader)
+    this.passThroughShader = new Shader(gl, vertPassThroughShader, fragPassThroughShader)
 
     // orientation shaders
-    this.orientShaderAtlasU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas))
-    this.orientShaderAtlasI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShaderAtlas))
+    this.orientShaderAtlasU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas))
+    this.orientShaderAtlasI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShaderAtlas))
 
-    this.orientShaderU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader))
-    this.orientShaderI = new Shader(this.gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader))
-    this.orientShaderF = new Shader(this.gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader))
-    this.orientShaderRGBU = new Shader(this.gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader))
+    this.orientShaderU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader))
+    this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader))
+    this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader))
+    this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader))
     // 3D crosshair cylinder
-    this.surfaceShader = new Shader(this.gl, vertSurfaceShader, fragSurfaceShader)
-    this.surfaceShader.use(this.gl)
+    this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader)
+    this.surfaceShader.use(gl)
     this.surfaceShader.mvpLoc = this.surfaceShader.uniforms.mvpMtx
     this.surfaceShader.colorLoc = this.surfaceShader.uniforms.surfaceColor
     // tractography fibers
-    this.fiberShader = new Shader(this.gl, vertFiberShader, fragFiberShader)
-    this.pickingImageShader.use(this.gl)
+    this.fiberShader = new Shader(gl, vertFiberShader, fragFiberShader)
+    this.pickingImageShader.use(gl)
     this.fiberShader.mvpLoc = this.fiberShader.uniforms.mvpMtx
     // compile all mesh shaders
     // compile all mesh shaders
     for (let i = 0; i < this.meshShaders.length; i++) {
       const m = this.meshShaders[i]
       if (m.Name === 'Flat') {
-        m.shader = new Shader(this.gl, vertFlatMeshShader, fragFlatMeshShader)
+        m.shader = new Shader(gl, vertFlatMeshShader, fragFlatMeshShader)
       } else {
-        m.shader = new Shader(this.gl, vertMeshShader, m.Frag)
+        m.shader = new Shader(gl, vertMeshShader, m.Frag)
       }
-      m.shader.use(this.gl)
+      m.shader.use(gl)
       m.shader.mvpLoc = m.shader.uniforms.mvpMtx
       m.shader.normLoc = m.shader.uniforms.normMtx
       m.shader.opacityLoc = m.shader.uniforms.opacity
       m.shader.isMatcap = m.Name === 'Matcap'
       if (m.shader.isMatcap) {
-        this.gl.uniform1i(m.shader.uniforms.matCap, 5)
+        gl.uniform1i(m.shader.uniforms.matCap, 5)
       }
     }
-    this.bmpShader = new Shader(this.gl, vertBmpShader, fragBmpShader)
+    this.bmpShader = new Shader(gl, vertBmpShader, fragBmpShader)
     await this.initText()
     if (this.opts.thumbnail.length > 0) {
       await this.loadBmpTexture(this.opts.thumbnail)
@@ -6536,12 +6527,12 @@ export class Niivue {
     this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2]
   }
 
-  dragForCenterButton(startXYendXY) {
+  dragForCenterButton(startXYendXY: number[]) {
     this.dragForPanZoom(startXYendXY)
   }
 
   // for slicer3D vertical dragging adjusts zoom
-  dragForSlicer3D(startXYendXY) {
+  dragForSlicer3D(startXYendXY: number[]) {
     let zoom = this.uiData.pan2DxyzmmAtMouseDown[3]
     const y = startXYendXY[3] - startXYendXY[1]
     const pixelScale = 0.01
@@ -6558,13 +6549,17 @@ export class Niivue {
 
   // not included in public docs
   // draw line between start/end points and text to report length
-  drawMeasurementTool(startXYendXY) {
+  drawMeasurementTool(startXYendXY: number[]) {
     const gl = this.gl
     gl.bindVertexArray(this.genericVAO)
 
     gl.depthFunc(gl.ALWAYS)
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    if (!this.lineShader) {
+      throw new Error('lineShader undefined')
+    }
 
     this.lineShader.use(this.gl)
     gl.uniform4fv(this.lineShader.lineColorLoc, this.opts.rulerColor)
@@ -6611,9 +6606,12 @@ export class Niivue {
   // not included in public docs
   // draw a rectangle at specified location
   // unless Alpha is > 0, default color is opts.crosshairColor
-  drawRect(leftTopWidthHeight, lineColor = [1, 0, 0, -1]) {
+  drawRect(leftTopWidthHeight: number[], lineColor = [1, 0, 0, -1]) {
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
+    }
+    if (!this.rectShader) {
+      throw new Error('rectShader undefined')
     }
     this.rectShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
@@ -6631,7 +6629,10 @@ export class Niivue {
     this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
   }
 
-  drawCircle(leftTopWidthHeight, circleColor = this.opts.fontColor, fillPercent = 1.0) {
+  drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0) {
+    if (!this.circleShader) {
+      throw new Error('circleShader undefined')
+    }
     this.circleShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor)
@@ -6652,7 +6653,7 @@ export class Niivue {
 
   // not included in public docs
   // draw a rectangle at desired location
-  drawSelectionBox(leftTopWidthHeight) {
+  drawSelectionBox(leftTopWidthHeight: number[]) {
     this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor)
   }
 
@@ -6669,7 +6670,7 @@ export class Niivue {
 
   getAllLabels() {
     const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
-    const meshNodes = connectomes.flatMap((m) => m.nodes)
+    const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
     const meshLabels = meshNodes.map((n) => n.label)
     // filter our undefined labels
     const definedMeshLabels = meshLabels.filter((l) => l)
@@ -7004,7 +7005,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextBetween(startXYendXY, str, scale = 1, color = null) {
+  drawTextBetween(startXYendXY, str, scale = 1, color: number[] | null = null) {
     // horizontally centered on x, below y
     if (this.opts.textHeight <= 0) {
       return
@@ -9482,7 +9483,7 @@ export class Niivue {
 
   // not included in public docs
   // called to refresh canvas
-  async drawScene() {
+  drawScene() {
     if (this.isBusy) {
       // limit concurrent draw calls (chrome v FireFox)
       this.needsRefresh = true
@@ -9495,12 +9496,23 @@ export class Niivue {
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
     // await this.gl.finish();
-    if (this.gl !== null) {
-      await this.gl.finish()
+    if (this._gl !== null) {
+      this.gl.finish()
     }
     if (this.needsRefresh) {
-      posString = await this.drawScene()
+      posString = this.drawScene()
     }
     return posString
+  }
+
+  get gl(): WebGL2RenderingContext {
+    if (!this._gl) {
+      throw new Error('rendering context is not defined')
+    }
+    return this._gl
+  }
+
+  set gl(gl: WebGL2RenderingContext | null) {
+    this._gl = gl
   }
 }
