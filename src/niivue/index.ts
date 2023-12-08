@@ -179,6 +179,21 @@ type SliceScale = {
   dimsMM: vec3
 }
 
+type MvpMatrix2D = {
+  modelViewProjectionMatrix: mat4
+  modelMatrix: mat4
+  normalMatrix: mat4
+  leftTopMM: number[]
+  fovMM: number[]
+}
+
+type MM = {
+  mnMM: vec3
+  mxMM: vec3
+  rotation: mat4
+  fovMM: vec3
+}
+
 /**
  * mesh file formats that can be loaded
  */
@@ -6225,7 +6240,7 @@ export class Niivue {
   // not included in public docs
   // if clip plane is active, change depth of clip plane
   // otherwise, set zoom factor for rendering size
-  async sliceScroll3D(posChange = 0): Promise<void> {
+  sliceScroll3D(posChange = 0): void {
     if (posChange === 0) {
       return
     }
@@ -6298,8 +6313,9 @@ export class Niivue {
       // this.bmpTexture = null;
       this.thumbnailVisible = false
       // the thumbnail is now released, do something profound: actually load the images
-      this.loadVolumes(this.deferredVolumes)
-      this.loadMeshes(this.deferredMeshes)
+      Promise.all([this.loadVolumes(this.deferredVolumes), this.loadMeshes(this.deferredMeshes)]).catch((e) => {
+        throw e
+      })
       return
     }
     if (this.inGraphTile(x, y)) {
@@ -6319,7 +6335,9 @@ export class Niivue {
       }
       if (pos[0] > 0.5 && pos[1] > 1.0) {
         // load full 4D series if user clicks on lower right of plot tile
-        this.loadDeferred4DVolumes(this.volumes[0].id)
+        this.loadDeferred4DVolumes(this.volumes[0].id).catch((e) => {
+          throw e
+        })
       }
       return
     }
@@ -6419,7 +6437,7 @@ export class Niivue {
 
   // not included in public docs
   // draw 10cm ruler on a 2D tile
-  drawRuler() {
+  drawRuler(): void {
     let fovMM: number[] = []
     let ltwh: number[] = []
     for (let i = 0; i < this.screenSlices.length; i++) {
@@ -6446,7 +6464,7 @@ export class Niivue {
 
   // not included in public docs
   // draw 10cm ruler at desired coordinates
-  drawRuler10cm(startXYendXY: number[]) {
+  drawRuler10cm(startXYendXY: number[]): void {
     if (!this.lineShader) {
       throw new Error('lineShader undefined')
     }
@@ -6504,7 +6522,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  dragForPanZoom(startXYendXY: number[]) {
+  dragForPanZoom(startXYendXY: number[]): void {
     const endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3])
     if (isNaN(endMM[0])) {
       return
@@ -6521,12 +6539,12 @@ export class Niivue {
     this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2]
   }
 
-  dragForCenterButton(startXYendXY: number[]) {
+  dragForCenterButton(startXYendXY: number[]): void {
     this.dragForPanZoom(startXYendXY)
   }
 
   // for slicer3D vertical dragging adjusts zoom
-  dragForSlicer3D(startXYendXY: number[]) {
+  dragForSlicer3D(startXYendXY: number[]): void {
     let zoom = this.uiData.pan2DxyzmmAtMouseDown[3]
     const y = startXYendXY[3] - startXYendXY[1]
     const pixelScale = 0.01
@@ -6543,7 +6561,7 @@ export class Niivue {
 
   // not included in public docs
   // draw line between start/end points and text to report length
-  drawMeasurementTool(startXYendXY: number[]) {
+  drawMeasurementTool(startXYendXY: number[]): void {
     const gl = this.gl
     gl.bindVertexArray(this.genericVAO)
 
@@ -6602,7 +6620,7 @@ export class Niivue {
   // not included in public docs
   // draw a rectangle at specified location
   // unless Alpha is > 0, default color is opts.crosshairColor
-  drawRect(leftTopWidthHeight: number[], lineColor = [1, 0, 0, -1]) {
+  drawRect(leftTopWidthHeight: number[], lineColor = [1, 0, 0, -1]): void {
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
     }
@@ -6625,7 +6643,7 @@ export class Niivue {
     this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
   }
 
-  drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0) {
+  drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0): void {
     if (!this.circleShader) {
       throw new Error('circleShader undefined')
     }
@@ -6649,22 +6667,22 @@ export class Niivue {
 
   // not included in public docs
   // draw a rectangle at desired location
-  drawSelectionBox(leftTopWidthHeight: number[]) {
+  drawSelectionBox(leftTopWidthHeight: number[]): void {
     this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor)
   }
 
   // not included in public docs
   // return canvas pixels available for tiles (e.g without colorbar)
-  effectiveCanvasHeight() {
+  effectiveCanvasHeight(): number {
     // available canvas height differs from actual height if bottom colorbar is shown
     return this.gl.canvas.height - this.colorbarHeight
   }
 
-  effectiveCanvasWidth() {
+  effectiveCanvasWidth(): number {
     return this.gl.canvas.width - this.getLegendPanelWidth()
   }
 
-  getAllLabels() {
+  getAllLabels(): NVLabel3D[] {
     const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
     const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
     const meshLabels = meshNodes.map((n) => n.label)
@@ -6674,7 +6692,7 @@ export class Niivue {
     return labels
   }
 
-  getBulletMarginWidth() {
+  getBulletMarginWidth(): number {
     let bulletMargin = 0
     const labels = this.getAllLabels()
     if (labels.length === 0) {
@@ -6700,7 +6718,7 @@ export class Niivue {
     return bulletMargin
   }
 
-  getLegendPanelWidth() {
+  getLegendPanelWidth(): number {
     const labels = this.getAllLabels()
     if (!this.opts.showLegend || labels.length === 0) {
       return 0
@@ -6728,7 +6746,7 @@ export class Niivue {
     return width
   }
 
-  getLegendPanelHeight() {
+  getLegendPanelHeight(): number {
     const labels = this.getAllLabels()
     let height = 0
     const scale = 1.0 // we may want to make this adjustable in the future
@@ -6747,7 +6765,7 @@ export class Niivue {
 
   // not included in public docs
   // determine canvas pixels required for colorbar
-  reserveColorbarPanel() {
+  reserveColorbarPanel(): number[] {
     let txtHt = Math.max(this.opts.textHeight, 0.01)
     txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
 
@@ -6766,7 +6784,7 @@ export class Niivue {
     min = 0,
     max = 1,
     isAlphaThreshold: boolean
-  ) {
+  ): void {
     if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
       return
     }
@@ -6830,7 +6848,7 @@ export class Niivue {
       ticMin += spacing
     }
     // determine font size
-    function humanize(x: number) {
+    function humanize(x: number): string {
       // drop trailing zeros from numerical string
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
@@ -6860,7 +6878,7 @@ export class Niivue {
 
   // not included in public docs
   // high level code to draw colorbar(s)
-  drawColorbar() {
+  drawColorbar(): void {
     const maps = this.colormapLists
     const nmaps = maps.length
     if (nmaps < 1) {
@@ -6903,7 +6921,7 @@ export class Niivue {
     let w = 0
     const bytes = new TextEncoder().encode(str)
     for (let i = 0; i < str.length; i++) {
-      w += scale * this.fontMets?.mets[bytes[i]].xadv!
+      w += scale * this.fontMets!.mets[bytes[i]].xadv!
     }
     return w
   }
@@ -6928,7 +6946,7 @@ export class Niivue {
       throw new Error('fontShader undefined')
     }
     // draw single character, never call directly: ALWAYS call from drawText()
-    const metrics = this.fontMets?.mets[char]!
+    const metrics = this.fontMets!.mets[char]!
     const l = xy[0] + scale * metrics.lbwh[0]
     const b = -(scale * metrics.lbwh[1])
     const w = scale * metrics.lbwh[2]
@@ -6941,7 +6959,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawLoadingText(text: string) {
+  drawLoadingText(text: string): void {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
@@ -6952,7 +6970,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawText(xy: number[], str: string, scale = 1, color: number[] | null = null) {
+  drawText(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
     if (this.opts.textHeight <= 0) {
       return
     }
@@ -6980,7 +6998,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextRight(xy: number[], str: string, scale = 1, color = null) {
+  drawTextRight(xy: number[], str: string, scale = 1, color = null): void {
     // to right of x, vertically centered on y
     if (this.opts.textHeight <= 0) {
       return
@@ -6990,7 +7008,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextLeft(xy: number[], str: string, scale = 1, color = null) {
+  drawTextLeft(xy: number[], str: string, scale = 1, color = null): void {
     // to left of x, vertically centered on y
     if (this.opts.textHeight <= 0) {
       return
@@ -7002,7 +7020,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextRightBelow(xy: number[], str: string, scale = 1, color = null) {
+  drawTextRightBelow(xy: number[], str: string, scale = 1, color = null): void {
     // to right of x, vertically centered on y
     if (this.opts.textHeight <= 0) {
       return
@@ -7012,7 +7030,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextBetween(startXYendXY: number[], str: string, scale = 1, color: number[] | null = null) {
+  drawTextBetween(startXYendXY: number[], str: string, scale = 1, color: number[] | null = null): void {
     // horizontally centered on x, below y
     if (this.opts.textHeight <= 0) {
       return
@@ -7037,7 +7055,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawTextBelow(xy: number[], str: string, scale = 1, color = null) {
+  drawTextBelow(xy: number[], str: string, scale = 1, color = null): void {
     // horizontally centered on x, below y
     if (this.opts.textHeight <= 0) {
       return
@@ -7059,7 +7077,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  updateInterpolation(layer: number, isForceLinear = false) {
+  updateInterpolation(layer: number, isForceLinear = false): void {
     let interp: number = this.gl.LINEAR
     if (!isForceLinear && this.opts.isNearestInterpolation) {
       interp = this.gl.NEAREST
@@ -7074,7 +7092,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  setAtlasOutline(isOutline: boolean) {
+  setAtlasOutline(isOutline: boolean): void {
     this.opts.isAtlasOutline = isOutline
     this.updateGLVolume()
     this.drawScene()
@@ -7082,11 +7100,11 @@ export class Niivue {
 
   /**
    * select between nearest and linear interpolation for voxel based images
-   * @property {boolean} isNearest whether nearest neighbor interpolation is used, else linear interpolation
+   * @param isNearest - whether nearest neighbor interpolation is used, else linear interpolation
    * @example niivue.setInterpolation(true);
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
-  setInterpolation(isNearest: boolean) {
+  setInterpolation(isNearest: boolean): void {
     this.opts.isNearestInterpolation = isNearest
     const numLayers = this.volumes.length
     if (numLayers < 1) {
@@ -7108,7 +7126,7 @@ export class Niivue {
     azimuth = 0,
     elevation = 0,
     isRadiolgical: boolean
-  ) {
+  ): MvpMatrix2D {
     const gl = this.gl
     gl.viewport(
       leftTopWidthHeight[0],
@@ -7169,7 +7187,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE) {
+  swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE): vec3 {
     // change order of vector components
     if (axCorSag === SLICE_TYPE.CORONAL) {
       // 2D coronal screenXYZ = nifti [i,k,j]
@@ -7182,14 +7200,14 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenFieldOfViewVox(axCorSag = 0) {
+  screenFieldOfViewVox(axCorSag = 0): vec3 {
     const fov = vec3.clone(this.volumeObject3D!.fieldOfViewDeObliqueMM!)
     return this.swizzleVec3MM(fov, axCorSag)
   }
 
   // not included in public docs
   // determine height/width of image in millimeters
-  screenFieldOfViewMM(axCorSag = 0, forceSliceMM = false) {
+  screenFieldOfViewMM(axCorSag = 0, forceSliceMM = false): vec3 {
     // extent of volume/mesh (in millimeters) in screen space
     if (!forceSliceMM && !this.opts.isSliceMM) {
       // return voxel space
@@ -7208,7 +7226,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenFieldOfViewExtendedVox(axCorSag = 0) {
+  screenFieldOfViewExtendedVox(axCorSag = 0): MM {
     // extent of volume/mesh (in orthographic alignment for rectangular voxels) in screen space
     // let fov = [frac2mmTexture[0], frac2mmTexture[5], frac2mmTexture[10]];
     const extentsMinOrtho = this.volumes[0].extentsMinOrtho!
@@ -7224,7 +7242,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenFieldOfViewExtendedMM(axCorSag = 0) {
+  screenFieldOfViewExtendedMM(axCorSag = 0): MM {
     if (!this.volumeObject3D) {
       throw new Error('volumeObject3D undefined')
     }
@@ -7244,7 +7262,7 @@ export class Niivue {
 
   // not included in public docs
   // show text labels for L/R, A/P, I/S dimensions
-  drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE) {
+  drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE): void {
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     let topText = 'S'
     if (axCorSag === SLICE_TYPE.AXIAL) {
@@ -7264,7 +7282,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number) {
+  xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number): number[] {
     // given X and Y, find Z for a plane defined by 3 points (a,b,c)
     // https://math.stackexchange.com/questions/851742/calculate-coordinate-of-any-point-on-triangle-in-3d-plane
     let sliceDim = 2 // axial depth is NIfTI k dimension
@@ -7303,7 +7321,7 @@ export class Niivue {
 
   // not included in public docs
   // draw 2D tile
-  draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN) {
+  draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN): void {
     let frac2mmTexture = this.volumes[0].frac2mm!.slice()
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
     let mesh2ortho = mat4.create()
