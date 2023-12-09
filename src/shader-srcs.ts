@@ -10,7 +10,7 @@ void main(void) {
 }`
 
 const kDrawFunc = `
-	vec4 drawColor(float scalar) {
+	vec4 drawColor(float scalar, float drawOpacity) {
 		float nlayer = float(textureSize(colormap, 0).y);
 		float layer = (nlayer - 0.5) / nlayer;
 		vec4 dcolor = texture(colormap, vec2((scalar * 255.0)/256.0 + 0.5/256.0, layer)).rgba;
@@ -84,7 +84,7 @@ uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity, renderOverlayBlend;
+uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 in vec3 vColor;
@@ -255,7 +255,8 @@ const kRenderInit = `void main() {
 			break;
 		samplePos += deltaDirFast; //advance ray position
 	}
-	if ((samplePos.a >= len) && (((overlays < 1.0) && (drawOpacity <= 0.0) ) || (backgroundMasksOverlays > 0)))  {
+	float drawOpacityA = renderDrawAmbientOcclusionXY.y;
+	if ((samplePos.a >= len) && (((overlays < 1.0) && (drawOpacityA <= 0.0) ) || (backgroundMasksOverlays > 0)))  {
 		if (isClip)
 			fColor += clipPlaneColorX;
 		return;
@@ -283,6 +284,8 @@ const kRenderTail = `
 	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
 		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
 		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
+	float renderDrawAmbientOcclusionX = renderDrawAmbientOcclusionXY.x;
+	float drawOpacity = renderDrawAmbientOcclusionXY.y;
 	if ((overlays < 1.0) && (drawOpacity <= 0.0))
 		return;
 	//overlay pass
@@ -320,7 +323,7 @@ const kRenderTail = `
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
 			float val = texture(drawing, samplePos.xyz).r;
-			vec4 draw = drawColor(val);
+			vec4 draw = drawColor(val, drawOpacity);
 			if ((draw.a > 0.0) && (firstDraw)) {
 				firstDraw = false;
 				float sum = 0.0;
@@ -361,7 +364,7 @@ const kRenderTail = `
 				// without brighten, only the most extreme ridges will not be darker
 				const float brighten = 1.2;
 				vec3 ao = draw.rgb * (1.0 - proportion) * brighten;
-				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusion);
+				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusionX);
 			}
 			colorSample = draw;
 		}
@@ -416,10 +419,10 @@ uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity, renderOverlayBlend;
+uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
-uniform float renderDrawAmbientOcclusion;
+uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -500,10 +503,10 @@ uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity, renderOverlayBlend;
+uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
-uniform float renderDrawAmbientOcclusion;
+uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -543,11 +546,11 @@ uniform mat4 mvpMtx;
 uniform mat4 normMtx;
 uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
-uniform float drawOpacity, renderOverlayBlend;
+uniform float renderOverlayBlend;
 uniform highp sampler3D drawing, gradient;
 uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
-uniform float renderDrawAmbientOcclusion;
+uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 in vec3 vColor;
 out vec4 fColor;
@@ -734,7 +737,7 @@ out vec4 color;` +
 		} //outline above threshold
 	}
 	ocolor.a *= overlayAlpha;
-	vec4 dcolor = drawColor(texture(drawing, texPos).r);
+	vec4 dcolor = drawColor(texture(drawing, texPos).r, drawOpacity);
 	if (dcolor.a > 0.0) {
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
