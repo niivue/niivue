@@ -705,7 +705,6 @@ export class NVMeshLoaders {
       } else {
         const obj = NVMeshLoaders.readMGH(buffer, n_vert, true)
         if ('scalars' in obj) {
-          console.log('>>>',obj);
           layer.values = obj.scalars
           layer.colormapLabel = obj.colormapLabel
         } // unable to decode colormapLabel
@@ -2670,7 +2669,6 @@ export class NVMeshLoaders {
             if (num_entries_to_read < 0) {
               return scalars
             }
-            console.log('???');
             // Allocate our table.
             const Labels: ColorMap = { R: [], G: [], B: [], A: [], I: [], labels: [] }
             for (let i = 0; i < num_entries_to_read; i++) {
@@ -2699,7 +2697,7 @@ export class NVMeshLoaders {
               // break
             } // for num_entries_to_read
             colormapLabel = cmapper.makeLabelLut(Labels)
-            console.log('<<<',colormapLabel);
+            console.log('<<<', colormapLabel)
           }
           break
         default:

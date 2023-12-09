@@ -55,7 +55,7 @@
     nv1.drawScene();
   }
   layout.onchange = function () {
-    nv1.setMultiplanarLayout(this.value);
+    nv1.setMultiplanarLayout(Number(this.value));
   }
   var volumeList1 = [{url: "../images/pcasl.nii.gz"},];
   let opts = {
