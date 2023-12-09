@@ -699,7 +699,6 @@ export class NVMeshLoaders {
       layer.values = obj.scalars // colormapLabel
       layer.colormapLabel = obj.colormapLabel
     } else if (ext === 'MGH' || ext === 'MGZ') {
-      console.log(':::', isReadColortables)
       if (!isReadColortables) {
         layer.values = NVMeshLoaders.readMGH(buffer, n_vert) as number[]
       } else {
@@ -2626,13 +2625,11 @@ export class NVMeshLoaders {
     // const TAG_ORIG_RAS2VOX = 44;
     const nBytes = raw.byteLength
     let colormapLabel: LUT
-    console.log('Entry!!', voxoffset, nBytes)
 
     while (voxoffset < nBytes - 8) {
       // let vx = voxoffset;
       const tagType = reader.getInt32((voxoffset += 4), isLittleEndian)
       let plen = 0
-      console.log(tagType, '>>>', TAG_OLD_COLORTABLE)
       switch (tagType) {
         case TAG_OLD_MGH_XFORM:
           // doesn't include null
@@ -2697,7 +2694,6 @@ export class NVMeshLoaders {
               // break
             } // for num_entries_to_read
             colormapLabel = cmapper.makeLabelLut(Labels)
-            console.log('<<<', colormapLabel)
           }
           break
         default:
