@@ -699,11 +699,13 @@ export class NVMeshLoaders {
       layer.values = obj.scalars // colormapLabel
       layer.colormapLabel = obj.colormapLabel
     } else if (ext === 'MGH' || ext === 'MGZ') {
+      console.log(':::', isReadColortables)
       if (!isReadColortables) {
         layer.values = NVMeshLoaders.readMGH(buffer, n_vert) as number[]
       } else {
         const obj = NVMeshLoaders.readMGH(buffer, n_vert, true)
         if ('scalars' in obj) {
+          console.log('>>>',obj);
           layer.values = obj.scalars
           layer.colormapLabel = obj.colormapLabel
         } // unable to decode colormapLabel
@@ -2549,9 +2551,11 @@ export class NVMeshLoaders {
   // https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
   static readMGH(buffer: ArrayBuffer, n_vert = 0, isReadColortables = false): MGH {
     let reader = new DataView(buffer)
-    const raw = buffer
+    let raw = buffer
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
       const decompressed = decompressSync(new Uint8Array(buffer))
+      raw = new ArrayBuffer(decompressed.byteLength)
+      new Uint8Array(raw).set(new Uint8Array(decompressed))
       reader = new DataView(decompressed.buffer)
     }
     const version = reader.getInt32(0, false)
@@ -2623,10 +2627,13 @@ export class NVMeshLoaders {
     // const TAG_ORIG_RAS2VOX = 44;
     const nBytes = raw.byteLength
     let colormapLabel: LUT
+    console.log('Entry!!', voxoffset, nBytes)
+
     while (voxoffset < nBytes - 8) {
       // let vx = voxoffset;
       const tagType = reader.getInt32((voxoffset += 4), isLittleEndian)
       let plen = 0
+      console.log(tagType, '>>>', TAG_OLD_COLORTABLE)
       switch (tagType) {
         case TAG_OLD_MGH_XFORM:
           // doesn't include null
@@ -2663,6 +2670,7 @@ export class NVMeshLoaders {
             if (num_entries_to_read < 0) {
               return scalars
             }
+            console.log('???');
             // Allocate our table.
             const Labels: ColorMap = { R: [], G: [], B: [], A: [], I: [], labels: [] }
             for (let i = 0; i < num_entries_to_read; i++) {
@@ -2691,6 +2699,7 @@ export class NVMeshLoaders {
               // break
             } // for num_entries_to_read
             colormapLabel = cmapper.makeLabelLut(Labels)
+            console.log('<<<',colormapLabel);
           }
           break
         default:
