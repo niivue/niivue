@@ -8014,17 +8014,17 @@ export class Niivue {
       shader.use(this.gl)
       // next lines optional: these textures should be bound by default
       // these lines can cause warnings, e.g. if drawTexture not used or created
-      //borg
-      this.gl.activeTexture(this.gl.TEXTURE0);
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+      // borg
+      this.gl.activeTexture(this.gl.TEXTURE0)
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
       this.gl.activeTexture(this.gl.TEXTURE1)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
 
-      this.gl.activeTexture(this.gl.TEXTURE2);
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
-      this.gl.activeTexture(this.gl.TEXTURE7);
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
-      
+      this.gl.activeTexture(this.gl.TEXTURE2)
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture)
+      this.gl.activeTexture(this.gl.TEXTURE7)
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+
       gl.uniform1i(shader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0) {
         gl.activeTexture(gl.TEXTURE6)
@@ -8056,8 +8056,7 @@ export class Niivue {
       } else {
         gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane)
       }
-      gl.uniform1f(shader.uniforms.drawOpacity, 1.0);
-      
+      gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
 
       gl.bindVertexArray(object3D.vao)
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
