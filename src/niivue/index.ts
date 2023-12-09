@@ -8014,17 +8014,14 @@ export class Niivue {
       shader.use(this.gl)
       // next lines optional: these textures should be bound by default
       // these lines can cause warnings, e.g. if drawTexture not used or created
-      // borg
-      this.gl.activeTexture(this.gl.TEXTURE0)
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
-      this.gl.activeTexture(this.gl.TEXTURE1)
-      this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
-
-      this.gl.activeTexture(this.gl.TEXTURE2)
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture)
-      this.gl.activeTexture(this.gl.TEXTURE7)
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
-
+      // gl.activeTexture(gl.TEXTURE0)
+      // gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
+      // gl.activeTexture(gl.TEXTURE1)
+      // gl.bindTexture(gl.TEXTURE_2D, this.colormapTexture)
+      // gl.activeTexture(gl.TEXTURE2)
+      // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
+      // gl.activeTexture(gl.TEXTURE7)
+      // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
       gl.uniform1i(shader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0) {
         gl.activeTexture(gl.TEXTURE6)
