@@ -19,16 +19,14 @@
     <header>
       <button class="unstyled-button">Normalize Graph</button>
       <input
-        onclick="checkClick(this)"
         type="checkbox"
         id="check1"
-        name="check1"
         value="true"
       />
-      <button onclick="prevVolume()">back</button>
-      <button onclick="nextVolume()">forward</button>
-      &nbsp;<button onclick="animateVolume()">animate</button>
-      &nbsp;<button onclick="about()">about</button>
+      <button id="prevVolume">back</button>
+      <button id="nextVolume">forward</button>
+      &nbsp;<button id="animate">animate</button>
+      &nbsp;<button id="about">about</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -56,16 +54,16 @@
   nv1.opts.multiplanarForceRender = true;
   nv1.graph.normalizeValues = false;
   nv1.graph.opacity = 1.0;
-  function checkClick(cb) {
-    nv1.graph.normalizeValues = cb.checked;
+  check1.onchange = function () {
+    nv1.graph.normalizeValues = this.checked;
     nv1.updateGLVolume();
   }
   let currentVol = 0;
-  function prevVolume() {
+  prevVolume.onclick = function () {
     currentVol = Math.max(currentVol - 1, 0);
     nv1.setFrame4D(nv1.volumes[0].id, currentVol);
   }
-  function nextVolume() {
+  nextVolume.onclick = function () {
     currentVol++;
     currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1);
     nv1.setFrame4D(nv1.volumes[0].id, currentVol);
@@ -80,14 +78,14 @@
     if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id)) currentVol = 0;
     nv1.setFrame4D(nv1.volumes[0].id, currentVol);
   }
-  function animateVolume() {
+  animate.onclick = function () {
     if (animationTimer == null) animationTimer = setInterval(doAnimate, 100);
     else {
       clearInterval(animationTimer);
       animationTimer = null;
     }
   }
-  function about() {
+  about.onclick = function () {
     alert("4D images can be slow to load. Click the `...` icon below the graph to see the entire dataset. Currently displaying "+nv1.volumes[0].nFrame4D+" of " +nv1.volumes[0].nTotalFrame4D+ " frames.");
   }
 </script>

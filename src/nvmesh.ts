@@ -967,7 +967,7 @@ export class NVMesh {
     gl: WebGL2RenderingContext
   ): void {
     const layer = this.layers[id]
-    if (!layer || !layer.key) {
+    if (!layer || !(key in layer)) {
       console.log('mesh does not have property ', key, ' for layer ', layer)
       return
     }
@@ -979,7 +979,7 @@ export class NVMesh {
   // adjust mesh attributes. invoked by niivue.setMeshProperty(()
   // TODO this method is too generic
   setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void {
-    if (!this[key]) {
+    if (!(key in this)) {
       console.log('mesh does not have property ', key, this)
       return
     }
