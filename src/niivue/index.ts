@@ -4901,7 +4901,7 @@ export class Niivue {
     this.gl.uniform1i(shader.uniforms.colormap, 1)
     this.gl.uniform1i(shader.uniforms.overlay, 2)
     this.gl.uniform1i(shader.uniforms.drawing, 7)
-    this.gl.uniform1f(shader.uniforms.renderDrawAmbientOcclusion, this.renderDrawAmbientOcclusion)
+    this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
     shader.mvpLoc = shader.uniforms.mvpMtx
     shader.clipPlaneClrLoc = shader.uniforms.clipPlaneColor
     shader.renderOverlayBlendLoc = shader.uniforms.renderOverlayBlend
@@ -5928,7 +5928,7 @@ export class Niivue {
 
     this.renderDrawAmbientOcclusion = ao
     this.renderShader.use(this.gl)
-    this.gl.uniform1f(this.renderShader.uniforms.renderDrawAmbientOcclusion, this.renderDrawAmbientOcclusion)
+    this.gl.uniform1fv(this.renderShader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
     this.drawScene()
   }
 
@@ -8007,19 +8007,21 @@ export class Niivue {
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
       gl.enable(gl.CULL_FACE)
       gl.cullFace(gl.FRONT) // TH switch since we L/R flipped in calculateMvpMatrix
-      // next lines optional: these textures should be bound by default
-      // these lines can cause warnings, e.g. if drawTexture not used or created
-      // this.gl.activeTexture(this.gl.TEXTURE0);
-      // this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
-      // this.gl.activeTexture(this.gl.TEXTURE2);
-      // this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
-      // this.gl.activeTexture(this.gl.TEXTURE7);
-      // this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
       let shader = this.renderShader!
       if (this.uiData.mouseDepthPicker) {
         shader = this.pickingImageShader!
       }
       shader.use(this.gl)
+      // next lines optional: these textures should be bound by default
+      // these lines can cause warnings, e.g. if drawTexture not used or created
+      // gl.activeTexture(gl.TEXTURE0)
+      // gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
+      // gl.activeTexture(gl.TEXTURE1)
+      // gl.bindTexture(gl.TEXTURE_2D, this.colormapTexture)
+      // gl.activeTexture(gl.TEXTURE2)
+      // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
+      // gl.activeTexture(gl.TEXTURE7)
+      // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
       gl.uniform1i(shader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0) {
         gl.activeTexture(gl.TEXTURE6)
@@ -8032,9 +8034,9 @@ export class Niivue {
         gl.uniformMatrix4fv(shader.normLoc, false, normalMatrix)
       }
       if (this.drawBitmap && this.drawBitmap.length > 8) {
-        gl.uniform1f(shader.drawOpacityLoc, this.drawOpacity)
+        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity)
       } else {
-        gl.uniform1f(shader.drawOpacityLoc, 0.0)
+        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
       }
       gl.uniformMatrix4fv(shader.mvpLoc, false, mvpMatrix)
       gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back!.matRAS!)
@@ -8051,6 +8053,8 @@ export class Niivue {
       } else {
         gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane)
       }
+      gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
+
       gl.bindVertexArray(object3D.vao)
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
       gl.bindVertexArray(this.unusedVAO)
