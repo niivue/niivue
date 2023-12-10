@@ -493,8 +493,6 @@ export class Niivue {
   currentClipPlaneIndex = 0
   lastCalled = new Date().getTime()
 
-  orientCubeMtxLoc: WebGLUniformLocation | null = null
-
   selectedObjectId = -1
   CLIP_PLANE_ID = 1
   VOLUME_ID = 254
@@ -3275,7 +3273,7 @@ export class Niivue {
   setClipPlaneColor(color: number[]): void {
     this.opts.clipPlaneColor = color
     this.renderShader!.use(this.gl)
-    this.gl.uniform4fv(this.renderShader!.clipPlaneClrLoc!, this.opts.clipPlaneColor)
+    this.gl.uniform4fv(this.renderShader!.uniforms.clipPlaneColor!, this.opts.clipPlaneColor)
     this.drawScene()
   }
 
@@ -4775,11 +4773,6 @@ export class Niivue {
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
     this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
     this.fontShader.use(this.gl)
-    this.fontShader.screenPxRangeLoc = this.fontShader.uniforms.screenPxRange
-    this.fontShader.fontColorLoc = this.fontShader.uniforms.fontColor
-    this.fontShader.canvasWidthHeightLoc = this.fontShader.uniforms.canvasWidthHeight
-    this.fontShader.leftTopWidthHeightLoc = this.fontShader.uniforms.leftTopWidthHeight
-    this.fontShader.uvLeftTopWidthHeightLoc = this.fontShader.uniforms.uvLeftTopWidthHeight
 
     await this.loadDefaultFont()
     await this.loadDefaultMatCap()
@@ -4851,9 +4844,6 @@ export class Niivue {
 
     const shader = new Shader(this.gl, vertMeshShader, fragmentShaderText)
     shader.use(this.gl)
-    shader.mvpLoc = shader.uniforms.mvpMtx
-    shader.normLoc = shader.uniforms.normMtx
-    shader.opacityLoc = shader.uniforms.opacity
 
     return {
       Name: name,
@@ -4895,19 +4885,11 @@ export class Niivue {
   // not included in public docs
   initRenderShader(shader: Shader, gradientAmount = 0.0): void {
     shader.use(this.gl)
-    shader.drawOpacityLoc = shader.uniforms.drawOpacity
-    shader.backgroundMasksOverlaysLoc = shader.uniforms.backgroundMasksOverlays
     this.gl.uniform1i(shader.uniforms.volume, 0)
     this.gl.uniform1i(shader.uniforms.colormap, 1)
     this.gl.uniform1i(shader.uniforms.overlay, 2)
     this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
-    shader.mvpLoc = shader.uniforms.mvpMtx
-    shader.clipPlaneClrLoc = shader.uniforms.clipPlaneColor
-    shader.renderOverlayBlendLoc = shader.uniforms.renderOverlayBlend
-    shader.mvpMatRASLoc = shader.uniforms.matRAS
-    shader.rayDirLoc = shader.uniforms.rayDir
-    shader.clipPlaneLoc = shader.uniforms.clipPlane
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
   }
 
@@ -4969,33 +4951,16 @@ export class Niivue {
     gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
     this.pickingMeshShader = new Shader(gl, vertMeshShader, fragMeshDepthShader)
     this.pickingMeshShader.use(gl)
-    this.pickingMeshShader.mvpLoc = this.pickingMeshShader.uniforms.mvpMtx
     this.pickingImageShader = new Shader(gl, vertRenderShader, fragVolumePickingShader)
     this.pickingImageShader.use(gl)
-    this.pickingImageShader.drawOpacityLoc = this.pickingImageShader.uniforms.drawOpacity
-    this.pickingImageShader.backgroundMasksOverlaysLoc = this.pickingImageShader.uniforms.backgroundMasksOverlays
-    this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms.mvpMtx
     gl.uniform1i(this.pickingImageShader.uniforms.volume, 0)
     gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
     gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
     gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7)
-    this.pickingImageShader.mvpLoc = this.pickingImageShader.uniforms.mvpMtx
-    this.pickingImageShader.rayDirLoc = this.pickingImageShader.uniforms.rayDir
-    this.pickingImageShader.clipPlaneLoc = this.pickingImageShader.uniforms.clipPlane
     // slice shader
     // slice mm shader
     this.sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader)
     this.sliceMMShader.use(gl)
-    this.sliceMMShader.drawOpacityLoc = this.sliceMMShader.uniforms.drawOpacity
-    this.sliceMMShader.isAlphaClipDarkLoc = this.sliceMMShader.uniforms.isAlphaClipDark
-    this.sliceMMShader.overlayOutlineWidthLoc = this.sliceMMShader.uniforms.overlayOutlineWidth
-    this.sliceMMShader.overlayAlphaShaderLoc = this.sliceMMShader.uniforms.overlayAlphaShader
-    this.sliceMMShader.backgroundMasksOverlaysLoc = this.sliceMMShader.uniforms.backgroundMasksOverlays
-    this.sliceMMShader.opacityLoc = this.sliceMMShader.uniforms.opacity
-    this.sliceMMShader.axCorSagLoc = this.sliceMMShader.uniforms.axCorSag
-    this.sliceMMShader.sliceLoc = this.sliceMMShader.uniforms.slice
-    this.sliceMMShader.frac2mmLoc = this.sliceMMShader.uniforms.frac2mm
-    this.sliceMMShader.mvpLoc = this.sliceMMShader.uniforms.mvpMtx
     gl.uniform1i(this.sliceMMShader.uniforms.volume, 0)
     gl.uniform1i(this.sliceMMShader.uniforms.colormap, 1)
     gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2)
@@ -5005,8 +4970,6 @@ export class Niivue {
     this.orientCubeShader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader)
     this.orientCubeShaderVAO = gl.createVertexArray()
     gl.bindVertexArray(this.orientCubeShaderVAO)
-    const program = this.orientCubeShader.program
-    this.orientCubeMtxLoc = gl.getUniformLocation(program, 'u_matrix')
     // Create a buffer
     const positionBuffer = gl.createBuffer()
     gl.enableVertexAttribArray(0)
@@ -5022,31 +4985,15 @@ export class Niivue {
     // rect shader (crosshair): horizontal and vertical lines only
     this.rectShader = new Shader(gl, vertRectShader, fragRectShader)
     this.rectShader.use(gl)
-    this.rectShader.lineColorLoc = this.rectShader.uniforms.lineColor
-    this.rectShader.canvasWidthHeightLoc = this.rectShader.uniforms.canvasWidthHeight
-    this.rectShader.leftTopWidthHeightLoc = this.rectShader.uniforms.leftTopWidthHeight
     // line shader: diagonal lines
     this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
     this.lineShader.use(gl)
-    this.lineShader.lineColorLoc = this.lineShader.uniforms.lineColor
-    this.lineShader.canvasWidthHeightLoc = this.lineShader.uniforms.canvasWidthHeight
-    this.lineShader.thicknessLoc = this.lineShader.uniforms.thickness
-    this.lineShader.startXYendXYLoc = this.lineShader.uniforms.startXYendXY
     // 3D line shader
     this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader)
     this.line3DShader.use(gl)
-    this.line3DShader.lineColorLoc = this.line3DShader.uniforms.lineColor
-    this.line3DShader.canvasWidthHeightLoc = this.line3DShader.uniforms.canvasWidthHeight
-    this.line3DShader.thicknessLoc = this.line3DShader.uniforms.thickness
-    this.line3DShader.startXYLoc = this.line3DShader.uniforms.startXY
-    this.line3DShader.endXYZLoc = this.line3DShader.uniforms.endXYZ
     // circle shader
     this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
     this.circleShader.use(gl)
-    this.circleShader.circleColorLoc = this.circleShader.uniforms.circleColor
-    this.circleShader.canvasWidthHeightLoc = this.circleShader.uniforms.canvasWidthHeight
-    this.circleShader.leftTopWidthHeightLoc = this.circleShader.uniforms.leftTopWidthHeight
-    this.circleShader.fillPercentLoc = this.circleShader.uniforms.fillPercent
     // render shader (3D)
     this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader)
     this.initRenderShader(this.renderVolumeShader)
@@ -5056,14 +5003,10 @@ export class Niivue {
     this.initRenderShader(this.renderGradientShader, 0.3)
     gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5)
     gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6)
-    this.renderGradientShader.normLoc = this.renderGradientShader.uniforms.normMtx
     this.renderShader = this.renderVolumeShader
     // colorbar shader
     this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
     this.colorbarShader.use(gl)
-    this.colorbarShader.layerLoc = this.colorbarShader.uniforms.layer
-    this.colorbarShader.canvasWidthHeightLoc = this.colorbarShader.uniforms.canvasWidthHeight
-    this.colorbarShader.leftTopWidthHeightLoc = this.colorbarShader.uniforms.leftTopWidthHeight
     gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
     this.blurShader = new Shader(gl, blurVertShader, blurFragShader)
     this.sobelShader = new Shader(gl, blurVertShader, sobelFragShader)
@@ -5084,12 +5027,9 @@ export class Niivue {
     // 3D crosshair cylinder
     this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader)
     this.surfaceShader.use(gl)
-    this.surfaceShader.mvpLoc = this.surfaceShader.uniforms.mvpMtx
-    this.surfaceShader.colorLoc = this.surfaceShader.uniforms.surfaceColor
     // tractography fibers
     this.fiberShader = new Shader(gl, vertFiberShader, fragFiberShader)
     this.pickingImageShader.use(gl)
-    this.fiberShader.mvpLoc = this.fiberShader.uniforms.mvpMtx
     // compile all mesh shaders
     // compile all mesh shaders
     for (let i = 0; i < this.meshShaders.length; i++) {
@@ -5100,9 +5040,6 @@ export class Niivue {
         m.shader = new Shader(gl, vertMeshShader, m.Frag)
       }
       m.shader.use(gl)
-      m.shader.mvpLoc = m.shader.uniforms.mvpMtx
-      m.shader.normLoc = m.shader.uniforms.normMtx
-      m.shader.opacityLoc = m.shader.uniforms.opacity
       m.shader.isMatcap = m.Name === 'Matcap'
       if (m.shader.isMatcap) {
         gl.uniform1i(m.shader.uniforms.matCap, 5)
@@ -5843,9 +5780,9 @@ export class Niivue {
     const volScale = slicescl.volScale
     // @ts-expect-error FIXME assigning this.overlays to a number field
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays)
-    this.gl.uniform4fv(this.renderShader.clipPlaneClrLoc, this.opts.clipPlaneColor)
+    this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
-    this.gl.uniform1f(this.renderShader.renderOverlayBlendLoc, this.opts.renderOverlayBlend)
+    this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend)
 
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane)
     this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
@@ -6145,7 +6082,7 @@ export class Niivue {
           continue
         }
         const nlayers = mesh.layers.length
-        if ('edgeColormap' in mesh) {
+        if (('edgeColormap' in mesh) && ('edges' in mesh) && (mesh.edges !== undefined)) {
           const neg = negMinMax(mesh.edgeMin!, mesh.edgeMax!, NaN, NaN)
           this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true, true, mesh.colormapInvert)
           //  alpha = false,
@@ -6473,11 +6410,11 @@ export class Niivue {
     }
     this.gl.bindVertexArray(this.genericVAO)
     this.lineShader.use(this.gl)
-    this.gl.uniform4fv(this.lineShader.lineColorLoc, this.opts.rulerColor)
-    this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
+    this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
-    this.gl.uniform1f(this.lineShader.thicknessLoc, this.opts.rulerWidth)
-    this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY)
+    this.gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
+    this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     // draw tick marks
     const w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
@@ -6490,7 +6427,7 @@ export class Niivue {
       if (i % 5 === 0) {
         xyxy[3] = t2
       }
-      this.gl.uniform4fv(this.lineShader.startXYendXYLoc, xyxy)
+      this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, xyxy)
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     }
     this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
@@ -6577,24 +6514,24 @@ export class Niivue {
     }
 
     this.lineShader.use(this.gl)
-    gl.uniform4fv(this.lineShader.lineColorLoc, this.opts.rulerColor)
-    gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [gl.canvas.width, gl.canvas.height])
+    gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
+    gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
     // draw Line
-    gl.uniform1f(this.lineShader.thicknessLoc, this.opts.rulerWidth)
-    gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY)
+    gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
+    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // draw startCap
     const color = this.opts.rulerColor
     color[3] = 1.0 // opaque
-    gl.uniform4fv(this.lineShader.lineColorLoc, color)
+    gl.uniform4fv(this.lineShader.uniforms.lineColor, color)
     const w = this.opts.rulerWidth
-    gl.uniform1f(this.lineShader.thicknessLoc, w * 2)
+    gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
     let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
-    gl.uniform4fv(this.lineShader.startXYendXYLoc, sXYeXY)
+    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // end cap
     sXYeXY = [startXYendXY[2], startXYendXY[3] - w, startXYendXY[2], startXYendXY[3] + w]
-    gl.uniform4fv(this.lineShader.startXYendXYLoc, sXYeXY)
+    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // distance between start and stop
     let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]])
@@ -6632,10 +6569,10 @@ export class Niivue {
     }
     this.rectShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(this.rectShader.lineColorLoc, lineColor)
-    this.gl.uniform2fv(this.rectShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform4fv(this.rectShader.uniforms.lineColor, lineColor)
+    this.gl.uniform2fv(this.rectShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     this.gl.uniform4f(
-      this.rectShader.leftTopWidthHeightLoc,
+      this.rectShader.uniforms.leftTopWidthHeight,
       leftTopWidthHeight[0],
       leftTopWidthHeight[1],
       leftTopWidthHeight[2],
@@ -6652,17 +6589,17 @@ export class Niivue {
     }
     this.circleShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor)
-    this.gl.uniform2fv(this.circleShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
+    this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     this.gl.uniform4f(
-      this.circleShader.leftTopWidthHeightLoc,
+      this.circleShader.uniforms.leftTopWidthHeight,
       leftTopWidthHeight[0],
       leftTopWidthHeight[1],
       leftTopWidthHeight[2],
       leftTopWidthHeight[3]
     )
-    this.gl.uniform1f(this.circleShader.fillPercentLoc, fillPercent)
-    this.gl.uniform4fv(this.circleShader.circleColorLoc, circleColor)
+    this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent)
+    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
     this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
@@ -6820,14 +6757,14 @@ export class Niivue {
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
     const lx = layer
-    this.gl.uniform1f(this.colorbarShader.layerLoc, lx)
-    this.gl.uniform2fv(this.colorbarShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform1f(this.colorbarShader.uniforms.layer, lx)
+    this.gl.uniform2fv(this.colorbarShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     this.gl.disable(this.gl.CULL_FACE)
     if (isNegativeColor) {
       const flip = [barLTWH[0] + barLTWH[2], barLTWH[1], -barLTWH[2], barLTWH[3]]
-      this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, flip)
+      this.gl.uniform4fv(this.colorbarShader.uniforms.leftTopWidthHeight, flip)
     } else {
-      this.gl.uniform4fv(this.colorbarShader.leftTopWidthHeightLoc, barLTWH)
+      this.gl.uniform4fv(this.colorbarShader.uniforms.leftTopWidthHeight, barLTWH)
     }
     this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
@@ -6955,8 +6892,8 @@ export class Niivue {
     const w = scale * metrics.lbwh[2]
     const h = scale * metrics.lbwh[3]
     const t = xy[1] + (b - h) + scale
-    this.gl.uniform4f(this.fontShader.leftTopWidthHeightLoc, l, t, w, h)
-    this.gl.uniform4fv(this.fontShader.uvLeftTopWidthHeightLoc!, metrics.uv_lbwh)
+    this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
+    this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     return scale * metrics.xadv
   }
@@ -6984,14 +6921,14 @@ export class Niivue {
     // let size = this.opts.textHeight * this.gl.canvas.height * scale;
     const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
     this.gl.enable(this.gl.BLEND)
-    this.gl.uniform2f(this.fontShader.canvasWidthHeightLoc, this.gl.canvas.width, this.gl.canvas.height)
+    this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
     if (color === null) {
       color = this.opts.fontColor
     }
-    this.gl.uniform4fv(this.fontShader.fontColorLoc, color)
+    this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color)
     let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
     screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
-    this.gl.uniform1f(this.fontShader.screenPxRangeLoc, screenPxRange)
+    this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
     const bytes = new TextEncoder().encode(str)
     this.gl.bindVertexArray(this.genericVAO)
     for (let i = 0; i < str.length; i++) {
@@ -7447,22 +7384,22 @@ export class Niivue {
       throw new Error('sliceMMShader undefined')
     }
     this.sliceMMShader.use(this.gl)
-    gl.uniform1f(this.sliceMMShader.overlayOutlineWidthLoc, this.overlayOutlineWidth)
-    gl.uniform1f(this.sliceMMShader.overlayAlphaShaderLoc, this.overlayAlphaShader)
-    gl.uniform1i(this.sliceMMShader.isAlphaClipDarkLoc, this.isAlphaClipDark ? 1 : 0)
-    gl.uniform1i(this.sliceMMShader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
-    gl.uniform1f(this.sliceMMShader.drawOpacityLoc, this.drawOpacity)
+    gl.uniform1f(this.sliceMMShader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
+    gl.uniform1f(this.sliceMMShader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
+    gl.uniform1i(this.sliceMMShader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
+    gl.uniform1i(this.sliceMMShader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+    gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.uniform1f(this.sliceMMShader.opacityLoc, this.volumes[0].opacity)
-    gl.uniform1i(this.sliceMMShader.axCorSagLoc, axCorSag)
-    gl.uniform1f(this.sliceMMShader.sliceLoc, sliceFrac)
+    gl.uniform1f(this.sliceMMShader.uniforms.opacity, this.volumes[0].opacity)
+    gl.uniform1i(this.sliceMMShader.uniforms.axCorSag, axCorSag)
+    gl.uniform1f(this.sliceMMShader.uniforms.slice, sliceFrac)
     gl.uniformMatrix4fv(
-      this.sliceMMShader.frac2mmLoc,
+      this.sliceMMShader.uniforms.frac2mm,
       false,
       frac2mmTexture // this.volumes[0].frac2mm
     )
-    gl.uniformMatrix4fv(this.sliceMMShader.mvpLoc, false, obj.modelViewProjectionMatrix.slice())
+    gl.uniformMatrix4fv(this.sliceMMShader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
     gl.bindVertexArray(this.genericVAO) // set vertex attributes
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
@@ -8022,7 +7959,7 @@ export class Niivue {
       // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
       // gl.activeTexture(gl.TEXTURE7)
       // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
-      gl.uniform1i(shader.backgroundMasksOverlaysLoc, this.backgroundMasksOverlays)
+      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0) {
         gl.activeTexture(gl.TEXTURE6)
         gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
@@ -8031,27 +7968,27 @@ export class Niivue {
         mat4.invert(iModelMatrix, modelMatrix)
         const normalMatrix = mat4.create()
         mat4.transpose(normalMatrix, iModelMatrix)
-        gl.uniformMatrix4fv(shader.normLoc, false, normalMatrix)
+        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix)
       }
       if (this.drawBitmap && this.drawBitmap.length > 8) {
         gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity)
       } else {
         gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
       }
-      gl.uniformMatrix4fv(shader.mvpLoc, false, mvpMatrix)
-      gl.uniformMatrix4fv(shader.mvpMatRASLoc, false, this.back!.matRAS!)
-      gl.uniform3fv(shader.rayDirLoc, rayDir)
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
+      gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back!.matRAS!)
+      gl.uniform3fv(shader.uniforms.rayDir, rayDir)
 
       if (this.gradientTextureAmount < 0.0) {
         // use slice shader
-        gl.uniform4fv(shader.clipPlaneLoc, [
+        gl.uniform4fv(shader.uniforms.clipPlane, [
           this.scene.crosshairPos[0],
           this.scene.crosshairPos[1],
           this.scene.crosshairPos[2],
           30
         ])
       } else {
-        gl.uniform4fv(shader.clipPlaneLoc, this.scene.clipPlane)
+        gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
       }
       gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
 
@@ -8096,7 +8033,7 @@ export class Niivue {
     mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth))
     const modelViewProjectionMatrix = mat4.create()
     mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
-    gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix)
+    gl.uniformMatrix4fv(this.orientCubeShader!.uniforms.u_matrix, false, modelViewProjectionMatrix)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 168)
     gl.bindVertexArray(this.unusedVAO)
     this.gl.disable(this.gl.CULL_FACE)
@@ -8514,12 +8451,12 @@ export class Niivue {
       }
       shader.use(this.gl) // set Shader
       // set shader uniforms
-      gl.uniformMatrix4fv(shader.mvpLoc, false, m)
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
       // gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
       // gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
       // gl.uniform1f(shader.uniforms["opacity"], alpha);
-      gl.uniformMatrix4fv(shader.normLoc, false, normMtx!)
-      gl.uniform1f(shader.opacityLoc, alpha)
+      gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
+      gl.uniform1f(shader.uniforms.opacity, alpha)
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
@@ -8544,7 +8481,7 @@ export class Niivue {
     }
     shader = this.fiberShader!
     shader.use(this.gl)
-    gl.uniformMatrix4fv(shader.mvpLoc, false, m)
+    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
     gl.uniform1f(shader.uniforms.opacity, alpha)
     for (let i = 0; i < this.meshes.length; i++) {
       if (this.meshes[i].visible === false) {
@@ -8621,7 +8558,7 @@ export class Niivue {
         this.scene.renderElevation
       )
     }
-    gl.uniformMatrix4fv(crosshairsShader.mvpLoc, false, mvpMtx)
+    gl.uniformMatrix4fv(crosshairsShader.uniforms.mvpMtx, false, mvpMtx)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer)
     gl.enable(gl.DEPTH_TEST)
@@ -8636,7 +8573,7 @@ export class Niivue {
       gl.depthFunc(gl.ALWAYS)
     }
     color[3] = alpha
-    gl.uniform4fv(crosshairsShader.colorLoc, color)
+    gl.uniform4fv(crosshairsShader.uniforms.surfaceColor, color)
     gl.bindVertexArray(this.crosshairs3D.vao)
     gl.drawElements(
       gl.TRIANGLES,
@@ -8876,11 +8813,11 @@ export class Niivue {
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
     }
-    this.gl.uniform4fv(this.lineShader.lineColorLoc, lineColor)
-    this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor)
+    this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
-    this.gl.uniform1f(this.lineShader.thicknessLoc, thickness)
-    this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY)
+    this.gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+    this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
@@ -8897,12 +8834,12 @@ export class Niivue {
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
     }
-    this.gl.uniform4fv(this.line3DShader.lineColorLoc, lineColor)
-    this.gl.uniform2fv(this.line3DShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform4fv(this.line3DShader.uniforms.lineColor, lineColor)
+    this.gl.uniform2fv(this.line3DShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
-    this.gl.uniform1f(this.line3DShader.thicknessLoc, thickness)
-    this.gl.uniform2fv(this.line3DShader.startXYLoc, startXY)
-    this.gl.uniform3fv(this.line3DShader.endXYZLoc, endXYZ)
+    this.gl.uniform1f(this.line3DShader.uniforms.thickness, thickness)
+    this.gl.uniform2fv(this.line3DShader.uniforms.startXY, startXY)
+    this.gl.uniform3fv(this.line3DShader.uniforms.endXYZ, endXYZ)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
@@ -8933,9 +8870,9 @@ export class Niivue {
 
     const currentSegmentXY = [startXYendXY[0], startXYendXY[1]]
 
-    this.gl.uniform4fv(this.lineShader.lineColorLoc, dottedLineColor)
-    this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [this.gl.canvas.width, this.gl.canvas.height])
-    this.gl.uniform1f(this.lineShader.thicknessLoc, thickness)
+    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, dottedLineColor)
+    this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
 
     // draw all segments except for the last one
     for (let i = 0; i < segmentCount - 1; i++) {
@@ -8954,21 +8891,21 @@ export class Niivue {
 
       // draw Line
 
-      this.gl.uniform4fv(this.lineShader.startXYendXYLoc, segmentStartXYendXY)
+      this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentStartXYendXY)
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
       // this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
       currentSegmentXY[0] += segment[0]
       currentSegmentXY[1] += segment[1]
     }
 
-    // this.gl.uniform4fv(this.lineShader.lineColorLoc, lineColor);
-    // this.gl.uniform2fv(this.lineShader.canvasWidthHeightLoc, [
+    // this.gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor);
+    // this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [
     //   this.gl.canvas.width,
     //   this.gl.canvas.height,
     // ]);
     // //draw Line
-    // this.gl.uniform1f(this.lineShader.thicknessLoc, thickness);
-    // this.gl.uniform4fv(this.lineShader.startXYendXYLoc, startXYendXY);
+    // this.gl.uniform1f(this.lineShader.uniforms.thickness, thickness);
+    // this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY);
     // this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }

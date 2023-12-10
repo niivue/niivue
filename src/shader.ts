@@ -56,38 +56,6 @@ export class Shader {
   uniforms: Record<string, WebGLUniformLocation | null> = {}
   isMatcap?: boolean
 
-  // TODO split these up into multiple shader sub-classes?
-  clipPlaneClrLoc: WebGLUniformLocation | null = null
-  mvpLoc: WebGLUniformLocation | null = null
-  drawOpacityLoc: WebGLUniformLocation | null = null
-  normLoc: WebGLUniformLocation | null = null
-  opacityLoc: WebGLUniformLocation | null = null
-  screenPxRangeLoc: WebGLUniformLocation | null = null
-  fontColorLoc: WebGLUniformLocation | null = null
-  canvasWidthHeightLoc: WebGLUniformLocation | null = null
-  leftTopWidthHeightLoc: WebGLUniformLocation | null = null
-  uvLeftTopWidthHeightLoc?: WebGLUniformLocation | null = null
-  backgroundMasksOverlaysLoc: WebGLUniformLocation | null = null
-  renderOverlayBlendLoc: WebGLUniformLocation | null = null
-  mvpMatRASLoc: WebGLUniformLocation | null = null
-  rayDirLoc: WebGLUniformLocation | null = null
-  clipPlaneLoc: WebGLUniformLocation | null = null
-  isAlphaClipDarkLoc: WebGLUniformLocation | null = null
-  overlayAlphaShaderLoc: WebGLUniformLocation | null = null
-  overlayOutlineWidthLoc: WebGLUniformLocation | null = null
-  axCorSagLoc: WebGLUniformLocation | null = null
-  sliceLoc: WebGLUniformLocation | null = null
-  frac2mmLoc: WebGLUniformLocation | null = null
-  lineColorLoc: WebGLUniformLocation | null = null
-  thicknessLoc: WebGLUniformLocation | null = null
-  startXYendXYLoc: WebGLUniformLocation | null = null
-  startXYLoc: WebGLUniformLocation | null = null
-  endXYZLoc: WebGLUniformLocation | null = null
-  circleColorLoc: WebGLUniformLocation | null = null
-  fillPercentLoc: WebGLUniformLocation | null = null
-  colorLoc: WebGLUniformLocation | null = null
-  layerLoc: WebGLUniformLocation | null = null
-
   constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
     this.program = compileShader(gl, vertexSrc, fragmentSrc)
 
