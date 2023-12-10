@@ -6082,7 +6082,7 @@ export class Niivue {
           continue
         }
         const nlayers = mesh.layers.length
-        if (('edgeColormap' in mesh) && ('edges' in mesh) && (mesh.edges !== undefined)) {
+        if ('edgeColormap' in mesh && 'edges' in mesh && mesh.edges !== undefined) {
           const neg = negMinMax(mesh.edgeMin!, mesh.edgeMax!, NaN, NaN)
           this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true, true, mesh.colormapInvert)
           //  alpha = false,
