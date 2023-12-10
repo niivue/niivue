@@ -493,8 +493,6 @@ export class Niivue {
   currentClipPlaneIndex = 0
   lastCalled = new Date().getTime()
 
-  orientCubeMtxLoc: WebGLUniformLocation | null = null
-
   selectedObjectId = -1
   CLIP_PLANE_ID = 1
   VOLUME_ID = 254
@@ -4972,8 +4970,6 @@ export class Niivue {
     this.orientCubeShader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader)
     this.orientCubeShaderVAO = gl.createVertexArray()
     gl.bindVertexArray(this.orientCubeShaderVAO)
-    const program = this.orientCubeShader.program
-    this.orientCubeMtxLoc = gl.getUniformLocation(program, 'u_matrix')
     // Create a buffer
     const positionBuffer = gl.createBuffer()
     gl.enableVertexAttribArray(0)
@@ -8037,7 +8033,7 @@ export class Niivue {
     mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth))
     const modelViewProjectionMatrix = mat4.create()
     mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
-    gl.uniformMatrix4fv(this.orientCubeMtxLoc, false, modelViewProjectionMatrix)
+    gl.uniformMatrix4fv(this.orientCubeShader!.uniforms.u_matrix, false, modelViewProjectionMatrix)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 168)
     gl.bindVertexArray(this.unusedVAO)
     this.gl.disable(this.gl.CULL_FACE)
