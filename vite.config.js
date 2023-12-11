@@ -25,7 +25,7 @@ export default defineConfig({
   build: {
     outDir: './dist_intermediate',
     lib: {
-      entry: resolve(__dirname, 'src/niivue/index.js'),
+      entry: resolve(__dirname, 'src/niivue/index.ts'),
       name: 'niivue',
       fileName: (format) => `niivue.${format}.js`
     }

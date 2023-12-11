@@ -33,13 +33,17 @@ export class NVImage {
   name: string
   id: string
   url?: string
+  headers?: Record<string, string>
   _colormap: string
   _opacity: number
   percentileFrac: number
   ignoreZeroVoxels: boolean
   trustCalMinMax: boolean
   colormapNegative: string
+  // TODO see niivue/loadDocument
+  colorMapNegative: string
   colormapLabel: LUT | null
+  colormapInvert?: boolean
   nFrame4D?: number
   frame4D: number // indexed from 0!
   nTotalFrame4D?: number
@@ -47,7 +51,7 @@ export class NVImage {
   cal_maxNeg: number
   colorbarVisible = true
   visible: boolean
-  modulationImage = null
+  modulationImage: number | null = null
   modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
   // TODO this is some Daikon internal thing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,6 +61,9 @@ export class NVImage {
   maxShearDeg?: number
   useQFormNotSForm: boolean
 
+  alphaThreshold?: number
+
+  pixDims?: number[]
   matRAS?: mat4
   pixDimsRAS?: number[]
   obliqueRAS?: mat4
@@ -76,6 +83,7 @@ export class NVImage {
   img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
   imaginary?: Float32Array
   fileObject?: File | File[]
+  dims?: number[]
 
   onColormapChange: (img: NVImage) => void = () => {}
   onOpacityChange: (img: NVImage) => void = () => {}
@@ -91,6 +99,11 @@ export class NVImage {
   robust_max?: number
   global_min?: number
   global_max?: number
+
+  // TODO referenced by niivue/loadVolumes
+  urlImgData?: string
+  isManifest?: boolean
+  limitFrames4D?: number
 
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   // TODO move to enum
@@ -174,6 +187,7 @@ export class NVImage {
     this.ignoreZeroVoxels = ignoreZeroVoxels
     this.trustCalMinMax = trustCalMinMax
     this.colormapNegative = colormapNegative
+    this.colorMapNegative = colormapNegative
     this.colormapLabel = colormapLabel
     this.frame4D = frame4D // indexed from 0!
     this.cal_minNeg = cal_minNeg
@@ -185,6 +199,7 @@ export class NVImage {
     this.useQFormNotSForm = useQFormNotSForm
 
     // Added to support zerosLike
+    // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
       return
     }
@@ -2289,8 +2304,17 @@ export class NVImage {
     return this._colormap
   }
 
-  set colormap(colormap: string) {
-    this.setColormap(colormap)
+  get colorMap(): string {
+    return this._colormap
+  }
+
+  // TODO duplicate fields, see niivue/loadDocument
+  set colormap(cm: string) {
+    this.setColormap(cm)
+  }
+
+  set colorMap(cm: string) {
+    this.setColormap(cm)
   }
 
   get opacity(): number {
@@ -2525,7 +2549,7 @@ export class NVImage {
   // not included in public docs
   // save image as NIfTI volume
   // if fnm is empty, data is returned
-  saveToDisk(fnm: string, drawing8 = null): Uint8Array {
+  saveToDisk(fnm: string, drawing8: Uint8Array | null = null): Uint8Array {
     // TODO there was an unnecessary strict string check for fnm here,
     // shouldn't be necessary anymore. Thanks TS! :)
     const saveData = this.saveToUint8Array(fnm, drawing8)
@@ -2582,11 +2606,15 @@ export class NVImage {
 
   static async fetchPartial(url: string, bytesToLoad: number, headers: Record<string, string> = {}): Promise<Response> {
     try {
-      return fetch(url, {
-        headers: { range: 'bytes=0-' + bytesToLoad, ...headers }
+      const response = await fetch(url, {
+        headers: { range: `bytes=0-'${bytesToLoad}`, stream: 'true', ...headers }
       })
-    } catch {
-      return fetch(url, { headers })
+      return response
+    } catch (error) {
+      console.error(error)
+      console.error('fetchPartial failed, trying again without range header')
+      const response = await fetch(url, { headers })
+      return response
     }
   }
 
@@ -3235,8 +3263,8 @@ export class NVImage {
    * Update options for image
    */
   applyOptionsUpdate(options: ImageFromUrlOptions): void {
-    this.hdr!.cal_min = options.cal_min
-    this.hdr!.cal_max = options.cal_max
+    this.hdr!.cal_min = options.cal_min!
+    this.hdr!.cal_max = options.cal_max!
     Object.assign(this, options)
   }
 

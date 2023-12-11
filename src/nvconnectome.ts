@@ -21,7 +21,7 @@ const defaultOptions: ConnectomeOptions = {
   edgeScale: 1
 }
 
-type FreeSurferConnectome = {
+export type FreeSurferConnectome = {
   data_type: string
   points: Array<{
     comments?: Array<{

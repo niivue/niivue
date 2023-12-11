@@ -1,4 +1,5 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
+import { vec3, vec4 } from 'gl-matrix'
 import { NVUtilities } from './nvutilities.js'
 import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvimage/index.js'
 import { MeshType, NVMesh } from './nvmesh.js'
@@ -166,11 +167,11 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
 type SceneData = {
   azimuth: number
   elevation: number
-  crosshairPos: number[]
+  crosshairPos: vec3
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
   volScaleMultiplier: number
-  pan2Dxyzmm: number[]
+  pan2Dxyzmm: vec4
 }
 
 type Scene = {
@@ -180,10 +181,12 @@ type Scene = {
   renderAzimuth: number
   renderElevation: number
   volScaleMultiplier: number
-  crosshairPos: number[]
+  crosshairPos: vec3
   clipPlane: number[]
   clipPlaneDepthAziElev: number[]
-  pan2Dxyzmm: number[]
+  pan2Dxyzmm: vec4
+  _elevation?: number
+  _azimuth?: number
 }
 
 type DocumentData = {
@@ -198,9 +201,11 @@ type DocumentData = {
   // TODO not sure if they should be here? They are needed for loadFromJSON
   meshesString?: string
   sceneData?: SceneData
+  // TODO referenced in niivue/loadDocument
+  connectomes?: string[]
 }
 
-type ExportDocumentData = {
+export type ExportDocumentData = {
   // base64 encoded images
   encodedImageBlobs: string[]
   // base64 encoded drawing
@@ -212,7 +217,7 @@ type ExportDocumentData = {
   // array of image options to recreate images
   imageOptionsArray: ImageFromUrlOptions[]
   // data to recreate a scene
-  sceneData: SceneData
+  sceneData: Partial<SceneData>
   // configuration options of {@link Niivue} instance
   opts: NVConfigOptions
   // encoded meshes
@@ -242,7 +247,7 @@ export class NVDocument {
   volumes: NVImage[] = []
   meshDataObjects?: Array<NVMesh | NVConnectome>
   meshes: Array<NVMesh | NVConnectome> = []
-  drawBitmap = null
+  drawBitmap: Uint8Array | null = null
   imageOptionsMap = new Map()
   meshOptionsMap = new Map()
 
@@ -288,10 +293,10 @@ export class NVDocument {
         this.onZoom3DChange(scale)
       },
 
-      get crosshairPos(): number[] {
+      get crosshairPos(): vec3 {
         return this.sceneData.crosshairPos
       },
-      set crosshairPos(crosshairPos: number[]) {
+      set crosshairPos(crosshairPos: vec3) {
         this.sceneData.crosshairPos = crosshairPos
       },
 
@@ -309,7 +314,7 @@ export class NVDocument {
         this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev
       },
 
-      get pan2Dxyzmm(): number[] {
+      get pan2Dxyzmm(): vec4 {
         return this.sceneData.pan2Dxyzmm
       },
 
@@ -496,6 +501,7 @@ export class NVDocument {
         imageOptions = {
           name: '',
           colormap: 'gray',
+          colorMap: 'gray',
           opacity: 1.0,
           pairedImgData: null,
           cal_min: NaN,
@@ -548,6 +554,7 @@ export class NVDocument {
           imageOptions = {
             name: '',
             colormap: 'gray',
+            colorMap: 'gray',
             opacity: 1.0,
             pairedImgData: null,
             cal_min: NaN,

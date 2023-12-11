@@ -146,8 +146,8 @@ export class ColorTables {
 
   // not included in public docs
   // The drawing colormap is a variant of the label colormap with precisely 256 colors
-  makeDrawLut(name: keyof typeof cmaps | ColorMap): LUT {
-    let cmap: ColorMap = typeof name === 'object' ? name : cmaps[name]
+  makeDrawLut(name: string | ColorMap): LUT {
+    let cmap: ColorMap = typeof name === 'object' ? name : cmaps[name as keyof typeof cmaps]
 
     if (cmap === undefined) {
       cmap = {

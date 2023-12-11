@@ -187,7 +187,7 @@ export function unProject(winX: number, winY: number, winZ: number, mvpMatrix: m
   return out
 }
 
-export function unpackFloatFromVec4i(val: number[]): number {
+export function unpackFloatFromVec4i(val: Uint8Array): number {
   // Convert 32-bit rgba to float32
   // https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/viewer/screensurface.js#L552
   const bitSh = [1.0 / (256.0 * 256.0 * 256.0), 1.0 / (256.0 * 256.0), 1.0 / 256.0, 1.0]

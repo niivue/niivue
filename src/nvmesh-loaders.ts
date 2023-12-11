@@ -2549,9 +2549,11 @@ export class NVMeshLoaders {
   // https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
   static readMGH(buffer: ArrayBuffer, n_vert = 0, isReadColortables = false): MGH {
     let reader = new DataView(buffer)
-    const raw = buffer
+    let raw = buffer
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
       const decompressed = decompressSync(new Uint8Array(buffer))
+      raw = new ArrayBuffer(decompressed.byteLength)
+      new Uint8Array(raw).set(new Uint8Array(decompressed))
       reader = new DataView(decompressed.buffer)
     }
     const version = reader.getInt32(0, false)
@@ -2623,6 +2625,7 @@ export class NVMeshLoaders {
     // const TAG_ORIG_RAS2VOX = 44;
     const nBytes = raw.byteLength
     let colormapLabel: LUT
+
     while (voxoffset < nBytes - 8) {
       // let vx = voxoffset;
       const tagType = reader.getInt32((voxoffset += 4), isLittleEndian)

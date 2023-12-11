@@ -54,6 +54,7 @@ export const getGLExtension = function (gl: WebGL2RenderingContext, ext: string)
 export class Shader {
   program: WebGLProgram
   uniforms: Record<string, WebGLUniformLocation | null> = {}
+  isMatcap?: boolean
 
   constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
     this.program = compileShader(gl, vertexSrc, fragmentSrc)
@@ -78,7 +79,7 @@ export class Shader {
     }
 
     for (const unif in this.uniforms) {
-      this.uniforms[unif] = gl.getUniformLocation(this.program, unif)
+      this.uniforms[unif] = gl.getUniformLocation(this.program, unif)!
     }
   }
 

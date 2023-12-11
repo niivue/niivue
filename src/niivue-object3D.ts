@@ -43,7 +43,10 @@ export class NiivueObject3D {
   // TODO needed through NVImage
   furthestVertexFromOrigin?: number
   originNegate?: vec3
-  fieldOfViewDeObliqueMM?: number[]
+  fieldOfViewDeObliqueMM?: vec3
+
+  // TODO needed through crosshairs in NiiVue
+  mm?: vec4
 
   constructor(
     id: number,
@@ -71,9 +74,9 @@ export class NiivueObject3D {
   static generateCrosshairs = function (
     gl: WebGL2RenderingContext,
     id: number,
-    xyzMM: number[],
-    xyzMin: number[],
-    xyzMax: number[],
+    xyzMM: vec4,
+    xyzMin: vec3,
+    xyzMax: vec3,
     radius: number,
     sides = 20
   ): NiivueObject3D {
@@ -91,9 +94,9 @@ export class NiivueObject3D {
   // not included in public docs
   static generateCrosshairsGeometry = function (
     gl: WebGL2RenderingContext,
-    xyzMM: number[],
-    xyzMin: number[],
-    xyzMax: number[],
+    xyzMM: vec4,
+    xyzMin: vec3,
+    xyzMax: vec3,
     radius: number,
     sides = 20
   ): Geometry {
