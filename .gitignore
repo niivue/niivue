@@ -12,6 +12,7 @@ niivue.es.js
 niivue.umd.js
 /downloads
 __diff_output__
+/coverage
 
 # local env files
 .env.local
