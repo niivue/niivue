@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>read mesh layers dynamically</title>
+  <link rel="stylesheet" href="niivue.css" />
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue doesn't work properly without JavaScript enabled. Please enable
+      it to continue.</strong>
+  </noscript>
+  <header>
+    <label for="meshSlider2">Threshold</label>
+    <input type="range" min="1" max="49" value="5" class="slider" id="meshSlider2" />
+    <label for="meshSlider3">Opacity</label>
+    <input type="range" min="1" max="10" value="7" class="slider" id="meshSlider3" />
+    <input type="checkbox" id="meshCheckbox1" checked />
+    <label for="meshCheckbox1">Hemisphere Visible</label>
+    <button id="addMeshLayerButton">Add Layer</button>
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer>
+    <label id="shaders">Shaders: </label><label id="location">&nbsp; </label>
+  </footer>
+</body>
+
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js";
+
+  var checkbox1 = document.getElementById("meshCheckbox1");
+  checkbox1.onclick = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, 'visible', checkbox1.checked);
+    console.log(`visible=${nv1.meshes[0].visible}`);
+  }
+  var slider2 = document.getElementById("meshSlider2");
+  slider2.oninput = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1);
+  };
+  var slider3 = document.getElementById("meshSlider3");
+  slider3.oninput = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1);
+  };
+
+  var button = document.getElementById("addMeshLayerButton");
+  button.onclick = async () => {
+    const layer =
+    {
+      url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
+      cal_min: 0.5,
+      cal_max: 5.5,
+      useNegativeCmap: true,
+      opacity: 0.7,
+    };
+    const response = await fetch(layer.url)
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    const buffer = await response.arrayBuffer();
+    niivue.NVMeshLoaders.readLayer(layer.url, buffer, nv1.meshes[0], layer.opacity, 'gray', undefined, layer.useNegativeCmap);
+    nv1.meshes[0].updateMesh(nv1.gl);
+    nv1.drawScene();
+    console.log('mesh updated');
+  }
+
+  function handleLocationChange(data) {
+    document.getElementById("location").innerHTML =
+      "&nbsp;&nbsp;" + data.string;
+  }
+  var nv1 = new niivue.Niivue({
+    show3Dcrosshair: true,
+    onLocationChange: handleLocationChange,
+    backColor: [1, 1, 1, 1],
+    meshXRay: 0.3
+  });
+  nv1.attachTo("gl1");
+  nv1.opts.isColorbar = true;
+
+  await nv1.loadMeshes([
+    {
+      url: "../images/BrainMesh_ICBM152.lh.mz3",
+      rgba255: [255, 255, 255, 255],
+    },
+    { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
+  ]);
+ 
+  let cmaps = nv1.meshShaderNames();
+  let cmapEl = document.getElementById("shaders");
+  for (let i = 0; i < cmaps.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = cmaps[i];
+    btn.onclick = function () {
+      nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+    };
+    cmapEl.appendChild(btn);
+  }
+</script>
