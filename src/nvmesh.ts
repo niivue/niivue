@@ -1,58 +1,64 @@
 import { vec3 } from 'gl-matrix'
-import { Log } from './logger'
+import { v4 as uuidv4 } from '@lukeed/uuid'
+import { Log } from './logger.js'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
-import { cmapper } from './colortables'
-import { NVMeshUtilities } from './nvmesh-utilities'
-import { NVMeshLoaders } from './nvmesh-loaders'
+import { ColorMap, LUT, cmapper } from './colortables.js'
+import { NVMeshUtilities } from './nvmesh-utilities.js'
+import { NVMeshLoaders } from './nvmesh-loaders.js'
+import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
+import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
 
 const log = new Log()
 
 /** Enum for text alignment
- * @enum
- * @readonly
  */
-export const MeshType = Object.freeze({
-  MESH: 'mesh',
-  CONNECTOME: 'connectome',
-  FIBER: 'fiber'
-})
+export enum MeshType {
+  MESH = 'mesh',
+  CONNECTOME = 'connectome',
+  FIBER = 'fiber'
+}
 
-/**
- * @typedef {Object} NVMeshLayer
- * @property {string} url
- * @property {number} opacity
- * @property {string} colormap
- * @property {string} colormapNegative
- * @property {boolean} useNegativeCmap
- * @property {number} cal_min
- * @property {number} cal_max
- */
+export type NVMeshLayer = {
+  name?: string
+  key?: string
+  url?: string
+  headers?: Record<string, string>
+  opacity: number
+  colormap: string
+  colormapNegative: string
+  colormapInvert: boolean
+  colormapLabel?: ColorMap | LUT
+  useNegativeCmap: boolean
+  global_min: number
+  global_max: number
+  cal_min: number
+  cal_max: number
+  cal_minNeg: number
+  cal_maxNeg: number
+  isAdditiveBlend: boolean
+  frame4D: number
+  nFrame4D: number
+  values: number[]
+  isOutlineBorder: boolean
+  isTransparentBelowCalMin?: boolean
+  alphaThreshold: boolean
 
-/**
- * @typedef {Object} NVMeshFromUrlOptions
- * @property {string} url
- * @property {WebGL2RenderingContext} gl
- * @property {string} name
- * @property {number} opacity
- * @property {number[]} rgba255
- * @property {boolean} visible
- * @property {NVMeshLayer[]} layers
- */
+  base64?: string
 
-/**
- *
- * @constructor
- * @param {string} url - url mesh will be loaded from
- * @param {WebGL2RenderingContext} gl
- * @param {string} name
- * @param {number} opacity
- * @param {number[]} rgba255
- * @param {boolean} visible
- * @param {NVMeshLayer[]} layers
- * @returns {NVMeshFromUrlOptions}
- *
- */
+  // TODO referenced in niivue/refreshColormaps
+  colorbarVisible?: boolean
+}
+
 export class NVMeshFromUrlOptions {
+  url: string
+  gl: WebGL2RenderingContext | null
+  name: string
+  opacity: number
+  rgba255: number[]
+  visible: boolean
+  layers: NVMeshLayer[]
+  colorbarVisible: boolean
+
   constructor(
     url = '',
     gl = null,
@@ -74,46 +80,135 @@ export class NVMeshFromUrlOptions {
   }
 }
 
+type BaseLoadParams = {
+  // WebGL rendering context
+  gl: WebGL2RenderingContext
+  // a name for this image. Default is an empty string
+  name: string
+  // the opacity for this image. default is 1
+  opacity: number
+  // the base color of the mesh. RGBA values from 0 to 255. Default is white
+  rgba255: number[]
+  // whether or not this image is to be visible
+  visible: boolean
+  // layers of the mesh to load
+  layers: NVMeshLayer[]
+}
+
+export type LoadFromUrlParams = Partial<BaseLoadParams> & {
+  // the resolvable URL pointing to a mesh to load
+  url: string
+  headers?: Record<string, string>
+}
+
+type LoadFromFileParams = BaseLoadParams & {
+  // the file object
+  file: Blob
+}
+
+type LoadFromBase64Params = BaseLoadParams & {
+  // the base64 encoded string
+  base64: string
+}
+
 /**
- * @class NVMesh
- * @type NVMesh
- * @description
  * a NVMesh encapsulates some mesh data and provides methods to query and operate on meshes
- * @constructor
- * @param {array} pts a 3xN array of vertex positions (X,Y,Z coordinates).
- * @param {array} tris a 3xN array of triangle indices (I,J,K; indexed from zero). Each triangle generated from three vertices.
- * @param {string} [name=''] a name for this image. Default is an empty string
- * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
- * @param {number} [opacity=1.0] the opacity for this mesh. default is 1
- * @param {boolean} [visible=true] whether or not this image is to be visible
- * @param {WebGLRenderingContext} gl - WebGL rendering context
- * @param {object} connectome specify connectome edges and nodes. Default is null (not a connectome).
- * @property {array} dpg Data per group for tractography, see TRK format. Default is null (not tractograpgy)
- * @property {array} dps  Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
- * @property {array} dpv Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
- * @param {boolean} [colorbarVisible=true] does this mesh display a colorbar
- * @param {string} [anatomicalStructurePrimary=''] region for mesh. Default is an empty string
  */
 export class NVMesh {
+  id: string
+  name: string
+  anatomicalStructurePrimary: string
+  colorbarVisible: boolean
+  furthestVertexFromOrigin: number
+  extentsMin: number | number[]
+  extentsMax: number | number[]
+  opacity: number
+  visible: boolean
+  meshShaderIndex = 0
+  offsetPt0: number[] | null = null
+
+  colormapInvert = false
+  fiberGroupColormap: ColorMap | null = null
+
+  indexBuffer: WebGLBuffer
+  vertexBuffer: WebGLBuffer
+  vao: WebGLVertexArrayObject
+
+  pts: number[]
+  tris?: number[]
+  layers: NVMeshLayer[]
+  type = MeshType.MESH
+
+  data_type?: string
+  rgba255: number[]
+  fiberLength?: number
+  fiberLengths?: number[]
+  fiberDither = 0.1
+  fiberColor = 'Global'
+  fiberDecimationStride = 1 // e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
+  fiberMask?: unknown[]
+  colormap?: ColorMap | LegacyConnectome | string | null
+  dpg?: ValuesArray | null
+  dps?: ValuesArray | null
+  dpv?: ValuesArray | null
+
+  hasConnectome = false
+  connectome?: LegacyConnectome | string
+
+  // TODO this should somehow get aligned with connectome
+  indexCount?: number
+  vertexCount = 1
+  nodeScale = 4
+  edgeScale = 1
+  nodeColormap = 'warm'
+  edgeColormap = 'warm'
+  nodeColormapNegative?: string
+  edgeColormapNegative?: string
+  nodeMinColor?: number
+  nodeMaxColor?: number
+  edgeMin?: number
+  edgeMax?: number
+
+  nodes?: LegacyNodes | NVConnectomeNode[]
+
+  edges?: number[] | NVConnectomeEdge[]
+
+  points?: Point[]
+
+  /**
+   * @param pts - a 3xN array of vertex positions (X,Y,Z coordinates).
+   * @param tris - a 3xN array of triangle indices (I,J,K; indexed from zero). Each triangle generated from three vertices.
+   * @param name - a name for this image. Default is an empty string
+   * @param rgba255 - the base color of the mesh. RGBA values from 0 to 255. Default is white
+   * @param opacity - the opacity for this mesh. default is 1
+   * @param visible - whether or not this image is to be visible
+   * @param gl - WebGL rendering context
+   * @param connectome - specify connectome edges and nodes. Default is null (not a connectome).
+   * @param dpg - Data per group for tractography, see TRK format. Default is null (not tractograpgy)
+   * @param dps - Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
+   * @param dpv - Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
+   * @param colorbarVisible - does this mesh display a colorbar
+   * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
+   */
   constructor(
-    pts,
-    tris,
+    pts: number[],
+    tris: number[],
     name = '',
     rgba255 = [255, 255, 255, 255],
     opacity = 1.0,
     visible = true,
-    gl,
-    connectome = null,
-    dpg = null,
-    dps = null,
-    dpv = null,
+    gl: WebGL2RenderingContext,
+    connectome: LegacyConnectome | string | null = null,
+    dpg: ValuesArray | null = null,
+    dps: ValuesArray | null = null,
+    dpv: ValuesArray | null = null,
     colorbarVisible = true,
     anatomicalStructurePrimary = ''
   ) {
     this.anatomicalStructurePrimary = anatomicalStructurePrimary
     this.name = name
     this.colorbarVisible = colorbarVisible
-    this.id = crypto.randomUUID()
+    this.id = uuidv4()
     const obj = NVMeshUtilities.getExtents(pts)
     this.furthestVertexFromOrigin = obj.mxDx
     this.extentsMin = obj.extentsMin
@@ -121,9 +216,9 @@ export class NVMesh {
     this.opacity = opacity > 1.0 ? 1.0 : opacity // make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
     this.visible = visible
     this.meshShaderIndex = 0
-    this.indexBuffer = gl.createBuffer()
-    this.vertexBuffer = gl.createBuffer()
-    this.vao = gl.createVertexArray()
+    this.indexBuffer = gl.createBuffer()!
+    this.vertexBuffer = gl.createBuffer()!
+    this.vao = gl.createVertexArray()!
     this.offsetPt0 = null
     this.hasConnectome = false
     this.colormapInvert = false
@@ -162,6 +257,7 @@ export class NVMesh {
       this.hasConnectome = true
       const keysArray = Object.keys(connectome)
       for (let i = 0, len = keysArray.length; i < len; i++) {
+        // @ts-expect-error -- this should be done explicitly
         this[keysArray[i]] = connectome[keysArray[i]]
       }
     }
@@ -186,7 +282,7 @@ export class NVMesh {
 
   // not included in public docs
   // internal function filters tractogram to identify which color and visibility of streamlines
-  updateFibers(gl) {
+  updateFibers(gl: WebGL2RenderingContext): void {
     if (!this.offsetPt0 || !this.fiberLength) {
       return
     }
@@ -227,7 +323,7 @@ export class NVMesh {
     // fill fiber Color
     const dither = this.fiberDither
     const ditherHalf = dither * 0.5
-    function rgb2int32(r, g, b) {
+    function rgb2int32(r: number, g: number, b: number): number {
       const ditherFrac = dither * Math.random()
       const d = 255.0 * (ditherFrac - ditherHalf)
       r = Math.max(Math.min(r + d, 255.0), 0.0)
@@ -235,7 +331,15 @@ export class NVMesh {
       b = Math.max(Math.min(b + d, 255.0), 0.0)
       return r + (g << 8) + (b << 16)
     }
-    function direction2rgb(x1, y1, z1, x2, y2, z2, ditherFrac) {
+    function direction2rgb(
+      x1: number,
+      y1: number,
+      z1: number,
+      x2: number,
+      y2: number,
+      z2: number,
+      ditherFrac: number
+    ): number {
       // generate color based on direction between two 3D spatial positions
       const v = vec3.fromValues(Math.abs(x1 - x2), Math.abs(y1 - y2), Math.abs(z1 - z2))
       vec3.normalize(v, v)
@@ -247,15 +351,15 @@ export class NVMesh {
     } // direction2rgb()
     // Determine color: local, global, dps0, dpv0, etc.
     const fiberColor = this.fiberColor.toLowerCase()
-    let dps = null
-    let dpv = null
-    if (fiberColor.startsWith('dps') && this.dps.length > 0) {
+    let dps: number[] | null = null
+    let dpv: number[] | null = null
+    if (fiberColor.startsWith('dps') && this.dps && this.dps.length > 0) {
       const n = parseInt(fiberColor.substring(3))
       if (n < this.dps.length && this.dps[n].vals.length === n_count) {
         dps = this.dps[n].vals
       }
     }
-    if (fiberColor.startsWith('dpv') && this.dpv.length > 0) {
+    if (fiberColor.startsWith('dpv') && this.dpv && this.dpv.length > 0) {
       const n = parseInt(fiberColor.substring(3))
       if (n < this.dpv.length && this.dpv[n].vals.length === npt) {
         dpv = this.dpv[n].vals
@@ -263,12 +367,12 @@ export class NVMesh {
     }
     const streamlineVisible = new Int16Array(n_count)
     // if ((this.dpg !== null) && (this.fiberGroupMask !== null) && (this.fiberGroupMask.length === this.dpg.length)) {
-    if (this.dpg !== null && this.fiberGroupColormap !== null) {
+    if (this.dpg && this.fiberGroupColormap !== null) {
       const lut = new Uint8ClampedArray(this.dpg.length * 4) // 4 component RGBA for each group
       const groupVisible = new Array(this.dpg.length).fill(false)
       const cmap = this.fiberGroupColormap
-      if (!('A' in cmap)) {
-        cmap.A = new Uint8ClampedArray(cmap.I.length).fill(255)
+      if (cmap.A === undefined) {
+        cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255))
       }
       for (let i = 0; i < cmap.I.length; i++) {
         let idx = cmap.I[i]
@@ -311,7 +415,7 @@ export class NVMesh {
       }
     } else if (dpv) {
       // color per vertex
-      const lut = cmapper.colormap(this.colormap, this.colormapInvert)
+      const lut = cmapper.colormap(this.colormap as string, this.colormapInvert)
       let mn = dpv[0]
       let mx = dpv[0]
       for (let i = 0; i < npt; i++) {
@@ -321,14 +425,14 @@ export class NVMesh {
       let v4 = 3 // +3: fill 4th component colors: XYZC = 0123
       for (let i = 0; i < npt; i++) {
         let color = (dpv[i] - mn) / (mx - mn)
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4
         const RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16)
         posClrU32[v4] = RGBA
         v4 += 4
       }
     } else if (dps) {
       // color per streamline
-      const lut = cmapper.colormap(this.colormap, this.colormapInvert)
+      const lut = cmapper.colormap(this.colormap as string, this.colormapInvert)
       let mn = dps[0]
       let mx = dps[0]
       for (let i = 0; i < n_count; i++) {
@@ -340,7 +444,7 @@ export class NVMesh {
       } // avoid divide by zero
       for (let i = 0; i < n_count; i++) {
         let color = (dps[i] - mn) / (mx - mn)
-        color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4
         const RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16)
         const vStart = offsetPt0[i] // first vertex in streamline
         const vEnd = offsetPt0[i + 1] - 1 // last vertex in streamline
@@ -420,7 +524,7 @@ export class NVMesh {
     const min_mm = this.fiberLength
     //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
     const primitiveRestart = Math.pow(2, 32) - 1 // for gl.UNSIGNED_INT
-    const indices = []
+    const indices: number[] = []
     let stride = -1
     for (let i = 0; i < n_count; i++) {
       // let n_pts = offsetPt0[i + 1] - offsetPt0[i]; //if streamline0 starts at point 0 and streamline1 at point 4, then streamline0 has 4 points: 0,1,2,3
@@ -445,46 +549,34 @@ export class NVMesh {
   } // updateFibers()
 
   // internal function filters connectome to identify which color, size and visibility of nodes and edges
-  updateConnectome(gl) {
+  updateConnectome(gl: WebGL2RenderingContext): void {
     // draw nodes
-    const tris = []
-    const nNode = this.nodes.X.length
+    const tris: number[] = []
+    const nNode = (this.nodes as LegacyNodes).X.length
     let hasEdges = false
-    if (nNode > 1 && 'edges' in this) {
-      let nEdges = this.edges.length
+    if (nNode > 1 && this.edges) {
+      let nEdges = this.edges!.length
       if ((nEdges = nNode * nNode)) {
         hasEdges = true
       } else {
         console.log('Expected %d edges not %d', nNode * nNode, nEdges)
       }
     }
-    if (!('nodeScale' in this.hasOwnProperty)) {
-      this.nodeScale = 4
-    }
-    if (!('edgeScale' in this)) {
-      this.edgeScale = 1
-    }
-    if (!('nodeColormap' in this)) {
-      this.nodeColormap = 'warm'
-    }
-    if (!('edgeColormap' in this)) {
-      this.edgeColormap = 'warm'
-    }
 
     // draw all nodes
-    const pts = []
-    const rgba255 = []
+    const pts: number[] = []
+    const rgba255: number[] = []
     let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
     let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
-    let hasNeg = 'nodeColormapNegative' in this
-    let min = this.nodeMinColor
-    let max = this.nodeMaxColor
+    let hasNeg = this.nodeColormapNegative !== undefined
+    let min = this.nodeMinColor!
+    let max = this.nodeMaxColor!
     for (let i = 0; i < nNode; i++) {
-      const radius = this.nodes.Size[i] * this.nodeScale
+      const radius = (this.nodes as LegacyNodes).Size[i] * this.nodeScale
       if (radius <= 0.0) {
         continue
       }
-      let color = this.nodes.Color[i]
+      let color = (this.nodes as LegacyNodes).Color[i]
       let isNeg = false
       if (hasNeg && color < 0) {
         isNeg = true
@@ -498,24 +590,28 @@ export class NVMesh {
       } else {
         color = 1.0
       }
-      color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+      color = Math.round(Math.max(Math.min(255, color * 255))) * 4
       let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
       if (isNeg) {
         rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
       }
-      const pt = [this.nodes.X[i], this.nodes.Y[i], this.nodes.Z[i]]
+      const pt: vec3 = [
+        (this.nodes as LegacyNodes).X[i],
+        (this.nodes as LegacyNodes).Y[i],
+        (this.nodes as LegacyNodes).Z[i]
+      ] // TODO defined assertions should not be necessary here, this should be correctly assigned in the constructor
       NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
     }
     // draw all edges
     if (hasEdges) {
       lut = cmapper.colormap(this.edgeColormap, this.colormapInvert)
       lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert)
-      hasNeg = 'edgeColormapNegative' in this
-      min = this.edgeMin
-      max = this.edgeMax
+      hasNeg = this.edgeColormapNegative !== undefined
+      min = this.edgeMin!
+      max = this.edgeMax!
       for (let i = 0; i < nNode - 1; i++) {
         for (let j = i + 1; j < nNode; j++) {
-          let color = this.edges[i * nNode + j]
+          let color = (this.edges as number[])[i * nNode + j]
           let isNeg = false
           if (hasNeg && color < 0) {
             isNeg = true
@@ -533,13 +629,21 @@ export class NVMesh {
           } else {
             color = 1.0
           }
-          color = Math.round(Math.max(Math.min(255, color * 255)), 1) * 4
+          color = Math.round(Math.max(Math.min(255, color * 255))) * 4
           let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
           if (isNeg) {
             rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
           }
-          const pti = [this.nodes.X[i], this.nodes.Y[i], this.nodes.Z[i]]
-          const ptj = [this.nodes.X[j], this.nodes.Y[j], this.nodes.Z[j]]
+          const pti: vec3 = [
+            (this.nodes as LegacyNodes).X[i],
+            (this.nodes as LegacyNodes).Y[i],
+            (this.nodes as LegacyNodes).Z[i]
+          ]
+          const ptj: vec3 = [
+            (this.nodes as LegacyNodes).X[j],
+            (this.nodes as LegacyNodes).Y[j],
+            (this.nodes as LegacyNodes).Z[j]
+          ]
           NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
         } // for j
       } // for i
@@ -559,7 +663,7 @@ export class NVMesh {
   }
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
-  updateMesh(gl) {
+  updateMesh(gl: WebGL2RenderingContext): void {
     if (this.offsetPt0) {
       this.updateFibers(gl)
       return // fiber not mesh
@@ -572,11 +676,11 @@ export class NVMesh {
       console.log('underspecified mesh')
       return
     }
-    function lerp(x, y, a) {
+    function lerp(x: number, y: number, a: number): number {
       // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
       return x * (1 - a) + y * a
     }
-    function additiveBlend(x, y) {
+    function additiveBlend(x: number, y: number): number {
       return Math.min(x + y, 255.0)
     }
     const posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255)
@@ -594,18 +698,17 @@ export class NVMesh {
         if (opacity <= 0.0 || layer.cal_min > layer.cal_max) {
           continue
         }
-        if (!('isAdditiveBlend' in layer)) {
+        if (layer.isAdditiveBlend === undefined) {
           layer.isAdditiveBlend = false
         }
-        if (!('colormapLabel' in layer)) {
-          layer.colormapLabel = []
-        }
-        if ('R' in layer.colormapLabel && !('lut' in layer.colormapLabel)) {
+        // build a label colormap
+        if (layer.colormapLabel && (layer.colormapLabel as ColorMap).R && !(layer.colormapLabel as LUT).lut) {
           // convert colormap JSON to RGBA LUT
-          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel)
+          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel as ColorMap)
         }
-        if ('lut' in layer.colormapLabel) {
-          const lut = layer.colormapLabel.lut
+        if (layer.colormapLabel && (layer.colormapLabel as LUT).lut) {
+          const colormapLabel = layer.colormapLabel as LUT
+          const lut = colormapLabel.lut
           const nLabel = Math.floor(lut.length / 4)
           const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1)
           const frameOffset = nvtx * frame
@@ -638,7 +741,7 @@ export class NVMesh {
           } // for each vertex
           continue
         } // if colormapLabel
-        if (layer.values.constructor === Uint32Array) {
+        if (layer.values instanceof Uint8Array) {
           const rgba8 = new Uint8Array(layer.values.buffer)
           let opaque = new Array(nvtx).fill(true)
           if (layer.isOutlineBorder) {
@@ -669,7 +772,7 @@ export class NVMesh {
           layer.cal_min = Math.max(0, layer.cal_min)
           layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max)
         }
-        if (!('isTransparentBelowCalMin' in layer)) {
+        if (layer.isTransparentBelowCalMin === undefined) {
           layer.isTransparentBelowCalMin = true
         }
         let mn = layer.cal_min
@@ -818,7 +921,7 @@ export class NVMesh {
         if (opacity <= 0) {
           continue
         }
-        function modulate(x, y) {
+        function modulate(x: number, y: number): number {
           return Math.min(x * y * (1 / 255), 255.0)
         }
         u8[vtx + 0] = modulate(u8[vtx + 0], additiveRGBA[v + 0])
@@ -839,14 +942,14 @@ export class NVMesh {
   }
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
-  reverseFaces(gl) {
+  reverseFaces(gl: WebGL2RenderingContext): void {
     if (this.offsetPt0) {
       return
     } // fiber not mesh
     if (this.hasConnectome) {
       return
     } // connectome not mesh
-    const tris = this.tris
+    const tris = this.tris || [] // TODO tris should probably be assigned in the constructor
     for (let j = 0; j < tris.length; j += 3) {
       const tri = tris[j]
       tris[j] = tris[j + 1]
@@ -856,29 +959,38 @@ export class NVMesh {
   }
 
   // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
-  setLayerProperty(id, key, val, gl) {
+  // TODO this method is a bit too generic
+  setLayerProperty(
+    id: number,
+    key: keyof NVMeshLayer,
+    val: number | string | boolean,
+    gl: WebGL2RenderingContext
+  ): void {
     const layer = this.layers[id]
     if (!layer || !(key in layer)) {
       console.log('mesh does not have property ', key, ' for layer ', layer)
       return
     }
+    // @ts-expect-error TODO generic property access
     layer[key] = val
     this.updateMesh(gl) // apply the new properties...
   }
 
   // adjust mesh attributes. invoked by niivue.setMeshProperty(()
-  setProperty(key, val, gl) {
+  // TODO this method is too generic
+  setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void {
     if (!(key in this)) {
       console.log('mesh does not have property ', key, this)
       return
     }
+    // @ts-expect-error TODO generic access
     this[key] = val
     this.updateMesh(gl) // apply the new properties...
   }
 
   // Each streamline vertex has color, normal and position attributes
   // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-  generatePosNormClr(pts, tris, rgba255) {
+  generatePosNormClr(pts: number[], tris: number[], rgba255: number[]): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
       console.log('this', this)
@@ -915,56 +1027,65 @@ export class NVMesh {
     return f32
   }
 
-  static async loadConnectomeFromFreeSurfer(
-    json,
-    gl,
+  static loadConnectomeFromFreeSurfer(
+    json: {
+      points?: Point[]
+      data_type: string
+    },
+    gl: WebGL2RenderingContext,
     name = '',
     // colormap = "",
     opacity = 1.0,
     visible = true
-  ) {
-    // let rgb255 = [255, 0, 0];
-    // if ("color" in json) rgb255 = this.color;
+  ): NVMesh {
     let isValid = true
-    if (!('data_type' in json)) {
+    if (json.data_type === undefined) {
       isValid = false
-    } else if (this.data_type !== 'fs_pointset') {
+    } else if (json.data_type !== 'fs_pointset') {
       isValid = false
     }
-    if (!('points' in json)) {
+    if (json.points === undefined) {
       isValid = false
     }
     if (!isValid) {
       throw Error('not a valid FreeSurfer json pointset')
     }
-    const jcon = []
-    jcon.nodes = []
-    jcon.nodes.names = []
-    jcon.nodes.prefilled = []
-    jcon.nodes.X = []
-    jcon.nodes.Y = []
-    jcon.nodes.Z = []
-    jcon.nodes.Color = []
-    jcon.nodes.Size = []
-    jcon.name = this.data_type
-    for (let i = 0; i < this.points.length; i++) {
+    const jcon: LegacyConnectome = {
+      nodes: {
+        names: [],
+        prefilled: [],
+        X: [],
+        Y: [],
+        Z: [],
+        Color: [],
+        Size: []
+      },
+      edges: [],
+      // @ts-expect-error not sure where this should come from
+      name: this.data_type
+    }
+
+    if (!json.points) {
+      throw new Error('points are not set!')
+    }
+    for (let i = 0; i < json.points.length; i++) {
       let name = ''
-      if ('comments' in this.points[i]) {
-        if ('text' in this.points[i].comments[0]) {
-          name = this.points[i].comments[0].text
+      if (json.points[i].comments) {
+        if (json.points[i].comments[0].text) {
+          name = json.points[i].comments[0].text
         }
       }
       jcon.nodes.names.push(name)
       let prefilled = ''
-      if ('comments' in this.points[i]) {
-        if ('prefilled' in this.points[i].comments[0]) {
-          prefilled = this.points[i].comments[0].prefilled
+      if (json.points[i].comments) {
+        if (json.points[i].comments[0].prefilled) {
+          prefilled = json.points[i].comments[0].prefilled as string
         }
       }
       jcon.nodes.prefilled.push(prefilled)
-      jcon.nodes.X.push(this.points[i].coordinates.x)
-      jcon.nodes.Y.push(this.points[i].coordinates.y)
-      jcon.nodes.Z.push(this.points[i].coordinates.z)
+      jcon.nodes.X.push(json.points[i].coordinates.x)
+      jcon.nodes.Y.push(json.points[i].coordinates.y)
+      jcon.nodes.Z.push(json.points[i].coordinates.z)
       jcon.nodes.Color.push(1)
       jcon.nodes.Size.push(1)
     }
@@ -972,55 +1093,48 @@ export class NVMesh {
   } // loadConnectomeFromFreeSurfer
 
   // read connectome saved as JSON
-  static async loadConnectomeFromJSON(
-    json,
-    gl,
+  static loadConnectomeFromJSON(
+    json: Record<string, unknown>,
+    gl: WebGL2RenderingContext,
     name = '',
     // colormap = "",
     opacity = 1.0,
     visible = true
-  ) {
+  ): NVMesh {
     if ('name' in json) {
       name = this.name
     }
     if (!('nodes' in json)) {
       throw Error('not a valid jcon connectome file')
     }
-    return new NVMesh([], [], name, [], opacity, visible, gl, json)
+    return new NVMesh([], [], name, [], opacity, visible, gl, json as LegacyConnectome)
   } // loadConnectomeFromJSON()
 
   // wrapper to read meshes, tractograms and connectomes regardless of format
-  static async readMesh(buffer, name, gl, opacity = 1.0, rgba255 = [255, 255, 255, 255], visible = true) {
-    let tris = []
-    let pts = []
+  static readMesh(
+    buffer: ArrayBuffer,
+    name: string,
+    gl: WebGL2RenderingContext,
+    opacity = 1.0,
+    rgba255 = [255, 255, 255, 255],
+    visible = true
+  ): NVMesh {
+    let tris: number[] = []
+    let pts: number[] = []
     let anatomicalStructurePrimary = ''
-    let obj = []
+    let obj: TCK | TRACT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
-    let ext = re.exec(name)[1]
+    let ext = re.exec(name)![1]
     ext = ext.toUpperCase()
     if (ext === 'GZ') {
-      ext = re.exec(name.slice(0, -3))[1] // img.trk.gz -> img.trk
+      ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
     }
     if (ext === 'JCON') {
-      return await this.loadConnectomeFromJSON(
-        JSON.parse(new TextDecoder().decode(buffer)),
-        gl,
-        name,
-        '',
-        opacity,
-        visible
-      )
+      return NVMesh.loadConnectomeFromJSON(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
     }
     if (ext === 'JSON') {
-      return await this.loadConnectomeFromFreeSurfer(
-        JSON.parse(new TextDecoder().decode(buffer)),
-        gl,
-        name,
-        '',
-        opacity,
-        visible
-      )
+      return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
     }
     rgba255[3] = Math.max(0, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TRX' || ext === 'TRACT') {
@@ -1029,7 +1143,7 @@ export class NVMesh {
       } else if (ext === 'TRACT') {
         obj = NVMeshLoaders.readTRACT(buffer)
       } else if (ext === 'TRX') {
-        obj = await NVMeshLoaders.readTRX(buffer)
+        obj = NVMeshLoaders.readTRX(buffer)
       } else {
         obj = NVMeshLoaders.readTRK(buffer)
       }
@@ -1039,39 +1153,27 @@ export class NVMesh {
         obj = { pts, offsetPt0 }
         log.error('Creating empty tracts')
       }
-      // let offsetPt0 = new Int32Array(obj.offsetPt0.slice());
-      // let pts = new Float32Array(obj.pts.slice());
-      const offsetPt0 = new Int32Array(obj.offsetPt0.slice())
-      const pts = new Float32Array(obj.pts.slice())
-      if (!('dpg' in obj)) {
-        obj.dpg = null
-      }
-      if (!('dps' in obj)) {
-        obj.dps = null
-      }
-      if (!('dpv' in obj)) {
-        obj.dpv = null
-      }
+
       rgba255[3] = -1.0
       return new NVMesh(
-        pts,
-        offsetPt0,
+        obj.pts,
+        obj.offsetPt0,
         name,
         rgba255, // colormap,
         opacity, // opacity,
         visible, // visible,
         gl,
         'inferno',
-        obj.dpg,
-        obj.dps,
-        obj.dpv
+        (obj as TRX).dpg || null,
+        (obj as TRX).dps || null,
+        (obj as TRX).dpv || null
       )
     } // is fibers
     if (ext === 'GII') {
       obj = NVMeshLoaders.readGII(buffer)
     } else if (ext === 'MZ3') {
       obj = NVMeshLoaders.readMZ3(buffer)
-      if (obj.positions === null) {
+      if (obj instanceof Float32Array || obj.positions === null) {
         console.log('MZ3 does not have positions (statistical overlay?)')
       }
     } else if (ext === 'ASC') {
@@ -1098,12 +1200,10 @@ export class NVMesh {
       obj = NVMeshLoaders.readVTK(buffer)
       if ('offsetPt0' in obj) {
         // VTK files used both for meshes and streamlines
-        const offsetPt0 = new Int32Array(obj.offsetPt0.slice())
-        const pts = new Float32Array(obj.pts.slice())
         rgba255[3] = -1.0
         return new NVMesh(
-          pts,
-          offsetPt0,
+          Array.from(obj.pts),
+          Array.from(obj.offsetPt0),
           name,
           rgba255, // colormap,
           opacity, // opacity,
@@ -1119,16 +1219,28 @@ export class NVMesh {
     } else {
       obj = NVMeshLoaders.readFreeSurfer(buffer)
     } // freesurfer hail mary
-    if (obj.anatomicalStructurePrimary) {
-      anatomicalStructurePrimary = obj.anatomicalStructurePrimary
+    if ((obj as GII).anatomicalStructurePrimary) {
+      anatomicalStructurePrimary = (obj as GII).anatomicalStructurePrimary
     }
-    pts = obj.positions.slice()
-    tris = obj.indices.slice()
+    if (obj instanceof Float32Array) {
+      throw new Error('fatal: unknown mesh type loaded')
+    }
+
+    if (!obj.positions) {
+      throw new Error('positions not loaded')
+    }
+    if (!obj.indices) {
+      throw new Error('indices not loaded')
+    }
+
+    pts = Array.from(obj.positions)
+    tris = Array.from(obj.indices)
+
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
-      rgba255 = obj.rgba255.slice()
+      rgba255 = obj.rgba255
     }
-    if (obj.colors && obj.colors.length === pts.length) {
+    if ('colors' in obj && obj.colors && obj.colors.length === pts.length) {
       rgba255 = []
       const n = pts.length / 3
       let c = 0
@@ -1144,11 +1256,7 @@ export class NVMesh {
     const npt = pts.length / 3
     const ntri = tris.length / 3
     if (ntri < 1 || npt < 3) {
-      alert('Mesh should have at least one triangle and three vertices')
-      return
-    }
-    if (tris.constructor !== Int32Array) {
-      alert('Expected triangle indices to be of type INT32')
+      throw new Error('Mesh should have at least one triangle and three vertices')
     }
     const nvm = new NVMesh(
       pts,
@@ -1172,10 +1280,10 @@ export class NVMesh {
     return nvm
   }
 
-  static async loadLayer(layer, nvmesh) {
+  static async loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void> {
     let buffer
 
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -1189,19 +1297,25 @@ export class NVMesh {
       // populate buffer with base64 if exists
       buffer = base64ToArrayBuffer(layer.base64)
     } else {
+      if (!layer.url) {
+        throw new Error('layer: missing url')
+      }
       // fetch url otherwise
-      const response = await fetch(layer.url)
+      const response = await fetch(layer.url, { headers: layer.headers })
       if (!response.ok) {
         throw Error(response.statusText)
       }
       buffer = await response.arrayBuffer()
     }
 
-    let layerName = null
-    let urlParts = []
-    if ('name' in layer && layer.name !== '') {
+    let layerName: string
+    let urlParts: string[] = []
+    if (layer.name && layer.name !== '') {
       layerName = layer.name
     } else {
+      if (!layer.url) {
+        throw new Error('layer: missing url')
+      }
       // urlParts = layer.url.split("/");
       // layerName = urlParts.slice(-1)[0];
       try {
@@ -1235,11 +1349,11 @@ export class NVMesh {
     if ('useNegativeCmap' in layer) {
       useNegativeCmap = layer.useNegativeCmap
     }
-    let cal_min = null
+    let cal_min: number | null = null
     if ('cal_min' in layer) {
       cal_min = layer.cal_min
     }
-    let cal_max = null
+    let cal_max: number | null = null
     if ('cal_max' in layer) {
       cal_max = layer.cal_max
     }
@@ -1259,25 +1373,17 @@ export class NVMesh {
 
   /**
    * factory function to load and return a new NVMesh instance from a given URL
-   * @param {string} url the resolvable URL pointing to a nifti image to load
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {string} [colormap='gray'] a color map to use. default is gray
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @param {NVMeshLayer[]} [layers=[]] layers of the mesh to load
-   * @returns {NVMesh} returns a NVImage instance
-   * @example
-   * myImage = NVMesh.loadFromUrl('./someURL/mesh.gii') // must be served from a server (local or remote)
    */
   static async loadFromUrl({
     url = '',
-    gl = null,
+    headers = {},
+    gl,
     name = '',
     opacity = 1.0,
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  } = {}) {
+  }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
     let urlParts = url.split('/') // split url parts at slash
     if (name === '') {
       try {
@@ -1296,11 +1402,11 @@ export class NVMesh {
     if (url === '') {
       throw Error('url must not be empty')
     }
-    if (gl === null) {
+    if (!gl) {
       throw Error('gl context is null')
     }
     // TRX format is special (its a zip archive of multiple files)
-    const response = await fetch(url)
+    const response = await fetch(url, { headers })
     if (!response.ok) {
       throw Error(response.statusText)
     }
@@ -1324,12 +1430,12 @@ export class NVMesh {
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file) {
+  static async readFileAsync(file: Blob): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
 
-      reader.onload = () => {
-        resolve(reader.result)
+      reader.onload = (): void => {
+        resolve(reader.result as ArrayBuffer)
       }
 
       reader.onerror = reject
@@ -1340,14 +1446,8 @@ export class NVMesh {
 
   /**
    * factory function to load and return a new NVMesh instance from a file in the browser
-   * @param {string} file the file object
-   * @param {WebGLRenderingContext} gl - WebGL rendering context
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
-   * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @returns {NVMesh} returns a NVMesh instance
+   *
+   * @returns NVMesh instance
    */
   static async loadFromFile({
     file,
@@ -1357,16 +1457,23 @@ export class NVMesh {
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  } = {}) {
-    const buffer = await this.readFileAsync(file)
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
+  }: Partial<LoadFromFileParams> = {}): Promise<NVMesh> {
+    if (!file) {
+      throw new Error('file must be set')
+    }
+    if (!gl) {
+      throw new Error('rendering context must be set')
+    }
+
+    const buffer = await NVMesh.readFileAsync(file)
+    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
     }
 
     for (let i = 0; i < layers.length; i++) {
-      await this.loadLayer(layers[i], nvmesh)
+      await NVMesh.loadLayer(layers[i], nvmesh)
     }
 
     // apply the new properties
@@ -1376,26 +1483,25 @@ export class NVMesh {
 
   /**
    * load and return a new NVMesh instance from a base64 encoded string
-   * @param {string} [base64=null] the base64 encoded string
-   * @param {WebGLRenderingContext} gl - WebGL rendering context
-   * @param {string} [name=''] a name for this image. Default is an empty string
-   * @param {number} [opacity=1.0] the opacity for this image. default is 1
-   * @property {array} rgba255 the base color of the mesh. RGBA values from 0 to 255. Default is white
-   * @property {array} layers optional files that determine per-vertex colors, e.g. statistical maps.
-   * @param {boolean} [visible=true] whether or not this image is to be visible
-   * @returns {NVMesh} returns a NVMesh instance
    */
-  static async loadFromBase64({
-    base64 = null,
-    gl = null,
+  async loadFromBase64({
+    base64,
+    gl,
     name = '',
     opacity = 1.0,
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
-  } = {}) {
+  }: Partial<LoadFromBase64Params> = {}): Promise<NVMesh> {
+    if (!base64) {
+      throw new Error('base64 must bet set')
+    }
+    if (!gl) {
+      throw new Error('rendering context must be set')
+    }
+
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
       const len = binary_string.length
       const bytes = new Uint8Array(len)
@@ -1406,13 +1512,13 @@ export class NVMesh {
     }
 
     const buffer = base64ToArrayBuffer(base64)
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible, layers)
+    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
     }
     for (let i = 0; i < layers.length; i++) {
-      await this.loadLayer(layers[i], nvmesh)
+      await NVMesh.loadLayer(layers[i], nvmesh)
     }
 
     // apply new properties
@@ -1421,111 +1527,111 @@ export class NVMesh {
   }
 
   // loaders
-  static readGII(buffer) {
+  static readGII(buffer: ArrayBuffer): GII {
     return NVMeshLoaders.readGII(buffer)
   }
 
-  static readX3D(buffer) {
+  static readX3D(buffer: ArrayBuffer): X3D {
     return NVMeshLoaders.readX3D(buffer)
   }
 
-  static readNII(buffer, n_vert = 0) {
+  static readNII(buffer: ArrayBuffer, n_vert = 0): Uint8Array | Float32Array | Int32Array | Int16Array {
     return NVMeshLoaders.readNII(buffer, n_vert)
   }
 
-  static readNII2(buffer, n_vert = 0) {
+  static readNII2(buffer: ArrayBuffer, n_vert = 0): Uint8Array | Float32Array | Int32Array | Int16Array {
     return NVMeshLoaders.readNII2(buffer, n_vert)
   }
 
-  static readMGH(buffer) {
+  static readMGH(buffer: ArrayBuffer): MGH {
     return NVMeshLoaders.readMGH(buffer)
   }
 
-  static readSTL(buffer) {
+  static readSTL(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readSTL(buffer)
   }
 
-  static readTxtSTL(buffer) {
+  static readTxtSTL(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readTxtSTL(buffer)
   }
 
-  static readSRF(buffer) {
+  static readSRF(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readSRF(buffer)
   }
 
-  static readFreeSurfer(buffer) {
+  static readFreeSurfer(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readFreeSurfer(buffer)
   }
 
-  static readOBJ(buffer) {
+  static readOBJ(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readOBJ(buffer)
   }
 
-  static readOFF(buffer) {
+  static readOFF(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readOFF(buffer)
   }
 
-  static readGEO(buffer, isFlipWinding = false) {
+  static readGEO(buffer: ArrayBuffer, isFlipWinding = false): DefaultMeshType {
     return NVMeshLoaders.readGEO(buffer, isFlipWinding)
   }
 
-  static readICO(buffer) {
+  static readICO(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readICO(buffer)
   }
 
-  static readPLY(buffer) {
+  static readPLY(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readPLY(buffer)
   }
 
-  static readMZ3(buffer, n_vert = 0) {
+  static readMZ3(buffer: ArrayBuffer, n_vert = 0): MZ3 {
     return NVMeshLoaders.readMZ3(buffer, n_vert)
   }
 
-  static readVTK(buffer) {
+  static readVTK(buffer: ArrayBuffer): VTK {
     return NVMeshLoaders.readVTK(buffer)
   }
 
-  static readASC(buffer) {
+  static readASC(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readASC(buffer)
   }
 
-  static readNV(buffer) {
+  static readNV(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readNV(buffer)
   }
 
-  static readANNOT(buffer, n_vert, isReadColortables = false) {
+  static readANNOT(buffer: ArrayBuffer, n_vert: number, isReadColortables = false): ANNOT {
     return NVMeshLoaders.readANNOT(buffer, n_vert, isReadColortables)
   }
 
-  static readCURV(buffer, n_vert) {
+  static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array {
     return NVMeshLoaders.readCURV(buffer, n_vert)
   }
 
-  static readSTC(buffer, n_vert) {
+  static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array {
     return NVMeshLoaders.readSTC(buffer, n_vert)
   }
 
-  static readSMP(buffer, n_vert) {
+  static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array {
     return NVMeshLoaders.readSMP(buffer, n_vert)
   }
 
-  static readTxtVTK(buffer) {
+  static readTxtVTK(buffer: ArrayBuffer): VTK {
     return NVMeshLoaders.readTxtVTK(buffer)
   }
 
-  static readTRK(buffer) {
+  static readTRK(buffer: ArrayBuffer): TRK {
     return NVMeshLoaders.readTRK(buffer)
   }
 
-  static readTCK(buffer) {
+  static readTCK(buffer: ArrayBuffer): TCK {
     return NVMeshLoaders.readTCK(buffer)
   }
 
-  static async readTRX(buffer) {
+  static readTRX(buffer: ArrayBuffer): TRX {
     return NVMeshLoaders.readTRX(buffer)
   }
 
-  static readTRACT(buffer) {
+  static readTRACT(buffer: ArrayBuffer): TRACT {
     return NVMeshLoaders.readTRACT(buffer)
   }
 }

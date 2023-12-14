@@ -1,0 +1,10 @@
+{
+  "out": "./devdocs",
+  "name": "NiiVue API documentation",
+  "includeVersion": true,
+  "basePath": "src",
+  "entryPoints": ["src/niivue/index.ts"],
+  "kindSortOrder": ["Class"],
+  "excludeReferences": true,
+  "excludePrivate": true
+}

@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "lib": ["ESNext", "DOM"],
+    // This doesn't do anything, as we don't compile using tsc.
+    // It needs to be set so that ts linting doesn't complain about overwriting input files.
+    "outDir": "ts-build",
     "module": "NodeNext",
     "target": "esnext",
     "moduleResolution": "NodeNext",
@@ -12,5 +15,5 @@
     "allowJs": true,
     "resolveJsonModule": true
   },
-  "exclude": ["release", "dist", "./**/*.js"]
+  "include": ["src", "types.d.ts"]
 }

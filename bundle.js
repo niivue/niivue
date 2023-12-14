@@ -5,7 +5,7 @@ import { build } from 'tsup'
 ;(async () => {
   // build bundle with tsup
   await build({
-    entry: ['src/niivue/index.js'],
+    entry: ['src/niivue/index.ts'],
     outDir: 'dist_intermediate',
     target: 'es2020',
     splitting: false,

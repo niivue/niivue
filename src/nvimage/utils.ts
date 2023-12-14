@@ -1,9 +1,10 @@
 import { vec3 } from 'gl-matrix'
-import { Log } from '../logger'
+import { Log } from '../logger.js'
+import { NiftiHeader } from '../types.js'
 
 const log = new Log()
 
-export const isPlatformLittleEndian = () => {
+export const isPlatformLittleEndian = (): boolean => {
   // inspired by https://github.com/rii-mango/Papaya
   const buffer = new ArrayBuffer(2)
   new DataView(buffer).setInt16(0, 256, true)
@@ -12,113 +13,216 @@ export const isPlatformLittleEndian = () => {
 
 /**
  * Enum for supported image types (e.g. NII, NRRD, DICOM)
- * @readonly
- * @enum {number}
  */
+export enum ImageType {
+  UNKNOWN = 0,
+  NII = 1,
+  DCM = 2,
+  DCM_MANIFEST = 3,
+  MIH = 4,
+  MIF = 5,
+  NHDR = 6,
+  NRRD = 7,
+  MHD = 8,
+  MHA = 9,
+  MGH = 10,
+  MGZ = 11,
+  V = 12,
+  V16 = 13,
+  VMR = 14,
+  HEAD = 15,
+  DCM_FOLDER = 16
+}
+
 export const NVIMAGE_TYPE = Object.freeze({
-  UNKNOWN: 0,
-  NII: 1,
-  DCM: 2,
-  DCM_MANIFEST: 3,
-  MIH: 4,
-  MIF: 5,
-  NHDR: 6,
-  NRRD: 7,
-  MHD: 8,
-  MHA: 9,
-  MGH: 10,
-  MGZ: 11,
-  V: 12,
-  V16: 13,
-  VMR: 14,
-  HEAD: 15,
-  DCM_FOLDER: 16,
-  parse: (ext) => {
-    let imageType = NVIMAGE_TYPE.UNKNOWN
+  ...ImageType,
+  parse: (ext: string) => {
+    let imageType: ImageType = ImageType.UNKNOWN
     switch (ext.toUpperCase()) {
       case '':
       case 'DCM':
-        imageType = NVIMAGE_TYPE.DCM
+        imageType = ImageType.DCM
         break
       case 'TXT':
-        imageType = NVIMAGE_TYPE.DCM_MANIFEST
+        imageType = ImageType.DCM_MANIFEST
         break
       case 'NII':
-        imageType = NVIMAGE_TYPE.NII
+        imageType = ImageType.NII
         break
       case 'MIH':
-        imageType = NVIMAGE_TYPE.MIH
+        imageType = ImageType.MIH
         break
       case 'MIF':
-        imageType = NVIMAGE_TYPE.MIF
+        imageType = ImageType.MIF
         break
       case 'NHDR':
-        imageType = NVIMAGE_TYPE.NHDR
+        imageType = ImageType.NHDR
         break
       case 'NRRD':
-        imageType = NVIMAGE_TYPE.NRRD
+        imageType = ImageType.NRRD
         break
       case 'MHD':
-        imageType = NVIMAGE_TYPE.MHD
+        imageType = ImageType.MHD
         break
       case 'MHA':
-        imageType = NVIMAGE_TYPE.MHA
+        imageType = ImageType.MHA
         break
       case 'MGH':
-        imageType = NVIMAGE_TYPE.MGH
+        imageType = ImageType.MGH
         break
       case 'MGZ':
-        imageType = NVIMAGE_TYPE.MGZ
+        imageType = ImageType.MGZ
         break
       case 'V':
-        imageType = NVIMAGE_TYPE.V
+        imageType = ImageType.V
         break
       case 'V16':
-        imageType = NVIMAGE_TYPE.V16
+        imageType = ImageType.V16
         break
       case 'VMR':
-        imageType = NVIMAGE_TYPE.VMR
+        imageType = ImageType.VMR
         break
       case 'HEAD':
-        imageType = NVIMAGE_TYPE.HEAD
+        imageType = ImageType.HEAD
         break
     }
     return imageType
   }
 })
 
-/**
- * NVImageFromUrlOptions
- * @typedef  NVImageFromUrlOptions
- * @type {object}
- * @property {string} url - the resolvable URL pointing to a nifti image to load
- * @property {string} [urlImgData=""] Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
- * @property {string} [name=""] a name for this image. Default is an empty string
- * @property {string} [colormap="gray"] a color map to use. default is gray
- * @property {number} [opacity=1.0] the opacity for this image. default is 1
- * @property {number} [cal_min=NaN] minimum intensity for color brightness/contrast
- * @property {number} [cal_max=NaN] maximum intensity for color brightness/contrast
- * @property {boolean} [trustCalMinMax=true] whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
- * @property {number} [percentileFrac=0.02] the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
- * @property {boolean} [visible=true] whether or not this image is to be visible
- * @property {boolean} [useQFormNotSForm=false] whether or not to use QForm over SForm constructing the NVImage instance
- * @property {boolean} [alphaThreshold=false] if true, values below cal_min are shown as translucent, not transparent
- * @property {string} [colormapNegative=""] a color map to use for negative intensities
- * @property {number} [cal_minNeg=NaN] minimum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_min)
- * @property {number} [cal_maxNeg=NaN] maximum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_max)
- * @property {boolean} [colorbarVisible=true] hide colormaps 
+export type ImageFromUrlOptions = {
+  // the resolvable URL pointing to a nifti image to load
+  url: string
+  // Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+  urlImageData?: string
+  // headers to use in the fetch call
+  headers?: Record<string, string>
+  // a name for this image (defaults to empty)
+  name?: string
+  // a color map to use (defaults to gray)
+  colorMap?: string
+  // TODO see duplicate usage in niivue/loadDocument
+  colormap?: string
+  // the opacity for this image (defaults to 1)
+  opacity?: number
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading, defaults to true)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges, defaults to 0.02)
+  percentileFrac?: number
+  // whether or not this image is to be visible (defaults to true)
+  visible?: boolean
+  // whether or not to use QForm over SForm constructing the NVImage instance (defaults to false)
+  useQFormNotSForm?: boolean
+  // if true, values below cal_min are shown as translucent, not transparent (defaults to false)
+  alphaThreshold?: boolean
+  // a color map to use for negative intensities
+  colormapNegative?: string
+  // minimum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_min)
+  cal_minNeg?: number
+  // maximum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_max)
+  cal_maxNeg?: number
+  // show/hide colormaps (defaults to true)
+  colorbarVisible?: boolean
+  // TODO the following fields were not documented
+  ignoreZeroVoxels?: boolean
+  imageType?: ImageType
+  frame4D?: number
+  colormapLabel?: string[]
+  pairedImgData?: null
+  limitFrames4D?: number
+  isManifest?: boolean
+  urlImgData?: string
+}
 
+// TODO centralize shared options
+export type ImageFromFileOptions = {
+  // the file object
+  file: File | File[]
+  // a name for this image. Default is an empty string
+  name?: string
+  // a color map to use. default is gray
+  colormap?: string
+  // the opacity for this image. default is 1
+  opacity?: number
+  // Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
+  urlImgData?: File | null
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+  percentileFrac?: number
+  // whether or not to ignore zero voxels in setting the robust range of display values
+  ignoreZeroVoxels?: boolean
+  // whether or not this image is to be visible
+  visible?: boolean
+  // whether or not to use QForm instead of SForm during construction
+  useQFormNotSForm?: boolean
+  // colormap negative for the image
+  colormapNegative?: string
+  // image type
+  imageType?: ImageType
+  frame4D?: number
+  limitFrames4D?: number
+}
 
- * @property {NVIMAGE_TYPE} [imageType=NVIMAGE_TYPE.UNKNOWN] image type being loaded
- */
+export type ImageFromBase64 = {
+  // base64 string
+  base64: string
+  // a name for this image. Default is an empty string
+  name?: string
+  // a color map to use. default is gray
+  colormap?: string
+  // the opacity for this image. default is 1
+  opacity?: number
+  // minimum intensity for color brightness/contrast
+  cal_min?: number
+  // maximum intensity for color brightness/contrast
+  cal_max?: number
+  // whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
+  trustCalMinMax?: boolean
+  // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
+  percentileFrac?: number
+  // whether or not to ignore zero voxels in setting the robust range of display values
+  ignoreZeroVoxels?: boolean
+  // whether or not this image is to be visible
+  visible?: boolean
+}
 
-/**
- *
- * @constructor
- * @returns {NVImageFromUrlOptions}
- */
-export function NVImageFromUrlOptions(
-  url,
+export type ImageMetadata = {
+  // unique if of image
+  id: string
+  // data type
+  datatypeCode: number
+  // number of columns
+  nx: number
+  // number of rows
+  ny: number
+  // number of slices
+  nz: number
+  // number of volumes
+  nt: number
+  // space between columns
+  dx: number
+  // space between rows
+  dy: number
+  // space between slices
+  dz: number
+  // time between volumes
+  dt: number
+  // bits per voxel
+  // TODO was documented as bpx
+  bpv: number
+}
+
+export const NVImageFromUrlOptions = (
+  url: string,
   urlImageData = '',
   name = '',
   colormap = 'gray',
@@ -137,13 +241,14 @@ export function NVImageFromUrlOptions(
   cal_maxNeg = NaN,
   colorbarVisible = true,
   alphaThreshold = false,
-  colormapLabel = []
-) {
+  colormapLabel: string[] = []
+): ImageFromUrlOptions => {
   return {
     url,
     urlImageData,
     name,
     colormap,
+    colorMap: colormap,
     opacity,
     cal_min,
     cal_max,
@@ -165,7 +270,11 @@ export function NVImageFromUrlOptions(
 
 // not included in public docs
 // create NIfTI format SForm from DICOM frame of reference
-export function getBestTransform(imageDirections, voxelDimensions, imagePosition) {
+export function getBestTransform(
+  imageDirections: number[],
+  voxelDimensions: number[],
+  imagePosition: number[]
+): number[][] | null {
   // https://github.com/rii-mango/Papaya/blob/782a19341af77a510d674c777b6da46afb8c65f1/src/js/volume/dicom/header-dicom.js#L605
   /* Copyright (c) 2012-2015, RII-UTHSCSA
 All rights reserved.
@@ -218,7 +327,7 @@ following conditions are met:
   return m
 }
 
-function str2Buffer(str) {
+function str2Buffer(str: string): number[] {
   // emulate node.js Buffer.from
   const bytes = []
   for (let i = 0; i < str.length; i++) {
@@ -229,7 +338,7 @@ function str2Buffer(str) {
 }
 
 // save NIfTI header into UINT8 array for saving to disk
-export function hdrToArrayBuffer(hdr, isDrawing8 = false) {
+export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false): Uint8Array {
   const SHORT_SIZE = 2
   const FLOAT32_SIZE = 4
 
@@ -327,29 +436,19 @@ export function hdrToArrayBuffer(hdr, isDrawing8 = false) {
   // return byteArray.buffer;
 }
 
-/**
- * @typedef {Object} NVImage~Extents
- * @property {number[]} min - min bounding point
- * @property {number[]} max - max bounding point
- * @property {number} furthestVertexFromOrigin - point furthest from origin
- */
+type Extents = {
+  // min bounding point
+  min: number[]
+  // max bounding point
+  max: number[]
+  // point furthest from origin
+  furthestVertexFromOrigin: number
+  // origin
+  origin: vec3
+}
 
-// returns the left, right, up, down, front and back via pixdims, qform or sform
-// +x = Right  +y = Anterior  +z = Superior.
-// https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/qsform.html
-
-/**
- * calculate cuboid extents via pixdims * dims
- * @returns {number[]}
- */
-
-/**
- *
- * @param {number[]} positions
- * @returns {NVImage~Extents}
- */
-export function getExtents(positions, forceOriginInVolume = true) {
-  const nV = (positions.length / 3).toFixed() // each vertex has 3 components: XYZ
+export function getExtents(positions: number[], forceOriginInVolume = true): Extents {
+  const nV = Math.round(positions.length / 3) // each vertex has 3 components: XYZ
   const origin = vec3.fromValues(0, 0, 0) // default center of rotation
   const mn = vec3.create()
   const mx = vec3.create()
@@ -394,4 +493,36 @@ export function getExtents(positions, forceOriginInVolume = true) {
   const max = [mx[0], mx[1], mx[2]]
   const furthestVertexFromOrigin = mxDx
   return { min, max, furthestVertexFromOrigin, origin }
+}
+
+export function isAffineOK(mtx: number[][]): boolean {
+  // A good matrix should not have any components that are not a number
+  // A good spatial transformation matrix should not have a row or column that is all zeros
+  const iOK = [false, false, false, false]
+  const jOK = [false, false, false, false]
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (isNaN(mtx[i][j])) {
+        return false
+      }
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (mtx[i][j] === 0.0) {
+        continue
+      }
+      iOK[i] = true
+      jOK[j] = true
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    if (!iOK[i]) {
+      return false
+    }
+    if (!jOK[i]) {
+      return false
+    }
+  }
+  return true
 }
