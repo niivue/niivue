@@ -24,7 +24,9 @@ export default defineConfig({
   ],
   build: {
     outDir: './dist_intermediate',
+    emptyOutDir: false,
     lib: {
+      formats: ['umd'],
       entry: resolve(__dirname, 'src/niivue/index.ts'),
       name: 'niivue',
       fileName: (format) => `niivue.${format}.js`

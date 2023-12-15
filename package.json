@@ -17,7 +17,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsup && npm run build:min",
+    "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
+    "build": "tsup && npm run build:min && npm run build:umd",
     "build:min": "node bundle.js",
     "demo": "npm run build && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
