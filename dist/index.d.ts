@@ -2848,6 +2848,41 @@ declare class NVUtilities {
     static range(start: number, stop: number, step: number): number[];
 }
 
+/**
+ * Class to load different mesh formats
+ */
+declare class NVMeshLoaders {
+    static readTRACT(buffer: ArrayBuffer): TRACT;
+    static readTRX(buffer: ArrayBuffer): TRX;
+    static readTCK(buffer: ArrayBuffer): TCK;
+    static readTRK(buffer: ArrayBuffer): TRK;
+    static readTxtVTK(buffer: ArrayBuffer): VTK;
+    static readLayer(name: string, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, isOutlineBorder?: boolean): void;
+    static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
+    static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
+    static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
+    static readANNOT(buffer: ArrayBuffer, n_vert: number, isReadColortables?: boolean): ANNOT;
+    static readNV(buffer: ArrayBuffer): DefaultMeshType;
+    static readASC(buffer: ArrayBuffer): DefaultMeshType;
+    static readVTK(buffer: ArrayBuffer): VTK;
+    static readDFS(buffer: ArrayBuffer): DefaultMeshType;
+    static readMZ3(buffer: ArrayBuffer, n_vert?: number): MZ3;
+    static readPLY(buffer: ArrayBuffer): DefaultMeshType;
+    static readICO(buffer: ArrayBuffer): DefaultMeshType;
+    static readGEO(buffer: ArrayBuffer, isFlipWinding?: boolean): DefaultMeshType;
+    static readOFF(buffer: ArrayBuffer): DefaultMeshType;
+    static readOBJ(buffer: ArrayBuffer): DefaultMeshType;
+    static readFreeSurfer(buffer: ArrayBuffer): DefaultMeshType;
+    static readSRF(buffer: ArrayBuffer): DefaultMeshType;
+    static readTxtSTL(buffer: ArrayBuffer): DefaultMeshType;
+    static readSTL(buffer: ArrayBuffer): DefaultMeshType;
+    static readNII2(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Int32Array | Float32Array | Int16Array | Uint8Array;
+    static readNII(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Float32Array | Uint8Array | Int32Array | Int16Array;
+    static readMGH(buffer: ArrayBuffer, n_vert?: number, isReadColortables?: boolean): MGH;
+    static readX3D(buffer: ArrayBuffer): X3D;
+    static readGII(buffer: ArrayBuffer, n_vert?: number): GII;
+}
+
 type DragReleaseParams = {
     fracStart: vec3;
     fracEnd: vec3;
@@ -4442,4 +4477,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { LabelLineTerminator, LabelTextAlignment, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVUtilities, Niivue, SLICE_TYPE, cmapper, ColorTables as colortables };
+export { LabelLineTerminator, LabelTextAlignment, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, Niivue, SLICE_TYPE, cmapper, ColorTables as colortables };
