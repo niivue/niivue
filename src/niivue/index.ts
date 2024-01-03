@@ -99,6 +99,7 @@ export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
 export { NVDocument, SLICE_TYPE } from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
+export { NVMeshLoaders } from '../nvmesh-loaders.js'
 
 const log = new Log()
 
