@@ -3123,7 +3123,7 @@ declare class Niivue {
     eventsToSubjects: Record<string, Subject<unknown>>;
     back: NVImage | null;
     overlays: NVImage[];
-    deferredVolumes: NVImage[];
+    deferredVolumes: ImageFromUrlOptions[];
     deferredMeshes: LoadFromUrlParams[];
     furthestVertexFromOrigin: number;
     volScale: number[];
@@ -4038,7 +4038,7 @@ declare class Niivue {
      * niivue.loadVolumes([\{url: 'someImage.nii.gz\}, \{url: 'anotherImage.nii.gz\'\}])
      * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
      */
-    loadVolumes(volumeList: NVImage[]): Promise<this>;
+    loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<this>;
     /**
      * Add mesh and notify subscribers
      * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
