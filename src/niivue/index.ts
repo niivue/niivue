@@ -467,7 +467,7 @@ export class Niivue {
 
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   overlays: NVImage[] = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is necessary?
-  deferredVolumes: NVImage[] = []
+  deferredVolumes: ImageFromUrlOptions[] = []
   deferredMeshes: LoadFromUrlParams[] = []
   furthestVertexFromOrigin = 100
   volScale: number[] = []
@@ -3608,7 +3608,7 @@ export class Niivue {
     this.document.title = fileName
     console.log('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
-    await this.drawScene()
+    this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.download(fileName)
   }
@@ -3622,7 +3622,7 @@ export class Niivue {
    * niivue.loadVolumes([\{url: 'someImage.nii.gz\}, \{url: 'anotherImage.nii.gz\'\}])
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
-  async loadVolumes(volumeList: NVImage[]): Promise<this> {
+  async loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<this> {
     this.on('loading', (isLoading) => {
       if (isLoading) {
         this.loadingText = 'loading...'
@@ -3646,9 +3646,6 @@ export class Niivue {
       this.uiData.loading$.next(true)
       if (volumeList[i].colorMap !== undefined) {
         volumeList[i].colormap = volumeList[i].colorMap
-      }
-      if (volumeList[i].colorMapNegative !== undefined) {
-        volumeList[i].colormapNegative = volumeList[i].colorMapNegative
       }
       const imageOptions = {
         url: volumeList[i].url!,
