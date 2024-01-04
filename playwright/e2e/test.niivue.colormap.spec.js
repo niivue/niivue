@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress, testOptions } from './helpers'
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(httpServerAddress)

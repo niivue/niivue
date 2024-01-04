@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress, testOptions } from './helpers'
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(httpServerAddress)
@@ -7,9 +7,10 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue load connectome tabular', async ({ page }) => {
-  const nlabels = await page.evaluate(async () => {
+  const options = testOptions;
+  const nlabels = await page.evaluate(async (options) => {
     // eslint-disable-next-line no-undef
-    const nv = new Niivue({ show3Dcrosshair: true, isColorbar: true })
+    const nv = new Niivue({ ...options, show3Dcrosshair: true, isColorbar: true })
     nv.opts.multiplanarForceRender = true
     await nv.attachTo('gl', false)
     // load one volume object in an array

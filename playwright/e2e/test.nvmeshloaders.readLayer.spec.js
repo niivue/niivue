@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress, testOptions } from './helpers'
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(httpServerAddress)
@@ -7,10 +7,13 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('nvmeshloaders readLayer', async ({ page }) => {
-  const nlayers = await page.evaluate(async () => {
+  const options = testOptions;
+  const nlayers = await page.evaluate(async (options) => {
+    
     // load one volume object in an array
     // eslint-disable-next-line no-undef
     const nv = new Niivue({
+      ...options,
       show3Dcrosshair: true,
       backColor: [1, 1, 1, 1],
       meshXRay: 0.3

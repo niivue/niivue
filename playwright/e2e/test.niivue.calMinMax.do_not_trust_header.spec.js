@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress, testOptions } from './helpers'
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(httpServerAddress)
@@ -7,8 +7,10 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue calMinMax do not trust header cal min max', async ({ page }) => {
-  const minmax = await page.evaluate(async () => {
+  const options = testOptions;
+  const minmax = await page.evaluate(async (options) => {
     const opts = {
+      ...options,
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1], // green
       trustCalMinMax: false

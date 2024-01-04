@@ -4,6 +4,11 @@ import { existsSync, mkdirSync } from 'fs'
 export const httpServerAddress = 'http://localhost:8888/tests/index.html'
 export const httpServerAddressSync = 'http://localhost:8888/tests/sync.html'
 export const httpServerAddressDemos = 'http://localhost:8888/demos/features/'
+export const testOptions = {
+  isAntiAlias: false,
+  isHighResolutionCapable: false
+}
+
 export const seconds = (n) => 1000 * n
 export const ensureDownloadFolder = () => {
   const downloadPath = resolve('./downloads')
