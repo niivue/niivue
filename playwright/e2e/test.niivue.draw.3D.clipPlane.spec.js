@@ -7,8 +7,9 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue draw 3D clipPlane correct in axial plane', async ({ page }) => {
-  await page.evaluate(async () => {
+  await page.evaluate(async (testOptions) => {
     const opts = {
+      ...testOptions,
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1] // green
     }

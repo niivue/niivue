@@ -7,10 +7,9 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue calMinMax do not trust header cal min max', async ({ page }) => {
-  const options = testOptions;
-  const minmax = await page.evaluate(async (options) => {
+  const minmax = await page.evaluate(async (testOptions) => {
     const opts = {
-      ...options,
+      ...testOptions,
       textHeight: 0.05, // larger text
       crosshairColor: [0, 0, 1, 1], // green
       trustCalMinMax: false

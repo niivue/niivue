@@ -7,9 +7,8 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue attachTo', async ({ page }) => {
-  const options = testOptions;
-  const gl = await page.evaluate(async (options) => {
-    const nv = new niivue.Niivue(options)
+  const gl = await page.evaluate(async (testOptions) => {
+    const nv = new niivue.Niivue(testOptions)
     await nv.attachTo('gl', false)
     return nv.gl
   })

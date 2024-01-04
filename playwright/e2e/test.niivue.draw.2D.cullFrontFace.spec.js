@@ -7,8 +7,8 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue draw 2D set cull front face', async ({ page }) => {
-  const nvols = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+  const nvols = await page.evaluate(async (testOptions) => {
+    const nv = new niivue.Niivue(testOptions)
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

@@ -19,9 +19,9 @@ files = files.map((file) => {
 
 for (const file of files) {
   test(`niivue colormap ${file}`, async ({ page }) => {
-    const retFile = await page.evaluate(async (file) => {
+    const retFile = await page.evaluate(async (file, testOptions) => {
       // eslint-disable-next-line no-undef
-      const nv = new Niivue()
+      const nv = new Niivue(testOptions)
       await nv.attachTo('gl', false)
       // load one volume object in an array
       console.log(`${file}`)

@@ -7,11 +7,9 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue load compressed nifti volume', async ({ page }) => {
-  const options = testOptions;
-  const nvols = await page.evaluate(async (options) => {
-    
+  const nvols = await page.evaluate(async (testOptions) => {
     // eslint-disable-next-line no-undef
-    const nv = new Niivue(options)
+    const nv = new Niivue(testOptions)
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [

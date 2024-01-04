@@ -24,11 +24,10 @@ const files = [
 
 for (const file of files) {
   test(`niivue loadVolumes loadMeshes for file format ${file.fileName}`, async ({ page }) => {
-    const options = testOptions;
     // eslint-disable-next-line prettier/prettier
-    await page.evaluate(async (file, options) => {
+    await page.evaluate(async (file, testOptions) => {
       // eslint-disable-next-line no-undef
-      const nv = new Niivue(options)
+      const nv = new Niivue(testOptions)
       await nv.attachTo('gl', false)
       // load one volume object in an array
       const imageList = [

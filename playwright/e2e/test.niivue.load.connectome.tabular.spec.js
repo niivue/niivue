@@ -7,10 +7,9 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue load connectome tabular', async ({ page }) => {
-  const options = testOptions;
-  const nlabels = await page.evaluate(async (options) => {
+  const nlabels = await page.evaluate(async (testOptions) => {
     // eslint-disable-next-line no-undef
-    const nv = new Niivue({ ...options, show3Dcrosshair: true, isColorbar: true })
+    const nv = new Niivue({ ...testOptions, show3Dcrosshair: true, isColorbar: true })
     nv.opts.multiplanarForceRender = true
     await nv.attachTo('gl', false)
     // load one volume object in an array

@@ -7,13 +7,11 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('nvmeshloaders readLayer', async ({ page }) => {
-  const options = testOptions;
-  const nlayers = await page.evaluate(async (options) => {
-    
+  const nlayers = await page.evaluate(async (testOptions) => {
     // load one volume object in an array
     // eslint-disable-next-line no-undef
     const nv = new Niivue({
-      ...options,
+      ...testOptions,
       show3Dcrosshair: true,
       backColor: [1, 1, 1, 1],
       meshXRay: 0.3
