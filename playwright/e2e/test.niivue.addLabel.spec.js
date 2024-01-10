@@ -9,20 +9,19 @@ test.beforeEach(async ({ page }, testInfo) => {
 test('niivue label addLabel', async ({ page }) => {
   const nlabels = await page.evaluate(async (testOptions) => {
     // eslint-disable-next-line no-undef
-    const nv = new Niivue() //testOptions
-    // nv.opts.multiplanarForceRender = true
+    const nv = new Niivue(testOptions)
     await nv.attachTo('gl', false)
     // load one volume object in an array
     const volumeList = [
-        {
-          url: './images/mni152.nii.gz', // "./RAS.nii.gz", "./spm152.nii.gz",
-          volume: { hdr: null, img: null },
-          name: 'mni152.nii.gz',
-          colormap: 'gray',
-          opacity: 1,
-          visible: true
-        }
-      ]
+      {
+        url: './images/mni152.nii.gz', // "./RAS.nii.gz", "./spm152.nii.gz",
+        volume: { hdr: null, img: null },
+        name: 'mni152.nii.gz',
+        colormap: 'gray',
+        opacity: 1,
+        visible: true
+      }
+    ]
     await nv.loadVolumes(volumeList)
     nv.addLabel('Insula', { textScale: 2.0, textAlignment: niivue.LabelTextAlignment.CENTER }, [0.0, 0.0, 0.0])
     nv.addLabel(
@@ -64,7 +63,7 @@ test('niivue label addLabel', async ({ page }) => {
       },
       [0.0, 0.0, 0.0]
     )
-    nv.drawScene();
+    nv.drawScene()
     return nv.document.labels.length
   })
   expect(nlabels).toBe(6)
