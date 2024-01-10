@@ -189,7 +189,7 @@ type Scene = {
   _azimuth?: number
 }
 
-type DocumentData = {
+export type DocumentData = {
   title: string
   imageOptionsArray: ImageFromUrlOptions[]
   meshOptionsArray: unknown[]
@@ -670,6 +670,18 @@ export class NVDocument {
   static deserializeMeshDataObjects(document: NVDocument): void {
     if (document.data.meshesString) {
       document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
+      for(const mesh of document.meshDataObjects!) {
+        for(let layer of mesh.layers) {
+          if("colorMap" in layer) {
+            layer.colormap = layer.colorMap as string
+            delete layer.colorMap
+          }
+          if("colorMapNegative" in layer) {
+            layer.colormapNegative = layer.colorMapNegative as string
+            delete layer.colorMapNegative
+          }
+        }
+      }
     }
   }
 

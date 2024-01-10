@@ -69,6 +69,7 @@ import {
   DRAG_MODE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
+  DocumentData,
   ExportDocumentData
 } from '../nvdocument.js'
 
@@ -96,7 +97,7 @@ export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
 export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
-export { NVDocument, SLICE_TYPE } from '../nvdocument.js'
+export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
