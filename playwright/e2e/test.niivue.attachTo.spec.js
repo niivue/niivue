@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress, testOptions } from './helpers'
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(httpServerAddress)
@@ -7,8 +7,8 @@ test.beforeEach(async ({ page }, testInfo) => {
 })
 
 test('niivue attachTo', async ({ page }) => {
-  const gl = await page.evaluate(async () => {
-    const nv = new niivue.Niivue()
+  const gl = await page.evaluate(async (testOptions) => {
+    const nv = new niivue.Niivue(testOptions)
     await nv.attachTo('gl', false)
     return nv.gl
   })
