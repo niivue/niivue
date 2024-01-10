@@ -69,7 +69,6 @@ import {
   DRAG_MODE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
-  DocumentData,
   ExportDocumentData
 } from '../nvdocument.js'
 
