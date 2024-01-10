@@ -501,7 +501,6 @@ export class NVDocument {
         imageOptions = {
           name: '',
           colormap: 'gray',
-          colorMap: 'gray',
           opacity: 1.0,
           pairedImgData: null,
           cal_min: NaN,
