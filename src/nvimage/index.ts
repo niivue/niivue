@@ -6,7 +6,7 @@ import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
-import { Log } from '../logger.js'
+import { log } from '../logger.js'
 import { NVUtilities } from '../nvutilities.js'
 import {
   ImageFromBase64,
@@ -22,7 +22,6 @@ import {
   isAffineOK,
   isPlatformLittleEndian
 } from './utils.js'
-const log = new Log()
 
 export * from './utils.js'
 
@@ -291,9 +290,9 @@ export class NVImage {
     const nVol4D = imgRaw.byteLength / bytesPerVol
     if (nVol4D !== this.nFrame4D) {
       if (nVol4D > 0 && nVol4D * bytesPerVol === imgRaw.byteLength) {
-        console.log('Loading the first ' + nVol4D + ' of ' + this.nFrame4D + ' volumes')
+        log.debug('Loading the first ' + nVol4D + ' of ' + this.nFrame4D + ' volumes')
       } else {
-        console.log('This header does not match voxel data', this.hdr, imgRaw.byteLength)
+        log.warn('This header does not match voxel data', this.hdr, imgRaw.byteLength)
       }
       this.nFrame4D = nVol4D
     }
@@ -334,7 +333,7 @@ export class NVImage {
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
 
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
-      console.log('pixDims not plausible', this.hdr)
+      log.error('pixDims not plausible', this.hdr)
     }
 
     if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0) {
@@ -543,7 +542,7 @@ export class NVImage {
     const fig_merit = Math.min(Math.min(xmax, ymax), zmax)
     let oblique_angle = Math.abs((Math.acos(fig_merit) * 180.0) / 3.141592653)
     if (oblique_angle > 0.01) {
-      console.log('Warning voxels not aligned with world space: ' + oblique_angle + ' degrees from plumb.\n')
+      log.warn('Warning voxels not aligned with world space: ' + oblique_angle + ' degrees from plumb.\n')
     } else {
       oblique_angle = 0.0
     }
@@ -595,7 +594,7 @@ export class NVImage {
     const YZ = Math.abs(90 - vec3.angle(Y1mm, Z1mm) * (180 / Math.PI))
     this.maxShearDeg = Math.max(Math.max(XY, XZ), YZ)
     if (this.maxShearDeg > 0.1) {
-      console.log('Warning: voxels are rhomboidal, maximum shear is %f degrees.', this.maxShearDeg)
+      log.warn('Warning: voxels are rhomboidal, maximum shear is %f degrees.', this.maxShearDeg)
     }
     // compute a matrix to transform vectors from factional space to mm:
     const dim = vec4.fromValues(this.dimsRAS[1], this.dimsRAS[2], this.dimsRAS[3], 1)
@@ -618,7 +617,6 @@ export class NVImage {
     const pixdimX = this.pixDimsRAS[1] // vec3.length(X1mm);
     const pixdimY = this.pixDimsRAS[2] // vec3.length(Y1mm);
     const pixdimZ = this.pixDimsRAS[3] // vec3.length(Z1mm);
-    // console.log("pixdim", pixdimX, pixdimY, pixdimZ);
     // orthographic view
     const oform = mat4.clone(sform)
     oform[0] = pixdimX * dim[0]
@@ -742,7 +740,7 @@ export class NVImage {
         const dataview = new DataView(buf[i])
         const image = daikon.Series.parseImage(dataview)
         if (image === null) {
-          console.error(daikon.Series.parserError)
+          log.error(daikon.Series.parserError)
         } else if (image.hasPixelData()) {
           // if it's part of the same series, add it
           if (this.series.images.length === 0 || image.getSeriesId() === this.series.images[0].getSeriesId()) {
@@ -754,7 +752,7 @@ export class NVImage {
       // not a dicom folder drop
       const image = daikon.Series.parseImage(new DataView(buf))
       if (image === null) {
-        console.error(daikon.Series.parserError)
+        log.error(daikon.Series.parserError)
       } else if (image.hasPixelData()) {
         // if it's part of the same series, add it
         if (this.series.images.length === 0 || image.getSeriesId() === this.series.images[0].getSeriesId()) {
@@ -782,7 +780,7 @@ export class NVImage {
     hdr.dims[3] = this.series.images[0].getNumberOfFrames()
     if (this.series.images.length > 1) {
       if (hdr.dims[3] > 1) {
-        console.log('To Do: multiple slices per file and multiple files (XA30 DWI)')
+        log.debug('To Do: multiple slices per file and multiple files (XA30 DWI)')
       }
       hdr.dims[3] = this.series.images.length
     }
@@ -823,7 +821,7 @@ export class NVImage {
     } else if (bpv === 64 && dt === 4) {
       hdr.datatypeCode = this.DT_DOUBLE
     } else {
-      console.log('Unsupported DICOM format: ' + dt + ' ' + bpv)
+      log.warn('Unsupported DICOM format: ' + dt + ' ' + bpv)
     }
     const voxelDimensions = hdr.pixDims.slice(1, 4)
     const m = getBestTransform(
@@ -929,7 +927,7 @@ export class NVImage {
             ipos += 4
           }
         } else {
-          console.log('Unknown ECAT data type ' + data_type)
+          log.warn('Unknown ECAT data type ' + data_type)
         }
         const prevImg = rawImg.slice(0)
         rawImg = new Float32Array(prevImg.length + newImg.length)
@@ -953,7 +951,7 @@ export class NVImage {
         }
       }
       if (isFDvaries) {
-        console.log('Frame durations vary')
+        log.warn('Frame durations vary')
       }
     }
     hdr.sform_code = 1
@@ -979,11 +977,11 @@ export class NVImage {
     hdr.dims[3] = reader.getUint16(4, true)
     const nBytes = 2 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
     if (nBytes + 6 !== buffer.byteLength) {
-      console.log('This does not look like a valid BrainVoyager V16 file')
+      log.warn('This does not look like a valid BrainVoyager V16 file')
     }
     hdr.numBitsPerVoxel = 16
     hdr.datatypeCode = this.DT_UINT16
-    console.log('Warning: V16 files have no spatial transforms')
+    log.warn('Warning: V16 files have no spatial transforms')
     hdr.affine = [
       [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
       [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
@@ -1005,7 +1003,7 @@ export class NVImage {
     const reader = new DataView(buffer)
     const version = reader.getUint16(0, true)
     if (version !== 4) {
-      console.log('Not a valid version 4 VMR image')
+      log.warn('Not a valid version 4 VMR image')
     }
     hdr.dims[1] = reader.getUint16(2, true)
     hdr.dims[2] = reader.getUint16(4, true)
@@ -1072,7 +1070,7 @@ export class NVImage {
       // let meanInten = reader.getInt32(pos + 20, true);
       // let maxInten = reader.getInt32(pos + 24, true);
     }
-    console.log('Warning: VMR spatial transform not implemented')
+    log.warn('Warning: VMR spatial transform not implemented')
     // if (XmmStart === XmmEnd) { // https://brainvoyager.com/bv/sampledata/index.html??
     hdr.affine = [
       [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
@@ -1081,7 +1079,7 @@ export class NVImage {
       [0, 0, 0, 1]
     ]
     // }
-    console.log(hdr)
+    log.debug(hdr)
     hdr.numBitsPerVoxel = 8
     hdr.datatypeCode = this.DT_UNSIGNED_CHAR
     return buffer.slice(8, 8 + nBytes)
@@ -1126,7 +1124,7 @@ export class NVImage {
     const ca = reader.getFloat32(82, false)
     const cs = reader.getFloat32(86, false)
     if (version !== 1 || mtype < 0 || mtype > 4) {
-      console.log('Not a valid MGH file')
+      log.warn('Not a valid MGH file')
     }
     if (mtype === 0) {
       hdr.numBitsPerVoxel = 8
@@ -1205,7 +1203,7 @@ export class NVImage {
     // embed entire AFNI HEAD text as NIfTI extension
     const mod = (dataBuffer.byteLength + 8) % 16
     const len = dataBuffer.byteLength + (16 - mod)
-    console.log(dataBuffer.byteLength, 'len', len)
+    log.debug(dataBuffer.byteLength, 'len', len)
     const extBuffer = new Uint8Array(len)
     extBuffer.fill(0)
     extBuffer.set(new Uint8Array(dataBuffer))
@@ -1277,7 +1275,7 @@ export class NVImage {
               hdr.numBitsPerVoxel = 32
               hdr.datatypeCode = this.DT_FLOAT
             } else {
-              console.log('Unknown BRICK_TYPES ', datatype)
+              log.warn('Unknown BRICK_TYPES ', datatype)
             }
           }
           break
@@ -1315,7 +1313,7 @@ export class NVImage {
           hdr.pixDims[4] = items[0] as number
           break
         default:
-        // console.log('Unknown:',key);
+          log.warn('Unknown:', key)
       } // read item
     } // read all lines
     if (!hasIJK_TO_DICOM_REAL) {
@@ -1447,7 +1445,7 @@ export class NVImage {
         }
       }
       if (line.startsWith('ObjectType') && !items[0].includes('Image')) {
-        console.log('Only able to read ObjectType = Image, not ' + line)
+        log.warn('Only able to read ObjectType = Image, not ' + line)
       }
       if (line.startsWith('ElementDataFile')) {
         if (items[0] !== 'LOCAL') {
@@ -1494,7 +1492,7 @@ export class NVImage {
     }
     const bytes = new Uint8Array(buffer)
     if (bytes[0] === 31 && bytes[1] === 139) {
-      console.log('MIF with GZ decompression')
+      log.debug('MIF with GZ decompression')
       const raw = decompressSync(new Uint8Array(buffer))
       buffer = raw.buffer
       len = buffer.byteLength
@@ -1574,7 +1572,7 @@ export class NVImage {
             } else if (dt.startsWith('Float64')) {
               hdr.datatypeCode = this.DT_DOUBLE
             } else {
-              console.log('Unsupported datatype ' + dt)
+              log.warn('Unsupported datatype ' + dt)
             }
             if (dt.includes('8')) {
               hdr.numBitsPerVoxel = 8
@@ -1618,13 +1616,13 @@ export class NVImage {
     }
     const ndim = hdr.dims[0]
     if (ndim > 5) {
-      console.log('reader only designed for a maximum of 5 dimensions (XYZTD)')
+      log.warn('reader only designed for a maximum of 5 dimensions (XYZTD)')
     }
     let nvox = 1
     for (let i = 0; i < ndim; i++) {
       nvox *= Math.max(hdr.dims[i + 1], 1)
     }
-    console.log(nvox)
+    log.debug(nvox)
     // let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -1632,12 +1630,12 @@ export class NVImage {
         hdr.affine[i][j] *= hdr.pixDims[j + 1]
       }
     }
-    console.log('mif affine:' + hdr.affine[0])
+    log.debug('mif affine:' + hdr.affine[0])
     if (TR > 0) {
       hdr.pixDims[4] = TR
     }
     if (isDetached && !pairedImgData) {
-      console.log('MIH header provided without paired image data')
+      log.warn('MIH header provided without paired image data')
     }
     let rawImg: ArrayBuffer
     if (pairedImgData && isDetached) {
@@ -1648,7 +1646,7 @@ export class NVImage {
       rawImg = buffer.slice(hdr.vox_offset, hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8))
     }
     if (layout.length !== hdr.dims[0]) {
-      console.log('dims does not match layout')
+      log.warn('dims does not match layout')
     }
     // estimate strides:
     let stride = 1
@@ -1962,11 +1960,11 @@ export class NVImage {
               1
             )
           } else {
-            console.log('Unsupported NRRD space value:', value)
+            log.warn('Unsupported NRRD space value:', value)
           }
           break
         default:
-        // console.log('Unknown:',key);
+          log.warn('Unknown:', key)
       } // read line
     } // read all lines
     if (!isNaN(mat33[0])) {
@@ -2031,7 +2029,7 @@ export class NVImage {
       return pairedImgData.slice(0)
     }
     if (isDetached) {
-      console.log('Missing data: NRRD header describes detached data file but only one URL provided')
+      log.warn('Missing data: NRRD header describes detached data file but only one URL provided')
     }
     if (isGz) {
       return decompressSync(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer
@@ -2611,8 +2609,8 @@ export class NVImage {
       })
       return response
     } catch (error) {
-      console.error(error)
-      console.error('fetchPartial failed, trying again without range header')
+      log.error(error)
+      log.error('fetchPartial failed, trying again without range header')
       const response = await fetch(url, { headers })
       return response
     }
@@ -2670,7 +2668,6 @@ export class NVImage {
       if (bytes[0] === 31 && bytes[1] === 139) {
         isGz = true
         const dcmpStrm = new Decompress((chunk) => {
-          // console.log('decoded:', chunk);
           bytes = chunk
         })
         dcmpStrm.push(bytes)
@@ -2856,7 +2853,6 @@ export class NVImage {
           if (bytes[0] === 31 && bytes[1] === 139) {
             isGz = true
             const dcmpStrm = new Decompress((chunk) => {
-              // console.log('decoded:', chunk);
               bytes = chunk
             })
             dcmpStrm.push(bytes)
@@ -2938,8 +2934,8 @@ export class NVImage {
       // is this too hacky?
       nvimage.fileObject = file
     } catch (err) {
-      console.log(err)
-      log.debug(err)
+      log.error(err)
+      log.error(err)
     }
     if (nvimage === null) {
       throw new Error('could not build NVImage')
@@ -3364,8 +3360,8 @@ export class NVImage {
           } // for y
         } // for z
         drawingBytesToBeConverted = outVs
-        console.log('drawing bytes')
-        console.log(drawingBytesToBeConverted)
+        log.debug('drawing bytes')
+        log.debug(drawingBytesToBeConverted)
       }
     }
     const img8 = isDrawing ? (drawingBytesToBeConverted as Uint8Array) : new Uint8Array(this.img!.buffer)

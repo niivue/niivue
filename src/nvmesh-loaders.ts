@@ -1,6 +1,6 @@
 import { mat4, vec4, vec3 } from 'gl-matrix'
 import { decompressSync, unzipSync } from 'fflate/browser'
-import { Log } from './logger.js'
+import { log } from './logger.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
 import { NVMesh, NVMeshLayer } from './nvmesh.js'
@@ -22,7 +22,7 @@ import {
   XmlTag
 } from './nvmesh-types.js'
 
-const utiltiesLogger = new Log()
+const utiltiesLogger = log
 
 /**
  * Class to load different mesh formats
@@ -67,7 +67,7 @@ export class NVMeshLoaders {
     }
     const n_tracts = readNumericTag('N_tracts=')
     if (!line.startsWith('<network') || n_tracts < 1) {
-      console.log('This is not a valid niml.tract file ' + line)
+      log.warn('This is not a valid niml.tract file ' + line)
     }
     let npt = 0
     const offsetPt0 = []
@@ -83,13 +83,11 @@ export class NVMeshLoaders {
       const new_tracts = readNumericTag('ni_dimen=')
       const bundleTag = readNumericTag('Bundle_Tag=')
       const isLittleEndian = line.includes('binary.lsbfirst')
-      // console.log(new_tracts, pos, isLittleEndian);
       for (let i = 0; i < new_tracts; i++) {
         // let id = reader.getUint32(pos, isLittleEndian);
         pos += 4
         const new_pts = reader.getUint32(pos, isLittleEndian) / 3
         pos += 4
-        // console.log('offset', pos, 'new', new_pts,'id', id);
         for (let j = 0; j < new_pts; j++) {
           pts.push(reader.getFloat32(pos, isLittleEndian))
           pos += 4
@@ -418,7 +416,7 @@ export class NVMeshLoaders {
     }
     if (mat[15] === 0.0) {
       // vox_to_ras[3][3] is 0, it means the matrix is not recorded
-      console.log('TRK vox_to_ras not set')
+      log.warn('TRK vox_to_ras not set')
       mat4.identity(mat)
     }
     const vox2mmMat = mat4.create()
@@ -718,7 +716,7 @@ export class NVMeshLoaders {
     } else if (ext === 'STC') {
       layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
     } else {
-      console.log('Unknown layer overlay format ' + name)
+      log.warn('Unknown layer overlay format ' + name)
       return
     }
     if (!layer.values) {
@@ -734,7 +732,6 @@ export class NVMeshLoaders {
       mn = Math.min(mn, layer.values[i])
       mx = Math.max(mx, layer.values[i])
     }
-    // console.log('layer range: ', mn, mx);
     layer.global_min = mn
     layer.global_max = mx
     layer.cal_min = cal_min
@@ -768,11 +765,11 @@ export class NVMeshLoaders {
       buffer = raw.buffer
     }
     if (vers > 5) {
-      console.log('Unsupported or invalid BrainVoyager SMP version ' + vers)
+      log.error('Unsupported or invalid BrainVoyager SMP version ' + vers)
     }
     const nvert = reader.getUint32(2, true)
     if (nvert !== n_vert) {
-      console.log('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
+      log.error('SMP file has ' + nvert + ' vertices, background mesh has ' + n_vert)
     }
     const nMaps = reader.getUint16(6, true)
 
@@ -1021,7 +1018,7 @@ export class NVMeshLoaders {
       const B = view.getInt32((pos += 4), false)
       const A = view.getInt32((pos += 4), false)
       if (struc < 0 || struc >= maxstruc) {
-        console.log('annot entry out of range')
+        log.warn('annot entry out of range')
         continue
       }
       LUT.R[struc] = R
@@ -1048,7 +1045,7 @@ export class NVMeshLoaders {
       }
     }
     if (nError > 0) {
-      console.log(`annot vertex colors do not match ${nError} of ${n_vertex} vertices.`)
+      log.error(`annot vertex colors do not match ${nError} of ${n_vertex} vertices.`)
     }
     for (let i = 0; i < maxstruc; i++) {
       LUT.I[i] = i
@@ -1147,7 +1144,7 @@ export class NVMeshLoaders {
     }
     let line = readStr() // 1st line: '#!ascii version of lh.pial'
     if (!line.startsWith('#!ascii')) {
-      console.log('Invalid ASC mesh')
+      log.warn('Invalid ASC mesh')
     }
     line = readStr() // 1st line: signature
     let items = line.trim().split(/\s+/)
@@ -1220,7 +1217,7 @@ export class NVMeshLoaders {
     }
     line = readStr() // 6th line "POINTS 10261 float"
     if (!line.includes('POINTS') || (!line.includes('double') && !line.includes('float'))) {
-      console.log('Only able to read VTK float or double POINTS' + line)
+      log.warn('Only able to read VTK float or double POINTS' + line)
     }
     const isFloat64 = line.includes('double')
     let items = line.trim().split(/\s+/)
@@ -1248,7 +1245,6 @@ export class NVMeshLoaders {
       const posOK = pos
       line = readStr() // borked files "OFFSETS vtktypeint64"
       if (line.startsWith('OFFSETS')) {
-        // console.log("invalid VTK file created by DiPy");
         let isInt64 = false
         if (line.includes('int64')) {
           isInt64 = true
@@ -1267,7 +1263,7 @@ export class NVMeshLoaders {
             offsetPt0[c] = idx
           }
           if (isOverflowInt32) {
-            console.log('int32 overflow: JavaScript does not support int64')
+            log.warn('int32 overflow: JavaScript does not support int64')
           }
         } else {
           for (let c = 0; c < n_count; c++) {
@@ -1363,7 +1359,7 @@ export class NVMeshLoaders {
     const magic = reader.getUint32(0, true) // "DFS_"
     const LE = reader.getUint16(4, true) // "LE"
     if (magic !== 1599292996 || LE !== 17740) {
-      console.log('Not a little-endian brainsuite DFS mesh')
+      log.warn('Not a little-endian brainsuite DFS mesh')
     }
     const hdrBytes = reader.getUint32(12, true)
     // var mdoffset = reader.getUint32(16, true);
@@ -1448,12 +1444,12 @@ export class NVMeshLoaders {
         16 + nskip + (isFace ? 1 : 0) * nface * 12 + (isVert ? 1 : 0) * n_vert * 12 + (isRGBA ? 1 : 0) * n_vert * 4
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar)
       if (nvert !== n_vert && scalarFloats % n_vert === 0) {
-        console.log('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT')
+        log.warn('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT')
         nvert = n_vert
       }
       NSCALAR = Math.floor(scalarFloats / nvert)
       if (NSCALAR < 1) {
-        console.log('Corrupt MZ3: file reports NSCALAR but not enough bytes')
+        log.warn('Corrupt MZ3: file reports NSCALAR but not enough bytes')
         isSCALAR = false
       }
     }
@@ -1461,7 +1457,7 @@ export class NVMeshLoaders {
       throw new Error('Not a mesh MZ3 file (maybe scalar)')
     }
     if (n_vert > 0 && n_vert !== nvert) {
-      console.log('Layer has ' + nvert + 'vertices, but background mesh has ' + n_vert)
+      log.warn('Layer has ' + nvert + 'vertices, but background mesh has ' + n_vert)
     }
     let filepos = 16 + nskip
     let indices = null
@@ -1587,7 +1583,7 @@ export class NVMeshLoaders {
           if (items[2] === 'x' && datatype.startsWith('double')) {
             vertIsDouble = true
           } else if (items[2] === 'x' && !datatype.startsWith('float')) {
-            console.log('Error: expect ply xyz to be float or double: ' + line)
+            log.error('Error: expect ply xyz to be float or double: ' + line)
           }
           vertStride += dataTypeBytes(datatype)
           line = readStr()
@@ -1600,7 +1596,6 @@ export class NVMeshLoaders {
         line = readStr()
         items = line.split(/\s/)
         while (line.startsWith('property')) {
-          // console.log("property", line);
           if (items[1] === 'list') {
             indexCountBytes = dataTypeBytes(items[2])
             indexBytes = dataTypeBytes(items[3])
@@ -1621,7 +1616,7 @@ export class NVMeshLoaders {
     } // while reading all lines of header
     if (isAscii) {
       if (nface < 1) {
-        console.log(`Malformed ply format: faces ${nface} `)
+        log.error(`Malformed ply format: faces ${nface} `)
       }
       const positions = new Float32Array(nvert * 3)
       let v = 0
@@ -1667,7 +1662,7 @@ export class NVMeshLoaders {
       }
     } // if isAscii
     if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1) {
-      console.log(
+      log.warn(
         `Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`
       )
     }
@@ -1746,7 +1741,7 @@ export class NVMeshLoaders {
       } // for each face
     } // if not 1:4 datatype
     if (!isTriangular) {
-      console.log('Only able to read PLY meshes limited to triangles.')
+      log.warn('Only able to read PLY meshes limited to triangles.')
     }
     return {
       positions,
@@ -1767,7 +1762,7 @@ export class NVMeshLoaders {
     // FreeSurfer header has one item: [0]'num_verts'
     // Bourke header has 2 items: [0]'num_verts', [1]'num_faces'
     if (header.length > 1) {
-      console.log('This is not a valid FreeSurfer ICO/TRI mesh.')
+      log.warn('This is not a valid FreeSurfer ICO/TRI mesh.')
     }
     const num_v = parseInt(header[0])
     // read vertices: each line has 4 values: index, x, y, z
@@ -1783,7 +1778,7 @@ export class NVMeshLoaders {
       const y = parseFloat(items[2])
       const z = parseFloat(items[3])
       if (idx < 0 || idx >= num_v) {
-        console.log('ICO vertices corrupted')
+        log.error('ICO vertices corrupted')
         break
       }
       idx *= 3
@@ -1805,7 +1800,7 @@ export class NVMeshLoaders {
       const y = parseInt(items[2]) - 1
       const z = parseInt(items[3]) - 1
       if (idx < 0 || idx >= num_f) {
-        console.log('ICO indices corrupted')
+        log.error('ICO indices corrupted')
         break
       }
       idx *= 3
@@ -1845,7 +1840,7 @@ export class NVMeshLoaders {
     let num_f = parseInt(header[2])
     const num_c = parseInt(header[3])
     if (num_p > 1 || num_c !== num_f * 3) {
-      console.log('Multi-part BYU/GEO header or not a triangular mesh.')
+      log.warn('Multi-part BYU/GEO header or not a triangular mesh.')
     }
     // skip line 1: it is redundant (contains number of faces once more)
     // next read the vertices (points)
@@ -1908,7 +1903,7 @@ export class NVMeshLoaders {
     let i = 0
     // first line signature "OFF", but R freesurfer package uses "# OFF"
     if (!lines[i].includes('OFF')) {
-      console.log('File does not start with OFF')
+      log.warn('File does not start with OFF')
     } else {
       i++
     }
@@ -1929,7 +1924,7 @@ export class NVMeshLoaders {
       items = str.trim().split(/\s+/)
       const n = parseInt(items[0])
       if (n !== 3) {
-        console.log('Only able to read OFF files with triangular meshes')
+        log.warn('Only able to read OFF files with triangular meshes')
       }
       t.push(parseInt(items[1]))
       t.push(parseInt(items[2]))
@@ -2037,7 +2032,7 @@ export class NVMeshLoaders {
       isHeadOK = head0 === 2 && head1 === 0 && head2 === 20
     }
     if (!isHeadOK) {
-      console.log('Unknown FreeSurfer Mesh extension code.')
+      log.warn('Unknown FreeSurfer Mesh extension code.')
     } else {
       const footer = new TextDecoder().decode(buffer.slice(offset)).trim()
       const strings = footer.split('\n')
@@ -2156,7 +2151,7 @@ export class NVMeshLoaders {
       pos += 4
     }
     if (ver !== 4) {
-      console.log('Not valid SRF')
+      log.warn('Not valid SRF')
     }
 
     return {
@@ -2261,7 +2256,7 @@ export class NVMeshLoaders {
     const scl_slope = reader.getFloat64(176, isLittleEndian)
     const scl_inter = reader.getFloat64(184, isLittleEndian)
     if (scl_slope !== 1 || scl_inter !== 0) {
-      console.log('ignoring scale slope and intercept')
+      log.warn('ignoring scale slope and intercept')
     }
     const intent_code = reader.getUint32(504, isLittleEndian)
     const datatype = reader.getUint16(12, isLittleEndian)
@@ -2370,13 +2365,13 @@ export class NVMeshLoaders {
             line = readStr()
           }
           if (!line.startsWith('<VertexIndices>') || !line.endsWith('</VertexIndices>')) {
-            console.log('Unable to find CIfTI <VertexIndices>')
+            log.warn('Unable to find CIfTI <VertexIndices>')
             return scalars
           }
           line = line.slice(15, -16)
           const items = line.trim().split(/\s+/)
           if (items.length < indexCount) {
-            console.log('Error parsing VertexIndices')
+            log.error('Error parsing VertexIndices')
           }
           vertexIndices = new Int32Array(indexCount)
           for (let i = 0; i < indexCount; i++) {
@@ -2386,11 +2381,11 @@ export class NVMeshLoaders {
       } // while (pos < len) or reached </CIFTI>
 
       if (surfaceNumberOfVertices === 0 || vertexIndices.length === 0) {
-        console.log('Unable to find CIfTI structure that matches the mesh.')
+        log.warn('Unable to find CIfTI structure that matches the mesh.')
         return scalars
       }
       if (datatype !== 16) {
-        console.log('Only able to read float32 CIfTI (only known datatype).')
+        log.warn('Only able to read float32 CIfTI (only known datatype).')
         return scalars
       }
 
@@ -2408,7 +2403,7 @@ export class NVMeshLoaders {
           j++
         }
       }
-      console.log(
+      log.debug(
         'CIfTI diagnostics',
         surfaceNumberOfVertices,
         brainStructure,
@@ -2491,13 +2486,13 @@ export class NVMeshLoaders {
       }
     }
     if (magic !== 348) {
-      console.log('Not a valid NIfTI image.')
+      log.error('Not a valid NIfTI image.')
     }
     const voxoffset = reader.getFloat32(108, isLittleEndian)
     const scl_slope = reader.getFloat32(112, isLittleEndian)
     const scl_inter = reader.getFloat32(116, isLittleEndian)
     if (scl_slope !== 1 || scl_inter !== 0) {
-      console.log('ignoring scale slope and intercept')
+      log.warn('ignoring scale slope and intercept')
     }
     const datatype = reader.getUint16(70, isLittleEndian)
     if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
@@ -2565,12 +2560,12 @@ export class NVMeshLoaders {
     let voxoffset = 284 // ALWAYS fixed header size
     const isLittleEndian = false // ALWAYS byte order is BIG ENDIAN
     if (version !== 1 || mtype < 0 || mtype > 4) {
-      console.log('Not a valid MGH file')
+      log.warn('Not a valid MGH file')
     }
     const nvert = width * height * depth * nframes
     let scalars: AnyNumberArray = []
     if (nvert % n_vert !== 0) {
-      console.log('Vertices in NIfTI (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
+      log.warn('Vertices in NIfTI (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
       return scalars
     }
     if (mtype === 3) {
@@ -2645,18 +2640,18 @@ export class NVMeshLoaders {
           {
             let version = reader.getInt32((voxoffset += 4), isLittleEndian)
             if (version > 0) {
-              console.log('unsupported CTABreadFromBinaryV1')
+              log.warn('unsupported CTABreadFromBinaryV1')
               return scalars
             }
             version = -version
             if (version !== 2) {
-              console.log('CTABreadFromBinary: unknown version')
+              log.warn('CTABreadFromBinary: unknown version')
               return scalars
             }
             // CTABreadFromBinaryV2() follows
             const nentries = reader.getInt32((voxoffset += 4), isLittleEndian)
             if (nentries < 0) {
-              console.log('CTABreadFromBinaryV2: nentries was ', nentries)
+              log.warn('CTABreadFromBinaryV2: nentries was ', nentries)
               return scalars
             }
             // skip the file name
@@ -2776,7 +2771,7 @@ export class NVMeshLoaders {
       return ret
     }
     if (!line.includes('xml version')) {
-      console.log('Not a X3D image')
+      log.warn('Not a X3D image')
     }
     let positions: number[] = []
     const indices: number[] = []
@@ -2806,7 +2801,7 @@ export class NVMeshLoaders {
         if (ref in appearanceStyles) {
           rgba = appearanceStyles[ref as keyof typeof appearanceStyles] as number[]
         } else {
-          console.log('Unable to find DEF for ' + ref)
+          log.warn('Unable to find DEF for ' + ref)
         }
         return
       }
@@ -2876,15 +2871,15 @@ export class NVMeshLoaders {
           } // Coordinate point
           if (line.startsWith('<Box')) {
             height = -4
-            console.log('Unsupported x3d shape: Box')
+            log.warn('Unsupported x3d shape: Box')
           }
           if (line.startsWith('<Cone')) {
             height = -5
-            console.log('Unsupported x3d shape: Cone')
+            log.warn('Unsupported x3d shape: Cone')
           }
           if (line.startsWith('<ElevationGrid')) {
             height = -6
-            console.log('Unsupported x3d shape: ElevationGrid')
+            log.warn('Unsupported x3d shape: ElevationGrid')
           }
         } // while not </shape
         if (height < -3.0) {
@@ -2893,7 +2888,7 @@ export class NVMeshLoaders {
         } else if (height < -1.0) {
           // indexed triangle mesh or strip
           if (coordIndex.length < 1 || point.length < 3 || point.length === undefined) {
-            console.log('Indexed mesh must specify indices and points')
+            log.warn('Indexed mesh must specify indices and points')
             break
           }
           const idx0 = Math.floor(positions.length / 3) // first new vertex will be AFTER previous vertices
@@ -3168,7 +3163,7 @@ export class NVMeshLoaders {
         }
         if (isPts) {
           if (dataType !== 16) {
-            console.log('expect positions as FLOAT32')
+            log.warn('expect positions as FLOAT32')
           }
           positions = new Float32Array(datBin!.buffer) // TODO can we guarantee this?
           if (isColMajor) {
@@ -3184,7 +3179,7 @@ export class NVMeshLoaders {
           } // isColMajor
         } else if (isIdx) {
           if (dataType !== 8) {
-            console.log('expect indices as INT32')
+            log.warn('expect indices as INT32')
           }
           indices = new Int32Array(datBin!.buffer)
           if (isColMajor) {
@@ -3203,7 +3198,7 @@ export class NVMeshLoaders {
           nvert = Dims[0] * Dims[1] * Dims[2]
           if (n_vert !== 0) {
             if (nvert % n_vert !== 0) {
-              console.log('Number of vertices in scalar overlay (' + nvert + ') does not match mesh (' + n_vert + ')')
+              log.warn('Number of vertices in scalar overlay (' + nvert + ') does not match mesh (' + n_vert + ')')
             }
           }
           function Float32Concat(first: Float32Array, second: Float32Array): Float32Array {
@@ -3290,7 +3285,6 @@ export class NVMeshLoaders {
       Dims[1] = readNumericTag('Dim1=')
       Dims[2] = readNumericTag('Dim2=')
     }
-    // console.log(`p=${positions.length} i=${indices.length} s=${scalars.length}`);
     let colormapLabel
     if (Labels.I.length > 1) {
       colormapLabel = cmapper.makeLabelLut(Labels)

@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { httpServerAddress, testOptions } from './helpers'
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
-  console.log(`Running ${testInfo.title}`)
 })
 
 test('niivue draw 3D clipPlane correct in axial plane', async ({ page }) => {

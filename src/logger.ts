@@ -1,41 +1,46 @@
-export class Log {
-  static LOGGING_ON = true
-  static LOGGING_OFF = false
-  static LOG_PREFIX = 'NiiVue:'
-
-  useLogging: boolean
-
-  constructor(useLogging = false) {
-    this.useLogging = useLogging
-  }
-
-  getTimeStamp(): string {
-    return `${Log.LOG_PREFIX} `
+import pino from 'pino'
+class Log {
+  logger: pino.Logger
+  level: string
+  name: string
+  constructor({ name = 'niivue', level = 'info' } = {}) {
+    this.logger = pino.default({
+      level,
+      name,
+      msgPrefix: name,
+      browser: {
+        asObject: false
+      }
+    })
+    this.name = `${name}`
+    this.level = level
   }
 
   debug(...args: unknown[]): void {
-    if (this.useLogging) {
-      console.log(this.getTimeStamp(), 'DEBUG', ...args)
-    }
+    this.logger.debug(`${this.name}-${this.level}`, ...args)
   }
 
   info(...args: unknown[]): void {
-    if (this.useLogging) {
-      console.info(this.getTimeStamp(), 'INFO', ...args)
-    }
+    this.logger.info(`${this.name}-${this.level}`, ...args)
   }
 
   warn(...args: unknown[]): void {
-    if (this.useLogging) {
-      console.warn(this.getTimeStamp(), 'WARN', ...args)
-    }
+    this.logger.warn(`${this.name}-${this.level}`, ...args)
   }
 
   error(...args: unknown[]): void {
-    console.error(this.getTimeStamp(), 'ERROR', ...args)
+    this.logger.error(`${this.name}-${this.level}`, ...args)
   }
 
-  setLogLevel(useLogging: boolean): void {
-    this.useLogging = useLogging
+  fatal(...args: unknown[]): void {
+    this.logger.fatal(`${this.name}-${this.level}`, ...args)
+  }
+
+  setLogLevel(level: string): void {
+    this.logger.level = level
   }
 }
+
+// make a log instance and export it
+const log = new Log({ name: 'niivue', level: 'info' })
+export { log }

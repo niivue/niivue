@@ -1,4 +1,5 @@
 import * as cmaps from './cmaps/index.js'
+import { log } from './logger.js'
 
 export type ColorMap = {
   R: number[]
@@ -65,7 +66,7 @@ export class ColorTables {
     }
 
     if (name.length > 0) {
-      console.log('No color map named ' + name)
+      log.warn('No color map named ' + name)
     }
     return {
       min: 0,
@@ -240,10 +241,10 @@ export class ColorTables {
       const idxLo = Is[i]
       let idxHi = Is[i + 1]
       if (i === 0 && idxLo !== 0) {
-        console.log('colormap issue: indices expected to start with 0 not ', idxLo)
+        log.warn('colormap issue: indices expected to start with 0 not ', idxLo)
       }
       if (i === Is.length - 2 && idxHi !== 255) {
-        console.log('padding colormap: indices expected end with 255 not ', idxHi)
+        log.warn('padding colormap: indices expected end with 255 not ', idxHi)
         idxHi = 255
       }
       const idxRng = idxHi - idxLo

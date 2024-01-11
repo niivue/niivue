@@ -1,3 +1,4 @@
+import { log } from './logger.js'
 // shader.js is taken from github user Twinklebear: https://github.com/Twinklebear/webgl-util
 
 // Compile and link the shaders vert and frag. vert and frag should contain
@@ -12,7 +13,7 @@ export const compileShader = function (gl: WebGL2RenderingContext, vert: string,
   gl.shaderSource(vs, vert)
   gl.compileShader(vs)
   if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(vs))
+    log.error(gl.getShaderInfoLog(vs))
     throw new Error('Vertex shader failed to compile, see console for log')
   }
 
@@ -24,7 +25,7 @@ export const compileShader = function (gl: WebGL2RenderingContext, vert: string,
   gl.shaderSource(fs, frag)
   gl.compileShader(fs)
   if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(fs))
+    log.error(gl.getShaderInfoLog(fs))
     throw new Error('Fragment shader failed to compile, see console for log')
   }
 
@@ -37,7 +38,7 @@ export const compileShader = function (gl: WebGL2RenderingContext, vert: string,
   gl.attachShader(program, fs)
   gl.linkProgram(program)
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error(gl.getProgramInfoLog(program))
+    log.error(gl.getProgramInfoLog(program))
     throw new Error('Shader failed to link, see console for log')
   }
   return program
@@ -45,7 +46,7 @@ export const compileShader = function (gl: WebGL2RenderingContext, vert: string,
 
 export const getGLExtension = function (gl: WebGL2RenderingContext, ext: string): boolean {
   if (!gl.getExtension(ext)) {
-    console.error('Missing ' + ext + ' WebGL extension')
+    log.error('Missing ' + ext + ' WebGL extension')
     return false
   }
   return true

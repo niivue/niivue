@@ -1,14 +1,12 @@
 import { vec3 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
-import { Log } from './logger.js'
+import { log } from './logger.js'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
 import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
-
-const log = new Log()
 
 /** Enum for text alignment
  */
@@ -559,7 +557,7 @@ export class NVMesh {
       if ((nEdges = nNode * nNode)) {
         hasEdges = true
       } else {
-        console.log('Expected %d edges not %d', nNode * nNode, nEdges)
+        log.warn('Expected %d edges not %d', nNode * nNode, nEdges)
       }
     }
 
@@ -673,7 +671,7 @@ export class NVMesh {
       return // connectome not mesh
     }
     if (!this.pts || !this.tris || !this.rgba255) {
-      console.log('underspecified mesh')
+      log.warn('underspecified mesh')
       return
     }
     function lerp(x: number, y: number, a: number): number {
@@ -968,7 +966,7 @@ export class NVMesh {
   ): void {
     const layer = this.layers[id]
     if (!layer || !(key in layer)) {
-      console.log('mesh does not have property ', key, ' for layer ', layer)
+      log.warn('mesh does not have property ', key, ' for layer ', layer)
       return
     }
     // @ts-expect-error TODO generic property access
@@ -980,7 +978,7 @@ export class NVMesh {
   // TODO this method is too generic
   setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void {
     if (!(key in this)) {
-      console.log('mesh does not have property ', key, this)
+      log.warn('mesh does not have property ', key, this)
       return
     }
     // @ts-expect-error TODO generic access
@@ -993,9 +991,9 @@ export class NVMesh {
   generatePosNormClr(pts: number[], tris: number[], rgba255: number[]): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
-      console.log('this', this)
-      console.log('pts', pts)
-      console.log('rgba', rgba255)
+      log.debug('this', this)
+      log.debug('pts', pts)
+      log.debug('rgba', rgba255)
     }
     const norms = NVMeshUtilities.generateNormals(pts, tris)
     const npt = pts.length / 3
@@ -1174,7 +1172,7 @@ export class NVMesh {
     } else if (ext === 'MZ3') {
       obj = NVMeshLoaders.readMZ3(buffer)
       if (obj instanceof Float32Array || obj.positions === null) {
-        console.log('MZ3 does not have positions (statistical overlay?)')
+        log.warn('MZ3 does not have positions (statistical overlay?)')
       }
     } else if (ext === 'ASC') {
       obj = NVMeshLoaders.readASC(buffer)

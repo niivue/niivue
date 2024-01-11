@@ -2,6 +2,7 @@ import { Subject, Subscription } from 'rxjs'
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
+import { log } from '../logger.js'
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -58,7 +59,6 @@ import {
 import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
-import { Log } from '../logger.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json'
@@ -100,8 +100,6 @@ export { NVDocument, SLICE_TYPE } from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
-
-const log = new Log()
 
 type DragReleaseParams = {
   fracStart: vec3
@@ -279,8 +277,8 @@ type NiiVueOptions = {
   longTouchTimeout?: number
   // whether or not to use radiological convention in the display
   isRadiologicalConvention?: boolean
-  // turn on logging or not (true/false)
-  logging?: boolean
+  // set the logging level to one of: debug, info, warn, error, fatal, silent
+  logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent'
   // the loading text to display when there is a blank canvas and no images
   loadingText?: string
   // whether or not to allow file and url drag and drop on the canvas
@@ -791,7 +789,7 @@ export class Niivue {
     }
 
     this.loadingText = this.opts.loadingText
-    log.setLogLevel(this.opts.logging)
+    log.setLogLevel(this.opts.logLevel)
   }
 
   get volumes(): NVImage[] {
@@ -948,7 +946,7 @@ export class Niivue {
       antialias: isAntiAlias
     })
 
-    console.log('NIIVUE VERSION ', version) // TH added this rare console.log via suggestion from CR. Don't remove
+    log.info('NIIVUE VERSION ', version)
 
     // set parent background container to black (default empty canvas color)
     // avoids white cube around image in 3D render mode
@@ -1163,7 +1161,6 @@ export class Niivue {
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
     const label = this.getLabelAtPoint([x, y])
     if (label) {
-      console.log('label clicked', label)
       // find associated mesh
       for (const mesh of this.meshes) {
         if (mesh.type !== MeshType.CONNECTOME) {
@@ -1171,7 +1168,6 @@ export class Niivue {
         }
         for (const node of mesh.nodes as NVConnectomeNode[]) {
           if (node.label === label) {
-            console.log('node', node)
             this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z])
             this.updateGLVolume()
             this.drawScene()
@@ -1318,7 +1314,6 @@ export class Niivue {
     const mxScale = intensityRaw2Scaled(hdr, hi)
     this.volumes[volIdx].cal_min = mnScale
     this.volumes[volIdx].cal_max = mxScale
-    console.log('new min max', this.volumes[volIdx].cal_max, this.volumes[volIdx].cal_max)
     this.onIntensityChange(this.volumes[volIdx])
   }
 
@@ -2425,7 +2420,7 @@ export class Niivue {
       }
       ok = this.loadDrawing(volume)
     } catch (err) {
-      console.error('loadDrawingFromUrl() failed to load ' + fnm)
+      log.error('loadDrawingFromUrl() failed to load ' + fnm)
       this.drawClearAllUndoBitmaps()
     }
     return ok
@@ -3372,7 +3367,7 @@ export class Niivue {
   loadDocument(document: NVDocument): this {
     this.document = document
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
-    console.log('load document', document)
+    log.debug('load document', document)
     this.mediaUrlMap.clear()
     this.createEmptyDrawing()
     // load our images and meshes
@@ -3589,7 +3584,6 @@ export class Niivue {
     this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     const json = this.document.json()
-    console.log('json', json)
     json.sceneData = { ...this.scene }
 
     return json
@@ -3607,7 +3601,7 @@ export class Niivue {
     this.document.scene = this.scene
 
     this.document.title = fileName
-    console.log('saveDocument', this.volumes[0])
+    log.debug('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
     this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
@@ -3759,7 +3753,7 @@ export class Niivue {
   handleNodeAdded(event: { detail: { node: NVConnectomeNode } }): void {
     const node = event.detail.node
     const rgba = [1, 1, 1, 1]
-    const label = this.addLabel(
+    this.addLabel(
       node.name,
       {
         textColor: rgba,
@@ -3772,7 +3766,6 @@ export class Niivue {
       },
       [node.x, node.y, node.z]
     )
-    console.log(label)
     this.drawScene()
   }
 
@@ -3802,11 +3795,10 @@ export class Niivue {
     if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
       // legacy format
       connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
-      console.log('converted legacy connectome', connectome)
+      log.warn('converted legacy connectome', connectome)
     }
     const mesh = new NVConnectome(this.gl, connectome as LegacyConnectome)
     this.addMesh(mesh)
-    console.log('mesh added', mesh)
     this.uiData.loading$.next(false)
     this.drawScene()
     return this
@@ -3927,7 +3919,7 @@ export class Niivue {
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
         if (status !== gl.FRAMEBUFFER_COMPLETE) {
-          console.error('Incomplete framebuffer')
+          log.error('Incomplete framebuffer')
         }
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
@@ -3946,7 +3938,7 @@ export class Niivue {
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
         if (status !== gl.FRAMEBUFFER_COMPLETE) {
-          console.error('Incomplete framebuffer')
+          log.error('Incomplete framebuffer')
         }
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
@@ -5110,7 +5102,6 @@ export class Niivue {
     for (let i = 0; i < hdr.dims[3] - 1; i++) {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(sobelShader.uniforms.coordZ, coordZ)
-      // console.log(coordZ);
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i)
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
@@ -5532,7 +5523,6 @@ export class Niivue {
 
     const isUseCopyTexSubImage3D = false
     if (isUseCopyTexSubImage3D) {
-      // console.log("Using copyTexSubImage3D (issue 501)");
       if (layer > 1) {
         // we can not simultaneously read and write to the same texture.
         // therefore, we must clone the overlay texture when we wish to add another layer
@@ -5549,7 +5539,6 @@ export class Niivue {
         blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true)
       }
     } else {
-      // console.log("Using pass through shader (issue 501)");
       if (layer > 1) {
         if (!this.back.dims) {
           throw new Error('back.dims undefined')
@@ -8152,12 +8141,12 @@ export class Niivue {
   }
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
-    console.log('screenPoint', screenPoint)
+    log.debug('screenPoint', screenPoint)
     const panelHeight = this.getLegendPanelHeight()
     const panelWidth = this.getLegendPanelWidth()
     const left = this.gl.canvas.width - panelWidth
     let top = (this.canvas!.height - panelHeight) / 2
-    console.log('panelrect', left, top, left + panelWidth, top + panelHeight)
+    log.debug('panelrect', left, top, left + panelWidth, top + panelHeight)
     if (
       screenPoint[0] < left ||
       screenPoint[1] < top ||
@@ -8604,7 +8593,7 @@ export class Niivue {
           frac[2] = 0.5
         }
         if (this.meshes.length < 1) {
-          console.error('mm2frac() not finite: objects not (yet) loaded.')
+          log.error('mm2frac() not finite: objects not (yet) loaded.')
         }
       }
       return frac
@@ -9203,7 +9192,6 @@ export class Niivue {
         } else {
           h = fov[2]
         }
-        // console.log("w" + w + " h" + h + "::", fov);
         if (pass === 0) {
           // 1st pass: record slice locations in world space
           if (!isRender) {

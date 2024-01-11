@@ -1,6 +1,7 @@
 import { WebSocketSubject, webSocket } from 'rxjs/webSocket'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Message, NVMESSAGE } from './nvmessage.js'
+import { log } from './logger.js'
 
 /**
  * SessionUser specifies display name, user id and user key
@@ -125,7 +126,7 @@ export class SessionBus {
     url.pathname = 'websockets'
     url.search = '?session=' + sessionName
     this.serverConnection$ = webSocket(url.href)
-    console.log(url.href)
+    log.debug(url.href)
   }
 
   // Internal function called after a connection with the server has been made
@@ -135,8 +136,8 @@ export class SessionBus {
         next: (msg) => {
           this.onMessageCallback(msg)
         }, // Called whenever there is a message from the server.
-        error: (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
-        complete: () => console.log('complete') // Called when connection is closed (for whatever reason).
+        error: (err) => log.error(err), // Called if at any point WebSocket API signals some kind of error.
+        complete: () => log.debug('complete') // Called when connection is closed (for whatever reason).
       })
     }
   }

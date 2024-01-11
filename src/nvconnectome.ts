@@ -6,6 +6,7 @@ import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { cmapper } from './colortables.js'
 import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from './nvlabel.js'
 import { Connectome, ConnectomeOptions, LegacyConnectome, NVConnectomeEdge, NVConnectomeNode } from './types.js'
+import { log } from './logger.js'
 
 const defaultOptions: ConnectomeOptions = {
   name: 'untitled connectome',
@@ -152,7 +153,7 @@ export class NVConnectome extends NVMesh {
 
         if (min < max) {
           if (color < min) {
-            console.log('color value lower than min')
+            log.warn('color value lower than min')
             continue
           }
           color = (color - min) / (max - min)
@@ -166,7 +167,7 @@ export class NVConnectome extends NVMesh {
           rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
         }
         rgba = rgba.map((c) => c / 255)
-        console.log('adding label for ', nodes[i])
+        log.debug('adding label for ', nodes[i])
         nodes[i].label = new NVLabel3D(
           nodes[i].name,
           {
@@ -181,13 +182,13 @@ export class NVConnectome extends NVMesh {
           },
           [nodes[i].x, nodes[i].y, nodes[i].z]
         )
-        console.log('label for node:', nodes[i].label)
+        log.debug('label for node:', nodes[i].label)
       }
     }
   }
 
   addConnectomeNode(node: NVConnectomeNode): void {
-    console.log('adding node', node)
+    log.debug('adding node', node)
     if (!this.nodes) {
       throw new Error('nodes not defined')
     }
