@@ -2143,7 +2143,6 @@ declare class NVImage {
     ignoreZeroVoxels: boolean;
     trustCalMinMax: boolean;
     colormapNegative: string;
-    colorMapNegative: string;
     colormapLabel: LUT | null;
     colormapInvert?: boolean;
     nFrame4D?: number;
@@ -2468,6 +2467,7 @@ type NVConfigOptions = {
     multiplanarLayout: MULTIPLANAR_TYPE;
     renderOverlayBlend: number;
 };
+declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
     azimuth: number;
     elevation: number;
@@ -4477,4 +4477,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { LabelLineTerminator, LabelTextAlignment, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, Niivue, SLICE_TYPE, cmapper, ColorTables as colortables };
+export { DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type ExportDocumentData, LabelLineTerminator, LabelTextAlignment, MULTIPLANAR_TYPE, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, Niivue, SLICE_TYPE, cmapper, ColorTables as colortables };
