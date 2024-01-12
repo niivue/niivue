@@ -3,6 +3,7 @@ import { ImageFromUrlOptions, NVImage } from './nvimage/index.js'
 import { LoadFromUrlParams, NVMesh } from './nvmesh.js'
 import { Niivue } from './niivue/index.js'
 import { Message, NVMESSAGE } from './nvmessage.js'
+import { log } from './logger.js'
 
 /**
  * NVController is for synchronizing both remote and local instances of Niivue
@@ -57,7 +58,7 @@ export class NVController {
 
   // TODO location type
   onLocationChangeHandler(location: unknown): void {
-    console.log(location)
+    log.debug(location)
   }
 
   addVolume(volume: NVImage, url: string): void {
@@ -228,7 +229,7 @@ export class NVController {
    */
   onVolumeAddedFromUrlHandler(imageOptions: ImageFromUrlOptions, volume: NVImage): void {
     if (this.isInSession && this.sessionBus) {
-      console.log(imageOptions)
+      log.debug(imageOptions)
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.VOLUME_ADDED_FROM_URL,
         imageOptions
@@ -271,8 +272,8 @@ export class NVController {
    * Notifies that a mesh has been loaded by URL
    */
   onMeshAddedFromUrlHandler(meshOptions: LoadFromUrlParams): void {
-    console.log('mesh loaded from url')
-    console.log(meshOptions)
+    log.debug('mesh loaded from url')
+    log.debug(meshOptions)
     if (this.isInSession && this.sessionBus) {
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.MESH_FROM_URL_ADDED,
@@ -285,8 +286,8 @@ export class NVController {
    * Notifies that a mesh has been added
    */
   onMeshLoadedHandler(mesh: NVMesh): void {
-    console.log('mesh has been added')
-    console.log(mesh)
+    log.debug('mesh has been added')
+    log.debug(mesh)
   }
 
   onMeshWithUrlRemovedHandler(url: string): void {
@@ -333,8 +334,8 @@ export class NVController {
    * Frame for 4D image has changed
    */
   onFrameChangeHandler(volume: NVImage, index: number): void {
-    console.log('frame has changed to ' + index)
-    console.log(volume)
+    log.debug('frame has changed to ' + index)
+    log.debug(volume)
     if (this.niivue.mediaUrlMap.has(volume) && this.isInSession && this.sessionBus) {
       const url = this.niivue.mediaUrlMap.get(volume)
       this.sessionBus.sendSessionMessage({
@@ -384,7 +385,7 @@ export class NVController {
    */
   onMeshPropertyChanged(meshIndex: number, key: string, val: unknown): void {
     if (this.isInSession && this.sessionBus) {
-      console.log(NVMESSAGE.MESH_PROPERTY_CHANGED)
+      log.debug(NVMESSAGE.MESH_PROPERTY_CHANGED)
       this.sessionBus.sendSessionMessage({
         op: NVMESSAGE.MESH_PROPERTY_CHANGED,
         meshIndex,

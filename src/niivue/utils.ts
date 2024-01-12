@@ -1,9 +1,7 @@
 import { mat4, vec3, vec4 } from 'gl-matrix'
-import { Log } from '../logger.js'
+import { log } from '../logger.js'
 import { NiftiHeader, Volume } from '../types.js'
 import { NVUtilities } from '../nvutilities.js'
-
-const log = new Log()
 
 // rotate image to match right-anterior-superior voxel order
 export function img2ras16(volume: Volume): Int16Array {
@@ -239,7 +237,6 @@ export function encodeRLE(data: Uint8Array): Uint8Array {
         break
       }
       if (dp + 2 < dl) {
-        // console.log(':', v, data[dp], data[dp+1]);
         if (v !== data[dp] && data[dp + 2] === data[dp] && data[dp + 1] === data[dp]) {
           break
         }

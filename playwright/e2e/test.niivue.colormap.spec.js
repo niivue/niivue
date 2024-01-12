@@ -2,9 +2,8 @@ import fs from 'fs'
 import { test, expect } from '@playwright/test'
 import { httpServerAddress, testOptions } from './helpers'
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
-  console.log(`Running ${testInfo.title}`)
 })
 
 // get a list of cmap json file names. dont include files that start with "_"
@@ -24,7 +23,6 @@ for (const file of files) {
       const nv = new Niivue(testOptions)
       await nv.attachTo('gl', false)
       // load one volume object in an array
-      console.log(`${file}`)
       const volumeList = [
         {
           url: `./images/mni152.nii.gz`,
@@ -48,7 +46,6 @@ for (const file of files) {
       const nv = new Niivue()
       await nv.attachTo('gl', false)
       // load one volume object in an array
-      console.log(`${file}`)
       const volumeList = [
         {
           url: `./images/mni152.nii.gz`,

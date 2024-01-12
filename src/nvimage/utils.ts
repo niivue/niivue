@@ -1,8 +1,6 @@
 import { vec3 } from 'gl-matrix'
-import { Log } from '../logger.js'
+import { log } from '../logger.js'
 import { NiftiHeader } from '../types.js'
-
-const log = new Log()
 
 export const isPlatformLittleEndian = (): boolean => {
   // inspired by https://github.com/rii-mango/Papaya
