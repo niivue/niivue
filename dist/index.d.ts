@@ -2447,7 +2447,7 @@ type NVConfigOptions = {
     sagittalNoseLeft: boolean;
     isSliceMM: boolean;
     isHighResolutionCapable: boolean;
-    logging: boolean;
+    logLevel: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent';
     loadingText: string;
     dragAndDropEnabled: boolean;
     drawingEnabled: boolean;
@@ -2988,7 +2988,7 @@ type NiiVueOptions = {
     doubleTouchTimeout?: number;
     longTouchTimeout?: number;
     isRadiologicalConvention?: boolean;
-    logging?: boolean;
+    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent';
     loadingText?: string;
     dragAndDropEnabled?: boolean;
     isNearestInterpolation?: boolean;
@@ -3397,7 +3397,7 @@ declare class Niivue {
         sagittalNoseLeft: boolean;
         isSliceMM: boolean;
         isHighResolutionCapable: boolean;
-        logging: boolean;
+        logLevel: "debug" | "info" | "warn" | "error" | "fatal" | "silent";
         loadingText: string;
         dragAndDropEnabled: boolean;
         drawingEnabled: boolean;
