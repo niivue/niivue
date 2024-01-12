@@ -40,7 +40,6 @@ export class NVImage {
   trustCalMinMax: boolean
   colormapNegative: string
   // TODO see niivue/loadDocument
-  colorMapNegative: string
   colormapLabel: LUT | null
   colormapInvert?: boolean
   nFrame4D?: number
@@ -186,7 +185,6 @@ export class NVImage {
     this.ignoreZeroVoxels = ignoreZeroVoxels
     this.trustCalMinMax = trustCalMinMax
     this.colormapNegative = colormapNegative
-    this.colorMapNegative = colormapNegative
     this.colormapLabel = colormapLabel
     this.frame4D = frame4D // indexed from 0!
     this.cal_minNeg = cal_minNeg
