@@ -417,10 +417,10 @@ export class Niivue {
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
-  DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
-  DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
-  fontMetrics?: typeof defaultFontMetrics
-  fontMets: FontMetrics | null = null
+  private DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
+  private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
+  private fontMetrics?: typeof defaultFontMetrics
+  private fontMets: FontMetrics | null = null
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
