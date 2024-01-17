@@ -225,6 +225,7 @@ const MESH_EXTENSIONS = [
   'TRACT',
   'TRI',
   'TRK',
+  'TT',
   'TRX',
   'VTK',
   'X3D',

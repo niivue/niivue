@@ -1135,11 +1135,13 @@ export class NVMesh {
       return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
     }
     rgba255[3] = Math.max(0, rgba255[3])
-    if (ext === 'TCK' || ext === 'TRK' || ext === 'TRX' || ext === 'TRACT') {
+    if (ext === 'TCK' || ext === 'TRK' || ext === 'TT' || ext === 'TRX' || ext === 'TRACT') {
       if (ext === 'TCK') {
         obj = NVMeshLoaders.readTCK(buffer)
       } else if (ext === 'TRACT') {
         obj = NVMeshLoaders.readTRACT(buffer)
+      } else if (ext === 'TT') {
+        obj = NVMeshLoaders.readTT(buffer)
       } else if (ext === 'TRX') {
         obj = NVMeshLoaders.readTRX(buffer)
       } else {

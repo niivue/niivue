@@ -29,6 +29,11 @@ export type TRACT = {
   dps: ValuesArray
 }
 
+export type TT = {
+  pts: number[]
+  offsetPt0: number[]
+}
+
 export type TRX = {
   pts: number[]
   offsetPt0: number[]
