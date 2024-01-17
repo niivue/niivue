@@ -202,7 +202,7 @@ export class NVMeshLoaders {
         const u16 = new Uint16Array(data.buffer)
         const lut = new Float32Array(65536)
         for (let i = 0; i < 65536; i++) {
-            lut[i] = decodeFloat16(i)
+          lut[i] = decodeFloat16(i)
         }
         for (let i = 0; i < nval; i++) {
           vals[i] = lut[u16[i]]

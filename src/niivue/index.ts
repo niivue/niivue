@@ -6423,7 +6423,8 @@ export class Niivue {
   }
 
   // not included in public docs
-  screenXY2mm(x: number, y: number, forceSlice = -1): vec3 {
+  // returns vec4: XYZi where XYZ is location in millimeters, and i tile index
+  screenXY2mm(x: number, y: number, forceSlice = -1): vec4 {
     let texFrac: vec3
     for (let s = 0; s < this.screenSlices.length; s++) {
       let i = s
@@ -6445,9 +6446,9 @@ export class Niivue {
       }
       const mm = this.frac2mm(texFrac)
 
-      return vec3.fromValues(mm[0], mm[1], mm[2])
+      return vec4.fromValues(mm[0], mm[1], mm[2], i)
     }
-    return vec3.fromValues(NaN, NaN, NaN)
+    return vec4.fromValues(NaN, NaN, NaN, NaN)
   }
 
   // not included in public docs
@@ -6460,9 +6461,9 @@ export class Niivue {
     if (isNaN(startMM[0]) || isNaN(endMM[0]) || isNaN(endMM[3])) {
       return
     }
-    const v = vec3.create()
+    const v = vec4.create()
     const zoom = this.uiData.pan2DxyzmmAtMouseDown[3]
-    vec3.sub(v, endMM, startMM)
+    vec4.sub(v, endMM, startMM)
     this.scene.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0]
     this.scene.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1]
     this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2]
