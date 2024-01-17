@@ -6,8 +6,7 @@ export type ValuesArray = Array<{
   vals: number[]
 }>
 
-export type AnyNumberArray =
-  | number[]
+export type TypedNumberArray =
   | Float64Array
   | Float32Array
   | Uint32Array
@@ -16,6 +15,8 @@ export type AnyNumberArray =
   | Int32Array
   | Int16Array
   | Int8Array
+
+export type AnyNumberArray = number[] | TypedNumberArray
 
 export type DefaultMeshType = {
   positions: Float32Array
