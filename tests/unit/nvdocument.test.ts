@@ -12,4 +12,3 @@ test('nvdocument convert colorMap and colorMapNegative to colormap and colormapN
   expect(colorMapIsInLayer).toBe(false)
   expect(colorMapNegativeIsInLayer).toBe(false)
 })
-
