@@ -46,17 +46,16 @@ test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
 })
 
 test('niivue loadDocumentFromUrl replaces previous document objects', async ({ page }) => {
-  const {nvols, nmeshes} = await page.evaluate(async (testOptions) => {
+  const { nvols, nmeshes } = await page.evaluate(async (testOptions) => {
     // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl', false)
     await nv.loadDocumentFromUrl('./images/document/niivue.basic.nvd')
     // now load a document with no volumes
     await nv.loadDocumentFromUrl('./images/document/niivue.mesh.nvd')
-    return {nvols: nv.volumes.length, nmeshes: nv.meshes.length}
+    return { nvols: nv.volumes.length, nmeshes: nv.meshes.length }
   })
   expect(nvols).toBe(0)
   expect(nmeshes).toBe(1)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
-
