@@ -6,7 +6,6 @@ import { NiivueObject3D } from './niivue-object3D.js'
 import { NVMesh, NVMeshLayer } from './nvmesh.js'
 import {
   ANNOT,
-  AnyNumberArray,
   DefaultMeshType,
   GII,
   Layer,
@@ -16,10 +15,13 @@ import {
   TCK,
   TRACT,
   TRK,
+  TT,
   TRX,
   VTK,
   X3D,
-  XmlTag
+  XmlTag,
+  AnyNumberArray,
+  TypedNumberArray
 } from './nvmesh-types.js'
 
 const utiltiesLogger = log
@@ -108,6 +110,210 @@ export class NVMeshLoaders {
       dps
     }
   } // readTRACT()
+
+  // https://dsi-studio.labsolver.org/doc/cli_data.html
+  // https://brain.labsolver.org/hcp_trk_atlas.html
+  static readTT(buffer: ArrayBuffer): TT {
+    // Read a Matlab V4 file, n.b. does not support modern versions
+    // https://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
+    function readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray> {
+      let len = buffer.byteLength
+      if (len < 40) {
+        throw new Error('File too small to be MAT v4: bytes = ' + buffer.byteLength)
+      }
+      let reader = new DataView(buffer)
+      let magic = reader.getUint16(0, true)
+      let _buffer = buffer
+      if (magic === 35615 || magic === 8075) {
+        // gzip signature 0x1F8B in little and big endian
+        const raw = decompressSync(new Uint8Array(buffer))
+        reader = new DataView(raw.buffer)
+        magic = reader.getUint16(0, true)
+        _buffer = raw.buffer
+        len = _buffer.byteLength
+      }
+      const textDecoder = new TextDecoder('utf-8')
+      const bytes = new Uint8Array(_buffer)
+      let pos = 0
+      const mat: Record<string, TypedNumberArray> = {}
+      function getTensDigit(v: number): number {
+        return Math.floor(v / 10) % 10
+      }
+      function readArray(tagDataType: number, tagBytesStart: number, tagBytesEnd: number): TypedNumberArray {
+        const byteArray = new Uint8Array(bytes.subarray(tagBytesStart, tagBytesEnd))
+        if (tagDataType === 1) {
+          return new Float32Array(byteArray.buffer)
+        }
+        if (tagDataType === 2) {
+          return new Int32Array(byteArray.buffer)
+        }
+        if (tagDataType === 3) {
+          return new Int16Array(byteArray.buffer)
+        }
+        if (tagDataType === 4) {
+          return new Uint16Array(byteArray.buffer)
+        }
+        if (tagDataType === 5) {
+          return new Uint8Array(byteArray.buffer)
+        }
+        return new Float64Array(byteArray.buffer)
+      }
+      function readTag(): void {
+        const mtype = reader.getUint32(pos, true)
+        const mrows = reader.getUint32(pos + 4, true)
+        const ncols = reader.getUint32(pos + 8, true)
+        const imagf = reader.getUint32(pos + 12, true)
+        const namlen = reader.getUint32(pos + 16, true)
+        pos += 20 // skip header
+        if (imagf !== 0) {
+          throw new Error('Matlab V4 reader does not support imaginary numbers')
+        }
+        const tagArrayItems = mrows * ncols
+        if (tagArrayItems < 1) {
+          throw new Error('mrows * ncols must be greater than one')
+        }
+        const byteArray = new Uint8Array(bytes.subarray(pos, pos + namlen))
+        const tagName = textDecoder.decode(byteArray).trim().replaceAll('\x00', '')
+        const tagDataType = getTensDigit(mtype)
+        // 0 double-precision (64-bit) floating-point numbers
+        // 1 single-precision (32-bit) floating-point numbers
+        // 2 32-bit signed integers
+        // 3 16-bit signed integers
+        // 4 16-bit unsigned integers
+        // 5 8-bit unsigned integers
+        let tagBytesPerItem = 8
+        if (tagDataType >= 1 && tagDataType <= 2) {
+          tagBytesPerItem = 4
+        } else if (tagDataType >= 3 && tagDataType <= 4) {
+          tagBytesPerItem = 2
+        } else if (tagDataType === 5) {
+          tagBytesPerItem = 1
+        } else if (tagDataType !== 0) {
+          throw new Error('impossible Matlab v4 datatype')
+        }
+        pos += namlen // skip name
+        if (mtype > 50) {
+          throw new Error('Does not appear to be little-endian V4 Matlab file')
+        }
+        const posEnd = pos + tagArrayItems * tagBytesPerItem
+        mat[tagName] = readArray(tagDataType, pos, posEnd)
+        pos = posEnd
+      }
+      while (pos + 20 < len) {
+        readTag()
+      }
+      return mat
+    } // readMatV4()
+    let offsetPt0: AnyNumberArray = []
+    let pts: AnyNumberArray = []
+    const mat = readMatV4(buffer)
+    if (!('trans_to_mni' in mat)) {
+      throw new Error("TT format file must have 'trans_to_mni'")
+    }
+    if (!('voxel_size' in mat)) {
+      throw new Error("TT format file must have 'voxel_size'")
+    }
+    if (!('track' in mat)) {
+      throw new Error("TT format file must have 'track'")
+    }
+    let trans_to_mni = mat4.create()
+    const m = mat.trans_to_mni
+    trans_to_mni = mat4.fromValues(
+      m[0],
+      m[1],
+      m[2],
+      m[3],
+      m[4],
+      m[5],
+      m[6],
+      m[7],
+      m[8],
+      m[9],
+      m[10],
+      m[11],
+      m[12],
+      m[13],
+      m[14],
+      m[15]
+    )
+    mat4.transpose(trans_to_mni, trans_to_mni)
+    let zoomMat = mat4.create()
+    zoomMat = mat4.fromValues(
+      1 / mat.voxel_size[0],
+      0,
+      0,
+      -0.5,
+      0,
+      1 / mat.voxel_size[1],
+      0,
+      -0.5,
+      0,
+      0,
+      1 / mat.voxel_size[2],
+      -0.5,
+      0,
+      0,
+      0,
+      1
+    )
+    mat4.transpose(zoomMat, zoomMat)
+    function parse_tt(
+      track: Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array
+    ): void {
+      const dv = new DataView(track.buffer)
+      const pos = []
+      let nvert3 = 0
+      let i = 0
+      while (i < track.length) {
+        pos.push(i)
+        const newpts = dv.getUint32(i, true)
+        i = i + newpts + 13
+        nvert3 += newpts
+      }
+      offsetPt0 = new Uint32Array(pos.length + 1)
+      pts = new Float32Array(nvert3)
+      let npt = 0
+      for (let i = 0; i < pos.length; i++) {
+        offsetPt0[i] = npt / 3
+        let p = pos[i]
+        const sz = dv.getUint32(p, true) / 3
+        let x = dv.getInt32(p + 4, true)
+        let y = dv.getInt32(p + 8, true)
+        let z = dv.getInt32(p + 12, true)
+        p += 16
+        pts[npt++] = x
+        pts[npt++] = y
+        pts[npt++] = z
+        for (let j = 2; j <= sz; j++) {
+          x = x + dv.getInt8(p++)
+          y = y + dv.getInt8(p++)
+          z = z + dv.getInt8(p++)
+          pts[npt++] = x
+          pts[npt++] = y
+          pts[npt++] = z
+        }
+      } // for each streamline
+      for (let i = 0; i < npt; i++) {
+        pts[i] = pts[i] / 32.0
+      }
+      const vox2mmMat = mat4.create()
+      mat4.mul(vox2mmMat, zoomMat, trans_to_mni)
+      let v = 0
+      for (let i = 0; i < npt / 3; i++) {
+        const pos = vec4.fromValues(pts[v], pts[v + 1], pts[v + 2], 1)
+        vec4.transformMat4(pos, pos, vox2mmMat)
+        pts[v++] = pos[0]
+        pts[v++] = pos[1]
+        pts[v++] = pos[2]
+      }
+      offsetPt0[pos.length] = npt / 3 // solve fence post problem, offset for final streamline
+    } // parse_tt()
+    parse_tt(mat.track)
+    return {
+      pts,
+      offsetPt0
+    }
+  }
 
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
@@ -200,8 +406,12 @@ export class NVMeshLoaders {
         nval = data.length / 2 // 2 bytes per 16bit input
         vals = new Float32Array(nval)
         const u16 = new Uint16Array(data.buffer)
+        const lut = new Float32Array(65536)
+        for (let i = 0; i < 65536; i++) {
+          lut[i] = decodeFloat16(i)
+        }
         for (let i = 0; i < nval; i++) {
-          vals[i] = decodeFloat16(u16[i])
+          vals[i] = lut[u16[i]]
         }
       } else {
         continue

@@ -6,8 +6,7 @@ export type ValuesArray = Array<{
   vals: number[]
 }>
 
-export type AnyNumberArray =
-  | number[]
+export type TypedNumberArray =
   | Float64Array
   | Float32Array
   | Uint32Array
@@ -16,6 +15,8 @@ export type AnyNumberArray =
   | Int32Array
   | Int16Array
   | Int8Array
+
+export type AnyNumberArray = number[] | TypedNumberArray
 
 export type DefaultMeshType = {
   positions: Float32Array
@@ -27,6 +28,11 @@ export type TRACT = {
   pts: number[]
   offsetPt0: number[]
   dps: ValuesArray
+}
+
+export type TT = {
+  pts: number[]
+  offsetPt0: number[]
 }
 
 export type TRX = {
