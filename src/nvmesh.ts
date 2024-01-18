@@ -6,7 +6,7 @@ import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
-import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
+import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TT, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
 
 /** Enum for text alignment
  */
@@ -1120,7 +1120,7 @@ export class NVMesh {
     let tris: number[] = []
     let pts: number[] = []
     let anatomicalStructurePrimary = ''
-    let obj: TCK | TRACT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
+    let obj: TCK | TRACT | TT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(name)![1]
     ext = ext.toUpperCase()
@@ -1625,6 +1625,10 @@ export class NVMesh {
 
   static readTCK(buffer: ArrayBuffer): TCK {
     return NVMeshLoaders.readTCK(buffer)
+  }
+
+  static readTT(buffer: ArrayBuffer): TT {
+    return NVMeshLoaders.readTRX(buffer)
   }
 
   static readTRX(buffer: ArrayBuffer): TRX {
