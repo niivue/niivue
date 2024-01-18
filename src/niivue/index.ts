@@ -353,6 +353,19 @@ type UIData = {
   dpr?: number
 }
 
+type SaveImageOptions = {
+  filename?: string
+  isSaveDrawing?: boolean
+  volumeByIndex: number
+}
+
+// default SaveImageOptions
+const defaultSaveImageOptions: SaveImageOptions = {
+  filename: '',
+  isSaveDrawing: false,
+  volumeByIndex: 0
+}
+
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -2629,7 +2642,10 @@ export class Niivue {
    * @example niivue.saveImage('test.nii', true);
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
-  saveImage(fnm: string, isSaveDrawing = false, volumeByIndex = 0): Uint8Array | boolean {
+  saveImage(options: SaveImageOptions = defaultSaveImageOptions): Uint8Array | boolean {
+    const saveOptions: SaveImageOptions = { ...defaultSaveImageOptions, ...options }
+    const { filename, isSaveDrawing, volumeByIndex } = saveOptions
+    log.debug('saveImage', filename, isSaveDrawing, volumeByIndex)
     if (this.back?.dims === undefined) {
       log.debug('No voxelwise image open')
       return false
@@ -2641,9 +2657,11 @@ export class Niivue {
       }
       const perm = this.volumes[0].permRAS!
       if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-        this.volumes[0].saveToDisk(fnm, this.drawBitmap) // createEmptyDrawing
-        return true
+        log.debug('saving drawing')
+        const img = this.volumes[0].saveToDisk(filename, this.drawBitmap) // createEmptyDrawing
+        return img
       } else {
+        log.debug('saving drawing')
         const dims = this.volumes[0].hdr!.dims // reverse to original
         // reverse RAS to native space, layout is mrtrix MIF format
         // for details see NVImage.readMIF()
@@ -2708,15 +2726,13 @@ export class Niivue {
             }
           }
         }
-        this.volumes[0].saveToDisk(fnm, outVs)
-        return true
+        log.debug('saving drawing')
+        const img = this.volumes[0].saveToDisk(filename, outVs)
+        return img
       }
     }
-    const img = this.volumes[volumeByIndex].saveToDisk(fnm)
-    const isString = typeof fnm === 'string' && fnm.length > 0
-    if (isString) {
-      return true
-    }
+    log.debug('saving image')
+    const img = this.volumes[volumeByIndex].saveToDisk(filename)
     return img
   }
 
