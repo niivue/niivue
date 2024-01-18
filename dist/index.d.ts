@@ -249,7 +249,8 @@ type ValuesArray = Array<{
     id: string;
     vals: number[];
 }>;
-type AnyNumberArray = number[] | Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
+type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
+type AnyNumberArray = number[] | TypedNumberArray;
 type DefaultMeshType = {
     positions: Float32Array;
     indices: Int32Array;
@@ -259,6 +260,10 @@ type TRACT = {
     pts: number[];
     offsetPt0: number[];
     dps: ValuesArray;
+};
+type TT = {
+    pts: number[];
+    offsetPt0: number[];
 };
 type TRX = {
     pts: number[];
@@ -1318,6 +1323,7 @@ declare class NVUtilities {
  */
 declare class NVMeshLoaders {
     static readTRACT(buffer: ArrayBuffer): TRACT;
+    static readTT(buffer: ArrayBuffer): TT;
     static readTRX(buffer: ArrayBuffer): TRX;
     static readTCK(buffer: ArrayBuffer): TCK;
     static readTRK(buffer: ArrayBuffer): TRK;
@@ -2786,7 +2792,7 @@ declare class Niivue {
     mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): void;
     drawRuler(): void;
     drawRuler10cm(startXYendXY: number[]): void;
-    screenXY2mm(x: number, y: number, forceSlice?: number): vec3;
+    screenXY2mm(x: number, y: number, forceSlice?: number): vec4;
     dragForPanZoom(startXYendXY: number[]): void;
     dragForCenterButton(startXYendXY: number[]): void;
     dragForSlicer3D(startXYendXY: number[]): void;
