@@ -10,7 +10,7 @@ type Extents = {
  * Utilities class for common mesh functions
  */
 export class NVMeshUtilities {
-  static getClusterBoundaryU8(u8: Uint8Array, faces: number[]): boolean[] {
+  static getClusterBoundaryU8(u8: Uint8Array, faces: number[] | Uint32Array): boolean[] {
     // assume all vertices are not near a border
     const border = new Array(u8.length).fill(false)
     const binary = new Array(u8.length).fill(false)
@@ -38,7 +38,7 @@ export class NVMeshUtilities {
     return border
   }
 
-  static getClusterBoundary(rgba8: Uint8Array, faces: number[]): boolean[] {
+  static getClusterBoundary(rgba8: Uint8Array, faces: number[] | Uint32Array): boolean[] {
     const rgba32 = new Uint32Array(rgba8.buffer)
     // assume all vertices are not near a border
     const border = new Array(rgba32.length).fill(false)
@@ -62,7 +62,7 @@ export class NVMeshUtilities {
   }
 
   // return spatial extremes for vertices
-  static getExtents(pts: number[]): Extents {
+  static getExtents(pts: number[] | Float32Array): Extents {
     if ((!ArrayBuffer.isView(pts) && !Array.isArray(pts)) || pts.length < 3) {
       return { mxDx: 0.0, extentsMin: 0.0, extentsMax: 0.0 }
     }
@@ -84,7 +84,7 @@ export class NVMeshUtilities {
 
   // determine vector orthogonal to plane defined by triangle
   // triangle winding determines front/back face
-  static generateNormals(pts: number[], tris: number[]): Float32Array {
+  static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array {
     // from https://github.com/rii-mango/Papaya
     /*
 Copyright (c) 2012-2015, RII-UTHSCSA
