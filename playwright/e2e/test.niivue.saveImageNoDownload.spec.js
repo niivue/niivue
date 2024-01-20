@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { httpServerAddress, testOptions } from './helpers'
 
+// The header is the first 352 bytes, and the image data is dim1 * dim2 * dim3 * nbyper.
+// So for the test case with the mni152 image we have 352 + (207 * 256 * 215 * 1).
+const expectedImgLength = 11393632
+
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
@@ -25,7 +29,7 @@ test('save image no download trigger', async ({ page }) => {
     const img = nv.saveImage()
     return img.length
   })
-  expect(imgLength).toBe(11393632)
+  expect(imgLength).toBe(expectedImgLength)
 })
 
 test('save image no download trigger partial options', async ({ page }) => {
@@ -48,5 +52,5 @@ test('save image no download trigger partial options', async ({ page }) => {
     const img = nv.saveImage({ filename: '' })
     return img.length
   })
-  expect(imgLength).toBe(11393632)
+  expect(imgLength).toBe(expectedImgLength)
 })
