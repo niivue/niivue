@@ -2545,10 +2545,14 @@ export class NVImage {
   // not included in public docs
   // save image as NIfTI volume
   // if fnm is empty, data is returned
-  saveToDisk(fnm: string, drawing8: Uint8Array | null = null): Uint8Array {
+  saveToDisk(fnm: string = '', drawing8: Uint8Array | null = null): Uint8Array {
     // TODO there was an unnecessary strict string check for fnm here,
     // shouldn't be necessary anymore. Thanks TS! :)
     const saveData = this.saveToUint8Array(fnm, drawing8)
+    if (fnm === '') {
+      log.debug('saveToDisk: empty file name, returning data as Uint8Array rather than triggering download')
+      return saveData
+    }
     const blob = new Blob([saveData.buffer], {
       type: 'application/octet-stream'
     })

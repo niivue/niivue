@@ -219,7 +219,7 @@
   } // toggleGroup()
   async function onButtonClick(event) {
     if (event.target.id === "SaveDraw") {
-      nv1.saveImage("draw.nii", true);
+      nv1.saveImage({ filename: 'draw.nii', isSaveDrawing: true})
       return;
     }
     if (event.target.id === "SaveBitmap") {
