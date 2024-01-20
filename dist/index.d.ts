@@ -745,7 +745,7 @@ declare class NVImage {
     intensityRaw2Scaled(raw: number): number;
     intensityScaled2Raw(scaled: number): number;
     saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Uint8Array;
-    saveToDisk(fnm: string, drawing8?: Uint8Array | null): Uint8Array;
+    saveToDisk(fnm?: string, drawing8?: Uint8Array | null): Uint8Array;
     static fetchDicomData(url: string, headers?: Record<string, string>): Promise<ArrayBuffer[]>;
     static fetchPartial(url: string, bytesToLoad: number, headers?: Record<string, string>): Promise<Response>;
     /**
@@ -1500,6 +1500,11 @@ type UIData = {
     loading$: Subject<unknown>;
     dpr?: number;
 };
+type SaveImageOptions = {
+    filename: string;
+    isSaveDrawing: boolean;
+    volumeByIndex: number;
+};
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -2190,10 +2195,10 @@ declare class Niivue {
      * @param isSaveDrawing - determines whether drawing or background image is saved
      * @param volumeByIndex - determines layer to save (0 for background)
      * @param volumeByIndex - determines layer to save (0 for background)
-     * @example niivue.saveImage('test.nii', true);
+     * @example niivue.saveImage(\{ filename: "myimage.nii.gz", isSaveDrawing: true \});
      * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
      */
-    saveImage(fnm: string, isSaveDrawing?: boolean, volumeByIndex?: number): Uint8Array | boolean;
+    saveImage(options?: SaveImageOptions): Uint8Array | boolean;
     getMeshIndexByID(id: string | number): number;
     /**
      * change property of mesh, tractogram or connectome
