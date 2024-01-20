@@ -274,14 +274,14 @@ type TRX = {
     header: unknown;
 };
 type TRK = {
-    pts: number[];
-    offsetPt0: number[];
+    pts: Float32Array;
+    offsetPt0: Uint32Array;
     dps: ValuesArray;
     dpv: ValuesArray;
 };
 type TCK = {
-    pts: number[];
-    offsetPt0: number[];
+    pts: Float32Array;
+    offsetPt0: Uint32Array;
 };
 type VTK = DefaultMeshType | {
     pts: Float32Array;
@@ -391,14 +391,14 @@ declare class NVMesh {
     opacity: number;
     visible: boolean;
     meshShaderIndex: number;
-    offsetPt0: number[] | null;
+    offsetPt0: number[] | Uint32Array | null;
     colormapInvert: boolean;
     fiberGroupColormap: ColorMap | null;
     indexBuffer: WebGLBuffer;
     vertexBuffer: WebGLBuffer;
     vao: WebGLVertexArrayObject;
-    pts: number[];
-    tris?: number[];
+    pts: number[] | Float32Array;
+    tris?: number[] | Uint32Array;
     layers: NVMeshLayer[];
     type: MeshType;
     data_type?: string;
@@ -445,14 +445,14 @@ declare class NVMesh {
      * @param colorbarVisible - does this mesh display a colorbar
      * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
      */
-    constructor(pts: number[], tris: number[], name: string | undefined, rgba255: number[] | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
+    constructor(pts: number[] | Float32Array, tris: number[] | Uint32Array, name: string | undefined, rgba255: number[] | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
     updateFibers(gl: WebGL2RenderingContext): void;
     updateConnectome(gl: WebGL2RenderingContext): void;
     updateMesh(gl: WebGL2RenderingContext): void;
     reverseFaces(gl: WebGL2RenderingContext): void;
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): void;
     setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void;
-    generatePosNormClr(pts: number[], tris: number[], rgba255: number[]): Float32Array;
+    generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: number[]): Float32Array;
     static loadConnectomeFromFreeSurfer(json: {
         points?: Point[];
         data_type: string;
@@ -500,6 +500,7 @@ declare class NVMesh {
     static readTxtVTK(buffer: ArrayBuffer): VTK;
     static readTRK(buffer: ArrayBuffer): TRK;
     static readTCK(buffer: ArrayBuffer): TCK;
+    static readTT(buffer: ArrayBuffer): TT;
     static readTRX(buffer: ArrayBuffer): TRX;
     static readTRACT(buffer: ArrayBuffer): TRACT;
 }
