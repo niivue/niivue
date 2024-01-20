@@ -354,8 +354,8 @@ type UIData = {
 }
 
 type SaveImageOptions = {
-  filename?: string
-  isSaveDrawing?: boolean
+  filename: string
+  isSaveDrawing: boolean
   volumeByIndex: number
 }
 
@@ -2639,7 +2639,7 @@ export class Niivue {
    * @param isSaveDrawing - determines whether drawing or background image is saved
    * @param volumeByIndex - determines layer to save (0 for background)
    * @param volumeByIndex - determines layer to save (0 for background)
-   * @example niivue.saveImage('test.nii', true);
+   * @example niivue.saveImage(\{ filename: "myimage.nii.gz", isSaveDrawing: true \});
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html|live demo usage}
    */
   saveImage(options: SaveImageOptions = defaultSaveImageOptions): Uint8Array | boolean {

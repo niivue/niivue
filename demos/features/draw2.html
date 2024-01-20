@@ -124,7 +124,7 @@
   }
   document.getElementById("save").addEventListener("click", doSave);
   function doSave() {
-    nv1.saveImage("test.nii", true);
+    nv1.saveImage({ filename: 'test.nii', isSaveDrawing: true})
   }
   document.getElementById("check1").addEventListener("change", doCheckClick);
   function doCheckClick() {
