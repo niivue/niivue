@@ -6,7 +6,21 @@ import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
-import { ANNOT, DefaultMeshType, GII, MGH, MZ3, TCK, TRACT, TRK, TRX, VTK, ValuesArray, X3D } from './nvmesh-types.js'
+import {
+  ANNOT,
+  DefaultMeshType,
+  GII,
+  MGH,
+  MZ3,
+  TCK,
+  TRACT,
+  TRK,
+  TT,
+  TRX,
+  VTK,
+  ValuesArray,
+  X3D
+} from './nvmesh-types.js'
 
 /** Enum for text alignment
  */
@@ -123,7 +137,7 @@ export class NVMesh {
   opacity: number
   visible: boolean
   meshShaderIndex = 0
-  offsetPt0: number[] | null = null
+  offsetPt0: number[] | Uint32Array | null = null
 
   colormapInvert = false
   fiberGroupColormap: ColorMap | null = null
@@ -132,8 +146,8 @@ export class NVMesh {
   vertexBuffer: WebGLBuffer
   vao: WebGLVertexArrayObject
 
-  pts: number[]
-  tris?: number[]
+  pts: number[] | Float32Array
+  tris?: number[] | Uint32Array
   layers: NVMeshLayer[]
   type = MeshType.MESH
 
@@ -189,8 +203,8 @@ export class NVMesh {
    * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
    */
   constructor(
-    pts: number[],
-    tris: number[],
+    pts: number[] | Float32Array,
+    tris: number[] | Uint32Array,
     name = '',
     rgba255 = [255, 255, 255, 255],
     opacity = 1.0,
@@ -988,7 +1002,7 @@ export class NVMesh {
 
   // Each streamline vertex has color, normal and position attributes
   // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-  generatePosNormClr(pts: number[], tris: number[], rgba255: number[]): Float32Array {
+  generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: number[]): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
       log.debug('this', this)
@@ -1120,7 +1134,7 @@ export class NVMesh {
     let tris: number[] = []
     let pts: number[] = []
     let anatomicalStructurePrimary = ''
-    let obj: TCK | TRACT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
+    let obj: TCK | TRACT | TT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(name)![1]
     ext = ext.toUpperCase()
@@ -1625,6 +1639,10 @@ export class NVMesh {
 
   static readTCK(buffer: ArrayBuffer): TCK {
     return NVMeshLoaders.readTCK(buffer)
+  }
+
+  static readTT(buffer: ArrayBuffer): TT {
+    return NVMeshLoaders.readTRX(buffer)
   }
 
   static readTRX(buffer: ArrayBuffer): TRX {

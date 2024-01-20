@@ -45,15 +45,15 @@ export type TRX = {
 }
 
 export type TRK = {
-  pts: number[]
-  offsetPt0: number[]
+  pts: Float32Array
+  offsetPt0: Uint32Array
   dps: ValuesArray
   dpv: ValuesArray
 }
 
 export type TCK = {
-  pts: number[]
-  offsetPt0: number[]
+  pts: Float32Array
+  offsetPt0: Uint32Array
 }
 
 export type VTK =
