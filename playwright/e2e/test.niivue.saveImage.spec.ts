@@ -33,7 +33,7 @@ test('niivue saveImage', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
-    await nv.saveImage({ filename: 'test.nii' })
+    await nv.saveImage({ filename: 'test.nii', isSaveDrawing: false, volumeByIndex: 0 })
   }, TEST_OPTIONS)
   const download = await downloadPromise
   const downloadPath = path.resolve('./downloads')
