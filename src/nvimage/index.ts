@@ -3374,4 +3374,69 @@ export class NVImage {
     odata.set(img8, hdrBytes.length + opad.length)
     return odata
   }
+
+  // not included in public docs
+  convertVox2Frac(vox: vec3): vec3 {
+    // convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
+    // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
+    const frac = vec3.fromValues(
+      (vox[0] + 0.5) / this.dimsRAS![1],
+      (vox[1] + 0.5) / this.dimsRAS![2],
+      (vox[2] + 0.5) / this.dimsRAS![3]
+    )
+    return frac
+  }
+
+  // not included in public docs
+  convertFrac2Vox(frac: vec3): vec3 {
+    const vox = vec3.fromValues(
+      Math.round(frac[0] * this.dims![1] - 0.5), // dims === RAS
+      Math.round(frac[1] * this.dims![2] - 0.5), // dims === RAS
+      Math.round(frac[2] * this.dims![3] - 0.5) // dims === RAS
+    )
+    return vox
+  }
+
+  // not included in public docs
+  convertFrac2MM(frac: vec3, isForceSliceMM = false): vec4 {
+    const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
+      if (isForceSliceMM) {
+        vec4.transformMat4(pos, pos, this.frac2mm!)
+      } else {
+        vec4.transformMat4(pos, pos, this.frac2mmOrtho!)
+      }
+    return pos
+  }
+
+  // not included in public docs
+  convertMM2Frac(mm: vec3 | vec4, isForceSliceMM = false): vec3 {
+    // given mm, return volume fraction
+    // convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
+    const mm4 = vec4.fromValues(mm[0], mm[1], mm[2], 1)
+    const d = this.dimsRAS
+    const frac = vec3.fromValues(0, 0, 0)
+    if (typeof d === 'undefined') {
+      return frac
+    }
+    if (!isForceSliceMM) {
+      const xform = mat4.clone(this.frac2mmOrtho!)
+      mat4.invert(xform, xform)
+      vec4.transformMat4(mm4, mm4, xform)
+      frac[0] = mm4[0]
+      frac[1] = mm4[1]
+      frac[2] = mm4[2]
+      return frac
+    }
+    if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
+      return frac
+    }
+    const sform = mat4.clone(this.matRAS!)
+    mat4.invert(sform, sform)
+    mat4.transpose(sform, sform)
+    vec4.transformMat4(mm4, mm4, sform)
+    frac[0] = (mm4[0] + 0.5) / d[1]
+    frac[1] = (mm4[1] + 0.5) / d[2]
+    frac[2] = (mm4[2] + 0.5) / d[3]
+    return frac
+  }
 }

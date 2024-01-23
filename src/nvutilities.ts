@@ -138,4 +138,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   static range(start: number, stop: number, step: number): number[] {
     return Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
   }
+
+  /**
+   * convert spherical AZIMUTH, ELEVATION to Cartesian
+   * @param azimuth - azimuth number
+   * @param elevation - elevation number
+   * @returns the converted [x, y, z] coordinates
+   * @example
+   * xyz = NVUtilities.sph2cartDeg(42, 42)
+   */
+  static sph2cartDeg(azimuth: number, elevation: number): number[] {
+    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesion
+    // see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
+    // reverse with cart2sph
+    const Phi = -elevation * (Math.PI / 180)
+    const Theta = ((azimuth - 90) % 360) * (Math.PI / 180)
+    const ret = [Math.cos(Phi) * Math.cos(Theta), Math.cos(Phi) * Math.sin(Theta), Math.sin(Phi)]
+    const len = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2])
+    if (len <= 0.0) {
+      return ret
+    }
+    ret[0] /= len
+    ret[1] /= len
+    ret[2] /= len
+    return ret
+  }
 }
