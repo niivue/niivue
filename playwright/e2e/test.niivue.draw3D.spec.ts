@@ -12,9 +12,9 @@ test('niivue draw3D sobel shader', async ({ page }) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     const volumeList = [
-        { url: './images/mni152.nii.gz', cal_min: 30, cal_max: 80 },
-        { url: './images/spmMotor.nii.gz', cal_min: 3, cal_max: 8, colormap: 'warm' }
-      ]
+      { url: './images/mni152.nii.gz', cal_min: 30, cal_max: 80 },
+      { url: './images/spmMotor.nii.gz', cal_min: 3, cal_max: 8, colormap: 'warm' }
+    ]
     nv.setSliceType(nv.sliceTypeRender)
     nv.setVolumeRenderIllumination(1.0)
     nv.setClipPlane([0.3, 180, 20])
