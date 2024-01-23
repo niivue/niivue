@@ -8633,7 +8633,7 @@ export class Niivue {
     if (this.volumes.length <= volIdx) {
       return [0, 0, 0]
     }
-    
+
     return this.volumes[volIdx].convertFrac2Vox(frac)
   }
 

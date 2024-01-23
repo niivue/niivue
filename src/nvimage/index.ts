@@ -3400,11 +3400,11 @@ export class NVImage {
   // not included in public docs
   convertFrac2MM(frac: vec3, isForceSliceMM = false): vec4 {
     const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
-      if (isForceSliceMM) {
-        vec4.transformMat4(pos, pos, this.frac2mm!)
-      } else {
-        vec4.transformMat4(pos, pos, this.frac2mmOrtho!)
-      }
+    if (isForceSliceMM) {
+      vec4.transformMat4(pos, pos, this.frac2mm!)
+    } else {
+      vec4.transformMat4(pos, pos, this.frac2mmOrtho!)
+    }
     return pos
   }
 
