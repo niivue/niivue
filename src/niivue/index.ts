@@ -3349,12 +3349,7 @@ export class Niivue {
 
   // not included in public docs
   vox2mm(XYZ: number[], mtx: mat4): vec3 {
-    const sform = mat4.clone(mtx)
-    mat4.transpose(sform, sform)
-    const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
-    vec4.transformMat4(pos, pos, sform)
-    const pos3 = vec3.fromValues(pos[0], pos[1], pos[2])
-    return pos3
+    return NVUtilities.vox2mm(XYZ, mtx)
   }
 
   /**

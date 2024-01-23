@@ -1,5 +1,6 @@
 import arrayEqual from 'array-equal'
 import { compressSync, decompressSync, strToU8 } from 'fflate/browser'
+import { mat4, vec3, vec4 } from 'gl-matrix'
 
 /**
  * Namespace for utility functions
@@ -162,5 +163,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     ret[1] /= len
     ret[2] /= len
     return ret
+  }
+
+  static vox2mm(XYZ: number[], mtx: mat4): vec3 {
+    const sform = mat4.clone(mtx)
+    mat4.transpose(sform, sform)
+    const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
+    vec4.transformMat4(pos, pos, sform)
+    const pos3 = vec3.fromValues(pos[0], pos[1], pos[2])
+    return pos3
   }
 }
