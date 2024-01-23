@@ -297,7 +297,7 @@ export class NVMeshLoaders {
         pts[i] = pts[i] / 32.0
       }
       const vox2mmMat = mat4.create()
-      mat4.mul(vox2mmMat, zoomMat, trans_to_mni)
+      mat4.mul(vox2mmMat, trans_to_mni, zoomMat)
       let v = 0
       for (let i = 0; i < npt / 3; i++) {
         const pos = vec4.fromValues(pts[v], pts[v + 1], pts[v + 2], 1)
@@ -556,7 +556,7 @@ export class NVMeshLoaders {
   // read trackvis trk format streamlines
   // http://trackvis.org/docs/?subsect=fileformat
   static readTRK(buffer: ArrayBuffer): TRK {
-    // http://www.tractometer.org/fiberweb/
+    // https://brain.labsolver.org/hcp_trk_atlas.html
     // https://github.com/xtk/X/tree/master/io
     // in practice, always little endian
     let reader = new DataView(buffer)
@@ -637,7 +637,7 @@ export class NVMeshLoaders {
       mat4.identity(mat)
     }
     const vox2mmMat = mat4.create()
-    mat4.mul(vox2mmMat, mat, zoomMat)
+    mat4.mul(vox2mmMat, zoomMat, mat)
     // translation is in mm and not influenced by resolution
     vox2mmMat[3] = mat[3]
     vox2mmMat[7] = mat[7]
