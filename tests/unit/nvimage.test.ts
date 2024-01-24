@@ -17,3 +17,14 @@ test("nvimage convertVox2Frac", () => {
         expect(frac[i]).toBeCloseTo(expected[i])
     }
 })
+
+test("nvimage zerosLike", () => {
+    const name = "mni152.nii.gz"
+    const dataBuffer = readFileSync(path.join("./tests/images/", name))
+    const image = new NVImage(
+        dataBuffer.buffer,
+        name)
+    const zeroImage = NVImage.zerosLike(image)
+    expect(JSON.stringify(image.hdr)).toBe(JSON.stringify(zeroImage.hdr))
+    expect(zeroImage.img!.every((item: number) => item === 0)).toBeTruthy()
+})
