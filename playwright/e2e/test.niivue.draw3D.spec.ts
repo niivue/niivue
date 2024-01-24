@@ -21,6 +21,7 @@ test('niivue draw3D sobel shader', async ({ page }) => {
     await nv.loadVolumes(volumeList)
     await nv.loadMeshes([{ url: './images/connectome.jcon' }, { url: './images/dpsv.trx', rgba255: [0, 142, 0, 255] }])
     await nv.loadMatCapTexture('./matcaps/Cortex.jpg')
+    nv.drawScene()
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
