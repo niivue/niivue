@@ -5899,7 +5899,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo scalar usage}
    * @see {@link https://niivue.github.io/niivue/features/modulateAfni.html|live demo usage}
    */
-  setModulationImage(idTarget: string, idModulation: string, modulateAlpha = 0): void {
+  setModulationImage(idTarget: string, idModulation: string | null, modulateAlpha = 0): void {
     // to set:
     // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
     // to clear:
