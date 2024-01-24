@@ -3112,9 +3112,9 @@ export class Niivue {
    * niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
    */
-  async setCrosshairColor(color: number[]): Promise<void> {
+  setCrosshairColor(color: number[]): void {
     this.opts.crosshairColor = color
-    await this.drawScene()
+    this.drawScene()
   }
 
   /**
