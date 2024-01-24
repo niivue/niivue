@@ -814,6 +814,10 @@ declare class NVImage {
      * Converts NVImage to NIfTI compliant byte array
      */
     toUint8Array(drawingBytes?: Uint8Array | null): Uint8Array;
+    convertVox2Frac(vox: vec3): vec3;
+    convertFrac2Vox(frac: vec3): vec3;
+    convertFrac2MM(frac: vec3, isForceSliceMM?: boolean): vec4;
+    convertMM2Frac(mm: vec3 | vec4, isForceSliceMM?: boolean): vec3;
 }
 
 type FreeSurferConnectome = {
@@ -1317,6 +1321,16 @@ declare class NVUtilities {
      * @returns filled number array
      */
     static range(start: number, stop: number, step: number): number[];
+    /**
+     * convert spherical AZIMUTH, ELEVATION to Cartesian
+     * @param azimuth - azimuth number
+     * @param elevation - elevation number
+     * @returns the converted [x, y, z] coordinates
+     * @example
+     * xyz = NVUtilities.sph2cartDeg(42, 42)
+     */
+    static sph2cartDeg(azimuth: number, elevation: number): number[];
+    static vox2mm(XYZ: number[], mtx: mat4): vec3;
 }
 
 /**
