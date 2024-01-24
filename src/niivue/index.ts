@@ -3349,12 +3349,7 @@ export class Niivue {
 
   // not included in public docs
   vox2mm(XYZ: number[], mtx: mat4): vec3 {
-    const sform = mat4.clone(mtx)
-    mat4.transpose(sform, sform)
-    const pos = vec4.fromValues(XYZ[0], XYZ[1], XYZ[2], 1)
-    vec4.transformMat4(pos, pos, sform)
-    const pos3 = vec3.fromValues(pos[0], pos[1], pos[2])
-    return pos3
+    return NVUtilities.vox2mm(XYZ, mtx)
   }
 
   /**
@@ -8618,45 +8613,12 @@ export class Niivue {
       }
       return frac
     }
-    // convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
-    const mm4 = vec4.fromValues(mm[0], mm[1], mm[2], 1)
-    const d = this.volumes[volIdx].dimsRAS
-    const frac = vec3.fromValues(0, 0, 0)
-    if (typeof d === 'undefined') {
-      return frac
-    }
-    if (!isForceSliceMM && !this.opts.isSliceMM) {
-      const xform = mat4.clone(this.volumes[volIdx].frac2mmOrtho!)
-      mat4.invert(xform, xform)
-      vec4.transformMat4(mm4, mm4, xform)
-      frac[0] = mm4[0]
-      frac[1] = mm4[1]
-      frac[2] = mm4[2]
-      return frac
-    }
-    if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
-      return frac
-    }
-    const sform = mat4.clone(this.volumes[volIdx].matRAS!)
-    mat4.invert(sform, sform)
-    mat4.transpose(sform, sform)
-    vec4.transformMat4(mm4, mm4, sform)
-    frac[0] = (mm4[0] + 0.5) / d[1]
-    frac[1] = (mm4[1] + 0.5) / d[2]
-    frac[2] = (mm4[2] + 0.5) / d[3]
-    return frac
+    return this.volumes[volIdx].convertMM2Frac(mm, isForceSliceMM || this.opts.isSliceMM)
   }
 
   // not included in public docs
   vox2frac(vox: vec3, volIdx = 0): vec3 {
-    // convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
-    // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
-    const frac = vec3.fromValues(
-      (vox[0] + 0.5) / this.volumes[volIdx].dimsRAS![1],
-      (vox[1] + 0.5) / this.volumes[volIdx].dimsRAS![2],
-      (vox[2] + 0.5) / this.volumes[volIdx].dimsRAS![3]
-    )
-    return frac
+    return this.volumes[volIdx].convertVox2Frac(vox)
   }
 
   // not included in public docs
@@ -8666,12 +8628,8 @@ export class Niivue {
     if (this.volumes.length <= volIdx) {
       return [0, 0, 0]
     }
-    const vox = vec3.fromValues(
-      Math.round(frac[0] * this.volumes[volIdx].dims![1] - 0.5), // dims === RAS
-      Math.round(frac[1] * this.volumes[volIdx].dims![2] - 0.5), // dims === RAS
-      Math.round(frac[2] * this.volumes[volIdx].dims![3] - 0.5) // dims === RAS
-    )
-    return vox
+
+    return this.volumes[volIdx].convertFrac2Vox(frac)
   }
 
   /**
@@ -8699,11 +8657,7 @@ export class Niivue {
   frac2mm(frac: vec3, volIdx = 0, isForceSliceMM = false): vec4 {
     const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (this.volumes.length > 0) {
-      if (isForceSliceMM || this.opts.isSliceMM) {
-        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mm!)
-      } else {
-        vec4.transformMat4(pos, pos, this.volumes[volIdx].frac2mmOrtho!)
-      }
+      return this.volumes[volIdx].convertFrac2MM(frac, isForceSliceMM || this.opts.isSliceMM)
     } else {
       const [mn, mx] = this.sceneExtentsMinMax()
       const lerp = (x: number, y: number, a: number): number => x * (1 - a) + y * a
