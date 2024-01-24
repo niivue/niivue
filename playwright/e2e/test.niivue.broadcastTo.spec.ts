@@ -8,28 +8,27 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('niivue broadcastTo', async ({ page }) => {
-    const nvols = await page.evaluate(async (testOptions) => {
-      const nv1 = new Niivue(testOptions)
-      await nv1.attachTo('gl1')
-      nv1.attachTo('gl1')
-      const nv2 = new Niivue(testOptions)
-      await nv2.attachTo('gl2')
-      const volumeList = [
-        {
-          url: './images/mni152.nii.gz', 
-          volume: { hdr: null, img: null },
-          name: 'mni152.nii.gz',
-          colormap: 'gray',
-          opacity: 1,
-          visible: true
-        }
-      ]
-      await nv1.loadVolumes(volumeList)
-      await nv2.loadVolumes(volumeList)
-      nv1.broadcastTo(nv2)
-    }, TEST_OPTIONS)
+  await page.evaluate(async (testOptions) => {
+    const nv1 = new Niivue(testOptions)
+    await nv1.attachTo('gl1')
+    nv1.attachTo('gl1')
+    const nv2 = new Niivue(testOptions)
+    await nv2.attachTo('gl2')
+    const volumeList = [
+      {
+        url: './images/mni152.nii.gz',
+        volume: { hdr: null, img: null },
+        name: 'mni152.nii.gz',
+        colormap: 'gray',
+        opacity: 1,
+        visible: true
+      }
+    ]
+    await nv1.loadVolumes(volumeList)
+    await nv2.loadVolumes(volumeList)
+    nv1.broadcastTo(nv2)
+  }, TEST_OPTIONS)
 
-    await page.mouse.click(100, 200)
-    await expect(page).toHaveScreenshot({ timeout: 30000 })
-
-})  
+  await page.mouse.click(100, 200)
+  await expect(page).toHaveScreenshot({ timeout: 30000 })
+})
