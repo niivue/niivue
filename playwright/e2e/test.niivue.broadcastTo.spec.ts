@@ -30,5 +30,5 @@ test('niivue broadcastTo', async ({ page }) => {
   }, TEST_OPTIONS)
 
   await page.mouse.click(100, 200)
-  await expect(page).toHaveScreenshot({ timeout: 30000, fullPage : true })
+  await expect(page).toHaveScreenshot({ timeout: 30000, fullPage: true })
 })
