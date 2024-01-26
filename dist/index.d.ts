@@ -2362,7 +2362,7 @@ declare class Niivue {
      * niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green
      * @see {@link https://niivue.github.io/niivue/features/colormaps.html|live demo usage}
      */
-    setCrosshairColor(color: number[]): Promise<void>;
+    setCrosshairColor(color: number[]): void;
     /**
      * set thickness of crosshair
      * @example niivue.crosshairWidth(2)
