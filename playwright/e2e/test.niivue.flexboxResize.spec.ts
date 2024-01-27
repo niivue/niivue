@@ -31,22 +31,24 @@ test('canvas size is sized consistently in a flexbox parent', async ({ page }) =
   }
 
   // gradually decrease window size by 100, which triggers nv.resizeListener()
-  for (let i = 0; i < 100; i++) {
-    await page.setViewportSize({width: 600, height: 600 - i})
+  for (let i = 1; i <= 100; i++) {
+    await page.setViewportSize({ width: 600, height: 600 - i })
   }
 
   await expect(page.getByText('bottom of page')).toBeInViewport()
 
   // gradually increase window size until back to original size.
-  for (let i = 0; i < 100; i++) {
-    await page.setViewportSize({width: 600, height: 500 + i})
+  for (let i = 1; i <= 100; i++) {
+    await page.setViewportSize({ width: 600, height: 500 + i })
   }
 
-  await expect.poll(async () => {
-    const box = await page.locator('#gl').boundingBox()
-    if (box === null) {
-      throw new Error('boundingBox is null, meaning canvas is not visible')
-    }
-    return box.height
-  }).toBe(originalBox.height)
+  await expect
+    .poll(async () => {
+      const box = await page.locator('#gl').boundingBox()
+      if (box === null) {
+        throw new Error('boundingBox is null, meaning canvas is not visible')
+      }
+      return box.height
+    })
+    .toBe(originalBox.height)
 })
