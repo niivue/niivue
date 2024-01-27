@@ -971,6 +971,7 @@ export class Niivue {
     if (this.opts.isResizeCanvas) {
       this.canvas.style.width = '100%'
       this.canvas.style.height = '100%'
+      this.canvas.style.display = 'block'
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
       window.addEventListener('resize', this.resizeListener.bind(this)) // must bind 'this' niivue object or else 'this' becomes 'window'
@@ -1093,6 +1094,8 @@ export class Niivue {
     }
     this.canvas.style.width = '100%'
     this.canvas.style.height = '100%'
+    this.canvas.style.display = 'block'
+
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     // https://www.khronos.org/webgl/wiki/HandlingHighDPI
     if (this.opts.isHighResolutionCapable) {
