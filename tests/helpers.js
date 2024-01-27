@@ -27,6 +27,7 @@ function ensureDownloadFolder() {
 
 module.exports.httpServerAddress = 'http://localhost:8888/tests/index.html'
 module.exports.httpServerAddressSync = 'http://localhost:8888/tests/sync.html'
+module.exports.httpServerAddressFlexbox = 'http://localhost:8888/tests/flexbox.html'
 module.exports.httpServerAddressDemos = 'http://localhost:8888/demos/features/'
 module.exports.snapshot = snapshot
 module.exports.seconds = seconds
