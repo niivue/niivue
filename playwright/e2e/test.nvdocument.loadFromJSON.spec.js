@@ -34,6 +34,8 @@ test('nvdocument loadFromJSON', async ({ page }) => {
     const document = niivue.NVDocument.loadFromJSON(data)
     nv.volumes.length = 0
     nv.loadDocument(document)
+    nv.drawScene()
+    nv.gl.finish()
     return nv.volumes.length
   })
   expect(nvols).toBe(2)
