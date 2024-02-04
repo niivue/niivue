@@ -3127,7 +3127,9 @@ export class Niivue {
    */
   setCrosshairWidth(crosshairWidth: number): void {
     this.opts.crosshairWidth = crosshairWidth
-    this.crosshairs3D!.mm![0] = NaN // force redraw
+    if (this.crosshairs3D) {
+      this.crosshairs3D.mm![0] = NaN // force redraw
+    }
     this.drawScene()
   }
 
