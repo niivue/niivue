@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>niivue flexbox test</title>
+
+    <style>
+      html, body, main {
+        height: 100%;
+        width: 100%;
+      }
+
+      main {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #niivue-container {
+        height: 100%;
+        width: 100%;
+      }
+
+      .text-block {
+        height: 100px;
+        overflow: hidden;
+      }
+
+
+    </style>
+  </head>
+  <body>
+
+  <main>
+    <div class="text-block">
+      <h1>top of page</h1>
+    </div>
+    <div id="niivue-container">
+      <canvas id="gl"></canvas>
+    </div>
+
+    <div class="text-block">
+      <h1>bottom of page</h1>
+    </div>
+
+  </main>
+    <script type="module">
+      import * as niivue from '../dist/index.js'
+      globalThis.Niivue = niivue.Niivue
+      globalThis.niivue = niivue
+    </script>
+  </body>
+</html>
