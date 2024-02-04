@@ -39,3 +39,4 @@ pnpm-debug.log*
 /playwright/.cache/
 /playwright/e2e/index.js
 /tests/index.js
+dist_demo

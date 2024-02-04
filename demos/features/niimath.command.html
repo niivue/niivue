@@ -99,7 +99,7 @@
 
 New operations: (not in fslmaths)
  -bandpass <hp> <lp> <tr> : Butterworth filter, highpass and lowpass in Hz,TR in seconds (zero-phase 2*2nd order filtfilt)
- -bptfm  <hp> <lp>        : Same as bptf but does not remove mean (emulates fslmaths < 5.0.7)
+ -bptfm  <hp> <lp>        : Same as bptf but does not remove mean (emulates fslmaths &lt; 5.0.7)
  -ceil                    : round voxels upwards to the nearest integer
  -crop <tmin> <tsize>     : remove volumes, starts with 0 not 1! Inputting -1 for a size will set it to the full range
  -detrend                 : remove linear trend (and mean) from input
@@ -108,7 +108,7 @@ New operations: (not in fslmaths)
  -floor                    : round voxels downwards to the nearest integer
  -mod                     : modulus fractional remainder - same as '-rem' but includes fractions
  -p <threads>             : set maximum number of parallel threads. DISABLED: recompile for OpenMP support
- -resize <X> <Y> <Z> <m>  : grow (>1) or shrink (<1) image. Method <m> (0=nearest,1=linear,2=spline,3=Lanczos,4=Mitchell)
+ -resize <X> <Y> <Z> <m>  : grow (&gt;1) or shrink (&lt;1) image. Method <m> (0=nearest,1=linear,2=spline,3=Lanczos,4=Mitchell)
  -round                   : round voxels to the nearest integer
  -sobel                   : fast edge detection
  -sobel_binary              : sobel creating binary edge
@@ -226,9 +226,9 @@ Basic statistical operations:
  -ranknorm: Transform to Normal dist via ranks
 
 Multi-argument operations:
- -roi <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize> : zero outside roi (using voxel coordinates). Inputting -1 for a size will set it to the full image extent for that dimension
- -bptf  <hp_sigma> <lp_sigma> : (-t in ip.c) Bandpass temporal filtering; nonlinear highpass and Gaussian linear lowpass (with sigmas in volumes, not seconds); set either sigma<0 to skip that filter
- -roc <AROC-thresh> <outfile> [4Dnoiseonly] <truth> : take (normally binary) truth and test current image in ROC analysis against truth. <AROC-thresh> is usually 0.05 and is limit of Area-under-ROC measure FP axis. <outfile> is a text file of the ROC curve (triplets of values: FP TP threshold). If the truth image contains negative voxels these get excluded from all calculations. If <AROC-thresh> is positive then the [4Dnoiseonly] option needs to be set, and the FP rate is determined from this noise-only data, and is set to be the fraction of timepoints where any FP (anywhere) is seen, as found in the noise-only 4d-dataset. This is then controlling the FWE rate. If <AROC-thresh> is negative the FP rate is calculated from the zero-value parts of the <truth> image, this time averaging voxelwise FP rate over all timepoints. In both cases the TP rate is the average fraction of truth=positive voxels correctly found
+ -roi &lt;xmin> &lt;xsize> &lt;ymin> &lt;ysize> &lt;zmin> &lt;zsize> &lt;tmin> &lt;tsize> : zero outside roi (using voxel coordinates). Inputting -1 for a size will set it to the full image extent for that dimension
+ -bptf  &lt;hp_sigma> &lt;lp_sigma> : (-t in ip.c) Bandpass temporal filtering; nonlinear highpass and Gaussian linear lowpass (with sigmas in volumes, not seconds); set either sigma&lt;0 to skip that filter
+ -roc &lt;AROC-thresh> &lt;outfile> [4Dnoiseonly] &lt;truth> : take (normally binary) truth and test current image in ROC analysis against truth. &lt;AROC-thresh> is usually 0.05 and is limit of Area-under-ROC measure FP axis. &lt;outfile> is a text file of the ROC curve (triplets of values: FP TP threshold). If the truth image contains negative voxels these get excluded from all calculations. If &lt;AROC-thresh> is positive then the [4Dnoiseonly] option needs to be set, and the FP rate is determined from this noise-only data, and is set to be the fraction of timepoints where any FP (anywhere) is seen, as found in the noise-only 4d-dataset. This is then controlling the FWE rate. If &lt;AROC-thresh> is negative the FP rate is calculated from the zero-value parts of the &lt;truth> image, this time averaging voxelwise FP rate over all timepoints. In both cases the TP rate is the average fraction of truth=positive voxels correctly found
     </p>
   </section>
   <script type="module">

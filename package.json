@@ -17,22 +17,28 @@
   },
   "scripts": {
     "dev": "vite",
-    "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
+    "demo": "rm -rf dist_demo && cp -r demos/ dist_demo/ && npm run build:demo && npx http-server dist_demo/ --cors",
+    "build:demo": "vite build --config vite.config.demos.ts",
+
     "build": "tsup && npm run build:min && npm run build:umd",
+    "build:umd": "vite build",
     "build:min": "node bundle.js",
-    "demo": "npm run build && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
     "demo-win": "npm run build-win && npx http-server demos/",
+
     "test": "npm run build && npm run test:unit && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
     "test-playwright": "npm run build && npx playwright test",
-    "docs": "typedoc",
     "test:unit": "vitest --run --coverage",
-    "serve-docs": "npx http-server devdocs",
-    "pub": "npm run build && npm publish --access public",
+
     "lint": "eslint .",
     "lint:ts": "tsc --noEmit",
     "lint:fix": "eslint --fix .",
     "lint:debug": "DEBUG=eslint:cli-engine eslint .",
+
+    "docs": "typedoc",
+    "serve-docs": "npx http-server devdocs",
+    
+    "pub": "npm run build && npm publish --access public",
     "prepare": "husky install"
   },
   "files": [
@@ -81,6 +87,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "eslint-plugin-tsdoc": "^0.2.17",
     "express": "^4.18.2",
+    "glob": "^10.3.10",
     "happy-dom": "^12.10.3",
     "http-server": "^14.1.1",
     "husky": "^8.0.0",
