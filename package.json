@@ -17,7 +17,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "demo": "rm -rf dist_demo && cp -r demos/ dist_demo/ && npm run build:demo && npx http-server dist_demo/ --cors",
+    "demo": "vite --config vite.config.demos.ts",
+    "serve:demo": "rm -rf dist_demo && cp -r demos/ dist_demo/ && npm run build:demo && npx http-server dist_demo/ --cors",
     "build:demo": "vite build --config vite.config.demos.ts",
 
     "build": "tsup && npm run build:min && npm run build:umd",
