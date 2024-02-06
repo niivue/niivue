@@ -324,6 +324,8 @@ type NiiVueOptions = {
   maxDrawUndoBitmaps?: number
   // optional 2D png bitmap that can be rapidly loaded to defer slow loading of 3D image
   thumbnail?: string
+  // mesh XRay
+  meshXRay?: number
 }
 
 type UIData = {
