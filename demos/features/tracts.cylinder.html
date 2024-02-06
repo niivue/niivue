@@ -47,7 +47,7 @@
       <label id="shaders">Shaders: </label>
     </footer>
     <script type="module" async>
-      import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "./niivue/index.ts";
+      import * as niivue from "../dist/index.js";
       fiberRadius.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
         nv1.updateGLVolume();
@@ -58,17 +58,17 @@
       fiberDitherSlider.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
       };
-      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}];
+      var volumeList1 = [{ url: "../images/mni152.nii.gz"}];
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
       };
-      var nv1 = new Niivue(defaults);
+      var nv1 = new niivue.Niivue(defaults);
       nv1.attachToCanvas(gl1);
       nv1.opts.dragMode = nv1.dragModes.pan;
       nv1.opts.multiplanarForceRender = true;
       await nv1.loadVolumes(volumeList1);
-      await nv1.loadMeshes([{ url: "../demos/images/dpsv.trx"}]);
+      await nv1.loadMeshes([{ url: "../images/dpsv.trx"}]);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "Local");
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);

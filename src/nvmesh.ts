@@ -1,4 +1,4 @@
-import { vec3 } from 'gl-matrix'
+import { vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { log } from './logger.js'
 import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
@@ -145,6 +145,7 @@ export class NVMesh {
   indexBuffer: WebGLBuffer
   vertexBuffer: WebGLBuffer
   vao: WebGLVertexArrayObject
+  vaoFiber: WebGLVertexArrayObject
 
   pts: number[] | Float32Array
   tris?: number[] | Uint32Array
@@ -158,6 +159,9 @@ export class NVMesh {
   fiberDither = 0.1
   fiberColor = 'Global'
   fiberDecimationStride = 1 // e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
+  fiberSides = 5 // 1=streamline, 2=imposter, >2=mesh(cylinder with fiberSides sides)
+  fiberRadius = 0 // in mm, e.g. 3 means 6mm diameter fibers, ignored if fiberSides < 3
+  f32PerVertex = 5 // MUST be 5 or 7: number of float32s per vertex DEPRECATED, future releases will ALWAYS be 5
   fiberMask?: unknown[]
   colormap?: ColorMap | LegacyConnectome | string | null
   dpg?: ValuesArray | null
@@ -231,6 +235,34 @@ export class NVMesh {
     this.indexBuffer = gl.createBuffer()!
     this.vertexBuffer = gl.createBuffer()!
     this.vao = gl.createVertexArray()!
+    // the VAO binds the vertices and indices as well as describing the vertex layout
+    gl.bindVertexArray(this.vao)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
+    // vertex position: 3 floats X,Y,Z
+    gl.enableVertexAttribArray(0)
+
+    gl.enableVertexAttribArray(1)
+    const f32PerVertex = this.f32PerVertex
+    if (f32PerVertex !== 7) {
+      // n32
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0)
+      // vertex surface normal vector: (also three floats)
+      gl.vertexAttribPointer(1, 4, gl.BYTE, true, 20, 12)
+      // vertex color
+      gl.enableVertexAttribArray(2)
+      gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 20, 16)
+    } else {
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0)
+      // vertex surface normal vector: (also three floats)
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 28, 12)
+      // vertex color
+      gl.enableVertexAttribArray(2)
+      gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24)
+    }
+    gl.bindVertexArray(null) // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
+
+    this.vaoFiber = gl.createVertexArray()!
     this.offsetPt0 = null
     this.hasConnectome = false
     this.colormapInvert = false
@@ -252,7 +284,7 @@ export class NVMesh {
       this.offsetPt0 = tris
       this.updateFibers(gl)
       // define VAO
-      gl.bindVertexArray(this.vao)
+      gl.bindVertexArray(this.vaoFiber)
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
       // vertex position: 3 floats X,Y,Z
@@ -276,21 +308,154 @@ export class NVMesh {
     this.rgba255 = rgba255
     this.tris = tris
     this.updateMesh(gl)
-    // the VAO binds the vertices and indices as well as describing the vertex layout
-    gl.bindVertexArray(this.vao)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    // vertex position: 3 floats X,Y,Z
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0)
-    // vertex surface normal vector: (also three floats)
-    gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 28, 12)
-    // vertex color
-    gl.enableVertexAttribArray(2)
-    gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 28, 24)
-    gl.bindVertexArray(null) // https://stackoverflow.com/questions/43904396/are-we-not-allowed-to-bind-gl-array-buffer-and-vertex-attrib-array-to-0-in-webgl
   }
+
+  // given streamlines (which webGL renders as a single pixel), extrude to cylinders
+  linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void {
+    // return Float32Array
+    // const posClrF32 four 32-bit components X,Y,Z,C where C is Uint32 with RGBA
+    function v4ToV3(v4: vec4): vec3 {
+      return vec3.fromValues(v4[0], v4[1], v4[2])
+    }
+    const primitiveRestart = Math.pow(2, 32) - 1 // for gl.UNSIGNED_INT
+    const n_count = indices.length
+    let n_line_vtx = 0
+    let n_streamlines = 0
+    // n.b. each streamline terminates with a `primitiveRestart`, even the final one
+    for (let i = 0; i < n_count; i++) {
+      if (indices[i] === primitiveRestart) {
+        n_streamlines++
+        continue
+      }
+      n_line_vtx++
+    }
+    const cyl_sides = this.fiberSides
+    // next: generate extruded cylinders
+    // npt is number of points (vertices) for cylinders
+    const npt = cyl_sides * n_line_vtx
+    const f32PerVertex = this.f32PerVertex // 7 if NormalXYZ is 3 floats, 5 if normalXYZ is packed into rgb32
+    if (f32PerVertex !== 5) {
+      throw Error('fiberSides > 1 requires f32PerVertex == 5')
+    }
+    const f32 = new Float32Array(npt * f32PerVertex) // Each vertex has 5 components: PosX, PosY, PosZ, NormalXYZ, RGBA32
+    const u8 = new Uint8Array(f32.buffer) // Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
+    let vtx = 0
+    //
+    // previous vector location
+    let prevV4 = vec4.create()
+    let currV4 = vec4.create()
+    let nextV4 = vec4.create()
+    let node = 0
+    const radius = this.fiberRadius
+    for (let i = 0; i < n_count; i++) {
+      const isLineEnd = indices[i] === primitiveRestart
+      if (isLineEnd && node < 1) {
+        continue
+      } // two restarts in a row!
+      const idx = indices[i] * 4 // each posClrF32 has 4 elements X,Y,Z,C
+      node++
+      if (node <= 1) {
+        // first vertex in a streamline, no previous vertex
+        prevV4 = vec4.fromValues(posClrF32[idx + 0], posClrF32[idx + 1], posClrF32[idx + 2], posClrF32[idx + 3])
+        currV4 = vec4.clone(prevV4)
+        continue
+      }
+      if (isLineEnd) {
+        // last vertex of streamline, no next vertex
+        nextV4 = vec4.clone(currV4)
+      } else {
+        nextV4 = vec4.fromValues(posClrF32[idx + 0], posClrF32[idx + 1], posClrF32[idx + 2], posClrF32[idx + 3])
+      }
+      const v1 = vec3.create()
+      // mean direction at joint
+      // n.b. vec4 -> vec3 we ignore 4th dimension (color)
+      vec3.subtract(v1, v4ToV3(prevV4), v4ToV3(nextV4))
+      vec3.normalize(v1, v1) // principle axis of cylinder
+      const v2 = NiivueObject3D.getFirstPerpVector(v1)
+      // Get the second perp vector by cross product
+      const v3 = vec3.create()
+      vec3.cross(v3, v1, v2) // a unit length vector orthogonal to v1 and v2
+      vec3.normalize(v3, v3)
+      const vtxXYZ = vec3.create()
+      for (let j = 0; j < cyl_sides; j++) {
+        const c = Math.cos((j / cyl_sides) * 2 * Math.PI)
+        const s = Math.sin((j / cyl_sides) * 2 * Math.PI)
+        vtxXYZ[0] = radius * (c * v2[0] + s * v3[0])
+        vtxXYZ[1] = radius * (c * v2[1] + s * v3[1])
+        vtxXYZ[2] = radius * (c * v2[2] + s * v3[2])
+        vec3.add(vtxXYZ, v4ToV3(currV4), vtxXYZ)
+        const fidx = vtx * f32PerVertex
+        f32[fidx + 0] = vtxXYZ[0]
+        f32[fidx + 1] = vtxXYZ[1]
+        f32[fidx + 2] = vtxXYZ[2]
+        // compute normal
+        const n3 = vec3.create()
+        vec3.subtract(n3, vtxXYZ, v4ToV3(currV4))
+        vec3.normalize(n3, n3)
+        const fidxU8 = (fidx + 3) * 4 // 4 Uint8 per Float32
+        u8[fidxU8 + 0] = n3[0] * 127
+        u8[fidxU8 + 1] = n3[1] * 127
+        u8[fidxU8 + 2] = n3[2] * 127
+        // f32[fidx+3] = normal;
+        f32[fidx + 4] = currV4[3]
+        // u32[fidx+3] = 65555;
+        // u32[fidx+4] = 65555;
+        vtx++
+      }
+      prevV4 = vec4.clone(currV4)
+      currV4 = vec4.clone(nextV4)
+      if (isLineEnd) {
+        node = 0
+      }
+    }
+    // ntri = number of triangles
+    // each cylinder is composed of 2 * cyl_sides (e.g. triangular cylinder is 6 triangles)
+    // each streamline with n nodes has n-1 cylinders (fencepost)
+    // each triangle defined by three indices, each referring to a vertex
+    const nidx = (n_line_vtx - n_streamlines) * cyl_sides * 2 * 3
+    const idxs = new Int32Array(nidx)
+    let idx = 0
+    vtx = 0
+    for (let i = 1; i < n_count; i++) {
+      if (indices[i] === primitiveRestart) {
+        vtx += cyl_sides
+        continue
+      }
+      if (indices[i - 1] === primitiveRestart) {
+        // fencepost: do not create indices for first node in each streamline
+        continue
+      }
+      let prevStartVtx = vtx // startOfPreviousCylinder
+      let startVtx = vtx + cyl_sides // startOfCurrentCylinder
+      const prevStartVtxOverflow = startVtx // startOfCurrentCylinder
+      const startVtxOverflow = startVtx + cyl_sides // startOfNextCylinder
+      for (let j = 0; j < cyl_sides; j++) {
+        // emit triangle with one vertex on previous
+        idxs[idx++] = prevStartVtx
+        idxs[idx++] = startVtx++
+        if (startVtx === startVtxOverflow) {
+          startVtx = startVtxOverflow - cyl_sides
+        }
+        idxs[idx++] = startVtx
+        // emit triangle with two vertex on previous
+        idxs[idx++] = prevStartVtx++
+        if (prevStartVtx === prevStartVtxOverflow) {
+          prevStartVtx = prevStartVtxOverflow - cyl_sides
+        }
+        idxs[idx++] = startVtx
+        idxs[idx++] = prevStartVtx
+      }
+      vtx += cyl_sides
+    }
+    // copy index and vertex buffer to GPU
+    // no need to release: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBufferData.xhtml
+    // any pre-existing data store is deleted
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(idxs), gl.STATIC_DRAW)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(f32), gl.STATIC_DRAW)
+    this.indexCount = nidx
+  } // linesToCylinders
 
   // not included in public docs
   // internal function filters tractogram to identify which color and visibility of streamlines
@@ -530,8 +695,6 @@ export class NVMesh {
         }
       }
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW)
     // INDICES:
     const min_mm = this.fiberLength
     //  https://blog.spacepatroldelta.com/a?ID=00950-d878555f-a97a-4e32-9f40-fd9a449cb4fe
@@ -555,9 +718,16 @@ export class NVMesh {
       }
       indices.push(primitiveRestart)
     }
-    this.indexCount = indices.length
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW)
+    if (this.fiberSides > 2 && this.fiberRadius > 0) {
+      this.linesToCylinders(gl, posClrF32, indices)
+    } else {
+      // copy streamlines to GPU
+      this.indexCount = indices.length
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW)
+    }
   } // updateFibers()
 
   // internal function filters connectome to identify which color, size and visibility of nodes and edges
@@ -951,7 +1121,7 @@ export class NVMesh {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
     this.indexCount = this.tris.length
     this.vertexCount = this.pts.length
-  }
+  } // updateMesh()
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
   reverseFaces(gl: WebGL2RenderingContext): void {
@@ -1012,19 +1182,27 @@ export class NVMesh {
     const norms = NVMeshUtilities.generateNormals(pts, tris)
     const npt = pts.length / 3
     const isPerVertexColors = npt === rgba255.length / 4
-    const f32 = new Float32Array(npt * 7) // Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
+    // n32
+    const f32PerVertex = this.f32PerVertex // 7 if NormalXYZ is 3 floats, 5 if normalXYZ is packed into rgb32
+    const f32 = new Float32Array(npt * f32PerVertex) // Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
     const u8 = new Uint8Array(f32.buffer) // Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
     let p = 0 // input position
     let c = 0 // input color
     let f = 0 // output float32 location (position and normals)
-    let u = 24 // output uint8 location (colors), offset 24 as after 3*position+3*normal
+    let u = (f32PerVertex - 1) * 4 // output uint8 location (colors), offset 24 as after 3*position+3*normal
     for (let i = 0; i < npt; i++) {
       f32[f + 0] = pts[p + 0]
       f32[f + 1] = pts[p + 1]
       f32[f + 2] = pts[p + 2]
-      f32[f + 3] = norms[p + 0]
-      f32[f + 4] = norms[p + 1]
-      f32[f + 5] = norms[p + 2]
+      if (f32PerVertex !== 7) {
+        u8[u - 4] = norms[p + 0] * 127
+        u8[u - 3] = norms[p + 1] * 127
+        u8[u - 2] = norms[p + 2] * 127
+      } else {
+        f32[f + 3] = norms[p + 0]
+        f32[f + 4] = norms[p + 1]
+        f32[f + 5] = norms[p + 2]
+      }
       u8[u] = rgba255[c + 0]
       u8[u + 1] = rgba255[c + 1]
       u8[u + 2] = rgba255[c + 2]
@@ -1033,8 +1211,8 @@ export class NVMesh {
         c += 4
       }
       p += 3 // read 3 input components: XYZ
-      f += 7 // write 7 output components: 3*Position, 3*Normal, 1*RGBA
-      u += 28 // stride of 28 bytes
+      f += f32PerVertex // write 7 output components: 3*Position, 3*Normal, 1*RGBA
+      u += f32PerVertex * 4 // stride of 28 bytes
     }
     return f32
   }
@@ -1639,6 +1817,10 @@ export class NVMesh {
 
   static readTCK(buffer: ArrayBuffer): TCK {
     return NVMeshLoaders.readTCK(buffer)
+  }
+
+  static readTSF(buffer: ArrayBuffer): Float32Array {
+    return NVMeshLoaders.readTSF(buffer)
   }
 
   static readTT(buffer: ArrayBuffer): TT {

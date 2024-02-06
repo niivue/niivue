@@ -8467,7 +8467,9 @@ export class Niivue {
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
-      if (this.meshes[i].offsetPt0) {
+
+      if (this.meshes[i].offsetPt0 && (this.meshes[i].fiberSides < 3 || this.meshes[i].fiberRadius <= 0)) {
+        // if fibers has less than 3 sides, render as line not cylinder mesh
         hasFibers = true
         continue
       }
@@ -8491,16 +8493,16 @@ export class Niivue {
     gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
     gl.uniform1f(shader.uniforms.opacity, alpha)
     for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false) {
-        continue
-      }
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
       if (!this.meshes[i].offsetPt0) {
         continue
       }
-      gl.bindVertexArray(this.meshes[i].vao)
+      if (this.meshes[i].fiberSides >= 3 && this.meshes[i].fiberRadius > 0) {
+        continue // rendered as mesh cylinder, not line strip
+      }
+      gl.bindVertexArray(this.meshes[i].vaoFiber)
       gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
