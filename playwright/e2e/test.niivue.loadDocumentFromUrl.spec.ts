@@ -16,7 +16,7 @@ test('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(2000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
@@ -29,7 +29,7 @@ test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
     return nv.drawBitmap != null
   }, TEST_OPTIONS)
   expect(isDrawingPresent).toBe(true)
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(2000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
@@ -46,7 +46,7 @@ test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
   }, TEST_OPTIONS)
   expect(counts.meshCount).toBe(1)
   expect(counts.layerCount).toBe(1)
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(2000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
@@ -62,6 +62,6 @@ test('niivue loadDocumentFromUrl replaces previous document objects', async ({ p
   }, TEST_OPTIONS)
   expect(nvols).toBe(0)
   expect(nmeshes).toBe(1)
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(2000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
