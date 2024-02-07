@@ -41,6 +41,7 @@ import {
   fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshEdgeShader,
+  fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
   fragMeshDepthShader,
@@ -543,6 +544,11 @@ export class Niivue {
       Name: 'Edge',
       Frag: fragMeshEdgeShader
     },
+    {
+      Name: 'Diffuse',
+      Frag: fragMeshDiffuseEdgeShader
+    },
+    
     {
       Name: 'Outline',
       Frag: fragMeshOutlineShader
