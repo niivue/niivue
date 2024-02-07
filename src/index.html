@@ -67,12 +67,14 @@
       nv1.attachToCanvas(gl1);
       nv1.opts.dragMode = nv1.dragModes.pan;
       nv1.opts.multiplanarForceRender = true;
+      nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
       await nv1.loadMeshes([{ url: "../demos/images/dpsv.trx"}]);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "Local");
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
       nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
+      nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
       nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
       nv1.setClipPlane([0.0, 270, 0]);
       let cmaps = nv1.meshShaderNames();

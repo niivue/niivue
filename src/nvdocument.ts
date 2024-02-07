@@ -75,6 +75,7 @@ type NVConfigOptions = {
   // string to allow infinity
   meshThicknessOn2D: number | string
   dragMode: DRAG_MODE
+  yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
   // sagittal slices can have Y+ going left or right
@@ -139,6 +140,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
   dragMode: DRAG_MODE.contrast,
+  yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
   sagittalNoseLeft: false,
