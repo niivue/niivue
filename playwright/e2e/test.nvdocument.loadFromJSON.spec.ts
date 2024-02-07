@@ -36,10 +36,9 @@ test('nvdocument loadFromJSON', async ({ page }) => {
     const document = niivue.NVDocument.loadFromJSON(data)
     nv.volumes.length = 0
     nv.loadDocument(document)
-    nv.drawScene()
-    nv.gl.finish()
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
+  await page.waitForTimeout(3000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

@@ -52,5 +52,6 @@ test('nvmeshloaders readLayer', async ({ page }) => {
     return nv.meshes[0].layers.length
   }, TEST_OPTIONS)
   expect(nlayers).toBe(1)
+  await page.waitForTimeout(1000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
