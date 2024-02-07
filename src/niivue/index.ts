@@ -548,7 +548,7 @@ export class Niivue {
       Name: 'Diffuse',
       Frag: fragMeshDiffuseEdgeShader
     },
-    
+
     {
       Name: 'Outline',
       Frag: fragMeshOutlineShader
@@ -2826,6 +2826,9 @@ export class Niivue {
    */
   setPan2Dxyzmm(xyzmmZoom: vec4): void {
     this.scene.pan2Dxyzmm = xyzmmZoom
+    if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = xyzmmZoom[3]
+    }
     this.drawScene()
   }
 
@@ -3230,9 +3233,13 @@ export class Niivue {
       this.opts.dragMode === DRAG_MODE.pan &&
       this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1
     ) {
+      
       let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange)
       zoom = Math.round(zoom * 10) / 10
       const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+      if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = zoom
+      }
       this.scene.pan2Dxyzmm[3] = zoom
       const mm = this.frac2mm(this.scene.crosshairPos)
       this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
@@ -6507,6 +6514,9 @@ export class Niivue {
     zoom = Math.max(zoom, 0.1)
     zoom = Math.min(zoom, 10.0)
     const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+    if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = zoom
+    }
     this.scene.pan2Dxyzmm[3] = zoom
     const mm = this.frac2mm(this.scene.crosshairPos)
     this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
