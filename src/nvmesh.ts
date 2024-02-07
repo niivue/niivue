@@ -345,6 +345,8 @@ export class NVMesh {
     let prevV4 = vec4.create()
     let currV4 = vec4.create()
     let nextV4 = vec4.create()
+    let v1 = vec3.create()
+    let prevV2 = vec3.create()
     let node = 0
     const radius = this.fiberRadius
     for (let i = 0; i < n_count; i++) {
@@ -352,12 +354,19 @@ export class NVMesh {
       if (isLineEnd && node < 1) {
         continue
       } // two restarts in a row!
-      const idx = indices[i] * 4 // each posClrF32 has 4 elements X,Y,Z,C
+      let idx = indices[i] * 4 // each posClrF32 has 4 elements X,Y,Z,C
       node++
       if (node <= 1) {
         // first vertex in a streamline, no previous vertex
         prevV4 = vec4.fromValues(posClrF32[idx + 0], posClrF32[idx + 1], posClrF32[idx + 2], posClrF32[idx + 3])
         currV4 = vec4.clone(prevV4)
+        if (((i + 1) < n_count) && (indices[i + 1] !== primitiveRestart)) {
+          idx = indices[i + 1] * 4
+          nextV4 = vec4.fromValues(posClrF32[idx + 0], posClrF32[idx + 1], posClrF32[idx + 2], posClrF32[idx + 3])
+          vec3.subtract(v1, v4ToV3(prevV4), v4ToV3(nextV4))
+          vec3.normalize(v1, v1) // principle axis of cylinder
+          prevV2 = NiivueObject3D.getFirstPerpVector(v1)
+        }
         continue
       }
       if (isLineEnd) {
@@ -366,12 +375,22 @@ export class NVMesh {
       } else {
         nextV4 = vec4.fromValues(posClrF32[idx + 0], posClrF32[idx + 1], posClrF32[idx + 2], posClrF32[idx + 3])
       }
-      const v1 = vec3.create()
       // mean direction at joint
       // n.b. vec4 -> vec3 we ignore 4th dimension (color)
       vec3.subtract(v1, v4ToV3(prevV4), v4ToV3(nextV4))
       vec3.normalize(v1, v1) // principle axis of cylinder
-      const v2 = NiivueObject3D.getFirstPerpVector(v1)
+      //avoid twisted cylinders: ensure v2 as closely aligned with previous v2 as possible
+      //method simpler than Frenet–Serret apparatus
+      // https://math.stackexchange.com/questions/410530/find-closest-vector-to-a-which-is-perpendicular-to-b
+      //const v2 = NiivueObject3D.getFirstPerpVector(v1)
+      //𝐷=𝐴×𝐵, and then 𝐶=𝐵×𝐷. 𝐶 is automatically orthogonal to 𝐵
+      let D = vec3.create()
+      vec3.cross(D, prevV2, v1)
+      let v2 = vec3.create()
+      vec3.cross(v2, v1, D)
+      prevV2 = vec3.clone(prevV2)
+      //the next line of code would create arbitrary v2 that might show twisting
+      //v2 = NiivueObject3D.getFirstPerpVector(v1)
       // Get the second perp vector by cross product
       const v3 = vec3.create()
       vec3.cross(v3, v1, v2) // a unit length vector orthogonal to v1 and v2
