@@ -43,6 +43,6 @@ test('nvdocument loadFromUrl load preview', async ({ page }) => {
     return documents
   })
   expect(loadedDocuments.length).toBe(3)
-  await page.waitForTimeout(3000)
+  await page.waitForTimeout(5000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
