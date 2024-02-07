@@ -2640,7 +2640,8 @@ export class NVImage {
     frame4D = 0,
     isManifest = false,
     limitFrames4D = NaN,
-    imageType = NVIMAGE_TYPE.UNKNOWN
+    imageType = NVIMAGE_TYPE.UNKNOWN,
+    colorbarVisible = false
   }: Partial<Omit<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
     if (url === '') {
       throw Error('url must not be empty')
@@ -2794,6 +2795,7 @@ export class NVImage {
       imageType
     )
     nvimage.url = url
+    nvimage.colorbarVisible = colorbarVisible
     return nvimage
   }
 

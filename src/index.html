@@ -86,10 +86,14 @@
       about.onclick = function () {
         window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
       }
-      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}];
+      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz", colorbarVisible:true}];
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
+        logging: true,
+        limitFrames4D: 3,
+        isColorbar: true,
+        onLocationChange: handleLocationChange,
       };
       var nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);

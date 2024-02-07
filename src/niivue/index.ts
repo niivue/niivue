@@ -3688,7 +3688,8 @@ export class Niivue {
         trustCalMinMax: this.opts.trustCalMinMax,
         isManifest: volumeList[i].isManifest,
         frame4D: volumeList[i].frame4D,
-        limitFrames4D: volumeList[i].limitFrames4D || this.opts.limitFrames4D
+        limitFrames4D: volumeList[i].limitFrames4D || this.opts.limitFrames4D,
+        colorbarVisible: volumeList[i].colorbarVisible
       }
       await this.addVolumeFromUrl(imageOptions)
       this.uiData.loading$.next(false)
