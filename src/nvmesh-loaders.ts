@@ -430,7 +430,11 @@ export class NVMeshLoaders {
       if (pname.includes('dpv')) {
         dpv.push({
           id: tag,
-          vals: Array.from(vals.slice())
+          vals: Array.from(vals.slice()),
+          global_min: Math.min(...vals),
+          global_max: Math.max(...vals),
+          cal_min: Math.min(...vals),
+          cal_max: Math.max(...vals),
         })
         continue
       }
@@ -652,7 +656,11 @@ export class NVMeshLoaders {
         const str = new TextDecoder().decode(arr).split('\0').shift()
         dpv.push({
           id: str!.trim(), // TODO can we guarantee this?
-          vals: [] as number[]
+          vals: [] as number[],
+          global_min: 0,
+          global_max: 0,
+          cal_min: 0,
+          cal_max: 0,
         })
       }
     }
@@ -747,6 +755,14 @@ export class NVMeshLoaders {
         }
       }
     } // for each streamline: while i < n_count
+    if (n_scalars > 0) {
+      for (let s = 0; s < n_scalars; s++) {
+        dpv[s].global_min = Math.min(...dpv[s].vals)
+        dpv[s].global_max = Math.max(...dpv[s].vals)
+        dpv[s].cal_min = Math.min(...dpv[s].vals)
+        dpv[s].cal_max = Math.max(...dpv[s].vals)
+      }
+    }
     // add 'first index' as if one more line was added (fence post problem)
     offsetPt0[noffset++] = npt
     // resize offset/vertex arrays that were initially over-provisioned
@@ -977,7 +993,11 @@ export class NVMeshLoaders {
       }
       nvmesh.dpv.push({
         id: tag,
-        vals: Array.from(vals.slice())
+        vals: Array.from(vals.slice()),
+        global_min: Math.min(...vals),
+        global_max: Math.max(...vals),
+        cal_min: Math.min(...vals),
+        cal_max: Math.max(...vals),
       })
       return
     }

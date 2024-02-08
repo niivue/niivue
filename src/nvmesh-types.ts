@@ -4,6 +4,10 @@ import { LUT } from './colortables.js'
 export type ValuesArray = Array<{
   id: string
   vals: number[]
+  global_min: number | null
+  global_max: number | null
+  cal_min: number | null
+  cal_max: number | null
 }>
 
 export type TypedNumberArray =
