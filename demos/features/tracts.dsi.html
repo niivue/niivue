@@ -33,27 +33,18 @@
       />
       <label for="fiberColor">Fiber color</label>
       <select id="fiberColor">
-        <option value="Global">Global direction</option>
+        <option value="Global" selected>Global direction</option>
         <option value="Local">Local direction</option>
         <option value="Fixed">Fixed</option>
-        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
       </select>
-      <label for="fiberColormap">Colormap</label>
-      <select id="fiberColormap">
-        <option value="actc">ACTC</option>
-        <option value="inferno" selected>Inferno</option>
-        <option value="plasma">Plasma</option>
-        <option value="warm">Warm</option>
-        <option value="winter">Winter</option>
-      </select>
-      <label for="fiberCalMin">Color Minimum</label>
+      <label for="xRaySlider">XRay</label>
       <input
         type="range"
-        min="10"
-        max="75"
-        value="25"
+        min="0"
+        max="5"
+        value="0"
         class="slider"
-        id="fiberCalMin"
+        id="xRaySlider"
       />
       <button id="about">About</button>
     </header>
@@ -72,18 +63,15 @@
       fiberColor.onchange = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
       };
-      fiberColormap.onchange = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
-      };
       fiberDitherSlider.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
       };
-      fiberCalMin.oninput = function () {
-       nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
-        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
+      xRaySlider.oninput = function () {
+        nv1.opts.meshXRay = this.value / 20;
+        nv1.drawScene();
       };
       about.onclick = function () {
-        window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
+        window.alert("View streamlines in DSI-Studio TinyTrack format");
       }
       var volumeList1 = [{ url: "../images/mni152.nii.gz"}];
       let defaults = {
@@ -96,16 +84,12 @@
       nv1.opts.multiplanarForceRender = true;
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
-      var layerList = [{url: "../images/mni152.SLF1_R.tsf"}];
-      await nv1.loadMeshes([{ url: "../images/tract.SLF1_R.tck", layers: layerList,}]);
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
+      await nv1.loadMeshes([{ url: "../images/TR_S_R.tt.gz"}]);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
       nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
       nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
-      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
-      nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
-      nv1.setClipPlane([0.2, 0, 120]);
+      nv1.setClipPlane([0.05, 0, 90]);
       let cmaps = nv1.meshShaderNames();
       let cmapEl = document.getElementById("shaders");
       for (let i = 0; i < cmaps.length; i++) {
