@@ -237,9 +237,9 @@ export class NVMeshLoaders {
       m[15]
     )
     mat4.transpose(trans_to_mni, trans_to_mni)
-    let zoomMat = mat4.create()
-    //unlike TRK, DSI-studion does NOT translate voxels
-    /*zoomMat = mat4.fromValues(
+    const zoomMat = mat4.create()
+    // unlike TRK, DSI-studion does NOT translate voxels
+    /* zoomMat = mat4.fromValues(
       1 / mat.voxel_size[0],
       0,
       0,
@@ -256,7 +256,7 @@ export class NVMeshLoaders {
       0,
       0,
       1
-    )*/
+    ) */
     mat4.transpose(zoomMat, zoomMat)
     function parse_tt(
       track: Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array
