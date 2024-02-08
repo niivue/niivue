@@ -434,7 +434,7 @@ export class NVMeshLoaders {
           global_min: Math.min(...vals),
           global_max: Math.max(...vals),
           cal_min: Math.min(...vals),
-          cal_max: Math.max(...vals),
+          cal_max: Math.max(...vals)
         })
         continue
       }
@@ -660,7 +660,7 @@ export class NVMeshLoaders {
           global_min: 0,
           global_max: 0,
           cal_min: 0,
-          cal_max: 0,
+          cal_max: 0
         })
       }
     }
@@ -997,7 +997,7 @@ export class NVMeshLoaders {
         global_min: Math.min(...vals),
         global_max: Math.max(...vals),
         cal_min: Math.min(...vals),
-        cal_max: Math.max(...vals),
+        cal_max: Math.max(...vals)
       })
       return
     }
