@@ -36,9 +36,25 @@
         <option value="Global">Global direction</option>
         <option value="Local">Local direction</option>
         <option value="Fixed">Fixed</option>
-        <option value="DPV0"  selected>First Per Vertex Type (if available)</option>
-        <option value="DPS0">First Per Streamline Type (if available)</option>
+        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
       </select>
+      <label for="fiberColormap">Colormap</label>
+      <select id="fiberColormap">
+        <option value="actc">ACTC</option>
+        <option value="inferno" selected>Inferno</option>
+        <option value="plasma">Plasma</option>
+        <option value="warm">Warm</option>
+        <option value="winter">Winter</option>
+      </select>
+      <label for="fiberCalMin">Color Minimum</label>
+      <input
+        type="range"
+        min="10"
+        max="75"
+        value="25"
+        class="slider"
+        id="fiberCalMin"
+      />
       <button id="about">About</button>
     </header>
     <main>
@@ -56,8 +72,16 @@
       fiberColor.onchange = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
       };
+      fiberColormap.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
+      };
+      
       fiberDitherSlider.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
+      };
+      fiberCalMin.oninput = function () {
+       nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
+        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
       };
       about.onclick = function () {
         window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
@@ -80,6 +104,7 @@
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
       nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
       nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
+      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
       nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
       nv1.setClipPlane([0.2, 0, 120]);
       let cmaps = nv1.meshShaderNames();

@@ -548,7 +548,7 @@ export class NVMesh {
     // Determine color: local, global, dps0, dpv0, etc.
     const fiberColor = this.fiberColor.toLowerCase()
     let dps: number[] | null = null
-    let dpv: number[] | null = null
+    let dpv: ValuesArray | null = null
     if (fiberColor.startsWith('dps') && this.dps && this.dps.length > 0) {
       const n = parseInt(fiberColor.substring(3))
       if (n < this.dps.length && this.dps[n].vals.length === n_count) {
@@ -558,7 +558,7 @@ export class NVMesh {
     if (fiberColor.startsWith('dpv') && this.dpv && this.dpv.length > 0) {
       const n = parseInt(fiberColor.substring(3))
       if (n < this.dpv.length && this.dpv[n].vals.length === npt) {
-        dpv = this.dpv[n].vals
+        dpv = this.dpv[n]
       }
     }
     const streamlineVisible = new Int16Array(n_count)
@@ -612,15 +612,11 @@ export class NVMesh {
     } else if (dpv) {
       // color per vertex
       const lut = cmapper.colormap(this.colormap as string, this.colormapInvert)
-      let mn = dpv[0]
-      let mx = dpv[0]
-      for (let i = 0; i < npt; i++) {
-        mn = Math.min(mn, dpv[i])
-        mx = Math.max(mx, dpv[i])
-      }
+      let mn = dpv.cal_min;
+      let mx = dpv.cal_max;
       let v4 = 3 // +3: fill 4th component colors: XYZC = 0123
       for (let i = 0; i < npt; i++) {
-        let color = (dpv[i] - mn) / (mx - mn)
+        let color = Math.min(Math.max((dpv.vals[i] - mn) / (mx - mn), 0), 1);
         color = Math.round(Math.max(Math.min(255, color * 255))) * 4
         const RGBA = lut[color] + (lut[color + 1] << 8) + (lut[color + 2] << 16)
         posClrU32[v4] = RGBA
