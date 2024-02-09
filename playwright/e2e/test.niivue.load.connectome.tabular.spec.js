@@ -19,7 +19,8 @@ test('niivue load connectome tabular', async ({ page }) => {
         name: 'mni152.nii.gz',
         colormap: 'gray',
         opacity: 1,
-        visible: true
+        visible: true,
+        colorbarVisible: true
       }
     ]
     await nv.loadVolumes(volumeList)
