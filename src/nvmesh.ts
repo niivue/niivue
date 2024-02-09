@@ -54,9 +54,7 @@ export type NVMeshLayer = {
   isOutlineBorder: boolean
   isTransparentBelowCalMin?: boolean
   alphaThreshold: boolean
-
   base64?: string
-
   // TODO referenced in niivue/refreshColormaps
   colorbarVisible?: boolean
 }
@@ -476,7 +474,7 @@ export class NVMesh {
     this.indexCount = nidx
   } // linesToCylinders
 
-  // not included in public docs
+// not included in public docs
   // internal function filters tractogram to identify which color and visibility of streamlines
   updateFibers(gl: WebGL2RenderingContext): void {
     if (!this.offsetPt0 || !this.fiberLength) {
@@ -930,7 +928,9 @@ export class NVMesh {
               k += 4
               continue
             }
-            const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            if (this.f32PerVertex !== 7)
+              vtx = j * 20 + 16
             u8[vtx + 0] = lerp(u8[vtx + 0], rgba8[k + 0], opacity)
             u8[vtx + 1] = lerp(u8[vtx + 1], rgba8[k + 1], opacity)
             u8[vtx + 2] = lerp(u8[vtx + 2], rgba8[k + 2], opacity)
@@ -946,7 +946,9 @@ export class NVMesh {
           }
           let k = 0
           for (let j = 0; j < layer.values.length; j++) {
-            const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            if (this.f32PerVertex !== 7)
+              vtx = j * 20 + 16
             if (!opaque[j]) {
               u8[vtx + 3] = 0
               k += 4
@@ -983,7 +985,6 @@ export class NVMesh {
         if (!layer.isTransparentBelowCalMin) {
           mnCal = Number.NEGATIVE_INFINITY
         }
-
         if (!layer.isOutlineBorder) {
           // blend colors for each voxel
           for (let j = 0; j < nvtx; j++) {
@@ -997,7 +998,9 @@ export class NVMesh {
             }
             v255 = Math.max(0.0, v255)
             v255 = Math.min(255.0, v255) * 4
-            const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            if (this.f32PerVertex !== 7)
+              vtx = j * 20 + 16
             if (layer.isAdditiveBlend) {
               const j4 = j * 4
               // sum red, green and blue layers
@@ -1029,7 +1032,9 @@ export class NVMesh {
               continue
             }
             v255 = Math.min(255.0, v255) * 4
-            const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+            if (this.f32PerVertex !== 7)
+              vtx = j * 20 + 16
             u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity)
             u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity)
             u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity)
@@ -1069,8 +1074,9 @@ export class NVMesh {
                 continue
               }
               v255 = Math.min(255.0, v255) * 4
-              const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
-
+              let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+              if (this.f32PerVertex !== 7)
+                vtx = j * 20 + 16
               if (layer.isAdditiveBlend) {
                 const j4 = j * 4
                 // sum red, green and blue layers
@@ -1101,7 +1107,9 @@ export class NVMesh {
                 continue
               }
               v255 = Math.min(255.0, v255) * 4
-              const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+              let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+              if (this.f32PerVertex !== 7)
+                vtx = j * 20 + 16
               u8[vtx + 0] = lerp(u8[vtx + 0], lut[v255 + 0], opacity)
               u8[vtx + 1] = lerp(u8[vtx + 1], lut[v255 + 1], opacity)
               u8[vtx + 2] = lerp(u8[vtx + 2], lut[v255 + 2], opacity)
@@ -1112,7 +1120,9 @@ export class NVMesh {
     }
     if (maxAdditiveBlend > 0) {
       for (let j = 0; j < nvtx; j++) {
-        const vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+        let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
+        if (this.f32PerVertex !== 7)
+          vtx = j * 20 + 16
         const v = j * 4 // additiveRGBA is 4 bytes stride, RGBA color at offset 0,
         const opacity = Math.min(maxAdditiveBlend, additiveRGBA[v + 3] / 255)
         if (opacity <= 0) {
