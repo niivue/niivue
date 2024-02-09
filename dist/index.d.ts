@@ -752,7 +752,7 @@ declare class NVImage {
      * factory function to load and return a new NVImage instance from a given URL
      * @returns  NVImage instance
      */
-    static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
+    static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, visible, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType, colorbarVisible }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
         url?: string | Uint8Array | ArrayBuffer;
     }): Promise<NVImage>;
     static readFileAsync(file: File, bytesToLoad?: number): Promise<ArrayBuffer>;
