@@ -1382,6 +1382,20 @@ void main() {
 	color = vec4(d + s, opacity);
 }`
 
+export const fragMeshDiffuseEdgeShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+	float diffuse = 1.4;
+	vec3 l = vec3(0.0, 0.0, -1.0);
+	float lightNormDot = max(dot(normalize(vN), l), 0.0);
+	color = vec4(lightNormDot * vClr.rgb * diffuse, opacity);
+}`
+
 // Phong: default
 export const fragMeshShader = `#version 300 es
 precision highp int;

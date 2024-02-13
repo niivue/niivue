@@ -237,8 +237,9 @@ export class NVMeshLoaders {
       m[15]
     )
     mat4.transpose(trans_to_mni, trans_to_mni)
-    let zoomMat = mat4.create()
-    zoomMat = mat4.fromValues(
+    const zoomMat = mat4.create()
+    // unlike TRK, DSI-studion does NOT translate voxels
+    /* zoomMat = mat4.fromValues(
       1 / mat.voxel_size[0],
       0,
       0,
@@ -255,7 +256,7 @@ export class NVMeshLoaders {
       0,
       0,
       1
-    )
+    ) */
     mat4.transpose(zoomMat, zoomMat)
     function parse_tt(
       track: Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array
@@ -430,7 +431,11 @@ export class NVMeshLoaders {
       if (pname.includes('dpv')) {
         dpv.push({
           id: tag,
-          vals: Array.from(vals.slice())
+          vals: Array.from(vals.slice()),
+          global_min: Math.min(...vals),
+          global_max: Math.max(...vals),
+          cal_min: Math.min(...vals),
+          cal_max: Math.max(...vals)
         })
         continue
       }
@@ -473,6 +478,67 @@ export class NVMeshLoaders {
       header
     }
   } // readTRX()
+
+  // read mrtrix tsf format Track Scalar Files - these are are DPV
+  // https://mrtrix.readthedocs.io/en/dev/getting_started/image_data.html#track-scalar-file-format-tsf
+  static readTSF(buffer: ArrayBuffer, n_vert = 0): Float32Array {
+    const vals = new Float32Array(n_vert)
+    const len = buffer.byteLength
+    if (len < 20) {
+      throw new Error('File too small to be TSF: bytes = ' + len)
+    }
+    const bytes = new Uint8Array(buffer)
+    let pos = 0
+    function readStr(): string {
+      while (pos < len && bytes[pos] === 10) {
+        pos++
+      } // skip blank lines
+      const startPos = pos
+      while (pos < len && bytes[pos] !== 10) {
+        pos++
+      }
+      pos++ // skip EOLN
+      if (pos - startPos < 1) {
+        return ''
+      }
+      return new TextDecoder().decode(buffer.slice(startPos, pos - 1))
+    }
+    let line = readStr() // 1st line: signature 'mrtrix tracks'
+    if (!line.includes('mrtrix track scalars')) {
+      throw new Error('Not a valid TSF file')
+    }
+    let offset = -1 // "file: offset" is REQUIRED
+    while (pos < len && !line.includes('END')) {
+      line = readStr()
+      if (line.toLowerCase().startsWith('file:')) {
+        offset = parseInt(line.split(' ').pop()!)
+      }
+      if (line.toLowerCase().startsWith('datatype:') && !line.endsWith('Float32LE')) {
+        throw new Error('Only supports TSF files with Float32LE')
+      }
+    }
+    if (offset < 20) {
+      throw new Error('Not a valid TSF file (missing file offset)')
+    }
+    pos = offset
+    const reader = new DataView(buffer)
+    // read and transform vertex positions
+    let npt = 0
+    while (pos + 4 <= len && npt < n_vert) {
+      const ptx = reader.getFloat32(pos, true)
+      pos += 4
+      if (!isFinite(ptx)) {
+        // both NaN and Infinity are not finite
+        if (!isNaN(ptx)) {
+          // terminate if infinity
+          break
+        }
+      } else {
+        vals[npt++] = ptx
+      }
+    }
+    return vals
+  } // readTSF
 
   // read mrtrix tck format streamlines
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#tracks-file-format-tck
@@ -591,7 +657,11 @@ export class NVMeshLoaders {
         const str = new TextDecoder().decode(arr).split('\0').shift()
         dpv.push({
           id: str!.trim(), // TODO can we guarantee this?
-          vals: [] as number[]
+          vals: [] as number[],
+          global_min: 0,
+          global_max: 0,
+          cal_min: 0,
+          cal_max: 0
         })
       }
     }
@@ -686,6 +756,14 @@ export class NVMeshLoaders {
         }
       }
     } // for each streamline: while i < n_count
+    if (n_scalars > 0) {
+      for (let s = 0; s < n_scalars; s++) {
+        dpv[s].global_min = Math.min(...dpv[s].vals)
+        dpv[s].global_max = Math.max(...dpv[s].vals)
+        dpv[s].cal_min = Math.min(...dpv[s].vals)
+        dpv[s].cal_max = Math.max(...dpv[s].vals)
+      }
+    }
     // add 'first index' as if one more line was added (fence post problem)
     offsetPt0[noffset++] = npt
     // resize offset/vertex arrays that were initially over-provisioned
@@ -867,7 +945,7 @@ export class NVMeshLoaders {
 
   // read mesh overlay to influence vertex colors
   static readLayer(
-    name: string,
+    name: string = '',
     buffer: ArrayBuffer,
     nvmesh: NVMesh,
     opacity = 0.5,
@@ -885,18 +963,47 @@ export class NVMeshLoaders {
       isAdditiveBlend: false,
       colorbarVisible: true
     }
-
     const isReadColortables = true
-    const n_vert = nvmesh.vertexCount / 3 // each vertex has XYZ component
-    if (n_vert < 3) {
-      return
-    }
     const re = /(?:\.([^.]+))?$/
     let ext = re.exec(name)![1] // TODO can we guarantee this?
     ext = ext.toUpperCase()
     if (ext === 'GZ') {
       ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
+    }
+    const n_vert = nvmesh.vertexCount / 3 // each vertex has XYZ component
+    if (nvmesh.offsetPt0) {
+      if (ext !== 'TSF') {
+        throw new Error('readLayer for streamlines only supports TSF files.')
+      }
+      const npt = nvmesh.pts.length / 3
+      // typescript hell commences for one liner
+      // const tag = namex.split('/').pop().split('.').slice(0, -1).join('.')
+      const splitResult = name.split('/')
+      let tag = 'Unknown'
+      if (splitResult.length > 1) {
+        const tag1 = splitResult.pop()
+        if (tag1) {
+          tag = tag.split('.').slice(0, -1).join('.')
+        }
+      }
+      // return to readable javascript
+      const vals = NVMeshLoaders.readTSF(buffer, npt)
+      if (!nvmesh.dpv) {
+        nvmesh.dpv = []
+      }
+      nvmesh.dpv.push({
+        id: tag,
+        vals: Array.from(vals.slice()),
+        global_min: Math.min(...vals),
+        global_max: Math.max(...vals),
+        cal_min: Math.min(...vals),
+        cal_max: Math.max(...vals)
+      })
+      return
+    }
+    if (n_vert < 3) {
+      return
     }
     if (ext === 'MZ3') {
       layer.values = NVMeshLoaders.readMZ3(buffer, n_vert) as Float32Array

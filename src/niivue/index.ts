@@ -41,6 +41,7 @@ import {
   fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshEdgeShader,
+  fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
   fragMeshDepthShader,
@@ -541,6 +542,11 @@ export class Niivue {
       Name: 'Edge',
       Frag: fragMeshEdgeShader
     },
+    {
+      Name: 'Diffuse',
+      Frag: fragMeshDiffuseEdgeShader
+    },
+
     {
       Name: 'Outline',
       Frag: fragMeshOutlineShader
@@ -2818,6 +2824,9 @@ export class Niivue {
    */
   setPan2Dxyzmm(xyzmmZoom: vec4): void {
     this.scene.pan2Dxyzmm = xyzmmZoom
+    if (this.opts.yoke3Dto2DZoom) {
+      this.scene.volScaleMultiplier = xyzmmZoom[3]
+    }
     this.drawScene()
   }
 
@@ -3225,6 +3234,9 @@ export class Niivue {
       let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange)
       zoom = Math.round(zoom * 10) / 10
       const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+      if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = zoom
+      }
       this.scene.pan2Dxyzmm[3] = zoom
       const mm = this.frac2mm(this.scene.crosshairPos)
       this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
@@ -6500,6 +6512,9 @@ export class Niivue {
     zoom = Math.max(zoom, 0.1)
     zoom = Math.min(zoom, 10.0)
     const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+    if (this.opts.yoke3Dto2DZoom) {
+      this.scene.volScaleMultiplier = zoom
+    }
     this.scene.pan2Dxyzmm[3] = zoom
     const mm = this.frac2mm(this.scene.crosshairPos)
     this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
@@ -8468,7 +8483,9 @@ export class Niivue {
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
-      if (this.meshes[i].offsetPt0) {
+
+      if (this.meshes[i].offsetPt0 && (this.meshes[i].fiberSides < 3 || this.meshes[i].fiberRadius <= 0)) {
+        // if fibers has less than 3 sides, render as line not cylinder mesh
         hasFibers = true
         continue
       }
@@ -8492,16 +8509,16 @@ export class Niivue {
     gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
     gl.uniform1f(shader.uniforms.opacity, alpha)
     for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false) {
-        continue
-      }
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
       if (!this.meshes[i].offsetPt0) {
         continue
       }
-      gl.bindVertexArray(this.meshes[i].vao)
+      if (this.meshes[i].fiberSides >= 3 && this.meshes[i].fiberRadius > 0) {
+        continue // rendered as mesh cylinder, not line strip
+      }
+      gl.bindVertexArray(this.meshes[i].vaoFiber)
       gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
