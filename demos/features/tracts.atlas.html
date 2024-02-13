@@ -59,7 +59,7 @@
       nv1.opts.multiplanarForceRender = true
       nv1.opts.yoke3Dto2DZoom = true
       await nv1.loadVolumes(volumeList1)
-      await nv1.loadMeshes([{ url: "../images/Yeh2022.trx"}])
+      await nv1.loadMeshes([{ url: "../images/yeh2022.trx"}])
       let cmapEl = document.getElementById("status")
       for (let i = 0; i < nv1.meshes[0].dpg.length; i++) {
         let btn = document.createElement("button")
