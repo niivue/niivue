@@ -248,6 +248,10 @@ type LegacyConnectome = Partial<ConnectomeOptions> & {
 type ValuesArray = Array<{
     id: string;
     vals: number[];
+    global_min?: number;
+    global_max?: number;
+    cal_min?: number;
+    cal_max?: number;
 }>;
 type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
 type AnyNumberArray = number[] | TypedNumberArray;
@@ -397,6 +401,7 @@ declare class NVMesh {
     indexBuffer: WebGLBuffer;
     vertexBuffer: WebGLBuffer;
     vao: WebGLVertexArrayObject;
+    vaoFiber: WebGLVertexArrayObject;
     pts: number[] | Float32Array;
     tris?: number[] | Uint32Array;
     layers: NVMeshLayer[];
@@ -408,6 +413,9 @@ declare class NVMesh {
     fiberDither: number;
     fiberColor: string;
     fiberDecimationStride: number;
+    fiberSides: number;
+    fiberRadius: number;
+    f32PerVertex: number;
     fiberMask?: unknown[];
     colormap?: ColorMap | LegacyConnectome | string | null;
     dpg?: ValuesArray | null;
@@ -446,6 +454,7 @@ declare class NVMesh {
      * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
      */
     constructor(pts: number[] | Float32Array, tris: number[] | Uint32Array, name: string | undefined, rgba255: number[] | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
+    linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void;
     updateFibers(gl: WebGL2RenderingContext): void;
     updateConnectome(gl: WebGL2RenderingContext): void;
     updateMesh(gl: WebGL2RenderingContext): void;
@@ -500,6 +509,7 @@ declare class NVMesh {
     static readTxtVTK(buffer: ArrayBuffer): VTK;
     static readTRK(buffer: ArrayBuffer): TRK;
     static readTCK(buffer: ArrayBuffer): TCK;
+    static readTSF(buffer: ArrayBuffer): Float32Array;
     static readTT(buffer: ArrayBuffer): TT;
     static readTRX(buffer: ArrayBuffer): TRX;
     static readTRACT(buffer: ArrayBuffer): TRACT;
@@ -916,6 +926,7 @@ type NVConfigOptions = {
     isRadiologicalConvention: boolean;
     meshThicknessOn2D: number | string;
     dragMode: DRAG_MODE;
+    yoke3Dto2DZoom: boolean;
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
     sagittalNoseLeft: boolean;
@@ -1340,10 +1351,11 @@ declare class NVMeshLoaders {
     static readTRACT(buffer: ArrayBuffer): TRACT;
     static readTT(buffer: ArrayBuffer): TT;
     static readTRX(buffer: ArrayBuffer): TRX;
+    static readTSF(buffer: ArrayBuffer, n_vert?: number): Float32Array;
     static readTCK(buffer: ArrayBuffer): TCK;
     static readTRK(buffer: ArrayBuffer): TRK;
     static readTxtVTK(buffer: ArrayBuffer): VTK;
-    static readLayer(name: string, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, isOutlineBorder?: boolean): void;
+    static readLayer(name: string | undefined, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, isOutlineBorder?: boolean): void;
     static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
@@ -1835,6 +1847,7 @@ declare class Niivue {
         isRadiologicalConvention: boolean;
         meshThicknessOn2D: string | number;
         dragMode: DRAG_MODE;
+        yoke3Dto2DZoom: boolean;
         isDepthPickMesh: boolean;
         isCornerOrientationText: boolean;
         sagittalNoseLeft: boolean;
@@ -1876,6 +1889,9 @@ declare class Niivue {
         renderAzimuth: number;
         renderElevation: number;
         volScaleMultiplier: number;
+        /**
+         * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
+         */
         crosshairPos: vec3;
         clipPlane: number[];
         clipPlaneDepthAziElev: number[];
