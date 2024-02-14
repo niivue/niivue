@@ -14,7 +14,8 @@
       <select name="mode" id="mode">
         <option>FA</option>
         <option>V1</option>
-        <option selected>V1 modulated by FA</option>
+        <option>V1 modulated by FA</option>
+        <option selected>Lines</option>
       </select>
       <label for="slide">&nbsp; FAmin</label>
       <input
@@ -36,18 +37,22 @@
       />
       <label for="check">ClipDark</label>
       <input type="checkbox" id="check" checked />
+      <button id="about">About</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
+    <footer id="location">&nbsp;</footer>
     <script type="module" async>
       import * as niivue from "../dist/index.js";
-      
+      about.onclick = function () {
+        window.alert("Experimental diffusion tensor V1 validation (to do: assumptions regarding neurological convention, slice orientation, world space)")
+      }
       function minMax() {
         let mn = 0.01 * slide.value;
         let mx = 0.01 * slideX.value;
-        nv1.volumes[1].cal_min = Math.min(mn, mx);
-        nv1.volumes[1].cal_max = Math.max(mn, mx);
+        nv1.volumes[0].cal_min = Math.min(mn, mx);
+        nv1.volumes[0].cal_max = Math.max(mn, mx);
         nv1.updateGLVolume();
       }
       slide.oninput = function () {
@@ -60,37 +65,55 @@
         nv1.isAlphaClipDark = this.checked;
         nv1.updateGLVolume();
       }
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string;
+      }
       var volumeList1 = [
         {
-          url: "../images/V1.nii.gz",
+          url: "../images/FA.nii.gz",
           opacity: 1,
           visible: false,
         },
         {
-          url: "../images/FA.nii.gz",
-          colormap: "gray",
-          opacity: 1.0,
+          url: "../images/V1.nii.gz",
+          opacity: 0.0,
           visible: false,
         },
       ];
-      var nv1 = new niivue.Niivue({ backColor: [0.4, 0.2, 0.5, 1] });
+      var nv1 = new niivue.Niivue({ 
+        backColor: [0.2, 0.2, 0.2, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      });
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.opts.yoke3Dto2DZoom = true;
+      //v1 aided if all views show voxel centers
+      nv1.opts.isForceMouseClickToVoxelCenters = true;
       nv1.attachTo("gl1");
+      //V1 lines REQUIRES nearest neighbor interpolation
+      nv1.setInterpolation(true);
       await nv1.loadVolumes(volumeList1);
-      nv1.opts.isColorbar = true;
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.scene.crosshairPos = nv1.vox2frac([41, 46,28])
       var drop = document.getElementById("mode");
       drop.onchange = function () {
         let mode = document.getElementById("mode").selectedIndex;
         if (mode === 0) {
-          nv1.setOpacity(0, 0.0); //hide V1
-          nv1.setOpacity(1, 1.0); //show FA
+          nv1.setOpacity(0, 1.0); //show FA
+          nv1.setOpacity(1, 0.0); //hide V1
+        } else if (mode === 3) {
+          nv1.setOpacity(0, 1.0); //show FA
+          nv1.setOpacity(1, 1.0); //show V1
+           
         } else {
-          nv1.setOpacity(0, 1.0); //show V1
-          nv1.setOpacity(1, 0.0); //hide FA
+          nv1.setOpacity(0, 0.0); //hide FA
+          nv1.setOpacity(1, 1.0); //show V1
         }
         if (mode === 2) {
-          nv1.setModulationImage(nv1.volumes[0].id,nv1.volumes[1].id);
-        } else nv1.setModulationImage(nv1.volumes[0].id, null);
+          nv1.setModulationImage(nv1.volumes[1].id,nv1.volumes[0].id);
+        } else nv1.setModulationImage(nv1.volumes[1].id, null);
+        nv1.opts.isV1SliceShader = (mode === 3);
+        nv1.updateGLVolume()
       };
       drop.onchange();
       check.onchange();

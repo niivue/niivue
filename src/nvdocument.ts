@@ -81,9 +81,12 @@ type NVConfigOptions = {
   // sagittal slices can have Y+ going left or right
   sagittalNoseLeft: boolean
   isSliceMM: boolean
+  //V1 image overlays can show vectors as per-pixel lines
+  isV1SliceShader: boolean
   isHighResolutionCapable: boolean
   logLevel: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent'
   loadingText: string
+  isForceMouseClickToVoxelCenters: boolean
   dragAndDropEnabled: boolean
   // drawing disabled by default
   drawingEnabled: boolean
@@ -145,9 +148,11 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isCornerOrientationText: false,
   sagittalNoseLeft: false,
   isSliceMM: false,
+  isV1SliceShader: false,
   isHighResolutionCapable: true,
   logLevel: 'info',
   loadingText: 'waiting for images...',
+  isForceMouseClickToVoxelCenters: false,
   dragAndDropEnabled: true,
   drawingEnabled: false,
   penValue: 1,

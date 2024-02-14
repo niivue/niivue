@@ -8,6 +8,7 @@ import {
   fragOrientCubeShader,
   vertSliceMMShader,
   fragSliceMMShader,
+  fragSliceV1Shader,
   vertRectShader,
   vertLineShader,
   vertLine3DShader,
@@ -313,8 +314,12 @@ type NiiVueOptions = {
   sagittalNoseLeft?: boolean
   // are images aligned to voxel space (false) or world space (true)
   isSliceMM?: boolean
+  //if isV1SliceShader we will treat overlay as V1 volume for line drawing
+  isV1SliceShader?: boolean
   // demand that high-dot-per-inch displays use native voxel size
   isHighResolutionCapable?: boolean
+  //mouse selects are digitized based on voxel resolution
+  isForceMouseClickToVoxelCenters?: boolean
   // allow user to create and edit voxel-based drawings
   drawingEnabled?: boolean
   // color of drawing when user drags mouse (if drawingEnabled)
@@ -397,6 +402,7 @@ export class Niivue {
   overlayTexture: WebGLTexture | null = null
   overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
+  sliceV1Shader?: Shader
   orientCubeShader?: Shader
   orientCubeShaderVAO: WebGLVertexArrayObject | null = null
   rectShader?: Shader
@@ -4988,6 +4994,14 @@ export class Niivue {
     gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2)
     gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7)
     gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
+    //fragSliceV1Shader
+    this.sliceV1Shader = new Shader(gl, vertSliceMMShader, fragSliceV1Shader)
+    this.sliceV1Shader.use(gl)
+    gl.uniform1i(this.sliceV1Shader.uniforms.volume, 0)
+    gl.uniform1i(this.sliceV1Shader.uniforms.colormap, 1)
+    gl.uniform1i(this.sliceV1Shader.uniforms.overlay, 2)
+    gl.uniform1i(this.sliceV1Shader.uniforms.drawing, 7)
+    gl.uniform1f(this.sliceV1Shader.uniforms.drawOpacity, this.drawOpacity)
     // orient cube
     this.orientCubeShader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader)
     this.orientCubeShaderVAO = gl.createVertexArray()
@@ -5164,6 +5178,7 @@ export class Niivue {
       }
       this.refreshLayers(this.volumes[i], visibleLayers)
       visibleLayers++
+
     }
     this.furthestVertexFromOrigin = 0.0
     if (numLayers > 0) {
@@ -5650,16 +5665,13 @@ export class Niivue {
     this.gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope)
     this.gl.uniform1f(orientShader.uniforms.opacity ?? null, opacity)
     this.gl.uniform1i(orientShader.uniforms.modulationVol ?? null, 7)
-    //  this.gl.uniform1f(orientShader.uniforms["cal_min"], 2);
-    //  this.gl.uniform1f(orientShader.uniforms["cal_max"], 3);
-
     let modulateTexture = null
     if (
-      overlayItem.modulationImage &&
+      (overlayItem.modulationImage !== null) &&
       overlayItem.modulationImage >= 0 &&
       overlayItem.modulationImage < this.volumes.length
     ) {
-      log.debug(this.volumes)
+      log.debug('modulating', this.volumes)
       const mhdr = this.volumes[overlayItem.modulationImage].hdr!
       if (mhdr.dims[1] === hdr.dims[1] && mhdr.dims[2] === hdr.dims[2] && mhdr.dims[3] === hdr.dims[3]) {
         if (overlayItem.modulateAlpha) {
@@ -5814,19 +5826,24 @@ export class Niivue {
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
 
-    if (!this.sliceMMShader) {
-      throw new Error('sliceMMShader undefined')
+    let shader = this.sliceMMShader
+    if (this.opts.isV1SliceShader) {
+     shader = this.sliceV1Shader
     }
+    if (!shader) {
+      throw new Error('slice shader undefined')
+    }
+    
+    shader.use(this.gl)
 
-    this.sliceMMShader.use(this.gl)
-    this.gl.uniform1f(this.sliceMMShader.uniforms.overlays, this.overlays.length)
-    this.gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
+    this.gl.uniform1f(shader.uniforms.overlays, this.overlays.length)
+    this.gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
     if (colormapLabelTexture !== null) {
       this.gl.deleteTexture(colormapLabelTexture)
       this.gl.activeTexture(this.gl.TEXTURE1)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
     }
-    this.gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7)
+    this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.activeTexture(this.gl.TEXTURE7)
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.updateInterpolation(layer)
@@ -6344,7 +6361,10 @@ export class Niivue {
         this.createOnLocationChange(axCorSag)
         return
       }
-      this.scene.crosshairPos = vec3.clone(texFrac)
+      if (this.opts.isForceMouseClickToVoxelCenters)
+        this.scene.crosshairPos = vec3.clone(this.vox2frac(this.frac2vox(texFrac)))
+      else
+        this.scene.crosshairPos = vec3.clone(texFrac)
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
 
@@ -7403,26 +7423,30 @@ export class Niivue {
     gl.depthFunc(gl.GREATER)
     gl.disable(gl.CULL_FACE) // show front and back faces
 
-    if (!this.sliceMMShader) {
-      throw new Error('sliceMMShader undefined')
+    let shader = this.sliceMMShader
+    if (this.opts.isV1SliceShader) {
+     shader = this.sliceV1Shader
     }
-    this.sliceMMShader.use(this.gl)
-    gl.uniform1f(this.sliceMMShader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
-    gl.uniform1f(this.sliceMMShader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
-    gl.uniform1i(this.sliceMMShader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
-    gl.uniform1i(this.sliceMMShader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-    gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
+    if (!shader) {
+      throw new Error('slice Shader undefined')
+    }
+    shader.use(this.gl)
+    gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
+    gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
+    gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
+    gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.uniform1f(this.sliceMMShader.uniforms.opacity, this.volumes[0].opacity)
-    gl.uniform1i(this.sliceMMShader.uniforms.axCorSag, axCorSag)
-    gl.uniform1f(this.sliceMMShader.uniforms.slice, sliceFrac)
+    gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity)
+    gl.uniform1i(shader.uniforms.axCorSag, axCorSag)
+    gl.uniform1f(shader.uniforms.slice, sliceFrac)
     gl.uniformMatrix4fv(
-      this.sliceMMShader.uniforms.frac2mm,
+      shader.uniforms.frac2mm,
       false,
       frac2mmTexture // this.volumes[0].frac2mm
     )
-    gl.uniformMatrix4fv(this.sliceMMShader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
+    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
     gl.bindVertexArray(this.genericVAO) // set vertex attributes
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes

@@ -12,6 +12,15 @@
       <strong>niivue requires JavaScript. Please enable it to continue.</strong>
     </noscript>
     <header>
+      <label for="fiberRadius">Radius</label>
+      <input
+        type="range"
+        min="0"
+        max="20"
+        value="0"
+        class="slider"
+        id="fiberRadius"
+      />
       <label for="fiberDitherSlider">Dither</label>
       <input
         type="range"
@@ -51,6 +60,10 @@
 </html>
 <script type="module" async>
   import * as niivue from "../dist/index.js";
+  fiberRadius.oninput = function () {
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1)
+    nv1.updateGLVolume()
+  }
   fiberDitherSlider.oninput = function () {
     nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
   };
