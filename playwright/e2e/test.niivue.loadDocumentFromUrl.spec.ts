@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { Niivue } from '../../dist/index'
+
 import { httpServerAddress } from './helpers'
 import { TEST_OPTIONS } from './test.types'
 
@@ -7,9 +8,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test.skip('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
+test('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
   const nvols = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.basic.nvd')
@@ -22,7 +22,6 @@ test.skip('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
 
 test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
   const isDrawingPresent = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.drawing.nvd')
@@ -35,7 +34,6 @@ test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
 
 test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
   const counts = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.mesh.nvd')
@@ -52,7 +50,6 @@ test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
 
 test('niivue loadDocumentFromUrl replaces previous document objects', async ({ page }) => {
   const { nvols, nmeshes } = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.basic.nvd')
