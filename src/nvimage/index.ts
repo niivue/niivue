@@ -304,8 +304,8 @@ export class NVImage {
     ) {
       const tmp = new Float32Array(imgRaw)
       const f32 = tmp.slice()
-      
-      //Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
+
+      // Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
       // this allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction
       this.hdr.datatypeCode = this.DT_RGBA32
       this.nFrame4D = 1
@@ -318,7 +318,7 @@ export class NVImage {
       for (let i = 0; i < this.nVox3D * 3; i++) {
         mx = Math.max(mx, Math.abs(f32[i]))
       }
-      let slope = 255 / mx
+      const slope = 255 / mx
       const nVox3D2 = this.nVox3D * 2
       let j = 0
       for (let i = 0; i < this.nVox3D; i++) {
@@ -329,12 +329,12 @@ export class NVImage {
         ;(imgRaw as Uint8Array)[j] = Math.abs(x * slope)
         ;(imgRaw as Uint8Array)[j + 1] = Math.abs(y * slope)
         ;(imgRaw as Uint8Array)[j + 2] = Math.abs(z * slope)
-        let xNeg = Number(x > 0) * 1
-        let yNeg = Number(y > 0) * 2
-        let zNeg = Number(z > 0) * 4
+        const xNeg = Number(x > 0) * 1
+        const yNeg = Number(y > 0) * 2
+        const zNeg = Number(z > 0) * 4
         let alpha = 248 + xNeg + yNeg + zNeg
-        if ((Math.abs(x) + Math.abs(y) + Math.abs(z)) < 0.1) {
-            alpha = 0
+        if (Math.abs(x) + Math.abs(y) + Math.abs(z) < 0.1) {
+          alpha = 0
         }
         ;(imgRaw as Uint8Array)[j + 3] = alpha
         j += 4

@@ -608,8 +608,8 @@ void main(void) {
 	gl_Position = mvpMtx * mm;
 }`
 
-export const kFragSliceHead = 
-`#version 300 es
+export const kFragSliceHead =
+  `#version 300 es
 #line 411
 precision highp int;
 precision highp float;
@@ -637,8 +637,7 @@ out vec4 color;` +
 	if (overlays > 0.0)
 		ocolor = texture(overlay, texPos);
 `
-export const kFragSliceTail = 
-`	ocolor.a *= overlayAlpha;
+export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
 	vec4 dcolor = drawColor(texture(drawing, texPos).r, drawOpacity);
 	if (dcolor.a > 0.0) {
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
@@ -652,12 +651,11 @@ export const kFragSliceTail =
 	color.a = a;
 }`
 
-export const fragSliceMMShader =
-	kFragSliceHead + kFragSliceTail
+export const fragSliceMMShader = kFragSliceHead + kFragSliceTail
 
 export const fragSliceV1Shader =
   kFragSliceHead +
-`	if (ocolor.a > 0.0) {
+  `	if (ocolor.a > 0.0) {
 		//https://gamedev.stackexchange.com/questions/102889/is-it-possible-to-convert-vec4-to-int-in-glsl-using-opengl-es
 		uint alpha = uint(ocolor.a * 255.0);
 		vec3 xyzFlip = vec3(float((uint(1) & alpha) > uint(0)), float((uint(2) & alpha) > uint(0)), float((uint(4) & alpha) > uint(0)));
@@ -678,7 +676,8 @@ export const fragSliceV1Shader =
 		ocolor.a = 1.0 - smoothstep(0.2,0.25, dx);
 		//ocolor.rgb = abs(2.0 * (ocolor.rgb - 0.5));
 	}
-` + kFragSliceTail
+` +
+  kFragSliceTail
 
 export const fragRectShader = `#version 300 es
 #line 480

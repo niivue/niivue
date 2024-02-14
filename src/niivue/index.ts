@@ -314,11 +314,11 @@ type NiiVueOptions = {
   sagittalNoseLeft?: boolean
   // are images aligned to voxel space (false) or world space (true)
   isSliceMM?: boolean
-  //if isV1SliceShader we will treat overlay as V1 volume for line drawing
+  // if isV1SliceShader we will treat overlay as V1 volume for line drawing
   isV1SliceShader?: boolean
   // demand that high-dot-per-inch displays use native voxel size
   isHighResolutionCapable?: boolean
-  //mouse selects are digitized based on voxel resolution
+  // mouse selects are digitized based on voxel resolution
   isForceMouseClickToVoxelCenters?: boolean
   // allow user to create and edit voxel-based drawings
   drawingEnabled?: boolean
@@ -4994,7 +4994,7 @@ export class Niivue {
     gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2)
     gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7)
     gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
-    //fragSliceV1Shader
+    // fragSliceV1Shader
     this.sliceV1Shader = new Shader(gl, vertSliceMMShader, fragSliceV1Shader)
     this.sliceV1Shader.use(gl)
     gl.uniform1i(this.sliceV1Shader.uniforms.volume, 0)
@@ -5178,7 +5178,6 @@ export class Niivue {
       }
       this.refreshLayers(this.volumes[i], visibleLayers)
       visibleLayers++
-
     }
     this.furthestVertexFromOrigin = 0.0
     if (numLayers > 0) {
@@ -5667,7 +5666,7 @@ export class Niivue {
     this.gl.uniform1i(orientShader.uniforms.modulationVol ?? null, 7)
     let modulateTexture = null
     if (
-      (overlayItem.modulationImage !== null) &&
+      overlayItem.modulationImage !== null &&
       overlayItem.modulationImage >= 0 &&
       overlayItem.modulationImage < this.volumes.length
     ) {
@@ -5828,12 +5827,12 @@ export class Niivue {
 
     let shader = this.sliceMMShader
     if (this.opts.isV1SliceShader) {
-     shader = this.sliceV1Shader
+      shader = this.sliceV1Shader
     }
     if (!shader) {
       throw new Error('slice shader undefined')
     }
-    
+
     shader.use(this.gl)
 
     this.gl.uniform1f(shader.uniforms.overlays, this.overlays.length)
@@ -6361,10 +6360,11 @@ export class Niivue {
         this.createOnLocationChange(axCorSag)
         return
       }
-      if (this.opts.isForceMouseClickToVoxelCenters)
+      if (this.opts.isForceMouseClickToVoxelCenters) {
         this.scene.crosshairPos = vec3.clone(this.vox2frac(this.frac2vox(texFrac)))
-      else
+      } else {
         this.scene.crosshairPos = vec3.clone(texFrac)
+      }
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
 
@@ -7425,7 +7425,7 @@ export class Niivue {
 
     let shader = this.sliceMMShader
     if (this.opts.isV1SliceShader) {
-     shader = this.sliceV1Shader
+      shader = this.sliceV1Shader
     }
     if (!shader) {
       throw new Error('slice Shader undefined')

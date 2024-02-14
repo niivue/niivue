@@ -81,7 +81,7 @@ type NVConfigOptions = {
   // sagittal slices can have Y+ going left or right
   sagittalNoseLeft: boolean
   isSliceMM: boolean
-  //V1 image overlays can show vectors as per-pixel lines
+  // V1 image overlays can show vectors as per-pixel lines
   isV1SliceShader: boolean
   isHighResolutionCapable: boolean
   logLevel: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent'

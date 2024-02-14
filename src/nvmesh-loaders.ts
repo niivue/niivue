@@ -353,11 +353,6 @@ export class NVMeshLoaders {
     const keys = Object.keys(decompressed)
     for (let i = 0, len = keys.length; i < len; i++) {
       const parts = keys[i].split('/')
-      const fname = parts.slice(-1)[0]
-      const pname = parts.slice(-2)[0] // my.trx/dpv/fx.float32 -> dpv
-    }
-    for (let i = 0, len = keys.length; i < len; i++) {
-      const parts = keys[i].split('/')
       const fname = parts.slice(-1)[0] // my.trx/dpv/fx.float32 -> fx.float32
       if (fname.startsWith('.')) {
         continue
@@ -432,11 +427,11 @@ export class NVMeshLoaders {
       }
       // next: read data_per_vertex
       if (pname.includes('dpv')) {
-        let mn = vals[0];
-        let mx = vals[0];
+        let mn = vals[0]
+        let mx = vals[0]
         for (let i = 1; i < vals.length; i++) {
-          mn = Math.min(vals[i],mn);
-          mx = Math.max(vals[i],mx);
+          mn = Math.min(vals[i], mn)
+          mx = Math.max(vals[i], mx)
         }
         dpv.push({
           id: tag,
@@ -444,7 +439,7 @@ export class NVMeshLoaders {
           global_min: mn,
           global_max: mx,
           cal_min: mn,
-          cal_max: mx,
+          cal_max: mx
         })
         continue
       }
@@ -767,8 +762,8 @@ export class NVMeshLoaders {
     } // for each streamline: while i < n_count
     if (n_scalars > 0) {
       for (let s = 0; s < n_scalars; s++) {
-        let mn = dpv[s].vals.reduce((acc, current) => Math.min(acc, current))
-        let mx = dpv[s].vals.reduce((acc, current) => Math.max(acc, current))
+        const mn = dpv[s].vals.reduce((acc, current) => Math.min(acc, current))
+        const mx = dpv[s].vals.reduce((acc, current) => Math.max(acc, current))
         dpv[s].global_min = mn
         dpv[s].global_max = mx
         dpv[s].cal_min = mn
@@ -1003,8 +998,8 @@ export class NVMeshLoaders {
       if (!nvmesh.dpv) {
         nvmesh.dpv = []
       }
-      let mn = vals.reduce((acc, current) => Math.min(acc, current))
-      let mx = vals.reduce((acc, current) => Math.max(acc, current))
+      const mn = vals.reduce((acc, current) => Math.min(acc, current))
+      const mx = vals.reduce((acc, current) => Math.max(acc, current))
       nvmesh.dpv.push({
         id: tag,
         vals: Array.from(vals.slice()),
