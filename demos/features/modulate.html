@@ -15,7 +15,8 @@
         <option>FA</option>
         <option>V1</option>
         <option>V1 modulated by FA</option>
-        <option selected>Lines</option>
+        <option>Lines</option>
+        <option selected>Lines modulated by FA</option>
       </select>
       <label for="slide">&nbsp; FAmin</label>
       <input
@@ -82,7 +83,7 @@
         },
       ];
       var nv1 = new niivue.Niivue({ 
-        backColor: [0.2, 0.2, 0.2, 1],
+        backColor: [0.0, 0.0, 0.2, 1],
         show3Dcrosshair: true,
         onLocationChange: handleLocationChange,
       });
@@ -101,18 +102,17 @@
         if (mode === 0) {
           nv1.setOpacity(0, 1.0); //show FA
           nv1.setOpacity(1, 0.0); //hide V1
-        } else if (mode === 3) {
+        } else if (mode > 2) {
           nv1.setOpacity(0, 1.0); //show FA
           nv1.setOpacity(1, 1.0); //show V1
-           
         } else {
           nv1.setOpacity(0, 0.0); //hide FA
           nv1.setOpacity(1, 1.0); //show V1
         }
-        if (mode === 2) {
+        if ((mode === 4) || (mode === 2)) {
           nv1.setModulationImage(nv1.volumes[1].id,nv1.volumes[0].id);
         } else nv1.setModulationImage(nv1.volumes[1].id, null);
-        nv1.opts.isV1SliceShader = (mode === 3);
+        nv1.opts.isV1SliceShader = (mode > 2);
         nv1.updateGLVolume()
       };
       drop.onchange();

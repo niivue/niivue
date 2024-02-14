@@ -662,10 +662,9 @@ export const fragSliceV1Shader =
 		//convert from 0 and 1 to -1 and 1
 		xyzFlip = (xyzFlip * 2.0) - 1.0;
 		//https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
-		//convert from 0..1 to -1..1
 		//v1 principle direction of tensor for this voxel
-		//vec3 v1 = normalize(2.0 * (ocolor.rgb - 0.5));
 		vec3 v1 = ocolor.rgb;
+		//flips encode polarity to convert from 0..1 to -1..1 (27 bits vs 24 bit precision)
 		v1 = normalize( v1 * xyzFlip);
 		vec3 vxl = fract(texPos * vec3(textureSize(volume, 0))) - 0.5;
 		//vxl coordinates now -0.5..+0.5 so 0,0,0 is origin
@@ -674,7 +673,9 @@ export const fragSliceV1Shader =
 		vec3 P = t * v1;
 		float dx = length(P-vxl);
 		ocolor.a = 1.0 - smoothstep(0.2,0.25, dx);
-		//ocolor.rgb = abs(2.0 * (ocolor.rgb - 0.5));
+		//if modulation was applied, use that to scale alpha not color:
+		ocolor.a *= length(ocolor.rgb);
+		ocolor.rgb = normalize(ocolor.rgb);
 	}
 ` +
   kFragSliceTail
