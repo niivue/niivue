@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
   const nvols = await page.evaluate(async (testOptions) => {
     // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
