@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
   const gl = await page.evaluate(async () => {
     const nv = new Niivue()
-    await nv.attachTo('gl', false)
+    await nv.attachTo('gl')
     return nv.gl
   })
   expect(gl).toBeDefined()

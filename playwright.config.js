@@ -29,6 +29,8 @@ export default defineConfig({
 
   snapshotPathTemplate: '{testDir}/__screenshots__/{testName}/{testName}-{projectName}{ext}',
 
+  maxFailures: 1,
+
   /* Configure projects for major browsers */
   projects: [
     {
