@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { Niivue, NVMeshLoaders } from '../../dist/index'
+import { Niivue } from '../../dist/index'
 import { httpServerAddress } from './helpers'
 import { TEST_OPTIONS } from './test.types'
 test.beforeEach(async ({ page }) => {
