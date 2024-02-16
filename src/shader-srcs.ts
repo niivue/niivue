@@ -676,6 +676,18 @@ export const fragSliceV1Shader =
 		//if modulation was applied, use that to scale alpha not color:
 		ocolor.a *= length(ocolor.rgb);
 		ocolor.rgb = normalize(ocolor.rgb);
+		//compute distance one half voxel closer to viewer:
+		float pan = 0.5;
+		if (axCorSag == 0)
+			vxl.z -= pan;
+		if (axCorSag == 1)
+			vxl.y -= pan;
+		if (axCorSag == 2)
+			vxl.x += pan;
+		t = dot(vxl,v1);
+		P = t * v1;
+		float dx2 = length(P-vxl);
+		ocolor.rgb += (dx2-dx-(0.5 * pan)) * 1.0;
 	}
 ` +
   kFragSliceTail
