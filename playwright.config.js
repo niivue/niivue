@@ -73,6 +73,8 @@ export default defineConfig({
     port: 8888,
     command: 'node server.js',
     timeout: 120 * 1000,
-    reuseExistingServer: !process.env.CI
+    reuseExistingServer: !process.env.CI,
+    stderr: 'pipe',
+    stdout: 'pipe'
   }
 })
