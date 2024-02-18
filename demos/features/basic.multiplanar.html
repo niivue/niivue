@@ -28,7 +28,7 @@
 </html>
 <!-- <script type="module" async></script> -->
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
+  import { Niivue } from "../../src/niivue/index.ts";
 
   var drop = document.getElementById("sliceType");
   drop.onchange = function () {
@@ -54,7 +54,7 @@
       opacity: 1
     }
   ];
-  var nv1 = new niivue.Niivue({
+  var nv1 = new Niivue({
     dragAndDropEnabled: true,
     onLocationChange: handleIntensityChange,
   });

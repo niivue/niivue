@@ -3,9 +3,6 @@ import commonjs from '@rollup/plugin-commonjs'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  define: {
-    __NIIVUE_VERSION__: JSON.stringify(process.env.npm_package_version)
-  },
   root: '.',
   server: {
     open: '/src/index.html',
