@@ -139,7 +139,7 @@
       ];
       for (const documentUrl of documentUrls) {
         console.log("loading " + documentUrl);
-        niivue.NVDocument.loadFromUrl(documentUrl).then((doc) => {
+        nv1.loadDocumentFromUrl(documentUrl).then((doc) => {
           documents.push(doc);
           console.log("adding preview");
           console.log(doc.opts);

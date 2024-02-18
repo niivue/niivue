@@ -93,17 +93,20 @@ import {
   unProject,
   unpackFloatFromVec4i
 } from './utils.js'
-export { NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
-export { NVController } from '../nvcontroller.js'
-export { ColorTables as colortables, cmapper } from '../colortables.js'
+// TODO: remove the commented exports when we are happy that we don't need them
+// export { NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+// export { NVController } from '../nvcontroller.js'
+// export { ColorTables as colortables, cmapper } from '../colortables.js'
 
-export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
+export { NVImage } from '../nvimage/index.js'
+export { SLICE_TYPE } from '../nvdocument.js'
+// TODO: remove the commented exports when we are happy that we don't need them
 // export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.js'
 // address rollup error - https://github.com/rollup/plugins/issues/71
-export * from '../nvdocument.js'
-export { NVUtilities } from '../nvutilities.js'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
-export { NVMeshLoaders } from '../nvmesh-loaders.js'
+// export * from '../nvdocument.js'
+// export { NVUtilities } from '../nvutilities.js'
+// export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
+// export { NVMeshLoaders } from '../nvmesh-loaders.js'
 
 type DragReleaseParams = {
   fracStart: vec3
@@ -3427,9 +3430,10 @@ export class Niivue {
    * load a NVDocument from a URL
    * @param url - URL of NVDocument
    */
-  async loadDocumentFromUrl(url: string): Promise<void> {
+  async loadDocumentFromUrl(url: string): Promise<NVDocument> {
     const document = await NVDocument.loadFromUrl(url)
     this.loadDocument(document)
+    return document
   }
 
   /**
