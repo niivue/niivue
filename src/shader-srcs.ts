@@ -608,7 +608,7 @@ void main(void) {
 	gl_Position = mvpMtx * mm;
 }`
 
-export const fragSliceMMShader =
+export const kFragSliceHead =
   `#version 300 es
 #line 411
 precision highp int;
@@ -634,109 +634,10 @@ out vec4 color;` +
 	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
 	vec4 ocolor = vec4(0.0);
 	float overlayAlpha = overlayAlphaShader;
-	if (overlays > 0.0) {
+	if (overlays > 0.0)
 		ocolor = texture(overlay, texPos);
-		//dFdx for "boxing" issue 435 has aliasing on some implementations (coarse vs fine)
-		//however, this only identifies 50% of the edges due to aliasing effects
-		// http://www.aclockworkberry.com/shader-derivative-functions/
-		// https://bgolus.medium.com/distinctive-derivative-differences-cce38d36797b
-		//if ((ocolor.a >= 1.0) && ((dFdx(ocolor.a) != 0.0) || (dFdy(ocolor.a) != 0.0)  ))
-		//	ocolor.rbg = vec3(0.0, 0.0, 0.0);
-		bool isOutlineBelowNotAboveThreshold = true;
-		if (isOutlineBelowNotAboveThreshold) {
-			if ((overlayOutlineWidth > 0.0) && (ocolor.a < 1.0)) { //check voxel neighbors for edge
-				vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
-				//6 voxel neighbors that share a face
-				vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
-				vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
-				vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
-				vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
-				vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
-				vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
-				float a = 0.0;
-				if (axCorSag != 2) {
-					a = max(a, texture(overlay, vxR).a);
-					a = max(a, texture(overlay, vxL).a);
-				}
-				if (axCorSag != 1) {
-					a = max(a, texture(overlay, vxA).a);
-					a = max(a, texture(overlay, vxP).a);
-				}
-				if (axCorSag != 0) {
-					a = max(a, texture(overlay, vxS).a);
-					a = max(a, texture(overlay, vxI).a);
-				}
-				bool isCheckCorners = true;
-				if (isCheckCorners) {
-					//12 voxel neighbors that share an edge
-					vec3 vxRA = vec3(texPos.x+vx.x, texPos.y+vx.y, texPos.z);
-					vec3 vxLA = vec3(texPos.x-vx.x, texPos.y+vx.y, texPos.z);
-					vec3 vxRP = vec3(texPos.x+vx.x, texPos.y-vx.y, texPos.z);
-					vec3 vxLP = vec3(texPos.x-vx.x, texPos.y-vx.y, texPos.z);
-					vec3 vxRS = vec3(texPos.x+vx.x, texPos.y, texPos.z+vx.z);
-					vec3 vxLS = vec3(texPos.x-vx.x, texPos.y, texPos.z+vx.z);
-					vec3 vxRI = vec3(texPos.x+vx.x, texPos.y, texPos.z-vx.z);
-					vec3 vxLI = vec3(texPos.x-vx.x, texPos.y, texPos.z-vx.z);
-					vec3 vxAS = vec3(texPos.x, texPos.y+vx.y, texPos.z+vx.z);
-					vec3 vxPS = vec3(texPos.x, texPos.y-vx.y, texPos.z+vx.z);
-					vec3 vxAI = vec3(texPos.x, texPos.y+vx.y, texPos.z-vx.z);
-					vec3 vxPI = vec3(texPos.x, texPos.y-vx.y, texPos.z-vx.z);
-
-					if (axCorSag == 0) { //axial corners
-						a = max(a, texture(overlay, vxRA).a);
-						a = max(a, texture(overlay, vxLA).a);
-						a = max(a, texture(overlay, vxRP).a);
-						a = max(a, texture(overlay, vxLP).a);
-					}
-					if (axCorSag == 1) { //coronal corners
-						a = max(a, texture(overlay, vxRS).a);
-						a = max(a, texture(overlay, vxLS).a);
-						a = max(a, texture(overlay, vxRI).a);
-						a = max(a, texture(overlay, vxLI).a);
-					}
-					if (axCorSag == 2) { //sagittal corners
-						a = max(a, texture(overlay, vxAS).a);
-						a = max(a, texture(overlay, vxPS).a);
-						a = max(a, texture(overlay, vxAI).a);
-						a = max(a, texture(overlay, vxPI).a);
-					}
-				}
-				if (a >= 1.0) {
-					ocolor = vec4(0.0, 0.0, 0.0, 1.0);
-					overlayAlpha = 1.0;
-				}
-			}
-
-		} else {
-			if ((overlayOutlineWidth > 0.0) && (ocolor.a >= 1.0)) { //check voxel neighbors for edge
-				vec3 vx = (overlayOutlineWidth ) / vec3(textureSize(overlay, 0));
-				vec3 vxR = vec3(texPos.x+vx.x, texPos.y, texPos.z);
-				vec3 vxL = vec3(texPos.x-vx.x, texPos.y, texPos.z);
-				vec3 vxA = vec3(texPos.x, texPos.y+vx.y, texPos.z);
-				vec3 vxP = vec3(texPos.x, texPos.y-vx.y, texPos.z);
-				vec3 vxS = vec3(texPos.x, texPos.y, texPos.z+vx.z);
-				vec3 vxI = vec3(texPos.x, texPos.y, texPos.z-vx.z);
-				float a = 1.0;
-				if (axCorSag != 2) {
-					a = min(a, texture(overlay, vxR).a);
-					a = min(a, texture(overlay, vxL).a);
-				}
-				if (axCorSag != 1) {
-					a = min(a, texture(overlay, vxA).a);
-					a = min(a, texture(overlay, vxP).a);
-				}
-				if (axCorSag != 0) {
-					a = min(a, texture(overlay, vxS).a);
-					a = min(a, texture(overlay, vxI).a);
-				}
-				if (a < 1.0) {
-					ocolor = vec4(0.0, 0.0, 0.0, 1.0);
-					overlayAlpha = 1.0;
-				}
-			}
-		} //outline above threshold
-	}
-	ocolor.a *= overlayAlpha;
+`
+export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
 	vec4 dcolor = drawColor(texture(drawing, texPos).r, drawOpacity);
 	if (dcolor.a > 0.0) {
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
@@ -749,6 +650,47 @@ out vec4 color;` +
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
 	color.a = a;
 }`
+
+export const fragSliceMMShader = kFragSliceHead + kFragSliceTail
+
+export const fragSliceV1Shader =
+  kFragSliceHead +
+  `	if (ocolor.a > 0.0) {
+		//https://gamedev.stackexchange.com/questions/102889/is-it-possible-to-convert-vec4-to-int-in-glsl-using-opengl-es
+		uint alpha = uint(ocolor.a * 255.0);
+		vec3 xyzFlip = vec3(float((uint(1) & alpha) > uint(0)), float((uint(2) & alpha) > uint(0)), float((uint(4) & alpha) > uint(0)));
+		//convert from 0 and 1 to -1 and 1
+		xyzFlip = (xyzFlip * 2.0) - 1.0;
+		//https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
+		//v1 principle direction of tensor for this voxel
+		vec3 v1 = ocolor.rgb;
+		//flips encode polarity to convert from 0..1 to -1..1 (27 bits vs 24 bit precision)
+		v1 = normalize( v1 * xyzFlip);
+		vec3 vxl = fract(texPos * vec3(textureSize(volume, 0))) - 0.5;
+		//vxl coordinates now -0.5..+0.5 so 0,0,0 is origin
+		vxl.x = -vxl.x;
+		float t = dot(vxl,v1);
+		vec3 P = t * v1;
+		float dx = length(P-vxl);
+		ocolor.a = 1.0 - smoothstep(0.2,0.25, dx);
+		//if modulation was applied, use that to scale alpha not color:
+		ocolor.a *= length(ocolor.rgb);
+		ocolor.rgb = normalize(ocolor.rgb);
+		//compute distance one half voxel closer to viewer:
+		float pan = 0.5;
+		if (axCorSag == 0)
+			vxl.z -= pan;
+		if (axCorSag == 1)
+			vxl.y -= pan;
+		if (axCorSag == 2)
+			vxl.x += pan;
+		t = dot(vxl,v1);
+		P = t * v1;
+		float dx2 = length(P-vxl);
+		ocolor.rgb += (dx2-dx-(0.5 * pan)) * 1.0;
+	}
+` +
+  kFragSliceTail
 
 export const fragRectShader = `#version 300 es
 #line 480
