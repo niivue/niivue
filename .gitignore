@@ -1,6 +1,8 @@
 .DS_Store
 node_modules
 /dist
+/build
+/distForTests
 dist_intermediate
 devdocs
 /_md_docs
