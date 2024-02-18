@@ -6181,7 +6181,7 @@ export class Niivue {
   /**
    * get the colormap object for a given colormap name
    * @param name - the name of the colormap
-   * @returns the colormap object with R, G, B, A, I, min, max properties 
+   * @returns the colormap object with R, G, B, A, I, min, max properties
    */
   colormapFromKey(name: string): ColorMap {
     return cmapper.colormapFromKey(name)
@@ -9107,7 +9107,13 @@ export class Niivue {
   }
 
   // not included in public docs
-  private drawCrossLinesMM(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]): void {
+  private drawCrossLinesMM(
+    sliceIndex: number,
+    axCorSag: SLICE_TYPE,
+    axiMM: number[],
+    corMM: number[],
+    sagMM: number[]
+  ): void {
     if (sliceIndex < 0 || this.screenSlices.length <= sliceIndex) {
       return
     }
