@@ -931,9 +931,11 @@ type NVConfigOptions = {
     isCornerOrientationText: boolean;
     sagittalNoseLeft: boolean;
     isSliceMM: boolean;
+    isV1SliceShader: boolean;
     isHighResolutionCapable: boolean;
     logLevel: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent';
     loadingText: string;
+    isForceMouseClickToVoxelCenters: boolean;
     dragAndDropEnabled: boolean;
     drawingEnabled: boolean;
     penValue: number;
@@ -1493,7 +1495,9 @@ type NiiVueOptions = {
     isCornerOrientationText?: boolean;
     sagittalNoseLeft?: boolean;
     isSliceMM?: boolean;
+    isV1SliceShader?: boolean;
     isHighResolutionCapable?: boolean;
+    isForceMouseClickToVoxelCenters?: boolean;
     drawingEnabled?: boolean;
     penValue?: number;
     floodFillNeighbors?: number;
@@ -1561,6 +1565,7 @@ declare class Niivue {
     overlayTexture: WebGLTexture | null;
     overlayTextureID: WebGLTexture | null;
     sliceMMShader?: Shader;
+    sliceV1Shader?: Shader;
     orientCubeShader?: Shader;
     orientCubeShaderVAO: WebGLVertexArrayObject | null;
     rectShader?: Shader;
@@ -1852,9 +1857,11 @@ declare class Niivue {
         isCornerOrientationText: boolean;
         sagittalNoseLeft: boolean;
         isSliceMM: boolean;
+        isV1SliceShader: boolean;
         isHighResolutionCapable: boolean;
         logLevel: "debug" | "info" | "warn" | "error" | "fatal" | "silent";
         loadingText: string;
+        isForceMouseClickToVoxelCenters: boolean;
         dragAndDropEnabled: boolean;
         drawingEnabled: boolean;
         penValue: number;
@@ -1889,9 +1896,6 @@ declare class Niivue {
         renderAzimuth: number;
         renderElevation: number;
         volScaleMultiplier: number;
-        /**
-         * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
-         */
         crosshairPos: vec3;
         clipPlane: number[];
         clipPlaneDepthAziElev: number[];
