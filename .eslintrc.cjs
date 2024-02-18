@@ -6,7 +6,7 @@ module.exports = {
   globals: {
     niivue: true
   },
-  ignorePatterns: ['dist/**/*', 'devdocs/**/*'],
+  ignorePatterns: ['dist/**/*', 'devdocs/**/*', 'build/**/*'],
   extends: ['standard', 'plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc', 'prettier'],
