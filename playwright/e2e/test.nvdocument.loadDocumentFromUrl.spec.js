@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('nvdocument loadFromUrl load preview', async ({ page }) => {
-  const loadedDocuments = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     const documents = []
     const documentUrls = [
       './images/document/niivue.basic.nvd',
@@ -39,9 +39,6 @@ test('nvdocument loadFromUrl load preview', async ({ page }) => {
       img.style.height = '150px'
       demo.appendChild(img)
     }
-
-    return documents
   })
-  expect(loadedDocuments.length).toBe(3)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

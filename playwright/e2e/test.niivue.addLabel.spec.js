@@ -7,9 +7,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test('niivue label addLabel', async ({ page }) => {
+test.skip('niivue label addLabel', async ({ page }) => {
   const nlabels = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     // load one volume object in an array

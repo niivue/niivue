@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index'
-import { httpServerAddress, testOptions } from './helpers'
+import { DocumentData, Niivue, NVDocument } from '../../dist/index'
+import { httpServerAddress } from './helpers'
 import { TEST_OPTIONS } from './test.types'
 
 test.beforeEach(async ({ page }) => {
@@ -33,7 +33,11 @@ test('nvdocument loadFromJSON', async ({ page }) => {
     ]
     await nv.loadVolumes(volumeList)
     const data = nv.document.json()
-    const document = niivue.NVDocument.loadFromJSON(data)
+    const document = NVDocument.loadFromJSON({
+      ...data,
+      title: 'no titile',
+      meshOptionsArray: []
+    } as DocumentData)
     nv.volumes.length = 0
     nv.loadDocument(document)
     nv.drawScene()

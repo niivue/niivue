@@ -1,4 +1,4 @@
-import fs from 'fs'
+import * as fs from 'fs'
 import { test, expect } from '@playwright/test'
 import { Niivue } from '../../dist/index'
 import { httpServerAddress } from './helpers'
