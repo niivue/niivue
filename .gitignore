@@ -15,7 +15,7 @@ niivue.umd.js
 /downloads
 __diff_output__
 /coverage
-
+/playwright/tests-out
 # local env files
 .env.local
 .env.*.local
