@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index'
-import { httpServerAddress } from './helpers'
-import { TEST_OPTIONS } from './test.types'
+import { Niivue } from '../../dist/index.js'
+import { httpServerAddress } from './helpers.js'
+import { TEST_OPTIONS } from './test.types.js'
 
 // The header is the first 352 bytes, and the image data is dim1 * dim2 * dim3 * nbyper.
 // So for the test case with the mni152 image we have 352 + (207 * 256 * 215 * 1).

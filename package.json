@@ -25,7 +25,7 @@
     "demo-win": "npm run build && npx http-server demos/",
     "test": "npm run build:forTests && npm run test:unit && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
-    "test-playwright": "npm run build && npx playwright test -c tests-out",
+    "test-playwright": "npm run build && npm run pretest && npx playwright test",
     "docs": "typedoc",
     "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
@@ -35,7 +35,7 @@
     "lint:fix": "eslint --fix .",
     "lint:debug": "DEBUG=eslint:cli-engine eslint .",
     "prepare": "husky install",
-    "pretest": "tsc --incremental -p playwright/e2e/tsconfig.json"
+    "pretest": "cp ./playwright/e2e/*.js ./playwright/tests-out && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
   "files": [
     "src",
@@ -77,6 +77,7 @@
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "@vitest/coverage-v8": "^1.1.1",
+    "common-js": "^0.3.8",
     "eslint": "^8.36.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-config-standard": "^17.1.0",

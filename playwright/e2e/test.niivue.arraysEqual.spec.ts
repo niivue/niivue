@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index'
-import { httpServerAddress } from './helpers'
+import { Niivue } from '../../dist/index.js'
+import { httpServerAddress } from './helpers.js'
 
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)

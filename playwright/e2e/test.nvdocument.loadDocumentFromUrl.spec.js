@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress } from './helpers.js'
 
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)

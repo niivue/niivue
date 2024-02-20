@@ -3,8 +3,8 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index'
-import { httpServerAddressFlexbox } from './helpers'
+import { Niivue } from '../../dist/index.js'
+import { httpServerAddressFlexbox } from './helpers.js'
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 600, height: 600 })
