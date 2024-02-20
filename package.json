@@ -25,7 +25,7 @@
     "demo-win": "npm run build && npx http-server demos/",
     "test": "npm run build:forTests && npm run test:unit && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
-    "test-playwright": "npm run build && npm run pretest && npx playwright test",
+    "test-playwright": "npm run build && npx playwright test",
     "docs": "typedoc",
     "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
