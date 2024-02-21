@@ -26,7 +26,9 @@ test('niivue draw 3D sobel shader', async ({ page }) => {
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
-  await expect(page).toHaveScreenshot('../../playwright/e2e/__screenshots__/niivue-draw-3D-sobel-shader/niivue-draw-3D-sobel-shader-chromium.png')
+  await expect(page).toHaveScreenshot(
+    '../../playwright/e2e/__screenshots__/niivue-draw-3D-sobel-shader/niivue-draw-3D-sobel-shader-chromium.png'
+  )
 })
 
 test('niivue draw 3D clipPlane correct in axial plane', async ({ page }) => {
