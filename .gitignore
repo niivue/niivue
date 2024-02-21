@@ -1,10 +1,12 @@
 .DS_Store
 node_modules
+tsconfig.tsbuildinfo
 /dist/index*
 /dist/niivue*.js
 !/dist/index.js
 /build
 /distForTests
+/tests-out
 dist_intermediate
 devdocs
 /_md_docs

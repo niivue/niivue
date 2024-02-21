@@ -35,7 +35,7 @@
     "lint:fix": "eslint --fix .",
     "lint:debug": "DEBUG=eslint:cli-engine eslint .",
     "prepare": "husky install",
-    "pretest": "cp ./playwright/e2e/*.js ./playwright/tests-out && tsc --incremental -p playwright/e2e/tsconfig.json"
+    "pretest-playwright": "node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
   "files": [
     "src",
