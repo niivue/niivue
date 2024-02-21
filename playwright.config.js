@@ -79,10 +79,6 @@ export default defineConfig({
   },
 
   launchOptions: {
-    args: [
-      '--ignore-gpu-blocklist',
-      '--use-gl-angle',
-      '--use-angle=gl-egl'
-    ]
+    args: ['--ignore-gpu-blocklist', '--use-gl-angle', '--use-angle=gl-egl']
   }
 })
