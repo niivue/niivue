@@ -7,6 +7,10 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 test('niivue draw 3D sobel shader', async ({ page }) => {
   const nvols = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
@@ -26,11 +30,12 @@ test('niivue draw 3D sobel shader', async ({ page }) => {
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
+  await delay(5000)
   setTimeout(async () => {
-    await expect(page).toHaveScreenshot(
-      '../../playwright/e2e/__screenshots__/niivue-draw-3D-sobel-shader/niivue-draw-3D-sobel-shader-chromium.png'
-    )
-  }, 5000)
+  await expect(page).toHaveScreenshot(
+    '../../playwright/e2e/__screenshots__/niivue-draw-3D-sobel-shader/niivue-draw-3D-sobel-shader-chromium.png'
+  )
+}, 1000)
 })
 
 test('niivue draw 3D clipPlane correct in axial plane', async ({ page }) => {
