@@ -76,5 +76,5 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stderr: 'pipe',
     stdout: 'pipe'
-  },
+  }
 })
