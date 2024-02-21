@@ -27,7 +27,7 @@ export default defineConfig({
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 }
   },
 
-  snapshotPathTemplate: '{testDir}/__screenshots__/{testName}/{testName}-{projectName}{ext}',
+  snapshotPathTemplate: './playwright/e2e/__screenshots__/{testName}/{testName}-{projectName}{ext}',
 
   maxFailures: 1,
 
