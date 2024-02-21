@@ -76,5 +76,13 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stderr: 'pipe',
     stdout: 'pipe'
+  },
+
+  launchOptions: {
+    args: [
+      '--ignore-gpu-blocklist',
+      '--use-gl-angle',
+      '--use-angle=gl-egl'
+    ]
   }
 })
