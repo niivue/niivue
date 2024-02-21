@@ -77,8 +77,4 @@ export default defineConfig({
     stderr: 'pipe',
     stdout: 'pipe'
   },
-
-  launchOptions: {
-    args: ['--ignore-gpu-blocklist', '--use-gl-angle', '--use-angle=gl-egl']
-  }
 })
