@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>NiiVue</title>
+    <title>NiiVue brainlife </title>
     <link rel="stylesheet" href="niivue.css" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
@@ -31,93 +31,81 @@
         class="slider"
         id="fiberDitherSlider"
       />
-      <label for="fiberColor">Fiber color</label>
-      <select id="fiberColor">
-        <option value="Global">Global direction</option>
-        <option value="Local">Local direction</option>
-        <option value="Fixed">Fixed</option>
-        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
-      </select>
-      <label for="fiberColormap">Colormap</label>
-      <select id="fiberColormap">
-        <option value="actc">ACTC</option>
-        <option value="inferno" selected>Inferno</option>
-        <option value="plasma">Plasma</option>
-        <option value="warm">Warm</option>
-        <option value="winter">Winter</option>
-      </select>
-      <label for="fiberCalMin">Color Minimum</label>
+      <label for="xRaySlider">XRay</label>
       <input
         type="range"
-        min="10"
-        max="75"
-        value="25"
+        min="0"
+        max="5"
+        value="0"
         class="slider"
-        id="fiberCalMin"
+        id="xRaySlider"
       />
+      <label for="renderMode">Rendering</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0" selected>matte</option>
+        <option value="1.0">shiny</option>
+      </select>
       <button id="about">About</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <footer>
-      <label id="shaders">Shaders: </label>
+      <label id="status">Regions: </label>
     </footer>
     <script type="module" async>
       import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "./niivue/index.ts";
       fiberRadius.oninput = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
-        nv1.updateGLVolume();
-      };
-      fiberColor.onchange = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
-      };
-      fiberColormap.onchange = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
-      };
-      
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1)
+        nv1.updateGLVolume()
+      }
       fiberDitherSlider.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
       };
-      fiberCalMin.oninput = function () {
-       nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
-        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
+      xRaySlider.oninput = function () {
+        nv1.opts.meshXRay = this.value / 20;
+        nv1.drawScene();
       };
       about.onclick = function () {
-        window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
-
+        window.alert("the script concat_json2trx.mjs converts brainlife json tracks to TRX format https://github.com/brainlife")
       }
-      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}];
+      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}]
       let defaults = {
-        backColor: [0, 0, 0, 1],
+        backColor: [0.1, 0.1, 0.2, 1],
         show3Dcrosshair: true,
-      };
-      var nv1 = new Niivue(defaults);
-      nv1.attachToCanvas(gl1);
-      nv1.opts.dragMode = nv1.dragModes.pan;
-      nv1.opts.multiplanarForceRender = true;
-      nv1.opts.yoke3Dto2DZoom = true;
-      await nv1.loadVolumes(volumeList1);
-      var layerList = [{url: "../demos/images/mni152.SLF1_R.tsf"}];
-      await nv1.loadMeshes([{ url: "../demos/images/tract.SLF1_R.tck", layers: layerList,}]);
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
-      nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
-      nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
-      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
-      nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
-      nv1.setClipPlane([0.2, 0, 120]);
-      let cmaps = nv1.meshShaderNames();
-      let cmapEl = document.getElementById("shaders");
-      for (let i = 0; i < cmaps.length; i++) {
-        let btn = document.createElement("button");
-        btn.innerHTML = cmaps[i];
-        btn.onclick = function () {
-          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
-        };
-        cmapEl.appendChild(btn);
       }
+      renderMode.onchange = function () {
+        nv1.setVolumeRenderIllumination(this.value);
+      };
+      var nv1 = new Niivue(defaults)
+      nv1.attachToCanvas(gl1)
+      nv1.opts.dragMode = nv1.dragModes.pan
+      nv1.opts.multiplanarForceRender = true
+      nv1.opts.yoke3Dto2DZoom = true
+      await nv1.loadVolumes(volumeList1)
+      await nv1.loadMeshes([{ url: "./brainlife.trx"}])
+      let cmapEl = document.getElementById("status")
+      for (let i = 0; i < nv1.meshes[0].dpg.length; i++) {
+        let btn = document.createElement("button")
+        btn.innerHTML = nv1.meshes[0].dpg[i].id
+        btn.onclick = function () {
+          let cmap = {
+                R: [192],
+                G: [192],
+                B: [0],
+                I: [i+0],
+          }
+          nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap)
+        }
+        cmapEl.appendChild(btn)
+      }
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", {R: [192],G: [192], B: [0], I: [1]})
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5)
+      nv1.setMeshShader(nv1.meshes[0].id, "diffuse")
+      nv1.setSelectionBoxColor([0, 1, 0, 0.5])
+      nv1.setClipPlane([-0.2, 0, 120])
+      nv1.resizeListener()
     </script>
   </body>
 </html>
