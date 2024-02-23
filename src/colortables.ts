@@ -215,6 +215,16 @@ export class ColorTables {
     const Rs = [...Rsi]
     const Gs = [...Gsi]
     const Bs = [...Bsi]
+    if (!Isi) {
+        Isi = new Array(nIdx)
+        for (let i = 0; i < nIdx; i++) {
+            Isi[i] = i/(nIdx-1) * 255
+        }
+    }
+    if (!Asi) {
+        Asi = new Array(nIdx).fill(64);
+        Asi[0] = 0;
+    }
     let As = Uint8ClampedArray.from(Asi)
     let Is = Uint8ClampedArray.from(Isi)
     if (isInvert) {
