@@ -30,72 +30,121 @@
         class="slider"
         id="colorSlider"
       />
-      <label for="xRaySlider">XRay</label>
+      <label for="hippoSlider">Hippocampus</label>
       <input
         type="range"
         min="0"
-        max="10"
+        max="255"
+        value="255"
+        class="slider"
+        id="hippoSlider"
+      />
+      <label for="statSlider">Statistics</label>
+      <input
+        type="range"
+        min="1"
+        max="35"
+        value="25"
+        class="slider"
+        id="statSlider"
+      />
+      <label for="nodeSlider">Node</label>
+      <input type="range" min="5" max="80" value="30" class="slider" id="nodeSlider" />
+      <label for="fiberRadius">FiberRadius</label>
+      <input
+        type="range"
+        min="0"
+        max="20"
         value="0"
         class="slider"
-        id="xRaySlider"
+        id="fiberRadius"
       />
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
+    <footer>
+      <x id="intensity"> &nbsp;</x>
+    </footer>
     <script type="module" async>
       import * as niivue from "../dist/index.js";
-      var volumeList1 = [
-        {
-          url: "../images/mni152.nii.gz", //"./RAS.nii.gz", "./spm152.nii.gz",
-          colormap: "gray",
-          opacity: 1,
-          visible: true,
-        },
-      ];
-      var nv1 = new niivue.Niivue({
-        show3Dcrosshair: false,
-        backColor: [1, 1, 1, 1],
-      });
-      nv1.attachTo("gl1");
-      nv1.loadVolumes(volumeList1);
-      nv1.setSliceType(nv1.sliceTypeRender);
-      nv1.setClipPlane([0, 180, 40]);
-      nv1.setRenderAzimuthElevation(260, 20);
-      nv1.loadMeshes([
-        {
-          url: "../images/BrainMesh_ICBM152.lh.mz3",
-          rgba255: [222, 164, 164, 255],
-        },
-        { url: "../images/connectome.jcon" },
-      ]);
-      var check = document.getElementById("check1");
-      check.onclick = function () {
+      check1.onclick = function () {
         let clr = nv1.opts.clipPlaneColor;
         console.log(clr);
         clr[3] = Math.abs(clr[3]);
         if (this.checked) clr[3] = -clr[3];
         nv1.setClipPlaneColor(clr);
       };
-      var slider = document.getElementById("alphaSlider");
-      slider.oninput = function () {
+      alphaSlider.oninput = function () {
         let clr = nv1.opts.clipPlaneColor;
         let rev = clr[3] < 0;
         clr[3] = this.value / 255;
         if (rev) clr[3] = -clr[3];
         nv1.setClipPlaneColor(clr);
       };
-      var cslider = document.getElementById("colorSlider");
-      cslider.oninput = function () {
+      colorSlider.oninput = function () {
         let clr = nv1.opts.clipPlaneColor;
         clr[1] = this.value / 255;
         nv1.setClipPlaneColor(clr);
       };
-      var xslider = document.getElementById("xRaySlider");
-      xslider.oninput = function () {
-        nv1.opts.meshXRay = this.value * 0.01;
-        nv1.drawScene();
+      hippoSlider.oninput = function () {
+        nv1.setOpacity(1, this.value /255);
       };
+      statSlider.oninput = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value);
+      }
+      nodeSlider.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[1].id, "nodeScale", this.value * 0.1);
+      };
+      fiberRadius.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[2].id, "fiberRadius", this.value * 0.1)
+        nv1.updateGLVolume()
+      }
+      function handleIntensityChange(data) {
+        let idx = nv1.meshes[0].indexNearestXYZmm(data.mm[0],data.mm[1],data.mm[2])
+        function flt2str(flt, decimals = 0) {
+          return parseFloat(flt.toFixed(decimals))
+        }
+        let deci = 0
+        let str = flt2str(data.mm[0], deci) + '×' + flt2str(data.mm[1], deci) + '×' + flt2str(data.mm[2], deci)
+        str += ' Vertex '+ flt2str(idx[0], 0) +' is ' + flt2str(idx[1], 2) + 'mm from crosshairs'
+        document.getElementById("intensity").innerHTML = str
+      }
+      var volumeList1 = [
+        {url: "../images/mni152.nii.gz"},
+        {
+          url: "../images/hippolr.nii.gz", 
+          colormap: "red",
+        }
+      ];
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        backColor: [0.5, 0.5, 0.6, 1],
+        onLocationChange: handleIntensityChange,
+      });
+      nv1.attachTo("gl1");
+      nv1.setClipPlane([-0.12, 180, 40]);
+      nv1.setRenderAzimuthElevation(230,15)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      nv1.opts.multiplanarForceRender = true;
+      await nv1.loadVolumes(volumeList1);
+      var meshLayersList1 = [
+        {
+          url: "../images/pval.LH.nii.gz",
+          cal_min: 25,
+          cal_max: 35.0,
+          opacity: 1,
+        },
+      ];
+      await nv1.loadMeshes([
+        {
+          url: "../images/lh.pial",
+          rgba255: [212, 244, 212, 255],
+          layers: meshLayersList1,
+        },
+        { url: "../images/connectome.jcon" },
+        { url: "../images/dpsv.trx" },
+      ]);
     </script>
   </body>
 </html>
