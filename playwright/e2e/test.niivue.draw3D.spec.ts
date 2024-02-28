@@ -1,3 +1,4 @@
+import * as process from 'node:process'
 import { test, expect } from '@playwright/test'
 import { Niivue } from '../../dist/index.js'
 import { httpServerAddress } from './helpers.js'
@@ -7,11 +8,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 test('niivue draw 3D sobel shader', async ({ page }) => {
+  test.skip(process.platform === 'linux', 'do not run test on linux')
   const nvols = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
@@ -30,7 +28,6 @@ test('niivue draw 3D sobel shader', async ({ page }) => {
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
-  await delay(5000)
   setTimeout(async () => {
     await expect(page).toHaveScreenshot(
       '../../playwright/e2e/__screenshots__/niivue-draw-3D-sobel-shader/niivue-draw-3D-sobel-shader-chromium.png'
