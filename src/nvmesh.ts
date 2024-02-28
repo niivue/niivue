@@ -857,31 +857,27 @@ export class NVMesh {
     this.indexCount = tris.length
   }
 
-  //given X,Y,Z coordinates in world space, return index of nearest vertex as well as 
+  // given X,Y,Z coordinates in world space, return index of nearest vertex as well as
   // the distance of this closest vertex to the coordinates
-  indexNearestXYZmm(
-    Xmm: number,
-    Ymm: number,
-    Zmm: number,
-  ): number[] {
-  const pts = this.pts
-  const nvtx = this.pts.length / 3
-  let i = 0
-  let mnDx = Infinity
-  let mnIdx = 0
-  for (let j = 0; j < nvtx; j++) {
-    let dx = Math.pow(pts[i]-Xmm, 2) + Math.pow(pts[i+1]-Ymm,2) + Math.pow(pts[i+2]-Zmm,2)
-    if (dx < mnDx) {
-      mnDx = dx
-      mnIdx = j
+  indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[] {
+    const pts = this.pts
+    const nvtx = this.pts.length / 3
+    let i = 0
+    let mnDx = Infinity
+    let mnIdx = 0
+    for (let j = 0; j < nvtx; j++) {
+      const dx = Math.pow(pts[i] - Xmm, 2) + Math.pow(pts[i + 1] - Ymm, 2) + Math.pow(pts[i + 2] - Zmm, 2)
+      if (dx < mnDx) {
+        mnDx = dx
+        mnIdx = j
+      }
+      i += 3
     }
-    i += 3
-  }
-  //Pythagorean theorem sqrt(x^2+y^2+z^2)
-  // only calculate sqrt once
-  mnDx = Math.sqrt(mnDx)
-  return new Array(mnIdx, mnDx) 
-  } //indexNearestXYZmm()
+    // Pythagorean theorem sqrt(x^2+y^2+z^2)
+    // only calculate sqrt once
+    mnDx = Math.sqrt(mnDx)
+    return [mnIdx, mnDx]
+  } // indexNearestXYZmm()
 
   // internal function filters mesh to identify which color of triangulated mesh vertices
   updateMesh(gl: WebGL2RenderingContext): void {
