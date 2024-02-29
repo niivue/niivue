@@ -3053,30 +3053,17 @@ export class NVMeshLoaders {
     }
     const bytes = new Uint8Array(buffer)
     let pos = 0
-    function readStrX(): string {
-      while (pos < len && bytes[pos] === 10) {
-        pos++
-      } // skip blank lines
-      const startPos = pos
-      while (pos < len && bytes[pos] !== 10) {
-        pos++
-      }
-      pos++ // skip EOLN
-      if (pos - startPos < 1) {
-        return ''
-      }
-      return new TextDecoder().decode(buffer.slice(startPos, pos - 1)).trim()
-    }
     function readStr(): string {
       // concatenate lines to return tag <...>
-      let line = readStrX()
-      if (!line.startsWith('<') || line.endsWith('>')) {
-        return line
-      }
-      while (pos < len && !line.endsWith('>')) {
-        line += readStrX()
-      }
-      return line
+      while (pos < len && bytes[pos] !== 60) {
+        pos++
+      } // find initial <
+      let startP = pos
+      while (pos < len && bytes[pos] !== 62) {
+        pos++
+      } // find trailing >
+      let endP = pos
+      return new TextDecoder().decode(buffer.slice(startP, endP+1)).trim()
     }
     let line = readStr() // 1st line: signature 'mrtrix tracks'
     function readStringTag(TagName: string): string {
@@ -3104,9 +3091,9 @@ export class NVMeshLoaders {
       if (items.length < 2) {
         return parseFloat(str)
       }
-      const ret = []
+      const ret = new Array(items.length)
       for (let i = 0; i < items.length; i++) {
-        ret.push(parseFloat(items[i]))
+        ret[i] = parseFloat(items[i])
       }
       return ret
     }
