@@ -984,7 +984,7 @@ export class NVMeshLoaders {
       }
       const npt = nvmesh.pts.length / 3
       // typescript hell commences for one liner
-      // const tag = namex.split('/').pop().split('.').slice(0, -1).join('.')
+      // const tag = name.split('/')!.pop()!.split('.')!.slice(0, -1).join('.')!
       const splitResult = name.split('/')
       let tag = 'Unknown'
       if (splitResult.length > 1) {

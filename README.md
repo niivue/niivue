@@ -26,10 +26,10 @@ The command `npm run demo` will minify the project and locally host all of the [
 # Projects and People using NiiVue
 
 - Analysis of Functional NeuroImages (AFNI) [Scientific and Statistical Computing Core](https://afni.nimh.nih.gov/) (National Institutes of Health)
-- [Children’s Research Integration System (ChRIS)](https://chrisproject.org/) uses [NiiVue](https://app.chrisproject.org/niivue).
+- [ChRIS Research Integration System (ChRIS)  from Boston Children's Hospital](https://chrisproject.org/) uses [NiiVue](https://app.chrisproject.org/niivue).
 - [Center for the Study of Aphasia Recovery](https://cstar.sc.edu/) (University of South Carolina)
 - FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
-- FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital)
+- FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [BrainLife.io](https://brainlife.io/about/) integrates NiiVue into [ezbids](https://brainlife.io/ezbids/)
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)

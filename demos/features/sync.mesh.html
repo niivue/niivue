@@ -19,6 +19,12 @@
         <option value="4">Render</option>
         <option value="3" selected>A+C+S+R</option>
       </select>
+      <select id="controller">
+        <option value="0">Independent</option>
+        <option value="1"  selected>Top Controls Bottom</option>
+        <option value="2">Bottom Controls Top</option>
+        <option value="3">Bidirectional</option>
+      </select>
       <label for="dxSlider">Mesh clipping</label>
       <input
         type="range"
@@ -40,66 +46,70 @@
       <x id="intensity2"> &nbsp;</x>
     </footer>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
-      document
-        .getElementById("sliceType")
-        .addEventListener("change", changeSliceType);
-      function changeSliceType() {
-        let st = parseInt(document.getElementById("sliceType").value);
-        nv1.setSliceType(st);
-        nv2.setSliceType(st);
+      import * as niivue from "../dist/index.js"
+      sliceType.onchange = function() {
+        let st = parseInt(document.getElementById("sliceType").value)
+        nv1.setSliceType(st)
+        nv2.setSliceType(st)
       }
-      document
-        .getElementById("check10")
-        .addEventListener("change", doCheck10Click);
-      function doCheck10Click() {
-        nv1.setHighResolutionCapable(this.checked);
+      controller.onchange = function() {
+        let v = parseInt(controller.value)
+        if ((v & 1) > 0)
+            nv1.broadcastTo([nv2], { "3d": true, "2d": true })
+        else
+            nv1.broadcastTo()
+        if ((v & 2) > 0)
+            nv2.broadcastTo([nv1], { "3d": true, "2d": true })
+        else
+            nv2.broadcastTo()
       }
-      var dxslider = document.getElementById("dxSlider");
-      dxslider.oninput = function () {
-        let dx = parseFloat(this.value);
-        if (dx > 10) dx = Infinity;
-        nv1.setMeshThicknessOn2D(dx);
-      };
+      check10.onchange = function() {
+        nv1.setHighResolutionCapable(this.checked)
+      }
+      dxSlider.oninput = function () {
+        let dx = parseFloat(this.value)
+        if (dx > 10) dx = Infinity
+        nv1.setMeshThicknessOn2D(dx)
+      }
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML =
-          "&nbsp;&nbsp;" + data.string;
+          "&nbsp;&nbsp;" + data.string
       }
       function handleIntensityChange2(data) {
         document.getElementById("intensity2").innerHTML =
-          "&nbsp;&nbsp;" + data.string;
+          "&nbsp;&nbsp;" + data.string
       }
       var nv1 = new niivue.Niivue({
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange,
         backColor: [1, 1, 1, 1],
-      });
-      nv1.attachTo("gl1");
-      nv1.setHighResolutionCapable(false);
-      nv1.opts.isOrientCube = true;
-      var volumeList1 = [{ url: "../images/mni152.nii.gz" }];
-      await nv1.loadVolumes(volumeList1);
-      await nv1.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }]);
-      nv1.setMeshShader(0, "Outline");
-      nv1.opts.multiplanarForceRender = true;
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      nv1.setSliceMM(true);
-      nv1.setClipPlane([0, 180, 40]);
+      })
+      nv1.attachTo("gl1")
+      nv1.setHighResolutionCapable(false)
+      nv1.opts.isOrientCube = true
+      var volumeList1 = [{ url: "../images/mni152.nii.gz" }]
+      await nv1.loadVolumes(volumeList1)
+      await nv1.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
+      nv1.setMeshShader(0, "Outline")
+      nv1.opts.multiplanarForceRender = true
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceMM(true)
+      nv1.setClipPlane([0, 180, 40])
       //
       var nv2 = new niivue.Niivue({
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange2,
         backColor: [1, 1, 1, 1],
-      });
-      nv2.attachTo("gl2");
-      nv2.setHighResolutionCapable(true);
-      await nv2.loadVolumes(volumeList1);
-      await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }]);
-      nv2.opts.multiplanarForceRender = true;
-      nv2.setSliceType(nv2.sliceTypeMultiplanar);
-      nv2.setSliceMM(true);
-      nv2.setClipPlane([0, 180, 40]);
-      nv1.syncWith(nv2, { "3d": true, "2d": true });
+      })
+      nv2.attachTo("gl2")
+      nv2.setHighResolutionCapable(true)
+      await nv2.loadVolumes(volumeList1)
+      await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
+      nv2.opts.multiplanarForceRender = true
+      nv2.setSliceType(nv2.sliceTypeMultiplanar)
+      nv2.setSliceMM(true)
+      nv2.setClipPlane([0, 180, 40])
+      controller.onchange()
     </script>
   </body>
 </html>
