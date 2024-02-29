@@ -1,0 +1,171 @@
+
+type = string-attribute
+name = HISTORY_NOTE
+count = 6356
+'[ptaylor@planchet: Thu Jan 11 16:53:21 2024] ===================================\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] === History of inputs to 3dcalc ===\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] === Input a:\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] [ptaylor@planchet: Thu Jan 11 16:52:49 2024] ===================================\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] === History of inputs to 3dcalc ===\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] === Input a:\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] [ptaylor@planchet: Thu Jan 11 16:48:33 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dSkullStrip -orig_vol -input ./FT_anat_unflipped+orig -prefix ./FT_anat_unflipped_ns\n[ptaylor@planchet: Thu Jan 11 16:52:46 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcopy ./FT_anat_unflipped_ns+orig FT_anat_ns\n[ptaylor@planchet: Thu Jan 11 16:52:48 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dresample -rmode Cu -master __ats_tmp__ref_MNI152_2009_template.nii.gz_15pad+tlrc -inset FT_anat_ns+orig -prefix ./__ats_tmp__resamp_edge_art\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] === Input b:\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] [ptaylor@planchet: Thu Jan 11 16:48:33 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dSkullStrip -orig_vol -input ./FT_anat_unflipped+orig -prefix ./FT_anat_unflipped_ns\n[ptaylor@planchet: Thu Jan 11 16:52:46 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcopy ./FT_anat_unflipped_ns+orig FT_anat_ns\n[ptaylor@planchet: Thu Jan 11 16:52:48 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcalc -a FT_anat_ns+orig -expr 'step(a)*10000' -prefix ./__ats_tmp__resamp_step\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dresample -rmode Linear -master __ats_tmp__ref_MNI152_2009_template.nii.gz_15pad+tlrc -inset __ats_tmp__resamp_step+orig -prefix ./__ats_tmp__resamp_NN\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] ===================================\n[ptaylor@planchet: Thu Jan 11 16:52:49 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcalc -a __ats_tmp__resamp_edge_art+tlrc. -b __ats_tmp__resamp_NN+tlrc. -expr 'a*step(b-5000)' -prefix ./__ats_tmp__resamp\n[ptaylor@planchet: Thu Jan 11 16:52:50 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcalc -a __ats_tmp__resamp+tlrc -expr 'a*step(a--0.000100)*step(2704.000100-a) + 0*step(0-a) + 2704*step(a-2704)' -prefix __ats_tmp___rs_FT_anat_ns\n[ptaylor@planchet: Thu Jan 11 16:52:51 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -view +orig __ats_tmp___rs_FT_anat_ns+tlrc.HEAD\n[ptaylor@planchet: Thu Jan 11 16:53:19 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcalc -a __ats_tmp___rs_FT_anat_ns+orig -expr 'step(a)*10000' -prefix ./__ats_tmp__reg_braintlrcstep\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dWarp -matvec_out2in FT_anat_ns.maskwarp.Xat.1D -gridset __ats_tmp__gridout+orig -linear -prefix ./__ats_tmp__reg_braintlrcmask __ats_tmp__reg_braintlrcstep+orig\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] === Input b:\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] [ptaylor@planchet: Thu Jan 11 16:48:33 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dSkullStrip -orig_vol -input ./FT_anat_unflipped+orig -prefix ./FT_anat_unflipped_ns\n[ptaylor@planchet: Thu Jan 11 16:52:46 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcopy ./FT_anat_unflipped_ns+orig FT_anat_ns\n[ptaylor@planchet: Thu Jan 11 16:53:19 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dWarp -matvec_out2in FT_anat_ns.Xat.1D -cubic -prefix ./__ats_tmp___pad15_FT_anat_ns -gridset __ats_tmp__gridout+orig FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] ===================================\n[ptaylor@planchet: Thu Jan 11 16:53:21 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcalc -a __ats_tmp__reg_braintlrcmask+orig -b __ats_tmp___pad15_FT_anat_ns.skl+orig -expr 'step(a-5000)*b' -prefix ./__ats_tmp___pad15_FT_anat_ns\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -atrcopy __ats_tmp___pad15_FT_anat_ns.skl+orig WARPDRIVE_MATVEC_FOR_000000 __ats_tmp___pad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -atrcopy __ats_tmp___pad15_FT_anat_ns.skl+orig WARPDRIVE_MATVEC_FOR_000000 __ats_tmp___pad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -atrcopy __ats_tmp___pad15_FT_anat_ns.skl+orig WARPDRIVE_MATVEC_INV_000000 __ats_tmp___pad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dZeropad -I -15 -S -15 -A -15 -P -15 -L -15 -R -15 -mm -prefix ./__ats_tmp___upad15_FT_anat_ns __ats_tmp___pad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -atrcopy __ats_tmp___pad15_FT_anat_ns+orig WARPDRIVE_MATVEC_FOR_000000 __ats_tmp___upad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -atrcopy __ats_tmp___pad15_FT_anat_ns+orig WARPDRIVE_MATVEC_FOR_000000 __ats_tmp___upad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -atrcopy __ats_tmp___pad15_FT_anat_ns+orig WARPDRIVE_MATVEC_INV_000000 __ats_tmp___upad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -space MNI __ats_tmp___upad15_FT_anat_ns+orig\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] Dataset created via: @auto_tlrc -base MNI152_2009_template.nii.gz -input FT_anat_ns+orig -no_ss\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -view +tlrc __ats_tmp___upad15_FT_anat_ns+orig.HEAD\n[ptaylor@planchet: Thu Jan 11 16:53:22 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3drefit -wset FT_anat_ns+orig __ats_tmp___upad15_FT_anat_ns+tlrc\n[ptaylor@planchet: Thu Jan 11 16:54:56 2024] {AFNI_24.0.00:linux_ubuntu_16_64_glw_local_shared} 3dcopy FT_anat_ns+tlrc anat_final.FT~
+
+type = string-attribute
+name = TYPESTRING
+count = 15
+'3DIM_HEAD_ANAT~
+
+type = string-attribute
+name = IDCODE_STRING
+count = 27
+'AFN_Z41hncPPGkHXtFHTDAaW6w~
+
+type = string-attribute
+name = IDCODE_DATE
+count = 25
+'Thu Jan 11 16:54:56 2024~
+
+type = integer-attribute
+name = SCENE_DATA
+count = 8
+ 2 2 0 -999 -999
+ -999 -999 -999
+
+type = string-attribute
+name = LABEL_1
+count = 5
+'zyxt~
+
+type = string-attribute
+name = LABEL_2
+count = 5
+'zyxt~
+
+type = string-attribute
+name = DATASET_NAME
+count = 5
+'zyxt~
+
+type = integer-attribute
+name = ORIENT_SPECIFIC
+count = 3
+ 1 2 4
+
+type  = float-attribute
+name  = ORIGIN
+count = 3
+             96            132            -78
+
+type  = float-attribute
+name  = DELTA
+count = 3
+             -1             -1              1
+
+type  = float-attribute
+name  = IJK_TO_DICOM
+count = 12
+             -1              0              0             96              0
+             -1              0            132              0              0
+              1            -78
+
+type  = float-attribute
+name  = IJK_TO_DICOM_REAL
+count = 12
+             -1              0              0             96              0
+             -1              0            132              0              0
+              1            -78
+
+type  = float-attribute
+name  = BRICK_STATS
+count = 2
+              0           2697
+
+type = integer-attribute
+name = DATASET_RANK
+count = 8
+ 3 1 0 0 0
+ 0 0 0
+
+type = integer-attribute
+name = DATASET_DIMENSIONS
+count = 5
+ 193 229 193 0 0
+
+type = integer-attribute
+name = BRICK_TYPES
+count = 1
+ 1
+
+type  = float-attribute
+name  = BRICK_FLOAT_FACS
+count = 1
+              0
+
+type = string-attribute
+name = BRICK_LABS
+count = 3
+'#0~
+
+type = string-attribute
+name = BRICK_KEYWORDS
+count = 1
+'~
+
+type = string-attribute
+name = TEMPLATE_SPACE
+count = 4
+'MNI~
+
+type = integer-attribute
+name = INT_CMAP
+count = 1
+ 0
+
+type = string-attribute
+name = BYTEORDER_STRING
+count = 10
+'LSB_FIRST~
+
+type  = float-attribute
+name  = WARPDRIVE_MATVEC_FOR_000000
+count = 12
+       0.962297      0.0130023      0.0227514       -3.06118     -0.0248111
+         1.0142       0.136961       -19.6528    -0.00139679      -0.148502
+       0.887602        13.9889
+
+type  = float-attribute
+name  = WARPDRIVE_MATVEC_INV_000000
+count = 12
+       1.038711    -0.01683465    -0.02402704       3.184946     0.02463344
+      0.9638144     -0.1493524       21.10633    0.005755932      0.1612264
+       1.101606      -12.22408
+
+type = integer-attribute
+name = NOTES_COUNT
+count = 1
+ 1
+
+type = string-attribute
+name = NOTE_NUMBER_001
+count = 96
+'Dataset created via: @auto_tlrc -base MNI152_2009_template.nii.gz -input FT_anat_ns+orig -no_ss~
+
+type = string-attribute
+name = NOTE_DATE_001
+count = 25
+'Thu Jan 11 16:53:22 2024~
+
+type = string-attribute
+name = IDCODE_WARP_PARENT
+count = 27
+'AFN_Z_TZERFdbNkk5tN8xUfUDw~
+
+type = integer-attribute
+name = WARP_TYPE
+count = 8
+ 0 0 -999 -999 -999
+ -999 -999 -999
+
+type  = float-attribute
+name  = WARP_DATA
+count = 30
+       1.038711    -0.01683465    -0.02402704     0.02463344      0.9638144
+     -0.1493524    0.005755932      0.1612264       1.101606      0.9622973
+     0.01300231      0.0227514    -0.02481111         1.0142       0.136961
+   -0.001396789      -0.148502      0.8876017      -3.184946      -21.10633
+       12.22408       3.061181        19.6528      -13.98889           -160
+           -160           -130            160            220            170
