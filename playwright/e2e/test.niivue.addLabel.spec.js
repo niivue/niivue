@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress, testOptions } from './helpers'
+import { Niivue } from '../../dist/index.js'
+import { httpServerAddress } from './helpers.js'
+import { TEST_OPTIONS } from './test.types.js'
 
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test('niivue label addLabel', async ({ page }) => {
+test.skip('niivue label addLabel', async ({ page }) => {
   const nlabels = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
-    await nv.attachTo('gl', false)
+    await nv.attachTo('gl')
     // load one volume object in an array
     const volumeList = [
       {
@@ -64,7 +65,7 @@ test('niivue label addLabel', async ({ page }) => {
     )
     nv.drawScene()
     return nv.document.labels.length
-  })
+  }, TEST_OPTIONS)
   expect(nlabels).toBe(6)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

@@ -1,6 +1,7 @@
 export interface NiivueTestOptions {
   isAntiAlias: boolean
   isHighResolutionCapable: boolean
+  thumbnail?: string
 }
 
 export interface FilePath {

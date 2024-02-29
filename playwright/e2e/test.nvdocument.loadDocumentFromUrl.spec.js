@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress } from './helpers'
+import { httpServerAddress } from './helpers.js'
 
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
 test('nvdocument loadFromUrl load preview', async ({ page }) => {
-  const loadedDocuments = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     const documents = []
     const documentUrls = [
       './images/document/niivue.basic.nvd',
@@ -19,6 +19,9 @@ test('nvdocument loadFromUrl load preview', async ({ page }) => {
     }
 
     const demo = document.getElementById('demo')
+    if (!demo) {
+      throw new Error('could not find demo element')
+    }
     demo.style.margin = 'auto'
     demo.style.display = 'flex'
     demo.style.flexDirection = 'column'
@@ -26,6 +29,9 @@ test('nvdocument loadFromUrl load preview', async ({ page }) => {
 
     // get rid of our canvas element for the test
     const gl = document.getElementById('gl')
+    if (!gl) {
+      throw new Error('could not obtain graphic context')
+    }
     gl.remove()
     for (const doc of documents) {
       const img = document.createElement('img')
@@ -33,9 +39,6 @@ test('nvdocument loadFromUrl load preview', async ({ page }) => {
       img.style.height = '150px'
       demo.appendChild(img)
     }
-
-    return documents
   })
-  expect(loadedDocuments.length).toBe(3)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

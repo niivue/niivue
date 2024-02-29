@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { httpServerAddress, testOptions } from './helpers'
-
+import { Niivue } from '../../dist/index.js'
+import { httpServerAddress } from './helpers.js'
+import { TEST_OPTIONS } from './test.types.js'
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
@@ -49,7 +50,7 @@ test('nvmeshloaders readLayer', async ({ page }) => {
     nv.meshes[0].updateMesh(nv.gl)
     nv.drawScene()
     return nv.meshes[0].layers.length
-  })
+  }, TEST_OPTIONS)
   expect(nlayers).toBe(1)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

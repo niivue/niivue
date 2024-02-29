@@ -2,27 +2,28 @@
   "name": "@niivue/niivue",
   "version": "0.39.0",
   "description": "minimal webgl2 nifti image viewer",
-  "types": "./dist/index.d.ts",
-  "main": "./dist/index.js",
+  "types": "./build/index.d.ts",
+  "main": "./build/index.js",
   "type": "module",
-  "unpkg": "./dist/index.min.js",
-  "module": "./dist/index.js",
+  "unpkg": "./build/index.min.js",
+  "module": "./build/index.js",
   "exports": {
     ".": {
-      "import": "./dist/index.js"
+      "import": "./build/index.js"
     },
     "./min": {
-      "import": "./dist/index.min.js"
+      "import": "./build/index.min.js"
     }
   },
   "scripts": {
     "dev": "vite",
     "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
-    "build": "tsup && npm run build:min && npm run build:umd",
+    "build": "tsup --config tsup.config.ts && npm run build:min && npm run build:umd",
+    "build:forTests": "tsup --config tsup.config.tests.ts",
     "build:min": "node bundle.js",
     "demo": "npm run build && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
-    "demo-win": "npm run build-win && npx http-server demos/",
-    "test": "npm run build && npm run test:unit && jest --maxWorkers=1",
+    "demo-win": "npm run build && npx http-server demos/",
+    "test": "npm run build:forTests && npm run test:unit && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
     "test-playwright": "npm run build && npx playwright test",
     "docs": "typedoc",
@@ -33,11 +34,12 @@
     "lint:ts": "tsc --noEmit",
     "lint:fix": "eslint --fix .",
     "lint:debug": "DEBUG=eslint:cli-engine eslint .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "pretest-playwright": "node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
   "files": [
     "src",
-    "dist"
+    "build"
   ],
   "repository": {
     "type": "git",
@@ -75,6 +77,7 @@
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "@vitest/coverage-v8": "^1.1.1",
+    "common-js": "^0.3.8",
     "eslint": "^8.36.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-config-standard": "^17.1.0",

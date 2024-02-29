@@ -3,8 +3,8 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index'
-import { httpServerAddressFlexbox } from './helpers'
+import { Niivue } from '../../dist/index.js'
+import { httpServerAddressFlexbox } from './helpers.js'
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 600, height: 600 })
@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
   const gl = await page.evaluate(async () => {
     const nv = new Niivue()
-    await nv.attachTo('gl', false)
+    await nv.attachTo('gl')
     return nv.gl
   })
   expect(gl).toBeDefined()

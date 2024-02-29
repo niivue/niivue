@@ -1,6 +1,11 @@
 .DS_Store
 node_modules
-/dist
+/dist/index*
+/dist/niivue*.js
+!/dist/index.js
+/build
+distForTests
+tests-out
 dist_intermediate
 devdocs
 /_md_docs
@@ -13,7 +18,6 @@ niivue.umd.js
 /downloads
 __diff_output__
 /coverage
-
 # local env files
 .env.local
 .env.*.local

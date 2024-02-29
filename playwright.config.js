@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './playwright/e2e',
+  testDir: './playwright/tests-out',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -27,7 +27,9 @@ export default defineConfig({
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 }
   },
 
-  snapshotPathTemplate: '{testDir}/__screenshots__/{testName}/{testName}-{projectName}{ext}',
+  snapshotPathTemplate: './playwright/e2e/__screenshots__/{testName}/{testName}-{projectName}{ext}',
+
+  maxFailures: 1,
 
   /* Configure projects for major browsers */
   projects: [
@@ -71,6 +73,8 @@ export default defineConfig({
     port: 8888,
     command: 'node server.js',
     timeout: 120 * 1000,
-    reuseExistingServer: !process.env.CI
+    reuseExistingServer: !process.env.CI,
+    stderr: 'pipe',
+    stdout: 'pipe'
   }
 })

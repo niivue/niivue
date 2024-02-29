@@ -1,9 +1,9 @@
-import fs from 'fs'
-import path from 'path'
+import * as fs from 'fs'
+import * as path from 'path'
 import { test, expect } from '@playwright/test'
-import { Niivue, NVDocument } from '../../dist/index'
-import { httpServerAddress } from './helpers'
-import { TEST_OPTIONS } from './test.types'
+import { Niivue, NVDocument } from '../../dist/index.js'
+import { httpServerAddress } from './helpers.js'
+import { TEST_OPTIONS } from './test.types.js'
 
 test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
