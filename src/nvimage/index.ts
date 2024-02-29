@@ -105,26 +105,26 @@ export class NVImage {
 
   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
   // TODO move to enum
-  DT_NONE = 0
-  DT_UNKNOWN = 0 /* what it says, dude           */
-  DT_BINARY = 1 /* binary (1 bit/voxel)         */
-  DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
-  DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
-  DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
-  DT_FLOAT = 16 /* float (32 bits/voxel)        */
-  DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
-  DT_DOUBLE = 64 /* double (64 bits/voxel)       */
-  DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
-  DT_ALL = 255 /* not very useful (?)          */
-  DT_INT8 = 256 /* signed char (8 bits)         */
-  DT_UINT16 = 512 /* unsigned short (16 bits)     */
-  DT_UINT32 = 768 /* unsigned int (32 bits)       */
-  DT_INT64 = 1024 /* long long (64 bits)          */
-  DT_UINT64 = 1280 /* unsigned long long (64 bits) */
-  DT_FLOAT128 = 1536 /* long double (128 bits)       */
-  DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
-  DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
-  DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
+  readonly DT_NONE = 0
+  readonly DT_UNKNOWN = 0 /* what it says, dude           */
+  readonly DT_BINARY = 1 /* binary (1 bit/voxel)         */
+  readonly DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
+  readonly DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
+  readonly DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
+  readonly DT_FLOAT = 16 /* float (32 bits/voxel)        */
+  readonly DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
+  readonly DT_DOUBLE = 64 /* double (64 bits/voxel)       */
+  readonly DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
+  readonly DT_ALL = 255 /* not very useful (?)          */
+  readonly DT_INT8 = 256 /* signed char (8 bits)         */
+  readonly DT_UINT16 = 512 /* unsigned short (16 bits)     */
+  readonly DT_UINT32 = 768 /* unsigned int (32 bits)       */
+  readonly DT_INT64 = 1024 /* long long (64 bits)          */
+  readonly DT_UINT64 = 1280 /* unsigned long long (64 bits) */
+  readonly DT_FLOAT128 = 1536 /* long double (128 bits)       */
+  readonly DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
+  readonly DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
+  readonly DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
 
   /**
    *
@@ -538,7 +538,7 @@ export class NVImage {
   // not included in public docs
   // detect difference between voxel grid and world space
   // https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
-  computeObliqueAngle(mtx44: mat4): number {
+  private computeObliqueAngle(mtx44: mat4): number {
     const mtx = mat4.clone(mtx44)
     mat4.transpose(mtx, mtx44)
     const dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2])
@@ -559,7 +559,7 @@ export class NVImage {
 
   // not included in public docs
   // detect difference between voxel grid and world space
-  calculateOblique(): void {
+  private calculateOblique(): void {
     if (!this.matRAS) {
       throw new Error('matRAS not defined')
     }
@@ -651,7 +651,7 @@ export class NVImage {
   // not included in public docs
   // convert AFNI head/brik space to NIfTI format
   // https://github.com/afni/afni/blob/d6997e71f2b625ac1199460576d48f3136dac62c/src/thd_niftiwrite.c#L315
-  THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void {
+  private THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void {
     const hdr = this.hdr
 
     if (hdr === null) {
@@ -703,7 +703,7 @@ export class NVImage {
 
   // not included in public docs
   // determine spacing voxel centers (rows, columns, slices)
-  SetPixDimFromSForm(): void {
+  private SetPixDimFromSForm(): void {
     if (!this.hdr) {
       throw new Error('hdr not defined')
     }
@@ -740,7 +740,7 @@ export class NVImage {
 
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
-  readDICOM(buf: ArrayBuffer | ArrayBuffer[]): ArrayBuffer {
+  private readDICOM(buf: ArrayBuffer | ArrayBuffer[]): ArrayBuffer {
     this.series = new daikon.Series()
     // parse DICOM file
     if (Array.isArray(buf)) {
@@ -867,7 +867,7 @@ export class NVImage {
   // not included in public docs
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
-  readECAT(buffer: ArrayBuffer): ArrayBuffer {
+  private readECAT(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -974,7 +974,7 @@ export class NVImage {
     return rawImg
   } // readECAT()
 
-  readV16(buffer: ArrayBuffer): ArrayBuffer {
+  private readV16(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1003,7 +1003,7 @@ export class NVImage {
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
-  readVMR(buffer: ArrayBuffer): ArrayBuffer {
+  private readVMR(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1095,7 +1095,7 @@ export class NVImage {
 
   // not included in public docs
   // read FreeSurfer MGH format image
-  readMGH(buffer: ArrayBuffer): ArrayBuffer {
+  private readMGH(buffer: ArrayBuffer): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
@@ -1198,7 +1198,7 @@ export class NVImage {
 
   // not included in public docs
   // read AFNI head/brik format image
-  readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  private readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.dims[0] = 3
@@ -1345,7 +1345,7 @@ export class NVImage {
   // not included in public docs
   // read ITK MHA format image
   // https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
-  readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  private readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     const len = buffer.byteLength
     if (len < 20) {
       throw new Error('File too small to be VTK: bytes = ' + buffer.byteLength)
@@ -1487,7 +1487,7 @@ export class NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  private readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
     this.hdr = new nifti.NIFTI1()
@@ -1752,7 +1752,7 @@ export class NVImage {
   // not included in public docs
   // read NRRD format image
   // http://teem.sourceforge.net/nrrd/format.html
-  readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  private readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     // inspired by parserNRRD.js in https://github.com/xtk
     // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
     // http://www.opensource.org/licenses/mit-license.php
@@ -2048,7 +2048,7 @@ export class NVImage {
 
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
-  calculateRAS(): void {
+  private calculateRAS(): void {
     if (!this.hdr) {
       throw new Error('hdr not set')
     }
@@ -2199,8 +2199,9 @@ export class NVImage {
     this.calculateOblique()
   }
 
-  // Reorient raw image data to RAS
-  // note that GPU-based orient shader is much faster
+  /**
+   * Reorient raw image data to RAS, note that GPU-based orient shader is much faster
+   */
   img2RAS(): Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
@@ -2246,8 +2247,9 @@ export class NVImage {
     return imgRAS
   } // img2RAS()
 
-  // not included in public docs
-  // convert voxel location (row, column slice, indexed from 0) to world space
+  /**
+   * Convert voxel location (row, column slice, indexed from 0) to world space in mm
+   */
   vox2mm(XYZ: number[], mtx: mat4): vec3 {
     const sform = mat4.clone(mtx)
     mat4.transpose(sform, sform)
@@ -2257,8 +2259,9 @@ export class NVImage {
     return pos3
   } // vox2mm()
 
-  // not included in public docs
-  // convert world space to voxel location (row, column slice, indexed from 0)
+  /**
+   * Convert world space in mm to voxel location (row, column slice, indexed from 0)
+   */
   mm2vox(mm: number[], frac = false): Float32Array | vec3 {
     if (!this.matRAS) {
       throw new Error('matRAS undefined')
@@ -2280,13 +2283,13 @@ export class NVImage {
   // not included in public docs
   // returns boolean: are two arrays identical?
   // TODO this won't work for complex objects. Maybe use array-equal from NPM
-  arrayEquals(a: unknown[], b: unknown[]): boolean {
+  private arrayEquals(a: unknown[], b: unknown[]): boolean {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index])
   }
 
-  // not included in public docs
-  // base function for niivue.setColormap()
-  // colormaps are continuously interpolated between 256 values (0..256)
+  /**
+   * set the colormap for the image, base function for niivue.setColormap(). Colormaps are continuously interpolated between 256 values (0..256)
+   */
   setColormap(cm: string): void {
     this._colormap = cm
     this.calMinMax()
@@ -2298,11 +2301,11 @@ export class NVImage {
   // not included in public docs
   // base function for niivue.setColormap()
   // label colormaps are discretely sampled from an arbitrary number of colors
-  setColormapLabel(cm: ColorMap): void {
+  private setColormapLabel(cm: ColorMap): void {
     this.colormapLabel = cmapper.makeLabelLut(cm)
   }
 
-  async setColormapLabelFromUrl(url: string): Promise<void> {
+  private async setColormapLabelFromUrl(url: string): Promise<void> {
     this.colormapLabel = await cmapper.makeLabelLutFromUrl(url)
   }
 
@@ -2310,6 +2313,7 @@ export class NVImage {
     return this._colormap
   }
 
+  // support both 'colormap' and 'colorMap' for backwards compatibility
   get colorMap(): string {
     return this._colormap
   }
@@ -2319,6 +2323,7 @@ export class NVImage {
     this.setColormap(cm)
   }
 
+  // support both 'colormap' and 'colorMap' for backwards compatibility
   set colorMap(cm: string) {
     this.setColormap(cm)
   }
@@ -2334,10 +2339,12 @@ export class NVImage {
     }
   }
 
-  // not included in public docs
-  // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
-  // clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
-  // ToDo: convert to web assembly, this is slow in JavaScript
+  /**
+   * Calculate the min and max intensity values for the image. given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
+   * @returns [robustMin, robustMax, globalMin, globalMax]
+   * ToDo: convert to web assembly, this is (relatively) slow in JavaScript
+   * clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
+   */
   calMinMax(): number[] {
     if (!this.hdr) {
       throw new Error('hdr undefined')
@@ -2490,7 +2497,7 @@ export class NVImage {
 
   // not included in public docs
   // convert voxel intensity from stored value to scaled intensity
-  intensityRaw2Scaled(raw: number): number {
+  private intensityRaw2Scaled(raw: number): number {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2502,7 +2509,7 @@ export class NVImage {
   }
 
   // convert voxel intensity from scaled intensity to stored value
-  intensityScaled2Raw(scaled: number): number {
+  private intensityScaled2Raw(scaled: number): number {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2513,8 +2520,11 @@ export class NVImage {
     return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope
   }
 
-  // not included in public docs
-  // see niivue.saveImage() for wrapper of this function
+  /**
+   * encode image as NIfTI volume
+   * @returns Uint8Array
+   * see Niivue.saveImage() for wrapper of this function
+   */
   saveToUint8Array(fnm: string, drawing8: Uint8Array | null = null): Uint8Array {
     if (!this.hdr) {
       throw new Error('hdr undefined')
@@ -2552,9 +2562,9 @@ export class NVImage {
     return saveData
   }
 
-  // not included in public docs
-  // save image as NIfTI volume
-  // if fnm is empty, data is returned
+  /**
+   * trigger download of image as NIfTI volume
+   */
   saveToDisk(fnm: string = '', drawing8: Uint8Array | null = null): Uint8Array {
     // TODO there was an unnecessary strict string check for fnm here,
     // shouldn't be necessary anymore. Thanks TS! :)
@@ -2809,8 +2819,12 @@ export class NVImage {
     return nvimage
   }
 
-  // not included in public docs
-  // loading Nifti files
+  /**
+   * load and return a new NVImage instance from a File object in the browser
+   * @param file - file object
+   * @param bytesToLoad - number of bytes to load from the file, default is NaN which means load the entire file
+   * @returns NVImage instance
+   */
   static readFileAsync(file: File, bytesToLoad = NaN): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -2959,7 +2973,6 @@ export class NVImage {
 
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
-   *
    * @returns NVImage instance
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
@@ -3099,8 +3112,9 @@ export class NVImage {
     return zeroClone
   }
 
-  // not included in public docs
-  // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
+  /**
+   * get the intensity value at a specific voxel coordinate (xyz are zero indexed column row, slice)
+   */
   getValue(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number {
     if (!this.hdr) {
       throw new Error('hdr undefined')
@@ -3387,7 +3401,9 @@ export class NVImage {
     return odata
   }
 
-  // not included in public docs
+  /**
+   * convert voxel space to texture space
+   */
   convertVox2Frac(vox: vec3): vec3 {
     // convert from  0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1] to normalized texture space XYZ= [0..1, 0..1 ,0..1]
     // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
@@ -3399,7 +3415,9 @@ export class NVImage {
     return frac
   }
 
-  // not included in public docs
+  /**
+   * convert texture space to voxel space
+   */
   convertFrac2Vox(frac: vec3): vec3 {
     const vox = vec3.fromValues(
       Math.round(frac[0] * this.dims![1] - 0.5), // dims === RAS
@@ -3409,7 +3427,9 @@ export class NVImage {
     return vox
   }
 
-  // not included in public docs
+  /**
+   * convert texture space to millimeter (world) space
+   */
   convertFrac2MM(frac: vec3, isForceSliceMM = false): vec4 {
     const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
     if (isForceSliceMM) {
@@ -3420,7 +3440,9 @@ export class NVImage {
     return pos
   }
 
-  // not included in public docs
+  /**
+   * convert millimeter (world) space to texture space
+   */
   convertMM2Frac(mm: vec3 | vec4, isForceSliceMM = false): vec3 {
     // given mm, return volume fraction
     // convert from object space in millimeters to normalized texture space XYZ= [0..1, 0..1 ,0..1]
