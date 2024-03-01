@@ -3058,12 +3058,12 @@ export class NVMeshLoaders {
       while (pos < len && bytes[pos] !== 60) {
         pos++
       } // find initial <
-      let startP = pos
+      const startP = pos
       while (pos < len && bytes[pos] !== 62) {
         pos++
       } // find trailing >
-      let endP = pos
-      return new TextDecoder().decode(buffer.slice(startP, endP+1)).trim()
+      const endP = pos
+      return new TextDecoder().decode(buffer.slice(startP, endP + 1)).trim()
     }
     let line = readStr() // 1st line: signature 'mrtrix tracks'
     function readStringTag(TagName: string): string {
