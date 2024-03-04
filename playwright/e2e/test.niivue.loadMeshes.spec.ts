@@ -104,7 +104,8 @@ const meshFormats = [
   { fileType: 'obj', fileName: 'simplify_brain.obj', meshOrVolume: 'mesh' },
   { fileType: 'vtk', fileName: 'tract.FAT_R.vtk', meshOrVolume: 'mesh' },
   { fileType: 'trk', fileName: 'tract.IFOF_R.trk', meshOrVolume: 'mesh' },
-  { fileType: 'tck', fileName: 'tract.SLF1_R.tck', meshOrVolume: 'mesh' }
+  { fileType: 'tck', fileName: 'tract.SLF1_R.tck', meshOrVolume: 'mesh' },
+  { fileType: 'x3d', fileName: 'MolView-sticks-color_38.x3d', meshOrVolume: 'mesh' }
 ]
 
 for (const file of meshFormats) {
