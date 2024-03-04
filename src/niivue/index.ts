@@ -449,10 +449,10 @@ export class Niivue {
   overlayAlphaShader = 1 // float, 1 for opaque
   isAlphaClipDark = false
   position?: vec3
-
   extentsMin?: vec3
   extentsMax?: vec3
-
+  // ResizeObserver
+  private resizeObserver: ResizeObserver | null = null
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
 
@@ -989,6 +989,8 @@ export class Niivue {
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
       window.addEventListener('resize', this.resizeListener.bind(this)) // must bind 'this' niivue object or else 'this' becomes 'window'
+      this.resizeObserver = new ResizeObserver(this.resizeListener.bind(this))
+      this.resizeObserver.observe(this.canvas.parentElement!)
     }
     this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
     await this.init()
