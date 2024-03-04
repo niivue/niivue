@@ -118,17 +118,6 @@
         };
         cmapEl.appendChild(btn);
       }
-      // TEMPORARY! TODO: remove before merging into main
-      // every 500ms make the canvas container 2px shorter and narrower
-      let resizeInterval = setInterval(() => {
-        let canvasContainer = document.getElementById("canvas-container");
-        canvasContainer.style.width = canvasContainer.offsetWidth - 2 + "px";
-        canvasContainer.style.height = canvasContainer.offsetHeight - 2 + "px";
-        // stop when the canvas container is 500px wide
-        if (canvasContainer.offsetWidth <= 500) {
-          clearInterval( resizeInterval);
-        }
-      }, 16);
     </script>
   </body>
 </html>
