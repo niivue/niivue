@@ -940,25 +940,14 @@ void main(void) {
 		if ((idx == R) && (idx == L) && (idx == A) && (idx == P) && (idx == S) && (idx == I))
 			return;
 	}
-	idx = ((idx - uint(1)) % uint(100))+uint(1);
+	//idx = ((idx - uint(1)) % uint(100))+uint(1);
 	float textureWidth = float(textureSize(colormap, 0).x);
 	float fx = (float(idx)+0.5) / textureWidth;
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	//FragColor.a *= opacity;
-	FragColor.a = opacity;
-	return;
-
-	if (layer < 2.0) return;
-	//vec2 texXY = TexCoord.xy*0.5 +vec2(0.5,0.5);
-	//vec4 prevColor = texture(blend3D, vec3(texXY, coordZ));
-	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
-	// https://en.wikipedia.org/wiki/Alpha_compositing
-	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
-	if (aout <= 0.0) return;
-	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
-	FragColor.a = aout;
+	if (FragColor.a > 0.0)
+		FragColor.a = opacity;
 }`
 
 export const fragOrientShader = `#line 691
