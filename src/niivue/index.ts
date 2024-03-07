@@ -2793,6 +2793,25 @@ export class Niivue {
   }
 
   /**
+   * returns the index of the mesh vertex that is closest to the provided coordinates
+   * @param id - identity of mesh to change
+   * @param Xmm - location in left/right dimension
+   * @param Ymm - location in posterior/anterior dimension
+   * @param Zmm - location in foot/head dimension
+   * @returns the an array where ret[0] is the mesh index and ret[1] is distance from vertex to coordinates
+   * @example niivue.indexNearestXYZmm(niivue.meshes[0].id, -22, 42, 13)
+   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html|live demo usage}
+   */
+  indexNearestXYZmm(mesh: number, Xmm: number, Ymm: number, Zmm: number): number[] {
+    const idx = this.getMeshIndexByID(mesh)
+    if (idx < 0) {
+      log.warn('indexNearestXYZmm() id not loaded', mesh)
+      return [NaN, NaN]
+    }
+    return this.meshes[idx].indexNearestXYZmm(Xmm, Ymm, Zmm)
+  }
+
+  /**
    * reverse triangle winding of mesh (swap front and back faces)
    * @param id - identity of mesh to change
    * @example niivue.reverseFaces(niivue.meshes[0].id)

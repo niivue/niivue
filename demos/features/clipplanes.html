@@ -101,7 +101,8 @@
         nv1.updateGLVolume()
       }
       function handleIntensityChange(data) {
-        let idx = nv1.meshes[0].indexNearestXYZmm(data.mm[0],data.mm[1],data.mm[2])
+        console.log(nv1)
+        let idx = nv1.indexNearestXYZmm(nv1.meshes[0].id, data.mm[0],data.mm[1],data.mm[2])
         function flt2str(flt, decimals = 0) {
           return parseFloat(flt.toFixed(decimals))
         }
