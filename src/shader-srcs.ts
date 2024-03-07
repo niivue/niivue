@@ -1202,9 +1202,11 @@ uniform mat4 mvpMtx;
 uniform mat4 normMtx;
 out vec4 vClr;
 out vec3 vN;
+out vec4 vP;
 void main(void) {
 	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
-	gl_Position = mvpMtx * vec4(pos, 1.0);
+	vP = vec4(pos, 1.0);
+	gl_Position = mvpMtx * vP;
 	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
 	//vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
