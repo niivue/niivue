@@ -1,9 +1,7 @@
 .DS_Store
 node_modules
-/dist/index*
-/dist/niivue*.js
-!/dist/index.js
 /build
+/dist
 distForTests
 tests-out
 dist_intermediate
