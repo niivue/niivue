@@ -6025,7 +6025,7 @@ export class Niivue {
    */
   getFrame4D(id: string): number {
     const idx = this.getVolumeIndexByID(id)
-    return this.volumes[idx].nFrame4D!
+    return this.volumes[idx].frame4D!
   }
 
   // not included in public docs
