@@ -2279,10 +2279,58 @@ export class NVMeshLoaders {
     }
   } // readOFF()
 
+  static readOBJMNI(buffer: ArrayBuffer): DefaultMeshType {
+    //Support MNI 'P'olygon mesh format
+    // n.b. uses same .obj extension as WaveFront OBJ meshes
+    //https://bigbrain.loris.ca/main.php?test_name=brainsurfaces
+    //http://www.bic.mni.mcgill.ca/users/mishkin/mni_obj_format.pdf
+    //https://pages.stat.wisc.edu/~mchung/softwares/mesh/mesh.html
+    //https://github.com/aces/brainbrowser/tree/master
+    const enc = new TextDecoder("utf-8");
+    const txt = enc.decode(buffer);
+    const items = txt.trim().split(/\s*,\s*|\s+/);
+    if (items.length < 1 || items[0] !== "P") {
+      log.warn("This is not a valid MNI OBJ mesh.");
+    }
+    let j = 6;
+    const nVert = parseInt(items[j++]);
+    const nVertX3 = nVert * 3;
+    const positions = new Float32Array(nVertX3);
+    for (let i = 0; i < nVertX3; i++) {
+      positions[i] = parseFloat(items[j++]);
+    }
+    j += nVertX3;
+    let nTri = parseInt(items[j++]);
+    let colour_flag = parseInt(items[j++]);
+    if (nTri < 1 || colour_flag < 0 || colour_flag > 2) {
+      log.warn("This is not a valid MNI OBJ mesh.");
+    }
+    let num_c = 1;
+    if (colour_flag === 1) {
+      num_c = nTri;
+    } else if (colour_flag === 1) {
+      num_c = nVert;
+    }
+    j += num_c * 4;
+    j += nTri;
+    const nTriX3 = nTri * 3;
+    const indices = new Int32Array(nTriX3);
+    for (let i = 0; i < nTriX3; i++) {
+      indices[i] = parseInt(items[j++]);
+    }
+    return {
+      positions,
+      indices
+    };
+  } // readOBJMNI()
+
   static readOBJ(buffer: ArrayBuffer): DefaultMeshType {
     // WaveFront OBJ format
     const enc = new TextDecoder('utf-8')
     const txt = enc.decode(buffer)
+    if (txt[0] === "P") {
+      return this.readOBJMNI(buffer);
+    }
     const lines = txt.split('\n')
     const n = lines.length
     const pts = []
