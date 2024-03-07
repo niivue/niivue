@@ -2280,56 +2280,56 @@ export class NVMeshLoaders {
   } // readOFF()
 
   static readOBJMNI(buffer: ArrayBuffer): DefaultMeshType {
-    //Support MNI 'P'olygon mesh format
+    // Support MNI 'P'olygon mesh format
     // n.b. uses same .obj extension as WaveFront OBJ meshes
-    //https://bigbrain.loris.ca/main.php?test_name=brainsurfaces
-    //http://www.bic.mni.mcgill.ca/users/mishkin/mni_obj_format.pdf
-    //https://pages.stat.wisc.edu/~mchung/softwares/mesh/mesh.html
-    //https://github.com/aces/brainbrowser/tree/master
-    const enc = new TextDecoder("utf-8");
-    const txt = enc.decode(buffer);
-    const items = txt.trim().split(/\s*,\s*|\s+/);
-    if (items.length < 1 || items[0] !== "P") {
-      log.warn("This is not a valid MNI OBJ mesh.");
+    // https://bigbrain.loris.ca/main.php?test_name=brainsurfaces
+    // http://www.bic.mni.mcgill.ca/users/mishkin/mni_obj_format.pdf
+    // https://pages.stat.wisc.edu/~mchung/softwares/mesh/mesh.html
+    // https://github.com/aces/brainbrowser/tree/master
+    const enc = new TextDecoder('utf-8')
+    const txt = enc.decode(buffer)
+    const items = txt.trim().split(/\s*,\s*|\s+/)
+    if (items.length < 1 || items[0] !== 'P') {
+      log.warn('This is not a valid MNI OBJ mesh.')
     }
-    let j = 6;
-    const nVert = parseInt(items[j++]);
-    const nVertX3 = nVert * 3;
-    const positions = new Float32Array(nVertX3);
+    let j = 6
+    const nVert = parseInt(items[j++])
+    const nVertX3 = nVert * 3
+    const positions = new Float32Array(nVertX3)
     for (let i = 0; i < nVertX3; i++) {
-      positions[i] = parseFloat(items[j++]);
+      positions[i] = parseFloat(items[j++])
     }
-    j += nVertX3;
-    let nTri = parseInt(items[j++]);
-    let colour_flag = parseInt(items[j++]);
+    j += nVertX3
+    const nTri = parseInt(items[j++])
+    const colour_flag = parseInt(items[j++])
     if (nTri < 1 || colour_flag < 0 || colour_flag > 2) {
-      log.warn("This is not a valid MNI OBJ mesh.");
+      log.warn('This is not a valid MNI OBJ mesh.')
     }
-    let num_c = 1;
+    let num_c = 1
     if (colour_flag === 1) {
-      num_c = nTri;
+      num_c = nTri
     } else if (colour_flag === 1) {
-      num_c = nVert;
+      num_c = nVert
     }
-    j += num_c * 4;
-    j += nTri;
-    const nTriX3 = nTri * 3;
-    const indices = new Int32Array(nTriX3);
+    j += num_c * 4
+    j += nTri
+    const nTriX3 = nTri * 3
+    const indices = new Int32Array(nTriX3)
     for (let i = 0; i < nTriX3; i++) {
-      indices[i] = parseInt(items[j++]);
+      indices[i] = parseInt(items[j++])
     }
     return {
       positions,
       indices
-    };
+    }
   } // readOBJMNI()
 
   static readOBJ(buffer: ArrayBuffer): DefaultMeshType {
     // WaveFront OBJ format
     const enc = new TextDecoder('utf-8')
     const txt = enc.decode(buffer)
-    if (txt[0] === "P") {
-      return this.readOBJMNI(buffer);
+    if (txt[0] === 'P') {
+      return this.readOBJMNI(buffer)
     }
     const lines = txt.split('\n')
     const n = lines.length
@@ -3097,23 +3097,22 @@ export class NVMeshLoaders {
     // beware: The values of XML attributes are delimited by either single or double quotes
     const len = buffer.byteLength
     if (len < 20) {
-      throw new Error('File too small to be GII: bytes = ' + len)
+      throw new Error('File too small to be X3D: bytes = ' + len)
     }
     const bytes = new Uint8Array(buffer)
     let pos = 0
     function readStr(): string {
-      // concatenate lines to return tag <...>
       while (pos < len && bytes[pos] !== 60) {
         pos++
-      } // find initial <
+      }
       const startP = pos
       while (pos < len && bytes[pos] !== 62) {
         pos++
-      } // find trailing >
+      }
       const endP = pos
       return new TextDecoder().decode(buffer.slice(startP, endP + 1)).trim()
     }
-    let line = readStr() // 1st line: signature 'mrtrix tracks'
+    let line = readStr() // detect XML signature: '<?xml version=...'
     function readStringTag(TagName: string): string {
       // Tag 'DEF' will return l3 for DEF='l3'
       const fpos = line.indexOf(TagName + '=')
@@ -3134,22 +3133,30 @@ export class NVMeshLoaders {
       const delimiter = line[fpos + TagName.length + 1]
       const spos = line.indexOf(delimiter, fpos) + 1
       const epos = line.indexOf(delimiter, spos)
-      const str = line.slice(spos, epos).trim()
-      const items = str.trim().split(/\s+/)
+      let str = line.slice(spos, epos).trim()
+      str = str.replace(/,\s*$/, '')
+      const items = str.trim().split(/\s*,\s*|\s+/)
       if (items.length < 2) {
         return parseFloat(str)
       }
-      const ret = new Array(items.length)
+      let ret = new Array(items.length)
+      let j = 0
       for (let i = 0; i < items.length; i++) {
-        ret[i] = parseFloat(items[i])
+        const v = parseFloat(items[i])
+        if (!isFinite(v)) {
+          continue
+        }
+        ret[j] = v
+        j++
       }
+      ret = ret.slice(0, j)
       return ret
     }
     if (!line.includes('xml version')) {
       log.warn('Not a X3D image')
     }
     let positions: number[] = []
-    const indices: number[] = []
+    let indices: number[] = []
     let rgba255: number[] = []
     let color: number[] = []
     let translation: vec4 = [0, 0, 0, 0]
@@ -3233,6 +3240,10 @@ export class NVMeshLoaders {
             // https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#IndexedFaceSet
             coordIndex = readNumericTag('coordIndex') as number[]
           }
+          if (line.startsWith('<IndexedTriangleSet')) {
+            height = -7
+            coordIndex = readNumericTag('index') as number[]
+          }
           if (line.startsWith('<IndexedTriangleStripSet')) {
             height = -3
             // https://www.web3d.org/specifications/X3Dv4Draft/ISO-IEC19775-1v4-CD/Part01/components/geometry3D.html#IndexedFaceSet
@@ -3240,10 +3251,14 @@ export class NVMeshLoaders {
           }
           if (line.startsWith('<Coordinate')) {
             point = readNumericTag('point') as number[]
+            const rem = point.length % 3
+            if (rem !== 0) {
+              point = point.slice(0, -rem)
+            }
           } // Coordinate point
           if (line.startsWith('<Color')) {
             color = readNumericTag('color') as number[]
-          } // Coordinate point
+          }
           if (line.startsWith('<Box')) {
             height = -4
             log.warn('Unsupported x3d shape: Box')
@@ -3256,11 +3271,11 @@ export class NVMeshLoaders {
             height = -6
             log.warn('Unsupported x3d shape: ElevationGrid')
           }
-        } // while not </shape
-        if (height < -3.0) {
+        }
+        if (height < -3 && height !== -7) {
           // cone, box, elevation grid
           // unsupported
-        } else if (height < -1.0) {
+        } else if (height < -1) {
           // indexed triangle mesh or strip
           if (coordIndex.length < 1 || point.length < 3 || point.length === undefined) {
             log.warn('Indexed mesh must specify indices and points')
@@ -3268,28 +3283,24 @@ export class NVMeshLoaders {
           }
           const idx0 = Math.floor(positions.length / 3) // first new vertex will be AFTER previous vertices
           let j = 2
-          if (height === -2) {
-            // if triangles
-            // see Castle engine should_be_manifold.x3d.stl test image
+          if (height === -7) {
+            indices = [...indices, ...coordIndex]
+          } else if (height === -2) {
             let triStart = 0
             while (j < coordIndex.length) {
               if (coordIndex[j] >= 0) {
-                // new triangle
                 indices.push(coordIndex[triStart] + idx0)
                 indices.push(coordIndex[j - 1] + idx0)
                 indices.push(coordIndex[j - 0] + idx0)
                 j += 1
               } else {
-                // coordIndex[j] === -1, next polygon
                 j += 3
                 triStart = j - 2
               }
             }
           } else {
-            // if triangles else triangle strips
             while (j < coordIndex.length) {
               if (coordIndex[j] >= 0) {
-                // new triangle
                 indices.push(coordIndex[j - 2] + idx0)
                 indices.push(coordIndex[j - 1] + idx0)
                 indices.push(coordIndex[j - 0] + idx0)
@@ -3309,7 +3320,7 @@ export class NVMeshLoaders {
             let c3 = 0
             let c4 = 0
             for (let i = 0; i < npt; i++) {
-              for (let j = 0; j < 3; j++) {
+              for (let j2 = 0; j2 < 3; j2++) {
                 rgbas[c4] = Math.round(color[c3] * 255.0)
                 c3++
                 c4++
@@ -3339,7 +3350,7 @@ export class NVMeshLoaders {
       } // while <shape
     }
     return {
-      positions,
+      positions: Float32Array.from(positions),
       indices: Int32Array.from(indices),
       rgba255
     }

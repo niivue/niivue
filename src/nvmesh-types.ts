@@ -99,7 +99,7 @@ export type MGH =
     }
 
 export type X3D = {
-  positions: number[] // TODO clean up number types
+  positions: Float32Array
   indices: Int32Array
   rgba255: number[]
 }
