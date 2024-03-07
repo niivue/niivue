@@ -10,9 +10,6 @@
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <label for="hideCheck">Hide Hover</label>
-      <input type="checkbox" id="hideCheck" unchecked />
-
       <label for="interpCheck">Jagged</label>
       <input type="checkbox" id="interpCheck" checked />
       <label for="outlineSlider">Outline</label>
@@ -20,7 +17,7 @@
         type="range"
         min="0"
         max="255"
-        value="5"
+        value="1"
         class="slider"
         id="outlineSlider"
       />
@@ -68,7 +65,11 @@
       }
       let cmap = await fetchJSON("../images/aal.json")
       nv1.volumes[1].setColormapLabel(cmap)
-      const clut = nv1.volumes[1].colormapLabel.lut
+      let clut = nv1.volumes[1].colormapLabel.lut
+      //make all regions translucent
+      for (let a = 3; a < clut.length ; a += 4) {
+        clut[a] = 96
+      }
       nv1.updateGLVolume()
       nv1.setMultiplanarPadPixels(5)
       outlineSlider.oninput = function () {
@@ -83,23 +84,22 @@
       interpCheck.onchange = function () {
         nv1.setInterpolation(this.checked)
       }
+      alphaSlider.oninput()
+      outlineSlider.oninput()
       let activeIdx = - 1
       gl1.addEventListener("mousemove", (e) => {
-        const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas)
-        const frac = nv1.canvasPos2frac([pos.x, pos.y])
+        let pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas)
+        const frac = nv1.canvasPos2frac([pos.x  * nv1.uiData.dpr, pos.y  * nv1.uiData.dpr])
         if (frac[0] >= 0) {
           let mm = nv1.frac2mm(frac)
+          //console.log(mm[0])
           const vox = nv1.volumes[1].mm2vox(mm)
           let idx = nv1.volumes[1].getValue(vox[0], vox[1], vox[2])
           if ((isFinite(idx)) && (idx !== activeIdx)) {
+            
             activeIdx = idx
             let lut = clut.slice() //nv1.volumes[1].colormapLabel.lut
-            let idx4 = idx * 4 //four components: RGBA
-            lut[idx4+0] = 255
-            lut[idx4+1] = 255
-            lut[idx4+2] = 255
-            if (hideCheck.checked)
-              lut[idx4+3] = 0
+            lut[(idx * 4)+3] = 200
             nv1.volumes[1].colormapLabel.lut = lut.slice()
             nv1.updateGLVolume()
             document.getElementById("hover").innerHTML = 'Hover: '+ cmap.labels[idx]

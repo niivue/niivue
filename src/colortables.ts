@@ -85,7 +85,7 @@ export class ColorTables {
     return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I, isInvert)
   }
 
-  makeLabelLut(cm: ColorMap, alphaFill = 64): LUT {
+  makeLabelLut(cm: ColorMap, alphaFill = 255): LUT {
     if (cm.R === undefined || cm.G === undefined || cm.B === undefined) {
       throw new Error(`Invalid colormap table: ${cm}`)
     }

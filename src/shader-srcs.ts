@@ -923,14 +923,14 @@ void main(void) {
 	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
 	if (idx == uint(0))
 		return;
-	idx = ((idx - uint(1)) % uint(100))+uint(1);
+	//idx = ((idx - uint(1)) % uint(100))+uint(1);
 	float textureWidth = float(textureSize(colormap, 0).x);
 	float fx = (float(idx)+0.5) / textureWidth;
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	//FragColor.a *= opacity;
-	FragColor.a = opacity;
+	float alpha = FragColor.a;
+	FragColor.a *= opacity;
 	if (xyzaFrac.a > 0.0) { //outline
 		vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
 		uint R = uint(texture(intensityVol, vx.xyz).r);
@@ -945,7 +945,7 @@ void main(void) {
 		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
 		uint I = uint(texture(intensityVol, vx.xyz).r);
 		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I))
-			FragColor.a = xyzaFrac.a;
+			FragColor.a = alpha * xyzaFrac.a;
 	}
 }`
 
