@@ -960,7 +960,7 @@ export class NVMeshLoaders {
     useNegativeCmap = false,
     cal_min: number | null = null,
     cal_max: number | null = null,
-    isOutlineBorder = false
+    outlineBorder = 0
   ): void {
     const layer: Partial<Layer> = {
       colormapInvert: false,
@@ -1064,7 +1064,7 @@ export class NVMeshLoaders {
     }
     layer.nFrame4D = layer.values.length / n_vert
     layer.frame4D = 0
-    layer.isOutlineBorder = isOutlineBorder
+    layer.outlineBorder = outlineBorder
     // determine global min..max
     let mn = layer.values[0]
     let mx = layer.values[0]

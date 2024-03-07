@@ -10,8 +10,6 @@
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <label for="check1">Outline</label>
-      <input type="checkbox" id="check1" name="check1" unchecked />
       <label for="alphaSlider">Opacity</label>
       <input
         type="range"
@@ -20,6 +18,15 @@
         value="127"
         class="slider"
         id="alphaSlider"
+      />
+      <label for="outlineSlider">Outline</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="5"
+        class="slider"
+        id="outlineSlider"
       />
       <button id="about">About</button>
     </header>
@@ -39,23 +46,12 @@
       var nv1 = new niivue.Niivue({ onLocationChange: handleLocationChange });
       nv1.attachTo("gl1");
       await nv1.loadVolumes(volumeList1);
-      /*async function fetchJSON(fnm) {
-        const response = await fetch(fnm);
-        const js = await response.json();
-        return js;
-      }
-      let cmap = await fetchJSON("../demos/images/inia19-NeuroMaps.json");
-      nv1.volumes[1].setColormapLabel(cmap);*/
       await nv1.volumes[1].setColormapLabelFromUrl("../images/inia19-NeuroMaps.json");
       nv1.updateGLVolume();
-      document
-        .getElementById("check1")
-        .addEventListener("change", doCheckClick);
-      function doCheckClick() {
-        nv1.setAtlasOutline(this.checked);
+      outlineSlider.oninput = function () {
+        nv1.setAtlasOutline(this.value / 255)
       }
-      var slider = document.getElementById("alphaSlider");
-      slider.oninput = function () {
+      alphaSlider.oninput = function () {
         nv1.setOpacity(1, this.value / 255);
       };
       document.getElementById("about").addEventListener("click", doAbout);

@@ -65,7 +65,7 @@ type NVConfigOptions = {
   // default debounce time used in keyup listeners
   keyDebounceTime: number
   isNearestInterpolation: boolean
-  isAtlasOutline: boolean
+  atlasOutline: number
   isRuler: boolean
   isColorbar: boolean
   isOrientCube: boolean
@@ -134,7 +134,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   keyDebounceTime: 50,
   isNearestInterpolation: false,
   isResizeCanvas: true,
-  isAtlasOutline: false,
+  atlasOutline: 0,
   isRuler: false,
   isColorbar: false,
   isOrientCube: false,
@@ -627,7 +627,7 @@ export class NVDocument {
           values: layer.values,
           nFrame4D: layer.nFrame4D,
           frame4D: 0,
-          isOutlineBorder: layer.isOutlineBorder,
+          outlineBorder: layer.outlineBorder,
           global_min: layer.global_min,
           global_max: layer.global_max,
           cal_min: layer.cal_min,

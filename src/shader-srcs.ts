@@ -905,7 +905,6 @@ export const fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
 `
 
-// uniform vec2 canvasWidthHeight;
 export const fragOrientShaderAtlas = `#line 636
 precision highp int;
 precision highp float;
@@ -916,7 +915,7 @@ uniform float layer;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform float opacity;
-uniform vec3 xyzFrac;
+uniform vec4 xyzaFrac;
 uniform mat4 mtx;
 void main(void) {
 	vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
@@ -924,30 +923,30 @@ void main(void) {
 	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
 	if (idx == uint(0))
 		return;
-	if (xyzFrac.x > 0.0) { //outline
-		vx = vec4(TexCoord.x+xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint R = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x-xyzFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint L = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y+xyzFrac.y, coordZ, 1.0) * mtx;
-		uint A = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y-xyzFrac.y, coordZ, 1.0) * mtx;
-		uint P = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzFrac.z, 1.0) * mtx;
-		uint S = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzFrac.z, 1.0) * mtx;
-		uint I = uint(texture(intensityVol, vx.xyz).r);
-		if ((idx == R) && (idx == L) && (idx == A) && (idx == P) && (idx == S) && (idx == I))
-			return;
-	}
-	//idx = ((idx - uint(1)) % uint(100))+uint(1);
+	idx = ((idx - uint(1)) % uint(100))+uint(1);
 	float textureWidth = float(textureSize(colormap, 0).x);
 	float fx = (float(idx)+0.5) / textureWidth;
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	if (FragColor.a > 0.0)
-		FragColor.a = opacity;
+	//FragColor.a *= opacity;
+	FragColor.a = opacity;
+	if (xyzaFrac.a > 0.0) { //outline
+		vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+		uint R = uint(texture(intensityVol, vx.xyz).r);
+		vx = vec4(TexCoord.x-xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+		uint L = uint(texture(intensityVol, vx.xyz).r);
+		vx = vec4(TexCoord.x, TexCoord.y+xyzaFrac.y, coordZ, 1.0) * mtx;
+		uint A = uint(texture(intensityVol, vx.xyz).r);
+		vx = vec4(TexCoord.x, TexCoord.y-xyzaFrac.y, coordZ, 1.0) * mtx;
+		uint P = uint(texture(intensityVol, vx.xyz).r);
+		vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzaFrac.z, 1.0) * mtx;
+		uint S = uint(texture(intensityVol, vx.xyz).r);
+		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
+		uint I = uint(texture(intensityVol, vx.xyz).r);
+		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I))
+			FragColor.a = xyzaFrac.a;
+	}
 }`
 
 export const fragOrientShader = `#line 691

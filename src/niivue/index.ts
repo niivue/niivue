@@ -291,7 +291,7 @@ type NiiVueOptions = {
   // whether nearest neighbor interpolation is used, else linear interpolation
   isNearestInterpolation?: boolean
   // whether atlas maps are only visible at the boundary of regions
-  isAtlasOutline?: boolean
+  atlasOutline?: number
   // whether a 10cm ruler is displayed
   isRuler?: boolean
   // whether colorbar(s) are shown illustrating values for color maps
@@ -5787,13 +5787,16 @@ export class Niivue {
     if (!this.back.dims) {
       throw new Error('back.dims undefined')
     }
+    let outline = 0
     if (hdr.intent_code === 1002) {
-      let x = 1.0 / this.back.dims[1]
-      if (!this.opts.isAtlasOutline) {
-        x = -x
-      }
-      this.gl.uniform3fv(orientShader.uniforms.xyzFrac, [x, 1.0 / this.back.dims[2], 1.0 / this.back.dims[3]])
+      outline = this.opts.atlasOutline
     }
+    this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
+      1.0 / this.back.dims[1],
+      1.0 / this.back.dims[2],
+      1.0 / this.back.dims[3],
+      outline
+    ])
     log.debug('back dims: ', this.back.dims)
     for (let i = 0; i < this.back.dims[3]; i++) {
       // output slices
@@ -7098,8 +7101,8 @@ export class Niivue {
   }
 
   // not included in public docs
-  setAtlasOutline(isOutline: boolean): void {
-    this.opts.isAtlasOutline = isOutline
+  setAtlasOutline(isOutline: number): void {
+    this.opts.atlasOutline = isOutline
     this.updateGLVolume()
     this.drawScene()
   }

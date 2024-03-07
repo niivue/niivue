@@ -114,7 +114,7 @@ export type Layer = {
   colormapLabel: LUT
   nFrame4D: number
   frame4D: number
-  isOutlineBorder: boolean
+  outlineBorder: number
   global_min: number
   global_max: number
   cal_min: number | null
