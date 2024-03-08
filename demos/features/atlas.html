@@ -57,6 +57,8 @@
       nv1.attachTo("gl1")
       nv1.setInterpolation(true)
       nv1.opts.multiplanarForceRender = true
+      nv1.opts.dragMode = nv1.dragModes.pan
+      nv1.opts.yoke3Dto2DZoom = true
       await nv1.loadVolumes(volumeList1)
       async function fetchJSON(fnm) {
         const response = await fetch(fnm)
