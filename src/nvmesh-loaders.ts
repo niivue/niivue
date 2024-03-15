@@ -1780,8 +1780,12 @@ export class NVMeshLoaders {
       isSCALAR = true
     }
     if (isSCALAR) {
+      let nv = n_vert
+      if (n_vert === 0) {
+        nv = nvert
+      }
       const FSizeWoScalars =
-        16 + nskip + (isFace ? 1 : 0) * nface * 12 + (isVert ? 1 : 0) * n_vert * 12 + (isRGBA ? 1 : 0) * n_vert * 4
+        16 + nskip + (isFace ? 1 : 0) * nface * 12 + (isVert ? 1 : 0) * nv * 12 + (isRGBA ? 1 : 0) * nv * 4
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar)
       if (nvert !== n_vert && scalarFloats % n_vert === 0) {
         log.warn('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT')
