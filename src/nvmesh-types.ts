@@ -99,7 +99,7 @@ export type MGH =
     }
 
 export type X3D = {
-  positions: number[] // TODO clean up number types
+  positions: Float32Array
   indices: Int32Array
   rgba255: number[]
 }
@@ -114,7 +114,7 @@ export type Layer = {
   colormapLabel: LUT
   nFrame4D: number
   frame4D: number
-  isOutlineBorder: boolean
+  outlineBorder: number
   global_min: number
   global_max: number
   cal_min: number | null

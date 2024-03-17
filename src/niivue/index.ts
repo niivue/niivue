@@ -291,7 +291,7 @@ type NiiVueOptions = {
   // whether nearest neighbor interpolation is used, else linear interpolation
   isNearestInterpolation?: boolean
   // whether atlas maps are only visible at the boundary of regions
-  isAtlasOutline?: boolean
+  atlasOutline?: number
   // whether a 10cm ruler is displayed
   isRuler?: boolean
   // whether colorbar(s) are shown illustrating values for color maps
@@ -2790,6 +2790,25 @@ export class Niivue {
     this.meshes[idx].setProperty(key, val, this.gl)
     this.updateGLVolume()
     this.onMeshPropertyChanged(idx, key, val)
+  }
+
+  /**
+   * returns the index of the mesh vertex that is closest to the provided coordinates
+   * @param id - identity of mesh to change
+   * @param Xmm - location in left/right dimension
+   * @param Ymm - location in posterior/anterior dimension
+   * @param Zmm - location in foot/head dimension
+   * @returns the an array where ret[0] is the mesh index and ret[1] is distance from vertex to coordinates
+   * @example niivue.indexNearestXYZmm(niivue.meshes[0].id, -22, 42, 13)
+   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   */
+  indexNearestXYZmm(mesh: number, Xmm: number, Ymm: number, Zmm: number): number[] {
+    const idx = this.getMeshIndexByID(mesh)
+    if (idx < 0) {
+      log.warn('indexNearestXYZmm() id not loaded', mesh)
+      return [NaN, NaN]
+    }
+    return this.meshes[idx].indexNearestXYZmm(Xmm, Ymm, Zmm)
   }
 
   /**
@@ -5768,13 +5787,16 @@ export class Niivue {
     if (!this.back.dims) {
       throw new Error('back.dims undefined')
     }
+    let outline = 0
     if (hdr.intent_code === 1002) {
-      let x = 1.0 / this.back.dims[1]
-      if (!this.opts.isAtlasOutline) {
-        x = -x
-      }
-      this.gl.uniform3fv(orientShader.uniforms.xyzFrac, [x, 1.0 / this.back.dims[2], 1.0 / this.back.dims[3]])
+      outline = this.opts.atlasOutline
     }
+    this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
+      1.0 / this.back.dims[1],
+      1.0 / this.back.dims[2],
+      1.0 / this.back.dims[3],
+      outline
+    ])
     log.debug('back dims: ', this.back.dims)
     for (let i = 0; i < this.back.dims[3]; i++) {
       // output slices
@@ -7079,8 +7101,8 @@ export class Niivue {
   }
 
   // not included in public docs
-  setAtlasOutline(isOutline: boolean): void {
-    this.opts.isAtlasOutline = isOutline
+  setAtlasOutline(isOutline: number): void {
+    this.opts.atlasOutline = isOutline
     this.updateGLVolume()
     this.drawScene()
   }

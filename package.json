@@ -19,13 +19,14 @@
     "dev": "vite",
     "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
     "build": "tsup --config tsup.config.ts && npm run build:min && npm run build:umd",
-    "build:forTests": "tsup --config tsup.config.tests.ts",
+    "build:forTests": "tsup --config tsup.config.tests.ts && npm run build:mindemos",
     "build:min": "node bundle.js",
-    "demo": "npm run build && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
+    "build:mindemos": "node bundleForDemos.js",
+    "demo": "npm run build:forTests && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
     "demo-win": "npm run build && npx http-server demos/",
     "test": "npm run build:forTests && npm run test:unit && jest --maxWorkers=1",
     "test-win": "npm run build-win && jest",
-    "test-playwright": "npm run build && npx playwright test",
+    "test-playwright": "npx playwright test",
     "docs": "typedoc",
     "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
@@ -35,7 +36,7 @@
     "lint:fix": "eslint --fix .",
     "lint:debug": "DEBUG=eslint:cli-engine eslint .",
     "prepare": "husky install",
-    "pretest-playwright": "node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
+    "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
   "files": [
     "src",
