@@ -13,7 +13,7 @@ jobs:
       - name: Install and Build
         run: |
           npm install
-          npm run build
+          npm run build:forTests
           npm run docs
           cp -r dist demos/dist
           cp -r devdocs demos/
