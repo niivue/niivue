@@ -51,7 +51,7 @@ export type NVMeshLayer = {
   frame4D: number
   nFrame4D: number
   values: number[]
-  outlineBorder: number
+  outlineBorder?: number
   isTransparentBelowCalMin?: boolean
   alphaThreshold: boolean
   base64?: string
