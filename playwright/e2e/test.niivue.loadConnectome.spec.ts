@@ -21,7 +21,7 @@ test('niivue load connectome tabular', async ({ page }) => {
         name: 'mni152.nii.gz',
         colormap: 'gray',
         opacity: 1,
-        visible: true
+        colorbarVisible: false
       }
     ]
     await nv.loadVolumes(volumeList)
@@ -74,8 +74,7 @@ test('niivue loadConnectome with labels', async ({ page }) => {
         volume: { hdr: null, img: null },
         name: 'mni152.nii.gz',
         colormap: 'gray',
-        opacity: 1,
-        visible: true
+        opacity: 1
       }
     ]
     await nv.loadVolumes(volumeList)
@@ -175,8 +174,7 @@ test('niivue loadConnectome replace label text', async ({ page }) => {
         volume: { hdr: null, img: null },
         name: 'mni152.nii.gz',
         colormap: 'gray',
-        opacity: 1,
-        visible: true
+        opacity: 1
       }
     ]
     await nv.loadVolumes(volumeList)
