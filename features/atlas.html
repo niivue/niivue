@@ -5,15 +5,22 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Atlas</title>
-    <link rel="stylesheet" href="light.css" />
+    <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <label for="check1">Outline</label>
-      <input type="checkbox" id="check1" unchecked />
-      <label for="check2">Dark Background</label>
-      <input type="checkbox" id="check2" unchecked />
+      <label for="interpCheck">Jagged</label>
+      <input type="checkbox" id="interpCheck" checked />
+      <label for="outlineSlider">Outline</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="1"
+        class="slider"
+        id="outlineSlider"
+      />
       <label for="alphaSlider">Opacity</label>
       <input
         type="range"
@@ -36,47 +43,71 @@
     <main>
       <canvas id="gl1"></canvas>
     </main>
-    <footer id="location">&nbsp;</footer>
+    <footer id="locationx"><span id="hover"></span>&nbsp;<span id="location"></span></footer>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
+      import * as niivue from "../dist/index.js"
       var volumeList1 = [
         {url: "../images/mni152.nii.gz"},
         {url: "../images/aal.nii.gz"},
-      ];
+      ]
       function handleLocationChange(data) {
-        document.getElementById("location").innerHTML = data.string;
+        document.getElementById("location").innerHTML = 'Clicked: '+data.string
       }
-      var nv1 = new niivue.Niivue({backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange });
-      nv1.attachTo("gl1");
-      await nv1.loadVolumes(volumeList1);
+      var nv1 = new niivue.Niivue({backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange })
+      nv1.attachTo("gl1")
+      nv1.setInterpolation(true)
+      nv1.opts.multiplanarForceRender = true
+      nv1.opts.dragMode = nv1.dragModes.pan
+      nv1.opts.yoke3Dto2DZoom = true
+      await nv1.loadVolumes(volumeList1)
       async function fetchJSON(fnm) {
-        const response = await fetch(fnm);
-        const js = await response.json();
-        return js;
+        const response = await fetch(fnm)
+        const js = await response.json()
+        return js
       }
-      let cmap = await fetchJSON("../images/aal.json");
-      nv1.volumes[1].setColormapLabel(cmap);
-      nv1.updateGLVolume();
-      nv1.setMultiplanarPadPixels(5);
-      document
-        .getElementById("check1")
-        .addEventListener("change", doCheckClick);
-      function doCheckClick() {
-        nv1.setAtlasOutline(this.checked);
+      let cmap = await fetchJSON("../images/aal.json")
+      nv1.volumes[1].setColormapLabel(cmap)
+      let clut = nv1.volumes[1].colormapLabel.lut
+      //make all regions translucent
+      for (let a = 3; a < clut.length ; a += 4) {
+        clut[a] = 96
       }
-      check2.onchange = function() {
-        if (this.checked)
-            nv1.opts.backColor = [0.5, 0.5, 0.5, 1];
-        else
-            nv1.opts.backColor = [1, 1, 1, 1];
-        nv1.drawScene();
+      nv1.updateGLVolume()
+      nv1.setMultiplanarPadPixels(5)
+      outlineSlider.oninput = function () {
+        nv1.setAtlasOutline(this.value / 255)
       }
       alphaSlider.oninput = function () {
-        nv1.setOpacity(1, this.value / 255);
-      };
+        nv1.setOpacity(1, this.value / 255)
+      }
       padSlider.oninput = function () {
-        nv1.setMultiplanarPadPixels(this.value);
-      };
+        nv1.setMultiplanarPadPixels(this.value)
+      }
+      interpCheck.onchange = function () {
+        nv1.setInterpolation(this.checked)
+      }
+      alphaSlider.oninput()
+      outlineSlider.oninput()
+      let activeIdx = - 1
+      gl1.addEventListener("mousemove", (e) => {
+        let pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas)
+        const frac = nv1.canvasPos2frac([pos.x  * nv1.uiData.dpr, pos.y  * nv1.uiData.dpr])
+        if (frac[0] >= 0) {
+          let mm = nv1.frac2mm(frac)
+          //console.log(mm[0])
+          const vox = nv1.volumes[1].mm2vox(mm)
+          let idx = nv1.volumes[1].getValue(vox[0], vox[1], vox[2])
+          if ((isFinite(idx)) && (idx !== activeIdx)) {
+            
+            activeIdx = idx
+            let lut = clut.slice() //nv1.volumes[1].colormapLabel.lut
+            lut[(idx * 4)+3] = 200
+            nv1.volumes[1].colormapLabel.lut = lut.slice()
+            nv1.updateGLVolume()
+            document.getElementById("hover").innerHTML = 'Hover: '+ cmap.labels[idx]
+          }
+        }
+      })
     </script>
   </body>
 </html>

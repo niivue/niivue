@@ -21,23 +21,23 @@
         size="128"
       />
       <p>
-        <label for="check1">Radiological</label>
-        <input type="checkbox" id="check1" name="check1" unchecked />
-        <label for="check3">World space</label>
-        <input type="checkbox" id="check3" name="check3" unchecked />
-        <label for="check5">Ruler</label>
-        <input type="checkbox" id="check5" name="check5" unchecked />
-        <label for="check6">Nose left</label>
-        <input type="checkbox" id="check6" name="check6" unchecked />
-        <label for="check7">Colorbar</label>
-        <input type="checkbox" id="check7" name="check7" checked />
-        <label for="check8">Negative colors</label>
-        <input type="checkbox" id="check8" name="check8" checked />
-        <label for="check9">Cube</label>
-        <input type="checkbox" id="check9" name="check9" unchecked />
-        <label for="check10">HighDPI</label>
-        <input type="checkbox" id="check10" name="check10" checked />
-        gamma
+        <label for="radioCheck">Radiological</label>
+        <input type="checkbox" id="radioCheck" unchecked />
+        <label for="mmCheck">&nbsp; World space</label>
+        <input type="checkbox" id="mmCheck" unchecked />
+        <label for="rulerCheck">&nbsp; Ruler</label>
+        <input type="checkbox" id="rulerCheck" unchecked />
+        <label for="sagCheck">&nbsp; Nose left</label>
+        <input type="checkbox" id="sagCheck" unchecked />
+        <label for="colorbarCheck">&nbsp; Colorbar</label>
+        <input type="checkbox" id="colorbarCheck" checked />
+        <label for="negativeCheck">&nbsp; Negative colors</label>
+        <input type="checkbox" id="negativeCheck" checked />
+        <label for="cubeCheck">&nbsp; Cube</label>
+        <input type="checkbox" id="cubeCheck" unchecked />
+        <label for="dpiCheck">&nbsp; HighDPI</label>
+        <input type="checkbox" id="dpiCheck" checked />
+        <label for="gamma">&nbsp; Gamma</label>
         <input
           type="range"
           min="1"
@@ -46,7 +46,7 @@
           class="slider"
           id="gamma"
         />
-        <label for="dragMode">drag mode</label>
+        <label for="dragMode">&nbsp; Drag mode</label>
         <select id="dragMode">
           <option value="contrast">contrast</option>
           <option value="measurement">measurement</option>
@@ -54,121 +54,86 @@
         </select>
       </p>
     </header>
-
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
-      var dropDrag = document.getElementById("dragMode");
-      dropDrag.onchange = function () {
+      import * as niivue from "../dist/index.js"
+      dragMode.onchange = function () {
         switch (document.getElementById("dragMode").value) {
           case "none":
-            nv1.opts.dragMode = nv1.dragModes.none;
-            break;
+            nv1.opts.dragMode = nv1.dragModes.none
+            break
           case "contrast":
-            nv1.opts.dragMode = nv1.dragModes.contrast;
-            break;
+            nv1.opts.dragMode = nv1.dragModes.contrast
+            break
           case "measurement":
-            nv1.opts.dragMode = nv1.dragModes.measurement;
-            break;
-          case "pan":
-            nv1.opts.dragMode = nv1.dragModes.pan;
-            break;
+            nv1.opts.dragMode = nv1.dragModes.measurement
+            break
         }
-      };
-      var slider = document.getElementById("gamma");
-      slider.oninput = function () {
-        nv1.setGamma(0.1 * this.value);
-      };
-      document
-        .getElementById("check1")
-        .addEventListener("change", doCheckClick);
-      function doCheckClick() {
-        nv1.setRadiologicalConvention(this.checked);
       }
-      document
-        .getElementById("check3")
-        .addEventListener("change", doCheck3Click);
-      function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
+      gamma.oninput = function () {
+        nv1.setGamma(0.1 * this.value)
       }
-      document
-        .getElementById("check5")
-        .addEventListener("change", doCheck5Click);
-      function doCheck5Click() {
-        nv1.opts.isRuler = this.checked;
-        nv1.drawScene();
+      radioCheck.onchange = function () {
+        nv1.setRadiologicalConvention(this.checked)
       }
-      document
-        .getElementById("check6")
-        .addEventListener("change", doCheck6Click);
-      function doCheck6Click() {
-        nv1.opts.sagittalNoseLeft = this.checked;
-        nv1.drawScene();
+      mmCheck.onchange = function () {
+        nv1.setSliceMM(this.checked)
       }
-      document
-        .getElementById("check7")
-        .addEventListener("change", doCheck7Click);
-      function doCheck7Click() {
-        nv1.opts.isColorbar = this.checked;
-        nv1.drawScene();
+      rulerCheck.onchange = function () {
+        nv1.opts.isRuler = this.checked
+        nv1.drawScene()
       }
-      document
-        .getElementById("check8")
-        .addEventListener("change", doCheck8Click);
-      function doCheck8Click() {
-        if (this.checked) nv1.setColormapNegative(nv1.volumes[1].id, "winter");
-        else nv1.setColormapNegative(nv1.volumes[1].id, "");
-        nv1.drawScene();
+      sagCheck.onchange = function () {
+        nv1.opts.sagittalNoseLeft = this.checked
+        nv1.drawScene()
       }
-      document
-        .getElementById("check9")
-        .addEventListener("change", doCheck9Click);
-      function doCheck9Click() {
-        nv1.opts.isOrientCube = this.checked;
-        nv1.drawScene();
+      colorbarCheck.onchange = function () {
+        nv1.opts.isColorbar = this.checked
+        nv1.drawScene()
       }
-      document
-        .getElementById("check10")
-        .addEventListener("change", doCheck10Click);
-      function doCheck10Click() {
-        nv1.setHighResolutionCapable(this.checked);
+      negativeCheck.onchange = function () {
+        if (this.checked) nv1.setColormapNegative(nv1.volumes[1].id, "winter")
+        else nv1.setColormapNegative(nv1.volumes[1].id, "")
+        nv1.drawScene()
+      }
+      cubeCheck.onchange = function () {
+        nv1.opts.isOrientCube = this.checked
+        nv1.drawScene()
+      }
+      dpiCheck.onchange = function () {
+        nv1.setHighResolutionCapable(this.checked)
+      }
+      str.onkeyup = function () {
+        nv1.setSliceMosaicString(txt.value)
+      }
+      about.onclick = function () {
+        window.alert(
+          "Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R)."
+        )
       }
       var volumeList1 = [
         {
           url: "../images/fslmean.nii.gz",
           colormap: "gray",
-          opacity: 1,
-          visible: true,
         },
         {
           url: "../images/fslt.nii.gz",
           colormap: "warm",
           colormapNegative: "winter",
-          opacity: 1,
           cal_min: 1,
           cal_max: 6,
-          visible: true,
         },
-      ];
-      var nv1 = new niivue.Niivue({ backColor: [1, 1, 1, 1] });
-      nv1.attachTo("gl1");
-      nv1.loadVolumes(volumeList1);
-      var txt = document.getElementById("str");
-      nv1.setSliceType(nv1.sliceTypeAxial);
-      nv1.opts.isColorbar = true;
-      nv1.setSliceMosaicString(txt.value);
-      document.getElementById("str").addEventListener("keyup", doStr);
-      function doStr() {
-        nv1.setSliceMosaicString(txt.value);
-      }
-      document.getElementById("about").addEventListener("click", doAbout);
-      function doAbout() {
-        window.alert(
-          "Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R)."
-        );
-      }
+      ]
+      var nv1 = new niivue.Niivue({ backColor: [1, 1, 1, 1] })
+      nv1.attachTo("gl1")
+      await nv1.loadVolumes(volumeList1)
+      nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
+      var txt = document.getElementById("str")
+      nv1.setSliceType(nv1.sliceTypeAxial)
+      nv1.opts.isColorbar = true
+      nv1.setSliceMosaicString(txt.value)
     </script>
   </body>
 </html>
