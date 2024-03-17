@@ -111,8 +111,6 @@ export type ImageFromUrlOptions = {
   trustCalMinMax?: boolean
   // the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges, defaults to 0.02)
   percentileFrac?: number
-  // whether or not this image is to be visible (defaults to true)
-  visible?: boolean
   // whether or not to use QForm over SForm constructing the NVImage instance (defaults to false)
   useQFormNotSForm?: boolean
   // if true, values below cal_min are shown as translucent, not transparent (defaults to false)
@@ -158,8 +156,6 @@ export type ImageFromFileOptions = {
   percentileFrac?: number
   // whether or not to ignore zero voxels in setting the robust range of display values
   ignoreZeroVoxels?: boolean
-  // whether or not this image is to be visible
-  visible?: boolean
   // whether or not to use QForm instead of SForm during construction
   useQFormNotSForm?: boolean
   // colormap negative for the image
@@ -189,8 +185,6 @@ export type ImageFromBase64 = {
   percentileFrac?: number
   // whether or not to ignore zero voxels in setting the robust range of display values
   ignoreZeroVoxels?: boolean
-  // whether or not this image is to be visible
-  visible?: boolean
 }
 
 export type ImageMetadata = {
@@ -230,7 +224,6 @@ export const NVImageFromUrlOptions = (
   trustCalMinMax = true,
   percentileFrac = 0.02,
   ignoreZeroVoxels = false,
-  visible = true,
   useQFormNotSForm = false,
   colormapNegative = '',
   frame4D = 0,
@@ -253,7 +246,6 @@ export const NVImageFromUrlOptions = (
     trustCalMinMax,
     percentileFrac,
     ignoreZeroVoxels,
-    visible,
     useQFormNotSForm,
     colormapNegative,
     imageType,

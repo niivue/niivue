@@ -48,7 +48,6 @@ export class NVImage {
   cal_minNeg: number
   cal_maxNeg: number
   colorbarVisible = true
-  visible: boolean
   modulationImage: number | null = null
   modulateAlpha = 0 // if !=0, mod transparency with expon power |Alpha|
   // TODO this is some Daikon internal thing
@@ -138,7 +137,6 @@ export class NVImage {
    * @param trustCalMinMax - whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
    * @param percentileFrac - the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
    * @param ignoreZeroVoxels - whether or not to ignore zero voxels in setting the robust range of display values
-   * @param visible - whether or not this image is to be visible
    * @param useQFormNotSForm - give precedence to QForm (Quaternion) or SForm (Matrix)
    * @param colormapNegative - a color map to use for symmetrical negative intensities
    * @param frame4D - volume displayed, 0 indexed, must be less than nFrame4D
@@ -166,7 +164,6 @@ export class NVImage {
     trustCalMinMax = true,
     percentileFrac = 0.02,
     ignoreZeroVoxels = false,
-    visible = true,
     // TODO this was marked as true by default in the docs!
     useQFormNotSForm = false,
     colormapNegative = '',
@@ -190,7 +187,6 @@ export class NVImage {
     this.cal_minNeg = cal_minNeg
     this.cal_maxNeg = cal_maxNeg
     this.colorbarVisible = colorbarVisible
-    this.visible = visible
 
     // TODO this was missing
     this.useQFormNotSForm = useQFormNotSForm
@@ -2644,7 +2640,6 @@ export class NVImage {
     trustCalMinMax = true,
     percentileFrac = 0.02,
     ignoreZeroVoxels = false,
-    visible = true,
     useQFormNotSForm = false,
     colormapNegative = '',
     frame4D = 0,
@@ -2798,7 +2793,6 @@ export class NVImage {
       trustCalMinMax,
       percentileFrac,
       ignoreZeroVoxels,
-      visible,
       useQFormNotSForm,
       colormapNegative,
       frame4D,
@@ -2845,7 +2839,6 @@ export class NVImage {
     trustCalMinMax = true,
     percentileFrac = 0.02,
     ignoreZeroVoxels = false,
-    visible = true,
     useQFormNotSForm = false,
     colormapNegative = '',
     frame4D = 0,
@@ -2938,7 +2931,6 @@ export class NVImage {
         trustCalMinMax,
         percentileFrac,
         ignoreZeroVoxels,
-        visible,
         useQFormNotSForm,
         colormapNegative,
         frame4D,
@@ -2973,8 +2965,7 @@ export class NVImage {
     cal_max = NaN,
     trustCalMinMax = true,
     percentileFrac = 0.02,
-    ignoreZeroVoxels = false,
-    visible = true
+    ignoreZeroVoxels = false
   }: ImageFromBase64): NVImage {
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
     function base64ToArrayBuffer(base64: string): ArrayBuffer {
@@ -3000,8 +2991,7 @@ export class NVImage {
         cal_max,
         trustCalMinMax,
         percentileFrac,
-        ignoreZeroVoxels,
-        visible
+        ignoreZeroVoxels
       )
     } catch (err) {
       log.debug(err)
@@ -3290,7 +3280,6 @@ export class NVImage {
       this.trustCalMinMax, // trustCalMinMax,
       this.percentileFrac, // percentileFrac
       this.ignoreZeroVoxels, // ignoreZeroVoxels
-      this.visible, // visible
       this.useQFormNotSForm, // useQFormNotSForm
       this.colormapNegative, // colormapNegative
       this.frame4D,
