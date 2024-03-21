@@ -240,28 +240,27 @@ const LEFT_MOUSE_BUTTON = 0
 const CENTER_MOUSE_BUTTON = 1
 const RIGHT_MOUSE_BUTTON = 2
 
-
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
 // gl.TEXTURE0..31 are constants 0x84C0..0x84DF = 33984..34015
 // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
-//persistent textures
-const TEXTURE0_BACK_VOL      = 33984
-const TEXTURE1_COLORMAPS     = 33985
-const TEXTURE2_OVERLAY_VOL   = 33986
-const TEXTURE3_FONT          = 33987
-const TEXTURE4_THUMBNAIL     = 33988
-const TEXTURE5_MATCAP        = 33989
-const TEXTURE6_GRADIENT      = 33990
-const TEXTURE7_DRAW          = 33991
-//subsequent textures only used transiently
+// persistent textures
+const TEXTURE0_BACK_VOL = 33984
+const TEXTURE1_COLORMAPS = 33985
+const TEXTURE2_OVERLAY_VOL = 33986
+const TEXTURE3_FONT = 33987
+const TEXTURE4_THUMBNAIL = 33988
+const TEXTURE5_MATCAP = 33989
+const TEXTURE6_GRADIENT = 33990
+const TEXTURE7_DRAW = 33991
+// subsequent textures only used transiently
 const TEXTURE8_GRADIENT_TEMP = 33992
-const TEXTURE9_ORIENT        = 33993
-const TEXTURE10_BLEND        = 33994
-const TEXTURE11_GC_BACK      = 33995
+const TEXTURE9_ORIENT = 33993
+const TEXTURE10_BLEND = 33994
+const TEXTURE11_GC_BACK = 33995
 const TEXTURE12_GC_STRENGTH0 = 33996
 const TEXTURE13_GC_STRENGTH1 = 33997
-const TEXTURE14_GC_LABEL0    = 33998
-const TEXTURE15_GC_LABEL1    = 33999
+const TEXTURE14_GC_LABEL0 = 33998
+const TEXTURE15_GC_LABEL1 = 33999
 
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
@@ -3953,7 +3952,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
   drawGrowCut(): void {
-    //this compute shader transiently requires 5 3D Textures:
+    // this compute shader transiently requires 5 3D Textures:
     // TEXTURE11_GC_BACK      = 33995 background voxel intensity
     // TEXTURE12_GC_STRENGTH0 = 33996 weighting read/write
     // TEXTURE13_GC_STRENGTH1 = 33997 weighting write/read
@@ -5172,7 +5171,7 @@ export class Niivue {
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
-    gl.uniform1i(sobelShader.uniforms.intensityVol, 8) //TEXTURE8_GRADIENT_TEMP
+    gl.uniform1i(sobelShader.uniforms.intensityVol, 8) // TEXTURE8_GRADIENT_TEMP
     const sobelRadius = 0.7
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
     gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2])
@@ -5195,7 +5194,7 @@ export class Niivue {
     gl.deleteTexture(tempTex3D)
     gl.deleteBuffer(vbo2)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-  } 
+  }
 
   /**
    * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
@@ -5452,7 +5451,7 @@ export class Niivue {
     this.gl.viewport(0, 0, this.back.dims![1], this.back.dims![2]) // output in background dimensions
     this.gl.disable(this.gl.BLEND)
     const tempTex3D = this.gl.createTexture()
-   this.gl.activeTexture(TEXTURE9_ORIENT) // Temporary 3D Texture TEXTURE9_ORIENT
+    this.gl.activeTexture(TEXTURE9_ORIENT) // Temporary 3D Texture TEXTURE9_ORIENT
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
@@ -5611,7 +5610,7 @@ export class Niivue {
       if (layer > 1) {
         // we can not simultaneously read and write to the same texture.
         // therefore, we must clone the overlay texture when we wish to add another layer
-        // copy previous overlay texture to blend texture 
+        // copy previous overlay texture to blend texture
         blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims!, true)
         this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
         for (let i = 0; i < this.back.dims![3]; i++) {
@@ -5695,9 +5694,9 @@ export class Niivue {
     this.gl.uniform1f(orientShader.uniforms.cal_minNeg ?? null, mnNeg)
     this.gl.uniform1f(orientShader.uniforms.cal_maxNeg ?? null, mxNeg)
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
-    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 9) //TEXTURE9_ORIENT
-    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 10) //TEXTURE10_BLEND
-    this.gl.uniform1i(orientShader.uniforms.colormap ?? null, 1) 
+    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 9) // TEXTURE9_ORIENT
+    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 10) // TEXTURE10_BLEND
+    this.gl.uniform1i(orientShader.uniforms.colormap ?? null, 1)
     // this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
     this.gl.uniform1f(orientShader.uniforms.scl_inter ?? null, hdr.scl_inter)
     this.gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope)
