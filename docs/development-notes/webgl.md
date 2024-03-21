@@ -10,16 +10,24 @@ WebGL is a modern shader-based language. It lacks the fixed function pipeline, q
 
 ##### Textures
 
-The term Textures refers to bitmap images that are stored on the graphics card. WebGL2 can support 1D, 2D, and 3D textures. The WebGL context can only have a limited number of textures active at one time (with the command `activeTexture` deterimining which textures are available). WebGL provides a minimum of [8 MAX_COMBINED_TEXTURE_IMAGE_UNITS](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/activeTexture). You can think of these active textures as slots that are available for the shaders to access. NiiVue consistently uses the same slots for specific textures. This means that each draw call does not need to explicitly set the active textures. Therefore, these slots should be considered reserved and not used for other functions.
+The term Textures refers to bitmap images that are stored on the graphics card. WebGL2 can support 1D, 2D, and 3D textures. The WebGL context can only have a limited number of textures active at one time (with the command `activeTexture` deterimining which textures are available). A WebGL 2 context provides a minimum of [32 total loaded textures, with a fragment program able to access at least 16 concurrently](https://webgl2fundamentals.org/webgl/lessons/webgl-cross-platform-issues.html#device-limits). You can think of these active textures as slots that are available for the shaders to access. NiiVue consistently uses the same slots for specific textures. While this is not required by WebGL, it simplifies the code (e.g. otherwise many calls to bind textures to specific slots of the style `gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)`). This means that each draw call does not need to explicitly set the active textures. Therefore, slots 0..7 should be considered reserved and not used for other functions. The code currently uses slots 8..15 transiently, so these could be easily used by other functions.
 
-- TEXTURE0: Background volume. This 3D scalar bitmap stores the voxel intensities of the background image.
-- TEXTURE1: Active colormaps. This 2D RGBA bitmap converts the scalar volume voxel intensities to RGBA values (e.g. Grayscale, Viridis). Note that each voxelwise layer can have two unique colormaps (for positive and negative values) and meshes can also have colormaps.
-- TEXTURE2: Overlay volumes. This 3D RGBA bitmap stores the blended values of all loaded overlays.
-- TEXTURE3: Font. This is a 2D bitmap that stores the [multi-channel signed distance field typeface](https://github.com/Chlumsky/msdfgen).
-- TEXTURE4: Thumbnail. This is a 2D bitmap that can be rapidly displayed. When a user clicks on the thumbnail the (large and slow) volumes and meshes will be loaded.
-- TEXTURE5: Matcap. This is a 2D bitmap used for exclusively by the matcap mesh shader (transiently enabled with the shader, so available for other functions). It is also used as a temporary 2D texture: this is used to blend multiple overlays into a single texture (TEXTURE2). 
-- TEXTURE6: Temporary 3D texture: this is used for compute shaders to reorient volumes (e.g. reformat an image from ASR to LIP orientation). It is also used as for volume rendering shaders that use a gradient map for lighting.
-- TEXTURE7: Drawing texture: this stores any active drawing, having the same resolution as TEXTURE0.
+- `TEXTURE0_BACK_VOL`: Background volume. This 3D scalar bitmap stores the voxel intensities of the background image.
+- `TEXTURE1_COLORMAPS`: Active colormaps. This 2D RGBA bitmap converts the scalar volume voxel intensities to RGBA values (e.g. Grayscale, Viridis). Note that each voxelwise layer can have two unique colormaps (for positive and negative values) and meshes can also have colormaps.
+- `TEXTURE2_OVERLAY_VOL`: Overlay volumes. This 3D RGBA bitmap stores the blended values of all loaded overlays.
+- `TEXTURE3_FONT`: Font. This is a 2D bitmap that stores the [multi-channel signed distance field typeface](https://github.com/Chlumsky/msdfgen).
+- `TEXTURE4_THUMBNAIL`: Thumbnail. This is a 2D bitmap that can be rapidly displayed. When a user clicks on the thumbnail the (large and slow) volumes and meshes will be loaded.
+- `TEXTURE5_MATCAP`: Matcap. This is a 2D bitmap used for exclusively by the matcap mesh shader (transiently enabled with the shader, so available for other functions). It is also used as a temporary 2D texture: this is used to blend multiple overlays into a single texture (TEXTURE2). 
+- `TEXTURE6_GRADIENT`: Gradient texture for [shiny volume rendering shaders](https://niivue.github.io/niivue/features/shiny.volumes.html) that use a gradient map for lighting.
+- `TEXTURE7_DRAW`: Drawing texture: this stores any active drawing, having the same resolution as TEXTURE0.
+- `TEXTURE8_GRADIENT_TEMP`: Transient texture used when generating TEXTURE6_GRADIENT.
+- `TEXTURE9_ORIENT`: Transient texture used when re-orienting voxel-based volumes to RAS orientation.
+- `TEXTURE10_BLEND`: Transient texture for blending different overlay volumes into the single TEXTURE2_OVERLAY_VOL.
+- `TEXTURE11_GC_BACK`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: background voxel intensity.
+- `TEXTURE12_GC_STRENGTH0`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: edge strength that ping-pongs between read and write.
+- `TEXTURE13_GC_STRENGTH1`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: edge strength that ping-pongs between write and read.
+- `TEXTURE14_GC_LABEL0: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: drawing color that ping-pongs between read and write.
+- `TEXTURE15_GC_LABEL1`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: drawing color that ping-pongs between write and read.
 
 ##### Color Schemes
 

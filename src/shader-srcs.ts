@@ -1093,28 +1093,28 @@ export const fragGrowCutShader = `#version 300 es
 	uniform int finalPass;
 	uniform float coordZ;
 	uniform lowp sampler3D in3D;
-	uniform highp isampler3D inputTexture0; // background
-	uniform highp isampler3D inputTexture1; // label
-	uniform highp isampler3D inputTexture2; // strength
+	uniform highp isampler3D backTex; // background
+	uniform highp isampler3D labelTex; // label
+	uniform highp isampler3D strengthTex; // strength
 void main(void) {
 	vec3 interpolatedTextureCoordinate = vec3(TexCoord.xy, coordZ);
-	ivec3 size = textureSize(inputTexture0, 0);
+	ivec3 size = textureSize(backTex, 0);
 	ivec3 texelIndex = ivec3(floor(interpolatedTextureCoordinate * vec3(size)));
-	int background = texelFetch(inputTexture0, texelIndex, 0).r;
-	label = texelFetch(inputTexture1, texelIndex, 0).r;
-	strength = texelFetch(inputTexture2, texelIndex, 0).r;
+	int background = texelFetch(backTex, texelIndex, 0).r;
+	label = texelFetch(labelTex, texelIndex, 0).r;
+	strength = texelFetch(strengthTex, texelIndex, 0).r;
 	for (int k = -1; k <= 1; k++) {
 		for (int j = -1; j <= 1; j++) {
 			for (int i = -1; i <= 1; i++) {
 				if (i != 0 && j != 0 && k != 0) {
 					ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
-					int neighborBackground = texelFetch(inputTexture0, neighborIndex, 0).r;
-					int neighborStrength = texelFetch(inputTexture2, neighborIndex, 0).r;
+					int neighborBackground = texelFetch(backTex, neighborIndex, 0).r;
+					int neighborStrength = texelFetch(strengthTex, neighborIndex, 0).r;
 					int strengthCost = abs(neighborBackground - background);
 					int takeoverStrength = neighborStrength - strengthCost;
 					if (takeoverStrength > strength) {
 						strength = takeoverStrength;
-						label = texelFetch(inputTexture1, neighborIndex, 0).r;
+						label = texelFetch(labelTex, neighborIndex, 0).r;
 					}
 				}
 			}
@@ -1128,7 +1128,7 @@ void main(void) {
 		for (int j = -1; j <= 1; j++)
 			for (int i = -1; i <= 1; i++) {
 				ivec3 neighborIndex = texelIndex + ivec3(i,j,k);
-				int ilabel = texelFetch(inputTexture1, neighborIndex, 0).r;
+				int ilabel = texelFetch(labelTex, neighborIndex, 0).r;
 				if ((ilabel < 0) || (ilabel > 3))
 					ok = 0;
 				else
@@ -1143,7 +1143,7 @@ void main(void) {
 			maxIdx = i;
 	}
 	label = maxIdx;
-}` // inputTexture0
+}`
 
 export const vertSurfaceShader = `#version 300 es
 layout(location=0) in vec3 pos;
