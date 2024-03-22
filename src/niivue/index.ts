@@ -240,6 +240,28 @@ const LEFT_MOUSE_BUTTON = 0
 const CENTER_MOUSE_BUTTON = 1
 const RIGHT_MOUSE_BUTTON = 2
 
+// https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
+// gl.TEXTURE0..31 are constants 0x84C0..0x84DF = 33984..34015
+// https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
+// persistent textures
+const TEXTURE0_BACK_VOL = 33984
+const TEXTURE1_COLORMAPS = 33985
+const TEXTURE2_OVERLAY_VOL = 33986
+const TEXTURE3_FONT = 33987
+const TEXTURE4_THUMBNAIL = 33988
+const TEXTURE5_MATCAP = 33989
+const TEXTURE6_GRADIENT = 33990
+const TEXTURE7_DRAW = 33991
+// subsequent textures only used transiently
+const TEXTURE8_GRADIENT_TEMP = 33992
+const TEXTURE9_ORIENT = 33993
+const TEXTURE10_BLEND = 33994
+const TEXTURE11_GC_BACK = 33995
+const TEXTURE12_GC_STRENGTH0 = 33996
+const TEXTURE13_GC_STRENGTH1 = 33997
+const TEXTURE14_GC_LABEL0 = 33998
+const TEXTURE15_GC_LABEL1 = 33999
+
 /**
  * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
  */
@@ -2350,7 +2372,7 @@ export class Niivue {
     const perm = drawingBitmap.permRAS!
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims!, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims!, true)
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -3882,7 +3904,7 @@ export class Niivue {
     this.drawBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, this.back.dims, true)
+    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
     this.refreshDrawing(false)
   }
 
@@ -3930,6 +3952,12 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw2.html|live demo usage}
    */
   drawGrowCut(): void {
+    // this compute shader transiently requires 5 3D Textures:
+    // TEXTURE11_GC_BACK      = 33995 background voxel intensity
+    // TEXTURE12_GC_STRENGTH0 = 33996 weighting read/write
+    // TEXTURE13_GC_STRENGTH1 = 33997 weighting write/read
+    // TEXTURE14_GC_LABEL0    = 33998 drawing color read/write
+    // TEXTURE15_GC_LABEL1    = 33999 drawing color write/read
     if (!this.back || !this.back.dims) {
       // TODO gl and back etc should be centrally guaranteed to be set
       throw new Error('back not defined')
@@ -3947,31 +3975,30 @@ export class Niivue {
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]) // output in background dimensions
     gl.disable(gl.BLEND)
-    // we need to devote 5 textures to this shader 3,4,5,6,7
     let img16 = img2ras16(this.back)
-    const background = this.r16Tex(null, gl.TEXTURE3, this.back.dims, img16)
+    const background = this.r16Tex(null, TEXTURE11_GC_BACK, this.back.dims, img16)
     for (let i = 1; i < nv; i++) {
       img16[i] = this.drawBitmap[i]
     }
-    const label0 = this.r16Tex(null, gl.TEXTURE6, this.back.dims, img16)
-    const label1 = this.r16Tex(null, gl.TEXTURE7, this.back.dims, img16) // TEXTURE7 = draw Texture
+    const label0 = this.r16Tex(null, TEXTURE14_GC_LABEL0, this.back.dims, img16)
+    const label1 = this.r16Tex(null, TEXTURE15_GC_LABEL1, this.back.dims, img16)
     const kMAX_STRENGTH = 10000
     for (let i = 1; i < nv; i++) {
       if (img16[i] > 0) {
         img16[i] = kMAX_STRENGTH
       }
     }
-    const strength0 = this.r16Tex(null, gl.TEXTURE4, this.back.dims, img16)
-    const strength1 = this.r16Tex(null, gl.TEXTURE5, this.back.dims, img16)
+    const strength0 = this.r16Tex(null, TEXTURE12_GC_STRENGTH0, this.back.dims, img16)
+    const strength1 = this.r16Tex(null, TEXTURE13_GC_STRENGTH1, this.back.dims, img16)
     gl.bindVertexArray(this.genericVAO)
     const shader = this.growCutShader!
     shader.use(gl)
     const iterations = 128 // will run 2x this value
     gl.uniform1i(shader.uniforms.finalPass, 0)
-    gl.uniform1i(shader.uniforms.inputTexture0, 3) // background is TEXTURE3
+    gl.uniform1i(shader.uniforms.backTex, 11) // background is TEXTURE11_GC_BACK
     for (let j = 0; j < iterations; j++) {
-      gl.uniform1i(shader.uniforms.inputTexture1, 6) // label0 is TEXTURE6
-      gl.uniform1i(shader.uniforms.inputTexture2, 4) // strength0 is TEXTURE4
+      gl.uniform1i(shader.uniforms.labelTex, 14) // label0 is TEXTURE14_GC_LABEL0
+      gl.uniform1i(shader.uniforms.strengthTex, 12) // strength0 is TEXTURE12_GC_STRENGTH0
       for (let i = 0; i < this.back.dims[3]; i++) {
         const coordZ = (1 / this.back.dims[3]) * (i + 0.5)
         gl.uniform1f(shader.uniforms.coordZ, coordZ)
@@ -3982,15 +4009,14 @@ export class Niivue {
         if (status !== gl.FRAMEBUFFER_COMPLETE) {
           log.error('Incomplete framebuffer')
         }
-
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
       // reverse order strength1/label1 and strength0/label0 for reading and writing:
       if (j === iterations - 1) {
         gl.uniform1i(shader.uniforms.finalPass, 1)
       }
-      gl.uniform1i(shader.uniforms.inputTexture1, 7) // label1 is TEXTURE7
-      gl.uniform1i(shader.uniforms.inputTexture2, 5) // strength1 is TEXTURE5
+      gl.uniform1i(shader.uniforms.labelTex, 15) // label1 is TEXTURE15_GC_LABEL1
+      gl.uniform1i(shader.uniforms.strengthTex, 13) // strength1 is TEXTURE13_GC_STRENGTH1
       for (let i = 0; i < this.back.dims[3]; i++) {
         const coordZ = (1 / this.back.dims[3]) * (i + 0.5)
         gl.uniform1f(shader.uniforms.coordZ, coordZ)
@@ -4037,16 +4063,6 @@ export class Niivue {
     for (let i = 1; i < nv; i++) {
       this.drawBitmap[i] = img16[i]
     }
-    // clean up
-    // restore textures
-    gl.activeTexture(gl.TEXTURE2)
-    gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
-    gl.activeTexture(gl.TEXTURE3)
-    gl.bindTexture(gl.TEXTURE_2D, this.fontTexture)
-    gl.activeTexture(gl.TEXTURE4)
-    gl.bindTexture(gl.TEXTURE_2D, this.bmpTexture)
-    gl.activeTexture(gl.TEXTURE7)
-    gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
     gl.deleteTexture(background)
     gl.deleteTexture(strength0)
     gl.deleteTexture(strength1)
@@ -4535,7 +4551,7 @@ export class Niivue {
    */
   closeDrawing(): void {
     this.drawClearAllUndoBitmaps()
-    this.rgbaTex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true)
+    this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
     this.drawBitmap = null
     this.drawScene()
   }
@@ -4563,7 +4579,7 @@ export class Niivue {
     } else if (vx !== this.drawBitmap.length) {
       log.warn('Drawing bitmap must match the background image')
     }
-    this.gl.activeTexture(this.gl.TEXTURE7)
+    this.gl.activeTexture(TEXTURE7_DRAW)
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.gl.texSubImage3D(
       this.gl.TEXTURE_3D,
@@ -4678,11 +4694,11 @@ export class Niivue {
           this.bmpTexture = this.gl.createTexture()
           pngTexture = this.bmpTexture
           this.bmpTextureWH = img.width / img.height
-          this.gl.activeTexture(this.gl.TEXTURE4)
+          this.gl.activeTexture(TEXTURE4_THUMBNAIL)
           this.bmpShader.use(this.gl)
           this.gl.uniform1i(this.bmpShader.uniforms.bmpTexture, 4)
         } else if (textureNum === 5) {
-          this.gl.activeTexture(this.gl.TEXTURE5)
+          this.gl.activeTexture(TEXTURE5_MATCAP)
           if (this.matCapTexture !== null) {
             this.gl.deleteTexture(this.matCapTexture)
           }
@@ -4690,7 +4706,7 @@ export class Niivue {
           pngTexture = this.matCapTexture
         } else {
           this.fontShader!.use(this.gl)
-          this.gl.activeTexture(this.gl.TEXTURE3)
+          this.gl.activeTexture(TEXTURE3_FONT)
           this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
           if (this.fontTexture !== null) {
             this.gl.deleteTexture(this.fontTexture)
@@ -4967,9 +4983,9 @@ export class Niivue {
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
 
     // register volume and overlay textures
-    this.volumeTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, [2, 2, 2, 2], true)
-    this.overlayTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, [2, 2, 2, 2], true)
-    this.drawTexture = this.r8Tex(this.drawTexture, this.gl.TEXTURE7, [2, 2, 2, 2], true)
+    this.volumeTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, [2, 2, 2, 2], true)
+    this.overlayTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, [2, 2, 2, 2], true)
+    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
 
     const rectStrip = [
       1,
@@ -5132,12 +5148,11 @@ export class Niivue {
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
-    const tempTex3D = this.rgbaTex(null, this.gl.TEXTURE5, hdr.dims)
-    // tempTex3D = this.bindBlankGL(hdr);
+    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
     const blurShader = this.blurShader!
     blurShader.use(gl)
 
-    gl.activeTexture(gl.TEXTURE0)
+    gl.activeTexture(TEXTURE0_BACK_VOL)
     gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
     const blurRadius = 0.7
     gl.uniform1i(blurShader.uniforms.intensityVol, 0)
@@ -5154,20 +5169,20 @@ export class Niivue {
     }
     const sobelShader = this.sobelShader!
     sobelShader.use(gl)
-    gl.activeTexture(gl.TEXTURE1)
+    gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
-    gl.uniform1i(sobelShader.uniforms.intensityVol, 1)
+    gl.uniform1i(sobelShader.uniforms.intensityVol, 8) // TEXTURE8_GRADIENT_TEMP
     const sobelRadius = 0.7
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
     gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2])
     gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3])
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
-    gl.activeTexture(gl.TEXTURE0)
+    gl.activeTexture(TEXTURE0_BACK_VOL)
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture)
     }
-    this.gradientTexture = this.rgbaTex(this.gradientTexture, this.gl.TEXTURE6, hdr.dims)
+    this.gradientTexture = this.rgbaTex(this.gradientTexture, TEXTURE6_GRADIENT, hdr.dims)
     for (let i = 0; i < hdr.dims[3] - 1; i++) {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(sobelShader.uniforms.coordZ, coordZ)
@@ -5367,7 +5382,7 @@ export class Niivue {
       this.back.matRAS = overlayItem.matRAS
       this.back.dims = overlayItem.dimsRAS
       this.back.pixDims = overlayItem.pixDimsRAS
-      outTexture = this.rgbaTex(this.volumeTexture, this.gl.TEXTURE0, overlayItem.dimsRAS!) // this.back.dims)
+      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!) // this.back.dims)
 
       const { volScale, vox } = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
 
@@ -5423,7 +5438,7 @@ export class Niivue {
       )
       mat4.invert(mtx, mtx)
       if (layer === 1) {
-        outTexture = this.rgbaTex(this.overlayTexture, this.gl.TEXTURE2, this.back!.dims!)
+        outTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, this.back!.dims!)
         this.overlayTexture = outTexture
         this.overlayTextureID = outTexture
       } else {
@@ -5436,7 +5451,7 @@ export class Niivue {
     this.gl.viewport(0, 0, this.back.dims![1], this.back.dims![2]) // output in background dimensions
     this.gl.disable(this.gl.BLEND)
     const tempTex3D = this.gl.createTexture()
-    this.gl.activeTexture(this.gl.TEXTURE6) // Temporary 3D Texture
+    this.gl.activeTexture(TEXTURE9_ORIENT) // Temporary 3D Texture TEXTURE9_ORIENT
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
@@ -5596,16 +5611,16 @@ export class Niivue {
         // we can not simultaneously read and write to the same texture.
         // therefore, we must clone the overlay texture when we wish to add another layer
         // copy previous overlay texture to blend texture
-        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims!, true)
+        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims!, true)
         this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
         for (let i = 0; i < this.back.dims![3]; i++) {
           // n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
           this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.overlayTexture, 0, i) // read from existing overlay texture 2
-          this.gl.activeTexture(this.gl.TEXTURE5) // write to blend texture 5
+          this.gl.activeTexture(TEXTURE10_BLEND) // write to blend texture 5
           this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i, 0, 0, this.back.dims![1], this.back.dims![2])
         }
       } else {
-        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2], true)
+        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, [2, 2, 2, 2], true)
       }
     } else {
       if (layer > 1) {
@@ -5613,7 +5628,7 @@ export class Niivue {
           throw new Error('back.dims undefined')
         }
         // use pass-through shader to copy previous color to temporary 2D texture
-        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, this.back.dims)
+        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims)
         this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
         const passShader = this.passThroughShader!
         passShader.use(this.gl)
@@ -5627,11 +5642,11 @@ export class Niivue {
           this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
         }
       } else {
-        blendTexture = this.rgbaTex(blendTexture, this.gl.TEXTURE5, [2, 2, 2, 2])
+        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, [2, 2, 2, 2])
       }
     }
     orientShader!.use(this.gl)
-    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.activeTexture(TEXTURE1_COLORMAPS)
     // for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
     let colormapLabelTexture = null
     if (overlayItem.colormapLabel !== null && overlayItem.colormapLabel.lut.length > 7) {
@@ -5679,8 +5694,8 @@ export class Niivue {
     this.gl.uniform1f(orientShader.uniforms.cal_minNeg ?? null, mnNeg)
     this.gl.uniform1f(orientShader.uniforms.cal_maxNeg ?? null, mxNeg)
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
-    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 6)
-    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 5)
+    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 9) // TEXTURE9_ORIENT
+    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 10) // TEXTURE10_BLEND
     this.gl.uniform1i(orientShader.uniforms.colormap ?? null, 1)
     // this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
     this.gl.uniform1f(orientShader.uniforms.scl_inter ?? null, hdr.scl_inter)
@@ -5865,11 +5880,11 @@ export class Niivue {
     this.gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
     if (colormapLabelTexture !== null) {
       this.gl.deleteTexture(colormapLabelTexture)
-      this.gl.activeTexture(this.gl.TEXTURE1)
+      this.gl.activeTexture(TEXTURE1_COLORMAPS)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
     }
     this.gl.uniform1i(shader.uniforms.drawing, 7)
-    this.gl.activeTexture(this.gl.TEXTURE7)
+    this.gl.activeTexture(TEXTURE7_DRAW)
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.updateInterpolation(layer)
     //
@@ -6071,7 +6086,7 @@ export class Niivue {
       return null
     }
     texture = this.gl.createTexture()
-    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.activeTexture(TEXTURE1_COLORMAPS)
     this.gl.bindTexture(this.gl.TEXTURE_2D, texture)
     this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, nCol, nRow)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
@@ -6821,7 +6836,7 @@ export class Niivue {
     }
 
     this.colorbarShader.use(this.gl)
-    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.activeTexture(TEXTURE1_COLORMAPS)
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
@@ -7092,9 +7107,9 @@ export class Niivue {
       interp = this.gl.NEAREST
     }
     if (layer === 0) {
-      this.gl.activeTexture(this.gl.TEXTURE0) // background
+      this.gl.activeTexture(TEXTURE0_BACK_VOL) // background
     } else {
-      this.gl.activeTexture(this.gl.TEXTURE2) // overlay
+      this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
     }
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
@@ -8024,17 +8039,17 @@ export class Niivue {
       shader.use(this.gl)
       // next lines optional: these textures should be bound by default
       // these lines can cause warnings, e.g. if drawTexture not used or created
-      // gl.activeTexture(gl.TEXTURE0)
+      // gl.activeTexture(TEXTURE0_BACK_VOL)
       // gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
-      // gl.activeTexture(gl.TEXTURE1)
+      // gl.activeTexture(TEXTURE1_COLORMAPS)
       // gl.bindTexture(gl.TEXTURE_2D, this.colormapTexture)
-      // gl.activeTexture(gl.TEXTURE2)
+      // gl.activeTexture(TEXTURE2_OVERLAY_VOL)
       // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
-      // gl.activeTexture(gl.TEXTURE7)
+      // gl.activeTexture(TEXTURE7_DRAW)
       // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
       gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0) {
-        gl.activeTexture(gl.TEXTURE6)
+        gl.activeTexture(TEXTURE6_GRADIENT)
         gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
         const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
         const iModelMatrix = mat4.create()
@@ -8540,8 +8555,7 @@ export class Niivue {
         continue
       }
       if (shader.isMatcap) {
-        // texture slot 6 used by other functions, so explicitly switch on
-        gl.activeTexture(gl.TEXTURE6)
+        gl.activeTexture(TEXTURE5_MATCAP)
         gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture)
       }
       gl.bindVertexArray(this.meshes[i].vao)
