@@ -67,6 +67,8 @@ import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
+  NVConfigOptions,
+  Scene,
   SLICE_TYPE,
   DRAG_MODE,
   MULTIPLANAR_TYPE,
@@ -796,8 +798,13 @@ export class Niivue {
 
   document = new NVDocument()
 
-  opts = { ...DEFAULT_OPTIONS }
-  scene = { ...this.document.scene }
+  get scene(): Scene {
+    return this.document.scene
+  }
+
+  get opts(): NVConfigOptions {
+    return this.document.opts
+  }
 
   mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
   initialized = false
@@ -810,7 +817,7 @@ export class Niivue {
   /**
    * @param options - options object to set modifiable Niivue properties
    */
-  constructor(options: Partial<NiiVueOptions> = {}) {
+  constructor(options: Partial<NVConfigOptions> = {}) {
     // populate Niivue with user supplied options
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
@@ -2149,8 +2156,8 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
   setDefaults(options: Partial<NiiVueOptions> = {}, resetBriCon = false): void {
-    this.opts = { ...DEFAULT_OPTIONS }
-    this.scene = { ...this.document.scene }
+    this.document.opts = { ...DEFAULT_OPTIONS }
+    // this.document.scene = { ...this.document.scene } // this is unnecessary now
     // populate Niivue with user supplied options
     for (const name in options) {
       if (typeof options[name as keyof NiiVueOptions] === 'function') {
@@ -3447,7 +3454,13 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/document.load.html|live demo usage}
    */
   loadDocument(document: NVDocument): this {
+    this.volumes = []
+    this.meshes = []
     this.document = document
+    const opts = { ...DEFAULT_OPTIONS, ...document.opts }
+
+    this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
+    this.document.opts = opts
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
     log.debug('load document', document)
     this.mediaUrlMap.clear()
@@ -3513,8 +3526,8 @@ export class Niivue {
     }
 
     // handle older documents that don't have options/scene fields defined
-    this.scene = { ...this.scene, ...document.scene.sceneData }
-    this.opts = { ...this.opts, ...document.opts }
+    // this.scene = { ...this.scene, ...document.scene.sceneData }
+    // this.opts = { ...this.opts, ...document.opts }
     this.updateGLVolume()
     this.drawScene()
     this.onDocumentLoaded(document)

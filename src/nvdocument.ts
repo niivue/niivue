@@ -37,7 +37,7 @@ export enum DRAG_MODE {
   callbackOnly = 5
 }
 
-type NVConfigOptions = {
+export type NVConfigOptions = {
   // 0 for no text, fraction of canvas min(height,width)
   textHeight: number
   // 0 for no colorbars, fraction of Nifti j dimension
@@ -182,7 +182,7 @@ type SceneData = {
   pan2Dxyzmm: vec4
 }
 
-type Scene = {
+export type Scene = {
   onAzimuthElevationChange: (azimuth: number, elevation: number) => void
   onZoom3DChange: (scale: number) => void
   sceneData: SceneData
