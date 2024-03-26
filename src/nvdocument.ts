@@ -37,7 +37,7 @@ export enum DRAG_MODE {
   callbackOnly = 5
 }
 
-type NVConfigOptions = {
+export type NVConfigOptions = {
   // 0 for no text, fraction of canvas min(height,width)
   textHeight: number
   // 0 for no colorbars, fraction of Nifti j dimension
@@ -111,6 +111,7 @@ type NVConfigOptions = {
   legendTextColor: number[]
   multiplanarLayout: MULTIPLANAR_TYPE
   renderOverlayBlend: number
+  sliceMosaicString: string
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -169,7 +170,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
-  renderOverlayBlend: 1.0
+  renderOverlayBlend: 1.0,
+  sliceMosaicString: ''
 }
 
 type SceneData = {
@@ -182,7 +184,7 @@ type SceneData = {
   pan2Dxyzmm: vec4
 }
 
-type Scene = {
+export type Scene = {
   onAzimuthElevationChange: (azimuth: number, elevation: number) => void
   onZoom3DChange: (scale: number) => void
   sceneData: SceneData

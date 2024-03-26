@@ -67,6 +67,8 @@ import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
+  NVConfigOptions,
+  Scene,
   SLICE_TYPE,
   DRAG_MODE,
   MULTIPLANAR_TYPE,
@@ -261,100 +263,6 @@ const TEXTURE12_GC_STRENGTH0 = 33996
 const TEXTURE13_GC_STRENGTH1 = 33997
 const TEXTURE14_GC_LABEL0 = 33998
 const TEXTURE15_GC_LABEL1 = 33999
-
-/**
- * Niivue exposes many properties. It's always good to call `updateGLVolume` after altering one of these settings.
- */
-type NiiVueOptions = {
-  // the text height for orientation labels (0 to 1). Zero for no text labels
-  textHeight?: number
-  // size of colorbar. 0 for no colorbars, fraction of Nifti j dimension
-  colorbarHeight?: number
-  // padding around colorbar when displayed
-  colorbarMargin?: number
-  // crosshair size. Zero for no crosshair
-  crosshairWidth?: number
-  // ruler size. Zero (or isRuler is false) for no ruler
-  rulerWidth?: number
-  // the background color. RGBA values from 0 to 1. Default is black
-  backColor?: number[]
-  // the crosshair color. RGBA values from 0 to 1. Default is red
-  crosshairColor?: number[]
-  // the font color. RGBA values from 0 to 1. Default is gray
-  fontColor?: number[]
-  // the selection box color when the intensty selection box is shown (right click and drag). RGBA values from 0 to 1. Default is transparent white
-  selectionBoxColor?: number[]
-  // the color of the visible clip plane. RGBA values from 0 to 1. Default is white
-  clipPlaneColor?: number[]
-  // the color of the ruler. RGBA values from 0 to 1. Default is translucent red
-  rulerColor?: number[]
-  // true/false whether crosshairs are shown on 3D rendering
-  show3Dcrosshair?: boolean
-  // whether to trust the nifti header values for cal_min and cal_max. Trusting them results in faster loading because we skip computing these values from the data
-  trustCalMinMax?: boolean
-  // the keyboard key used to cycle through clip plane orientations. The default is "c"
-  clipPlaneHotKey?: string
-  // the keyboard key used to cycle through view modes. The default is "v"
-  viewModeHotKey?: string
-  // the keyUp debounce time in milliseconds. The default is 50 ms. You must wait this long before a new hot-key keystroke will be registered by the event listener
-  keyDebounceTime?: number
-  // the maximum time in milliseconds for a double touch to be detected. The default is 500 ms
-  doubleTouchTimeout?: number
-  // the minimum time in milliseconds for a touch to count as long touch. The default is 1000 ms
-  longTouchTimeout?: number
-  // whether or not to use radiological convention in the display
-  isRadiologicalConvention?: boolean
-  // set the logging level to one of: debug, info, warn, error, fatal, silent
-  logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent'
-  // the loading text to display when there is a blank canvas and no images
-  loadingText?: string
-  // whether or not to allow file and url drag and drop on the canvas
-  dragAndDropEnabled?: boolean
-  // whether nearest neighbor interpolation is used, else linear interpolation
-  isNearestInterpolation?: boolean
-  // whether atlas maps are only visible at the boundary of regions
-  atlasOutline?: number
-  // whether a 10cm ruler is displayed
-  isRuler?: boolean
-  // whether colorbar(s) are shown illustrating values for color maps
-  isColorbar?: boolean
-  // whether orientation cube is shown for 3D renderings
-  isOrientCube?: boolean
-  // spacing between tiles of a multiplanar view
-  multiplanarPadPixels?: number
-  // always show rendering in multiplanar view
-  multiplanarForceRender?: boolean
-  // 2D slice views can show meshes within this range. Meshes only visible in sliceMM (world space) mode
-  meshThicknessOn2D?: number
-  // behavior for dragging (none, contrast, measurement, pan)
-  dragMode?: DRAG_MODE
-  // when both voxel-based image and mesh is loaded, will depth picking be able to detect mesh or only voxels
-  isDepthPickMesh?: boolean
-  // should slice text be shown in the upper right corner instead of the center of left and top axes?
-  isCornerOrientationText?: boolean
-  // should 2D sagittal slices show the anterior direction toward the left or right?
-  sagittalNoseLeft?: boolean
-  // are images aligned to voxel space (false) or world space (true)
-  isSliceMM?: boolean
-  // if isV1SliceShader we will treat overlay as V1 volume for line drawing
-  isV1SliceShader?: boolean
-  // demand that high-dot-per-inch displays use native voxel size
-  isHighResolutionCapable?: boolean
-  // mouse selects are digitized based on voxel resolution
-  isForceMouseClickToVoxelCenters?: boolean
-  // allow user to create and edit voxel-based drawings
-  drawingEnabled?: boolean
-  // color of drawing when user drags mouse (if drawingEnabled)
-  penValue?: number
-  // does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors?
-  floodFillNeighbors?: number
-  // number of possible undo steps (if drawingEnabled)
-  maxDrawUndoBitmaps?: number
-  // optional 2D png bitmap that can be rapidly loaded to defer slow loading of 3D image
-  thumbnail?: string
-  // mesh XRay
-  meshXRay?: number
-}
 
 type UIData = {
   mousedown: boolean
@@ -611,7 +519,6 @@ export class Niivue {
   sliceTypeSagittal = SLICE_TYPE.SAGITTAL
   sliceTypeMultiplanar = SLICE_TYPE.MULTIPLANAR
   sliceTypeRender = SLICE_TYPE.RENDER
-  sliceMosaicString = ''
 
   // Event listeners
 
@@ -796,8 +703,21 @@ export class Niivue {
 
   document = new NVDocument()
 
-  opts = { ...DEFAULT_OPTIONS }
-  scene = { ...this.document.scene }
+  get scene(): Scene {
+    return this.document.scene
+  }
+
+  get opts(): NVConfigOptions {
+    return this.document.opts
+  }
+
+  get sliceMosaicString(): string {
+    return this.document.opts.sliceMosaicString
+  }
+
+  set sliceMosaicString(newSliceMosaicString: string) {
+    this.document.opts.sliceMosaicString = newSliceMosaicString
+  }
 
   mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
   initialized = false
@@ -810,7 +730,7 @@ export class Niivue {
   /**
    * @param options - options object to set modifiable Niivue properties
    */
-  constructor(options: Partial<NiiVueOptions> = {}) {
+  constructor(options: Partial<NVConfigOptions> = {}) {
     // populate Niivue with user supplied options
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
@@ -2148,12 +2068,12 @@ export class Niivue {
    * @example niivue.nv1.setDefaults(opts, true);
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
-  setDefaults(options: Partial<NiiVueOptions> = {}, resetBriCon = false): void {
-    this.opts = { ...DEFAULT_OPTIONS }
-    this.scene = { ...this.document.scene }
+  setDefaults(options: Partial<NVConfigOptions> = {}, resetBriCon = false): void {
+    this.document.opts = { ...DEFAULT_OPTIONS }
+    // this.document.scene = { ...this.document.scene } // this is unnecessary now
     // populate Niivue with user supplied options
     for (const name in options) {
-      if (typeof options[name as keyof NiiVueOptions] === 'function') {
+      if (typeof options[name as keyof NVConfigOptions] === 'function') {
         // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
@@ -3447,7 +3367,13 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/document.load.html|live demo usage}
    */
   loadDocument(document: NVDocument): this {
+    this.volumes = []
+    this.meshes = []
     this.document = document
+    const opts = { ...DEFAULT_OPTIONS, ...document.opts }
+
+    this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
+    this.document.opts = opts
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
     log.debug('load document', document)
     this.mediaUrlMap.clear()
@@ -3513,8 +3439,8 @@ export class Niivue {
     }
 
     // handle older documents that don't have options/scene fields defined
-    this.scene = { ...this.scene, ...document.scene.sceneData }
-    this.opts = { ...this.opts, ...document.opts }
+    // this.scene = { ...this.scene, ...document.scene.sceneData }
+    // this.opts = { ...this.opts, ...document.opts }
     this.updateGLVolume()
     this.drawScene()
     this.onDocumentLoaded(document)

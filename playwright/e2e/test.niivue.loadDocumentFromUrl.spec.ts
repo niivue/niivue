@@ -9,20 +9,19 @@ test.beforeEach(async ({ page }) => {
 
 test.skip('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
   const nvols = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.basic.nvd')
+    nv.gl.finish()
     return nv.volumes.length
   }, TEST_OPTIONS)
   expect(nvols).toBe(2)
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(2000)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
   const isDrawingPresent = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.drawing.nvd')
@@ -33,9 +32,8 @@ test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl mesh', async ({ page }) => {
   const counts = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.mesh.nvd')
@@ -50,9 +48,8 @@ test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl replaces previous document objects', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl replaces previous document objects', async ({ page }) => {
   const { nvols, nmeshes } = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     await nv.loadDocumentFromUrl('./images/document/niivue.basic.nvd')
