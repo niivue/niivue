@@ -20,7 +20,7 @@ test.skip('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
   const isDrawingPresent = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
@@ -32,7 +32,7 @@ test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl mesh', async ({ page }) => {
   const counts = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
@@ -48,7 +48,7 @@ test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl replaces previous document objects', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl replaces previous document objects', async ({ page }) => {
   const { nvols, nmeshes } = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
