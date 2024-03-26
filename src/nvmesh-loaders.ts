@@ -237,26 +237,7 @@ export class NVMeshLoaders {
       m[15]
     )
     mat4.transpose(trans_to_mni, trans_to_mni)
-    const zoomMat = mat4.create()
-    // unlike TRK, DSI-studion does NOT translate voxels
-    /* zoomMat = mat4.fromValues(
-      1 / mat.voxel_size[0],
-      0,
-      0,
-      -0.5,
-      0,
-      1 / mat.voxel_size[1],
-      0,
-      -0.5,
-      0,
-      0,
-      1 / mat.voxel_size[2],
-      -0.5,
-      0,
-      0,
-      0,
-      1
-    ) */
+    //unlike TRK, TT uses voxel centers, not voxel corners
     mat4.transpose(zoomMat, zoomMat)
     function parse_tt(
       track: Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array
@@ -297,12 +278,10 @@ export class NVMeshLoaders {
       for (let i = 0; i < npt; i++) {
         pts[i] = pts[i] / 32.0
       }
-      const vox2mmMat = mat4.create()
-      mat4.mul(vox2mmMat, trans_to_mni, zoomMat)
       let v = 0
       for (let i = 0; i < npt / 3; i++) {
         const pos = vec4.fromValues(pts[v], pts[v + 1], pts[v + 2], 1)
-        vec4.transformMat4(pos, pos, vox2mmMat)
+        vec4.transformMat4(pos, pos, trans_to_mni)
         pts[v++] = pos[0]
         pts[v++] = pos[1]
         pts[v++] = pos[2]
@@ -712,10 +691,6 @@ export class NVMeshLoaders {
     }
     const vox2mmMat = mat4.create()
     mat4.mul(vox2mmMat, zoomMat, mat)
-    // translation is in mm and not influenced by resolution
-    vox2mmMat[3] = mat[3]
-    vox2mmMat[7] = mat[7]
-    vox2mmMat[11] = mat[11]
     let i32 = null
     let f32 = null
     i32 = new Int32Array(buffer.slice(hdr_sz))
