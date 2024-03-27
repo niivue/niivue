@@ -237,8 +237,7 @@ export class NVMeshLoaders {
       m[15]
     )
     mat4.transpose(trans_to_mni, trans_to_mni)
-    //unlike TRK, TT uses voxel centers, not voxel corners
-    mat4.transpose(zoomMat, zoomMat)
+    // unlike TRK, TT uses voxel centers, not voxel corners
     function parse_tt(
       track: Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array
     ): void {

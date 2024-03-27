@@ -27,7 +27,7 @@ The image above is from a NiiVue [live demo](https://niivue.github.io/niivue/fea
  
 ##### Streamlines
 
- - Streamlines are used to for tractography data.
+ - Streamlines are used for tractography data.
  - Streamlines can either be drawn as single-pixel lines, or extruded to triangulated cylinders. The `radius` slider of the [tract live demo](https://niivue.github.io/niivue/features/tracts.cylinder.html) shows how NiiVue dynamically scales the diameter.
  - Each vertex of a streamline can be assigned a color based on the global direction, local direction, group, per-vertex or per-streamline properties. The [tract group live demo](https://niivue.github.io/niivue/features/tracts.group.html) showcases these properties.
  - The TrackVis TRK format is popular. However, it uses voxel corner to specifiy coordinates, rather that the typical voxel center or world space coordinates. While nibabel, Surfice and NiiVue follow this convention, be aware that other tools (included DSI Studio) use voxel centers. This means that TRK files created by one tool can appear shifted by half a voxel in other tools. A [validation dataset](https://github.com/neurolabusc/TRK) is available.

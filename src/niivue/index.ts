@@ -1751,6 +1751,12 @@ export class Niivue {
       this.moveCrosshairInVox(0, -1, 0)
     } else if (e.code === 'KeyK' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
       this.moveCrosshairInVox(0, 1, 0)
+    } else if (e.code === 'KeyM' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
+      this.opts.dragMode ++
+      if (this.opts.dragMode >= DRAG_MODE.slicer3D) {
+        this.opts.dragMode = DRAG_MODE.none
+      }
+      log.info('drag mode changed to ', DRAG_MODE[this.opts.dragMode])
     } else if (e.code === 'ArrowLeft') {
       // only works for background (first loaded image is index 0)
       this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1)
