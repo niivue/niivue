@@ -98,9 +98,9 @@
     <script type="module" async>
       import * as niivue from "../dist/index.js";
       layout.onchange = function () {
-        nv1.setMultiplanarLayout(this.value);
-        nv2.setMultiplanarLayout(this.value);
-        nv3.setMultiplanarLayout(this.value);
+        nv1.setMultiplanarLayout(parseInt(this.value));
+        nv2.setMultiplanarLayout(parseInt(this.value));
+        nv3.setMultiplanarLayout(parseInt(this.value));
       }
       canvasHeight.onchange = function () {
         gl1.height = this.value;

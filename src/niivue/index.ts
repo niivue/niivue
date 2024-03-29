@@ -2121,6 +2121,8 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/layout.html|live demo usage}
    */
   setMultiplanarLayout(layout: number): void {
+    if (typeof(layout)==="string")
+        layout = parseInt(layout)
     this.opts.multiplanarLayout = layout
     this.drawScene()
   }
