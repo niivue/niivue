@@ -96,6 +96,7 @@ export type ConnectomeOptions = {
   edgeMin: number
   edgeMax: number
   edgeScale: number
+  legendLineThickness: number
 }
 
 export type Connectome = ConnectomeOptions & {

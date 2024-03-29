@@ -1752,7 +1752,7 @@ export class Niivue {
     } else if (e.code === 'KeyK' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
       this.moveCrosshairInVox(0, 1, 0)
     } else if (e.code === 'KeyM' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-      this.opts.dragMode ++
+      this.opts.dragMode++
       if (this.opts.dragMode >= DRAG_MODE.slicer3D) {
         this.opts.dragMode = DRAG_MODE.none
       }
@@ -8635,7 +8635,7 @@ export class Niivue {
         radius = range[0] * 0.02
       } // 2% of first dimension
       radius *= this.opts.crosshairWidth
-      this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius)
+      this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius, 20, this.opts.crosshairGap)
       this.crosshairs3D.mm = mm
     }
 

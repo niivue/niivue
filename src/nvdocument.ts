@@ -44,6 +44,7 @@ type NVConfigOptions = {
   colorbarHeight: number
   // 0 for no crosshairs
   crosshairWidth: number
+  crosshairGap: number
   rulerWidth: number
   show3Dcrosshair: boolean
   backColor: number[]
@@ -117,6 +118,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   textHeight: 0.06,
   colorbarHeight: 0.05,
   crosshairWidth: 1,
+  crosshairGap: 0,
   rulerWidth: 4,
   show3Dcrosshair: false,
   backColor: [0, 0, 0, 1],
@@ -651,6 +653,7 @@ export class NVDocument {
         nodeMaxColor: mesh.nodeMaxColor,
         nodeMinColor: mesh.nodeMinColor,
         nodeScale: mesh.nodeScale,
+        legendLineThickness: mesh.legendLineThickness,
         offsetPt0: mesh.offsetPt0,
         nodes: mesh.nodes
       }
