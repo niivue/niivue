@@ -7770,6 +7770,12 @@ export class Niivue {
     if (graph.opacity <= 0.0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
       return
     }
+    if ((graph.LTWH[0] + graph.LTWH[2]) > this.gl.canvas.width) {
+        return // issue 930
+    }
+    if ((graph.LTWH[1] + graph.LTWH[3]) > this.gl.canvas.height) {
+        return // issue 930
+    }
     graph.backColor = [0.15, 0.15, 0.15, graph.opacity]
     graph.lineColor = [1, 1, 1, 1]
     if (this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2] > 1.5) {
