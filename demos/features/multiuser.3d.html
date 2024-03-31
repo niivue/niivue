@@ -7,7 +7,7 @@
     <title>Multiuser basic 3D</title>
     <style>
       section {
-        margin: 20px;
+        margin: 20px
       }
     </style>
   </head>
@@ -49,39 +49,38 @@
     <button id="toggleHippoButton" onclick="toggleHippo()">
       Add Hippocampus
     </button>
-    <script>
-      import * as niivue from "../dist/index.js";
+    <script type="module">
+      import * as niivue from "../dist/index.js"
       
       function toggleHippo() {
-        let buttonElem = document.getElementById("toggleHippoButton");
+        let buttonElem = document.getElementById("toggleHippoButton")
         if (isHippoShowing) {
-          nv1.removeVolumeByUrl(url);
-          buttonElem.innerText = "Add Hippocampus";
-          isHippoShowing = false;
+          nv1.removeVolumeByUrl(url)
+          buttonElem.innerText = "Add Hippocampus"
+          isHippoShowing = false
         } else {
-          nv1.addVolumeFromUrl({ url });
-          buttonElem.innerText = "Remove Hippocampus";
-          isHippoShowing = true;
+          nv1.addVolumeFromUrl({ url })
+          buttonElem.innerText = "Remove Hippocampus"
+          isHippoShowing = true
         }
       }
 
-      const url = "../images/hippo.nii.gz";
-      var isHippoShowing = false;
+      const url = "../images/hippo.nii.gz"
+      var isHippoShowing = false
       var volumeList1 = [
-        // first item is background image
         {
-          url: "../images/mni152.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
+          url: "../images/mni152.nii.gz",
           colormap: "gray",
           opacity: 1,
           visible: true,
         },
-      ];
-      var nv1 = new niivue.Niivue();
-      nv1.attachTo("gl1");
-      nv1.loadVolumes(volumeList1);
-      nv1.setSliceType(nv1.sliceTypeRender);
-      var controller = new niivue.NVController(nv1);
-      controller.connectToSession("niivue-3d");
+      ]
+      var nv1 = new niivue.Niivue()
+      nv1.attachTo("gl1")
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeRender)
+      var controller = new niivue.NVController(nv1)
+      controller.connectToSession("niivue-3d")
     </script>
   </body>
 </html>
