@@ -3870,13 +3870,20 @@ export class Niivue {
     this.drawScene()
   }
 
-  loadConnectomeAsMesh(json: Connectome | LegacyConnectome): NVMesh {
+  loadConnectomeAsMesh(json: Connectome | LegacyConnectome | FreeSurferConnectome): NVMesh {
     let connectome = json
-    const nodes = json.nodes
-    if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
-      // legacy format
-      connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
-      log.warn('converted legacy connectome', connectome)
+    if (('data_type' in json) && (json.data_type === 'fs_pointset')){
+          connectome = NVConnectome.convertFreeSurferConnectome(json as FreeSurferConnectome)
+          log.warn('converted FreeSurfer connectome', connectome)
+    } else if ('nodes' in json) {
+        const nodes = json.nodes
+        if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
+          // legacy format
+          connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
+          log.warn('converted legacy connectome', connectome)
+        }
+    } else {
+        throw new Error('not a known connectome format')
     }
     return new NVConnectome(this.gl, connectome as LegacyConnectome)
   }

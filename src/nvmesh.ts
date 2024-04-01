@@ -1163,71 +1163,6 @@ export class NVMesh {
     return f32
   }
 
-  static loadConnectomeFromFreeSurfer(
-    json: {
-      points?: Point[]
-      data_type: string
-    },
-    gl: WebGL2RenderingContext,
-    name = '',
-    // colormap = "",
-    opacity = 1.0,
-    visible = true
-  ): NVMesh {
-    let isValid = true
-    if (json.data_type === undefined) {
-      isValid = false
-    } else if (json.data_type !== 'fs_pointset') {
-      isValid = false
-    }
-    if (json.points === undefined) {
-      isValid = false
-    }
-    if (!isValid) {
-      throw Error('not a valid FreeSurfer json pointset')
-    }
-    const jcon: LegacyConnectome = {
-      nodes: {
-        names: [],
-        prefilled: [],
-        X: [],
-        Y: [],
-        Z: [],
-        Color: [],
-        Size: []
-      },
-      edges: [],
-      // @ts-expect-error not sure where this should come from
-      name: this.data_type
-    }
-
-    if (!json.points) {
-      throw new Error('points are not set!')
-    }
-    for (let i = 0; i < json.points.length; i++) {
-      let name = ''
-      if (json.points[i].comments) {
-        if (json.points[i].comments[0].text) {
-          name = json.points[i].comments[0].text
-        }
-      }
-      jcon.nodes.names.push(name)
-      let prefilled = ''
-      if (json.points[i].comments) {
-        if (json.points[i].comments[0].prefilled) {
-          prefilled = json.points[i].comments[0].prefilled as string
-        }
-      }
-      jcon.nodes.prefilled.push(prefilled)
-      jcon.nodes.X.push(json.points[i].coordinates.x)
-      jcon.nodes.Y.push(json.points[i].coordinates.y)
-      jcon.nodes.Z.push(json.points[i].coordinates.z)
-      jcon.nodes.Color.push(1)
-      jcon.nodes.Size.push(1)
-    }
-    return new NVMesh([], [], name, [], opacity, visible, gl, jcon)
-  } // loadConnectomeFromFreeSurfer
-
   // wrapper to read meshes, tractograms and connectomes regardless of format
   static readMesh(
     buffer: ArrayBuffer,
@@ -1253,7 +1188,8 @@ export class NVMesh {
       log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
     if (ext === 'JSON') {
-      return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      //return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
     rgba255[3] = Math.max(0, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TT' || ext === 'TRX' || ext === 'TRACT') {
