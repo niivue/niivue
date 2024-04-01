@@ -3760,11 +3760,20 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
    */
   async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
+    const ext = this.getFileExt(meshOptions.url)
+    if (ext === 'JCON' || ext === 'JSON') {
+      const response = await fetch(meshOptions.url, {})
+      const json = await response.json()
+      const mesh = this.loadConnectomeAsMesh(json)
+      this.mediaUrlMap.set(mesh, meshOptions.url)
+      this.onMeshAddedFromUrl(meshOptions, mesh)
+      this.addMesh(mesh)
+      return mesh
+    }
     const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl })
     this.mediaUrlMap.set(mesh, meshOptions.url)
     this.onMeshAddedFromUrl(meshOptions, mesh)
     this.addMesh(mesh)
-
     return mesh
   }
 
@@ -3861,6 +3870,17 @@ export class Niivue {
     this.drawScene()
   }
 
+  loadConnectomeAsMesh(json: Connectome | LegacyConnectome): NVMesh {
+    let connectome = json
+    const nodes = json.nodes
+    if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
+      // legacy format
+      connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
+      log.warn('converted legacy connectome', connectome)
+    }
+    return new NVConnectome(this.gl, connectome as LegacyConnectome)
+  }
+
   /**
    * load a connectome specified by json
    * @param connectome - model
@@ -3882,14 +3902,7 @@ export class Niivue {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
     this.uiData.loading$.next(true)
-    let connectome = json
-    const nodes = json.nodes
-    if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
-      // legacy format
-      connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
-      log.warn('converted legacy connectome', connectome)
-    }
-    const mesh = new NVConnectome(this.gl, connectome as LegacyConnectome)
+    const mesh = this.loadConnectomeAsMesh(json)
     this.addMesh(mesh)
     this.uiData.loading$.next(false)
     this.drawScene()

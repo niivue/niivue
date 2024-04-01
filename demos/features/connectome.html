@@ -26,6 +26,12 @@
     <label for="lineSlider">Legend Lines</label>
     <input type="range" min="0" max="12" value="3" class="slider" id="lineSlider" />
     <button id="reset">reset</button>
+    <button id="loadTab">load tabular</button>
+    <button id="loadSparse">load sparse</button>
+    <button id="loadFreeSurfer">load FreeSurfer</button>
+    <button id="loadTab2">load tabular via mesh</button>
+    <button id="loadSparse2">load sparse via mesh</button>
+    <button id="loadFreeSurfer2">load FreeSurfer via mesh</button>
   </header>
   <main id="container">
     <canvas id="gl1"></canvas>
@@ -155,9 +161,38 @@
     }
     cmapEl.appendChild(btn)
   }
-  document.getElementById("reset").addEventListener("click", doReset)
-  function doReset() {
+  reset.onclick = function () {
     nv1.setDefaults(opts, true)
     nv1.setClipPlane([-0.1, 270, 0])
+  }
+  function removeOpenMeshes() {
+    if (nv1.meshes.length > 0) {
+      let mesh = nv1.meshes[0]
+      nv1.removeMesh(mesh)
+    }
+  }
+  loadTab.onclick = function () {
+    removeOpenMeshes()
+    nv1.loadConnectomeFromUrl("../images/connectome.jcon")
+  }
+  loadSparse.onclick = function () {
+    removeOpenMeshes()
+    nv1.loadConnectomeFromUrl("../images/connectome2.jcon")
+  }
+  loadFreeSurfer.onclick = function () {
+    removeOpenMeshes()
+    nv1.loadFreeSurferConnectomeFromUrl("../images/FreeSurferControlPoints.json");
+  }
+  loadTab2.onclick = function () {
+    removeOpenMeshes()
+    nv1.loadMeshes([{ url: "../images/connectome.jcon" }])
+  }
+  loadSparse2.onclick = function () {
+    removeOpenMeshes()
+    nv1.loadMeshes([{ url: "../images/connectome2.jcon" }])
+  }
+  loadFreeSurfer2.onclick = function () {
+    removeOpenMeshes()
+    nv1.loadMeshes([{ url: "../images/FreeSurferControlPoints.json" }])
   }
 </script>
