@@ -1188,7 +1188,7 @@ export class NVMesh {
       log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
     if (ext === 'JSON') {
-      //return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      // return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
       log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
     rgba255[3] = Math.max(0, rgba255[3])
