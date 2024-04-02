@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index.js'
+import { Niivue, Connectome, LegacyConnectome } from '../../dist/index.js'
 import { httpServerAddress } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
 
@@ -49,7 +49,7 @@ test('niivue load connectome tabular', async ({ page }) => {
         prefilled: []
       },
       edges: [1, 2, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1]
-    }
+    } as LegacyConnectome
 
     nv.loadConnectome(connectome)
     nv.setMeshProperty(0, 'nodeScale', 3)
@@ -149,7 +149,7 @@ test('niivue loadConnectome with labels', async ({ page }) => {
           colorValue: 6
         }
       ]
-    }
+    } as Connectome
 
     await nv.loadConnectome(connectome)
     await nv.setMeshProperty(0, 'nodeScale', 3)
