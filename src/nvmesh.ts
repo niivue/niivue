@@ -153,7 +153,7 @@ export class NVMesh {
   data_type?: string
   rgba255: number[]
   fiberLength?: number
-  fiberLengths?: number[]
+  fiberLengths?: Uint32Array
   fiberDither = 0.1
   fiberColor = 'Global'
   fiberDecimationStride = 1 // e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
@@ -487,7 +487,7 @@ export class NVMesh {
     const npt = pts.length / 3 // each point has three components: X,Y,Z
     // only once: compute length of each streamline
     if (!this.fiberLengths) {
-      this.fiberLengths = []
+      this.fiberLengths = new Uint32Array(n_count)
       for (let i = 0; i < n_count; i++) {
         // for each streamline
         const vStart3 = offsetPt0[i] * 3 // first vertex in streamline
@@ -497,7 +497,7 @@ export class NVMesh {
           const v = vec3.fromValues(pts[j + 0] - pts[j + 3], pts[j + 1] - pts[j + 4], pts[j + 2] - pts[j + 5])
           len += vec3.len(v)
         }
-        this.fiberLengths.push(len)
+        this.fiberLengths[i] = len
       }
     } // only once: compute length of each streamline
     // determine fiber colors
