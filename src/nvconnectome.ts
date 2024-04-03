@@ -45,7 +45,11 @@ export class NVConnectome extends NVMesh {
   nodesChanged: EventTarget
 
   constructor(gl: WebGL2RenderingContext, connectome: LegacyConnectome) {
-    super([], [], connectome.name, [], 1.0, true, gl, connectome)
+    super([], 
+    [], 
+    connectome.name, 
+    new Uint8Array([])
+    , 1.0, true, gl, connectome)
     this.gl = gl
     // this.nodes = connectome.nodes;
     // this.edges = connectome.edges;
@@ -372,7 +376,7 @@ export class NVConnectome extends NVMesh {
     this.furthestVertexFromOrigin = obj.mxDx
     this.extentsMin = obj.extentsMin
     this.extentsMax = obj.extentsMax
-    const posNormClr = this.generatePosNormClr(pts, tris, rgba255)
+    const posNormClr = this.generatePosNormClr(pts, tris, new Uint8Array(rgba255))
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW)

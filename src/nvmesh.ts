@@ -64,7 +64,7 @@ export class NVMeshFromUrlOptions {
   gl: WebGL2RenderingContext | null
   name: string
   opacity: number
-  rgba255: number[]
+  rgba255: Uint8Array
   visible: boolean
   layers: NVMeshLayer[]
   colorbarVisible: boolean
@@ -74,7 +74,7 @@ export class NVMeshFromUrlOptions {
     gl = null,
     name = '',
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true,
     layers = [],
     colorbarVisible = true
@@ -98,7 +98,7 @@ type BaseLoadParams = {
   // the opacity for this image. default is 1
   opacity: number
   // the base color of the mesh. RGBA values from 0 to 255. Default is white
-  rgba255: number[]
+  rgba255: Uint8Array
   // whether or not this image is to be visible
   visible: boolean
   // layers of the mesh to load
@@ -151,7 +151,7 @@ export class NVMesh {
   type = MeshType.MESH
 
   data_type?: string
-  rgba255: number[]
+  rgba255: Uint8Array
   fiberLength?: number
   fiberLengths?: Uint32Array
   fiberDither = 0.1
@@ -209,7 +209,7 @@ export class NVMesh {
     pts: number[] | Float32Array,
     tris: number[] | Uint32Array,
     name = '',
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     opacity = 1.0,
     visible = true,
     gl: WebGL2RenderingContext,
@@ -1118,7 +1118,7 @@ export class NVMesh {
 
   // Each streamline vertex has color, normal and position attributes
   // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-  generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: number[]): Float32Array {
+  generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: Uint8Array): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
       log.debug('this', this)
@@ -1169,7 +1169,7 @@ export class NVMesh {
     name: string,
     gl: WebGL2RenderingContext,
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true
   ): NVMesh {
     let tris: number[] = []
@@ -1295,20 +1295,23 @@ export class NVMesh {
 
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
-      rgba255 = Array.from(obj.rgba255)
+      //rgba255 = Array.from(obj.rgba255)
+      rgba255 = obj.rgba255
     }
     if ('colors' in obj && obj.colors && obj.colors.length === pts.length) {
-      rgba255 = []
       const n = pts.length / 3
+      rgba255 = new Uint8Array(n * 4)
       let c = 0
+      let k = 0
       for (let i = 0; i < n; i++) {
         // convert ThreeJS unit RGB to RGBA255
-        rgba255.push(obj.colors[c] * 255) // red
-        rgba255.push(obj.colors[c + 1] * 255) // green
-        rgba255.push(obj.colors[c + 2] * 255) // blue
-        rgba255.push(255) // alpha
+        rgba255[k++] = obj.colors[c] * 255 // red
+        rgba255[k++] = obj.colors[c + 1] * 255 // green
+        rgba255[k++] = obj.colors[c + 2] * 255 // blue
+        rgba255[k++] = 255 // alpha
         c += 3
       } // for i: each vertex
+      
     } // obj includes colors
     const npt = pts.length / 3
     const ntri = tris.length / 3
@@ -1437,7 +1440,7 @@ export class NVMesh {
     gl,
     name = '',
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true,
     layers = []
   }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
@@ -1511,7 +1514,7 @@ export class NVMesh {
     gl,
     name = '',
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true,
     layers = []
   }: Partial<LoadFromFileParams> = {}): Promise<NVMesh> {
@@ -1546,7 +1549,7 @@ export class NVMesh {
     gl,
     name = '',
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true,
     layers = []
   }: Partial<LoadFromBase64Params> = {}): Promise<NVMesh> {
