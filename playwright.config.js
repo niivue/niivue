@@ -22,11 +22,7 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    viewport: { width: 1280, height: 720 },
-    args: [
-      // set window size to 1280x720
-      '--window-size=1280,720'
-    ]
+    viewport: { width: 1280, height: 720 }
   },
 
   expect: {
@@ -41,7 +37,14 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
+      use: {
+        ...devices['Desktop Chrome'],
+        headless: true,
+        launchOptions: {
+          // args: ['--headless', '--no-sandbox', '--use-angle=angle', '--use-gl=swiftshader']
+          args: ['--window-size=1280,720']
+        }
+      }
     }
 
     // {
