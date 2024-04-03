@@ -1,6 +1,5 @@
 const { snapshot, httpServerAddressSync, wait } = require('./helpers')
 
-const { wait } = require('./utils')
 beforeEach(async () => {
   await page.goto(httpServerAddressSync, { timeout: 0 })
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
