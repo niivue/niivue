@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="niivue.css" />
     <style>
       .unstyled-button {
-        border: none;
-        padding: 0;
-        background: #202020;
-        color: white;
+        border: none
+        padding: 0
+        background: #202020
+        color: white
       }
     </style>
   </head>
@@ -35,57 +35,57 @@
   </body>
 </html>
 <script type="module">
-  import * as niivue from "../dist/index.js";
+  import * as niivue from "../dist/index.js"
   
   var volumeList1 = [
     {
       url: "../images/pcasl.nii.gz",
       limitFrames4D: 5
     },
-  ];
+  ]
   var nv1 = new niivue.Niivue({
     onLocationChange: handleLocationChange,
-  });
-  nv1.attachTo("gl1");
-  nv1.setRadiologicalConvention(false);
-  nv1.loadVolumes(volumeList1);
-  nv1.setSliceType(nv1.sliceTypeMultiplanar);
-  nv1.graph.autoSizeMultiplanar = true;
-  nv1.opts.multiplanarForceRender = true;
-  nv1.graph.normalizeValues = false;
-  nv1.graph.opacity = 1.0;
+  })
+  nv1.attachTo("gl1")
+  nv1.setRadiologicalConvention(false)
+  nv1.loadVolumes(volumeList1)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  nv1.graph.autoSizeMultiplanar = true
+  nv1.opts.multiplanarForceRender = true
+  nv1.graph.normalizeValues = false
+  nv1.graph.opacity = 1.0
   check1.onchange = function () {
-    nv1.graph.normalizeValues = this.checked;
-    nv1.updateGLVolume();
+    nv1.graph.normalizeValues = this.checked
+    nv1.updateGLVolume()
   }
-  let currentVol = 0;
+  let currentVol = 0
   prevVolume.onclick = function () {
-    currentVol = Math.max(currentVol - 1, 0);
-    nv1.setFrame4D(nv1.volumes[0].id, currentVol);
+    currentVol = Math.max(currentVol - 1, 0)
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
   }
   nextVolume.onclick = function () {
-    currentVol++;
-    currentVol = Math.min(currentVol, nv1.getFrame4D(nv1.volumes[0].id) - 1);
-    nv1.setFrame4D(nv1.volumes[0].id, currentVol);
+    currentVol++
+    currentVol = Math.min(currentVol, nv1.volumes[0].nFrame4D - 1)
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
   }
   function handleLocationChange(data) {
     document.getElementById("location").innerHTML =
-      "&nbsp;&nbsp;" + data.string;
+      "&nbsp;&nbsp;" + data.string
   }
-  var animationTimer = null;
+  var animationTimer = null
   function doAnimate() {
-    currentVol++;
-    if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id)) currentVol = 0;
-    nv1.setFrame4D(nv1.volumes[0].id, currentVol);
+    currentVol++
+    if (currentVol >= nv1.volumes[0].nFrame4D) currentVol = 0
+    nv1.setFrame4D(nv1.volumes[0].id, currentVol)
   }
   animate.onclick = function () {
-    if (animationTimer == null) animationTimer = setInterval(doAnimate, 100);
+    if (animationTimer == null) animationTimer = setInterval(doAnimate, 100)
     else {
-      clearInterval(animationTimer);
-      animationTimer = null;
+      clearInterval(animationTimer)
+      animationTimer = null
     }
   }
   about.onclick = function () {
-    alert("4D images can be slow to load. Click the `...` icon below the graph to see the entire dataset. Currently displaying "+nv1.volumes[0].nFrame4D+" of " +nv1.volumes[0].nTotalFrame4D+ " frames.");
+    alert("4D images can be slow to load. Click the `...` icon below the graph to see the entire dataset. Currently displaying "+nv1.volumes[0].nFrame4D+" of " +nv1.volumes[0].nTotalFrame4D+ " frames.")
   }
 </script>

@@ -7,7 +7,7 @@
     <title>time series demo</title>
     <style>
       section {
-        margin: 20px;
+        margin: 20px
       }
     </style>
   </head>
@@ -42,9 +42,9 @@
     </section>
     <section>
       <div>
-        <button onclick="prevVolume()">back</button>
-        <button onclick="nextVolume()">forward</button>
-        &nbsp;<button onclick="animateVolume()">animate</button>
+        <button id="prevVolumeBtn">back</button>
+        <button id="nextVolumeBtn">forward</button>
+        &nbsp;<button id="animateVolumeBtn">animate</button>
         <p id="volume">volume: 0</p>
       </div>
     </section>
@@ -54,7 +54,7 @@
       </div>
     </section>
     <script type="module">
-      import * as niivue from "../dist/index.js";
+      import * as niivue from "../dist/index.js"
       
       var volumeList1 = [
         // first item is background image
@@ -64,55 +64,62 @@
           opacity: 1,
           visible: true,
         },
-      ];
-      var nv1 = new niivue.Niivue();
-      nv1.setRadiologicalConvention(false);
-      nv1.attachTo("gl1");
-      nv1.loadVolumes(volumeList1);
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      nv1.graph.autoSizeMultiplanar = true;
-      nv1.graph.normalizeValues = false;
-      nv1.graph.opacity = 1.0;
+      ]
+      var nv1 = new niivue.Niivue()
+      nv1.setRadiologicalConvention(false)
+      nv1.attachTo("gl1")
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.graph.autoSizeMultiplanar = true
+      nv1.graph.normalizeValues = false
+      nv1.graph.opacity = 1.0
+      nv1.opts.multiplanarForceRender = true
 
-      var controller = new niivue.NVController(nv1);
-      controller.onFrameChange = updateFrameValue;
-      controller.connectToSession("timeseries");
+      var controller = new niivue.NVController(nv1)
+      controller.onFrameChange = updateFrameValue
+      controller.connectToSession("timeseries")
 
       function checkClick(cb) {
-        nv1.graph.normalizeValues = cb.checked;
-        nv1.updateGLVolume();
+        nv1.graph.normalizeValues = cb.checked
+        nv1.updateGLVolume()
       }
-      let currentVol = 0;
+      let currentVol = 0
       function prevVolume() {
-        currentVol = Math.max(currentVol - 1, 0);
-        nv1.setFrame4D(nv1.volumes[0].id, currentVol);
-        document.getElementById("volume").innerHTML = "volume " + currentVol;
+        currentVol = Math.max(currentVol - 1, 0)
+        nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+        document.getElementById("volume").innerHTML = "volume " + currentVol
       }
       function nextVolume() {
-        currentVol++;
+        currentVol++
         currentVol = Math.min(
           currentVol,
-          nv1.getFrame4D(nv1.volumes[0].id) - 1
-        );
-        nv1.setFrame4D(nv1.volumes[0].id, currentVol);
-        document.getElementById("volume").innerHTML = "volume " + currentVol;
+          nv1.volumes[0].nFrame4D - 1
+        )
+        nv1.setFrame4D(nv1.volumes[0].id, currentVol)
+        document.getElementById("volume").innerHTML = "volume " + currentVol
+      }
+      prevVolumeBtn.onclick = function () {
+        prevVolume()
+      }
+      nextVolumeBtn.onclick = function () {
+        nextVolume()
       }
       function updateFrameValue(volume, index) {
-        document.getElementById("volume").innerHTML = "volume " + index;
-        currentVol = index;
+        document.getElementById("volume").innerHTML = "volume " + index
+        currentVol = index
       }
-      var animationTimer = null;
+      var animationTimer = null
       function doAnimate() {
-        currentVol++;
-        if (currentVol >= nv1.getFrame4D(nv1.volumes[0].id)) currentVol = 0;
-        nv1.setFrame4D(nv1.volumes[0].id, currentVol);
+        currentVol++
+        if (currentVol >= nv1.volumes[0].nFrame4D) currentVol = 0
+        nv1.setFrame4D(nv1.volumes[0].id, currentVol)
       }
-      function animateVolume() {
+      animateVolumeBtn.onclick = function () {
         if (animationTimer == null)
-          animationTimer = setInterval(doAnimate, 100);
+          animationTimer = setInterval(doAnimate, 100)
         else {
-          clearInterval(animationTimer);
-          animationTimer = null;
+          clearInterval(animationTimer)
+          animationTimer = null
         }
       }
     </script>
