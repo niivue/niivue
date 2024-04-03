@@ -1,4 +1,3 @@
-import { Subject, Subscription } from 'rxjs'
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
@@ -382,7 +381,6 @@ type UIData = {
   dragClipPlaneStartDepthAziElev: number[]
   lastTwoTouchDistance: number
   multiTouchGesture: boolean
-  loading$: Subject<unknown>
   dpr?: number
 }
 
@@ -505,13 +503,7 @@ export class Niivue {
     dragEnd: [0.0, 0.0],
     dragClipPlaneStartDepthAziElev: [0, 0, 0],
     lastTwoTouchDistance: 0,
-    multiTouchGesture: false,
-    loading$: new Subject() // whether or not the scene is loading
-  }
-
-  // mapping of keys (event strings) to rxjs subjects
-  eventsToSubjects: Record<string, Subject<unknown>> = {
-    loading: this.uiData.loading$
+    multiTouchGesture: false
   }
 
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -807,9 +799,6 @@ export class Niivue {
   currentDrawUndoBitmap: number
   loadingText: string
 
-  // rxjs subscriptions. Keeping a reference array like this allows us to unsubscribe later
-  subscriptions: Array<Record<string, Subscription>> = []
-
   /**
    * @param options - options object to set modifiable Niivue properties
    */
@@ -927,60 +916,6 @@ export class Niivue {
     await this.attachToCanvas(document.getElementById(id) as HTMLCanvasElement, isAntiAlias)
     log.debug('attached to element with id: ', id)
     return this
-  }
-
-  // on handles matching event strings (event) with know rxjs subjects within NiiVue.
-  // if the event string exists (e.g. 'location') then the corresponding rxjs subject reference
-  // is extracted from this.eventsToSubjects and the callback passed as the second argument to NiiVue.on
-  // is added to the subsciptions to the next method. These callbacks are called whenever subject.next is called within
-  // various NiiVue methods.
-
-  /**
-   * register a callback function to run when known Niivue events happen
-   * @param event - the name of the event to watch for. Event names are shown in the type column
-   * @param callback - the function to call when the event happens
-   * @example
-   * niivue = new Niivue()
-   *
-   * // 'location' update event is fired when the crosshair changes position via user input
-   * function doSomethingWithLocationData(data)\{
-   *    // data has the shape \{mm: [N, N, N], vox: [N, N, N], frac: [N, N, N], values: this.volumes.map(v =\> \{return val\})\}
-   *    //...
-   * \}
-   */
-  on(event: string, callback: (data: unknown) => void): void {
-    const knownEvents = Object.keys(this.eventsToSubjects)
-    if (!knownEvents.includes(event)) {
-      return
-    }
-    const subject = this.eventsToSubjects[event]
-    const subscription = subject.subscribe({
-      next: (data) => callback(data)
-    })
-    this.subscriptions.push({ [event]: subscription })
-  }
-
-  /**
-   * off unsubscribes events and subjects (the opposite of on)
-   * @param event - the name of the event to watch for. Event names are shown in the type column
-   * @example
-   * niivue = new Niivue()
-   * niivue.off('location')
-   */
-  off(event: string): void {
-    const knownEvents = Object.keys(this.eventsToSubjects)
-    if (!knownEvents.includes(event)) {
-      return
-    }
-    const nsubs = this.subscriptions.length
-    for (let i = 0; i < nsubs; i++) {
-      const key = Object.keys(this.subscriptions[i])[0]
-      if (key === event) {
-        this.subscriptions[i][event].unsubscribe()
-        this.subscriptions.splice(i, 1)
-        return
-      }
-    }
   }
 
   /**
@@ -2038,7 +1973,6 @@ export class Niivue {
                   name: file.name
                 })
                   .then((mesh) => {
-                    this.uiData.loading$.next(false)
                     this.addMesh(mesh)
                   })
                   .catch((e) => {
@@ -3712,14 +3646,9 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/mask.html|live demo usage}
    */
   async loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<this> {
-    this.on('loading', (isLoading) => {
-      if (isLoading) {
-        this.loadingText = 'loading...'
-        this.drawScene()
-      } else {
-        this.loadingText = this.opts.loadingText
-      }
-    })
+    this.loadingText = 'loading...'
+    this.drawScene()
+    // this.loadingText = this.opts.loadingText
 
     if (this.thumbnailVisible) {
       // defer volume loading until user clicks on canvas with thumbnail image
@@ -3729,10 +3658,8 @@ export class Niivue {
     this.volumes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    this.uiData.loading$.next(false)
     // for loop to load all volumes in volumeList
     for (let i = 0; i < volumeList.length; i++) {
-      this.uiData.loading$.next(true)
       if (volumeList[i].colorMap !== undefined) {
         volumeList[i].colormap = volumeList[i].colorMap
       }
@@ -3753,7 +3680,6 @@ export class Niivue {
         colorbarVisible: volumeList[i].colorbarVisible
       }
       await this.addVolumeFromUrl(imageOptions)
-      this.uiData.loading$.next(false)
     }
     return this
   }
@@ -3790,14 +3716,9 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/meshes.html|live demo usage}
    */
   async loadMeshes(meshList: LoadFromUrlParams[]): Promise<this> {
-    this.on('loading', (isLoading) => {
-      if (isLoading) {
-        this.loadingText = 'loading...'
-        this.drawScene()
-      } else {
-        this.loadingText = this.opts.loadingText
-      }
-    })
+    this.loadingText = 'loading...'
+    this.drawScene()
+
     if (this.thumbnailVisible) {
       // defer loading until user clicks on canvas with thumbnail image
       this.deferredMeshes = meshList
@@ -3810,12 +3731,9 @@ export class Niivue {
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
-    this.uiData.loading$.next(false)
     // for loop to load all volumes in volumeList
     for (let i = 0; i < meshList.length; i++) {
-      this.uiData.loading$.next(true)
       await this.addMeshFromUrl(meshList[i])
-      this.uiData.loading$.next(false)
     }
     this.drawScene()
     return this
@@ -3898,23 +3816,14 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/connectome.html|live demo usage}
    */
   loadConnectome(json: Connectome | LegacyConnectome): this {
-    this.on('loading', (isLoading) => {
-      if (isLoading) {
-        this.loadingText = 'loading...'
-        this.drawScene()
-      } else {
-        this.loadingText = this.opts.loadingText
-      }
-    })
-
+    this.loadingText = 'loading...'
+    this.drawScene()
     this.meshes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
-    this.uiData.loading$.next(true)
     const mesh = this.loadConnectomeAsMesh(json)
     this.addMesh(mesh)
-    this.uiData.loading$.next(false)
     this.drawScene()
     return this
   }
