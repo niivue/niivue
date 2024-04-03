@@ -7,6 +7,8 @@ for (const file of files) {
   test(`niivue demo file: ${file}`, async ({ page }) => {
     await page.goto(`${httpServerAddressDemos}${file}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1000)
-    await expect(page).toHaveScreenshot({ timeout: 30000 })
+    // find the first canvas element on the page
+    const canvas = await page.locator('canvas').first()
+    await expect(canvas).toHaveScreenshot({ timeout: 30000 })
   })
 }
