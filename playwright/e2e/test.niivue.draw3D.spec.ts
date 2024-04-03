@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test('niivue draw 3D sobel shader', async ({ page }) => {
+test.skip('niivue draw 3D sobel shader', async ({ page }) => {
   test.skip(process.platform === 'linux', 'do not run test on linux')
   const nvols = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)

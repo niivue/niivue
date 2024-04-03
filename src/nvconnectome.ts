@@ -19,7 +19,8 @@ const defaultOptions: ConnectomeOptions = {
   edgeColormapNegative: 'winter',
   edgeMin: 2,
   edgeMax: 6,
-  edgeScale: 1
+  edgeScale: 1,
+  legendLineThickness: 0
 }
 
 export type FreeSurferConnectome = {
@@ -42,7 +43,6 @@ export type FreeSurferConnectome = {
 export class NVConnectome extends NVMesh {
   gl: WebGL2RenderingContext
   nodesChanged: EventTarget
-  legendLineThickness?: number
 
   constructor(gl: WebGL2RenderingContext, connectome: LegacyConnectome) {
     super([], [], connectome.name, [], 1.0, true, gl, connectome)
@@ -139,7 +139,6 @@ export class NVConnectome extends NVMesh {
         : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b)).colorValue
       const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
       const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
-
       const hasNeg = 'nodeColormapNegative' in this
       const legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0.0
 
@@ -384,6 +383,7 @@ export class NVConnectome extends NVMesh {
 
   updateMesh(gl: WebGL2RenderingContext): void {
     this.updateConnectome(gl)
+    this.updateLabels()
   }
 
   json(): Connectome {

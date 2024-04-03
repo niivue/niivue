@@ -104,6 +104,9 @@ export * from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
+// same rollup error as above during npm run dev, and during the umd build
+// TODO: at least remove the umd build when AFNI do not need it anymore
+export * from '../types.js'
 
 type DragReleaseParams = {
   fracStart: vec3
@@ -1751,6 +1754,12 @@ export class Niivue {
       this.moveCrosshairInVox(0, -1, 0)
     } else if (e.code === 'KeyK' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
       this.moveCrosshairInVox(0, 1, 0)
+    } else if (e.code === 'KeyM' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
+      this.opts.dragMode++
+      if (this.opts.dragMode >= DRAG_MODE.slicer3D) {
+        this.opts.dragMode = DRAG_MODE.none
+      }
+      log.info('drag mode changed to ', DRAG_MODE[this.opts.dragMode])
     } else if (e.code === 'ArrowLeft') {
       // only works for background (first loaded image is index 0)
       this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1)
@@ -2115,6 +2124,9 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/layout.html|live demo usage}
    */
   setMultiplanarLayout(layout: number): void {
+    if (typeof layout === 'string') {
+      layout = parseInt(layout)
+    }
     this.opts.multiplanarLayout = layout
     this.drawScene()
   }
@@ -3751,11 +3763,20 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html|live demo usage}
    */
   async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
+    const ext = this.getFileExt(meshOptions.url)
+    if (ext === 'JCON' || ext === 'JSON') {
+      const response = await fetch(meshOptions.url, {})
+      const json = await response.json()
+      const mesh = this.loadConnectomeAsMesh(json)
+      this.mediaUrlMap.set(mesh, meshOptions.url)
+      this.onMeshAddedFromUrl(meshOptions, mesh)
+      this.addMesh(mesh)
+      return mesh
+    }
     const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl })
     this.mediaUrlMap.set(mesh, meshOptions.url)
     this.onMeshAddedFromUrl(meshOptions, mesh)
     this.addMesh(mesh)
-
     return mesh
   }
 
@@ -3852,6 +3873,24 @@ export class Niivue {
     this.drawScene()
   }
 
+  loadConnectomeAsMesh(json: Connectome | LegacyConnectome | FreeSurferConnectome): NVMesh {
+    let connectome = json
+    if ('data_type' in json && json.data_type === 'fs_pointset') {
+      connectome = NVConnectome.convertFreeSurferConnectome(json as FreeSurferConnectome)
+      log.warn('converted FreeSurfer connectome', connectome)
+    } else if ('nodes' in json) {
+      const nodes = json.nodes
+      if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
+        // legacy format
+        connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
+        log.warn('converted legacy connectome', connectome)
+      }
+    } else {
+      throw new Error('not a known connectome format')
+    }
+    return new NVConnectome(this.gl, connectome as LegacyConnectome)
+  }
+
   /**
    * load a connectome specified by json
    * @param connectome - model
@@ -3873,14 +3912,7 @@ export class Niivue {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
     this.uiData.loading$.next(true)
-    let connectome = json
-    const nodes = json.nodes
-    if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
-      // legacy format
-      connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
-      log.warn('converted legacy connectome', connectome)
-    }
-    const mesh = new NVConnectome(this.gl, connectome as LegacyConnectome)
+    const mesh = this.loadConnectomeAsMesh(json)
     this.addMesh(mesh)
     this.uiData.loading$.next(false)
     this.drawScene()
@@ -7761,6 +7793,12 @@ export class Niivue {
     if (graph.opacity <= 0.0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
       return
     }
+    if (graph.LTWH[0] + graph.LTWH[2] > this.gl.canvas.width) {
+      return // issue 930
+    }
+    if (graph.LTWH[1] + graph.LTWH[3] > this.gl.canvas.height) {
+      return // issue 930
+    }
     graph.backColor = [0.15, 0.15, 0.15, graph.opacity]
     graph.lineColor = [1, 1, 1, 1]
     if (this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2] > 1.5) {
@@ -8629,7 +8667,7 @@ export class Niivue {
         radius = range[0] * 0.02
       } // 2% of first dimension
       radius *= this.opts.crosshairWidth
-      this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius)
+      this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius, 20, this.opts.crosshairGap)
       this.crosshairs3D.mm = mm
     }
 

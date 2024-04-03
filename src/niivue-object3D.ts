@@ -78,9 +78,10 @@ export class NiivueObject3D {
     xyzMin: vec3,
     xyzMax: vec3,
     radius: number,
-    sides = 20
+    sides = 20,
+    gap = 0
   ): NiivueObject3D {
-    const geometry = NiivueObject3D.generateCrosshairsGeometry(gl, xyzMM, xyzMin, xyzMax, radius, sides)
+    const geometry = NiivueObject3D.generateCrosshairsGeometry(gl, xyzMM, xyzMin, xyzMax, radius, sides, gap)
     return new NiivueObject3D(
       id,
       geometry.vertexBuffer,
@@ -98,21 +99,49 @@ export class NiivueObject3D {
     xyzMin: vec3,
     xyzMax: vec3,
     radius: number,
-    sides = 20
+    sides = 20,
+    gap = 0
   ): Geometry {
     const vertices: number[] = []
     const indices: number[] = []
-    let start = vec3.fromValues(xyzMin[0], xyzMM[1], xyzMM[2])
-    let dest = vec3.fromValues(xyzMax[0], xyzMM[1], xyzMM[2])
-    NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides)
-    start = vec3.fromValues(xyzMM[0], xyzMin[1], xyzMM[2])
-    dest = vec3.fromValues(xyzMM[0], xyzMax[1], xyzMM[2])
-    NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides)
-    start = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMin[2])
-    dest = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMax[2])
-    NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides)
+    const gapX = radius * gap
+    if (gapX <= 0) {
+      // left-right
+      let start = vec3.fromValues(xyzMin[0], xyzMM[1], xyzMM[2])
+      let dest = vec3.fromValues(xyzMax[0], xyzMM[1], xyzMM[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides)
+      // anterior-posterior
+      start = vec3.fromValues(xyzMM[0], xyzMin[1], xyzMM[2])
+      dest = vec3.fromValues(xyzMM[0], xyzMax[1], xyzMM[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides)
+      // superior-inferior
+      start = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMin[2])
+      dest = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMax[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides)
+    } else {
+      // left-right
+      let start = vec3.fromValues(xyzMin[0], xyzMM[1], xyzMM[2])
+      let dest = vec3.fromValues(xyzMM[0] - gapX, xyzMM[1], xyzMM[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides, false)
+      start = vec3.fromValues(xyzMM[0] + gapX, xyzMM[1], xyzMM[2])
+      dest = vec3.fromValues(xyzMax[0], xyzMM[1], xyzMM[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides, false)
+      // anterior-posterior
+      start = vec3.fromValues(xyzMM[0], xyzMin[1], xyzMM[2])
+      dest = vec3.fromValues(xyzMM[0], xyzMM[1] - gapX, xyzMM[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides, false)
+      start = vec3.fromValues(xyzMM[0], xyzMM[1] + gapX, xyzMM[2])
+      dest = vec3.fromValues(xyzMM[0], xyzMax[1], xyzMM[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides, false)
+      // superior-inferior
+      start = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMin[2])
+      dest = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMM[2] - gapX)
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides, false)
+      start = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMM[2] + gapX)
+      dest = vec3.fromValues(xyzMM[0], xyzMM[1], xyzMax[2])
+      NiivueObject3D.makeCylinder(vertices, indices, start, dest, radius, sides, false)
+    }
     // console.log('i:',indices.length / 3, 'v:',vertices.length / 3);
-
     const vertexBuffer = gl.createBuffer()
     if (vertexBuffer === null) {
       throw new Error('could not instantiate vertex buffer')

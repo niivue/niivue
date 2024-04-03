@@ -31,8 +31,15 @@
         class="slider"
         id="modulateSlider"
       />
-      <label for="outlineCheck">Outline</label>
-      <input type="checkbox" id="outlineCheck" checked />
+      <label for="outlineSlider"> &nbsp; Outline</label>
+      <input
+        type="range"
+        min="0"
+        max="5"
+        value="1"
+        class="slider"
+        id="outlineSlider"
+      />
       <label for="smoothCheck">&nbsp;&nbsp;Smooth</label>
       <input type="checkbox" id="smoothCheck" unchecked />
       <label for="mode">&nbsp;&nbsp;Display:</label>
@@ -42,49 +49,35 @@
         <option>Coef</option>
         <option selected>Alpha-modulated Coef</option>
       </select>
-      <button id="ExtButton">NIfTI Extension</button>
+      <button id="extButton">NIfTI Extension</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <footer id="location">&nbsp;</footer>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
-      
+      import * as niivue from "../dist/index.js"
       opacitySlider.onchange = function () {
-        drop.onchange();
-      };
-      document
-        .getElementById("ExtButton")
-        .addEventListener("click", doExtButton);
-      function doExtButton() {
-        let str = "Volume does not have an extension";
+        drop.onchange()
+      }
+      extButton.onclick = function () {
+        let str = "Volume does not have an extension"
         if (nv1.volumes[1].hdr.extensions.length > 0) {
-          let buf = nv1.volumes[1].hdr.extensions[0].edata;
-          str = String.fromCharCode.apply(null, new Uint8Array(buf));
+          let buf = nv1.volumes[1].hdr.extensions[0].edata
+          str = String.fromCharCode.apply(null, new Uint8Array(buf))
         }
-        alert(str);
+        alert(str)
       }
-      document
-        .getElementById("outlineCheck")
-        .addEventListener("change", doCheckClick);
-      function doCheckClick() {
-        if (this.checked) nv1.overlayOutlineWidth = 1.0;
-        else nv1.overlayOutlineWidth = 0.0;
-        nv1.drawScene();
+      outlineSlider.oninput = function () {
+        nv1.overlayOutlineWidth = this.value;
+        nv1.updateGLVolume();
+      };
+      smoothCheck.onchange = function () {
+        nv1.setInterpolation(!this.checked)
+        nv1.drawScene()
       }
-      document
-        .getElementById("smoothCheck")
-        .addEventListener("change", doCheck4Click);
-      function doCheck4Click() {
-        nv1.setInterpolation(!this.checked);
-        nv1.drawScene();
-      }
-      document
-        .getElementById("modulateSlider")
-        .addEventListener("change", modulateChange);
-      function modulateChange() {
-        drop.onchange();
+      modulateSlider.onchange = function () {
+        drop.onchange()
       }
       var volumeList1 = [
         { url: "../images/mni152.nii.gz" },
@@ -104,10 +97,10 @@
           cal_max: 3.09735,
           cal_min: 0,
         },
-      ];
+      ]
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML =
-          "&nbsp;&nbsp;" + data.string;
+          "&nbsp;&nbsp;" + data.string
       }
       let defaults = {
         loadingText: "there are no images",
@@ -115,40 +108,40 @@
         show3Dcrosshair: true,
         logging: true,
         onLocationChange: handleLocationChange,
-      };
-      var nv1 = new niivue.Niivue(defaults);
-      nv1.setInterpolation(true);
-      nv1.opts.multiplanarForceRender = true;
-      nv1.attachTo("gl1");
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      await nv1.loadVolumes(volumeList1);
-      var drop = document.getElementById("mode");
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.setInterpolation(true)
+      nv1.opts.multiplanarForceRender = true
+      nv1.attachTo("gl1")
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      await nv1.loadVolumes(volumeList1)
+      var drop = document.getElementById("mode")
       drop.onchange = function () {
-        let mode = document.getElementById("mode").selectedIndex;
-        nv1.setOpacity(0, 1.0); //background opaque
-        nv1.setOpacity(1, 0.0); //hide tstat
-        nv1.setOpacity(2, 0.0); //hide cope
-        let visibleOverlay = Math.min(mode, 2);
-        let opacity = opacitySlider.value / 255;
-        nv1.overlayOutlineAlpha = opacity;
-        nv1.setOpacity(visibleOverlay, opacity);
-        nv1.overlayAlphaShader = 1.0;
+        let mode = document.getElementById("mode").selectedIndex
+        nv1.setOpacity(0, 1.0) //background opaque
+        nv1.setOpacity(1, 0.0) //hide tstat
+        nv1.setOpacity(2, 0.0) //hide cope
+        let visibleOverlay = Math.min(mode, 2)
+        let opacity = opacitySlider.value / 255
+        nv1.overlayOutlineAlpha = opacity
+        nv1.setOpacity(visibleOverlay, opacity)
+        nv1.overlayAlphaShader = 1.0
         if (mode === 3) {
-          nv1.overlayAlphaShader = opacity;
-          let modulateAlpha = modulateSlider.value;
+          nv1.overlayAlphaShader = opacity
+          let modulateAlpha = modulateSlider.value
           nv1.setModulationImage(
             nv1.volumes[2].id,
             nv1.volumes[1].id,
             modulateAlpha
-          );
-        } else nv1.setModulationImage(nv1.volumes[2].id, null);
-      };
-      nv1.overlayOutlineWidth = 1;
-      nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
-      nv1.volumes[1].colorbarVisible = false; //hide colorbar for anatomical scan
-      nv1.opts.isColorbar = true;
-      drop.onchange();
-      nv1.createOnLocationChange();
+          )
+        } else nv1.setModulationImage(nv1.volumes[2].id, null)
+      }
+      nv1.overlayOutlineWidth = 1
+      nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
+      nv1.volumes[1].colorbarVisible = false //hide colorbar for anatomical scan
+      nv1.opts.isColorbar = true
+      drop.onchange()
+      nv1.createOnLocationChange()
     </script>
   </body>
 </html>

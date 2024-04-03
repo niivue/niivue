@@ -174,6 +174,7 @@ export class NVMesh {
   vertexCount = 1
   nodeScale = 4
   edgeScale = 1
+  legendLineThickness = 0
   nodeColormap = 'warm'
   edgeColormap = 'warm'
   nodeColormapNegative?: string
@@ -743,120 +744,6 @@ export class NVMesh {
     }
   } // updateFibers()
 
-  // internal function filters connectome to identify which color, size and visibility of nodes and edges
-  updateConnectome(gl: WebGL2RenderingContext): void {
-    // draw nodes
-    const tris: number[] = []
-    const nNode = (this.nodes as LegacyNodes).X.length
-    let hasEdges = false
-    if (nNode > 1 && this.edges) {
-      let nEdges = this.edges!.length
-      if ((nEdges = nNode * nNode)) {
-        hasEdges = true
-      } else {
-        log.warn('Expected %d edges not %d', nNode * nNode, nEdges)
-      }
-    }
-
-    // draw all nodes
-    const pts: number[] = []
-    const rgba255: number[] = []
-    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
-    let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
-    let hasNeg = this.nodeColormapNegative !== undefined
-    let min = this.nodeMinColor!
-    let max = this.nodeMaxColor!
-    for (let i = 0; i < nNode; i++) {
-      const radius = (this.nodes as LegacyNodes).Size[i] * this.nodeScale
-      if (radius <= 0.0) {
-        continue
-      }
-      let color = (this.nodes as LegacyNodes).Color[i]
-      let isNeg = false
-      if (hasNeg && color < 0) {
-        isNeg = true
-        color = -color
-      }
-      if (min < max) {
-        if (color < min) {
-          continue
-        }
-        color = (color - min) / (max - min)
-      } else {
-        color = 1.0
-      }
-      color = Math.round(Math.max(Math.min(255, color * 255))) * 4
-      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-      if (isNeg) {
-        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
-      }
-      const pt: vec3 = [
-        (this.nodes as LegacyNodes).X[i],
-        (this.nodes as LegacyNodes).Y[i],
-        (this.nodes as LegacyNodes).Z[i]
-      ] // TODO defined assertions should not be necessary here, this should be correctly assigned in the constructor
-      NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba)
-    }
-    // draw all edges
-    if (hasEdges) {
-      lut = cmapper.colormap(this.edgeColormap, this.colormapInvert)
-      lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert)
-      hasNeg = this.edgeColormapNegative !== undefined
-      min = this.edgeMin!
-      max = this.edgeMax!
-      for (let i = 0; i < nNode - 1; i++) {
-        for (let j = i + 1; j < nNode; j++) {
-          let color = (this.edges as number[])[i * nNode + j]
-          let isNeg = false
-          if (hasNeg && color < 0) {
-            isNeg = true
-            color = -color
-          }
-          const radius = color * this.edgeScale
-          if (radius <= 0) {
-            continue
-          }
-          if (min < max) {
-            if (color < min) {
-              continue
-            }
-            color = (color - min) / (max - min)
-          } else {
-            color = 1.0
-          }
-          color = Math.round(Math.max(Math.min(255, color * 255))) * 4
-          let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-          if (isNeg) {
-            rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
-          }
-          const pti: vec3 = [
-            (this.nodes as LegacyNodes).X[i],
-            (this.nodes as LegacyNodes).Y[i],
-            (this.nodes as LegacyNodes).Z[i]
-          ]
-          const ptj: vec3 = [
-            (this.nodes as LegacyNodes).X[j],
-            (this.nodes as LegacyNodes).Y[j],
-            (this.nodes as LegacyNodes).Z[j]
-          ]
-          NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
-        } // for j
-      } // for i
-    } // hasEdges
-    // calculate spatial extent of connectome: user adjusting node sizes may influence size
-    const obj = NVMeshUtilities.getExtents(pts)
-    this.furthestVertexFromOrigin = obj.mxDx
-    this.extentsMin = obj.extentsMin
-    this.extentsMax = obj.extentsMax
-    const posNormClr = this.generatePosNormClr(pts, tris, rgba255)
-    // generate webGL buffers and vao
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
-    this.indexCount = tris.length
-  }
-
   // given X,Y,Z coordinates in world space, return index of nearest vertex as well as
   // the distance of this closest vertex to the coordinates
   indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[] {
@@ -886,7 +773,7 @@ export class NVMesh {
       return // fiber not mesh
     }
     if (this.hasConnectome) {
-      this.updateConnectome(gl)
+      // this.updateConnectome(gl)
       return // connectome not mesh
     }
     if (!this.pts || !this.tris || !this.rgba255) {
@@ -1276,89 +1163,6 @@ export class NVMesh {
     return f32
   }
 
-  static loadConnectomeFromFreeSurfer(
-    json: {
-      points?: Point[]
-      data_type: string
-    },
-    gl: WebGL2RenderingContext,
-    name = '',
-    // colormap = "",
-    opacity = 1.0,
-    visible = true
-  ): NVMesh {
-    let isValid = true
-    if (json.data_type === undefined) {
-      isValid = false
-    } else if (json.data_type !== 'fs_pointset') {
-      isValid = false
-    }
-    if (json.points === undefined) {
-      isValid = false
-    }
-    if (!isValid) {
-      throw Error('not a valid FreeSurfer json pointset')
-    }
-    const jcon: LegacyConnectome = {
-      nodes: {
-        names: [],
-        prefilled: [],
-        X: [],
-        Y: [],
-        Z: [],
-        Color: [],
-        Size: []
-      },
-      edges: [],
-      // @ts-expect-error not sure where this should come from
-      name: this.data_type
-    }
-
-    if (!json.points) {
-      throw new Error('points are not set!')
-    }
-    for (let i = 0; i < json.points.length; i++) {
-      let name = ''
-      if (json.points[i].comments) {
-        if (json.points[i].comments[0].text) {
-          name = json.points[i].comments[0].text
-        }
-      }
-      jcon.nodes.names.push(name)
-      let prefilled = ''
-      if (json.points[i].comments) {
-        if (json.points[i].comments[0].prefilled) {
-          prefilled = json.points[i].comments[0].prefilled as string
-        }
-      }
-      jcon.nodes.prefilled.push(prefilled)
-      jcon.nodes.X.push(json.points[i].coordinates.x)
-      jcon.nodes.Y.push(json.points[i].coordinates.y)
-      jcon.nodes.Z.push(json.points[i].coordinates.z)
-      jcon.nodes.Color.push(1)
-      jcon.nodes.Size.push(1)
-    }
-    return new NVMesh([], [], name, [], opacity, visible, gl, jcon)
-  } // loadConnectomeFromFreeSurfer
-
-  // read connectome saved as JSON
-  static loadConnectomeFromJSON(
-    json: Record<string, unknown>,
-    gl: WebGL2RenderingContext,
-    name = '',
-    // colormap = "",
-    opacity = 1.0,
-    visible = true
-  ): NVMesh {
-    if ('name' in json) {
-      name = this.name
-    }
-    if (!('nodes' in json)) {
-      throw Error('not a valid jcon connectome file')
-    }
-    return new NVMesh([], [], name, [], opacity, visible, gl, json as LegacyConnectome)
-  } // loadConnectomeFromJSON()
-
   // wrapper to read meshes, tractograms and connectomes regardless of format
   static readMesh(
     buffer: ArrayBuffer,
@@ -1380,10 +1184,12 @@ export class NVMesh {
       ext = ext.toUpperCase()
     }
     if (ext === 'JCON') {
-      return NVMesh.loadConnectomeFromJSON(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      // return NVMesh.loadConnectomeFromJSON(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
     if (ext === 'JSON') {
-      return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      // return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
+      log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
     rgba255[3] = Math.max(0, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TT' || ext === 'TRX' || ext === 'TRACT') {
