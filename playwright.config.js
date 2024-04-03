@@ -21,7 +21,12 @@ export default defineConfig({
     // baseURL: 'http://127.0.0.1:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry'
+    trace: 'on-first-retry',
+    viewport: { width: 1280, height: 720 },
+    args: [
+      // set window size to 1280x720
+      '--window-size=1280,720'
+    ]
   },
 
   expect: {
