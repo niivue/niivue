@@ -1,4 +1,5 @@
-const { snapshot, httpServerAddress, seconds } = require('./helpers')
+const { snapshot, httpServerAddress, wait } = require('./helpers')
+
 beforeEach(async () => {
   await page.goto(httpServerAddress, { timeout: 0 })
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
@@ -26,7 +27,7 @@ test('mouse wheel changes slices in 2D view', async () => {
     await nv.loadVolumes(volumeList)
   })
 
-  await page.waitForTimeout(500)
+  await wait(500)
   await page.mouse.move(100, 200)
   for (let i = 0; i < 20; i++) {
     await page.mouse.wheel({

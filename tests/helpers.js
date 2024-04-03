@@ -25,6 +25,9 @@ function ensureDownloadFolder() {
   }
 }
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+module.exports.wait = wait
 module.exports.httpServerAddress = 'http://localhost:8888/tests/index.html'
 module.exports.httpServerAddressSync = 'http://localhost:8888/tests/sync.html'
 module.exports.httpServerAddressFlexbox = 'http://localhost:8888/tests/flexbox.html'
