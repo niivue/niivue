@@ -9,6 +9,7 @@ for (const file of files) {
     // find the first canvas element on the page
     const canvas = await page.locator('canvas').first()
     await page.waitForSelector('canvas')
+    await page.waitForTimeout(5000)
     await expect(canvas).toHaveScreenshot({ timeout: 30000 })
   })
 }
