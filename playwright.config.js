@@ -1,13 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const isMacosCI = process.env.CI && process.platform === 'darwin'
-// const isMacosCI = process.platform === 'darwin'
-
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  headless: !isMacosCI,
   testDir: './playwright/tests-out',
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -25,11 +21,7 @@ export default defineConfig({
     // baseURL: 'http://127.0.0.1:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-    launchOptions: {
-      // use egl if macos
-      // args: [isMacosCI ? '--use-gl=angle' : '', isMacosCI ? '--use-angle=swiftshader' : '']
-    }
+    trace: 'on-first-retry'
   },
 
   expect: {
