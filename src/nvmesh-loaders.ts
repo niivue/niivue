@@ -3330,7 +3330,7 @@ export class NVMeshLoaders {
     return {
       positions: Float32Array.from(positions),
       indices: Int32Array.from(indices),
-      rgba255
+      rgba255: Uint8Array.from(rgba255)
     }
   } // readX3D()
 

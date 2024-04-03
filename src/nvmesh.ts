@@ -1295,7 +1295,7 @@ export class NVMesh {
 
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
-      rgba255 = obj.rgba255
+      rgba255 = Array.from(obj.rgba255)
     }
     if ('colors' in obj && obj.colors && obj.colors.length === pts.length) {
       rgba255 = []

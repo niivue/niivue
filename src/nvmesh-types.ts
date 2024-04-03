@@ -101,7 +101,7 @@ export type MGH =
 export type X3D = {
   positions: Float32Array
   indices: Int32Array
-  rgba255: number[]
+  rgba255: Uint8Array
 }
 
 export type Layer = {
