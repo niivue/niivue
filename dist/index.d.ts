@@ -87,8 +87,8 @@ declare class NiivueObject3D {
     fieldOfViewDeObliqueMM?: vec3;
     mm?: vec4;
     constructor(id: number, vertexBuffer: WebGLBuffer, mode: number, indexCount: number, indexBuffer?: WebGLVertexArrayObject | null, vao?: WebGLVertexArrayObject | null);
-    static generateCrosshairs: (gl: WebGL2RenderingContext, id: number, xyzMM: vec4, xyzMin: vec3, xyzMax: vec3, radius: number, sides?: number) => NiivueObject3D;
-    static generateCrosshairsGeometry: (gl: WebGL2RenderingContext, xyzMM: vec4, xyzMin: vec3, xyzMax: vec3, radius: number, sides?: number) => Geometry;
+    static generateCrosshairs: (gl: WebGL2RenderingContext, id: number, xyzMM: vec4, xyzMin: vec3, xyzMax: vec3, radius: number, sides?: number, gap?: number) => NiivueObject3D;
+    static generateCrosshairsGeometry: (gl: WebGL2RenderingContext, xyzMM: vec4, xyzMin: vec3, xyzMax: vec3, radius: number, sides?: number, gap?: number) => Geometry;
     static getFirstPerpVector: (v1: vec3) => vec3;
     static subdivide: (verts: number[], faces: number[]) => void;
     static weldVertices: (verts: number[], faces: number[]) => number[];
@@ -183,6 +183,7 @@ type NiftiHeader = {
     intent_name: string;
     magic: string;
 };
+type Volume = Record<string, any>;
 type Point = {
     comments: Array<{
         text: string;
@@ -226,6 +227,7 @@ type ConnectomeOptions = {
     edgeMin: number;
     edgeMax: number;
     edgeScale: number;
+    legendLineThickness?: number;
 };
 type Connectome = ConnectomeOptions & {
     nodes: NVConnectomeNode[];
@@ -427,6 +429,7 @@ declare class NVMesh {
     vertexCount: number;
     nodeScale: number;
     edgeScale: number;
+    legendLineThickness: number;
     nodeColormap: string;
     edgeColormap: string;
     nodeColormapNegative?: string;
@@ -456,18 +459,12 @@ declare class NVMesh {
     constructor(pts: number[] | Float32Array, tris: number[] | Uint32Array, name: string | undefined, rgba255: number[] | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
     linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void;
     updateFibers(gl: WebGL2RenderingContext): void;
-    updateConnectome(gl: WebGL2RenderingContext): void;
     indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[];
     updateMesh(gl: WebGL2RenderingContext): void;
     reverseFaces(gl: WebGL2RenderingContext): void;
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): void;
     setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void;
     generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: number[]): Float32Array;
-    static loadConnectomeFromFreeSurfer(json: {
-        points?: Point[];
-        data_type: string;
-    }, gl: WebGL2RenderingContext, name?: string, opacity?: number, visible?: boolean): NVMesh;
-    static loadConnectomeFromJSON(json: Record<string, unknown>, gl: WebGL2RenderingContext, name?: string, opacity?: number, visible?: boolean): NVMesh;
     static readMesh(buffer: ArrayBuffer, name: string, gl: WebGL2RenderingContext, opacity?: number, rgba255?: number[], visible?: boolean): NVMesh;
     static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
     /**
@@ -845,7 +842,6 @@ type FreeSurferConnectome = {
 declare class NVConnectome extends NVMesh {
     gl: WebGL2RenderingContext;
     nodesChanged: EventTarget;
-    legendLineThickness?: number;
     constructor(gl: WebGL2RenderingContext, connectome: LegacyConnectome);
     static convertLegacyConnectome(json: LegacyConnectome): Connectome;
     static convertFreeSurferConnectome(json: FreeSurferConnectome, colormap?: string): Connectome;
@@ -897,6 +893,7 @@ type NVConfigOptions = {
     textHeight: number;
     colorbarHeight: number;
     crosshairWidth: number;
+    crosshairGap: number;
     rulerWidth: number;
     show3Dcrosshair: boolean;
     backColor: number[];
@@ -1826,6 +1823,7 @@ declare class Niivue {
         textHeight: number;
         colorbarHeight: number;
         crosshairWidth: number;
+        crosshairGap: number;
         rulerWidth: number;
         show3Dcrosshair: boolean;
         backColor: number[];
@@ -2586,6 +2584,7 @@ declare class Niivue {
             node: NVConnectomeNode;
         };
     }): void;
+    loadConnectomeAsMesh(json: Connectome | LegacyConnectome | FreeSurferConnectome): NVMesh;
     /**
      * load a connectome specified by json
      * @param connectome - model
@@ -2950,4 +2949,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type ExportDocumentData, LabelLineTerminator, LabelTextAlignment, MULTIPLANAR_TYPE, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, Niivue, SLICE_TYPE, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type ExportDocumentData, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, type NiftiHeader, Niivue, type Point, SLICE_TYPE, type Volume, cmapper, ColorTables as colortables };

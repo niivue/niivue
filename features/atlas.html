@@ -39,6 +39,15 @@
         class="slider"
         id="padSlider"
       />
+      <label for="gapSlider">Crosshair Gap</label>
+      <input
+        type="range"
+        min="0"
+        max="36"
+        value="12"
+        class="slider"
+        id="gapSlider"
+      />
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -53,9 +62,10 @@
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML = 'Clicked: '+data.string
       }
-      var nv1 = new niivue.Niivue({backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange })
+      var nv1 = new niivue.Niivue({show3Dcrosshair: true, backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange })
       nv1.attachTo("gl1")
       nv1.setInterpolation(true)
+      nv1.opts.crosshairGap = 12
       nv1.opts.multiplanarForceRender = true
       nv1.opts.dragMode = nv1.dragModes.pan
       nv1.opts.yoke3Dto2DZoom = true
@@ -82,6 +92,10 @@
       }
       padSlider.oninput = function () {
         nv1.setMultiplanarPadPixels(this.value)
+      }
+      gapSlider.oninput = function () {
+        nv1.opts.crosshairGap = this.value
+        nv1.updateGLVolume()
       }
       interpCheck.onchange = function () {
         nv1.setInterpolation(this.checked)
