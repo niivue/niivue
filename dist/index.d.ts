@@ -1,4 +1,3 @@
-import { Subject, Subscription } from 'rxjs';
 import { mat4, vec3, vec4, vec2 } from 'gl-matrix';
 import * as nifti from 'nifti-reader-js';
 import { WebSocketSubject } from 'rxjs/webSocket';
@@ -1522,7 +1521,6 @@ type UIData = {
     dragClipPlaneStartDepthAziElev: number[];
     lastTwoTouchDistance: number;
     multiTouchGesture: boolean;
-    loading$: Subject<unknown>;
     dpr?: number;
 };
 type SaveImageOptions = {
@@ -1611,7 +1609,6 @@ declare class Niivue {
     syncOpts: Record<string, unknown>;
     readyForSync: boolean;
     uiData: UIData;
-    eventsToSubjects: Record<string, Subject<unknown>>;
     back: NVImage | null;
     overlays: NVImage[];
     deferredVolumes: ImageFromUrlOptions[];
@@ -1904,7 +1901,6 @@ declare class Niivue {
     initialized: boolean;
     currentDrawUndoBitmap: number;
     loadingText: string;
-    subscriptions: Array<Record<string, Subscription>>;
     /**
      * @param options - options object to set modifiable Niivue properties
      */
@@ -1933,28 +1929,6 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/multiplanar.html|live demo usage}
      */
     attachTo(id: string, isAntiAlias?: null): Promise<this>;
-    /**
-     * register a callback function to run when known Niivue events happen
-     * @param event - the name of the event to watch for. Event names are shown in the type column
-     * @param callback - the function to call when the event happens
-     * @example
-     * niivue = new Niivue()
-     *
-     * // 'location' update event is fired when the crosshair changes position via user input
-     * function doSomethingWithLocationData(data)\{
-     *    // data has the shape \{mm: [N, N, N], vox: [N, N, N], frac: [N, N, N], values: this.volumes.map(v =\> \{return val\})\}
-     *    //...
-     * \}
-     */
-    on(event: string, callback: (data: unknown) => void): void;
-    /**
-     * off unsubscribes events and subjects (the opposite of on)
-     * @param event - the name of the event to watch for. Event names are shown in the type column
-     * @example
-     * niivue = new Niivue()
-     * niivue.off('location')
-     */
-    off(event: string): void;
     /**
      * attach the Niivue instance to a canvas element directly
      * @param canvas - the canvas element reference
