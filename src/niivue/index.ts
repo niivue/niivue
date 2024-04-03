@@ -104,7 +104,9 @@ export * from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
-export { Connectome, LegacyConnectome } from '../types.js'
+// same rollup error as above during npm run dev, and during the umd build
+// TODO: at least remove the umd build when AFNI do not need it anymore
+export * from '../types.js'
 
 type DragReleaseParams = {
   fracStart: vec3
