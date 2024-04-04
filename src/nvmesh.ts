@@ -1205,7 +1205,7 @@ export class NVMesh {
         obj = NVMeshLoaders.readTRK(buffer)
       }
       if (typeof obj === 'undefined') {
-        const pts = [0, 0, 0, 0, 0, 0]
+        const pts = new Float32Array([0, 0, 0, 0, 0, 0])
         const offsetPt0 = [0]
         obj = { pts, offsetPt0 }
         log.error('Creating empty tracts')
@@ -1690,7 +1690,7 @@ export class NVMesh {
   }
 
   static readTT(buffer: ArrayBuffer): TT {
-    return NVMeshLoaders.readTRX(buffer)
+    return NVMeshLoaders.readTT(buffer)
   }
 
   static readTRX(buffer: ArrayBuffer): TRX {

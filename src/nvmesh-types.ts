@@ -35,12 +35,12 @@ export type TRACT = {
 }
 
 export type TT = {
-  pts: number[]
+  pts: Float32Array
   offsetPt0: number[]
 }
 
 export type TRX = {
-  pts: number[]
+  pts: Float32Array
   offsetPt0: number[]
   dpg: ValuesArray
   dps: ValuesArray

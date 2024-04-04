@@ -205,7 +205,7 @@ export class NVMeshLoaders {
       return mat
     } // readMatV4()
     let offsetPt0: AnyNumberArray = []
-    let pts: AnyNumberArray = []
+    let pts = new Float32Array(0)
     const mat = readMatV4(buffer)
     if (!('trans_to_mni' in mat)) {
       throw new Error("TT format file must have 'trans_to_mni'")
@@ -316,7 +316,7 @@ export class NVMeshLoaders {
     } // decodeFloat16()
     let noff = 0
     let npt = 0
-    let pts: number[] = []
+    let pts = new Float32Array([])
     const offsetPt0: number[] = []
     const dpg = []
     const dps = []
@@ -440,7 +440,7 @@ export class NVMeshLoaders {
       }
       if (fname.startsWith('positions.3.')) {
         npt = nval // 4 bytes per 32bit input
-        pts = Array.from(vals.slice())
+        pts = new Float32Array(vals)
       }
     }
     if (noff === 0 || npt === 0) {
@@ -452,7 +452,7 @@ export class NVMeshLoaders {
     }
     offsetPt0[noff] = npt / 3 // solve fence post problem, offset for final streamline
     return {
-      pts: Array.from(pts),
+      pts,
       offsetPt0: Array.from(offsetPt0),
       dpg,
       dps,
