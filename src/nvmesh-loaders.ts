@@ -106,7 +106,7 @@ export class NVMeshLoaders {
     }
     return {
       pts: new Float32Array(pts),
-      offsetPt0,
+      offsetPt0: new Uint32Array(offsetPt0),
       dps
     }
   } // readTRACT()

@@ -45,7 +45,9 @@ export class NVConnectome extends NVMesh {
   nodesChanged: EventTarget
 
   constructor(gl: WebGL2RenderingContext, connectome: LegacyConnectome) {
-    super([], [], connectome.name, new Uint8Array([]), 1.0, true, gl, connectome)
+    super([],
+    new Uint32Array([]),
+    connectome.name, new Uint8Array([]), 1.0, true, gl, connectome)
     this.gl = gl
     // this.nodes = connectome.nodes;
     // this.edges = connectome.edges;

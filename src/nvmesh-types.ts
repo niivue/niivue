@@ -30,7 +30,7 @@ export type DefaultMeshType = {
 
 export type TRACT = {
   pts: Float32Array
-  offsetPt0: number[]
+  offsetPt0: Uint32Array
   dps: ValuesArray
 }
 

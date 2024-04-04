@@ -135,7 +135,7 @@ export class NVMesh {
   opacity: number
   visible: boolean
   meshShaderIndex = 0
-  offsetPt0: number[] | Uint32Array | null = null
+  offsetPt0: Uint32Array | null = null
 
   colormapInvert = false
   fiberGroupColormap: ColorMap | null = null
@@ -146,7 +146,7 @@ export class NVMesh {
   vaoFiber: WebGLVertexArrayObject
 
   pts: number[] | Float32Array
-  tris?: number[] | Uint32Array
+  tris?: Uint32Array
   layers: NVMeshLayer[]
   type = MeshType.MESH
 
@@ -207,7 +207,7 @@ export class NVMesh {
    */
   constructor(
     pts: number[] | Float32Array,
-    tris: number[] | Uint32Array,
+    tris: Uint32Array,
     name = '',
     rgba255 = new Uint8Array([255, 255, 255, 255]),
     opacity = 1.0,
@@ -1172,8 +1172,8 @@ export class NVMesh {
     rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true
   ): NVMesh {
-    let tris: number[] = []
-    let pts: number[] = []
+    let tris: Uint32Array = new Uint32Array([])
+    let pts: Float32Array = new Float32Array([]) 
     let anatomicalStructurePrimary = ''
     let obj: TCK | TRACT | TT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
@@ -1259,7 +1259,8 @@ export class NVMesh {
         rgba255[3] = -1.0
         return new NVMesh(
           Array.from(obj.pts),
-          Array.from(obj.offsetPt0),
+          //Array.from(obj.offsetPt0),
+          obj.offsetPt0,
           name,
           rgba255, // colormap,
           opacity, // opacity,
@@ -1289,8 +1290,8 @@ export class NVMesh {
       throw new Error('indices not loaded')
     }
 
-    pts = Array.from(obj.positions)
-    tris = Array.from(obj.indices)
+    pts = new Float32Array(obj.positions)// Array.from(obj.positions)
+    tris = new Uint32Array(obj.indices)//Array.from()
 
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
