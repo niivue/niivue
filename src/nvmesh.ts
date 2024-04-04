@@ -98,7 +98,7 @@ type BaseLoadParams = {
   // the opacity for this image. default is 1
   opacity: number
   // the base color of the mesh. RGBA values from 0 to 255. Default is white
-  rgba255: Uint8Array
+  rgba255: number[] | Uint8Array
   // whether or not this image is to be visible
   visible: boolean
   // layers of the mesh to load
@@ -1439,7 +1439,7 @@ export class NVMesh {
     gl,
     name = '',
     opacity = 1.0,
-    rgba255 = new Uint8Array([255, 255, 255, 255]),
+    rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
   }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
@@ -1472,7 +1472,7 @@ export class NVMesh {
     // let tris = [];
     // var pts = [];
     const buffer = await response.arrayBuffer()
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = await this.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
@@ -1513,7 +1513,7 @@ export class NVMesh {
     gl,
     name = '',
     opacity = 1.0,
-    rgba255 = new Uint8Array([255, 255, 255, 255]),
+    rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
   }: Partial<LoadFromFileParams> = {}): Promise<NVMesh> {
@@ -1525,7 +1525,7 @@ export class NVMesh {
     }
 
     const buffer = await NVMesh.readFileAsync(file)
-    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
@@ -1548,7 +1548,7 @@ export class NVMesh {
     gl,
     name = '',
     opacity = 1.0,
-    rgba255 = new Uint8Array([255, 255, 255, 255]),
+    rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = []
   }: Partial<LoadFromBase64Params> = {}): Promise<NVMesh> {
@@ -1571,7 +1571,7 @@ export class NVMesh {
     }
 
     const buffer = base64ToArrayBuffer(base64)
-    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
