@@ -99,7 +99,7 @@
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
       var layerList = [{url: "../demos/images/mni152.SLF1_R.tsf"}];
-      await nv1.loadMeshes([{ url: "../demos/images/tract.SLF1_R.tck", layers: layerList,}]);
+      await nv1.loadMeshes([{ url: "../demos/images/tract.SLF1_R.tck", layers: layerList,}, { url: "../demos/images/lh.pial"}]);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);

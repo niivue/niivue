@@ -1191,7 +1191,7 @@ export class NVMesh {
       // return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
       log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
-    rgba255[3] = Math.max(0, rgba255[3])
+    rgba255[3] = Math.max(1, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TT' || ext === 'TRX' || ext === 'TRACT') {
       if (ext === 'TCK') {
         obj = NVMeshLoaders.readTCK(buffer)
@@ -1210,8 +1210,7 @@ export class NVMesh {
         obj = { pts, offsetPt0 }
         log.error('Creating empty tracts')
       }
-
-      rgba255[3] = -1.0
+      rgba255[3] = 0.0
       return new NVMesh(
         obj.pts,
         obj.offsetPt0,
@@ -1295,7 +1294,7 @@ export class NVMesh {
 
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
-      //rgba255 = Array.from(obj.rgba255)
+      // rgba255 = Array.from(obj.rgba255)
       rgba255 = obj.rgba255
     }
     if ('colors' in obj && obj.colors && obj.colors.length === pts.length) {
@@ -1311,7 +1310,6 @@ export class NVMesh {
         rgba255[k++] = 255 // alpha
         c += 3
       } // for i: each vertex
-      
     } // obj includes colors
     const npt = pts.length / 3
     const ntri = tris.length / 3
