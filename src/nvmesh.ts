@@ -431,7 +431,7 @@ export class NVMesh {
     // each streamline with n nodes has n-1 cylinders (fencepost)
     // each triangle defined by three indices, each referring to a vertex
     const nidx = (n_line_vtx - n_streamlines) * cyl_sides * 2 * 3
-    const idxs = new Int32Array(nidx)
+    const idxs = new Uint32Array(nidx)
     let idx = 0
     vtx = 0
     for (let i = 1; i < n_count; i++) {
@@ -469,7 +469,7 @@ export class NVMesh {
     // no need to release: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBufferData.xhtml
     // any pre-existing data store is deleted
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(idxs), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(idxs), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(f32), gl.STATIC_DRAW)
     this.indexCount = nidx
@@ -1062,7 +1062,7 @@ export class NVMesh {
     } // isAdditiveBlend
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(this.tris), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(this.tris), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
     this.indexCount = this.tris.length

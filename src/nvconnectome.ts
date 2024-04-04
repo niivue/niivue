@@ -366,8 +366,8 @@ export class NVConnectome extends NVMesh {
       NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
     }
 
-    let pts32 = new Float32Array(pts)
-    let tris32 = new Uint32Array(tris)
+    const pts32 = new Float32Array(pts)
+    const tris32 = new Uint32Array(tris)
     // calculate spatial extent of connectome: user adjusting node sizes may influence size
     const obj = NVMeshUtilities.getExtents(pts32)
 
