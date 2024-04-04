@@ -145,7 +145,7 @@ export class NVMesh {
   vao: WebGLVertexArrayObject
   vaoFiber: WebGLVertexArrayObject
 
-  pts: number[] | Float32Array
+  pts: Float32Array
   tris?: Uint32Array
   layers: NVMeshLayer[]
   type = MeshType.MESH
@@ -206,7 +206,7 @@ export class NVMesh {
    * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
    */
   constructor(
-    pts: number[] | Float32Array,
+    pts: Float32Array,
     tris: Uint32Array,
     name = '',
     rgba255 = new Uint8Array([255, 255, 255, 255]),
@@ -1173,7 +1173,7 @@ export class NVMesh {
     visible = true
   ): NVMesh {
     let tris: Uint32Array = new Uint32Array([])
-    let pts: Float32Array = new Float32Array([]) 
+    let pts: Float32Array = new Float32Array([])
     let anatomicalStructurePrimary = ''
     let obj: TCK | TRACT | TT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
@@ -1256,10 +1256,9 @@ export class NVMesh {
       obj = NVMeshLoaders.readVTK(buffer)
       if ('offsetPt0' in obj) {
         // VTK files used both for meshes and streamlines
-        rgba255[3] = -1.0
+        rgba255[3] = 0.0
         return new NVMesh(
-          Array.from(obj.pts),
-          //Array.from(obj.offsetPt0),
+          obj.pts,
           obj.offsetPt0,
           name,
           rgba255, // colormap,
@@ -1290,8 +1289,8 @@ export class NVMesh {
       throw new Error('indices not loaded')
     }
 
-    pts = new Float32Array(obj.positions)// Array.from(obj.positions)
-    tris = new Uint32Array(obj.indices)//Array.from()
+    pts = obj.positions
+    tris = obj.indices
 
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
@@ -1317,6 +1316,7 @@ export class NVMesh {
     if (ntri < 1 || npt < 3) {
       throw new Error('Mesh should have at least one triangle and three vertices')
     }
+    rgba255[3] = Math.max(1, rgba255[3]) //mesh not streamline
     const nvm = new NVMesh(
       pts,
       tris,

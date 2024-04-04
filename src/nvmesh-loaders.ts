@@ -916,7 +916,7 @@ export class NVMeshLoaders {
     } else {
       throw new Error('Unsupported ASCII VTK datatype ' + items[0])
     }
-    const indices = new Int32Array(tris)
+    const indices = new Uint32Array(tris)
     return {
       positions,
       indices
@@ -1397,7 +1397,7 @@ export class NVMeshLoaders {
     let v = 0
     let t = 0
     let positions: Float32Array
-    let indices: Int32Array
+    let indices: Uint32Array
     while (pos < len) {
       const line = readStr()
       if (line.startsWith('#')) {
@@ -1418,7 +1418,7 @@ export class NVMeshLoaders {
       }
       if (ntri < 1) {
         ntri = parseInt(items[0])
-        indices = new Int32Array(ntri * 3)
+        indices = new Uint32Array(ntri * 3)
         continue
       }
       if (t >= ntri * 3) {
@@ -1474,7 +1474,7 @@ export class NVMeshLoaders {
       positions[j + 2] = parseFloat(items[2])
       j += 3
     }
-    const indices = new Int32Array(ntri * 3)
+    const indices = new Uint32Array(ntri * 3)
     j = 0
     for (let i = 0; i < ntri; i++) {
       line = readStr() // 1st line: signature
@@ -1658,7 +1658,7 @@ export class NVMeshLoaders {
     } else {
       throw new Error('Unsupported binary VTK datatype ' + items[0])
     }
-    const indices = new Int32Array(tris)
+    const indices = new Uint32Array(tris)
     return {
       positions,
       indices
@@ -1688,7 +1688,7 @@ export class NVMeshLoaders {
     // var precision = reader.getUint32(52, true);
     // float64 orientation[4][4]; //4x4 matrix, affine transformation to world coordinates*)
     let pos = hdrBytes
-    const indices = new Int32Array(buffer, pos, nface * 3)
+    const indices = new Uint32Array(buffer, pos, nface * 3)
     pos += nface * 3 * 4
     const positions = new Float32Array(buffer, pos, nvert * 3)
     // oops, triangle winding opposite of CCW convention
@@ -1780,7 +1780,7 @@ export class NVMeshLoaders {
     let filepos = 16 + nskip
     let indices = null
     if (isFace) {
-      indices = new Int32Array(_buffer, filepos, nface * 3)
+      indices = new Uint32Array(_buffer, filepos, nface * 3)
       filepos += nface * 3 * 4
     }
     let positions = null
@@ -1946,7 +1946,7 @@ export class NVMeshLoaders {
         positions[v + 2] = parseFloat(items[2])
         v += 3
       }
-      let indices = new Int32Array(nface * 3)
+      let indices = new Uint32Array(nface * 3)
       let f = 0
       for (let i = 0; i < nface; i++) {
         line = readStr()
@@ -1956,7 +1956,7 @@ export class NVMeshLoaders {
           break
         } // error
         if (f + nTri * 3 > indices.length) {
-          const c = new Int32Array(indices.length + indices.length)
+          const c = new Uint32Array(indices.length + indices.length)
           c.set(indices)
           indices = c.slice()
         }
@@ -2008,7 +2008,7 @@ export class NVMeshLoaders {
         pos += vertStride
       }
     }
-    const indices = new Int32Array(nface * 3) // assume triangular mesh: pre-allocation optimization
+    const indices = new Uint32Array(nface * 3) // assume triangular mesh: pre-allocation optimization
     let isTriangular = true
     let j = 0
     if (indexCountBytes === 1 && indexBytes === 4 && indexStrideBytes === 13) {
@@ -2108,7 +2108,7 @@ export class NVMeshLoaders {
     header = lines[line].trim().split(/\s+/)
     line++
     const num_f = parseInt(header[0])
-    const indices = new Int32Array(num_f * 3)
+    const indices = new Uint32Array(num_f * 3)
     for (let i = 0; i < num_f; i++) {
       const items = lines[line].trim().split(/\s+/)
       line++
@@ -2202,7 +2202,7 @@ export class NVMeshLoaders {
     }
     // return results
     const positions = new Float32Array(pts)
-    const indices = new Int32Array(t)
+    const indices = new Uint32Array(t)
     return {
       positions,
       indices
@@ -2250,7 +2250,7 @@ export class NVMeshLoaders {
       i++
     }
     const positions = new Float32Array(pts)
-    const indices = new Int32Array(t)
+    const indices = new Uint32Array(t)
     return {
       positions,
       indices
@@ -2292,7 +2292,7 @@ export class NVMeshLoaders {
     j += num_c * 4
     j += nTri
     const nTriX3 = nTri * 3
-    const indices = new Int32Array(nTriX3)
+    const indices = new Uint32Array(nTriX3)
     for (let i = 0; i < nTriX3; i++) {
       indices[i] = parseInt(items[j++])
     }
@@ -2344,7 +2344,7 @@ export class NVMeshLoaders {
       }
     } // for all lines
     const positions = new Float32Array(pts)
-    const indices = new Int32Array(t)
+    const indices = new Uint32Array(t)
     return {
       positions,
       indices
@@ -2379,7 +2379,7 @@ export class NVMeshLoaders {
       offset += 4
     }
     nf *= 3 // each triangle face indexes 3 triangles
-    const indices = new Int32Array(nf)
+    const indices = new Uint32Array(nf)
     for (let i = 0; i < nf; i++) {
       indices[i] = view.getUint32(offset, false)
       offset += 4
@@ -2511,7 +2511,7 @@ export class NVMeshLoaders {
       const nNearest = reader.getUint32(pos, true)
       pos += 4 + 4 * nNearest
     }
-    const indices = new Int32Array(nTri * 3)
+    const indices = new Uint32Array(nTri * 3)
     for (let i = 0; i < nTri * 3; i++) {
       indices[i] = reader.getInt32(pos, true)
       pos += 4
@@ -2551,7 +2551,7 @@ export class NVMeshLoaders {
       throw new Error('Unable to parse ASCII STL file.')
     }
     const positions = new Float32Array(pts)
-    const indices = new Int32Array(npts)
+    const indices = new Uint32Array(npts)
     for (let i = 0; i < npts; i++) {
       indices[i] = i
     }
@@ -2577,7 +2577,7 @@ export class NVMeshLoaders {
     if (buffer.byteLength < 80 + 4 + ntri * 50) {
       throw new Error('STL file too small to store triangles = ' + ntri)
     }
-    const indices = new Int32Array(ntri3)
+    const indices = new Uint32Array(ntri3)
     const positions = new Float32Array(ntri3 * 3)
     let pos = 80 + 4 + 12
     let v = 0 // vertex
@@ -2641,7 +2641,7 @@ export class NVMeshLoaders {
       let indexCount = 0
       let surfaceNumberOfVertices = 0
       let brainStructure = ''
-      let vertexIndices: Int32Array = new Int32Array()
+      let vertexIndices: Uint32Array = new Uint32Array()
       const bytes = new Uint8Array(buffer)
       let pos = 552
 
@@ -2739,7 +2739,7 @@ export class NVMeshLoaders {
           if (items.length < indexCount) {
             log.error('Error parsing VertexIndices')
           }
-          vertexIndices = new Int32Array(indexCount)
+          vertexIndices = new Uint32Array(indexCount)
           for (let i = 0; i < indexCount; i++) {
             vertexIndices[i] = parseInt(items[i])
           }
@@ -3329,7 +3329,7 @@ export class NVMeshLoaders {
     }
     return {
       positions: Float32Array.from(positions),
-      indices: Int32Array.from(indices),
+      indices: Uint32Array.from(indices),
       rgba255: Uint8Array.from(rgba255)
     }
   } // readX3D()
@@ -3410,7 +3410,7 @@ export class NVMeshLoaders {
     }
     len = tag.contentEndPos // only read contents of GIfTI tag
     let positions = new Float32Array()
-    let indices = new Int32Array()
+    let indices = new Uint32Array()
     let scalars = new Float32Array()
     let anatomicalStructurePrimary = ''
     let isIdx = false
@@ -3545,7 +3545,7 @@ export class NVMeshLoaders {
           if (dataType !== 8) {
             log.warn('expect indices as INT32')
           }
-          indices = new Int32Array(datBin!.buffer)
+          indices = new Uint32Array(datBin!.buffer)
           if (isColMajor) {
             const tmp = indices.slice()
             const np = tmp.length / 3
