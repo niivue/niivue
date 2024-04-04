@@ -5909,7 +5909,7 @@ export class Niivue {
   /**
    * modulate intensity of one image based on intensity of another
    * @param idTarget - the ID of the NVImage to be biased
-   * @param idModulation - the ID of the NVImage that controls bias (null to disable modulation)
+   * @param idModulation - the ID of the NVImage that controls bias (empty string to disable modulation)
    * @param modulateAlpha - does the modulation influence alpha transparency (values greater than 1).
    * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
    * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo scalar usage}
@@ -5919,11 +5919,13 @@ export class Niivue {
     // to set:
     // nv1.setModulationImage(nv1.volumes[0].id, nv1.volumes[1].id);
     // to clear:
-    // nv1.setModulationImage(nv1.volumes[0].id, null);
+    // nv1.setModulationImage(nv1.volumes[0].id, '');
     const idxTarget = this.getVolumeIndexByID(idTarget)
-    let idxModulation = null
-    // if (idModulation)
-    idxModulation = this.getVolumeIndexByID(idModulation)
+    // idxModulation can be null or the index of the modulation image
+    let idxModulation: number | null = null
+    if (idModulation.length > 0) {
+      idxModulation = this.getVolumeIndexByID(idModulation)
+    }
     this.volumes[idxTarget].modulationImage = idxModulation
     this.volumes[idxTarget].modulateAlpha = modulateAlpha
     this.updateGLVolume()
