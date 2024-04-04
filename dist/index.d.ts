@@ -2767,7 +2767,7 @@ declare class Niivue {
     /**
      * modulate intensity of one image based on intensity of another
      * @param idTarget - the ID of the NVImage to be biased
-     * @param idModulation - the ID of the NVImage that controls bias (null to disable modulation)
+     * @param idModulation - the ID of the NVImage that controls bias (empty string to disable modulation)
      * @param modulateAlpha - does the modulation influence alpha transparency (values greater than 1).
      * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
      * @see {@link https://niivue.github.io/niivue/features/modulate.html|live demo scalar usage}
