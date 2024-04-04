@@ -45,9 +45,7 @@ export class NVConnectome extends NVMesh {
   nodesChanged: EventTarget
 
   constructor(gl: WebGL2RenderingContext, connectome: LegacyConnectome) {
-    super(
-    new Float32Array([]),
-    new Uint32Array([]), connectome.name, new Uint8Array([]), 1.0, true, gl, connectome)
+    super(new Float32Array([]), new Uint32Array([]), connectome.name, new Uint8Array([]), 1.0, true, gl, connectome)
     this.gl = gl
     // this.nodes = connectome.nodes;
     // this.edges = connectome.edges;
@@ -368,16 +366,18 @@ export class NVConnectome extends NVMesh {
       NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
     }
 
+    let pts32 = new Float32Array(pts)
+    let tris32 = new Uint32Array(tris)
     // calculate spatial extent of connectome: user adjusting node sizes may influence size
-    const obj = NVMeshUtilities.getExtents(pts)
+    const obj = NVMeshUtilities.getExtents(pts32)
 
     this.furthestVertexFromOrigin = obj.mxDx
     this.extentsMin = obj.extentsMin
     this.extentsMax = obj.extentsMax
-    const posNormClr = this.generatePosNormClr(pts, tris, new Uint8Array(rgba255))
+    const posNormClr = this.generatePosNormClr(pts32, tris32, new Uint8Array(rgba255))
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(tris), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tris32, gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
     this.indexCount = tris.length

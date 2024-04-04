@@ -1118,7 +1118,7 @@ export class NVMesh {
 
   // Each streamline vertex has color, normal and position attributes
   // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-  generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: Uint8Array): Float32Array {
+  generatePosNormClr(pts: Float32Array, tris: Uint32Array, rgba255: Uint8Array): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
       log.debug('this', this)
@@ -1316,7 +1316,7 @@ export class NVMesh {
     if (ntri < 1 || npt < 3) {
       throw new Error('Mesh should have at least one triangle and three vertices')
     }
-    rgba255[3] = Math.max(1, rgba255[3]) //mesh not streamline
+    rgba255[3] = Math.max(1, rgba255[3]) // mesh not streamline
     const nvm = new NVMesh(
       pts,
       tris,
