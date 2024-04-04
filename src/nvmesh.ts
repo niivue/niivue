@@ -1206,7 +1206,7 @@ export class NVMesh {
       }
       if (typeof obj === 'undefined') {
         const pts = new Float32Array([0, 0, 0, 0, 0, 0])
-        const offsetPt0 = [0]
+        const offsetPt0 = new Uint32Array([0])
         obj = { pts, offsetPt0 }
         log.error('Creating empty tracts')
       }

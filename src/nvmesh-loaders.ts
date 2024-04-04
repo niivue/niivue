@@ -105,7 +105,7 @@ export class NVMeshLoaders {
       line = readStr() // </tracts>
     }
     return {
-      pts,
+      pts: new Float32Array(pts),
       offsetPt0,
       dps
     }
@@ -204,7 +204,7 @@ export class NVMeshLoaders {
       }
       return mat
     } // readMatV4()
-    let offsetPt0: AnyNumberArray = []
+    let offsetPt0 = new Uint32Array(0)
     let pts = new Float32Array(0)
     const mat = readMatV4(buffer)
     if (!('trans_to_mni' in mat)) {
@@ -453,7 +453,7 @@ export class NVMeshLoaders {
     offsetPt0[noff] = npt / 3 // solve fence post problem, offset for final streamline
     return {
       pts,
-      offsetPt0: Array.from(offsetPt0),
+      offsetPt0: new Uint32Array(offsetPt0),
       dpg,
       dps,
       dpv,
