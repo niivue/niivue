@@ -280,6 +280,9 @@ export class NVMesh {
       this.dpg = dpg
       this.dps = dps
       this.dpv = dpv
+      if (dpg) this.initValuesArray(dpg)
+      if (dps) this.initValuesArray(dps)
+      if (dpv) this.initValuesArray(dpv)
       this.offsetPt0 = tris
       this.updateFibers(gl)
       // define VAO
@@ -307,6 +310,18 @@ export class NVMesh {
     this.rgba255 = rgba255
     this.tris = tris
     this.updateMesh(gl)
+  }
+
+  initValuesArray(va: ValuesArray): ValuesArray {
+    for (let i = 0; i < va.length; i++) {
+      const mn = va[i].vals.reduce((acc, current) => Math.min(acc, current))
+      const mx = va[i].vals.reduce((acc, current) => Math.max(acc, current))
+      va[i].global_min = mn
+      va[i].global_max = mx
+      va[i].cal_min = mn
+      va[i].cal_max = mx
+    }
+    return va
   }
 
   // given streamlines (which webGL renders as a single pixel), extrude to cylinders
@@ -546,7 +561,7 @@ export class NVMesh {
     } // direction2rgb()
     // Determine color: local, global, dps0, dpv0, etc.
     const fiberColor = this.fiberColor.toLowerCase()
-    let dps: number[] | null = null
+    let dps: Float32Array | null = null
     let dpv: ValuesArray[0] | null = null
     if (fiberColor.startsWith('dps') && this.dps && this.dps.length > 0) {
       const n = parseInt(fiberColor.substring(3))

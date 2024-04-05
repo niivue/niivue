@@ -3,7 +3,7 @@ import { LUT } from './colortables.js'
 
 export type ValuesArray = Array<{
   id: string
-  vals: number[]
+  vals: Float32Array
   global_min?: number
   global_max?: number
   cal_min?: number

@@ -75,11 +75,7 @@ export class NVMeshLoaders {
     const offsetPt0 = []
     offsetPt0.push(npt) // 1st streamline starts at 0
     const pts = []
-    const dps = []
-    dps.push({
-      id: 'tract',
-      vals: [] as number[]
-    })
+    const bundleTags = []
     for (let t = 0; t < n_tracts; t++) {
       line = readStr() // <tracts ...
       const new_tracts = readNumericTag('ni_dimen=')
@@ -100,10 +96,16 @@ export class NVMeshLoaders {
         }
         npt += new_pts
         offsetPt0.push(npt)
-        dps[0].vals.push(bundleTag) // each streamline associated with tract
+        bundleTags.push(bundleTag) // each streamline associated with tract
       }
       line = readStr() // </tracts>
     }
+    const dps = []
+    dps.push({
+      id: 'tract',
+      vals: Float32Array.from(bundleTags)
+    })
+    
     return {
       pts: new Float32Array(pts),
       offsetPt0: new Uint32Array(offsetPt0),
@@ -399,25 +401,15 @@ export class NVMeshLoaders {
       if (pname.includes('groups')) {
         dpg.push({
           id: tag,
-          vals: Array.from(vals.slice())
+          vals: Float32Array.from(vals.slice())
         })
         continue
       }
       // next: read data_per_vertex
       if (pname.includes('dpv')) {
-        let mn = vals[0]
-        let mx = vals[0]
-        for (let i = 1; i < vals.length; i++) {
-          mn = Math.min(vals[i], mn)
-          mx = Math.max(vals[i], mx)
-        }
         dpv.push({
           id: tag,
-          vals: Array.from(vals.slice()),
-          global_min: mn,
-          global_max: mx,
-          cal_min: mn,
-          cal_max: mx
+          vals: Float32Array.from(vals.slice()),
         })
         continue
       }
@@ -425,7 +417,7 @@ export class NVMeshLoaders {
       if (pname.includes('dps')) {
         dps.push({
           id: tag,
-          vals: Array.from(vals.slice())
+          vals: Float32Array.from(vals.slice())
         })
         continue
       }
@@ -629,23 +621,16 @@ export class NVMeshLoaders {
     if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388) {
       throw new Error('Not a valid TRK file')
     }
-    const dps = []
-    const dpv = []
     const n_scalars = reader.getInt16(36, true)
-    if (n_scalars > 0) {
-      // data_per_vertex
-      for (let i = 0; i < n_scalars; i++) {
-        const arr = new Uint8Array(buffer.slice(38 + i * 20, 58 + i * 20))
-        const str = new TextDecoder().decode(arr).split('\0').shift()
-        dpv.push({
-          id: str!.trim(), // TODO can we guarantee this?
-          vals: [] as number[],
-          global_min: 0,
-          global_max: 0,
-          cal_min: 0,
-          cal_max: 0
-        })
-      }
+    const dpv = []
+    // data_per_vertex
+    for (let i = 0; i < n_scalars; i++) {
+      const arr = new Uint8Array(buffer.slice(38 + i * 20, 58 + i * 20))
+      const str = new TextDecoder().decode(arr).split('\0').shift()
+      dpv.push({
+        id: str!.trim(), // TODO can we guarantee this?
+        vals: [] as number[],
+      })
     }
     const voxel_sizeX = reader.getFloat32(12, true)
     const voxel_sizeY = reader.getFloat32(16, true)
@@ -669,15 +654,15 @@ export class NVMeshLoaders {
       1
     )
     const n_properties = reader.getInt16(238, true)
-    if (n_properties > 0) {
-      for (let i = 0; i < n_properties; i++) {
-        const arr = new Uint8Array(buffer.slice(240 + i * 20, 260 + i * 20))
-        const str = new TextDecoder().decode(arr).split('\0').shift()
-        dps.push({
-          id: str!.trim(), // TODO can we guarantee this?
-          vals: [] as number[]
-        })
-      }
+    const dps = []
+    // data_per_streamline
+    for (let i = 0; i < n_properties; i++) {
+      const arr = new Uint8Array(buffer.slice(240 + i * 20, 260 + i * 20))
+      const str = new TextDecoder().decode(arr).split('\0').shift()
+      dps.push({
+        id: str!.trim(), // TODO can we guarantee this?
+        vals: [] as number[]
+      })
     }
     const mat = mat4.create()
     for (let i = 0; i < 16; i++) {
@@ -734,15 +719,21 @@ export class NVMeshLoaders {
         }
       }
     } // for each streamline: while i < n_count
-    if (n_scalars > 0) {
-      for (let s = 0; s < n_scalars; s++) {
-        const mn = dpv[s].vals.reduce((acc, current) => Math.min(acc, current))
-        const mx = dpv[s].vals.reduce((acc, current) => Math.max(acc, current))
-        dpv[s].global_min = mn
-        dpv[s].global_max = mx
-        dpv[s].cal_min = mn
-        dpv[s].cal_max = mx
-      }
+    //output uses static float32 not dynamic number[]
+    const dps32 = []
+    // data_per_streamline
+    for (let i = 0; i < dps.length; i++) {
+      dps32.push({
+        id: dps[i].id,
+        vals: Float32Array.from(dps[i].vals)
+      })
+    }
+    const dpv32 = []
+    for (let s = 0; s < dpv.length; s++) {
+        dpv32.push({
+          id: dpv[i].id,
+          vals: Float32Array.from(dpv[i].vals)
+        })
     }
     // add 'first index' as if one more line was added (fence post problem)
     offsetPt0[noffset++] = npt
@@ -752,8 +743,8 @@ export class NVMeshLoaders {
     return {
       pts,
       offsetPt0,
-      dps,
-      dpv
+      dps: dps32,
+      dpv: dpv32
     }
   } // readTRK()
 
@@ -976,7 +967,7 @@ export class NVMeshLoaders {
       const mx = vals.reduce((acc, current) => Math.max(acc, current))
       nvmesh.dpv.push({
         id: tag,
-        vals: Array.from(vals.slice()),
+        vals: Float32Array.from(vals.slice()),
         global_min: mn,
         global_max: mx,
         cal_min: mn,
