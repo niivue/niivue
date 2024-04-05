@@ -377,9 +377,9 @@ export class NVConnectome extends NVMesh {
     const posNormClr = this.generatePosNormClr(pts32, tris32, new Uint8Array(rgba255))
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tris32, gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(tris32), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW)
     this.indexCount = tris.length
   }
 

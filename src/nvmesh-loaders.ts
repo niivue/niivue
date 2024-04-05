@@ -105,7 +105,7 @@ export class NVMeshLoaders {
       id: 'tract',
       vals: Float32Array.from(bundleTags)
     })
-    
+
     return {
       pts: new Float32Array(pts),
       offsetPt0: new Uint32Array(offsetPt0),
@@ -409,7 +409,7 @@ export class NVMeshLoaders {
       if (pname.includes('dpv')) {
         dpv.push({
           id: tag,
-          vals: Float32Array.from(vals.slice()),
+          vals: Float32Array.from(vals.slice())
         })
         continue
       }
@@ -629,7 +629,7 @@ export class NVMeshLoaders {
       const str = new TextDecoder().decode(arr).split('\0').shift()
       dpv.push({
         id: str!.trim(), // TODO can we guarantee this?
-        vals: [] as number[],
+        vals: [] as number[]
       })
     }
     const voxel_sizeX = reader.getFloat32(12, true)
@@ -719,7 +719,7 @@ export class NVMeshLoaders {
         }
       }
     } // for each streamline: while i < n_count
-    //output uses static float32 not dynamic number[]
+    // output uses static float32 not dynamic number[]
     const dps32 = []
     // data_per_streamline
     for (let i = 0; i < dps.length; i++) {
@@ -730,10 +730,10 @@ export class NVMeshLoaders {
     }
     const dpv32 = []
     for (let s = 0; s < dpv.length; s++) {
-        dpv32.push({
-          id: dpv[i].id,
-          vals: Float32Array.from(dpv[i].vals)
-        })
+      dpv32.push({
+        id: dpv[i].id,
+        vals: Float32Array.from(dpv[i].vals)
+      })
     }
     // add 'first index' as if one more line was added (fence post problem)
     offsetPt0[noffset++] = npt

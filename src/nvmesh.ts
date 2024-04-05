@@ -280,9 +280,15 @@ export class NVMesh {
       this.dpg = dpg
       this.dps = dps
       this.dpv = dpv
-      if (dpg) this.initValuesArray(dpg)
-      if (dps) this.initValuesArray(dps)
-      if (dpv) this.initValuesArray(dpv)
+      if (dpg) {
+        this.initValuesArray(dpg)
+      }
+      if (dps) {
+        this.initValuesArray(dps)
+      }
+      if (dpv) {
+        this.initValuesArray(dpv)
+      }
       this.offsetPt0 = tris
       this.updateFibers(gl)
       // define VAO
@@ -484,9 +490,9 @@ export class NVMesh {
     // no need to release: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBufferData.xhtml
     // any pre-existing data store is deleted
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(idxs), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(idxs), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(f32), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(f32), gl.STATIC_DRAW)
     this.indexCount = nidx
   } // linesToCylinders
 
@@ -753,9 +759,9 @@ export class NVMesh {
       // copy streamlines to GPU
       this.indexCount = indices.length
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW)
+      gl.bufferData(gl.ARRAY_BUFFER, Uint32Array.from(posClrU32), gl.STATIC_DRAW)
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(indices), gl.STATIC_DRAW)
     }
   } // updateFibers()
 
@@ -1077,9 +1083,9 @@ export class NVMesh {
     } // isAdditiveBlend
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(this.tris), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(this.tris), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW)
     this.indexCount = this.tris.length
     this.vertexCount = this.pts.length
   } // updateMesh()
