@@ -3013,7 +3013,8 @@ export class NVImage {
    */
   clone(): NVImage {
     const clonedImage = new NVImage()
-    clonedImage.id = this.id
+    // clonedImage.id = this.id
+    clonedImage.id = uuidv4()
     clonedImage.hdr = Object.assign({}, this.hdr)
     clonedImage.img = this.img!.slice()
     clonedImage.calculateRAS()
