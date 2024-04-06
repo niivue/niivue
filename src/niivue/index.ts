@@ -5765,6 +5765,269 @@ export class Niivue {
     this.updateGLVolume()
   }
 
+  // port of https://github.com/rordenlab/niimath/blob/master/src/bwlabel.c
+
+  check_previous_slice(
+    bw: number[],
+    il: number[],
+    r: number,
+    c: number,
+    sl: number,
+    dim: number[],
+    conn: number,
+    tt: number[]
+  ): number {
+    // const nabo: number[] = [];
+    const nabo = new Array<number>(27)
+    let nr_set = 0
+    if (!sl) {
+      return 0
+    }
+    const val = bw[this.idx(r, c, sl, dim)]
+    if (conn >= 6) {
+      const idx = this.idx(r, c, sl - 1, dim)
+      if (val === bw[idx]) {
+        nabo[nr_set++] = il[idx]
+      }
+    }
+    if (conn >= 18) {
+      if (r) {
+        const idx = this.idx(r - 1, c, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (c) {
+        const idx = this.idx(r, c - 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r < dim[0] - 1) {
+        const idx = this.idx(r + 1, c, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (c < dim[1] - 1) {
+        const idx = this.idx(r, c + 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+    }
+    if (conn === 26) {
+      if (r && c) {
+        const idx = this.idx(r - 1, c - 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r < dim[0] - 1 && c) {
+        const idx = this.idx(r + 1, c - 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r && c < dim[1] - 1) {
+        const idx = this.idx(r - 1, c + 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r < dim[0] - 1 && c < dim[1] - 1) {
+        const idx = this.idx(r + 1, c + 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+    }
+    if (nr_set) {
+      this.fill_tratab(tt, nabo, nr_set)
+      return nabo[0]
+    } else {
+      return 0
+    }
+  } // check_previous_slice()
+
+  do_initial_labelling(bw: number[], dim: number[], conn: number, il: number[]): [number, number[]] {
+    let i = 0
+    let j = 0
+    let label = 1
+    let nr_set = 0
+    let sl, r, c
+    const kGrowArrayBy = 8192
+    let ttn = kGrowArrayBy
+    const stt = new Array<number>(ttn).fill(0)
+    const nabo = new Array<number>(27)
+    for (sl = 0; sl < dim[2]; sl++) {
+      for (c = 0; c < dim[1]; c++) {
+        for (r = 0; r < dim[0]; r++) {
+          nr_set = 0
+          const val = bw[this.idx(r, c, sl, dim)]
+          if (val === 0) {
+            continue
+          }
+          nabo[0] = this.check_previous_slice(bw, il, r, c, sl, dim, conn, stt)
+          if (nabo[0]) {
+            nr_set += 1
+          }
+          if (conn >= 6) {
+            if (r) {
+              const idx = this.idx(r - 1, c, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+            if (c) {
+              const idx = this.idx(r, c - 1, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+          }
+          if (conn >= 18) {
+            if (c && r) {
+              const idx = this.idx(r - 1, c - 1, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+            if (c && r < dim[0] - 1) {
+              const idx = this.idx(r + 1, c - 1, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+          }
+          if (nr_set) {
+            il[this.idx(r, c, sl, dim)] = nabo[0]
+            this.fill_tratab(stt, nabo, nr_set)
+          } else {
+            il[this.idx(r, c, sl, dim)] = label
+            if (label >= ttn) {
+              ttn += kGrowArrayBy
+              const ext = new Array<number>(kGrowArrayBy).fill(0)
+              stt.concat(ext)
+            }
+            stt[label - 1] = label
+            label++
+          }
+        }
+      }
+    }
+    for (i = 0; i < label - 1; i++) {
+      j = i
+      while (stt[j] !== j + 1) {
+        j = stt[j] - 1
+      }
+      stt[i] = j + 1
+    }
+    return [label - 1, stt]
+  } // do_initial_labelling()
+
+  fill_tratab(tt: number[], nabo: number[], nr_set: number): void {
+    let i = 0
+    let j = 0
+    let cntr = 0
+    const tn: number[] = []
+    const INT_MAX = 2147483647
+    let ltn = INT_MAX
+    for (i = 0; i < nr_set; i++) {
+      j = nabo[i]
+      cntr = 0
+      while (tt[j - 1] !== j) {
+        j = tt[j - 1]
+        cntr++
+        if (cntr > 100) {
+          log.info('\nOoh no!!')
+          break
+        }
+      }
+      tn[i] = j
+      ltn = Math.min(ltn, j)
+    }
+    for (i = 0; i < nr_set; i++) {
+      tt[tn[i] - 1] = ltn
+    }
+  } // fill_tratab()
+
+  idx(A: number, B: number, C: number, DIM: number[]): number {
+    return C * DIM[0] * DIM[1] + B * DIM[0] + A
+  } // idx()
+
+  translate_labels(il: number[], dim: number[], tt: number[], ttn: number): [number, number[]] {
+    let n = 0
+    let i = 0
+    let ml = 0
+    let cl = 0
+    n = dim[0] * dim[1] * dim[2]
+    const l: number[] = new Array<number>(n).fill(0)
+    for (i = 0; i < ttn; i++) {
+      ml = Math.max(ml, tt[i])
+    }
+    const fl = new Array<number>(ml).fill(0)
+    for (i = 0; i < n; i++) {
+      if (il[i]) {
+        if (!fl[tt[il[i] - 1] - 1]) {
+          cl += 1
+          fl[tt[il[i] - 1] - 1] = cl
+        }
+        l[i] = fl[tt[il[i] - 1] - 1]
+      }
+    }
+    return [cl, l]
+  } // translate_labels()
+
+  bwlabel(img: Float64Array, dim: number[], conn: number = 26, binarize: boolean = false): [number, number[]] {
+    const nvox = dim[0] * dim[1] * dim[2]
+    const il: number[] = new Array<number>(nvox).fill(0)
+    if (![6, 18, 26].includes(conn)) {
+      log.info('bwlabel: conn must be 6, 18 or 26.')
+      return [0, il]
+    }
+    if (dim[0] < 2 || dim[1] < 2 || dim[2] < 1) {
+      log.info('bwlabel: img must be 2 or 3-dimensional')
+      return [0, il]
+    }
+    const start = Date.now()
+    const bw: number[] = new Array<number>(nvox).fill(0)
+    if (binarize) {
+      for (let i = 0; i < nvox; i++) {
+        if (img[i] !== 0.0) {
+          bw[i] = 1
+        }
+      }
+    } else {
+      for (let i = 0; i < nvox; i++) {
+        bw[i] = img[i]
+      }
+    }
+    let [ttn, tt] = this.do_initial_labelling(bw, dim, conn, il)
+    if (tt === undefined) {
+      tt = []
+    }
+    const [cl, ls] = this.translate_labels(il, dim, tt, ttn)
+    log.info(conn + ' neighbor clustering into ' + cl + ' regions in ' + (Date.now() - start) + 'ms')
+    return [cl, ls]
+  } // bwlabel()
+
+  async createConnectedLabelImage(id: string, conn: number = 26, binarize: boolean = false): Promise<NVImage> {
+    const idx = this.getVolumeIndexByID(id)
+    const dim = this.volumes[idx].dims?.slice(1, 4)
+    const img = Float64Array.from(this.volumes[idx].img?.slice() ?? [])
+    const [mx, clusterImg] = this.bwlabel(img, dim!, conn, binarize)
+    const nii = this.volumes[0].clone()
+    nii.opacity = 0.5
+    nii.colormap = 'random'
+    for (let i = 0; i < nii.img!.length; i++) {
+      nii.img![i] = clusterImg[i]!
+    }
+    nii.cal_min = 0
+    nii.cal_max = mx
+    return nii
+  }
+
   /**
    * darken crevices and brighten corners when 3D rendering drawings.
    * @param amount - amount of ambient occlusion (default 0.4)
