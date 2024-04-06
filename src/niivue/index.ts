@@ -5767,18 +5767,24 @@ export class Niivue {
 
   // port of https://github.com/rordenlab/niimath/blob/master/src/bwlabel.c
 
+  // return voxel address given row A, column B, and slice C
+  idx(A: number, B: number, C: number, DIM: Uint32Array): number {
+    return C * DIM[0] * DIM[1] + B * DIM[0] + A
+  } // idx()
+
+  // determine if voxels below candidate voxel have already been assigned a label
   check_previous_slice(
-    bw: number[],
-    il: number[],
+    bw: Uint32Array,
+    il: Uint32Array,
     r: number,
     c: number,
     sl: number,
-    dim: number[],
+    dim: Uint32Array,
     conn: number,
-    tt: number[]
+    tt: Uint32Array
   ): number {
     // const nabo: number[] = [];
-    const nabo = new Array<number>(27)
+    const nabo = new Uint32Array(27)
     let nr_set = 0
     if (!sl) {
       return 0
@@ -5850,25 +5856,23 @@ export class Niivue {
     }
   } // check_previous_slice()
 
-  do_initial_labelling(bw: number[], dim: number[], conn: number, il: number[]): [number, number[]] {
-    let i = 0
-    let j = 0
+  // provisionally label all voxels in volume
+  do_initial_labelling(bw: Uint32Array, dim: Uint32Array, conn: number): [number, Uint32Array, Uint32Array] {
     let label = 1
-    let nr_set = 0
-    let sl, r, c
     const kGrowArrayBy = 8192
     let ttn = kGrowArrayBy
-    const stt = new Array<number>(ttn).fill(0)
-    const nabo = new Array<number>(27)
-    for (sl = 0; sl < dim[2]; sl++) {
-      for (c = 0; c < dim[1]; c++) {
-        for (r = 0; r < dim[0]; r++) {
-          nr_set = 0
+    let tt = new Uint32Array(ttn).fill(0)
+    const il = new Uint32Array(dim[0] * dim[1] * dim[2]).fill(0)
+    const nabo = new Uint32Array(27)
+    for (let sl = 0; sl < dim[2]; sl++) {
+      for (let c = 0; c < dim[1]; c++) {
+        for (let r = 0; r < dim[0]; r++) {
+          let nr_set = 0
           const val = bw[this.idx(r, c, sl, dim)]
           if (val === 0) {
             continue
           }
-          nabo[0] = this.check_previous_slice(bw, il, r, c, sl, dim, conn, stt)
+          nabo[0] = this.check_previous_slice(bw, il, r, c, sl, dim, conn, tt)
           if (nabo[0]) {
             nr_set += 1
           }
@@ -5902,39 +5906,39 @@ export class Niivue {
           }
           if (nr_set) {
             il[this.idx(r, c, sl, dim)] = nabo[0]
-            this.fill_tratab(stt, nabo, nr_set)
+            this.fill_tratab(tt, nabo, nr_set)
           } else {
             il[this.idx(r, c, sl, dim)] = label
             if (label >= ttn) {
               ttn += kGrowArrayBy
-              const ext = new Array<number>(kGrowArrayBy).fill(0)
-              stt.concat(ext)
+              const ext = new Uint32Array(ttn)
+              ext.set(tt)
+              tt = ext
             }
-            stt[label - 1] = label
+            tt[label - 1] = label
             label++
           }
         }
       }
     }
-    for (i = 0; i < label - 1; i++) {
-      j = i
-      while (stt[j] !== j + 1) {
-        j = stt[j] - 1
+    for (let i = 0; i < label - 1; i++) {
+      let j = i
+      while (tt[j] !== j + 1) {
+        j = tt[j] - 1
       }
-      stt[i] = j + 1
+      tt[i] = j + 1
     }
-    return [label - 1, stt]
+    return [label - 1, tt, il]
   } // do_initial_labelling()
 
-  fill_tratab(tt: number[], nabo: number[], nr_set: number): void {
-    let i = 0
-    let j = 0
+  // translation table unifies a region that has been assigned multiple classes
+  fill_tratab(tt: Uint32Array, nabo: Uint32Array, nr_set: number): void {
     let cntr = 0
-    const tn: number[] = []
+    const tn = new Uint32Array(nr_set + 5).fill(0)
     const INT_MAX = 2147483647
     let ltn = INT_MAX
-    for (i = 0; i < nr_set; i++) {
-      j = nabo[i]
+    for (let i = 0; i < nr_set; i++) {
+      let j = nabo[i]
       cntr = 0
       while (tt[j - 1] !== j) {
         j = tt[j - 1]
@@ -5947,27 +5951,22 @@ export class Niivue {
       tn[i] = j
       ltn = Math.min(ltn, j)
     }
-    for (i = 0; i < nr_set; i++) {
+    for (let i = 0; i < nr_set; i++) {
       tt[tn[i] - 1] = ltn
     }
   } // fill_tratab()
 
-  idx(A: number, B: number, C: number, DIM: number[]): number {
-    return C * DIM[0] * DIM[1] + B * DIM[0] + A
-  } // idx()
-
-  translate_labels(il: number[], dim: number[], tt: number[], ttn: number): [number, number[]] {
-    let n = 0
-    let i = 0
+  // remove any residual gaps so label numbers are dense rather than sparse
+  translate_labels(il: Uint32Array, dim: Uint32Array, tt: Uint32Array, ttn: number): [number, Uint32Array] {
+    const nvox = dim[0] * dim[1] * dim[2]
     let ml = 0
-    let cl = 0
-    n = dim[0] * dim[1] * dim[2]
-    const l: number[] = new Array<number>(n).fill(0)
-    for (i = 0; i < ttn; i++) {
+    const l = new Uint32Array(nvox).fill(0)
+    for (let i = 0; i < ttn; i++) {
       ml = Math.max(ml, tt[i])
     }
-    const fl = new Array<number>(ml).fill(0)
-    for (i = 0; i < n; i++) {
+    const fl = new Uint32Array(ml).fill(0)
+    let cl = 0
+    for (let i = 0; i < nvox; i++) {
       if (il[i]) {
         if (!fl[tt[il[i] - 1] - 1]) {
           cl += 1
@@ -5979,19 +5978,21 @@ export class Niivue {
     return [cl, l]
   } // translate_labels()
 
-  bwlabel(img: Float64Array, dim: number[], conn: number = 26, binarize: boolean = false): [number, number[]] {
+  // given a 3D image, return a clustered label map
+  // for an explanation and optimized C code see
+  // https://github.com/seung-lab/connected-components-3d
+  bwlabel(img: Uint32Array, dim: Uint32Array, conn: number = 26, binarize: boolean = false): [number, Uint32Array] {
+    const start = Date.now()
     const nvox = dim[0] * dim[1] * dim[2]
-    const il: number[] = new Array<number>(nvox).fill(0)
+    const bw = new Uint32Array(nvox).fill(0)
     if (![6, 18, 26].includes(conn)) {
       log.info('bwlabel: conn must be 6, 18 or 26.')
-      return [0, il]
+      return [0, bw]
     }
     if (dim[0] < 2 || dim[1] < 2 || dim[2] < 1) {
       log.info('bwlabel: img must be 2 or 3-dimensional')
-      return [0, il]
+      return [0, bw]
     }
-    const start = Date.now()
-    const bw: number[] = new Array<number>(nvox).fill(0)
     if (binarize) {
       for (let i = 0; i < nvox; i++) {
         if (img[i] !== 0.0) {
@@ -5999,13 +6000,11 @@ export class Niivue {
         }
       }
     } else {
-      for (let i = 0; i < nvox; i++) {
-        bw[i] = img[i]
-      }
+      bw.set(img)
     }
-    let [ttn, tt] = this.do_initial_labelling(bw, dim, conn, il)
+    let [ttn, tt, il] = this.do_initial_labelling(bw, dim, conn)
     if (tt === undefined) {
-      tt = []
+      tt = new Uint32Array()
     }
     const [cl, ls] = this.translate_labels(il, dim, tt, ttn)
     log.info(conn + ' neighbor clustering into ' + cl + ' regions in ' + (Date.now() - start) + 'ms')
@@ -6014,8 +6013,9 @@ export class Niivue {
 
   async createConnectedLabelImage(id: string, conn: number = 26, binarize: boolean = false): Promise<NVImage> {
     const idx = this.getVolumeIndexByID(id)
-    const dim = this.volumes[idx].dims?.slice(1, 4)
-    const img = Float64Array.from(this.volumes[idx].img?.slice() ?? [])
+    const dim = Uint32Array.from(this.volumes[idx].dims?.slice(1, 4) ?? [])
+    // const dim = Array.from([this.volumes[idx].dims[1], this.volumes[idx].dims[2], this.volumes[idx].dims[3], this.volumes[idx].dims[1] * this.volumes[idx].dims[2]])
+    const img = Uint32Array.from(this.volumes[idx].img?.slice() ?? [])
     const [mx, clusterImg] = this.bwlabel(img, dim!, conn, binarize)
     const nii = this.volumes[0].clone()
     nii.opacity = 0.5
