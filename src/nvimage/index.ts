@@ -3013,7 +3013,10 @@ export class NVImage {
    */
   clone(): NVImage {
     const clonedImage = new NVImage()
-    clonedImage.id = this.id
+    // important! the clone should have a new ID to avoid conflicts
+    // when referencing images by ID. A user could add the cloned
+    // image as a viewable volume in any order.
+    clonedImage.id = uuidv4()
     clonedImage.hdr = Object.assign({}, this.hdr)
     clonedImage.img = this.img!.slice()
     clonedImage.calculateRAS()
