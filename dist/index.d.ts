@@ -248,7 +248,7 @@ type LegacyConnectome = Partial<ConnectomeOptions> & {
 
 type ValuesArray = Array<{
     id: string;
-    vals: number[];
+    vals: Float32Array;
     global_min?: number;
     global_max?: number;
     cal_min?: number;
@@ -258,21 +258,21 @@ type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array 
 type AnyNumberArray = number[] | TypedNumberArray;
 type DefaultMeshType = {
     positions: Float32Array;
-    indices: Int32Array;
+    indices: Uint32Array;
     colors?: Float32Array;
 };
 type TRACT = {
-    pts: number[];
-    offsetPt0: number[];
+    pts: Float32Array;
+    offsetPt0: Uint32Array;
     dps: ValuesArray;
 };
 type TT = {
-    pts: number[];
-    offsetPt0: number[];
+    pts: Float32Array;
+    offsetPt0: Uint32Array;
 };
 type TRX = {
-    pts: number[];
-    offsetPt0: number[];
+    pts: Float32Array;
+    offsetPt0: Uint32Array;
     dpg: ValuesArray;
     dps: ValuesArray;
     dpv: ValuesArray;
@@ -298,14 +298,14 @@ type ANNOT = Uint32Array | {
 };
 type MZ3 = Float32Array | {
     positions: Float32Array | null;
-    indices: Int32Array | null;
+    indices: Uint32Array | null;
     scalars: Float32Array;
     colors: Float32Array | null;
 };
 type GII = {
     scalars: Float32Array;
     positions?: Float32Array;
-    indices?: Int32Array;
+    indices?: Uint32Array;
     colormapLabel?: LUT;
     anatomicalStructurePrimary: string;
 };
@@ -315,8 +315,8 @@ type MGH = AnyNumberArray | {
 };
 type X3D = {
     positions: Float32Array;
-    indices: Int32Array;
-    rgba255: number[];
+    indices: Uint32Array;
+    rgba255: Uint8Array;
 };
 
 /** Enum for text alignment
@@ -358,17 +358,17 @@ declare class NVMeshFromUrlOptions {
     gl: WebGL2RenderingContext | null;
     name: string;
     opacity: number;
-    rgba255: number[];
+    rgba255: Uint8Array;
     visible: boolean;
     layers: NVMeshLayer[];
     colorbarVisible: boolean;
-    constructor(url?: string, gl?: null, name?: string, opacity?: number, rgba255?: number[], visible?: boolean, layers?: never[], colorbarVisible?: boolean);
+    constructor(url?: string, gl?: null, name?: string, opacity?: number, rgba255?: Uint8Array, visible?: boolean, layers?: never[], colorbarVisible?: boolean);
 }
 type BaseLoadParams = {
     gl: WebGL2RenderingContext;
     name: string;
     opacity: number;
-    rgba255: number[];
+    rgba255: number[] | Uint8Array;
     visible: boolean;
     layers: NVMeshLayer[];
 };
@@ -396,21 +396,21 @@ declare class NVMesh {
     opacity: number;
     visible: boolean;
     meshShaderIndex: number;
-    offsetPt0: number[] | Uint32Array | null;
+    offsetPt0: Uint32Array | null;
     colormapInvert: boolean;
     fiberGroupColormap: ColorMap | null;
     indexBuffer: WebGLBuffer;
     vertexBuffer: WebGLBuffer;
     vao: WebGLVertexArrayObject;
     vaoFiber: WebGLVertexArrayObject;
-    pts: number[] | Float32Array;
-    tris?: number[] | Uint32Array;
+    pts: Float32Array;
+    tris?: Uint32Array;
     layers: NVMeshLayer[];
     type: MeshType;
     data_type?: string;
-    rgba255: number[];
+    rgba255: Uint8Array;
     fiberLength?: number;
-    fiberLengths?: number[];
+    fiberLengths?: Uint32Array;
     fiberDither: number;
     fiberColor: string;
     fiberDecimationStride: number;
@@ -455,7 +455,8 @@ declare class NVMesh {
      * @param colorbarVisible - does this mesh display a colorbar
      * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
      */
-    constructor(pts: number[] | Float32Array, tris: number[] | Uint32Array, name: string | undefined, rgba255: number[] | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
+    constructor(pts: Float32Array, tris: Uint32Array, name: string | undefined, rgba255: Uint8Array | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
+    initValuesArray(va: ValuesArray): ValuesArray;
     linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void;
     updateFibers(gl: WebGL2RenderingContext): void;
     indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[];
@@ -463,8 +464,8 @@ declare class NVMesh {
     reverseFaces(gl: WebGL2RenderingContext): void;
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): void;
     setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void;
-    generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: number[]): Float32Array;
-    static readMesh(buffer: ArrayBuffer, name: string, gl: WebGL2RenderingContext, opacity?: number, rgba255?: number[], visible?: boolean): NVMesh;
+    generatePosNormClr(pts: Float32Array, tris: Uint32Array, rgba255: Uint8Array): Float32Array;
+    static readMesh(buffer: ArrayBuffer, name: string, gl: WebGL2RenderingContext, opacity?: number, rgba255?: Uint8Array, visible?: boolean): NVMesh;
     static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
     /**
      * factory function to load and return a new NVMesh instance from a given URL
