@@ -28,3 +28,13 @@ test("nvimage zerosLike", () => {
     expect(JSON.stringify(image.hdr)).toBe(JSON.stringify(zeroImage.hdr))
     expect(zeroImage.img!.every((item: number) => item === 0)).toBeTruthy()
 })
+
+test("nvimage clone has unique ID", () => {
+    const name = "mni152.nii.gz"
+    const dataBuffer = readFileSync(path.join("./tests/images/", name))
+    const image = new NVImage(
+        dataBuffer.buffer,
+        name)
+    const clone = image.clone()
+    expect(clone.id).not.toBe(image.id)
+})
