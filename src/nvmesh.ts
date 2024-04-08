@@ -64,7 +64,7 @@ export class NVMeshFromUrlOptions {
   gl: WebGL2RenderingContext | null
   name: string
   opacity: number
-  rgba255: number[]
+  rgba255: Uint8Array
   visible: boolean
   layers: NVMeshLayer[]
   colorbarVisible: boolean
@@ -74,7 +74,7 @@ export class NVMeshFromUrlOptions {
     gl = null,
     name = '',
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true,
     layers = [],
     colorbarVisible = true
@@ -98,7 +98,7 @@ type BaseLoadParams = {
   // the opacity for this image. default is 1
   opacity: number
   // the base color of the mesh. RGBA values from 0 to 255. Default is white
-  rgba255: number[]
+  rgba255: number[] | Uint8Array
   // whether or not this image is to be visible
   visible: boolean
   // layers of the mesh to load
@@ -135,7 +135,7 @@ export class NVMesh {
   opacity: number
   visible: boolean
   meshShaderIndex = 0
-  offsetPt0: number[] | Uint32Array | null = null
+  offsetPt0: Uint32Array | null = null
 
   colormapInvert = false
   fiberGroupColormap: ColorMap | null = null
@@ -145,15 +145,15 @@ export class NVMesh {
   vao: WebGLVertexArrayObject
   vaoFiber: WebGLVertexArrayObject
 
-  pts: number[] | Float32Array
-  tris?: number[] | Uint32Array
+  pts: Float32Array
+  tris?: Uint32Array
   layers: NVMeshLayer[]
   type = MeshType.MESH
 
   data_type?: string
-  rgba255: number[]
+  rgba255: Uint8Array
   fiberLength?: number
-  fiberLengths?: number[]
+  fiberLengths?: Uint32Array
   fiberDither = 0.1
   fiberColor = 'Global'
   fiberDecimationStride = 1 // e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
@@ -206,10 +206,10 @@ export class NVMesh {
    * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
    */
   constructor(
-    pts: number[] | Float32Array,
-    tris: number[] | Uint32Array,
+    pts: Float32Array,
+    tris: Uint32Array,
     name = '',
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     opacity = 1.0,
     visible = true,
     gl: WebGL2RenderingContext,
@@ -280,6 +280,15 @@ export class NVMesh {
       this.dpg = dpg
       this.dps = dps
       this.dpv = dpv
+      if (dpg) {
+        this.initValuesArray(dpg)
+      }
+      if (dps) {
+        this.initValuesArray(dps)
+      }
+      if (dpv) {
+        this.initValuesArray(dpv)
+      }
       this.offsetPt0 = tris
       this.updateFibers(gl)
       // define VAO
@@ -307,6 +316,18 @@ export class NVMesh {
     this.rgba255 = rgba255
     this.tris = tris
     this.updateMesh(gl)
+  }
+
+  initValuesArray(va: ValuesArray): ValuesArray {
+    for (let i = 0; i < va.length; i++) {
+      const mn = va[i].vals.reduce((acc, current) => Math.min(acc, current))
+      const mx = va[i].vals.reduce((acc, current) => Math.max(acc, current))
+      va[i].global_min = mn
+      va[i].global_max = mx
+      va[i].cal_min = mn
+      va[i].cal_max = mx
+    }
+    return va
   }
 
   // given streamlines (which webGL renders as a single pixel), extrude to cylinders
@@ -431,7 +452,7 @@ export class NVMesh {
     // each streamline with n nodes has n-1 cylinders (fencepost)
     // each triangle defined by three indices, each referring to a vertex
     const nidx = (n_line_vtx - n_streamlines) * cyl_sides * 2 * 3
-    const idxs = new Int32Array(nidx)
+    const idxs = new Uint32Array(nidx)
     let idx = 0
     vtx = 0
     for (let i = 1; i < n_count; i++) {
@@ -469,9 +490,9 @@ export class NVMesh {
     // no need to release: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBufferData.xhtml
     // any pre-existing data store is deleted
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(idxs), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(idxs), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(f32), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(f32), gl.STATIC_DRAW)
     this.indexCount = nidx
   } // linesToCylinders
 
@@ -487,7 +508,7 @@ export class NVMesh {
     const npt = pts.length / 3 // each point has three components: X,Y,Z
     // only once: compute length of each streamline
     if (!this.fiberLengths) {
-      this.fiberLengths = []
+      this.fiberLengths = new Uint32Array(n_count)
       for (let i = 0; i < n_count; i++) {
         // for each streamline
         const vStart3 = offsetPt0[i] * 3 // first vertex in streamline
@@ -497,7 +518,7 @@ export class NVMesh {
           const v = vec3.fromValues(pts[j + 0] - pts[j + 3], pts[j + 1] - pts[j + 4], pts[j + 2] - pts[j + 5])
           len += vec3.len(v)
         }
-        this.fiberLengths.push(len)
+        this.fiberLengths[i] = len
       }
     } // only once: compute length of each streamline
     // determine fiber colors
@@ -546,7 +567,7 @@ export class NVMesh {
     } // direction2rgb()
     // Determine color: local, global, dps0, dpv0, etc.
     const fiberColor = this.fiberColor.toLowerCase()
-    let dps: number[] | null = null
+    let dps: Float32Array | null = null
     let dpv: ValuesArray[0] | null = null
     if (fiberColor.startsWith('dps') && this.dps && this.dps.length > 0) {
       const n = parseInt(fiberColor.substring(3))
@@ -738,9 +759,9 @@ export class NVMesh {
       // copy streamlines to GPU
       this.indexCount = indices.length
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(posClrU32), gl.STATIC_DRAW)
+      gl.bufferData(gl.ARRAY_BUFFER, Uint32Array.from(posClrU32), gl.STATIC_DRAW)
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(indices), gl.STATIC_DRAW)
     }
   } // updateFibers()
 
@@ -1062,9 +1083,9 @@ export class NVMesh {
     } // isAdditiveBlend
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(this.tris), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(this.tris), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posNormClr), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW)
     this.indexCount = this.tris.length
     this.vertexCount = this.pts.length
   } // updateMesh()
@@ -1118,7 +1139,7 @@ export class NVMesh {
 
   // Each streamline vertex has color, normal and position attributes
   // Interleaved Vertex Data https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/TechniquesforWorkingwithVertexData/TechniquesforWorkingwithVertexData.html
-  generatePosNormClr(pts: number[] | Float32Array, tris: number[] | Uint32Array, rgba255: number[]): Float32Array {
+  generatePosNormClr(pts: Float32Array, tris: Uint32Array, rgba255: Uint8Array): Float32Array {
     if (pts.length < 3 || rgba255.length < 4) {
       log.error('Catastrophic failure generatePosNormClr()')
       log.debug('this', this)
@@ -1169,11 +1190,11 @@ export class NVMesh {
     name: string,
     gl: WebGL2RenderingContext,
     opacity = 1.0,
-    rgba255 = [255, 255, 255, 255],
+    rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true
   ): NVMesh {
-    let tris: number[] = []
-    let pts: number[] = []
+    let tris: Uint32Array = new Uint32Array([])
+    let pts: Float32Array = new Float32Array([])
     let anatomicalStructurePrimary = ''
     let obj: TCK | TRACT | TT | TRX | TRK | GII | MZ3 | X3D | VTK | DefaultMeshType
     const re = /(?:\.([^.]+))?$/
@@ -1191,7 +1212,7 @@ export class NVMesh {
       // return NVMesh.loadConnectomeFromFreeSurfer(JSON.parse(new TextDecoder().decode(buffer)), gl, name, opacity)
       log.error('you should never see this message: load using nvconnectome not nvmesh')
     }
-    rgba255[3] = Math.max(0, rgba255[3])
+    rgba255[3] = Math.max(1, rgba255[3])
     if (ext === 'TCK' || ext === 'TRK' || ext === 'TT' || ext === 'TRX' || ext === 'TRACT') {
       if (ext === 'TCK') {
         obj = NVMeshLoaders.readTCK(buffer)
@@ -1205,13 +1226,12 @@ export class NVMesh {
         obj = NVMeshLoaders.readTRK(buffer)
       }
       if (typeof obj === 'undefined') {
-        const pts = [0, 0, 0, 0, 0, 0]
-        const offsetPt0 = [0]
+        const pts = new Float32Array([0, 0, 0, 0, 0, 0])
+        const offsetPt0 = new Uint32Array([0])
         obj = { pts, offsetPt0 }
         log.error('Creating empty tracts')
       }
-
-      rgba255[3] = -1.0
+      rgba255[3] = 0.0
       return new NVMesh(
         obj.pts,
         obj.offsetPt0,
@@ -1257,10 +1277,10 @@ export class NVMesh {
       obj = NVMeshLoaders.readVTK(buffer)
       if ('offsetPt0' in obj) {
         // VTK files used both for meshes and streamlines
-        rgba255[3] = -1.0
+        rgba255[3] = 0.0
         return new NVMesh(
-          Array.from(obj.pts),
-          Array.from(obj.offsetPt0),
+          obj.pts,
+          obj.offsetPt0,
           name,
           rgba255, // colormap,
           opacity, // opacity,
@@ -1290,23 +1310,25 @@ export class NVMesh {
       throw new Error('indices not loaded')
     }
 
-    pts = Array.from(obj.positions)
-    tris = Array.from(obj.indices)
+    pts = obj.positions
+    tris = obj.indices
 
     if ('rgba255' in obj && obj.rgba255.length > 0) {
       // e.g. x3D format
+      // rgba255 = Array.from(obj.rgba255)
       rgba255 = obj.rgba255
     }
     if ('colors' in obj && obj.colors && obj.colors.length === pts.length) {
-      rgba255 = []
       const n = pts.length / 3
+      rgba255 = new Uint8Array(n * 4)
       let c = 0
+      let k = 0
       for (let i = 0; i < n; i++) {
         // convert ThreeJS unit RGB to RGBA255
-        rgba255.push(obj.colors[c] * 255) // red
-        rgba255.push(obj.colors[c + 1] * 255) // green
-        rgba255.push(obj.colors[c + 2] * 255) // blue
-        rgba255.push(255) // alpha
+        rgba255[k++] = obj.colors[c] * 255 // red
+        rgba255[k++] = obj.colors[c + 1] * 255 // green
+        rgba255[k++] = obj.colors[c + 2] * 255 // blue
+        rgba255[k++] = 255 // alpha
         c += 3
       } // for i: each vertex
     } // obj includes colors
@@ -1315,6 +1337,7 @@ export class NVMesh {
     if (ntri < 1 || npt < 3) {
       throw new Error('Mesh should have at least one triangle and three vertices')
     }
+    rgba255[3] = Math.max(1, rgba255[3]) // mesh not streamline
     const nvm = new NVMesh(
       pts,
       tris,
@@ -1470,7 +1493,7 @@ export class NVMesh {
     // let tris = [];
     // var pts = [];
     const buffer = await response.arrayBuffer()
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = await this.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
@@ -1523,7 +1546,7 @@ export class NVMesh {
     }
 
     const buffer = await NVMesh.readFileAsync(file)
-    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
@@ -1569,7 +1592,7 @@ export class NVMesh {
     }
 
     const buffer = base64ToArrayBuffer(base64)
-    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, rgba255, visible)
+    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
@@ -1689,7 +1712,7 @@ export class NVMesh {
   }
 
   static readTT(buffer: ArrayBuffer): TT {
-    return NVMeshLoaders.readTRX(buffer)
+    return NVMeshLoaders.readTT(buffer)
   }
 
   static readTRX(buffer: ArrayBuffer): TRX {

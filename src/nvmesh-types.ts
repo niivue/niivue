@@ -3,7 +3,7 @@ import { LUT } from './colortables.js'
 
 export type ValuesArray = Array<{
   id: string
-  vals: number[]
+  vals: Float32Array
   global_min?: number
   global_max?: number
   cal_min?: number
@@ -24,24 +24,24 @@ export type AnyNumberArray = number[] | TypedNumberArray
 
 export type DefaultMeshType = {
   positions: Float32Array
-  indices: Int32Array
+  indices: Uint32Array
   colors?: Float32Array
 }
 
 export type TRACT = {
-  pts: number[]
-  offsetPt0: number[]
+  pts: Float32Array
+  offsetPt0: Uint32Array
   dps: ValuesArray
 }
 
 export type TT = {
-  pts: number[]
-  offsetPt0: number[]
+  pts: Float32Array
+  offsetPt0: Uint32Array
 }
 
 export type TRX = {
-  pts: number[]
-  offsetPt0: number[]
+  pts: Float32Array
+  offsetPt0: Uint32Array
   dpg: ValuesArray
   dps: ValuesArray
   dpv: ValuesArray
@@ -78,7 +78,7 @@ export type MZ3 =
   | Float32Array
   | {
       positions: Float32Array | null
-      indices: Int32Array | null
+      indices: Uint32Array | null
       scalars: Float32Array
       colors: Float32Array | null
     }
@@ -86,7 +86,7 @@ export type MZ3 =
 export type GII = {
   scalars: Float32Array
   positions?: Float32Array
-  indices?: Int32Array
+  indices?: Uint32Array
   colormapLabel?: LUT
   anatomicalStructurePrimary: string
 }
@@ -100,8 +100,8 @@ export type MGH =
 
 export type X3D = {
   positions: Float32Array
-  indices: Int32Array
-  rgba255: number[]
+  indices: Uint32Array
+  rgba255: Uint8Array
 }
 
 export type Layer = {
