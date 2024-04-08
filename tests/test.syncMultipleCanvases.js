@@ -1,4 +1,5 @@
-const { snapshot, httpServerAddressSync, seconds } = require('./helpers')
+const { snapshot, httpServerAddressSync, wait } = require('./helpers')
+
 beforeEach(async () => {
   await page.goto(httpServerAddressSync, { timeout: 0 })
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
@@ -39,6 +40,6 @@ test('crosshairs synced on click', async () => {
     nv1.syncWith(nv2)
   })
   await page.mouse.click(100, 200)
-  await page.waitForTimeout(1000)
+  await wait(1000)
   await snapshot('#gl2')
 })

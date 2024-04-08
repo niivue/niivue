@@ -1,4 +1,5 @@
-const { snapshot, httpServerAddress, seconds } = require('./helpers')
+const { snapshot, httpServerAddress, wait } = require('./helpers')
+
 beforeEach(async () => {
   await page.goto(httpServerAddress, { timeout: 0 })
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 })
@@ -25,7 +26,7 @@ test('mouse left click focuses crosshair', async () => {
     ]
     await nv.loadVolumes(volumeList)
   })
-  await page.waitForTimeout(500)
+  await wait(500)
   await page.mouse.click(100, 200)
   // take a snapshot for comparison
   await snapshot()

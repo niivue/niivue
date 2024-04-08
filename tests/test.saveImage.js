@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const { waitForDownload } = require('puppeteer-utilz')
-const { snapshot, httpServerAddress, ensureDownloadFolder } = require('./helpers')
+const { httpServerAddress, ensureDownloadFolder } = require('./helpers')
 
 const downloadPath = path.resolve('./downloads')
 const fileName = 'test.nii'
