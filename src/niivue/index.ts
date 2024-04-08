@@ -6174,10 +6174,53 @@ export class Niivue {
     return [cl, l]
   } // translate_labels()
 
+  // retain only the largest cluster for each region
+  largest_original_cluster_labels(bw: Uint32Array, cl: number, ls: Uint32Array): [number, Uint32Array] {
+    const nvox = bw.length
+    const ls2bw = new Uint32Array(cl + 1).fill(0)
+    const sumls = new Uint32Array(cl + 1).fill(0)
+    for (let i = 0; i < nvox; i++) {
+      const bwVal = bw[i]
+      const lsVal = ls[i]
+      ls2bw[lsVal] = bwVal
+      sumls[lsVal]++
+    }
+    let mxbw = 0
+    for (let i = 0; i < cl + 1; i++) {
+      const bwVal = ls2bw[i]
+      mxbw = Math.max(mxbw, bwVal)
+      // see if this is largest cluster of this bw-value
+      for (let j = 0; j < cl + 1; j++) {
+        if (j === i) {
+          continue
+        }
+        if (bwVal !== ls2bw[j]) {
+          continue
+        }
+        if (sumls[i] < sumls[j]) {
+          ls2bw[i] = 0
+        } else if (sumls[i] === sumls[j] && i < j) {
+          ls2bw[i] = 0
+        } // ties: arbitrary winner
+      }
+    }
+    const vxs = new Uint32Array(nvox).fill(0)
+    for (let i = 0; i < nvox; i++) {
+      vxs[i] = ls2bw[ls[i]]
+    }
+    return [mxbw, vxs]
+  }
+
   // given a 3D image, return a clustered label map
   // for an explanation and optimized C code see
   // https://github.com/seung-lab/connected-components-3d
-  bwlabel(img: Uint32Array, dim: Uint32Array, conn: number = 26, binarize: boolean = false): [number, Uint32Array] {
+  bwlabel(
+    img: Uint32Array,
+    dim: Uint32Array,
+    conn: number = 26,
+    binarize: boolean = false,
+    onlyLargestClusterPerClass: boolean = false
+  ): [number, Uint32Array] {
     const start = Date.now()
     const nvox = dim[0] * dim[1] * dim[2]
     const bw = new Uint32Array(nvox).fill(0)
@@ -6204,15 +6247,24 @@ export class Niivue {
     }
     const [cl, ls] = this.translate_labels(il, dim, tt, ttn)
     log.info(conn + ' neighbor clustering into ' + cl + ' regions in ' + (Date.now() - start) + 'ms')
+    if (onlyLargestClusterPerClass) {
+      const [nbw, bwMx] = this.largest_original_cluster_labels(bw, cl, ls)
+      return [nbw, bwMx]
+    }
     return [cl, ls]
   } // bwlabel()
 
-  async createConnectedLabelImage(id: string, conn: number = 26, binarize: boolean = false): Promise<NVImage> {
+  async createConnectedLabelImage(
+    id: string,
+    conn: number = 26,
+    binarize: boolean = false,
+    onlyLargestClusterPerClass: boolean = false
+  ): Promise<NVImage> {
     const idx = this.getVolumeIndexByID(id)
     const dim = Uint32Array.from(this.volumes[idx].dims?.slice(1, 4) ?? [])
     // const dim = Array.from([this.volumes[idx].dims[1], this.volumes[idx].dims[2], this.volumes[idx].dims[3], this.volumes[idx].dims[1] * this.volumes[idx].dims[2]])
     const img = Uint32Array.from(this.volumes[idx].img?.slice() ?? [])
-    const [mx, clusterImg] = this.bwlabel(img, dim!, conn, binarize)
+    const [mx, clusterImg] = this.bwlabel(img, dim!, conn, binarize, onlyLargestClusterPerClass)
     const nii = this.volumes[0].clone()
     nii.opacity = 0.5
     nii.colormap = 'random'
