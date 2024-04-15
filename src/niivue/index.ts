@@ -6132,9 +6132,9 @@ export class Niivue {
     f_low: number = 0.0,
     f_high: number = 0.999
   ): [number, number] {
+    // https://github.com/Deep-MI/FastSurfer/blob/4e76bed7b11fd7e6403ddac729059ad3842b56de/FastSurferCNN/data_loader/conform.py#L217
     let src_min = volume.global_min!
     let src_max = volume.global_max!
-
     if (src_min < 0.0) {
       log.warn('WARNING: Input image has value(s) below 0.0 !')
     }
@@ -6143,7 +6143,6 @@ export class Niivue {
       return [src_min, 1.0]
     }
     // compute non-zeros and total vox num
-
     const voxnum = volume.dims![1] * volume.dims![2] * volume.dims![3]
     let nz = 0
     for (let i = 0; i < voxnum; i++) {
@@ -6227,22 +6226,17 @@ export class Niivue {
     const Pxyz_c = vec3.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2])
     // MGH format doesn't store the transform directly. Instead it's gleaned
     // from the zooms ( delta ), direction cosines ( Mdc ), RAS centers (
-
     const delta = vec3.fromValues(outMM, outMM, outMM)
     const Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
     mat4.transpose(Mdc, Mdc)
     const dims = vec4.fromValues(outDim, outDim, outDim, 1)
-    // vol_center = MdcD.dot(hdr['dims'][:3]) / 2
     const MdcD = mat4.create()
-    // MdcD = hdr['Mdc'].T * hdr['delta']
     mat4.scale(MdcD, Mdc, delta)
     const vol_center = vec4.fromValues(dims[0], dims[1], dims[2], 1)
-    // vol_center = MdcD.dot(hdr['dims'][:3]) / 2
     vec4.transformMat4(vol_center, vol_center, MdcD)
     vec4.scale(vol_center, vol_center, 0.5)
     const translate = vec3.create()
     vec3.subtract(translate, Pxyz_c, vec3.fromValues(vol_center[0], vol_center[1], vol_center[2]))
-    // 256.000 -90.097  117.06
     const out_affine = mat4.create()
     mat4.transpose(out_affine, MdcD)
     out_affine[3] = translate[0]
@@ -6256,8 +6250,7 @@ export class Niivue {
     // compute inverse
     const inv_vox2vox = mat4.create()
     mat4.invert(inv_vox2vox, vox2vox)
-
-    return [vox2vox, out_affine, inv_vox2vox]
+    return [out_affine, vox2vox, inv_vox2vox]
   }
 
   async createNiftiArray(
@@ -6274,59 +6267,24 @@ export class Niivue {
     return await NVImage.loadFromUrl({ url: bytes })
   }
 
-  /*
-  async makeBorg(): Promise<NVImage> {
-    const dim = 256
-    const dims = [dim, dim, dim]
-    const pixDims = [1, 1, 1]
-    const affine = [1, 0, 0, -dim / 2, 0, 1, 0, -dim / 2, 0, 0, 1, -dim / 2, 0, 0, 0, 1]
-    const datatype = 2
-    const img = new Uint8Array(dim * dim * dim)
-    // make borg
-    let i = 0
-    const slope = 0.0005
-    for (let z = 0; z < dim; z++) {
-      for (let y = 0; y < dim; y++) {
-        for (let x = 0; x < dim; x++) {
-          let v = Math.sin(slope * x * y) + Math.sin(slope * y * z) + Math.sin(slope * z * x)
-          v = Math.floor(Math.min(Math.max((v * 255) / 3, 0), 255))
-          img[i] = v
-          i++
-        }
-      }
-    }
-    const bytes = await this.createNiftiArray(dims, pixDims, affine, datatype, img)
-    return await this.niftiArray2NVImage(bytes)
-  }
-*/
-
   async conform(id: string): Promise<NVImage> {
     const idx = this.getVolumeIndexByID(id)
     const volume = this.volumes[idx]
     const outDim = 256
     const outMM = 1
     const obj = this.conformVox2Vox(volume.dims!, volume.hdr!.affine.flat(), outDim, outMM)
-    const vox2vox = obj[0]
-    log.warn('Check vox2vox', vox2vox)
-    const out_affine = obj[1]
+    const out_affine = obj[0]
+    const inv_vox2vox = obj[2]
     const out_nvox = outDim * outDim * outDim
-    // let out_img = new Float32Array(out_nvox)
     const out_img = new Float32Array(out_nvox)
-    // const in_nvox = volume.dims![1] * volume.dims![2] * volume.dims![3]
     const in_img = new Float32Array(volume.img!)
     let i = -1
     for (let z = 0; z < outDim; z++) {
       for (let y = 0; y < outDim; y++) {
         for (let x = 0; x < outDim; x++) {
-          const ix = x * out_affine[0] + y * out_affine[1] + z * out_affine[2] + out_affine[3]
-          const iy = x * out_affine[4] + y * out_affine[5] + z * out_affine[6] + out_affine[7]
-          const iz = x * out_affine[8] + y * out_affine[9] + z * out_affine[10] + out_affine[11]
-
-          /*
-          let ix = (x * out_affine[0]) + (y * out_affine[4]) + (z * out_affine[8]) + out_affine[12]
-          let iy = (x * out_affine[1]) + (y * out_affine[5]) + (z * out_affine[9]) + out_affine[13]
-          let iz = (x * out_affine[2]) + (y * out_affine[6]) + (z * out_affine[10]) + out_affine[141]
-*/
+          const ix = x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
+          const iy = x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
+          const iz = x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
           i++
           if (ix < 0 || iy < 0 || iz < 0) {
             continue
@@ -6340,7 +6298,6 @@ export class Niivue {
         }
       }
     }
-
     // Unlike mri_convert -c, we first interpolate (float image), and then rescale
     // to uchar. mri_convert is doing it the other way around. However, we compute
     // the scale factor from the input to increase similarity.
@@ -6348,15 +6305,6 @@ export class Niivue {
     const scale = 0
     const gs = await this.getScale(volume)
     const out_img8 = await this.scalecrop255(out_img, 0, 255, gs[0], gs[1])
-
-    /* for (let z = 0; z < volume.dims[3]; z++) {
-      for (let y = 0; y < volume.dims[2]; y++) {
-        for (let x = 0; x < volume.dims[1]; x++) {
-          mx = Math.max(mx, in_img[i])
-          i++
-        }
-      }
-    } */
     const bytes = await this.createNiftiArray(
       [outDim, outDim, outDim],
       [outMM, outMM, outMM],
@@ -6367,56 +6315,6 @@ export class Niivue {
     const nii = await this.niftiArray2NVImage(bytes)
     return nii
   }
-
-  async conformJ(id: string): Promise<NVImage> {
-    const idx = this.getVolumeIndexByID(id)
-    // Unlike mri_convert -c, we first interpolate (float image), and then rescale
-    // to uchar. mri_convert is doing it the other way around. However, we compute
-    // the scale factor from the input to increase similarity.
-    const volume = this.volumes[idx]
-    const src_min = 0
-    const scale = 0
-    const gs = await this.getScale(volume)
-    const vol = this.scalecrop(volume, 0, 255, gs[0], gs[1])
-
-    // vol.opacity = 0.5
-    // vol.colormap = 'actc'
-    return vol
-  }
-  /*
-  confirmX2(id: string): void {
-    const idx = this.getVolumeIndexByID(id)
-    const volume = this.volumes[idx]
-    const outDim = 256
-    const outMM = 1
-    // const obj = this.conformVox2Vox(volume.dims!, volume.hdr!.affine.flat(), outDim, outMM)
-    // const vox2vox = obj[0]
-    // const out_affine = obj[1]
-    // let outhdr = new nifti.NIFTI1()
-    this.hdr = new nifti.NIFTI1()
-    const hdr = this.hdr
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    const reader = new DataView(buffer)
-    hdr.dims[1] = reader.getUint16(0, true)
-    hdr.dims[2] = reader.getUint16(2, true)
-    hdr.dims[3] = reader.getUint16(4, true)
-    const nBytes = 2 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
-    if (nBytes + 6 !== buffer.byteLength) {
-      log.warn('This does not look like a valid BrainVoyager V16 file')
-    }
-    hdr.numBitsPerVoxel = 16
-    hdr.datatypeCode = this.DT_UINT16
-    log.warn('Warning: V16 files have no spatial transforms')
-    hdr.affine = [
-      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ]
-    hdr.littleEndian = true
-  }
-*/
 
   confirmX(id: string): void {
     const idx = this.getVolumeIndexByID(id)
