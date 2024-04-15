@@ -33,9 +33,11 @@
         <option value="26" selected>26 (Faces, Edges, Corners)</option>
       </select>
       &nbsp; &nbsp; 
+      <button id="saveBtn">Save Volume</button>
+      &nbsp; &nbsp; 
       <button id="showBtn">Show Borg</button>
       &nbsp; &nbsp; 
-      <button id="saveBtn">Save Borg</button>
+      <button id="saveBorgBtn">Save Borg</button>
     </header>
     <main id="canvas-container">
       <canvas id="gl1"></canvas>
@@ -84,11 +86,10 @@
         nii2.opacity = 0.5
         console.log(nii2)
         nv1.addVolume(nii2)
-
       }
-      saveBtn.onclick = async function () {
+      saveBorgBtn.onclick = async function () {
         let bytes = await makeBorg()
-        let fnm = 'test.nii'
+        let fnm = 'borg.nii'
         const blob = new Blob([bytes.buffer], {
           type: 'application/octet-stream'
         })
@@ -100,20 +101,21 @@
         document.body.appendChild(link)
         link.click()
       }
+      saveBtn.onclick = async function () {
+        await nv1.saveImage({ filename: 'test.nii', isSaveDrawing: false, volumeByIndex: 0 })
+      }
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML = data.string
       }
-      var volumeList1 = [{ url: "./ax.nii.gz"}]
-      //var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}]
       let defaults = {
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange,
       }
       var nv1 = new Niivue(defaults)
-      //nv1.setInterpolation(true)
       nv1.attachToCanvas(gl1)
-      await nv1.loadVolumes(volumeList1)
-      await con()
+      let nii = await nv1.loadFromUrl("../demos/images/FLAIR.nii.gz")
+      let nii2 = await nv1.conform(nii)
+      nv1.addVolume(nii2)
     </script>
   </body>
 </html>
