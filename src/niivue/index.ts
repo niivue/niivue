@@ -6275,34 +6275,13 @@ export class Niivue {
     return nii
   }
 
-  async scalecrop(
-    volume: NVImage,
-    dst_min: number = 0,
-    dst_max: number = 255,
-    src_min: number,
-    scale: number
-  ): Promise<NVImage> {
-    const vol = await volume.clone() // NVImage.zerosLike(NVImage, 'uint8')
-    vol.cal_min = dst_min
-    vol.cal_max = dst_max
-    vol.robust_min = 0
-    vol.robust_max = 0
-    vol.hdr!.cal_min = 0
-    vol.hdr!.cal_min = 0
-    vol.hdr!.scl_slope = 1
-    vol.hdr!.scl_inter = 0
-    const voxnum = volume.dims![1] * volume.dims![2] * volume.dims![3]
-    for (let i = 0; i < voxnum; i++) {
-      let val = volume.img![i]
-      val = dst_min + scale * (val - src_min)
-      val = Math.max(val, dst_min)
-      val = Math.min(val, dst_max)
-      vol.img![i] = val
-    }
-    return vol
-  }
+  // conform.py functions follow
+  // https://github.com/Deep-MI/FastSurfer/blob/4e76bed7b11fd7e6403ddac729059ad3842b56de/FastSurferCNN/data_loader/conform.py
+  // Licensed under the Apache License, Version 2.0 (the "License")
 
-  async scalecrop255(
+  // Crop the intensity ranges to specific min and max values.
+
+  async scalecropUint8(
     img32: Float32Array,
     dst_min: number = 0,
     dst_max: number = 255,
@@ -6321,6 +6300,29 @@ export class Niivue {
     return img8
   }
 
+
+  async scalecropFloat32(
+    img32: Float32Array,
+    dst_min: number = 0,
+    dst_max: number = 1,
+    src_min: number,
+    scale: number
+  ): Promise<Float32Array> {
+    const voxnum = img32.length
+    const img = new Float32Array(voxnum)
+    for (let i = 0; i < voxnum; i++) {
+      let val = img32![i]
+      val = dst_min + scale * (val - src_min)
+      val = Math.max(val, dst_min)
+      val = Math.min(val, dst_max)
+      img![i] = val
+    }
+    return img
+  }
+
+  // Get offset and scale of image intensities to robustly rescale to range dst_min..dst_max.
+  // Equivalent to how mri_convert conforms images.
+
   getScale(
     volume: NVImage,
     dst_min: number = 0,
@@ -6328,7 +6330,6 @@ export class Niivue {
     f_low: number = 0.0,
     f_high: number = 0.999
   ): [number, number] {
-    // https://github.com/Deep-MI/FastSurfer/blob/4e76bed7b11fd7e6403ddac729059ad3842b56de/FastSurferCNN/data_loader/conform.py#L217
     let src_min = volume.global_min!
     let src_max = volume.global_max!
     if (src_min < 0.0) {
@@ -6339,7 +6340,7 @@ export class Niivue {
       return [src_min, 1.0]
     }
     // compute non-zeros and total vox num
-    const voxnum = volume.dims![1] * volume.dims![2] * volume.dims![3]
+    const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
     let nz = 0
     for (let i = 0; i < voxnum; i++) {
       if (Math.abs(volume.img![i]) >= 1e-15) {
@@ -6393,6 +6394,9 @@ export class Niivue {
 
     return [src_min, scale]
   }
+
+  // Translation of nibabel mghformat.py (MIT License 2009-2019) and FastSurfer conform.py (Apache License)
+  // https://github.com/nipy/nibabel/blob/a2e5dee05cf374c22670ff9fd0d385ce366eb495/nibabel/freesurfer/mghformat.py#L30
 
   conformVox2Vox(inDims: number[], inAffine: number[], outDim = 256, outMM = 1): [mat4, mat4, mat4] {
     const a = inAffine.flat()
@@ -6449,6 +6453,8 @@ export class Niivue {
     return [out_affine, vox2vox, inv_vox2vox]
   }
 
+  // Create a binary byte array with a NIfTI format header as well as image data
+
   async createNiftiArray(
     dims = [256, 256, 256],
     pixDims = [1, 1, 1],
@@ -6459,120 +6465,126 @@ export class Niivue {
     return await NVImage.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
   }
 
+  // Convert a binary byte array with a NIfTI image to NiiVue's internal NVImage object
+
   async niftiArray2NVImage(bytes = new Uint8Array()): Promise<NVImage> {
     return await NVImage.loadFromUrl({ url: bytes })
   }
 
-  async conform(id: string): Promise<NVImage> {
-    const idx = this.getVolumeIndexByID(id)
-    const volume = this.volumes[idx]
+  // Read a NIfTI file and convert as NiiVue internal NVImage: AddVolume this does not load image to GPU
+
+  async loadFromUrl(fnm: string): Promise<NVImage> {
+    return await NVImage.loadFromUrl({ url: fnm })
+  }
+
+  // Translation of FastSurfer conform.py (Apache License)
+  // Reslice an image to an isotropic 1mm with dimensions of 1x1x1mm
+  // The original volume is translated to be in the center of the new volume
+  // Interpolation is linear (default) or nearest neighbor
+  // asFloat32 determines if output is Float32 with range 0..255 or Uint8 with range 0..255
+
+  async conform(volume: NVImage, linear: boolean = true, asFloat32 = false): Promise<NVImage> {
     const outDim = 256
     const outMM = 1
-    const obj = this.conformVox2Vox(volume.dims!, volume.hdr!.affine.flat(), outDim, outMM)
+    const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM)
     const out_affine = obj[0]
     const inv_vox2vox = obj[2]
     const out_nvox = outDim * outDim * outDim
     const out_img = new Float32Array(out_nvox)
     const in_img = new Float32Array(volume.img!)
-    let i = -1
-    for (let z = 0; z < outDim; z++) {
-      for (let y = 0; y < outDim; y++) {
-        for (let x = 0; x < outDim; x++) {
-          const ix = x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
-          const iy = x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
-          const iz = x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
-          i++
-          if (ix < 0 || iy < 0 || iz < 0) {
-            continue
-          }
-          if (ix >= volume.dims![1] || iy >= volume.dims![2] || iz >= volume.dims![3]) {
-            continue
-          }
-          const vx =
-            Math.round(ix) + Math.round(iy) * volume.dims![1] + Math.round(iz) * volume.dims![1] * volume.dims![2]
-          out_img[i] = in_img[vx]
-        }
-      }
+    function voxval(vx: number, vy: number, vz: number): number {
+      return in_img[vx + vy * volume.hdr!.dims![1] + vz * volume.hdr!.dims![1] * volume.hdr!.dims![2]]
     }
+    let i = -1
+    if (linear) {
+      for (let z = 0; z < outDim; z++) {
+        for (let y = 0; y < outDim; y++) {
+          for (let x = 0; x < outDim; x++) {
+            const ix = x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
+            const iy = x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
+            const iz = x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
+            const fx = Math.floor(ix)
+            const fy = Math.floor(iy)
+            const fz = Math.floor(iz)
+            const cx = Math.ceil(ix)
+            const cy = Math.ceil(iy)
+            const cz = Math.ceil(iz)
+            i++
+            if (fx < 0 || fy < 0 || fz < 0) {
+              continue
+            }
+            if (cx >= volume.hdr!.dims![1] || cy >= volume.hdr!.dims![2] || cz >= volume.hdr!.dims![3]) {
+              continue
+            }
+            // residuals
+            const rcx = ix - fx
+            const rcy = iy - fy
+            const rcz = iz - fz
+            const rfx = 1 - rcx
+            const rfy = 1 - rcy
+            const rfz = 1 - rcz
+            let vx = 0
+            vx += voxval(fx, fy, fz) * rfx * rfy * rfz
+            vx += voxval(fx, fy, cz) * rfx * rfy * rcz
+            vx += voxval(fx, cy, fz) * rfx * rcy * rfz
+            vx += voxval(fx, cy, cz) * rfx * rcy * rcz
+            vx += voxval(cx, fy, fz) * rcx * rfy * rfz
+            vx += voxval(cx, fy, cz) * rcx * rfy * rcz
+            vx += voxval(cx, cy, fz) * rcx * rcy * rfz
+            vx += voxval(cx, cy, cz) * rcx * rcy * rcz
+            out_img[i] = vx
+          } // z
+        } // y
+      } // x
+    } else {
+      // nearest neighbor interpolation
+      for (let z = 0; z < outDim; z++) {
+        for (let y = 0; y < outDim; y++) {
+          for (let x = 0; x < outDim; x++) {
+            const ix = Math.round(x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3])
+            const iy = Math.round(x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7])
+            const iz = Math.round(x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11])
+            i++
+            if (ix < 0 || iy < 0 || iz < 0) {
+              continue
+            }
+            if (ix >= volume.hdr!.dims![1] || iy >= volume.hdr!.dims![2] || iz >= volume.hdr!.dims![3]) {
+              continue
+            }
+            out_img[i] = voxval(ix, iy, iz)
+          } // z
+        } // y
+      } // x
+    } // if linear else nearest
     // Unlike mri_convert -c, we first interpolate (float image), and then rescale
     // to uchar. mri_convert is doing it the other way around. However, we compute
     // the scale factor from the input to increase similarity.
     const src_min = 0
     const scale = 0
-    const gs = await this.getScale(volume)
-    const out_img8 = await this.scalecrop255(out_img, 0, 255, gs[0], gs[1])
-    const bytes = await this.createNiftiArray(
-      [outDim, outDim, outDim],
-      [outMM, outMM, outMM],
-      Array.from(out_affine),
-      2,
-      out_img8
-    )
+    let bytes = new Uint8Array()
+    if (asFloat32) {
+        const gs = await this.getScale(volume, 0, 1)
+        const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1])
+        bytes = await this.createNiftiArray(
+          [outDim, outDim, outDim],
+          [outMM, outMM, outMM],
+          Array.from(out_affine),
+          16, //DT_FLOAT
+          new Uint8Array(out_img32.buffer)
+        )
+    } else {
+        const gs = await this.getScale(volume, 0, 255)
+        const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1])
+        bytes = await this.createNiftiArray(
+          [outDim, outDim, outDim],
+          [outMM, outMM, outMM],
+          Array.from(out_affine),
+          2,
+          out_img8
+        )
+    }
     const nii = await this.niftiArray2NVImage(bytes)
     return nii
-  }
-
-  confirmX(id: string): void {
-    const idx = this.getVolumeIndexByID(id)
-    const volume = this.volumes[idx]
-    // const dim = [volume.dims![1], volume.dims![2], volume.dims![3]]
-    const a = volume.hdr!.affine.flat()
-    const affine = mat4.fromValues(
-      a[0],
-      a[1],
-      a[2],
-      a[3],
-      a[4],
-      a[5],
-      a[6],
-      a[7],
-      a[8],
-      a[9],
-      a[10],
-      a[11],
-      a[12],
-      a[13],
-      a[14],
-      a[15]
-    )
-    const half = vec4.fromValues(volume.dims![1] / 2, volume.dims![2] / 2, volume.dims![3] / 2, 1)
-    const Pxyz_c4 = vec4.create()
-    const affineT = mat4.create()
-    mat4.transpose(affineT, affine)
-    vec4.transformMat4(Pxyz_c4, half, affineT)
-    const Pxyz_c = vec3.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2])
-    // MGH format doesn't store the transform directly. Instead it's gleaned
-    // from the zooms ( delta ), direction cosines ( Mdc ), RAS centers (
-
-    const delta = vec3.fromValues(1, 1, 1)
-    const Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
-    mat4.transpose(Mdc, Mdc)
-    const dims = vec4.fromValues(256, 256, 256, 1)
-    // vol_center = MdcD.dot(hdr['dims'][:3]) / 2
-    const MdcD = mat4.create()
-    // MdcD = hdr['Mdc'].T * hdr['delta']
-    mat4.scale(MdcD, Mdc, delta)
-    const vol_center = vec4.fromValues(dims[0], dims[1], dims[2], 1)
-    // vol_center = MdcD.dot(hdr['dims'][:3]) / 2
-    vec4.transformMat4(vol_center, vol_center, MdcD)
-    vec4.scale(vol_center, vol_center, 0.5)
-    // ????mork
-    const translate = vec3.create()
-    vec3.subtract(translate, Pxyz_c, vec3.fromValues(vol_center[0], vol_center[1], vol_center[2]))
-    // 256.000 -90.097  117.06
-    const out_affine = mat4.create()
-    mat4.transpose(out_affine, MdcD)
-    out_affine[3] = translate[0]
-    out_affine[7] = translate[1]
-    out_affine[11] = translate[2]
-    const inv_out_affine = mat4.create()
-    mat4.invert(inv_out_affine, out_affine)
-    const vox2vox = mat4.create()
-    // compute vox2vox from src to trg
-    mat4.mul(vox2vox, affine, inv_out_affine)
-    // ?? [ 0.000  37.903 -10.935]
-    // ?? [-256.000  128.000 -128.000]
-    // ?? [ 256.000 -90.097  117.065]
   }
 
   /**
