@@ -2417,6 +2417,7 @@ export class NVImage {
     for (let i = 0; i < nBins; i++) {
       hist[i] = 0
     }
+    this.ignoreZeroVoxels = true
     if (this.ignoreZeroVoxels) {
       for (let i = 0; i <= nVox; i++) {
         if (this.img[i] === 0) {
@@ -2475,6 +2476,7 @@ export class NVImage {
       pct2 = this.hdr.cal_min
       pct98 = this.hdr.cal_max
     }
+    log.warn('2..98', mn, mx, pct2, pct98)
     this.cal_min = pct2
     this.cal_max = pct98
     this.robust_min = this.cal_min
@@ -2956,6 +2958,82 @@ export class NVImage {
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
+  static createNiftiArray(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2, // DT_UNSIGNED_CHAR
+    img = new Uint8Array()
+  ): Uint8Array {
+    const hdr = this.createNiftiHeader(dims, pixDims, affine, datatypeCode)
+    const hdrBytes = hdrToArrayBuffer(hdr, false)
+    if (img.length < 1) {
+      return hdrBytes
+    }
+    const opad = new Uint8Array(4)
+    const img8 = new Uint8Array(img.buffer)
+    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
+    odata.set(hdrBytes)
+    odata.set(opad, hdrBytes.length)
+    odata.set(img8, hdrBytes.length + opad.length)
+    return odata
+  } // createNiftiFile()
+
+  static createNiftiHeader(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2 // this.DT_UNSIGNED_CHAR
+  ): nifti.NIFTI1 {
+    const hdr = new nifti.NIFTI1()
+    hdr.littleEndian = true
+    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
+    hdr.dims[0] = Math.max(3, dims.length)
+    for (let i = 0; i < dims.length; i++) {
+      hdr.dims[i + 1] = dims[i]
+    }
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+    for (let i = 0; i < dims.length; i++) {
+      hdr.pixDims[i + 1] = pixDims[i]
+    }
+    if (affine.length === 16) {
+      let k = 0
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          hdr.affine[i][j] = affine[k]
+          k++
+        }
+      }
+    }
+    let bpv = 8
+    if (datatypeCode === 256 || datatypeCode === 2) {
+      bpv = 8
+    } else if (datatypeCode === 512 || datatypeCode === 4) {
+      bpv = 16
+    } else if (datatypeCode === 16 || datatypeCode === 768 || hdr.datatypeCode === 8) {
+      bpv = 32
+    } else if (datatypeCode === 64) {
+      bpv = 64
+    } else {
+      log.warn('Unsupported NIfTI datatypeCode: ' + datatypeCode)
+    }
+    hdr.datatypeCode = datatypeCode
+    hdr.numBitsPerVoxel = bpv
+    hdr.scl_inter = 0
+    hdr.scl_slope = 0
+    hdr.sform_code = 2
+    hdr.magic = 'n+1'
+    hdr.vox_offset = 352
+    return hdr
+  } // loadFromHeader
+
+  /**
+   * factory function to load and return a new NVImage instance from a base64 encoded string
+   *
+   * @returns NVImage instance
+   * @example
+   * myImage = NVImage.loadFromBase64('SomeBase64String')
+   */
   static loadFromBase64({
     base64,
     name = '',
@@ -3086,6 +3164,11 @@ export class NVImage {
       zeroClone.img = Uint8Array.from(zeroClone.img!)
       zeroClone.hdr!.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
       zeroClone.hdr!.numBitsPerVoxel = 8
+    }
+    if (dataType === 'float32') {
+      zeroClone.img = Float32Array.from(zeroClone.img!)
+      zeroClone.hdr!.datatypeCode = zeroClone.DT_FLOAT
+      zeroClone.hdr!.numBitsPerVoxel = 32
     }
     return zeroClone
   }
