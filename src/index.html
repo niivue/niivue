@@ -33,7 +33,9 @@
         <option value="26" selected>26 (Faces, Edges, Corners)</option>
       </select>
       &nbsp; &nbsp; 
-      <button id="aboutBtn">About</button>
+      <button id="showBtn">Show Borg</button>
+      &nbsp; &nbsp; 
+      <button id="saveBtn">Save Borg</button>
     </header>
     <main id="canvas-container">
       <canvas id="gl1"></canvas>
@@ -68,7 +70,7 @@
         }
         return await nv1.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
       } //makeBorg()
-      async function showBorg(data) {
+      showBtn.onclick = async function () {
         let bytes = await makeBorg()
         let nii2 = await nv1.niftiArray2NVImage(bytes)
         nii2.colormap = 'actc'
@@ -84,7 +86,7 @@
         nv1.addVolume(nii2)
 
       }
-      aboutBtn.onclick = async function () {
+      saveBtn.onclick = async function () {
         let bytes = await makeBorg()
         let fnm = 'test.nii'
         const blob = new Blob([bytes.buffer], {
