@@ -2396,6 +2396,11 @@ export class NVImage {
     }
     const mnScale = this.intensityRaw2Scaled(mn)
     const mxScale = this.intensityRaw2Scaled(mx)
+    const percentZero = (100 * nZero) / nVox
+    if (percentZero > 50 && !this.ignoreZeroVoxels) {
+      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max and cal_min`)
+      this.ignoreZeroVoxels = true
+    }
     if (!this.ignoreZeroVoxels) {
       nZero = 0
     }
@@ -2417,7 +2422,6 @@ export class NVImage {
     for (let i = 0; i < nBins; i++) {
       hist[i] = 0
     }
-    this.ignoreZeroVoxels = true
     if (this.ignoreZeroVoxels) {
       for (let i = 0; i <= nVox; i++) {
         if (this.img[i] === 0) {
@@ -2476,7 +2480,6 @@ export class NVImage {
       pct2 = this.hdr.cal_min
       pct98 = this.hdr.cal_max
     }
-    log.warn('2..98', mn, mx, pct2, pct98)
     this.cal_min = pct2
     this.cal_max = pct98
     this.robust_min = this.cal_min
