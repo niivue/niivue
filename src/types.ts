@@ -1,4 +1,6 @@
+import { vec3, vec4 } from 'gl-matrix'
 import { NVLabel3D } from './nvlabel.js'
+import { SLICE_TYPE } from './nvdocument.js'
 
 export type NiftiHeader = {
   littleEndian: boolean
@@ -57,6 +59,7 @@ export type Point = {
 
 /**
  * Representes the vertices of a connectome
+ * @ignore
  */
 export type NVConnectomeNode = {
   // name of node
@@ -73,6 +76,7 @@ export type NVConnectomeNode = {
 
 /**
  * Represents edges between connectome nodes
+ * @ignore
  */
 export type NVConnectomeEdge = {
   // index of first node
@@ -117,4 +121,16 @@ export type LegacyNodes = {
 export type LegacyConnectome = Partial<ConnectomeOptions> & {
   nodes: LegacyNodes
   edges: number[]
+}
+
+export type DragReleaseParams = {
+  fracStart: vec3
+  fracEnd: vec3
+  voxStart: vec3
+  voxEnd: vec3
+  mmStart: vec4
+  mmEnd: vec4
+  mmLength: number
+  tileIdx: number
+  axCorSag: SLICE_TYPE
 }

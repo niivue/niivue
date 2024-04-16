@@ -41,7 +41,6 @@ module.exports = {
         '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/no-floating-promises': 'error',
         '@typescript-eslint/no-misused-promises': 'error',
-        'tsdoc/syntax': 'warn'
       }
     }
   ]
