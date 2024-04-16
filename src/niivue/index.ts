@@ -6300,7 +6300,6 @@ export class Niivue {
     return img8
   }
 
-
   async scalecropFloat32(
     img32: Float32Array,
     dst_min: number = 0,
@@ -6332,6 +6331,19 @@ export class Niivue {
   ): [number, number] {
     let src_min = volume.global_min!
     let src_max = volume.global_max!
+    if (volume.hdr!.datatypeCode === 2) {
+      // for compatibility with conform.py: uint8 is not transformed
+      return [src_min, 1.0]
+    }
+    const img = volume.img!
+    const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
+    if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
+      const srcimg = volume.img!
+      const img = new Float32Array(volume.img!.length)
+      for (let i = 0; i < voxnum; i++) {
+        img[i] = srcimg[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
+      }
+    }
     if (src_min < 0.0) {
       log.warn('WARNING: Input image has value(s) below 0.0 !')
     }
@@ -6340,10 +6352,9 @@ export class Niivue {
       return [src_min, 1.0]
     }
     // compute non-zeros and total vox num
-    const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
     let nz = 0
     for (let i = 0; i < voxnum; i++) {
-      if (Math.abs(volume.img![i]) >= 1e-15) {
+      if (Math.abs(img![i]) >= 1e-15) {
         nz++
       }
     }
@@ -6352,7 +6363,7 @@ export class Niivue {
     const bin_size = (src_max - src_min) / histosize
     const hist = new Array(histosize).fill(0)
     for (let i = 0; i < voxnum; i++) {
-      const val = volume.img![i]
+      const val = img[i]
       let bin = Math.floor((val - src_min) / bin_size)
       bin = Math.min(bin, histosize - 1)
       hist[bin]++
@@ -6391,7 +6402,6 @@ export class Niivue {
       scale = (dst_max - dst_min) / (src_max - src_min)
     }
     log.info(' Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
-
     return [src_min, scale]
   }
 
@@ -6492,6 +6502,12 @@ export class Niivue {
     const out_nvox = outDim * outDim * outDim
     const out_img = new Float32Array(out_nvox)
     const in_img = new Float32Array(volume.img!)
+    const in_nvox = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
+    if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
+      for (let i = 0; i < in_nvox; i++) {
+        in_img[i] = in_img[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
+      }
+    }
     function voxval(vx: number, vy: number, vz: number): number {
       return in_img[vx + vy * volume.hdr!.dims![1] + vz * volume.hdr!.dims![1] * volume.hdr!.dims![2]]
     }
@@ -6563,25 +6579,25 @@ export class Niivue {
     const scale = 0
     let bytes = new Uint8Array()
     if (asFloat32) {
-        const gs = await this.getScale(volume, 0, 1)
-        const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1])
-        bytes = await this.createNiftiArray(
-          [outDim, outDim, outDim],
-          [outMM, outMM, outMM],
-          Array.from(out_affine),
-          16, //DT_FLOAT
-          new Uint8Array(out_img32.buffer)
-        )
+      const gs = await this.getScale(volume, 0, 1)
+      const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1])
+      bytes = await this.createNiftiArray(
+        [outDim, outDim, outDim],
+        [outMM, outMM, outMM],
+        Array.from(out_affine),
+        16, // DT_FLOAT
+        new Uint8Array(out_img32.buffer)
+      )
     } else {
-        const gs = await this.getScale(volume, 0, 255)
-        const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1])
-        bytes = await this.createNiftiArray(
-          [outDim, outDim, outDim],
-          [outMM, outMM, outMM],
-          Array.from(out_affine),
-          2,
-          out_img8
-        )
+      const gs = await this.getScale(volume, 0, 255)
+      const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1])
+      bytes = await this.createNiftiArray(
+        [outDim, outDim, outDim],
+        [outMM, outMM, outMM],
+        Array.from(out_affine),
+        2,
+        out_img8
+      )
     }
     const nii = await this.niftiArray2NVImage(bytes)
     return nii
