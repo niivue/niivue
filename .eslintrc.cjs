@@ -28,8 +28,7 @@ module.exports = {
         trailingComma: 'none',
         semi: false
       }
-    ],
-    'no-console': 2
+    ]
   },
   // separate ESLint rules for TS files for now
   overrides: [
