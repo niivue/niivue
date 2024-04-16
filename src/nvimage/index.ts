@@ -2341,39 +2341,6 @@ export class NVImage {
     if (!this.img) {
       throw new Error('img undefined')
     }
-
-    const cmap = cmapper.colormapFromKey(this._colormap)
-    let cmMin = 0
-    let cmMax = 0
-    if (cmap.min !== undefined) {
-      cmMin = cmap.min
-    }
-    if (cmap.max !== undefined) {
-      cmMax = cmap.max
-    }
-    if (
-      cmMin === cmMax &&
-      this.trustCalMinMax &&
-      isFinite(this.hdr.cal_min) &&
-      isFinite(this.hdr.cal_max) &&
-      this.hdr.cal_max > this.hdr.cal_min
-    ) {
-      this.cal_min = this.hdr.cal_min
-      this.cal_max = this.hdr.cal_max
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      this.global_min = this.hdr.cal_min
-      this.global_max = this.hdr.cal_max
-      return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
-    }
-    // if color map specifies non zero values for min and max then use them
-    if (cmMin !== cmMax) {
-      this.cal_min = cmMin
-      this.cal_max = cmMax
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      return [cmMin, cmMax, cmMin, cmMax]
-    }
     // determine full range: min..max
     let mn = this.img[0]
     let mx = this.img[0]
@@ -2396,9 +2363,43 @@ export class NVImage {
     }
     const mnScale = this.intensityRaw2Scaled(mn)
     const mxScale = this.intensityRaw2Scaled(mx)
+    const cmap = cmapper.colormapFromKey(this._colormap)
+    let cmMin = 0
+    let cmMax = 0
+    if (cmap.min !== undefined) {
+      cmMin = cmap.min
+    }
+    if (cmap.max !== undefined) {
+      cmMax = cmap.max
+    }
+    if (
+      cmMin === cmMax &&
+      this.trustCalMinMax &&
+      isFinite(this.hdr.cal_min) &&
+      isFinite(this.hdr.cal_max) &&
+      this.hdr.cal_max > this.hdr.cal_min
+    ) {
+      this.cal_min = this.hdr.cal_min
+      this.cal_max = this.hdr.cal_max
+      this.robust_min = this.cal_min
+      this.robust_max = this.cal_max
+      this.global_min = mnScale
+      this.global_max = mxScale
+      return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
+    }
+    // if color map specifies non zero values for min and max then use them
+    if (cmMin !== cmMax) {
+      this.cal_min = cmMin
+      this.cal_max = cmMax
+      this.robust_min = this.cal_min
+      this.robust_max = this.cal_max
+      return [cmMin, cmMax, cmMin, cmMax]
+    }
     const percentZero = (100 * nZero) / nVox
+    let isOverrideIgnoreZeroVoxels = false
     if (percentZero > 50 && !this.ignoreZeroVoxels) {
-      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max and cal_min`)
+      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
+      isOverrideIgnoreZeroVoxels = true
       this.ignoreZeroVoxels = true
     }
     if (!this.ignoreZeroVoxels) {
@@ -2479,6 +2480,9 @@ export class NVImage {
     if (this.hdr.cal_min < this.hdr.cal_max && this.hdr.cal_min >= mnScale && this.hdr.cal_max <= mxScale) {
       pct2 = this.hdr.cal_min
       pct98 = this.hdr.cal_max
+    }
+    if (isOverrideIgnoreZeroVoxels) {
+      pct2 = Math.min(pct2, 0)
     }
     this.cal_min = pct2
     this.cal_max = pct98
@@ -3013,7 +3017,7 @@ export class NVImage {
       bpv = 8
     } else if (datatypeCode === 512 || datatypeCode === 4) {
       bpv = 16
-    } else if (datatypeCode === 16 || datatypeCode === 768 || hdr.datatypeCode === 8) {
+    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8) {
       bpv = 32
     } else if (datatypeCode === 64) {
       bpv = 64
