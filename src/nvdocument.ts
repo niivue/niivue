@@ -112,6 +112,7 @@ export type NVConfigOptions = {
   legendTextColor: number[]
   multiplanarLayout: MULTIPLANAR_TYPE
   renderOverlayBlend: number
+  sliceMosaicString: string
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -171,7 +172,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
-  renderOverlayBlend: 1.0
+  renderOverlayBlend: 1.0,
+  sliceMosaicString: ''
 }
 
 type SceneData = {

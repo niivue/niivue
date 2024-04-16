@@ -608,7 +608,6 @@ export class Niivue {
   sliceTypeSagittal = SLICE_TYPE.SAGITTAL
   sliceTypeMultiplanar = SLICE_TYPE.MULTIPLANAR
   sliceTypeRender = SLICE_TYPE.RENDER
-  sliceMosaicString = ''
 
   // Event listeners
 
@@ -799,6 +798,14 @@ export class Niivue {
 
   get opts(): NVConfigOptions {
     return this.document.opts
+  }
+
+  get sliceMosaicString(): string {
+    return this.document.opts.sliceMosaicString || ''
+  }
+
+  set sliceMosaicString(newSliceMosaicString: string) {
+    this.document.opts.sliceMosaicString = newSliceMosaicString
   }
 
   mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
@@ -3403,6 +3410,9 @@ export class Niivue {
     this.meshes = []
     this.document = document
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
+    const opts = { ...DEFAULT_OPTIONS, ...document.opts }
+    this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
+    this.document.opts = opts
     log.debug('load document', document)
     this.mediaUrlMap.clear()
     this.createEmptyDrawing()
