@@ -47,6 +47,7 @@
     "DICOM manifests": "https://github.com/niivue/niivue/blob/main/docs/development-notes/dicom-manifests.md"
   },
   "navigationLinks": {
+    "Quick starts": "https://github.com/niivue/ipyniivue/blob/main/original_gallery.md",
     "Live demos": "https://niivue.github.io/niivue/",
     "GitHub": "https://github.com/niivue/niivue",
     "npm": "https://www.npmjs.com/package/@niivue/niivue",

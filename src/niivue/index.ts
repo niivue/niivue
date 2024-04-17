@@ -702,8 +702,7 @@ export class Niivue {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
       if (typeof options[name as keyof typeof options] === 'function') {
         // @ts-expect-error should be explicit
-        // this[name] = options[name]
-        this[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
+        this[name] = options[name]
       } else {
         // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
@@ -5763,6 +5762,648 @@ export class Niivue {
     const idx = this.getVolumeIndexByID(id)
     this.volumes[idx].colormap = colormap
     this.updateGLVolume()
+  }
+
+  // port of https://github.com/rordenlab/niimath/blob/master/src/bwlabel.c
+
+  // return voxel address given row A, column B, and slice C
+  idx(A: number, B: number, C: number, DIM: Uint32Array): number {
+    return C * DIM[0] * DIM[1] + B * DIM[0] + A
+  } // idx()
+
+  // determine if voxels below candidate voxel have already been assigned a label
+  check_previous_slice(
+    bw: Uint32Array,
+    il: Uint32Array,
+    r: number,
+    c: number,
+    sl: number,
+    dim: Uint32Array,
+    conn: number,
+    tt: Uint32Array
+  ): number {
+    // const nabo: number[] = [];
+    const nabo = new Uint32Array(27)
+    let nr_set = 0
+    if (!sl) {
+      return 0
+    }
+    const val = bw[this.idx(r, c, sl, dim)]
+    if (conn >= 6) {
+      const idx = this.idx(r, c, sl - 1, dim)
+      if (val === bw[idx]) {
+        nabo[nr_set++] = il[idx]
+      }
+    }
+    if (conn >= 18) {
+      if (r) {
+        const idx = this.idx(r - 1, c, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (c) {
+        const idx = this.idx(r, c - 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r < dim[0] - 1) {
+        const idx = this.idx(r + 1, c, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (c < dim[1] - 1) {
+        const idx = this.idx(r, c + 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+    }
+    if (conn === 26) {
+      if (r && c) {
+        const idx = this.idx(r - 1, c - 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r < dim[0] - 1 && c) {
+        const idx = this.idx(r + 1, c - 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r && c < dim[1] - 1) {
+        const idx = this.idx(r - 1, c + 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+      if (r < dim[0] - 1 && c < dim[1] - 1) {
+        const idx = this.idx(r + 1, c + 1, sl - 1, dim)
+        if (val === bw[idx]) {
+          nabo[nr_set++] = il[idx]
+        }
+      }
+    }
+    if (nr_set) {
+      this.fill_tratab(tt, nabo, nr_set)
+      return nabo[0]
+    } else {
+      return 0
+    }
+  } // check_previous_slice()
+
+  // provisionally label all voxels in volume
+  do_initial_labelling(bw: Uint32Array, dim: Uint32Array, conn: number): [number, Uint32Array, Uint32Array] {
+    let label = 1
+    const kGrowArrayBy = 8192
+    let ttn = kGrowArrayBy
+    let tt = new Uint32Array(ttn).fill(0)
+    const il = new Uint32Array(dim[0] * dim[1] * dim[2]).fill(0)
+    const nabo = new Uint32Array(27)
+    for (let sl = 0; sl < dim[2]; sl++) {
+      for (let c = 0; c < dim[1]; c++) {
+        for (let r = 0; r < dim[0]; r++) {
+          let nr_set = 0
+          const val = bw[this.idx(r, c, sl, dim)]
+          if (val === 0) {
+            continue
+          }
+          nabo[0] = this.check_previous_slice(bw, il, r, c, sl, dim, conn, tt)
+          if (nabo[0]) {
+            nr_set += 1
+          }
+          if (conn >= 6) {
+            if (r) {
+              const idx = this.idx(r - 1, c, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+            if (c) {
+              const idx = this.idx(r, c - 1, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+          }
+          if (conn >= 18) {
+            if (c && r) {
+              const idx = this.idx(r - 1, c - 1, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+            if (c && r < dim[0] - 1) {
+              const idx = this.idx(r + 1, c - 1, sl, dim)
+              if (val === bw[idx]) {
+                nabo[nr_set++] = il[idx]
+              }
+            }
+          }
+          if (nr_set) {
+            il[this.idx(r, c, sl, dim)] = nabo[0]
+            this.fill_tratab(tt, nabo, nr_set)
+          } else {
+            il[this.idx(r, c, sl, dim)] = label
+            if (label >= ttn) {
+              ttn += kGrowArrayBy
+              const ext = new Uint32Array(ttn)
+              ext.set(tt)
+              tt = ext
+            }
+            tt[label - 1] = label
+            label++
+          }
+        }
+      }
+    }
+    for (let i = 0; i < label - 1; i++) {
+      let j = i
+      while (tt[j] !== j + 1) {
+        j = tt[j] - 1
+      }
+      tt[i] = j + 1
+    }
+    return [label - 1, tt, il]
+  } // do_initial_labelling()
+
+  // translation table unifies a region that has been assigned multiple classes
+  fill_tratab(tt: Uint32Array, nabo: Uint32Array, nr_set: number): void {
+    let cntr = 0
+    const tn = new Uint32Array(nr_set + 5).fill(0)
+    const INT_MAX = 2147483647
+    let ltn = INT_MAX
+    for (let i = 0; i < nr_set; i++) {
+      let j = nabo[i]
+      cntr = 0
+      while (tt[j - 1] !== j) {
+        j = tt[j - 1]
+        cntr++
+        if (cntr > 100) {
+          log.info('\nOoh no!!')
+          break
+        }
+      }
+      tn[i] = j
+      ltn = Math.min(ltn, j)
+    }
+    for (let i = 0; i < nr_set; i++) {
+      tt[tn[i] - 1] = ltn
+    }
+  } // fill_tratab()
+
+  // remove any residual gaps so label numbers are dense rather than sparse
+  translate_labels(il: Uint32Array, dim: Uint32Array, tt: Uint32Array, ttn: number): [number, Uint32Array] {
+    const nvox = dim[0] * dim[1] * dim[2]
+    let ml = 0
+    const l = new Uint32Array(nvox).fill(0)
+    for (let i = 0; i < ttn; i++) {
+      ml = Math.max(ml, tt[i])
+    }
+    const fl = new Uint32Array(ml).fill(0)
+    let cl = 0
+    for (let i = 0; i < nvox; i++) {
+      if (il[i]) {
+        if (!fl[tt[il[i] - 1] - 1]) {
+          cl += 1
+          fl[tt[il[i] - 1] - 1] = cl
+        }
+        l[i] = fl[tt[il[i] - 1] - 1]
+      }
+    }
+    return [cl, l]
+  } // translate_labels()
+
+  // retain only the largest cluster for each region
+  largest_original_cluster_labels(bw: Uint32Array, cl: number, ls: Uint32Array): [number, Uint32Array] {
+    const nvox = bw.length
+    const ls2bw = new Uint32Array(cl + 1).fill(0)
+    const sumls = new Uint32Array(cl + 1).fill(0)
+    for (let i = 0; i < nvox; i++) {
+      const bwVal = bw[i]
+      const lsVal = ls[i]
+      ls2bw[lsVal] = bwVal
+      sumls[lsVal]++
+    }
+    let mxbw = 0
+    for (let i = 0; i < cl + 1; i++) {
+      const bwVal = ls2bw[i]
+      mxbw = Math.max(mxbw, bwVal)
+      // see if this is largest cluster of this bw-value
+      for (let j = 0; j < cl + 1; j++) {
+        if (j === i) {
+          continue
+        }
+        if (bwVal !== ls2bw[j]) {
+          continue
+        }
+        if (sumls[i] < sumls[j]) {
+          ls2bw[i] = 0
+        } else if (sumls[i] === sumls[j] && i < j) {
+          ls2bw[i] = 0
+        } // ties: arbitrary winner
+      }
+    }
+    const vxs = new Uint32Array(nvox).fill(0)
+    for (let i = 0; i < nvox; i++) {
+      vxs[i] = ls2bw[ls[i]]
+    }
+    return [mxbw, vxs]
+  }
+
+  // given a 3D image, return a clustered label map
+  // for an explanation and optimized C code see
+  // https://github.com/seung-lab/connected-components-3d
+  bwlabel(
+    img: Uint32Array,
+    dim: Uint32Array,
+    conn: number = 26,
+    binarize: boolean = false,
+    onlyLargestClusterPerClass: boolean = false
+  ): [number, Uint32Array] {
+    const start = Date.now()
+    const nvox = dim[0] * dim[1] * dim[2]
+    const bw = new Uint32Array(nvox).fill(0)
+    if (![6, 18, 26].includes(conn)) {
+      log.info('bwlabel: conn must be 6, 18 or 26.')
+      return [0, bw]
+    }
+    if (dim[0] < 2 || dim[1] < 2 || dim[2] < 1) {
+      log.info('bwlabel: img must be 2 or 3-dimensional')
+      return [0, bw]
+    }
+    if (binarize) {
+      for (let i = 0; i < nvox; i++) {
+        if (img[i] !== 0.0) {
+          bw[i] = 1
+        }
+      }
+    } else {
+      bw.set(img)
+    }
+    let [ttn, tt, il] = this.do_initial_labelling(bw, dim, conn)
+    if (tt === undefined) {
+      tt = new Uint32Array()
+    }
+    const [cl, ls] = this.translate_labels(il, dim, tt, ttn)
+    log.info(conn + ' neighbor clustering into ' + cl + ' regions in ' + (Date.now() - start) + 'ms')
+    if (onlyLargestClusterPerClass) {
+      const [nbw, bwMx] = this.largest_original_cluster_labels(bw, cl, ls)
+      return [nbw, bwMx]
+    }
+    return [cl, ls]
+  } // bwlabel()
+
+  async createConnectedLabelImage(
+    id: string,
+    conn: number = 26,
+    binarize: boolean = false,
+    onlyLargestClusterPerClass: boolean = false
+  ): Promise<NVImage> {
+    const idx = this.getVolumeIndexByID(id)
+    const dim = Uint32Array.from(this.volumes[idx].dims?.slice(1, 4) ?? [])
+    const img = Uint32Array.from(this.volumes[idx].img?.slice() ?? [])
+    const [mx, clusterImg] = this.bwlabel(img, dim!, conn, binarize, onlyLargestClusterPerClass)
+    const nii = this.volumes[idx].clone()
+    nii.opacity = 0.5
+    nii.colormap = 'random'
+    for (let i = 0; i < nii.img!.length; i++) {
+      nii.img![i] = clusterImg[i]!
+    }
+    nii.cal_min = 0
+    nii.cal_max = mx
+    return nii
+  }
+
+  // conform.py functions follow
+  // https://github.com/Deep-MI/FastSurfer/blob/4e76bed7b11fd7e6403ddac729059ad3842b56de/FastSurferCNN/data_loader/conform.py
+  // Licensed under the Apache License, Version 2.0 (the "License")
+
+  // Crop the intensity ranges to specific min and max values.
+
+  async scalecropUint8(
+    img32: Float32Array,
+    dst_min: number = 0,
+    dst_max: number = 255,
+    src_min: number,
+    scale: number
+  ): Promise<Uint8Array> {
+    const voxnum = img32.length
+    const img8 = new Uint8Array(voxnum)
+    for (let i = 0; i < voxnum; i++) {
+      let val = img32![i]
+      val = dst_min + scale * (val - src_min)
+      val = Math.max(val, dst_min)
+      val = Math.min(val, dst_max)
+      img8![i] = val
+    }
+    return img8
+  }
+
+  async scalecropFloat32(
+    img32: Float32Array,
+    dst_min: number = 0,
+    dst_max: number = 1,
+    src_min: number,
+    scale: number
+  ): Promise<Float32Array> {
+    const voxnum = img32.length
+    const img = new Float32Array(voxnum)
+    for (let i = 0; i < voxnum; i++) {
+      let val = img32![i]
+      val = dst_min + scale * (val - src_min)
+      val = Math.max(val, dst_min)
+      val = Math.min(val, dst_max)
+      img![i] = val
+    }
+    return img
+  }
+
+  // Get offset and scale of image intensities to robustly rescale to range dst_min..dst_max.
+  // Equivalent to how mri_convert conforms images.
+
+  getScale(
+    volume: NVImage,
+    dst_min: number = 0,
+    dst_max: number = 255,
+    f_low: number = 0.0,
+    f_high: number = 0.999
+  ): [number, number] {
+    let src_min = volume.global_min!
+    let src_max = volume.global_max!
+    if (volume.hdr!.datatypeCode === 2) {
+      // for compatibility with conform.py: uint8 is not transformed
+      return [src_min, 1.0]
+    }
+    const img = volume.img!
+    const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
+    if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
+      const srcimg = volume.img!
+      const img = new Float32Array(volume.img!.length)
+      for (let i = 0; i < voxnum; i++) {
+        img[i] = srcimg[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
+      }
+    }
+    if (src_min < 0.0) {
+      log.warn('WARNING: Input image has value(s) below 0.0 !')
+    }
+    log.info(' Input:    min: ' + src_min + '  max: ' + src_max)
+    if (f_low === 0.0 && f_high === 1.0) {
+      return [src_min, 1.0]
+    }
+    // compute non-zeros and total vox num
+    let nz = 0
+    for (let i = 0; i < voxnum; i++) {
+      if (Math.abs(img![i]) >= 1e-15) {
+        nz++
+      }
+    }
+    // compute histogram
+    const histosize = 1000
+    const bin_size = (src_max - src_min) / histosize
+    const hist = new Array(histosize).fill(0)
+    for (let i = 0; i < voxnum; i++) {
+      const val = img[i]
+      let bin = Math.floor((val - src_min) / bin_size)
+      bin = Math.min(bin, histosize - 1)
+      hist[bin]++
+    }
+    // compute cumulative sum
+    const cs = new Array(histosize).fill(0)
+    cs[0] = hist[0]
+    for (let i = 1; i < histosize; i++) {
+      cs[i] = cs[i - 1] + hist[i]
+    }
+    // get lower limit
+    let nth = Math.floor(f_low * voxnum)
+    let idx = 0
+    while (idx < histosize) {
+      if (cs[idx] >= nth) {
+        break
+      }
+      idx++
+    }
+    const global_min = src_min
+    src_min = idx * bin_size + global_min
+    // get upper limit
+    // nth = Math.floor((1.0 - f_high2) * nz)
+    nth = voxnum - Math.floor((1.0 - f_high) * nz)
+    idx = 0
+    while (idx < histosize - 1) {
+      if (cs[idx + 1] >= nth) {
+        break
+      }
+      idx++
+    }
+    src_max = idx * bin_size + global_min
+    // scale
+    let scale = 1
+    if (src_min !== src_max) {
+      scale = (dst_max - dst_min) / (src_max - src_min)
+    }
+    log.info(' Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
+    return [src_min, scale]
+  }
+
+  // Translation of nibabel mghformat.py (MIT License 2009-2019) and FastSurfer conform.py (Apache License)
+  // https://github.com/nipy/nibabel/blob/a2e5dee05cf374c22670ff9fd0d385ce366eb495/nibabel/freesurfer/mghformat.py#L30
+
+  conformVox2Vox(inDims: number[], inAffine: number[], outDim = 256, outMM = 1): [mat4, mat4, mat4] {
+    const a = inAffine.flat()
+    const affine = mat4.fromValues(
+      a[0],
+      a[1],
+      a[2],
+      a[3],
+      a[4],
+      a[5],
+      a[6],
+      a[7],
+      a[8],
+      a[9],
+      a[10],
+      a[11],
+      a[12],
+      a[13],
+      a[14],
+      a[15]
+    )
+    const half = vec4.fromValues(inDims[1] / 2, inDims[2] / 2, inDims[3] / 2, 1)
+    const Pxyz_c4 = vec4.create()
+    const affineT = mat4.create()
+    mat4.transpose(affineT, affine)
+    vec4.transformMat4(Pxyz_c4, half, affineT)
+    const Pxyz_c = vec3.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2])
+    // MGH format doesn't store the transform directly. Instead it's gleaned
+    // from the zooms ( delta ), direction cosines ( Mdc ), RAS centers (
+    const delta = vec3.fromValues(outMM, outMM, outMM)
+    const Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
+    mat4.transpose(Mdc, Mdc)
+    const dims = vec4.fromValues(outDim, outDim, outDim, 1)
+    const MdcD = mat4.create()
+    mat4.scale(MdcD, Mdc, delta)
+    const vol_center = vec4.fromValues(dims[0], dims[1], dims[2], 1)
+    vec4.transformMat4(vol_center, vol_center, MdcD)
+    vec4.scale(vol_center, vol_center, 0.5)
+    const translate = vec3.create()
+    vec3.subtract(translate, Pxyz_c, vec3.fromValues(vol_center[0], vol_center[1], vol_center[2]))
+    const out_affine = mat4.create()
+    mat4.transpose(out_affine, MdcD)
+    out_affine[3] = translate[0]
+    out_affine[7] = translate[1]
+    out_affine[11] = translate[2]
+    const inv_out_affine = mat4.create()
+    mat4.invert(inv_out_affine, out_affine)
+    const vox2vox = mat4.create()
+    // compute vox2vox from src to trg
+    mat4.mul(vox2vox, affine, inv_out_affine)
+    // compute inverse
+    const inv_vox2vox = mat4.create()
+    mat4.invert(inv_vox2vox, vox2vox)
+    return [out_affine, vox2vox, inv_vox2vox]
+  }
+
+  // Create a binary byte array with a NIfTI format header as well as image data
+
+  async createNiftiArray(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2, // DT_UNSIGNED_CHAR
+    img = new Uint8Array()
+  ): Promise<Uint8Array> {
+    return await NVImage.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
+  }
+
+  // Convert a binary byte array with a NIfTI image to NiiVue's internal NVImage object
+
+  async niftiArray2NVImage(bytes = new Uint8Array()): Promise<NVImage> {
+    return await NVImage.loadFromUrl({ url: bytes })
+  }
+
+  // Read a NIfTI file and convert as NiiVue internal NVImage: AddVolume this does not load image to GPU
+
+  async loadFromUrl(fnm: string): Promise<NVImage> {
+    return await NVImage.loadFromUrl({ url: fnm })
+  }
+
+  // Translation of FastSurfer conform.py (Apache License)
+  // Reslice an image to an isotropic 1mm with dimensions of 1x1x1mm
+  // The original volume is translated to be in the center of the new volume
+  // Interpolation is linear (default) or nearest neighbor
+  // asFloat32 determines if output is Float32 with range 0..255 or Uint8 with range 0..255
+
+  async conform(volume: NVImage, linear: boolean = true, asFloat32 = false): Promise<NVImage> {
+    const outDim = 256
+    const outMM = 1
+    const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM)
+    const out_affine = obj[0]
+    const inv_vox2vox = obj[2]
+    const out_nvox = outDim * outDim * outDim
+    const out_img = new Float32Array(out_nvox)
+    const in_img = new Float32Array(volume.img!)
+    const in_nvox = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
+    if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
+      for (let i = 0; i < in_nvox; i++) {
+        in_img[i] = in_img[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
+      }
+    }
+    function voxval(vx: number, vy: number, vz: number): number {
+      return in_img[vx + vy * volume.hdr!.dims![1] + vz * volume.hdr!.dims![1] * volume.hdr!.dims![2]]
+    }
+    let i = -1
+    if (linear) {
+      for (let z = 0; z < outDim; z++) {
+        for (let y = 0; y < outDim; y++) {
+          for (let x = 0; x < outDim; x++) {
+            const ix = x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
+            const iy = x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
+            const iz = x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
+            const fx = Math.floor(ix)
+            const fy = Math.floor(iy)
+            const fz = Math.floor(iz)
+            const cx = Math.ceil(ix)
+            const cy = Math.ceil(iy)
+            const cz = Math.ceil(iz)
+            i++
+            if (fx < 0 || fy < 0 || fz < 0) {
+              continue
+            }
+            if (cx >= volume.hdr!.dims![1] || cy >= volume.hdr!.dims![2] || cz >= volume.hdr!.dims![3]) {
+              continue
+            }
+            // residuals
+            const rcx = ix - fx
+            const rcy = iy - fy
+            const rcz = iz - fz
+            const rfx = 1 - rcx
+            const rfy = 1 - rcy
+            const rfz = 1 - rcz
+            let vx = 0
+            vx += voxval(fx, fy, fz) * rfx * rfy * rfz
+            vx += voxval(fx, fy, cz) * rfx * rfy * rcz
+            vx += voxval(fx, cy, fz) * rfx * rcy * rfz
+            vx += voxval(fx, cy, cz) * rfx * rcy * rcz
+            vx += voxval(cx, fy, fz) * rcx * rfy * rfz
+            vx += voxval(cx, fy, cz) * rcx * rfy * rcz
+            vx += voxval(cx, cy, fz) * rcx * rcy * rfz
+            vx += voxval(cx, cy, cz) * rcx * rcy * rcz
+            out_img[i] = vx
+          } // z
+        } // y
+      } // x
+    } else {
+      // nearest neighbor interpolation
+      for (let z = 0; z < outDim; z++) {
+        for (let y = 0; y < outDim; y++) {
+          for (let x = 0; x < outDim; x++) {
+            const ix = Math.round(x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3])
+            const iy = Math.round(x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7])
+            const iz = Math.round(x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11])
+            i++
+            if (ix < 0 || iy < 0 || iz < 0) {
+              continue
+            }
+            if (ix >= volume.hdr!.dims![1] || iy >= volume.hdr!.dims![2] || iz >= volume.hdr!.dims![3]) {
+              continue
+            }
+            out_img[i] = voxval(ix, iy, iz)
+          } // z
+        } // y
+      } // x
+    } // if linear else nearest
+    // Unlike mri_convert -c, we first interpolate (float image), and then rescale
+    // to uchar. mri_convert is doing it the other way around. However, we compute
+    // the scale factor from the input to increase similarity.
+    const src_min = 0
+    const scale = 0
+    let bytes = new Uint8Array()
+    if (asFloat32) {
+      const gs = await this.getScale(volume, 0, 1)
+      const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1])
+      bytes = await this.createNiftiArray(
+        [outDim, outDim, outDim],
+        [outMM, outMM, outMM],
+        Array.from(out_affine),
+        16, // DT_FLOAT
+        new Uint8Array(out_img32.buffer)
+      )
+    } else {
+      const gs = await this.getScale(volume, 0, 255)
+      const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1])
+      bytes = await this.createNiftiArray(
+        [outDim, outDim, outDim],
+        [outMM, outMM, outMM],
+        Array.from(out_affine),
+        2,
+        out_img8
+      )
+    }
+    const nii = await this.niftiArray2NVImage(bytes)
+    return nii
   }
 
   /**

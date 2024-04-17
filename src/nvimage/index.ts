@@ -2341,39 +2341,6 @@ export class NVImage {
     if (!this.img) {
       throw new Error('img undefined')
     }
-
-    const cmap = cmapper.colormapFromKey(this._colormap)
-    let cmMin = 0
-    let cmMax = 0
-    if (cmap.min !== undefined) {
-      cmMin = cmap.min
-    }
-    if (cmap.max !== undefined) {
-      cmMax = cmap.max
-    }
-    if (
-      cmMin === cmMax &&
-      this.trustCalMinMax &&
-      isFinite(this.hdr.cal_min) &&
-      isFinite(this.hdr.cal_max) &&
-      this.hdr.cal_max > this.hdr.cal_min
-    ) {
-      this.cal_min = this.hdr.cal_min
-      this.cal_max = this.hdr.cal_max
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      this.global_min = this.hdr.cal_min
-      this.global_max = this.hdr.cal_max
-      return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
-    }
-    // if color map specifies non zero values for min and max then use them
-    if (cmMin !== cmMax) {
-      this.cal_min = cmMin
-      this.cal_max = cmMax
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      return [cmMin, cmMax, cmMin, cmMax]
-    }
     // determine full range: min..max
     let mn = this.img[0]
     let mx = this.img[0]
@@ -2396,6 +2363,45 @@ export class NVImage {
     }
     const mnScale = this.intensityRaw2Scaled(mn)
     const mxScale = this.intensityRaw2Scaled(mx)
+    const cmap = cmapper.colormapFromKey(this._colormap)
+    let cmMin = 0
+    let cmMax = 0
+    if (cmap.min !== undefined) {
+      cmMin = cmap.min
+    }
+    if (cmap.max !== undefined) {
+      cmMax = cmap.max
+    }
+    if (
+      cmMin === cmMax &&
+      this.trustCalMinMax &&
+      isFinite(this.hdr.cal_min) &&
+      isFinite(this.hdr.cal_max) &&
+      this.hdr.cal_max > this.hdr.cal_min
+    ) {
+      this.cal_min = this.hdr.cal_min
+      this.cal_max = this.hdr.cal_max
+      this.robust_min = this.cal_min
+      this.robust_max = this.cal_max
+      this.global_min = mnScale
+      this.global_max = mxScale
+      return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
+    }
+    // if color map specifies non zero values for min and max then use them
+    if (cmMin !== cmMax) {
+      this.cal_min = cmMin
+      this.cal_max = cmMax
+      this.robust_min = this.cal_min
+      this.robust_max = this.cal_max
+      return [cmMin, cmMax, cmMin, cmMax]
+    }
+    const percentZero = (100 * nZero) / nVox
+    let isOverrideIgnoreZeroVoxels = false
+    if (percentZero > 50 && !this.ignoreZeroVoxels) {
+      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
+      isOverrideIgnoreZeroVoxels = true
+      this.ignoreZeroVoxels = true
+    }
     if (!this.ignoreZeroVoxels) {
       nZero = 0
     }
@@ -2474,6 +2480,9 @@ export class NVImage {
     if (this.hdr.cal_min < this.hdr.cal_max && this.hdr.cal_min >= mnScale && this.hdr.cal_max <= mxScale) {
       pct2 = this.hdr.cal_min
       pct98 = this.hdr.cal_max
+    }
+    if (isOverrideIgnoreZeroVoxels) {
+      pct2 = Math.min(pct2, 0)
     }
     this.cal_min = pct2
     this.cal_max = pct98
@@ -2956,6 +2965,82 @@ export class NVImage {
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
+  static createNiftiArray(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2, // DT_UNSIGNED_CHAR
+    img = new Uint8Array()
+  ): Uint8Array {
+    const hdr = this.createNiftiHeader(dims, pixDims, affine, datatypeCode)
+    const hdrBytes = hdrToArrayBuffer(hdr, false)
+    if (img.length < 1) {
+      return hdrBytes
+    }
+    const opad = new Uint8Array(4)
+    const img8 = new Uint8Array(img.buffer)
+    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
+    odata.set(hdrBytes)
+    odata.set(opad, hdrBytes.length)
+    odata.set(img8, hdrBytes.length + opad.length)
+    return odata
+  } // createNiftiFile()
+
+  static createNiftiHeader(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2 // this.DT_UNSIGNED_CHAR
+  ): nifti.NIFTI1 {
+    const hdr = new nifti.NIFTI1()
+    hdr.littleEndian = true
+    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
+    hdr.dims[0] = Math.max(3, dims.length)
+    for (let i = 0; i < dims.length; i++) {
+      hdr.dims[i + 1] = dims[i]
+    }
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+    for (let i = 0; i < dims.length; i++) {
+      hdr.pixDims[i + 1] = pixDims[i]
+    }
+    if (affine.length === 16) {
+      let k = 0
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          hdr.affine[i][j] = affine[k]
+          k++
+        }
+      }
+    }
+    let bpv = 8
+    if (datatypeCode === 256 || datatypeCode === 2) {
+      bpv = 8
+    } else if (datatypeCode === 512 || datatypeCode === 4) {
+      bpv = 16
+    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8) {
+      bpv = 32
+    } else if (datatypeCode === 64) {
+      bpv = 64
+    } else {
+      log.warn('Unsupported NIfTI datatypeCode: ' + datatypeCode)
+    }
+    hdr.datatypeCode = datatypeCode
+    hdr.numBitsPerVoxel = bpv
+    hdr.scl_inter = 0
+    hdr.scl_slope = 0
+    hdr.sform_code = 2
+    hdr.magic = 'n+1'
+    hdr.vox_offset = 352
+    return hdr
+  } // loadFromHeader
+
+  /**
+   * factory function to load and return a new NVImage instance from a base64 encoded string
+   *
+   * @returns NVImage instance
+   * @example
+   * myImage = NVImage.loadFromBase64('SomeBase64String')
+   */
   static loadFromBase64({
     base64,
     name = '',
@@ -3088,6 +3173,11 @@ export class NVImage {
       zeroClone.img = Uint8Array.from(zeroClone.img!)
       zeroClone.hdr!.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
       zeroClone.hdr!.numBitsPerVoxel = 8
+    }
+    if (dataType === 'float32') {
+      zeroClone.img = Float32Array.from(zeroClone.img!)
+      zeroClone.hdr!.datatypeCode = zeroClone.DT_FLOAT
+      zeroClone.hdr!.numBitsPerVoxel = 32
     }
     return zeroClone
   }
