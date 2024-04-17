@@ -28,6 +28,7 @@ const utiltiesLogger = log
 
 /**
  * Class to load different mesh formats
+ * @ignore
  */
 export class NVMeshLoaders {
   // read undocumented AFNI tract.niml format streamlines

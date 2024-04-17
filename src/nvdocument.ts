@@ -9,6 +9,7 @@ import { log } from './logger.js'
 
 /**
  * Slice Type
+ * @ignore
  */
 export enum SLICE_TYPE {
   AXIAL = 0,
@@ -20,6 +21,7 @@ export enum SLICE_TYPE {
 
 /**
  * Multi-planar layout
+ * @ignore
  */
 export enum MULTIPLANAR_TYPE {
   AUTO = 0,
@@ -28,6 +30,10 @@ export enum MULTIPLANAR_TYPE {
   ROW = 3
 }
 
+/**
+ * Drag mode
+ * @ignore
+ */
 export enum DRAG_MODE {
   none = 0,
   contrast = 1,
@@ -37,7 +43,10 @@ export enum DRAG_MODE {
   callbackOnly = 5
 }
 
-type NVConfigOptions = {
+/**
+ * NVConfigOptions
+ */
+export type NVConfigOptions = {
   // 0 for no text, fraction of canvas min(height,width)
   textHeight: number
   // 0 for no colorbars, fraction of Nifti j dimension
@@ -239,6 +248,7 @@ export type ExportDocumentData = {
 
 /**
  * Creates and instance of NVDocument
+ * @ignore
  */
 export class NVDocument {
   data: DocumentData = {

@@ -28,8 +28,7 @@ module.exports = {
         trailingComma: 'none',
         semi: false
       }
-    ],
-    'no-console': 2
+    ]
   },
   // separate ESLint rules for TS files for now
   overrides: [
@@ -42,7 +41,6 @@ module.exports = {
         '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/no-floating-promises': 'error',
         '@typescript-eslint/no-misused-promises': 'error',
-        'tsdoc/syntax': 'warn'
       }
     }
   ]
