@@ -13,6 +13,10 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <select id="rasDrop">
+        <option value="0" selected>Conform to LIA</option>
+        <option value="1">Conform to RAS</option>
+      </select>
       <button id="conformBtn">Conform Volume</button>
       <button id="loadConformedBtn">Load and Conform Volume</button>
       <button id="saveBtn">Save Volume</button>
@@ -79,14 +83,16 @@
       conformBtn.onclick = async function () {
         //the FreeSurfer conform standardizes shape/resolution of an image, common prior to machine learning
         let nii = nv1.volumes[0]
-        let nii2 = await nv1.conform(nii)
+        let toRAS = (rasDrop.value === "1")
+        let nii2 = await nv1.conform(nii, toRAS)
         nv1.removeVolume(nv1.volumes[0])
         nv1.addVolume(nii2)
       }
       loadConformedBtn.onclick = async function () {
         //load an image and conform it prior to displaying it
         let nii = await nv1.loadFromUrl("../images/FA.nii.gz")
-        let nii2 = await nv1.conform(nii)
+        let toRAS = (rasDrop.value === "1")
+        let nii2 = await nv1.conform(nii, toRAS)
         nv1.removeVolume(nv1.volumes[0])
         nv1.addVolume(nii2)
       }

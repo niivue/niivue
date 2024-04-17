@@ -6211,7 +6211,7 @@ export class Niivue {
   // Translation of nibabel mghformat.py (MIT License 2009-2019) and FastSurfer conform.py (Apache License)
   // https://github.com/nipy/nibabel/blob/a2e5dee05cf374c22670ff9fd0d385ce366eb495/nibabel/freesurfer/mghformat.py#L30
 
-  conformVox2Vox(inDims: number[], inAffine: number[], outDim = 256, outMM = 1): [mat4, mat4, mat4] {
+  conformVox2Vox(inDims: number[], inAffine: number[], outDim = 256, outMM = 1, toRAS = false): [mat4, mat4, mat4] {
     const a = inAffine.flat()
     const affine = mat4.fromValues(
       a[0],
@@ -6240,7 +6240,10 @@ export class Niivue {
     // MGH format doesn't store the transform directly. Instead it's gleaned
     // from the zooms ( delta ), direction cosines ( Mdc ), RAS centers (
     const delta = vec3.fromValues(outMM, outMM, outMM)
-    const Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
+    let Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
+    if (toRAS) {
+      Mdc = mat4.fromValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+    }
     mat4.transpose(Mdc, Mdc)
     const dims = vec4.fromValues(outDim, outDim, outDim, 1)
     const MdcD = mat4.create()
@@ -6263,6 +6266,7 @@ export class Niivue {
     // compute inverse
     const inv_vox2vox = mat4.create()
     mat4.invert(inv_vox2vox, vox2vox)
+    console.log('>>', out_affine)
     return [out_affine, vox2vox, inv_vox2vox]
   }
 
@@ -6296,10 +6300,18 @@ export class Niivue {
   // Interpolation is linear (default) or nearest neighbor
   // asFloat32 determines if output is Float32 with range 0..255 or Uint8 with range 0..255
 
-  async conform(volume: NVImage, linear: boolean = true, asFloat32 = false): Promise<NVImage> {
+  /**
+   * FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
+   * @param volume - input volume to be re-oriented, intensity-scaled and resliced
+   * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
+   * @param linear - reslice with linear rather than nearest-neighbor interpolation (default true).
+   * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
+   * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
+   */
+  async conform(volume: NVImage, toRAS = false, linear: boolean = true, asFloat32 = false): Promise<NVImage> {
     const outDim = 256
     const outMM = 1
-    const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM)
+    const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM, toRAS)
     const out_affine = obj[0]
     const inv_vox2vox = obj[2]
     const out_nvox = outDim * outDim * outDim
