@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue Conform and Generate Volumes</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <button id="conformBtn">Conform Volume</button>
+      <button id="loadConformedBtn">Load and Conform Volume</button>
+      <button id="saveBtn">Save Volume</button>
+      <button id="showBorgBtn">Generate Borg</button>
+      <button id="saveBorgBtn">Save Borg</button>
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+    <footer id="intensity">&nbsp;</footer>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      async function makeBorg() {
+        const dim = 256
+        const dims = [dim, dim, dim]
+        const pixDims = [1, 1, 1]
+        const affine = [1, 0, 0, -dim / 2, 0, 1, 0, -dim / 2, 0, 0, 1, -dim / 2, 0, 0, 0, 1]
+        const datatypeCode = 2
+        const img = new Uint8Array(dim * dim * dim)
+        // make borg
+        let i = 0
+        const slope = 0.0005
+        for (let z = 0; z < dim; z++) {
+          for (let y = 0; y < dim; y++) {
+            for (let x = 0; x < dim; x++) {
+              let v = Math.sin(slope * x * y) + Math.sin(slope * y * z) + Math.sin(slope * z * x)
+              v = Math.floor(Math.min(Math.max((v * 255) / 3, 0), 255))
+              img[i] = v
+              i++
+            }
+          }
+        }
+        return await nv1.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
+      } //makeBorg()
+      showBorgBtn.onclick = async function () {
+        //this demonstrates how to generate a NIfTI volume from scratch
+        let bytes = await makeBorg()
+        let nii2 = await nv1.niftiArray2NVImage(bytes)
+        nv1.removeVolume(nv1.volumes[0])
+        nv1.addVolume(nii2)
+      }
+      saveBorgBtn.onclick = async function () {
+        //this demonstrates how to save a NIfTI image without ever loading it
+        let bytes = await makeBorg()
+        let fnm = 'borg.nii'
+        const blob = new Blob([bytes.buffer], {
+          type: 'application/octet-stream'
+        })
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.setAttribute('href', blobUrl)
+        link.setAttribute('download', fnm)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+      }
+      saveBtn.onclick = async function () {
+        //this demonstrates how to save the current image, this can validate conform vs FreeSurfer and FastSurfer implementations
+        await nv1.saveImage({ filename: 'test.nii', isSaveDrawing: false, volumeByIndex: 0 })
+      }
+      conformBtn.onclick = async function () {
+        //the FreeSurfer conform standardizes shape/resolution of an image, common prior to machine learning
+        let nii = nv1.volumes[0]
+        let nii2 = await nv1.conform(nii)
+        nv1.removeVolume(nv1.volumes[0])
+        nv1.addVolume(nii2)
+      }
+      loadConformedBtn.onclick = async function () {
+        //load an image and conform it prior to displaying it
+        let nii = await nv1.loadFromUrl("../images/FA.nii.gz")
+        let nii2 = await nv1.conform(nii)
+        nv1.removeVolume(nv1.volumes[0])
+        nv1.addVolume(nii2)
+      }
+      aboutBtn.onclick = function () {
+        window.alert("This page demonstrates ways to generate NIfTI volumes. The conform function reslices a volume to a common resolution (popular for machine learning). The borg volume is generated from scratch.")
+      }
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML = data.string
+      }
+      let defaults = {
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.attachToCanvas(gl1)
+      await nv1.loadVolumes([{ url: "../images/FLAIR.nii.gz"}])
+    </script>
+  </body>
+</html>

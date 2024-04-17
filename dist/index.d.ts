@@ -406,6 +406,16 @@ declare class NVImage {
      * @example
      * myImage = NVImage.loadFromBase64('SomeBase64String')
      */
+    static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UNSIGNED_CHAR
+    img?: Uint8Array): Uint8Array;
+    static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number): nifti.NIFTI1;
+    /**
+     * factory function to load and return a new NVImage instance from a base64 encoded string
+     *
+     * @returns NVImage instance
+     * @example
+     * myImage = NVImage.loadFromBase64('SomeBase64String')
+     */
     static loadFromBase64({ base64, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels }: ImageFromBase64): NVImage;
     /**
      * make a clone of a NVImage instance and return a new NVImage
@@ -2716,6 +2726,23 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
      */
     setColormap(id: string, colormap: string): void;
+    idx(A: number, B: number, C: number, DIM: Uint32Array): number;
+    check_previous_slice(bw: Uint32Array, il: Uint32Array, r: number, c: number, sl: number, dim: Uint32Array, conn: number, tt: Uint32Array): number;
+    do_initial_labelling(bw: Uint32Array, dim: Uint32Array, conn: number): [number, Uint32Array, Uint32Array];
+    fill_tratab(tt: Uint32Array, nabo: Uint32Array, nr_set: number): void;
+    translate_labels(il: Uint32Array, dim: Uint32Array, tt: Uint32Array, ttn: number): [number, Uint32Array];
+    largest_original_cluster_labels(bw: Uint32Array, cl: number, ls: Uint32Array): [number, Uint32Array];
+    bwlabel(img: Uint32Array, dim: Uint32Array, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): [number, Uint32Array];
+    createConnectedLabelImage(id: string, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): Promise<NVImage>;
+    scalecropUint8(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Uint8Array>;
+    scalecropFloat32(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Float32Array>;
+    getScale(volume: NVImage, dst_min?: number, dst_max?: number, f_low?: number, f_high?: number): [number, number];
+    conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number): [mat4, mat4, mat4];
+    createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UNSIGNED_CHAR
+    img?: Uint8Array): Promise<Uint8Array>;
+    niftiArray2NVImage(bytes?: Uint8Array): Promise<NVImage>;
+    loadFromUrl(fnm: string): Promise<NVImage>;
+    conform(volume: NVImage, linear?: boolean, asFloat32?: boolean): Promise<NVImage>;
     /**
      * darken crevices and brighten corners when 3D rendering drawings.
      * @param amount - amount of ambient occlusion (default 0.4)
