@@ -25,6 +25,8 @@ import {
 
 export * from './utils.js'
 
+export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
+
 /**
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  */
@@ -77,7 +79,7 @@ export class NVImage {
 
   hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
   imageType?: ImageType
-  img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
+  img?: TypedVoxelArray
   imaginary?: Float32Array
   fileObject?: File | File[]
   dims?: number[]
@@ -2197,7 +2199,7 @@ export class NVImage {
 
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
-  img2RAS(): Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array {
+  img2RAS(): TypedVoxelArray {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
     }
@@ -3033,6 +3035,122 @@ export class NVImage {
     hdr.vox_offset = 352
     return hdr
   } // loadFromHeader
+
+  // not included in public docs
+  // convert voxels provided in xyz RAS to NIfTI row, columns, slices (ijk)
+  ras2ijk(voxRAS = [0, 0, 0]): number[] {
+    const vox = voxRAS.slice()
+    const perm = this.permRAS!.slice()
+    if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+      const pos = vec4.fromValues(vox[0], vox[1], vox[2], 1)
+      vec4.transformMat4(pos, pos, this.toRASvox!)
+      vox[0] = pos[0]
+      vox[1] = pos[1]
+      vox[2] = pos[2]
+    } // image is already in RA
+    return vox
+  } // ras2native()
+
+  /**
+   * read a 3D slab of voxels from a volume
+   * @param voxStartRAS - first row, column and slice (RAS order) for selection
+   * @param voxEndRAS - final row, column and slice (RAS order) for selection
+   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32'
+   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection (n.b. in native space, not RAS)
+   * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+   */
+
+  getVolumeData(voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], dataType = 'same'): [TypedVoxelArray, number[]] {
+    let img: TypedVoxelArray = new Uint8Array()
+    const voxStart = this.ras2ijk(voxStartRAS)
+    const voxEnd = this.ras2ijk(voxEndRAS)
+    if (Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
+      return [img, [0, 0, 0]]
+    }
+    const dims = this.hdr!.dims.slice(1, 4)
+    for (let i = 0; i < 3; i++) {
+      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
+      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
+      if (voxEnd[i] < voxStart[i]) {
+        const tmp = voxEnd[i]
+        voxEnd[i] = voxStart[i]
+        voxStart[i] = tmp
+      }
+    }
+    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
+    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
+    let dt = this.hdr!.datatypeCode
+    if (dataType === 'uint8') {
+      dt = this.DT_UNSIGNED_CHAR
+    } else if (dataType === 'float32') {
+      dt = this.DT_FLOAT
+    }
+    if (dt === this.DT_UNSIGNED_CHAR) {
+      img = new Uint8Array(slabNVox)
+    } else if (dt === this.DT_SIGNED_SHORT) {
+      img = new Int16Array(slabNVox)
+    } else if (dt === this.DT_UINT16) {
+      img = new Uint16Array(slabNVox)
+    } else if (dt === this.DT_FLOAT) {
+      img = new Float32Array(slabNVox)
+    } else if (dt === this.DT_DOUBLE) {
+      img = new Float64Array(slabNVox)
+    } else {
+      log.error('getVolumeData unsupported datatype')
+      return [img, [0, 0, 0]]
+    }
+    let i = 0
+    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
+      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
+        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
+          // img[i++] = this.getValue(x, y, z) // this.img[x + y * dims[0] + z * dims[0] * dims[2] ]
+          img[i++] = this.img![x + y * dims[0] + z * dims[0] * dims[1]]
+        }
+      }
+    }
+    return [img, slabDims]
+  } // getVolumeData()
+
+  /**
+   * write a 3D slab of voxels from a volume
+   * @param voxStartRAS - first row, column and slice (RAS order) for selection
+   * @param voxEndRAS - final row, column and slice (RAS order) for selection
+   * @param img - array of voxel values to insert
+   * @note that img is in native space (IJK), not RAS)
+   * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+   */
+
+  setVolumeData(voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], img: TypedVoxelArray = new Uint8Array()): void {
+    const voxStart = this.ras2ijk(voxStartRAS)
+    const voxEnd = this.ras2ijk(voxEndRAS)
+    if (img.length < 1 || Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
+      return
+    }
+    const dims = this.hdr!.dims.slice(1, 4)
+    for (let i = 0; i < 3; i++) {
+      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
+      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
+      if (voxEnd[i] < voxStart[i]) {
+        const tmp = voxEnd[i]
+        voxEnd[i] = voxStart[i]
+        voxStart[i] = tmp
+      }
+    }
+    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
+    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
+    if (img.length < slabNVox) {
+      log.error('setVolumeData image does not have enough voxels')
+      return
+    }
+    let i = 0
+    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
+      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
+        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
+          this.img![x + y * dims[0] + z * dims[0] * dims[1]] = img[i++]
+        }
+      }
+    }
+  } // setVolumeData()
 
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
