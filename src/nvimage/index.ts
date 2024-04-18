@@ -471,10 +471,33 @@ export class NVImage {
         const i8 = new Int8Array(imgRaw)
         const vx8 = i8.length
         this.img = new Int16Array(vx8)
-        for (let i = 0; i < vx8 - 1; i++) {
+        for (let i = 0; i < vx8; i++) {
           this.img[i] = i8[i]
         }
         this.hdr.datatypeCode = this.DT_SIGNED_SHORT
+        this.hdr.numBitsPerVoxel = 16
+        break
+      }
+      case this.DT_BINARY: {
+        const nvox = this.hdr.dims[1] * this.hdr.dims[2] * Math.max(1, this.hdr.dims[3]) * Math.max(1, this.hdr.dims[4])
+        const img1 = new Uint8Array(imgRaw)
+        this.img = new Uint8Array(nvox)
+        const lut = new Uint8Array(8)
+        for (let i = 0; i < 8; i++) {
+          lut[i] = Math.pow(2, i)
+        }
+        let i1 = -1
+        for (let i = 0; i < nvox; i++) {
+          const bit = i % 8
+          if (bit === 0) {
+            i1++
+          }
+          if ((img1[i1] & lut[bit]) !== 0) {
+            this.img[i] = 1
+          }
+        }
+        this.hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+        this.hdr.numBitsPerVoxel = 8
         break
       }
       case this.DT_UINT32: {
@@ -828,6 +851,8 @@ export class NVImage {
       hdr.datatypeCode = this.DT_FLOAT
     } else if (bpv === 64 && dt === 4) {
       hdr.datatypeCode = this.DT_DOUBLE
+    } else if (bpv === 1) {
+      hdr.datatypeCode = this.DT_BINARY
     } else {
       log.warn('Unsupported DICOM format: ' + dt + ' ' + bpv)
     }
