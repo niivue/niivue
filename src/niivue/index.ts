@@ -76,7 +76,7 @@ import {
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
-import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE, ImageFromUrlOptions } from '../nvimage/index.js'
+import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE, NiiDataType, ImageFromUrlOptions } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { Connectome, LegacyConnectome, NVConnectomeNode, NiftiHeader, DragReleaseParams } from '../types.js'
 import {
@@ -2292,7 +2292,7 @@ export class Niivue {
       }
     }
     volume.img = img
-    volume.hdr!.datatypeCode = 2 // DT_UNSIGNED_CHAR
+    volume.hdr!.datatypeCode = NiiDataType.DT_UNSIGNED_CHAR
     volume.hdr!.cal_min = 0
     volume.hdr!.cal_max = 1
   }
@@ -5303,7 +5303,7 @@ export class Niivue {
     if (!img) {
       throw new Error('img undefined')
     }
-    if (hdr.datatypeCode === 2) {
+    if (hdr.datatypeCode === NiiDataType.DT_UNSIGNED_CHAR) {
       // raw input data
       if (hdr.intent_code === 1002) {
         orientShader = this.orientShaderAtlasU!
@@ -5322,7 +5322,7 @@ export class Niivue {
         this.gl.UNSIGNED_BYTE,
         img
       )
-    } else if (hdr.datatypeCode === 4) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_SIGNED_SHORT) {
       orientShader = this.orientShaderI!
       if (hdr.intent_code === 1002) {
         orientShader = this.orientShaderAtlasI!
@@ -5341,7 +5341,7 @@ export class Niivue {
         this.gl.SHORT,
         img
       )
-    } else if (hdr.datatypeCode === 16) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_FLOAT) {
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -5357,7 +5357,7 @@ export class Niivue {
         img
       )
       orientShader = this.orientShaderF!
-    } else if (hdr.datatypeCode === 64) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_DOUBLE) {
       let img32f = new Float32Array()
       img32f = Float32Array.from(img)
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -5375,7 +5375,7 @@ export class Niivue {
         img32f
       )
       orientShader = this.orientShaderF!
-    } else if (hdr.datatypeCode === 128) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_RGB) {
       orientShader = this.orientShaderRGBU!
       orientShader.use(this.gl)
       // TODO was false instead of 0
@@ -5394,7 +5394,7 @@ export class Niivue {
         this.gl.UNSIGNED_BYTE,
         img
       )
-    } else if (hdr.datatypeCode === 512) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_UINT16) {
       if (hdr.intent_code === 1002) {
         orientShader = this.orientShaderAtlasU!
       }
@@ -5412,7 +5412,7 @@ export class Niivue {
         this.gl.UNSIGNED_SHORT,
         img
       )
-    } else if (hdr.datatypeCode === 2304) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_RGBA32) {
       orientShader = this.orientShaderRGBU!
       orientShader.use(this.gl)
       this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1)
@@ -5565,19 +5565,19 @@ export class Niivue {
           imgRaw
         )
         switch (mhdr.datatypeCode) {
-          case overlayItem.DT_SIGNED_SHORT:
+          case NiiDataType.DT_SIGNED_SHORT:
             img = new Int16Array(imgRaw)
             break
-          case overlayItem.DT_FLOAT:
+          case NiiDataType.DT_FLOAT:
             img = new Float32Array(imgRaw)
             break
-          case overlayItem.DT_DOUBLE:
+          case NiiDataType.DT_DOUBLE:
             img = new Float64Array(imgRaw)
             break
-          case overlayItem.DT_RGB:
+          case NiiDataType.DT_RGB:
             img = new Uint8Array(imgRaw)
             break
-          case overlayItem.DT_UINT16:
+          case NiiDataType.DT_UINT16:
             img = new Uint16Array(imgRaw)
             break
         }
@@ -6134,7 +6134,7 @@ export class Niivue {
   ): [number, number] {
     let src_min = volume.global_min!
     let src_max = volume.global_max!
-    if (volume.hdr!.datatypeCode === 2) {
+    if (volume.hdr!.datatypeCode === NiiDataType.DT_UNSIGNED_CHAR) {
       // for compatibility with conform.py: uint8 is not transformed
       return [src_min, 1.0]
     }
@@ -6276,7 +6276,7 @@ export class Niivue {
     dims = [256, 256, 256],
     pixDims = [1, 1, 1],
     affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
-    datatypeCode = 2, // DT_UNSIGNED_CHAR
+    datatypeCode = NiiDataType.DT_UNSIGNED_CHAR,
     img = new Uint8Array()
   ): Promise<Uint8Array> {
     return await NVImage.createNiftiArray(dims, pixDims, affine, datatypeCode, img)

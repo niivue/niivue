@@ -10,6 +10,32 @@ export const isPlatformLittleEndian = (): boolean => {
 }
 
 /**
+ * Enum for NIfTI datatype codes
+ *   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+ */
+export enum NiiDataType {
+  DT_NONE = 0,
+  DT_BINARY = 1,
+  DT_UNSIGNED_CHAR = 2,
+  DT_SIGNED_SHORT = 4,
+  DT_SIGNED_INT = 8,
+  DT_FLOAT = 16,
+  DT_COMPLEX = 32,
+  DT_DOUBLE = 64,
+  DT_RGB = 128,
+  DT_ALL = 255,
+  DT_INT8 = 256,
+  DT_UINT16 = 512,
+  DT_UINT32 = 768,
+  DT_INT64 = 1024,
+  DT_UINT64 = 1280,
+  DT_FLOAT128 = 1536,
+  DT_COMPLEX128 = 1792,
+  DT_COMPLEX256 = 2048,
+  DT_RGBA32 = 2304
+}
+
+/**
  * Enum for supported image types (e.g. NII, NRRD, DICOM)
  */
 export enum ImageType {
