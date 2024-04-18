@@ -6266,7 +6266,6 @@ export class Niivue {
     // compute inverse
     const inv_vox2vox = mat4.create()
     mat4.invert(inv_vox2vox, vox2vox)
-    console.log('>>', out_affine)
     return [out_affine, vox2vox, inv_vox2vox]
   }
 
@@ -6337,13 +6336,13 @@ export class Niivue {
             const fx = Math.floor(ix)
             const fy = Math.floor(iy)
             const fz = Math.floor(iz)
-            const cx = Math.ceil(ix)
-            const cy = Math.ceil(iy)
-            const cz = Math.ceil(iz)
             i++
             if (fx < 0 || fy < 0 || fz < 0) {
               continue
             }
+            const cx = Math.ceil(ix)
+            const cy = Math.ceil(iy)
+            const cz = Math.ceil(iz)
             if (cx >= volume.hdr!.dims![1] || cy >= volume.hdr!.dims![2] || cz >= volume.hdr!.dims![3]) {
               continue
             }

@@ -609,7 +609,6 @@ export class NVImage {
     const sform = mat4.clone(this.matRAS)
     mat4.transpose(sform, sform)
     const shim = vec4.fromValues(-0.5, -0.5, -0.5, 0) // bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
-    // TODO was sform, sform, shim
     mat4.translate(sform, sform, vec3.fromValues(shim[0], shim[1], shim[2]))
     // mat.mat4.scale(sform, sform, dim);
     sform[0] *= dim[0]
