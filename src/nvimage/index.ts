@@ -68,6 +68,8 @@ export class NVImage {
   obliqueRAS?: mat4
   dimsRAS?: number[]
   permRAS?: number[]
+  img2RASstep?: number[]
+  img2RASstart?: number[]
   toRAS?: mat4
   toRASvox?: mat4
 
@@ -2098,7 +2100,7 @@ export class NVImage {
     }
     // 3rd column = z: constrained as x+y+z = 1+2+3 = 6
     ixyz[2] = 6 - ixyz[1] - ixyz[0]
-    const perm = [1, 2, 3]
+    let perm = [1, 2, 3]
     perm[ixyz[0] - 1] = 1
     perm[ixyz[1] - 1] = 2
     perm[ixyz[2] - 1] = 3
@@ -2154,6 +2156,8 @@ export class NVImage {
       this.toRAS = mat4.create() // aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
       this.matRAS = mat4.clone(rotM)
       this.calculateOblique()
+      this.img2RASstep = [1, this.dimsRAS[1], this.dimsRAS[1] * this.dimsRAS[2]]
+      this.img2RASstart = [0, 0, 0]
       return // no rotation required!
     }
     mat4.identity(rotM)
@@ -2194,6 +2198,26 @@ export class NVImage {
     this.toRASvox = mat4.clone(rotM)
     log.debug(this.hdr.dims)
     log.debug(this.dimsRAS)
+
+    // compute img2RASstep[] and img2RASstart[] for rapid native<->RAS conversion
+    // TODO: replace all other outStep/outStart calculations with img2RASstep/img2RASstart
+    const hdr = this.hdr
+    perm = this.permRAS
+    const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])]
+    const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]]
+    const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]] // increment i,j,k
+    const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]]
+    const outStart = [0, 0, 0]
+    for (let p = 0; p < 3; p++) {
+      // flip dimensions
+      if (perm[p] < 0) {
+        outStart[p] = outStep[p] * (outdim[p] - 1)
+        outStep[p] = -outStep[p]
+      }
+    }
+    this.img2RASstep = outStep
+    this.img2RASstart = outStart
+
     this.calculateOblique()
   }
 
@@ -3036,38 +3060,21 @@ export class NVImage {
     return hdr
   } // loadFromHeader
 
-  // not included in public docs
-  // convert voxels provided in xyz RAS to NIfTI row, columns, slices (ijk)
-  ras2ijk(voxRAS = [0, 0, 0]): number[] {
-    const vox = voxRAS.slice()
-    const perm = this.permRAS!.slice()
-    if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-      const pos = vec4.fromValues(vox[0], vox[1], vox[2], 1)
-      vec4.transformMat4(pos, pos, this.toRASvox!)
-      vox[0] = pos[0]
-      vox[1] = pos[1]
-      vox[2] = pos[2]
-    } // image is already in RA
-    return vox
-  } // ras2native()
-
   /**
    * read a 3D slab of voxels from a volume
-   * @param voxStartRAS - first row, column and slice (RAS order) for selection
-   * @param voxEndRAS - final row, column and slice (RAS order) for selection
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
    * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32'
-   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection (n.b. in native space, not RAS)
+   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
 
-  getVolumeData(voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], dataType = 'same'): [TypedVoxelArray, number[]] {
+  getVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], dataType = 'same'): [TypedVoxelArray, number[]] {
     let img: TypedVoxelArray = new Uint8Array()
-    const voxStart = this.ras2ijk(voxStartRAS)
-    const voxEnd = this.ras2ijk(voxEndRAS)
     if (Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
       return [img, [0, 0, 0]]
     }
-    const dims = this.hdr!.dims.slice(1, 4)
+    const dims = this.dimsRAS!.slice(1, 4)
     for (let i = 0; i < 3; i++) {
       voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
       voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
@@ -3099,12 +3106,16 @@ export class NVImage {
       log.error('getVolumeData unsupported datatype')
       return [img, [0, 0, 0]]
     }
+    const outStep = this.img2RASstep!
+    const outStart = this.img2RASstart!
     let i = 0
     for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
+      const zi = outStart[2] + z * outStep[2]
       for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
+        const yizi = zi + outStart[1] + y * outStep[1]
         for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          // img[i++] = this.getValue(x, y, z) // this.img[x + y * dims[0] + z * dims[0] * dims[2] ]
-          img[i++] = this.img![x + y * dims[0] + z * dims[0] * dims[1]]
+          const xi = outStart[0] + x * outStep[0]
+          img[i++] = this.img![xi + yizi]
         }
       }
     }
@@ -3113,20 +3124,17 @@ export class NVImage {
 
   /**
    * write a 3D slab of voxels from a volume
-   * @param voxStartRAS - first row, column and slice (RAS order) for selection
-   * @param voxEndRAS - final row, column and slice (RAS order) for selection
-   * @param img - array of voxel values to insert
-   * @note that img is in native space (IJK), not RAS)
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param img - array of voxel values to insert (RAS order)
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
 
-  setVolumeData(voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], img: TypedVoxelArray = new Uint8Array()): void {
-    const voxStart = this.ras2ijk(voxStartRAS)
-    const voxEnd = this.ras2ijk(voxEndRAS)
+  setVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], img: TypedVoxelArray = new Uint8Array()): void {
     if (img.length < 1 || Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
       return
     }
-    const dims = this.hdr!.dims.slice(1, 4)
+    const dims = this.dimsRAS!.slice(1, 4)
     for (let i = 0; i < 3; i++) {
       voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
       voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
@@ -3142,11 +3150,17 @@ export class NVImage {
       log.error('setVolumeData image does not have enough voxels')
       return
     }
+    const outStep = this.img2RASstep!
+    const outStart = this.img2RASstart!
     let i = 0
     for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
+      const zi = outStart[2] + z * outStep[2]
       for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
+        const yizi = zi + outStart[1] + y * outStep[1]
         for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          this.img![x + y * dims[0] + z * dims[0] * dims[1]] = img[i++]
+          const xi = outStart[0] + x * outStep[0]
+          // imgRAS[j] = this.img[xi + yi + zi]
+          this.img![xi + yizi] = img[i++]
         }
       }
     }

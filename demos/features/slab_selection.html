@@ -73,9 +73,13 @@
         if (nv1.volumes.length !== 1) return
         let overlayVolume = await nv1.volumes[0].clone()
         overlayVolume.zeroImage()
-        overlayVolume.colormap = 'warm'
+        overlayVolume.hdr.scl_inter = 0
+        overlayVolume.hdr.scl_slope = 1
+        overlayVolume.colormap = 'actc'
         overlayVolume.opacity = 0.5
         nv1.addVolume(overlayVolume)
+        overlayVolume.cal_min = 0
+        overlayVolume.cal_max = 100
       }
       function imageProcessing(vox, dims) {
         //insert any image processing function here
@@ -88,8 +92,11 @@
           mn = Math.min(mn, vox[i])
           mx = Math.max(mx, vox[i])
         }
+        let scale = 1
+        if (mx > mn)
+          scale = 100 / (mx - mn)
         for (let i = 0; i < vox.length; i++) {
-          vox[i] = (mx - vox[i]) + mn
+          vox[i] = scale * (mx - vox[i]) 
         }
         return vox
       }
@@ -120,6 +127,7 @@
             //find range of voxels from input image
             vox = imageProcessing(vox, dims)
             nv1.volumes[1].setVolumeData(info.voxStart, info.voxEnd, vox)
+            console.log(nv1.volumes[1].cal_min)
             nv1.updateGLVolume()
         }
       }
