@@ -240,6 +240,7 @@ type ImageMetadata = {
 };
 declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: string[]) => ImageFromUrlOptions;
 
+type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
 /**
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  */
@@ -276,6 +277,8 @@ declare class NVImage {
     obliqueRAS?: mat4;
     dimsRAS?: number[];
     permRAS?: number[];
+    img2RASstep?: number[];
+    img2RASstart?: number[];
     toRAS?: mat4;
     toRASvox?: mat4;
     frac2mm?: mat4;
@@ -285,7 +288,7 @@ declare class NVImage {
     mm2ortho?: mat4;
     hdr: nifti.NIFTI1 | nifti.NIFTI2 | null;
     imageType?: ImageType;
-    img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array;
+    img?: TypedVoxelArray;
     imaginary?: Float32Array;
     fileObject?: File | File[];
     dims?: number[];
@@ -366,7 +369,7 @@ declare class NVImage {
     readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     calculateRAS(): void;
-    img2RAS(): Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
+    img2RAS(): TypedVoxelArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     mm2vox(mm: number[], frac?: boolean): Float32Array | vec3;
     arrayEquals(a: unknown[], b: unknown[]): boolean;
@@ -409,6 +412,23 @@ declare class NVImage {
     static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UNSIGNED_CHAR
     img?: Uint8Array): Uint8Array;
     static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number): nifti.NIFTI1;
+    /**
+     * read a 3D slab of voxels from a volume
+     * @param voxStart - first row, column and slice (RAS order) for selection
+     * @param voxEnd - final row, column and slice (RAS order) for selection
+     * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32'
+     * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
+     * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+     */
+    getVolumeData(voxStart?: number[], voxEnd?: number[], dataType?: string): [TypedVoxelArray, number[]];
+    /**
+     * write a 3D slab of voxels from a volume
+     * @param voxStart - first row, column and slice (RAS order) for selection
+     * @param voxEnd - final row, column and slice (RAS order) for selection
+     * @param img - array of voxel values to insert (RAS order)
+     * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+     */
+    setVolumeData(voxStart?: number[], voxEnd?: number[], img?: TypedVoxelArray): void;
     /**
      * factory function to load and return a new NVImage instance from a base64 encoded string
      *
@@ -2737,12 +2757,20 @@ declare class Niivue {
     scalecropUint8(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Uint8Array>;
     scalecropFloat32(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Float32Array>;
     getScale(volume: NVImage, dst_min?: number, dst_max?: number, f_low?: number, f_high?: number): [number, number];
-    conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number): [mat4, mat4, mat4];
+    conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number, toRAS?: boolean): [mat4, mat4, mat4];
     createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UNSIGNED_CHAR
     img?: Uint8Array): Promise<Uint8Array>;
     niftiArray2NVImage(bytes?: Uint8Array): Promise<NVImage>;
     loadFromUrl(fnm: string): Promise<NVImage>;
-    conform(volume: NVImage, linear?: boolean, asFloat32?: boolean): Promise<NVImage>;
+    /**
+     * FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
+     * @param volume - input volume to be re-oriented, intensity-scaled and resliced
+     * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
+     * @param linear - reslice with linear rather than nearest-neighbor interpolation (default true).
+     * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
+     * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
+     */
+    conform(volume: NVImage, toRAS?: boolean, linear?: boolean, asFloat32?: boolean): Promise<NVImage>;
     /**
      * darken crevices and brighten corners when 3D rendering drawings.
      * @param amount - amount of ambient occlusion (default 0.4)

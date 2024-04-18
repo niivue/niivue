@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="128"
+        class="slider"
+        id="opacitySlider"
+      />
+      &nbsp;
+      <button id="selectAllBtn">Process entire volume</button>
+      &nbsp;
+      <label for="thicknessDrop">Selection thickness</label>
+      <select id="thicknessDrop">
+        <option value="0">1</option>
+        <option value="2">5</option>
+        <option value="4" selected>9</option>
+        <option value="5">11</option>
+      </select>
+      &nbsp;
+      <button id="saveBtn">Save Overlay</button>
+      &nbsp;
+      <label for="dragDrop">Drag mode</label>
+      <select id="dragDrop">
+        <option>None</option>
+        <option>Contrast</option>
+        <option>Measurement</option>
+        <option>Pan/Zoom</option>
+        <option>Slicer3D</option>
+        <option selected>Custom Drawing</option>
+      </select>
+      &nbsp;
+      <button id="aboutBtn">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      opacitySlider.oninput = function () {
+        nv1.setOpacity(1, this.value /255)
+      }
+      dragDrop.onchange = function () {
+        nv1.opts.dragMode = this.selectedIndex
+      }
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      aboutBtn.onclick = function () {
+        window.alert("Illustrates reading and writing voxel intensities with getVolumeData and getVolumeData. These functions allow custom image processing.")
+      }
+      saveBtn.onclick = function () {
+        nv1.volumes[1].saveToDisk("Custom.nii")
+      }
+      async function ensureOverlayVolumeLoaded() {
+        if (nv1.volumes.length !== 1) return
+        let overlayVolume = await nv1.volumes[0].clone()
+        overlayVolume.zeroImage()
+        overlayVolume.hdr.scl_inter = 0
+        overlayVolume.hdr.scl_slope = 1
+        overlayVolume.colormap = 'actc'
+        overlayVolume.opacity = 0.5
+        nv1.addVolume(overlayVolume)
+        overlayVolume.cal_min = 0
+        overlayVolume.cal_max = 100
+      }
+      function imageProcessing(vox, dims) {
+        //insert any image processing function here
+        //in this case we simply invert the contrast of selected voxels
+        console.log(`Slab dimensions ${dims[0]}×${dims[1]}×${dims[2]}`)
+        if (vox.length < 1) return
+        let mn = vox[0]
+        let mx = vox[0]
+        for (let i = 0; i < vox.length; i++) {
+          mn = Math.min(mn, vox[i])
+          mx = Math.max(mx, vox[i])
+        }
+        let scale = 1
+        if (mx > mn)
+          scale = 100 / (mx - mn)
+        for (let i = 0; i < vox.length; i++) {
+          vox[i] = scale * (mx - vox[i]) 
+        }
+        return vox
+      }
+      selectAllBtn.onclick = async function () {
+        await ensureOverlayVolumeLoaded()
+        let vox = nv1.volumes[0].img.slice()
+        vox = imageProcessing(vox, nv1.volumes[0].dims.slice(1,4))
+        nv1.volumes[1].img = vox
+        nv1.updateGLVolume()
+      }
+      async function doDragRelease(info) {
+        if ((info.tileIdx >= 0) && (info.voxStart[0] >= 0)) {
+            document.getElementById("location").innerHTML = `Tile: ${info.tileIdx} Orient: ${info.axCorSag} Length:${Math.round(info.mmLength)} x:${info.voxStart[0]}..${info.voxEnd[0]} y:${info.voxStart[1]}..${info.voxEnd[1]} z:${info.voxStart[2]}..${info.voxEnd[2]}`
+            await ensureOverlayVolumeLoaded()
+            let slabPad = parseInt(thicknessDrop.value)
+            let sliceDir = 2 //Axial slice direction is Z
+            if (info.axCorSag === 1) {
+              sliceDir = 1 //Coronal slice direction is Y
+            }
+            if (info.axCorSag === 2) {
+              sliceDir = 0 //Sagittal slice direction is X
+            }
+            info.voxStart[sliceDir] -= slabPad
+            info.voxEnd[sliceDir] += slabPad
+            let obj = nv1.volumes[0].getVolumeData(info.voxStart, info.voxEnd)
+            let vox = obj[0]
+            let dims = obj[1]
+            //find range of voxels from input image
+            vox = imageProcessing(vox, dims)
+            nv1.volumes[1].setVolumeData(info.voxStart, info.voxEnd, vox)
+            console.log(nv1.volumes[1].cal_min)
+            nv1.updateGLVolume()
+        }
+      }
+      let defaults = {
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.setRadiologicalConvention(false)
+      nv1.attachTo("gl1")
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setInterpolation(true)
+      nv1.onDragRelease = doDragRelease
+      nv1.opts.dragMode = 5
+      await nv1.loadVolumes([{ url: "../images/mni152.nii.gz" }])
+      await ensureOverlayVolumeLoaded()
+    </script>
+  </body>
+</html>
