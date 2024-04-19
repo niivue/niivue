@@ -2389,6 +2389,9 @@ export class NVImage {
       for (let i = 0; i < nVox; i++) {
         mn = Math.min(this.img[i], mn)
         mx = Math.max(this.img[i], mx)
+        if (this.img[i] === 0) {
+          nZero++
+        }
       }
     } else {
       for (let i = 0; i < nVox; i++) {
