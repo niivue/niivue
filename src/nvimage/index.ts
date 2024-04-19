@@ -191,7 +191,6 @@ export class NVImage {
     if (imageType === NVIMAGE_TYPE.UNKNOWN) {
       imageType = NVIMAGE_TYPE.parse(ext)
     }
-
     this.imageType = imageType
     switch (imageType) {
       case NVIMAGE_TYPE.DCM_FOLDER:
@@ -321,7 +320,6 @@ export class NVImage {
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
       log.error('pixDims not plausible', this.hdr)
     }
-
     if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0) {
       this.hdr.scl_slope = 1.0
     } // https://github.com/nipreps/fmriprep/issues/2507
@@ -2370,24 +2368,43 @@ export class NVImage {
       throw new Error('img undefined')
     }
     // determine full range: min..max
-    let mn = this.img[0]
-    let mx = this.img[0]
+    let mn = Number.POSITIVE_INFINITY // not this.img[0] in case ignoreZeroVoxels
+    let mx = Number.NEGATIVE_INFINITY // this.img[0] in case ignoreZeroVoxels
     let nZero = 0
     let nNan = 0
     const nVox = this.img.length
-    for (let i = 0; i < nVox; i++) {
-      if (isNaN(this.img[i])) {
-        nNan++
-        continue
+    // we can accelerate loops for integer data (which can not store NaN)
+    // n.b. do to stack size, we can not use Math.max.apply()
+    let isFastCalc = true
+    if (this.img.constructor === Float64Array) {
+      isFastCalc = false
+    }
+    if (this.img.constructor === Float32Array) {
+      isFastCalc = false
+    }
+    if (this.ignoreZeroVoxels) {
+      isFastCalc = false
+    }
+    if (isFastCalc) {
+      for (let i = 0; i < nVox; i++) {
+        mn = Math.min(this.img[i], mn)
+        mx = Math.max(this.img[i], mx)
       }
-      if (this.img[i] === 0) {
-        nZero++
-        if (this.ignoreZeroVoxels) {
+    } else {
+      for (let i = 0; i < nVox; i++) {
+        if (isNaN(this.img[i])) {
+          nNan++
           continue
         }
+        if (this.img[i] === 0) {
+          nZero++
+          if (this.ignoreZeroVoxels) {
+            continue
+          }
+        }
+        mn = Math.min(this.img[i], mn)
+        mx = Math.max(this.img[i], mx)
       }
-      mn = Math.min(this.img[i], mn)
-      mx = Math.max(this.img[i], mx)
     }
     const mnScale = this.intensityRaw2Scaled(mn)
     const mxScale = this.intensityRaw2Scaled(mx)
@@ -2451,8 +2468,12 @@ export class NVImage {
     for (let i = 0; i < nBins; i++) {
       hist[i] = 0
     }
-    if (this.ignoreZeroVoxels) {
-      for (let i = 0; i <= nVox; i++) {
+    if (isFastCalc) {
+      for (let i = 0; i < nVox; i++) {
+        hist[Math.round((this.img[i] - mn) * scl)]++
+      }
+    } else if (this.ignoreZeroVoxels) {
+      for (let i = 0; i < nVox; i++) {
         if (this.img[i] === 0) {
           continue
         }
@@ -2462,7 +2483,7 @@ export class NVImage {
         hist[Math.round((this.img[i] - mn) * scl)]++
       }
     } else {
-      for (let i = 0; i <= nVox; i++) {
+      for (let i = 0; i < nVox; i++) {
         if (isNaN(this.img[i])) {
           continue
         }
@@ -2688,6 +2709,7 @@ export class NVImage {
     if (url === '') {
       throw Error('url must not be empty')
     }
+
     let nvimage = null
     let dataBuffer = null
     if (url instanceof Uint8Array) {
@@ -2776,7 +2798,6 @@ export class NVImage {
       }
       dataBuffer = await response.arrayBuffer()
     }
-
     const re = /(?:\.([^.]+))?$/
     let ext = ''
     if (name === '') {
