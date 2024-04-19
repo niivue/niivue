@@ -6330,11 +6330,16 @@ export class Niivue {
       }
     }
     const dimX = volume.hdr!.dims![1]
-    const dimXY = volume.hdr!.dims![1] * volume.hdr!.dims![2]
+    const dimY = volume.hdr!.dims![2]
+    const dimZ = volume.hdr!.dims![3]
+    const dimXY = dimX * dimY
     let i = -1
     function voxidx(vx: number, vy: number, vz: number): number {
       return vx + vy * dimX + vz * dimXY
     }
+    const inv_vox2vox0 = inv_vox2vox[0]
+    const inv_vox2vox4 = inv_vox2vox[4]
+    const inv_vox2vox8 = inv_vox2vox[8]
     if (isLinear) {
       for (let z = 0; z < outDim; z++) {
         for (let y = 0; y < outDim; y++) {
@@ -6343,9 +6348,9 @@ export class Niivue {
           const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
           const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
           for (let x = 0; x < outDim; x++) {
-            const ix = x * inv_vox2vox[0] + ixYZ
-            const iy = x * inv_vox2vox[4] + iyYZ
-            const iz = x * inv_vox2vox[8] + izYZ
+            const ix = x * inv_vox2vox0 + ixYZ
+            const iy = x * inv_vox2vox4 + iyYZ
+            const iz = x * inv_vox2vox8 + izYZ
             const fx = Math.floor(ix)
             const fy = Math.floor(iy)
             const fz = Math.floor(iz)
@@ -6358,7 +6363,7 @@ export class Niivue {
             const cx = Math.ceil(ix)
             const cy = Math.ceil(iy)
             const cz = Math.ceil(iz)
-            if (cx >= volume.hdr!.dims![1] || cy >= volume.hdr!.dims![2] || cz >= volume.hdr!.dims![3]) {
+            if (cx >= dimX || cy >= dimY || cz >= dimZ) {
               continue
             }
             // residuals
@@ -6391,14 +6396,14 @@ export class Niivue {
           const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
           const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
           for (let x = 0; x < outDim; x++) {
-            const ix = Math.round(x * inv_vox2vox[0] + ixYZ)
-            const iy = Math.round(x * inv_vox2vox[4] + iyYZ)
-            const iz = Math.round(x * inv_vox2vox[8] + izYZ)
+            const ix = Math.round(x * inv_vox2vox0 + ixYZ)
+            const iy = Math.round(x * inv_vox2vox4 + iyYZ)
+            const iz = Math.round(x * inv_vox2vox8 + izYZ)
             i++
             if (ix < 0 || iy < 0 || iz < 0) {
               continue
             }
-            if (ix >= volume.hdr!.dims![1] || iy >= volume.hdr!.dims![2] || iz >= volume.hdr!.dims![3]) {
+            if (ix >= dimX || iy >= dimY || iz >= dimZ) {
               continue
             }
             out_img[i] = in_img[voxidx(ix, iy, iz)]
