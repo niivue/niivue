@@ -2375,16 +2375,9 @@ export class NVImage {
     const nVox = this.img.length
     // we can accelerate loops for integer data (which can not store NaN)
     // n.b. do to stack size, we can not use Math.max.apply()
-    let isFastCalc = true
-    if (this.img.constructor === Float64Array) {
-      isFastCalc = false
-    }
-    if (this.img.constructor === Float32Array) {
-      isFastCalc = false
-    }
-    if (this.ignoreZeroVoxels) {
-      isFastCalc = false
-    }
+    const isFastCalc =
+      this.img.constructor !== Float64Array && this.img.constructor !== Float32Array && this.ignoreZeroVoxels
+
     if (isFastCalc) {
       for (let i = 0; i < nVox; i++) {
         mn = Math.min(this.img[i], mn)
