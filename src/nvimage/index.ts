@@ -2445,7 +2445,7 @@ export class NVImage {
     }
     const percentZero = (100 * nZero) / nVox
     let isOverrideIgnoreZeroVoxels = false
-    if (percentZero > 50 && !this.ignoreZeroVoxels) {
+    if (percentZero > 60 && !this.ignoreZeroVoxels) {
       log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
       isOverrideIgnoreZeroVoxels = true
       this.ignoreZeroVoxels = true
