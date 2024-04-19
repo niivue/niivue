@@ -76,7 +76,14 @@ import {
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
-import { NVImage, NVImageFromUrlOptions, NVIMAGE_TYPE, NiiDataType, ImageFromUrlOptions } from '../nvimage/index.js'
+import {
+  NVImage,
+  NVImageFromUrlOptions,
+  NVIMAGE_TYPE,
+  NiiDataType,
+  NiiIntentCode,
+  ImageFromUrlOptions
+} from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { Connectome, LegacyConnectome, NVConnectomeNode, NiftiHeader, DragReleaseParams } from '../types.js'
 import {
@@ -2292,7 +2299,7 @@ export class Niivue {
       }
     }
     volume.img = img
-    volume.hdr!.datatypeCode = NiiDataType.DT_UNSIGNED_CHAR
+    volume.hdr!.datatypeCode = NiiDataType.DT_UINT8
     volume.hdr!.cal_min = 0
     volume.hdr!.cal_max = 1
   }
@@ -5303,9 +5310,9 @@ export class Niivue {
     if (!img) {
       throw new Error('img undefined')
     }
-    if (hdr.datatypeCode === NiiDataType.DT_UNSIGNED_CHAR) {
+    if (hdr.datatypeCode === NiiDataType.DT_UINT8) {
       // raw input data
-      if (hdr.intent_code === 1002) {
+      if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
         orientShader = this.orientShaderAtlasU!
       }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -5322,9 +5329,9 @@ export class Niivue {
         this.gl.UNSIGNED_BYTE,
         img
       )
-    } else if (hdr.datatypeCode === NiiDataType.DT_SIGNED_SHORT) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_INT16) {
       orientShader = this.orientShaderI!
-      if (hdr.intent_code === 1002) {
+      if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
         orientShader = this.orientShaderAtlasI!
       }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -5341,7 +5348,7 @@ export class Niivue {
         this.gl.SHORT,
         img
       )
-    } else if (hdr.datatypeCode === NiiDataType.DT_FLOAT) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_FLOAT32) {
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
@@ -5357,7 +5364,7 @@ export class Niivue {
         img
       )
       orientShader = this.orientShaderF!
-    } else if (hdr.datatypeCode === NiiDataType.DT_DOUBLE) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_FLOAT64) {
       let img32f = new Float32Array()
       img32f = Float32Array.from(img)
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -5375,7 +5382,7 @@ export class Niivue {
         img32f
       )
       orientShader = this.orientShaderF!
-    } else if (hdr.datatypeCode === NiiDataType.DT_RGB) {
+    } else if (hdr.datatypeCode === NiiDataType.DT_RGB24) {
       orientShader = this.orientShaderRGBU!
       orientShader.use(this.gl)
       // TODO was false instead of 0
@@ -5395,7 +5402,7 @@ export class Niivue {
         img
       )
     } else if (hdr.datatypeCode === NiiDataType.DT_UINT16) {
-      if (hdr.intent_code === 1002) {
+      if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
         orientShader = this.orientShaderAtlasU!
       }
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -5565,16 +5572,16 @@ export class Niivue {
           imgRaw
         )
         switch (mhdr.datatypeCode) {
-          case NiiDataType.DT_SIGNED_SHORT:
+          case NiiDataType.DT_INT16:
             img = new Int16Array(imgRaw)
             break
-          case NiiDataType.DT_FLOAT:
+          case NiiDataType.DT_FLOAT32:
             img = new Float32Array(imgRaw)
             break
-          case NiiDataType.DT_DOUBLE:
+          case NiiDataType.DT_FLOAT64:
             img = new Float64Array(imgRaw)
             break
-          case NiiDataType.DT_RGB:
+          case NiiDataType.DT_RGB24:
             img = new Uint8Array(imgRaw)
             break
           case NiiDataType.DT_UINT16:
@@ -5638,7 +5645,7 @@ export class Niivue {
       throw new Error('back.dims undefined')
     }
     let outline = 0
-    if (hdr.intent_code === 1002) {
+    if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
       outline = this.opts.atlasOutline
     }
     this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
@@ -6134,7 +6141,7 @@ export class Niivue {
   ): [number, number] {
     let src_min = volume.global_min!
     let src_max = volume.global_max!
-    if (volume.hdr!.datatypeCode === NiiDataType.DT_UNSIGNED_CHAR) {
+    if (volume.hdr!.datatypeCode === NiiDataType.DT_UINT8) {
       // for compatibility with conform.py: uint8 is not transformed
       return [src_min, 1.0]
     }
@@ -6275,7 +6282,7 @@ export class Niivue {
     dims = [256, 256, 256],
     pixDims = [1, 1, 1],
     affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
-    datatypeCode = NiiDataType.DT_UNSIGNED_CHAR,
+    datatypeCode = NiiDataType.DT_UINT8,
     img = new Uint8Array()
   ): Promise<Uint8Array> {
     return await NVImage.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
@@ -6303,11 +6310,11 @@ export class Niivue {
    * FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
    * @param volume - input volume to be re-oriented, intensity-scaled and resliced
    * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
-   * @param linear - reslice with linear rather than nearest-neighbor interpolation (default true).
+   * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
    * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
    * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
    */
-  async conform(volume: NVImage, toRAS = false, linear: boolean = true, asFloat32 = false): Promise<NVImage> {
+  async conform(volume: NVImage, toRAS = false, isLinear: boolean = true, asFloat32 = false): Promise<NVImage> {
     const outDim = 256
     const outMM = 1
     const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM, toRAS)
@@ -6322,17 +6329,23 @@ export class Niivue {
         in_img[i] = in_img[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
       }
     }
-    function voxval(vx: number, vy: number, vz: number): number {
-      return in_img[vx + vy * volume.hdr!.dims![1] + vz * volume.hdr!.dims![1] * volume.hdr!.dims![2]]
-    }
+    const dimX = volume.hdr!.dims![1]
+    const dimXY = volume.hdr!.dims![1] * volume.hdr!.dims![2]
     let i = -1
-    if (linear) {
+    function voxidx(vx: number, vy: number, vz: number): number {
+      return vx + vy * dimX + vz * dimXY
+    }
+    if (isLinear) {
       for (let z = 0; z < outDim; z++) {
         for (let y = 0; y < outDim; y++) {
+          // loop hoisting
+          const ixYZ = y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
+          const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
+          const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
           for (let x = 0; x < outDim; x++) {
-            const ix = x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
-            const iy = x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
-            const iz = x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
+            const ix = x * inv_vox2vox[0] + ixYZ
+            const iy = x * inv_vox2vox[4] + iyYZ
+            const iz = x * inv_vox2vox[8] + izYZ
             const fx = Math.floor(ix)
             const fy = Math.floor(iy)
             const fz = Math.floor(iz)
@@ -6340,6 +6353,8 @@ export class Niivue {
             if (fx < 0 || fy < 0 || fz < 0) {
               continue
             }
+            // n.b. cx = fx + 1 unless fx is an integer
+            // no performance benefits noted changing ceil to + 1
             const cx = Math.ceil(ix)
             const cy = Math.ceil(iy)
             const cz = Math.ceil(iz)
@@ -6353,15 +6368,16 @@ export class Niivue {
             const rfx = 1 - rcx
             const rfy = 1 - rcy
             const rfz = 1 - rcz
+            const fff = voxidx(fx, fy, fz)
             let vx = 0
-            vx += voxval(fx, fy, fz) * rfx * rfy * rfz
-            vx += voxval(fx, fy, cz) * rfx * rfy * rcz
-            vx += voxval(fx, cy, fz) * rfx * rcy * rfz
-            vx += voxval(fx, cy, cz) * rfx * rcy * rcz
-            vx += voxval(cx, fy, fz) * rcx * rfy * rfz
-            vx += voxval(cx, fy, cz) * rcx * rfy * rcz
-            vx += voxval(cx, cy, fz) * rcx * rcy * rfz
-            vx += voxval(cx, cy, cz) * rcx * rcy * rcz
+            vx += in_img[fff] * rfx * rfy * rfz
+            vx += in_img[fff + dimXY] * rfx * rfy * rcz
+            vx += in_img[fff + dimX] * rfx * rcy * rfz
+            vx += in_img[fff + dimX + dimXY] * rfx * rcy * rcz
+            vx += in_img[fff + 1] * rcx * rfy * rfz
+            vx += in_img[fff + 1 + dimXY] * rcx * rfy * rcz
+            vx += in_img[fff + 1 + dimX] * rcx * rcy * rfz
+            vx += in_img[fff + 1 + dimX + dimXY] * rcx * rcy * rcz
             out_img[i] = vx
           } // z
         } // y
@@ -6370,10 +6386,14 @@ export class Niivue {
       // nearest neighbor interpolation
       for (let z = 0; z < outDim; z++) {
         for (let y = 0; y < outDim; y++) {
+          // loop hoisting
+          const ixYZ = y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
+          const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
+          const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
           for (let x = 0; x < outDim; x++) {
-            const ix = Math.round(x * inv_vox2vox[0] + y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3])
-            const iy = Math.round(x * inv_vox2vox[4] + y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7])
-            const iz = Math.round(x * inv_vox2vox[8] + y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11])
+            const ix = Math.round(x * inv_vox2vox[0] + ixYZ)
+            const iy = Math.round(x * inv_vox2vox[4] + iyYZ)
+            const iz = Math.round(x * inv_vox2vox[8] + izYZ)
             i++
             if (ix < 0 || iy < 0 || iz < 0) {
               continue
@@ -6381,7 +6401,7 @@ export class Niivue {
             if (ix >= volume.hdr!.dims![1] || iy >= volume.hdr!.dims![2] || iz >= volume.hdr!.dims![3]) {
               continue
             }
-            out_img[i] = voxval(ix, iy, iz)
+            out_img[i] = in_img[voxidx(ix, iy, iz)]
           } // z
         } // y
       } // x
@@ -6399,7 +6419,7 @@ export class Niivue {
         [outDim, outDim, outDim],
         [outMM, outMM, outMM],
         Array.from(out_affine),
-        16, // DT_FLOAT
+        NiiDataType.DT_FLOAT32,
         new Uint8Array(out_img32.buffer)
       )
     } else {
