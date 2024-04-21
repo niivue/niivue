@@ -43,7 +43,7 @@ nv.loadVolumes(volumeList);
 import { Niivue } from "@niivue/niivue";
 // make an array of meshes to load
 let meshList = [
-  { url: "https://niivue.github.io/niivue/features/images/BrainMesh_ICBM152.lh.mz3"},
+  { url: "https://niivue.github.io/niivue/images/BrainMesh_ICBM152.lh.mz3"},
 ];
 const nv = new Niivue();
 nv.attachTo("gl"); // attach to canvas with id="gl"
@@ -58,7 +58,7 @@ import { Niivue } from "@niivue/niivue";
 let volumeList = [
   { 
     url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
-    colormap: "red", // see: https://niivue.github.io/niivue/features/colormaps.html
+    colormap: "red", // see: https://niivue.github.io/niivue/colormaps.html
   },
 ];
 const nv = new Niivue();
@@ -73,11 +73,11 @@ nv.loadVolumes(volumeList);
   // make an array of volumes to load
   let volumeList = [
     { 
-      url: "https://niivue.github.io/niivue/features/images/mni152.nii.gz",
+      url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
       colormap: "grey"
     },
     { 
-      url: "https://niivue.github.io/niivue/features/images/hippo.nii.gz",
+      url: "https://niivue.github.io/niivue/images/hippo.nii.gz",
       colormap: "red"
     },
   ]
@@ -93,13 +93,13 @@ nv.loadVolumes(volumeList);
   // make an array of volumes to load
   let volumeList = [
     { 
-      url: "https://niivue.github.io/niivue/features/images/mni152.nii.gz",
+      url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
       colormap: "grey"
     },
   ]
   // make an array of meshes to load
   let meshList = [
-    { url: "https://niivue.github.io/niivue/features/images/BrainMesh_ICBM152.lh.mz3"},
+    { url: "https://niivue.github.io/niivue/images/BrainMesh_ICBM152.lh.mz3"},
   ]
   const nv = new Niivue();
   nv.attachTo("gl"); // attach to canvas with id="gl"
@@ -114,7 +114,7 @@ nv.loadVolumes(volumeList);
     // make an array of volumes to load
     let volumeList = [
       { 
-        url: "https://niivue.github.io/niivue/features/images/mni152.nii.gz",
+        url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
         colormap: "grey"
       },
     ]
@@ -161,22 +161,19 @@ While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can als
   <body>
     <canvas id="gl" width="640" height="640"></canvas>
   </body>
-  <script src="https://niivue.github.io/niivue/features/niivue.umd.js"></script>
-  <script>
+  <script type="module" async>
+    // uses the version of niivue from the main branch of the niivue repository.
+    // This is the latest development version and may not be stable, and may not reflect 
+    // the functionality of the latest release on NPM. 
+    import * as niivue from "https://niivue.github.io/niivue/dist/index.js"
     var volumeList = [
       { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
     ];
-    var nv = new Niivue({ isResizeCanvas: false });
+    var nv = new niivue.Niivue({ isResizeCanvas: false });
     nv.attachTo("gl");
     nv.loadVolumes(volumeList);
   </script>
 </html>
-```
-
-Note that the code above will load the latest current stable release. Alternatively, you can specify a specific NiiVue version. For example, to ensure compatibility with release 0.32.0, you could specify:
-
-```html
-<script src="https://unpkg.com/@niivue/niivue@0.32.0/dist/niivue.umd.js"></script>
 ```
 
 ## VueJS example
