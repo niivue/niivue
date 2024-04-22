@@ -149,6 +149,30 @@ declare class NVLabel3D {
 }
 
 /**
+ * Enum for NIfTI datatype codes
+ *   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+ */
+declare enum NiiDataType {
+    DT_NONE = 0,
+    DT_BINARY = 1,
+    DT_UINT8 = 2,
+    DT_INT16 = 4,
+    DT_INT32 = 8,
+    DT_FLOAT32 = 16,
+    DT_COMPLEX64 = 32,
+    DT_FLOAT64 = 64,
+    DT_RGB24 = 128,
+    DT_INT8 = 256,
+    DT_UINT16 = 512,
+    DT_UINT32 = 768,
+    DT_INT64 = 1024,
+    DT_UINT64 = 1280,
+    DT_FLOAT128 = 1536,
+    DT_COMPLEX128 = 1792,
+    DT_COMPLEX256 = 2048,
+    DT_RGBA32 = 2304
+}
+/**
  * Enum for supported image types (e.g. NII, NRRD, DICOM)
  */
 declare enum ImageType {
@@ -307,26 +331,6 @@ declare class NVImage {
     urlImgData?: string;
     isManifest?: boolean;
     limitFrames4D?: number;
-    DT_NONE: number;
-    DT_UNKNOWN: number;
-    DT_BINARY: number;
-    DT_UNSIGNED_CHAR: number;
-    DT_SIGNED_SHORT: number;
-    DT_SIGNED_INT: number;
-    DT_FLOAT: number;
-    DT_COMPLEX: number;
-    DT_DOUBLE: number;
-    DT_RGB: number;
-    DT_ALL: number;
-    DT_INT8: number;
-    DT_UINT16: number;
-    DT_UINT32: number;
-    DT_INT64: number;
-    DT_UINT64: number;
-    DT_FLOAT128: number;
-    DT_COMPLEX128: number;
-    DT_COMPLEX256: number;
-    DT_RGBA32: number;
     /**
      *
      * @param dataBuffer - an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
@@ -409,7 +413,7 @@ declare class NVImage {
      * @example
      * myImage = NVImage.loadFromBase64('SomeBase64String')
      */
-    static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UNSIGNED_CHAR
+    static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UINT8
     img?: Uint8Array): Uint8Array;
     static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number): nifti.NIFTI1;
     /**
@@ -2758,19 +2762,18 @@ declare class Niivue {
     scalecropFloat32(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Float32Array>;
     getScale(volume: NVImage, dst_min?: number, dst_max?: number, f_low?: number, f_high?: number): [number, number];
     conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number, toRAS?: boolean): [mat4, mat4, mat4];
-    createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UNSIGNED_CHAR
-    img?: Uint8Array): Promise<Uint8Array>;
+    createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: NiiDataType, img?: Uint8Array): Promise<Uint8Array>;
     niftiArray2NVImage(bytes?: Uint8Array): Promise<NVImage>;
     loadFromUrl(fnm: string): Promise<NVImage>;
     /**
      * FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
      * @param volume - input volume to be re-oriented, intensity-scaled and resliced
      * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
-     * @param linear - reslice with linear rather than nearest-neighbor interpolation (default true).
+     * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
      * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
      * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
      */
-    conform(volume: NVImage, toRAS?: boolean, linear?: boolean, asFloat32?: boolean): Promise<NVImage>;
+    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean): Promise<NVImage>;
     /**
      * darken crevices and brighten corners when 3D rendering drawings.
      * @param amount - amount of ambient occlusion (default 0.4)
