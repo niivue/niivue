@@ -1360,17 +1360,12 @@ export class Niivue {
       if (this.opts.dragMode === DRAG_MODE.contrast) {
         this.calculateNewRange()
         this.refreshLayers(this.volumes[0], 0)
-      } else if (this.opts.dragMode === DRAG_MODE.callbackOnly) {
-        // if the drag mode is callback only, then we don't want to change the brightness and contrast
-        // callback only is useful for the custom machine learning related callbacks
-        const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
-        const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
-        // just use the generateMouseUpCallback since it
-        // does everything we need (same as the behaviour in mouseUpListener)
-        this.generateMouseUpCallback(fracStart, fracEnd)
-      } else {
-        return
       }
+      const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
+      const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
+      // just use the generateMouseUpCallback since it
+      // does everything we need (same as the behaviour in mouseUpListener)
+      this.generateMouseUpCallback(fracStart, fracEnd)
     }
     // mouseUp generates this.drawScene();
     this.mouseUpListener()
