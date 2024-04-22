@@ -1363,12 +1363,16 @@ export class Niivue {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false
-      // if (this.opts.isDragShowsMeasurementTool) return;
-      if (this.opts.dragMode !== DRAG_MODE.contrast) {
-        return
+      // if drag mode is contrast, and the user double taps and drags...
+      if (this.opts.dragMode === DRAG_MODE.contrast) {
+        this.calculateNewRange()
+        this.refreshLayers(this.volumes[0], 0)
       }
-      this.calculateNewRange()
-      this.refreshLayers(this.volumes[0], 0)
+      const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
+      const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
+      // just use the generateMouseUpCallback since it
+      // does everything we need (same as the behaviour in mouseUpListener)
+      this.generateMouseUpCallback(fracStart, fracEnd)
     }
     // mouseUp generates this.drawScene();
     this.mouseUpListener()
