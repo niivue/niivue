@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.41.1",
+  "version": "0.42.0",
   "description": "minimal webgl2 nifti image viewer",
   "types": "./build/index.d.ts",
   "main": "./build/index.js",
@@ -36,7 +36,6 @@
     "lint:ts": "tsc --noEmit",
     "lint:fix": "eslint --fix .",
     "lint:debug": "DEBUG=eslint:cli-engine eslint .",
-    "prepare": "husky install",
     "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
     "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
@@ -88,7 +87,6 @@
     "express": "^4.19.2",
     "happy-dom": "^14.3.10",
     "http-server": "^14.1.1",
-    "husky": "^9.0.11",
     "jest": "^29.7.0",
     "jest-image-snapshot": "^6.4.0",
     "jest-puppeteer": "^10.0.1",

@@ -7,6 +7,7 @@ import { log } from './logger.js'
 
 /**
  * NVController is for synchronizing both remote and local instances of Niivue
+ * @ignore
  */
 export class NVController {
   niivue: Niivue

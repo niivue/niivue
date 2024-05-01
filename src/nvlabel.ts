@@ -12,6 +12,7 @@ export enum LabelLineTerminator {
 
 /**
  * Class representing label style.
+ * @ignore
  */
 export class NVLabel3DStyle {
   textColor: number[]
@@ -58,6 +59,7 @@ export class NVLabel3DStyle {
 
 /**
  * Label class
+ * @ignore
  */
 export class NVLabel3D {
   text: string

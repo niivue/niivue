@@ -15,6 +15,8 @@ import {
   ImageMetadata,
   ImageType,
   NVIMAGE_TYPE,
+  NiiDataType,
+  NiiIntentCode,
   NVImageFromUrlOptions,
   getBestTransform,
   getExtents,
@@ -24,6 +26,8 @@ import {
 } from './utils.js'
 
 export * from './utils.js'
+
+export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
 
 /**
  * a NVImage encapsulates some images data and provides methods to query and operate on images
@@ -66,6 +70,8 @@ export class NVImage {
   obliqueRAS?: mat4
   dimsRAS?: number[]
   permRAS?: number[]
+  img2RASstep?: number[]
+  img2RASstart?: number[]
   toRAS?: mat4
   toRASvox?: mat4
 
@@ -77,7 +83,7 @@ export class NVImage {
 
   hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
   imageType?: ImageType
-  img?: Uint8Array | Int16Array | Float32Array | Float64Array | Uint16Array
+  img?: TypedVoxelArray
   imaginary?: Float32Array
   fileObject?: File | File[]
   dims?: number[]
@@ -101,29 +107,6 @@ export class NVImage {
   urlImgData?: string
   isManifest?: boolean
   limitFrames4D?: number
-
-  // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
-  // TODO move to enum
-  DT_NONE = 0
-  DT_UNKNOWN = 0 /* what it says, dude           */
-  DT_BINARY = 1 /* binary (1 bit/voxel)         */
-  DT_UNSIGNED_CHAR = 2 /* unsigned char (8 bits/voxel) */
-  DT_SIGNED_SHORT = 4 /* signed short (16 bits/voxel) */
-  DT_SIGNED_INT = 8 /* signed int (32 bits/voxel)   */
-  DT_FLOAT = 16 /* float (32 bits/voxel)        */
-  DT_COMPLEX = 32 /* complex (64 bits/voxel)      */
-  DT_DOUBLE = 64 /* double (64 bits/voxel)       */
-  DT_RGB = 128 /* RGB triple (24 bits/voxel)   */
-  DT_ALL = 255 /* not very useful (?)          */
-  DT_INT8 = 256 /* signed char (8 bits)         */
-  DT_UINT16 = 512 /* unsigned short (16 bits)     */
-  DT_UINT32 = 768 /* unsigned int (32 bits)       */
-  DT_INT64 = 1024 /* long long (64 bits)          */
-  DT_UINT64 = 1280 /* unsigned long long (64 bits) */
-  DT_FLOAT128 = 1536 /* long double (128 bits)       */
-  DT_COMPLEX128 = 1792 /* double pair (128 bits)       */
-  DT_COMPLEX256 = 2048 /* long double pair (256 bits)  */
-  DT_RGBA32 = 2304 /* 4 byte RGBA (32 bits/voxel)  */
 
   /**
    *
@@ -208,9 +191,7 @@ export class NVImage {
     if (imageType === NVIMAGE_TYPE.UNKNOWN) {
       imageType = NVIMAGE_TYPE.parse(ext)
     }
-
     this.imageType = imageType
-
     switch (imageType) {
       case NVIMAGE_TYPE.DCM_FOLDER:
       case NVIMAGE_TYPE.DCM_MANIFEST:
@@ -291,19 +272,19 @@ export class NVImage {
       this.nFrame4D = nVol4D
     }
 
-    // 1007 = NIFTI_INTENT_VECTOR; 2003 = NIFTI_INTENT_RGB_VECTOR
     // n.b. NIfTI standard says "NIFTI_INTENT_RGB_VECTOR" should be RGBA, but FSL only stores RGB
     if (
-      (this.hdr.intent_code === 1007 || this.hdr.intent_code === 2003) &&
+      (this.hdr.intent_code === NiiIntentCode.NIFTI_INTENT_VECTOR ||
+        this.hdr.intent_code === NiiIntentCode.NIFTI_INTENT_RGB_VECTOR) &&
       this.nFrame4D === 3 &&
-      this.hdr.datatypeCode === this.DT_FLOAT
+      this.hdr.datatypeCode === NiiDataType.DT_FLOAT32
     ) {
       const tmp = new Float32Array(imgRaw)
       const f32 = tmp.slice()
 
       // Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
       // this allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction
-      this.hdr.datatypeCode = this.DT_RGBA32
+      this.hdr.datatypeCode = NiiDataType.DT_RGBA32
       this.nFrame4D = 1
       for (let i = 4; i < 7; i++) {
         this.hdr.dims[i] = 1
@@ -339,7 +320,6 @@ export class NVImage {
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
       log.error('pixDims not plausible', this.hdr)
     }
-
     if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0) {
       this.hdr.scl_slope = 1.0
     } // https://github.com/nipreps/fmriprep/issues/2507
@@ -407,8 +387,8 @@ export class NVImage {
     } // defective affine
     // swap data if foreign endian:
     if (
-      this.hdr.datatypeCode !== this.DT_RGB &&
-      this.hdr.datatypeCode !== this.DT_RGBA32 &&
+      this.hdr.datatypeCode !== NiiDataType.DT_RGB24 &&
+      this.hdr.datatypeCode !== NiiDataType.DT_RGBA32 &&
       this.hdr.littleEndian !== isPlatformLittleEndian() &&
       this.hdr.numBitsPerVoxel > 8
     ) {
@@ -442,68 +422,91 @@ export class NVImage {
       } // if 64-bits
     } // swap byte order
     switch (this.hdr.datatypeCode) {
-      case this.DT_UNSIGNED_CHAR:
+      case NiiDataType.DT_UINT8:
         this.img = new Uint8Array(imgRaw)
         break
-      case this.DT_SIGNED_SHORT:
+      case NiiDataType.DT_INT16:
         this.img = new Int16Array(imgRaw)
         break
-      case this.DT_FLOAT:
+      case NiiDataType.DT_FLOAT32:
         this.img = new Float32Array(imgRaw)
         break
-      case this.DT_DOUBLE:
+      case NiiDataType.DT_FLOAT64:
         this.img = new Float64Array(imgRaw)
         break
-      case this.DT_RGB:
+      case NiiDataType.DT_RGB24:
         this.img = new Uint8Array(imgRaw)
         break
-      case this.DT_UINT16:
+      case NiiDataType.DT_UINT16:
         this.img = new Uint16Array(imgRaw)
         break
-      case this.DT_RGBA32:
+      case NiiDataType.DT_RGBA32:
         this.img = new Uint8Array(imgRaw)
         break
-      case this.DT_INT8: {
+      case NiiDataType.DT_INT8: {
         const i8 = new Int8Array(imgRaw)
         const vx8 = i8.length
         this.img = new Int16Array(vx8)
-        for (let i = 0; i < vx8 - 1; i++) {
+        for (let i = 0; i < vx8; i++) {
           this.img[i] = i8[i]
         }
-        this.hdr.datatypeCode = this.DT_SIGNED_SHORT
+        this.hdr.datatypeCode = NiiDataType.DT_INT16
+        this.hdr.numBitsPerVoxel = 16
         break
       }
-      case this.DT_UINT32: {
+      case NiiDataType.DT_BINARY: {
+        const nvox = this.hdr.dims[1] * this.hdr.dims[2] * Math.max(1, this.hdr.dims[3]) * Math.max(1, this.hdr.dims[4])
+        const img1 = new Uint8Array(imgRaw)
+        this.img = new Uint8Array(nvox)
+        const lut = new Uint8Array(8)
+        for (let i = 0; i < 8; i++) {
+          lut[i] = Math.pow(2, i)
+        }
+        let i1 = -1
+        for (let i = 0; i < nvox; i++) {
+          const bit = i % 8
+          if (bit === 0) {
+            i1++
+          }
+          if ((img1[i1] & lut[bit]) !== 0) {
+            this.img[i] = 1
+          }
+        }
+        this.hdr.datatypeCode = NiiDataType.DT_UINT8
+        this.hdr.numBitsPerVoxel = 8
+        break
+      }
+      case NiiDataType.DT_UINT32: {
         const u32 = new Uint32Array(imgRaw)
         const vx32 = u32.length
         this.img = new Float64Array(vx32)
         for (let i = 0; i < vx32 - 1; i++) {
           this.img[i] = u32[i]
         }
-        this.hdr.datatypeCode = this.DT_DOUBLE
+        this.hdr.datatypeCode = NiiDataType.DT_FLOAT64
         break
       }
-      case this.DT_SIGNED_INT: {
+      case NiiDataType.DT_INT32: {
         const i32 = new Int32Array(imgRaw)
         const vxi32 = i32.length
         this.img = new Float64Array(vxi32)
         for (let i = 0; i < vxi32 - 1; i++) {
           this.img[i] = i32[i]
         }
-        this.hdr.datatypeCode = this.DT_DOUBLE
+        this.hdr.datatypeCode = NiiDataType.DT_FLOAT64
         break
       }
-      case this.DT_INT64: {
+      case NiiDataType.DT_INT64: {
         const i64 = new BigInt64Array(imgRaw)
         const vx = i64.length
         this.img = new Float64Array(vx)
         for (let i = 0; i < vx - 1; i++) {
           this.img[i] = Number(i64[i])
         }
-        this.hdr.datatypeCode = this.DT_DOUBLE
+        this.hdr.datatypeCode = NiiDataType.DT_FLOAT64
         break
       }
-      case this.DT_COMPLEX: {
+      case NiiDataType.DT_COMPLEX64: {
         // saved as real/imaginary pairs: show real following fsleyes/MRIcroGL convention
         const f32 = new Float32Array(imgRaw)
         const nvx = Math.floor(f32.length / 2)
@@ -515,7 +518,7 @@ export class NVImage {
           this.imaginary[i] = f32[r + 1]
           r += 2
         }
-        this.hdr.datatypeCode = this.DT_FLOAT
+        this.hdr.datatypeCode = NiiDataType.DT_FLOAT32
         break
       }
       default:
@@ -605,7 +608,6 @@ export class NVImage {
     const sform = mat4.clone(this.matRAS)
     mat4.transpose(sform, sform)
     const shim = vec4.fromValues(-0.5, -0.5, -0.5, 0) // bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
-    // TODO was sform, sform, shim
     mat4.translate(sform, sform, vec3.fromValues(shim[0], shim[1], shim[2]))
     // mat.mat4.scale(sform, sform, dim);
     sform[0] *= dim[0]
@@ -809,21 +811,23 @@ export class NVImage {
     hdr.numBitsPerVoxel = bpv
     this.hdr.littleEndian = this.series.images[0].littleEndian
     if (bpv === 8 && dt === 2) {
-      hdr.datatypeCode = this.DT_INT8
+      hdr.datatypeCode = NiiDataType.DT_INT8
     } else if (bpv === 8 && dt === 3) {
-      hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+      hdr.datatypeCode = NiiDataType.DT_UINT8
     } else if (bpv === 16 && dt === 2) {
-      hdr.datatypeCode = this.DT_SIGNED_SHORT
+      hdr.datatypeCode = NiiDataType.DT_INT16
     } else if (bpv === 16 && dt === 3) {
-      hdr.datatypeCode = this.DT_UINT16
+      hdr.datatypeCode = NiiDataType.DT_UINT16
     } else if (bpv === 32 && dt === 2) {
-      hdr.datatypeCode = this.DT_SIGNED_INT
+      hdr.datatypeCode = NiiDataType.DT_INT32
     } else if (bpv === 32 && dt === 3) {
-      hdr.datatypeCode = this.DT_UINT32
+      hdr.datatypeCode = NiiDataType.DT_UINT32
     } else if (bpv === 32 && dt === 4) {
-      hdr.datatypeCode = this.DT_FLOAT
+      hdr.datatypeCode = NiiDataType.DT_FLOAT32
     } else if (bpv === 64 && dt === 4) {
-      hdr.datatypeCode = this.DT_DOUBLE
+      hdr.datatypeCode = NiiDataType.DT_FLOAT64
+    } else if (bpv === 1) {
+      hdr.datatypeCode = NiiDataType.DT_BINARY
     } else {
       log.warn('Unsupported DICOM format: ' + dt + ' ' + bpv)
     }
@@ -966,7 +970,7 @@ export class NVImage {
       [0, 0, 0, 1]
     ]
     hdr.numBitsPerVoxel = 32
-    hdr.datatypeCode = this.DT_FLOAT
+    hdr.datatypeCode = NiiDataType.DT_FLOAT32
     return rawImg
   } // readECAT()
 
@@ -984,7 +988,7 @@ export class NVImage {
       log.warn('This does not look like a valid BrainVoyager V16 file')
     }
     hdr.numBitsPerVoxel = 16
-    hdr.datatypeCode = this.DT_UINT16
+    hdr.datatypeCode = NiiDataType.DT_UINT16
     log.warn('Warning: V16 files have no spatial transforms')
     hdr.affine = [
       [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
@@ -1085,7 +1089,7 @@ export class NVImage {
     // }
     log.debug(hdr)
     hdr.numBitsPerVoxel = 8
-    hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+    hdr.datatypeCode = NiiDataType.DT_UINT8
     return buffer.slice(8, 8 + nBytes)
   } // readVMR()
 
@@ -1132,16 +1136,16 @@ export class NVImage {
     }
     if (mtype === 0) {
       hdr.numBitsPerVoxel = 8
-      hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+      hdr.datatypeCode = NiiDataType.DT_UINT8
     } else if (mtype === 4) {
       hdr.numBitsPerVoxel = 16
-      hdr.datatypeCode = this.DT_SIGNED_SHORT
+      hdr.datatypeCode = NiiDataType.DT_INT16
     } else if (mtype === 1) {
       hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = this.DT_SIGNED_INT
+      hdr.datatypeCode = NiiDataType.DT_INT32
     } else if (mtype === 3) {
       hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = this.DT_FLOAT
+      hdr.datatypeCode = NiiDataType.DT_FLOAT32
     }
     hdr.dims[1] = width
     hdr.dims[2] = height
@@ -1271,13 +1275,13 @@ export class NVImage {
             const datatype = parseInt(items[0] as string)
             if (datatype === 0) {
               hdr.numBitsPerVoxel = 8
-              hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+              hdr.datatypeCode = NiiDataType.DT_UINT8
             } else if (datatype === 1) {
               hdr.numBitsPerVoxel = 16
-              hdr.datatypeCode = this.DT_SIGNED_SHORT
+              hdr.datatypeCode = NiiDataType.DT_INT16
             } else if (datatype === 3) {
               hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = this.DT_FLOAT
+              hdr.datatypeCode = NiiDataType.DT_FLOAT32
             } else {
               log.warn('Unknown BRICK_TYPES ', datatype)
             }
@@ -1414,35 +1418,35 @@ export class NVImage {
         switch (items[0]) {
           case 'MET_UCHAR':
             hdr.numBitsPerVoxel = 8
-            hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+            hdr.datatypeCode = NiiDataType.DT_UINT8
             break
           case 'MET_CHAR':
             hdr.numBitsPerVoxel = 8
-            hdr.datatypeCode = this.DT_INT8
+            hdr.datatypeCode = NiiDataType.DT_INT8
             break
           case 'MET_SHORT':
             hdr.numBitsPerVoxel = 16
-            hdr.datatypeCode = this.DT_SIGNED_SHORT
+            hdr.datatypeCode = NiiDataType.DT_INT16
             break
           case 'MET_USHORT':
             hdr.numBitsPerVoxel = 16
-            hdr.datatypeCode = this.DT_UINT16
+            hdr.datatypeCode = NiiDataType.DT_UINT16
             break
           case 'MET_INT':
             hdr.numBitsPerVoxel = 32
-            hdr.datatypeCode = this.DT_SIGNED_INT
+            hdr.datatypeCode = NiiDataType.DT_INT32
             break
           case 'MET_UINT':
             hdr.numBitsPerVoxel = 32
-            hdr.datatypeCode = this.DT_UINT32
+            hdr.datatypeCode = NiiDataType.DT_UINT32
             break
           case 'MET_FLOAT':
             hdr.numBitsPerVoxel = 32
-            hdr.datatypeCode = this.DT_FLOAT
+            hdr.datatypeCode = NiiDataType.DT_FLOAT32
             break
           case 'MET_DOUBLE':
             hdr.numBitsPerVoxel = 64
-            hdr.datatypeCode = this.DT_DOUBLE
+            hdr.datatypeCode = NiiDataType.DT_FLOAT64
             break
           default:
             throw new Error('Unsupported NRRD data type: ' + items[0])
@@ -1560,21 +1564,21 @@ export class NVImage {
           {
             const dt = items[0]
             if (dt.startsWith('Int8')) {
-              hdr.datatypeCode = this.DT_INT8
+              hdr.datatypeCode = NiiDataType.DT_INT8
             } else if (dt.startsWith('UInt8')) {
-              hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+              hdr.datatypeCode = NiiDataType.DT_UINT8
             } else if (dt.startsWith('Int16')) {
-              hdr.datatypeCode = this.DT_SIGNED_SHORT
+              hdr.datatypeCode = NiiDataType.DT_INT16
             } else if (dt.startsWith('UInt16')) {
-              hdr.datatypeCode = this.DT_UINT16
+              hdr.datatypeCode = NiiDataType.DT_UINT16
             } else if (dt.startsWith('Int32')) {
-              hdr.datatypeCode = this.DT_SIGNED_INT
+              hdr.datatypeCode = NiiDataType.DT_INT32
             } else if (dt.startsWith('UInt32')) {
-              hdr.datatypeCode = this.DT_UINT32
+              hdr.datatypeCode = NiiDataType.DT_UINT32
             } else if (dt.startsWith('Float32')) {
-              hdr.datatypeCode = this.DT_FLOAT
+              hdr.datatypeCode = NiiDataType.DT_FLOAT32
             } else if (dt.startsWith('Float64')) {
-              hdr.datatypeCode = this.DT_DOUBLE
+              hdr.datatypeCode = NiiDataType.DT_FLOAT64
             } else {
               log.warn('Unsupported datatype ' + dt)
             }
@@ -1818,13 +1822,13 @@ export class NVImage {
             case 'uint8':
             case 'uint8_t':
               hdr.numBitsPerVoxel = 8
-              hdr.datatypeCode = this.DT_UNSIGNED_CHAR
+              hdr.datatypeCode = NiiDataType.DT_UINT8
               break
             case 'signed char':
             case 'int8':
             case 'int8_t':
               hdr.numBitsPerVoxel = 8
-              hdr.datatypeCode = this.DT_INT8
+              hdr.datatypeCode = NiiDataType.DT_INT8
               break
             case 'short':
             case 'short int':
@@ -1833,7 +1837,7 @@ export class NVImage {
             case 'int16':
             case 'int16_t':
               hdr.numBitsPerVoxel = 16
-              hdr.datatypeCode = this.DT_SIGNED_SHORT
+              hdr.datatypeCode = NiiDataType.DT_INT16
               break
             case 'ushort':
             case 'unsigned short':
@@ -1841,29 +1845,29 @@ export class NVImage {
             case 'uint16':
             case 'uint16_t':
               hdr.numBitsPerVoxel = 16
-              hdr.datatypeCode = this.DT_UINT16
+              hdr.datatypeCode = NiiDataType.DT_UINT16
               break
             case 'int':
             case 'signed int':
             case 'int32':
             case 'int32_t':
               hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = this.DT_SIGNED_INT
+              hdr.datatypeCode = NiiDataType.DT_INT32
               break
             case 'uint':
             case 'unsigned int':
             case 'uint32':
             case 'uint32_t':
               hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = this.DT_UINT32
+              hdr.datatypeCode = NiiDataType.DT_UINT32
               break
             case 'float':
               hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = this.DT_FLOAT
+              hdr.datatypeCode = NiiDataType.DT_FLOAT32
               break
             case 'double':
               hdr.numBitsPerVoxel = 64
-              hdr.datatypeCode = this.DT_DOUBLE
+              hdr.datatypeCode = NiiDataType.DT_FLOAT64
               break
             default:
               throw new Error('Unsupported NRRD data type: ' + value)
@@ -2096,7 +2100,7 @@ export class NVImage {
     }
     // 3rd column = z: constrained as x+y+z = 1+2+3 = 6
     ixyz[2] = 6 - ixyz[1] - ixyz[0]
-    const perm = [1, 2, 3]
+    let perm = [1, 2, 3]
     perm[ixyz[0] - 1] = 1
     perm[ixyz[1] - 1] = 2
     perm[ixyz[2] - 1] = 3
@@ -2152,6 +2156,8 @@ export class NVImage {
       this.toRAS = mat4.create() // aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
       this.matRAS = mat4.clone(rotM)
       this.calculateOblique()
+      this.img2RASstep = [1, this.dimsRAS[1], this.dimsRAS[1] * this.dimsRAS[2]]
+      this.img2RASstart = [0, 0, 0]
       return // no rotation required!
     }
     mat4.identity(rotM)
@@ -2192,12 +2198,32 @@ export class NVImage {
     this.toRASvox = mat4.clone(rotM)
     log.debug(this.hdr.dims)
     log.debug(this.dimsRAS)
+
+    // compute img2RASstep[] and img2RASstart[] for rapid native<->RAS conversion
+    // TODO: replace all other outStep/outStart calculations with img2RASstep/img2RASstart
+    const hdr = this.hdr
+    perm = this.permRAS
+    const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])]
+    const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]]
+    const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]] // increment i,j,k
+    const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]]
+    const outStart = [0, 0, 0]
+    for (let p = 0; p < 3; p++) {
+      // flip dimensions
+      if (perm[p] < 0) {
+        outStart[p] = outStep[p] * (outdim[p] - 1)
+        outStep[p] = -outStep[p]
+      }
+    }
+    this.img2RASstep = outStep
+    this.img2RASstart = outStart
+
     this.calculateOblique()
   }
 
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
-  img2RAS(): Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array {
+  img2RAS(): TypedVoxelArray {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
     }
@@ -2341,7 +2367,43 @@ export class NVImage {
     if (!this.img) {
       throw new Error('img undefined')
     }
+    // determine full range: min..max
+    let mn = Number.POSITIVE_INFINITY // not this.img[0] in case ignoreZeroVoxels
+    let mx = Number.NEGATIVE_INFINITY // this.img[0] in case ignoreZeroVoxels
+    let nZero = 0
+    let nNan = 0
+    const nVox = this.img.length
+    // we can accelerate loops for integer data (which can not store NaN)
+    // n.b. do to stack size, we can not use Math.max.apply()
+    const isFastCalc =
+      this.img.constructor !== Float64Array && this.img.constructor !== Float32Array && this.ignoreZeroVoxels
 
+    if (isFastCalc) {
+      for (let i = 0; i < nVox; i++) {
+        mn = Math.min(this.img[i], mn)
+        mx = Math.max(this.img[i], mx)
+        if (this.img[i] === 0) {
+          nZero++
+        }
+      }
+    } else {
+      for (let i = 0; i < nVox; i++) {
+        if (isNaN(this.img[i])) {
+          nNan++
+          continue
+        }
+        if (this.img[i] === 0) {
+          nZero++
+          if (this.ignoreZeroVoxels) {
+            continue
+          }
+        }
+        mn = Math.min(this.img[i], mn)
+        mx = Math.max(this.img[i], mx)
+      }
+    }
+    const mnScale = this.intensityRaw2Scaled(mn)
+    const mxScale = this.intensityRaw2Scaled(mx)
     const cmap = cmapper.colormapFromKey(this._colormap)
     let cmMin = 0
     let cmMax = 0
@@ -2362,8 +2424,8 @@ export class NVImage {
       this.cal_max = this.hdr.cal_max
       this.robust_min = this.cal_min
       this.robust_max = this.cal_max
-      this.global_min = this.hdr.cal_min
-      this.global_max = this.hdr.cal_max
+      this.global_min = mnScale
+      this.global_max = mxScale
       return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
     }
     // if color map specifies non zero values for min and max then use them
@@ -2374,28 +2436,13 @@ export class NVImage {
       this.robust_max = this.cal_max
       return [cmMin, cmMax, cmMin, cmMax]
     }
-    // determine full range: min..max
-    let mn = this.img[0]
-    let mx = this.img[0]
-    let nZero = 0
-    let nNan = 0
-    const nVox = this.img.length
-    for (let i = 0; i < nVox; i++) {
-      if (isNaN(this.img[i])) {
-        nNan++
-        continue
-      }
-      if (this.img[i] === 0) {
-        nZero++
-        if (this.ignoreZeroVoxels) {
-          continue
-        }
-      }
-      mn = Math.min(this.img[i], mn)
-      mx = Math.max(this.img[i], mx)
+    const percentZero = (100 * nZero) / nVox
+    let isOverrideIgnoreZeroVoxels = false
+    if (percentZero > 60 && !this.ignoreZeroVoxels) {
+      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
+      isOverrideIgnoreZeroVoxels = true
+      this.ignoreZeroVoxels = true
     }
-    const mnScale = this.intensityRaw2Scaled(mn)
-    const mxScale = this.intensityRaw2Scaled(mx)
     if (!this.ignoreZeroVoxels) {
       nZero = 0
     }
@@ -2417,8 +2464,12 @@ export class NVImage {
     for (let i = 0; i < nBins; i++) {
       hist[i] = 0
     }
-    if (this.ignoreZeroVoxels) {
-      for (let i = 0; i <= nVox; i++) {
+    if (isFastCalc) {
+      for (let i = 0; i < nVox; i++) {
+        hist[Math.round((this.img[i] - mn) * scl)]++
+      }
+    } else if (this.ignoreZeroVoxels) {
+      for (let i = 0; i < nVox; i++) {
         if (this.img[i] === 0) {
           continue
         }
@@ -2428,7 +2479,7 @@ export class NVImage {
         hist[Math.round((this.img[i] - mn) * scl)]++
       }
     } else {
-      for (let i = 0; i <= nVox; i++) {
+      for (let i = 0; i < nVox; i++) {
         if (isNaN(this.img[i])) {
           continue
         }
@@ -2474,6 +2525,9 @@ export class NVImage {
     if (this.hdr.cal_min < this.hdr.cal_max && this.hdr.cal_min >= mnScale && this.hdr.cal_max <= mxScale) {
       pct2 = this.hdr.cal_min
       pct98 = this.hdr.cal_max
+    }
+    if (isOverrideIgnoreZeroVoxels) {
+      pct2 = Math.min(pct2, 0)
     }
     this.cal_min = pct2
     this.cal_max = pct98
@@ -2651,6 +2705,7 @@ export class NVImage {
     if (url === '') {
       throw Error('url must not be empty')
     }
+
     let nvimage = null
     let dataBuffer = null
     if (url instanceof Uint8Array) {
@@ -2739,7 +2794,6 @@ export class NVImage {
       }
       dataBuffer = await response.arrayBuffer()
     }
-
     const re = /(?:\.([^.]+))?$/
     let ext = ''
     if (name === '') {
@@ -2956,6 +3010,188 @@ export class NVImage {
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
+  static createNiftiArray(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2, // DT_UINT8
+    img = new Uint8Array()
+  ): Uint8Array {
+    const hdr = this.createNiftiHeader(dims, pixDims, affine, datatypeCode)
+    const hdrBytes = hdrToArrayBuffer(hdr, false)
+    if (img.length < 1) {
+      return hdrBytes
+    }
+    const opad = new Uint8Array(4)
+    const img8 = new Uint8Array(img.buffer)
+    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
+    odata.set(hdrBytes)
+    odata.set(opad, hdrBytes.length)
+    odata.set(img8, hdrBytes.length + opad.length)
+    return odata
+  } // createNiftiFile()
+
+  static createNiftiHeader(
+    dims = [256, 256, 256],
+    pixDims = [1, 1, 1],
+    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = 2 // NiiDataType.DT_UINT8
+  ): nifti.NIFTI1 {
+    const hdr = new nifti.NIFTI1()
+    hdr.littleEndian = true
+    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
+    hdr.dims[0] = Math.max(3, dims.length)
+    for (let i = 0; i < dims.length; i++) {
+      hdr.dims[i + 1] = dims[i]
+    }
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+    for (let i = 0; i < dims.length; i++) {
+      hdr.pixDims[i + 1] = pixDims[i]
+    }
+    if (affine.length === 16) {
+      let k = 0
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          hdr.affine[i][j] = affine[k]
+          k++
+        }
+      }
+    }
+    let bpv = 8
+    if (datatypeCode === 256 || datatypeCode === 2) {
+      bpv = 8
+    } else if (datatypeCode === 512 || datatypeCode === 4) {
+      bpv = 16
+    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8) {
+      bpv = 32
+    } else if (datatypeCode === 64) {
+      bpv = 64
+    } else {
+      log.warn('Unsupported NIfTI datatypeCode: ' + datatypeCode)
+    }
+    hdr.datatypeCode = datatypeCode
+    hdr.numBitsPerVoxel = bpv
+    hdr.scl_inter = 0
+    hdr.scl_slope = 0
+    hdr.sform_code = 2
+    hdr.magic = 'n+1'
+    hdr.vox_offset = 352
+    return hdr
+  } // loadFromHeader
+
+  /**
+   * read a 3D slab of voxels from a volume
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32'
+   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
+   * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+   */
+
+  getVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], dataType = 'same'): [TypedVoxelArray, number[]] {
+    let img: TypedVoxelArray = new Uint8Array()
+    if (Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
+      return [img, [0, 0, 0]]
+    }
+    const dims = this.dimsRAS!.slice(1, 4)
+    for (let i = 0; i < 3; i++) {
+      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
+      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
+      if (voxEnd[i] < voxStart[i]) {
+        const tmp = voxEnd[i]
+        voxEnd[i] = voxStart[i]
+        voxStart[i] = tmp
+      }
+    }
+    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
+    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
+    let dt = this.hdr!.datatypeCode
+    if (dataType === 'uint8') {
+      dt = NiiDataType.DT_UINT8
+    } else if (dataType === 'float32') {
+      dt = NiiDataType.DT_FLOAT32
+    }
+    if (dt === NiiDataType.DT_UINT8) {
+      img = new Uint8Array(slabNVox)
+    } else if (dt === NiiDataType.DT_INT16) {
+      img = new Int16Array(slabNVox)
+    } else if (dt === NiiDataType.DT_UINT16) {
+      img = new Uint16Array(slabNVox)
+    } else if (dt === NiiDataType.DT_FLOAT32) {
+      img = new Float32Array(slabNVox)
+    } else if (dt === NiiDataType.DT_FLOAT64) {
+      img = new Float64Array(slabNVox)
+    } else {
+      log.error('getVolumeData unsupported datatype')
+      return [img, [0, 0, 0]]
+    }
+    const outStep = this.img2RASstep!
+    const outStart = this.img2RASstart!
+    let i = 0
+    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
+      const zi = outStart[2] + z * outStep[2]
+      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
+        const yizi = zi + outStart[1] + y * outStep[1]
+        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
+          const xi = outStart[0] + x * outStep[0]
+          img[i++] = this.img![xi + yizi]
+        }
+      }
+    }
+    return [img, slabDims]
+  } // getVolumeData()
+
+  /**
+   * write a 3D slab of voxels from a volume
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param img - array of voxel values to insert (RAS order)
+   * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+   */
+
+  setVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], img: TypedVoxelArray = new Uint8Array()): void {
+    if (img.length < 1 || Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
+      return
+    }
+    const dims = this.dimsRAS!.slice(1, 4)
+    for (let i = 0; i < 3; i++) {
+      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
+      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
+      if (voxEnd[i] < voxStart[i]) {
+        const tmp = voxEnd[i]
+        voxEnd[i] = voxStart[i]
+        voxStart[i] = tmp
+      }
+    }
+    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
+    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
+    if (img.length < slabNVox) {
+      log.error('setVolumeData image does not have enough voxels')
+      return
+    }
+    const outStep = this.img2RASstep!
+    const outStart = this.img2RASstart!
+    let i = 0
+    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
+      const zi = outStart[2] + z * outStep[2]
+      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
+        const yizi = zi + outStart[1] + y * outStep[1]
+        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
+          const xi = outStart[0] + x * outStep[0]
+          // imgRAS[j] = this.img[xi + yi + zi]
+          this.img![xi + yizi] = img[i++]
+        }
+      }
+    }
+  } // setVolumeData()
+
+  /**
+   * factory function to load and return a new NVImage instance from a base64 encoded string
+   *
+   * @returns NVImage instance
+   * @example
+   * myImage = NVImage.loadFromBase64('SomeBase64String')
+   */
   static loadFromBase64({
     base64,
     name = '',
@@ -3086,8 +3322,13 @@ export class NVImage {
     zeroClone.zeroImage()
     if (dataType === 'uint8') {
       zeroClone.img = Uint8Array.from(zeroClone.img!)
-      zeroClone.hdr!.datatypeCode = zeroClone.DT_UNSIGNED_CHAR
+      zeroClone.hdr!.datatypeCode = NiiDataType.DT_UINT8
       zeroClone.hdr!.numBitsPerVoxel = 8
+    }
+    if (dataType === 'float32') {
+      zeroClone.img = Float32Array.from(zeroClone.img!)
+      zeroClone.hdr!.datatypeCode = NiiDataType.DT_FLOAT32
+      zeroClone.hdr!.numBitsPerVoxel = 32
     }
     return zeroClone
   }
@@ -3115,12 +3356,12 @@ export class NVImage {
     } // image is already in RAS
     let vx = x + y * nx + z * nx * ny
 
-    if (this.hdr.datatypeCode === this.DT_RGBA32) {
+    if (this.hdr.datatypeCode === NiiDataType.DT_RGBA32) {
       vx *= 4
       // convert rgb to luminance
       return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07)
     }
-    if (this.hdr.datatypeCode === this.DT_RGB) {
+    if (this.hdr.datatypeCode === NiiDataType.DT_RGB24) {
       vx *= 3
       // convert rgb to luminance
       return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07)

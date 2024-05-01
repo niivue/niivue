@@ -4,6 +4,7 @@ import { mat4, vec3, vec4 } from 'gl-matrix'
 
 /**
  * Namespace for utility functions
+ * @ignore
  */
 export class NVUtilities {
   static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string {

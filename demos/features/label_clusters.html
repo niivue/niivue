@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="128"
+        class="slider"
+        id="opacitySlider"
+      />
+      <label for="binaryCheck">&nbsp; &nbsp; Binarize</label>
+      <input type="checkbox" id="binaryCheck" value="false" />
+      <label for="onlyLargestCheck">&nbsp; &nbsp; Only Largest</label>
+      <input type="checkbox" id="onlyLargestCheck" value="false" />
+      <label for="neighborsDrop">&nbsp; &nbsp; Neighbors</label>
+      <select id="neighborsDrop">
+        <option value="6">6 (Faces)</option>
+        <option value="18">18 (Faces, Edges)</option>
+        <option value="26" selected>26 (Faces, Edges, Corners)</option>
+      </select>
+      &nbsp; &nbsp; 
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+    <footer id="intensity">&nbsp;</footer>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      opacitySlider.oninput = function () {
+        nv1.setOpacity(1, this.value /255)
+      }
+      async function clusterize() {
+        if (nv1.volumes.length > 1)
+          nv1.removeVolumeByIndex(1)
+        let binarize = binaryCheck.checked
+        let conn = parseInt(neighborsDrop.value)
+        let onlyLargest = onlyLargestCheck.checked
+        let nii2 = await nv1.createConnectedLabelImage(nv1.volumes[0].id, conn, binarize, onlyLargest)
+        nv1.addVolume(nii2)
+        nv1.setOpacity(1, opacitySlider.value /255)
+        document.getElementById("intensity").innerHTML = 'binarize ' + binarize + ' with ' + conn + ' neighbors yields ' + nii2.cal_max + ' clusters'
+      }
+      binaryCheck.onchange = function () {
+        clusterize()
+      }
+      onlyLargestCheck.onchange = function () {
+        clusterize()
+      }
+      onlyLargestCheck.onchange = function () {
+        clusterize()
+      }
+      neighborsDrop.onchange = function () {
+        clusterize()
+      }
+      aboutBtn.onclick = function () {
+        window.alert("Press 'Process' after changing settings to generate new clusters. This method identifies contiguous intensity clusters in the input image. These functions can aid machine-learning atlas segmentations")
+      }
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML = data.string
+      }
+      var volumeList1 = [{ url: "../images/labels256.nii.gz"}]
+      let defaults = {
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.setInterpolation(true)
+      nv1.attachToCanvas(gl1)
+      await nv1.loadVolumes(volumeList1)
+      clusterize()
+    </script>
+  </body>
+</html>

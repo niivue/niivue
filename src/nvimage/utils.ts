@@ -10,6 +10,41 @@ export const isPlatformLittleEndian = (): boolean => {
 }
 
 /**
+ * Enum for NIfTI datatype codes
+ *   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+ */
+export enum NiiDataType {
+  DT_NONE = 0,
+  DT_BINARY = 1,
+  DT_UINT8 = 2,
+  DT_INT16 = 4,
+  DT_INT32 = 8,
+  DT_FLOAT32 = 16,
+  DT_COMPLEX64 = 32,
+  DT_FLOAT64 = 64,
+  DT_RGB24 = 128,
+  DT_INT8 = 256,
+  DT_UINT16 = 512,
+  DT_UINT32 = 768,
+  DT_INT64 = 1024,
+  DT_UINT64 = 1280,
+  DT_FLOAT128 = 1536,
+  DT_COMPLEX128 = 1792,
+  DT_COMPLEX256 = 2048,
+  DT_RGBA32 = 2304
+}
+
+/**
+ * Enum for NIfTI intent codes
+ *   // https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
+ */
+export enum NiiIntentCode {
+  NIFTI_INTENT_LABEL = 1002,
+  NIFTI_INTENT_VECTOR = 1007,
+  NIFTI_INTENT_RGB_VECTOR = 2003
+}
+
+/**
  * Enum for supported image types (e.g. NII, NRRD, DICOM)
  */
 export enum ImageType {
@@ -354,7 +389,7 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false): Uint8Arr
   // intent_code, datatype, bitpix, slice_start
   view.setInt16(68, hdr.intent_code, hdr.littleEndian)
   if (isDrawing8) {
-    view.setInt16(70, 2, hdr.littleEndian) // 2 = DT_UNSIGNED_CHAR
+    view.setInt16(70, 2, hdr.littleEndian) // 2 = DT_UINT8
     view.setInt16(72, 8, hdr.littleEndian)
   } else {
     view.setInt16(70, hdr.datatypeCode, hdr.littleEndian)
