@@ -73,7 +73,7 @@ import {
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
   ExportDocumentData,
-  INITIAL_SCENE_DATA,
+  INITIAL_SCENE_DATA
 } from '../nvdocument.js'
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
