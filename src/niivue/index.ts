@@ -73,7 +73,7 @@ import {
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
   ExportDocumentData,
-  NVConfigOptions
+  INITIAL_SCENE_DATA,
 } from '../nvdocument.js'
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
@@ -2014,9 +2014,8 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   setDefaults(options: Partial<NVConfigOptions> = {}, resetBriCon = false): void {
-    this.opts = { ...DEFAULT_OPTIONS }
-    this.scene = { ...this.document.scene }
     this.document.opts = { ...DEFAULT_OPTIONS }
+    this.scene.sceneData = { ...INITIAL_SCENE_DATA }
     // populate Niivue with user supplied options
     for (const name in options) {
       if (typeof options[name as keyof NVConfigOptions] === 'function') {

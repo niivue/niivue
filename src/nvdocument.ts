@@ -195,6 +195,16 @@ type SceneData = {
   pan2Dxyzmm: vec4
 }
 
+export const INITIAL_SCENE_DATA = {
+  azimuth: 110,
+  elevation: 10,
+  crosshairPos: vec3.fromValues(0.5, 0.5, 0.5),
+  clipPlane: [0, 0, 0, 0],
+  clipPlaneDepthAziElev: [2, 0, 0],
+  volScaleMultiplier: 1.0,
+  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1)
+}
+
 export type Scene = {
   onAzimuthElevationChange: (azimuth: number, elevation: number) => void
   onZoom3DChange: (scale: number) => void
@@ -277,15 +287,7 @@ export class NVDocument {
     this.scene = {
       onAzimuthElevationChange: (): void => {},
       onZoom3DChange: (): void => {},
-      sceneData: {
-        azimuth: 110,
-        elevation: 10,
-        crosshairPos: [0.5, 0.5, 0.5],
-        clipPlane: [0, 0, 0, 0],
-        clipPlaneDepthAziElev: [2, 0, 0],
-        volScaleMultiplier: 1.0,
-        pan2Dxyzmm: [0, 0, 0, 1]
-      },
+      sceneData: INITIAL_SCENE_DATA,
 
       get renderAzimuth(): number {
         return this.sceneData.azimuth
