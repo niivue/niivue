@@ -58,7 +58,7 @@ export type NVConfigOptions = {
   show3Dcrosshair: boolean
   backColor: number[]
   crosshairColor: number[]
-  fontColor: number[]
+  fontColor: Float32List
   selectionBoxColor: number[]
   clipPlaneColor: number[]
   rulerColor: number[]
@@ -121,6 +121,7 @@ export type NVConfigOptions = {
   legendTextColor: number[]
   multiplanarLayout: MULTIPLANAR_TYPE
   renderOverlayBlend: number
+  sliceMosaicString: string
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -180,7 +181,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   legendBackgroundColor: [0.3, 0.3, 0.3, 0.5],
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
-  renderOverlayBlend: 1.0
+  renderOverlayBlend: 1.0,
+  sliceMosaicString: ''
 }
 
 type SceneData = {
@@ -193,7 +195,17 @@ type SceneData = {
   pan2Dxyzmm: vec4
 }
 
-type Scene = {
+export const INITIAL_SCENE_DATA = {
+  azimuth: 110,
+  elevation: 10,
+  crosshairPos: vec3.fromValues(0.5, 0.5, 0.5),
+  clipPlane: [0, 0, 0, 0],
+  clipPlaneDepthAziElev: [2, 0, 0],
+  volScaleMultiplier: 1.0,
+  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1)
+}
+
+export type Scene = {
   onAzimuthElevationChange: (azimuth: number, elevation: number) => void
   onZoom3DChange: (scale: number) => void
   sceneData: SceneData
@@ -275,15 +287,7 @@ export class NVDocument {
     this.scene = {
       onAzimuthElevationChange: (): void => {},
       onZoom3DChange: (): void => {},
-      sceneData: {
-        azimuth: 110,
-        elevation: 10,
-        crosshairPos: [0.5, 0.5, 0.5],
-        clipPlane: [0, 0, 0, 0],
-        clipPlaneDepthAziElev: [2, 0, 0],
-        volScaleMultiplier: 1.0,
-        pan2Dxyzmm: [0, 0, 0, 1]
-      },
+      sceneData: INITIAL_SCENE_DATA,
 
       get renderAzimuth(): number {
         return this.sceneData.azimuth

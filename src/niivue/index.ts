@@ -66,12 +66,14 @@ import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
+  NVConfigOptions,
+  Scene,
   SLICE_TYPE,
   DRAG_MODE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
   ExportDocumentData,
-  NVConfigOptions
+  INITIAL_SCENE_DATA
 } from '../nvdocument.js'
 
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
@@ -508,7 +510,6 @@ export class Niivue {
   sliceTypeSagittal = SLICE_TYPE.SAGITTAL
   sliceTypeMultiplanar = SLICE_TYPE.MULTIPLANAR
   sliceTypeRender = SLICE_TYPE.RENDER
-  sliceMosaicString = ''
 
   // Event listeners
   /**
@@ -692,8 +693,21 @@ export class Niivue {
 
   document = new NVDocument()
 
-  opts = { ...DEFAULT_OPTIONS }
-  scene = { ...this.document.scene }
+  get scene(): Scene {
+    return this.document.scene
+  }
+
+  get opts(): NVConfigOptions {
+    return this.document.opts
+  }
+
+  get sliceMosaicString(): string {
+    return this.document.opts.sliceMosaicString || ''
+  }
+
+  set sliceMosaicString(newSliceMosaicString: string) {
+    this.document.opts.sliceMosaicString = newSliceMosaicString
+  }
 
   mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
   initialized = false
@@ -2000,8 +2014,8 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   setDefaults(options: Partial<NVConfigOptions> = {}, resetBriCon = false): void {
-    this.opts = { ...DEFAULT_OPTIONS }
-    this.scene = { ...this.document.scene }
+    this.document.opts = { ...DEFAULT_OPTIONS }
+    this.scene.sceneData = { ...INITIAL_SCENE_DATA }
     // populate Niivue with user supplied options
     for (const name in options) {
       if (typeof options[name as keyof NVConfigOptions] === 'function') {
@@ -3298,8 +3312,13 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/document.load.html | live demo usage}
    */
   loadDocument(document: NVDocument): this {
+    this.volumes = []
+    this.meshes = []
     this.document = document
     this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
+    const opts = { ...DEFAULT_OPTIONS, ...document.opts }
+    this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
+    this.document.opts = opts
     log.debug('load document', document)
     this.mediaUrlMap.clear()
     this.createEmptyDrawing()
@@ -3363,9 +3382,6 @@ export class Niivue {
       }
     }
 
-    // handle older documents that don't have options/scene fields defined
-    this.scene = { ...this.scene, ...document.scene.sceneData }
-    this.opts = { ...this.opts, ...document.opts }
     this.updateGLVolume()
     this.drawScene()
     this.onDocumentLoaded(document)
@@ -7513,7 +7529,7 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawText(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
+  drawText(xy: number[], str: string, scale = 1, color: Float32List | null = null): void {
     if (this.opts.textHeight <= 0) {
       return
     }
@@ -7528,7 +7544,7 @@ export class Niivue {
     if (color === null) {
       color = this.opts.fontColor
     }
-    this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color)
+    this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color as Float32List)
     let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
     screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
     this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
@@ -7588,7 +7604,7 @@ export class Niivue {
     if (clr === null) {
       clr = this.opts.crosshairColor
     }
-    if (clr[0] + clr[1] + clr[2] > 0.8) {
+    if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
       clr = [0, 0, 0, 0.5]
     } else {
       clr = [1, 1, 1, 0.5]
