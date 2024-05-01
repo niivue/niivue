@@ -576,7 +576,7 @@ type NVConfigOptions = {
     show3Dcrosshair: boolean;
     backColor: number[];
     crosshairColor: number[];
-    fontColor: number[];
+    fontColor: Float32List;
     selectionBoxColor: number[];
     clipPlaneColor: number[];
     rulerColor: number[];
@@ -625,9 +625,19 @@ type NVConfigOptions = {
     legendTextColor: number[];
     multiplanarLayout: MULTIPLANAR_TYPE;
     renderOverlayBlend: number;
+    sliceMosaicString: string;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
+    azimuth: number;
+    elevation: number;
+    crosshairPos: vec3;
+    clipPlane: number[];
+    clipPlaneDepthAziElev: number[];
+    volScaleMultiplier: number;
+    pan2Dxyzmm: vec4;
+};
+declare const INITIAL_SCENE_DATA: {
     azimuth: number;
     elevation: number;
     crosshairPos: vec3;
@@ -1659,7 +1669,6 @@ declare class Niivue {
     sliceTypeSagittal: SLICE_TYPE;
     sliceTypeMultiplanar: SLICE_TYPE;
     sliceTypeRender: SLICE_TYPE;
-    sliceMosaicString: string;
     /**
      * callback function to run when the right mouse button is released after dragging
      * @example
@@ -1819,87 +1828,10 @@ declare class Niivue {
      */
     onDocumentLoaded: (document: NVDocument) => void;
     document: NVDocument;
-    opts: {
-        textHeight: number;
-        colorbarHeight: number;
-        crosshairWidth: number;
-        crosshairGap: number;
-        rulerWidth: number;
-        show3Dcrosshair: boolean;
-        backColor: number[];
-        crosshairColor: number[];
-        fontColor: number[];
-        selectionBoxColor: number[];
-        clipPlaneColor: number[];
-        rulerColor: number[];
-        colorbarMargin: number;
-        trustCalMinMax: boolean;
-        clipPlaneHotKey: string;
-        viewModeHotKey: string;
-        doubleTouchTimeout: number;
-        longTouchTimeout: number;
-        keyDebounceTime: number;
-        isNearestInterpolation: boolean;
-        atlasOutline: number;
-        isRuler: boolean;
-        isColorbar: boolean;
-        isOrientCube: boolean;
-        multiplanarPadPixels: number;
-        multiplanarForceRender: boolean;
-        isRadiologicalConvention: boolean;
-        meshThicknessOn2D: string | number;
-        dragMode: DRAG_MODE;
-        yoke3Dto2DZoom: boolean;
-        isDepthPickMesh: boolean;
-        isCornerOrientationText: boolean;
-        sagittalNoseLeft: boolean;
-        isSliceMM: boolean;
-        isV1SliceShader: boolean;
-        isHighResolutionCapable: boolean;
-        logLevel: "debug" | "info" | "warn" | "error" | "fatal" | "silent";
-        loadingText: string;
-        isForceMouseClickToVoxelCenters: boolean;
-        dragAndDropEnabled: boolean;
-        drawingEnabled: boolean;
-        penValue: number;
-        floodFillNeighbors: number;
-        isFilledPen: boolean;
-        thumbnail: string;
-        maxDrawUndoBitmaps: number;
-        sliceType: SLICE_TYPE;
-        isAntiAlias: boolean | null;
-        isAdditiveBlend: boolean;
-        isResizeCanvas: boolean;
-        meshXRay: number;
-        limitFrames4D: number;
-        showLegend: boolean;
-        legendBackgroundColor: number[];
-        legendTextColor: number[];
-        multiplanarLayout: MULTIPLANAR_TYPE;
-        renderOverlayBlend: number;
-    };
-    scene: {
-        onAzimuthElevationChange: (azimuth: number, elevation: number) => void;
-        onZoom3DChange: (scale: number) => void;
-        sceneData: {
-            azimuth: number;
-            elevation: number;
-            crosshairPos: vec3;
-            clipPlane: number[];
-            clipPlaneDepthAziElev: number[];
-            volScaleMultiplier: number;
-            pan2Dxyzmm: vec4;
-        };
-        renderAzimuth: number;
-        renderElevation: number;
-        volScaleMultiplier: number;
-        crosshairPos: vec3;
-        clipPlane: number[];
-        clipPlaneDepthAziElev: number[];
-        pan2Dxyzmm: vec4;
-        _elevation?: number | undefined;
-        _azimuth?: number | undefined;
-    };
+    get scene(): Scene;
+    get opts(): NVConfigOptions;
+    get sliceMosaicString(): string;
+    set sliceMosaicString(newSliceMosaicString: string);
     mediaUrlMap: Map<NVImage | NVMesh, string>;
     initialized: boolean;
     currentDrawUndoBitmap: number;
@@ -2848,7 +2780,7 @@ declare class Niivue {
     dragForSlicer3D(startXYendXY: number[]): void;
     drawMeasurementTool(startXYendXY: number[]): void;
     drawRect(leftTopWidthHeight: number[], lineColor?: number[]): void;
-    drawCircle(leftTopWidthHeight: number[], circleColor?: number[], fillPercent?: number): void;
+    drawCircle(leftTopWidthHeight: number[], circleColor?: Float32List, fillPercent?: number): void;
     drawSelectionBox(leftTopWidthHeight: number[]): void;
     effectiveCanvasHeight(): number;
     effectiveCanvasWidth(): number;
@@ -2863,7 +2795,7 @@ declare class Niivue {
     textHeight(scale: number, str: string): number;
     drawChar(xy: number[], scale: number, char: number): number;
     drawLoadingText(text: string): void;
-    drawText(xy: number[], str: string, scale?: number, color?: number[] | null): void;
+    drawText(xy: number[], str: string, scale?: number, color?: Float32List | null): void;
     drawTextRight(xy: number[], str: string, scale?: number, color?: number[] | null): void;
     drawTextLeft(xy: number[], str: string, scale?: number, color?: number[] | null): void;
     drawTextRightBelow(xy: number[], str: string, scale?: number, color?: number[] | null): void;
@@ -2950,4 +2882,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, type NiftiHeader, Niivue, type Point, SLICE_TYPE, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, type NiftiHeader, Niivue, type Point, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
