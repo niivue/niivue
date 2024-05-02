@@ -8990,11 +8990,13 @@ export class Niivue {
 
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
 
-    this.updateInterpolation(0, true) // force background interpolation
     if (this.volumes.length > 0) {
+      this.updateInterpolation(0, true) // force background interpolation
+      this.updateInterpolation(1, true) // force overlay interpolation
       this.drawImage3D(mvpMatrix, azimuth!, elevation)
     }
-    this.updateInterpolation(0) // use default interpolation for 2D slices
+    this.updateInterpolation(0) // use default background interpolation for 2D slices
+    this.updateInterpolation(1) // use default overlay interpolation for 2D slices
     if (!isMosaic) {
       this.drawCrosshairs3D(true, 1.0, mvpMatrix)
     }
