@@ -1,11 +1,11 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.42.0",
+  "version": "0.43.0",
   "description": "minimal webgl2 nifti image viewer",
   "types": "./build/index.d.ts",
   "main": "./build/index.js",
   "type": "module",
-  "unpkg": "./build/index.min.js",
+  "unpkg": "./dist/index.min.js",
   "module": "./build/index.js",
   "exports": {
     ".": {
@@ -18,7 +18,7 @@
   "scripts": {
     "dev": "vite",
     "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
-    "build": "tsup --config tsup.config.ts && npm run build:min && npm run build:umd",
+    "build": "tsup --config tsup.config.ts && npm run build:forTests && npm run build:min && npm run build:umd",
     "build:forTests": "tsup --config tsup.config.tests.ts && npm run build:mindemos",
     "build:min": "node bundle.js",
     "build:mindemos": "node bundleForDemos.js",
