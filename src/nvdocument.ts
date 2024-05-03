@@ -285,8 +285,8 @@ export class NVDocument {
 
   constructor() {
     this.scene = {
-      onAzimuthElevationChange: (): void => { },
-      onZoom3DChange: (): void => { },
+      onAzimuthElevationChange: (): void => {},
+      onZoom3DChange: (): void => {},
       sceneData: INITIAL_SCENE_DATA,
 
       get renderAzimuth(): number {
@@ -301,7 +301,6 @@ export class NVDocument {
 
       get renderElevation(): number {
         return this.sceneData.elevation
-
       },
       set renderElevation(elevation: number) {
         this.sceneData.elevation = elevation
