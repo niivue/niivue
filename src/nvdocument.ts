@@ -285,12 +285,12 @@ export class NVDocument {
 
   constructor() {
     this.scene = {
-      onAzimuthElevationChange: (): void => {},
-      onZoom3DChange: (): void => {},
+      onAzimuthElevationChange: (): void => { },
+      onZoom3DChange: (): void => { },
       sceneData: INITIAL_SCENE_DATA,
 
       get renderAzimuth(): number {
-          return this.sceneData.azimuth
+        return this.sceneData.azimuth
       },
       set renderAzimuth(azimuth: number) {
         this.sceneData.azimuth = azimuth
@@ -300,8 +300,8 @@ export class NVDocument {
       },
 
       get renderElevation(): number {
-          return this.sceneData.elevation
-        
+        return this.sceneData.elevation
+
       },
       set renderElevation(elevation: number) {
         this.sceneData.elevation = elevation
@@ -726,7 +726,7 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
-    document.scene.sceneData = {...INITIAL_SCENE_DATA,  ...document.scene.sceneData }
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.scene.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
@@ -740,7 +740,7 @@ export class NVDocument {
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
       document.data.opts.meshThicknessOn2D = Infinity
     }
-    document.scene.sceneData = {...INITIAL_SCENE_DATA,  ...data.sceneData}
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
