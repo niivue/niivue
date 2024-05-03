@@ -733,6 +733,9 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
+    if (document.data.sceneData!) {
+      document.scene.sceneData = document.data.sceneData
+    }
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
