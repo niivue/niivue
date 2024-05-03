@@ -290,11 +290,7 @@ export class NVDocument {
       sceneData: INITIAL_SCENE_DATA,
 
       get renderAzimuth(): number {
-        if (this.sceneData.azimuth!) {
           return this.sceneData.azimuth
-        } else {
-          return INITIAL_SCENE_DATA.azimuth
-        }
       },
       set renderAzimuth(azimuth: number) {
         this.sceneData.azimuth = azimuth
@@ -304,11 +300,8 @@ export class NVDocument {
       },
 
       get renderElevation(): number {
-        if (this.sceneData.elevation!) {
           return this.sceneData.elevation
-        } else {
-          return INITIAL_SCENE_DATA.elevation
-        }
+        
       },
       set renderElevation(elevation: number) {
         this.sceneData.elevation = elevation
@@ -733,9 +726,7 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
-    if (document.data.sceneData!) {
-      document.scene.sceneData = document.data.sceneData
-    }
+    document.scene.sceneData = {...INITIAL_SCENE_DATA,  ...document.scene.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
@@ -749,7 +740,7 @@ export class NVDocument {
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
       document.data.opts.meshThicknessOn2D = Infinity
     }
-    document.scene.sceneData = data.sceneData!
+    document.scene.sceneData = {...INITIAL_SCENE_DATA,  ...data.sceneData}
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
