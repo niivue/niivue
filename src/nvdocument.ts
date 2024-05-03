@@ -291,9 +291,9 @@ export class NVDocument {
 
       get renderAzimuth(): number {
         if (this.sceneData.azimuth!) {
-            return this.sceneData.azimuth
+          return this.sceneData.azimuth
         } else {
-            return INITIAL_SCENE_DATA.azimuth
+          return INITIAL_SCENE_DATA.azimuth
         }
       },
       set renderAzimuth(azimuth: number) {
@@ -305,9 +305,9 @@ export class NVDocument {
 
       get renderElevation(): number {
         if (this.sceneData.elevation!) {
-            return this.sceneData.elevation
+          return this.sceneData.elevation
         } else {
-            return INITIAL_SCENE_DATA.elevation
+          return INITIAL_SCENE_DATA.elevation
         }
       },
       set renderElevation(elevation: number) {
