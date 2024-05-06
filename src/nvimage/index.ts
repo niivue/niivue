@@ -2700,23 +2700,30 @@ export class NVImage {
     isManifest = false,
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN,
-    colorbarVisible = true
+    colorbarVisible = true,
+    buffer = new ArrayBuffer(0)
   }: Partial<Omit<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
     if (url === '') {
       throw Error('url must not be empty')
     }
-
     let nvimage = null
     let dataBuffer = null
     if (url instanceof Uint8Array) {
       url = url.buffer as ArrayBuffer
     } // convert Uint8Array -> ArrayBuffer
+    if (buffer.byteLength > 0) {
+      url = buffer
+    }
     if (url instanceof ArrayBuffer) {
       dataBuffer = url
-      url = 'array.nii'
-      const bytes = new Uint8Array(dataBuffer)
-      if (bytes[0] === 31 && bytes[1] === 139) {
-        url = 'array.nii.gz'
+      if (name !== '') {
+        url = name
+      } else {
+        url = 'array.nii'
+        const bytes = new Uint8Array(dataBuffer)
+        if (bytes[0] === 31 && bytes[1] === 139) {
+          url = 'array.nii.gz'
+        }
       }
     }
     // fetch data associated with image

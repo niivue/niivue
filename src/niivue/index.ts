@@ -1805,6 +1805,25 @@ export class Niivue {
     return MESH_EXTENSIONS.includes(ext)
   }
 
+  /**
+   * Remove volume by url
+   * @param buffer - ArrayBuffer with the entire contents of a mesh and volume
+   * @param name - string of filename, extension used to infer type (NIfTI, MGH, MZ3, etc)
+   * @see {@link http://192.168.0.150:8080/features/draganddrop.html | live demo usage}
+   */
+
+  async addFromArrayBuffer(buffer: ArrayBuffer, name: string): Promise<void> {
+    const ext = this.getFileExt(name)
+    if (MESH_EXTENSIONS.includes(ext)) {
+      await this.addMeshFromUrl({ url: name, buffer })
+      return
+    }
+    const imageOptions = NVImageFromUrlOptions(name)
+    imageOptions.buffer = buffer
+    imageOptions.name = name
+    await this.addVolumeFromUrl(imageOptions)
+  }
+
   // not included in public docs
   dropListener(e: DragEvent): void {
     e.stopPropagation()
