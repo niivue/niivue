@@ -725,6 +725,7 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.scene.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
@@ -738,7 +739,7 @@ export class NVDocument {
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
       document.data.opts.meshThicknessOn2D = Infinity
     }
-    document.scene.sceneData = data.sceneData!
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }

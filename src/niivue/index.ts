@@ -3533,7 +3533,6 @@ export class Niivue {
     this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     const json = this.document.json()
-    json.sceneData = { ...this.scene }
 
     return json
   }
