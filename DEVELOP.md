@@ -176,6 +176,32 @@ While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can als
 </html>
 ```
 
+Note that the code above will load the latest current stable release of NiiVue. Alternatively, you can specify a specific NiiVue version. For example, to ensure compatibility with release 0.43.1, you could specify:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NiiVue</title>
+  </head>
+  <body>
+    <canvas id="gl" width="640" height="640"></canvas>
+  </body>
+  <script type="module" async>
+    // select a specific version of NiiVue.
+    import {Niivue} from "https://unpkg.com/@niivue/niivue@0.43.1/dist/index.js"
+    import {esm} from "https://unpkg.com/@niivue/niivue@0.43.1/dist/index.min.js"
+    var volumeList = [
+      { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
+    ];
+    var nv = new Niivue({ isResizeCanvas: false });
+    nv.attachTo("gl");
+    nv.loadVolumes(volumeList);
+  </script>
+</html>
+```
+
 ## VueJS example
 
 install: `npm i @niivue/niivue`

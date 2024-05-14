@@ -1805,6 +1805,46 @@ export class Niivue {
     return MESH_EXTENSIONS.includes(ext)
   }
 
+  /**
+   * Load an image or mesh from an array buffer
+   * @param buffer - ArrayBuffer with the entire contents of a mesh or volume
+   * @param name - string of filename, extension used to infer type (NIfTI, MGH, MZ3, etc)
+   * @see {@link http://192.168.0.150:8080/features/draganddrop.html | live demo usage}
+   */
+  async loadFromArrayBuffer(buffer: ArrayBuffer, name: string): Promise<void> {
+    const ext = this.getFileExt(name)
+    if (MESH_EXTENSIONS.includes(ext)) {
+      await this.addMeshFromUrl({ url: name, buffer })
+      return
+    }
+    const imageOptions = NVImageFromUrlOptions(name)
+    imageOptions.buffer = buffer
+    imageOptions.name = name
+    await this.addVolumeFromUrl(imageOptions)
+  }
+
+  /**
+   * Load a mesh or image from a file object
+   * @param file - File object
+   */
+  async loadFromFile(file: File): Promise<void> {
+    const ext = this.getFileExt(file.name)
+    // first check if it's a mesh
+    if (MESH_EXTENSIONS.includes(ext)) {
+      await NVMesh.loadFromFile({ file, gl: this.gl, name: file.name }).then((mesh) => {
+        this.addMesh(mesh)
+      })
+      return
+    }
+    // load as a volume if not a mesh
+    await NVImage.loadFromFile({
+      file,
+      name: file.name
+    }).then((volume) => {
+      this.addVolume(volume)
+    })
+  }
+
   // not included in public docs
   dropListener(e: DragEvent): void {
     e.stopPropagation()
@@ -6177,6 +6217,16 @@ export class Niivue {
       // for compatibility with conform.py: uint8 is not transformed
       return [src_min, 1.0]
     }
+    if (!isFinite(f_low) || !isFinite(f_high)) {
+      if (isFinite(volume.cal_min!) && isFinite(volume.cal_max!) && volume.cal_max! > volume.cal_min!) {
+        src_min = volume.cal_min!
+        src_max = volume.cal_max!
+        const scale = (dst_max - dst_min) / (src_max - src_min)
+        log.info(' Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
+        console.log('Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
+        return [src_min, scale]
+      }
+    }
     const img = volume.img!
     const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
     if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
@@ -6344,9 +6394,16 @@ export class Niivue {
    * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
    * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
    * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
+   * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
    * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
    */
-  async conform(volume: NVImage, toRAS = false, isLinear: boolean = true, asFloat32 = false): Promise<NVImage> {
+  async conform(
+    volume: NVImage,
+    toRAS = false,
+    isLinear: boolean = true,
+    asFloat32 = false,
+    isRobustMinMax = false
+  ): Promise<NVImage> {
     const outDim = 256
     const outMM = 1
     const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM, toRAS)
@@ -6448,9 +6505,13 @@ export class Niivue {
     // the scale factor from the input to increase similarity.
     const src_min = 0
     const scale = 0
+    let f_low = 0
+    if (isRobustMinMax) {
+      f_low = NaN
+    }
     let bytes = new Uint8Array()
     if (asFloat32) {
-      const gs = await this.getScale(volume, 0, 1)
+      const gs = await this.getScale(volume, 0, 1, f_low)
       const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1])
       bytes = await this.createNiftiArray(
         [outDim, outDim, outDim],
@@ -6460,7 +6521,7 @@ export class Niivue {
         new Uint8Array(out_img32.buffer)
       )
     } else {
-      const gs = await this.getScale(volume, 0, 255)
+      const gs = await this.getScale(volume, 0, 255, f_low)
       const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1])
       bytes = await this.createNiftiArray(
         [outDim, outDim, outDim],

@@ -168,6 +168,7 @@ export type ImageFromUrlOptions = {
   limitFrames4D?: number
   isManifest?: boolean
   urlImgData?: string
+  buffer?: ArrayBuffer
 }
 
 // TODO centralize shared options
