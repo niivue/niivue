@@ -13,6 +13,8 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <label for="robustCheck">Conform uses robust clamping</label>
+      <input type="checkbox" id="robustCheck" unchecked />
       <select id="rasDrop">
         <option value="0" selected>Conform to LIA</option>
         <option value="1">Conform to RAS</option>
@@ -84,7 +86,9 @@
         //the FreeSurfer conform standardizes shape/resolution of an image, common prior to machine learning
         let nii = nv1.volumes[0]
         let toRAS = (rasDrop.value === "1")
-        let nii2 = await nv1.conform(nii, toRAS)
+        let isLinear = true
+        let asFloat32 = false
+        let nii2 = await nv1.conform(nii, toRAS, isLinear, asFloat32, robustCheck.checked)
         nv1.removeVolume(nv1.volumes[0])
         nv1.addVolume(nii2)
       }
@@ -104,11 +108,13 @@
       }
       let defaults = {
         show3Dcrosshair: true,
+        logging: true,
         onLocationChange: handleIntensityChange,
+        logLevel: 'info',
       }
       var nv1 = new niivue.Niivue(defaults)
       nv1.attachToCanvas(gl1)
-      await nv1.loadVolumes([{ url: "../images/FLAIR.nii.gz"}])
+      await nv1.loadVolumes([{ url: "../images/fslmean.nii.gz"}])
     </script>
   </body>
 </html>

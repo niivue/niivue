@@ -13,6 +13,7 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <button id="openBtn">Choose an image or mesh with a dialog</button>
       <label for="fiberRadius">Radius</label>
       <input
         type="range"
@@ -65,6 +66,21 @@
     </footer>
     <script type="module" async>
       import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "./niivue/index.ts";
+      async function addVolumeFromFiles(f) {
+          console.log('attempting to open ', f[0].name)
+          console.log('details', f[0])
+          nv1.loadFromFile(f[0])
+      }
+      openBtn.onclick = function () {
+        let input = document.createElement('input');
+        input.style.display = 'none';
+        input.type = 'file'
+        document.body.appendChild(input);
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files)
+        }
+        input.click()
+      }
       fiberRadius.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
         nv1.updateGLVolume();

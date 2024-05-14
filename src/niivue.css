@@ -13,7 +13,7 @@ body {
   font-family: system-ui, Arial, Helvetica, sans-serif;
   user-select: none; /* Standard syntax */
   color: white;
-  background: #202020;
+  background: #404040;
 }
 header {
   margin: 10px;
@@ -47,7 +47,7 @@ div {
   outline: none;
   color: white;
   padding: 12px 12px;
-  background-color: #202020;
+  background-color: #404040;
   font-family: inherit;
   margin: 0;
 }

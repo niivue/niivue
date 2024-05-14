@@ -109,6 +109,7 @@ export type LoadFromUrlParams = Partial<BaseLoadParams> & {
   // the resolvable URL pointing to a mesh to load
   url: string
   headers?: Record<string, string>
+  buffer?: ArrayBuffer
 }
 
 type LoadFromFileParams = BaseLoadParams & {
@@ -1462,7 +1463,8 @@ export class NVMesh {
     opacity = 1.0,
     rgba255 = [255, 255, 255, 255],
     visible = true,
-    layers = []
+    layers = [],
+    buffer = new ArrayBuffer(0)
   }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
     let urlParts = url.split('/') // split url parts at slash
     if (name === '') {
@@ -1485,15 +1487,18 @@ export class NVMesh {
     if (!gl) {
       throw Error('gl context is null')
     }
-    // TRX format is special (its a zip archive of multiple files)
-    const response = await fetch(url, { headers })
-    if (!response.ok) {
-      throw Error(response.statusText)
+    let buff
+    if (buffer.byteLength > 0) {
+      buff = buffer
+    } else {
+      // TRX format is special (its a zip archive of multiple files)
+      const response = await fetch(url, { headers })
+      if (!response.ok) {
+        throw Error(response.statusText)
+      }
+      buff = await response.arrayBuffer()
     }
-    // let tris = [];
-    // var pts = [];
-    const buffer = await response.arrayBuffer()
-    const nvmesh = await this.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
+    const nvmesh = await this.readMesh(buff, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
