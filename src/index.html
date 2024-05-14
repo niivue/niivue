@@ -69,16 +69,17 @@
       async function addVolumeFromFiles(f) {
           console.log('attempting to open ', f[0].name)
           console.log('details', f[0])
-          const buffer = await event.target.files[0].arrayBuffer()
-          nv1.addFromArrayBuffer(buffer, f[0].name)
+          nv1.loadFromFile(f[0])
       }
       openBtn.onclick = function () {
         let input = document.createElement('input');
+        input.style.display = 'none';
         input.type = 'file'
-        input.onchange = _ => {
-          addVolumeFromFiles(input.files)
+        document.body.appendChild(input);
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files)
         }
-        input.click();
+        input.click()
       }
       fiberRadius.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);

@@ -84,7 +84,8 @@ import {
   NVIMAGE_TYPE,
   NiiDataType,
   NiiIntentCode,
-  ImageFromUrlOptions
+  ImageFromUrlOptions,
+  ImageFromFileOptions
 } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { Connectome, LegacyConnectome, NVConnectomeNode, NiftiHeader, DragReleaseParams } from '../types.js'
@@ -1806,13 +1807,12 @@ export class Niivue {
   }
 
   /**
-   * Remove volume by url
-   * @param buffer - ArrayBuffer with the entire contents of a mesh and volume
+   * Load an image or mesh from an array buffer
+   * @param buffer - ArrayBuffer with the entire contents of a mesh or volume
    * @param name - string of filename, extension used to infer type (NIfTI, MGH, MZ3, etc)
    * @see {@link http://192.168.0.150:8080/features/draganddrop.html | live demo usage}
    */
-
-  async addFromArrayBuffer(buffer: ArrayBuffer, name: string): Promise<void> {
+  async loadFromArrayBuffer(buffer: ArrayBuffer, name: string): Promise<void> {
     const ext = this.getFileExt(name)
     if (MESH_EXTENSIONS.includes(ext)) {
       await this.addMeshFromUrl({ url: name, buffer })
@@ -1822,6 +1822,28 @@ export class Niivue {
     imageOptions.buffer = buffer
     imageOptions.name = name
     await this.addVolumeFromUrl(imageOptions)
+  }
+
+  /**
+   * Load a mesh or image from a file object
+   * @param file - File object
+   */
+  async loadFromFile(file: File): Promise<void> {
+    const ext = this.getFileExt(file.name)
+    // first check if it's a mesh
+    if (MESH_EXTENSIONS.includes(ext)) {
+      await NVMesh.loadFromFile({ file, gl: this.gl, name: file.name }).then((mesh) => {
+        this.addMesh(mesh)
+      })
+      return
+    }
+    // load as a volume if not a mesh
+    await NVImage.loadFromFile({
+      file,
+      name: file.name
+    }).then((volume) => {
+      this.addVolume(volume)
+    })
   }
 
   // not included in public docs
