@@ -84,8 +84,7 @@ import {
   NVIMAGE_TYPE,
   NiiDataType,
   NiiIntentCode,
-  ImageFromUrlOptions,
-  ImageFromFileOptions
+  ImageFromUrlOptions
 } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { Connectome, LegacyConnectome, NVConnectomeNode, NiftiHeader, DragReleaseParams } from '../types.js'
