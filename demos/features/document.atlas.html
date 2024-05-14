@@ -37,6 +37,7 @@
     <label for="fiberCalMin">Color Minimum</label>
     <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
     <button id="about">Save NVD</button>
+    <button id="clear">Clear</button>
   </header>
   <main id="canvas-container">
     <canvas id="gl1"></canvas>
@@ -65,8 +66,18 @@
     about.onclick = function () {
       //window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
       console.log("document on save", nv1.document);
-      nv1.saveDocument("atlas.nvd");
+      
+      nv1.saveDocument("atlas.nvd");      
     }
+
+    clear.onclick = async function () {      
+      nv1 = new Niivue(defaults);
+      nv1.attachToCanvas(gl1);
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.opts.yoke3Dto2DZoom = true;
+    }
+
     var volumeList1 = [{ url: "../images/mni152.nii.gz" }, { url: "../images/aal.nii.gz" }];
     let defaults = {
       backColor: [0, 0, 0, 1],
