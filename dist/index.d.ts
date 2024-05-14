@@ -220,6 +220,7 @@ type ImageFromUrlOptions = {
     limitFrames4D?: number;
     isManifest?: boolean;
     urlImgData?: string;
+    buffer?: ArrayBuffer;
 };
 type ImageFromFileOptions = {
     file: File | File[];
@@ -397,7 +398,7 @@ declare class NVImage {
      * factory function to load and return a new NVImage instance from a given URL
      * @returns  NVImage instance
      */
-    static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType, colorbarVisible }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
+    static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType, colorbarVisible, buffer }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
         url?: string | Uint8Array | ArrayBuffer;
     }): Promise<NVImage>;
     static readFileAsync(file: File, bytesToLoad?: number): Promise<ArrayBuffer>;
@@ -1031,6 +1032,7 @@ type BaseLoadParams = {
 type LoadFromUrlParams = Partial<BaseLoadParams> & {
     url: string;
     headers?: Record<string, string>;
+    buffer?: ArrayBuffer;
 };
 type LoadFromFileParams = BaseLoadParams & {
     file: Blob;
@@ -1126,7 +1128,7 @@ declare class NVMesh {
     /**
      * factory function to load and return a new NVMesh instance from a given URL
      */
-    static loadFromUrl({ url, headers, gl, name, opacity, rgba255, visible, layers }?: Partial<LoadFromUrlParams>): Promise<NVMesh>;
+    static loadFromUrl({ url, headers, gl, name, opacity, rgba255, visible, layers, buffer }?: Partial<LoadFromUrlParams>): Promise<NVMesh>;
     static readFileAsync(file: Blob): Promise<ArrayBuffer>;
     /**
      * factory function to load and return a new NVMesh instance from a file in the browser
@@ -1991,6 +1993,18 @@ declare class Niivue {
      * @param url - filename
      */
     isMeshExt(url: string): boolean;
+    /**
+     * Load an image or mesh from an array buffer
+     * @param buffer - ArrayBuffer with the entire contents of a mesh or volume
+     * @param name - string of filename, extension used to infer type (NIfTI, MGH, MZ3, etc)
+     * @see {@link http://192.168.0.150:8080/features/draganddrop.html | live demo usage}
+     */
+    loadFromArrayBuffer(buffer: ArrayBuffer, name: string): Promise<void>;
+    /**
+     * Load a mesh or image from a file object
+     * @param file - File object
+     */
+    loadFromFile(file: File): Promise<void>;
     dropListener(e: DragEvent): void;
     /**
      * insert a gap between slices of a mutliplanar view.
@@ -2703,9 +2717,10 @@ declare class Niivue {
      * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
      * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
      * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
+     * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
      * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
      */
-    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean): Promise<NVImage>;
+    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean, isRobustMinMax?: boolean): Promise<NVImage>;
     /**
      * darken crevices and brighten corners when 3D rendering drawings.
      * @param amount - amount of ambient occlusion (default 0.4)
