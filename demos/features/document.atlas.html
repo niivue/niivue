@@ -64,7 +64,7 @@
     };
     about.onclick = function () {
       //window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
-      console.log("document on save", nv1.document.scene);
+      console.log("document on save", nv1.document);
       nv1.saveDocument("atlas.nvd");
     }
     var volumeList1 = [{ url: "../images/mni152.nii.gz" }, { url: "../images/aal.nii.gz" }];
@@ -72,6 +72,7 @@
       backColor: [0, 0, 0, 1],
       show3Dcrosshair: true,
       onLocationChange: handleLocationChange,
+      onDocumentLoaded: handleDocumentLoaded
     };
     async function fetchJSON(fnm) {
       const response = await fetch(fnm)
@@ -81,84 +82,89 @@
     function handleLocationChange(data) {
       document.getElementById("location").innerHTML = data.string
     }
+
+    function handleDocumentLoaded(doc) {
+      console.log("doc loaded", doc);
+    }
+
     var nv1 = new Niivue(defaults);
     nv1.attachToCanvas(gl1);
     nv1.opts.dragMode = nv1.dragModes.pan;
     nv1.opts.multiplanarForceRender = true;
     nv1.opts.yoke3Dto2DZoom = true;
-    // await nv1.loadVolumes(volumeList1);
-    // let cmap = await fetchJSON("../images/aal.json")
-    // nv1.volumes[1].setColormapLabel(cmap)
-    // var layerList = [{url: "../images/mni152.SLF1_R.tsf"}];
-    // await nv1.loadMeshes([{ url: "../images/tract.SLF1_R.tck", layers: layerList,}]);
-    // console.log("meshes at load", nv1.meshes);
-    // nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
-    // nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
-    // nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
-    // nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
-    // nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
-    // var meshLayersList1 = [
-    //   {
-    //     url: "../images/lh.curv",
-    //     colormap: "gray",
-    //     cal_min: 0.3,
-    //     cal_max: 0.5,
-    //     opacity: 1,
-    //   },
-    //   { url: "../images/boggle.lh.annot", colormap: "rocket", opacity: 0.5 },
-    //   {
-    //     url: "../images/pval.LH.nii.gz",
-    //     cal_min: 25,
-    //     cal_max: 35.0,
-    //     opacity: 0.9,
-    //   },
-    // ]
-    // await nv1.loadMeshes([
-    //   {
-    //     url: "../images/lh.pial",
-    //     rgba255: [255, 255, 255, 255],
-    //     layers: meshLayersList1,
-    //   },
-    //   { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
-    // ])
+    await nv1.loadVolumes(volumeList1);
+    let cmap = await fetchJSON("../images/aal.json")
+    nv1.volumes[1].setColormapLabel(cmap)
+    var layerList = [{url: "../images/mni152.SLF1_R.tsf"}];
+    await nv1.loadMeshes([{ url: "../images/tract.SLF1_R.tck", layers: layerList,}]);
+    console.log("meshes at load", nv1.meshes);
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
+    nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
+    nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
+    var meshLayersList1 = [
+      {
+        url: "../images/lh.curv",
+        colormap: "gray",
+        cal_min: 0.3,
+        cal_max: 0.5,
+        opacity: 1,
+      },
+      { url: "../images/boggle.lh.annot", colormap: "rocket", opacity: 0.5 },
+      {
+        url: "../images/pval.LH.nii.gz",
+        cal_min: 25,
+        cal_max: 35.0,
+        opacity: 0.9,
+      },
+    ]
+    await nv1.loadMeshes([
+      {
+        url: "../images/lh.pial",
+        rgba255: [255, 255, 255, 255],
+        layers: meshLayersList1,
+      },
+      { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
+    ])
 
 
     nv1.setClipPlane([-0.12, 180, 40]);
       nv1.setRenderAzimuthElevation(230,15)
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.opts.multiplanarForceRender = true;
-      var volumeList1 = [
-        {url: "../images/mni152.nii.gz"},
-        {
-          url: "../images/hippolr.nii.gz", 
-          colormap: "red",
-        }
-      ];
-      await nv1.loadVolumes(volumeList1);
-      var meshLayersList1 = [
-        {
-          url: "../images/pval.LH.nii.gz",
-          cal_min: 25,
-          cal_max: 35.0,
-          opacity: 1,
-        },
-      ];
-      await nv1.loadMeshes([
-        {
-          url: "../images/lh.pial",
-          rgba255: [212, 244, 212, 255],
-          layers: meshLayersList1,
-        },
-        { url: "../images/dpsv.trx" },
-        // {  url: "../images/aal.mz3"},
-        { url: "../images/TR_S_R.tt.gz"},
-        { url: "../images/connectome.jcon" },    
-        // { url: "../images/simplify_brain.obj"}    
-      ]);
+    //   var volumeList1 = [
+    //     {url: "../images/mni152.nii.gz"},
+    //     {
+    //       url: "../images/hippolr.nii.gz", 
+    //       colormap: "red",
+    //     }
+    //   ];
+    //   await nv1.loadVolumes(volumeList1);
+    //   var meshLayersList1 = [
+    //     {
+    //       url: "../images/pval.LH.nii.gz",
+    //       cal_min: 25,
+    //       cal_max: 35.0,
+    //       opacity: 1,
+    //     },
+    //   ];
+    //   await nv1.loadMeshes([
+    //     {
+    //       url: "../images/lh.pial",
+    //       rgba255: [212, 244, 212, 255],
+    //       layers: meshLayersList1,
+    //     },
+    //     { url: "../images/dpsv.trx" },
+    //     // {  url: "../images/aal.mz3"},
+    //     { url: "../images/TR_S_R.tt.gz"},
+    //     { url: "../images/connectome.jcon" },    
+    //     // { url: "../images/simplify_brain.obj"}    
+    //   ]);
 
-    // console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
-    nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
-    nv1.setClipPlane([0.2, 0, 120]);
+    // // console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
+    // nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
+    // nv1.setClipPlane([0.2, 0, 120]);
   </script>
 </body>
 

@@ -3336,13 +3336,9 @@ export class Niivue {
         if ('colorMap' in imageOptions) {
           imageOptions.colormap = imageOptions.colorMap
         }
-        
         const image = NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
-          console.log('loadDocument image >>>',image)
           this.addVolume(image)
-          // document.addImageOptions(image, imageOptions)
-          // imagesToAdd.set(imageOptions, image)
         }
       }
     }
@@ -3370,10 +3366,6 @@ export class Niivue {
     for (const meshDataObject of document.meshDataObjects ?? []) {
       const meshInit = { gl: this.gl, ...meshDataObject }
       log.debug(meshInit)
-      if (!meshInit.tris) {
-        console.log('no tris', meshInit)
-        // throw new Error('tris for mesh is null')
-      }
       const meshToAdd = new NVMesh(
         meshInit.pts,
         meshInit.tris!,
@@ -5766,9 +5758,9 @@ export class Niivue {
       this.gl.activeTexture(TEXTURE1_COLORMAPS)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
     }
-    // this.gl.uniform1i(shader.uniforms.drawing, 7)
-    // this.gl.activeTexture(TEXTURE7_DRAW)
-    // this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+    this.gl.uniform1i(shader.uniforms.drawing, 7)
+    this.gl.activeTexture(TEXTURE7_DRAW)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.updateInterpolation(layer)
     //
     // this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!

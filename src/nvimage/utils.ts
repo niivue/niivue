@@ -1,6 +1,7 @@
 import { vec3 } from 'gl-matrix'
 import { log } from '../logger.js'
 import { NiftiHeader } from '../types.js'
+import { LUT } from '../colortables.js'
 
 export const isPlatformLittleEndian = (): boolean => {
   // inspired by https://github.com/rii-mango/Papaya
@@ -162,7 +163,7 @@ export type ImageFromUrlOptions = {
   ignoreZeroVoxels?: boolean
   imageType?: ImageType
   frame4D?: number
-  colormapLabel?: string[]
+  colormapLabel?: LUT | null
   pairedImgData?: null
   limitFrames4D?: number
   isManifest?: boolean
@@ -220,6 +221,15 @@ export type ImageFromBase64 = {
   percentileFrac?: number
   // whether or not to ignore zero voxels in setting the robust range of display values
   ignoreZeroVoxels?: boolean
+  // whether or not use QForm instead of SForm
+  useQFormNotSForm?: boolean
+  colormapNegative?: string
+  frame4D?: number
+  imageType?: ImageType
+  cal_minNeg?: number
+  cal_maxNeg?: number
+  colorbarVisible?: boolean
+  colormapLabel?: LUT | null
 }
 
 export type ImageMetadata = {
@@ -267,7 +277,7 @@ export const NVImageFromUrlOptions = (
   cal_maxNeg = NaN,
   colorbarVisible = true,
   alphaThreshold = false,
-  colormapLabel: string[] = []
+  colormapLabel = null
 ): ImageFromUrlOptions => {
   return {
     url,

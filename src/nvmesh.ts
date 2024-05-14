@@ -1240,9 +1240,7 @@ export class NVMesh {
       } else {
         obj = NVMeshLoaders.readTRK(buffer)
       }
-      console.log('mesh obj', obj)
       if (typeof obj === 'undefined') {
-        console.log('obj type is undefined')
         const pts = new Float32Array([0, 0, 0, 0, 0, 0])
         const offsetPt0 = new Uint32Array([0])
         obj = { pts, offsetPt0 }
@@ -1378,7 +1376,6 @@ export class NVMesh {
   }
 
   static async loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void> {
-    console.log('loading layer')
     let buffer
 
     function base64ToArrayBuffer(base64: string): ArrayBuffer {
@@ -1469,8 +1466,6 @@ export class NVMesh {
     )
     if (newLayer) {
       nvmesh.layers.push(newLayer)
-    } else {
-      console.log('no layer returned')
     }
   }
 
@@ -1487,7 +1482,6 @@ export class NVMesh {
     visible = true,
     layers = []
   }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
-    console.log('loading mesh from url')
     let urlParts = url.split('/') // split url parts at slash
     if (name === '') {
       try {
@@ -1524,7 +1518,6 @@ export class NVMesh {
     }
 
     for (let i = 0; i < layers.length; i++) {
-      console.log('loading layer', layers[i])
       await NVMesh.loadLayer(layers[i], nvmesh)
     }
 
