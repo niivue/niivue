@@ -3391,12 +3391,13 @@ export class Niivue {
       log.debug(meshToAdd)
       this.addMesh(meshToAdd)
     }
-
-    // load connectomes
+    // add connectomes
     if (document.data.connectomes) {
       for (const connectomeString of document.data.connectomes) {
         const connectome = JSON.parse(connectomeString)
-        this.loadConnectome(connectome)
+        const meshToAdd = this.loadConnectomeAsMesh(connectome)
+        meshToAdd.updateMesh(this.gl)
+        this.addMesh(meshToAdd)
       }
     }
 
