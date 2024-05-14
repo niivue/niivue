@@ -102,7 +102,7 @@ import {
   unProject,
   unpackFloatFromVec4i
 } from './utils.js'
-export { NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
@@ -3319,7 +3319,6 @@ export class Niivue {
     const opts = { ...DEFAULT_OPTIONS, ...document.opts }
     this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
     this.document.opts = opts
-    console.log('scene', this.document.scene)
     this.setClipPlane(this.scene.clipPlaneDepthAziElev)
     log.debug('load document', document)
     this.mediaUrlMap.clear()
