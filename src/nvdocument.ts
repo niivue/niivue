@@ -519,6 +519,7 @@ export class NVDocument {
     // volumes
     // TODO move this to a per-volume export function in NVImage?
     if (this.volumes.length) {
+      console.log('volumes length', this.volumes.length)
       let imageOptions = this.imageOptionsArray[0]
       if (!imageOptions) {
         log.debug('no image options for base image')
@@ -725,7 +726,13 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
-    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.scene.sceneData }
+
+    if (document.data.opts.meshThicknessOn2D === 'infinity') {
+      document.data.opts.meshThicknessOn2D = Infinity
+    }
+    console.log('document.data.sceneData from loadFromJSON', document.data.sceneData)
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.data.sceneData }
+
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }
@@ -739,6 +746,7 @@ export class NVDocument {
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
       document.data.opts.meshThicknessOn2D = Infinity
     }
+    console.log('data.sceneData from loadFromJSON', data.sceneData)
     document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document

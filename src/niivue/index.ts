@@ -3319,9 +3319,14 @@ export class Niivue {
     const opts = { ...DEFAULT_OPTIONS, ...document.opts }
     this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
     this.document.opts = opts
+    console.log('scene', this.document.scene)
+    this.setClipPlane(this.scene.clipPlaneDepthAziElev)
     log.debug('load document', document)
     this.mediaUrlMap.clear()
     this.createEmptyDrawing()
+
+    // const imagesToAdd = new Map<ImageFromUrlOptions, NVImage>()
+
     // load our images and meshes
     const encodedImageBlobs = document.encodedImageBlobs
     for (let i = 0; i < document.imageOptionsArray.length; i++) {
@@ -3334,10 +3339,19 @@ export class Niivue {
         const image = NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
           this.addVolume(image)
-          document.addImageOptions(image, imageOptions)
+          // document.addImageOptions(image, imageOptions)
+          // imagesToAdd.set(imageOptions, image)
         }
       }
     }
+
+    // reset our image options map
+    // document.imageOptionsMap.clear()
+
+    // for(const imageOptions of map.keys()) {
+
+    // }
+
     if (this.volumes.length > 0) {
       this.back = this.volumes[0]
     }
@@ -3354,6 +3368,10 @@ export class Niivue {
     for (const meshDataObject of document.meshDataObjects ?? []) {
       const meshInit = { gl: this.gl, ...meshDataObject }
       log.debug(meshInit)
+      if (!meshInit.tris) {
+        console.log('no tris', meshInit)
+        // throw new Error('tris for mesh is null')
+      }
       const meshToAdd = new NVMesh(
         meshInit.pts,
         meshInit.tris!,
@@ -3545,14 +3563,14 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
    */
   async saveDocument(fileName = 'untitled.nvd'): Promise<void> {
-    this.document.opts = this.opts
-    this.document.scene = this.scene
-
     this.document.title = fileName
     log.debug('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
     this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
+    this.document.volumes = this.volumes
+    this.document.meshes = this.meshes
+    console.log('meshes at save', this.meshes)
     this.document.download(fileName)
   }
 
@@ -3655,6 +3673,7 @@ export class Niivue {
     for (let i = 0; i < meshList.length; i++) {
       await this.addMeshFromUrl(meshList[i])
     }
+    this.updateGLVolume()
     this.drawScene()
     return this
   }
@@ -5744,9 +5763,9 @@ export class Niivue {
       this.gl.activeTexture(TEXTURE1_COLORMAPS)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
     }
-    this.gl.uniform1i(shader.uniforms.drawing, 7)
-    this.gl.activeTexture(TEXTURE7_DRAW)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+    // this.gl.uniform1i(shader.uniforms.drawing, 7)
+    // this.gl.activeTexture(TEXTURE7_DRAW)
+    // this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     this.updateInterpolation(layer)
     //
     // this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
