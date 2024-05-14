@@ -3336,8 +3336,10 @@ export class Niivue {
         if ('colorMap' in imageOptions) {
           imageOptions.colormap = imageOptions.colorMap
         }
+        
         const image = NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
+          console.log('loadDocument image >>>',image)
           this.addVolume(image)
           // document.addImageOptions(image, imageOptions)
           // imagesToAdd.set(imageOptions, image)
