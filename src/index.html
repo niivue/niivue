@@ -1,93 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>NiiVue</title>
-  <link rel="stylesheet" href="niivue.css" />
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
-</head>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <button id="openBtn">Choose an image or mesh with a dialog</button>
+      <label for="fiberRadius">Radius</label>
+      <input
+        type="range"
+        min="0"
+        max="20"
+        value="5"
+        class="slider"
+        id="fiberRadius"
+      />
+      <label for="fiberDitherSlider">Dither</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="0"
+        class="slider"
+        id="fiberDitherSlider"
+      />
+      <label for="fiberColor">Fiber color</label>
+      <select id="fiberColor">
+        <option value="Global">Global direction</option>
+        <option value="Local">Local direction</option>
+        <option value="Fixed">Fixed</option>
+        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
+      </select>
+      <label for="fiberColormap">Colormap</label>
+      <select id="fiberColormap">
+        <option value="actc">ACTC</option>
+        <option value="inferno" selected>Inferno</option>
+        <option value="plasma">Plasma</option>
+        <option value="warm">Warm</option>
+        <option value="winter">Winter</option>
+      </select>
+      <label for="fiberCalMin">Color Minimum</label>
+      <input
+        type="range"
+        min="10"
+        max="75"
+        value="25"
+        class="slider"
+        id="fiberCalMin"
+      />
+      <button id="about">About</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      <label id="shaders">Shaders: </label>
+    </footer>
+    <script type="module" async>
+      import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "./niivue/index.ts";
+      async function addVolumeFromFiles(f) {
+          console.log('attempting to open ', f[0].name)
+          console.log('details', f[0])
+          nv1.loadFromFile(f[0])
+      }
+      openBtn.onclick = function () {
+        let input = document.createElement('input');
+        input.style.display = 'none';
+        input.type = 'file'
+        document.body.appendChild(input);
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files)
+        }
+        input.click()
+      }
+      fiberRadius.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
+        nv1.updateGLVolume();
+      };
+      fiberColor.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
+      };
+      fiberColormap.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
+      };
+      
+      fiberDitherSlider.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
+      };
+      fiberCalMin.oninput = function () {
+       nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
+        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
+      };
+      about.onclick = function () {
+        window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
 
-<body>
-  <noscript>
-    <strong>niivue requires JavaScript.</strong>
-  </noscript>
-  <header>
-    <button id="saveBtn">Save NVD</button>
-    <button id="infoBtn">Info</button>
-  </header>
-  <main id="canvas-container">
-    <canvas id="gl1"></canvas>
-  </main>
-  <footer id="location">&nbsp;</footer>
-  <script type="module" async>
-    import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "./niivue/index.ts"
-    infoBtn.onclick = function () {
-      console.log('meshes', nv1.meshes)
-      console.log('volumes', nv1.volumes)
-    }
-    saveBtn.onclick = function () {
-      console.log("document on save", nv1.document.scene)
-      nv1.saveDocument("demo.nvd")
-    }
-    var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }, { url: "../demos/images/aal.nii.gz" }]
-    let defaults = {
-      backColor: [0, 0, 0, 1],
-      show3Dcrosshair: true,
-      onLocationChange: handleLocationChange,
-    }
-    async function fetchJSON(fnm) {
-      const response = await fetch(fnm)
-      const js = await response.json()
-      return js
-    }
-    function handleLocationChange(data) {
-      document.getElementById("location").innerHTML = data.string
-    }
-    var nv1 = new Niivue(defaults)
-    nv1.attachToCanvas(gl1)
-    nv1.opts.dragMode = nv1.dragModes.pan
-    nv1.opts.multiplanarForceRender = true
-    nv1.opts.yoke3Dto2DZoom = true
-    nv1.setClipPlane([-0.12, 180, 40])
-    nv1.setRenderAzimuthElevation(230,15)
-    nv1.setSliceType(nv1.sliceTypeMultiplanar)
-    nv1.opts.multiplanarForceRender = true
-    var volumeList1 = [
-      {url: "../demos/images/FLAIR.nii.gz"},
-      {url: "../demos/images/aal.nii.gz"},
-
-    ]
-    if (true) {
-    await nv1.loadVolumes(volumeList1)
-    let cmap = await fetchJSON("../demos/images/aal.json")
-    nv1.volumes[1].setColormapLabel(cmap)
-    var meshLayersList1 = [
-      {
-        url: "../demos/images/pval.LH.nii.gz",
-        cal_min: 25,
-        cal_max: 35.0,
-        opacity: 1,
-      },
-    ]
-    await nv1.loadMeshes([
-      {
-        url: "../demos/images/lh.pial",
-        rgba255: [212, 244, 212, 255],
-        layers: meshLayersList1,
-      },
-      { url: "../demos/images/dpsv.trx" },
-      { url: "../demos/images/TR_S_R.tt.gz"},
-      { url: "../demos/images/connectome.jcon" },
-    ])
-    await nv1.loadDrawingFromUrl("../demos/images/lesion.nii.gz")
-    } else {
-      await nv1.loadDocumentFromUrl("./demo.nvd")
-    }
-    nv1.setSelectionBoxColor([0, 1, 0, 0.5])
-    nv1.setClipPlane([0.2, 0, 120])
-  </script>
-</body>
-
+      }
+      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}];
+      let defaults = {
+        backColor: [0, 0, 0, 1],
+        show3Dcrosshair: true,
+      };
+      var nv1 = new Niivue(defaults);
+      nv1.attachToCanvas(gl1);
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.opts.yoke3Dto2DZoom = true;
+      await nv1.loadVolumes(volumeList1);
+      var layerList = [{url: "../demos/images/mni152.SLF1_R.tsf"}];
+      await nv1.loadMeshes([{ url: "../demos/images/tract.SLF1_R.tck", layers: layerList,}]);
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
+      nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
+      nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
+      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
+      nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
+      nv1.setClipPlane([0.2, 0, 120]);
+      let cmaps = nv1.meshShaderNames();
+      let cmapEl = document.getElementById("shaders");
+      for (let i = 0; i < cmaps.length; i++) {
+        let btn = document.createElement("button");
+        btn.innerHTML = cmaps[i];
+        btn.onclick = function () {
+          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+        };
+        cmapEl.appendChild(btn);
+      }
+    </script>
+  </body>
 </html>
