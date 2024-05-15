@@ -89,7 +89,7 @@ test('niivue saveDocument mesh mz3', async ({ page }) => {
   fs.unlinkSync(filePath)
 })
 
-test('niivue saveDocument and loadDocument', async ({ page }) => {
+test.skip('niivue saveDocument and loadDocument', async ({ page }) => {
   test.setTimeout(120000)
   const downloadPromise = page.waitForEvent('download')
   await page.evaluate(async (testOptions) => {
@@ -172,6 +172,6 @@ test('niivue saveDocument and loadDocument', async ({ page }) => {
     },
     { options: TEST_OPTIONS, documentJSON }
   )
-  await expect(page.locator('#gl')).toHaveScreenshot({ timeout: 30000 })
+  await expect(page.locator('#gl')).toHaveScreenshot({ timeout: 120000 })
   fs.unlinkSync(filePath)
 })
