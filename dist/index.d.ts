@@ -215,7 +215,7 @@ type ImageFromUrlOptions = {
     ignoreZeroVoxels?: boolean;
     imageType?: ImageType;
     frame4D?: number;
-    colormapLabel?: string[];
+    colormapLabel?: LUT | null;
     pairedImgData?: null;
     limitFrames4D?: number;
     isManifest?: boolean;
@@ -249,6 +249,14 @@ type ImageFromBase64 = {
     trustCalMinMax?: boolean;
     percentileFrac?: number;
     ignoreZeroVoxels?: boolean;
+    useQFormNotSForm?: boolean;
+    colormapNegative?: string;
+    frame4D?: number;
+    imageType?: ImageType;
+    cal_minNeg?: number;
+    cal_maxNeg?: number;
+    colorbarVisible?: boolean;
+    colormapLabel?: LUT | null;
 };
 type ImageMetadata = {
     id: string;
@@ -263,7 +271,7 @@ type ImageMetadata = {
     dt: number;
     bpv: number;
 };
-declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: string[]) => ImageFromUrlOptions;
+declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: null) => ImageFromUrlOptions;
 
 type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
 /**
@@ -441,7 +449,7 @@ declare class NVImage {
      * @example
      * myImage = NVImage.loadFromBase64('SomeBase64String')
      */
-    static loadFromBase64({ base64, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels }: ImageFromBase64): NVImage;
+    static loadFromBase64({ base64, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, imageType, cal_minNeg, cal_maxNeg, colorbarVisible, colormapLabel }: ImageFromBase64): NVImage;
     /**
      * make a clone of a NVImage instance and return a new NVImage
      * @returns NVImage instance
@@ -990,25 +998,37 @@ type NVMeshLayer = {
     headers?: Record<string, string>;
     opacity: number;
     colormap: string;
-    colormapNegative: string;
-    colormapInvert: boolean;
+    colormapNegative?: string;
+    colormapInvert?: boolean;
     colormapLabel?: ColorMap | LUT;
-    useNegativeCmap: boolean;
-    global_min: number;
-    global_max: number;
+    useNegativeCmap?: boolean;
+    global_min?: number;
+    global_max?: number;
     cal_min: number;
     cal_max: number;
     cal_minNeg: number;
     cal_maxNeg: number;
-    isAdditiveBlend: boolean;
+    isAdditiveBlend?: boolean;
     frame4D: number;
     nFrame4D: number;
-    values: number[];
+    values: AnyNumberArray;
     outlineBorder?: number;
     isTransparentBelowCalMin?: boolean;
-    alphaThreshold: boolean;
+    alphaThreshold?: boolean;
     base64?: string;
     colorbarVisible?: boolean;
+};
+declare const NVMeshLayerDefaults: {
+    colormap: string;
+    opacity: number;
+    nFrame4D: number;
+    frame4D: number;
+    outlineBorder: number;
+    cal_min: number;
+    cal_max: number;
+    cal_minNeg: number;
+    cal_maxNeg: number;
+    values: number[];
 };
 declare class NVMeshFromUrlOptions {
     url: string;
@@ -1424,7 +1444,7 @@ declare class NVMeshLoaders {
     static readTCK(buffer: ArrayBuffer): TCK;
     static readTRK(buffer: ArrayBuffer): TRK;
     static readTxtVTK(buffer: ArrayBuffer): VTK;
-    static readLayer(name: string | undefined, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): void;
+    static readLayer(name: string | undefined, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): NVMeshLayer | undefined;
     static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
@@ -2897,4 +2917,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLoaders, NVUtilities, type NiftiHeader, Niivue, type Point, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVUtilities, type NiftiHeader, Niivue, type Point, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
