@@ -24,6 +24,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 720 }
   },
+  /* Global test timeout */
+  timeout: 120 * 1000,
 
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 }
