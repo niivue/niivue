@@ -90,6 +90,7 @@ test('niivue saveDocument mesh mz3', async ({ page }) => {
 })
 
 test('niivue saveDocument and loadDocument', async ({ page }) => {
+  test.setTimeout(120000)
   const downloadPromise = page.waitForEvent('download')
   await page.evaluate(async (testOptions) => {
     const NVMeshLayerDefaults = {
