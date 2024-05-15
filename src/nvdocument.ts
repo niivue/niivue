@@ -534,7 +534,7 @@ export class NVDocument {
           ignoreZeroVoxels: false,
           useQFormNotSForm: false,
           colormapNegative: '',
-          colormapLabel: [],
+          colormapLabel: null,
           imageType: NVIMAGE_TYPE.NII,
           frame4D: 0,
           limitFrames4D: NaN,
@@ -585,7 +585,7 @@ export class NVDocument {
             ignoreZeroVoxels: false,
             useQFormNotSForm: false,
             colormapNegative: '',
-            colormapLabel: [],
+            colormapLabel: null,
             imageType: NVIMAGE_TYPE.NII,
             frame4D: 0,
             limitFrames4D: NaN,
@@ -604,6 +604,7 @@ export class NVDocument {
         }
         // update image options on current image settings
         imageOptions.colormap = volume.colormap
+        imageOptions.colormapLabel = volume.colormapLabel
         imageOptions.opacity = volume.opacity
         imageOptions.cal_max = volume.cal_max || NaN
         imageOptions.cal_min = volume.cal_min || NaN
@@ -725,7 +726,12 @@ export class NVDocument {
     const utf8decoder = new TextDecoder()
     const dataString = utf8decoder.decode(arrayBuffer)
     document.data = JSON.parse(dataString)
-    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.scene.sceneData }
+
+    if (document.data.opts.meshThicknessOn2D === 'infinity') {
+      document.data.opts.meshThicknessOn2D = Infinity
+    }
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.data.sceneData }
+
     NVDocument.deserializeMeshDataObjects(document)
     return document
   }

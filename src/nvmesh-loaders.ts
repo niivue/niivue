@@ -3,12 +3,12 @@ import { decompressSync, unzipSync } from 'fflate/browser'
 import { log } from './logger.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
-import { NVMesh, NVMeshLayer } from './nvmesh.js'
+import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
 import {
   ANNOT,
   DefaultMeshType,
   GII,
-  Layer,
+  // Layer,
   MGH,
   MZ3,
   SmpMap,
@@ -927,8 +927,9 @@ export class NVMeshLoaders {
     cal_min: number | null = null,
     cal_max: number | null = null,
     outlineBorder = 0
-  ): void {
-    const layer: Partial<Layer> = {
+  ): NVMeshLayer | undefined {
+    const layer: NVMeshLayer = {
+      ...NVMeshLayerDefaults,
       colormapInvert: false,
       alphaThreshold: false,
       isTransparentBelowCalMin: true,
@@ -974,9 +975,10 @@ export class NVMeshLoaders {
         cal_min: mn,
         cal_max: mx
       })
-      return
+      return layer
     }
     if (n_vert < 3) {
+      log.error('n_vert < 3 in layer')
       return
     }
     if (ext === 'MZ3') {
@@ -1023,9 +1025,10 @@ export class NVMeshLoaders {
       layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
     } else {
       log.warn('Unknown layer overlay format ' + name)
-      return
+      return layer
     }
     if (!layer.values) {
+      log.error('no values in layer')
       return
     }
     layer.nFrame4D = layer.values.length / n_vert
@@ -1040,11 +1043,11 @@ export class NVMeshLoaders {
     }
     layer.global_min = mn
     layer.global_max = mx
-    layer.cal_min = cal_min
+    layer.cal_min = cal_min || 0
     if (!cal_min) {
       layer.cal_min = mn
     }
-    layer.cal_max = cal_max
+    layer.cal_max = cal_max || 0
     if (!cal_max) {
       layer.cal_max = mx
     }
@@ -1054,7 +1057,7 @@ export class NVMeshLoaders {
     layer.colormap = colormap
     layer.colormapNegative = colormapNegative
     layer.useNegativeCmap = useNegativeCmap
-    nvmesh.layers.push(layer as NVMeshLayer)
+    return layer
   } // readLayer()
 
   // read brainvoyager smp format file

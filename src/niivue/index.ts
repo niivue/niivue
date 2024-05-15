@@ -102,7 +102,7 @@ import {
   unProject,
   unpackFloatFromVec4i
 } from './utils.js'
-export { NVMesh, NVMeshFromUrlOptions } from '../nvmesh.js'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
@@ -3359,9 +3359,13 @@ export class Niivue {
     const opts = { ...DEFAULT_OPTIONS, ...document.opts }
     this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
     this.document.opts = opts
+    this.setClipPlane(this.scene.clipPlaneDepthAziElev)
     log.debug('load document', document)
     this.mediaUrlMap.clear()
     this.createEmptyDrawing()
+
+    // const imagesToAdd = new Map<ImageFromUrlOptions, NVImage>()
+
     // load our images and meshes
     const encodedImageBlobs = document.encodedImageBlobs
     for (let i = 0; i < document.imageOptionsArray.length; i++) {
@@ -3374,10 +3378,17 @@ export class Niivue {
         const image = NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
           this.addVolume(image)
-          document.addImageOptions(image, imageOptions)
         }
       }
     }
+
+    // reset our image options map
+    // document.imageOptionsMap.clear()
+
+    // for(const imageOptions of map.keys()) {
+
+    // }
+
     if (this.volumes.length > 0) {
       this.back = this.volumes[0]
     }
@@ -3413,12 +3424,13 @@ export class Niivue {
       log.debug(meshToAdd)
       this.addMesh(meshToAdd)
     }
-
-    // load connectomes
+    // add connectomes
     if (document.data.connectomes) {
       for (const connectomeString of document.data.connectomes) {
         const connectome = JSON.parse(connectomeString)
-        this.loadConnectome(connectome)
+        const meshToAdd = this.loadConnectomeAsMesh(connectome)
+        meshToAdd.updateMesh(this.gl)
+        this.addMesh(meshToAdd)
       }
     }
 
@@ -3585,14 +3597,13 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
    */
   async saveDocument(fileName = 'untitled.nvd'): Promise<void> {
-    this.document.opts = this.opts
-    this.document.scene = this.scene
-
     this.document.title = fileName
     log.debug('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
     this.drawScene()
     this.document.previewImageDataURL = this.canvas!.toDataURL()
+    this.document.volumes = this.volumes
+    this.document.meshes = this.meshes
     this.document.download(fileName)
   }
 
@@ -3695,6 +3706,7 @@ export class Niivue {
     for (let i = 0; i < meshList.length; i++) {
       await this.addMeshFromUrl(meshList[i])
     }
+    this.updateGLVolume()
     this.drawScene()
     return this
   }

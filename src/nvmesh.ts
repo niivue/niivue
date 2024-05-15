@@ -19,7 +19,8 @@ import {
   TRX,
   VTK,
   ValuesArray,
-  X3D
+  X3D,
+  AnyNumberArray
 } from './nvmesh-types.js'
 
 /** Enum for text alignment
@@ -37,26 +38,39 @@ export type NVMeshLayer = {
   headers?: Record<string, string>
   opacity: number
   colormap: string
-  colormapNegative: string
-  colormapInvert: boolean
+  colormapNegative?: string
+  colormapInvert?: boolean
   colormapLabel?: ColorMap | LUT
-  useNegativeCmap: boolean
-  global_min: number
-  global_max: number
+  useNegativeCmap?: boolean
+  global_min?: number
+  global_max?: number
   cal_min: number
   cal_max: number
   cal_minNeg: number
   cal_maxNeg: number
-  isAdditiveBlend: boolean
+  isAdditiveBlend?: boolean
   frame4D: number
   nFrame4D: number
-  values: number[]
+  values: AnyNumberArray // number[] | Float32Array | Uint32Array
   outlineBorder?: number
   isTransparentBelowCalMin?: boolean
-  alphaThreshold: boolean
+  alphaThreshold?: boolean
   base64?: string
   // TODO referenced in niivue/refreshColormaps
   colorbarVisible?: boolean
+}
+
+export const NVMeshLayerDefaults = {
+  colormap: 'gray',
+  opacity: 0.0,
+  nFrame4D: 0,
+  frame4D: 0,
+  outlineBorder: 0,
+  cal_min: 0,
+  cal_max: 0,
+  cal_minNeg: 0,
+  cal_maxNeg: 0,
+  values: new Array<number>()
 }
 
 export class NVMeshFromUrlOptions {
@@ -270,6 +284,7 @@ export class NVMesh {
     this.pts = pts
     this.layers = []
     this.type = MeshType.MESH
+    this.tris = tris
     if (rgba255[3] < 1) {
       this.rgba255 = rgba255
       this.fiberLength = 2
@@ -315,7 +330,7 @@ export class NVMesh {
       }
     }
     this.rgba255 = rgba255
-    this.tris = tris
+
     this.updateMesh(gl)
   }
 
@@ -1420,15 +1435,15 @@ export class NVMesh {
     }
     let colormap = 'warm'
     if ('colormap' in layer) {
-      colormap = layer.colormap
+      colormap = layer.colormap!
     }
     let colormapNegative = 'winter'
     if ('colormapNegative' in layer) {
-      colormapNegative = layer.colormapNegative
+      colormapNegative = layer.colormapNegative!
     }
     let useNegativeCmap = false
     if ('useNegativeCmap' in layer) {
-      useNegativeCmap = layer.useNegativeCmap
+      useNegativeCmap = layer.useNegativeCmap!
     }
     let cal_min: number | null = null
     if ('cal_min' in layer) {
@@ -1439,7 +1454,7 @@ export class NVMesh {
       cal_max = layer.cal_max
     }
 
-    NVMeshLoaders.readLayer(
+    const newLayer = NVMeshLoaders.readLayer(
       layerName,
       buffer,
       nvmesh,
@@ -1450,6 +1465,9 @@ export class NVMesh {
       cal_min,
       cal_max
     )
+    if (newLayer) {
+      nvmesh.layers.push(newLayer)
+    }
   }
 
   /**
@@ -1505,7 +1523,7 @@ export class NVMesh {
     }
 
     for (let i = 0; i < layers.length; i++) {
-      await this.loadLayer(layers[i], nvmesh)
+      await NVMesh.loadLayer(layers[i], nvmesh)
     }
 
     // apply the new properties

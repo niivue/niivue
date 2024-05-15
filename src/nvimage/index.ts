@@ -3208,7 +3208,15 @@ export class NVImage {
     cal_max = NaN,
     trustCalMinMax = true,
     percentileFrac = 0.02,
-    ignoreZeroVoxels = false
+    ignoreZeroVoxels = false,
+    useQFormNotSForm = false,
+    colormapNegative = '',
+    frame4D = 0,
+    imageType = NVIMAGE_TYPE.UNKNOWN,
+    cal_minNeg = NaN,
+    cal_maxNeg = NaN,
+    colorbarVisible = true,
+    colormapLabel = null
   }: ImageFromBase64): NVImage {
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
     function base64ToArrayBuffer(base64: string): ArrayBuffer {
@@ -3234,7 +3242,15 @@ export class NVImage {
         cal_max,
         trustCalMinMax,
         percentileFrac,
-        ignoreZeroVoxels
+        ignoreZeroVoxels,
+        useQFormNotSForm,
+        colormapNegative,
+        frame4D,
+        imageType,
+        cal_minNeg,
+        cal_maxNeg,
+        colorbarVisible,
+        colormapLabel
       )
     } catch (err) {
       log.debug(err)

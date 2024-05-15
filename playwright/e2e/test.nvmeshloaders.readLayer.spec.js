@@ -38,7 +38,7 @@ test('nvmeshloaders readLayer', async ({ page }) => {
       throw Error(response.statusText)
     }
     const buffer = await response.arrayBuffer()
-    niivue.NVMeshLoaders.readLayer(
+    const meshLayer = niivue.NVMeshLoaders.readLayer(
       layer.url,
       buffer,
       nv.meshes[0],
@@ -47,6 +47,7 @@ test('nvmeshloaders readLayer', async ({ page }) => {
       undefined,
       layer.useNegativeCmap
     )
+    nv.meshes[0].layers.push(meshLayer)
     nv.meshes[0].updateMesh(nv.gl)
     nv.drawScene()
     return nv.meshes[0].layers.length
