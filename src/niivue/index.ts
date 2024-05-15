@@ -3604,7 +3604,6 @@ export class Niivue {
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.volumes = this.volumes
     this.document.meshes = this.meshes
-    console.log('meshes at save', this.meshes)
     this.document.download(fileName)
   }
 

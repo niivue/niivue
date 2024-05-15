@@ -978,7 +978,7 @@ export class NVMeshLoaders {
       return layer
     }
     if (n_vert < 3) {
-      console.log('n_vert < 3')
+      log.error('n_vert < 3 in layer')
       return
     }
     if (ext === 'MZ3') {
@@ -1028,7 +1028,7 @@ export class NVMeshLoaders {
       return layer
     }
     if (!layer.values) {
-      console.log('no values')
+      log.error('no values in layer')
       return
     }
     layer.nFrame4D = layer.values.length / n_vert
