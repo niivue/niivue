@@ -3560,7 +3560,7 @@ export class NVImage {
    */
   toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
     const isDrawing = drawingBytes !== null
-    const hdrBytes = hdrToArrayBuffer(this.hdr!, isDrawing)
+    const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, isDrawing)
 
     let drawingBytesToBeConverted = drawingBytes
     if (isDrawing) {

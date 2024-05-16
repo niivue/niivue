@@ -234,6 +234,7 @@ export type DocumentData = {
   sceneData?: SceneData
   // TODO referenced in niivue/loadDocument
   connectomes?: string[]
+  customData?: string
 }
 
 export type ExportDocumentData = {
@@ -256,6 +257,7 @@ export type ExportDocumentData = {
   // TODO the following fields were missing in the typedef
   labels: NVLabel3D[]
   connectomes: string[]
+  customData: string
 }
 
 /**
@@ -428,6 +430,14 @@ export class NVDocument {
     this.data.labels = labels
   }
 
+  get customData(): string | undefined {
+    return this.data.customData
+  }
+
+  set customData(data: string) {
+    this.data.customData = data
+  }
+
   /**
    * Checks if document has an image by id
    */
@@ -515,6 +525,7 @@ export class NVDocument {
     }
 
     data.labels = [...this.data.labels]
+    data.customData = this.customData
 
     // volumes
     // TODO move this to a per-volume export function in NVImage?

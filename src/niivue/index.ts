@@ -3377,6 +3377,18 @@ export class Niivue {
         }
         const image = NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
+          if (image.colormapLabel) {
+            const length = Object.keys(image.colormapLabel.lut).length
+
+            // Create a new Uint8ClampedArray with the length of the object.
+            const uint8ClampedArray = new Uint8ClampedArray(length)
+
+            // Iterate over the object and set the values of the Uint8ClampedArray.
+            for (const key in image.colormapLabel.lut) {
+              uint8ClampedArray[key] = image.colormapLabel.lut[key]
+            }
+            image.colormapLabel.lut = uint8ClampedArray
+          }
           this.addVolume(image)
         }
       }

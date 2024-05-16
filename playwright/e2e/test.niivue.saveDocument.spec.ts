@@ -89,6 +89,50 @@ test('niivue saveDocument mesh mz3', async ({ page }) => {
   fs.unlinkSync(filePath)
 })
 
+test('niivue saveDocument customData', async ({ page }) => {
+  const downloadPromise = page.waitForEvent('download')
+  await page.evaluate(async (testOptions) => {
+    const nv = new Niivue(testOptions)
+    await nv.attachTo('gl')
+    const volumeList = [
+      {
+        url: './images/mni152.nii.gz',
+        volume: { hdr: null, img: null },
+        name: 'mni152.nii.gz',
+        colormap: 'gray',
+        opacity: 1,
+        visible: true
+      },
+      {
+        url: './images/hippo.nii.gz',
+        volume: { hdr: null, img: null },
+        name: 'hippo.nii.gz',
+        colormap: 'winter',
+        opacity: 1,
+        visible: true
+      }
+    ]
+    await nv.loadVolumes(volumeList)
+    nv.document.customData = 'test message'
+    await nv.saveDocument('test-volume.nvd')
+  }, TEST_OPTIONS)
+  const download = await downloadPromise
+  const downloadPath = path.resolve('./downloads')
+  const filePath = path.join(downloadPath, download.suggestedFilename())
+  await download.saveAs(filePath)
+  const data = fs.readFileSync(filePath, { encoding: 'utf-8' })
+  try {
+    if (typeof data === 'string') {
+      const json = JSON.parse(data)
+      const doc = NVDocument.loadFromJSON(json)
+      expect(doc.customData).toBe('test message')
+    } else {
+      throw new Error('NVDocument not correctly encoded')
+    }
+  } catch {}
+  fs.unlinkSync(filePath)
+})
+
 test.skip('niivue saveDocument and loadDocument', async ({ page }) => {
   test.setTimeout(120000)
   const downloadPromise = page.waitForEvent('download')
