@@ -681,6 +681,7 @@ type DocumentData = {
     meshesString?: string;
     sceneData?: SceneData;
     connectomes?: string[];
+    customData?: string;
 };
 type ExportDocumentData = {
     encodedImageBlobs: string[];
@@ -693,6 +694,7 @@ type ExportDocumentData = {
     meshesString: string;
     labels: NVLabel3D[];
     connectomes: string[];
+    customData: string;
 };
 /**
  * Creates and instance of NVDocument
@@ -752,6 +754,8 @@ declare class NVDocument {
      * Sets the 3D labels of the {@link Niivue} instance
      */
     set labels(labels: NVLabel3D[]);
+    get customData(): string | undefined;
+    set customData(data: string);
     /**
      * Checks if document has an image by id
      */

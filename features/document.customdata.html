@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>NiiVue</title>
+  <link rel="stylesheet" href="niivue.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue requires JavaScript.</strong>
+  </noscript>
+  <header>
+    <p>
+      Use the input box to set custom data in the document. Save the document and then drag and drop the document onto the canvas.
+    </p>
+    <label for="customData">Custom Data</label>
+    <input id="customData" value="hello, world!" />
+    <button id="save">Save NVD</button>
+    <button id="clear">Clear</button>
+    <button id="update">Update</button>
+    <button id="info">Info</button>
+    <button id="colormap">Set Colormap</button>
+    <label id="documentCustomData" style="color: cornflowerblue">Custom Data from Document</span>
+  </header>
+  <main id="canvas-container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer id="location">&nbsp;</footer>
+  <script type="module" async>
+    import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "../dist/index.js";
+
+    save.onclick = function () {
+      console.log("document on save", nv1.document);
+      const dataElement = document.getElementById('customData');
+      nv1.document.customData = dataElement.value
+      nv1.saveDocument("custom.nvd");
+    }
+
+    clear.onclick = async function () {
+      nv1 = new Niivue(defaults);
+      nv1.attachToCanvas(gl1);
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.opts.yoke3Dto2DZoom = true;
+    }
+
+    update.onclick = async function () {
+      nv1.updateGLVolume();
+    }
+
+    info.onclick = function () {
+      for (const vol of nv1.volumes) {
+        console.log('vol', vol);
+      }
+    }
+
+    var volumeList1 = [
+      { url: "../images/mni152.nii.gz" },
+    ];
+    let defaults = {
+      backColor: [0, 0, 0, 1],
+      show3Dcrosshair: true,
+      onLocationChange: handleLocationChange,
+      onDocumentLoaded: handleDocumentLoaded
+    };
+    async function fetchJSON(fnm) {
+      const response = await fetch(fnm)
+      const js = await response.json()
+      return js
+    }
+    function handleLocationChange(data) {
+      document.getElementById("location").innerHTML = data.string
+    }
+
+    async function handleDocumentLoaded(doc) {
+      console.log(doc)
+      if (doc.customData) {
+        document.getElementById("documentCustomData").innerHTML = doc.customData
+      }
+    }
+
+    var nv1 = new Niivue(defaults);
+    nv1.attachToCanvas(gl1);
+    nv1.opts.dragMode = nv1.dragModes.pan;
+    nv1.opts.multiplanarForceRender = true;
+    nv1.opts.yoke3Dto2DZoom = true;
+    await nv1.loadVolumes(volumeList1);
+
+    nv1.setClipPlane([-0.12, 180, 40]);
+    nv1.setRenderAzimuthElevation(230, 15)
+    nv1.setSliceType(nv1.sliceTypeMultiplanar);
+    nv1.opts.multiplanarForceRender = true;
+
+  </script>
+</body>
+
+</html>
