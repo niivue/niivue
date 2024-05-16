@@ -38,6 +38,9 @@
     <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
     <button id="about">Save NVD</button>
     <button id="clear">Clear</button>
+    <button id="update">Update</button>
+    <button id="info">Info</button>
+    <button id="colormap">Set Colormap</button>
   </header>
   <main id="canvas-container">
     <canvas id="gl1"></canvas>
@@ -78,7 +81,28 @@
       nv1.opts.yoke3Dto2DZoom = true;
     }
 
-    var volumeList1 = [{ url: "../images/mni152.nii.gz" }, { url: "../images/aal.nii.gz" }];
+    update.onclick = async function() {
+      nv1.updateGLVolume();
+    }
+
+    info.onclick = function() {
+      for(const vol of nv1.volumes) {
+        console.log('vol', vol);
+      }
+    }
+
+    colormap.onclick = async function() {
+      console.log('setting colormap')
+      let cmap = await fetchJSON("../images/aal.json")
+      console.log('colormap loaded')
+      nv1.volumes[1].setColormapLabel(cmap)
+      nv1.updateGLVolume()
+      console.log('finished')
+    }
+
+    var volumeList1 = [
+      { url: "../images/mni152.nii.gz" }, 
+      { url: "../images/aal.nii.gz" }];
     let defaults = {
       backColor: [0, 0, 0, 1],
       show3Dcrosshair: true,
@@ -92,10 +116,19 @@
     }
     function handleLocationChange(data) {
       document.getElementById("location").innerHTML = data.string
+      
+
     }
 
-    function handleDocumentLoaded(doc) {
+    async function handleDocumentLoaded(doc) {
+      // nv1.updateGLVolume();
+      // for(let i = 0; i < nv1.volumes.length; i++) {
+      //   nv1.refreshLayers(nv1.volumes[i], i)
+      // }
       console.log("doc loaded", doc);
+      // let cmap = await fetchJSON("../images/aal.json")
+      // nv1.volumes[1].setColormapLabel(cmap)
+
     }
 
     var nv1 = new Niivue(defaults);
@@ -144,38 +177,7 @@
       nv1.setRenderAzimuthElevation(230,15)
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.opts.multiplanarForceRender = true;
-    //   var volumeList1 = [
-    //     {url: "../images/mni152.nii.gz"},
-    //     {
-    //       url: "../images/hippolr.nii.gz", 
-    //       colormap: "red",
-    //     }
-    //   ];
-    //   await nv1.loadVolumes(volumeList1);
-    //   var meshLayersList1 = [
-    //     {
-    //       url: "../images/pval.LH.nii.gz",
-    //       cal_min: 25,
-    //       cal_max: 35.0,
-    //       opacity: 1,
-    //     },
-    //   ];
-    //   await nv1.loadMeshes([
-    //     {
-    //       url: "../images/lh.pial",
-    //       rgba255: [212, 244, 212, 255],
-    //       layers: meshLayersList1,
-    //     },
-    //     { url: "../images/dpsv.trx" },
-    //     // {  url: "../images/aal.mz3"},
-    //     { url: "../images/TR_S_R.tt.gz"},
-    //     { url: "../images/connectome.jcon" },    
-    //     // { url: "../images/simplify_brain.obj"}    
-    //   ]);
-
-    // // console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
-    // nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
-    // nv1.setClipPlane([0.2, 0, 120]);
+    
   </script>
 </body>
 
