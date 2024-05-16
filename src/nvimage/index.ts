@@ -235,10 +235,7 @@ export class NVImage {
           if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
             imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer as ArrayBuffer))
           } else {
-            // imgRaw = nifti.readImage(this.hdr, dataBuffer as ArrayBuffer) // this.hdr.vox_offset
-            console.log('this.hdr.vox_offset', this.hdr.vox_offset)
-            imgRaw = new Uint8Array(dataBuffer.slice(352) as ArrayBuffer)
-            console.log('imgRaw length', imgRaw.byteLength)
+            imgRaw = nifti.readImage(this.hdr, dataBuffer as ArrayBuffer)
           }
         }
         break
@@ -3563,7 +3560,7 @@ export class NVImage {
    */
   toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
     const isDrawing = drawingBytes !== null
-    const hdrBytes = hdrToArrayBuffer(this.hdr!, isDrawing)
+    const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, isDrawing)
 
     let drawingBytesToBeConverted = drawingBytes
     if (isDrawing) {
@@ -3640,7 +3637,6 @@ export class NVImage {
     const img8 = isDrawing ? (drawingBytesToBeConverted as Uint8Array) : new Uint8Array(this.img!.buffer)
     const opad = new Uint8Array(4)
     const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    console.log('hdrBytes.length + opad.length + img8.length', hdrBytes.length, opad.length, img8.length)
     odata.set(hdrBytes)
     odata.set(opad, hdrBytes.length)
     odata.set(img8, hdrBytes.length + opad.length)
