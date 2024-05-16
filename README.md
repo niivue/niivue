@@ -2,7 +2,13 @@
 
 NiiVue is web-based visualization tool for neuroimaging that can run on any operating system and any web device (phone, tablet, computer). This repository contains only the **core NiiVue package** that can be embedded into other projects. We have additional [repositories](https://github.com/niivue) that wrap NiiVue for use in jupyter notebooks, vscode, and electron applications. 
 
-[Click here to see NiiVue live demos](https://niivue.github.io/niivue/)
+# News
+
+The NiiVue iOS app is now available on iPhone and iPad.
+
+[![Apple App Store](./docs/appstore.svg)](https://apps.apple.com/gb/app/niivue/id6497066801)
+
+### [Click here to see NiiVue live demos](https://niivue.github.io/niivue/)
 
 What makes NiiVue unique is its ability to simultaneously display all the datatypes popular with neuroimaging: voxels, meshes, tractography streamlines, statistical maps and connectomes. Alternative voxel-based web tools include [ami](https://fnndsc.github.io/ami/), [BioImage Suite Web](https://bioimagesuiteweb.github.io/webapp/viewer.html), [BrainBrowser](https://brainbrowser.cbrain.mcgill.ca/volume-viewer), [nifti-drop](http://vsoch.github.io/nifti-drop), [OHIF DICOM Viewer](https://viewer.ohif.org/), [Papaya](https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html), [VTK.js](https://kitware.github.io/paraview-glance/app/), and [slicedrop](https://slicedrop.com/).
 
