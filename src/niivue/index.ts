@@ -3617,7 +3617,7 @@ export class Niivue {
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.volumes = this.volumes
     this.document.meshes = this.meshes
-    this.document.download(fileName, compress)
+    return this.document.download(fileName, compress)
   }
 
   /**
