@@ -742,7 +742,8 @@ export class NVDocument {
       const documentText = await NVUtilities.decompressArrayBuffer(buffer)
       documentData = JSON.parse(documentText)
     } else {
-      documentData = await response.json()
+      const utf8decoder = new TextDecoder()
+      documentData = JSON.parse(utf8decoder.decode(buffer))
     }
 
     return NVDocument.loadFromJSON(documentData)
@@ -757,10 +758,8 @@ export class NVDocument {
     const document = new NVDocument()
 
     if (NVUtilities.isArrayBufferCompressed(arrayBuffer)) {
-      console.log('compressed')
       dataString = await NVUtilities.decompressArrayBuffer(arrayBuffer)
     } else {
-      console.log('not compressed')
       const utf8decoder = new TextDecoder()
       dataString = utf8decoder.decode(arrayBuffer)
     }
