@@ -3604,11 +3604,12 @@ export class Niivue {
   /**
    * save the entire scene (objects and settings) as a document
    * @param fileName - the name of the document storing the scene
+   * @param compress - whether the file should be compressed
    * @example
    * niivue.saveDocument("niivue.basic.nvd")
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
    */
-  async saveDocument(fileName = 'untitled.nvd'): Promise<void> {
+  async saveDocument(fileName = 'untitled.nvd', compress = true): Promise<void> {
     this.document.title = fileName
     log.debug('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
@@ -3616,7 +3617,7 @@ export class Niivue {
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.volumes = this.volumes
     this.document.meshes = this.meshes
-    this.document.download(fileName)
+    this.document.download(fileName, compress)
   }
 
   /**

@@ -693,9 +693,19 @@ export class NVDocument {
   /**
    * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
    */
-  download(fileName: string): void {
+  async download(fileName: string, compress: boolean): Promise<void> {
     const data = this.json()
-    NVUtilities.download(JSON.stringify(data), fileName, 'application/json')
+    const dataText = JSON.stringify(data)
+    const contentType = compress ? 'application/gzip' : 'application/json'
+    let content: string | ArrayBuffer
+
+    if (compress) {
+      content = await NVUtilities.compressStringToArrayBuffer(dataText)
+    } else {
+      content = JSON.stringify(data)
+    }
+
+    NVUtilities.download(content, fileName, contentType)
   }
 
   /**

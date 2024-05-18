@@ -1,5 +1,5 @@
 import arrayEqual from 'array-equal'
-import { compressSync, decompress, decompressSync, strFromU8, strToU8 } from 'fflate/browser'
+import { compress, compressSync, decompress, decompressSync, strFromU8, strToU8 } from 'fflate/browser'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 
 /**
@@ -73,9 +73,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 
   // https://stackoverflow.com/questions/34156282/how-do-i-save-json-to-local-text-file
-  static download(content: string, fileName: string, contentType: string): void {
+  static download(content: string | ArrayBuffer, fileName: string, contentType: string): void {
     const a = document.createElement('a')
-    const file = new Blob([content], { type: contentType })
+    const contentArray = Array.isArray(content) ? content : [content]
+    const file = new Blob(contentArray, { type: contentType })
     a.href = URL.createObjectURL(file)
     a.download = fileName
     a.click()
@@ -125,11 +126,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return base64
   }
 
+  static async compressStringToArrayBuffer(input: string): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const uint8Array = new TextEncoder().encode(input)
+
+      compress(uint8Array, (err, compressed) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(compressed.buffer)
+        }
+      })
+    })
+  }
+
   static isArrayBufferCompressed(buffer: ArrayBuffer): boolean {
     if (buffer && buffer.byteLength) {
       const arr = new Uint8Array(buffer)
       const magicNumber = (arr[0] << 8) | arr[1]
-      console.log('magic number', magicNumber)
       return magicNumber === 0x1f8b
     } else {
       return false
