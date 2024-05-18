@@ -1,5 +1,5 @@
 import arrayEqual from 'array-equal'
-import { compressSync, decompressSync, strToU8 } from 'fflate/browser'
+import { compressSync, decompress, decompressSync, strFromU8, strToU8 } from 'fflate/browser'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 
 /**
@@ -123,6 +123,32 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const compressed = compressSync(buf)
     const base64 = NVUtilities.uint8tob64(compressed)
     return base64
+  }
+
+  static isArrayBufferCompressed(buffer: ArrayBuffer): boolean {
+    if (buffer && buffer.byteLength) {
+      const arr = new Uint8Array(buffer)
+      const magicNumber = (arr[0] << 8) | arr[1]
+      console.log('magic number', magicNumber)
+      return magicNumber === 0x1f8b
+    } else {
+      return false
+    }
+  }
+
+  static async decompressArrayBuffer(buffer: ArrayBuffer): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const uint8Array = new Uint8Array(buffer)
+
+      decompress(uint8Array, (err, decompressed) => {
+        if (err) {
+          reject(err)
+        } else {
+          const result = strFromU8(decompressed)
+          resolve(result)
+        }
+      })
+    })
   }
 
   static arraysAreEqual(a: unknown[], b: unknown[]): boolean {

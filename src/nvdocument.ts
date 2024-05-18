@@ -724,8 +724,18 @@ export class NVDocument {
    */
   static async loadFromUrl(url: string): Promise<NVDocument> {
     const response = await fetch(url)
-    const data = await response.json()
-    return NVDocument.loadFromJSON(data)
+    const buffer = await response.arrayBuffer()
+    let documentData: DocumentData
+
+    if (NVUtilities.isArrayBufferCompressed(buffer)) {
+      // The file is gzip compressed
+      const documentText = await NVUtilities.decompressArrayBuffer(buffer)
+      documentData = JSON.parse(documentText)
+    } else {
+      documentData = await response.json()
+    }
+
+    return NVDocument.loadFromJSON(documentData)
   }
 
   /**
@@ -733,9 +743,17 @@ export class NVDocument {
    */
   static async loadFromFile(file: Blob): Promise<NVDocument> {
     const arrayBuffer = await NVUtilities.readFileAsync(file)
+    let dataString: string
     const document = new NVDocument()
-    const utf8decoder = new TextDecoder()
-    const dataString = utf8decoder.decode(arrayBuffer)
+
+    if (NVUtilities.isArrayBufferCompressed(arrayBuffer)) {
+      console.log('compressed')
+      dataString = await NVUtilities.decompressArrayBuffer(arrayBuffer)
+    } else {
+      console.log('not compressed')
+      const utf8decoder = new TextDecoder()
+      dataString = utf8decoder.decode(arrayBuffer)
+    }
     document.data = JSON.parse(dataString)
 
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
