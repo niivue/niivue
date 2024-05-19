@@ -3416,6 +3416,10 @@ export class Niivue {
 
     for (const meshDataObject of document.meshDataObjects ?? []) {
       const meshInit = { gl: this.gl, ...meshDataObject }
+      if (meshDataObject.offsetPt0) {
+        meshInit.rgba255[3] = 0 //this is a streamline
+        meshInit.tris = new Uint32Array(meshDataObject.offsetPt0)
+      }
       log.debug(meshInit)
       const meshToAdd = new NVMesh(
         meshInit.pts,

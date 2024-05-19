@@ -305,7 +305,8 @@ export class NVMesh {
       if (dpv) {
         this.initValuesArray(dpv)
       }
-      this.offsetPt0 = tris
+      this.offsetPt0 = new Uint32Array(tris)
+      this.tris = new Uint32Array(0)
       this.updateFibers(gl)
       // define VAO
       gl.bindVertexArray(this.vaoFiber)
