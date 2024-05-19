@@ -3465,30 +3465,32 @@ export class Niivue {
  * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
         ${javascript}</script></body></html>`;
  */
-  generateLoadDocumentJavaScript(canvasId: string, esm: string): string {
+  async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
     const json = this.json()
 
-    const base64 = NVUtilities.compressToBase64String(JSON.stringify(json))
+    const base64 = await NVUtilities.compressToBase64String(JSON.stringify(json))
     const javascript = `
         ${esm}
         
-        function saveNiivueAsHtml(pageName) {    
+        async function saveNiivueAsHtml(pageName) {    
           //get new docstring
           const docString = nv1.json();
           const html = 
           document.getElementsByTagName("html")[0]
-              .innerHTML.replace(base64, NVUtilities.compressToBase64String(JSON.stringify(docString)));
+              .innerHTML.replace(base64, await NVUtilities.compressToBase64String(JSON.stringify(docString)));
           NVUtilities.download(html, pageName, "application/html");
         }
         
         var nv1 = new Niivue();
         nv1.attachTo("${canvasId}");  
         var base64 = "${base64}";
-        var jsonText = NVUtilities.decompressBase64String(base64);
-        var json = JSON.parse(jsonText); // string -> JSON
-        var doc = NVDocument.loadFromJSON(json);                
-        nv1.loadDocument(doc);
-        nv1.updateGLVolume();
+        NVUtilities.decompressBase64String(base64).then((jsonText) => {
+          var json = JSON.parse(jsonText); // string -> JSON
+          var doc = NVDocument.loadFromJSON(json);                
+          nv1.loadDocument(doc);
+          nv1.updateGLVolume();
+        });
+        
       `
 
     return javascript
@@ -3504,8 +3506,8 @@ export class Niivue {
    *       %%javascript%%</script></body></html>`;
    * nv1.generateHTML("page.html", esm);
    */
-  generateHTML(canvasId = 'gl1', esm: string): string {
-    const javascript = this.generateLoadDocumentJavaScript(canvasId, esm)
+  async generateHTML(canvasId = 'gl1', esm: string): Promise<string> {
+    const javascript = await this.generateLoadDocumentJavaScript(canvasId, esm)
     const html = `<!DOCTYPE html>
         <html lang="en">
           <head>
@@ -3584,9 +3586,9 @@ export class Niivue {
    * @param canvasId - id of canvas NiiVue will be attached to
    * @param esm - bundled version of NiiVue
    */
-  saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): void {
-    const html = this.generateHTML(canvasId, esm)
-    NVUtilities.download(html, fileName, 'application/html')
+  async saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): Promise<void> {
+    const html = await this.generateHTML(canvasId, esm)
+    return NVUtilities.download(html, fileName, 'application/html')
   }
 
   /**

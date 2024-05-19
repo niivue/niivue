@@ -1,5 +1,5 @@
 import arrayEqual from 'array-equal'
-import { compress, compressSync, decompress, decompressSync, strFromU8, strToU8 } from 'fflate/browser'
+import { compress, decompress, strFromU8, strToU8 } from 'fflate/browser'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 
 /**
@@ -103,7 +103,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     })
   }
 
-  static decompressBase64String(base64: string): string {
+  static async decompressBase64String(base64: string): Promise<string> {
     const compressed = atob(base64)
     // convert to an array buffer
     const compressedBuffer = new ArrayBuffer(compressed.length)
@@ -111,24 +111,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     for (let i = 0; i < compressed.length; i++) {
       compressedView[i] = compressed.charCodeAt(i)
     }
-    // decompress the array buffer
-    const decompressedBuffer = decompressSync(compressedView)
-    // convert the array buffer to a string
-    const decompressed = new TextDecoder('utf-8').decode(decompressedBuffer)
-    // console.log(decompressed);
-    return decompressed
+    return NVUtilities.decompressArrayBuffer(compressedView)
   }
 
-  static compressToBase64String(string: string): string {
-    const buf = strToU8(string)
-    const compressed = compressSync(buf)
-    const base64 = NVUtilities.uint8tob64(compressed)
-    return base64
+  static async compressToBase64String(string: string): Promise<string> {
+    const buf = await NVUtilities.compressStringToArrayBuffer(string)
+    return NVUtilities.uint8tob64(new Uint8Array(buf))
   }
 
   static async compressStringToArrayBuffer(input: string): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
-      const uint8Array = new TextEncoder().encode(input)
+      const uint8Array = strToU8(input)
 
       compress(uint8Array, (err, compressed) => {
         if (err) {
