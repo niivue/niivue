@@ -672,9 +672,6 @@ export class NVDocument {
         edges: mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [],
         extentsMax: mesh.extentsMax,
         extentsMin: mesh.extentsMin,
-        fiberColor: mesh.fiberColor,
-        fiberDither: mesh.fiberDither,
-        fiberRadius: mesh.fiberRadius,
         furthestVertexFromOrigin: mesh.furthestVertexFromOrigin,
         nodeColormap: mesh.nodeColormap,
         nodeColormapNegative: mesh.nodeColormapNegative,
@@ -685,7 +682,7 @@ export class NVDocument {
         offsetPt0: mesh.offsetPt0,
         nodes: mesh.nodes
       }
-      if ((mesh.offsetPt0) && (mesh.offsetPt0.length > 0)) {
+      if (mesh.offsetPt0 && mesh.offsetPt0.length > 0) {
         copyMesh.offsetPt0 = mesh.offsetPt0
         copyMesh.fiberGroupColormap = mesh.fiberGroupColormap
         copyMesh.fiberColor = mesh.fiberColor
