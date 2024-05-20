@@ -1925,7 +1925,7 @@ export class NVImage {
           }
           break
         case 'space':
-          if (value.includes('right-anterior-superior') || value.includes('RAS')) {
+          if (value.includes('right-anterior-superior') || value.includes('ras')) {
             rot33 = mat3.fromValues(
               1,
               0,
@@ -1939,7 +1939,7 @@ export class NVImage {
               0,
               1
             )
-          } else if (value.includes('left-anterior-superior') || value.includes('LAS')) {
+          } else if (value.includes('left-anterior-superior') || value.includes('las')) {
             rot33 = mat3.fromValues(
               -1,
               0,
@@ -1953,7 +1953,7 @@ export class NVImage {
               0,
               1
             )
-          } else if (value.includes('left-posterior-superior') || value.includes('LPS')) {
+          } else if (value.includes('left-posterior-superior') || value.includes('lps')) {
             rot33 = mat3.fromValues(
               -1,
               0,
