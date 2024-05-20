@@ -3434,6 +3434,13 @@ export class Niivue {
         meshInit.dps,
         meshInit.dpv
       )
+      if (meshDataObject.offsetPt0) {
+        meshToAdd.fiberGroupColormap = meshDataObject.fiberGroupColormap
+        meshToAdd.fiberColor = meshDataObject.fiberColor
+        meshToAdd.fiberDither = meshDataObject.fiberDither
+        meshToAdd.fiberRadius = meshDataObject.fiberRadius
+        meshToAdd.colormap = meshDataObject.colormap
+      }
       meshToAdd.meshShaderIndex = meshInit.meshShaderIndex
       meshToAdd.layers = meshInit.layers
       meshToAdd.updateMesh(this.gl)
