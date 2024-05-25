@@ -722,10 +722,8 @@ export class Niivue {
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
       if (typeof options[name as keyof typeof options] === 'function') {
-        // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
-        // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -2059,10 +2057,8 @@ export class Niivue {
     // populate Niivue with user supplied options
     for (const name in options) {
       if (typeof options[name as keyof NVConfigOptions] === 'function') {
-        // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
-        // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }

@@ -43,6 +43,11 @@ export enum DRAG_MODE {
   callbackOnly = 5
 }
 
+// make mutable type
+type Mutable<T> = {
+  -readonly [P in keyof T]: T[P];
+};
+
 /**
  * NVConfigOptions
  */
@@ -638,7 +643,7 @@ export class NVDocument {
         data.connectomes.push(JSON.stringify((mesh as NVConnectome).json()))
         continue
       }
-      const copyMesh = {
+      const copyMesh: Mutable<any> = {
         pts: mesh.pts,
         tris: mesh.tris,
         name: mesh.name,

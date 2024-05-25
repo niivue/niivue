@@ -182,7 +182,7 @@ export type ImageFromFileOptions = {
   // the opacity for this image. default is 1
   opacity?: number
   // Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
-  urlImgData?: File | null
+  urlImgData?: File | null | FileSystemEntry
   // minimum intensity for color brightness/contrast
   cal_min?: number
   // maximum intensity for color brightness/contrast

@@ -326,7 +326,6 @@ export class NVMesh {
       this.hasConnectome = true
       const keysArray = Object.keys(connectome)
       for (let i = 0, len = keysArray.length; i < len; i++) {
-        // @ts-expect-error -- this should be done explicitly
         this[keysArray[i]] = connectome[keysArray[i]]
       }
     }

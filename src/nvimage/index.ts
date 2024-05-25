@@ -1,5 +1,4 @@
 import * as nifti from 'nifti-reader-js'
-// @ts-expect-error -- https://github.com/rii-mango/Daikon/pull/57
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
@@ -2979,6 +2978,7 @@ export class NVImage {
       }
       let pairedImgData = null
       if (urlImgData) {
+        //@ts-expect-error
         pairedImgData = await this.readFileAsync(urlImgData)
       }
       nvimage = new NVImage(
