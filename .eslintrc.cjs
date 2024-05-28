@@ -41,6 +41,8 @@ module.exports = {
         '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/no-floating-promises': 'error',
         '@typescript-eslint/no-misused-promises': 'error',
+        // allow any for now: TH implemented for CR easier development cycles
+        '@typescript-eslint/no-explicit-any': 'off'
       }
     }
   ]

@@ -2978,7 +2978,7 @@ export class NVImage {
       }
       let pairedImgData = null
       if (urlImgData) {
-        //@ts-expect-error
+        // @ts-expect-error check data type?
         pairedImgData = await this.readFileAsync(urlImgData)
       }
       nvimage = new NVImage(

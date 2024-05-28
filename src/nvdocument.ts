@@ -45,8 +45,8 @@ export enum DRAG_MODE {
 
 // make mutable type
 type Mutable<T> = {
-  -readonly [P in keyof T]: T[P];
-};
+  -readonly [P in keyof T]: T[P]
+}
 
 /**
  * NVConfigOptions
