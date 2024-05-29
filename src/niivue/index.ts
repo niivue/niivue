@@ -87,7 +87,15 @@ import {
   ImageFromUrlOptions
 } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
-import { Connectome, LegacyConnectome, NVConnectomeNode, NiftiHeader, DragReleaseParams } from '../types.js'
+import {
+  Connectome,
+  LegacyConnectome,
+  NVConnectomeNode,
+  NiftiHeader,
+  DragReleaseParams,
+  NiiVueLocation,
+  NiiVueLocationValue
+} from '../types.js'
 import {
   clamp,
   decodeRLE,
@@ -8819,7 +8827,23 @@ export class Niivue {
       }
     }
 
-    const msg = {
+    // const msg = {
+    //   mm: this.frac2mm(this.scene.crosshairPos, 0, true),
+    //   axCorSag,
+    //   vox: this.frac2vox(this.scene.crosshairPos),
+    //   frac: this.scene.crosshairPos,
+    //   xy: [this.mousePos[0], this.mousePos[1]],
+    //   values: this.volumes.map((v) => {
+    //     const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
+    //     const vox = v.mm2vox(mm as number[]) // e.mm2vox
+    //     const val = v.getValue(vox[0], vox[1], vox[2], v.frame4D)
+    //     return { name: v.name, value: val, id: v.id, mm, vox }
+    //   }),
+    //   string: str
+    // }
+
+    // make msg object of type NVLocation
+    const msg: NiiVueLocation = {
       mm: this.frac2mm(this.scene.crosshairPos, 0, true),
       axCorSag,
       vox: this.frac2vox(this.scene.crosshairPos),
@@ -8829,10 +8853,11 @@ export class Niivue {
         const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
         const vox = v.mm2vox(mm as number[]) // e.mm2vox
         const val = v.getValue(vox[0], vox[1], vox[2], v.frame4D)
-        return { name: v.name, value: val, id: v.id, mm, vox }
+        return { name: v.name, value: val, id: v.id, mm, vox } as NiiVueLocationValue
       }),
       string: str
     }
+
     this.onLocationChange(msg)
   }
 
