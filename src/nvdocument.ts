@@ -43,6 +43,11 @@ export enum DRAG_MODE {
   callbackOnly = 5
 }
 
+// make mutable type
+type Mutable<T> = {
+  -readonly [P in keyof T]: T[P]
+}
+
 /**
  * NVConfigOptions
  */
@@ -638,7 +643,7 @@ export class NVDocument {
         data.connectomes.push(JSON.stringify((mesh as NVConnectome).json()))
         continue
       }
-      const copyMesh = {
+      const copyMesh: Mutable<any> = {
         pts: mesh.pts,
         tris: mesh.tris,
         name: mesh.name,
@@ -672,7 +677,6 @@ export class NVDocument {
         edges: mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [],
         extentsMax: mesh.extentsMax,
         extentsMin: mesh.extentsMin,
-        fiberGroupColormap: mesh.fiberGroupColormap,
         furthestVertexFromOrigin: mesh.furthestVertexFromOrigin,
         nodeColormap: mesh.nodeColormap,
         nodeColormapNegative: mesh.nodeColormapNegative,
@@ -683,7 +687,14 @@ export class NVDocument {
         offsetPt0: mesh.offsetPt0,
         nodes: mesh.nodes
       }
-
+      if (mesh.offsetPt0 && mesh.offsetPt0.length > 0) {
+        copyMesh.offsetPt0 = mesh.offsetPt0
+        copyMesh.fiberGroupColormap = mesh.fiberGroupColormap
+        copyMesh.fiberColor = mesh.fiberColor
+        copyMesh.fiberDither = mesh.fiberDither
+        copyMesh.fiberRadius = mesh.fiberRadius
+        copyMesh.colormap = mesh.colormap
+      }
       meshes.push(copyMesh)
     }
     data.meshesString = JSON.stringify(serialize(meshes))
@@ -693,9 +704,19 @@ export class NVDocument {
   /**
    * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
    */
-  download(fileName: string): void {
+  async download(fileName: string, compress: boolean): Promise<void> {
     const data = this.json()
-    NVUtilities.download(JSON.stringify(data), fileName, 'application/json')
+    const dataText = JSON.stringify(data)
+    const contentType = compress ? 'application/gzip' : 'application/json'
+    let content: string | ArrayBuffer
+
+    if (compress) {
+      content = await NVUtilities.compressStringToArrayBuffer(dataText)
+    } else {
+      content = JSON.stringify(data)
+    }
+
+    NVUtilities.download(content, fileName, contentType)
   }
 
   /**
@@ -724,8 +745,19 @@ export class NVDocument {
    */
   static async loadFromUrl(url: string): Promise<NVDocument> {
     const response = await fetch(url)
-    const data = await response.json()
-    return NVDocument.loadFromJSON(data)
+    const buffer = await response.arrayBuffer()
+    let documentData: DocumentData
+
+    if (NVUtilities.isArrayBufferCompressed(buffer)) {
+      // The file is gzip compressed
+      const documentText = await NVUtilities.decompressArrayBuffer(buffer)
+      documentData = JSON.parse(documentText)
+    } else {
+      const utf8decoder = new TextDecoder()
+      documentData = JSON.parse(utf8decoder.decode(buffer))
+    }
+
+    return NVDocument.loadFromJSON(documentData)
   }
 
   /**
@@ -733,9 +765,15 @@ export class NVDocument {
    */
   static async loadFromFile(file: Blob): Promise<NVDocument> {
     const arrayBuffer = await NVUtilities.readFileAsync(file)
+    let dataString: string
     const document = new NVDocument()
-    const utf8decoder = new TextDecoder()
-    const dataString = utf8decoder.decode(arrayBuffer)
+
+    if (NVUtilities.isArrayBufferCompressed(arrayBuffer)) {
+      dataString = await NVUtilities.decompressArrayBuffer(arrayBuffer)
+    } else {
+      const utf8decoder = new TextDecoder()
+      dataString = utf8decoder.decode(arrayBuffer)
+    }
     document.data = JSON.parse(dataString)
 
     if (document.data.opts.meshThicknessOn2D === 'infinity') {

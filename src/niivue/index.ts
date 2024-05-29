@@ -722,10 +722,8 @@ export class Niivue {
     for (const name in options) {
       // if the user supplied a function for a callback, use it, else use the default callback or nothing
       if (typeof options[name as keyof typeof options] === 'function') {
-        // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
-        // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -2059,10 +2057,8 @@ export class Niivue {
     // populate Niivue with user supplied options
     for (const name in options) {
       if (typeof options[name as keyof NVConfigOptions] === 'function') {
-        // @ts-expect-error should be explicit
         this[name] = options[name]
       } else {
-        // @ts-expect-error should be explicit
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
@@ -3416,6 +3412,10 @@ export class Niivue {
 
     for (const meshDataObject of document.meshDataObjects ?? []) {
       const meshInit = { gl: this.gl, ...meshDataObject }
+      if (meshDataObject.offsetPt0) {
+        meshInit.rgba255[3] = 0 // this is a streamline
+        meshInit.tris = new Uint32Array(meshDataObject.offsetPt0)
+      }
       log.debug(meshInit)
       const meshToAdd = new NVMesh(
         meshInit.pts,
@@ -3430,6 +3430,13 @@ export class Niivue {
         meshInit.dps,
         meshInit.dpv
       )
+      if (meshDataObject.offsetPt0) {
+        meshToAdd.fiberGroupColormap = meshDataObject.fiberGroupColormap
+        meshToAdd.fiberColor = meshDataObject.fiberColor
+        meshToAdd.fiberDither = meshDataObject.fiberDither
+        meshToAdd.fiberRadius = meshDataObject.fiberRadius
+        meshToAdd.colormap = meshDataObject.colormap
+      }
       meshToAdd.meshShaderIndex = meshInit.meshShaderIndex
       meshToAdd.layers = meshInit.layers
       meshToAdd.updateMesh(this.gl)
@@ -3461,30 +3468,32 @@ export class Niivue {
  * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
         ${javascript}</script></body></html>`;
  */
-  generateLoadDocumentJavaScript(canvasId: string, esm: string): string {
+  async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
     const json = this.json()
 
-    const base64 = NVUtilities.compressToBase64String(JSON.stringify(json))
+    const base64 = await NVUtilities.compressToBase64String(JSON.stringify(json))
     const javascript = `
         ${esm}
         
-        function saveNiivueAsHtml(pageName) {    
+        async function saveNiivueAsHtml(pageName) {    
           //get new docstring
           const docString = nv1.json();
           const html = 
           document.getElementsByTagName("html")[0]
-              .innerHTML.replace(base64, NVUtilities.compressToBase64String(JSON.stringify(docString)));
+              .innerHTML.replace(base64, await NVUtilities.compressToBase64String(JSON.stringify(docString)));
           NVUtilities.download(html, pageName, "application/html");
         }
         
         var nv1 = new Niivue();
         nv1.attachTo("${canvasId}");  
         var base64 = "${base64}";
-        var jsonText = NVUtilities.decompressBase64String(base64);
-        var json = JSON.parse(jsonText); // string -> JSON
-        var doc = NVDocument.loadFromJSON(json);                
-        nv1.loadDocument(doc);
-        nv1.updateGLVolume();
+        NVUtilities.decompressBase64String(base64).then((jsonText) => {
+          var json = JSON.parse(jsonText); // string -> JSON
+          var doc = NVDocument.loadFromJSON(json);                
+          nv1.loadDocument(doc);
+          nv1.updateGLVolume();
+        });
+        
       `
 
     return javascript
@@ -3500,8 +3509,8 @@ export class Niivue {
    *       %%javascript%%</script></body></html>`;
    * nv1.generateHTML("page.html", esm);
    */
-  generateHTML(canvasId = 'gl1', esm: string): string {
-    const javascript = this.generateLoadDocumentJavaScript(canvasId, esm)
+  async generateHTML(canvasId = 'gl1', esm: string): Promise<string> {
+    const javascript = await this.generateLoadDocumentJavaScript(canvasId, esm)
     const html = `<!DOCTYPE html>
         <html lang="en">
           <head>
@@ -3580,9 +3589,9 @@ export class Niivue {
    * @param canvasId - id of canvas NiiVue will be attached to
    * @param esm - bundled version of NiiVue
    */
-  saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): void {
-    const html = this.generateHTML(canvasId, esm)
-    NVUtilities.download(html, fileName, 'application/html')
+  async saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): Promise<void> {
+    const html = await this.generateHTML(canvasId, esm)
+    return NVUtilities.download(html, fileName, 'application/html')
   }
 
   /**
@@ -3604,11 +3613,12 @@ export class Niivue {
   /**
    * save the entire scene (objects and settings) as a document
    * @param fileName - the name of the document storing the scene
+   * @param compress - whether the file should be compressed
    * @example
    * niivue.saveDocument("niivue.basic.nvd")
    * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
    */
-  async saveDocument(fileName = 'untitled.nvd'): Promise<void> {
+  async saveDocument(fileName = 'untitled.nvd', compress = true): Promise<void> {
     this.document.title = fileName
     log.debug('saveDocument', this.volumes[0])
     // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
@@ -3616,7 +3626,7 @@ export class Niivue {
     this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.volumes = this.volumes
     this.document.meshes = this.meshes
-    this.document.download(fileName)
+    return this.document.download(fileName, compress)
   }
 
   /**

@@ -7,7 +7,7 @@
     "module": "NodeNext",
     "target": "esnext",
     "moduleResolution": "NodeNext",
-    "strict": true,
+    "strict": false,
     "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,

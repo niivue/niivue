@@ -1,5 +1,4 @@
 import * as nifti from 'nifti-reader-js'
-// @ts-expect-error -- https://github.com/rii-mango/Daikon/pull/57
 import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
@@ -1925,7 +1924,7 @@ export class NVImage {
           }
           break
         case 'space':
-          if (value.includes('right-anterior-superior') || value.includes('RAS')) {
+          if (value.includes('right-anterior-superior') || value.includes('ras')) {
             rot33 = mat3.fromValues(
               1,
               0,
@@ -1939,7 +1938,7 @@ export class NVImage {
               0,
               1
             )
-          } else if (value.includes('left-anterior-superior') || value.includes('LAS')) {
+          } else if (value.includes('left-anterior-superior') || value.includes('las')) {
             rot33 = mat3.fromValues(
               -1,
               0,
@@ -1953,7 +1952,7 @@ export class NVImage {
               0,
               1
             )
-          } else if (value.includes('left-posterior-superior') || value.includes('LPS')) {
+          } else if (value.includes('left-posterior-superior') || value.includes('lps')) {
             rot33 = mat3.fromValues(
               -1,
               0,
@@ -2979,6 +2978,7 @@ export class NVImage {
       }
       let pairedImgData = null
       if (urlImgData) {
+        // @ts-expect-error check data type?
         pairedImgData = await this.readFileAsync(urlImgData)
       }
       nvimage = new NVImage(

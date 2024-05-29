@@ -1,5 +1,5 @@
 import arrayEqual from 'array-equal'
-import { compressSync, decompressSync, strToU8 } from 'fflate/browser'
+import { compress, decompress, strFromU8, strToU8 } from 'fflate/browser'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 
 /**
@@ -73,9 +73,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 
   // https://stackoverflow.com/questions/34156282/how-do-i-save-json-to-local-text-file
-  static download(content: string, fileName: string, contentType: string): void {
+  static download(content: string | ArrayBuffer, fileName: string, contentType: string): void {
     const a = document.createElement('a')
-    const file = new Blob([content], { type: contentType })
+    const contentArray = Array.isArray(content) ? content : [content]
+    const file = new Blob(contentArray, { type: contentType })
     a.href = URL.createObjectURL(file)
     a.download = fileName
     a.click()
@@ -102,7 +103,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     })
   }
 
-  static decompressBase64String(base64: string): string {
+  static async decompressBase64String(base64: string): Promise<string> {
     const compressed = atob(base64)
     // convert to an array buffer
     const compressedBuffer = new ArrayBuffer(compressed.length)
@@ -110,19 +111,51 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     for (let i = 0; i < compressed.length; i++) {
       compressedView[i] = compressed.charCodeAt(i)
     }
-    // decompress the array buffer
-    const decompressedBuffer = decompressSync(compressedView)
-    // convert the array buffer to a string
-    const decompressed = new TextDecoder('utf-8').decode(decompressedBuffer)
-    // console.log(decompressed);
-    return decompressed
+    return NVUtilities.decompressArrayBuffer(compressedView)
   }
 
-  static compressToBase64String(string: string): string {
-    const buf = strToU8(string)
-    const compressed = compressSync(buf)
-    const base64 = NVUtilities.uint8tob64(compressed)
-    return base64
+  static async compressToBase64String(string: string): Promise<string> {
+    const buf = await NVUtilities.compressStringToArrayBuffer(string)
+    return NVUtilities.uint8tob64(new Uint8Array(buf))
+  }
+
+  static async compressStringToArrayBuffer(input: string): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const uint8Array = strToU8(input)
+
+      compress(uint8Array, (err, compressed) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(compressed.buffer)
+        }
+      })
+    })
+  }
+
+  static isArrayBufferCompressed(buffer: ArrayBuffer): boolean {
+    if (buffer && buffer.byteLength) {
+      const arr = new Uint8Array(buffer)
+      const magicNumber = (arr[0] << 8) | arr[1]
+      return magicNumber === 0x1f8b
+    } else {
+      return false
+    }
+  }
+
+  static async decompressArrayBuffer(buffer: ArrayBuffer): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const uint8Array = new Uint8Array(buffer)
+
+      decompress(uint8Array, (err, decompressed) => {
+        if (err) {
+          reject(err)
+        } else {
+          const result = strFromU8(decompressed)
+          resolve(result)
+        }
+      })
+    })
   }
 
   static arraysAreEqual(a: unknown[], b: unknown[]): boolean {
