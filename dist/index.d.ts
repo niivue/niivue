@@ -227,7 +227,7 @@ type ImageFromFileOptions = {
     name?: string;
     colormap?: string;
     opacity?: number;
-    urlImgData?: File | null;
+    urlImgData?: File | null | FileSystemEntry;
     cal_min?: number;
     cal_max?: number;
     trustCalMinMax?: boolean;
@@ -271,7 +271,7 @@ type ImageMetadata = {
     dt: number;
     bpv: number;
 };
-declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: null) => ImageFromUrlOptions;
+declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: any) => ImageFromUrlOptions;
 
 type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
 /**
@@ -783,7 +783,7 @@ declare class NVDocument {
     /**
      * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
      */
-    download(fileName: string): void;
+    download(fileName: string, compress: boolean): Promise<void>;
     /**
      * Deserialize mesh data objects
      */
@@ -1043,7 +1043,7 @@ declare class NVMeshFromUrlOptions {
     visible: boolean;
     layers: NVMeshLayer[];
     colorbarVisible: boolean;
-    constructor(url?: string, gl?: null, name?: string, opacity?: number, rgba255?: Uint8Array, visible?: boolean, layers?: never[], colorbarVisible?: boolean);
+    constructor(url?: string, gl?: any, name?: string, opacity?: number, rgba255?: Uint8Array, visible?: boolean, layers?: any[], colorbarVisible?: boolean);
 }
 type BaseLoadParams = {
     gl: WebGL2RenderingContext;
@@ -1137,7 +1137,7 @@ declare class NVMesh {
      * @param colorbarVisible - does this mesh display a colorbar
      * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
      */
-    constructor(pts: Float32Array, tris: Uint32Array, name: string | undefined, rgba255: Uint8Array | undefined, opacity: number | undefined, visible: boolean | undefined, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
+    constructor(pts: Float32Array, tris: Uint32Array, name: string, rgba255: Uint8Array, opacity: number, visible: boolean, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
     initValuesArray(va: ValuesArray): ValuesArray;
     linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void;
     updateFibers(gl: WebGL2RenderingContext): void;
@@ -1409,11 +1409,14 @@ declare class NVController {
 declare class NVUtilities {
     static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string;
     static uint8tob64(bytes: Uint8Array): string;
-    static download(content: string, fileName: string, contentType: string): void;
+    static download(content: string | ArrayBuffer, fileName: string, contentType: string): void;
     static readFileAsync(file: Blob): Promise<ArrayBuffer>;
     static blobToBase64(blob: Blob): Promise<string>;
-    static decompressBase64String(base64: string): string;
-    static compressToBase64String(string: string): string;
+    static decompressBase64String(base64: string): Promise<string>;
+    static compressToBase64String(string: string): Promise<string>;
+    static compressStringToArrayBuffer(input: string): Promise<ArrayBuffer>;
+    static isArrayBufferCompressed(buffer: ArrayBuffer): boolean;
+    static decompressArrayBuffer(buffer: ArrayBuffer): Promise<string>;
     static arraysAreEqual(a: unknown[], b: unknown[]): boolean;
     /**
      * Generate a pre-filled number array.
@@ -1448,7 +1451,7 @@ declare class NVMeshLoaders {
     static readTCK(buffer: ArrayBuffer): TCK;
     static readTRK(buffer: ArrayBuffer): TRK;
     static readTxtVTK(buffer: ArrayBuffer): VTK;
-    static readLayer(name: string | undefined, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): NVMeshLayer | undefined;
+    static readLayer(name: string, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): NVMeshLayer | undefined;
     static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
@@ -1631,7 +1634,7 @@ declare class Niivue {
     blurShader: Shader | null;
     sobelShader: Shader | null;
     genericVAO: WebGLVertexArrayObject | null;
-    unusedVAO: null;
+    unusedVAO: any;
     crosshairs3D: NiivueObject3D | null;
     private DEFAULT_FONT_GLYPH_SHEET;
     private DEFAULT_FONT_METRICS;
@@ -1889,7 +1892,7 @@ declare class Niivue {
      * @example niivue.attachTo('gl')
      * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html | live demo usage}
      */
-    attachTo(id: string, isAntiAlias?: null): Promise<this>;
+    attachTo(id: string, isAntiAlias?: any): Promise<this>;
     /**
      * attach the Niivue instance to a canvas element directly
      * @param canvas - the canvas element reference
@@ -1976,7 +1979,7 @@ declare class Niivue {
      */
     calculateMinMaxVoxIdx(array: number[]): number[];
     calculateNewRange({ volIdx }?: {
-        volIdx?: number | undefined;
+        volIdx?: number;
     }): void;
     generateMouseUpCallback(fracStart: vec3, fracEnd: vec3): void;
     mouseUpListener(): void;
@@ -2451,7 +2454,7 @@ declare class Niivue {
    * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
           ${javascript}</script></body></html>`;
    */
-    generateLoadDocumentJavaScript(canvasId: string, esm: string): string;
+    generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string>;
     /**
      * generates HTML of current scene
      * @param canvasId - id of canvas NiiVue will be attached to
@@ -2462,14 +2465,14 @@ declare class Niivue {
      *       %%javascript%%</script></body></html>`;
      * nv1.generateHTML("page.html", esm);
      */
-    generateHTML(canvasId: string | undefined, esm: string): string;
+    generateHTML(canvasId: string, esm: string): Promise<string>;
     /**
      * save current scene as HTML
      * @param fileName - the name of the HTML file
      * @param canvasId - id of canvas NiiVue will be attached to
      * @param esm - bundled version of NiiVue
      */
-    saveHTML(fileName: string | undefined, canvasId: string | undefined, esm: string): void;
+    saveHTML(fileName: string, canvasId: string, esm: string): Promise<void>;
     /**
      * Converts NiiVue scene to JSON
      */
@@ -2477,11 +2480,12 @@ declare class Niivue {
     /**
      * save the entire scene (objects and settings) as a document
      * @param fileName - the name of the document storing the scene
+     * @param compress - whether the file should be compressed
      * @example
      * niivue.saveDocument("niivue.basic.nvd")
      * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
      */
-    saveDocument(fileName?: string): Promise<void>;
+    saveDocument(fileName?: string, compress?: boolean): Promise<void>;
     /**
      * load an array of volume objects
      * @param volumeList - the array of objects to load. each object must have a resolvable "url" property at a minimum
@@ -2632,7 +2636,7 @@ declare class Niivue {
                 top: number;
             };
         })[];
-        kerning: never[];
+        kerning: any[];
     }): Promise<void>;
     loadDefaultMatCap(): Promise<WebGLTexture | null>;
     loadDefaultFont(): Promise<void>;
@@ -2692,7 +2696,7 @@ declare class Niivue {
      * @example niivue.getDescriptives(0);
      * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
      */
-    getDescriptives(layer?: number, masks?: never[], drawingIsMask?: boolean): Descriptive;
+    getDescriptives(layer?: number, masks?: any[], drawingIsMask?: boolean): Descriptive;
     refreshLayers(overlayItem: NVImage, layer: number): void;
     /**
      * query all available color maps that can be applied to volumes
@@ -2728,8 +2732,8 @@ declare class Niivue {
     largest_original_cluster_labels(bw: Uint32Array, cl: number, ls: Uint32Array): [number, Uint32Array];
     bwlabel(img: Uint32Array, dim: Uint32Array, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): [number, Uint32Array];
     createConnectedLabelImage(id: string, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): Promise<NVImage>;
-    scalecropUint8(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Uint8Array>;
-    scalecropFloat32(img32: Float32Array, dst_min: number | undefined, dst_max: number | undefined, src_min: number, scale: number): Promise<Float32Array>;
+    scalecropUint8(img32: Float32Array, dst_min: number, dst_max: number, src_min: number, scale: number): Promise<Uint8Array>;
+    scalecropFloat32(img32: Float32Array, dst_min: number, dst_max: number, src_min: number, scale: number): Promise<Float32Array>;
     getScale(volume: NVImage, dst_min?: number, dst_max?: number, f_low?: number, f_high?: number): [number, number];
     conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number, toRAS?: boolean): [mat4, mat4, mat4];
     createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: NiiDataType, img?: Uint8Array): Promise<Uint8Array>;
@@ -2828,7 +2832,7 @@ declare class Niivue {
     getLegendPanelWidth(): number;
     getLegendPanelHeight(): number;
     reserveColorbarPanel(): number[];
-    drawColorbarCore(layer: number | undefined, leftTopWidthHeight: number[] | undefined, isNegativeColor: boolean | undefined, min: number | undefined, max: number | undefined, isAlphaThreshold: boolean): void;
+    drawColorbarCore(layer: number, leftTopWidthHeight: number[], isNegativeColor: boolean, min: number, max: number, isAlphaThreshold: boolean): void;
     drawColorbar(): void;
     textWidth(scale: number, str: string): number;
     textHeight(scale: number, str: string): number;
@@ -2849,7 +2853,7 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
      */
     setInterpolation(isNearest: boolean): void;
-    calculateMvpMatrix2D(leftTopWidthHeight: number[], mn: vec3, mx: vec3, clipTolerance: number | undefined, clipDepth: number | undefined, azimuth: number | undefined, elevation: number | undefined, isRadiolgical: boolean): MvpMatrix2D;
+    calculateMvpMatrix2D(leftTopWidthHeight: number[], mn: vec3, mx: vec3, clipTolerance: number, clipDepth: number, azimuth: number, elevation: number, isRadiolgical: boolean): MvpMatrix2D;
     swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE): vec3;
     screenFieldOfViewVox(axCorSag?: number): vec3;
     screenFieldOfViewMM(axCorSag?: number, forceSliceMM?: boolean): vec3;
@@ -2858,7 +2862,7 @@ declare class Niivue {
     drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE): void;
     xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number): number[];
     draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number): void;
-    calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[] | undefined, azimuth: number, elevation: number): mat4[];
+    calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number): mat4[];
     calculateModelMatrix(azimuth: number, elevation: number): mat4;
     calculateRayDirection(azimuth: number, elevation: number): vec3;
     sceneExtentsMinMax(isSliceMM?: boolean): vec3[];
@@ -2880,7 +2884,7 @@ declare class Niivue {
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4;
     getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null;
     drawLabelLine(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
-    draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], bulletMargin: number | undefined, legendWidth: number, secondPass?: boolean): void;
+    draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], bulletMargin: number, legendWidth: number, secondPass?: boolean): void;
     draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
     draw3D(leftTopWidthHeight?: number[], mvpMatrix?: mat4 | null, modelMatrix?: mat4 | null, normalMatrix?: mat4 | null, azimuth?: number | null, elevation?: number): string | undefined;
     drawMesh3D(isDepthTest?: boolean, alpha?: number, m?: mat4, modelMtx?: mat4, normMtx?: mat4): void;
