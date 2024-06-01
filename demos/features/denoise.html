@@ -24,6 +24,12 @@ dialog {
       <button id="denoiseBtn">Denoise</button>
       <label for="darkCheck">ClipDark</label>
       <input type="checkbox" id="darkCheck" checked />
+      <select id="dragDrop">
+        <option value="contrast">Drag contrast</option>
+        <option value="measurement">Drag measurement</option>
+        <option value="pan" selected>Drag pan/zoom</option>
+        <option value="none">Drag none</option>
+      </select>
     </header>
     <main id="canvas-container">
       <canvas id="gl1"></canvas>
@@ -35,19 +41,25 @@ dialog {
           <label>
             Reduce dark noise:
             <select id="otsuSelect">
-              <option>Very Heavy</option>
-              <option>Heavy</option>
-              <option>Medium</option>
-              <option>Light</option>
-              <option selected>Very Light</option>
+              <option>Very Heavy 3:4</option>
+              <option>Heavy 2:3</option>
+              <option>Medium 1:2</option>
+              <option>Light 1:3</option>
+              <option selected>Very Light 1:4</option>
               <option>None</option>
             </select>
           </label>
         </p>
         <p>
           <label>
-            Dilate:
             <input type="checkbox" id="dilateCheck" checked />
+            Dilate dark
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="checkbox" id="denoiseCheck" unchecked />
+            Denoise
           </label>
         </p>
         <div>
@@ -74,10 +86,6 @@ dialog {
         const level = otsuSelect.selectedIndex + 1
         //reload original image, so user can compare different Otsu levels
         nv1.volumes[0].img = imgRaw.slice()
-        if (level > 5) { //no denoising = raw image
-          nv1.updateGLVolume()
-          return
-        }
         let otsu = 2
         if (level === 5 || level === 1) {
           otsu = 4
@@ -96,12 +104,58 @@ dialog {
         if (level === 2) {
           threshold = thresholds[1]
         }
-        const img = nv1.volumes[0].img
-        const nvox = img.length
         const mn = nv1.volumes[0].global_min
-        if (dilateCheck.checked) {
+        if (level > 5) { //no Otsu, though maybe denoising
+          threshold = mn
+        }
+        const img = nv1.volumes[0].img
+        if (denoiseCheck.checked) {
+          const nx = nv1.volumes[0].dims[1]
+          const ny = nv1.volumes[0].dims[2]
+          const nz = nv1.volumes[0].dims[3]
+          let i = 0
+          let xInc = 1
+          let yInc = nx
+          let zInc = nx * ny
+          let vals = new Array(7).fill(0)
+          for (let z = 0; z < nz; z++) {
+            for (let y = 0; y < ny; y++) {
+              for (let x = 0; x < nx; x++) {
+                let val = imgRaw[i]
+                if ((x > 0) && (y > 0) && (z > 0) && (x < (nx-1)) && (y < (ny-1)) && (z < (nz-1)) ) {
+                  //find min and max of neighborhood
+                  vals[0] = val
+                  //6 neighbors share face
+                  vals[1] = imgRaw[i-xInc]
+                  vals[2] = imgRaw[i-yInc]
+                  vals[3] = imgRaw[i-zInc]
+                  vals[4] = imgRaw[i+xInc]
+                  vals[5] = imgRaw[i+yInc]
+                  vals[6] =  imgRaw[i+zInc]
+                  let vmx = val
+                  let vmn = val
+                  //approximate a Gaussian kernel by over-weighting central voxel
+                  // with a center weight of 4, 37.5%..50% of output based on center
+                  const centerWeight = 4
+                  let vsum = val * centerWeight
+                  for (let v = 1; v <= 6; v++) {
+                    vmn = Math.min(vmn, vals[v])
+                    vmx = Math.max(vmx, vals[v])
+                    vsum += vals[v]
+                  }
+                  //approximate median filter by attenuating extremes
+                  val = (vsum - vmn - vmx) / (4 + centerWeight)
+                }
+                img[i] = val
+                i++
+              } // x
+            } // y
+          } //z
+        } //if denoise
+        const nvox = img.length
+        let imgMx = imgRaw.slice()
+        if ((dilateCheck.checked) && (level < 6)) {
           //dilate one voxel for tissue partial volume effects
-          let imgMx = imgRaw.slice()
           const nx = nv1.volumes[0].dims[1]
           const ny = nv1.volumes[0].dims[2]
           const nz = nv1.volumes[0].dims[3]
@@ -147,28 +201,41 @@ dialog {
                 }
                 imgMx[i] = mx
                 i++
-              
               } // x
             } // y
           } //z
-          for (let v = 0; v < nvox; v++) {
-            if (imgMx[v] < threshold)
-              img[v] = mn
-          }
-        } else { //no dilation
-          for (let v = 0; v < nvox; v++) {
-            if (img[v] < threshold)
-              img[v] = mn
-          }
+        } //if dilation
+        for (let v = 0; v < nvox; v++) {
+          if (imgMx[v] < threshold)
+            img[v] = mn
         }
         nv1.updateGLVolume()
       }
       dilateCheck.onchange = function () {
         otsuSelect.onchange()
       }
+      denoiseCheck.onchange = function () {
+        otsuSelect.onchange()
+      }
       darkCheck.onchange = function () {
         nv1.isAlphaClipDark = this.checked
         nv1.updateGLVolume()
+      }
+      dragDrop.onchange = function () {
+        switch (dragDrop.value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break;
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break;
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break;
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break;
+        }
       }
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML =
@@ -186,13 +253,13 @@ dialog {
       nv1.onImageLoaded = (volume) => {
         imgRaw = nv1.volumes[0].img.slice()
       }
-      nv1.opts.dragMode = nv1.dragModes.pan
       nv1.opts.multiplanarForceRender = true
       nv1.opts.yoke3Dto2DZoom = true
       nv1.setInterpolation(true)
       await nv1.loadVolumes(volumeList1)
       nv1.setClipPlane([0.2, 0, 120])
       darkCheck.onchange()
+      dragDrop.onchange()
     </script>
   </body>
 </html>
