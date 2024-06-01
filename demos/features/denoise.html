@@ -44,6 +44,12 @@ dialog {
             </select>
           </label>
         </p>
+        <p>
+          <label>
+            Dilate:
+            <input type="checkbox" id="dilateCheck" checked />
+          </label>
+        </p>
         <div>
           <button type="button" id="saveBtn">Save</button>
           <button id="cancelBtn" formmethod="dialog">Cancel</button>
@@ -93,11 +99,72 @@ dialog {
         const img = nv1.volumes[0].img
         const nvox = img.length
         const mn = nv1.volumes[0].global_min
-        for (let v = 0; v < nvox; v++) {
-          if (img[v] < threshold)
-            img[v] = mn
+        if (dilateCheck.checked) {
+          //dilate one voxel for tissue partial volume effects
+          let imgMx = imgRaw.slice()
+          const nx = nv1.volumes[0].dims[1]
+          const ny = nv1.volumes[0].dims[2]
+          const nz = nv1.volumes[0].dims[3]
+          let i = 0
+          let xInc = 1
+          let yInc = nx
+          let zInc = nx * ny
+          for (let z = 0; z < nz; z++) {
+            for (let y = 0; y < ny; y++) {
+              for (let x = 0; x < nx; x++) {
+                let mx = imgRaw[i]
+                if ((x > 0) && (y > 0) && (z > 0) && (x < (nx-1)) && (y < (ny-1)) && (z < (nz-1)) ) {
+                  //6 neighbors share face
+                  mx = Math.max(mx, imgRaw[i-xInc])
+                  mx = Math.max(mx, imgRaw[i-yInc])
+                  mx = Math.max(mx, imgRaw[i-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc])
+                  mx = Math.max(mx, imgRaw[i+yInc])
+                  mx = Math.max(mx, imgRaw[i+zInc])
+                  //12 neighbors share edge
+                  mx = Math.max(mx, imgRaw[i-xInc-yInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+yInc])
+                  mx = Math.max(mx, imgRaw[i-xInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+zInc])
+                  mx = Math.max(mx, imgRaw[i-yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-yInc+zInc])
+                  
+                  mx = Math.max(mx, imgRaw[i+xInc-yInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+yInc])
+                  mx = Math.max(mx, imgRaw[i+xInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+zInc])
+                  mx = Math.max(mx, imgRaw[i+yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+yInc+zInc])
+                  // 8 neighbors share a corner
+                  mx = Math.max(mx, imgRaw[i-xInc-yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc-yInc+zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+yInc+zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc-yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc-yInc+zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+yInc+zInc])
+                }
+                imgMx[i] = mx
+                i++
+              
+              } // x
+            } // y
+          } //z
+          for (let v = 0; v < nvox; v++) {
+            if (imgMx[v] < threshold)
+              img[v] = mn
+          }
+        } else { //no dilation
+          for (let v = 0; v < nvox; v++) {
+            if (img[v] < threshold)
+              img[v] = mn
+          }
         }
         nv1.updateGLVolume()
+      }
+      dilateCheck.onchange = function () {
+        otsuSelect.onchange()
       }
       darkCheck.onchange = function () {
         nv1.isAlphaClipDark = this.checked
