@@ -37,9 +37,10 @@ dialog {
             <select id="otsuSelect">
               <option>Very Heavy</option>
               <option>Heavy</option>
-              <option selected>Medium</option>
+              <option>Medium</option>
               <option>Light</option>
-              <option>Very Light</option>
+              <option selected>Very Light</option>
+              <option>None</option>
             </select>
           </label>
         </p>
@@ -64,16 +65,36 @@ dialog {
         nv1.updateGLVolume()
       }
       otsuSelect.onchange = function () {
-        const otsuLevel = otsuSelect.selectedIndex + 1
+        const level = otsuSelect.selectedIndex + 1
         //reload original image, so user can compare different Otsu levels
         nv1.volumes[0].img = imgRaw.slice()
+        if (level > 5) { //no denoising = raw image
+          nv1.updateGLVolume()
+          return
+        }
+        let otsu = 2
+        if (level === 5 || level === 1) {
+          otsu = 4
+        }
+        if (level === 4 || level === 2) {
+          otsu = 3
+        }
+        const thresholds = nv1.findOtsu(otsu)
+        if (thresholds.length < 3) {
+          return
+        }
+        let threshold = thresholds[0]
+        if (level === 1) {
+          threshold = thresholds[2]
+        }
+        if (level === 2) {
+          threshold = thresholds[1]
+        }
         const img = nv1.volumes[0].img
-        const thresholds = nv1.findOtsu(otsuLevel)
-        const thresh = thresholds[0]
         const nvox = img.length
         const mn = nv1.volumes[0].global_min
         for (let v = 0; v < nvox; v++) {
-          if (img[v] < thresh)
+          if (img[v] < threshold)
             img[v] = mn
         }
         nv1.updateGLVolume()
@@ -103,7 +124,6 @@ dialog {
       nv1.opts.yoke3Dto2DZoom = true
       nv1.setInterpolation(true)
       await nv1.loadVolumes(volumeList1)
-      
       nv1.setClipPlane([0.2, 0, 120])
       darkCheck.onchange()
     </script>
