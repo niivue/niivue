@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+<style>
+dialog {
+  z-index: 10;
+  margin-top: 10px;
+  border: solid;
+  border-radius: 1rem;
+}
+</style>
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <button id="denoiseBtn">Denoise</button>
+      <label for="darkCheck">ClipDark</label>
+      <input type="checkbox" id="darkCheck" checked />
+      <select id="dragDrop">
+        <option value="contrast">Drag contrast</option>
+        <option value="measurement">Drag measurement</option>
+        <option value="pan" selected>Drag pan/zoom</option>
+        <option value="none">Drag none</option>
+      </select>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+    <dialog id="denoiseDialog">
+      <form method="dialog">
+        <p>
+          <label>
+            Reduce dark noise:
+            <select id="otsuSelect">
+              <option>Very Heavy 3:4</option>
+              <option>Heavy 2:3</option>
+              <option>Medium 1:2</option>
+              <option>Light 1:3</option>
+              <option selected>Very Light 1:4</option>
+              <option>None</option>
+            </select>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="checkbox" id="dilateCheck" checked />
+            Dilate dark
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="checkbox" id="denoiseCheck" unchecked />
+            Denoise
+          </label>
+        </p>
+        <div>
+          <button type="button" id="saveBtn">Save</button>
+          <button id="cancelBtn" formmethod="dialog">Cancel</button>
+          <button autofocus id="applyBtn" value="default">Apply</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      denoiseBtn.onclick = function () {
+        otsuSelect.onchange()
+        denoiseDialog.show()
+      }
+      saveBtn.onclick = function () {
+        nv1.volumes[0].saveToDisk("denoised.nii")
+      }
+      cancelBtn.onclick = function () {
+        nv1.volumes[0].img = imgRaw.slice()
+        nv1.updateGLVolume()
+      }
+      otsuSelect.onchange = function () {
+        const level = otsuSelect.selectedIndex + 1
+        //reload original image, so user can compare different Otsu levels
+        nv1.volumes[0].img = imgRaw.slice()
+        let otsu = 2
+        if (level === 5 || level === 1) {
+          otsu = 4
+        }
+        if (level === 4 || level === 2) {
+          otsu = 3
+        }
+        const thresholds = nv1.findOtsu(otsu)
+        if (thresholds.length < 3) {
+          return
+        }
+        let threshold = thresholds[0]
+        if (level === 1) {
+          threshold = thresholds[2]
+        }
+        if (level === 2) {
+          threshold = thresholds[1]
+        }
+        const mn = nv1.volumes[0].global_min
+        if (level > 5) { //no Otsu, though maybe denoising
+          threshold = mn
+        }
+        const img = nv1.volumes[0].img
+        if (denoiseCheck.checked) {
+          const nx = nv1.volumes[0].dims[1]
+          const ny = nv1.volumes[0].dims[2]
+          const nz = nv1.volumes[0].dims[3]
+          let i = 0
+          let xInc = 1
+          let yInc = nx
+          let zInc = nx * ny
+          let vals = new Array(7).fill(0)
+          for (let z = 0; z < nz; z++) {
+            for (let y = 0; y < ny; y++) {
+              for (let x = 0; x < nx; x++) {
+                let val = imgRaw[i]
+                if ((x > 0) && (y > 0) && (z > 0) && (x < (nx-1)) && (y < (ny-1)) && (z < (nz-1)) ) {
+                  //find min and max of neighborhood
+                  vals[0] = val
+                  //6 neighbors share face
+                  vals[1] = imgRaw[i-xInc]
+                  vals[2] = imgRaw[i-yInc]
+                  vals[3] = imgRaw[i-zInc]
+                  vals[4] = imgRaw[i+xInc]
+                  vals[5] = imgRaw[i+yInc]
+                  vals[6] =  imgRaw[i+zInc]
+                  let vmx = val
+                  let vmn = val
+                  //approximate a Gaussian kernel by over-weighting central voxel
+                  // with a center weight of 4, 37.5%..50% of output based on center
+                  const centerWeight = 4
+                  let vsum = val * centerWeight
+                  for (let v = 1; v <= 6; v++) {
+                    vmn = Math.min(vmn, vals[v])
+                    vmx = Math.max(vmx, vals[v])
+                    vsum += vals[v]
+                  }
+                  //approximate median filter by attenuating extremes
+                  val = (vsum - vmn - vmx) / (4 + centerWeight)
+                }
+                img[i] = val
+                i++
+              } // x
+            } // y
+          } //z
+        } //if denoise
+        const nvox = img.length
+        let imgMx = imgRaw.slice()
+        if ((dilateCheck.checked) && (level < 6)) {
+          //dilate one voxel for tissue partial volume effects
+          const nx = nv1.volumes[0].dims[1]
+          const ny = nv1.volumes[0].dims[2]
+          const nz = nv1.volumes[0].dims[3]
+          let i = 0
+          let xInc = 1
+          let yInc = nx
+          let zInc = nx * ny
+          for (let z = 0; z < nz; z++) {
+            for (let y = 0; y < ny; y++) {
+              for (let x = 0; x < nx; x++) {
+                let mx = imgRaw[i]
+                if ((x > 0) && (y > 0) && (z > 0) && (x < (nx-1)) && (y < (ny-1)) && (z < (nz-1)) ) {
+                  //6 neighbors share face
+                  mx = Math.max(mx, imgRaw[i-xInc])
+                  mx = Math.max(mx, imgRaw[i-yInc])
+                  mx = Math.max(mx, imgRaw[i-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc])
+                  mx = Math.max(mx, imgRaw[i+yInc])
+                  mx = Math.max(mx, imgRaw[i+zInc])
+                  //12 neighbors share edge
+                  mx = Math.max(mx, imgRaw[i-xInc-yInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+yInc])
+                  mx = Math.max(mx, imgRaw[i-xInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+zInc])
+                  mx = Math.max(mx, imgRaw[i-yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-yInc+zInc])
+                  
+                  mx = Math.max(mx, imgRaw[i+xInc-yInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+yInc])
+                  mx = Math.max(mx, imgRaw[i+xInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+zInc])
+                  mx = Math.max(mx, imgRaw[i+yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+yInc+zInc])
+                  // 8 neighbors share a corner
+                  mx = Math.max(mx, imgRaw[i-xInc-yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc-yInc+zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i-xInc+yInc+zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc-yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc-yInc+zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+yInc-zInc])
+                  mx = Math.max(mx, imgRaw[i+xInc+yInc+zInc])
+                }
+                imgMx[i] = mx
+                i++
+              } // x
+            } // y
+          } //z
+        } //if dilation
+        for (let v = 0; v < nvox; v++) {
+          if (imgMx[v] < threshold)
+            img[v] = mn
+        }
+        nv1.updateGLVolume()
+      }
+      dilateCheck.onchange = function () {
+        otsuSelect.onchange()
+      }
+      denoiseCheck.onchange = function () {
+        otsuSelect.onchange()
+      }
+      darkCheck.onchange = function () {
+        nv1.isAlphaClipDark = this.checked
+        nv1.updateGLVolume()
+      }
+      dragDrop.onchange = function () {
+        switch (dragDrop.value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break;
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break;
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break;
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break;
+        }
+      }
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      var volumeList1 = [{ url: "../images/otsu.nii.gz"}]
+      let defaults = {
+        backColor: [0.9, 0.9, 1, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange,
+      }
+      let imgRaw
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.attachToCanvas(gl1)
+      nv1.onImageLoaded = (volume) => {
+        imgRaw = nv1.volumes[0].img.slice()
+      }
+      nv1.opts.multiplanarForceRender = true
+      nv1.opts.yoke3Dto2DZoom = true
+      nv1.setInterpolation(true)
+      await nv1.loadVolumes(volumeList1)
+      nv1.setClipPlane([0.2, 0, 120])
+      darkCheck.onchange()
+      dragDrop.onchange()
+    </script>
+  </body>
+</html>
