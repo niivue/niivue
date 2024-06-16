@@ -13,6 +13,15 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <label for="fiberOcclusion">Occlusion</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        class="slider"
+        id="fiberOcclusion"
+      />
       <label for="fiberRadius">Radius</label>
       <input
         type="range"
@@ -63,6 +72,10 @@
       fiberColor.onchange = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
       };
+      fiberOcclusion.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberOcclusion", this.value * 0.01)
+        nv1.updateGLVolume()
+      }
       fiberDitherSlider.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
       };
