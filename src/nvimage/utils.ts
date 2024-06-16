@@ -65,7 +65,8 @@ export enum ImageType {
   V16 = 13,
   VMR = 14,
   HEAD = 15,
-  DCM_FOLDER = 16
+  DCM_FOLDER = 16,
+  SRC = 17
 }
 
 export const NVIMAGE_TYPE = Object.freeze({
@@ -106,6 +107,9 @@ export const NVIMAGE_TYPE = Object.freeze({
         break
       case 'MGZ':
         imageType = ImageType.MGZ
+        break
+      case 'SRC':
+        imageType = ImageType.SRC
         break
       case 'V':
         imageType = ImageType.V

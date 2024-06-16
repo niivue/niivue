@@ -28,6 +28,17 @@ export * from './utils.js'
 
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
 
+// TODO: TypedNumberArray also in nvmesh-types.ts
+export type TypedNumberArray =
+  | Float64Array
+  | Float32Array
+  | Uint32Array
+  | Uint16Array
+  | Uint8Array
+  | Int32Array
+  | Int16Array
+  | Int8Array
+
 /**
  * a NVImage encapsulates some images data and provides methods to query and operate on images
  */
@@ -172,7 +183,6 @@ export class NVImage {
 
     // TODO this was missing
     this.useQFormNotSForm = useQFormNotSForm
-
     // Added to support zerosLike
     // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
@@ -212,6 +222,9 @@ export class NVImage {
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
         imgRaw = this.readMGH(dataBuffer as ArrayBuffer) // to do: pairedImgData
+        break
+      case NVIMAGE_TYPE.SRC:
+        imgRaw = this.readSRC(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.V:
         imgRaw = this.readECAT(dataBuffer as ArrayBuffer)
@@ -1194,6 +1207,163 @@ export class NVImage {
     const nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4] * (hdr.numBitsPerVoxel / 8)
     return raw.slice(hdr.vox_offset, hdr.vox_offset + nBytes)
   } // readMGH()
+
+  // not included in public docs
+  // read DSI-Studio SRC format image
+  // https://dsi-studio.labsolver.org/doc/cli_data.html
+  readSRC(buffer: ArrayBuffer): ArrayBuffer {
+    this.hdr = new nifti.NIFTI1()
+    const hdr = this.hdr
+    hdr.littleEndian = false // MGH always big ending
+    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+
+    function readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray> {
+      let len = buffer.byteLength
+      if (len < 40) {
+        throw new Error('File too small to be MAT v4: bytes = ' + buffer.byteLength)
+      }
+      let reader = new DataView(buffer)
+      let magic = reader.getUint16(0, true)
+      let _buffer = buffer
+      if (magic === 35615 || magic === 8075) {
+        // gzip signature 0x1F8B in little and big endian
+        const raw = decompressSync(new Uint8Array(buffer))
+        reader = new DataView(raw.buffer)
+        magic = reader.getUint16(0, true)
+        _buffer = raw.buffer
+        len = _buffer.byteLength
+      }
+      const textDecoder = new TextDecoder('utf-8')
+      const bytes = new Uint8Array(_buffer)
+      let pos = 0
+      const mat: Record<string, TypedNumberArray> = {}
+      function getTensDigit(v: number): number {
+        return Math.floor(v / 10) % 10
+      }
+      function readArray(tagDataType: number, tagBytesStart: number, tagBytesEnd: number): TypedNumberArray {
+        const byteArray = new Uint8Array(bytes.subarray(tagBytesStart, tagBytesEnd))
+        if (tagDataType === 1) {
+          return new Float32Array(byteArray.buffer)
+        }
+        if (tagDataType === 2) {
+          return new Int32Array(byteArray.buffer)
+        }
+        if (tagDataType === 3) {
+          return new Int16Array(byteArray.buffer)
+        }
+        if (tagDataType === 4) {
+          return new Uint16Array(byteArray.buffer)
+        }
+        if (tagDataType === 5) {
+          return new Uint8Array(byteArray.buffer)
+        }
+        return new Float64Array(byteArray.buffer)
+      }
+      function readTag(): void {
+        const mtype = reader.getUint32(pos, true)
+        const mrows = reader.getUint32(pos + 4, true)
+        const ncols = reader.getUint32(pos + 8, true)
+        const imagf = reader.getUint32(pos + 12, true)
+        const namlen = reader.getUint32(pos + 16, true)
+        pos += 20 // skip header
+        if (imagf !== 0) {
+          throw new Error('Matlab V4 reader does not support imaginary numbers')
+        }
+        const tagArrayItems = mrows * ncols
+        if (tagArrayItems < 1) {
+          throw new Error('mrows * ncols must be greater than one')
+        }
+        const byteArray = new Uint8Array(bytes.subarray(pos, pos + namlen))
+        const tagName = textDecoder.decode(byteArray).trim().replaceAll('\x00', '')
+        const tagDataType = getTensDigit(mtype)
+        // 0 double-precision (64-bit) floating-point numbers
+        // 1 single-precision (32-bit) floating-point numbers
+        // 2 32-bit signed integers
+        // 3 16-bit signed integers
+        // 4 16-bit unsigned integers
+        // 5 8-bit unsigned integers
+        let tagBytesPerItem = 8
+        if (tagDataType >= 1 && tagDataType <= 2) {
+          tagBytesPerItem = 4
+        } else if (tagDataType >= 3 && tagDataType <= 4) {
+          tagBytesPerItem = 2
+        } else if (tagDataType === 5) {
+          tagBytesPerItem = 1
+        } else if (tagDataType !== 0) {
+          throw new Error('impossible Matlab v4 datatype')
+        }
+        pos += namlen // skip name
+        if (mtype > 50) {
+          throw new Error('Does not appear to be little-endian V4 Matlab file')
+        }
+        const posEnd = pos + tagArrayItems * tagBytesPerItem
+        mat[tagName] = readArray(tagDataType, pos, posEnd)
+        pos = posEnd
+      }
+      while (pos + 20 < len) {
+        readTag()
+      }
+      return mat
+    } // readMatV4()
+    const mat = readMatV4(buffer)
+    if (!('dimension' in mat) || !('image0' in mat)) {
+      throw new Error('Not a valid DSIstudio SRC file')
+    }
+    let n = 0
+    let len = 0
+    for (const [key, value] of Object.entries(mat)) {
+      if (!key.startsWith('image')) {
+        continue
+      }
+      if (n === 0) {
+        len = value.length
+      } else if (len !== value.length) {
+        len = -1
+      }
+      if (value.constructor !== Uint16Array) {
+        throw new Error('DSIstudio SRC files always use Uint16 datatype')
+      }
+      n++
+    }
+    if (len < 1 || n < 1) {
+      throw new Error('SRC file not valid DSI Studio data. The image(s) should have the same length')
+    }
+    hdr.numBitsPerVoxel = 16
+    hdr.datatypeCode = NiiDataType.DT_UINT16
+    hdr.dims[1] = mat.dimension[0]
+    hdr.dims[2] = mat.dimension[1]
+    hdr.dims[3] = mat.dimension[2]
+    hdr.dims[4] = n
+    hdr.pixDims[1] = mat.voxel_size[0]
+    hdr.pixDims[2] = mat.voxel_size[1]
+    hdr.pixDims[3] = mat.voxel_size[2]
+    hdr.sform_code = 1
+    const xmm = (hdr.dims[1] - 1) * 0.5 * hdr.pixDims[1]
+    const ymm = (hdr.dims[2] - 1) * 0.5 * hdr.pixDims[2]
+    const zmm = (hdr.dims[3] - 1) * 0.5 * hdr.pixDims[3]
+    hdr.affine = [
+      [hdr.pixDims[1], 0, 0, -xmm],
+      [0, -hdr.pixDims[2], 0, ymm],
+      [0, 0, hdr.pixDims[2], -zmm],
+      [0, 0, 0, 1]
+    ]
+    hdr.littleEndian = true
+    const nBytes3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (hdr.numBitsPerVoxel / 8)
+    const nBytes = nBytes3D * hdr.dims[4]
+    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
+    let offset = 0
+    for (let i = 0; i < n; i++) {
+      const arr = mat[`image${i}`]
+      const img8 = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength)
+      buff8.set(img8, offset)
+      offset += nBytes3D
+    }
+    if ('report' in mat) {
+      hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)))
+    }
+    return buff8.buffer
+  } // readSRC()
 
   // not included in public docs
   // read AFNI head/brik format image
@@ -2807,7 +2977,6 @@ export class NVImage {
     } else {
       ext = re.exec(name)![1]
     }
-
     if (ext.toUpperCase() === 'HEAD') {
       if (urlImgData === '') {
         urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + 'BRIK'
