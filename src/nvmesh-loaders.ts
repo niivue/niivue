@@ -1,6 +1,7 @@
 import { mat4, vec4, vec3 } from 'gl-matrix'
 import { decompressSync, unzipSync } from 'fflate/browser'
 import { log } from './logger.js'
+import { NVUtilities } from './nvutilities.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
 import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
@@ -20,8 +21,7 @@ import {
   VTK,
   X3D,
   XmlTag,
-  AnyNumberArray,
-  TypedNumberArray
+  AnyNumberArray
 } from './nvmesh-types.js'
 
 const utiltiesLogger = log
@@ -119,97 +119,9 @@ export class NVMeshLoaders {
   static readTT(buffer: ArrayBuffer): TT {
     // Read a Matlab V4 file, n.b. does not support modern versions
     // https://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
-    function readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray> {
-      let len = buffer.byteLength
-      if (len < 40) {
-        throw new Error('File too small to be MAT v4: bytes = ' + buffer.byteLength)
-      }
-      let reader = new DataView(buffer)
-      let magic = reader.getUint16(0, true)
-      let _buffer = buffer
-      if (magic === 35615 || magic === 8075) {
-        // gzip signature 0x1F8B in little and big endian
-        const raw = decompressSync(new Uint8Array(buffer))
-        reader = new DataView(raw.buffer)
-        magic = reader.getUint16(0, true)
-        _buffer = raw.buffer
-        len = _buffer.byteLength
-      }
-      const textDecoder = new TextDecoder('utf-8')
-      const bytes = new Uint8Array(_buffer)
-      let pos = 0
-      const mat: Record<string, TypedNumberArray> = {}
-      function getTensDigit(v: number): number {
-        return Math.floor(v / 10) % 10
-      }
-      function readArray(tagDataType: number, tagBytesStart: number, tagBytesEnd: number): TypedNumberArray {
-        const byteArray = new Uint8Array(bytes.subarray(tagBytesStart, tagBytesEnd))
-        if (tagDataType === 1) {
-          return new Float32Array(byteArray.buffer)
-        }
-        if (tagDataType === 2) {
-          return new Int32Array(byteArray.buffer)
-        }
-        if (tagDataType === 3) {
-          return new Int16Array(byteArray.buffer)
-        }
-        if (tagDataType === 4) {
-          return new Uint16Array(byteArray.buffer)
-        }
-        if (tagDataType === 5) {
-          return new Uint8Array(byteArray.buffer)
-        }
-        return new Float64Array(byteArray.buffer)
-      }
-      function readTag(): void {
-        const mtype = reader.getUint32(pos, true)
-        const mrows = reader.getUint32(pos + 4, true)
-        const ncols = reader.getUint32(pos + 8, true)
-        const imagf = reader.getUint32(pos + 12, true)
-        const namlen = reader.getUint32(pos + 16, true)
-        pos += 20 // skip header
-        if (imagf !== 0) {
-          throw new Error('Matlab V4 reader does not support imaginary numbers')
-        }
-        const tagArrayItems = mrows * ncols
-        if (tagArrayItems < 1) {
-          throw new Error('mrows * ncols must be greater than one')
-        }
-        const byteArray = new Uint8Array(bytes.subarray(pos, pos + namlen))
-        const tagName = textDecoder.decode(byteArray).trim().replaceAll('\x00', '')
-        const tagDataType = getTensDigit(mtype)
-        // 0 double-precision (64-bit) floating-point numbers
-        // 1 single-precision (32-bit) floating-point numbers
-        // 2 32-bit signed integers
-        // 3 16-bit signed integers
-        // 4 16-bit unsigned integers
-        // 5 8-bit unsigned integers
-        let tagBytesPerItem = 8
-        if (tagDataType >= 1 && tagDataType <= 2) {
-          tagBytesPerItem = 4
-        } else if (tagDataType >= 3 && tagDataType <= 4) {
-          tagBytesPerItem = 2
-        } else if (tagDataType === 5) {
-          tagBytesPerItem = 1
-        } else if (tagDataType !== 0) {
-          throw new Error('impossible Matlab v4 datatype')
-        }
-        pos += namlen // skip name
-        if (mtype > 50) {
-          throw new Error('Does not appear to be little-endian V4 Matlab file')
-        }
-        const posEnd = pos + tagArrayItems * tagBytesPerItem
-        mat[tagName] = readArray(tagDataType, pos, posEnd)
-        pos = posEnd
-      }
-      while (pos + 20 < len) {
-        readTag()
-      }
-      return mat
-    } // readMatV4()
     let offsetPt0 = new Uint32Array(0)
     let pts = new Float32Array(0)
-    const mat = readMatV4(buffer)
+    const mat = NVUtilities.readMatV4(buffer)
     if (!('trans_to_mni' in mat)) {
       throw new Error("TT format file must have 'trans_to_mni'")
     }
