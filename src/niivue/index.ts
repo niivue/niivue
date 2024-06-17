@@ -46,6 +46,7 @@ import {
   fragMeshMatteShader,
   fragMeshDepthShader,
   fragMeshShaderSHBlue,
+  fragMeshSpecularEdgeShader,
   vertFlatMeshShader,
   fragFlatMeshShader,
   vertFiberShader,
@@ -475,10 +476,13 @@ export class Niivue {
       Name: 'Diffuse',
       Frag: fragMeshDiffuseEdgeShader
     },
-
     {
       Name: 'Outline',
       Frag: fragMeshOutlineShader
+    },
+    {
+      Name: 'Specular',
+      Frag: fragMeshSpecularEdgeShader
     },
     {
       Name: 'Toon',
