@@ -3199,6 +3199,8 @@ export class Niivue {
       this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
       this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
       this.drawScene()
+      this.canvas!.focus() // required after change for issue706
+      this.sync()
       return
     }
     this.mouseClick(x, y, posChange, isDelta)
@@ -6954,7 +6956,6 @@ export class Niivue {
     // var posNow;
     // var posFuture;
     this.canvas!.focus()
-
     if (this.thumbnailVisible) {
       // we will simply hide the thmubnail
       // use deleteThumbnail() to close the thumbnail and free resources
@@ -7191,6 +7192,7 @@ export class Niivue {
     this.scene.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0]
     this.scene.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1]
     this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2]
+    this.canvas!.focus() // required after change for issue706
   }
 
   dragForCenterButton(startXYendXY: number[]): void {
