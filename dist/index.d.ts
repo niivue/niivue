@@ -192,7 +192,9 @@ declare enum ImageType {
     V16 = 13,
     VMR = 14,
     HEAD = 15,
-    DCM_FOLDER = 16
+    DCM_FOLDER = 16,
+    SRC = 17,
+    FIB = 18
 }
 type ImageFromUrlOptions = {
     url: string;
@@ -377,6 +379,8 @@ declare class NVImage {
     readV16(buffer: ArrayBuffer): ArrayBuffer;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
     readMGH(buffer: ArrayBuffer): ArrayBuffer;
+    readFIB(buffer: ArrayBuffer, isLoadV1?: boolean): ArrayBuffer;
+    readSRC(buffer: ArrayBuffer): ArrayBuffer;
     readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
@@ -923,8 +927,7 @@ type ValuesArray = Array<{
     cal_min?: number;
     cal_max?: number;
 }>;
-type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
-type AnyNumberArray = number[] | TypedNumberArray;
+type AnyNumberArray = number[] | Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
 type DefaultMeshType = {
     positions: Float32Array;
     indices: Uint32Array;
@@ -1093,11 +1096,13 @@ declare class NVMesh {
     rgba255: Uint8Array;
     fiberLength?: number;
     fiberLengths?: Uint32Array;
+    fiberDensity?: Float32Array;
     fiberDither: number;
     fiberColor: string;
     fiberDecimationStride: number;
     fiberSides: number;
     fiberRadius: number;
+    fiberOcclusion: number;
     f32PerVertex: number;
     fiberMask?: unknown[];
     colormap?: ColorMap | LegacyConnectome | string | null;
@@ -1140,6 +1145,7 @@ declare class NVMesh {
     constructor(pts: Float32Array, tris: Uint32Array, name: string, rgba255: Uint8Array, opacity: number, visible: boolean, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
     initValuesArray(va: ValuesArray): ValuesArray;
     linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void;
+    createFiberDensityMap(): void;
     updateFibers(gl: WebGL2RenderingContext): void;
     indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[];
     updateMesh(gl: WebGL2RenderingContext): void;
@@ -1402,12 +1408,14 @@ declare class NVController {
     onMeshPropertyChanged(meshIndex: number, key: string, val: unknown): void;
 }
 
+type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
 /**
  * Namespace for utility functions
  * @ignore
  */
 declare class NVUtilities {
     static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string;
+    static readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray>;
     static uint8tob64(bytes: Uint8Array): string;
     static download(content: string | ArrayBuffer, fileName: string, contentType: string): void;
     static readFileAsync(file: Blob): Promise<ArrayBuffer>;

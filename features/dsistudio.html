@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <header>
+    <button class="btn btn-success" onclick=" window.open('https://dsi-studio.labsolver.org/doc/cli_data.html','_blank')">About</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">DSI-Studio SRC image</footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      var volumeList1 = [{ url: "../images/dsistudio.src.gz"}]
+      let defaults = {
+        onLocationChange: handleLocationChange,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.opts.multiplanarForceRender = true
+      nv1.graph.opacity = 1.0
+      nv1.graph.autoSizeMultiplanar = true
+      nv1.attachToCanvas(gl1)
+      await nv1.loadVolumes(volumeList1)
+    </script>
+  </body>
+</html>
