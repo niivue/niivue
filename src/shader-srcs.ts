@@ -1429,6 +1429,29 @@ void main() {
 	color = vec4(lightNormDot * vClr.rgb * diffuse, opacity);
 }`
 
+export const fragMeshSpecularEdgeShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+	float specularRGB = 0.7;
+	float specularWhite = 0.3;
+	float shininess = 10.0;
+	float diffuse = 1.0;
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	vec3 n = normalize(vN);
+	vec3 l = vec3(0.0, 0.0, -1.0);
+	float lightNormDot = max(dot(n, l), 0.0);
+	vec3 d3 = lightNormDot * vClr.rgb * diffuse;
+	float s = pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	vec3 s3 = specularRGB * s * vClr.rgb;
+	s *= specularWhite;
+	color = vec4(d3 + s3 + s, opacity);
+}`
+
 // Phong: default
 export const fragMeshShader = `#version 300 es
 precision highp int;

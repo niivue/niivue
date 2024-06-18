@@ -10,7 +10,10 @@ export type ValuesArray = Array<{
   cal_max?: number
 }>
 
-export type TypedNumberArray =
+// export type AnyNumberArray = number[] | TypedNumberArray
+
+export type AnyNumberArray =
+  | number[]
   | Float64Array
   | Float32Array
   | Uint32Array
@@ -19,8 +22,6 @@ export type TypedNumberArray =
   | Int32Array
   | Int16Array
   | Int8Array
-
-export type AnyNumberArray = number[] | TypedNumberArray
 
 export type DefaultMeshType = {
   positions: Float32Array

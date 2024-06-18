@@ -10,8 +10,11 @@
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <label for="check10">HighDPI</label>
-      <input type="checkbox" id="check10" name="check10" unchecked />
+      <label for="dpiCheck">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" unchecked />
+      <label for="zoomCheck"> 2D/3D Zoom Sync</label>
+      <input type="checkbox" id="zoomCheck" unchecked />
+      <label for="sliceType"> View</label>
       <select id="sliceType">
         <option value="0">Axial</option>
         <option value="1">Coronal</option>
@@ -19,13 +22,21 @@
         <option value="4">Render</option>
         <option value="3" selected>A+C+S+R</option>
       </select>
+      <label for="controller"> Broadcast</label>
       <select id="controller">
         <option value="0">Independent</option>
         <option value="1"  selected>Top Controls Bottom</option>
         <option value="2">Bottom Controls Top</option>
         <option value="3">Bidirectional</option>
       </select>
-      <label for="dxSlider">Mesh clipping</label>
+      <label for="dragMode"> Drag</label>
+      <select id="dragMode">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="none">none</option>
+      </select>
+      <label for="dxSlider"> Mesh clipping</label>
       <input
         type="range"
         min="0"
@@ -63,8 +74,35 @@
         else
             nv2.broadcastTo()
       }
-      check10.onchange = function() {
+      dragMode.onchange = function () {
+        switch (dragMode.value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break;
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break;
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break;
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break;
+        }
+        nv2.opts.dragMode = nv1.opts.dragMode
+      }
+      dpiCheck.onchange = function() {
         nv1.setHighResolutionCapable(this.checked)
+      }
+      zoomCheck.onchange = function() {
+        nv1.opts.yoke3Dto2DZoom = this.checked
+        nv2.opts.yoke3Dto2DZoom = this.checked
+        if (this.checked) {
+          nv1.scene.volScaleMultiplier = nv1.scene.pan2Dxyzmm[3]
+          nv2.scene.volScaleMultiplier = nv2.scene.pan2Dxyzmm[3]
+          nv1.drawScene()
+          nv2.drawScene()
+        }
       }
       dxSlider.oninput = function () {
         let dx = parseFloat(this.value)

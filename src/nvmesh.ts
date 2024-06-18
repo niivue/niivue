@@ -169,11 +169,13 @@ export class NVMesh {
   rgba255: Uint8Array
   fiberLength?: number
   fiberLengths?: Uint32Array
+  fiberDensity?: Float32Array
   fiberDither = 0.1
   fiberColor = 'Global'
   fiberDecimationStride = 1 // e.g. if 2 the 50% of streamlines visible, if 3 then 1/3rd
   fiberSides = 5 // 1=streamline, 2=imposter, >2=mesh(cylinder with fiberSides sides)
   fiberRadius = 0 // in mm, e.g. 3 means 6mm diameter fibers, ignored if fiberSides < 3
+  fiberOcclusion = 0 // value 0..1 to simulate ambient occlusion
   f32PerVertex = 5 // MUST be 5 or 7: number of float32s per vertex DEPRECATED, future releases will ALWAYS be 5
   fiberMask?: unknown[]
   colormap?: ColorMap | LegacyConnectome | string | null
@@ -512,6 +514,130 @@ export class NVMesh {
     this.indexCount = nidx
   } // linesToCylinders
 
+  createFiberDensityMap(): void {
+    // generate a fiber density map
+    // the array fiberDensity has one element per vertex
+    // this provides the normalized (0..1) neighboring vertices
+    if (this.fiberDensity) {
+      return
+    }
+    const pts = this.pts
+    const npt = pts.length / 3 // each point has three components: X,Y,Z
+    let maxExtentsRange = 0
+    for (let i = 0; i < 3; i++) {
+      const range = this.extentsMax[i] - this.extentsMin[i]
+      maxExtentsRange = Math.max(maxExtentsRange, range)
+    }
+    this.fiberDensity = new Float32Array(npt)
+    if (maxExtentsRange === 0) {
+      return
+    }
+    // DSI-Studio counts vertex density per voxel
+    // However, some tract formats do not store voxel dimensions
+    // therefore, we will create a 3D volume of size bins*bins*bins
+    const bins = 64
+    const binWidth = maxExtentsRange / (bins - 1)
+    const half = binWidth / 2
+    const scale = (bins - 1) / maxExtentsRange
+    let densityMap = new Float32Array(bins * bins * bins)
+    const mn = [this.extentsMin[0] - half, this.extentsMin[1] - half, this.extentsMin[2] - half]
+    // sum density map
+    const xyz = [0, 0, 0]
+    const prevVx = -1
+    const binsXbins = bins * bins
+    let j = 0
+    for (let i = 0; i < npt; i++) {
+      xyz[0] = Math.round((pts[j++] - mn[0]) * scale)
+      xyz[1] = Math.round((pts[j++] - mn[1]) * scale)
+      xyz[2] = Math.round((pts[j++] - mn[2]) * scale)
+      const vx = xyz[0] + xyz[1] * bins + xyz[2] * binsXbins
+      if (vx === prevVx) {
+        // each streamline contributes once per voxel
+        continue
+      }
+      densityMap[vx]++
+    }
+    function blur3D(vol: Float32Array, dim: number): Float32Array {
+      // let raw = vol.slice()
+      let raw = vol.slice()
+      let v = -1
+      const dim1 = dim - 1
+      // blur in x
+      for (let z = 0; z < dim; z++) {
+        for (let y = 0; y < dim; y++) {
+          for (let x = 0; x < dim; x++) {
+            v++
+            if (x < 1 || x >= dim1) {
+              continue
+            }
+            vol[v] = raw[v - 1] + raw[v] + raw[v] + raw[v + 1]
+          }
+        }
+      }
+      // blur in y
+      v = -1
+      raw = vol.slice()
+      for (let z = 0; z < dim; z++) {
+        for (let y = 0; y < dim; y++) {
+          for (let x = 0; x < dim; x++) {
+            v++
+            if (y < 1 || y >= dim1) {
+              continue
+            }
+            vol[v] = raw[v - dim] + raw[v] + raw[v] + raw[v + dim]
+          }
+        }
+      }
+      // blur in z
+      const dimXdim = dim * dim
+      v = -1
+      raw = vol.slice()
+      for (let z = 0; z < dim; z++) {
+        for (let y = 0; y < dim; y++) {
+          for (let x = 0; x < dim; x++) {
+            v++
+            if (z < 1 || z >= dim1) {
+              continue
+            }
+            vol[v] = raw[v - dimXdim] + raw[v] + raw[v] + raw[dimXdim]
+          }
+        }
+      }
+      return vol
+    }
+    densityMap = blur3D(densityMap, bins)
+    densityMap = blur3D(densityMap, bins)
+    // let raw = densityMap.slice()
+    let mx = 0
+    let mn0 = Infinity
+    const binsXbinsXbins = bins * bins * bins
+    for (let i = 0; i < binsXbinsXbins; i++) {
+      if (densityMap[i] <= 0) {
+        continue
+      }
+      mx = Math.max(mx, densityMap[i])
+      mn0 = Math.min(mn0, densityMap[i])
+    }
+    // console.log('Maximum streamlines in a voxel:', mx, mn0)
+    if (mx <= 1 || mx <= mn0) {
+      // no neighbors: no ambient occlusion
+      return
+    }
+    j = 0
+    for (let i = 0; i < binsXbinsXbins; i++) {
+      // least occluded vertices should have no occlusion
+      densityMap[i] = Math.max(0, densityMap[i] - mn0)
+    }
+    mx -= mn0
+    for (let i = 0; i < npt; i++) {
+      xyz[0] = Math.round((pts[j++] - mn[0]) * scale)
+      xyz[1] = Math.round((pts[j++] - mn[1]) * scale)
+      xyz[2] = Math.round((pts[j++] - mn[2]) * scale)
+      const vx = xyz[0] + xyz[1] * bins + xyz[2] * binsXbins
+      this.fiberDensity[i] = densityMap[vx] / mx
+    }
+  }
+
   // not included in public docs
   // internal function filters tractogram to identify which color and visibility of streamlines
   updateFibers(gl: WebGL2RenderingContext): void {
@@ -742,6 +868,39 @@ export class NVMesh {
         const vStart4 = vStart * 4 + 3 // +3: fill 4th component colors: XYZC = 0123
         const vEnd4 = vEnd * 4 + 3
         for (let j = vStart4; j <= vEnd4; j += 4) {
+          posClrU32[j] = RGBA
+        }
+      }
+    }
+    // SHADING: ambient occlusion
+    if (this.fiberOcclusion > 0) {
+      this.createFiberDensityMap()
+      function shadeRGBA(rgba: number, frac: number): number {
+        const r = frac * (rgba & 0xff)
+        const g = frac * ((rgba >> 8) & 0xff)
+        const b = frac * ((rgba >> 16) & 0xff)
+        return r + (g << 8) + (b << 16)
+      }
+      for (let i = 0; i < n_count; i++) {
+        // for each streamline
+        const vStart = offsetPt0[i] // first vertex in streamline
+        const vEnd = offsetPt0[i + 1] - 1 // last vertex in streamline
+        const vStart4 = vStart * 4 + 3 // +3: fill 4th component colors: XYZC = 0123
+        const vEnd4 = vEnd * 4 + 3
+        let vtx = vStart
+        const bias = Math.min(this.fiberOcclusion, 0.99)
+        for (let j = vStart4; j <= vEnd4; j += 4) {
+          let shade = this.fiberDensity[vtx++]
+          if (shade <= 0) {
+            continue
+          }
+          // Schlick's fast bias function
+          // https://github.com/ayamflow/schlick-curve
+          shade = shade / ((1.0 / bias - 2.0) * (1.0 - shade) + 1.0)
+          const frac = 1 - Math.min(shade, 0.9)
+          // console.log(shade, frac)
+          let RGBA = posClrU32[j]
+          RGBA = shadeRGBA(RGBA, frac)
           posClrU32[j] = RGBA
         }
       }
