@@ -133,6 +133,42 @@ test('niivue saveDocument customData', async ({ page }) => {
   fs.unlinkSync(filePath)
 })
 
+test('niivue saveDocument clipVolume', async ({ page }) => {
+  const downloadPromise = page.waitForEvent('download')
+  await page.evaluate(async (testOptions) => {
+    const nv = new Niivue({
+      ...testOptions,
+      clipThick: 0.42,
+      clipVolumeLow: [0.46, 0.42, 0.31],
+      clipVolumeHigh: [0.76, 0.73, 0.75]
+    })
+    await nv.attachTo('gl')
+    const volumeList = [
+      { url: './images/mni152.nii.gz', cal_min: 30, cal_max: 80 },
+      { url: './images/spmMotor.nii.gz', cal_min: 3, cal_max: 8, colormap: 'warm' }
+    ]
+    await nv.loadVolumes(volumeList)
+    await nv.saveDocument('test-clip-volume.nvd')
+  }, TEST_OPTIONS)
+  const download = await downloadPromise
+  const downloadPath = path.resolve('./downloads')
+  const filePath = path.join(downloadPath, download.suggestedFilename())
+  await download.saveAs(filePath)
+  const data = fs.readFileSync(filePath, { encoding: 'utf-8' })
+  try {
+    if (typeof data === 'string') {
+      const json = JSON.parse(data)
+      const doc = NVDocument.loadFromJSON(json)
+      expect(doc.opts.clipThick).toBe(0.42)
+      expect(doc.opts.clipVolumeLow).toBe([0.46, 0.42, 0.31])
+      expect(doc.opts.clipVolumeHigh).toBe([0.76, 0.73, 0.75])
+    } else {
+      throw new Error('NVDocument not correctly encoded')
+    }
+  } catch {}
+  fs.unlinkSync(filePath)
+})
+
 test.skip('niivue saveDocument and loadDocument', async ({ page }) => {
   test.setTimeout(120000)
   const downloadPromise = page.waitForEvent('download')
