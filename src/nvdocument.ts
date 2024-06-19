@@ -66,6 +66,9 @@ export type NVConfigOptions = {
   fontColor: Float32List
   selectionBoxColor: number[]
   clipPlaneColor: number[]
+  clipThick: number
+  clipVolumeLow: number[]
+  clipVolumeHigh: number[]
   rulerColor: number[]
   // x axis margin around color bar, clip space coordinates
   colorbarMargin: number
@@ -141,6 +144,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  clipThick: 2,
+  clipVolumeLow: [0, 0, 0],
+  clipVolumeHigh: [1.0, 1.0, 1.0],
   rulerColor: [1, 0, 0, 0.8],
   colorbarMargin: 0.05,
   trustCalMinMax: true,
@@ -198,6 +204,9 @@ type SceneData = {
   clipPlaneDepthAziElev: number[]
   volScaleMultiplier: number
   pan2Dxyzmm: vec4
+  clipThick: number
+  clipVolumeLow: number[]
+  clipVolumeHigh: number[]
 }
 
 export const INITIAL_SCENE_DATA = {
@@ -207,7 +216,10 @@ export const INITIAL_SCENE_DATA = {
   clipPlane: [0, 0, 0, 0],
   clipPlaneDepthAziElev: [2, 0, 0],
   volScaleMultiplier: 1.0,
-  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1)
+  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1),
+  clipThick: 2.0,
+  clipVolumeLow: [0, 0, 0],
+  clipVolumeHigh: [1.0, 1.0, 1.0]
 }
 
 export type Scene = {

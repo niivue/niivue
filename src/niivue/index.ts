@@ -3268,6 +3268,38 @@ export class Niivue {
   }
 
   /**
+   * adjust thickness of the 3D clip plane
+   * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
+   * @example
+   * niivue.setClipPlaneThick(0.3) // thin slab
+   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   */
+  setClipPlaneThick(thick: number): void {
+    this.opts.clipThick = thick
+    this.renderShader!.use(this.gl)
+    this.gl.uniform1f(this.renderShader!.uniforms.clipThick!, this.opts.clipThick)
+    // this.renderShader!.use(this.gl)
+    // this.gl.uniform4fv(this.renderShader!.uniforms.clipPlaneColor!, this.opts.clipPlaneColor)
+    this.drawScene()
+  }
+
+  /**
+   * set the clipping region for volume rendering
+   * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+   * @example
+   * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
+   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   */
+  setClipVolume(low: number[], high: number[]): void {
+    this.opts.clipVolumeLow = [Math.min(low[0], high[0]), Math.min(low[1], high[1]), Math.min(low[2], high[2])]
+    this.opts.clipVolumeHigh = [Math.max(low[0], high[0]), Math.max(low[1], high[1]), Math.max(low[2], high[2])]
+    this.renderShader!.use(this.gl)
+    this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
+    this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
+    this.drawScene()
+  }
+
+  /**
    * set proportion of volume rendering influenced by selected matcap.
    * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
    * @example
@@ -5793,6 +5825,9 @@ export class Niivue {
     // @ts-expect-error FIXME assigning this.overlays to a number field
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
+    this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)
+    this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
+    this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
     this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend)
 
