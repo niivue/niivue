@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="xLoSlider">X Low</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="20"
+        class="slider"
+        id="xLoSlider"
+      />
+      <label for="xHiSlider">X High</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="100"
+        class="slider"
+        id="xHiSlider"
+      />
+      <label for="yLoSlider">Y Low</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        class="slider"
+        id="yLoSlider"
+      />
+      <label for="yHiSlider">Y High</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="100"
+        class="slider"
+        id="yHiSlider"
+      />
+      <label for="zLoSlider">X Low</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        class="slider"
+        id="zLoSlider"
+      />
+      <label for="zHiSlider">X High</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="100"
+        class="slider"
+        id="zHiSlider"
+      />
+      <label for="thickSlider">Thickness</label>
+      <input
+        type="range"
+        min="1"
+        max="170"
+        value="50"
+        class="slider"
+        id="thickSlider"
+      />
+      <label for="renderMode">Style</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0" selected>matte</option>
+        <option value="0.3">low</option>
+        <option value="0.6">medium</option>
+        <option value="1.0">high</option>
+      </select>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      function doSlider() {
+        const xyzLo = [xLoSlider.value/100, yLoSlider.value/100, zLoSlider.value/100]
+        const xyzHi = [xHiSlider.value/100, yHiSlider.value/100, zHiSlider.value/100]
+        nv1.setClipVolume(xyzLo, xyzHi)
+      }
+      xLoSlider.oninput = function () {
+        doSlider()
+      }
+      xHiSlider.oninput = function () {
+        doSlider()
+      }
+      yLoSlider.oninput = function () {
+        doSlider()
+      }
+      yHiSlider.oninput = function () {
+        doSlider()
+      }
+      zLoSlider.oninput = function () {
+        doSlider()
+      }
+      zHiSlider.oninput = function () {
+        doSlider()
+      }
+      thickSlider.oninput = function () {
+        nv1.setClipPlaneThick(this.value / 100)
+      }
+      renderMode.onchange = function () {
+        nv1.setVolumeRenderIllumination(this.value)
+      }
+      let defaults = {
+        backColor: [0, 0, 0, 1],
+        show3Dcrosshair: true,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.attachToCanvas(gl1)
+      nv1.opts.dragMode = nv1.dragModes.pan
+      nv1.opts.multiplanarForceRender = true
+      nv1.opts.yoke3Dto2DZoom = true
+      var volumeList1 = [
+        { url: "../images/mni152.nii.gz", cal_min: 30, cal_max: 80 },
+        {url: "../images/spmMotor.nii.gz",cal_min: 3,cal_max: 8,colormap: "warm"}
+      ]
+      await nv1.loadVolumes(volumeList1)
+      nv1.setClipPlane([0.2, 0, 150])
+      doSlider()
+      renderMode.onchange()
+      thickSlider.oninput()
+    </script>
+  </body>
+</html>
