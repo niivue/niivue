@@ -592,6 +592,9 @@ type NVConfigOptions = {
     fontColor: Float32List;
     selectionBoxColor: number[];
     clipPlaneColor: number[];
+    clipThick: number;
+    clipVolumeLow: number[];
+    clipVolumeHigh: number[];
     rulerColor: number[];
     colorbarMargin: number;
     trustCalMinMax: boolean;
@@ -649,6 +652,9 @@ type SceneData = {
     clipPlaneDepthAziElev: number[];
     volScaleMultiplier: number;
     pan2Dxyzmm: vec4;
+    clipThick: number;
+    clipVolumeLow: number[];
+    clipVolumeHigh: number[];
 };
 declare const INITIAL_SCENE_DATA: {
     azimuth: number;
@@ -658,6 +664,9 @@ declare const INITIAL_SCENE_DATA: {
     clipPlaneDepthAziElev: number[];
     volScaleMultiplier: number;
     pan2Dxyzmm: vec4;
+    clipThick: number;
+    clipVolumeLow: number[];
+    clipVolumeHigh: number[];
 };
 type Scene = {
     onAzimuthElevationChange: (azimuth: number, elevation: number) => void;
@@ -2423,6 +2432,22 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
      */
     setClipPlaneColor(color: number[]): void;
+    /**
+     * adjust thickness of the 3D clip plane
+     * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
+     * @example
+     * niivue.setClipPlaneThick(0.3) // thin slab
+     * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+     */
+    setClipPlaneThick(thick: number): void;
+    /**
+     * set the clipping region for volume rendering
+     * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+     * @example
+     * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
+     * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+     */
+    setClipVolume(low: number[], high: number[]): void;
     /**
      * set proportion of volume rendering influenced by selected matcap.
      * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
