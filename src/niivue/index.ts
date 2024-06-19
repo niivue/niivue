@@ -3268,6 +3268,22 @@ export class Niivue {
   }
 
   /**
+   * adjust thickness of the 3D clip plane
+   * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
+   * @example
+   * niivue.setClipPlaneThick(0.3) // thin slab
+   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   */
+  setClipPlaneThick(thick: number): void {
+    this.opts.clipThick = thick
+    this.renderShader!.use(this.gl)
+    this.gl.uniform1f(this.renderShader!.uniforms.clipThick!, this.opts.clipThick)
+    // this.renderShader!.use(this.gl)
+    // this.gl.uniform4fv(this.renderShader!.uniforms.clipPlaneColor!, this.opts.clipPlaneColor)
+    this.drawScene()
+  }
+
+  /**
    * set proportion of volume rendering influenced by selected matcap.
    * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
    * @example
@@ -5793,6 +5809,8 @@ export class Niivue {
     // @ts-expect-error FIXME assigning this.overlays to a number field
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
+    this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)
+    console.log('>>', this.opts.clipThick)
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
     this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend)
 

@@ -30,6 +30,15 @@
         class="slider"
         id="colorSlider"
       />
+      <label for="thickSlider">Thickness</label>
+      <input
+        type="range"
+        min="1"
+        max="173"
+        value="33"
+        class="slider"
+        id="thickSlider"
+      />
       <label for="hippoSlider">Hippocampus</label>
       <input
         type="range"
@@ -87,6 +96,9 @@
         clr[1] = this.value / 255;
         nv1.setClipPlaneColor(clr);
       };
+      thickSlider.oninput = function () {
+        nv1.setClipPlaneThick(this.value / 173)
+      };
       hippoSlider.oninput = function () {
         nv1.setOpacity(1, this.value /255);
       };
@@ -128,6 +140,7 @@
       nv1.setRenderAzimuthElevation(230,15)
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.opts.multiplanarForceRender = true;
+      thickSlider.oninput()
       await nv1.loadVolumes(volumeList1);
       var meshLayersList1 = [
         {

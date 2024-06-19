@@ -31,14 +31,16 @@ const kRenderFunc =
 	endPosition = endPosition / volScale;
 	return endPosition;
 }
+
 vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
 	float cdot = dot(dir,clipPlane.xyz);
 	isClip = false;
 	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
 	bool frontface = (cdot > 0.0);
-	float clipThick = 2.0;
 	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	float  disBackFace = (-(clipPlane.a-clipThick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
+	float thick = clipThick;
+	if (thick <= 0.0) thick = 2.0;
+	float  disBackFace = (-(clipPlane.a-thick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
 	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
 		samplePos.a = len + 1.0;
 		return samplePos;
@@ -57,6 +59,7 @@ vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isCl
 	}
 	return samplePos;
 }
+
 float frac2ndc(vec3 frac) {
 //https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
 	vec4 pos = vec4(frac.xyz, 1.0); //fraction
@@ -80,6 +83,7 @@ uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
+uniform float clipThick;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -415,6 +419,7 @@ uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
+uniform float clipThick;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -499,6 +504,7 @@ uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
+uniform float clipThick;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -541,6 +547,7 @@ uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
+uniform float clipThick;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 normMtx;
@@ -1648,6 +1655,7 @@ uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
 uniform float overlays;
+uniform float clipThick;
 uniform mat4 matRAS;
 uniform mat4 mvpMtx;
 uniform float drawOpacity, renderOverlayBlend;
