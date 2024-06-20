@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Modulation</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="mode">Display:</label>
+      <select name="mode" id="mode">
+        <option>FA</option>
+        <option>V1</option>
+        <option>V1 modulated by FA</option>
+        <option>Lines</option>
+        <option  selected>Lines modulated by FA</option>
+      </select>
+      <label for="slide">&nbsp; FAmin</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        class="slider"
+        id="slide"
+      />
+      <label for="slideX">&nbsp; FAmax</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="100"
+        class="slider"
+        id="slideX"
+      />
+      <label for="check">ClipDark</label>
+      <input type="checkbox" id="check" checked />
+      <button id="about">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      about.onclick = function () {
+        window.alert("Experimental diffusion tensor V1 validation (to do: assumptions regarding neurological convention, slice orientation, world space)")
+      }
+      function minMax() {
+        let mn = 0.01 * slide.value
+        let mx = 0.01 * slideX.value
+        nv1.volumes[0].cal_min = Math.min(mn, mx)
+        nv1.volumes[0].cal_max = Math.max(mn, mx)
+        nv1.updateGLVolume()
+      }
+      slide.oninput = function () {
+        minMax()
+      }
+      slideX.oninput = function () {
+        minMax()
+      }
+      check.onchange = function () {
+        nv1.isAlphaClipDark = this.checked
+        nv1.updateGLVolume()
+      }
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      var volumeList1 = [
+        {
+          url: "../images/dsistudio.fib.gz",
+          opacity: 1,
+          visible: false,
+        },
+        {
+          url: "../images/dsistudio.fib.gz",
+          opacity: 0.0,
+          visible: false,
+        },
+      ]
+      var nv1 = new niivue.Niivue({ 
+        backColor: [0.0, 0.0, 0.2, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      })
+      nv1.opts.dragMode = nv1.dragModes.pan
+      nv1.opts.yoke3Dto2DZoom = true
+      nv1.setCrosshairWidth(0.1)
+      //v1 aided if all views show voxel centers
+      nv1.opts.isForceMouseClickToVoxelCenters = true
+      nv1.attachTo("gl1")
+      //V1 lines REQUIRES nearest neighbor interpolation
+      nv1.setInterpolation(true)
+      await nv1.loadVolumes(volumeList1)
+      await nv1.volumes[1].loadImgV1()
+      nv1.scene.crosshairPos = nv1.vox2frac([36, 32,18])
+      var drop = document.getElementById("mode")
+      drop.onchange = function () {
+        let mode = document.getElementById("mode").selectedIndex
+        if (mode === 0) {
+          nv1.setOpacity(0, 1.0) //show FA
+          nv1.setOpacity(1, 0.0) //hide V1
+        } else if (mode > 2) {
+          nv1.setOpacity(0, 1.0) //show FA
+          nv1.setOpacity(1, 1.0) //show V1
+        } else {
+          nv1.setOpacity(0, 0.0) //hide FA
+          nv1.setOpacity(1, 1.0) //show V1
+        }
+        if ((mode === 4) || (mode === 2)) {
+          nv1.setModulationImage(nv1.volumes[1].id,nv1.volumes[0].id)
+        } else nv1.setModulationImage(nv1.volumes[1].id, '')
+        nv1.opts.isV1SliceShader = (mode > 2)
+        nv1.updateGLVolume()
+      }
+      drop.onchange()
+      check.onchange()
+    </script>
+  </body>
+</html>
