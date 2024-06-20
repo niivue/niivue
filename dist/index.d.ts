@@ -325,6 +325,7 @@ declare class NVImage {
     imageType?: ImageType;
     img?: TypedVoxelArray;
     imaginary?: Float32Array;
+    v1?: Float32Array;
     fileObject?: File | File[];
     dims?: number[];
     onColormapChange: (img: NVImage) => void;
@@ -371,6 +372,8 @@ declare class NVImage {
      */
     constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null);
     computeObliqueAngle(mtx44: mat4): number;
+    float32V1asRGBA(inImg: Float32Array): Uint8Array;
+    loadImgV1(): boolean;
     calculateOblique(): void;
     THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void;
     SetPixDimFromSForm(): void;
@@ -379,7 +382,7 @@ declare class NVImage {
     readV16(buffer: ArrayBuffer): ArrayBuffer;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
     readMGH(buffer: ArrayBuffer): ArrayBuffer;
-    readFIB(buffer: ArrayBuffer, isLoadV1?: boolean): ArrayBuffer;
+    readFIB(buffer: ArrayBuffer): [ArrayBuffer, Float32Array];
     readSRC(buffer: ArrayBuffer): ArrayBuffer;
     readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
