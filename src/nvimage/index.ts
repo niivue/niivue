@@ -83,7 +83,8 @@ export class NVImage {
   hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
   imageType?: ImageType
   img?: TypedVoxelArray
-  imaginary?: Float32Array
+  imaginary?: Float32Array // only for complex data
+  v1?: Float32Array // only for FIB files
   fileObject?: File | File[]
   dims?: number[]
 
@@ -197,7 +198,7 @@ export class NVImage {
         imgRaw = this.readDICOM(dataBuffer)
         break
       case NVIMAGE_TYPE.FIB:
-        imgRaw = this.readFIB(dataBuffer as ArrayBuffer)
+        ;[imgRaw, this.v1] = this.readFIB(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.MIH:
       case NVIMAGE_TYPE.MIF:
@@ -283,43 +284,8 @@ export class NVImage {
       this.nFrame4D === 3 &&
       this.hdr.datatypeCode === NiiDataType.DT_FLOAT32
     ) {
-      const tmp = new Float32Array(imgRaw)
-      const f32 = tmp.slice()
-
-      // Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
-      // this allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction
-      this.hdr.datatypeCode = NiiDataType.DT_RGBA32
-      this.nFrame4D = 1
-      for (let i = 4; i < 7; i++) {
-        this.hdr.dims[i] = 1
-      }
-      this.hdr.dims[0] = 3 // 3D
-      imgRaw = new Uint8Array(this.nVox3D * 4) //* 3 for RGB
-      let mx = 1.0
-      for (let i = 0; i < this.nVox3D * 3; i++) {
-        mx = Math.max(mx, Math.abs(f32[i]))
-      }
-      const slope = 255 / mx
-      const nVox3D2 = this.nVox3D * 2
-      let j = 0
-      for (let i = 0; i < this.nVox3D; i++) {
-        // n.b. it is really necessary to overwrite imgRaw with a new datatype mid-method
-        const x = f32[i]
-        const y = f32[i + this.nVox3D]
-        const z = f32[i + nVox3D2]
-        ;(imgRaw as Uint8Array)[j] = Math.abs(x * slope)
-        ;(imgRaw as Uint8Array)[j + 1] = Math.abs(y * slope)
-        ;(imgRaw as Uint8Array)[j + 2] = Math.abs(z * slope)
-        const xNeg = Number(x > 0) * 1
-        const yNeg = Number(y > 0) * 2
-        const zNeg = Number(z > 0) * 4
-        let alpha = 248 + xNeg + yNeg + zNeg
-        if (Math.abs(x) + Math.abs(y) + Math.abs(z) < 0.1) {
-          alpha = 0
-        }
-        ;(imgRaw as Uint8Array)[j + 3] = alpha
-        j += 4
-      }
+      // change data from float32 to rgba32
+      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw))
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
       log.error('pixDims not plausible', this.hdr)
@@ -558,6 +524,54 @@ export class NVImage {
       oblique_angle = 0.0
     }
     return oblique_angle
+  }
+
+  float32V1asRGBA(inImg: Float32Array): Uint8Array {
+    const f32 = inImg.slice()
+    // Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
+    // this allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction
+    this.hdr.datatypeCode = NiiDataType.DT_RGBA32
+    this.nFrame4D = 1
+    for (let i = 4; i < 7; i++) {
+      this.hdr.dims[i] = 1
+    }
+    this.hdr.dims[0] = 3 // 3D
+    const imgRaw = new Uint8Array(this.nVox3D * 4) //* 3 for RGB
+    let mx = 1.0
+    for (let i = 0; i < this.nVox3D * 3; i++) {
+      mx = Math.max(mx, Math.abs(f32[i]))
+    }
+    const slope = 255 / mx
+    const nVox3D2 = this.nVox3D * 2
+    let j = 0
+    for (let i = 0; i < this.nVox3D; i++) {
+      // n.b. it is really necessary to overwrite imgRaw with a new datatype mid-method
+      const x = f32[i]
+      const y = f32[i + this.nVox3D]
+      const z = f32[i + nVox3D2]
+      ;(imgRaw as Uint8Array)[j] = Math.abs(x * slope)
+      ;(imgRaw as Uint8Array)[j + 1] = Math.abs(y * slope)
+      ;(imgRaw as Uint8Array)[j + 2] = Math.abs(z * slope)
+      const xNeg = Number(x > 0) * 1
+      const yNeg = Number(y > 0) * 2
+      const zNeg = Number(z > 0) * 4
+      let alpha = 248 + xNeg + yNeg + zNeg
+      if (Math.abs(x) + Math.abs(y) + Math.abs(z) < 0.1) {
+        alpha = 0
+      }
+      ;(imgRaw as Uint8Array)[j + 3] = alpha
+      j += 4
+    }
+    return imgRaw
+  }
+
+  loadImgV1(): boolean {
+    if (!this.v1) {
+      log.warn('Image does not have V1 data')
+      return false
+    }
+    this.img = this.float32V1asRGBA(this.v1)
+    return true
   }
 
   // not included in public docs
@@ -1202,7 +1216,7 @@ export class NVImage {
   // not included in public docs
   // read DSI-Studio FIB format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  readFIB(buffer: ArrayBuffer, isLoadV1: boolean = false): ArrayBuffer {
+  readFIB(buffer: ArrayBuffer): [ArrayBuffer, Float32Array] {
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
@@ -1213,9 +1227,6 @@ export class NVImage {
       throw new Error('Not a valid DSIstudio FIB file')
     }
     const hasV1 = 'index0' in mat && 'index1' in mat && 'index2' in mat
-    if (isLoadV1 && !hasV1) {
-      throw new Error('FIB file does not have index0/1/2')
-    }
     // const hasV1 = false
     hdr.numBitsPerVoxel = 32
     hdr.datatypeCode = NiiDataType.DT_FLOAT32
@@ -1223,12 +1234,6 @@ export class NVImage {
     hdr.dims[2] = mat.dimension[1]
     hdr.dims[3] = mat.dimension[2]
     hdr.dims[4] = 1
-    if (isLoadV1) {
-      hdr.dims[4] = 3
-    }
-    if (hdr.dims[4] > 1) {
-      hdr.dims[0] = 4
-    }
     hdr.pixDims[1] = mat.voxel_size[0]
     hdr.pixDims[2] = mat.voxel_size[1]
     hdr.pixDims[3] = mat.voxel_size[2]
@@ -1243,10 +1248,11 @@ export class NVImage {
       [0, 0, 0, 1]
     ]
     hdr.littleEndian = true
-    const nBytes3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * Math.ceil(hdr.numBitsPerVoxel / 8)
+    const nVox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+    const nBytes3D = nVox3D * Math.ceil(hdr.numBitsPerVoxel / 8)
     const nBytes = nBytes3D * hdr.dims[4]
-    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
-    if (isLoadV1) {
+    const buff8v1 = new Uint8Array(new ArrayBuffer(nVox3D * 4 * 3)) // 4=Float32, 3=x,y,z
+    if (hasV1) {
       // read directions, stored as index
       const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
       const dir0 = new Float32Array(nvox)
@@ -1258,21 +1264,21 @@ export class NVImage {
         const idx = idxs[i] * 3
         dir0[i] = dirs[idx + 0]
         dir1[i] = dirs[idx + 1]
-        dir2[i] = dirs[idx + 2]
+        dir2[i] = -dirs[idx + 2]
       }
-      buff8.set(new Uint8Array(dir0.buffer, dir0.byteOffset, dir0.byteLength), 0 * nBytes3D)
-      buff8.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D)
-      buff8.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D)
-    } else {
-      // read FA
-      const arrFA = Float32Array.from(mat.dti_fa)
-      const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength)
-      buff8.set(imgFA, 0)
+      buff8v1.set(new Uint8Array(dir0.buffer, dir0.byteOffset, dir0.byteLength), 0 * nBytes3D)
+      buff8v1.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D)
+      buff8v1.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D)
     }
+    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
+    // read FA
+    const arrFA = Float32Array.from(mat.dti_fa)
+    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength)
+    buff8.set(imgFA, 0)
     if ('report' in mat) {
       hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)))
     }
-    return buff8.buffer
+    return [buff8.buffer, new Float32Array(buff8v1.buffer)]
   } // readFIB()
 
   // not included in public docs
