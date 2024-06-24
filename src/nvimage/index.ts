@@ -201,9 +201,14 @@ export class NVImage {
         ;[imgRaw, this.v1] = this.readFIB(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.MIH:
-      case NVIMAGE_TYPE.MIF:
-        imgRaw = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
+      case NVIMAGE_TYPE.MIF: {
+        let v1
+        ;[imgRaw, v1] = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
+        if (v1.length > 0) {
+          this.v1 = v1
+        }
         break
+      }
       case NVIMAGE_TYPE.NHDR:
       case NVIMAGE_TYPE.NRRD:
         imgRaw = this.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
@@ -527,6 +532,9 @@ export class NVImage {
   }
 
   float32V1asRGBA(inImg: Float32Array): Uint8Array {
+    if (inImg.length !== this.nVox3D * 3) {
+      log.warn('float32V1asRGBA() expects ' + this.nVox3D * 3 + 'voxels, got ', +inImg.length)
+    }
     const f32 = inImg.slice()
     // Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
     // this allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction
@@ -539,6 +547,10 @@ export class NVImage {
     const imgRaw = new Uint8Array(this.nVox3D * 4) //* 3 for RGB
     let mx = 1.0
     for (let i = 0; i < this.nVox3D * 3; i++) {
+      // n.b. NaN values created by dwi2tensor and tensor2metric tensors.mif -vector v1.mif
+      if (isNaN(f32[i])) {
+        continue
+      }
       mx = Math.max(mx, Math.abs(f32[i]))
     }
     const slope = 255 / mx
@@ -565,12 +577,31 @@ export class NVImage {
     return imgRaw
   }
 
-  loadImgV1(): boolean {
-    if (!this.v1) {
+  loadImgV1(isFlipX: boolean = false, isFlipY: boolean = false, isFlipZ: boolean = false): boolean {
+    let v1 = this.v1
+    if (!v1 && this.nFrame4D === 3 && this.img.constructor === Float32Array) {
+      v1 = this.img.slice()
+    }
+    if (!v1) {
       log.warn('Image does not have V1 data')
       return false
     }
-    this.img = this.float32V1asRGBA(this.v1)
+    if (isFlipX) {
+      for (let i = 0; i < this.nVox3D; i++) {
+        v1[i] = -v1[i]
+      }
+    }
+    if (isFlipY) {
+      for (let i = this.nVox3D; i < 2 * this.nVox3D; i++) {
+        v1[i] = -v1[i]
+      }
+    }
+    if (isFlipZ) {
+      for (let i = 2 * this.nVox3D; i < 3 * this.nVox3D; i++) {
+        v1[i] = -v1[i]
+      }
+    }
+    this.img = this.float32V1asRGBA(v1)
     return true
   }
 
@@ -1643,7 +1674,7 @@ export class NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): [ArrayBuffer, Float32Array] {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
     this.hdr = new nifti.NIFTI1()
@@ -1681,9 +1712,12 @@ export class NVImage {
       throw new Error('Not a valid MIF file')
     }
     const layout = []
+    let isBit = false
     let nTransform = 0
     let TR = 0
     let isDetached = false
+    let isDerived = false
+    let isTensor = false
     line = readStr()
     while (pos < len && !line.startsWith('END')) {
       let items = line.split(':') // "vox: 1,1,1" -> "vox", " 1,1,1"
@@ -1719,7 +1753,10 @@ export class NVImage {
         case 'datatype':
           {
             const dt = items[0]
-            if (dt.startsWith('Int8')) {
+            if (dt.startsWith('Bit')) {
+              isBit = true
+              hdr.datatypeCode = NiiDataType.DT_UINT8
+            } else if (dt.startsWith('Int8')) {
               hdr.datatypeCode = NiiDataType.DT_INT8
             } else if (dt.startsWith('UInt8')) {
               hdr.datatypeCode = NiiDataType.DT_UINT8
@@ -1766,6 +1803,17 @@ export class NVImage {
           hdr.affine[nTransform][3] = parseFloat(items[3])
           nTransform++
           break
+        case 'comments':
+          hdr.description = items[0].substring(0, Math.min(79, items[0].length))
+          break
+        case 'prior_dw_scheme':
+          isDerived = true
+          break
+        case 'command_history':
+          if (items[0].startsWith('dwi2tensor')) {
+            isTensor = true
+          }
+          break
         case 'RepetitionTime':
           TR = parseFloat(items[0])
           break
@@ -1786,7 +1834,6 @@ export class NVImage {
     for (let i = 0; i < ndim; i++) {
       nvox *= Math.max(hdr.dims[i + 1], 1)
     }
-    log.debug(nvox)
     // let nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -1804,9 +1851,22 @@ export class NVImage {
     let rawImg: ArrayBuffer
     if (pairedImgData && isDetached) {
       rawImg = pairedImgData.slice(0)
-    }
-    // n.b. mrconvert can pad files? See dtitest_Siemens_SC 4_dti_nopf_x2_pitch
-    else {
+    } else if (isBit) {
+      hdr.numBitsPerVoxel = 8
+      const img8 = new Uint8Array(nvox)
+      const buffer1 = buffer.slice(hdr.vox_offset, hdr.vox_offset + Math.ceil(nvox / 8))
+      const img1 = new Uint8Array(buffer1)
+      let j = 0
+      for (let i = 0; i < nvox; i++) {
+        const bit = i % 8
+        img8[i] = (img1[j] >> (7 - bit)) & 1
+        if (bit === 7) {
+          j++
+        }
+      }
+      rawImg = img8.buffer
+    } else {
+      // n.b. mrconvert can pad files? See dtitest_Siemens_SC 4_dti_nopf_x2_pitch
       rawImg = buffer.slice(hdr.vox_offset, hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8))
     }
     if (layout.length !== hdr.dims[0]) {
@@ -1868,27 +1928,51 @@ export class NVImage {
     }
     // input and output arrays
     let j = 0
-    let inVs: Uint8Array | Uint16Array | Uint32Array | BigUint64Array
-    let outVs: Uint8Array | Uint16Array | Uint32Array | BigUint64Array
-    switch (hdr.numBitsPerVoxel) {
-      case 8:
+    let inVs: Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array
+    let outVs:
+      | Int8Array
+      | Uint8Array
+      | Int16Array
+      | Uint16Array
+      | Int32Array
+      | Uint32Array
+      | Float32Array
+      | Float64Array
+    switch (hdr.datatypeCode) {
+      case NiiDataType.DT_INT8:
+        inVs = new Int8Array(rawImg)
+        outVs = new Int8Array(nvox)
+        break
+      case NiiDataType.DT_UINT8:
         inVs = new Uint8Array(rawImg)
         outVs = new Uint8Array(nvox)
         break
-      case 16:
+      case NiiDataType.DT_INT16:
+        inVs = new Int16Array(rawImg)
+        outVs = new Int16Array(nvox)
+        break
+      case NiiDataType.DT_UINT16:
         inVs = new Uint16Array(rawImg)
         outVs = new Uint16Array(nvox)
         break
-      case 32:
+      case NiiDataType.DT_INT32:
+        inVs = new Int32Array(rawImg)
+        outVs = new Int32Array(nvox)
+        break
+      case NiiDataType.DT_UINT32:
         inVs = new Uint32Array(rawImg)
         outVs = new Uint32Array(nvox)
         break
-      case 64:
-        inVs = new BigUint64Array(rawImg)
-        outVs = new BigUint64Array(nvox)
+      case NiiDataType.DT_FLOAT32:
+        inVs = new Float32Array(rawImg)
+        outVs = new Float32Array(nvox)
+        break
+      case NiiDataType.DT_FLOAT64:
+        inVs = new Float64Array(rawImg)
+        outVs = new Float64Array(nvox)
         break
       default:
-        throw new Error('unknown numBitsPerVoxel')
+        throw new Error('unknown datatypeCode')
     }
     for (let d = 0; d < hdr.dims[5]; d++) {
       for (let t = 0; t < hdr.dims[4]; t++) {
@@ -1902,7 +1986,146 @@ export class NVImage {
         } // for z
       } // for t (time)
     } // for d (direction, phase/real, etc)
-    return outVs
+    let v1s = new Float32Array(0)
+    if (isTensor && isDerived && hdr.datatypeCode === NiiDataType.DT_FLOAT32 && hdr.dims[4] === 6) {
+      // https://community.mrtrix.org/t/dti-volumes-storage-formats-and-conversion/4502
+      // https://mrtrix.readthedocs.io/en/latest/reference/commands/dwi2tensor.html
+      // volumes 0-5: D11, D22, D33, D12, D13, D23
+      // this function from ChatGPT
+      function tensorToPrincipalAxesAndFA(tensor: number[]): number[] {
+        // Extract tensor components
+        const [D11, D22, D33, D12, D13, D23] = tensor
+
+        // Construct the 3x3 matrix
+        const matrix = [
+          [D11, D12, D13],
+          [D12, D22, D23],
+          [D13, D23, D33]
+        ]
+
+        // Helper function to calculate the magnitude of a vector
+        // function vectorMagnitude(vec: number[]): number {
+        //  return Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0))
+        // }
+
+        // Function to perform eigenvalue decomposition using the Jacobi method
+        function eigenDecomposition(matrix: number[][]): { eigenvalues: number[]; eigenvectors: number[][] } {
+          const n = matrix.length
+          const maxIter = 100
+          const epsilon = 1e-10
+          const V: number[][] = Array.from({ length: n }, (_, i) =>
+            Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))
+          )
+          const A = matrix.map((row) => row.slice())
+
+          for (let iter = 0; iter < maxIter; iter++) {
+            let maxOffDiag = 0
+            let p, q
+            for (let i = 0; i < n; i++) {
+              for (let j = i + 1; j < n; j++) {
+                if (Math.abs(A[i][j]) > maxOffDiag) {
+                  maxOffDiag = Math.abs(A[i][j])
+                  p = i
+                  q = j
+                }
+              }
+            }
+            if (maxOffDiag < epsilon) {
+              break
+            }
+
+            const theta = 0.5 * Math.atan2(2 * A[p][q], A[q][q] - A[p][p])
+            const cos = Math.cos(theta)
+            const sin = Math.sin(theta)
+
+            const Ap = A[p].slice()
+            const Aq = A[q].slice()
+
+            for (let i = 0; i < n; i++) {
+              A[p][i] = cos * Ap[i] - sin * Aq[i]
+              A[q][i] = sin * Ap[i] + cos * Aq[i]
+              A[i][p] = A[p][i]
+              A[i][q] = A[q][i]
+            }
+            A[p][p] = cos * cos * Ap[p] + sin * sin * Aq[q] - 2 * sin * cos * Ap[q]
+            A[q][q] = sin * sin * Ap[p] + cos * cos * Aq[q] + 2 * sin * cos * Ap[q]
+            A[p][q] = A[q][p] = 0
+
+            const Vp = V[p].slice()
+            const Vq = V[q].slice()
+            for (let i = 0; i < n; i++) {
+              V[p][i] = cos * Vp[i] - sin * Vq[i]
+              V[q][i] = sin * Vp[i] + cos * Vq[i]
+            }
+          }
+
+          const eigenvalues = A.map((row, i) => row[i])
+          return { eigenvalues, eigenvectors: V }
+        }
+
+        // Perform eigenvalue decomposition
+        const { eigenvalues, eigenvectors } = eigenDecomposition(matrix)
+
+        // Sort eigenvalues and corresponding eigenvectors
+        const sortedIndices = eigenvalues
+          .map((value, index) => ({ value, index }))
+          .sort((a, b) => b.value - a.value)
+          .map((obj) => obj.index)
+
+        const lambda1 = eigenvalues[sortedIndices[0]] // Largest eigenvalue
+        const lambda2 = eigenvalues[sortedIndices[1]] // Middle eigenvalue
+        const lambda3 = eigenvalues[sortedIndices[2]] // Smallest eigenvalue
+
+        const v1 = eigenvectors.map((row) => row[sortedIndices[0]]) // Principal axis
+        // const v2 = eigenvectors.map((row) => row[sortedIndices[1]]) // Secondary axis
+        // const v3 = eigenvectors.map((row) => row[sortedIndices[2]]) // Third axis
+
+        // Calculate the mean of the eigenvalues
+        const lambdaMean = (lambda1 + lambda2 + lambda3) / 3
+
+        // Calculate FA
+        const numerator = Math.sqrt(
+          (lambda1 - lambdaMean) ** 2 + (lambda2 - lambdaMean) ** 2 + (lambda3 - lambdaMean) ** 2
+        )
+        const denominator = Math.sqrt(lambda1 ** 2 + lambda2 ** 2 + lambda3 ** 2)
+        const FA = Math.sqrt(3 / 2) * (numerator / denominator)
+        return [v1[0], v1[1], v1[2], FA]
+        // return { FA, v1 }
+      } // tensorToPrincipalAxesAndFA
+      hdr.dims[0] = 3
+      hdr.dims[4] = 1
+      const nVox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+      const rawImg = outVs.slice()
+      outVs = new Float32Array(nVox3D)
+      v1s = new Float32Array(nVox3D * 3)
+      const offsets = [0, nVox3D, 2 * nVox3D, 3 * nVox3D, 4 * nVox3D, 5 * nVox3D]
+      for (let i = 0; i < nVox3D; i++) {
+        const tensor = [
+          rawImg[i],
+          rawImg[i + offsets[1]],
+          rawImg[i + offsets[2]],
+          rawImg[i + offsets[3]],
+          rawImg[i + offsets[4]],
+          rawImg[i + offsets[5]]
+        ]
+        let allZeros = true
+        for (let j = 0; j < 6; j++) {
+          if (tensor[j] !== 0) {
+            allZeros = false
+            break
+          }
+        }
+        if (allZeros) {
+          continue
+        }
+        const v1 = tensorToPrincipalAxesAndFA(tensor)
+        outVs[i] = v1[3]
+        v1s[i] = v1[0]
+        v1s[i + offsets[1]] = v1[1]
+        v1s[i + offsets[2]] = v1[2]
+      }
+    }
+    return [outVs, v1s]
   } // readMIF()
 
   // not included in public docs
