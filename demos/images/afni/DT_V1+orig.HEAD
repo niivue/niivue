@@ -1,0 +1,122 @@
+
+type = string-attribute
+name = HISTORY_NOTE
+count = 329
+'[user@Users-MacBook-Pro.local: Thu Jan 23 11:35:32 2014] 3dcopy AVEB0_DWI+orig. AVEB0_DWI.nii.gz\n[chris@Chriss-MacBook-Pro-6.local: Mon Jun 24 11:24:12 2024] {AFNI_24.0.17:macos_13_ARM_clang} 3dDWItoDT -prefix DTI/DT -mask mask_DWI+orig -eigs -sep_dsets -nonlinear -scale_out_1000 -bmatrix_FULL GRADS_bmatA.dat AVEB0_DWI.nii.gz~
+
+type = string-attribute
+name = TYPESTRING
+count = 15
+'3DIM_HEAD_FUNC~
+
+type = string-attribute
+name = IDCODE_STRING
+count = 27
+'AFN_GalL_y42xWQWviXQizvd4A~
+
+type = string-attribute
+name = IDCODE_DATE
+count = 25
+'Mon Jun 24 11:24:12 2024~
+
+type = integer-attribute
+name = SCENE_DATA
+count = 8
+ 0 11 1 -999 -999
+ -999 -999 -999
+
+type = string-attribute
+name = LABEL_1
+count = 5
+'zyxt~
+
+type = string-attribute
+name = LABEL_2
+count = 5
+'zyxt~
+
+type = string-attribute
+name = DATASET_NAME
+count = 5
+'zyxt~
+
+type = integer-attribute
+name = ORIENT_SPECIFIC
+count = 3
+ 0 2 4
+
+type  = float-attribute
+name  = ORIGIN
+count = 3
+      -129.0411       95.20151      -104.7115
+
+type  = float-attribute
+name  = DELTA
+count = 3
+              2             -2              2
+
+type  = float-attribute
+name  = IJK_TO_DICOM
+count = 12
+              2              0              0      -129.0411              0
+             -2              0       95.20151              0              0
+              2      -104.7115
+
+type  = float-attribute
+name  = IJK_TO_DICOM_REAL
+count = 12
+              2              0              0      -129.0411              0
+             -2              0       95.20151              0              0
+              2      -104.7115
+
+type  = float-attribute
+name  = BRICK_STATS
+count = 6
+     -0.9999961              1     -0.9999939      0.9999861     -0.9999877
+       0.999884
+
+type = integer-attribute
+name = DATASET_RANK
+count = 8
+ 3 3 0 0 0
+ 0 0 0
+
+type = integer-attribute
+name = DATASET_DIMENSIONS
+count = 5
+ 128 128 70 0 0
+
+type = integer-attribute
+name = BRICK_TYPES
+count = 3
+ 3 3 3
+
+type  = float-attribute
+name  = BRICK_FLOAT_FACS
+count = 3
+              0              0              0
+
+type = string-attribute
+name = BRICK_LABS
+count = 36
+'eigvec_1[1]~eigvec_1[2]~eigvec_1[3]~
+
+type = string-attribute
+name = BRICK_KEYWORDS
+count = 3
+'~~~
+
+type = string-attribute
+name = TEMPLATE_SPACE
+count = 5
+'ORIG~
+
+type = integer-attribute
+name = INT_CMAP
+count = 1
+ 0
+
+type = string-attribute
+name = BYTEORDER_STRING
+count = 10
+'LSB_FIRST~
