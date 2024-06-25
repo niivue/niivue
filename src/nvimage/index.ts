@@ -201,14 +201,9 @@ export class NVImage {
         ;[imgRaw, this.v1] = this.readFIB(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.MIH:
-      case NVIMAGE_TYPE.MIF: {
-        let v1
-        ;[imgRaw, v1] = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
-        if (v1.length > 0) {
-          this.v1 = v1
-        }
+      case NVIMAGE_TYPE.MIF:
+        imgRaw = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
         break
-      }
       case NVIMAGE_TYPE.NHDR:
       case NVIMAGE_TYPE.NRRD:
         imgRaw = this.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
@@ -1674,7 +1669,7 @@ export class NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): [ArrayBuffer, Float32Array] {
+  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
     this.hdr = new nifti.NIFTI1()
@@ -1716,8 +1711,7 @@ export class NVImage {
     let nTransform = 0
     let TR = 0
     let isDetached = false
-    let isDerived = false
-    let isTensor = false
+    // let isTensor = false
     line = readStr()
     while (pos < len && !line.startsWith('END')) {
       let items = line.split(':') // "vox: 1,1,1" -> "vox", " 1,1,1"
@@ -1806,14 +1800,11 @@ export class NVImage {
         case 'comments':
           hdr.description = items[0].substring(0, Math.min(79, items[0].length))
           break
-        case 'prior_dw_scheme':
-          isDerived = true
-          break
-        case 'command_history':
+        /* case 'command_history':
           if (items[0].startsWith('dwi2tensor')) {
             isTensor = true
           }
-          break
+          break */
         case 'RepetitionTime':
           TR = parseFloat(items[0])
           break
@@ -1986,112 +1977,17 @@ export class NVImage {
         } // for z
       } // for t (time)
     } // for d (direction, phase/real, etc)
+    /*
+    
     let v1s = new Float32Array(0)
     if (isTensor && isDerived && hdr.datatypeCode === NiiDataType.DT_FLOAT32 && hdr.dims[4] === 6) {
       // https://community.mrtrix.org/t/dti-volumes-storage-formats-and-conversion/4502
       // https://mrtrix.readthedocs.io/en/latest/reference/commands/dwi2tensor.html
       // volumes 0-5: D11, D22, D33, D12, D13, D23
-      // this function from ChatGPT
-      function tensorToPrincipalAxesAndFA(tensor: number[]): number[] {
-        // Extract tensor components
-        const [D11, D22, D33, D12, D13, D23] = tensor
-
-        // Construct the 3x3 matrix
-        const matrix = [
-          [D11, D12, D13],
-          [D12, D22, D23],
-          [D13, D23, D33]
-        ]
-
-        // Helper function to calculate the magnitude of a vector
-        // function vectorMagnitude(vec: number[]): number {
-        //  return Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0))
-        // }
-
-        // Function to perform eigenvalue decomposition using the Jacobi method
-        function eigenDecomposition(matrix: number[][]): { eigenvalues: number[]; eigenvectors: number[][] } {
-          const n = matrix.length
-          const maxIter = 100
-          const epsilon = 1e-10
-          const V: number[][] = Array.from({ length: n }, (_, i) =>
-            Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))
-          )
-          const A = matrix.map((row) => row.slice())
-
-          for (let iter = 0; iter < maxIter; iter++) {
-            let maxOffDiag = 0
-            let p, q
-            for (let i = 0; i < n; i++) {
-              for (let j = i + 1; j < n; j++) {
-                if (Math.abs(A[i][j]) > maxOffDiag) {
-                  maxOffDiag = Math.abs(A[i][j])
-                  p = i
-                  q = j
-                }
-              }
-            }
-            if (maxOffDiag < epsilon) {
-              break
-            }
-
-            const theta = 0.5 * Math.atan2(2 * A[p][q], A[q][q] - A[p][p])
-            const cos = Math.cos(theta)
-            const sin = Math.sin(theta)
-
-            const Ap = A[p].slice()
-            const Aq = A[q].slice()
-
-            for (let i = 0; i < n; i++) {
-              A[p][i] = cos * Ap[i] - sin * Aq[i]
-              A[q][i] = sin * Ap[i] + cos * Aq[i]
-              A[i][p] = A[p][i]
-              A[i][q] = A[q][i]
-            }
-            A[p][p] = cos * cos * Ap[p] + sin * sin * Aq[q] - 2 * sin * cos * Ap[q]
-            A[q][q] = sin * sin * Ap[p] + cos * cos * Aq[q] + 2 * sin * cos * Ap[q]
-            A[p][q] = A[q][p] = 0
-
-            const Vp = V[p].slice()
-            const Vq = V[q].slice()
-            for (let i = 0; i < n; i++) {
-              V[p][i] = cos * Vp[i] - sin * Vq[i]
-              V[q][i] = sin * Vp[i] + cos * Vq[i]
-            }
-          }
-
-          const eigenvalues = A.map((row, i) => row[i])
-          return { eigenvalues, eigenvectors: V }
-        }
-
-        // Perform eigenvalue decomposition
-        const { eigenvalues, eigenvectors } = eigenDecomposition(matrix)
-
-        // Sort eigenvalues and corresponding eigenvectors
-        const sortedIndices = eigenvalues
-          .map((value, index) => ({ value, index }))
-          .sort((a, b) => b.value - a.value)
-          .map((obj) => obj.index)
-
-        const lambda1 = eigenvalues[sortedIndices[0]] // Largest eigenvalue
-        const lambda2 = eigenvalues[sortedIndices[1]] // Middle eigenvalue
-        const lambda3 = eigenvalues[sortedIndices[2]] // Smallest eigenvalue
-
-        const v1 = eigenvectors.map((row) => row[sortedIndices[0]]) // Principal axis
-        // const v2 = eigenvectors.map((row) => row[sortedIndices[1]]) // Secondary axis
-        // const v3 = eigenvectors.map((row) => row[sortedIndices[2]]) // Third axis
-
-        // Calculate the mean of the eigenvalues
-        const lambdaMean = (lambda1 + lambda2 + lambda3) / 3
-
-        // Calculate FA
-        const numerator = Math.sqrt(
-          (lambda1 - lambdaMean) ** 2 + (lambda2 - lambdaMean) ** 2 + (lambda3 - lambdaMean) ** 2
-        )
-        const denominator = Math.sqrt(lambda1 ** 2 + lambda2 ** 2 + lambda3 ** 2)
-        const FA = Math.sqrt(3 / 2) * (numerator / denominator)
-        return [v1[0], v1[1], v1[2], FA]
-        // return { FA, v1 }
-      } // tensorToPrincipalAxesAndFA
+      // https://github.com/ANTsX/ANTs/wiki/Importing-diffusion-tensor-data-from-other-software
+      // mrtrix xx, yy, zz, xy, xz, yz
+      // ants xx, xy, yy, xz, yz, zz (NIfTI, lower)
+      // NIFTI_INTENT_SYMMATRIX https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h
       hdr.dims[0] = 3
       hdr.dims[4] = 1
       const nVox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
@@ -2101,12 +1997,12 @@ export class NVImage {
       const offsets = [0, nVox3D, 2 * nVox3D, 3 * nVox3D, 4 * nVox3D, 5 * nVox3D]
       for (let i = 0; i < nVox3D; i++) {
         const tensor = [
-          rawImg[i],
+          rawImg[i + offsets[0]],
           rawImg[i + offsets[1]],
           rawImg[i + offsets[2]],
+          rawImg[i + offsets[5]],
           rawImg[i + offsets[3]],
-          rawImg[i + offsets[4]],
-          rawImg[i + offsets[5]]
+          rawImg[i + offsets[4]]
         ]
         let allZeros = true
         for (let j = 0; j < 6; j++) {
@@ -2125,7 +2021,8 @@ export class NVImage {
         v1s[i + offsets[2]] = v1[2]
       }
     }
-    return [outVs, v1s]
+    return [outVs, v1s] */
+    return outVs
   } // readMIF()
 
   // not included in public docs
