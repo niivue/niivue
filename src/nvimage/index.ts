@@ -2678,6 +2678,9 @@ export class NVImage {
         mx = Math.max(this.img[i], mx)
       }
     }
+    if (this.ignoreZeroVoxels && mn === mx && nZero > 0) {
+      mn = 0
+    }
     const mnScale = this.intensityRaw2Scaled(mn)
     const mxScale = this.intensityRaw2Scaled(mx)
     const cmap = cmapper.colormapFromKey(this._colormap)
