@@ -930,6 +930,22 @@ type DragReleaseParams = {
     tileIdx: number;
     axCorSag: SLICE_TYPE;
 };
+type NiiVueLocationValue = {
+    id: string;
+    mm: vec4;
+    name: string;
+    value: number;
+    vox: vec3;
+};
+type NiiVueLocation = {
+    axCorSag: number;
+    frac: vec3;
+    mm: vec4;
+    string: string;
+    values: NiiVueLocationValue[];
+    vox: vec3;
+    xy: [number, number];
+};
 
 type ValuesArray = Array<{
     id: string;
@@ -2961,4 +2977,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVUtilities, type NiftiHeader, Niivue, type Point, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
