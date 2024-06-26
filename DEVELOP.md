@@ -56,7 +56,7 @@ nv.loadMeshes(meshList);
 import { Niivue } from "@niivue/niivue";
 // make an array of volumes to load
 let volumeList = [
-  { 
+  {
     url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
     colormap: "red", // see: https://niivue.github.io/niivue/colormaps.html
   },
@@ -67,16 +67,16 @@ nv.loadVolumes(volumeList);
 ```
 
 ## Load multiple volumes
-  
+
   ```js
   import { Niivue } from "@niivue/niivue";
   // make an array of volumes to load
   let volumeList = [
-    { 
+    {
       url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
       colormap: "grey"
     },
-    { 
+    {
       url: "https://niivue.github.io/niivue/images/hippo.nii.gz",
       colormap: "red"
     },
@@ -87,12 +87,12 @@ nv.loadVolumes(volumeList);
   ```
 
 ## Load a volume and a mesh
-  
+
   ```js
   import { Niivue } from "@niivue/niivue";
   // make an array of volumes to load
   let volumeList = [
-    { 
+    {
       url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
       colormap: "grey"
     },
@@ -108,12 +108,12 @@ nv.loadVolumes(volumeList);
   nv.loadMeshes(meshList); // async
   ```
 ## Set properties before loading images
-  
+
   ```js
     import { Niivue } from "@niivue/niivue";
     // make an array of volumes to load
     let volumeList = [
-      { 
+      {
         url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
         colormap: "grey"
       },
@@ -133,7 +133,7 @@ nv.loadVolumes(volumeList);
 
 ### Supported Nodejs versions for building/developing with NiiVue
 
-NiiVue is built and tested using [Nodejs](https://nodejs.dev/en/) `14`, `16`, and `18` and their accompanying npm versions. We recommend using the latest LTS version of Nodejs when building and developing with NiiVue.
+NiiVue is built and tested using [Nodejs](https://nodejs.dev/en/) `20`. We recommend using the latest LTS version of Nodejs when building and developing with NiiVue.
 
 ### Install NiiVue using npm
 
@@ -163,8 +163,8 @@ While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can als
   </body>
   <script type="module" async>
     // uses the version of niivue from the main branch of the niivue repository.
-    // This is the latest development version and may not be stable, and may not reflect 
-    // the functionality of the latest release on NPM. 
+    // This is the latest development version and may not be stable, and may not reflect
+    // the functionality of the latest release on NPM.
     import * as niivue from "https://niivue.github.io/niivue/dist/index.js"
     var volumeList = [
       { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
@@ -387,16 +387,10 @@ Running the tests will format, build, and copy the bundled `niivue.js` to the `t
 
 ### on macOS and Linux
 
-**If using macOS with Apple Silicon add this to your .zshrc (if zsh). Also ensure Chrome is installed at that location:**
-
-```
-export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-export PUPPETEER_EXECUTABLE_PATH=/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome
-```
-
 ```
 npm install
-npm run test
+npm run test-playwright
+npm run test:unit
 ```
 
 ### on Windows
@@ -408,9 +402,10 @@ npm run test-win
 ### Running a specific test
 
 ```
-npm run test -- -t 'test string'
-# on windows use npm run test-win
+npm run test-playwright -- -g "test name"
 ```
+
+see more playwright options [here](https://playwright.dev/docs/test-cli)
 
 ## Creating fonts
 
@@ -428,9 +423,9 @@ Colormaps convert image intensities to a color gradient. The [developer notes de
 
 ## Adding tests
 
-NiiVue relies on [Jest](https://jestjs.io/)
+NiiVue relies on Playwright and vitest
 
-If you add a feature, or fix a bug please try to add a test for it. You can find tests in the `tests` folder within the niivue project. There are numerous existing tests, so you can probably use one of those as a template. Generally, a test is contained with an `it('test name')` block in the `tests/test.niivue.js` file.
+If you add a feature, or fix a bug please try to add a test for it. You can find unit tests in the `tests/unit` folder within the niivue project. Rendering based tests use Playwright, and those tests can be found in the `playwright/e2e` folder. There are numerous existing tests, so you can probably use one of those as a template.
 
 Some tests generate screenshots of the WebGL canvas in order to compare renderings to previous snapshots. Please have a look at the current tests in order to see how you can add this to your new tests if needed.
 

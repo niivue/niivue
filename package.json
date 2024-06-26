@@ -39,22 +39,12 @@
     "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
     "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
-  "files": [
-    "src",
-    "build",
-    "dist"
-  ],
+  "files": ["src", "build", "dist"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/niivue/niivue.git"
   },
-  "keywords": [
-    "niivue",
-    "webgl2",
-    "nifti",
-    "image",
-    "viewer"
-  ],
+  "keywords": ["niivue", "webgl2", "nifti", "image", "viewer"],
   "author": "niivue authors",
   "license": "BSD-2-Clause",
   "bugs": {
@@ -88,13 +78,7 @@
     "express": "^4.19.2",
     "happy-dom": "^14.3.10",
     "http-server": "^14.1.1",
-    "jest": "^29.7.0",
-    "jest-image-snapshot": "^6.4.0",
-    "jest-puppeteer": "^10.0.1",
     "prettier": "^3.2.5",
-    "puppeteer": "^22.6.2",
-    "puppeteer-core": "^22.6.2",
-    "puppeteer-utilz": "^4.0.8",
     "regenerator-runtime": "^0.14.1",
     "tsup": "^8.0.2",
     "typedoc": "^0.25.12",
