@@ -15,8 +15,11 @@ jobs:
           npm install
           npm run build:forTests
           npm run docs
+          version=$(node -p "require('./package.json').version")
           cp -r dist demos/dist
           cp -r devdocs demos/
+          mkdir -p demos/$version
+          cp -r devdocs/* demos/devdocs/$version
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
