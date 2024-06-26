@@ -134,3 +134,21 @@ export type DragReleaseParams = {
   tileIdx: number
   axCorSag: SLICE_TYPE
 }
+
+export type NiiVueLocationValue = {
+  id: string
+  mm: vec4
+  name: string
+  value: number
+  vox: vec3
+}
+
+export type NiiVueLocation = {
+  axCorSag: number
+  frac: vec3
+  mm: vec4
+  string: string
+  values: NiiVueLocationValue[]
+  vox: vec3
+  xy: [number, number]
+}
