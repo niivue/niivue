@@ -1,6 +1,6 @@
 {
   "name": "@niivue/niivue",
-  "version": "0.43.3",
+  "version": "0.43.4",
   "description": "minimal webgl2 nifti image viewer",
   "types": "./build/index.d.ts",
   "main": "./build/index.js",
@@ -39,12 +39,22 @@
     "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
     "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
-  "files": ["src", "build", "dist"],
+  "files": [
+    "src",
+    "build",
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/niivue/niivue.git"
   },
-  "keywords": ["niivue", "webgl2", "nifti", "image", "viewer"],
+  "keywords": [
+    "niivue",
+    "webgl2",
+    "nifti",
+    "image",
+    "viewer"
+  ],
   "author": "niivue authors",
   "license": "BSD-2-Clause",
   "bugs": {
