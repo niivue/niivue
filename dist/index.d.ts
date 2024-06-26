@@ -373,7 +373,7 @@ declare class NVImage {
     constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null);
     computeObliqueAngle(mtx44: mat4): number;
     float32V1asRGBA(inImg: Float32Array): Uint8Array;
-    loadImgV1(): boolean;
+    loadImgV1(isFlipX?: boolean, isFlipY?: boolean, isFlipZ?: boolean): boolean;
     calculateOblique(): void;
     THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void;
     SetPixDimFromSForm(): void;
