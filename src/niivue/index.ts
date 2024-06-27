@@ -2931,6 +2931,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
    */
   removeMesh(mesh: NVMesh): void {
+    mesh.unloadMesh(this.gl)
     this.setMesh(mesh, -1)
     if (this.mediaUrlMap.has(mesh)) {
       const url = this.mediaUrlMap.get(mesh)!

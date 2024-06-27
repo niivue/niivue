@@ -962,6 +962,37 @@ export class NVMesh {
     return [mnIdx, mnDx]
   } // indexNearestXYZmm()
 
+  // internal function discards GPU resources
+  unloadMesh(gl: WebGL2RenderingContext): void {
+    // free WebGL resources
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
+    gl.bindVertexArray(null)
+    gl.deleteBuffer(this.vertexBuffer)
+    gl.deleteBuffer(this.indexBuffer)
+    gl.deleteVertexArray(this.vao)
+    gl.deleteVertexArray(this.vaoFiber)
+    // presumably, if we null the mesh we dereference all the arrays, or do we have to explicitly null arrays
+    this.offsetPt0 = null
+    this.tris = null
+    this.pts = null
+    if (this.layers && this.layers.length > 0) {
+      for (let i = 0; i < this.layers.length; i++) {
+        this.layers[i].values = null
+      }
+    }
+    if (this.dpg && this.dpg.length > 0) {
+      for (let i = 0; i < this.dpg.length; i++) {
+        this.dpg[i].vals = null
+      }
+    }
+    if (this.dps && this.dps.length > 0) {
+      for (let i = 0; i < this.dps.length; i++) {
+        this.dps[i].vals = null
+      }
+    }
+  }
+
   // internal function filters mesh to identify which color of triangulated mesh vertices
   updateMesh(gl: WebGL2RenderingContext): void {
     if (this.offsetPt0) {
