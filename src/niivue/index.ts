@@ -391,6 +391,7 @@ export class Niivue {
   private resizeObserver: ResizeObserver | null = null
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
+  centerMosaic = false
 
   // UI Data
   uiData: UIData = {
@@ -2931,6 +2932,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
    */
   removeMesh(mesh: NVMesh): void {
+    mesh.unloadMesh(this.gl)
     this.setMesh(mesh, -1)
     if (this.mediaUrlMap.has(mesh)) {
       const url = this.mediaUrlMap.get(mesh)!
@@ -9890,12 +9892,13 @@ export class Niivue {
     let scale = 1.0 // e.g. if 1.0 1mm per pixel
     const labelSize = this.opts.textHeight
     // let isCrossLinesUsed = false;
+    let marginLeft = 0
+    let marginTop = 0
     for (let pass = 0; pass < 2; pass++) {
       // two pass: first calculate dimensions to determine scale, second draw items
       let isRender = false
       let isCrossLines = false
       isRender = false
-
       let rowHt = 0
       let left = 0
       let top = 0
@@ -9971,7 +9974,7 @@ export class Niivue {
           }
         } else {
           // 2nd pass draw
-          const ltwh = [scale * left, scale * top, scale * w, scale * h]
+          const ltwh = [marginLeft + scale * left, marginTop + scale * top, scale * w, scale * h]
           this.opts.textHeight = isLabel ? labelSize : 0
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity
@@ -10000,6 +10003,10 @@ export class Niivue {
       const scaleW = this.gl.canvas.width / mxRowWid
       const scaleH = this.effectiveCanvasHeight() / top
       scale = Math.min(scaleW, scaleH)
+      if (this.centerMosaic) {
+        marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale))
+        marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale))
+      }
     }
     this.opts.textHeight = labelSize
   }

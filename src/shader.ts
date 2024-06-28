@@ -6,34 +6,12 @@ import { log } from './logger.js'
 // Returns the compiled and linked program, or null if compilation or linking failed
 export const compileShader = function (gl: WebGL2RenderingContext, vert: string, frag: string): WebGLProgram {
   const vs = gl.createShader(gl.VERTEX_SHADER)
-  if (vs === null) {
-    throw new Error('could not create vertex shader')
-  }
-
   gl.shaderSource(vs, vert)
   gl.compileShader(vs)
-  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-    log.error(gl.getShaderInfoLog(vs))
-    throw new Error('Vertex shader failed to compile, see console for log')
-  }
-
   const fs = gl.createShader(gl.FRAGMENT_SHADER)
-  if (fs === null) {
-    throw new Error('could not create fragment shader')
-  }
-
   gl.shaderSource(fs, frag)
   gl.compileShader(fs)
-  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-    log.error(gl.getShaderInfoLog(fs))
-    throw new Error('Fragment shader failed to compile, see console for log')
-  }
-
   const program = gl.createProgram()
-  if (program === null) {
-    throw new Error('could not create GL program')
-  }
-
   gl.attachShader(program, vs)
   gl.attachShader(program, fs)
   gl.linkProgram(program)
