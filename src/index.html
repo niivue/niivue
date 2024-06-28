@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -37,7 +37,9 @@
         <option value="Global">Global direction</option>
         <option value="Local">Local direction</option>
         <option value="Fixed">Fixed</option>
-        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
+        <option value="DPV0" selected>
+          First Per Vertex Type (if available)
+        </option>
       </select>
       <label for="fiberColormap">Colormap</label>
       <select id="fiberColormap">
@@ -65,22 +67,27 @@
       <label id="shaders">Shaders: </label>
     </footer>
     <script type="module" async>
-      import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "./niivue/index.ts";
+      import {
+        Niivue,
+        NVImage,
+        NVMesh,
+        NVMeshLoaders,
+      } from "./niivue/index.ts";
       async function addVolumeFromFiles(f) {
-          console.log('attempting to open ', f[0].name)
-          console.log('details', f[0])
-          nv1.loadFromFile(f[0])
+        console.log("attempting to open ", f[0].name);
+        console.log("details", f[0]);
+        nv1.loadFromFile(f[0]);
       }
       openBtn.onclick = function () {
-        let input = document.createElement('input');
-        input.style.display = 'none';
-        input.type = 'file'
+        let input = document.createElement("input");
+        input.style.display = "none";
+        input.type = "file";
         document.body.appendChild(input);
         input.onchange = function (event) {
-          addVolumeFromFiles(event.target.files)
-        }
-        input.click()
-      }
+          addVolumeFromFiles(event.target.files);
+        };
+        input.click();
+      };
       fiberRadius.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
         nv1.updateGLVolume();
@@ -91,19 +98,20 @@
       fiberColormap.onchange = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
       };
-      
+
       fiberDitherSlider.oninput = function () {
         nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
       };
       fiberCalMin.oninput = function () {
-       nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
+        nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
         nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
       };
       about.onclick = function () {
-        window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
-
-      }
-      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz"}];
+        window.alert(
+          "The `Per Vertex` colors visualize a tsf format overlay created with tcksample",
+        );
+      };
+      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }];
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
@@ -114,26 +122,35 @@
       nv1.opts.multiplanarForceRender = true;
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
-      var layerList = [{url: "../demos/images/mni152.SLF1_R.tsf"}];
-      await nv1.loadMeshes([{ url: "../demos/images/tract.SLF1_R.tck", layers: layerList,}]);
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
-      nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
-      nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
-      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
-      nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
-      nv1.setClipPlane([0.2, 0, 120]);
-      let cmaps = nv1.meshShaderNames();
-      let cmapEl = document.getElementById("shaders");
-      for (let i = 0; i < cmaps.length; i++) {
-        let btn = document.createElement("button");
-        btn.innerHTML = cmaps[i];
-        btn.onclick = function () {
-          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
-        };
-        cmapEl.appendChild(btn);
-      }
+      nv1.clickToSegment = true;
+      nv1.setDrawingEnabled(true);
+      nv.setPenValue(1, true);
+      var layerList = [{ url: "../demos/images/mni152.SLF1_R.tsf" }];
+      // await nv1.loadMeshes([
+      //   { url: "../demos/images/tract.SLF1_R.tck", layers: layerList },
+      // ]);
+      // nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
+      // nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
+      // nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
+      // nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
+      // nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
+      // console.log(
+      //   "fiber vertex intensity range:",
+      //   nv1.meshes[0].dpv[0].global_min,
+      //   nv1.meshes[0].dpv[0].global_max,
+      // );
+      // nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
+      // nv1.setClipPlane([0.2, 0, 120]);
+      // let cmaps = nv1.meshShaderNames();
+      // let cmapEl = document.getElementById("shaders");
+      // for (let i = 0; i < cmaps.length; i++) {
+      //   let btn = document.createElement("button");
+      //   btn.innerHTML = cmaps[i];
+      //   btn.onclick = function () {
+      //     nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+      //   };
+      //   cmapEl.appendChild(btn);
+      // }
     </script>
   </body>
 </html>

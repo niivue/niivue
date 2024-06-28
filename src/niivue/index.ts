@@ -392,6 +392,7 @@ export class Niivue {
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
   centerMosaic = false
+  clickToSegment = true
 
   // UI Data
   uiData: UIData = {
@@ -2598,7 +2599,10 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
    */
   saveImage(options: SaveImageOptions = defaultSaveImageOptions): Uint8Array | boolean {
-    const saveOptions: SaveImageOptions = { ...defaultSaveImageOptions, ...options }
+    const saveOptions: SaveImageOptions = {
+      ...defaultSaveImageOptions,
+      ...options
+    }
     const { filename, isSaveDrawing, volumeByIndex } = saveOptions
     log.debug('saveImage', filename, isSaveDrawing, volumeByIndex)
     if (this.back?.dims === undefined) {
@@ -3513,7 +3517,7 @@ export class Niivue {
  * @param esm - bundled version of NiiVue
  * @example
  * const javascript = this.generateLoadDocumentJavaScript("gl1");
- * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+ * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
         ${javascript}</script></body></html>`;
  */
   async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
@@ -3522,26 +3526,26 @@ export class Niivue {
     const base64 = await NVUtilities.compressToBase64String(JSON.stringify(json))
     const javascript = `
         ${esm}
-        
-        async function saveNiivueAsHtml(pageName) {    
+
+        async function saveNiivueAsHtml(pageName) {
           //get new docstring
           const docString = nv1.json();
-          const html = 
+          const html =
           document.getElementsByTagName("html")[0]
               .innerHTML.replace(base64, await NVUtilities.compressToBase64String(JSON.stringify(docString)));
           NVUtilities.download(html, pageName, "application/html");
         }
-        
+
         var nv1 = new Niivue();
-        nv1.attachTo("${canvasId}");  
+        nv1.attachTo("${canvasId}");
         var base64 = "${base64}";
         NVUtilities.decompressBase64String(base64).then((jsonText) => {
           var json = JSON.parse(jsonText); // string -> JSON
-          var doc = NVDocument.loadFromJSON(json);                
+          var doc = NVDocument.loadFromJSON(json);
           nv1.loadDocument(doc);
           nv1.updateGLVolume();
         });
-        
+
       `
 
     return javascript
@@ -3617,14 +3621,14 @@ export class Niivue {
             <main>
               <canvas id="gl1"></canvas>
             </main>
-            <script type="module" async>        
+            <script type="module" async>
               ${javascript}
               function saveAsHtml() {
                 saveNiivueAsHtml("page.html");
-              }        
+              }
               // assign our event handler
               var button = document.getElementById("save");
-              button.onclick = saveAsHtml;      
+              button.onclick = saveAsHtml;
             </script>
           </body>
         </html>`
@@ -7087,7 +7091,49 @@ export class Niivue {
       }
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
+        // if click-to-segment enabled
+        const run = true
+        if (run) {
+          // if (isFinite(this.opts.penValue)) {
+          // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
+          this.drawFillOverwrites = true
+          // Function to draw a circle with simulated mouse events
+          const radius = 3
+          const steps = 100
+          console.log('drawCircle')
+          this.drawPenFillPts = []
+          this.drawPenAxCorSag = axCorSag
+          for (let i = 1; i <= steps; i++) {
+            const angle = (i / steps) * 2 * Math.PI
+            let xVox = pt[0] + radius * Math.cos(angle)
+            let yVox = pt[1] + radius * Math.sin(angle)
+            xVox = Math.round(xVox)
+            yVox = Math.round(yVox)
+            this.drawPt([xVox, yVox, pt[2]], this.opts.penValue)
+            this.drawPenFillPts.push([xVox, yVox, pt[2]])
+          }
+          // this.refreshDrawing(true);
+          // this.drawScene();
+          // this.updateGLVolume();
 
+          // const originalPenValue = this.opts.penValue;
+          // this.opts.penValue = Number.POSITIVE_INFINITY;
+          console.log(`pen value: ${this.opts.penValue}`)
+          this.drawFloodFill(pt, 0, Number.POSITIVE_INFINITY)
+          // this.refreshDrawing(false);
+          // this.drawScene();
+          // set the pen value back to the original value
+          // this.opts.penValue = originalPenValue;
+
+          // this.refreshDrawing(false);
+          // this.updateGLVolume();
+          this.drawScene()
+          this.createOnLocationChange(axCorSag)
+          // this.opts.penValue = Number.POSITIVE_INFINITY;
+          // this.clickToSegment = false;
+          // this.mouseClick(x, y);
+          return
+        }
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
           if (!isFinite(this.opts.penValue)) {
             // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
@@ -8896,7 +8942,13 @@ export class Niivue {
         const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
         const vox = v.mm2vox(mm as number[]) // e.mm2vox
         const val = v.getValue(vox[0], vox[1], vox[2], v.frame4D)
-        return { name: v.name, value: val, id: v.id, mm, vox } as NiiVueLocationValue
+        return {
+          name: v.name,
+          value: val,
+          id: v.id,
+          mm,
+          vox
+        } as NiiVueLocationValue
       }),
       string: str
     }
