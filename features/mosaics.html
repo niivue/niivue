@@ -20,12 +20,18 @@
         maxlength="128"
         size="128"
       />
+      <label for="centerCheck">Center</label>
+      <input type="checkbox" id="centerCheck" unchecked />
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
+      import * as niivue from "../dist/index.js"
+      centerCheck.onchange = function () {
+        nv1.centerMosaic = this.checked
+        nv1.drawScene()
+      }
       var volumeList1 = [
         {
           url: "../images/mni152.nii.gz",

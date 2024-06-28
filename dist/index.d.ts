@@ -1176,6 +1176,7 @@ declare class NVMesh {
     createFiberDensityMap(): void;
     updateFibers(gl: WebGL2RenderingContext): void;
     indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[];
+    unloadMesh(gl: WebGL2RenderingContext): void;
     updateMesh(gl: WebGL2RenderingContext): void;
     reverseFaces(gl: WebGL2RenderingContext): void;
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): void;
@@ -1686,6 +1687,7 @@ declare class Niivue {
     private resizeObserver;
     syncOpts: Record<string, unknown>;
     readyForSync: boolean;
+    centerMosaic: boolean;
     uiData: UIData;
     back: NVImage | null;
     overlays: NVImage[];
