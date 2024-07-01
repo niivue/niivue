@@ -392,7 +392,10 @@ export class Niivue {
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
   centerMosaic = false
-  clickToSegment = true
+  clickToSegment = false
+  clickToSegmentRadius = 2
+  clickToSegmentSteps = 100
+  clickToSegmentBright = true
 
   // UI Data
   uiData: UIData = {
@@ -564,6 +567,17 @@ export class Niivue {
    * }
    */
   onIntensityChange: (volume: NVImage) => void = () => {}
+
+  /**
+   * callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL
+   * @example
+   * niivue.onClickToSegment = (data) => {
+   * console.log('clicked to segment')
+   * console.log('volume mm3: ', data.mm3)
+   * console.log('volume mL: ', data.mL)
+   * }
+   */
+  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => {}
 
   /**
    * callback function to run when a new volume is loaded
@@ -1994,6 +2008,9 @@ export class Niivue {
                       this.loadDrawing(volume)
                     } else {
                       this.addVolume(volume)
+                      // set drawing enabled to make sure
+                      // the new drawing bitmap matches the background volume dims
+                      this.setDrawingEnabled(true)
                     }
                   })
                   .catch((e) => {
@@ -7092,14 +7109,10 @@ export class Niivue {
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
         // if click-to-segment enabled
-        const run = true
-        if (run) {
-          // if (isFinite(this.opts.penValue)) {
-          // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-          this.drawFillOverwrites = true
-          // Function to draw a circle with simulated mouse events
-          const radius = 3
-          const steps = 100
+        if (this.clickToSegment) {
+          const radius = this.clickToSegmentRadius
+          const steps = this.clickToSegmentSteps
+          const brightOrDark = this.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
           console.log('drawCircle')
           this.drawPenFillPts = []
           this.drawPenAxCorSag = axCorSag
@@ -7107,31 +7120,23 @@ export class Niivue {
             const angle = (i / steps) * 2 * Math.PI
             let xVox = pt[0] + radius * Math.cos(angle)
             let yVox = pt[1] + radius * Math.sin(angle)
+            const zVox = pt[2]
             xVox = Math.round(xVox)
             yVox = Math.round(yVox)
-            this.drawPt([xVox, yVox, pt[2]], this.opts.penValue)
+            this.drawPt(xVox, yVox, zVox, this.opts.penValue)
             this.drawPenFillPts.push([xVox, yVox, pt[2]])
+            // fill in the circle if we are at the last step.
+            // This also triggers the growth of the circle based on cluster intensity method of flood fill.
+            // If the circle is drawn in a bright region, it will grow in the bright region using all connected bright voxels and vice versa.
+            if (i === steps) {
+              this.drawFloodFill([xVox, yVox, pt[2]], 0, brightOrDark, NaN, NaN, this.opts.floodFillNeighbors)
+            }
           }
-          // this.refreshDrawing(true);
-          // this.drawScene();
-          // this.updateGLVolume();
-
-          // const originalPenValue = this.opts.penValue;
-          // this.opts.penValue = Number.POSITIVE_INFINITY;
-          console.log(`pen value: ${this.opts.penValue}`)
-          this.drawFloodFill(pt, 0, Number.POSITIVE_INFINITY)
-          // this.refreshDrawing(false);
-          // this.drawScene();
-          // set the pen value back to the original value
-          // this.opts.penValue = originalPenValue;
-
-          // this.refreshDrawing(false);
-          // this.updateGLVolume();
           this.drawScene()
           this.createOnLocationChange(axCorSag)
-          // this.opts.penValue = Number.POSITIVE_INFINITY;
-          // this.clickToSegment = false;
-          // this.mouseClick(x, y);
+          // get the volume of the segmented region
+          const info = this.getDescriptives(0, [], true)
+          this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
           return
         }
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {

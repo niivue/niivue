@@ -115,17 +115,22 @@
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
+        loglevel: 'debug',
+        floodFillNeighbors: 6
       };
       var nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);
-      nv1.opts.dragMode = nv1.dragModes.pan;
       nv1.opts.multiplanarForceRender = true;
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
-      nv1.clickToSegment = true;
+      nv1.clickToSegment = true
+      nv1.clickToSegmentBright = true
       nv1.setDrawingEnabled(true);
-      nv.setPenValue(1, true);
+      nv1.setPenValue(1, true);
       var layerList = [{ url: "../demos/images/mni152.SLF1_R.tsf" }];
+      nv1.onClickToSegment = (data)=> {
+        console.log(data)
+      }
       // await nv1.loadMeshes([
       //   { url: "../demos/images/tract.SLF1_R.tck", layers: layerList },
       // ]);
