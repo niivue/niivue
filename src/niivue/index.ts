@@ -1805,7 +1805,10 @@ export class Niivue {
                 urlImgData: null, // nothing
                 imageType: NVIMAGE_TYPE.DCM_FOLDER // signify that this is a dicom directory
               })
-                .then((volume) => this.addVolume(volume))
+                .then((volume) => {
+                  this.addVolume(volume)
+                  this.setDrawingEnabled(true)
+                })
                 .catch((e) => {
                   throw e
                 })
@@ -7113,7 +7116,6 @@ export class Niivue {
           const radius = this.clickToSegmentRadius
           const steps = this.clickToSegmentSteps
           const brightOrDark = this.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-          console.log('drawCircle')
           this.drawPenFillPts = []
           this.drawPenAxCorSag = axCorSag
           for (let i = 1; i <= steps; i++) {
