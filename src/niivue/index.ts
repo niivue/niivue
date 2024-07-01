@@ -394,7 +394,7 @@ export class Niivue {
   centerMosaic = false
   clickToSegment = false
   clickToSegmentRadius = 2
-  clickToSegmentSteps = 100
+  clickToSegmentSteps = 10
   clickToSegmentBright = true
 
   // UI Data
