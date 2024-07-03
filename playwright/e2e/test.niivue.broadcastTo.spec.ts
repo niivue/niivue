@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import { vec4 } from 'gl-matrix'
 import { Niivue } from '../../dist/index.js'
 import { httpServerAddressSync } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
