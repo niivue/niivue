@@ -68,6 +68,13 @@
         <option value="640" selected>512</option>
         <option value="768">768</option>
       </select>
+      <label for="syncDrop"> Broadcast</label>
+      <select id="syncDrop">
+        <option value="0">Sync Disabled</option>
+        <option value="1">Sync 2D</option>
+        <option value="2">Sync 3D</option>
+        <option value="3" selected>Sync 2D and 3D</option>
+      </select>
     </header>
     <main>
       <div class='page-wrapper'>
@@ -110,6 +117,22 @@
         nv2.resizeListener();
         nv3.resizeListener();
       }
+
+      syncDrop.onchange = function() {
+        const v = parseInt(syncDrop.value)
+        let is2D = false
+        let is3D = false
+        if (v % 2) {
+            is2D = true
+        }
+        if (v > 1) {
+            is3D = true
+        }
+        nv1.broadcastTo([nv2, nv3], { "2d": is2D, "3d": is3D })
+        nv2.broadcastTo([nv1, nv3], { "2d": is2D, "3d": is3D })
+        nv3.broadcastTo([nv1, nv2], { "2d": is2D, "3d": is3D })
+      }
+
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML =
           "&nbsp;&nbsp;" + data.string;
@@ -126,6 +149,9 @@
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange,
         backColor: [1, 1, 1, 1],
+        dragMode: 3,
+        sliceType: 3,
+        multiplanarForceRender: true,
       });
       nv1.attachTo("gl1");
       var volumeList1 = [{ url: "../images/pcasl.nii.gz" }];
@@ -134,12 +160,18 @@
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange2,
         backColor: [1, 1, 1, 1],
+        dragMode: 3,
+        sliceType: 3,
+        multiplanarForceRender: true,
       });
       nv2.attachTo("gl2");
       var nv3 = new niivue.Niivue({
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange3,
         backColor: [1, 1, 1, 1],
+        dragMode: 3,
+        sliceType: 3,
+        multiplanarForceRender: true,
       });
       nv3.attachTo("gl3");
       var volumeList2 = [{ url: "../images/mni152.nii.gz" }];

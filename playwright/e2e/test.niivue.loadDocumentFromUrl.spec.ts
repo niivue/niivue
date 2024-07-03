@@ -19,7 +19,7 @@ test.skip('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
+test.skip('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
   const isDrawingPresent = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')

@@ -896,7 +896,7 @@ export class Niivue {
    */
   syncWith(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }): void {
     this.otherNV = otherNV
-    this.syncOpts = syncOpts
+    this.syncOpts = { ...syncOpts }
   }
 
   /**
@@ -940,10 +940,12 @@ export class Niivue {
     if (this.otherNV instanceof Niivue) {
       if (this.syncOpts['2d']) {
         this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM)
+        this.otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
       }
       if (this.syncOpts['3d']) {
         this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth
         this.otherNV.scene.renderElevation = this.scene.renderElevation
+        this.otherNV.scene.volScaleMultiplier = this.scene.volScaleMultiplier
       }
       this.otherNV.drawScene()
       this.otherNV.createOnLocationChange()
@@ -954,10 +956,12 @@ export class Niivue {
         }
         if (this.syncOpts['2d']) {
           this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM)
+          this.otherNV[i].scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
         }
         if (this.syncOpts['3d']) {
           this.otherNV[i].scene.renderAzimuth = this.scene.renderAzimuth
           this.otherNV[i].scene.renderElevation = this.scene.renderElevation
+          this.otherNV[i].scene.volScaleMultiplier = this.scene.volScaleMultiplier
         }
         this.otherNV[i].drawScene()
         this.otherNV[i].createOnLocationChange()
