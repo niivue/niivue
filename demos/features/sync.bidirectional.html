@@ -68,10 +68,13 @@
         <option value="640" selected>512</option>
         <option value="768">768</option>
       </select>
-      <button id="stopSync">Stop All Sync</button>
-      <button id="stop3dSync">2D Sync</button>
-      <button id="stop2dSync">3D Sync</button>
-      <button id="restartSync">Restart All Sync</button>
+      <label for="syncDrop"> Broadcast</label>
+      <select id="syncDrop">
+        <option value="0">Sync Disabled</option>
+        <option value="1">Sync 2D</option>
+        <option value="2">Sync 3D</option>
+        <option value="3" selected>Sync 2D and 3D</option>
+      </select>
     </header>
     <main>
       <div class='page-wrapper'>
@@ -115,20 +118,19 @@
         nv3.resizeListener();
       }
 
-      stopSync.onclick = () => {
-        nv1.broadcastTo([nv2, nv3], { "3d": false, "2d": false });
-      }
-
-      stop2dSync.onclick = () => {
-        nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": false });
-      }
-
-      stop3dSync.onclick = () => {
-        nv1.broadcastTo([nv2, nv3], { "3d": false, "2d": true });
-      }
-
-      restartSync.onclick = () => {
-        nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true });
+      syncDrop.onchange = function() {
+        const v = parseInt(syncDrop.value)
+        let is2D = false
+        let is3D = false
+        if (v % 2) {
+            is2D = true
+        }
+        if (v > 1) {
+            is3D = true
+        }
+        nv1.broadcastTo([nv2, nv3], { "2d": is2D, "3d": is3D })
+        nv2.broadcastTo([nv1, nv3], { "2d": is2D, "3d": is3D })
+        nv3.broadcastTo([nv1, nv2], { "2d": is2D, "3d": is3D })
       }
 
       function handleIntensityChange(data) {
@@ -178,8 +180,8 @@
       await nv3.loadVolumes(volumeList3);
       // make sure all views can control each other
       nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true });
-      nv2.broadcastTo(nv3, { "3d": false, "2d": true });
-      nv3.broadcastTo([nv2], { "3d": true, "2d": false });
+      nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true });
+      nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
     </script>
   </body>
 </html>
