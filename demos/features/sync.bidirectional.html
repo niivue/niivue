@@ -178,8 +178,8 @@
       await nv3.loadVolumes(volumeList3);
       // make sure all views can control each other
       nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true });
-      // nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true });
-      // nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
+      nv2.broadcastTo(nv3, { "3d": false, "2d": true });
+      nv3.broadcastTo([nv2], { "3d": true, "2d": false });
     </script>
   </body>
 </html>
