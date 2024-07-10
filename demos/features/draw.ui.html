@@ -100,6 +100,8 @@
           <a class="viewBtn" id="@GrowCluster">Grow Cluster</a>
           <a class="viewBtn" id="@GrowClusterDark">Grow Cluster Dark</a>
           <a class="viewBtn" id="@GrowClusterBright">Grow Cluster Bright</a>
+          <a class="viewBtn" id="@ClickToSegmentBright">Click To Segment Bright</a>
+          <a class="viewBtn" id="@ClickToSegmentDark">Click To Segment Dark</a>
           <a
             class="viewBtn divider dropdown-item-checked"
             id="{$itksnap"
@@ -195,7 +197,7 @@
   nv1.opts.isColorbar = false;
   var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
   await nv1.loadVolumes(volumeList1);
-  await nv1.loadDrawingFromUrl("../images/lesion.nii.gz");
+  // await nv1.loadDrawingFromUrl("../images/lesion.nii.gz");
   function toggleGroup(id) {
     let buttons = document.getElementsByClassName("viewBtn");
     let char0 = id.charAt(0);
@@ -283,7 +285,8 @@
       nv1.drawUndo();
     }
     if (event.target.id.charAt(0) === "@") {
-      //sliceType
+      // turn off click to segment in case it was previously enabled
+      nv1.opts.clickToSegment = false
       if (event.target.id === "@Off") nv1.setDrawingEnabled(false);
       else nv1.setDrawingEnabled(true);
       if (event.target.id === "@Erase") nv1.setPenValue(0, isFilled);
@@ -299,6 +302,19 @@
         nv1.setPenValue(Number.POSITIVE_INFINITY, isFilled);
       if (event.target.id === "@GrowClusterDark")
         nv1.setPenValue(Number.NEGATIVE_INFINITY, isFilled);
+      // click to segment bright
+      if (event.target.id === "@ClickToSegmentBright") {
+        // if current penValue is less than 1 and greater than 6, set penValue to 1 (red)
+        if (nv1.opts.penValue < 1 || nv1.opts.penValue > 6) nv1.setPenValue(1, isFilled);
+        nv1.opts.clickToSegment = true
+        nv1.opts.clickToSegmentBright = true // use true for bright
+      } 
+      // click to segment dark
+      if (event.target.id === "@ClickToSegmentDark") {
+        nv1.setPenValue(1, isFilled);
+        nv1.opts.clickToSegment = true
+        nv1.opts.clickToSegmentBright = false // use false for dark
+      }
       toggleGroup(event.target.id);
     } //Draw Color
     if (event.target.id === "Growcut") nv1.drawGrowCut();

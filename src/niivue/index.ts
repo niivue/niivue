@@ -391,11 +391,6 @@ export class Niivue {
   private resizeObserver: ResizeObserver | null = null
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
-  centerMosaic = false
-  clickToSegment = false
-  clickToSegmentRadius = 2
-  clickToSegmentSteps = 10
-  clickToSegmentBright = true
 
   // UI Data
   uiData: UIData = {
@@ -7112,10 +7107,10 @@ export class Niivue {
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
         // if click-to-segment enabled
-        if (this.clickToSegment) {
-          const radius = this.clickToSegmentRadius
-          const steps = this.clickToSegmentSteps
-          const brightOrDark = this.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+        if (this.opts.clickToSegment) {
+          const radius = this.opts.clickToSegmentRadius
+          const steps = this.opts.clickToSegmentSteps
+          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
           this.drawPenFillPts = []
           this.drawPenAxCorSag = axCorSag
           for (let i = 1; i <= steps; i++) {
@@ -7144,11 +7139,16 @@ export class Niivue {
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
           if (!isFinite(this.opts.penValue)) {
             // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-            this.drawFloodFill(pt, 0, this.opts.penValue, this.opts.floodFillNeighbors)
+            this.drawFloodFill(pt, 0, this.opts.penValue, NaN, NaN, this.opts.floodFillNeighbors)
           } else {
-            // FIXME this was this.drawFloodFill(pt, Math.abs(this.opts.penValue, this.opts.floodFillNeighbors))
-            // FIXME this.opts.floodFillNeighbors therefore never affected this!
-            this.drawFloodFill(pt, Math.abs(this.opts.penValue), this.opts.floodFillNeighbors)
+            this.drawFloodFill(
+              pt,
+              Math.abs(this.opts.penValue),
+              this.opts.penValue,
+              NaN,
+              NaN,
+              this.opts.floodFillNeighbors
+            )
           }
           return
         }
@@ -10062,7 +10062,7 @@ export class Niivue {
       const scaleW = this.gl.canvas.width / mxRowWid
       const scaleH = this.effectiveCanvasHeight() / top
       scale = Math.min(scaleW, scaleH)
-      if (this.centerMosaic) {
+      if (this.opts.centerMosaic) {
         marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale))
         marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale))
       }
