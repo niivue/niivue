@@ -645,6 +645,11 @@ type NVConfigOptions = {
     multiplanarLayout: MULTIPLANAR_TYPE;
     renderOverlayBlend: number;
     sliceMosaicString: string;
+    centerMosaic: boolean;
+    clickToSegment: boolean;
+    clickToSegmentRadius: number;
+    clickToSegmentSteps: number;
+    clickToSegmentBright: boolean;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -1687,7 +1692,6 @@ declare class Niivue {
     private resizeObserver;
     syncOpts: Record<string, unknown>;
     readyForSync: boolean;
-    centerMosaic: boolean;
     uiData: UIData;
     back: NVImage | null;
     overlays: NVImage[];
@@ -1773,6 +1777,19 @@ declare class Niivue {
      * }
      */
     onIntensityChange: (volume: NVImage) => void;
+    /**
+     * callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL
+     * @example
+     * niivue.onClickToSegment = (data) => {
+     * console.log('clicked to segment')
+     * console.log('volume mm3: ', data.mm3)
+     * console.log('volume mL: ', data.mL)
+     * }
+     */
+    onClickToSegment: (data: {
+        mm3: number;
+        mL: number;
+    }) => void;
     /**
      * callback function to run when a new volume is loaded
      * @example
