@@ -391,7 +391,6 @@ export class Niivue {
   private resizeObserver: ResizeObserver | null = null
   syncOpts: Record<string, unknown> = {}
   readyForSync = false
-  centerMosaic = false
 
   // UI Data
   uiData: UIData = {
@@ -563,6 +562,17 @@ export class Niivue {
    * }
    */
   onIntensityChange: (volume: NVImage) => void = () => {}
+
+  /**
+   * callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL
+   * @example
+   * niivue.onClickToSegment = (data) => {
+   * console.log('clicked to segment')
+   * console.log('volume mm3: ', data.mm3)
+   * console.log('volume mL: ', data.mL)
+   * }
+   */
+  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => {}
 
   /**
    * callback function to run when a new volume is loaded
@@ -1794,7 +1804,10 @@ export class Niivue {
                 urlImgData: null, // nothing
                 imageType: NVIMAGE_TYPE.DCM_FOLDER // signify that this is a dicom directory
               })
-                .then((volume) => this.addVolume(volume))
+                .then((volume) => {
+                  this.addVolume(volume)
+                  this.setDrawingEnabled(true)
+                })
                 .catch((e) => {
                   throw e
                 })
@@ -1997,6 +2010,9 @@ export class Niivue {
                       this.loadDrawing(volume)
                     } else {
                       this.addVolume(volume)
+                      // set drawing enabled to make sure
+                      // the new drawing bitmap matches the background volume dims
+                      this.setDrawingEnabled(true)
                     }
                   })
                   .catch((e) => {
@@ -2602,7 +2618,10 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
    */
   saveImage(options: SaveImageOptions = defaultSaveImageOptions): Uint8Array | boolean {
-    const saveOptions: SaveImageOptions = { ...defaultSaveImageOptions, ...options }
+    const saveOptions: SaveImageOptions = {
+      ...defaultSaveImageOptions,
+      ...options
+    }
     const { filename, isSaveDrawing, volumeByIndex } = saveOptions
     log.debug('saveImage', filename, isSaveDrawing, volumeByIndex)
     if (this.back?.dims === undefined) {
@@ -3517,7 +3536,7 @@ export class Niivue {
  * @param esm - bundled version of NiiVue
  * @example
  * const javascript = this.generateLoadDocumentJavaScript("gl1");
- * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>        
+ * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
         ${javascript}</script></body></html>`;
  */
   async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
@@ -3526,26 +3545,26 @@ export class Niivue {
     const base64 = await NVUtilities.compressToBase64String(JSON.stringify(json))
     const javascript = `
         ${esm}
-        
-        async function saveNiivueAsHtml(pageName) {    
+
+        async function saveNiivueAsHtml(pageName) {
           //get new docstring
           const docString = nv1.json();
-          const html = 
+          const html =
           document.getElementsByTagName("html")[0]
               .innerHTML.replace(base64, await NVUtilities.compressToBase64String(JSON.stringify(docString)));
           NVUtilities.download(html, pageName, "application/html");
         }
-        
+
         var nv1 = new Niivue();
-        nv1.attachTo("${canvasId}");  
+        nv1.attachTo("${canvasId}");
         var base64 = "${base64}";
         NVUtilities.decompressBase64String(base64).then((jsonText) => {
           var json = JSON.parse(jsonText); // string -> JSON
-          var doc = NVDocument.loadFromJSON(json);                
+          var doc = NVDocument.loadFromJSON(json);
           nv1.loadDocument(doc);
           nv1.updateGLVolume();
         });
-        
+
       `
 
     return javascript
@@ -3621,14 +3640,14 @@ export class Niivue {
             <main>
               <canvas id="gl1"></canvas>
             </main>
-            <script type="module" async>        
+            <script type="module" async>
               ${javascript}
               function saveAsHtml() {
                 saveNiivueAsHtml("page.html");
-              }        
+              }
               // assign our event handler
               var button = document.getElementById("save");
-              button.onclick = saveAsHtml;      
+              button.onclick = saveAsHtml;
             </script>
           </body>
         </html>`
@@ -7091,15 +7110,49 @@ export class Niivue {
       }
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
-
+        // if click-to-segment enabled
+        if (this.opts.clickToSegment) {
+          const radius = this.opts.clickToSegmentRadius
+          const steps = this.opts.clickToSegmentSteps
+          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+          this.drawPenFillPts = []
+          this.drawPenAxCorSag = axCorSag
+          for (let i = 1; i <= steps; i++) {
+            const angle = (i / steps) * 2 * Math.PI
+            let xVox = pt[0] + radius * Math.cos(angle)
+            let yVox = pt[1] + radius * Math.sin(angle)
+            const zVox = pt[2]
+            xVox = Math.round(xVox)
+            yVox = Math.round(yVox)
+            this.drawPt(xVox, yVox, zVox, this.opts.penValue)
+            this.drawPenFillPts.push([xVox, yVox, pt[2]])
+            // fill in the circle if we are at the last step.
+            // This also triggers the growth of the circle based on cluster intensity method of flood fill.
+            // If the circle is drawn in a bright region, it will grow in the bright region using all connected bright voxels and vice versa.
+            if (i === steps) {
+              this.drawFloodFill([xVox, yVox, pt[2]], 0, brightOrDark, NaN, NaN, this.opts.floodFillNeighbors)
+            }
+          }
+          this.drawScene()
+          this.createOnLocationChange(axCorSag)
+          // get the volume of the segmented region
+          const info = this.getDescriptives(0, [], true)
+          this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
+          return
+        }
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
           if (!isFinite(this.opts.penValue)) {
             // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-            this.drawFloodFill(pt, 0, this.opts.penValue, this.opts.floodFillNeighbors)
+            this.drawFloodFill(pt, 0, this.opts.penValue, NaN, NaN, this.opts.floodFillNeighbors)
           } else {
-            // FIXME this was this.drawFloodFill(pt, Math.abs(this.opts.penValue, this.opts.floodFillNeighbors))
-            // FIXME this.opts.floodFillNeighbors therefore never affected this!
-            this.drawFloodFill(pt, Math.abs(this.opts.penValue), this.opts.floodFillNeighbors)
+            this.drawFloodFill(
+              pt,
+              Math.abs(this.opts.penValue),
+              this.opts.penValue,
+              NaN,
+              NaN,
+              this.opts.floodFillNeighbors
+            )
           }
           return
         }
@@ -8900,7 +8953,13 @@ export class Niivue {
         const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
         const vox = v.mm2vox(mm as number[]) // e.mm2vox
         const val = v.getValue(vox[0], vox[1], vox[2], v.frame4D)
-        return { name: v.name, value: val, id: v.id, mm, vox } as NiiVueLocationValue
+        return {
+          name: v.name,
+          value: val,
+          id: v.id,
+          mm,
+          vox
+        } as NiiVueLocationValue
       }),
       string: str
     }
@@ -10007,7 +10066,7 @@ export class Niivue {
       const scaleW = this.gl.canvas.width / mxRowWid
       const scaleH = this.effectiveCanvasHeight() / top
       scale = Math.min(scaleW, scaleH)
-      if (this.centerMosaic) {
+      if (this.opts.centerMosaic) {
         marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale))
         marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale))
       }

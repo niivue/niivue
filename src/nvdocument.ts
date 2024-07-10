@@ -130,6 +130,11 @@ export type NVConfigOptions = {
   multiplanarLayout: MULTIPLANAR_TYPE
   renderOverlayBlend: number
   sliceMosaicString: string
+  centerMosaic: boolean
+  clickToSegment: boolean
+  clickToSegmentRadius: number
+  clickToSegmentSteps: number
+  clickToSegmentBright: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -193,7 +198,12 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   legendTextColor: [1.0, 1.0, 1.0, 1.0],
   multiplanarLayout: MULTIPLANAR_TYPE.AUTO,
   renderOverlayBlend: 1.0,
-  sliceMosaicString: ''
+  sliceMosaicString: '',
+  centerMosaic: false,
+  clickToSegment: false,
+  clickToSegmentRadius: 2,
+  clickToSegmentSteps: 10,
+  clickToSegmentBright: true
 }
 
 type SceneData = {
