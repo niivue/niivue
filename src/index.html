@@ -119,6 +119,8 @@
       };
       var nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);
+      // multiplanarShowRender is the preferred option now, 
+      // but multiplanarForceRender is still available for backwards compatibility
       nv1.opts.multiplanarForceRender = true;
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);

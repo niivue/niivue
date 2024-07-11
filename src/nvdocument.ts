@@ -88,7 +88,9 @@ export type NVConfigOptions = {
   isColorbar: boolean
   isOrientCube: boolean
   multiplanarPadPixels: number
+  // @deprecated
   multiplanarForceRender: boolean
+  multiplanarShowRender: 'always' | 'never' | 'auto'
   isRadiologicalConvention: boolean
   // string to allow infinity
   meshThicknessOn2D: number | string
@@ -167,7 +169,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isColorbar: false,
   isOrientCube: false,
   multiplanarPadPixels: 0,
+  // @deprecated
   multiplanarForceRender: false,
+  multiplanarShowRender: 'auto', // auto is the same behaviour as multiplanarForceRender: false
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
   dragMode: DRAG_MODE.contrast,
