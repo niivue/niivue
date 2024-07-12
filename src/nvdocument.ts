@@ -19,6 +19,12 @@ export enum SLICE_TYPE {
   RENDER = 4
 }
 
+export enum SHOW_RENDER {
+  NEVER = 0,
+  ALWAYS = 1,
+  AUTO = 2
+}
+
 /**
  * Multi-planar layout
  * @ignore
@@ -90,7 +96,7 @@ export type NVConfigOptions = {
   multiplanarPadPixels: number
   // @deprecated
   multiplanarForceRender: boolean
-  multiplanarShowRender: 'always' | 'never' | 'auto'
+  multiplanarShowRender: SHOW_RENDER
   isRadiologicalConvention: boolean
   // string to allow infinity
   meshThicknessOn2D: number | string
@@ -171,7 +177,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   multiplanarPadPixels: 0,
   // @deprecated
   multiplanarForceRender: false,
-  multiplanarShowRender: 'auto', // auto is the same behaviour as multiplanarForceRender: false
+  multiplanarShowRender: SHOW_RENDER.AUTO, // auto is the same behaviour as multiplanarForceRender: false
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
   dragMode: DRAG_MODE.contrast,

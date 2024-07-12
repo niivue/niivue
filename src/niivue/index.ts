@@ -70,6 +70,7 @@ import {
   NVConfigOptions,
   Scene,
   SLICE_TYPE,
+  SHOW_RENDER,
   DRAG_MODE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
@@ -10167,18 +10168,25 @@ export class Niivue {
         if (this.opts.multiplanarForceRender) {
           showRender = true
           // warn the user that the option is deprecated
-          log.warn(
-            'multiplanarForceRender is deprecated. Use multiplanarShowRender instead. Possible values are: "always", "auto", "never".'
-          )
+          // log.warn(
+          //   'multiplanarForceRender is deprecated. Use multiplanarShowRender instead. Possible values are: "always", "auto", "never".'
+          // )
+          if (this.opts.multiplanarForceRender) {
+            this.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+          } else {
+            this.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+          }
+          // purge the deprecated option so it doesn't get used in saved scenes and documents
+          delete this.opts.multiplanarForceRender
         } else {
           //  check the now preferred multiplanarShowRender option.
           // if the value is always, then show the render.
-          if (this.opts.multiplanarShowRender === 'always') {
+          if (this.opts.multiplanarShowRender === SHOW_RENDER.ALWAYS) {
             showRender = true
-            // again, warn the user that we are using the new option
-            log.warn(
-              'multiplanarShowRender is set to always and multiplanarForceRender (deprecated) is false. We are assuming you prefer the non-deprecated option: multiplanarShowRender.'
-            )
+            // warn the user that we are using the new option
+            // log.warn(
+            //   'multiplanarShowRender is set to always and multiplanarForceRender (deprecated) is false. We are assuming you prefer the non-deprecated option: multiplanarShowRender.'
+            // )
           }
         }
         const isDrawPenDown = isFinite(this.drawPenLocation[0]) && this.opts.drawingEnabled
@@ -10229,7 +10237,7 @@ export class Niivue {
         }
         if (isDrawColumn) {
           let ltwh = ltwh1x3
-          if (showRender || (this.opts.multiplanarShowRender === 'auto' && ltwh1x4[4] >= ltwh1x3[4])) {
+          if (showRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4])) {
             ltwh = ltwh1x4
           } else {
             isDraw3D = false
@@ -10249,7 +10257,7 @@ export class Niivue {
           }
         } else if (isDrawRow) {
           let ltwh = ltwh3x1
-          if (showRender || (this.opts.multiplanarShowRender === 'auto' && ltwh4x1[4] >= ltwh3x1[4])) {
+          if (showRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4])) {
             ltwh = ltwh4x1
           } else {
             isDraw3D = false
@@ -10272,7 +10280,7 @@ export class Niivue {
             isDraw3D = false
           }
           // however, check if the user asked for auto
-          if (this.opts.multiplanarShowRender === 'auto') {
+          if (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO) {
             isDraw3D = true
           }
           const ltwh = ltwh2x2

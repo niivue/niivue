@@ -72,6 +72,7 @@
         NVImage,
         NVMesh,
         NVMeshLoaders,
+        SHOW_RENDER
       } from "./niivue/index.ts";
       async function addVolumeFromFiles(f) {
         console.log("attempting to open ", f[0].name);
@@ -121,7 +122,8 @@
       nv1.attachToCanvas(gl1);
       // multiplanarShowRender is the preferred option now, 
       // but multiplanarForceRender is still available for backwards compatibility
-      nv1.opts.multiplanarForceRender = true;
+      // previous use was: nv1.opts.multiplanarForceRender = true;
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
       var layerList = [{ url: "../demos/images/mni152.SLF1_R.tsf" }];
