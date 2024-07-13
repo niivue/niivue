@@ -30,6 +30,7 @@
           <a class="viewBtn" id="|Sagittal">Sagittal</a>
           <a class="viewBtn" id="|Coronal">Coronal</a>
           <a class="viewBtn" id="|Render">Render</a>
+          <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
           <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender"
             >A+C+S+R</a
           >
@@ -116,7 +117,7 @@
   nv1.setRenderAzimuthElevation(120, 10);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.setSliceMM(true);
-  nv1.opts.multiplanarForceRender = true;
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
   nv1.graph.autoSizeMultiplanar = true;
   nv1.graph.opacity = 1.0;
   var volumeList1 = [{ url: "../images/mni152.nii.gz" }];
@@ -190,11 +191,11 @@
         nv1.setSliceType(nv1.sliceTypeSagittal);
       if (event.target.id === "|Render") nv1.setSliceType(nv1.sliceTypeRender);
       if (event.target.id === "|MultiPlanar") {
-        nv1.opts.multiplanarForceRender = false;
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
         nv1.setSliceType(nv1.sliceTypeMultiplanar);
       }
       if (event.target.id === "|MultiPlanarRender") {
-        nv1.opts.multiplanarForceRender = true;
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
         nv1.setSliceType(nv1.sliceTypeMultiplanar);
       }
       toggleGroup(event.target.id);

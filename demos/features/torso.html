@@ -90,7 +90,7 @@
         },
       ];
       await nv1.loadVolumes(volumeList1);
-      nv1.opts.multiplanarForceRender = true;
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
       nv1.graph.autoSizeMultiplanar = true;
       nv1.setClipPlane([-0.1, 270, 0]);
       let cmap = {

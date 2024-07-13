@@ -129,7 +129,7 @@
       await nv1.loadVolumes(volumeList1)
       await nv1.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
       nv1.setMeshShader(0, "Outline")
-      nv1.opts.multiplanarForceRender = true
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.setSliceMM(true)
       nv1.setClipPlane([0, 180, 40])
@@ -143,7 +143,7 @@
       nv2.setHighResolutionCapable(true)
       await nv2.loadVolumes(volumeList1)
       await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
-      nv2.opts.multiplanarForceRender = true
+      nv2.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv2.setSliceType(nv2.sliceTypeMultiplanar)
       nv2.setSliceMM(true)
       nv2.setClipPlane([0, 180, 40])

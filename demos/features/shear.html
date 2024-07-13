@@ -49,8 +49,8 @@
       nv1.setRadiologicalConvention(false);
       nv1.attachTo("gl1");
       await nv1.loadVolumes(volumeList1);
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      nv1.opts.multiplanarForceRender = true;
       document.getElementById("about").addEventListener("click", doAbout);
       function doAbout() {
         window.alert(
@@ -80,8 +80,6 @@
         edges: [1, 4, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
       }; //connectome{}
       await nv1.loadConnectome(connectome);
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      nv1.opts.multiplanarForceRender = true;
     </script>
   </body>
 </html>
