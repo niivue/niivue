@@ -15,6 +15,17 @@
       >
     </noscript>
     <header>
+      <label for="decimateSelect">Decimate</label>
+      <select id="decimateSelect">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7" selected>7</option>
+      </select>
       <label for="meshSlider">Atlas transparency</label>
       <input
         type="range"
@@ -85,6 +96,12 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`
+  decimateSelect.onchange = async function () {
+    nv1.decimateHierarchicalMesh(nv1.meshes[0].id, decimateSelect.selectedIndex)
+    for (let i = decimateSelect.options.length - 1; i > decimateSelect.selectedIndex; i--) {
+      decimateSelect.remove(i);
+    }
+  }
   meshSlider.oninput = function () {
     nv1.setMeshLayerProperty(
       nv1.meshes[0].id,

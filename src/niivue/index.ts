@@ -2771,6 +2771,25 @@ export class Niivue {
   }
 
   /**
+   * reduce complexity of FreeSurfer mesh
+   * @param mesh - identity of mesh to change
+   * @param order - decimation order 0..6
+   * @example niivue.decimateHierarchicalMesh(niivue.meshes[0].id, 4)
+   * @returns boolean false if mesh is not hierarchical or of lower order
+   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   */
+  decimateHierarchicalMesh(mesh: number, order: number = 3): boolean {
+    const idx = this.getMeshIndexByID(mesh)
+    if (idx < 0) {
+      log.warn('reverseFaces() id not loaded', mesh)
+      return
+    }
+    const ret = this.meshes[idx].decimateHierarchicalMesh(this.gl, order)
+    this.updateGLVolume()
+    return ret
+  }
+
+  /**
    * reverse triangle winding of mesh (swap front and back faces)
    * @param id - identity of mesh to change
    * @example niivue.reverseFaces(niivue.meshes[0].id)
