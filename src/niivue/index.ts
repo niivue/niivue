@@ -7505,6 +7505,9 @@ export class Niivue {
       width = bulletMargin + longestTextLength
       width += horizontalMargin * 2
     }
+    if (width >= this.gl.canvas.width) {
+      return 0
+    }
     return width
   }
 
