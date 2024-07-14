@@ -3348,6 +3348,9 @@ export class Niivue {
     this.renderShader!.use(this.gl)
     this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
     this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
+    this.pickingImageShader!.use(this.gl)
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     this.drawScene()
   }
 
@@ -5893,7 +5896,8 @@ export class Niivue {
     this.pickingImageShader.use(this.gl)
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
-
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     let shader = this.sliceMMShader
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader

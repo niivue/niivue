@@ -1317,7 +1317,7 @@ export class NVMesh {
     const V0 = 12
     const F0 = 20
     const nF = this.tris.length / 3
-    let order = Math.log(nF / F0) / Math.log(4)
+    const order = Math.log(nF / F0) / Math.log(4)
     // Sanity checks
     if (nF !== Math.pow(4, order) * F0) {
       return NaN
@@ -1329,19 +1329,19 @@ export class NVMesh {
     // next checks are in case FreeSurfer was optimized with more local face indices
     // for an example see BrainMesh_ICBM152.lh.mz3
     for (let i = 0; i < 15; i += 3) {
-        if (this.tris[i] !== 0) {
-          return NaN
-        }
+      if (this.tris[i] !== 0) {
+        return NaN
+      }
     }
     for (let i = 15; i < 24; i += 3) {
-        if (this.tris[i] !== 3) {
-          return NaN
-        }
+      if (this.tris[i] !== 3) {
+        return NaN
+      }
     }
     for (let i = 24; i < 30; i += 3) {
-        if (this.tris[i] !== 4) {
-          return NaN
-        }
+      if (this.tris[i] !== 4) {
+        return NaN
+      }
     }
     return order
   }
