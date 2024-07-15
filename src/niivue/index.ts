@@ -1753,6 +1753,42 @@ export class Niivue {
     return volume
   }
 
+  async addVolumesFromUrl(imageOptionsArray: ImageFromUrlOptions[]): Promise<NVImage[]> {
+    const promises = imageOptionsArray.map(async (imageItem) => {
+      const imageOptions = {
+        url: imageItem.url!,
+        headers: imageItem.headers,
+        name: imageItem.name,
+        colormap: imageItem.colormap,
+        colormapNegative: imageItem.colormapNegative,
+        opacity: imageItem.opacity,
+        urlImgData: imageItem.urlImgData,
+        cal_min: imageItem.cal_min,
+        cal_max: imageItem.cal_max,
+        trustCalMinMax: this.opts.trustCalMinMax,
+        isManifest: imageItem.isManifest,
+        frame4D: imageItem.frame4D,
+        limitFrames4D: imageItem.limitFrames4D || this.opts.limitFrames4D,
+        colorbarVisible: imageItem.colorbarVisible
+      }
+      const volume = await NVImage.loadFromUrl(imageOptions)
+      this.document.addImageOptions(volume, imageOptions)
+      volume.onColormapChange = this.onColormapChange
+      this.mediaUrlMap.set(volume, imageOptions.url)
+      if (this.onVolumeAddedFromUrl) {
+        this.onVolumeAddedFromUrl(imageOptions, volume)
+      }
+      return volume
+    })
+
+    const volumes = await Promise.all(promises)
+
+    for (let i = 0; i < volumes.length; i++) {
+      this.addVolume(volumes[i])
+    }
+    return volumes
+  }
+
   /**
    * Find media by url
    */
@@ -3723,29 +3759,32 @@ export class Niivue {
     this.volumes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    // for loop to load all volumes in volumeList
-    for (let i = 0; i < volumeList.length; i++) {
-      if (volumeList[i].colorMap !== undefined) {
-        volumeList[i].colormap = volumeList[i].colorMap
-      }
-      const imageOptions = {
-        url: volumeList[i].url!,
-        headers: volumeList[i].headers,
-        name: volumeList[i].name,
-        colormap: volumeList[i].colormap,
-        colormapNegative: volumeList[i].colormapNegative,
-        opacity: volumeList[i].opacity,
-        urlImgData: volumeList[i].urlImgData,
-        cal_min: volumeList[i].cal_min,
-        cal_max: volumeList[i].cal_max,
-        trustCalMinMax: this.opts.trustCalMinMax,
-        isManifest: volumeList[i].isManifest,
-        frame4D: volumeList[i].frame4D,
-        limitFrames4D: volumeList[i].limitFrames4D || this.opts.limitFrames4D,
-        colorbarVisible: volumeList[i].colorbarVisible
-      }
-      await this.addVolumeFromUrl(imageOptions)
+    // if more than one volume, then fetch them all simultaneously
+    // using addVolumesFromUrl (note the "s" in "Volumes")
+    if (volumeList.length > 1) {
+      await this.addVolumesFromUrl(volumeList)
+      return this
     }
+    if (volumeList[0].colorMap !== undefined) {
+      volumeList[0].colormap = volumeList[0].colorMap
+    }
+    const imageOptions = {
+      url: volumeList[0].url!,
+      headers: volumeList[0].headers,
+      name: volumeList[0].name,
+      colormap: volumeList[0].colormap,
+      colormapNegative: volumeList[0].colormapNegative,
+      opacity: volumeList[0].opacity,
+      urlImgData: volumeList[0].urlImgData,
+      cal_min: volumeList[0].cal_min,
+      cal_max: volumeList[0].cal_max,
+      trustCalMinMax: this.opts.trustCalMinMax,
+      isManifest: volumeList[0].isManifest,
+      frame4D: volumeList[0].frame4D,
+      limitFrames4D: volumeList[0].limitFrames4D || this.opts.limitFrames4D,
+      colorbarVisible: volumeList[0].colorbarVisible
+    }
+    await this.addVolumeFromUrl(imageOptions)
     return this
   }
 
@@ -3769,6 +3808,34 @@ export class Niivue {
     this.onMeshAddedFromUrl(meshOptions, mesh)
     this.addMesh(mesh)
     return mesh
+  }
+
+  /**
+   * Add mesh and notify subscribers
+   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
+   */
+  async addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]> {
+    const promises = meshOptions.map(async (meshItem) => {
+      const ext = this.getFileExt(meshItem.url)
+      if (ext === 'JCON' || ext === 'JSON') {
+        const response = await fetch(meshItem.url, {})
+        const json = await response.json()
+        const mesh = this.loadConnectomeAsMesh(json)
+        this.mediaUrlMap.set(mesh, meshItem.url)
+        this.onMeshAddedFromUrl(meshItem, mesh)
+        return mesh
+      }
+      const mesh = await NVMesh.loadFromUrl({ ...meshItem, gl: this.gl })
+      this.mediaUrlMap.set(mesh, meshItem.url)
+      this.onMeshAddedFromUrl(meshItem, mesh)
+      return mesh
+    })
+    const meshes = await Promise.all(promises)
+
+    for (let i = 0; i < meshes.length; i++) {
+      this.addMesh(meshes[i])
+    }
+    return meshes
   }
 
   /**
@@ -3796,10 +3863,16 @@ export class Niivue {
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
-    // for loop to load all volumes in volumeList
-    for (let i = 0; i < meshList.length; i++) {
-      await this.addMeshFromUrl(meshList[i])
+    // if more than one mesh, then fetch them all simultaneously
+    // using addMeshesFromUrl (note the "s" in "Meshes")
+    if (meshList.length > 1) {
+      await this.addMeshesFromUrl(meshList)
+      this.updateGLVolume()
+      this.drawScene()
+      return this
     }
+
+    await this.addMeshFromUrl(meshList[0])
     this.updateGLVolume()
     this.drawScene()
     return this
