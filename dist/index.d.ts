@@ -558,6 +558,11 @@ declare enum SLICE_TYPE {
     MULTIPLANAR = 3,
     RENDER = 4
 }
+declare enum SHOW_RENDER {
+    NEVER = 0,
+    ALWAYS = 1,
+    AUTO = 2
+}
 /**
  * Multi-planar layout
  * @ignore
@@ -613,6 +618,7 @@ type NVConfigOptions = {
     isOrientCube: boolean;
     multiplanarPadPixels: number;
     multiplanarForceRender: boolean;
+    multiplanarShowRender: SHOW_RENDER;
     isRadiologicalConvention: boolean;
     meshThicknessOn2D: number | string;
     dragMode: DRAG_MODE;
@@ -2996,4 +3002,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };

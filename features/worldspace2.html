@@ -129,7 +129,10 @@
         .getElementById("check11")
         .addEventListener("change", doCheck11Click);
       function doCheck11Click() {
-        nv1.opts.multiplanarForceRender = this.checked;
+        if (this.checked)
+            nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+        else
+            nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.AUTO
         nv1.drawScene();
       }
 

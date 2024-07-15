@@ -45,7 +45,7 @@
       nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);
       nv1.opts.dragMode = nv1.dragModes.pan;
-      nv1.opts.multiplanarForceRender = true;
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
       nv1.opts.yoke3Dto2DZoom = true;
     }
 
@@ -87,14 +87,13 @@
     var nv1 = new Niivue(defaults);
     nv1.attachToCanvas(gl1);
     nv1.opts.dragMode = nv1.dragModes.pan;
-    nv1.opts.multiplanarForceRender = true;
+    nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
     nv1.opts.yoke3Dto2DZoom = true;
     await nv1.loadVolumes(volumeList1);
 
     nv1.setClipPlane([-0.12, 180, 40]);
     nv1.setRenderAzimuthElevation(230, 15)
     nv1.setSliceType(nv1.sliceTypeMultiplanar);
-    nv1.opts.multiplanarForceRender = true;
 
   </script>
 </body>
