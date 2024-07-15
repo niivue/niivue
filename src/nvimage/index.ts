@@ -3369,7 +3369,7 @@ export class NVImage {
    * read a 3D slab of voxels from a volume
    * @param voxStart - first row, column and slice (RAS order) for selection
    * @param voxEnd - final row, column and slice (RAS order) for selection
-   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32'
+   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
    * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
@@ -3394,7 +3394,12 @@ export class NVImage {
     let dt = this.hdr!.datatypeCode
     if (dataType === 'uint8') {
       dt = NiiDataType.DT_UINT8
-    } else if (dataType === 'float32') {
+    } else if (
+      dataType === 'float32' ||
+      dataType === 'scaled' ||
+      dataType === 'normalized' ||
+      dataType === 'windowed'
+    ) {
       dt = NiiDataType.DT_FLOAT32
     }
     if (dt === NiiDataType.DT_UINT8) {
@@ -3422,6 +3427,25 @@ export class NVImage {
           const xi = outStart[0] + x * outStep[0]
           img[i++] = this.img![xi + yizi]
         }
+      }
+    }
+    if (dataType === 'scaled' || dataType === 'normalized' || dataType === 'windowed') {
+      for (let i = 0; i < img.length; i++) {
+        img[i] = img[i] * this.hdr.scl_slope + this.hdr.scl_inter
+      }
+    }
+    if (dataType === 'normalized' || dataType === 'windowed') {
+      let mn = this.cal_min
+      let mx = this.cal_max
+      if (dataType === 'normalized') {
+        mn = this.global_min
+        mx = this.global_max
+      }
+      console.log(mn, ':::', mx)
+      const scale = 1 / (mx - mn)
+      for (let i = 0; i < img.length; i++) {
+        img[i] = (img[i] - mn) * scale
+        img[i] = Math.max(Math.min(img[i], 1), 0)
       }
     }
     return [img, slabDims]
