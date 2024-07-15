@@ -161,6 +161,8 @@ export type ImageFromUrlOptions = {
   alphaThreshold?: boolean
   // a color map to use for negative intensities
   colormapNegative?: string
+  // backwards compatible option
+  colorMapNegative?: string
   // minimum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_min)
   cal_minNeg?: number
   // maximum intensity for colormapNegative brightness/contrast (NaN for symmetrical cal_max)
