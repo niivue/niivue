@@ -1759,8 +1759,8 @@ export class Niivue {
         url: imageItem.url!,
         headers: imageItem.headers,
         name: imageItem.name,
-        colormap: imageItem.colormap,
-        colormapNegative: imageItem.colormapNegative,
+        colormap: imageItem.colormap ? imageItem.colormap : imageItem.colorMap,
+        colormapNegative: imageItem.colormapNegative ? imageItem.colormapNegative : imageItem.colorMapNegative,
         opacity: imageItem.opacity,
         urlImgData: imageItem.urlImgData,
         cal_min: imageItem.cal_min,
@@ -3765,15 +3765,14 @@ export class Niivue {
       await this.addVolumesFromUrl(volumeList)
       return this
     }
-    if (volumeList[0].colorMap !== undefined) {
-      volumeList[0].colormap = volumeList[0].colorMap
-    }
     const imageOptions = {
       url: volumeList[0].url!,
       headers: volumeList[0].headers,
       name: volumeList[0].name,
-      colormap: volumeList[0].colormap,
-      colormapNegative: volumeList[0].colormapNegative,
+      colormap: volumeList[0].colormap ? volumeList[0].colormap : volumeList[0].colorMap,
+      colormapNegative: volumeList[0].colormapNegative
+        ? volumeList[0].colormapNegative
+        : volumeList[0].colorMapNegative,
       opacity: volumeList[0].opacity,
       urlImgData: volumeList[0].urlImgData,
       cal_min: volumeList[0].cal_min,
