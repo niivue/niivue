@@ -162,7 +162,7 @@
     onLocationChange: handleLocationChange,
   });
   nv1.setRadiologicalConvention(false);
-  nv1.opts.multiplanarForceRender = true;
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
   nv1.attachTo("gl1");
   await nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);

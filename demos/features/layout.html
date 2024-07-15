@@ -15,8 +15,6 @@
       >
     </noscript>
     <header>
-      <label for="renderCheck">Force Render</label>
-      <input type="checkbox" id="renderCheck" unchecked />
       <label for="timelineCheck">Timeline</label>
       <input type="checkbox" id="timelineCheck" unchecked />
       <label for="padSlider">Padding</label>
@@ -28,13 +26,20 @@
         class="slider"
         id="padSlider"
       />
-      <label for="layout">Layout</label>
-      <select id="layout">
+      <label for="layoutSelect">Layout</label>
+      <select id="layoutSelect">
         <option value="0" selected>Auto</option>
         <option value="1">Column</option>
         <option value="2">Grid</option>
         <option value="3">Row</option>
       </select>
+      <label for="renderingSelect">Rendering</label>
+      <select id="renderingSelect">
+        <option value="0">Never</option>
+        <option value="1">Always</option>
+        <option value="2" selected>Auto</option>
+      </select>
+
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -46,16 +51,16 @@
   padSlider.oninput = function () {
     nv1.setMultiplanarPadPixels(this.value);
   };
-  renderCheck.onchange = function () {
-    nv1.opts.multiplanarForceRender = this.checked;
-    nv1.drawScene();
-  }
   timelineCheck.onchange = function () {
     nv1.graph.autoSizeMultiplanar = this.checked;
     nv1.drawScene();
   }
-  layout.onchange = function () {
+  layoutSelect.onchange = function () {
     nv1.setMultiplanarLayout(Number(this.value));
+  }
+  renderingSelect.onchange = function () {
+    nv1.opts.multiplanarShowRender =  Number(this.value);
+    nv1.drawScene();
   }
   var volumeList1 = [{url: "../images/pcasl.nii.gz"},];
   let opts = {

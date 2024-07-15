@@ -58,7 +58,7 @@
     drop.onchange = setSliceType;
 
     var nv1 = new niivue.Niivue();
-    nv1.opts.multiplanarForceRender = true;
+    nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
     nv1.attachTo("gl1");
     nv1.loadVolumes(volumeList1);
     nv1.addLabel("Insula", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.CENTER}, [0.0, 0.0, 0.0]);

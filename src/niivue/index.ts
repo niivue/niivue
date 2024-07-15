@@ -70,6 +70,7 @@ import {
   NVConfigOptions,
   Scene,
   SLICE_TYPE,
+  SHOW_RENDER,
   DRAG_MODE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
@@ -7504,6 +7505,9 @@ export class Niivue {
       width = bulletMargin + longestTextLength
       width += horizontalMargin * 2
     }
+    if (width >= this.gl.canvas.width) {
+      return 0
+    }
     return width
   }
 
@@ -10160,6 +10164,34 @@ export class Niivue {
         this.draw2D([0, 0, 0, 0], 2)
       } else {
         // sliceTypeMultiplanar
+        let isShowRender = false
+        // this.opts.multiplanarForceRender is deprecated but was boolean.
+        // We now need to check if it is true. If so, then the user may not know
+        // about the new multiplanarShowRender option, so we need to show the render.
+        if (this.opts.multiplanarForceRender) {
+          isShowRender = true
+          // warn the user that the option is deprecated
+          // log.warn(
+          //   'multiplanarForceRender is deprecated. Use multiplanarShowRender instead. Possible values are: "always", "auto", "never".'
+          // )
+          if (this.opts.multiplanarForceRender) {
+            this.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+          } else {
+            this.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+          }
+          // purge the deprecated option so it doesn't get used in saved scenes and documents
+          delete this.opts.multiplanarForceRender
+        } else {
+          //  check the now preferred multiplanarShowRender option.
+          // if the value is always, then show the render.
+          if (this.opts.multiplanarShowRender === SHOW_RENDER.ALWAYS) {
+            isShowRender = true
+            // warn the user that we are using the new option
+            // log.warn(
+            //   'multiplanarShowRender is set to always and multiplanarForceRender (deprecated) is false. We are assuming you prefer the non-deprecated option: multiplanarShowRender.'
+            // )
+          }
+        }
         const isDrawPenDown = isFinite(this.drawPenLocation[0]) && this.opts.drawingEnabled
         const { volScale } = this.sliceScale()
         if (typeof this.opts.multiplanarPadPixels !== 'number') {
@@ -10208,7 +10240,7 @@ export class Niivue {
         }
         if (isDrawColumn) {
           let ltwh = ltwh1x3
-          if (this.opts.multiplanarForceRender || ltwh1x4[4] >= ltwh1x3[4]) {
+          if (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4])) {
             ltwh = ltwh1x4
           } else {
             isDraw3D = false
@@ -10228,7 +10260,7 @@ export class Niivue {
           }
         } else if (isDrawRow) {
           let ltwh = ltwh3x1
-          if (this.opts.multiplanarForceRender || ltwh4x1[4] >= ltwh3x1[4]) {
+          if (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4])) {
             ltwh = ltwh4x1
           } else {
             isDraw3D = false
@@ -10246,6 +10278,14 @@ export class Niivue {
             this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], ltwh[3], ltwh[3]])
           }
         } else if (isDrawGrid) {
+          // did the user turn off 3D render view in multiplanar?
+          if (!isShowRender) {
+            isDraw3D = false
+          }
+          // however, check if the user asked for auto
+          if (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO) {
+            isDraw3D = true
+          }
           const ltwh = ltwh2x2
           const sX = volScale[0] * ltwh[4]
           const sY = volScale[1] * ltwh[4]

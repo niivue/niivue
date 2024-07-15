@@ -190,12 +190,11 @@
   nv1.setRenderAzimuthElevation(120, 10);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.setSliceMM(true);
-  nv1.opts.multiplanarForceRender = false;
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
   nv1.graph.autoSizeMultiplanar = true;
   nv1.graph.opacity = 1.0;
   nv1.drawOpacity = 0.5;
   nv1.opts.isColorbar = false;
-  nv1.opts.multiplanarForceRender = true;
   var volumeList1 = [{ url: "../images/cactus.nii.gz" }];
   await nv1.loadVolumes(volumeList1);
   //image specific settings
@@ -320,11 +319,11 @@
         nv1.setSliceType(nv1.sliceTypeSagittal);
       if (event.target.id === "|Render") nv1.setSliceType(nv1.sliceTypeRender);
       if (event.target.id === "|MultiPlanar") {
-        nv1.opts.multiplanarForceRender = false;
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
         nv1.setSliceType(nv1.sliceTypeMultiplanar);
       }
       if (event.target.id === "|MultiPlanarRender") {
-        nv1.opts.multiplanarForceRender = true;
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
         nv1.setSliceType(nv1.sliceTypeMultiplanar);
       }
       toggleGroup(event.target.id);

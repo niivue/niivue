@@ -111,7 +111,7 @@
       }
       var nv1 = new niivue.Niivue(defaults)
       nv1.setInterpolation(true)
-      nv1.opts.multiplanarForceRender = true
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.attachTo("gl1")
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
       await nv1.loadVolumes(volumeList1)

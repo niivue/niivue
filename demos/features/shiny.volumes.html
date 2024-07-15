@@ -107,7 +107,7 @@
       var nv1 = new niivue.Niivue(defaults)
       nv1.attachTo("gl1")
       nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.opts.multiplanarForceRender = true
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.setVolumeRenderIllumination(1.0)
       nv1.setClipPlane([0.3, 180, 20])
       await nv1.loadVolumes(volumeList1)
@@ -118,7 +118,6 @@
       matCaps.dispatchEvent(new Event("change"))
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.graph.autoSizeMultiplanar = true
-      nv1.opts.multiplanarForceRender = true
     </script>
   </body>
 </html>
