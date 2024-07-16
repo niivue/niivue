@@ -3441,7 +3441,6 @@ export class NVImage {
         mn = this.global_min
         mx = this.global_max
       }
-      console.log(mn, ':::', mx)
       const scale = 1 / (mx - mn)
       for (let i = 0; i < img.length; i++) {
         img[i] = (img[i] - mn) * scale
