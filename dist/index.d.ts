@@ -211,6 +211,7 @@ type ImageFromUrlOptions = {
     useQFormNotSForm?: boolean;
     alphaThreshold?: boolean;
     colormapNegative?: string;
+    colorMapNegative?: string;
     cal_minNeg?: number;
     cal_maxNeg?: number;
     colorbarVisible?: boolean;
@@ -2065,6 +2066,7 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
      */
     addVolumeFromUrl(imageOptions: ImageFromUrlOptions): Promise<NVImage>;
+    addVolumesFromUrl(imageOptionsArray: ImageFromUrlOptions[]): Promise<NVImage[]>;
     /**
      * Find media by url
      */
@@ -2578,6 +2580,11 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
      */
     addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh>;
+    /**
+     * Add mesh and notify subscribers
+     * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
+     */
+    addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]>;
     /**
      * load an array of meshes
      * @param meshList - the array of objects to load. each object must have a resolvable "url" property at a minimum
