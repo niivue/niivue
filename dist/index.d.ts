@@ -437,7 +437,7 @@ declare class NVImage {
      * read a 3D slab of voxels from a volume
      * @param voxStart - first row, column and slice (RAS order) for selection
      * @param voxEnd - final row, column and slice (RAS order) for selection
-     * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32'
+     * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
      * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
      * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
      */
@@ -1191,6 +1191,9 @@ declare class NVMesh {
     unloadMesh(gl: WebGL2RenderingContext): void;
     updateMesh(gl: WebGL2RenderingContext): void;
     reverseFaces(gl: WebGL2RenderingContext): void;
+    hierarchicalOrder(): number;
+    decimateFaces(n: number, ntarget: number): void;
+    decimateHierarchicalMesh(gl: WebGL2RenderingContext, order?: number): boolean;
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): void;
     setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void;
     generatePosNormClr(pts: Float32Array, tris: Uint32Array, rgba255: Uint8Array): Float32Array;
@@ -1520,11 +1523,32 @@ declare class NVMeshLoaders {
     static readSRF(buffer: ArrayBuffer): DefaultMeshType;
     static readTxtSTL(buffer: ArrayBuffer): DefaultMeshType;
     static readSTL(buffer: ArrayBuffer): DefaultMeshType;
+    static decimateLayerVertices(nVertLayer: number, nVertMesh: number): number;
     static readNII2(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Int32Array | Float32Array | Int16Array | Uint8Array;
     static readNII(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Float32Array | Uint8Array | Int32Array | Int16Array;
     static readMGH(buffer: ArrayBuffer, n_vert?: number, isReadColortables?: boolean): MGH;
     static readX3D(buffer: ArrayBuffer): X3D;
     static readGII(buffer: ArrayBuffer, n_vert?: number): GII;
+}
+
+type Extents = {
+    mxDx: number;
+    extentsMin: number | number[];
+    extentsMax: number | number[];
+};
+/**
+ * Utilities class for common mesh functions
+ */
+declare class NVMeshUtilities {
+    static getClusterBoundaryU8(u8: Uint8Array, faces: number[] | Uint32Array): boolean[];
+    static createMZ3(vertices: Float32Array, indices: Uint32Array, compress?: boolean): ArrayBuffer;
+    static createOBJ(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
+    static createSTL(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
+    static downloadArrayBuffer(buffer: ArrayBuffer, filename: string): void;
+    static saveMesh(vertices: Float32Array, indices: Uint32Array, filename?: string, compress?: boolean): ArrayBuffer;
+    static getClusterBoundary(rgba8: Uint8Array, faces: number[] | Uint32Array): boolean[];
+    static getExtents(pts: number[] | Float32Array): Extents;
+    static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
 }
 
 type ColormapListEntry = {
@@ -2264,6 +2288,15 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
      */
     indexNearestXYZmm(mesh: number, Xmm: number, Ymm: number, Zmm: number): number[];
+    /**
+     * reduce complexity of FreeSurfer mesh
+     * @param mesh - identity of mesh to change
+     * @param order - decimation order 0..6
+     * @example niivue.decimateHierarchicalMesh(niivue.meshes[0].id, 4)
+     * @returns boolean false if mesh is not hierarchical or of lower order
+     * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+     */
+    decimateHierarchicalMesh(mesh: number, order?: number): boolean;
     /**
      * reverse triangle winding of mesh (swap front and back faces)
      * @param id - identity of mesh to change
@@ -3009,4 +3042,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
