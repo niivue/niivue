@@ -1313,6 +1313,102 @@ export class NVMesh {
     this.updateMesh(gl) // apply the new properties...
   }
 
+  hierarchicalOrder(): number {
+    const V0 = 12
+    const F0 = 20
+    const nF = this.tris.length / 3
+    const order = Math.log(nF / F0) / Math.log(4)
+    // Sanity checks
+    if (nF !== Math.pow(4, order) * F0) {
+      return NaN
+    }
+    const nV = this.pts.length / 3
+    if (nV !== Math.pow(4, order) * (V0 - 2) + 2) {
+      return NaN
+    }
+    // next checks are in case FreeSurfer was optimized with more local face indices
+    // for an example see BrainMesh_ICBM152.lh.mz3
+    for (let i = 0; i < 15; i += 3) {
+      if (this.tris[i] !== 0) {
+        return NaN
+      }
+    }
+    for (let i = 15; i < 24; i += 3) {
+      if (this.tris[i] !== 3) {
+        return NaN
+      }
+    }
+    for (let i = 24; i < 30; i += 3) {
+      if (this.tris[i] !== 4) {
+        return NaN
+      }
+    }
+    return order
+  }
+
+  decimateFaces(n: number, ntarget: number): void {
+    let fac = this.tris
+    // Constants for the icosahedron
+    const V0 = 12
+    const F0 = 20
+    for (let j = n - 1; j >= ntarget; j--) {
+      const nVjprev = Math.pow(4, j + 1) * (V0 - 2) + 2
+      const nVj = Math.pow(4, j) * (V0 - 2) + 2
+      const nFjprev = fac.length / 3 // = 4^(j+1)*F0
+      const nFj = Math.pow(4, j) * F0
+
+      console.log(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`)
+
+      const remap = Array.from({ length: nVjprev }, (_, i) => i + 1)
+
+      for (let i = 0; i < nFjprev; i++) {
+        const v1 = fac[3 * i]
+        const v2 = fac[3 * i + 1]
+        const v3 = fac[3 * i + 2]
+        remap[v1 - 1] = Math.min(remap[v1 - 1], v2, v3)
+      }
+
+      const facJ = new Uint32Array(nFj * 3)
+      for (let i = 0; i < nFj; i++) {
+        facJ[3 * i] = remap[fac[3 * i] - 1]
+        facJ[3 * i + 1] = remap[fac[3 * i + 1] - 1]
+        facJ[3 * i + 2] = remap[fac[3 * i + 2] - 1]
+      }
+      fac = facJ
+    }
+    this.tris = new Uint32Array(fac)
+  }
+
+  // internal function simplifies FreeSurfer triangulated mesh and overlays
+  decimateHierarchicalMesh(gl: WebGL2RenderingContext, order: number = 4): boolean {
+    const inputOrder = this.hierarchicalOrder()
+    if (isNaN(inputOrder)) {
+      log.warn('Unable to decimate mesh: it does not have a hierarchical structure')
+      return false
+    }
+    if (order >= inputOrder) {
+      log.warn(`Unable to decimate mesh: input order (${inputOrder}) must be larger than downsampled order (${order})`)
+      return false
+    }
+    const inputVLength = this.pts.length / 3
+    const V0 = 12
+    const nV = Math.pow(4, order) * (V0 - 2) + 2
+    this.pts = new Float32Array(this.pts.slice(0, nV * 3))
+    this.decimateFaces(inputOrder, order)
+    if (this.layers && this.layers.length > 0) {
+      for (let i = 0; i < this.layers.length; i++) {
+        const layer = this.layers[i]
+        if (layer.values instanceof Float32Array || layer.values.length !== inputVLength) {
+          layer.values = new Float32Array(layer.values.slice(0, nV))
+        } else {
+          log.warn(`decimation logic needs to be updated`)
+        }
+      }
+    }
+    this.updateMesh(gl) // apply the new properties...
+    return true
+  }
+
   // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
   // TODO this method is a bit too generic
   setLayerProperty(

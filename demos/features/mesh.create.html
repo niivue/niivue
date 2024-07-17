@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue Create and Save Meshes</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="shaderSelect">Shader</label>
+      <select id="shaderSelect">
+        <option value="Flat">Flat</option>
+        <option value="Matcap">Matcap</option>
+        <option value="Matte">Matte</option>
+        <option value="Phong" selected>Phong</option>
+      </select>
+      <button id="saveBtn">Save Mesh</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <dialog id="saveDialog">
+      <form method="dialog">
+        <p>
+          <label>
+            Format:
+            <select id="formatSelect">
+              <option>MZ3 small and precise</option>
+              <option selected>OBJ widely supported</option>
+              <option>STL popular for printing</option>
+            </select>
+          </label>
+        </p>
+        <button id="cancelSaveBtn" formmethod="dialog">Cancel</button>
+        <button autofocus id="applySaveBtn" value="default">Save</button>
+      </form>
+    </dialog>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js";
+  function createTrefoilKnot(slices = 256, stacks = 64) {
+    // https://github.com/prideout/par/tree/master
+    // by Philip Rideout with MIT license
+    function evaluateTrefoil(s, t) {
+      const a = 0.5, b = 0.3, c = 0.5, d = 0.1
+      const u = (1 - s) * 4 * Math.PI
+      const v = t * 2 * Math.PI
+      const r = a + b * Math.cos(1.5 * u)
+      const x = r * Math.cos(u)
+      const y = r * Math.sin(u)
+      const z = c * Math.sin(1.5 * u)
+      const dv = {
+        x: -1.5 * b * Math.sin(1.5 * u) * Math.cos(u) - (a + b * Math.cos(1.5 * u)) * Math.sin(u),
+        y: -1.5 * b * Math.sin(1.5 * u) * Math.sin(u) + (a + b * Math.cos(1.5 * u)) * Math.cos(u),
+        z: 1.5 * c * Math.cos(1.5 * u)
+      }
+      const q = normalize(dv)
+      const qvn = normalize({ x: q.y, y: -q.x, z: 0 })
+      const ww = cross(q, qvn)
+      return {
+        x: x + d * (qvn.x * Math.cos(v) + ww.x * Math.sin(v)),
+        y: y + d * (qvn.y * Math.cos(v) + ww.y * Math.sin(v)),
+        z: z + d * ww.z * Math.sin(v)
+      }
+    }
+    function normalize(v) {
+        const len = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+        if (len === 0) return { x: 0, y: 0, z: 0 }
+        return { x: v.x / len, y: v.y / len, z: v.z / len }
+    }
+    function cross(v1, v2) {
+      return {
+        x: (v1.y * v2.z) - (v1.z * v2.y),
+        y: (v1.z * v2.x) - (v1.x * v2.z),
+        z: (v1.x * v2.y) - (v1.y * v2.x)
+      }
+    }
+    const verts = []
+    const faces = []
+    const kVertexCount = slices * stacks
+    const kIndexCount = kVertexCount * 2
+    for (let i = 0; i < slices; i++) {
+      for (let j = 0; j < stacks; j++) {
+        const n = i * stacks
+        faces.push(n + j, (n + j + stacks) % kVertexCount, n + (j + 1) % stacks)
+        faces.push((n + j + stacks) % kVertexCount, (n + (j + 1) % stacks + stacks) % kVertexCount, (n + (j + 1) % stacks) % kVertexCount)
+      }
+    }
+    const ds = 1.0 / slices
+    const dt = 1.0 / stacks
+    let s = 0.0
+    for (let i = 0; s < 1 - ds / 2; i++) {
+      s += ds
+      let t = 0
+      for (; t < 1 - dt / 2; t += dt) {
+        const vertex = evaluateTrefoil(s, t)
+        verts.push(vertex.x, vertex.y, vertex.z)
+      }
+    }
+    return {
+      pts: new Float32Array(verts),
+      tris: new Uint32Array(faces)
+    }
+  }
+  shaderSelect.onchange = function () {
+    nv1.setMeshShader(nv1.meshes[0].id, this.value)
+  }
+  saveBtn.onclick = function () {
+    if (nv1.meshes.length < 1) {
+      window.alert("No mesh open for saving. Use 'Create Mesh'.")
+    } else {
+      saveDialog.show()
+    }
+  }
+  applySaveBtn.onclick = function () {
+    if (formatSelect.selectedIndex == 0) {
+      niivue.NVMeshUtilities.saveMesh(nv1.meshes[0].pts, nv1.meshes[0].tris, 'trefoil.mz3', true)
+    }
+    if (formatSelect.selectedIndex == 1) {
+      niivue.NVMeshUtilities.saveMesh(nv1.meshes[0].pts, nv1.meshes[0].tris, 'trefoil.obj')
+    }
+    if (formatSelect.selectedIndex == 2) {
+      niivue.NVMeshUtilities.saveMesh(nv1.meshes[0].pts, nv1.meshes[0].tris, 'trefoil.stl')
+    }
+  }
+  var nv1 = new niivue.Niivue({show3Dcrosshair: true})
+  nv1.attachToCanvas(gl1)
+  const mesh = createTrefoilKnot()
+  const meshBuffer = niivue.NVMeshUtilities.createMZ3(mesh.pts, mesh.tris,  false)
+  await nv1.loadFromArrayBuffer(meshBuffer, 'trefoil.mz3')
+</script>
+

@@ -63,15 +63,11 @@
       cal_max: 5.5,
       useNegativeCmap: true,
       opacity: 0.7,
+      colormap: "warm",
+      colormapNegative: "winter",
     }
-    const response = await fetch(layer.url)
-    if (!response.ok) {
-      throw Error(response.statusText)
-    }
-    const buffer = await response.arrayBuffer()
-    niivue.NVMeshLoaders.readLayer(layer.url, buffer, nv1.meshes[0], layer.opacity, 'warm', 'winter', layer.useNegativeCmap, layer.cal_min, layer.cal_max)
+    await niivue.NVMesh.loadLayer(layer, nv1.meshes[0])
     nv1.meshes[0].updateMesh(nv1.gl)
-    nv1.refreshColormaps()
     nv1.drawScene()
     console.log('mesh updated')
   }

@@ -123,6 +123,8 @@ export * from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
+export { NVMeshUtilities } from '../nvmesh-utilities.js'
+
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '../types.js'
@@ -2808,6 +2810,25 @@ export class Niivue {
   }
 
   /**
+   * reduce complexity of FreeSurfer mesh
+   * @param mesh - identity of mesh to change
+   * @param order - decimation order 0..6
+   * @example niivue.decimateHierarchicalMesh(niivue.meshes[0].id, 4)
+   * @returns boolean false if mesh is not hierarchical or of lower order
+   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   */
+  decimateHierarchicalMesh(mesh: number, order: number = 3): boolean {
+    const idx = this.getMeshIndexByID(mesh)
+    if (idx < 0) {
+      log.warn('reverseFaces() id not loaded', mesh)
+      return
+    }
+    const ret = this.meshes[idx].decimateHierarchicalMesh(this.gl, order)
+    this.updateGLVolume()
+    return ret
+  }
+
+  /**
    * reverse triangle winding of mesh (swap front and back faces)
    * @param id - identity of mesh to change
    * @example niivue.reverseFaces(niivue.meshes[0].id)
@@ -3366,6 +3387,9 @@ export class Niivue {
     this.renderShader!.use(this.gl)
     this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
     this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
+    this.pickingImageShader!.use(this.gl)
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     this.drawScene()
   }
 
@@ -5947,7 +5971,8 @@ export class Niivue {
     this.pickingImageShader.use(this.gl)
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
-
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
+    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     let shader = this.sliceMMShader
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader

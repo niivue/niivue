@@ -1171,7 +1171,8 @@ export class NVMeshLoaders {
     const view = new DataView(buffer) // ArrayBuffer to dataview
     // ALWAYS big endian
     const n_vertex = view.getUint32(0, false)
-    if (n_vert !== n_vertex) {
+    const n_vertexDecimated = this.decimateLayerVertices(n_vertex, n_vert)
+    if (n_vert !== n_vertexDecimated) {
       throw new Error('ANNOT file has different number of vertices than mesh')
     }
     if (buffer.byteLength < 4 + 8 * n_vertex) {
@@ -2505,6 +2506,23 @@ export class NVMeshLoaders {
     }
   } // readSTL()
 
+  static decimateLayerVertices(nVertLayer: number, nVertMesh: number): number {
+    // downsample layer vertices if the mesh has been decimated
+    if (nVertLayer % nVertMesh === 0) {
+      return nVertLayer
+    }
+    const V0 = 12
+    const orderLayer = Math.round(Math.log((nVertLayer - 2) / (V0 - 2)) / Math.log(4))
+    const orderMesh = Math.round(Math.log((nVertMesh - 2) / (V0 - 2)) / Math.log(4))
+    // sanity check
+    const nVLayer = Math.pow(4, orderLayer) * (V0 - 2) + 2
+    const nVMesh = Math.pow(4, orderMesh) * (V0 - 2) + 2
+    if (nVLayer !== nVertLayer || nVMesh !== nVertMesh) {
+      return nVertLayer
+    }
+    return nVertMesh
+  }
+
   // read NIfTI2 format with embedded CIfTI
   // this variation very specific to connectome workbench
   // https://brainder.org/2015/04/03/the-nifti-2-file-format/
@@ -2688,8 +2706,9 @@ export class NVMeshLoaders {
       //
       return scalars
     } // is CIfTI
+    nvert = this.decimateLayerVertices(nvert, n_vert)
     if (nvert % n_vert !== 0) {
-      throw new Error('Vertices in NIfTI (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
+      throw new Error('Vertices in layer (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
     }
     if (isLittleEndian) {
       // block read native endian
@@ -2776,8 +2795,9 @@ export class NVMeshLoaders {
       const dim = reader.getUint16(40 + i * 2, isLittleEndian)
       nvert *= Math.max(dim, 1)
     }
+    nvert = this.decimateLayerVertices(nvert, n_vert)
     if (nvert % n_vert !== 0) {
-      throw new Error('Vertices in NIfTI (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
+      throw new Error('Vertices in layer (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
     }
     if (isLittleEndian) {
       // block read native endian
@@ -2835,10 +2855,11 @@ export class NVMeshLoaders {
     if (version !== 1 || mtype < 0 || mtype > 4) {
       log.warn('Not a valid MGH file')
     }
-    const nvert = width * height * depth * nframes
+    let nvert = width * height * depth * nframes
     let scalars: AnyNumberArray = []
+    nvert = this.decimateLayerVertices(nvert, n_vert)
     if (nvert % n_vert !== 0) {
-      log.warn('Vertices in NIfTI (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
+      log.warn('Vertices in layer (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
       return scalars
     }
     if (mtype === 3) {

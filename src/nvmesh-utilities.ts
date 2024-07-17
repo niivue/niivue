@@ -1,4 +1,5 @@
 import { vec3 } from 'gl-matrix'
+import { gzipSync } from 'fflate/browser'
 
 type Extents = {
   mxDx: number
@@ -36,6 +37,144 @@ export class NVMeshUtilities {
       border[v2] = true
     }
     return border
+  }
+
+  static createMZ3(vertices: Float32Array, indices: Uint32Array, compress: boolean = false): ArrayBuffer {
+    // generate binary MZ3 format mesh
+    // n.b. small, precise and small but support is not widespread
+    // n.b. result can be compressed with gzip
+    // https://github.com/neurolabusc/surf-ice/tree/master/mz3
+    const magic = 23117
+    const attr = 3
+    const nface = indices.length / 3
+    const nvert = vertices.length / 3
+    const nskip = 0
+    // Calculate buffer size
+    const headerSize = 16
+    const indexSize = nface * 3 * 4 // Uint32Array
+    const vertexSize = nvert * 3 * 4 // Float32Array
+    const totalSize = headerSize + indexSize + vertexSize
+    const buffer = new ArrayBuffer(totalSize)
+    const writer = new DataView(buffer)
+    // Write header
+    writer.setUint16(0, magic, true)
+    writer.setUint16(2, attr, true)
+    writer.setUint32(4, nface, true)
+    writer.setUint32(8, nvert, true)
+    writer.setUint32(12, nskip, true)
+    // Write indices
+    let offset = headerSize
+    new Uint32Array(buffer, offset, indices.length).set(indices)
+    offset += indexSize
+    // Write vertices
+    new Float32Array(buffer, offset, vertices.length).set(vertices)
+    if (compress) {
+      return gzipSync(new Uint8Array(buffer))
+    }
+    return buffer
+  }
+
+  static createOBJ(vertices: Float32Array, indices: Uint32Array): ArrayBuffer {
+    // generate binary OBJ format mesh
+    // n.b. widespread support, but large and slow due to ASCII
+    // https://en.wikipedia.org/wiki/Wavefront_.obj_file
+    let objContent = ''
+    // Add vertices to OBJ content
+    for (let i = 0; i < vertices.length; i += 3) {
+      objContent += `v ${vertices[i]} ${vertices[i + 1]} ${vertices[i + 2]}\n`
+    }
+    // Add faces to OBJ content (OBJ indices start at 1, not 0)
+    for (let i = 0; i < indices.length; i += 3) {
+      objContent += `f ${indices[i] + 1} ${indices[i + 1] + 1} ${indices[i + 2] + 1}\n`
+    }
+    // Encode the OBJ content as an ArrayBuffer
+    const encoder = new TextEncoder()
+    const arrayBuffer = encoder.encode(objContent).buffer
+    return arrayBuffer
+  }
+
+  static createSTL(vertices: Float32Array, indices: Uint32Array): ArrayBuffer {
+    // generate binary STL format mesh
+    // n.b. inefficient and slow as vertices are not reused
+    // https://en.wikipedia.org/wiki/STL_(file_format)#Binary
+    const numTriangles = indices.length / 3
+    const bufferLength = 84 + numTriangles * 50
+    const arrayBuffer = new ArrayBuffer(bufferLength)
+    const dataView = new DataView(arrayBuffer)
+    // Write header (80 bytes)
+    for (let i = 0; i < 80; i++) {
+      dataView.setUint8(i, 0)
+    }
+    // Write number of triangles (4 bytes)
+    dataView.setUint32(80, numTriangles, true)
+    let offset = 84
+    for (let i = 0; i < indices.length; i += 3) {
+      const i0 = indices[i] * 3
+      const i1 = indices[i + 1] * 3
+      const i2 = indices[i + 2] * 3
+      // Normal vector (12 bytes, set to zero)
+      dataView.setFloat32(offset, 0, true) // Normal X
+      dataView.setFloat32(offset + 4, 0, true) // Normal Y
+      dataView.setFloat32(offset + 8, 0, true) // Normal Z
+      offset += 12
+      // Vertex 1 (12 bytes)
+      dataView.setFloat32(offset, vertices[i0], true) // Vertex 1 X
+      dataView.setFloat32(offset + 4, vertices[i0 + 1], true) // Vertex 1 Y
+      dataView.setFloat32(offset + 8, vertices[i0 + 2], true) // Vertex 1 Z
+      offset += 12
+      // Vertex 2 (12 bytes)
+      dataView.setFloat32(offset, vertices[i1], true) // Vertex 2 X
+      dataView.setFloat32(offset + 4, vertices[i1 + 1], true) // Vertex 2 Y
+      dataView.setFloat32(offset + 8, vertices[i1 + 2], true) // Vertex 2 Z
+      offset += 12
+      // Vertex 3 (12 bytes)
+      dataView.setFloat32(offset, vertices[i2], true) // Vertex 3 X
+      dataView.setFloat32(offset + 4, vertices[i2 + 1], true) // Vertex 3 Y
+      dataView.setFloat32(offset + 8, vertices[i2 + 2], true) // Vertex 3 Z
+      offset += 12
+      // Attribute byte count (2 bytes, set to zero)
+      dataView.setUint16(offset, 0, true)
+      offset += 2
+    }
+    return arrayBuffer
+  }
+
+  static downloadArrayBuffer(buffer: ArrayBuffer, filename: string): void {
+    const blob = new Blob([buffer], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.style.display = 'none'
+    a.click()
+    setTimeout(() => {
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }, 0)
+  }
+
+  static saveMesh(
+    vertices: Float32Array,
+    indices: Uint32Array,
+    filename: string = '.mz3',
+    compress: boolean = false
+  ): ArrayBuffer {
+    let buff = new ArrayBuffer(0)
+    if (/\.obj$/i.test(filename)) {
+      buff = this.createOBJ(vertices, indices)
+    } else if (/\.stl$/i.test(filename)) {
+      buff = this.createSTL(vertices, indices)
+    } else {
+      if (!/\.mz3$/i.test(filename)) {
+        filename += '.mz3'
+      }
+      buff = this.createMZ3(vertices, indices, compress)
+    }
+    if (filename.length > 4) {
+      this.downloadArrayBuffer(buff, filename)
+    }
+    return buff
   }
 
   static getClusterBoundary(rgba8: Uint8Array, faces: number[] | Uint32Array): boolean[] {
