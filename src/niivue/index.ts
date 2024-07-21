@@ -41,6 +41,7 @@ import {
   fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshEdgeShader,
+  fragMeshShaderCrevice,
   fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
@@ -478,6 +479,10 @@ export class Niivue {
     {
       Name: 'Hemispheric',
       Frag: fragMeshHemiShader
+    },
+    {
+      Name: 'Crevice',
+      Frag: fragMeshShaderCrevice
     },
     {
       Name: 'Edge',
