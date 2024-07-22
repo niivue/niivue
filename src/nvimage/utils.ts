@@ -388,15 +388,17 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
   const SHORT_SIZE = 2
   const FLOAT32_SIZE = 4
   let isLittleEndian = true
-  if (isInputEndian)
+  if (isInputEndian) {
     isLittleEndian = hdr.littleEndian
+  }
   const byteArray = new Uint8Array(348)
   const view = new DataView(byteArray.buffer)
   // sizeof_hdr
   view.setInt32(0, 348, isLittleEndian)
 
   // data_type, db_name, extents, session_error, regular are not used
-
+  // regular set to 'r' (ASCII 114) for Analyze compatibility
+  view.setUint8(38, 114)
   // dim_info
   view.setUint8(39, hdr.dim_info)
 
@@ -429,7 +431,7 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
     view.setFloat32(112, 1.0, isLittleEndian)
     view.setFloat32(116, 0.0, isLittleEndian)
   } else {
-    //view.setFloat32(108, hdr.vox_offset, isLittleEndian)
+    // view.setFloat32(108, hdr.vox_offset, isLittleEndian)
     view.setFloat32(108, 352, isLittleEndian)
     view.setFloat32(112, hdr.scl_slope, isLittleEndian)
     view.setFloat32(116, hdr.scl_inter, isLittleEndian)
@@ -439,7 +441,11 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
 
   // slice_code, xyzt_units
   view.setUint8(122, hdr.slice_code)
-  view.setUint8(123, hdr.xyzt_units)
+  if (hdr.xyzt_units === 0) {
+    view.setUint8(123, 10)
+  } else {
+    view.setUint8(123, hdr.xyzt_units)
+  }
 
   // cal_max, cal_min, slice_duration, toffset
   if (isDrawing8) {
@@ -461,7 +467,12 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
   byteArray.set(str2Buffer(hdr.aux_file), 228)
   // qform_code, sform_code
   view.setInt16(252, hdr.qform_code, isLittleEndian)
-  view.setInt16(254, hdr.sform_code, isLittleEndian)
+  // if sform unknown, assume NIFTI_XFORM_SCANNER_ANAT
+  if (hdr.sform_code < 1 || hdr.sform_code < 1) {
+    view.setInt16(254, 1, isLittleEndian)
+  } else {
+    view.setInt16(254, hdr.sform_code, isLittleEndian)
+  }
 
   // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
   view.setFloat32(256, hdr.quatern_b, isLittleEndian)
@@ -478,11 +489,11 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
   // node.js https://www.w3schools.com/nodejs/met_buffer_from.asp
   // intent_name and magic
   // node.js byteArray.set(Buffer.from(hdr.intent_name), 328);
-//  byteArray.set(str2Buffer(hdr.intent_name), 328)
+  //  byteArray.set(str2Buffer(hdr.intent_name), 328)
   // node.js byteArray.set(Buffer.from(hdr.magic), 344);
-  //byteArray.set(str2Buffer(hdr.magic), 344)
-  view.setInt32(344, 3222382, true) //"n+1\0"
-  
+  // byteArray.set(str2Buffer(hdr.magic), 344)
+  view.setInt32(344, 3222382, true) // "n+1\0"
+
   console.log('???', byteArray[344])
   return byteArray
   // return byteArray.buffer;
