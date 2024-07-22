@@ -373,10 +373,13 @@ following conditions are met:
   return m
 }
 
-function str2Buffer(str: string): number[] {
+function str2Buffer(str: string, maxLen: number = 80): number[] {
   // emulate node.js Buffer.from
+  // remove characters than could be used for shell expansion
+  str = str.replace(/[`$]/g, '')
   const bytes = []
-  for (let i = 0; i < str.length; i++) {
+  const len = Math.min(maxLen, str.length)
+  for (let i = 0; i < len; i++) {
     const char = str.charCodeAt(i)
     bytes.push(char & 0xff)
   }
@@ -494,7 +497,6 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
   // byteArray.set(str2Buffer(hdr.magic), 344)
   view.setInt32(344, 3222382, true) // "n+1\0"
 
-  console.log('???', byteArray[344])
   return byteArray
   // return byteArray.buffer;
 }
