@@ -373,10 +373,13 @@ following conditions are met:
   return m
 }
 
-function str2Buffer(str: string): number[] {
+function str2Buffer(str: string, maxLen: number = 80): number[] {
   // emulate node.js Buffer.from
+  // remove characters than could be used for shell expansion
+  str = str.replace(/[`$]/g, '')
   const bytes = []
-  for (let i = 0; i < str.length; i++) {
+  const len = Math.min(maxLen, str.length)
+  for (let i = 0; i < len; i++) {
     const char = str.charCodeAt(i)
     bytes.push(char & 0xff)
   }
@@ -384,70 +387,79 @@ function str2Buffer(str: string): number[] {
 }
 
 // save NIfTI header into UINT8 array for saving to disk
-export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false): Uint8Array {
+export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEndian = false): Uint8Array {
   const SHORT_SIZE = 2
   const FLOAT32_SIZE = 4
-
+  let isLittleEndian = true
+  if (isInputEndian) {
+    isLittleEndian = hdr.littleEndian
+  }
   const byteArray = new Uint8Array(348)
   const view = new DataView(byteArray.buffer)
   // sizeof_hdr
-  view.setInt32(0, 348, hdr.littleEndian)
+  view.setInt32(0, 348, isLittleEndian)
 
   // data_type, db_name, extents, session_error, regular are not used
-
+  // regular set to 'r' (ASCII 114) for Analyze compatibility
+  view.setUint8(38, 114)
   // dim_info
   view.setUint8(39, hdr.dim_info)
 
   // dims
   for (let i = 0; i < 8; i++) {
-    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], hdr.littleEndian)
+    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], isLittleEndian)
   }
 
   // intent_p1, intent_p2, intent_p3
-  view.setFloat32(56, hdr.intent_p1, hdr.littleEndian)
-  view.setFloat32(60, hdr.intent_p2, hdr.littleEndian)
-  view.setFloat32(64, hdr.intent_p3, hdr.littleEndian)
+  view.setFloat32(56, hdr.intent_p1, isLittleEndian)
+  view.setFloat32(60, hdr.intent_p2, isLittleEndian)
+  view.setFloat32(64, hdr.intent_p3, isLittleEndian)
   // intent_code, datatype, bitpix, slice_start
-  view.setInt16(68, hdr.intent_code, hdr.littleEndian)
+  view.setInt16(68, hdr.intent_code, isLittleEndian)
   if (isDrawing8) {
-    view.setInt16(70, 2, hdr.littleEndian) // 2 = DT_UINT8
-    view.setInt16(72, 8, hdr.littleEndian)
+    view.setInt16(70, 2, isLittleEndian) // 2 = DT_UINT8
+    view.setInt16(72, 8, isLittleEndian)
   } else {
-    view.setInt16(70, hdr.datatypeCode, hdr.littleEndian)
-    view.setInt16(72, hdr.numBitsPerVoxel, hdr.littleEndian)
+    view.setInt16(70, hdr.datatypeCode, isLittleEndian)
+    view.setInt16(72, hdr.numBitsPerVoxel, isLittleEndian)
   }
-  view.setInt16(74, hdr.slice_start, hdr.littleEndian)
+  view.setInt16(74, hdr.slice_start, isLittleEndian)
 
   // pixdim[8], vox_offset, scl_slope, scl_inter
   for (let i = 0; i < 8; i++) {
-    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], hdr.littleEndian)
+    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], isLittleEndian)
   }
   if (isDrawing8) {
-    view.setFloat32(108, 352, hdr.littleEndian)
-    view.setFloat32(112, 1.0, hdr.littleEndian)
-    view.setFloat32(116, 0.0, hdr.littleEndian)
+    view.setFloat32(108, 352, isLittleEndian)
+    view.setFloat32(112, 1.0, isLittleEndian)
+    view.setFloat32(116, 0.0, isLittleEndian)
   } else {
-    view.setFloat32(108, hdr.vox_offset, hdr.littleEndian)
-    view.setFloat32(112, hdr.scl_slope, hdr.littleEndian)
-    view.setFloat32(116, hdr.scl_inter, hdr.littleEndian)
+    // view.setFloat32(108, hdr.vox_offset, isLittleEndian)
+    view.setFloat32(108, 352, isLittleEndian)
+    view.setFloat32(112, hdr.scl_slope, isLittleEndian)
+    view.setFloat32(116, hdr.scl_inter, isLittleEndian)
   }
   // slice_end
-  view.setInt16(120, hdr.slice_end, hdr.littleEndian)
+  view.setInt16(120, hdr.slice_end, isLittleEndian)
 
   // slice_code, xyzt_units
   view.setUint8(122, hdr.slice_code)
-  view.setUint8(123, hdr.xyzt_units)
+  if (hdr.xyzt_units === 0) {
+    view.setUint8(123, 10)
+  } else {
+    view.setUint8(123, hdr.xyzt_units)
+  }
 
   // cal_max, cal_min, slice_duration, toffset
   if (isDrawing8) {
-    view.setFloat32(124, 0, hdr.littleEndian)
-    view.setFloat32(128, 0, hdr.littleEndian)
+    view.setFloat32(124, 0, isLittleEndian)
+    view.setFloat32(128, 0, isLittleEndian)
   } else {
-    view.setFloat32(124, hdr.cal_max, hdr.littleEndian)
-    view.setFloat32(128, hdr.cal_min, hdr.littleEndian)
+    view.setFloat32(124, hdr.cal_max, isLittleEndian)
+    view.setFloat32(128, hdr.cal_min, isLittleEndian)
   }
-  view.setFloat32(132, hdr.slice_duration, hdr.littleEndian)
-  view.setFloat32(136, hdr.toffset, hdr.littleEndian)
+  view.setFloat32(132, hdr.slice_duration, isLittleEndian)
+  view.setFloat32(136, hdr.toffset, isLittleEndian)
 
   // glmax, glmin are unused
 
@@ -457,27 +469,34 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false): Uint8Arr
   // node.js: byteArray.set(Buffer.from(hdr.aux_file), 228);
   byteArray.set(str2Buffer(hdr.aux_file), 228)
   // qform_code, sform_code
-  view.setInt16(252, hdr.qform_code, hdr.littleEndian)
-  view.setInt16(254, hdr.sform_code, hdr.littleEndian)
+  view.setInt16(252, hdr.qform_code, isLittleEndian)
+  // if sform unknown, assume NIFTI_XFORM_SCANNER_ANAT
+  if (hdr.sform_code < 1 || hdr.sform_code < 1) {
+    view.setInt16(254, 1, isLittleEndian)
+  } else {
+    view.setInt16(254, hdr.sform_code, isLittleEndian)
+  }
 
   // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
-  view.setFloat32(256, hdr.quatern_b, hdr.littleEndian)
-  view.setFloat32(260, hdr.quatern_c, hdr.littleEndian)
-  view.setFloat32(264, hdr.quatern_d, hdr.littleEndian)
-  view.setFloat32(268, hdr.qoffset_x, hdr.littleEndian)
-  view.setFloat32(272, hdr.qoffset_y, hdr.littleEndian)
-  view.setFloat32(276, hdr.qoffset_z, hdr.littleEndian)
+  view.setFloat32(256, hdr.quatern_b, isLittleEndian)
+  view.setFloat32(260, hdr.quatern_c, isLittleEndian)
+  view.setFloat32(264, hdr.quatern_d, isLittleEndian)
+  view.setFloat32(268, hdr.qoffset_x, isLittleEndian)
+  view.setFloat32(272, hdr.qoffset_y, isLittleEndian)
+  view.setFloat32(276, hdr.qoffset_z, isLittleEndian)
   const flattened = hdr.affine.flat()
   // we only want the first three rows
   for (let i = 0; i < 12; i++) {
-    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], hdr.littleEndian)
+    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], isLittleEndian)
   }
   // node.js https://www.w3schools.com/nodejs/met_buffer_from.asp
   // intent_name and magic
   // node.js byteArray.set(Buffer.from(hdr.intent_name), 328);
-  byteArray.set(str2Buffer(hdr.intent_name), 328)
+  //  byteArray.set(str2Buffer(hdr.intent_name), 328)
   // node.js byteArray.set(Buffer.from(hdr.magic), 344);
-  byteArray.set(str2Buffer(hdr.magic), 344)
+  // byteArray.set(str2Buffer(hdr.magic), 344)
+  view.setInt32(344, 3222382, true) // "n+1\0"
+
   return byteArray
   // return byteArray.buffer;
 }

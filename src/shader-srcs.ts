@@ -1207,11 +1207,11 @@ uniform mat4 mvpMtx;
 uniform mat4 normMtx;
 out vec4 vClr;
 out vec3 vN;
-out vec4 vP;
+out vec4 vPc;
 void main(void) {
 	vec3 lightPosition = vec3(0.0, 0.0, -10.0);
-	vP = vec4(pos, 1.0);
-	gl_Position = mvpMtx * vP;
+	vPc = mvpMtx * vec4(pos, 1.0);
+	gl_Position = vPc;
 	vN = normalize((normMtx * vec4(norm.xyz,1.0)).xyz);
 	//vV = -vec3(modelMtx*vec4(pos,1.0));
 	vClr = clr;
@@ -1368,6 +1368,46 @@ void main() {
 	color = vec4(d3 + s3 + s, opacity);
 }`
 
+// https://thorium.rocks/media/curves/curvaceous.html
+export const fragMeshShaderCrevice = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+in vec4 vPc;
+out vec4 color;
+void main() {
+	vec3 n = normalize(vN);
+	// Compute curvature
+	vec3 dx = dFdx(n);
+	vec3 dy = dFdy(n);
+	vec3 xneg = n - dx;
+	vec3 xpos = n + dx;
+	vec3 yneg = n - dy;
+	vec3 ypos = n + dy;
+	float depth = length(vPc.xyz);
+	float curv = (cross(xneg, xpos).y - cross(yneg, ypos).x) / depth;
+	//at this stage 0.5 for flat, with valleys dark and ridges bright
+	curv = 1.0 - (curv + 0.5);
+	//clamp
+	curv =  min(max(curv, 0.0), 1.0);
+	// easing function
+	curv = pow(curv, 0.5);
+	//modulate ambient and diffuse with curvature
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.6;
+	float diffuse = 0.6;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 lightPosition = vec3(0.0, 10.0, -2.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient * curv;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color = vec4(a + d + s, opacity);
+}`
 // Phong: default
 export const fragMeshShader = `#version 300 es
 precision highp int;

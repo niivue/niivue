@@ -41,6 +41,7 @@ import {
   fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshEdgeShader,
+  fragMeshShaderCrevice,
   fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
   fragMeshMatteShader,
@@ -478,6 +479,10 @@ export class Niivue {
     {
       Name: 'Hemispheric',
       Frag: fragMeshHemiShader
+    },
+    {
+      Name: 'Crevice',
+      Frag: fragMeshShaderCrevice
     },
     {
       Name: 'Edge',
@@ -2051,7 +2056,7 @@ export class Niivue {
                       this.addVolume(volume)
                       // set drawing enabled to make sure
                       // the new drawing bitmap matches the background volume dims
-                      this.setDrawingEnabled(true)
+                      // this.setDrawingEnabled(true)
                     }
                   })
                   .catch((e) => {
