@@ -1631,7 +1631,7 @@ export class NVImage {
             hdr.datatypeCode = NiiDataType.DT_FLOAT64
             break
           default:
-            throw new Error('Unsupported NRRD data type: ' + items[0])
+            throw new Error('Unsupported MHA data type: ' + items[0])
         }
       }
       if (line.startsWith('ObjectType') && !items[0].includes('Image')) {
