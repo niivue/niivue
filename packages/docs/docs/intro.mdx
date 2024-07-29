@@ -1,0 +1,57 @@
+---
+sidebar_position: 1
+---
+
+import NiivueCanvas from '../src/components/NiivueCanvas'
+
+# Getting started
+
+NiiVue is module for loading, parsing, and viewing medical imaging data in the browser.
+
+> **Note**: NiiVue is not intended to be used in Node.js environments. It is designed to be used in the browser to _view_ data and a WebGL2 rendering context is required. 
+
+## Installation
+
+To install NiiVue, you can use your favorite package manager:
+
+```bash
+npm install @niivue/niivue
+```
+
+## Usage
+
+The `Niivue` class can be used in any framework or plain JavaScript. Here is an example of how to use it in a React component. However, you will probably want to use `useRef` or `useContext` with your initialised `Niivue` instance to interact with it for better performance and reduce re-renders.
+
+```jsx
+import { useRef, useEffect } from "react";
+import { Niivue } from "@niivue/niivue";
+
+const NiiVue = ({ imageUrl }) => {
+  const canvas = useRef();
+  useEffect(() => {
+    const volumeList = [
+      {
+        url: imageUrl,
+      },
+    ];
+    const nv = new Niivue();
+    nv.attachToCanvas(canvas.current);
+    nv.loadVolumes(volumeList);
+  }, [imageUrl]);
+
+  return <canvas ref={canvas} height={480} width={640} />;
+};
+
+// use as: <NiiVue imageUrl={someUrl}> </NiiVue>
+```
+## Embedded canvas example
+
+Go ahead, click around in the viewer below. That's NiiVue in action! In this example, we are loading a single Nifti file. This is rendered in our Docusaurus MDX page using a custom React component.
+
+<NiivueCanvas
+    images={[
+        {url: "/niivue/mni152.nii.gz"}
+    ]}
+    nvOpts={{}}
+>
+</NiivueCanvas>
