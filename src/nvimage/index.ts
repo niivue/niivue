@@ -1653,8 +1653,9 @@ export class NVImage {
       [mat33[2], mat33[5], mat33[8], offset[2]],
       [0, 0, 0, 1]
     ]
-    while (bytes[pos] === 10)
+    while (bytes[pos] === 10) {
       pos++
+    }
     hdr.vox_offset = pos
     if (isDetached && pairedImgData) {
       if (isGz) {

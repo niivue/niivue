@@ -709,6 +709,12 @@ export class NVMeshLoaders {
     while (lines[pos].length < 1) {
       pos++
     } // skip blank lines
+    if (lines[pos].startsWith('METADATA')) {
+      while (lines[pos].length > 1) {
+        pos++
+      } // skip until blank line
+      pos++
+    }
     items = lines[pos].trim().split(/\s+/)
     pos++
     if (items[0].includes('LINES')) {
