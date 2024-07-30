@@ -26,7 +26,7 @@ export default defineConfig({
   },
 
   expect: {
-    toHaveScreenshot: { maxDiffPixelRatio: 0.01 }
+    toHaveScreenshot: { maxDiffPixelRatio: 0.05 } // bumped to 5% due to github actions rendering differences
   },
 
   snapshotPathTemplate: './playwright/e2e/__screenshots__/{testName}/{testName}-{projectName}{ext}',
