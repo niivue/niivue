@@ -1,0 +1,103 @@
+{
+  "name": "@niivue/niivue",
+  "version": "0.44.2",
+  "description": "minimal webgl2 nifti image viewer",
+  "types": "./build/index.d.ts",
+  "main": "./build/index.js",
+  "type": "module",
+  "unpkg": "./dist/index.min.js",
+  "module": "./build/index.js",
+  "exports": {
+    ".": {
+      "import": "./build/index.js"
+    },
+    "./min": {
+      "import": "./build/index.min.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
+    "build": "tsup --config tsup.config.ts && npm run build:forTests && npm run build:min && npm run build:umd",
+    "build:forTests": "tsup --config tsup.config.tests.ts && npm run build:mindemos",
+    "build:min": "node bundle.js",
+    "build:mindemos": "node bundleForDemos.js",
+    "demo": "npm run build:forTests && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
+    "demo-win": "npm run build && npx http-server demos/",
+    "test": "npm run build:forTests && npm run test:unit && jest --maxWorkers=1",
+    "test-win": "npm run build-win && jest",
+    "test-playwright": "npx playwright test --grep-invert \"niivue demo file:\"",
+    "test-demos": "npx playwright test playwright/e2e/test.demos.spec.ts",
+    "docs": "typedoc",
+    "test:unit": "vitest --run --coverage",
+    "serve-docs": "npx http-server devdocs",
+    "pub": "npm run build && npm publish --access public",
+    "lint": "eslint .",
+    "lint:ts": "tsc --noEmit",
+    "lint:fix": "eslint --fix .",
+    "lint:debug": "DEBUG=eslint:cli-engine eslint .",
+    "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
+    "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
+  },
+  "files": [
+    "src",
+    "build",
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niivue/niivue.git"
+  },
+  "keywords": [
+    "niivue",
+    "webgl2",
+    "nifti",
+    "image",
+    "viewer"
+  ],
+  "author": "niivue authors",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/niivue/niivue/issues"
+  },
+  "homepage": "https://github.com/niivue/niivue#readme",
+  "dependencies": {
+    "@lukeed/uuid": "^2.0.1",
+    "@ungap/structured-clone": "^1.2.0",
+    "array-equal": "^1.0.2",
+    "daikon": "^1.2.46",
+    "fflate": "^0.8.2",
+    "gl-matrix": "^3.4.3",
+    "nifti-reader-js": "^0.6.8",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.2",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@types/array-equal": "^1.0.2",
+    "@types/node": "^20.14.11",
+    "@types/ungap__structured-clone": "^1.2.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "@vitest/coverage-v8": "^2.0.3",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-tsdoc": "^0.3.0",
+    "express": "^4.19.2",
+    "happy-dom": "^14.12.3",
+    "http-server": "^14.1.1",
+    "prettier": "^3.3.3",
+    "regenerator-runtime": "^0.14.1",
+    "terser": "^5.31.3",
+    "tsup": "^8.1.2",
+    "typedoc": "^0.26.4",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4",
+    "vitest": "^2.0.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.18.1"
+  }
+}
