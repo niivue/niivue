@@ -1631,7 +1631,7 @@ export class NVImage {
             hdr.datatypeCode = NiiDataType.DT_FLOAT64
             break
           default:
-            throw new Error('Unsupported NRRD data type: ' + items[0])
+            throw new Error('Unsupported MHA data type: ' + items[0])
         }
       }
       if (line.startsWith('ObjectType') && !items[0].includes('Image')) {
@@ -1653,6 +1653,9 @@ export class NVImage {
       [mat33[2], mat33[5], mat33[8], offset[2]],
       [0, 0, 0, 1]
     ]
+    while (bytes[pos] === 10) {
+      pos++
+    }
     hdr.vox_offset = pos
     if (isDetached && pairedImgData) {
       if (isGz) {
