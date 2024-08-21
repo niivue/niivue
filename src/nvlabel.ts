@@ -96,8 +96,13 @@ export class NVLabel3D {
    * @param style - The style of the label
    * @param points - An array of points label for label lines
    */
-  constructor(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint,
-    onClick?: (label: NVLabel3D) => void) {
+  constructor(
+    text: string,
+    style: NVLabel3DStyle,
+    points?: number[] | number[][],
+    anchor?: LabelAnchorPoint,
+    onClick?: (label: NVLabel3D) => void
+  ) {
     this.text = text
     this.style = style
     this.points = points
