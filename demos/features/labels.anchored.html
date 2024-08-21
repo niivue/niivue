@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Anchored Labels</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>
+    <strong>niivue requires JavaScript.</strong>
+  </noscript>
+  <header>
+    <select id="sliceType">
+      <option value="0">Axial</option>
+      <option value="1">Coronal</option>
+      <option value="2">Sagittal</option>
+      <option value="4">Render</option>
+      <option value="3" selected>A+C+S+R</option>
+    </select>
+  </header>
+  <main id="container">
+    <canvas id="gl1"></canvas>
+  </main>
+  <footer id="intensity">&nbsp;</footer>
+</body>
+
+</html>
+<!-- <script type="module" async></script> -->
+<script type="module" async>
+  import * as niivue from "../dist/index.js";
+
+  var drop = document.getElementById("sliceType");
+  drop.onchange = function () {
+    let st = parseInt(document.getElementById("sliceType").value);
+    nv1.setSliceType(st);
+  }
+  function handleIntensityChange(data) {
+    document.getElementById("intensity").innerHTML =
+      "&nbsp;&nbsp;" + data.string;
+    console.log(data);
+  }
+  function alertLabelText(label) {
+    alert(label.text);
+  }
+
+  var volumeList1 = [
+    {
+      url: "../images/mni152.nii.gz",
+      colormap: "gray",
+      visible: true,
+      opacity: 1
+    },
+    {
+      url: "../images/hippo.nii.gz",
+      colormap: "red",
+      visible: true,
+      opacity: 1
+    }
+  ];
+  var nv1 = new niivue.Niivue({
+    dragAndDropEnabled: true,
+    onLocationChange: handleIntensityChange,
+  });
+  // nv1.setRadiologicalConvention(false);
+  // nv1.opts.multiplanarForceRender = true;
+  nv1.attachTo("gl1");
+  await nv1.loadVolumes(volumeList1);
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+  console.log('anchor point', niivue.LabelAnchorPoint.TOPLEFT)
+  nv1.addLabel("Top Left", { textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT, textColor: [1.0, 1.0, 0.0, 1.0], backgroundColor: [1.0, 0.0, 0.0, 0.2] }, undefined, niivue.LabelAnchorPoint.TOPLEFT, alertLabelText);
+  // nv1.addLabel("Top Center", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT}, undefined, niivue.LabelAnchorPoint.TOPCENTER, alertLabelText);
+  // nv1.addLabel("Top Right", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT}, undefined, niivue.LabelAnchorPoint.TOPRIGHT, alertLabelText);
+  // nv1.addLabel("Middle Left", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT}, undefined, niivue.LabelAnchorPoint.MIDDLELEFT, alertLabelText);
+  nv1.addLabel("Middle Center", { textScale: 0.5, textAlignment: niivue.LabelTextAlignment.LEFT, backgroundColor: [0.0, 0.0, 1.0, 0.5] }, undefined, niivue.LabelAnchorPoint.MIDDLECENTER, alertLabelText);
+  // nv1.addLabel("Middle Right", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT}, undefined, niivue.LabelAnchorPoint.MIDDLERIGHT, alertLabelText);
+  // nv1.addLabel("Bottom Left", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT}, undefined, niivue.LabelAnchorPoint.BOTTOMLEFT, alertLabelText);
+  // nv1.addLabel("Bottom Center", {textScale: 2.0, textAlignment: niivue.LabelTextAlignment.LEFT}, undefined, niivue.LabelAnchorPoint.BOTTOMCENTER, alertLabelText);
+  nv1.addLabel("Bottom Right", { textScale: 1.0, textAlignment: niivue.LabelTextAlignment.LEFT, backgroundColor: [0.0, 1.0, 0.0, 1.0] }, undefined, niivue.LabelAnchorPoint.BOTTOMRIGHT, alertLabelText);
+  nv1.drawScene();
+</script>

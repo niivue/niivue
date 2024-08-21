@@ -79,7 +79,7 @@ import {
   INITIAL_SCENE_DATA
 } from '../nvdocument.js'
 
-import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
+import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
 import {
   NVImage,
@@ -539,7 +539,7 @@ export class Niivue {
    *   console.log('drag ended')
    * }
    */
-  onDragRelease: (params: DragReleaseParams) => void = () => {} // function to call when contrast drag is released by default. Can be overridden by user
+  onDragRelease: (params: DragReleaseParams) => void = () => { } // function to call when contrast drag is released by default. Can be overridden by user
 
   /**
    * callback function to run when the left mouse button is released
@@ -548,7 +548,7 @@ export class Niivue {
    *   console.log('mouse up')
    * }
    */
-  onMouseUp: (data: Partial<UIData>) => void = () => {}
+  onMouseUp: (data: Partial<UIData>) => void = () => { }
   /**
    * callback function to run when the crosshair location changes
    * @example
@@ -560,7 +560,7 @@ export class Niivue {
    * console.log('values: ', data.values)
    * }
    */
-  onLocationChange: (location: unknown) => void = () => {}
+  onLocationChange: (location: unknown) => void = () => { }
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
    * @example
@@ -569,7 +569,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onIntensityChange: (volume: NVImage) => void = () => {}
+  onIntensityChange: (volume: NVImage) => void = () => { }
 
   /**
    * callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL
@@ -580,7 +580,7 @@ export class Niivue {
    * console.log('volume mL: ', data.mL)
    * }
    */
-  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => {}
+  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => { }
 
   /**
    * callback function to run when a new volume is loaded
@@ -590,7 +590,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onImageLoaded: (volume: NVImage) => void = () => {}
+  onImageLoaded: (volume: NVImage) => void = () => { }
 
   /**
    * callback function to run when a new mesh is loaded
@@ -600,7 +600,7 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshLoaded: (mesh: NVMesh) => void = () => {}
+  onMeshLoaded: (mesh: NVMesh) => void = () => { }
 
   /**
    * callback function to run when the user changes the volume when a 4D image is loaded
@@ -611,7 +611,7 @@ export class Niivue {
    * console.log('frameNumber: ', frameNumber)
    * }
    */
-  onFrameChange: (volume: NVImage, index: number) => void = () => {}
+  onFrameChange: (volume: NVImage, index: number) => void = () => { }
 
   /**
    * callback function to run when niivue reports an error
@@ -620,10 +620,10 @@ export class Niivue {
    * console.log('error: ', error)
    * }
    */
-  onError: () => void = () => {}
+  onError: () => void = () => { }
 
   /// TODO was undocumented
-  onColormapChange: () => void = () => {}
+  onColormapChange: () => void = () => { }
 
   /**
    * callback function to run when niivue reports detailed info
@@ -632,7 +632,7 @@ export class Niivue {
    * console.log('info: ', info)
    * }
    */
-  onInfo: () => void = () => {}
+  onInfo: () => void = () => { }
 
   /**
    * callback function to run when niivue reports a warning
@@ -641,7 +641,7 @@ export class Niivue {
    * console.log('warn: ', warn)
    * }
    */
-  onWarn: () => void = () => {}
+  onWarn: () => void = () => { }
 
   /**
    * callback function to run when niivue reports a debug message
@@ -650,7 +650,7 @@ export class Niivue {
    * console.log('debug: ', debug)
    * }
    */
-  onDebug: () => void = () => {}
+  onDebug: () => void = () => { }
 
   /**
    * callback function to run when a volume is added from a url
@@ -661,8 +661,8 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => {}
-  onVolumeWithUrlRemoved: (url: string) => void = () => {}
+  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => { }
+  onVolumeWithUrlRemoved: (url: string) => void = () => { }
 
   /**
    * callback function to run when updateGLVolume is called (most users will not need to use
@@ -671,7 +671,7 @@ export class Niivue {
    * console.log('volume updated')
    * }
    */
-  onVolumeUpdated: () => void = () => {}
+  onVolumeUpdated: () => void = () => { }
 
   /**
    * callback function to run when a mesh is added from a url
@@ -682,14 +682,14 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => {}
+  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => { }
 
   // TODO seems redundant with onMeshLoaded
-  onMeshAdded: () => void = () => {}
-  onMeshWithUrlRemoved: (url: string) => void = () => {}
+  onMeshAdded: () => void = () => { }
+  onMeshWithUrlRemoved: (url: string) => void = () => { }
 
   // not implemented anywhere...
-  onZoom3DChange: (zoom: number) => void = () => {}
+  onZoom3DChange: (zoom: number) => void = () => { }
 
   /**
    * callback function to run when the user changes the rotation of the 3D rendering
@@ -699,7 +699,7 @@ export class Niivue {
    * console.log('elevation: ', elevation)
    * }
    */
-  onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => {}
+  onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => { }
 
   /**
    * callback function to run when the user changes the clip plane
@@ -708,10 +708,10 @@ export class Niivue {
    * console.log('clipPlane: ', clipPlane)
    * }
    */
-  onClipPlaneChange: (clipPlane: number[]) => void = () => {}
-  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
-  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => {}
-  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => {}
+  onClipPlaneChange: (clipPlane: number[]) => void = () => { }
+  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => { }
+  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => { }
+  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => { }
 
   /**
    * callback function to run when the user loads a new NiiVue document
@@ -720,7 +720,7 @@ export class Niivue {
    * console.log('document: ', document)
    * }
    */
-  onDocumentLoaded: (document: NVDocument) => void = () => {}
+  onDocumentLoaded: (document: NVDocument) => void = () => { }
 
   document = new NVDocument()
 
@@ -1104,6 +1104,11 @@ export class Niivue {
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
     const label = this.getLabelAtPoint([x, y])
     if (label) {
+      // check for user defined onclick handler
+      if (label.onClick) {
+        label.onClick(label)
+        return
+      }
       // find associated mesh
       for (const mesh of this.meshes) {
         if (mesh.type !== MeshType.CONNECTOME) {
@@ -1970,7 +1975,7 @@ export class Niivue {
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 // @ts-expect-error FIXME looks like a file gets passed instead of a string
                 this.loadBmpTexture(file).catch((e) => {
                   throw e
@@ -1997,7 +2002,7 @@ export class Niivue {
               continue
             }
             if (MESH_EXTENSIONS.includes(ext)) {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 NVMesh.loadFromFile({
                   file,
                   gl: this.gl,
@@ -2012,7 +2017,7 @@ export class Niivue {
               })
               continue
             } else if (ext === 'NVD') {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 NVDocument.loadFromFile(file)
                   .then((nvdoc) => {
                     this.loadDocument(nvdoc)
@@ -2024,10 +2029,10 @@ export class Niivue {
               })
               break
             }
-            ;(entry as FileSystemFileEntry).file((file) => {
+            ; (entry as FileSystemFileEntry).file((file) => {
               if (pairedImageData) {
                 // if we have paired header/img data
-                ;(pairedImageData as FileSystemFileEntry).file((imgfile) => {
+                ; (pairedImageData as FileSystemFileEntry).file((imgfile) => {
                   NVImage.loadFromFile({
                     file,
                     urlImgData: imgfile,
@@ -7556,9 +7561,26 @@ export class Niivue {
     return labels
   }
 
+  getConnectomeLabels(): NVLabel3D[] {
+    const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
+    const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
+    const meshLabels = meshNodes.map((n) => n.label)
+    // filter our undefined labels
+    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
+    // get all of our non-anchored labels
+    const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === LabelAnchorPoint.NONE)
+    // get the unique set of unanchored labels
+    const nonAnchoredLabelSet = new Set(definedMeshLabels)
+    for (const label of nonAnchoredLabels) {
+      nonAnchoredLabelSet.add(label)
+    }
+
+    return Array.from(nonAnchoredLabelSet)
+  }
+
   getBulletMarginWidth(): number {
     let bulletMargin = 0
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     if (labels.length === 0) {
       return 0
     }
@@ -7571,11 +7593,11 @@ export class Niivue {
       labels.length === 1
         ? labels[0]
         : labels.reduce((a, b) => {
-            const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-            const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
-            const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
-            return taller
-          })
+          const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
+          const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+          const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
+          return taller
+        })
     const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale
     bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
     bulletMargin += size
@@ -7583,7 +7605,7 @@ export class Niivue {
   }
 
   getLegendPanelWidth(): number {
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     if (!this.opts.showLegend || labels.length === 0) {
       return 0
     }
@@ -7614,7 +7636,7 @@ export class Niivue {
   }
 
   getLegendPanelHeight(): number {
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     let height = 0
     const scale = 1.0 // we may want to make this adjustable in the future
     const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
@@ -9079,7 +9101,8 @@ export class Niivue {
    * @param style - label style
    * @param point - 3D point on the model
    */
-  addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][]): NVLabel3D {
+  addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint,
+    onClick?: (label: NVLabel3D) => void): NVLabel3D {
     const defaultStyle = {
       textColor: this.opts.legendTextColor,
       textScale: 1.0,
@@ -9091,7 +9114,7 @@ export class Niivue {
       bulletColor: this.opts.legendTextColor
     }
     const labelStyle = style ? { ...defaultStyle, ...style } : { ...defaultStyle }
-    const label = new NVLabel3D(text, labelStyle, points)
+    const label = new NVLabel3D(text, { ...labelStyle }, points, anchor, onClick)
     this.document.labels.push(label)
     return label
   }
@@ -9114,6 +9137,75 @@ export class Niivue {
   }
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
+    const scale = 1.0
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+
+    // get all non-connectome labels
+    for (const label of this.document.labels) {
+      if (label.anchor == null || label.anchor === LabelAnchorPoint.NONE) {
+        continue
+      }
+
+      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const textHeight = this.textHeight(labelSize, label.text)
+      const textWidth = this.textWidth(labelSize, label.text)
+
+      if (label.anchor & LabelAnchorFlag.LEFT) {
+        if (screenPoint[0] > textWidth) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.CENTER) {
+        if (screenPoint[0] < (this.gl.canvas.width - textWidth) / 2) {
+          continue
+        }
+
+        if (screenPoint[0] > (this.gl.canvas.width + textWidth) / 2) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.RIGHT) {
+        if (screenPoint[0] < this.gl.canvas.width - textWidth) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.TOP) {
+        if (screenPoint[1] < verticalMargin / 2) {
+          continue
+        }
+
+        if (screenPoint[1] > textHeight + verticalMargin / 2) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.MIDDLE) {
+        if (screenPoint[1] < (this.gl.canvas.height - textHeight - verticalMargin) / 2) {
+          continue
+        }
+
+        if (screenPoint[1] > (this.gl.canvas.height + textHeight - verticalMargin / 2) / 2) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.BOTTOM) {
+        if (screenPoint[1] < this.gl.canvas.height - textHeight - verticalMargin) {
+          continue
+        }
+
+        if (screenPoint[1] > this.gl.canvas.height - verticalMargin / 2) {
+          continue
+        }
+      }
+
+      // label passed all tests
+      return label
+    }
     log.debug('screenPoint', screenPoint)
     const panelHeight = this.getLegendPanelHeight()
     const panelWidth = this.getLegendPanelWidth()
@@ -9129,10 +9221,7 @@ export class Niivue {
       return null
     }
 
-    const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     for (const label of labels) {
       const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
@@ -9170,11 +9259,11 @@ export class Niivue {
   draw3DLabel(
     label: NVLabel3D,
     pos: vec2,
-    mvpMatrix: mat4,
-    leftTopWidthHeight: number[],
-    bulletMargin = 0,
-    legendWidth: number,
-    secondPass = false
+    mvpMatrix?: mat4,
+    leftTopWidthHeight?: number[],
+    bulletMargin?: number,
+    legendWidth?: number,
+    secondPass?: boolean
   ): void {
     const text = label.text
     const left = pos[0]
@@ -9218,7 +9307,7 @@ export class Niivue {
 
   // not included in public docs
   draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass = false): void {
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     if (!this.opts.showLegend || labels.length === 0) {
       return
     }
@@ -9265,6 +9354,59 @@ export class Niivue {
       if (blend) {
         gl.enable(gl.BLEND)
       }
+    }
+  }
+
+  drawAnchoredLabels(): void {
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    const anchoredLabels = this.document.labels.filter((l) => l.anchor != null && l.anchor !== LabelAnchorPoint.NONE)
+    for (const label of anchoredLabels) {
+      const text = label.text
+      const textHeight = this.textHeight(label.style.textScale, text) * size
+      const textWidth = this.textWidth(label.style.textScale, text) * size
+      let left: number
+      let top: number
+
+      const scale = 1.0 // we may want to make this adjustable in the future
+      const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+      const rectHeightDiff = verticalMargin
+      let rectWidthDiff = verticalMargin / 4
+      let rectHorizontalOffset = 0
+      let rectVerticalOffset = 0
+
+      if (label.anchor & LabelAnchorFlag.LEFT) {
+        left = 0
+      }
+
+      if (label.anchor & LabelAnchorFlag.RIGHT) {
+        left = this.canvas.width - textWidth
+        rectHorizontalOffset -= verticalMargin / 4
+      }
+
+      if (label.anchor & LabelAnchorFlag.CENTER) {
+        left = (this.canvas.width - textWidth) / 2
+        rectHorizontalOffset -= verticalMargin / 4
+        rectWidthDiff += verticalMargin / 4
+      }
+
+      if (label.anchor & LabelAnchorFlag.TOP) {
+        top = 0
+      }
+
+      if (label.anchor & LabelAnchorFlag.MIDDLE) {
+        top = (this.canvas.height - textHeight - verticalMargin) / 2
+        rectVerticalOffset -= verticalMargin / 4
+      }
+
+      if (label.anchor & LabelAnchorFlag.BOTTOM) {
+        top = this.canvas.height - textHeight - verticalMargin
+        rectVerticalOffset -= verticalMargin / 4
+      }
+      this.drawRect(
+        [left + rectHorizontalOffset, top + rectVerticalOffset, textWidth + rectWidthDiff, textHeight + rectHeightDiff],
+        label.style.backgroundColor
+      )
+      this.draw3DLabel(label, [left, top])
     }
   }
 
