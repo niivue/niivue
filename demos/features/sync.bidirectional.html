@@ -75,6 +75,16 @@
         <option value="2">Sync 3D</option>
         <option value="3" selected>Sync 2D and 3D</option>
       </select>
+      <!-- slider for gamma -->
+      <label for="gammaSlider">Gamma</label>
+      <input
+      type="range"
+      min="10"
+      max="400"
+      value="100"
+      class="slider"
+      id="gammaSlider"
+    />
     </header>
     <main>
       <div class='page-wrapper'>
@@ -116,6 +126,14 @@
         nv1.resizeListener();
         nv2.resizeListener();
         nv3.resizeListener();
+      }
+
+      gammaSlider.onchange = function() {
+        const v = parseFloat(gammaSlider.value) * 0.01
+        nv1.setGamma(v)
+        nv1.gl.canvas.focus()
+        nv1.sync()
+        nv1.gl.canvas.blur()
       }
 
       syncDrop.onchange = function() {

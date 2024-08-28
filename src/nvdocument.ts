@@ -217,6 +217,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
 }
 
 type SceneData = {
+  gamma: number
   azimuth: number
   elevation: number
   crosshairPos: vec3
@@ -230,6 +231,7 @@ type SceneData = {
 }
 
 export const INITIAL_SCENE_DATA = {
+  gamma: 1.0,
   azimuth: 110,
   elevation: 10,
   crosshairPos: vec3.create(),
@@ -255,6 +257,7 @@ export type Scene = {
   pan2Dxyzmm: vec4
   _elevation?: number
   _azimuth?: number
+  gamma?: number
 }
 
 export type DocumentData = {

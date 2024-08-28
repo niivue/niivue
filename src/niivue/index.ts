@@ -956,10 +956,18 @@ export class Niivue {
     const thisMM = this.frac2mm(this.scene.crosshairPos)
     // if this.otherNV is an object, then it is a single Niivue instance
     if (this.otherNV instanceof Niivue) {
+      // gamma not dependent on 2d/3d
+      const thisGamma = this.scene.gamma
+      const otherGamma = this.otherNV.scene.gamma
+      if (thisGamma !== otherGamma) {
+        this.otherNV.setGamma(thisGamma)
+      }
+      // options specific to 2d rendering
       if (this.syncOpts['2d']) {
         this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM)
         this.otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
       }
+      // options specific to 3d rendering
       if (this.syncOpts['3d']) {
         this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth
         this.otherNV.scene.renderElevation = this.scene.renderElevation
@@ -971,6 +979,12 @@ export class Niivue {
       for (let i = 0; i < this.otherNV.length; i++) {
         if (this.otherNV[i] === this) {
           continue
+        }
+        // gamma not dependent on 2d/3d
+        const thisGamma = this.scene.gamma
+        const otherGamma = this.otherNV[i].scene.gamma
+        if (thisGamma !== otherGamma) {
+          this.otherNV[i].setGamma(thisGamma)
         }
         if (this.syncOpts['2d']) {
           this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM)
@@ -6801,6 +6815,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
    */
   setGamma(gamma = 1.0): void {
+    this.scene.gamma = gamma
     cmapper.gamma = gamma
     this.updateGLVolume()
   }
