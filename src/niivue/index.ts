@@ -129,7 +129,7 @@ export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
 export { NVMeshUtilities } from '../nvmesh-utilities.js'
 
