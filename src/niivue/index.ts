@@ -10302,24 +10302,33 @@ export class Niivue {
         // TODO this was parseFloat without escaping - passing a number to parseFloat doesn't work
         const pad = parseFloat(`${this.opts.multiplanarPadPixels}`)
         // size for 2 rows, 2 columns
-        const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1)
+        let ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1)
+        // TODO mx is ALWAYS 1, as volScale[] is fraction of largest FOV
         const mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0])
         // size for 3 columns and 1 row
-        const ltwh3x1 = this.scaleSlice(
+        let ltwh3x1 = this.scaleSlice(
           volScale[0] + volScale[0] + volScale[1],
           Math.max(volScale[1], volScale[2]),
           pad * 2
         )
         // size for 4 columns and 1 row
-        const ltwh4x1 = this.scaleSlice(
+        let ltwh4x1 = this.scaleSlice(
           volScale[0] + volScale[0] + volScale[1] + mx,
           Math.max(volScale[1], volScale[2]),
           pad * 3
         )
         // size for 1 column * 3 rows
-        const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], 0, pad * 2)
+        let ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], 0, pad * 2)
         // size for 1 column * 4 rows
-        const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, 0, pad * 3)
+        let ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, 0, pad * 3)
+        if (this.opts.multiplanarEqualSize) {
+          // issue1054
+          ltwh1x3 = this.scaleSlice(mx, 3 * mx, 0, pad * 2)
+          ltwh1x4 = this.scaleSlice(mx, 4 * mx, 0, pad * 3)
+          ltwh2x2 = this.scaleSlice(2 * mx, 2 * mx, pad * 1, pad * 1)
+          ltwh3x1 = this.scaleSlice(3 * mx, mx, pad * 2)
+          ltwh4x1 = this.scaleSlice(4 * mx, mx, pad * 3)
+        }
         let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph)
         let isDrawColumn = false
         let isDrawGrid = false
@@ -10350,15 +10359,28 @@ export class Niivue {
           const sX = volScale[0] * ltwh[4]
           const sY = volScale[1] * ltwh[4]
           const sZ = volScale[2] * ltwh[4]
+          let skipY = sY
+          let skipZ = sZ
+          let padX = 0
+          let padY = 0
+          let padZ = 0
+          if (this.opts.multiplanarEqualSize) {
+            // console.log('column')
+            skipY = ltwh[4]
+            skipZ = ltwh[4]
+            padX = Math.floor((1 - volScale[0]) * ltwh[4] * 0.5)
+            padY = Math.floor((1 - volScale[1]) * ltwh[4] * 0.5)
+            padZ = Math.floor((1 - volScale[2]) * ltwh[4] * 0.5)
+          }
           const sMx = mx * ltwh[4]
           // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0)
+          this.draw2D([ltwh[0] + padX, ltwh[1] + padY, sX, sY], 0)
           // draw coronal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1)
+          this.draw2D([ltwh[0] + padX, ltwh[1] + skipY + padZ + pad, sX, sZ], 1)
           // draw sagittal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2)
+          this.draw2D([ltwh[0] + padY, ltwh[1] + skipY + padZ + pad + skipZ + pad, sY, sZ], 2)
           if (isDraw3D) {
-            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
+            this.draw3D([ltwh[0], ltwh[1] + skipY + skipZ + skipZ + pad * 3, sMx, sMx])
           }
         } else if (isDrawRow) {
           let ltwh = ltwh3x1
@@ -10370,14 +10392,27 @@ export class Niivue {
           const sX = volScale[0] * ltwh[4]
           const sY = volScale[1] * ltwh[4]
           const sZ = volScale[2] * ltwh[4]
+          let skipX = sX
+          let skipY = sY
+          let padX = 0
+          let padY = 0
+          let padZ = 0
+          if (this.opts.multiplanarEqualSize) {
+            // console.log('row')
+            skipX = ltwh[4]
+            skipY = ltwh[4]
+            padX = Math.floor((1 - volScale[0]) * ltwh[4] * 0.5)
+            padY = Math.floor((1 - volScale[1]) * ltwh[4] * 0.5)
+            padZ = Math.floor((1 - volScale[2]) * ltwh[4] * 0.5)
+          }
           // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0)
+          this.draw2D([ltwh[0] + padX, ltwh[1] + padY, sX, sY], 0)
           // draw coronal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1)
+          this.draw2D([ltwh[0] + skipX + padX + pad, ltwh[1] + padZ, sX, sZ], 1)
           // draw sagittal
-          this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2)
+          this.draw2D([ltwh[0] + skipX + skipX + padY + pad * 2, ltwh[1] + padZ, sY, sZ], 2)
           if (isDraw3D) {
-            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], ltwh[3], ltwh[3]])
+            this.draw3D([ltwh[0] + skipX + skipX + skipY + pad * 3, ltwh[1], ltwh[3], ltwh[3]])
           }
         } else if (isDrawGrid) {
           // did the user turn off 3D render view in multiplanar?
@@ -10392,14 +10427,31 @@ export class Niivue {
           const sX = volScale[0] * ltwh[4]
           const sY = volScale[1] * ltwh[4]
           const sZ = volScale[2] * ltwh[4]
+          let sR = sY
+          let skipX = sX
+          // let skipY = sY
+          let skipZ = sZ
+          let padX = 0
+          let padY = 0
+          let padZ = 0
+          if (this.opts.multiplanarEqualSize) {
+            // console.log('grid', volScale[0],volScale[1],volScale[2])
+            skipX = ltwh[4]
+            // skipY = ltwh[4]
+            skipZ = ltwh[4]
+            padX = Math.floor((1 - volScale[0]) * ltwh[4] * 0.5)
+            padY = Math.floor((1 - volScale[1]) * ltwh[4] * 0.5)
+            padZ = Math.floor((1 - volScale[2]) * ltwh[4] * 0.5)
+            sR = ltwh[4]
+          }
           // draw axial
-          this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0)
+          this.draw2D([ltwh[0] + padX, ltwh[1] + padY + skipZ + pad, sX, sY], 0)
           // draw coronal
-          this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1)
+          this.draw2D([ltwh[0] + padX, ltwh[1] + padZ, sX, sZ], 1)
           // draw sagittal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2)
+          this.draw2D([ltwh[0] + skipX + padY + pad, ltwh[1] + padZ, sY, sZ], 2)
           if (isDraw3D) {
-            this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY])
+            this.draw3D([ltwh[0] + skipX + pad, ltwh[1] + skipZ + pad, sR, sR])
           }
         }
       }

@@ -58,7 +58,21 @@
         class="slider"
         id="fiberCalMin"
       />
-      <button id="about">About</button>
+      <label for="layoutSelect">Layout</label>
+      <select id="layoutSelect">
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
+        <option value="2">Grid</option>
+        <option value="3">Row</option>
+      </select>
+      <label for="renderingSelect">Rendering</label>
+      <select id="renderingSelect">
+        <option value="0">Never</option>
+        <option value="1">Always</option>
+        <option value="2" selected>Auto</option>
+      </select>
+      <label for="equalCheck">EqualSize</label>
+      <input type="checkbox" id="equalCheck" unchecked />
     </header>
     <main id="canvas-container">
       <canvas id="gl1"></canvas>
@@ -107,11 +121,17 @@
         nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
         nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
       };
-      about.onclick = function () {
-        window.alert(
-          "The `Per Vertex` colors visualize a tsf format overlay created with tcksample",
-        );
-      };
+      layoutSelect.onchange = function () {
+        nv1.setMultiplanarLayout(Number(this.value));
+      }
+      renderingSelect.onchange = function () {
+        nv1.opts.multiplanarShowRender =  Number(this.value);
+        nv1.drawScene();
+      }
+      equalCheck.onchange = function () {
+        nv1.opts.multiplanarEqualSize = this.checked
+        nv1.drawScene()
+      }
       var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }];
       let defaults = {
         backColor: [0, 0, 0, 1],

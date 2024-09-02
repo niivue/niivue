@@ -96,6 +96,7 @@ export type NVConfigOptions = {
   multiplanarPadPixels: number
   // @deprecated
   multiplanarForceRender: boolean
+  multiplanarEqualSize: boolean
   multiplanarShowRender: SHOW_RENDER
   isRadiologicalConvention: boolean
   // string to allow infinity
@@ -177,6 +178,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   multiplanarPadPixels: 0,
   // @deprecated
   multiplanarForceRender: false,
+  multiplanarEqualSize: false,
   multiplanarShowRender: SHOW_RENDER.AUTO, // auto is the same behaviour as multiplanarForceRender: false
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
