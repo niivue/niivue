@@ -107,6 +107,18 @@ declare enum LabelLineTerminator {
     CIRCLE = "circle",
     RING = "ring"
 }
+declare enum LabelAnchorPoint {
+    NONE = 0,
+    TOPLEFT = 9,
+    TOPCENTER = 10,
+    TOPRIGHT = 12,
+    MIDDLELEFT = 17,
+    MIDDLECENTER = 18,
+    MIDDLERIGHT = 20,
+    BOTTOMLEFT = 33,
+    BOTTOMCENTER = 34,
+    BOTTOMRIGHT = 36
+}
 /**
  * Class representing label style.
  * @ignore
@@ -140,12 +152,14 @@ declare class NVLabel3D {
     text: string;
     style: NVLabel3DStyle;
     points?: number[] | number[][];
+    anchor: LabelAnchorPoint;
+    onClick?: (label: NVLabel3D) => void;
     /**
      * @param text - The text of the label
      * @param style - The style of the label
      * @param points - An array of points label for label lines
      */
-    constructor(text: string, style: NVLabel3DStyle, points?: number[] | number[][]);
+    constructor(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint, onClick?: (label: NVLabel3D) => void);
 }
 
 /**
@@ -2948,6 +2962,7 @@ declare class Niivue {
     effectiveCanvasHeight(): number;
     effectiveCanvasWidth(): number;
     getAllLabels(): NVLabel3D[];
+    getConnectomeLabels(): NVLabel3D[];
     getBulletMarginWidth(): number;
     getLegendPanelWidth(): number;
     getLegendPanelHeight(): number;
@@ -3000,12 +3015,13 @@ declare class Niivue {
      * @param style - label style
      * @param point - 3D point on the model
      */
-    addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][]): NVLabel3D;
+    addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint, onClick?: (label: NVLabel3D) => void): NVLabel3D;
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4;
     getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null;
     drawLabelLine(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
-    draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], bulletMargin: number, legendWidth: number, secondPass?: boolean): void;
+    draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix?: mat4, leftTopWidthHeight?: number[], bulletMargin?: number, legendWidth?: number, secondPass?: boolean): void;
     draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
+    drawAnchoredLabels(): void;
     draw3D(leftTopWidthHeight?: number[], mvpMatrix?: mat4 | null, modelMatrix?: mat4 | null, normalMatrix?: mat4 | null, azimuth?: number | null, elevation?: number): string | undefined;
     drawMesh3D(isDepthTest?: boolean, alpha?: number, m?: mat4, modelMtx?: mat4, normMtx?: mat4): void;
     drawCrosshairs3D(isDepthTest?: boolean, alpha?: number, mvpMtx?: mat4 | null, is2DView?: boolean, isSliceMM?: boolean): void;
@@ -3045,4 +3061,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
