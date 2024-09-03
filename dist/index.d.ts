@@ -660,6 +660,7 @@ type NVConfigOptions = {
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
+    gamma: number;
     azimuth: number;
     elevation: number;
     crosshairPos: vec3;
@@ -672,6 +673,7 @@ type SceneData = {
     clipVolumeHigh: number[];
 };
 declare const INITIAL_SCENE_DATA: {
+    gamma: number;
     azimuth: number;
     elevation: number;
     crosshairPos: vec3;
@@ -696,6 +698,7 @@ type Scene = {
     pan2Dxyzmm: vec4;
     _elevation?: number;
     _azimuth?: number;
+    gamma?: number;
 };
 type DocumentData = {
     title: string;
