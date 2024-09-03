@@ -569,6 +569,12 @@ export class NVDocument {
     }
 
     data.labels = [...this.data.labels]
+
+    // remove any handlers
+    for (const label of data.labels) {
+      delete label.onClick
+    }
+
     data.customData = this.customData
 
     // volumes

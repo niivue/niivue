@@ -10,6 +10,29 @@ export enum LabelLineTerminator {
   RING = 'ring'
 }
 
+export enum LabelAnchorFlag {
+  NONE = 0,
+  LEFT = 1 << 0,
+  CENTER = 1 << 1,
+  RIGHT = 1 << 2,
+  TOP = 1 << 3,
+  MIDDLE = 1 << 4,
+  BOTTOM = 1 << 5
+}
+
+export enum LabelAnchorPoint {
+  NONE = LabelAnchorFlag.NONE,
+  TOPLEFT = LabelAnchorFlag.TOP | LabelAnchorFlag.LEFT,
+  TOPCENTER = LabelAnchorFlag.TOP | LabelAnchorFlag.CENTER,
+  TOPRIGHT = LabelAnchorFlag.TOP | LabelAnchorFlag.RIGHT,
+  MIDDLELEFT = LabelAnchorFlag.MIDDLE | LabelAnchorFlag.LEFT,
+  MIDDLECENTER = LabelAnchorFlag.MIDDLE | LabelAnchorFlag.CENTER,
+  MIDDLERIGHT = LabelAnchorFlag.MIDDLE | LabelAnchorFlag.RIGHT,
+  BOTTOMLEFT = LabelAnchorFlag.BOTTOM | LabelAnchorFlag.LEFT,
+  BOTTOMCENTER = LabelAnchorFlag.BOTTOM | LabelAnchorFlag.CENTER,
+  BOTTOMRIGHT = LabelAnchorFlag.BOTTOM | LabelAnchorFlag.RIGHT
+}
+
 /**
  * Class representing label style.
  * @ignore
@@ -65,15 +88,25 @@ export class NVLabel3D {
   text: string
   style: NVLabel3DStyle
   points?: number[] | number[][]
+  anchor: LabelAnchorPoint
+  onClick?: (label: NVLabel3D) => void
 
   /**
    * @param text - The text of the label
    * @param style - The style of the label
    * @param points - An array of points label for label lines
    */
-  constructor(text: string, style: NVLabel3DStyle, points?: number[] | number[][]) {
+  constructor(
+    text: string,
+    style: NVLabel3DStyle,
+    points?: number[] | number[][],
+    anchor?: LabelAnchorPoint,
+    onClick?: (label: NVLabel3D) => void
+  ) {
     this.text = text
     this.style = style
     this.points = points
+    this.anchor = anchor || LabelAnchorPoint.NONE
+    this.onClick = onClick
   }
 }

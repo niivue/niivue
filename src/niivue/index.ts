@@ -79,7 +79,14 @@ import {
   INITIAL_SCENE_DATA
 } from '../nvdocument.js'
 
-import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle } from '../nvlabel.js'
+import {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3D,
+  NVLabel3DStyle,
+  LabelAnchorPoint,
+  LabelAnchorFlag
+} from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
 import {
   NVImage,
@@ -122,7 +129,7 @@ export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '../nvdocument.js'
 export { NVUtilities } from '../nvutilities.js'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D } from '../nvlabel.js'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel.js'
 export { NVMeshLoaders } from '../nvmesh-loaders.js'
 export { NVMeshUtilities } from '../nvmesh-utilities.js'
 
@@ -1118,6 +1125,11 @@ export class Niivue {
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
     const label = this.getLabelAtPoint([x, y])
     if (label) {
+      // check for user defined onclick handler
+      if (label.onClick) {
+        label.onClick(label)
+        return
+      }
       // find associated mesh
       for (const mesh of this.meshes) {
         if (mesh.type !== MeshType.CONNECTOME) {
@@ -7571,9 +7583,26 @@ export class Niivue {
     return labels
   }
 
+  getConnectomeLabels(): NVLabel3D[] {
+    const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
+    const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
+    const meshLabels = meshNodes.map((n) => n.label)
+    // filter our undefined labels
+    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
+    // get all of our non-anchored labels
+    const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === LabelAnchorPoint.NONE)
+    // get the unique set of unanchored labels
+    const nonAnchoredLabelSet = new Set(definedMeshLabels)
+    for (const label of nonAnchoredLabels) {
+      nonAnchoredLabelSet.add(label)
+    }
+
+    return Array.from(nonAnchoredLabelSet)
+  }
+
   getBulletMarginWidth(): number {
     let bulletMargin = 0
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     if (labels.length === 0) {
       return 0
     }
@@ -7598,7 +7627,7 @@ export class Niivue {
   }
 
   getLegendPanelWidth(): number {
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     if (!this.opts.showLegend || labels.length === 0) {
       return 0
     }
@@ -7629,7 +7658,7 @@ export class Niivue {
   }
 
   getLegendPanelHeight(): number {
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     let height = 0
     const scale = 1.0 // we may want to make this adjustable in the future
     const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
@@ -9094,7 +9123,13 @@ export class Niivue {
    * @param style - label style
    * @param point - 3D point on the model
    */
-  addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][]): NVLabel3D {
+  addLabel(
+    text: string,
+    style: NVLabel3DStyle,
+    points?: number[] | number[][],
+    anchor?: LabelAnchorPoint,
+    onClick?: (label: NVLabel3D) => void
+  ): NVLabel3D {
     const defaultStyle = {
       textColor: this.opts.legendTextColor,
       textScale: 1.0,
@@ -9106,7 +9141,7 @@ export class Niivue {
       bulletColor: this.opts.legendTextColor
     }
     const labelStyle = style ? { ...defaultStyle, ...style } : { ...defaultStyle }
-    const label = new NVLabel3D(text, labelStyle, points)
+    const label = new NVLabel3D(text, { ...labelStyle }, points, anchor, onClick)
     this.document.labels.push(label)
     return label
   }
@@ -9129,6 +9164,75 @@ export class Niivue {
   }
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
+    const scale = 1.0
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+
+    // get all non-connectome labels
+    for (const label of this.document.labels) {
+      if (label.anchor == null || label.anchor === LabelAnchorPoint.NONE) {
+        continue
+      }
+
+      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const textHeight = this.textHeight(labelSize, label.text)
+      const textWidth = this.textWidth(labelSize, label.text)
+
+      if (label.anchor & LabelAnchorFlag.LEFT) {
+        if (screenPoint[0] > textWidth) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.CENTER) {
+        if (screenPoint[0] < (this.gl.canvas.width - textWidth) / 2) {
+          continue
+        }
+
+        if (screenPoint[0] > (this.gl.canvas.width + textWidth) / 2) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.RIGHT) {
+        if (screenPoint[0] < this.gl.canvas.width - textWidth) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.TOP) {
+        if (screenPoint[1] < verticalMargin / 2) {
+          continue
+        }
+
+        if (screenPoint[1] > textHeight + verticalMargin / 2) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.MIDDLE) {
+        if (screenPoint[1] < (this.gl.canvas.height - textHeight - verticalMargin) / 2) {
+          continue
+        }
+
+        if (screenPoint[1] > (this.gl.canvas.height + textHeight - verticalMargin / 2) / 2) {
+          continue
+        }
+      }
+
+      if (label.anchor & LabelAnchorFlag.BOTTOM) {
+        if (screenPoint[1] < this.gl.canvas.height - textHeight - verticalMargin) {
+          continue
+        }
+
+        if (screenPoint[1] > this.gl.canvas.height - verticalMargin / 2) {
+          continue
+        }
+      }
+
+      // label passed all tests
+      return label
+    }
     log.debug('screenPoint', screenPoint)
     const panelHeight = this.getLegendPanelHeight()
     const panelWidth = this.getLegendPanelWidth()
@@ -9144,10 +9248,7 @@ export class Niivue {
       return null
     }
 
-    const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     for (const label of labels) {
       const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
@@ -9185,11 +9286,11 @@ export class Niivue {
   draw3DLabel(
     label: NVLabel3D,
     pos: vec2,
-    mvpMatrix: mat4,
-    leftTopWidthHeight: number[],
-    bulletMargin = 0,
-    legendWidth: number,
-    secondPass = false
+    mvpMatrix?: mat4,
+    leftTopWidthHeight?: number[],
+    bulletMargin?: number,
+    legendWidth?: number,
+    secondPass?: boolean
   ): void {
     const text = label.text
     const left = pos[0]
@@ -9215,17 +9316,19 @@ export class Niivue {
 
     let textLeft = left
 
-    if (label.style.textAlignment !== LabelTextAlignment.LEFT) {
-      const textWidth = this.textWidth(label.style.textScale, label.text) * size
-      if (label.style.textAlignment === LabelTextAlignment.RIGHT) {
-        textLeft = left + legendWidth - size * 1.5 - textWidth
+    if (legendWidth) {
+      if (label.style.textAlignment !== LabelTextAlignment.LEFT) {
+        const textWidth = this.textWidth(label.style.textScale, label.text) * size
+        if (label.style.textAlignment === LabelTextAlignment.RIGHT) {
+          textLeft = left + legendWidth - size * 1.5 - textWidth
+        } else {
+          const remaining = legendWidth - (bulletMargin || size)
+          textLeft += (remaining - textWidth) / 2
+        }
       } else {
-        const remaining = legendWidth - (bulletMargin || size)
-        textLeft += (remaining - textWidth) / 2
+        // textLeft += size / 2;
+        textLeft += bulletMargin
       }
-    } else {
-      // textLeft += size / 2;
-      textLeft += bulletMargin
     }
 
     this.drawText([textLeft, top], text, label.style.textScale, label.style.textColor)
@@ -9233,7 +9336,7 @@ export class Niivue {
 
   // not included in public docs
   draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass = false): void {
-    const labels = this.getAllLabels()
+    const labels = this.getConnectomeLabels()
     if (!this.opts.showLegend || labels.length === 0) {
       return
     }
@@ -9280,6 +9383,59 @@ export class Niivue {
       if (blend) {
         gl.enable(gl.BLEND)
       }
+    }
+  }
+
+  drawAnchoredLabels(): void {
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    const anchoredLabels = this.document.labels.filter((l) => l.anchor != null && l.anchor !== LabelAnchorPoint.NONE)
+    for (const label of anchoredLabels) {
+      const text = label.text
+      const textHeight = this.textHeight(label.style.textScale, text) * size
+      const textWidth = this.textWidth(label.style.textScale, text) * size
+      let left: number
+      let top: number
+
+      const scale = 1.0 // we may want to make this adjustable in the future
+      const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+      const rectHeightDiff = verticalMargin
+      let rectWidthDiff = verticalMargin / 4
+      let rectHorizontalOffset = 0
+      let rectVerticalOffset = 0
+
+      if (label.anchor & LabelAnchorFlag.LEFT) {
+        left = 0
+      }
+
+      if (label.anchor & LabelAnchorFlag.RIGHT) {
+        left = this.canvas.width - textWidth
+        rectHorizontalOffset -= verticalMargin / 4
+      }
+
+      if (label.anchor & LabelAnchorFlag.CENTER) {
+        left = (this.canvas.width - textWidth) / 2
+        rectHorizontalOffset -= verticalMargin / 4
+        rectWidthDiff += verticalMargin / 4
+      }
+
+      if (label.anchor & LabelAnchorFlag.TOP) {
+        top = 0
+      }
+
+      if (label.anchor & LabelAnchorFlag.MIDDLE) {
+        top = (this.canvas.height - textHeight - verticalMargin) / 2
+        rectVerticalOffset -= verticalMargin / 4
+      }
+
+      if (label.anchor & LabelAnchorFlag.BOTTOM) {
+        top = this.canvas.height - textHeight - verticalMargin
+        rectVerticalOffset -= verticalMargin / 4
+      }
+      this.drawRect(
+        [left + rectHorizontalOffset, top + rectVerticalOffset, textWidth + rectWidthDiff, textHeight + rectHeightDiff],
+        label.style.backgroundColor
+      )
+      this.draw3DLabel(label, [left, top])
     }
   }
 
@@ -9375,6 +9531,7 @@ export class Niivue {
     this.readyForSync = true
     this.sync()
     this.draw3DLabels(mvpMatrix, relativeLTWH, true)
+
     return posString
   }
 
@@ -10483,6 +10640,7 @@ export class Niivue {
     posString = pos[0].toFixed(2) + '×' + pos[1].toFixed(2) + '×' + pos[2].toFixed(2)
     this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
     this.sync()
+    this.drawAnchoredLabels()
     return posString
   }
 
