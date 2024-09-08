@@ -1478,6 +1478,16 @@ export class Niivue {
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
+    } else if (!this.uiData.mousedown && this.opts.clickToSegment) {
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+      // ignore if mouse moves outside of tile of initial click
+      if (!pos) {
+        return
+      }
+      const x = pos.x * this.uiData.dpr!
+      const y = pos.y * this.uiData.dpr!
+      this.mousePos = [x, y]
+      this.drawScene()
     }
   }
 
@@ -10635,6 +10645,31 @@ export class Niivue {
         height
       ])
     }
+
+    // draw circle at mouse position if clickToSegment is enabled
+    if (this.opts.clickToSegment) {
+      const x = this.mousePos[0]
+      const y = this.mousePos[1]
+      // determine the tile the mouse is hovering in
+      const tileIdx = this.tileIndex(x, y)
+      // if a valid tile index, draw the circle
+      if (tileIdx > -1) {
+        // get fov in mm for this plane presented in the tile
+        const fovMM = this.screenSlices[tileIdx].fovMM
+        // get the left, top, width, height of the tile in pixels
+        const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+        // calculate the pixel to mm scale so we can draw the circle
+        // in pixels (so it is highres) but with the radius specified in mm
+        const pixPerMM = ltwh[2] / fovMM[0]
+        // get the crosshair color, but replace the alpha because we want it to be transparent
+        // no matter what. We want to see the image data underneath the circle.
+        const color = this.opts.crosshairColor
+        const segmentCursorColor = [color[0], color[1], color[2], 0.4]
+        const radius = this.opts.clickToSegmentRadius * pixPerMM
+        this.drawCircle([x - radius, y - radius, radius * 2, radius * 2], segmentCursorColor, 1)
+      }
+    }
+
     const pos = this.frac2mm([this.scene.crosshairPos[0], this.scene.crosshairPos[1], this.scene.crosshairPos[2]])
 
     posString = pos[0].toFixed(2) + '×' + pos[1].toFixed(2) + '×' + pos[2].toFixed(2)
