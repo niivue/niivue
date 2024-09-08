@@ -915,7 +915,7 @@ export class NVMeshLoaders {
           layer.values = obj
         }
       }
-    } else if (ext === 'CRV' || ext === 'CURV') {
+    } else if (ext === 'CRV' || ext === 'CURV' || ext === 'THICKNESS' || ext === 'AREA') {
       layer.values = NVMeshLoaders.readCURV(buffer, n_vert)
       layer.isTransparentBelowCalMin = false
     } else if (ext === 'GII') {
@@ -941,6 +941,10 @@ export class NVMeshLoaders {
       layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
     } else if (ext === 'STC') {
       layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
+    } else if (NVMeshLoaders.isCurv(buffer)) {
+      // Unknown layer overlay format - hail mary assume FreeSurfer
+      layer.values = NVMeshLoaders.readCURV(buffer, n_vert)
+      layer.isTransparentBelowCalMin = false
     } else {
       log.warn('Unknown layer overlay format ' + name)
       return layer
@@ -1128,6 +1132,19 @@ export class NVMeshLoaders {
     }
     return f32
   } // readSTC()
+
+  static isCurv(buffer: ArrayBuffer): boolean {
+    const view = new DataView(buffer) // ArrayBuffer to dataview
+    // ALWAYS big endian
+    const sig0 = view.getUint8(0)
+    const sig1 = view.getUint8(1)
+    const sig2 = view.getUint8(2)
+    if (sig0 !== 255 || sig1 !== 255 || sig2 !== 255) {
+      utiltiesLogger.debug('Unable to recognize file type: does not appear to be FreeSurfer format.')
+      return false
+    }
+    return true
+  }
 
   // read freesurfer curv big-endian format
   // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bpial/readPial.m
