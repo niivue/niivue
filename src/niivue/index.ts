@@ -8173,7 +8173,11 @@ export class Niivue {
 
   // not included in public docs
   // show text labels for L/R, A/P, I/S dimensions
-  drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE): void {
+  drawSliceOrientationText(
+    leftTopWidthHeight: number[],
+    axCorSag: SLICE_TYPE,
+    padLeftTop: number[] = [NaN, NaN]
+  ): void {
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     let topText = 'S'
     if (axCorSag === SLICE_TYPE.AXIAL) {
@@ -8187,9 +8191,32 @@ export class Niivue {
       this.drawTextRightBelow([leftTopWidthHeight[0], leftTopWidthHeight[1]], leftText + topText)
       return
     }
-    this.drawTextBelow([leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1]], topText)
-
-    this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText)
+    let drawBelow = true
+    let drawRight = true
+    if (!isNaN(padLeftTop[0])) {
+      const ht = this.opts.textHeight * this.gl.canvas.height + 2
+      if (padLeftTop[1] > ht) {
+        this.drawTextBelow(
+          [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + padLeftTop[1] - ht],
+          topText
+        )
+        drawBelow = false
+      }
+      const wid = this.textWidth(ht, leftText) + 2
+      if (padLeftTop[0] > wid) {
+        this.drawTextRight(
+          [leftTopWidthHeight[0] + padLeftTop[0] - wid, leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5],
+          leftText
+        )
+        drawRight = false
+      }
+    }
+    if (drawBelow) {
+      this.drawTextBelow([leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1]], topText)
+    }
+    if (drawRight) {
+      this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText)
+    }
   }
 
   // not included in public docs
@@ -8232,7 +8259,7 @@ export class Niivue {
 
   // not included in public docs
   // draw 2D tile
-  draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN): void {
+  draw2DMain(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN): void {
     let frac2mmTexture = this.volumes[0].frac2mm!.slice()
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
     let mesh2ortho = mat4.create()
@@ -8421,8 +8448,33 @@ export class Niivue {
       // no crossbars for mosaic view
       this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
     }
-    this.drawSliceOrientationText(leftTopWidthHeight, axCorSag)
     this.readyForSync = true
+  }
+
+  draw2D(
+    leftTopWidthHeight: number[],
+    axCorSag: SLICE_TYPE,
+    customMM = NaN,
+    imageWidthHeight: number[] = [NaN, NaN]
+  ): void {
+    const padLeftTop = [NaN, NaN]
+    if (isNaN(imageWidthHeight[0])) {
+      this.draw2DMain(leftTopWidthHeight, axCorSag, customMM)
+    } else {
+      // inset as padded in tile
+      const ltwh = leftTopWidthHeight.slice()
+      padLeftTop[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]))
+      padLeftTop[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]))
+      ltwh[0] += padLeftTop[0]
+      ltwh[1] += padLeftTop[1]
+      ltwh[2] = imageWidthHeight[0]
+      ltwh[3] = imageWidthHeight[1]
+      this.draw2DMain(ltwh, axCorSag, customMM)
+    }
+    if (customMM === Infinity || customMM === -Infinity || axCorSag === SLICE_TYPE.RENDER) {
+      return
+    }
+    this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
   }
 
   // not included in public docs
@@ -10467,7 +10519,14 @@ export class Niivue {
           }
         }
         const isDrawPenDown = isFinite(this.drawPenLocation[0]) && this.opts.drawingEnabled
+
         const { volScale } = this.sliceScale()
+        const actualScale = volScale.slice()
+        if (this.opts.multiplanarEqualSize) {
+          volScale[0] = 1
+          volScale[1] = 1
+          volScale[2] = 1
+        }
         if (typeof this.opts.multiplanarPadPixels !== 'number') {
           log.debug('multiplanarPadPixels must be numeric')
         }
@@ -10512,44 +10571,49 @@ export class Niivue {
             isDrawGrid = true
           }
         }
+        let ltwh = ltwh2x2
         if (isDrawColumn) {
-          let ltwh = ltwh1x3
+          ltwh = ltwh1x3
           if (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4])) {
             ltwh = ltwh1x4
           } else {
             isDraw3D = false
           }
-          const sX = volScale[0] * ltwh[4]
-          const sY = volScale[1] * ltwh[4]
-          const sZ = volScale[2] * ltwh[4]
-          const sMx = mx * ltwh[4]
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0)
-          // draw coronal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1)
-          // draw sagittal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2)
-          if (isDraw3D) {
-            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
-          }
         } else if (isDrawRow) {
-          let ltwh = ltwh3x1
+          ltwh = ltwh3x1
           if (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4])) {
             ltwh = ltwh4x1
           } else {
             isDraw3D = false
           }
-          const sX = volScale[0] * ltwh[4]
-          const sY = volScale[1] * ltwh[4]
-          const sZ = volScale[2] * ltwh[4]
+        }
+        const sX = volScale[0] * ltwh[4]
+        const sY = volScale[1] * ltwh[4]
+        const sZ = volScale[2] * ltwh[4]
+        const actualX = actualScale[0] * ltwh[4]
+        const actualY = actualScale[1] * ltwh[4]
+        const actualZ = actualScale[2] * ltwh[4]
+        if (isDrawColumn) {
           // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0)
+          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY])
           // draw coronal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1)
+          this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1, NaN, [actualX, actualZ])
           // draw sagittal
-          this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2)
+          this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2, NaN, [actualY, actualZ])
           if (isDraw3D) {
-            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], ltwh[3], ltwh[3]])
+            const sMx = mx * ltwh[4]
+            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
+          }
+        } else if (isDrawRow) {
+          // draw axial
+          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY])
+          // draw coronal
+          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ])
+          // draw sagittal
+          this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ])
+          if (isDraw3D) {
+            const sMx = mx * ltwh[4]
+            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], sMx, sMx])
           }
         } else if (isDrawGrid) {
           // did the user turn off 3D render view in multiplanar?
@@ -10560,16 +10624,12 @@ export class Niivue {
           if (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO) {
             isDraw3D = true
           }
-          const ltwh = ltwh2x2
-          const sX = volScale[0] * ltwh[4]
-          const sY = volScale[1] * ltwh[4]
-          const sZ = volScale[2] * ltwh[4]
           // draw axial
-          this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0)
+          this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0, NaN, [actualX, actualY])
           // draw coronal
-          this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1)
+          this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ])
           // draw sagittal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2)
+          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ])
           if (isDraw3D) {
             this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY])
           }
