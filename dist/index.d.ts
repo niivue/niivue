@@ -633,6 +633,7 @@ type NVConfigOptions = {
     isOrientCube: boolean;
     multiplanarPadPixels: number;
     multiplanarForceRender: boolean;
+    multiplanarEqualSize: boolean;
     multiplanarShowRender: SHOW_RENDER;
     isRadiologicalConvention: boolean;
     meshThicknessOn2D: number | string;
@@ -1523,6 +1524,7 @@ declare class NVMeshLoaders {
     static readLayer(name: string, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): NVMeshLayer | undefined;
     static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
+    static isCurv(buffer: ArrayBuffer): boolean;
     static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static readANNOT(buffer: ArrayBuffer, n_vert: number, isReadColortables?: boolean): ANNOT;
     static readNV(buffer: ArrayBuffer): DefaultMeshType;
@@ -2994,9 +2996,10 @@ declare class Niivue {
     screenFieldOfViewMM(axCorSag?: number, forceSliceMM?: boolean): vec3;
     screenFieldOfViewExtendedVox(axCorSag?: number): MM;
     screenFieldOfViewExtendedMM(axCorSag?: number): MM;
-    drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE): void;
+    drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, padLeftTop?: number[]): void;
     xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number): number[];
-    draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number): void;
+    draw2DMain(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number): void;
+    draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number, imageWidthHeight?: number[]): void;
     calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number): mat4[];
     calculateModelMatrix(azimuth: number, elevation: number): mat4;
     calculateRayDirection(azimuth: number, elevation: number): vec3;
