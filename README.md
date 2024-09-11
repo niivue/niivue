@@ -46,6 +46,15 @@ The command `npm run demo` will minify the project and locally host all of the [
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 - [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
+- [QuantCo](https://www.quantco.com/) is using NiiVue in medical imaging workflows
+- [FSL Clinical](https://fslclinical.com/) is using NiiVue in brain imaging reports
+- [brain2print](https://brain2print.org/) (from the NiiVue team) uses NiiVue for showing both volume data and converted meshes
+- [ct2print](https://ct2print.org/) (from the NiiVue team) uses NiiVue for showing volume and mesh data
+- [ipyniivue](https://github.com/niivue/ipyniivue) allows NiiVue to be used in Jupyter Notebooks
+- [T2Lesion](https://niivue.github.io/T2lesion/) (from the NiiVue team) uses NiiVue to show input data and segmented lesion masks
+- [NiiVue Desktop](https://github.com/niivue/desktop) (from the NiiVue team) uses NiiVue in a crossplatform Electron app
+- [NiiVue iOS](https://github.com/niivue/ios) (from the NiiVue team) uses NiiVue in a hybrid Swift + webView mobile app
+- [NiiVue Neglect](https://niivue.github.io/niivue-neglect/) uses NiiVue to visualise stroke lesion data in the spatial neglect severity prediction tool
 
 # Funding
 
