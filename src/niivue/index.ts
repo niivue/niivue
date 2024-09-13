@@ -8305,8 +8305,10 @@ export class Niivue {
       elevation = isRadiolgical ? -90 : 90
     }
     const gl = this.gl
+    let isStretchToScreen = false
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // only one tile: stretch tile to fill whole screen.
+      isStretchToScreen = true
       const pixPerMMw = gl.canvas.width / screen.fovMM[0]
       const pixPerMMh = gl.canvas.height / screen.fovMM[1]
       const pixPerMMmin = Math.min(pixPerMMw, pixPerMMh)
@@ -8465,6 +8467,10 @@ export class Niivue {
       // no crossbars for mosaic view
       this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
     }
+    if (isStretchToScreen) {
+      // issue1065
+      this.drawSliceOrientationText(leftTopWidthHeight, axCorSag)
+    }
     this.readyForSync = true
   }
 
@@ -8491,7 +8497,10 @@ export class Niivue {
     if (customMM === Infinity || customMM === -Infinity || axCorSag === SLICE_TYPE.RENDER) {
       return
     }
-    this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
+    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0) {
+      // issue1065
+      this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
+    }
   }
 
   // not included in public docs
