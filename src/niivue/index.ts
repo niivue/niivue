@@ -2348,6 +2348,12 @@ export class Niivue {
       return
     }
     this.currentDrawUndoBitmap--
+    // if clickToSegment is true then we need to go back two steps
+    // because the first drawing action is setting the seed cluster
+    // and the second drawing action is the flood fill region growing.
+    if (this.opts.clickToSegment) {
+      this.currentDrawUndoBitmap--
+    }
     if (this.currentDrawUndoBitmap < 0) {
       this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1
     }
@@ -7263,8 +7269,8 @@ export class Niivue {
           for (let i = 1; i <= steps; i++) {
             const angle = (i / steps) * 2 * Math.PI
             // get the x,y,z in mm since radius given in mm
-            const xMM = ptMM[0] + radius * Math.cos(angle)
-            const yMM = ptMM[1] + radius * Math.sin(angle)
+            const xMM = ptMM[0] + radius * Math.cos(angle) - radius
+            const yMM = ptMM[1] + radius * Math.sin(angle) - radius
             const zMM = ptMM[2]
             // convert x,y,z in mm to voxels for drawing
             const xVox = this.back.mm2vox([xMM, yMM, zMM])[0]
@@ -10726,6 +10732,11 @@ export class Niivue {
     if (this.opts.clickToSegment) {
       const x = this.mousePos[0]
       const y = this.mousePos[1]
+      // check if hovering over the 3D render tile
+      if (this.inRenderTile(x, y) >= 0) {
+        // exit early since we do not want to draw the cursor here!
+        return
+      }
       // determine the tile the mouse is hovering in
       const tileIdx = this.tileIndex(x, y)
       // if a valid tile index, draw the circle
