@@ -148,6 +148,7 @@ export type NVConfigOptions = {
   clickToSegmentIntensityMax: number // also covers NaN
   clickToSegmentIntensityMin: number // also covers NaN
   clickToSegmentPercent: number
+  clickToSegmentMaxDistanceMM: number // max distance in mm to consider for click to segment flood fill
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -227,7 +228,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   // Take the voxel intensity at the click point and use this percentage +/- to threshold the flood fill operation.
   // If greater than 0, clickedVoxelIntensity +/- clickedVoxelIntensity * clickToSegmentPercent will be used
   // for the clickToSegmentIntensityMin and clickToSegmentIntensityMax values.
-  clickToSegmentPercent: 0
+  clickToSegmentPercent: 0,
+  clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY // default value is infinity for backwards compatibility with flood fill routine.
 }
 
 type SceneData = {

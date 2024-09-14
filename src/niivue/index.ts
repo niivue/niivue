@@ -4428,7 +4428,9 @@ export class Niivue {
     growSelectedCluster = 0, // if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
     forceMin = NaN,
     forceMax = NaN,
-    neighbors = 6
+    neighbors = 6,
+    // option for only flood filling within max distance from seed voxel
+    maxDistanceMM = Number.POSITIVE_INFINITY
   ): void {
     if (!this.drawBitmap) {
       throw new Error('drawBitmap undefined')
@@ -4454,9 +4456,27 @@ export class Niivue {
     if (img.length !== nxy * dims[2]) {
       return
     }
+    function vx2xyz(vx: number): number[] {
+      // provided address in 1D array, return XYZ coordinate
+      const Z = Math.floor(vx / nxy) // slice
+      const Y = Math.floor((vx - Z * nxy) / nx) // column
+      const X = Math.floor(vx % nx)
+      return [X, Y, Z]
+    }
     function xyz2vx(pt: number[]): number {
       // provided an XYZ 3D point, provide address in 1D array
       return pt[0] + pt[1] * nx + pt[2] * nxy
+    }
+    const vx2mm = (xyz: number[]): vec3 => {
+      return this.vox2mm(xyz, this.back.matRAS)
+    }
+    // store seed vox as mm coordinates
+    const seedMM = vx2mm(seedXYZ)
+    // function to check if new point to be checked is less than maxDistanceMM
+    function isWithinDistance(vx: number): boolean {
+      const xyzMM = vx2mm(vx2xyz(vx))
+      const dist = Math.sqrt((xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2)
+      return dist <= maxDistanceMM
     }
     const seedVx = xyz2vx(seedXYZ)
     const seedColor = img[seedVx]
@@ -4470,6 +4490,12 @@ export class Niivue {
     }
     for (let i = 1; i < nxyz; i++) {
       img[i] = 0
+      // check if voxel index i is within maxDistanceMM from seed voxel
+      if (!isWithinDistance(i)) {
+        // move to next voxel if not within distance,
+        // no need to check voxel intensity for cluster assignment
+        continue
+      }
       if (this.drawBitmap[i] === seedColor) {
         img[i] = 1
       }
@@ -4501,6 +4527,12 @@ export class Niivue {
       // second pass:
       for (let i = 1; i < nxyz; i++) {
         img[i] = 0
+        // check if voxel index i is within maxDistanceMM from seed voxel
+        if (!isWithinDistance(i)) {
+          // move to next voxel if not within distance,
+          // no need to check voxel intensity for cluster assignment
+          continue
+        }
         if (backImg[i] >= mn && backImg[i] <= mx) {
           img[i] = 1
         }
@@ -7309,7 +7341,6 @@ export class Niivue {
             // This also triggers the growth of the circle based on cluster intensity method of flood fill.
             // If the circle is drawn in a bright region, it will grow in the bright region using all connected bright voxels and vice versa.
             if (i === steps) {
-              // this.drawFloodFill([xVox, yVox, pt[2]], 0, brightOrDark, NaN, NaN, this.opts.floodFillNeighbors)
               this.drawFloodFill(
                 [xVox, yVox, pt[2]],
                 0,
@@ -7317,6 +7348,7 @@ export class Niivue {
                 this.opts.clickToSegmentIntensityMin,
                 this.opts.clickToSegmentIntensityMax,
                 this.opts.floodFillNeighbors
+                // this.opts.clickToSegmentMaxDistanceMM
               )
             }
           }
