@@ -7257,8 +7257,10 @@ export class Niivue {
       if (this.opts.drawingEnabled) {
         // drawing done in voxels
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
-        // radius given in mm
-        const ptMM = this.frac2mm(this.scene.crosshairPos)
+        // radius given in mm so convert from voxels.
+        // !important! use matRAS to since niivue transforms all
+        // images to RAS orientation before rendering
+        const ptMM = this.vox2mm(pt, this.back.matRAS)
         // if click-to-segment enabled
         if (this.opts.clickToSegment) {
           const radius = this.opts.clickToSegmentRadius
@@ -7269,8 +7271,8 @@ export class Niivue {
           for (let i = 1; i <= steps; i++) {
             const angle = (i / steps) * 2 * Math.PI
             // get the x,y,z in mm since radius given in mm
-            const xMM = ptMM[0] + radius * Math.cos(angle) - radius
-            const yMM = ptMM[1] + radius * Math.sin(angle) - radius
+            const xMM = ptMM[0] + radius * Math.cos(angle)
+            const yMM = ptMM[1] + radius * Math.sin(angle)
             const zMM = ptMM[2]
             // convert x,y,z in mm to voxels for drawing
             const xVox = this.back.mm2vox([xMM, yMM, zMM])[0]
