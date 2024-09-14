@@ -7263,9 +7263,33 @@ export class Niivue {
         const ptMM = this.vox2mm(pt, this.back.matRAS)
         // if click-to-segment enabled
         if (this.opts.clickToSegment) {
+          // get voxel value of pt
+          const voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
+          if (this.opts.clickToSegmentPercent > 0 && this.opts.clickToSegmentPercent <= 1) {
+            this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + this.opts.clickToSegmentPercent)
+            this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - this.opts.clickToSegmentPercent)
+          }
+          // if clickToSegmentAutoBrightOrDark, then calculate if we need to flood fill
+          // in a bright or dark region based on the intensity of the clicked voxel,
+          // and where it falls in the range of cal_min and cal_max.
+          //
+          // !important! If this option is true, then it will ignore the boolean value of
+          // clickToSegmentBright supplied by the user
+          if (this.opts.clickToSegmentAutoBrightOrDark) {
+            // if voxel intensity is greater than the midpoint of cal_min and cal_max,
+            // then flood fill in a bright region
+            if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
+              this.opts.clickToSegmentBright = true
+            } else {
+              // else flood fill in a dark region
+              this.opts.clickToSegmentBright = false
+            }
+          }
+          // set brightOrDark now, if clickToSegmentAutoBrightOrDark is false,
+          // then brightOrDark will be set to the value of clickToSegmentBright supplied by the user
+          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
           const radius = this.opts.clickToSegmentRadius
           const steps = this.opts.clickToSegmentSteps
-          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
           this.drawPenFillPts = []
           this.drawPenAxCorSag = axCorSag
           for (let i = 1; i <= steps; i++) {
@@ -7285,7 +7309,15 @@ export class Niivue {
             // This also triggers the growth of the circle based on cluster intensity method of flood fill.
             // If the circle is drawn in a bright region, it will grow in the bright region using all connected bright voxels and vice versa.
             if (i === steps) {
-              this.drawFloodFill([xVox, yVox, pt[2]], 0, brightOrDark, NaN, NaN, this.opts.floodFillNeighbors)
+              // this.drawFloodFill([xVox, yVox, pt[2]], 0, brightOrDark, NaN, NaN, this.opts.floodFillNeighbors)
+              this.drawFloodFill(
+                [xVox, yVox, pt[2]],
+                0,
+                brightOrDark,
+                this.opts.clickToSegmentIntensityMin,
+                this.opts.clickToSegmentIntensityMax,
+                this.opts.floodFillNeighbors
+              )
             }
           }
           this.drawScene()
