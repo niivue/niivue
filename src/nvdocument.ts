@@ -140,11 +140,11 @@ export type NVConfigOptions = {
   renderOverlayBlend: number
   sliceMosaicString: string
   centerMosaic: boolean
+  penSize: number
   clickToSegment: boolean
   clickToSegmentRadius: number
-  clickToSegmentSteps: number
   clickToSegmentBright: boolean
-  clickToSegmentAutoBrightOrDark: boolean // new option, but keep clickToSegmentBright for backwards compatibility
+  clickToSegmentAutoIntensity: boolean // new option, but keep clickToSegmentBright for backwards compatibility
   clickToSegmentIntensityMax: number // also covers NaN
   clickToSegmentIntensityMin: number // also covers NaN
   clickToSegmentPercent: number
@@ -217,11 +217,11 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   renderOverlayBlend: 1.0,
   sliceMosaicString: '',
   centerMosaic: false,
+  penSize: 1, // in voxels, since all drawing is done using bitmap indices
   clickToSegment: false,
-  clickToSegmentRadius: 2,
-  clickToSegmentSteps: 10,
+  clickToSegmentRadius: 3, // in mm
   clickToSegmentBright: true,
-  clickToSegmentAutoBrightOrDark: false, // new option, but keep clickToSegmentBright for backwards compatibility
+  clickToSegmentAutoIntensity: false, // new option, but keep clickToSegmentBright for backwards compatibility
   clickToSegmentIntensityMax: NaN, // NaN will use auto threshold (default flood fill behavior from before)
   clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
   // 0 will use auto threshold (default flood fill behavior from before)

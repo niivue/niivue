@@ -546,7 +546,7 @@ export class Niivue {
    *   console.log('drag ended')
    * }
    */
-  onDragRelease: (params: DragReleaseParams) => void = () => {} // function to call when contrast drag is released by default. Can be overridden by user
+  onDragRelease: (params: DragReleaseParams) => void = () => { } // function to call when contrast drag is released by default. Can be overridden by user
 
   /**
    * callback function to run when the left mouse button is released
@@ -555,7 +555,7 @@ export class Niivue {
    *   console.log('mouse up')
    * }
    */
-  onMouseUp: (data: Partial<UIData>) => void = () => {}
+  onMouseUp: (data: Partial<UIData>) => void = () => { }
   /**
    * callback function to run when the crosshair location changes
    * @example
@@ -567,7 +567,7 @@ export class Niivue {
    * console.log('values: ', data.values)
    * }
    */
-  onLocationChange: (location: unknown) => void = () => {}
+  onLocationChange: (location: unknown) => void = () => { }
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
    * @example
@@ -576,7 +576,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onIntensityChange: (volume: NVImage) => void = () => {}
+  onIntensityChange: (volume: NVImage) => void = () => { }
 
   /**
    * callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL
@@ -587,7 +587,7 @@ export class Niivue {
    * console.log('volume mL: ', data.mL)
    * }
    */
-  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => {}
+  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => { }
 
   /**
    * callback function to run when a new volume is loaded
@@ -597,7 +597,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onImageLoaded: (volume: NVImage) => void = () => {}
+  onImageLoaded: (volume: NVImage) => void = () => { }
 
   /**
    * callback function to run when a new mesh is loaded
@@ -607,7 +607,7 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshLoaded: (mesh: NVMesh) => void = () => {}
+  onMeshLoaded: (mesh: NVMesh) => void = () => { }
 
   /**
    * callback function to run when the user changes the volume when a 4D image is loaded
@@ -618,7 +618,7 @@ export class Niivue {
    * console.log('frameNumber: ', frameNumber)
    * }
    */
-  onFrameChange: (volume: NVImage, index: number) => void = () => {}
+  onFrameChange: (volume: NVImage, index: number) => void = () => { }
 
   /**
    * callback function to run when niivue reports an error
@@ -627,10 +627,10 @@ export class Niivue {
    * console.log('error: ', error)
    * }
    */
-  onError: () => void = () => {}
+  onError: () => void = () => { }
 
   /// TODO was undocumented
-  onColormapChange: () => void = () => {}
+  onColormapChange: () => void = () => { }
 
   /**
    * callback function to run when niivue reports detailed info
@@ -639,7 +639,7 @@ export class Niivue {
    * console.log('info: ', info)
    * }
    */
-  onInfo: () => void = () => {}
+  onInfo: () => void = () => { }
 
   /**
    * callback function to run when niivue reports a warning
@@ -648,7 +648,7 @@ export class Niivue {
    * console.log('warn: ', warn)
    * }
    */
-  onWarn: () => void = () => {}
+  onWarn: () => void = () => { }
 
   /**
    * callback function to run when niivue reports a debug message
@@ -657,7 +657,7 @@ export class Niivue {
    * console.log('debug: ', debug)
    * }
    */
-  onDebug: () => void = () => {}
+  onDebug: () => void = () => { }
 
   /**
    * callback function to run when a volume is added from a url
@@ -668,8 +668,8 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => {}
-  onVolumeWithUrlRemoved: (url: string) => void = () => {}
+  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => { }
+  onVolumeWithUrlRemoved: (url: string) => void = () => { }
 
   /**
    * callback function to run when updateGLVolume is called (most users will not need to use
@@ -678,7 +678,7 @@ export class Niivue {
    * console.log('volume updated')
    * }
    */
-  onVolumeUpdated: () => void = () => {}
+  onVolumeUpdated: () => void = () => { }
 
   /**
    * callback function to run when a mesh is added from a url
@@ -689,14 +689,14 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => {}
+  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => { }
 
   // TODO seems redundant with onMeshLoaded
-  onMeshAdded: () => void = () => {}
-  onMeshWithUrlRemoved: (url: string) => void = () => {}
+  onMeshAdded: () => void = () => { }
+  onMeshWithUrlRemoved: (url: string) => void = () => { }
 
   // not implemented anywhere...
-  onZoom3DChange: (zoom: number) => void = () => {}
+  onZoom3DChange: (zoom: number) => void = () => { }
 
   /**
    * callback function to run when the user changes the rotation of the 3D rendering
@@ -706,7 +706,7 @@ export class Niivue {
    * console.log('elevation: ', elevation)
    * }
    */
-  onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => {}
+  onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => { }
 
   /**
    * callback function to run when the user changes the clip plane
@@ -715,10 +715,10 @@ export class Niivue {
    * console.log('clipPlane: ', clipPlane)
    * }
    */
-  onClipPlaneChange: (clipPlane: number[]) => void = () => {}
-  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
-  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => {}
-  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => {}
+  onClipPlaneChange: (clipPlane: number[]) => void = () => { }
+  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => { }
+  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => { }
+  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => { }
 
   /**
    * callback function to run when the user loads a new NiiVue document
@@ -727,7 +727,7 @@ export class Niivue {
    * console.log('document: ', document)
    * }
    */
-  onDocumentLoaded: (document: NVDocument) => void = () => {}
+  onDocumentLoaded: (document: NVDocument) => void = () => { }
 
   document = new NVDocument()
 
@@ -2006,7 +2006,7 @@ export class Niivue {
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 // @ts-expect-error FIXME looks like a file gets passed instead of a string
                 this.loadBmpTexture(file).catch((e) => {
                   throw e
@@ -2033,7 +2033,7 @@ export class Niivue {
               continue
             }
             if (MESH_EXTENSIONS.includes(ext)) {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 NVMesh.loadFromFile({
                   file,
                   gl: this.gl,
@@ -2048,7 +2048,7 @@ export class Niivue {
               })
               continue
             } else if (ext === 'NVD') {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 NVDocument.loadFromFile(file)
                   .then((nvdoc) => {
                     this.loadDocument(nvdoc)
@@ -2060,10 +2060,10 @@ export class Niivue {
               })
               break
             }
-            ;(entry as FileSystemFileEntry).file((file) => {
+            ; (entry as FileSystemFileEntry).file((file) => {
               if (pairedImageData) {
                 // if we have paired header/img data
-                ;(pairedImageData as FileSystemFileEntry).file((imgfile) => {
+                ; (pairedImageData as FileSystemFileEntry).file((imgfile) => {
                   NVImage.loadFromFile({
                     file,
                     urlImgData: imgfile,
@@ -4240,6 +4240,29 @@ export class Niivue {
     y = Math.min(Math.max(y, 0), dy - 1)
     z = Math.min(Math.max(z, 0), dz - 1)
     this.drawBitmap![x + y * dx + z * dx * dy] = penValue
+    // get tile index for voxel
+    const isAx = this.drawPenAxCorSag === 0
+    const isCor = this.drawPenAxCorSag === 1
+    const isSag = this.drawPenAxCorSag === 2
+    // since the pen is only drawing in one 2D plane,
+    // only draw the neighbors (based on penSize) in that plane.
+    // if penSize is 1, only draw the voxel itself.
+    // if penSize is even (2, 4, 6, etc.), then the extra voxel will be drawn in the positive direction.
+    // if penSize is odd (3, 5, 7, etc.), then the the pen will be centered on the voxel.
+    if (this.opts.penSize > 1) {
+      const halfPenSize = Math.floor(this.opts.penSize / 2)
+      for (let i = -halfPenSize; i <= halfPenSize; i++) {
+        for (let j = -halfPenSize; j <= halfPenSize; j++) {
+          if (isAx) {
+            this.drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
+          } else if (isCor) {
+            this.drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
+          } else if (isSag) {
+            this.drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
+          }
+        }
+      }
+    }
   }
 
   // not included in public docs
@@ -7289,10 +7312,6 @@ export class Niivue {
       if (this.opts.drawingEnabled) {
         // drawing done in voxels
         const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
-        // radius given in mm so convert from voxels.
-        // !important! use matRAS to since niivue transforms all
-        // images to RAS orientation before rendering
-        const ptMM = this.vox2mm(pt, this.back.matRAS)
         // if click-to-segment enabled
         if (this.opts.clickToSegment) {
           // get voxel value of pt
@@ -7301,13 +7320,12 @@ export class Niivue {
             this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + this.opts.clickToSegmentPercent)
             this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - this.opts.clickToSegmentPercent)
           }
-          // if clickToSegmentAutoBrightOrDark, then calculate if we need to flood fill
+          // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
           // in a bright or dark region based on the intensity of the clicked voxel,
           // and where it falls in the range of cal_min and cal_max.
-          //
           // !important! If this option is true, then it will ignore the boolean value of
           // clickToSegmentBright supplied by the user
-          if (this.opts.clickToSegmentAutoBrightOrDark) {
+          if (this.opts.clickToSegmentAutoIntensity) {
             // if voxel intensity is greater than the midpoint of cal_min and cal_max,
             // then flood fill in a bright region
             if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
@@ -7320,38 +7338,34 @@ export class Niivue {
           // set brightOrDark now, if clickToSegmentAutoBrightOrDark is false,
           // then brightOrDark will be set to the value of clickToSegmentBright supplied by the user
           const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-          const radius = this.opts.clickToSegmentRadius
-          const steps = this.opts.clickToSegmentSteps
-          this.drawPenFillPts = []
           this.drawPenAxCorSag = axCorSag
-          for (let i = 1; i <= steps; i++) {
-            const angle = (i / steps) * 2 * Math.PI
-            // get the x,y,z in mm since radius given in mm
-            const xMM = ptMM[0] + radius * Math.cos(angle)
-            const yMM = ptMM[1] + radius * Math.sin(angle)
-            const zMM = ptMM[2]
-            // convert x,y,z in mm to voxels for drawing
-            const xVox = this.back.mm2vox([xMM, yMM, zMM])[0]
-            const yVox = this.back.mm2vox([xMM, yMM, zMM])[1]
-            const zVox = this.back.mm2vox([xMM, yMM, zMM])[2]
-            // draw the point
-            this.drawPt(xVox, yVox, zVox, this.opts.penValue)
-            this.drawPenFillPts.push([xVox, yVox, pt[2]])
-            // fill in the circle if we are at the last step.
-            // This also triggers the growth of the circle based on cluster intensity method of flood fill.
-            // If the circle is drawn in a bright region, it will grow in the bright region using all connected bright voxels and vice versa.
-            if (i === steps) {
-              this.drawFloodFill(
-                [xVox, yVox, pt[2]],
-                0,
-                brightOrDark,
-                this.opts.clickToSegmentIntensityMin,
-                this.opts.clickToSegmentIntensityMax,
-                this.opts.floodFillNeighbors
-                // this.opts.clickToSegmentMaxDistanceMM
-              )
-            }
+          if (this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
+            // get voxel penSize for the current slice, but what if pixDims are not isotropic?
+            // we will use the smallest pixDim for the current slice
+            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[1]]
+            const minPixDim = Math.min(...pixDims)
+            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+          } else if (this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
+            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[2]]
+            const minPixDim = Math.min(...pixDims)
+            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+          } else if (this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
+            const pixDims = [this.back.pixDimsRAS[1], this.back.pixDimsRAS[2]]
+            const minPixDim = Math.min(...pixDims)
+            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
           }
+          // draw the point at the cursor using the penSize to set the
+          // seed for the flood fill
+          this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
+          this.drawFloodFill(
+            [pt[0], pt[1], pt[2]],
+            0,
+            brightOrDark,
+            this.opts.clickToSegmentIntensityMin,
+            this.opts.clickToSegmentIntensityMax,
+            this.opts.floodFillNeighbors,
+            this.opts.clickToSegmentMaxDistanceMM
+          )
           this.drawScene()
           this.createOnLocationChange(axCorSag)
           // get the volume of the segmented region
@@ -7704,11 +7718,11 @@ export class Niivue {
       labels.length === 1
         ? labels[0]
         : labels.reduce((a, b) => {
-            const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-            const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
-            const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
-            return taller
-          })
+          const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
+          const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+          const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
+          return taller
+        })
     const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale
     bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
     bulletMargin += size

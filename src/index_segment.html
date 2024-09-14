@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <button id="openBtn">Choose an image or mesh with a dialog</button>
+      <label for="layoutSelect">Layout</label>
+      <select id="layoutSelect">
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
+        <option value="2">Grid</option>
+        <option value="3">Row</option>
+      </select>
+      <label for="renderingSelect">MultiplanarRendering</label>
+      <select id="renderingSelect">
+        <option value="0">Never</option>
+        <option value="1">Always</option>
+        <option value="2" selected>Auto</option>
+      </select>
+      <select id="sliceType">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>Multiplanar</option>
+      </select>
+      <label for="equalCheck">EqualSize</label>
+      <input type="checkbox" id="equalCheck" checked />
+      <label for="cornerCheck">CornerText</label>
+      <input type="checkbox" id="cornerCheck" unchecked />
+      <!-- undo button for drawing -->
+      <button id="undoBtn">Undo</button>
+      <!-- draw toggle button -->
+      <button id="drawBtn">Draw</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    
+    <script type="module" async>
+      import {
+        Niivue,
+        NVImage,
+        NVMesh,
+        NVMeshLoaders,
+        SHOW_RENDER
+      } from "./niivue/index.ts";
+      async function addVolumeFromFiles(f) {
+        console.log("attempting to open ", f[0].name);
+        console.log("details", f[0]);
+        nv1.loadFromFile(f[0]);
+      }
+      openBtn.onclick = function () {
+        let input = document.createElement("input");
+        input.style.display = "none";
+        input.type = "file";
+        document.body.appendChild(input);
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files);
+        };
+        input.click();
+      };
+      
+
+      
+      layoutSelect.onchange = function () {
+        nv1.setMultiplanarLayout(Number(this.value));
+      }
+      renderingSelect.onchange = function () {
+        nv1.opts.multiplanarShowRender =  Number(this.value);
+        nv1.drawScene();
+      }
+      equalCheck.onchange = function () {
+        nv1.opts.multiplanarEqualSize = this.checked
+        nv1.drawScene()
+      }
+      cornerCheck.onchange = function () {
+        //nv1.opts.isCornerOrientationText = this.checked\
+        nv1.setCornerOrientationText(this.checked)
+      }
+      sliceType.onchange = function () {
+        let st = parseInt(document.getElementById("sliceType").value);
+        nv1.setSliceType(st)
+      }
+      undoBtn.onclick = function () {
+        nv1.drawUndo()
+      }
+      drawBtn.onclick = function () {
+        nv1.setDrawingEnabled(!nv1.opts.drawingEnabled)
+        if (nv1.opts.drawingEnabled) {
+          nv1.opts.clickToSegment = true;
+          nv1.setPenValue(1, false) // red and filled
+        } else {
+          nv1.opts.clickToSegment = false;
+        }
+      }
+      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }];
+      let defaults = {
+        backColor: [0, 0, 0, 1],
+        show3Dcrosshair: true,
+        loglevel: 'debug',
+        isRuler: true,
+        clickToSegmentRadius: 3, // in mm
+        clickToSegmentThreshold: 0.2,
+        clickToSegmentAutoIntensity: true,
+        clickToSegmentMaxDistanceMM: 10,
+        penSize: 3, // in voxels, but overridden by clickToSegmentRadius
+      };
+      var nv1 = new Niivue(defaults);
+      nv1.attachToCanvas(gl1);
+      // multiplanarShowRender is the preferred option now, 
+      // but multiplanarForceRender is still available for backwards compatibility
+      // previous use was: nv1.opts.multiplanarForceRender = true;
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+      await nv1.loadVolumes(volumeList1);
+      equalCheck.onchange()
+
+      // set drawing enabled
+      // nv1.setDrawingEnabled(true);
+      // nv1.setPenValue(1, true) // red and filled
+    </script>
+  </body>
+</html>
