@@ -238,15 +238,17 @@
       await nv2.loadVolumes(volumeList2);
       await nv3.loadVolumes(volumeList3);
       const syncOpts = {
-        // "2d": true,
+        // "2d": true, // legacy option
+        // "3d": true, // legacy option
+        // new options allowing more fine-grained control below.
+        // TODO: add logic checks to ensure that the options are not conflicting with legacy options
         crosshair: true,
         zoomPan: true,
-        "3d": true,
         gamma: true,
         sliceType: true,
         clipPlane: true,
-        // cal_min: true,
-        // cal_max: true,
+        // cal_min: true, // works but is slow due to updateGLVolume
+        // cal_max: true, // works but is slow due to updateGLVolumes
       }
       // make sure all views can control each other
       nv1.broadcastTo([nv2, nv3], syncOpts);
