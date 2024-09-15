@@ -4495,11 +4495,12 @@ export class Niivue {
     }
     // store seed vox as mm coordinates
     const seedMM = vx2mm(seedXYZ)
+    const maxDistanceMM2 = maxDistanceMM ** 2
     // function to check if new point to be checked is less than maxDistanceMM
     function isWithinDistance(vx: number): boolean {
       const xyzMM = vx2mm(vx2xyz(vx))
-      const dist = Math.sqrt((xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2)
-      return dist <= maxDistanceMM
+      const dist2 = (xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2
+      return dist2 <= maxDistanceMM2
     }
     const seedVx = xyz2vx(seedXYZ)
     const seedColor = img[seedVx]
@@ -4513,13 +4514,13 @@ export class Niivue {
     }
     for (let i = 1; i < nxyz; i++) {
       img[i] = 0
-      // check if voxel index i is within maxDistanceMM from seed voxel
-      if (!isWithinDistance(i)) {
-        // move to next voxel if not within distance,
-        // no need to check voxel intensity for cluster assignment
-        continue
-      }
       if (this.drawBitmap[i] === seedColor) {
+        // check if voxel index i is within maxDistanceMM from seed voxel
+        if (!isWithinDistance(i)) {
+          // move to next voxel if not within distance,
+          // no need to check voxel intensity for cluster assignment
+          continue
+        }
         img[i] = 1
       }
     }
@@ -4550,13 +4551,13 @@ export class Niivue {
       // second pass:
       for (let i = 1; i < nxyz; i++) {
         img[i] = 0
-        // check if voxel index i is within maxDistanceMM from seed voxel
-        if (!isWithinDistance(i)) {
-          // move to next voxel if not within distance,
-          // no need to check voxel intensity for cluster assignment
-          continue
-        }
         if (backImg[i] >= mn && backImg[i] <= mx) {
+          // check if voxel index i is within maxDistanceMM from seed voxel
+          if (!isWithinDistance(i)) {
+            // move to next voxel if not within distance,
+            // no need to check voxel intensity for cluster assignment
+            continue
+          }
           img[i] = 1
         }
       }
