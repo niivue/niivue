@@ -2348,12 +2348,6 @@ export class Niivue {
       return
     }
     this.currentDrawUndoBitmap--
-    // if clickToSegment is true then we need to go back two steps
-    // because the first drawing action is setting the seed cluster
-    // and the second drawing action is the flood fill region growing.
-    if (this.opts.clickToSegment) {
-      this.currentDrawUndoBitmap--
-    }
     if (this.currentDrawUndoBitmap < 0) {
       this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1
     }
@@ -4346,6 +4340,140 @@ export class Niivue {
         p2 += 2 * dx
         this.drawPt(x1, y1, z1, penValue)
       }
+    }
+  }
+
+  /**
+   * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
+   *
+   * @param seedXYZ -  voxel index of the seed voxel in the mask array.
+   * @param neighbors - Number of neighbors to consider for connectivity and dilation (6, 18, or 26).
+   */
+  drawingBinaryDilationWithSeed(
+    seedXYZ: number[], // seed voxel x,y,z
+    neighbors: 6 | 18 | 26 = 6
+  ): void {
+    try {
+      const mask = this.drawBitmap
+      const xDim = this.back.dims[1]
+      const yDim = this.back.dims[2]
+      const zDim = this.back.dims[3]
+      const nx = xDim
+      const nxy = xDim * yDim
+      const totalVoxels = nxy * zDim
+      function xyz2vx(pt: number[]): number {
+        return pt[0] + pt[1] * nx + pt[2] * nxy
+      }
+
+      const seedIndex = xyz2vx(seedXYZ)
+
+      // check that the seed index is within bounds
+      if (seedIndex < 0 || seedIndex >= totalVoxels) {
+        throw new Error('Seed index is out of bounds.')
+      }
+
+      // get value of the seed voxel
+      const seedValue = mask[seedIndex]
+
+      // check that the seed voxel is filled
+      if (seedValue === 0) {
+        throw new Error('Seed voxel is not part of a filled cluster.')
+      }
+
+      // create a copy of the mask to work on
+      const img = mask.slice()
+      // binarise the img since there could be multiple colors in the mask
+      for (let i = 0; i < totalVoxels; i++) {
+        img[i] = img[i] === seedValue ? 1 : 0
+      }
+
+      // use drawFloodFillCore to identify the connected cluster starting from seedIndex
+      this.drawFloodFillCore(img, seedIndex, neighbors)
+
+      // now, img has the cluster marked with value 2
+      // create an output mask for dilation
+      const outputMask = mask.slice() // Clone the original mask
+
+      // precompute neighbor offsets based on connectivity
+      const neighborOffsets: number[] = []
+
+      // offsets for 6-connectivity (face neighbors)
+      const offsets6 = [-nxy, nxy, -xDim, xDim, -1, 1]
+
+      neighborOffsets.push(...offsets6)
+
+      if (neighbors > 6) {
+        // offsets for 18-connectivity (edge neighbors)
+        neighborOffsets.push(
+          -xDim - 1,
+          -xDim + 1,
+          xDim - 1,
+          xDim + 1,
+          -nxy - xDim,
+          -nxy + xDim,
+          -nxy - 1,
+          -nxy + 1,
+          nxy - xDim,
+          nxy + xDim,
+          nxy - 1,
+          nxy + 1
+        )
+      }
+
+      if (neighbors > 18) {
+        // offsets for 26-connectivity (corner neighbors)
+        neighborOffsets.push(
+          -nxy - xDim - 1,
+          -nxy - xDim + 1,
+          -nxy + xDim - 1,
+          -nxy + xDim + 1,
+          nxy - xDim - 1,
+          nxy - xDim + 1,
+          nxy + xDim - 1,
+          nxy + xDim + 1
+        )
+      }
+
+      // iterate over the cluster voxels (value 2 in img) to perform dilation
+      for (let idx = 0; idx < totalVoxels; idx++) {
+        if (img[idx] === 2) {
+          const x = idx % xDim
+          const y = Math.floor((idx % nxy) / xDim)
+          const z = Math.floor(idx / nxy)
+
+          for (const offset of neighborOffsets) {
+            const neighborIdx = idx + offset
+
+            // skip if neighbor index is out of bounds
+            if (neighborIdx < 0 || neighborIdx >= totalVoxels) {
+              continue
+            }
+
+            // calculate neighbor coordinates
+            const nx = neighborIdx % xDim
+            const ny = Math.floor((neighborIdx % nxy) / xDim)
+            const nz = Math.floor(neighborIdx / nxy)
+
+            // ensure neighbor is adjacent (prevent wrapping around edges)
+            if (Math.abs(nx - x) > 1 || Math.abs(ny - y) > 1 || Math.abs(nz - z) > 1) {
+              continue
+            }
+
+            // if the neighbor voxel is empty in the original mask, fill it in the output mask
+            if (mask[neighborIdx] === 0) {
+              outputMask[neighborIdx] = seedValue
+            }
+          }
+        }
+      }
+      // set the output as the new drawing bitmap
+      this.drawBitmap = outputMask
+      // update the undo stack
+      this.drawAddUndoBitmap()
+      // refresh the drawing (copy from cpu to gpu) and show immediately
+      this.refreshDrawing(true)
+    } catch (error) {
+      log.error('Error in drawingBinaryDilationWithSeed:', error)
     }
   }
 
@@ -7357,6 +7485,8 @@ export class Niivue {
           }
           // draw the point at the cursor using the penSize to set the
           // seed for the flood fill
+          // !important! clickToSegment performs two drawing operations,
+          // therefore, if you want to undo the clickToSegment, you need to call undo twice
           this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
           this.drawFloodFill(
             [pt[0], pt[1], pt[2]],
