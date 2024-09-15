@@ -104,7 +104,8 @@ import {
   NiftiHeader,
   DragReleaseParams,
   NiiVueLocation,
-  NiiVueLocationValue
+  NiiVueLocationValue,
+  SyncOpts
 } from '../types.js'
 import {
   clamp,
@@ -400,7 +401,22 @@ export class Niivue {
   extentsMax?: vec3
   // ResizeObserver
   private resizeObserver: ResizeObserver | null = null
-  syncOpts: Record<string, unknown> = {}
+  // syncOpts: Record<string, unknown> = {}
+  syncOpts: SyncOpts = {
+    '3d': false, // legacy option
+    '2d': false, // legacy option
+    zoomPan: false,
+    cal_min: false,
+    cal_max: false,
+    clipPlane: false,
+    gamma: false,
+    useSliceOffset: false,
+    sliceType: false,
+    windowCenter: false,
+    windowWidth: false,
+    crosshair: false
+  }
+
   readyForSync = false
 
   // UI Data
@@ -546,7 +562,7 @@ export class Niivue {
    *   console.log('drag ended')
    * }
    */
-  onDragRelease: (params: DragReleaseParams) => void = () => {} // function to call when contrast drag is released by default. Can be overridden by user
+  onDragRelease: (params: DragReleaseParams) => void = () => { } // function to call when contrast drag is released by default. Can be overridden by user
 
   /**
    * callback function to run when the left mouse button is released
@@ -555,7 +571,7 @@ export class Niivue {
    *   console.log('mouse up')
    * }
    */
-  onMouseUp: (data: Partial<UIData>) => void = () => {}
+  onMouseUp: (data: Partial<UIData>) => void = () => { }
   /**
    * callback function to run when the crosshair location changes
    * @example
@@ -567,7 +583,7 @@ export class Niivue {
    * console.log('values: ', data.values)
    * }
    */
-  onLocationChange: (location: unknown) => void = () => {}
+  onLocationChange: (location: unknown) => void = () => { }
   /**
    * callback function to run when the user changes the intensity range with the selection box action (right click)
    * @example
@@ -576,7 +592,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onIntensityChange: (volume: NVImage) => void = () => {}
+  onIntensityChange: (volume: NVImage) => void = () => { }
 
   /**
    * callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL
@@ -587,7 +603,7 @@ export class Niivue {
    * console.log('volume mL: ', data.mL)
    * }
    */
-  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => {}
+  onClickToSegment: (data: { mm3: number; mL: number }) => void = () => { }
 
   /**
    * callback function to run when a new volume is loaded
@@ -597,7 +613,7 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onImageLoaded: (volume: NVImage) => void = () => {}
+  onImageLoaded: (volume: NVImage) => void = () => { }
 
   /**
    * callback function to run when a new mesh is loaded
@@ -607,7 +623,7 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshLoaded: (mesh: NVMesh) => void = () => {}
+  onMeshLoaded: (mesh: NVMesh) => void = () => { }
 
   /**
    * callback function to run when the user changes the volume when a 4D image is loaded
@@ -618,7 +634,7 @@ export class Niivue {
    * console.log('frameNumber: ', frameNumber)
    * }
    */
-  onFrameChange: (volume: NVImage, index: number) => void = () => {}
+  onFrameChange: (volume: NVImage, index: number) => void = () => { }
 
   /**
    * callback function to run when niivue reports an error
@@ -627,10 +643,10 @@ export class Niivue {
    * console.log('error: ', error)
    * }
    */
-  onError: () => void = () => {}
+  onError: () => void = () => { }
 
   /// TODO was undocumented
-  onColormapChange: () => void = () => {}
+  onColormapChange: () => void = () => { }
 
   /**
    * callback function to run when niivue reports detailed info
@@ -639,7 +655,7 @@ export class Niivue {
    * console.log('info: ', info)
    * }
    */
-  onInfo: () => void = () => {}
+  onInfo: () => void = () => { }
 
   /**
    * callback function to run when niivue reports a warning
@@ -648,7 +664,7 @@ export class Niivue {
    * console.log('warn: ', warn)
    * }
    */
-  onWarn: () => void = () => {}
+  onWarn: () => void = () => { }
 
   /**
    * callback function to run when niivue reports a debug message
@@ -657,7 +673,7 @@ export class Niivue {
    * console.log('debug: ', debug)
    * }
    */
-  onDebug: () => void = () => {}
+  onDebug: () => void = () => { }
 
   /**
    * callback function to run when a volume is added from a url
@@ -668,8 +684,8 @@ export class Niivue {
    * console.log('volume: ', volume)
    * }
    */
-  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => {}
-  onVolumeWithUrlRemoved: (url: string) => void = () => {}
+  onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => { }
+  onVolumeWithUrlRemoved: (url: string) => void = () => { }
 
   /**
    * callback function to run when updateGLVolume is called (most users will not need to use
@@ -678,7 +694,7 @@ export class Niivue {
    * console.log('volume updated')
    * }
    */
-  onVolumeUpdated: () => void = () => {}
+  onVolumeUpdated: () => void = () => { }
 
   /**
    * callback function to run when a mesh is added from a url
@@ -689,14 +705,14 @@ export class Niivue {
    * console.log('mesh: ', mesh)
    * }
    */
-  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => {}
+  onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void = () => { }
 
   // TODO seems redundant with onMeshLoaded
-  onMeshAdded: () => void = () => {}
-  onMeshWithUrlRemoved: (url: string) => void = () => {}
+  onMeshAdded: () => void = () => { }
+  onMeshWithUrlRemoved: (url: string) => void = () => { }
 
   // not implemented anywhere...
-  onZoom3DChange: (zoom: number) => void = () => {}
+  onZoom3DChange: (zoom: number) => void = () => { }
 
   /**
    * callback function to run when the user changes the rotation of the 3D rendering
@@ -706,7 +722,7 @@ export class Niivue {
    * console.log('elevation: ', elevation)
    * }
    */
-  onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => {}
+  onAzimuthElevationChange: (azimuth: number, elevation: number) => void = () => { }
 
   /**
    * callback function to run when the user changes the clip plane
@@ -715,10 +731,10 @@ export class Niivue {
    * console.log('clipPlane: ', clipPlane)
    * }
    */
-  onClipPlaneChange: (clipPlane: number[]) => void = () => {}
-  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
-  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => {}
-  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => {}
+  onClipPlaneChange: (clipPlane: number[]) => void = () => { }
+  onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => { }
+  onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => { }
+  onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => { }
 
   /**
    * callback function to run when the user loads a new NiiVue document
@@ -727,7 +743,7 @@ export class Niivue {
    * console.log('document: ', document)
    * }
    */
-  onDocumentLoaded: (document: NVDocument) => void = () => {}
+  onDocumentLoaded: (document: NVDocument) => void = () => { }
 
   document = new NVDocument()
 
@@ -936,8 +952,61 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
    */
   broadcastTo(otherNV: Niivue | Niivue[], syncOpts = { '2d': true, '3d': true }): void {
+    // if otherNV is a single instance then make it an array of one
+    if (!(otherNV instanceof Array)) {
+      otherNV = [otherNV]
+    }
     this.otherNV = otherNV
     this.syncOpts = syncOpts
+  }
+
+  doSync3d(otherNV: Niivue) {
+    otherNV.scene.renderAzimuth = this.scene.renderAzimuth
+    otherNV.scene.renderElevation = this.scene.renderElevation
+    otherNV.scene.volScaleMultiplier = this.scene.volScaleMultiplier
+  }
+
+  // both crosshair and zoomPan
+  doSync2d(otherNV: Niivue) {
+    const thisMM = this.frac2mm(this.scene.crosshairPos)
+    otherNV.scene.crosshairPos = otherNV.mm2frac(thisMM)
+    otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
+  }
+
+  doSyncGamma(otherNV: Niivue) {
+    // gamma not dependent on 2d/3d
+    const thisGamma = this.scene.gamma
+    const otherGamma = otherNV.scene.gamma
+    if (thisGamma !== otherGamma) {
+      otherNV.setGamma(thisGamma)
+    }
+  }
+
+  doSyncZoomPan(otherNV: Niivue) {
+    otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
+  }
+
+  doSyncCrosshair(otherNV: Niivue) {
+    const thisMM = this.frac2mm(this.scene.crosshairPos)
+    otherNV.scene.crosshairPos = otherNV.mm2frac(thisMM)
+  }
+
+  doSyncCalMin(otherNV: Niivue) {
+    otherNV.volumes[0].cal_min = this.volumes[0].cal_min
+    otherNV.updateGLVolume()
+  }
+
+  doSyncCalMax(otherNV: Niivue) {
+    otherNV.volumes[0].cal_max = this.volumes[0].cal_max
+    otherNV.updateGLVolume()
+  }
+
+  doSyncSliceType(otherNV: Niivue) {
+    otherNV.setSliceType(this.opts.sliceType)
+  }
+
+  doSyncClipPlane(otherNV: Niivue) {
+    otherNV.setClipPlane(this.scene.clipPlaneDepthAziElev)
   }
 
   /**
@@ -953,58 +1022,52 @@ export class Niivue {
     if (!this.gl || !this.otherNV || typeof this.otherNV === 'undefined') {
       return
     }
-    // if (!this.otherNV.readyForSync || !this.readyForSync) {
-    //   return;
-    // }
     // canvas must have focus to send messages issue706
     if (!(this.gl.canvas as HTMLCanvasElement).matches(':focus')) {
       return
     }
-    const thisMM = this.frac2mm(this.scene.crosshairPos)
-    // if this.otherNV is an object, then it is a single Niivue instance
-    if (this.otherNV instanceof Niivue) {
-      // gamma not dependent on 2d/3d
-      const thisGamma = this.scene.gamma
-      const otherGamma = this.otherNV.scene.gamma
-      if (thisGamma !== otherGamma) {
-        this.otherNV.setGamma(thisGamma)
+    for (let i = 0; i < this.otherNV.length; i++) {
+      if (this.otherNV[i] === this) {
+        continue
       }
-      // options specific to 2d rendering
+      // gamma
+      if (this.syncOpts.gamma) {
+        this.doSyncGamma(this.otherNV[i])
+      }
+      // crosshair
+      if (this.syncOpts.crosshair) {
+        this.doSyncCrosshair(this.otherNV[i])
+      }
+      // zoomPan
+      if (this.syncOpts.zoomPan) {
+        this.doSyncZoomPan(this.otherNV[i])
+      }
+      // sliceType
+      if (this.syncOpts.sliceType) {
+        this.doSyncSliceType(this.otherNV[i])
+      }
+      // cal_min
+      if (this.syncOpts.cal_min) {
+        this.doSyncCalMin(this.otherNV[i])
+      }
+      // cal_max
+      if (this.syncOpts.cal_max) {
+        this.doSyncCalMax(this.otherNV[i])
+      }
+      // clipPlane
+      if (this.syncOpts.clipPlane) {
+        this.doSyncClipPlane(this.otherNV[i])
+      }
+      // legacy 2d option for multiple properties
       if (this.syncOpts['2d']) {
-        this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM)
-        this.otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
+        this.doSync2d(this.otherNV[i])
       }
-      // options specific to 3d rendering
+      // legacy 3d option for multiple properties
       if (this.syncOpts['3d']) {
-        this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth
-        this.otherNV.scene.renderElevation = this.scene.renderElevation
-        this.otherNV.scene.volScaleMultiplier = this.scene.volScaleMultiplier
+        this.doSync3d(this.otherNV[i])
       }
-      this.otherNV.drawScene()
-      this.otherNV.createOnLocationChange()
-    } else if (Array.isArray(this.otherNV)) {
-      for (let i = 0; i < this.otherNV.length; i++) {
-        if (this.otherNV[i] === this) {
-          continue
-        }
-        // gamma not dependent on 2d/3d
-        const thisGamma = this.scene.gamma
-        const otherGamma = this.otherNV[i].scene.gamma
-        if (thisGamma !== otherGamma) {
-          this.otherNV[i].setGamma(thisGamma)
-        }
-        if (this.syncOpts['2d']) {
-          this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM)
-          this.otherNV[i].scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
-        }
-        if (this.syncOpts['3d']) {
-          this.otherNV[i].scene.renderAzimuth = this.scene.renderAzimuth
-          this.otherNV[i].scene.renderElevation = this.scene.renderElevation
-          this.otherNV[i].scene.volScaleMultiplier = this.scene.volScaleMultiplier
-        }
-        this.otherNV[i].drawScene()
-        this.otherNV[i].createOnLocationChange()
-      }
+      this.otherNV[i].drawScene()
+      this.otherNV[i].createOnLocationChange()
     }
   }
 
@@ -2006,7 +2069,7 @@ export class Niivue {
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
             if (ext === 'PNG') {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 // @ts-expect-error FIXME looks like a file gets passed instead of a string
                 this.loadBmpTexture(file).catch((e) => {
                   throw e
@@ -2033,7 +2096,7 @@ export class Niivue {
               continue
             }
             if (MESH_EXTENSIONS.includes(ext)) {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 NVMesh.loadFromFile({
                   file,
                   gl: this.gl,
@@ -2048,7 +2111,7 @@ export class Niivue {
               })
               continue
             } else if (ext === 'NVD') {
-              ;(entry as FileSystemFileEntry).file((file) => {
+              ; (entry as FileSystemFileEntry).file((file) => {
                 NVDocument.loadFromFile(file)
                   .then((nvdoc) => {
                     this.loadDocument(nvdoc)
@@ -2060,10 +2123,10 @@ export class Niivue {
               })
               break
             }
-            ;(entry as FileSystemFileEntry).file((file) => {
+            ; (entry as FileSystemFileEntry).file((file) => {
               if (pairedImageData) {
                 // if we have paired header/img data
-                ;(pairedImageData as FileSystemFileEntry).file((imgfile) => {
+                ; (pairedImageData as FileSystemFileEntry).file((imgfile) => {
                   NVImage.loadFromFile({
                     file,
                     urlImgData: imgfile,
@@ -7849,11 +7912,11 @@ export class Niivue {
       labels.length === 1
         ? labels[0]
         : labels.reduce((a, b) => {
-            const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-            const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
-            const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
-            return taller
-          })
+          const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
+          const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+          const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
+          return taller
+        })
     const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale
     bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
     bulletMargin += size
