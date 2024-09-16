@@ -57,7 +57,8 @@
         NVImage,
         NVMesh,
         NVMeshLoaders,
-        SHOW_RENDER
+        SHOW_RENDER,
+        DRAG_MODE
       } from "./niivue/index.ts";
       async function addVolumeFromFiles(f) {
         console.log("attempting to open ", f[0].name);
@@ -118,6 +119,18 @@
         penColor = penColor % 4 + 1;
         nv1.setPenValue(penColor, false)
       }
+
+      const onDragRelease = (data) => {
+        console.log("drag release", data);
+        let obj = nv1.getDescriptives({
+          layer: 0,
+          startVox: data.voxStart,
+          endVox: data.voxEnd,
+          roiIsMask: true,
+        });
+        console.log(obj);
+      };
+
       var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }];
       let defaults = {
         backColor: [0, 0, 0, 1],
@@ -129,7 +142,11 @@
         clickToSegmentAutoIntensity: true,
         clickToSegmentMaxDistanceMM: 10,
         penSize: 3, // in voxels, but overridden by clickToSegmentRadius
-        maxDrawUndoBitmaps: 30
+        maxDrawUndoBitmaps: 30,
+        onDragRelease: onDragRelease,
+        selectionBoxColor: [1, 0, 0, 0.5],
+        dragMode: DRAG_MODE.roiSelection,
+        selectionBoxIsOutline: true
       };
       var nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);

@@ -46,7 +46,8 @@ export enum DRAG_MODE {
   measurement = 2,
   pan = 3,
   slicer3D = 4,
-  callbackOnly = 5
+  callbackOnly = 5,
+  roiSelection = 6
 }
 
 // make mutable type
@@ -149,6 +150,9 @@ export type NVConfigOptions = {
   clickToSegmentIntensityMin: number // also covers NaN
   clickToSegmentPercent: number
   clickToSegmentMaxDistanceMM: number // max distance in mm to consider for click to segment flood fill
+  // selection box outline thickness
+  selectionBoxLineThickness: number
+  selectionBoxIsOutline: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -229,7 +233,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   // If greater than 0, clickedVoxelIntensity +/- clickedVoxelIntensity * clickToSegmentPercent will be used
   // for the clickToSegmentIntensityMin and clickToSegmentIntensityMax values.
   clickToSegmentPercent: 0,
-  clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY // default value is infinity for backwards compatibility with flood fill routine.
+  clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY, // default value is infinity for backwards compatibility with flood fill routine.
+  selectionBoxLineThickness: 4,
+  selectionBoxIsOutline: false
 }
 
 type SceneData = {

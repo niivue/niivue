@@ -12,6 +12,7 @@ import {
   vertLineShader,
   vertLine3DShader,
   fragRectShader,
+  fragRectOutlineShader,
   vertRenderShader,
   fragRenderShader,
   fragRenderGradientShader,
@@ -195,6 +196,7 @@ type Descriptive = {
   cal_max: number
   robust_min: number
   robust_max: number
+  area: number | null
 }
 
 type SliceScale = {
@@ -356,6 +358,7 @@ export class Niivue {
   orientCubeShader?: Shader
   orientCubeShaderVAO: WebGLVertexArrayObject | null = null
   rectShader?: Shader
+  rectOutlineShader?: Shader
   renderShader?: Shader
   lineShader?: Shader
   line3DShader?: Shader
@@ -1371,7 +1374,6 @@ export class Niivue {
     const mmLength = vec3.len(v)
     const voxStart = this.frac2vox(fracStart)
     const voxEnd = this.frac2vox(fracEnd)
-
     this.onDragRelease({
       fracStart,
       fracEnd,
@@ -1424,6 +1426,11 @@ export class Niivue {
       const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
       const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
       this.generateMouseUpCallback(fracStart, fracEnd)
+      // if roiSelection drag mode
+      if (this.opts.dragMode === DRAG_MODE.roiSelection) {
+        // do not call drawScene so that the selection box remains visible
+        return
+      }
       if (this.opts.dragMode !== DRAG_MODE.contrast) {
         return
       }
@@ -5459,6 +5466,8 @@ export class Niivue {
     // rect shader (crosshair): horizontal and vertical lines only
     this.rectShader = new Shader(gl, vertRectShader, fragRectShader)
     this.rectShader.use(gl)
+    this.rectOutlineShader = new Shader(gl, vertRectShader, fragRectOutlineShader)
+    this.rectOutlineShader.use(gl)
     // line shader: diagonal lines
     this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
     this.lineShader.use(gl)
@@ -5634,14 +5643,46 @@ export class Niivue {
 
   /**
    * basic statistics for selected voxel-based image
-   * @param layer - selects image to describe
-   * @param masks - are optional binary images to filter voxles
-   * @returns numeric values to describe image
-   * @example niivue.getDescriptives(0);
+   * @param options - an object containing the following properties:
+   *   - layer: selects image to describe
+   *   - masks: optional binary images to filter voxels
+   *   - drawingIsMask: a boolean indicating if the drawing is used as a mask
+   *   - roiIsMask: a boolean indicating if the ROI is used as a mask
+   *   - startVox: the starting voxel coordinates
+   *   - endVox: the ending voxel coordinates
+   * @returns numeric values to describe image or regions of images
+   * @example
+   * niivue.getDescriptives({
+   *   layer: 0,
+   *   masks: [],
+   *   drawingIsMask: true, // drawingIsMask and roiIsMask are mutually exclusive
+   *   roiIsMask: false,
+   *   startVox: [10, 20, 30], // ignored if roiIsMask is false
+   *   endVox: [40, 50, 60] // ignored if roiIsMask is false
+   * });
    * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
    */
-  getDescriptives(layer = 0, masks = [], drawingIsMask = false): Descriptive {
+  getDescriptives(options: {
+    layer?: number
+    masks?: number[]
+    drawingIsMask?: boolean
+    roiIsMask?: boolean
+    startVox?: number[]
+    endVox?: number[]
+  }): Descriptive {
+    const {
+      layer = 0,
+      masks = [],
+      drawingIsMask = false,
+      roiIsMask = false,
+      startVox = [0, 0, 0],
+      endVox = [0, 0, 0]
+    } = options
+
+    // Rest of the code remains the same
+    let area = null // used if roiIsMask since ROI is in 2D slice
     const hdr = this.volumes[layer].hdr!
+    const pixDimsRAS = this.volumes[layer].pixDimsRAS!
     let slope = hdr.scl_slope
     if (isNaN(slope)) {
       slope = 1
@@ -5680,6 +5721,48 @@ export class Niivue {
           mask[i] = 0
         }
       }
+    } else if (masks.length < 1 && roiIsMask) {
+      // fill mask with zeros
+      mask.fill(0)
+      console.log('startVox', startVox)
+      console.log('endVox', endVox)
+      // const startVox = roiInfo.startVox
+      // const endVox = roiInfo.endVox
+      const xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]])
+      const yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]])
+      const zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]])
+
+      // for our constant dimension we add one so that the for loop runs at least once
+      if (startVox[0] - endVox[0] === 0) {
+        xrange[1] = startVox[0] + 1
+      } else if (startVox[1] - endVox[1] === 0) {
+        yrange[1] = startVox[1] + 1
+      } else if (startVox[2] - endVox[2] === 0) {
+        zrange[1] = startVox[2] + 1
+      }
+
+      const xdim = hdr.dims[1]
+      const ydim = hdr.dims[2]
+      for (let z = zrange[0]; z < zrange[1]; z++) {
+        const zi = z * xdim * ydim
+        for (let y = yrange[0]; y < yrange[1]; y++) {
+          const yi = y * xdim
+          for (let x = xrange[0]; x < xrange[1]; x++) {
+            const index = zi + yi + x
+            mask[index] = 1
+          }
+        }
+      }
+      // calculate area 2d area from startVox and endVox coordinates if roiIsMask is true (since mask is created from a 2d slice only)
+      // area is in mm^2. The below calculations work regardless of the orientation of the image since
+      // Niivue converts all images to RAS
+      const xmm = Math.abs(pixDimsRAS[1] * (endVox[0] - startVox[0]))
+      const ymm = Math.abs(pixDimsRAS[2] * (endVox[1] - startVox[1]))
+      const zmm = Math.abs(pixDimsRAS[3] * (endVox[2] - startVox[2]))
+      // one of the above will be zero since roiIsMask==true, so we filter out the non-zero value
+      // and then multiply the other two to get the area
+      const mms = [xmm, ymm, zmm]
+      area = mms.filter((m) => m !== 0).reduce((a, b) => a * b, 1)
     }
     // Welfords method
     // https://www.embeddedrelated.com/showarticle/785.php
@@ -5740,7 +5823,8 @@ export class Niivue {
       cal_min: this.volumes[layer].cal_min!,
       cal_max: this.volumes[layer].cal_max!,
       robust_min: this.volumes[layer].robust_min!,
-      robust_max: this.volumes[layer].robust_max!
+      robust_max: this.volumes[layer].robust_max!,
+      area
     }
   }
 
@@ -7565,7 +7649,11 @@ export class Niivue {
           this.drawScene()
           this.createOnLocationChange(axCorSag)
           // get the volume of the segmented region
-          const info = this.getDescriptives(0, [], true)
+          const info = this.getDescriptives({
+            layer: 0,
+            masks: [],
+            drawingIsMask: true
+          })
           this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
           return
         }
@@ -7817,20 +7905,43 @@ export class Niivue {
     if (!this.rectShader) {
       throw new Error('rectShader undefined')
     }
-    this.rectShader.use(this.gl)
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(this.rectShader.uniforms.lineColor, lineColor)
-    this.gl.uniform2fv(this.rectShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
-    this.gl.uniform4f(
-      this.rectShader.uniforms.leftTopWidthHeight,
-      leftTopWidthHeight[0],
-      leftTopWidthHeight[1],
-      leftTopWidthHeight[2],
-      leftTopWidthHeight[3]
-    )
-    this.gl.bindVertexArray(this.genericVAO)
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    if (!this.opts.selectionBoxIsOutline) {
+      this.rectShader.use(this.gl)
+      this.gl.enable(this.gl.BLEND)
+      this.gl.uniform4fv(this.rectShader.uniforms.lineColor, lineColor)
+      this.gl.uniform2fv(this.rectShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
+      this.gl.uniform4f(
+        this.rectShader.uniforms.leftTopWidthHeight,
+        leftTopWidthHeight[0],
+        leftTopWidthHeight[1],
+        leftTopWidthHeight[2],
+        leftTopWidthHeight[3]
+      )
+      this.gl.bindVertexArray(this.genericVAO)
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+      this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    } else {
+      // this.opts.selectionBoxIsOutline == true
+      this.rectOutlineShader.use(this.gl)
+      this.gl.enable(this.gl.BLEND)
+      // set thickness of line
+      this.gl.uniform1f(this.rectOutlineShader.uniforms.thickness, this.opts.selectionBoxLineThickness)
+      this.gl.uniform4fv(this.rectOutlineShader.uniforms.lineColor, lineColor)
+      this.gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [
+        this.gl.canvas.width,
+        this.gl.canvas.height
+      ])
+      this.gl.uniform4f(
+        this.rectOutlineShader.uniforms.leftTopWidthHeight,
+        leftTopWidthHeight[0],
+        leftTopWidthHeight[1],
+        leftTopWidthHeight[2],
+        leftTopWidthHeight[3]
+      )
+      this.gl.bindVertexArray(this.genericVAO)
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+      this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    }
   }
 
   drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0): void {
@@ -11002,6 +11113,7 @@ export class Niivue {
         width,
         height
       ])
+      return
     }
 
     // draw circle at mouse position if clickToSegment is enabled
