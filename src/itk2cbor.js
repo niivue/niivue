@@ -69,7 +69,7 @@ export function iwm2mesh(arrayBuffer) {
 }
 
 // Input is triangular mesh with points [x0 y0 z0 x1 y1 z1...] and triangle indices [i0 j0 k0 i1 j1 k1 ...]
-export function mesh2iwm(pts, tris) {
+export function mesh2iwm(pts, tris, isEncodeCBOR = true) {
   let iwm = {
     "meshType": {
         "dimension": 3,
@@ -111,6 +111,9 @@ export function mesh2iwm(pts, tris) {
   }
   iwm.numberOfPoints = BigInt(Math.floor(pts.length) / 3)
   //console.log(iwm)
+  if (isEncodeCBOR) {
+    return encode(iwm)
+  }
   return iwm
 }
 
@@ -300,7 +303,7 @@ export function iwi2nii(arrayBuffer) {
 }
 
 // Input is ITK IWI, output is NIfTI
-export function nii2iwi(hdr, img) {
+export function nii2iwi(hdr, img, isEncodeCBOR = true) {
   let iwi = {
     "imageType": {
       "dimension": hdr.dims[0],
@@ -360,5 +363,8 @@ export function nii2iwi(hdr, img) {
   }
   iwi.size = iwi.size.map(num => BigInt(num));
   // console.log(iwi)
+  if (isEncodeCBOR) {
+    return encode(iwi)
+  }
   return iwi
 }
