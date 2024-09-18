@@ -94,18 +94,26 @@
       <option value="3" selected>Multi</option>
     </select>
     
-    <!-- clip plane slider-->
-    <label for="clipPlane">Clip Plane</label>
+    <!-- slider for cal_min -->
+    <label for="calMin">min</label>
     <input
       type="range"
       min="0"
       max="100"
       value="0"
       class="slider"
-      id="clipPlane"
+      id="calMin"
     />
-
-
+    <!-- slider for cal_max -->
+    <label for="calMax">max</label>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value="100"
+      class="slider"
+      id="calMax"
+    />
     </header>
     <main>
       <div class='page-wrapper'>
@@ -178,11 +186,24 @@
         nv3.broadcastTo([nv1, nv2], { "2d": is2D, "3d": is3D })
       }
 
-      clipPlane.oninput = function() {
-        const v = [0 , parseFloat(clipPlane.value), 0]
-        nv1.setClipPlane(v)
-        nv2.setClipPlane(v)
-        nv3.setClipPlane(v)
+      calMin.onchange = function() {
+        const v = parseFloat(calMin.value)
+        nv2.volumes[0].cal_min = v
+        // set focus to the canvas
+        nv2.gl.canvas.focus()
+        nv2.updateGLVolume()
+        // remove focus from the canvas
+        nv2.gl.canvas.blur()
+      }
+
+      calMax.onchange = function() {
+        const v = parseFloat(calMax.value)
+        nv2.volumes[0].cal_max = v
+        // set focus to the canvas
+        nv2.gl.canvas.focus()
+        nv2.updateGLVolume()
+        // remove focus from the canvas
+        nv2.gl.canvas.blur()
       }
 
       sliceType.onchange = function() {
@@ -236,19 +257,27 @@
       var volumeList2 = [{ url: "../demos/images/mni152.nii.gz" }];
       var volumeList3 = [{ url: "../demos/images/mni152.nii.gz" }];
       await nv2.loadVolumes(volumeList2);
+      // once the volumes are loaded for nv2, set the min and max values for 
+      // the calMin and calMax sliders to the min and max values of the volume
+      calMin.min = nv2.volumes[0].global_min
+      calMin.max = nv2.volumes[0].global_max
+      calMin.value = nv2.volumes[0].cal_min
+      calMax.min = nv2.volumes[0].global_min
+      calMax.max = nv2.volumes[0].global_max
+      calMax.value = nv2.volumes[0].cal_max
+
       await nv3.loadVolumes(volumeList3);
       const syncOpts = {
         // "2d": true, // legacy option
         // "3d": true, // legacy option
         // new options allowing more fine-grained control below.
-        // TODO: add logic checks to ensure that the options are not conflicting with legacy options
         crosshair: true,
         zoomPan: true,
         gamma: true,
         sliceType: true,
         clipPlane: true,
-        // cal_min: true, // works but is slow due to updateGLVolume
-        // cal_max: true, // works but is slow due to updateGLVolumes
+        cal_min: false,
+        cal_max: false,
       }
       // make sure all views can control each other
       nv1.broadcastTo([nv2, nv3], syncOpts);

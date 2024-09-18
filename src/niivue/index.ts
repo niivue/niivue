@@ -413,7 +413,6 @@ export class Niivue {
     cal_max: false,
     clipPlane: false,
     gamma: false,
-    useSliceOffset: false,
     sliceType: false,
     crosshair: false
   }
@@ -997,13 +996,21 @@ export class Niivue {
   }
 
   doSyncCalMin(otherNV: Niivue): void {
-    otherNV.volumes[0].cal_min = this.volumes[0].cal_min
-    otherNV.updateGLVolume()
+    // only call updateGLVolume if the cal_min is different
+    // because updateGLVolume is expensive, but required to update the volume
+    if (this.volumes[0].cal_min !== otherNV.volumes[0].cal_min) {
+      otherNV.volumes[0].cal_min = this.volumes[0].cal_min
+      otherNV.updateGLVolume()
+    }
   }
 
   doSyncCalMax(otherNV: Niivue): void {
-    otherNV.volumes[0].cal_max = this.volumes[0].cal_max
-    otherNV.updateGLVolume()
+    // only call updateGLVolume if the cal_max is different
+    // because updateGLVolume is expensive, but required to update the volume
+    if (this.volumes[0].cal_max !== otherNV.volumes[0].cal_max) {
+      otherNV.volumes[0].cal_max = this.volumes[0].cal_max
+      otherNV.updateGLVolume()
+    }
   }
 
   doSyncSliceType(otherNV: Niivue): void {
