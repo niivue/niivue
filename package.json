@@ -66,6 +66,7 @@
     "@ungap/structured-clone": "^1.2.0",
     "array-equal": "^1.0.2",
     "daikon": "^1.2.46",
+    "cbor-x": "^1.6.0",
     "fflate": "^0.8.2",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.6.8",
