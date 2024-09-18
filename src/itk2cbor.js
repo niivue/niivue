@@ -167,74 +167,164 @@ export function hdrToArrayBufferX(hdr) {
 }
 
 // Input is ITK IWI, output is NIfTI
-export function iwi2nii(arrayBuffer) {
-    // decode from cbor to JS object
-    let iwi = decode(new Uint8Array(arrayBuffer))
-    console.log(iwi)
-    if ((!iwi.hasOwnProperty('imageType')) || (!iwi.hasOwnProperty('size')) || (!iwi.hasOwnProperty('data'))) {
-        throw new Error('.iwi.cbor must have "imageType", "size" and "data".')
+export function iwi2niiCore(iwi) {
+  if (iwi.data.buffer.byteLength > iwi.data.byteLength) {
+    console.log(`!buffer larger than data ${iwi.data.buffer.byteLength} vs ${iwi.data.byteLength} bytes`)
+  }
+  if ((!iwi.hasOwnProperty('imageType')) || (!iwi.hasOwnProperty('size')) || (!iwi.hasOwnProperty('data'))) {
+      throw new Error('.iwi.cbor must have "imageType", "size" and "data".')
+  }
+  let hdr = new nifti.NIFTI1()
+  hdr.littleEndian = true
+  // set dims
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
+  hdr.dims[0] = iwi.size.length
+  let nvox = 1
+  for (let i = 0; i < iwi.size.length; i++) {
+      hdr.dims[i+1] = Number(iwi.size[i] & BigInt(0xFFFFFFFF))
+      nvox *= Math.max(hdr.dims[i+1], 1)
+  }
+  // set pixDims
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+  if (iwi.hasOwnProperty('spacing')) {
+    for (let i = 0; i < iwi.spacing.length; i++) {
+      hdr.pixDims[i+1] = iwi.spacing[i]
     }
-    let hdr = new nifti.NIFTI1()
-    hdr.littleEndian = true
-    // set dims
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.dims[0] = iwi.size.length
-    for (let i = 0; i < iwi.size.length; i++) {
-        hdr.dims[i+1] = Number(iwi.size[i] & BigInt(0xFFFFFFFF))
-    }
-    // set pixDims
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    if (iwi.hasOwnProperty('spacing')) {
-        for (let i = 0; i < iwi.spacing.length; i++) {
-            hdr.pixDims[i+1] = iwi.spacing[i]
-        }
-    }
-    if (iwi.data instanceof Uint8Array) {
+  }
+  if (iwi.data instanceof Uint8Array) {
+    if (iwi.imageType.hasOwnProperty('pixelType') && (iwi.imageType.pixelType === 'RGB')) {
+      hdr.numBitsPerVoxel = 24
+      hdr.datatypeCode = 128 //DT_RGB24
+    } else {
       hdr.numBitsPerVoxel = 8
       hdr.datatypeCode = 2 //DT_UINT8
-    } else if (iwi.data instanceof Int16Array) {
-      hdr.numBitsPerVoxel = 16
-      hdr.datatypeCode = 4 // DT_INT16
-    } else if (iwi.data instanceof Uint16Array) {
-      hdr.numBitsPerVoxel = 16
-      hdr.datatypeCode = 512 // DT_UINT16
-    } else if (iwi.data instanceof Uint32Array) {
-      hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = 8 // DT_INT32
-    } else if (iwi.data instanceof Float64Array) {
-      hdr.numBitsPerVoxel = 64
-      hdr.datatypeCode = 64 // DT_FLOAT64
-    } else if (iwi.data instanceof Float32Array) {
-      hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = 16 // DT_FLOAT32
-    } else {
-        throw new Error('.iwi.cbor voxels use unsupported datatype.')
     }
-    hdr.vox_offset = 352
-    hdr.scl_inter = 0
-    hdr.scl_slope = 1 //todo: check
-    hdr.magic = 'n+1'
-    if ((iwi.hasOwnProperty('direction')) && (iwi.hasOwnProperty('origin'))) {
-        // NIFTI is RAS, IWI is LPS
-        // https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Spatial_Coordinates
-        let m = iwi.direction.slice() //matrix
-        let mm = iwi.spacing.slice() // millimeters
-        let o = iwi.origin
-        hdr.sform_code = 1
-        hdr.affine = [
-          [m[0] * -mm[0], m[3] * -mm[1], m[6] * -mm[2], -o[0]],
-          [m[1] * -mm[0], m[4] * -mm[1], m[7] * -mm[2], -o[1]],
-          [m[2] * mm[0], m[5] * mm[1], m[8] * mm[2], o[2]],
-          [0, 0, 0, 1]
-        ]
-    }
-    console.log(hdr)
-    const hdrBytes = hdrToArrayBufferX({ ...hdr, vox_offset: 352 })
-    const opad = new Uint8Array(4)
-    const img8 = new Uint8Array(iwi.data.buffer)
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-    odata.set(img8, hdrBytes.length + opad.length)
-    return odata
+  } else if (iwi.data instanceof Int16Array) {
+    hdr.numBitsPerVoxel = 16
+    hdr.datatypeCode = 4 // DT_INT16
+  } else if (iwi.data instanceof Uint16Array) {
+    hdr.numBitsPerVoxel = 16
+    hdr.datatypeCode = 512 // DT_UINT16
+  } else if (iwi.data instanceof Int32Array) {
+    hdr.numBitsPerVoxel = 32
+    hdr.datatypeCode = 8 // DT_INT32
+  } else if (iwi.data instanceof Float64Array) {
+    hdr.numBitsPerVoxel = 64
+    hdr.datatypeCode = 64 // DT_FLOAT64
+  } else if (iwi.data instanceof Float32Array) {
+    hdr.numBitsPerVoxel = 32
+    hdr.datatypeCode = 16 // DT_FLOAT32
+  } else {
+      throw new Error('.iwi.cbor voxels use unsupported datatype.')
+  }
+  const nbyte = nvox * Math.floor(hdr.numBitsPerVoxel/8)
+  // see https://github.com/InsightSoftwareConsortium/ITK-Wasm/issues/1239
+  const img8 = new Uint8Array(iwi.data.buffer, iwi.data.byteOffset, iwi.data.byteLength)
+  if (nbyte !== img8.byteLength) {
+    throw new Error(`expected ${nbyte} bytes but have ${img8.byteLength}`)
+  }
+  hdr.vox_offset = 352
+  hdr.scl_inter = 0
+  hdr.scl_slope = 1 //todo: check
+  hdr.magic = 'n+1'
+  if ((iwi.hasOwnProperty('direction')) && (iwi.hasOwnProperty('origin'))) {
+      // NIFTI is RAS, IWI is LPS
+      // https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Spatial_Coordinates
+      let m = iwi.direction.slice() //matrix
+      let mm = iwi.spacing.slice() // millimeters
+      let o = iwi.origin
+      hdr.sform_code = 1
+      hdr.affine = [
+        [m[0] * -mm[0], m[3] * -mm[1], m[6] * -mm[2], -o[0]],
+        [m[1] * -mm[0], m[4] * -mm[1], m[7] * -mm[2], -o[1]],
+        [m[2] * mm[0], m[5] * mm[1], m[8] * mm[2], o[2]],
+        [0, 0, 0, 1]
+      ]
+  }
+  // console.log(hdr)
+  const hdrBytes = hdrToArrayBufferX({ ...hdr, vox_offset: 352 })
+  const opad = new Uint8Array(4)
+  const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
+  odata.set(hdrBytes)
+  odata.set(opad, hdrBytes.length)
+  odata.set(img8, hdrBytes.length + opad.length)
+  return odata
 }
+
+// Input is ITK IWI, output is NIfTI
+export function iwi2nii(arrayBuffer) {
+  // decode from cbor to JS object
+  let iwi = decode(new Uint8Array(arrayBuffer))
+  return iwi2niiCore(iwi)
+}
+
+// Input is ITK IWI, output is NIfTI
+export function nii2iwi(hdr, img) {
+  let iwi = {
+    "imageType": {
+      "dimension": hdr.dims[0],
+      "componentType": "uint8",
+      "pixelType": "Scalar",
+      "components": 1
+    },
+    "direction": [],
+    "origin": [],
+    "size": [],
+    "spacing": [],
+    "metadata": []
+  }
+  for (let i = 0; i < hdr.dims[0]; i++) {
+    iwi.spacing[i] =  hdr.pixDims[i+1]
+    iwi.size[i] =  hdr.dims[i+1]
+    
+  }
+  if (hdr.dims[0] > 2) {
+    // n.b. LPS -> RAS
+    iwi.origin[0] = -hdr.affine[0][3]
+    iwi.origin[1] = -hdr.affine[1][3]
+    iwi.origin[2] = hdr.affine[2][3]
+    const mm = [ hdr.pixDims[1], hdr.pixDims[2], hdr.pixDims[3]]
+    iwi.direction[0] = hdr.affine[0][0] / -mm[0]
+    iwi.direction[1] = hdr.affine[1][0] / -mm[0]
+    iwi.direction[2] = hdr.affine[2][0] / mm[0]
+    iwi.direction[3] = hdr.affine[0][1] / -mm[1]
+    iwi.direction[4] = hdr.affine[1][1] / -mm[1]
+    iwi.direction[5] = hdr.affine[2][1] / mm[1]
+    iwi.direction[6] = hdr.affine[0][2] / -mm[2]
+    iwi.direction[7] = hdr.affine[1][2] / -mm[2]
+    iwi.direction[8] = hdr.affine[2][2] / mm[2]
+  }
+  if (hdr.datatypeCode === 128) {
+    iwi.imageType.pixelType = 'RGB'
+    iwi.imageType.componentType = 'uint8'
+    iwi.imageType.components = 3
+    iwi.data = new Uint8Array(img)
+  } else if (hdr.datatypeCode === 64) {
+    iwi.imageType.componentType = 'float64'
+    iwi.data = new Float64Array(img)
+  } else if (hdr.datatypeCode === 16) {
+    iwi.imageType.componentType = 'float32'
+    iwi.data = new Float32Array(img)
+  } else if (hdr.datatypeCode === 2) {
+    iwi.imageType.componentType = 'uint8'
+    iwi.data = new Uint8Array(img)
+  } else if (hdr.datatypeCode === 4) {
+    iwi.imageType.componentType = 'int16'
+    iwi.data = new Int16Array(img)
+  } else if (hdr.datatypeCode === 8) {
+    iwi.imageType.componentType = 'int32'
+    iwi.data = new Int32Array(img)
+  } else {
+        throw new Error(`NIfTI voxels use unsupported datatype ${hdr.datatypeCode}.`)
+  }
+  iwi.size = iwi.size.map(num => BigInt(num));
+  // console.log(iwi)
+  return iwi
+}
+
+// Input is ITK IWI, output is NIfTI
+export function mesh2iwm(hdr, img) {
+
+
+}
+

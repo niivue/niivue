@@ -31,7 +31,10 @@
     <script type="module" async>
       import {
         iwm2mesh,
-        iwi2nii
+        iwi2niiCore,
+        iwi2nii,
+        nii2iwi,
+        mesh2iwm
       } from "./itk2cbor.js"
       import {
         Niivue,
@@ -55,7 +58,6 @@
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
-        loglevel: 'debug',
         onLocationChange: handleIntensityChange
       }
       var nv1 = new Niivue(defaults)
@@ -71,19 +73,25 @@
               console.error('Error loading binary file:', error)
           }
       }
-      async function processIWM(url) {
+      async function loadIWM(url) {
         const arrayBuffer = await loadBinaryFile(url)
         let mesh = iwm2mesh(arrayBuffer)
         const mz3 = NVMeshUtilities.createMZ3(mesh.positions, mesh.indices, false)
         await nv1.loadFromArrayBuffer(mz3, 'test.mz3')
       }
-      async function processIWI(url) {
+      async function loadIWI(url) {
         const arrayBuffer = await loadBinaryFile(url)
         let nii = iwi2nii(arrayBuffer)
         await nv1.loadVolumes([{ url: nii, name: 'test.nii' }]);
       }
-      processIWM('./cow.iwm.cbor')
-      processIWI('./fslmean.iwi.cbor')
+      async function createIWI () {
+        let iwi = nii2iwi(nv1.volumes[0].hdr,  nv1.volumes[0].img.buffer)
+        let nii = iwi2niiCore(iwi)
+        await nv1.loadVolumes([{ url: nii, name: 'test.nii' }]);
+      }
+      await loadIWI('./fslmean.iwi.cbor')
+      await loadIWM('./cow.iwm.cbor')
+      //createIWI()
     </script>
   </body>
 </html>
