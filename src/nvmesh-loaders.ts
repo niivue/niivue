@@ -823,6 +823,9 @@ export class NVMeshLoaders {
           fy = fz
         }
       }
+      for (let v = 0; v < 9; v++) {
+          console.log(':',tris[v])
+      }
     } else {
       throw new Error('Unsupported ASCII VTK datatype ' + items[0])
     }
