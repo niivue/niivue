@@ -10,57 +10,108 @@ import { mat4, mat3, vec4, vec3 } from 'gl-matrix'
 
 // Input is ITK IWM, output is mesh with vertices (positions) and indices (0-indexed)
 // https://github.com/InsightSoftwareConsortium/ITK-Wasm/issues/1235
+export function iwm2meshCore(iwm) {
+  if ((!iwm.hasOwnProperty('meshType')) || (!iwm.hasOwnProperty('cells')) || (!iwm.hasOwnProperty('points'))) {
+    throw new Error('.iwm.cbor must have "meshType", "cells" and "points".')
+  }
+  // convert bigint to uint32
+  const cells = new Uint32Array(iwm.cells.length)
+  for (let i = 0; i < iwm.cells.length; i++) {
+    cells[i] = Number(iwm.cells[i] & BigInt(0xFFFFFFFF))
+  }
+  // 1st pass: count triangles
+  let ntri = 0
+  let i = 0
+  while (i < cells.length) {
+    // enum cell type 2=TRIANGLE_CELL 3=QUADRILATERAL_CELL 4=POLYGON_CELL
+    const cellType = cells[i]
+    const cellNum = cells[i+1]
+    if ((cellType < 2) || (cellType < 2) || (cellNum < 3)) {
+        throw new Error('unsupported iwm cell type', cellType, cellNum)
+    }
+    i += cellNum + 2 //skip cellNum, cellType and elements
+    ntri += cellNum - 2 //e.g. TRIANGLE has 1 tri, QUAD has 2
+  }
+  // each triangle has 3 faces
+  const indices = new Uint32Array(ntri * 3)
+  // 2nd pass: populate triangles
+  i = 0
+  let j = 0
+  while (i < cells.length) {
+    const cellNum = cells[i+1]
+    const newTri = cellNum - 2 //e.g. TRIANGLE has 1 tri, QUAD has two
+    for (let t = 0; t < newTri; t++) { //for each triangle
+      indices[j++] = cells[i + 2]
+      indices[j++] = cells[i + 2 + 1 + t]
+      indices[j++] = cells[i + 2 + 2 + t]
+    }
+    i += cellNum + 2 //skip cellNum, cellType and elements
+  }
+  const positions = new Float32Array(iwm.points)
+  // TODO check NIFTI is RAS, IWM is LPS ??
+  i = 0
+  while (i < positions.length) {
+    positions[i] = -positions[i]
+    positions[i+1] = -positions[i+1]
+    i += 3
+  }
+  return {
+    positions,
+    indices
+  }
+}
+
 export function iwm2mesh(arrayBuffer) {
-    // decode from cbor to JS object
-    let iwm = decode(new Uint8Array(arrayBuffer))
-    if ((!iwm.hasOwnProperty('meshType')) || (!iwm.hasOwnProperty('cells')) || (!iwm.hasOwnProperty('points'))) {
-        throw new Error('.iwm.cbor must have "meshType", "cells" and "points".')
-    }
-    // convert bigint to uint32
-    const cells = new Uint32Array(iwm.cells.length)
-    for (let i = 0; i < iwm.cells.length; i++) {
-      cells[i] = Number(iwm.cells[i] & BigInt(0xFFFFFFFF))
-    }
-    // 1st pass: count triangles
-    let ntri = 0
-    let i = 0
-    while (i < cells.length) {
-        // enum cell type 2=TRIANGLE_CELL 3=QUADRILATERAL_CELL 4=POLYGON_CELL
-        const cellType = cells[i]
-        const cellNum = cells[i+1]
-        if ((cellType < 2) || (cellType < 2) || (cellNum < 3)) {
-            throw new Error('unsupported iwm cell type', cellType, cellNum)
-        }
-        i += cellNum + 2 //skip cellNum, cellType and elements
-        ntri += cellNum - 2 //e.g. TRIANGLE has 1 tri, QUAD has 2
-    }
-    // each triangle has 3 faces
-    const indices = new Uint32Array(ntri * 3)
-    // 2nd pass: populate triangles
-    i = 0
-    let j = 0
-    while (i < cells.length) {
-        const cellNum = cells[i+1]
-        const newTri = cellNum - 2 //e.g. TRIANGLE has 1 tri, QUAD has two
-        for (let t = 0; t < newTri; t++) { //for each triangle
-            indices[j++] = cells[i + 2]
-            indices[j++] = cells[i + 2 + 1 + t]
-            indices[j++] = cells[i + 2 + 2 + t]
-        }
-        i += cellNum + 2 //skip cellNum, cellType and elements
-    }
-    const positions = new Float32Array(iwm.points)
-    // TODO check NIFTI is RAS, IWM is LPS ??
-    i = 0
-    while (i < positions.length) {
-        positions[i] = -positions[i]
-        positions[i+1] = -positions[i+1]
-        i += 3
-    }
-    return {
-      positions,
-      indices
-    }
+  // decode from cbor to JS object
+  let iwm = decode(new Uint8Array(arrayBuffer))
+  // console.log(iwm)
+  return iwm2meshCore(iwm)
+}
+
+// Input is triangular mesh with points [x0 y0 z0 x1 y1 z1...] and triangle indices [i0 j0 k0 i1 j1 k1 ...]
+export function mesh2iwm(pts, tris) {
+  let iwm = {
+    "meshType": {
+        "dimension": 3,
+        "pointComponentType": "float32",
+        "pointPixelComponentType": "int8",
+        "pointPixelType": "Scalar",
+        "pointPixelComponents": 0,
+        "cellComponentType": "uint64",
+        "cellPixelComponentType": "int8",
+        "cellPixelType": "Scalar",
+        "cellPixelComponents": 0
+    },
+    "numberOfPointPixels": 0n,
+    "numberOfCellPixels": 0n,
+  }
+  // populate cells: one per triangle
+  let ntri = Math.floor(tris.length / 3)
+  // for iwm format, each triangle has 5 cells; DataType DataNum I J K
+  let cellBufferSize = ntri * 5
+  iwm.cells = new BigUint64Array(cellBufferSize)
+  let j = 0
+  let k = 0
+  for (let t = 0; t < ntri; t++) { //for each triangle
+      iwm.cells[j++] = 2n // TriangleCell
+      iwm.cells[j++] = 3n // Triangle has 3 indices
+      iwm.cells[j++] = BigInt(tris[k++])
+      iwm.cells[j++] = BigInt(tris[k++])
+      iwm.cells[j++] = BigInt(tris[k++])
+  }
+  iwm.cellBufferSize = BigInt(cellBufferSize)
+  iwm.numberOfCells = BigInt(ntri)
+  iwm.points = pts.slice()
+  // reorient vertices NIFTI is RAS, IWM is LPS ??
+  let i = 0
+  while (i < iwm.points.length) {
+      iwm.points[i] = -iwm.points[i]
+      iwm.points[i+1] = -iwm.points[i+1]
+      i += 3
+  }
+  iwm.numberOfPoints = BigInt(Math.floor(pts.length) / 3)
+  //console.log(iwm)
+  return iwm
 }
 
 // n.b. : largely duplicates of /nvimage/utils.ts but avoids dependency
@@ -84,18 +135,15 @@ export function hdrToArrayBufferX(hdr) {
   const byteArray = new Uint8Array(348)
   const view = new DataView(byteArray.buffer)
   view.setInt32(0, 348, isLittleEndian)
-
   // data_type, db_name, extents, session_error, regular are not used
   // regular set to 'r' (ASCII 114) for Analyze compatibility
   view.setUint8(38, 114)
   // dim_info
   view.setUint8(39, hdr.dim_info)
-
   // dims
   for (let i = 0; i < 8; i++) {
     view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], isLittleEndian)
   }
-
   // intent_p1, intent_p2, intent_p3
   view.setFloat32(56, hdr.intent_p1, isLittleEndian)
   view.setFloat32(60, hdr.intent_p2, isLittleEndian)
@@ -125,9 +173,7 @@ export function hdrToArrayBufferX(hdr) {
   view.setFloat32(128, hdr.cal_min, isLittleEndian)
   view.setFloat32(132, hdr.slice_duration, isLittleEndian)
   view.setFloat32(136, hdr.toffset, isLittleEndian)
-
   // glmax, glmin are unused
-
   // descrip and aux_file
   // node.js byteArray.set(Buffer.from(hdr.description), 148);
   byteArray.set(str2BufferX(hdr.description), 148)
@@ -141,7 +187,6 @@ export function hdrToArrayBufferX(hdr) {
   } else {
     view.setInt16(254, hdr.sform_code, isLittleEndian)
   }
-
   // quatern_b, quatern_c, quatern_d, qoffset_x, qoffset_y, qoffset_z, srow_x[4], srow_y[4], and srow_z[4]
   view.setFloat32(256, hdr.quatern_b, isLittleEndian)
   view.setFloat32(260, hdr.quatern_c, isLittleEndian)
@@ -161,16 +206,12 @@ export function hdrToArrayBufferX(hdr) {
   // node.js byteArray.set(Buffer.from(hdr.magic), 344);
   // byteArray.set(str2Buffer(hdr.magic), 344)
   view.setInt32(344, 3222382, true) // "n+1\0"
-
   return byteArray
   // return byteArray.buffer;
 }
 
 // Input is ITK IWI, output is NIfTI
 export function iwi2niiCore(iwi) {
-  if (iwi.data.buffer.byteLength > iwi.data.byteLength) {
-    console.log(`!buffer larger than data ${iwi.data.buffer.byteLength} vs ${iwi.data.byteLength} bytes`)
-  }
   if ((!iwi.hasOwnProperty('imageType')) || (!iwi.hasOwnProperty('size')) || (!iwi.hasOwnProperty('data'))) {
       throw new Error('.iwi.cbor must have "imageType", "size" and "data".')
   }
@@ -321,10 +362,3 @@ export function nii2iwi(hdr, img) {
   // console.log(iwi)
   return iwi
 }
-
-// Input is ITK IWI, output is NIfTI
-export function mesh2iwm(hdr, img) {
-
-
-}
-
