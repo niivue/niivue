@@ -1,7 +1,6 @@
 // Import the decode and encode functions from 'cbor-x'
 import { decode, encode } from 'cbor-x'
 import * as nifti from 'nifti-reader-js'
-import { mat4, mat3, vec4, vec3 } from 'gl-matrix'
 
 // itkwasm reads and writes images and meshes as cbor
 // https://docs.itk.org/en/latest/learn/python_quick_start.html
@@ -11,7 +10,11 @@ import { mat4, mat3, vec4, vec3 } from 'gl-matrix'
 // Input is ITK IWM, output is mesh with vertices (positions) and indices (0-indexed)
 // https://github.com/InsightSoftwareConsortium/ITK-Wasm/issues/1235
 export function iwm2meshCore(iwm) {
-  if (!iwm.hasOwnProperty('meshType') || !iwm.hasOwnProperty('cells') || !iwm.hasOwnProperty('points')) {
+  if (
+    !Object.prototype.hasOwnProperty.call(iwm, 'meshType') ||
+    !Object.prototype.hasOwnProperty.call(iwm, 'cells') ||
+    !Object.prototype.hasOwnProperty.call(iwm, 'points')
+  ) {
     throw new Error('.iwm.cbor must have "meshType", "cells" and "points".')
   }
   // convert bigint to uint32
@@ -64,14 +67,14 @@ export function iwm2meshCore(iwm) {
 
 export function iwm2mesh(arrayBuffer) {
   // decode from cbor to JS object
-  let iwm = decode(new Uint8Array(arrayBuffer))
+  const iwm = decode(new Uint8Array(arrayBuffer))
   // console.log(iwm)
   return iwm2meshCore(iwm)
 }
 
 // Input is triangular mesh with points [x0 y0 z0 x1 y1 z1...] and triangle indices [i0 j0 k0 i1 j1 k1 ...]
 export function mesh2iwm(pts, tris, isEncodeCBOR = true) {
-  let iwm = {
+  const iwm = {
     meshType: {
       dimension: 3,
       pointComponentType: 'float32',
@@ -87,9 +90,9 @@ export function mesh2iwm(pts, tris, isEncodeCBOR = true) {
     numberOfCellPixels: 0n
   }
   // populate cells: one per triangle
-  let ntri = Math.floor(tris.length / 3)
+  const ntri = Math.floor(tris.length / 3)
   // for iwm format, each triangle has 5 cells; DataType DataNum I J K
-  let cellBufferSize = ntri * 5
+  const cellBufferSize = ntri * 5
   iwm.cells = new BigUint64Array(cellBufferSize)
   let j = 0
   let k = 0
@@ -136,7 +139,7 @@ function str2BufferX(str, maxLen) {
 export function hdrToArrayBufferX(hdr) {
   const SHORT_SIZE = 2
   const FLOAT32_SIZE = 4
-  let isLittleEndian = true
+  const isLittleEndian = true
   const byteArray = new Uint8Array(348)
   const view = new DataView(byteArray.buffer)
   view.setInt32(0, 348, isLittleEndian)
@@ -180,9 +183,7 @@ export function hdrToArrayBufferX(hdr) {
   view.setFloat32(136, hdr.toffset, isLittleEndian)
   // glmax, glmin are unused
   // descrip and aux_file
-  // node.js byteArray.set(Buffer.from(hdr.description), 148);
   byteArray.set(str2BufferX(hdr.description), 148)
-  // node.js: byteArray.set(Buffer.from(hdr.aux_file), 228);
   byteArray.set(str2BufferX(hdr.aux_file), 228)
   // qform_code, sform_code
   view.setInt16(252, hdr.qform_code, isLittleEndian)
@@ -204,23 +205,21 @@ export function hdrToArrayBufferX(hdr) {
   for (let i = 0; i < 12; i++) {
     view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], isLittleEndian)
   }
-  // node.js https://www.w3schools.com/nodejs/met_buffer_from.asp
-  // intent_name and magic
-  // node.js byteArray.set(Buffer.from(hdr.intent_name), 328);
-  //  byteArray.set(str2Buffer(hdr.intent_name), 328)
-  // node.js byteArray.set(Buffer.from(hdr.magic), 344);
-  // byteArray.set(str2Buffer(hdr.magic), 344)
+  // magic
   view.setInt32(344, 3222382, true) // "n+1\0"
   return byteArray
-  // return byteArray.buffer;
 }
 
 // Input is ITK IWI, output is NIfTI
 export function iwi2niiCore(iwi) {
-  if (!iwi.hasOwnProperty('imageType') || !iwi.hasOwnProperty('size') || !iwi.hasOwnProperty('data')) {
+  if (
+    !Object.prototype.hasOwnProperty.call(iwi, 'imageType') ||
+    !Object.prototype.hasOwnProperty.call(iwi, 'size') ||
+    !Object.prototype.hasOwnProperty.call(iwi, 'data')
+  ) {
     throw new Error('.iwi.cbor must have "imageType", "size" and "data".')
   }
-  let hdr = new nifti.NIFTI1()
+  const hdr = new nifti.NIFTI1()
   hdr.littleEndian = true
   // set dims
   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -232,13 +231,13 @@ export function iwi2niiCore(iwi) {
   }
   // set pixDims
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-  if (iwi.hasOwnProperty('spacing')) {
+  if (Object.prototype.hasOwnProperty.call(iwi, 'spacing')) {
     for (let i = 0; i < iwi.spacing.length; i++) {
       hdr.pixDims[i + 1] = iwi.spacing[i]
     }
   }
   if (iwi.data instanceof Uint8Array) {
-    if (iwi.imageType.hasOwnProperty('pixelType') && iwi.imageType.pixelType === 'RGB') {
+    if (Object.prototype.hasOwnProperty.call(iwi.imageType, 'pixelType') && iwi.imageType.pixelType === 'RGB') {
       hdr.numBitsPerVoxel = 24
       hdr.datatypeCode = 128 // DT_RGB24
     } else {
@@ -273,12 +272,12 @@ export function iwi2niiCore(iwi) {
   hdr.scl_inter = 0
   hdr.scl_slope = 1 // todo: check
   hdr.magic = 'n+1'
-  if (iwi.hasOwnProperty('direction') && iwi.hasOwnProperty('origin')) {
+  if (Object.prototype.hasOwnProperty.call(iwi, 'direction') && Object.prototype.hasOwnProperty.call(iwi, 'origin')) {
     // NIFTI is RAS, IWI is LPS
     // https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Spatial_Coordinates
-    let m = iwi.direction.slice() // matrix
-    let mm = iwi.spacing.slice() // millimeters
-    let o = iwi.origin
+    const m = iwi.direction.slice() // matrix
+    const mm = iwi.spacing.slice() // millimeters
+    const o = iwi.origin
     hdr.sform_code = 1
     hdr.affine = [
       [m[0] * -mm[0], m[3] * -mm[1], m[6] * -mm[2], -o[0]],
@@ -319,7 +318,7 @@ export function nii2iwi(hdr, img, isEncodeCBOR = false) {
     spacing: [],
     metadata: []
   }
-  
+
   for (let i = 0; i < hdr.dims[0]; i++) {
     iwi.spacing[i] = hdr.pixDims[i + 1]
     iwi.size[i] = hdr.dims[i + 1]
