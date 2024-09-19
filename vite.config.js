@@ -15,13 +15,18 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['nifti-reader-js']
+    include: ['nifti-reader-js'],
+    // necessary for dev server
+    exclude: ['@itk-wasm/downsample', '@itk-wasm/image-io']
   },
   plugins: [
     commonjs({
       include: /node_modules/
     })
   ],
+  worker: {
+    format: 'es'
+  },
   build: {
     outDir: './dist_intermediate',
     emptyOutDir: false,

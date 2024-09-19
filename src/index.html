@@ -31,6 +31,7 @@
     <footer id="intensity">&nbsp;</footer>
     </footer>
     <script type="module" async>
+      import { decode, encode } from 'cbor-x'
       import {
         iwm2mesh,
         iwi2nii,
@@ -45,6 +46,16 @@
         NVMeshUtilities,
         SHOW_RENDER
       } from "./niivue/index.ts"
+      import {
+  downsampleBinShrink,
+  downsampleLabelImage,
+  downsampleSigma,
+  downsample,
+  gaussianKernelRadius,
+  setPipelinesBaseUrl,
+  getPipelinesBaseUrl,
+} from "@itk-wasm/downsample"
+import { niftiReadImage } from "@itk-wasm/image-io"
       sliceDrop.onchange = function () {
         let st = parseInt(this.value);
         nv1.setSliceType(st);
@@ -86,9 +97,13 @@
         await nv1.loadVolumes([{ url: nii, name: 'test.nii' }]);
       }
       async function createIWI() {
-        let iwi = nii2iwi(nv1.volumes[0].hdr,  nv1.volumes[0].img.buffer)
-        let nii = iwi2nii(iwi)
+        const iwi = nii2iwi(nv1.volumes[0].hdr,  nv1.volumes[0].img.buffer)
+        const iwiEncoded = nii2iwi(nv1.volumes[0].hdr,  nv1.volumes[0].img.buffer, true)
+        let nii = iwi2nii(iwiEncoded)
         await nv1.loadVolumes([{ url: nii, name: 'test.nii' }]);
+        console.log('dims before downsample')
+        console.log(nv1.volumes[0].dims)
+        await doDownsample(iwi, new File([nii], 'test.nii'))
       }
       async function createIWM() {
         let iwm = mesh2iwm(nv1.meshes[0].pts, nv1.meshes[0].tris)
@@ -96,10 +111,41 @@
         const mz3 = NVMeshUtilities.createMZ3(mesh.positions, mesh.indices, false)
         await nv1.loadFromArrayBuffer(mz3, 'test.mz3')
       }
-      await loadIWI('./fslmean.iwi.cbor')
-      await loadIWM('./cow.iwm.cbor')
-      createIWI()
-      createIWM()
+      async function doDownsample(inFile, nii){
+        let readFileResult = await niftiReadImage(nii)
+        // bigint -> number is necessary for serialization because the object is serialized to JSON
+        // to be sent to the worker and the JSON does not support bigint.
+        // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt#use_within_json
+        inFile.size = inFile.size.map(Number)
+        console.log('doing downsampling')
+        console.log('inFile nifti parsed with itk-wasm niftiReadImage')
+        console.log(readFileResult.image)
+        console.log('inFile from nii2iwi (for comparison)')
+        console.log(inFile)
+        const downSampleResult = await downsampleBinShrink(inFile, {
+          shrinkFactors: [2, 2, 2],
+          webWorker: null
+        })
+        const downSampledImage = downSampleResult.downsampled
+        console.log('downSampledImage')
+        console.log(downSampledImage)
+        // number -> bigint because encode expects Image class to have bigint size
+        downSampledImage.size = downSampledImage.size.map(BigInt)
+        // must incode the downsampled image to cbor to work 
+        // with iwi2nii implementation
+        const downNii = iwi2nii(encode(downSampledImage))
+        await nv1.loadVolumes([{ url: downNii, name: 'test.nii' }]);
+        console.log('dims after downsample')
+        console.log(nv1.volumes[0].dims)
+      }
+
+      async function main(){
+        await loadIWI('./fslmean.iwi.cbor')
+        await loadIWM('./cow.iwm.cbor')
+        await createIWI()
+        await createIWM()
+      }
+      main()
     </script>
   </body>
 </html>
