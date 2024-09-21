@@ -15,9 +15,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['nifti-reader-js'],
-    // necessary for dev server
-    exclude: ['@itk-wasm/downsample', '@itk-wasm/image-io']
+    include: ['nifti-reader-js']
   },
   plugins: [
     commonjs({
