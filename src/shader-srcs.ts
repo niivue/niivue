@@ -719,6 +719,47 @@ void main() {
 	color = lineColor;
 }`
 
+export const fragRectOutlineShader = `#version 300 es
+#line 723
+precision highp int;
+precision highp float;
+
+uniform vec4 lineColor;
+uniform vec4 leftTopWidthHeight;
+uniform float thickness; // line thickness in pixels
+uniform vec2 canvasWidthHeight;
+
+out vec4 color;
+
+void main() {
+    // fragment position in screen coordinates
+    vec2 fragCoord = gl_FragCoord.xy;
+
+    // canvas height
+    float canvasHeight = canvasWidthHeight.y;
+
+    // 'top' and 'bottom' to match gl_FragCoord.y coordinate system
+    float top = canvasHeight - leftTopWidthHeight.y;
+    float bottom = top - leftTopWidthHeight.w;
+
+    // left and right edges
+    float left = leftTopWidthHeight.x;
+    float right = left + leftTopWidthHeight.z;
+
+    bool withinLeft = fragCoord.x >= left && fragCoord.x <= left + thickness;
+    bool withinRight = fragCoord.x <= right && fragCoord.x >= right - thickness;
+    bool withinTop = fragCoord.y <= top && fragCoord.y >= top - thickness;
+    bool withinBottom = fragCoord.y >= bottom && fragCoord.y <= bottom + thickness;
+
+    bool isOutline = withinLeft || withinRight || withinTop || withinBottom;
+
+    if (isOutline) {
+        color = lineColor;
+    } else {
+        discard; 
+    }
+}`
+
 export const vertColorbarShader = `#version 300 es
 #line 490
 layout(location=0) in vec3 pos;
