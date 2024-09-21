@@ -22,6 +22,9 @@ export default defineConfig({
       include: /node_modules/
     })
   ],
+  worker: {
+    format: 'es'
+  },
   build: {
     outDir: './dist_intermediate',
     emptyOutDir: false,
