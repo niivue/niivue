@@ -1670,6 +1670,7 @@ type SaveImageOptions = {
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 declare class Niivue {
+    loaders: {};
     canvas: HTMLCanvasElement | null;
     _gl: WebGL2RenderingContext | null;
     isBusy: boolean;
@@ -2138,6 +2139,7 @@ declare class Niivue {
      * @param file - File object
      */
     loadFromFile(file: File): Promise<void>;
+    useLoader(loader: unknown, fileExt: string, toExt: string): void;
     dropListener(e: DragEvent): void;
     /**
      * insert a gap between slices of a mutliplanar view.
@@ -2617,6 +2619,7 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
      */
     saveDocument(fileName?: string, compress?: boolean): Promise<void>;
+    loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this>;
     /**
      * load an array of volume objects
      * @param volumeList - the array of objects to load. each object must have a resolvable "url" property at a minimum
