@@ -97,6 +97,7 @@ import {
   ImageFromUrlOptions
 } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
+import { NVMeshUtilities } from '../nvmesh-utilities.js'
 import {
   Connectome,
   LegacyConnectome,
@@ -329,6 +330,7 @@ const defaultSaveImageOptions: SaveImageOptions = {
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export class Niivue {
+  loaders = {}
   canvas: HTMLCanvasElement | null = null // the reference to the canvas element on the page
   _gl: WebGL2RenderingContext | null = null // the gl context
   isBusy = false // flag to indicate if the scene is busy drawing
@@ -1776,6 +1778,13 @@ export class Niivue {
     if (ext === 'GZ') {
       ext = re.exec(fullname.slice(0, -3))![1] // img.trk.gz -> img.trk
       ext = ext.toUpperCase()
+    } else if (ext === 'CBOR') {
+      // we want to keep cbor WITH the extension before it.
+      // e.g. if fullname is img.iwi.cbor, we want the ext to be iwi.cbor
+      const endExt = ext
+      ext = re.exec(fullname.slice(0, -5))![1] // img.iwi.cbor -> iwi.cbor
+      ext = ext.toUpperCase()
+      ext = `${ext}.${endExt}`
     }
     return upperCase ? ext : ext.toLowerCase() // developer can choose to have extensions as upper or lower
   }
@@ -1798,6 +1807,33 @@ export class Niivue {
 
   async addVolumesFromUrl(imageOptionsArray: ImageFromUrlOptions[]): Promise<NVImage[]> {
     const promises = imageOptionsArray.map(async (imageItem) => {
+      // first check this.loaders to see if the user has
+      // registered a custom loader for this file type.
+      // if so, use that loader to load the file.
+      const ext = this.getFileExt(imageItem.url)
+      if (this.loaders[ext]) {
+        let itemToLoad: string | Uint8Array | ArrayBuffer = imageItem.url
+        const toExt = this.loaders[ext].toExt
+        let name = imageItem.name || imageItem.url
+        // in case the name is a url, just get the basename without the slashes
+        name = name.split('/').pop()
+        // if url is a string fetch the file first
+        if (typeof imageItem.url === 'string') {
+          const url = imageItem.url
+          try {
+            const response = await fetch(url)
+            if (!response.ok) {
+              throw new Error(`Failed to load file: ${response.statusText}`)
+            }
+            itemToLoad = await response.arrayBuffer()
+          } catch (error) {
+            throw new Error(`Failed to load url ${url}: ${error}`)
+          }
+        }
+        const buffer = await this.loaders[ext].loader(itemToLoad)
+        imageItem.url = buffer
+        imageItem.name = `${name}.${toExt}`
+      }
       const imageOptions = {
         url: imageItem.url!,
         headers: imageItem.headers,
@@ -1951,6 +1987,41 @@ export class Niivue {
     }).then((volume) => {
       this.addVolume(volume)
     })
+  }
+
+  /* useLoader
+
+  registers an external file loader for niivue to use when reading files.
+
+  the loader must return an array buffer of the file contents for niivue
+  to parse and the extension of the file so niivue can infer the file type to load. 
+
+  example: 
+
+  const myCustomLoader = (File) => {
+    // ... do parsing here ...
+    return {
+      arrayBuffer: ArrayBuffer,
+      fileExt: 'iwi.cbor',
+      positions: Float32Array | [], // allows for mesh loading to mz3
+      indices: Uint32Array | [], // allows for mesh loading to mz3
+    }
+
+  nv.useLoader({
+    loader: myCustomLoader,
+    fileExt: 'iwi.cbor',
+    toExt: 'nii'
+  })
+
+  */
+  useLoader(loader: unknown, fileExt: string, toExt: string): void {
+    this.loaders = {
+      ...this.loaders,
+      [fileExt.toUpperCase()]: {
+        loader,
+        toExt
+      }
+    }
   }
 
   // not included in public docs
@@ -3802,6 +3873,45 @@ export class Niivue {
     return this.document.download(fileName, compress)
   }
 
+  // generic loadImages that wraps loadVolumes and loadMeshes
+  async loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this> {
+    const volumes = []
+    const meshes = []
+    for (const image of images) {
+      if ('url' in image) {
+        const ext = this.getFileExt(image.url)
+        // check this.loaders to see if a user has register
+        // a custom loader for this file extension
+        if (this.loaders[ext]) {
+          // check if the loader type property is a volume or mesh
+          // by using the toExt property
+          const toExt = this.loaders[ext].toExt.toUpperCase()
+          if (MESH_EXTENSIONS.includes(toExt)) {
+            meshes.push(image)
+          } else {
+            volumes.push(image)
+          }
+          // continue to the next image
+          continue
+        }
+
+        if (MESH_EXTENSIONS.includes(ext.toUpperCase())) {
+          meshes.push(image)
+        } else {
+          volumes.push(image)
+        }
+      }
+    }
+    if (volumes.length > 0) {
+      await this.loadVolumes(volumes as ImageFromUrlOptions[])
+    }
+    if (meshes.length > 0) {
+      await this.loadMeshes(meshes as LoadFromUrlParams[])
+    }
+
+    return this
+  }
+
   /**
    * load an array of volume objects
    * @param volumeList - the array of objects to load. each object must have a resolvable "url" property at a minimum
@@ -3826,30 +3936,33 @@ export class Niivue {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
     // if more than one volume, then fetch them all simultaneously
     // using addVolumesFromUrl (note the "s" in "Volumes")
-    if (volumeList.length > 1) {
-      await this.addVolumesFromUrl(volumeList)
-      return this
-    }
-    const imageOptions = {
-      url: volumeList[0].url!,
-      headers: volumeList[0].headers,
-      name: volumeList[0].name,
-      colormap: volumeList[0].colormap ? volumeList[0].colormap : volumeList[0].colorMap,
-      colormapNegative: volumeList[0].colormapNegative
-        ? volumeList[0].colormapNegative
-        : volumeList[0].colorMapNegative,
-      opacity: volumeList[0].opacity,
-      urlImgData: volumeList[0].urlImgData,
-      cal_min: volumeList[0].cal_min,
-      cal_max: volumeList[0].cal_max,
-      trustCalMinMax: this.opts.trustCalMinMax,
-      isManifest: volumeList[0].isManifest,
-      frame4D: volumeList[0].frame4D,
-      limitFrames4D: volumeList[0].limitFrames4D || this.opts.limitFrames4D,
-      colorbarVisible: volumeList[0].colorbarVisible
-    }
-    await this.addVolumeFromUrl(imageOptions)
+    // if (volumeList.length > 1) {
+    //   await this.addVolumesFromUrl(volumeList)
+    //   return this
+    // }
+
+    await this.addVolumesFromUrl(volumeList)
     return this
+    // const imageOptions = {
+    //   url: volumeList[0].url!,
+    //   headers: volumeList[0].headers,
+    //   name: volumeList[0].name,
+    //   colormap: volumeList[0].colormap ? volumeList[0].colormap : volumeList[0].colorMap,
+    //   colormapNegative: volumeList[0].colormapNegative
+    //     ? volumeList[0].colormapNegative
+    //     : volumeList[0].colorMapNegative,
+    //   opacity: volumeList[0].opacity,
+    //   urlImgData: volumeList[0].urlImgData,
+    //   cal_min: volumeList[0].cal_min,
+    //   cal_max: volumeList[0].cal_max,
+    //   trustCalMinMax: this.opts.trustCalMinMax,
+    //   isManifest: volumeList[0].isManifest,
+    //   frame4D: volumeList[0].frame4D,
+    //   limitFrames4D: volumeList[0].limitFrames4D || this.opts.limitFrames4D,
+    //   colorbarVisible: volumeList[0].colorbarVisible
+    // }
+    // await this.addVolumeFromUrl(imageOptions)
+    // return this
   }
 
   /**
@@ -3880,7 +3993,34 @@ export class Niivue {
    */
   async addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]> {
     const promises = meshOptions.map(async (meshItem) => {
+      // first check this.loaders to see if the user has
+      // registered a custom loader for this file type.
+      // if so, use that loader to load the file.
       const ext = this.getFileExt(meshItem.url)
+      if (this.loaders[ext]) {
+        let itemToLoad: string | Uint8Array | ArrayBuffer = meshItem.url
+        const toExt = this.loaders[ext].toExt
+        let name = meshItem.name || meshItem.url
+        // in case the name is a url, just get the basename without the slashes
+        name = name.split('/').pop()
+        if (typeof meshItem.url === 'string') {
+          const url = meshItem.url
+          try {
+            const response = await fetch(url)
+            if (!response.ok) {
+              throw new Error(`Failed to load file: ${response.statusText}`)
+            }
+            itemToLoad = await response.arrayBuffer()
+          } catch (error) {
+            throw new Error(`Failed to load url ${url}: ${error}`)
+          }
+        }
+        const { positions, indices } = await this.loaders[ext].loader(itemToLoad)
+        meshItem.name = `${name}.${toExt}`
+        const mz3 = NVMeshUtilities.createMZ3(positions, indices, false)
+        meshItem.buffer = mz3
+        // return await this.loadFromArrayBuffer(mz3, meshItem.name)
+      }
       if (ext === 'JCON' || ext === 'JSON') {
         const response = await fetch(meshItem.url, {})
         const json = await response.json()
@@ -3929,17 +4069,17 @@ export class Niivue {
 
     // if more than one mesh, then fetch them all simultaneously
     // using addMeshesFromUrl (note the "s" in "Meshes")
-    if (meshList.length > 1) {
-      await this.addMeshesFromUrl(meshList)
-      this.updateGLVolume()
-      this.drawScene()
-      return this
-    }
-
-    await this.addMeshFromUrl(meshList[0])
+    // if (meshList.length > 1) {
+    await this.addMeshesFromUrl(meshList)
     this.updateGLVolume()
     this.drawScene()
     return this
+    // }
+
+    // await this.addMeshFromUrl(meshList[0])
+    // this.updateGLVolume()
+    // this.drawScene()
+    // return this
   }
 
   /**
