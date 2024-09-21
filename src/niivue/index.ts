@@ -1810,7 +1810,7 @@ export class Niivue {
       // first check this.loaders to see if the user has
       // registered a custom loader for this file type.
       // if so, use that loader to load the file.
-      const ext = this.getFileExt(imageItem.url)
+      const ext = this.getFileExt(imageItem.name || imageItem.url)
       if (this.loaders[ext]) {
         let itemToLoad: string | Uint8Array | ArrayBuffer = imageItem.url
         const toExt = this.loaders[ext].toExt
@@ -3996,7 +3996,7 @@ export class Niivue {
       // first check this.loaders to see if the user has
       // registered a custom loader for this file type.
       // if so, use that loader to load the file.
-      const ext = this.getFileExt(meshItem.url)
+      const ext = this.getFileExt(meshItem.name || meshItem.url)
       if (this.loaders[ext]) {
         let itemToLoad: string | Uint8Array | ArrayBuffer = meshItem.url
         const toExt = this.loaders[ext].toExt
