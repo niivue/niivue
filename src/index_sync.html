@@ -70,10 +70,18 @@
       </select>
       <label for="syncDrop"> Broadcast</label>
       <select id="syncDrop">
-        <option value="0">Sync Disabled</option>
-        <option value="1">Sync 2D</option>
-        <option value="2">Sync 3D</option>
-        <option value="3" selected>Sync 2D and 3D</option>
+        <option value="disabled">Sync Disabled</option>
+        <option value="2d">Sync 2D</option>
+        <option value="3d">Sync 3D</option>
+        <option value="crosshair" selected>crosshair</option>
+        <option value="zoomPan">zoomPan</option>
+        <option value="gamma">gamma</option>
+        <option value="sliceType">sliceType</option>
+        <option value="clipPlane">clipPlane</option>
+        <option value="cal_min">cal_min</option>
+        <option value="cal_max">cal_max</option>
+        <!-- everything -->
+         <option value="all">all except intensity</option>
       </select>
       <!-- slider for gamma -->
       <label for="gammaSlider">Gamma</label>
@@ -171,19 +179,54 @@
         nv1.gl.canvas.blur()
       }
 
-      syncDrop.onchange = function() {
-        const v = parseInt(syncDrop.value)
-        let is2D = false
-        let is3D = false
-        if (v % 2) {
-            is2D = true
+      syncDrop.onchange = function(e) {
+        const v = e.target.value
+        // let is2D = false
+        // let is3D = false
+        // if (v % 2) {
+        //     is2D = true
+        // }
+        // if (v > 1) {
+        //     is3D = true
+        // }
+        
+        // check if v === "all", if so, add everything
+        if (v === "all") {
+          nv1.broadcastTo([nv2, nv3], {
+            ['3d']: true,
+            crosshair: true,
+            zoomPan: true,
+            gamma: true,
+            sliceType: true,
+            clipPlane: true,
+            // cal_min: true,
+            // cal_max: true,
+          })
+          nv2.broadcastTo([nv1, nv3], {
+            ['3d']: true,
+            crosshair: true,
+            zoomPan: true,
+            gamma: true,
+            sliceType: true,
+            clipPlane: true,
+            // cal_min: true,
+            // cal_max: true,
+          })
+          nv3.broadcastTo([nv1, nv2], {
+            ['3d']: true,
+            crosshair: true,
+            zoomPan: true,
+            gamma: true,
+            sliceType: true,
+            clipPlane: true,
+            // cal_min: true,
+            // cal_max: true,
+          })
+          return
         }
-        if (v > 1) {
-            is3D = true
-        }
-        nv1.broadcastTo([nv2, nv3], { "2d": is2D, "3d": is3D })
-        nv2.broadcastTo([nv1, nv3], { "2d": is2D, "3d": is3D })
-        nv3.broadcastTo([nv1, nv2], { "2d": is2D, "3d": is3D })
+        nv1.broadcastTo([nv2, nv3], { [v]: true })
+        nv2.broadcastTo([nv1, nv3], { [v]: true })
+        nv3.broadcastTo([nv1, nv2], { [v]: true })
       }
 
       calMin.onchange = function() {
@@ -229,9 +272,10 @@
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange,
         backColor: [1, 1, 1, 1],
-        // dragMode: 3,
+        dragMode: 3,
         sliceType: 3,
-        multiplanarShowRender: SHOW_RENDER.ALWAYS
+        multiplanarShowRender: SHOW_RENDER.ALWAYS,
+        isRadiologicalConvention: true
       });
       nv1.attachTo("gl1");
       var volumeList1 = [{ url: "../demos/images/pcasl.nii.gz" }];
@@ -240,7 +284,7 @@
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange2,
         backColor: [1, 1, 1, 1],
-        // dragMode: 3,
+        dragMode: 3,
         sliceType: 3,
         multiplanarShowRender: SHOW_RENDER.ALWAYS
       });
@@ -249,7 +293,7 @@
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange3,
         backColor: [1, 1, 1, 1],
-        // dragMode: 0,
+        dragMode: 0,
         sliceType: 3,
         multiplanarShowRender: SHOW_RENDER.ALWAYS
       });
