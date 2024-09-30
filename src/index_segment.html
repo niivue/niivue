@@ -106,8 +106,16 @@
         if (nv1.opts.drawingEnabled) {
           nv1.opts.clickToSegment = true;
           nv1.setPenValue(penColor, false) // red and filled
+          // hide the crosshair
+          nv1.opts.crosshairWidth = 0;
+          // hide the mouse cursor
+          nv1.canvas.style.cursor = "none";
         } else {
           nv1.opts.clickToSegment = false;
+          // show the crosshair
+          nv1.opts.crosshairWidth = 1;
+          // show the mouse cursor
+          nv1.canvas.style.cursor = "default";
         }
       }
       growBtn.onclick = function () {
@@ -169,38 +177,55 @@
         if (divToRemove) {
           divToRemove.remove();
         }
+        // console.log(data.string)
       };
 
-      var volumeList1 = [{ url: "../demos/images/FLAIR.nii.gz" }];
+
+      var volumeList1 = [
+        { url: "../demos/images/FLAIR.nii.gz" },
+      ];
+      let clicks = 0;
+      const defaultPercent = 0.05;
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
         clickToSegmentRadius: 3, // in mm
-        clickToSegmentPercent: 0.2,
+        clickToSegmentPercent: defaultPercent,
         clickToSegmentAutoIntensity: true,
-        clickToSegmentMaxDistanceMM: 10,
+        clickToSegmentMaxDistanceMM: 30,
+        clickToSegmentIs2D: true,
+        floodFillNeighbors: 6,
         penSize: 3, // in voxels, but overridden by clickToSegmentRadius
-        maxDrawUndoBitmaps: 30,
+        maxDrawUndoBitmaps: 100, // large number for undo
         onDragRelease: onDragRelease,
         onLocationChange: onLocationChange,
         selectionBoxColor: [1, 0, 0, 0.5],
         dragMode: DRAG_MODE.roiSelection,
-        selectionBoxIsOutline: true
+        selectionBoxIsOutline: true,
       };
       var nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);
-      // multiplanarShowRender is the preferred option now, 
-      // but multiplanarForceRender is still available for backwards compatibility
-      // previous use was: nv1.opts.multiplanarForceRender = true;
       nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+      nv1.setSliceType(0)
+      nv1.setInterpolation(false)
       await nv1.loadVolumes(volumeList1);
       equalCheck.onchange()
 
-      // set drawing enabled
-      // nv1.setDrawingEnabled(true);
-      // nv1.setPenValue(1, true) // red and filled
+      // store mouse position
+      const mouse = { x: 0, y: 0 };
+
+      // when the user presses "t" toggle the overlay opacity between 0 and 1
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "t") {
+          if (nv1.volumes.length < 2) {
+            return;
+          }
+          const currentOpacity = nv1.volumes[1].opacity;
+          nv1.setOpacity(1, currentOpacity === 0 ? 0.5 : 0);
+        }
+      });
     </script>
   </body>
 </html>

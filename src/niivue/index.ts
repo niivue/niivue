@@ -345,6 +345,8 @@ export class Niivue {
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
+  clickToSegmentIsGrowing = false // flag to indicate if the clickToSegment flood fill growing is in progress with left mouse down + drag
+  clickToSegmentXY = [0, 0] // the x,y location of the clickToSegment flood fill
   renderDrawAmbientOcclusion = 0.4
   colorbarHeight = 0 // height in pixels, set when colorbar is drawn
   drawPenLocation = [NaN, NaN, NaN]
@@ -1198,6 +1200,9 @@ export class Niivue {
     }
 
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
+    if (this.opts.clickToSegment) {
+      this.clickToSegmentXY = [x, y]
+    }
     const label = this.getLabelAtPoint([x, y])
     if (label) {
       // check for user defined onclick handler
@@ -4778,8 +4783,12 @@ export class Niivue {
         this.drawBitmap[i] = newColor
       }
     }
-    this.drawAddUndoBitmap()
-    this.refreshDrawing(false)
+    if (!this.clickToSegmentIsGrowing) {
+      this.drawAddUndoBitmap()
+      this.refreshDrawing(false)
+    } else {
+      this.refreshDrawing(true)
+    }
   }
 
   // not included in public docs
@@ -5729,47 +5738,150 @@ export class Niivue {
         }
       }
     } else if (masks.length < 1 && roiIsMask) {
+      //-------------------------------------------
       // fill mask with zeros
+      // mask.fill(0)
+      // console.log('startVox', startVox)
+      // console.log('endVox', endVox)
+      // // const startVox = roiInfo.startVox
+      // // const endVox = roiInfo.endVox
+      // const xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]])
+      // const yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]])
+      // const zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]])
+
+      // // for our constant dimension we add one so that the for loop runs at least once
+      // if (startVox[0] - endVox[0] === 0) {
+      //   xrange[1] = startVox[0] + 1
+      // } else if (startVox[1] - endVox[1] === 0) {
+      //   yrange[1] = startVox[1] + 1
+      // } else if (startVox[2] - endVox[2] === 0) {
+      //   zrange[1] = startVox[2] + 1
+      // }
+
+      // const xdim = hdr.dims[1]
+      // const ydim = hdr.dims[2]
+      // for (let z = zrange[0]; z < zrange[1]; z++) {
+      //   const zi = z * xdim * ydim
+      //   for (let y = yrange[0]; y < yrange[1]; y++) {
+      //     const yi = y * xdim
+      //     for (let x = xrange[0]; x < xrange[1]; x++) {
+      //       const index = zi + yi + x
+      //       mask[index] = 1
+      //     }
+      //   }
+      // }
+      // // calculate area 2d area from startVox and endVox coordinates if roiIsMask is true (since mask is created from a 2d slice only)
+      // // area is in mm^2. The below calculations work regardless of the orientation of the image since
+      // // Niivue converts all images to RAS
+      // const xmm = Math.abs(pixDimsRAS[1] * (endVox[0] - startVox[0]))
+      // const ymm = Math.abs(pixDimsRAS[2] * (endVox[1] - startVox[1]))
+      // const zmm = Math.abs(pixDimsRAS[3] * (endVox[2] - startVox[2]))
+      // // one of the above will be zero since roiIsMask==true, so we filter out the non-zero value
+      // // and then multiply the other two to get the area
+      // const mms = [xmm, ymm, zmm]
+      // area = mms.filter((m) => m !== 0).reduce((a, b) => a * b, 1)
+      //-------------------------------------------
+      // Fill mask with zeros
       mask.fill(0)
       console.log('startVox', startVox)
       console.log('endVox', endVox)
-      // const startVox = roiInfo.startVox
-      // const endVox = roiInfo.endVox
-      const xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]])
-      const yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]])
-      const zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]])
 
-      // for our constant dimension we add one so that the for loop runs at least once
-      if (startVox[0] - endVox[0] === 0) {
-        xrange[1] = startVox[0] + 1
-      } else if (startVox[1] - endVox[1] === 0) {
-        yrange[1] = startVox[1] + 1
-      } else if (startVox[2] - endVox[2] === 0) {
-        zrange[1] = startVox[2] + 1
+      // Identify the constant dimension (the plane where the ellipse is drawn)
+      let constantDim = -1
+      if (startVox[0] === endVox[0]) {
+        constantDim = 0 // x is constant
+      } else if (startVox[1] === endVox[1]) {
+        constantDim = 1 // y is constant
+      } else if (startVox[2] === endVox[2]) {
+        constantDim = 2 // z is constant
+      } else {
+        console.error('Error: No constant dimension found.')
+        return
       }
 
+      // Get the varying dimensions
+      const dims = [0, 1, 2]
+      const varDims = dims.filter((dim) => dim !== constantDim)
+
+      // Compute the center of the ellipse in voxel coordinates
+      const centerVox = []
+      centerVox[constantDim] = startVox[constantDim]
+      centerVox[varDims[0]] = (startVox[varDims[0]] + endVox[varDims[0]]) / 2
+      centerVox[varDims[1]] = (startVox[varDims[1]] + endVox[varDims[1]]) / 2
+
+      // Compute the radii along each varying dimension
+      const radiusX = Math.abs(endVox[varDims[0]] - startVox[varDims[0]]) / 2
+      const radiusY = Math.abs(endVox[varDims[1]] - startVox[varDims[1]]) / 2
+
+      // Dimensions of the image
       const xdim = hdr.dims[1]
       const ydim = hdr.dims[2]
-      for (let z = zrange[0]; z < zrange[1]; z++) {
-        const zi = z * xdim * ydim
-        for (let y = yrange[0]; y < yrange[1]; y++) {
-          const yi = y * xdim
-          for (let x = xrange[0]; x < xrange[1]; x++) {
-            const index = zi + yi + x
+      const zdim = hdr.dims[3]
+
+      // Define the ranges for the varying dimensions
+      const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX))
+      const maxVarDim0 = Math.min(hdr.dims[varDims[0] + 1] - 1, Math.ceil(centerVox[varDims[0]] + radiusX))
+
+      const minVarDim1 = Math.max(0, Math.floor(centerVox[varDims[1]] - radiusY))
+      const maxVarDim1 = Math.min(hdr.dims[varDims[1] + 1] - 1, Math.ceil(centerVox[varDims[1]] + radiusY))
+
+      // The constant dimension value
+      const constDimVal = centerVox[constantDim]
+      if (constDimVal < 0 || constDimVal >= hdr.dims[constantDim + 1]) {
+        console.error('Error: Constant dimension value is out of bounds.')
+        return
+      }
+
+      // Iterate over the varying dimensions and apply the elliptical mask
+      for (let i = minVarDim0; i <= maxVarDim0; i++) {
+        for (let j = minVarDim1; j <= maxVarDim1; j++) {
+          // Set the voxel coordinates
+          const voxel = []
+          voxel[constantDim] = constDimVal // Fixed dimension
+          voxel[varDims[0]] = i
+          voxel[varDims[1]] = j
+
+          // Calculate the normalized distances from the center
+          const di = (voxel[varDims[0]] - centerVox[varDims[0]]) / radiusX
+          const dj = (voxel[varDims[1]] - centerVox[varDims[1]]) / radiusY
+
+          // Calculate the squared distance in ellipse space
+          const distSq = di * di + dj * dj
+
+          // Check if the voxel is within the ellipse
+          if (distSq <= 1) {
+            // Calculate the index in the mask array
+            const x = voxel[0]
+            const y = voxel[1]
+            const z = voxel[2]
+
+            const index = z * xdim * ydim + y * xdim + x
             mask[index] = 1
           }
         }
       }
-      // calculate area 2d area from startVox and endVox coordinates if roiIsMask is true (since mask is created from a 2d slice only)
-      // area is in mm^2. The below calculations work regardless of the orientation of the image since
-      // Niivue converts all images to RAS
-      const xmm = Math.abs(pixDimsRAS[1] * (endVox[0] - startVox[0]))
-      const ymm = Math.abs(pixDimsRAS[2] * (endVox[1] - startVox[1]))
-      const zmm = Math.abs(pixDimsRAS[3] * (endVox[2] - startVox[2]))
-      // one of the above will be zero since roiIsMask==true, so we filter out the non-zero value
-      // and then multiply the other two to get the area
-      const mms = [xmm, ymm, zmm]
-      area = mms.filter((m) => m !== 0).reduce((a, b) => a * b, 1)
+
+      // Calculate the area based on the number of voxels in the mask
+      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // Adjusted for 1-indexing
+      const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
+      area = numMaskedVoxels * voxelArea
+
+      // Alternatively, calculate the area using the ellipse area formula
+      const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1]
+      const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1]
+      const areaEllipse = Math.PI * radiusX_mm * radiusY_mm
+      console.log('areas', area, areaEllipse)
+      // loop over drawing and set drawing to 1 if mask is 1
+      // this.setDrawingEnabled(true)
+      // for (let i = 0; i < nv; i++) {
+      //   if (mask[i] === 1) {
+      //     this.drawBitmap![i] = 1
+      //   } else {
+      //     this.drawBitmap![i] = 0
+      //   }
+      // }
+      // this.refreshDrawing(true)
+      // this.setDrawingEnabled(false)
     }
     // Welfords method
     // https://www.embeddedrelated.com/showarticle/785.php
@@ -7565,7 +7677,7 @@ export class Niivue {
       if (axCorSag > SLICE_TYPE.SAGITTAL) {
         continue
       }
-      const texFrac = this.screenXY2TextureFrac(x, y, i, false)
+      let texFrac = this.screenXY2TextureFrac(x, y, i, false)
       if (texFrac[0] < 0) {
         continue
       } // click not on slice i
@@ -7596,14 +7708,30 @@ export class Niivue {
       }
       if (this.opts.drawingEnabled) {
         // drawing done in voxels
-        const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
+        let pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
         // if click-to-segment enabled
         if (this.opts.clickToSegment) {
+          texFrac = this.screenXY2TextureFrac(this.clickToSegmentXY[0], this.clickToSegmentXY[1], i, false)
+          pt = this.frac2vox(texFrac) as [number, number, number]
+          let diff = 0
+          let threshold = this.opts.clickToSegmentPercent + diff
+          // if user is dragging, log it to the console
+          if (this.uiData.mousedown) {
+            // get percent difference between current x, y, and clickToSegmentXY
+            const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width
+            const yDiff = (this.clickToSegmentXY[1] - y) / this.gl.canvas.height
+            diff = Math.max(Math.abs(xDiff), Math.abs(yDiff))
+            // use the sign of the larger difference to determine the direction
+            diff *= Math.sign(Math.abs(xDiff) > Math.abs(yDiff) ? xDiff : yDiff)
+            threshold = this.opts.clickToSegmentPercent + diff
+            // clamp threshold to to 0 and 1
+            threshold = Math.min(1, Math.max(0, threshold))
+          }
           // get voxel value of pt
           const voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
-          if (this.opts.clickToSegmentPercent > 0 && this.opts.clickToSegmentPercent <= 1) {
-            this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + this.opts.clickToSegmentPercent)
-            this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - this.opts.clickToSegmentPercent)
+          if (threshold > 0 && threshold <= 1) {
+            this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
+            this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
           }
           // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
           // in a bright or dark region based on the intensity of the clicked voxel,
@@ -7644,17 +7772,32 @@ export class Niivue {
           // !important! clickToSegment performs two drawing operations,
           // therefore, if you want to undo the clickToSegment, you need to call undo twice
           this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
-          this.drawFloodFill(
-            [pt[0], pt[1], pt[2]],
-            0,
-            brightOrDark,
-            this.opts.clickToSegmentIntensityMin,
-            this.opts.clickToSegmentIntensityMax,
-            this.opts.floodFillNeighbors,
-            this.opts.clickToSegmentMaxDistanceMM
-          )
-          this.drawScene()
-          this.createOnLocationChange(axCorSag)
+          // refresh the drawing immediately to show th seed point with pen size
+          this.refreshDrawing(false)
+          if (diff >= 0) {
+            this.clickToSegmentIsGrowing = true
+            if (!this.opts.clickToSegmentIs2D) {
+              // do 3D flood fill
+              this.drawFloodFill(
+                [pt[0], pt[1], pt[2]],
+                0,
+                brightOrDark,
+                this.opts.clickToSegmentIntensityMin,
+                this.opts.clickToSegmentIntensityMax,
+                this.opts.floodFillNeighbors,
+                this.opts.clickToSegmentMaxDistanceMM
+              )
+            } else {
+              // do 2D flood fill
+              // TODO
+            }
+            this.drawScene()
+            this.createOnLocationChange(axCorSag)
+          }
+          if (this.clickToSegmentIsGrowing) {
+            this.clickToSegmentIsGrowing = false
+            return
+          }
           // get the volume of the segmented region
           const info = this.getDescriptives({
             layer: 0,
@@ -7928,6 +8071,7 @@ export class Niivue {
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
       this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
     } else {
+      this.drawCircle(leftTopWidthHeight, lineColor, 0.1)
       // this.opts.selectionBoxIsOutline == true
       this.rectOutlineShader.use(this.gl)
       this.gl.enable(this.gl.BLEND)
@@ -7976,6 +8120,11 @@ export class Niivue {
   // not included in public docs
   // draw a rectangle at desired location
   drawSelectionBox(leftTopWidthHeight: number[]): void {
+    if (this.opts.dragMode === DRAG_MODE.roiSelection) {
+      this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1)
+      return
+    }
+    // else draw a rectangle
     this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor)
   }
 

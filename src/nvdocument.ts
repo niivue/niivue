@@ -150,6 +150,7 @@ export type NVConfigOptions = {
   clickToSegmentIntensityMin: number // also covers NaN
   clickToSegmentPercent: number
   clickToSegmentMaxDistanceMM: number // max distance in mm to consider for click to segment flood fill
+  clickToSegmentIs2D: boolean
   // selection box outline thickness
   selectionBoxLineThickness: number
   selectionBoxIsOutline: boolean
@@ -234,6 +235,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   // for the clickToSegmentIntensityMin and clickToSegmentIntensityMax values.
   clickToSegmentPercent: 0,
   clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY, // default value is infinity for backwards compatibility with flood fill routine.
+  clickToSegmentIs2D: false,
   selectionBoxLineThickness: 4,
   selectionBoxIsOutline: false
 }
