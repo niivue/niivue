@@ -1191,6 +1191,9 @@ export class Niivue {
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.uiData.mousedown = true
+    // reset drag positions used previously.
+    this.setDragStart(0, 0)
+    this.setDragEnd(0, 0)
     log.debug('mouse down')
     log.debug(e)
     // record tile where mouse clicked
@@ -1788,6 +1791,49 @@ export class Niivue {
     // if thumbnailVisible this do not activate a canvas interaction when scrolling
     if (this.thumbnailVisible) {
       return
+    }
+    // check that the user has actually created an ROI already.
+    const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
+    const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0)
+    const validDrag = dragStartSum > 0 && dragEndSum > 0
+    // if dragMode is roiSelection, grow or shrink the selection box
+    // by scrolling the mouse wheel. Grows by 1 pixel per scroll
+    if (this.opts.dragMode === DRAG_MODE.roiSelection && validDrag) {
+      const delta = e.deltaY > 0 ? 1 : -1
+      // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
+      if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
+        this.uiData.dragStart[0] -= delta
+        this.uiData.dragEnd[0] += delta
+      } else {
+        this.uiData.dragStart[0] += delta
+        this.uiData.dragEnd[0] -= delta
+      }
+      if (this.uiData.dragStart[1] < this.uiData.dragEnd[1]) {
+        this.uiData.dragStart[1] -= delta
+        this.uiData.dragEnd[1] += delta
+      } else {
+        this.uiData.dragStart[1] += delta
+        this.uiData.dragEnd[1] -= delta
+      }
+      // draw the scene
+      this.uiData.isDragging = true // set is dragging so the selection box is drawn for this drawScene call
+      this.drawScene() // drawScene uses isDragging to determine if the selection box or ROI should be drawn
+      this.uiData.isDragging = false // reset is dragging
+      const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
+      this.generateMouseUpCallback(
+        this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
+        this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
+      )
+      return
+
+      // const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
+      // const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
+      // this.drawSelectionBox([
+      //   Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]) - delta,
+      //   Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]) - delta,
+      //   width + delta,
+      //   height + delta
+      // ])
     }
     const rect = this.canvas!.getBoundingClientRect()
     if (e.deltaY < 0) {
@@ -5738,55 +5784,12 @@ export class Niivue {
         }
       }
     } else if (masks.length < 1 && roiIsMask) {
-      //-------------------------------------------
       // fill mask with zeros
-      // mask.fill(0)
-      // console.log('startVox', startVox)
-      // console.log('endVox', endVox)
-      // // const startVox = roiInfo.startVox
-      // // const endVox = roiInfo.endVox
-      // const xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]])
-      // const yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]])
-      // const zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]])
-
-      // // for our constant dimension we add one so that the for loop runs at least once
-      // if (startVox[0] - endVox[0] === 0) {
-      //   xrange[1] = startVox[0] + 1
-      // } else if (startVox[1] - endVox[1] === 0) {
-      //   yrange[1] = startVox[1] + 1
-      // } else if (startVox[2] - endVox[2] === 0) {
-      //   zrange[1] = startVox[2] + 1
-      // }
-
-      // const xdim = hdr.dims[1]
-      // const ydim = hdr.dims[2]
-      // for (let z = zrange[0]; z < zrange[1]; z++) {
-      //   const zi = z * xdim * ydim
-      //   for (let y = yrange[0]; y < yrange[1]; y++) {
-      //     const yi = y * xdim
-      //     for (let x = xrange[0]; x < xrange[1]; x++) {
-      //       const index = zi + yi + x
-      //       mask[index] = 1
-      //     }
-      //   }
-      // }
-      // // calculate area 2d area from startVox and endVox coordinates if roiIsMask is true (since mask is created from a 2d slice only)
-      // // area is in mm^2. The below calculations work regardless of the orientation of the image since
-      // // Niivue converts all images to RAS
-      // const xmm = Math.abs(pixDimsRAS[1] * (endVox[0] - startVox[0]))
-      // const ymm = Math.abs(pixDimsRAS[2] * (endVox[1] - startVox[1]))
-      // const zmm = Math.abs(pixDimsRAS[3] * (endVox[2] - startVox[2]))
-      // // one of the above will be zero since roiIsMask==true, so we filter out the non-zero value
-      // // and then multiply the other two to get the area
-      // const mms = [xmm, ymm, zmm]
-      // area = mms.filter((m) => m !== 0).reduce((a, b) => a * b, 1)
-      //-------------------------------------------
-      // Fill mask with zeros
       mask.fill(0)
       console.log('startVox', startVox)
       console.log('endVox', endVox)
 
-      // Identify the constant dimension (the plane where the ellipse is drawn)
+      // identify the constant dimension (the plane where the ellipse is drawn)
       let constantDim = -1
       if (startVox[0] === endVox[0]) {
         constantDim = 0 // x is constant
@@ -5799,80 +5802,76 @@ export class Niivue {
         return
       }
 
-      // Get the varying dimensions
+      // get the varying dimensions
       const dims = [0, 1, 2]
       const varDims = dims.filter((dim) => dim !== constantDim)
 
-      // Compute the center of the ellipse in voxel coordinates
+      // compute the center of the ellipse in voxel coordinates
       const centerVox = []
       centerVox[constantDim] = startVox[constantDim]
       centerVox[varDims[0]] = (startVox[varDims[0]] + endVox[varDims[0]]) / 2
       centerVox[varDims[1]] = (startVox[varDims[1]] + endVox[varDims[1]]) / 2
 
-      // Compute the radii along each varying dimension
+      // compute the radii along each varying dimension
       const radiusX = Math.abs(endVox[varDims[0]] - startVox[varDims[0]]) / 2
       const radiusY = Math.abs(endVox[varDims[1]] - startVox[varDims[1]]) / 2
 
-      // Dimensions of the image
+      // dimensions of the image
       const xdim = hdr.dims[1]
       const ydim = hdr.dims[2]
       const zdim = hdr.dims[3]
 
-      // Define the ranges for the varying dimensions
+      // define the ranges for the varying dimensions
       const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX))
       const maxVarDim0 = Math.min(hdr.dims[varDims[0] + 1] - 1, Math.ceil(centerVox[varDims[0]] + radiusX))
 
       const minVarDim1 = Math.max(0, Math.floor(centerVox[varDims[1]] - radiusY))
       const maxVarDim1 = Math.min(hdr.dims[varDims[1] + 1] - 1, Math.ceil(centerVox[varDims[1]] + radiusY))
 
-      // The constant dimension value
+      // the constant dimension value
       const constDimVal = centerVox[constantDim]
       if (constDimVal < 0 || constDimVal >= hdr.dims[constantDim + 1]) {
         console.error('Error: Constant dimension value is out of bounds.')
         return
       }
 
-      // Iterate over the varying dimensions and apply the elliptical mask
+      // iterate over the varying dimensions and apply the elliptical mask
       for (let i = minVarDim0; i <= maxVarDim0; i++) {
         for (let j = minVarDim1; j <= maxVarDim1; j++) {
-          // Set the voxel coordinates
+          // set the voxel coordinates
           const voxel = []
           voxel[constantDim] = constDimVal // Fixed dimension
           voxel[varDims[0]] = i
           voxel[varDims[1]] = j
-
-          // Calculate the normalized distances from the center
+          // calculate the normalized distances from the center
           const di = (voxel[varDims[0]] - centerVox[varDims[0]]) / radiusX
           const dj = (voxel[varDims[1]] - centerVox[varDims[1]]) / radiusY
-
-          // Calculate the squared distance in ellipse space
+          // calculate the squared distance in ellipse space
           const distSq = di * di + dj * dj
-
-          // Check if the voxel is within the ellipse
+          // check if the voxel is within the ellipse
           if (distSq <= 1) {
-            // Calculate the index in the mask array
+            // calculate the index in the mask array
             const x = voxel[0]
             const y = voxel[1]
             const z = voxel[2]
-
             const index = z * xdim * ydim + y * xdim + x
             mask[index] = 1
           }
         }
       }
-
-      // Calculate the area based on the number of voxels in the mask
-      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // Adjusted for 1-indexing
+      // calculate the area based on the number of voxels in the mask
+      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
       const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
       area = numMaskedVoxels * voxelArea
 
-      // Alternatively, calculate the area using the ellipse area formula
+      // perhaps better to calculate the area using the ellipse area formula
       const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1]
       const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1]
       const areaEllipse = Math.PI * radiusX_mm * radiusY_mm
-      console.log('areas', area, areaEllipse)
-      // loop over drawing and set drawing to 1 if mask is 1
+      area = areaEllipse
+      // for debuging: show mask -- loop over drawing and set drawing to 1 if mask is 1
       // this.setDrawingEnabled(true)
+      // this.drawOpacity = 0.3
       // for (let i = 0; i < nv; i++) {
       //   if (mask[i] === 1) {
       //     this.drawBitmap![i] = 1
@@ -5880,7 +5879,7 @@ export class Niivue {
       //     this.drawBitmap![i] = 0
       //   }
       // }
-      // this.refreshDrawing(true)
+      // this.refreshDrawing(false)
       // this.setDrawingEnabled(false)
     }
     // Welfords method
