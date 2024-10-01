@@ -4711,7 +4711,8 @@ export class Niivue {
     forceMax = NaN,
     neighbors = 6,
     // option for only flood filling within max distance from seed voxel
-    maxDistanceMM = Number.POSITIVE_INFINITY
+    maxDistanceMM = Number.POSITIVE_INFINITY,
+    is2D = false
   ): void {
     if (!this.drawBitmap) {
       throw new Error('drawBitmap undefined')
@@ -4737,6 +4738,15 @@ export class Niivue {
     if (img.length !== nxy * dims[2]) {
       return
     }
+    // mask2D: axial slices constrained in Z, coronal in Y and sagittal in X
+    let constrainXYZ = -1
+    if (is2D && this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
+      constrainXYZ = 2
+    } else if (is2D && this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
+      constrainXYZ = 1
+    } else if (is2D && this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
+      constrainXYZ = 0
+    }
     function vx2xyz(vx: number): number[] {
       // provided address in 1D array, return XYZ coordinate
       const Z = Math.floor(vx / nxy) // slice
@@ -4756,7 +4766,11 @@ export class Niivue {
     const maxDistanceMM2 = maxDistanceMM ** 2
     // function to check if new point to be checked is less than maxDistanceMM
     function isWithinDistance(vx: number): boolean {
-      const xyzMM = vx2mm(vx2xyz(vx))
+      const xzyVox = vx2xyz(vx)
+      if (constrainXYZ >= 0 && xzyVox[constrainXYZ] !== seedXYZ[constrainXYZ]) {
+        return false
+      }
+      const xyzMM = vx2mm(xzyVox)
       const dist2 = (xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2
       return dist2 <= maxDistanceMM2
     }
@@ -5819,7 +5833,7 @@ export class Niivue {
       // dimensions of the image
       const xdim = hdr.dims[1]
       const ydim = hdr.dims[2]
-      const zdim = hdr.dims[3]
+      // const zdim = hdr.dims[3]
 
       // define the ranges for the varying dimensions
       const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX))
@@ -7775,21 +7789,17 @@ export class Niivue {
           this.refreshDrawing(false)
           if (diff >= 0) {
             this.clickToSegmentIsGrowing = true
-            if (!this.opts.clickToSegmentIs2D) {
-              // do 3D flood fill
-              this.drawFloodFill(
-                [pt[0], pt[1], pt[2]],
-                0,
-                brightOrDark,
-                this.opts.clickToSegmentIntensityMin,
-                this.opts.clickToSegmentIntensityMax,
-                this.opts.floodFillNeighbors,
-                this.opts.clickToSegmentMaxDistanceMM
-              )
-            } else {
-              // do 2D flood fill
-              // TODO
-            }
+            // do flood fill
+            this.drawFloodFill(
+              [pt[0], pt[1], pt[2]],
+              0,
+              brightOrDark,
+              this.opts.clickToSegmentIntensityMin,
+              this.opts.clickToSegmentIntensityMax,
+              this.opts.floodFillNeighbors,
+              this.opts.clickToSegmentMaxDistanceMM,
+              this.opts.clickToSegmentIs2D
+            )
             this.drawScene()
             this.createOnLocationChange(axCorSag)
           }
