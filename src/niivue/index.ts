@@ -346,6 +346,7 @@ export class Niivue {
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
   clickToSegmentIsGrowing = false // flag to indicate if the clickToSegment flood fill growing is in progress with left mouse down + drag
+  clickToSegmentGrowingBitmap: Uint8Array | null = null // the bitmap of the growing flood fill
   clickToSegmentXY = [0, 0] // the x,y location of the clickToSegment flood fill
   renderDrawAmbientOcclusion = 0.4
   colorbarHeight = 0 // height in pixels, set when colorbar is drawn
@@ -1426,8 +1427,18 @@ export class Niivue {
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
     } else if (this.drawPenAxCorSag >= 0) {
-      this.drawAddUndoBitmap()
+      if (this.opts.clickToSegment) {
+        // copy clickToSegment bitmap to drawBitmap.
+        // determine which bitmap has more non-zero values, indicating it is more recent
+        const sumBitmap = this.sumBitmap(this.drawBitmap)
+        const sumSeg = this.sumBitmap(this.clickToSegmentGrowingBitmap)
+        if (sumSeg > sumBitmap) {
+          this.updateBitmapFromClickToSegment()
+        }
+      }
     }
+    // add the bitmap after the clickToSegment update
+    this.drawAddUndoBitmap()
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     if (isFunction(this.onMouseUp)) {
@@ -4173,6 +4184,7 @@ export class Niivue {
     } // something is horribly wrong!
     const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
     this.drawBitmap = new Uint8Array(vx)
+    this.clickToSegmentGrowingBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
     this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
@@ -4731,7 +4743,16 @@ export class Niivue {
     const nx = dims[0]
     const nxy = nx * dims[1]
     const nxyz = nxy * dims[2]
-    const img = this.drawBitmap.slice()
+    let img = this.drawBitmap.slice()
+    let drawBitmap = this.drawBitmap
+    // use the growing bitmap if the clickToSegmentIsGrowing flag is set.
+    // this allows previewing the flood fill, and the results are copied
+    // to the drawBitmap when the user releases the mouse button.
+    if (this.clickToSegmentIsGrowing) {
+      img = this.clickToSegmentGrowingBitmap.slice()
+      drawBitmap = this.clickToSegmentGrowingBitmap
+    }
+
     if (img.length !== nxy * dims[2]) {
       return
     }
@@ -4783,7 +4804,7 @@ export class Niivue {
     }
     for (let i = 1; i < nxyz; i++) {
       img[i] = 0
-      if (this.drawBitmap[i] === seedColor) {
+      if (drawBitmap[i] === seedColor) {
         // check if voxel index i is within maxDistanceMM from seed voxel
         if (!isWithinDistance(i)) {
           // move to next voxel if not within distance,
@@ -4837,14 +4858,21 @@ export class Niivue {
     for (let i = 1; i < nxyz; i++) {
       if (img[i] === 2) {
         // if part of cluster
-        this.drawBitmap[i] = newColor
+        drawBitmap[i] = newColor
       }
     }
     if (!this.clickToSegmentIsGrowing) {
-      this.drawAddUndoBitmap()
-      this.refreshDrawing(false)
+      this.drawBitmap = drawBitmap.slice()
+      if (!this.opts.clickToSegment) {
+        // only update the undo array if clickToSegment is not enabled.
+        // This avoids adding the same drawing twice, since the mouse up
+        // event will also add the drawing to the undo array.
+        this.drawAddUndoBitmap()
+      }
+      this.refreshDrawing(true, this.clickToSegmentIsGrowing)
     } else {
-      this.refreshDrawing(true)
+      this.clickToSegmentGrowingBitmap = drawBitmap
+      this.refreshDrawing(true, this.clickToSegmentIsGrowing)
     }
   }
 
@@ -5032,6 +5060,7 @@ export class Niivue {
     this.drawClearAllUndoBitmaps()
     this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
     this.drawBitmap = null
+    this.clickToSegmentGrowingBitmap = null
     this.drawScene()
   }
 
@@ -5041,7 +5070,7 @@ export class Niivue {
    * @example niivue.refreshDrawing();
    * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
    */
-  refreshDrawing(isForceRedraw = true): void {
+  refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false): void {
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
@@ -5071,7 +5100,7 @@ export class Niivue {
       dims[3],
       this.gl.RED,
       this.gl.UNSIGNED_BYTE,
-      this.drawBitmap
+      useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
     )
     if (isForceRedraw) {
       this.drawScene()
@@ -7624,6 +7653,31 @@ export class Niivue {
     return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1
   }
 
+  // update drawBitmap if it differs from clickTosegmentBitmap
+  updateBitmapFromClickToSegment(): void {
+    if (this.clickToSegmentGrowingBitmap === null) {
+      return
+    }
+    if (this.drawBitmap === null) {
+      return
+    }
+    if (this.clickToSegmentGrowingBitmap.length !== this.drawBitmap.length) {
+      return
+    }
+    const nvx = this.drawBitmap.length
+    for (let i = 0; i < nvx; i++) {
+      this.drawBitmap[i] = this.clickToSegmentGrowingBitmap[i]
+    }
+  }
+
+  sumBitmap(img: Uint8Array): number {
+    let sum = 0
+    for (let i = 0; i < img.length; i++) {
+      sum += img[i]
+    }
+    return sum
+  }
+
   // not included in public docs
   // handle mouse click event on canvas
   mouseClick(x: number, y: number, posChange = 0, isDelta = true): void {
@@ -7725,7 +7779,6 @@ export class Niivue {
           pt = this.frac2vox(texFrac) as [number, number, number]
           let diff = 0
           let threshold = this.opts.clickToSegmentPercent + diff
-          // if user is dragging, log it to the console
           if (this.uiData.mousedown) {
             // get percent difference between current x, y, and clickToSegmentXY
             const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width
@@ -7734,21 +7787,22 @@ export class Niivue {
             // use the sign of the larger difference to determine the direction
             diff *= Math.sign(Math.abs(xDiff) > Math.abs(yDiff) ? xDiff : yDiff)
             threshold = this.opts.clickToSegmentPercent + diff
-            // clamp threshold to to 0 and 1
-            threshold = Math.min(1, Math.max(0, threshold))
           }
           // get voxel value of pt
-          const voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
-          if (threshold > 0 && threshold <= 1) {
-            this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
-            this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
-          }
+          let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
           // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
           // in a bright or dark region based on the intensity of the clicked voxel,
           // and where it falls in the range of cal_min and cal_max.
           // !important! If this option is true, then it will ignore the boolean value of
           // clickToSegmentBright supplied by the user
           if (this.opts.clickToSegmentAutoIntensity) {
+            if (threshold !== 0) {
+              if (voxelIntensity === 0) {
+                voxelIntensity = 0.01
+              }
+              this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
+              this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
+            }
             // if voxel intensity is greater than the midpoint of cal_min and cal_max,
             // then flood fill in a bright region
             if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
@@ -7779,32 +7833,35 @@ export class Niivue {
           }
           // draw the point at the cursor using the penSize to set the
           // seed for the flood fill
-          // !important! clickToSegment performs two drawing operations,
-          // therefore, if you want to undo the clickToSegment, you need to call undo twice
           this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
-          // refresh the drawing immediately to show th seed point with pen size
-          this.refreshDrawing(false)
-          if (diff >= 0) {
+
+          if (diff !== 0) {
             this.clickToSegmentIsGrowing = true
-            // do flood fill
-            this.drawFloodFill(
-              [pt[0], pt[1], pt[2]],
-              0,
-              brightOrDark,
-              this.opts.clickToSegmentIntensityMin,
-              this.opts.clickToSegmentIntensityMax,
-              this.opts.floodFillNeighbors,
-              this.opts.clickToSegmentMaxDistanceMM,
-              this.opts.clickToSegmentIs2D
-            )
-            this.drawScene()
-            this.createOnLocationChange(axCorSag)
-          }
-          if (this.clickToSegmentIsGrowing) {
+            this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
+          } else {
             this.clickToSegmentIsGrowing = false
+          }
+
+          // do flood fill
+          this.drawFloodFill(
+            [pt[0], pt[1], pt[2]],
+            0,
+            brightOrDark,
+            this.opts.clickToSegmentIntensityMin,
+            this.opts.clickToSegmentIntensityMax,
+            this.opts.floodFillNeighbors,
+            this.opts.clickToSegmentMaxDistanceMM,
+            this.opts.clickToSegmentIs2D
+          )
+          // draw the scene so we see the changes
+          this.drawScene()
+          this.createOnLocationChange(axCorSag)
+          if (this.clickToSegmentIsGrowing) {
+            // don't get descriptive stats if the user
+            // is still growing the segmented region
             return
           }
-          // get the volume of the segmented region
+          // get the volume of the segmented region if the user is not growing the region
           const info = this.getDescriptives({
             layer: 0,
             masks: [],

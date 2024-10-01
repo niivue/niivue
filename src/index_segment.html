@@ -104,6 +104,7 @@
       drawBtn.onclick = function () {
         nv1.setDrawingEnabled(!nv1.opts.drawingEnabled)
         if (nv1.opts.drawingEnabled) {
+          nv1.drawOpacity = 0.4
           nv1.opts.clickToSegment = true;
           nv1.setPenValue(penColor, false) // red and filled
           // hide the crosshair
@@ -185,7 +186,7 @@
         { url: "../demos/images/FLAIR.nii.gz" },
       ];
       let clicks = 0;
-      const defaultPercent = 0.05;
+      const defaultPercent = 0.02;
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
@@ -194,7 +195,7 @@
         clickToSegmentRadius: 3, // in mm
         clickToSegmentPercent: defaultPercent,
         clickToSegmentAutoIntensity: true,
-        clickToSegmentMaxDistanceMM: 30,
+        clickToSegmentMaxDistanceMM: 50,
         clickToSegmentIs2D: true,
         floodFillNeighbors: 6,
         penSize: 3, // in voxels, but overridden by clickToSegmentRadius
