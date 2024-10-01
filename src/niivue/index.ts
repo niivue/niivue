@@ -1825,15 +1825,6 @@ export class Niivue {
         this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
       )
       return
-
-      // const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
-      // const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
-      // this.drawSelectionBox([
-      //   Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]) - delta,
-      //   Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]) - delta,
-      //   width + delta,
-      //   height + delta
-      // ])
     }
     const rect = this.canvas!.getBoundingClientRect()
     if (e.deltaY < 0) {
@@ -3433,6 +3424,12 @@ export class Niivue {
 
   // not included in public docs
   sliceScroll2D(posChange: number, x: number, y: number, isDelta = true): void {
+    // check if the canvas has focus
+    if (this.opts.scrollRequiresFocus && this.canvas !== document.activeElement) {
+      log.warn('Canvas element does not have focus. Scroll events will not be processed.')
+      return
+    }
+
     if (this.inGraphTile(x, y)) {
       let vol = this.volumes[0].frame4D
       if (posChange > 0) {

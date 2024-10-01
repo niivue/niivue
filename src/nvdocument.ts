@@ -154,6 +154,7 @@ export type NVConfigOptions = {
   // selection box outline thickness
   selectionBoxLineThickness: number
   selectionBoxIsOutline: boolean
+  scrollRequiresFocus: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -237,7 +238,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY, // default value is infinity for backwards compatibility with flood fill routine.
   clickToSegmentIs2D: false,
   selectionBoxLineThickness: 4,
-  selectionBoxIsOutline: false
+  selectionBoxIsOutline: false,
+  scrollRequiresFocus: false // determines if the cavas need to be focused to scroll
 }
 
 type SceneData = {
