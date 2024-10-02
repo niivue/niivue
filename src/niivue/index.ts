@@ -7784,8 +7784,6 @@ export class Niivue {
             const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width
             const yDiff = (this.clickToSegmentXY[1] - y) / this.gl.canvas.height
             diff = Math.max(Math.abs(xDiff), Math.abs(yDiff))
-            // use the sign of the larger difference to determine the direction
-            diff *= Math.sign(Math.abs(xDiff) > Math.abs(yDiff) ? xDiff : yDiff)
             threshold = this.opts.clickToSegmentPercent + diff
           }
           // get voxel value of pt
