@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="frameCheck">PerVolumeContrast</label>
+      <input type="checkbox" id="frameCheck" unchecked />
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      <footer id="statusBar">&nbsp;</footer>
+    </footer>
+    <script type="module" async>
+      import {
+        Niivue,
+        NVImage,
+        NVMesh,
+        NVMeshLoaders,
+        SHOW_RENDER
+      } from "./niivue/index.ts";
+      function handleFrameChange(volume, index) {
+        if (!frameCheck.checked) return
+        const minmax = nv1.volumes[0].calMinMax(index)
+        nv1.updateGLVolume()
+        const str = `frame ${index} intensity ${nv1.volumes[0].cal_min.toFixed(2)}..${nv1.volumes[0].cal_max.toFixed(2)}`;
+        statusBar.innerHTML = str
+      }
+      var volumeList1 = [{ url: "./xASL.nii.gz" }];
+      //var volumeList1 = [{ url: "../demos/images/pcasl.nii.gz" }];
+      
+      let defaults = {
+        backColor: [0, 0, 0, 1],
+        show3Dcrosshair: true,
+        loglevel: 'debug',
+        onFrameChange: handleFrameChange,
+      };
+      var nv1 = new Niivue(defaults);
+      nv1.attachToCanvas(gl1);
+  nv1.graph.autoSizeMultiplanar = true
+  nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+  nv1.graph.normalizeValues = false
+  nv1.graph.opacity = 1.0
+      // multiplanarShowRender is the preferred option now, 
+      // but multiplanarForceRender is still available for backwards compatibility
+      // previous use was: nv1.opts.multiplanarForceRender = true;
+      //nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+      nv1.opts.yoke3Dto2DZoom = true;
+      await nv1.loadVolumes(volumeList1);
+    </script>
+  </body>
+</html>

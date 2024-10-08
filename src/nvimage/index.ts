@@ -2639,7 +2639,7 @@ export class NVImage {
   // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
   // clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
   // ToDo: convert to web assembly, this is slow in JavaScript
-  calMinMax(): number[] {
+  calMinMax(vol: number = 0): number[] {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2651,14 +2651,22 @@ export class NVImage {
     let mx = Number.NEGATIVE_INFINITY // this.img[0] in case ignoreZeroVoxels
     let nZero = 0
     let nNan = 0
-    const nVox = this.img.length
+    let voxEnd = this.img.length
+    let voxStart = 0 // offset to first voxel
+    const nVol = this.hdr.dims[4]
+    if (vol >= 0 && vol < nVol) {
+      const nVox = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
+      voxStart = vol * nVox
+      voxEnd = voxStart + nVox
+    }
+
     // we can accelerate loops for integer data (which can not store NaN)
     // n.b. do to stack size, we can not use Math.max.apply()
     const isFastCalc =
       this.img.constructor !== Float64Array && this.img.constructor !== Float32Array && this.ignoreZeroVoxels
 
     if (isFastCalc) {
-      for (let i = 0; i < nVox; i++) {
+      for (let i = voxStart; i < voxEnd; i++) {
         mn = Math.min(this.img[i], mn)
         mx = Math.max(this.img[i], mx)
         if (this.img[i] === 0) {
@@ -2666,7 +2674,7 @@ export class NVImage {
         }
       }
     } else {
-      for (let i = 0; i < nVox; i++) {
+      for (let i = voxStart; i < voxEnd; i++) {
         if (isNaN(this.img[i])) {
           nNan++
           continue
@@ -2718,7 +2726,7 @@ export class NVImage {
       this.robust_max = this.cal_max
       return [cmMin, cmMax, cmMin, cmMax]
     }
-    const percentZero = (100 * nZero) / nVox
+    const percentZero = (100 * nZero) / (voxEnd - voxStart)
     let isOverrideIgnoreZeroVoxels = false
     if (percentZero > 60 && !this.ignoreZeroVoxels) {
       log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
@@ -2729,7 +2737,7 @@ export class NVImage {
       nZero = 0
     }
     nZero += nNan
-    const n2pct = Math.round((nVox - nZero) * this.percentileFrac)
+    const n2pct = Math.round((voxEnd - voxStart - nZero) * this.percentileFrac)
     if (n2pct < 1 || mn === mx) {
       log.debug('no variability in image intensity?')
       this.cal_min = mnScale
@@ -2747,11 +2755,11 @@ export class NVImage {
       hist[i] = 0
     }
     if (isFastCalc) {
-      for (let i = 0; i < nVox; i++) {
+      for (let i = voxStart; i < voxEnd; i++) {
         hist[Math.round((this.img[i] - mn) * scl)]++
       }
     } else if (this.ignoreZeroVoxels) {
-      for (let i = 0; i < nVox; i++) {
+      for (let i = voxStart; i < voxEnd; i++) {
         if (this.img[i] === 0) {
           continue
         }
@@ -2761,7 +2769,7 @@ export class NVImage {
         hist[Math.round((this.img[i] - mn) * scl)]++
       }
     } else {
-      for (let i = 0; i < nVox; i++) {
+      for (let i = voxStart; i < voxEnd; i++) {
         if (isNaN(this.img[i])) {
           continue
         }
