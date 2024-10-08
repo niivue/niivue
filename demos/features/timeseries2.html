@@ -19,6 +19,8 @@
     <header>
       <label for="normCheck">normalize graph</label>
       <input type="checkbox" id="normCheck" unchecked />
+      <label for="minmaxCheck">per-volume graph range</label>
+      <input type="checkbox" id="minmaxCheck" unchecked />
       <label for="frameCheck">per-volume contrast</label>
       <input type="checkbox" id="frameCheck" unchecked />
       <button id="prevVolume">back</button>
@@ -54,6 +56,10 @@
   nv1.graph.opacity = 1.0
   normCheck.onchange = function () {
     nv1.graph.normalizeValues = this.checked
+    nv1.updateGLVolume()
+  }
+  minmaxCheck.onclick = function () {
+    nv1.graph.isRangeCalMinMax = this.checked
     nv1.updateGLVolume()
   }
   let currentVol = 0
