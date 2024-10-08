@@ -2653,11 +2653,12 @@ export class NVImage {
     let nNan = 0
     let voxEnd = this.img.length
     let voxStart = 0 // offset to first voxel
-    const nVol = this.hdr.dims[4]
+    const nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
+    // n.b. due to limitFrames4D nVol may not equal dims[4]
+    const nVol = Math.floor(voxEnd / nVox3D)
     if (vol >= 0 && vol < nVol) {
-      const nVox = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
-      voxStart = vol * nVox
-      voxEnd = voxStart + nVox
+      voxStart = vol * nVox3D
+      voxEnd = voxStart + nVox3D
     }
 
     // we can accelerate loops for integer data (which can not store NaN)
