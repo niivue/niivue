@@ -2635,10 +2635,12 @@ export class NVImage {
     }
   }
 
-  // not included in public docs
-  // given an overlayItem and its img TypedArray, calculate 2% and 98% display range if needed
-  // clone FSL robust_range estimates https://github.com/rordenlab/niimath/blob/331758459140db59290a794350d0ff3ad4c37b67/src/core32.c#L1215
-  // ToDo: convert to web assembly, this is slow in JavaScript
+  /**
+   * set contrast/brightness to robust range (2%..98%)
+   * @param vol - volume for estimate (use -1 to use estimate contrast on all loaded volumes)
+   * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
+   * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
+   */
   calMinMax(vol: number = 0): number[] {
     if (!this.hdr) {
       throw new Error('hdr undefined')
