@@ -417,7 +417,13 @@ declare class NVImage {
     set colorMap(cm: string);
     get opacity(): number;
     set opacity(opacity: number);
-    calMinMax(): number[];
+    /**
+     * set contrast/brightness to robust range (2%..98%)
+     * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
+     * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
+     * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
+     */
+    calMinMax(vol?: number): number[];
     intensityRaw2Scaled(raw: number): number;
     intensityScaled2Raw(scaled: number): number;
     saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Uint8Array;
@@ -1586,6 +1592,7 @@ type Graph = {
     vols: number[];
     autoSizeMultiplanar: boolean;
     normalizeValues: boolean;
+    isRangeCalMinMax: boolean;
     backColor?: number[];
     lineColor?: number[];
     textColor?: number[];
