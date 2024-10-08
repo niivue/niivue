@@ -2637,11 +2637,11 @@ export class NVImage {
 
   /**
    * set contrast/brightness to robust range (2%..98%)
-   * @param vol - volume for estimate (use -1 to use estimate contrast on all loaded volumes)
+   * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
    * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
    * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
    */
-  calMinMax(vol: number = 0): number[] {
+  calMinMax(vol: number = Number.POSITIVE_INFINITY): number[] {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2658,11 +2658,14 @@ export class NVImage {
     const nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
     // n.b. due to limitFrames4D nVol may not equal dims[4]
     const nVol = Math.floor(voxEnd / nVox3D)
+    if (vol >= nVol) {
+      // use currently selected volume
+      vol = this.frame4D
+    }
     if (vol >= 0 && vol < nVol) {
       voxStart = vol * nVox3D
       voxEnd = voxStart + nVox3D
     }
-
     // we can accelerate loops for integer data (which can not store NaN)
     // n.b. do to stack size, we can not use Math.max.apply()
     const isFastCalc =

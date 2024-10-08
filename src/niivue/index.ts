@@ -168,6 +168,7 @@ type Graph = {
   vols: number[]
   autoSizeMultiplanar: boolean
   normalizeValues: boolean
+  isRangeCalMinMax: boolean
   backColor?: number[]
   lineColor?: number[]
   textColor?: number[]
@@ -469,7 +470,8 @@ export class Niivue {
     opacity: 0.0,
     vols: [0], // e.g. timeline for background volume only, e.g. [0,2] for first and third volumes
     autoSizeMultiplanar: false,
-    normalizeValues: false
+    normalizeValues: false,
+    isRangeCalMinMax: false
   }
 
   meshShaders: Array<{ Name: string; Frag: string; shader?: Shader }> = [
@@ -8941,6 +8943,13 @@ export class Niivue {
         mx = Math.max(v, mx)
       }
     }
+    const volMn = this.volumes[vols[0]].cal_min
+    const volMx = this.volumes[vols[0]].cal_max
+    if (graph.isRangeCalMinMax && volMn < volMx && isFinite(volMn) && isFinite(volMx)) {
+      mn = volMn
+      mx = volMx
+    }
+
     if (graph.normalizeValues && mx > mn) {
       const range = mx - mn
       for (let j = 0; j < graph.lines.length; j++) {
