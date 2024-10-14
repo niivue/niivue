@@ -329,8 +329,8 @@ export class NVDocument {
 
   constructor() {
     this.scene = {
-      onAzimuthElevationChange: (): void => { },
-      onZoom3DChange: (): void => { },
+      onAzimuthElevationChange: (): void => {},
+      onZoom3DChange: (): void => {},
       sceneData: {
         ...INITIAL_SCENE_DATA,
         pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1),
