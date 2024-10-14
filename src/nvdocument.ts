@@ -236,11 +236,11 @@ export const INITIAL_SCENE_DATA = {
   gamma: 1.0,
   azimuth: 110,
   elevation: 10,
-  crosshairPos: vec3.create(),
+  crosshairPos: vec3.fromValues(0.5, 0.5, 0.5),
   clipPlane: [0, 0, 0, 0],
   clipPlaneDepthAziElev: [2, 0, 0],
   volScaleMultiplier: 1.0,
-  pan2Dxyzmm: vec4.create(),
+  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1),
   clipThick: 2.0,
   clipVolumeLow: [0, 0, 0],
   clipVolumeHigh: [1.0, 1.0, 1.0]
@@ -329,8 +329,8 @@ export class NVDocument {
 
   constructor() {
     this.scene = {
-      onAzimuthElevationChange: (): void => {},
-      onZoom3DChange: (): void => {},
+      onAzimuthElevationChange: (): void => { },
+      onZoom3DChange: (): void => { },
       sceneData: {
         ...INITIAL_SCENE_DATA,
         pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1),
