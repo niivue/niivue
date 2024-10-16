@@ -928,7 +928,6 @@ export class Niivue {
         })
       })
       this.resizeObserver = new ResizeObserver(() => {
-        console.log('resizeObserver')
         requestAnimationFrame(() => {
           this.resizeListener()
         })
