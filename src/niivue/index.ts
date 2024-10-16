@@ -123,6 +123,8 @@ import {
   unProject,
   unpackFloatFromVec4i
 } from './utils.js'
+import { NVFont } from '../ui/nvfont.js'
+import { NVUI } from '../ui/nvui.js'
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
@@ -776,6 +778,8 @@ export class Niivue {
   initialized = false
   currentDrawUndoBitmap: number
   loadingText: string
+  defaultFont: NVFont
+  ui: NVUI
 
   /**
    * @param options  - options object to set modifiable Niivue properties
@@ -911,7 +915,7 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
-
+    this.ui = new NVUI(this.gl)
     log.info('NIIVUE VERSION ', version)
 
     // set parent background container to black (default empty canvas color)
@@ -5500,7 +5504,8 @@ export class Niivue {
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
     this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
     this.fontShader.use(this.gl)
-
+    this.defaultFont = new NVFont(this.gl, this.opts.fontColor)
+    await this.defaultFont.loadDefaultFont()
     await this.loadDefaultFont()
     await this.loadDefaultMatCap()
     this.drawLoadingText(this.loadingText)
@@ -8661,30 +8666,7 @@ export class Niivue {
 
   // not included in public docs
   drawText(xy: number[], str: string, scale = 1, color: Float32List | null = null): void {
-    if (this.opts.textHeight <= 0) {
-      return
-    }
-    if (!this.fontShader) {
-      throw new Error('fontShader undefined')
-    }
-    this.fontShader.use(this.gl)
-    // let size = this.opts.textHeight * this.gl.canvas.height * scale;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
-    if (color === null) {
-      color = this.opts.fontColor
-    }
-    this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color as Float32List)
-    let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
-    screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
-    this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
-    const bytes = new TextEncoder().encode(str)
-    this.gl.bindVertexArray(this.genericVAO)
-    for (let i = 0; i < str.length; i++) {
-      xy[0] += this.drawChar(xy, size, bytes[i])
-    }
-    this.gl.bindVertexArray(this.unusedVAO)
+    this.ui.drawText(this.defaultFont, xy, str, scale, color)
   }
 
   // not included in public docs
