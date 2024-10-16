@@ -152,3 +152,16 @@ export type NiiVueLocation = {
   vox: vec3
   xy: [number, number]
 }
+
+export type SyncOpts = {
+  '3d'?: boolean
+  '2d'?: boolean
+  zoomPan?: boolean
+  cal_min?: boolean
+  cal_max?: boolean
+  gamma?: boolean
+  useSliceOffset?: boolean
+  sliceType?: boolean
+  crosshair?: boolean
+  clipPlane?: boolean
+}

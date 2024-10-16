@@ -46,7 +46,8 @@ export enum DRAG_MODE {
   measurement = 2,
   pan = 3,
   slicer3D = 4,
-  callbackOnly = 5
+  callbackOnly = 5,
+  roiSelection = 6
 }
 
 // make mutable type
@@ -140,10 +141,20 @@ export type NVConfigOptions = {
   renderOverlayBlend: number
   sliceMosaicString: string
   centerMosaic: boolean
+  penSize: number
   clickToSegment: boolean
   clickToSegmentRadius: number
-  clickToSegmentSteps: number
   clickToSegmentBright: boolean
+  clickToSegmentAutoIntensity: boolean // new option, but keep clickToSegmentBright for backwards compatibility
+  clickToSegmentIntensityMax: number // also covers NaN
+  clickToSegmentIntensityMin: number // also covers NaN
+  clickToSegmentPercent: number
+  clickToSegmentMaxDistanceMM: number // max distance in mm to consider for click to segment flood fill
+  clickToSegmentIs2D: boolean
+  // selection box outline thickness
+  selectionBoxLineThickness: number
+  selectionBoxIsOutline: boolean
+  scrollRequiresFocus: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -212,10 +223,23 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   renderOverlayBlend: 1.0,
   sliceMosaicString: '',
   centerMosaic: false,
+  penSize: 1, // in voxels, since all drawing is done using bitmap indices
   clickToSegment: false,
-  clickToSegmentRadius: 2,
-  clickToSegmentSteps: 10,
-  clickToSegmentBright: true
+  clickToSegmentRadius: 3, // in mm
+  clickToSegmentBright: true,
+  clickToSegmentAutoIntensity: false, // new option, but keep clickToSegmentBright for backwards compatibility
+  clickToSegmentIntensityMax: NaN, // NaN will use auto threshold (default flood fill behavior from before)
+  clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
+  // 0 will use auto threshold (default flood fill behavior from before)
+  // Take the voxel intensity at the click point and use this percentage +/- to threshold the flood fill operation.
+  // If greater than 0, clickedVoxelIntensity +/- clickedVoxelIntensity * clickToSegmentPercent will be used
+  // for the clickToSegmentIntensityMin and clickToSegmentIntensityMax values.
+  clickToSegmentPercent: 0,
+  clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY, // default value is infinity for backwards compatibility with flood fill routine.
+  clickToSegmentIs2D: false,
+  selectionBoxLineThickness: 4,
+  selectionBoxIsOutline: false,
+  scrollRequiresFocus: false // determines if the cavas need to be focused to scroll
 }
 
 type SceneData = {

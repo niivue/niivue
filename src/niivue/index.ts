@@ -12,6 +12,7 @@ import {
   vertLineShader,
   vertLine3DShader,
   fragRectShader,
+  fragRectOutlineShader,
   vertRenderShader,
   fragRenderShader,
   fragRenderGradientShader,
@@ -105,7 +106,8 @@ import {
   NiftiHeader,
   DragReleaseParams,
   NiiVueLocation,
-  NiiVueLocationValue
+  NiiVueLocationValue,
+  SyncOpts
 } from '../types.js'
 import {
   clamp,
@@ -196,6 +198,7 @@ type Descriptive = {
   cal_max: number
   robust_min: number
   robust_max: number
+  area: number | null
 }
 
 type SliceScale = {
@@ -345,6 +348,9 @@ export class Niivue {
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
+  clickToSegmentIsGrowing = false // flag to indicate if the clickToSegment flood fill growing is in progress with left mouse down + drag
+  clickToSegmentGrowingBitmap: Uint8Array | null = null // the bitmap of the growing flood fill
+  clickToSegmentXY = [0, 0] // the x,y location of the clickToSegment flood fill
   renderDrawAmbientOcclusion = 0.4
   colorbarHeight = 0 // height in pixels, set when colorbar is drawn
   drawPenLocation = [NaN, NaN, NaN]
@@ -358,6 +364,7 @@ export class Niivue {
   orientCubeShader?: Shader
   orientCubeShaderVAO: WebGLVertexArrayObject | null = null
   rectShader?: Shader
+  rectOutlineShader?: Shader
   renderShader?: Shader
   lineShader?: Shader
   line3DShader?: Shader
@@ -403,7 +410,19 @@ export class Niivue {
   extentsMax?: vec3
   // ResizeObserver
   private resizeObserver: ResizeObserver | null = null
-  syncOpts: Record<string, unknown> = {}
+  // syncOpts: Record<string, unknown> = {}
+  syncOpts: SyncOpts = {
+    '3d': false, // legacy option
+    '2d': false, // legacy option
+    zoomPan: false,
+    cal_min: false,
+    cal_max: false,
+    clipPlane: false,
+    gamma: false,
+    sliceType: false,
+    crosshair: false
+  }
+
   readyForSync = false
 
   // UI Data
@@ -453,7 +472,7 @@ export class Niivue {
 
   cuboidVertexBuffer?: WebGLBuffer
 
-  otherNV: Niivue | Niivue[] | null = null // another niivue instance that we wish to sync position with
+  otherNV: Niivue[] | null = null // another niivue instance that we wish to sync position with
   volumeObject3D: NiivueObject3D | null = null
   pivot3D = [0, 0, 0] // center for rendering rotation
   furthestFromPivot = 10.0 // most distant point from pivot
@@ -903,8 +922,16 @@ export class Niivue {
       this.canvas.style.display = 'block'
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
-      window.addEventListener('resize', this.resizeListener.bind(this)) // must bind 'this' niivue object or else 'this' becomes 'window'
-      this.resizeObserver = new ResizeObserver(this.resizeListener.bind(this))
+      window.addEventListener('resize', () => {
+        requestAnimationFrame(() => {
+          this.resizeListener()
+        })
+      })
+      this.resizeObserver = new ResizeObserver(() => {
+        requestAnimationFrame(() => {
+          this.resizeListener()
+        })
+      })
       this.resizeObserver.observe(this.canvas.parentElement!)
     }
     this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
@@ -923,7 +950,11 @@ export class Niivue {
    * @deprecated use broadcastTo instead
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
    */
-  syncWith(otherNV: Niivue, syncOpts = { '2d': true, '3d': true }): void {
+  syncWith(otherNV: Niivue | Niivue[], syncOpts = { '2d': true, '3d': true }): void {
+    // if otherNV is not an array, make it an array of one
+    if (!(otherNV instanceof Array)) {
+      otherNV = [otherNV]
+    }
     this.otherNV = otherNV
     this.syncOpts = { ...syncOpts }
   }
@@ -940,8 +971,69 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
    */
   broadcastTo(otherNV: Niivue | Niivue[], syncOpts = { '2d': true, '3d': true }): void {
+    // if otherNV is a single instance then make it an array of one
+    if (!(otherNV instanceof Array)) {
+      otherNV = [otherNV]
+    }
     this.otherNV = otherNV
     this.syncOpts = syncOpts
+  }
+
+  doSync3d(otherNV: Niivue): void {
+    otherNV.scene.renderAzimuth = this.scene.renderAzimuth
+    otherNV.scene.renderElevation = this.scene.renderElevation
+    otherNV.scene.volScaleMultiplier = this.scene.volScaleMultiplier
+  }
+
+  // both crosshair and zoomPan
+  doSync2d(otherNV: Niivue): void {
+    const thisMM = this.frac2mm(this.scene.crosshairPos)
+    otherNV.scene.crosshairPos = otherNV.mm2frac(thisMM)
+    otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
+  }
+
+  doSyncGamma(otherNV: Niivue): void {
+    // gamma not dependent on 2d/3d
+    const thisGamma = this.scene.gamma
+    const otherGamma = otherNV.scene.gamma
+    if (thisGamma !== otherGamma) {
+      otherNV.setGamma(thisGamma)
+    }
+  }
+
+  doSyncZoomPan(otherNV: Niivue): void {
+    otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
+  }
+
+  doSyncCrosshair(otherNV: Niivue): void {
+    const thisMM = this.frac2mm(this.scene.crosshairPos)
+    otherNV.scene.crosshairPos = otherNV.mm2frac(thisMM)
+  }
+
+  doSyncCalMin(otherNV: Niivue): void {
+    // only call updateGLVolume if the cal_min is different
+    // because updateGLVolume is expensive, but required to update the volume
+    if (this.volumes[0].cal_min !== otherNV.volumes[0].cal_min) {
+      otherNV.volumes[0].cal_min = this.volumes[0].cal_min
+      otherNV.updateGLVolume()
+    }
+  }
+
+  doSyncCalMax(otherNV: Niivue): void {
+    // only call updateGLVolume if the cal_max is different
+    // because updateGLVolume is expensive, but required to update the volume
+    if (this.volumes[0].cal_max !== otherNV.volumes[0].cal_max) {
+      otherNV.volumes[0].cal_max = this.volumes[0].cal_max
+      otherNV.updateGLVolume()
+    }
+  }
+
+  doSyncSliceType(otherNV: Niivue): void {
+    otherNV.setSliceType(this.opts.sliceType)
+  }
+
+  doSyncClipPlane(otherNV: Niivue): void {
+    otherNV.setClipPlane(this.scene.clipPlaneDepthAziElev)
   }
 
   /**
@@ -957,58 +1049,52 @@ export class Niivue {
     if (!this.gl || !this.otherNV || typeof this.otherNV === 'undefined') {
       return
     }
-    // if (!this.otherNV.readyForSync || !this.readyForSync) {
-    //   return;
-    // }
     // canvas must have focus to send messages issue706
     if (!(this.gl.canvas as HTMLCanvasElement).matches(':focus')) {
       return
     }
-    const thisMM = this.frac2mm(this.scene.crosshairPos)
-    // if this.otherNV is an object, then it is a single Niivue instance
-    if (this.otherNV instanceof Niivue) {
-      // gamma not dependent on 2d/3d
-      const thisGamma = this.scene.gamma
-      const otherGamma = this.otherNV.scene.gamma
-      if (thisGamma !== otherGamma) {
-        this.otherNV.setGamma(thisGamma)
+    for (let i = 0; i < this.otherNV.length; i++) {
+      if (this.otherNV[i] === this) {
+        continue
       }
-      // options specific to 2d rendering
+      // gamma
+      if (this.syncOpts.gamma) {
+        this.doSyncGamma(this.otherNV[i])
+      }
+      // crosshair
+      if (this.syncOpts.crosshair) {
+        this.doSyncCrosshair(this.otherNV[i])
+      }
+      // zoomPan
+      if (this.syncOpts.zoomPan) {
+        this.doSyncZoomPan(this.otherNV[i])
+      }
+      // sliceType
+      if (this.syncOpts.sliceType) {
+        this.doSyncSliceType(this.otherNV[i])
+      }
+      // cal_min
+      if (this.syncOpts.cal_min) {
+        this.doSyncCalMin(this.otherNV[i])
+      }
+      // cal_max
+      if (this.syncOpts.cal_max) {
+        this.doSyncCalMax(this.otherNV[i])
+      }
+      // clipPlane
+      if (this.syncOpts.clipPlane) {
+        this.doSyncClipPlane(this.otherNV[i])
+      }
+      // legacy 2d option for multiple properties
       if (this.syncOpts['2d']) {
-        this.otherNV.scene.crosshairPos = this.otherNV.mm2frac(thisMM)
-        this.otherNV.scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
+        this.doSync2d(this.otherNV[i])
       }
-      // options specific to 3d rendering
+      // legacy 3d option for multiple properties
       if (this.syncOpts['3d']) {
-        this.otherNV.scene.renderAzimuth = this.scene.renderAzimuth
-        this.otherNV.scene.renderElevation = this.scene.renderElevation
-        this.otherNV.scene.volScaleMultiplier = this.scene.volScaleMultiplier
+        this.doSync3d(this.otherNV[i])
       }
-      this.otherNV.drawScene()
-      this.otherNV.createOnLocationChange()
-    } else if (Array.isArray(this.otherNV)) {
-      for (let i = 0; i < this.otherNV.length; i++) {
-        if (this.otherNV[i] === this) {
-          continue
-        }
-        // gamma not dependent on 2d/3d
-        const thisGamma = this.scene.gamma
-        const otherGamma = this.otherNV[i].scene.gamma
-        if (thisGamma !== otherGamma) {
-          this.otherNV[i].setGamma(thisGamma)
-        }
-        if (this.syncOpts['2d']) {
-          this.otherNV[i].scene.crosshairPos = this.otherNV[i].mm2frac(thisMM)
-          this.otherNV[i].scene.pan2Dxyzmm = vec4.clone(this.scene.pan2Dxyzmm)
-        }
-        if (this.syncOpts['3d']) {
-          this.otherNV[i].scene.renderAzimuth = this.scene.renderAzimuth
-          this.otherNV[i].scene.renderElevation = this.scene.renderElevation
-          this.otherNV[i].scene.volScaleMultiplier = this.scene.volScaleMultiplier
-        }
-        this.otherNV[i].drawScene()
-        this.otherNV[i].createOnLocationChange()
-      }
+      this.otherNV[i].drawScene()
+      this.otherNV[i].createOnLocationChange()
     }
   }
 
@@ -1118,6 +1204,9 @@ export class Niivue {
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.uiData.mousedown = true
+    // reset drag positions used previously.
+    this.setDragStart(0, 0)
+    this.setDragEnd(0, 0)
     log.debug('mouse down')
     log.debug(e)
     // record tile where mouse clicked
@@ -1127,6 +1216,9 @@ export class Niivue {
     }
 
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
+    if (this.opts.clickToSegment) {
+      this.clickToSegmentXY = [x, y]
+    }
     const label = this.getLabelAtPoint([x, y])
     if (label) {
       // check for user defined onclick handler
@@ -1310,7 +1402,6 @@ export class Niivue {
     const mmLength = vec3.len(v)
     const voxStart = this.frac2vox(fracStart)
     const voxEnd = this.frac2vox(fracEnd)
-
     this.onDragRelease({
       fracStart,
       fracEnd,
@@ -1348,8 +1439,18 @@ export class Niivue {
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
     } else if (this.drawPenAxCorSag >= 0) {
-      this.drawAddUndoBitmap()
+      if (this.opts.clickToSegment) {
+        // copy clickToSegment bitmap to drawBitmap.
+        // determine which bitmap has more non-zero values, indicating it is more recent
+        const sumBitmap = this.sumBitmap(this.drawBitmap)
+        const sumSeg = this.sumBitmap(this.clickToSegmentGrowingBitmap)
+        if (sumSeg > sumBitmap) {
+          this.updateBitmapFromClickToSegment()
+        }
+      }
     }
+    // add the bitmap after the clickToSegment update
+    this.drawAddUndoBitmap()
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     if (isFunction(this.onMouseUp)) {
@@ -1363,6 +1464,11 @@ export class Niivue {
       const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
       const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
       this.generateMouseUpCallback(fracStart, fracEnd)
+      // if roiSelection drag mode
+      if (this.opts.dragMode === DRAG_MODE.roiSelection) {
+        // do not call drawScene so that the selection box remains visible
+        return
+      }
       if (this.opts.dragMode !== DRAG_MODE.contrast) {
         return
       }
@@ -1707,6 +1813,40 @@ export class Niivue {
     e.stopPropagation()
     // if thumbnailVisible this do not activate a canvas interaction when scrolling
     if (this.thumbnailVisible) {
+      return
+    }
+    // check that the user has actually created an ROI already.
+    const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
+    const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0)
+    const validDrag = dragStartSum > 0 && dragEndSum > 0
+    // if dragMode is roiSelection, grow or shrink the selection box
+    // by scrolling the mouse wheel. Grows by 1 pixel per scroll
+    if (this.opts.dragMode === DRAG_MODE.roiSelection && validDrag) {
+      const delta = e.deltaY > 0 ? 1 : -1
+      // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
+      if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
+        this.uiData.dragStart[0] -= delta
+        this.uiData.dragEnd[0] += delta
+      } else {
+        this.uiData.dragStart[0] += delta
+        this.uiData.dragEnd[0] -= delta
+      }
+      if (this.uiData.dragStart[1] < this.uiData.dragEnd[1]) {
+        this.uiData.dragStart[1] -= delta
+        this.uiData.dragEnd[1] += delta
+      } else {
+        this.uiData.dragStart[1] += delta
+        this.uiData.dragEnd[1] -= delta
+      }
+      // draw the scene
+      this.uiData.isDragging = true // set is dragging so the selection box is drawn for this drawScene call
+      this.drawScene() // drawScene uses isDragging to determine if the selection box or ROI should be drawn
+      this.uiData.isDragging = false // reset is dragging
+      const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
+      this.generateMouseUpCallback(
+        this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
+        this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
+      )
       return
     }
     const rect = this.canvas!.getBoundingClientRect()
@@ -3376,6 +3516,12 @@ export class Niivue {
 
   // not included in public docs
   sliceScroll2D(posChange: number, x: number, y: number, isDelta = true): void {
+    // check if the canvas has focus
+    if (this.opts.scrollRequiresFocus && this.canvas !== document.activeElement) {
+      log.warn('Canvas element does not have focus. Scroll events will not be processed.')
+      return
+    }
+
     if (this.inGraphTile(x, y)) {
       let vol = this.volumes[0].frame4D
       if (posChange > 0) {
@@ -4188,6 +4334,7 @@ export class Niivue {
     } // something is horribly wrong!
     const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
     this.drawBitmap = new Uint8Array(vx)
+    this.clickToSegmentGrowingBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
     this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
@@ -4376,6 +4523,29 @@ export class Niivue {
     y = Math.min(Math.max(y, 0), dy - 1)
     z = Math.min(Math.max(z, 0), dz - 1)
     this.drawBitmap![x + y * dx + z * dx * dy] = penValue
+    // get tile index for voxel
+    const isAx = this.drawPenAxCorSag === 0
+    const isCor = this.drawPenAxCorSag === 1
+    const isSag = this.drawPenAxCorSag === 2
+    // since the pen is only drawing in one 2D plane,
+    // only draw the neighbors (based on penSize) in that plane.
+    // if penSize is 1, only draw the voxel itself.
+    // if penSize is even (2, 4, 6, etc.), then the extra voxel will be drawn in the positive direction.
+    // if penSize is odd (3, 5, 7, etc.), then the the pen will be centered on the voxel.
+    if (this.opts.penSize > 1) {
+      const halfPenSize = Math.floor(this.opts.penSize / 2)
+      for (let i = -halfPenSize; i <= halfPenSize; i++) {
+        for (let j = -halfPenSize; j <= halfPenSize; j++) {
+          if (isAx) {
+            this.drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
+          } else if (isCor) {
+            this.drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
+          } else if (isSag) {
+            this.drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
+          }
+        }
+      }
+    }
   }
 
   // not included in public docs
@@ -4459,6 +4629,140 @@ export class Niivue {
         p2 += 2 * dx
         this.drawPt(x1, y1, z1, penValue)
       }
+    }
+  }
+
+  /**
+   * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
+   *
+   * @param seedXYZ -  voxel index of the seed voxel in the mask array.
+   * @param neighbors - Number of neighbors to consider for connectivity and dilation (6, 18, or 26).
+   */
+  drawingBinaryDilationWithSeed(
+    seedXYZ: number[], // seed voxel x,y,z
+    neighbors: 6 | 18 | 26 = 6
+  ): void {
+    try {
+      const mask = this.drawBitmap
+      const xDim = this.back.dims[1]
+      const yDim = this.back.dims[2]
+      const zDim = this.back.dims[3]
+      const nx = xDim
+      const nxy = xDim * yDim
+      const totalVoxels = nxy * zDim
+      function xyz2vx(pt: number[]): number {
+        return pt[0] + pt[1] * nx + pt[2] * nxy
+      }
+
+      const seedIndex = xyz2vx(seedXYZ)
+
+      // check that the seed index is within bounds
+      if (seedIndex < 0 || seedIndex >= totalVoxels) {
+        throw new Error('Seed index is out of bounds.')
+      }
+
+      // get value of the seed voxel
+      const seedValue = mask[seedIndex]
+
+      // check that the seed voxel is filled
+      if (seedValue === 0) {
+        throw new Error('Seed voxel is not part of a filled cluster.')
+      }
+
+      // create a copy of the mask to work on
+      const img = mask.slice()
+      // binarise the img since there could be multiple colors in the mask
+      for (let i = 0; i < totalVoxels; i++) {
+        img[i] = img[i] === seedValue ? 1 : 0
+      }
+
+      // use drawFloodFillCore to identify the connected cluster starting from seedIndex
+      this.drawFloodFillCore(img, seedIndex, neighbors)
+
+      // now, img has the cluster marked with value 2
+      // create an output mask for dilation
+      const outputMask = mask.slice() // Clone the original mask
+
+      // precompute neighbor offsets based on connectivity
+      const neighborOffsets: number[] = []
+
+      // offsets for 6-connectivity (face neighbors)
+      const offsets6 = [-nxy, nxy, -xDim, xDim, -1, 1]
+
+      neighborOffsets.push(...offsets6)
+
+      if (neighbors > 6) {
+        // offsets for 18-connectivity (edge neighbors)
+        neighborOffsets.push(
+          -xDim - 1,
+          -xDim + 1,
+          xDim - 1,
+          xDim + 1,
+          -nxy - xDim,
+          -nxy + xDim,
+          -nxy - 1,
+          -nxy + 1,
+          nxy - xDim,
+          nxy + xDim,
+          nxy - 1,
+          nxy + 1
+        )
+      }
+
+      if (neighbors > 18) {
+        // offsets for 26-connectivity (corner neighbors)
+        neighborOffsets.push(
+          -nxy - xDim - 1,
+          -nxy - xDim + 1,
+          -nxy + xDim - 1,
+          -nxy + xDim + 1,
+          nxy - xDim - 1,
+          nxy - xDim + 1,
+          nxy + xDim - 1,
+          nxy + xDim + 1
+        )
+      }
+
+      // iterate over the cluster voxels (value 2 in img) to perform dilation
+      for (let idx = 0; idx < totalVoxels; idx++) {
+        if (img[idx] === 2) {
+          const x = idx % xDim
+          const y = Math.floor((idx % nxy) / xDim)
+          const z = Math.floor(idx / nxy)
+
+          for (const offset of neighborOffsets) {
+            const neighborIdx = idx + offset
+
+            // skip if neighbor index is out of bounds
+            if (neighborIdx < 0 || neighborIdx >= totalVoxels) {
+              continue
+            }
+
+            // calculate neighbor coordinates
+            const nx = neighborIdx % xDim
+            const ny = Math.floor((neighborIdx % nxy) / xDim)
+            const nz = Math.floor(neighborIdx / nxy)
+
+            // ensure neighbor is adjacent (prevent wrapping around edges)
+            if (Math.abs(nx - x) > 1 || Math.abs(ny - y) > 1 || Math.abs(nz - z) > 1) {
+              continue
+            }
+
+            // if the neighbor voxel is empty in the original mask, fill it in the output mask
+            if (mask[neighborIdx] === 0) {
+              outputMask[neighborIdx] = seedValue
+            }
+          }
+        }
+      }
+      // set the output as the new drawing bitmap
+      this.drawBitmap = outputMask
+      // update the undo stack
+      this.drawAddUndoBitmap()
+      // refresh the drawing (copy from cpu to gpu) and show immediately
+      this.refreshDrawing(true)
+    } catch (error) {
+      log.error('Error in drawingBinaryDilationWithSeed:', error)
     }
   }
 
@@ -4564,7 +4868,10 @@ export class Niivue {
     growSelectedCluster = 0, // if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
     forceMin = NaN,
     forceMax = NaN,
-    neighbors = 6
+    neighbors = 6,
+    // option for only flood filling within max distance from seed voxel
+    maxDistanceMM = Number.POSITIVE_INFINITY,
+    is2D = false
   ): void {
     if (!this.drawBitmap) {
       throw new Error('drawBitmap undefined')
@@ -4586,13 +4893,54 @@ export class Niivue {
     const nx = dims[0]
     const nxy = nx * dims[1]
     const nxyz = nxy * dims[2]
-    const img = this.drawBitmap.slice()
+    let img = this.drawBitmap.slice()
+    let drawBitmap = this.drawBitmap
+    // use the growing bitmap if the clickToSegmentIsGrowing flag is set.
+    // this allows previewing the flood fill, and the results are copied
+    // to the drawBitmap when the user releases the mouse button.
+    if (this.clickToSegmentIsGrowing) {
+      img = this.clickToSegmentGrowingBitmap.slice()
+      drawBitmap = this.clickToSegmentGrowingBitmap
+    }
+
     if (img.length !== nxy * dims[2]) {
       return
+    }
+    // mask2D: axial slices constrained in Z, coronal in Y and sagittal in X
+    let constrainXYZ = -1
+    if (is2D && this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
+      constrainXYZ = 2
+    } else if (is2D && this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
+      constrainXYZ = 1
+    } else if (is2D && this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
+      constrainXYZ = 0
+    }
+    function vx2xyz(vx: number): number[] {
+      // provided address in 1D array, return XYZ coordinate
+      const Z = Math.floor(vx / nxy) // slice
+      const Y = Math.floor((vx - Z * nxy) / nx) // column
+      const X = Math.floor(vx % nx)
+      return [X, Y, Z]
     }
     function xyz2vx(pt: number[]): number {
       // provided an XYZ 3D point, provide address in 1D array
       return pt[0] + pt[1] * nx + pt[2] * nxy
+    }
+    const vx2mm = (xyz: number[]): vec3 => {
+      return this.vox2mm(xyz, this.back.matRAS)
+    }
+    // store seed vox as mm coordinates
+    const seedMM = vx2mm(seedXYZ)
+    const maxDistanceMM2 = maxDistanceMM ** 2
+    // function to check if new point to be checked is less than maxDistanceMM
+    function isWithinDistance(vx: number): boolean {
+      const xzyVox = vx2xyz(vx)
+      if (constrainXYZ >= 0 && xzyVox[constrainXYZ] !== seedXYZ[constrainXYZ]) {
+        return false
+      }
+      const xyzMM = vx2mm(xzyVox)
+      const dist2 = (xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2
+      return dist2 <= maxDistanceMM2
     }
     const seedVx = xyz2vx(seedXYZ)
     const seedColor = img[seedVx]
@@ -4606,7 +4954,13 @@ export class Niivue {
     }
     for (let i = 1; i < nxyz; i++) {
       img[i] = 0
-      if (this.drawBitmap[i] === seedColor) {
+      if (drawBitmap[i] === seedColor) {
+        // check if voxel index i is within maxDistanceMM from seed voxel
+        if (!isWithinDistance(i)) {
+          // move to next voxel if not within distance,
+          // no need to check voxel intensity for cluster assignment
+          continue
+        }
         img[i] = 1
       }
     }
@@ -4638,6 +4992,12 @@ export class Niivue {
       for (let i = 1; i < nxyz; i++) {
         img[i] = 0
         if (backImg[i] >= mn && backImg[i] <= mx) {
+          // check if voxel index i is within maxDistanceMM from seed voxel
+          if (!isWithinDistance(i)) {
+            // move to next voxel if not within distance,
+            // no need to check voxel intensity for cluster assignment
+            continue
+          }
           img[i] = 1
         }
       }
@@ -4648,11 +5008,22 @@ export class Niivue {
     for (let i = 1; i < nxyz; i++) {
       if (img[i] === 2) {
         // if part of cluster
-        this.drawBitmap[i] = newColor
+        drawBitmap[i] = newColor
       }
     }
-    this.drawAddUndoBitmap()
-    this.refreshDrawing(false)
+    if (!this.clickToSegmentIsGrowing) {
+      this.drawBitmap = drawBitmap.slice()
+      if (!this.opts.clickToSegment) {
+        // only update the undo array if clickToSegment is not enabled.
+        // This avoids adding the same drawing twice, since the mouse up
+        // event will also add the drawing to the undo array.
+        this.drawAddUndoBitmap()
+      }
+      this.refreshDrawing(true, this.clickToSegmentIsGrowing)
+    } else {
+      this.clickToSegmentGrowingBitmap = drawBitmap
+      this.refreshDrawing(true, this.clickToSegmentIsGrowing)
+    }
   }
 
   // not included in public docs
@@ -4839,6 +5210,7 @@ export class Niivue {
     this.drawClearAllUndoBitmaps()
     this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
     this.drawBitmap = null
+    this.clickToSegmentGrowingBitmap = null
     this.drawScene()
   }
 
@@ -4848,7 +5220,7 @@ export class Niivue {
    * @example niivue.refreshDrawing();
    * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
    */
-  refreshDrawing(isForceRedraw = true): void {
+  refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false): void {
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
@@ -4878,7 +5250,7 @@ export class Niivue {
       dims[3],
       this.gl.RED,
       this.gl.UNSIGNED_BYTE,
-      this.drawBitmap
+      useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
     )
     if (isForceRedraw) {
       this.drawScene()
@@ -5346,6 +5718,8 @@ export class Niivue {
     // rect shader (crosshair): horizontal and vertical lines only
     this.rectShader = new Shader(gl, vertRectShader, fragRectShader)
     this.rectShader.use(gl)
+    this.rectOutlineShader = new Shader(gl, vertRectShader, fragRectOutlineShader)
+    this.rectOutlineShader.use(gl)
     // line shader: diagonal lines
     this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
     this.lineShader.use(gl)
@@ -5521,14 +5895,46 @@ export class Niivue {
 
   /**
    * basic statistics for selected voxel-based image
-   * @param layer - selects image to describe
-   * @param masks - are optional binary images to filter voxles
-   * @returns numeric values to describe image
-   * @example niivue.getDescriptives(0);
+   * @param options - an object containing the following properties:
+   *   - layer: selects image to describe
+   *   - masks: optional binary images to filter voxels
+   *   - drawingIsMask: a boolean indicating if the drawing is used as a mask
+   *   - roiIsMask: a boolean indicating if the ROI is used as a mask
+   *   - startVox: the starting voxel coordinates
+   *   - endVox: the ending voxel coordinates
+   * @returns numeric values to describe image or regions of images
+   * @example
+   * niivue.getDescriptives({
+   *   layer: 0,
+   *   masks: [],
+   *   drawingIsMask: true, // drawingIsMask and roiIsMask are mutually exclusive
+   *   roiIsMask: false,
+   *   startVox: [10, 20, 30], // ignored if roiIsMask is false
+   *   endVox: [40, 50, 60] // ignored if roiIsMask is false
+   * });
    * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
    */
-  getDescriptives(layer = 0, masks = [], drawingIsMask = false): Descriptive {
+  getDescriptives(options: {
+    layer?: number
+    masks?: number[]
+    drawingIsMask?: boolean
+    roiIsMask?: boolean
+    startVox?: number[]
+    endVox?: number[]
+  }): Descriptive {
+    const {
+      layer = 0,
+      masks = [],
+      drawingIsMask = false,
+      roiIsMask = false,
+      startVox = [0, 0, 0],
+      endVox = [0, 0, 0]
+    } = options
+
+    // Rest of the code remains the same
+    let area = null // used if roiIsMask since ROI is in 2D slice
     const hdr = this.volumes[layer].hdr!
+    const pixDimsRAS = this.volumes[layer].pixDimsRAS!
     let slope = hdr.scl_slope
     if (isNaN(slope)) {
       slope = 1
@@ -5567,6 +5973,104 @@ export class Niivue {
           mask[i] = 0
         }
       }
+    } else if (masks.length < 1 && roiIsMask) {
+      // fill mask with zeros
+      mask.fill(0)
+      console.log('startVox', startVox)
+      console.log('endVox', endVox)
+
+      // identify the constant dimension (the plane where the ellipse is drawn)
+      let constantDim = -1
+      if (startVox[0] === endVox[0]) {
+        constantDim = 0 // x is constant
+      } else if (startVox[1] === endVox[1]) {
+        constantDim = 1 // y is constant
+      } else if (startVox[2] === endVox[2]) {
+        constantDim = 2 // z is constant
+      } else {
+        console.error('Error: No constant dimension found.')
+        return
+      }
+
+      // get the varying dimensions
+      const dims = [0, 1, 2]
+      const varDims = dims.filter((dim) => dim !== constantDim)
+
+      // compute the center of the ellipse in voxel coordinates
+      const centerVox = []
+      centerVox[constantDim] = startVox[constantDim]
+      centerVox[varDims[0]] = (startVox[varDims[0]] + endVox[varDims[0]]) / 2
+      centerVox[varDims[1]] = (startVox[varDims[1]] + endVox[varDims[1]]) / 2
+
+      // compute the radii along each varying dimension
+      const radiusX = Math.abs(endVox[varDims[0]] - startVox[varDims[0]]) / 2
+      const radiusY = Math.abs(endVox[varDims[1]] - startVox[varDims[1]]) / 2
+
+      // dimensions of the image
+      const xdim = hdr.dims[1]
+      const ydim = hdr.dims[2]
+      // const zdim = hdr.dims[3]
+
+      // define the ranges for the varying dimensions
+      const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX))
+      const maxVarDim0 = Math.min(hdr.dims[varDims[0] + 1] - 1, Math.ceil(centerVox[varDims[0]] + radiusX))
+
+      const minVarDim1 = Math.max(0, Math.floor(centerVox[varDims[1]] - radiusY))
+      const maxVarDim1 = Math.min(hdr.dims[varDims[1] + 1] - 1, Math.ceil(centerVox[varDims[1]] + radiusY))
+
+      // the constant dimension value
+      const constDimVal = centerVox[constantDim]
+      if (constDimVal < 0 || constDimVal >= hdr.dims[constantDim + 1]) {
+        console.error('Error: Constant dimension value is out of bounds.')
+        return
+      }
+
+      // iterate over the varying dimensions and apply the elliptical mask
+      for (let i = minVarDim0; i <= maxVarDim0; i++) {
+        for (let j = minVarDim1; j <= maxVarDim1; j++) {
+          // set the voxel coordinates
+          const voxel = []
+          voxel[constantDim] = constDimVal // Fixed dimension
+          voxel[varDims[0]] = i
+          voxel[varDims[1]] = j
+          // calculate the normalized distances from the center
+          const di = (voxel[varDims[0]] - centerVox[varDims[0]]) / radiusX
+          const dj = (voxel[varDims[1]] - centerVox[varDims[1]]) / radiusY
+          // calculate the squared distance in ellipse space
+          const distSq = di * di + dj * dj
+          // check if the voxel is within the ellipse
+          if (distSq <= 1) {
+            // calculate the index in the mask array
+            const x = voxel[0]
+            const y = voxel[1]
+            const z = voxel[2]
+            const index = z * xdim * ydim + y * xdim + x
+            mask[index] = 1
+          }
+        }
+      }
+      // calculate the area based on the number of voxels in the mask
+      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
+      const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
+      area = numMaskedVoxels * voxelArea
+
+      // perhaps better to calculate the area using the ellipse area formula
+      const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1]
+      const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1]
+      const areaEllipse = Math.PI * radiusX_mm * radiusY_mm
+      area = areaEllipse
+      // for debuging: show mask -- loop over drawing and set drawing to 1 if mask is 1
+      // this.setDrawingEnabled(true)
+      // this.drawOpacity = 0.3
+      // for (let i = 0; i < nv; i++) {
+      //   if (mask[i] === 1) {
+      //     this.drawBitmap![i] = 1
+      //   } else {
+      //     this.drawBitmap![i] = 0
+      //   }
+      // }
+      // this.refreshDrawing(false)
+      // this.setDrawingEnabled(false)
     }
     // Welfords method
     // https://www.embeddedrelated.com/showarticle/785.php
@@ -5627,7 +6131,8 @@ export class Niivue {
       cal_min: this.volumes[layer].cal_min!,
       cal_max: this.volumes[layer].cal_max!,
       robust_min: this.volumes[layer].robust_min!,
-      robust_max: this.volumes[layer].robust_max!
+      robust_max: this.volumes[layer].robust_max!,
+      area
     }
   }
 
@@ -7298,6 +7803,31 @@ export class Niivue {
     return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1
   }
 
+  // update drawBitmap if it differs from clickTosegmentBitmap
+  updateBitmapFromClickToSegment(): void {
+    if (this.clickToSegmentGrowingBitmap === null) {
+      return
+    }
+    if (this.drawBitmap === null) {
+      return
+    }
+    if (this.clickToSegmentGrowingBitmap.length !== this.drawBitmap.length) {
+      return
+    }
+    const nvx = this.drawBitmap.length
+    for (let i = 0; i < nvx; i++) {
+      this.drawBitmap[i] = this.clickToSegmentGrowingBitmap[i]
+    }
+  }
+
+  sumBitmap(img: Uint8Array): number {
+    let sum = 0
+    for (let i = 0; i < img.length; i++) {
+      sum += img[i]
+    }
+    return sum
+  }
+
   // not included in public docs
   // handle mouse click event on canvas
   mouseClick(x: number, y: number, posChange = 0, isDelta = true): void {
@@ -7361,7 +7891,7 @@ export class Niivue {
       if (axCorSag > SLICE_TYPE.SAGITTAL) {
         continue
       }
-      const texFrac = this.screenXY2TextureFrac(x, y, i, false)
+      let texFrac = this.screenXY2TextureFrac(x, y, i, false)
       if (texFrac[0] < 0) {
         continue
       } // click not on slice i
@@ -7392,40 +7922,99 @@ export class Niivue {
       }
       if (this.opts.drawingEnabled) {
         // drawing done in voxels
-        const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
-        // radius given in mm
-        const ptMM = this.frac2mm(this.scene.crosshairPos)
+        let pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
         // if click-to-segment enabled
         if (this.opts.clickToSegment) {
-          const radius = this.opts.clickToSegmentRadius
-          const steps = this.opts.clickToSegmentSteps
-          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-          this.drawPenFillPts = []
-          this.drawPenAxCorSag = axCorSag
-          for (let i = 1; i <= steps; i++) {
-            const angle = (i / steps) * 2 * Math.PI
-            // get the x,y,z in mm since radius given in mm
-            const xMM = ptMM[0] + radius * Math.cos(angle)
-            const yMM = ptMM[1] + radius * Math.sin(angle)
-            const zMM = ptMM[2]
-            // convert x,y,z in mm to voxels for drawing
-            const xVox = this.back.mm2vox([xMM, yMM, zMM])[0]
-            const yVox = this.back.mm2vox([xMM, yMM, zMM])[1]
-            const zVox = this.back.mm2vox([xMM, yMM, zMM])[2]
-            // draw the point
-            this.drawPt(xVox, yVox, zVox, this.opts.penValue)
-            this.drawPenFillPts.push([xVox, yVox, pt[2]])
-            // fill in the circle if we are at the last step.
-            // This also triggers the growth of the circle based on cluster intensity method of flood fill.
-            // If the circle is drawn in a bright region, it will grow in the bright region using all connected bright voxels and vice versa.
-            if (i === steps) {
-              this.drawFloodFill([xVox, yVox, pt[2]], 0, brightOrDark, NaN, NaN, this.opts.floodFillNeighbors)
+          texFrac = this.screenXY2TextureFrac(this.clickToSegmentXY[0], this.clickToSegmentXY[1], i, false)
+          pt = this.frac2vox(texFrac) as [number, number, number]
+          let diff = 0
+          let threshold = this.opts.clickToSegmentPercent + diff
+          if (this.uiData.mousedown) {
+            // get percent difference between current x, y, and clickToSegmentXY
+            const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width
+            const yDiff = (this.clickToSegmentXY[1] - y) / this.gl.canvas.height
+            diff = Math.max(Math.abs(xDiff), Math.abs(yDiff))
+            threshold = this.opts.clickToSegmentPercent + diff
+          }
+          // get voxel value of pt
+          let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
+          // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
+          // in a bright or dark region based on the intensity of the clicked voxel,
+          // and where it falls in the range of cal_min and cal_max.
+          // !important! If this option is true, then it will ignore the boolean value of
+          // clickToSegmentBright supplied by the user
+          if (this.opts.clickToSegmentAutoIntensity) {
+            if (threshold !== 0) {
+              if (voxelIntensity === 0) {
+                voxelIntensity = 0.01
+              }
+              this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
+              this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
+            }
+            // if voxel intensity is greater than the midpoint of cal_min and cal_max,
+            // then flood fill in a bright region
+            if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
+              this.opts.clickToSegmentBright = true
+            } else {
+              // else flood fill in a dark region
+              this.opts.clickToSegmentBright = false
             }
           }
+          // set brightOrDark now, if clickToSegmentAutoBrightOrDark is false,
+          // then brightOrDark will be set to the value of clickToSegmentBright supplied by the user
+          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+          this.drawPenAxCorSag = axCorSag
+          if (this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
+            // get voxel penSize for the current slice, but what if pixDims are not isotropic?
+            // we will use the smallest pixDim for the current slice
+            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[1]]
+            const minPixDim = Math.min(...pixDims)
+            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+          } else if (this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
+            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[2]]
+            const minPixDim = Math.min(...pixDims)
+            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+          } else if (this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
+            const pixDims = [this.back.pixDimsRAS[1], this.back.pixDimsRAS[2]]
+            const minPixDim = Math.min(...pixDims)
+            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+          }
+          // draw the point at the cursor using the penSize to set the
+          // seed for the flood fill
+          this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
+
+          if (diff !== 0) {
+            this.clickToSegmentIsGrowing = true
+            this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
+          } else {
+            this.clickToSegmentIsGrowing = false
+          }
+
+          // do flood fill
+          this.drawFloodFill(
+            [pt[0], pt[1], pt[2]],
+            0,
+            brightOrDark,
+            this.opts.clickToSegmentIntensityMin,
+            this.opts.clickToSegmentIntensityMax,
+            this.opts.floodFillNeighbors,
+            this.opts.clickToSegmentMaxDistanceMM,
+            this.opts.clickToSegmentIs2D
+          )
+          // draw the scene so we see the changes
           this.drawScene()
           this.createOnLocationChange(axCorSag)
-          // get the volume of the segmented region
-          const info = this.getDescriptives(0, [], true)
+          if (this.clickToSegmentIsGrowing) {
+            // don't get descriptive stats if the user
+            // is still growing the segmented region
+            return
+          }
+          // get the volume of the segmented region if the user is not growing the region
+          const info = this.getDescriptives({
+            layer: 0,
+            masks: [],
+            drawingIsMask: true
+          })
           this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
           return
         }
@@ -7677,20 +8266,44 @@ export class Niivue {
     if (!this.rectShader) {
       throw new Error('rectShader undefined')
     }
-    this.rectShader.use(this.gl)
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(this.rectShader.uniforms.lineColor, lineColor)
-    this.gl.uniform2fv(this.rectShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
-    this.gl.uniform4f(
-      this.rectShader.uniforms.leftTopWidthHeight,
-      leftTopWidthHeight[0],
-      leftTopWidthHeight[1],
-      leftTopWidthHeight[2],
-      leftTopWidthHeight[3]
-    )
-    this.gl.bindVertexArray(this.genericVAO)
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    if (!this.opts.selectionBoxIsOutline) {
+      this.rectShader.use(this.gl)
+      this.gl.enable(this.gl.BLEND)
+      this.gl.uniform4fv(this.rectShader.uniforms.lineColor, lineColor)
+      this.gl.uniform2fv(this.rectShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
+      this.gl.uniform4f(
+        this.rectShader.uniforms.leftTopWidthHeight,
+        leftTopWidthHeight[0],
+        leftTopWidthHeight[1],
+        leftTopWidthHeight[2],
+        leftTopWidthHeight[3]
+      )
+      this.gl.bindVertexArray(this.genericVAO)
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+      this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    } else {
+      this.drawCircle(leftTopWidthHeight, lineColor, 0.1)
+      // this.opts.selectionBoxIsOutline == true
+      this.rectOutlineShader.use(this.gl)
+      this.gl.enable(this.gl.BLEND)
+      // set thickness of line
+      this.gl.uniform1f(this.rectOutlineShader.uniforms.thickness, this.opts.selectionBoxLineThickness)
+      this.gl.uniform4fv(this.rectOutlineShader.uniforms.lineColor, lineColor)
+      this.gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [
+        this.gl.canvas.width,
+        this.gl.canvas.height
+      ])
+      this.gl.uniform4f(
+        this.rectOutlineShader.uniforms.leftTopWidthHeight,
+        leftTopWidthHeight[0],
+        leftTopWidthHeight[1],
+        leftTopWidthHeight[2],
+        leftTopWidthHeight[3]
+      )
+      this.gl.bindVertexArray(this.genericVAO)
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+      this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    }
   }
 
   drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0): void {
@@ -7718,6 +8331,11 @@ export class Niivue {
   // not included in public docs
   // draw a rectangle at desired location
   drawSelectionBox(leftTopWidthHeight: number[]): void {
+    if (this.opts.dragMode === DRAG_MODE.roiSelection) {
+      this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1)
+      return
+    }
+    // else draw a rectangle
     this.drawRect(leftTopWidthHeight, this.opts.selectionBoxColor)
   }
 
@@ -10870,12 +11488,18 @@ export class Niivue {
         width,
         height
       ])
+      return
     }
 
     // draw circle at mouse position if clickToSegment is enabled
     if (this.opts.clickToSegment) {
       const x = this.mousePos[0]
       const y = this.mousePos[1]
+      // check if hovering over the 3D render tile
+      if (this.inRenderTile(x, y) >= 0) {
+        // exit early since we do not want to draw the cursor here!
+        return
+      }
       // determine the tile the mouse is hovering in
       const tileIdx = this.tileIndex(x, y)
       // if a valid tile index, draw the circle
