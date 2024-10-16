@@ -8,7 +8,7 @@ export default defineConfig({
   },
   root: '.',
   server: {
-    open: '/src/index_segment.html',
+    open: '/src/index.html',
     fs: {
       // Allow serving files from one level up to the project root
       allow: ['..']

@@ -918,8 +918,17 @@ export class Niivue {
       this.canvas.style.display = 'block'
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
-      window.addEventListener('resize', this.resizeListener.bind(this)) // must bind 'this' niivue object or else 'this' becomes 'window'
-      this.resizeObserver = new ResizeObserver(this.resizeListener.bind(this))
+      window.addEventListener('resize', () => {
+        requestAnimationFrame(() => {
+          this.resizeListener()
+        })
+      })
+      this.resizeObserver = new ResizeObserver(() => {
+        console.log('resizeObserver')
+        requestAnimationFrame(() => {
+          this.resizeListener()
+        })
+      })
       this.resizeObserver.observe(this.canvas.parentElement!)
     }
     this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
