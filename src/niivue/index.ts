@@ -139,6 +139,8 @@ export { NVMeshUtilities } from '../nvmesh-utilities.js'
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '../types.js'
+export { NVUI } from '../ui/nvui.js'
+export { NVFont } from '../ui/nvfont.js'
 
 export type FontMetrics = {
   distanceRange: number

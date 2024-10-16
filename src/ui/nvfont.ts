@@ -4,7 +4,7 @@ import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { FontMetrics } from "../niivue/index.js"
 
-const TEXTURE3_FONT = 33987
+export const TEXTURE_FONT = 33987
 
 export class NVFont {
     private gl: WebGL2RenderingContext
@@ -67,6 +67,10 @@ export class NVFont {
         }
     }
 
+    public getFontTexture(): WebGLTexture | null {
+        return this.fontTexture
+    }
+
     public async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null> {
         return new Promise((resolve, reject) => {
             const img = new Image()
@@ -74,7 +78,7 @@ export class NVFont {
                 let pngTexture: WebGLTexture | null = null
 
                 this.fontShader!.use(this.gl)
-                this.gl.activeTexture(TEXTURE3_FONT)
+                this.gl.activeTexture(TEXTURE_FONT)
                 this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
                 if (this.fontTexture !== null) {
                     this.gl.deleteTexture(this.fontTexture)
@@ -159,7 +163,7 @@ export class NVFont {
 
     // Newly added functions
 
-    public getTextWidth(scale: number, str: string): number {
+    public getTextWidth(str: string, scale: number = 1.0): number {
         if (!str) {
             return 0
         }
@@ -210,7 +214,7 @@ export class NVFont {
         return scale * maxTop * this.gl.canvas.height * this.textHeight
     }
 
-    public getTextHeight(scale: number, str: string): number {
+    public getTextHeight(str: string, scale: number = 1.0): number {
         if (!str) {
             return 0
         }
@@ -235,63 +239,11 @@ export class NVFont {
     }
 
     public getTextBounds(scale: number, str: string): number[] {
-        const width = this.getTextWidth(scale, str)
-        const height = this.getTextHeight(scale, str)
+        const width = this.getTextWidth(str, scale)
+        const height = this.getTextHeight(str, scale)
         return [0, 0, width, height]
     }
 
 
-    drawChar(xy: number[], scale: number, char: number): number {
-        if (!this.fontShader) {
-            throw new Error('fontShader undefined')
-        }
-        // draw single character, never call directly: ALWAYS call from drawText()
-        const metrics = this.fontMets!.mets[char]!
-        const l = xy[0] + scale * metrics.lbwh[0]
-        const b = -(scale * metrics.lbwh[1])
-        const w = scale * metrics.lbwh[2]
-        const h = scale * metrics.lbwh[3]
-        const t = xy[1] + (b - h) + scale
-        this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
-        this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-        return scale * metrics.xadv
-    }
 
-
-    // not included in public docs
-    drawText(xy: number[], str: string, scale = 1.0, color: Float32List | null = null): void {
-        if (!this.isFontLoaded) {
-            console.log('font not loaded')
-        }
-
-        if (!this.fontShader) {
-            throw new Error('fontShader undefined')
-        }
-
-        // bind our font texture
-
-        const gl = this.gl
-        gl.activeTexture(TEXTURE3_FONT);
-        gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
-
-        this.fontShader.use(this.gl)
-        // let size = this.opts.textHeight * this.gl.canvas.height * scale;
-        const size = this.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-        this.gl.enable(this.gl.BLEND)
-        this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
-        if (color === null) {
-            color = this.fontColor
-        }
-        this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color as Float32List)
-        let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
-        screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
-        this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
-        const bytes = new TextEncoder().encode(str)
-        this.gl.bindVertexArray(this.genericVAO)
-        for (let i = 0; i < str.length; i++) {
-            xy[0] += this.drawChar(xy, size, bytes[i])
-        }
-        this.gl.bindVertexArray(this.unusedVAO)
-    }
 }

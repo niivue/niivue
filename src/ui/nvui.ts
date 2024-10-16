@@ -1,5 +1,6 @@
 import { Shader } from '../shader.js';
 import { fragRectShader, fragStadiumShader, vertLineShader, vertRectShader, vertStadiumShader } from '../shader-srcs.js';
+import { NVFont, TEXTURE_FONT } from './nvfont.js';
 
 export class NVUI {
     private gl: WebGL2RenderingContext;
@@ -47,6 +48,58 @@ export class NVUI {
 
             NVUI.genericVAO = vao;
         }
+    }
+
+    drawChar(font: NVFont, xy: number[], scale: number, char: number): number {
+        if (!font.fontShader) {
+            throw new Error('fontShader undefined')
+        }
+        // draw single character, never call directly: ALWAYS call from drawText()
+        const metrics = font.fontMets!.mets[char]!
+        const l = xy[0] + scale * metrics.lbwh[0]
+        const b = -(scale * metrics.lbwh[1])
+        const w = scale * metrics.lbwh[2]
+        const h = scale * metrics.lbwh[3]
+        const t = xy[1] + (b - h) + scale
+        this.gl.uniform4f(font.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
+        this.gl.uniform4fv(font.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+        return scale * metrics.xadv
+    }
+
+
+    // not included in public docs
+    drawText(font: NVFont, xy: number[], str: string, scale = 1.0, color: Float32List | null = null): void {
+        if (!font.isFontLoaded) {
+            console.log('font not loaded')
+        }
+
+        if (!font.fontShader) {
+            throw new Error('fontShader undefined')
+        }
+
+        // bind our font texture
+        const gl = this.gl
+        gl.activeTexture(TEXTURE_FONT);
+        gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture());
+
+        font.fontShader.use(this.gl)
+        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+        this.gl.enable(this.gl.BLEND)
+        this.gl.uniform2f(font.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
+        if (color === null) {
+            color = font.fontColor
+        }
+        this.gl.uniform4fv(font.fontShader.uniforms.fontColor, color as Float32List)
+        let screenPxRange = (size / font.fontMets!.size) * font.fontMets!.distanceRange
+        screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
+        this.gl.uniform1f(font.fontShader.uniforms.screenPxRange, screenPxRange)
+        const bytes = new TextEncoder().encode(str)
+        this.gl.bindVertexArray(NVUI.genericVAO)
+        for (let i = 0; i < str.length; i++) {
+            xy[0] += this.drawChar(font, xy, size, bytes[i])
+        }
+        this.gl.bindVertexArray(null)
     }
 
 
@@ -172,10 +225,7 @@ export class NVUI {
         const u_rectSize = [ndcWidth / 2, ndcHeight / 2];
         console.log('pos and size', u_rectPos, u_rectSize);
         gl.uniform2f(NVUI.stadiumShader.uniforms.u_rectPos, u_rectPos[0], u_rectPos[1]);
-        const aspectRatio = canvasWidth / canvasHeight;
-        const correctedWidth = ndcWidth / (aspectRatio > 1.0 ? aspectRatio : 1.0);
-        const correctedHeight = ndcHeight / (aspectRatio < 1.0 ? 1.0 / aspectRatio / 2 : 1.0);
-        // gl.uniform2f(NVDrawer.roundedRectShader.uniforms.u_rectSize, correctedWidth / 2, correctedHeight / 2);
+
         gl.uniform2f(NVUI.stadiumShader.uniforms.u_rectSize, ndcWidth / 2.04, ndcHeight / 4.9);
 
         // Set the outline width in NDC units
