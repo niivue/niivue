@@ -19,7 +19,7 @@ const kDrawFunc = `
 }`
 
 const kRenderFunc =
-  `vec3 GetBackPosition(vec3 startPositionTex) {
+	`vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale;
 	vec3 invR = 1.0 / rayDir;
 	vec3 tbot = invR * (vec3(0.0)-startPosition);
@@ -311,7 +311,7 @@ const kRenderTail = `
 
 // https://github.com/niivue/niivue/issues/679
 export const fragRenderSliceShader =
-  `#version 300 es
+	`#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -336,8 +336,8 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  `
+	kRenderFunc +
+	`
 	void main() {
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
@@ -395,10 +395,10 @@ out vec4 fColor;
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
 	samplePos += deltaDir * ran; //jitter ray
 ` +
-  kRenderTail
+	kRenderTail
 
 export const fragRenderShader =
-  `#version 300 es
+	`#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -423,9 +423,9 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  kRenderInit +
-  `while (samplePos.a <= len) {
+	kRenderFunc +
+	kRenderInit +
+	`while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -440,10 +440,10 @@ out vec4 fColor;
 		}
 	}
 ` +
-  kRenderTail
+	kRenderTail
 
 export const fragRenderGradientShader =
-  `#version 300 es
+	`#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -471,9 +471,9 @@ uniform float gradientAmount;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  kRenderInit +
-  `
+	kRenderFunc +
+	kRenderInit +
+	`
 	float startPos = samplePos.a;
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
@@ -504,7 +504,7 @@ out vec4 fColor;
 		samplePos += deltaDir; //advance ray position
 	}
 ` +
-  kRenderTail
+	kRenderTail
 
 export const vertSliceMMShader = `#version 300 es
 #line 392
@@ -525,7 +525,7 @@ void main(void) {
 }`
 
 export const kFragSliceHead =
-  `#version 300 es
+	`#version 300 es
 #line 411
 precision highp int;
 precision highp float;
@@ -542,8 +542,8 @@ uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;` +
-  kDrawFunc +
-  `void main() {
+	kDrawFunc +
+	`void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -671,8 +671,8 @@ export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
 export const fragSliceMMShader = kFragSliceHead + kFragSliceTail
 
 export const fragSliceV1Shader =
-  kFragSliceHead +
-  `	if (ocolor.a > 0.0) {
+	kFragSliceHead +
+	`	if (ocolor.a > 0.0) {
 		//https://gamedev.stackexchange.com/questions/102889/is-it-possible-to-convert-vec4-to-int-in-glsl-using-opengl-es
 		uint alpha = uint(ocolor.a * 255.0);
 		vec3 xyzFlip = vec3(float((uint(1) & alpha) > uint(0)), float((uint(2) & alpha) > uint(0)), float((uint(4) & alpha) > uint(0)));
@@ -707,7 +707,7 @@ export const fragSliceV1Shader =
 		ocolor.rgb += (dx2-dx-(0.5 * pan)) * 1.0;
 	}
 ` +
-  kFragSliceTail
+	kFragSliceTail
 
 export const fragRectShader = `#version 300 es
 #line 480
@@ -1635,7 +1635,7 @@ void main() {
 }`
 
 export const fragVolumePickingShader =
-  `#version 300 es
+	`#version 300 es
 #line 1260
 //precision highp int;
 precision highp float;
@@ -1657,8 +1657,8 @@ uniform int backgroundMasksOverlays;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  `
+	kRenderFunc +
+	`
 void main() {
 	int id = 254;
 	vec3 start = vColor;
@@ -1827,3 +1827,76 @@ void main(void) {
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
 }`
+
+export const vertStadiumShader = `#version 300 es
+layout(location = 0) in vec3 pos;
+
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+
+out vec2 v_position; // Pass normalized position to fragment shader
+
+void main(void) {
+    // Convert pixel x, y space to WebGL -1..1, -1..1
+    vec2 normalized = (pos.xy * leftTopWidthHeight.zw + leftTopWidthHeight.xy) / canvasWidthHeight;
+    // Invert y-axis for NDC
+    normalized.y = 1.0 - normalized.y;
+
+    // Convert from [0, 1] to [-1, 1]
+    v_position = (normalized * 2.0) - 1.0;
+
+    // Set gl_Position for rendering
+    gl_Position = vec4(v_position, 0.0, 1.0);
+}
+`
+
+export const fragStadiumShader = `#version 300 es
+precision highp float;
+
+uniform vec2 iResolution;   // Canvas resolution (width, height)
+uniform vec2 u_rectPos;     // Center position of the stadium in NDC space
+uniform vec2 u_rectSize;    // Half-size of the rectangle (half-width, half-height in NDC)
+uniform float u_roundness;  // Radius of the semi-circular caps (in NDC)
+uniform float u_outlineWidth; // Width of the outline in NDC units
+
+uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
+uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
+
+out vec4 fragColor;
+
+// Signed distance to a 2D stadium shape
+float sdStadium(vec2 p, vec2 halfSize, float radius) {
+    // Adjust the position to calculate distance correctly for rounded ends
+    vec2 d = abs(p) - vec2(halfSize.x - radius, halfSize.y);
+    d = max(d, 0.0); // Clamp to ensure no negative values for distance calculation
+    return length(d) - radius;
+}
+
+void main() {
+    // Convert fragment coordinates to NDC space ([-1, 1] range)
+    vec2 p = (2.0 * gl_FragCoord.xy - iResolution.xy) / iResolution;
+
+    // Transform the coordinates to local space relative to the stadium center
+    vec2 localPos = p - u_rectPos;
+
+    // Compute signed distance to the stadium shape (filled region)
+    float distFill = sdStadium(localPos, u_rectSize, u_roundness);
+
+    // Compute signed distance to the stadium outline (expanded region)
+    float distOutline = sdStadium(localPos, u_rectSize + vec2(u_outlineWidth, u_outlineWidth), u_roundness + u_outlineWidth);
+
+    // Smooth anti-aliasing edge for fill and outline regions
+    float edgeSmooth = fwidth(distFill);
+
+    // Determine alpha values for fill and outline
+    float alphaFill = smoothstep(-edgeSmooth, edgeSmooth, -distFill);
+    float alphaOutline = smoothstep(-edgeSmooth, edgeSmooth, -distOutline) - alphaFill;
+
+    // Combine the outline and fill colors with appropriate blending
+    vec4 outlineColor = u_outlineColor * alphaOutline;
+    vec4 fillColor = u_fillColor * alphaFill;
+
+    // Set the final fragment color, ensuring the outline color takes precedence over the fill
+    fragColor = outlineColor + fillColor;
+}
+`

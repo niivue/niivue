@@ -1,16 +1,14 @@
 import { Shader } from '../shader.js';
-import { fragRectShader, fragStadiumShader, vertLineShader, vertRectShader, vertRoundedRectShader } from '../shader-srcs.js';
+import { fragRectShader, fragStadiumShader, vertLineShader, vertRectShader, vertStadiumShader } from '../shader-srcs.js';
 
 export class NVUI {
     private gl: WebGL2RenderingContext;
     private lineShader: Shader;
-    private canvas: HTMLCanvasElement;
-
     protected static triangleShader: Shader;
     protected static circleShader: Shader;
     protected static rectShader: Shader;
     protected static genericVAO: WebGLVertexArrayObject;
-    protected static roundedRectShader: Shader;
+    protected static stadiumShader: Shader;
 
     /**
      * Creates an instance of NVDrawer.
@@ -19,15 +17,14 @@ export class NVUI {
     constructor(gl: WebGL2RenderingContext) {
         // Initialize static shaders and buffers if not already initialized
         this.gl = gl;
-        this.canvas = gl.canvas as HTMLCanvasElement;
         this.lineShader = new Shader(gl, vertLineShader, fragRectShader);
 
         if (!NVUI.rectShader) {
             NVUI.rectShader = new Shader(gl, vertRectShader, fragRectShader);
         }
 
-        if (!NVUI.roundedRectShader) {
-            NVUI.roundedRectShader = new Shader(gl, vertRoundedRectShader, fragStadiumShader);
+        if (!NVUI.stadiumShader) {
+            NVUI.stadiumShader = new Shader(gl, vertStadiumShader, fragStadiumShader);
         }
 
         if (!NVUI.genericVAO) {
@@ -112,25 +109,25 @@ export class NVUI {
         fillColor: [number, number, number, number],
         outlineColor: [number, number, number, number],
     ): void {
-        if (!NVUI.roundedRectShader) {
+        if (!NVUI.stadiumShader) {
             throw new Error('roundedRectShader undefined');
         }
 
         const gl = this.gl;
 
         // Use the rounded rectangle shader program
-        NVUI.roundedRectShader.use(gl);
+        NVUI.stadiumShader.use(gl);
 
         // Enable blending for transparency
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         // Set the necessary uniforms
-        const shader = NVUI.roundedRectShader;
+        const shader = NVUI.stadiumShader;
 
         // Set the roundness of the corners
         const radius = 0.02; // Adjust this value as needed for rounded corners
-        gl.uniform4fv(NVUI.roundedRectShader.uniforms.u_cornerRadii, [radius, radius, radius, radius]);
+        gl.uniform4fv(NVUI.stadiumShader.uniforms.u_cornerRadii, [radius, radius, radius, radius]);
 
         // Set the fill color
         const fillColorLocation = gl.getUniformLocation(shader.program, 'u_fillColor');
@@ -174,30 +171,30 @@ export class NVUI {
         const u_rectPos = [ndcX + ndcWidth / 2, ndcY - ndcHeight / 2]; // Center position in NDC
         const u_rectSize = [ndcWidth / 2, ndcHeight / 2];
         console.log('pos and size', u_rectPos, u_rectSize);
-        gl.uniform2f(NVUI.roundedRectShader.uniforms.u_rectPos, u_rectPos[0], u_rectPos[1]);
+        gl.uniform2f(NVUI.stadiumShader.uniforms.u_rectPos, u_rectPos[0], u_rectPos[1]);
         const aspectRatio = canvasWidth / canvasHeight;
         const correctedWidth = ndcWidth / (aspectRatio > 1.0 ? aspectRatio : 1.0);
         const correctedHeight = ndcHeight / (aspectRatio < 1.0 ? 1.0 / aspectRatio / 2 : 1.0);
         // gl.uniform2f(NVDrawer.roundedRectShader.uniforms.u_rectSize, correctedWidth / 2, correctedHeight / 2);
-        gl.uniform2f(NVUI.roundedRectShader.uniforms.u_rectSize, ndcWidth / 2.04, ndcHeight / 4.9);
+        gl.uniform2f(NVUI.stadiumShader.uniforms.u_rectSize, ndcWidth / 2.04, ndcHeight / 4.9);
 
         // Set the outline width in NDC units
         const outlineWidthNDC = Math.min(ndcWidth, ndcHeight) * 0.04; // Adjust for visible outline
-        gl.uniform1f(NVUI.roundedRectShader.uniforms.u_outlineWidth, outlineWidthNDC);
+        gl.uniform1f(NVUI.stadiumShader.uniforms.u_outlineWidth, outlineWidthNDC);
 
 
 
         // Set default outline width (2% of the smallest dimension in NDC)
         const defaultOutlineWidth = 0.03 * Math.min(ndcWidth, ndcHeight);
-        gl.uniform1f(NVUI.roundedRectShader.uniforms.u_outlineWidth, defaultOutlineWidth);
+        gl.uniform1f(NVUI.stadiumShader.uniforms.u_outlineWidth, defaultOutlineWidth);
 
 
         // Set canvas resolution
-        gl.uniform2f(NVUI.roundedRectShader.uniforms.iResolution, canvasWidth, canvasHeight);
+        gl.uniform2f(NVUI.stadiumShader.uniforms.iResolution, canvasWidth, canvasHeight);
 
         // Set roundness (at least half of height for stadium ends)
         const defaultRoundness = Math.min(ndcWidth / 2, ndcHeight / 2) * 0.5;
-        gl.uniform1f(NVUI.roundedRectShader.uniforms.u_roundness, defaultRoundness);
+        gl.uniform1f(NVUI.stadiumShader.uniforms.u_roundness, defaultRoundness);
 
 
 
