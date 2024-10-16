@@ -604,7 +604,8 @@ declare enum DRAG_MODE {
     measurement = 2,
     pan = 3,
     slicer3D = 4,
-    callbackOnly = 5
+    callbackOnly = 5,
+    roiSelection = 6
 }
 /**
  * NVConfigOptions
@@ -674,10 +675,19 @@ type NVConfigOptions = {
     renderOverlayBlend: number;
     sliceMosaicString: string;
     centerMosaic: boolean;
+    penSize: number;
     clickToSegment: boolean;
     clickToSegmentRadius: number;
-    clickToSegmentSteps: number;
     clickToSegmentBright: boolean;
+    clickToSegmentAutoIntensity: boolean;
+    clickToSegmentIntensityMax: number;
+    clickToSegmentIntensityMin: number;
+    clickToSegmentPercent: number;
+    clickToSegmentMaxDistanceMM: number;
+    clickToSegmentIs2D: boolean;
+    selectionBoxLineThickness: number;
+    selectionBoxIsOutline: boolean;
+    scrollRequiresFocus: boolean;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -981,6 +991,18 @@ type NiiVueLocation = {
     values: NiiVueLocationValue[];
     vox: vec3;
     xy: [number, number];
+};
+type SyncOpts = {
+    '3d'?: boolean;
+    '2d'?: boolean;
+    zoomPan?: boolean;
+    cal_min?: boolean;
+    cal_max?: boolean;
+    gamma?: boolean;
+    useSliceOffset?: boolean;
+    sliceType?: boolean;
+    crosshair?: boolean;
+    clipPlane?: boolean;
 };
 
 type ValuesArray = Array<{
@@ -1619,6 +1641,7 @@ type Descriptive = {
     cal_max: number;
     robust_min: number;
     robust_max: number;
+    area: number | null;
 };
 type SliceScale = {
     volScale: number[];
@@ -1691,6 +1714,9 @@ declare class Niivue {
     drawUndoBitmaps: Uint8Array[];
     drawLut: LUT;
     drawOpacity: number;
+    clickToSegmentIsGrowing: boolean;
+    clickToSegmentGrowingBitmap: Uint8Array | null;
+    clickToSegmentXY: number[];
     renderDrawAmbientOcclusion: number;
     colorbarHeight: number;
     drawPenLocation: number[];
@@ -1704,6 +1730,7 @@ declare class Niivue {
     orientCubeShader?: Shader;
     orientCubeShaderVAO: WebGLVertexArrayObject | null;
     rectShader?: Shader;
+    rectOutlineShader?: Shader;
     renderShader?: Shader;
     lineShader?: Shader;
     line3DShader?: Shader;
@@ -1748,7 +1775,7 @@ declare class Niivue {
     extentsMin?: vec3;
     extentsMax?: vec3;
     private resizeObserver;
-    syncOpts: Record<string, unknown>;
+    syncOpts: SyncOpts;
     readyForSync: boolean;
     uiData: UIData;
     back: NVImage | null;
@@ -1769,7 +1796,7 @@ declare class Niivue {
         screen2frac?: number[];
     }>;
     cuboidVertexBuffer?: WebGLBuffer;
-    otherNV: Niivue | Niivue[] | null;
+    otherNV: Niivue[] | null;
     volumeObject3D: NiivueObject3D | null;
     pivot3D: number[];
     furthestFromPivot: number;
@@ -2024,7 +2051,7 @@ declare class Niivue {
      * @deprecated use broadcastTo instead
      * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
      */
-    syncWith(otherNV: Niivue, syncOpts?: {
+    syncWith(otherNV: Niivue | Niivue[], syncOpts?: {
         '2d': boolean;
         '3d': boolean;
     }): void;
@@ -2043,6 +2070,15 @@ declare class Niivue {
         '2d': boolean;
         '3d': boolean;
     }): void;
+    doSync3d(otherNV: Niivue): void;
+    doSync2d(otherNV: Niivue): void;
+    doSyncGamma(otherNV: Niivue): void;
+    doSyncZoomPan(otherNV: Niivue): void;
+    doSyncCrosshair(otherNV: Niivue): void;
+    doSyncCalMin(otherNV: Niivue): void;
+    doSyncCalMax(otherNV: Niivue): void;
+    doSyncSliceType(otherNV: Niivue): void;
+    doSyncClipPlane(otherNV: Niivue): void;
     /**
      * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
      * @internal
@@ -2705,9 +2741,17 @@ declare class Niivue {
     drawGrowCut(): void;
     drawPt(x: number, y: number, z: number, penValue: number): void;
     drawPenLine(ptA: number[], ptB: number[], penValue: number): void;
+    /**
+     * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
+     *
+     * @param seedXYZ -  voxel index of the seed voxel in the mask array.
+     * @param neighbors - Number of neighbors to consider for connectivity and dilation (6, 18, or 26).
+     */
+    drawingBinaryDilationWithSeed(seedXYZ: number[], // seed voxel x,y,z
+    neighbors?: 6 | 18 | 26): void;
     drawFloodFillCore(img: Uint8Array, seedVx: number, neighbors?: number): void;
     drawFloodFill(seedXYZ: number[], newColor?: number, growSelectedCluster?: number, // if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
-    forceMin?: number, forceMax?: number, neighbors?: number): void;
+    forceMin?: number, forceMax?: number, neighbors?: number, maxDistanceMM?: number, is2D?: boolean): void;
     drawPenFilled(): void;
     /**
      * close drawing: make sure you have saved any changes before calling this!
@@ -2721,7 +2765,7 @@ declare class Niivue {
      * @example niivue.refreshDrawing();
      * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
      */
-    refreshDrawing(isForceRedraw?: boolean): void;
+    refreshDrawing(isForceRedraw?: boolean, useClickToSegmentBitmap?: boolean): void;
     r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
     rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
     requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
@@ -2836,13 +2880,33 @@ declare class Niivue {
     updateGLVolume(): void;
     /**
      * basic statistics for selected voxel-based image
-     * @param layer - selects image to describe
-     * @param masks - are optional binary images to filter voxles
-     * @returns numeric values to describe image
-     * @example niivue.getDescriptives(0);
+     * @param options - an object containing the following properties:
+     *   - layer: selects image to describe
+     *   - masks: optional binary images to filter voxels
+     *   - drawingIsMask: a boolean indicating if the drawing is used as a mask
+     *   - roiIsMask: a boolean indicating if the ROI is used as a mask
+     *   - startVox: the starting voxel coordinates
+     *   - endVox: the ending voxel coordinates
+     * @returns numeric values to describe image or regions of images
+     * @example
+     * niivue.getDescriptives({
+     *   layer: 0,
+     *   masks: [],
+     *   drawingIsMask: true, // drawingIsMask and roiIsMask are mutually exclusive
+     *   roiIsMask: false,
+     *   startVox: [10, 20, 30], // ignored if roiIsMask is false
+     *   endVox: [40, 50, 60] // ignored if roiIsMask is false
+     * });
      * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
      */
-    getDescriptives(layer?: number, masks?: any[], drawingIsMask?: boolean): Descriptive;
+    getDescriptives(options: {
+        layer?: number;
+        masks?: number[];
+        drawingIsMask?: boolean;
+        roiIsMask?: boolean;
+        startVox?: number[];
+        endVox?: number[];
+    }): Descriptive;
     refreshLayers(overlayItem: NVImage, layer: number): void;
     /**
      * query all available color maps that can be applied to volumes
@@ -2960,6 +3024,8 @@ declare class Niivue {
     sliceScroll3D(posChange?: number): void;
     deleteThumbnail(): void;
     inGraphTile(x: number, y: number): boolean;
+    updateBitmapFromClickToSegment(): void;
+    sumBitmap(img: Uint8Array): number;
     mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): void;
     drawRuler(): void;
     drawRuler10cm(startXYendXY: number[]): void;
@@ -3074,4 +3140,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
