@@ -1,6 +1,7 @@
 import { Shader } from '../shader.js';
 import { fragRectShader, fragRoundedRectShader, fragStadiumShader, vertLineShader, vertRectShader, vertStadiumShader } from '../shader-srcs.js';
 import { NVFont, TEXTURE_FONT } from './nvfont.js';
+import { text } from 'stream/consumers';
 
 export class NVUI {
     private gl: WebGL2RenderingContext;
@@ -65,30 +66,10 @@ export class NVUI {
         const b = -(size * metrics.lbwh[1])
         const w = size * metrics.lbwh[2]
         const h = size * metrics.lbwh[3]
-        const t = xy[1] + size - h + b//b//+ (b - h) + scale
-        // console.log('scale - b', size)
-        // console.log('t', size - h + b)
-        // const diff = h - b
-        // console.log('diff', diff)
-        // console.log('xy[1] + h - b', xy[1] + h - b)
-        // console.log('xy[1] - t', xy[1] - t)
-        // console.log('xy[1] - t + h', xy[1] - t + h)
-        // console.log('b', b)
-        // console.log('drawChar metrics', metrics)
-
-        const leftTopWidthHeight = [l, t, w, h]
-        this.drawRect(leftTopWidthHeight, [0, 1, 0, 1])
-
-        const gl = this.gl
-        font.fontShader.use(this.gl)
-        gl.activeTexture(TEXTURE_FONT);
-        gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture());
-        this.gl.bindVertexArray(NVUI.genericVAO)
+        const t = xy[1] + size - h + b//b//+ (b - h) + scale       
         this.gl.uniform4f(font.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
         this.gl.uniform4fv(font.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-        this.gl.bindVertexArray(null)
-        console.log('drawChar leftTopWidthHeight', leftTopWidthHeight)
         return size * metrics.xadv
     }
 
@@ -399,23 +380,42 @@ export class NVUI {
         gl.bindVertexArray(null);
     }
 
-    drawTextStadium(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], scale = 1.0, margin: number = 5) {
+    drawTextStadiumCenteredOn(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], scale = 1.0, margin: number = 15) {
         const textWidth = font.getTextWidth(str, scale)
         const textHeight = font.getTextHeight(str, scale)
-        const rectWidth = textWidth + 2 * margin * scale + 2 * textHeight
-        const rectHeight = font.getTextHeight(str, scale) + 2 * margin * scale // Height of the rectangle enclosing the text
-        console.log('text height', textHeight)
-        console.log('rectHeight', rectHeight)
+        const rectWidth = textWidth + 2 * margin * scale + textHeight
+        const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
+
+        const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2]
+        this.drawTextStadium(font, centeredPos, str, textColor, outlineColor, backgroundColor, scale, margin)
+    }
+
+    drawTextStadiumCenteredBelow(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], scale = 1.0, margin: number = 15) {
+        const textWidth = font.getTextWidth(str, scale)
+        const textHeight = font.getTextHeight(str, scale)
+        const rectWidth = textWidth + 2 * margin * scale + textHeight
+        const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
+
+        const centeredPos = [xy[0] - rectWidth / 2, xy[1]]
+        this.drawTextStadium(font, centeredPos, str, textColor, outlineColor, backgroundColor, scale, margin)
+    }
+
+    drawTextStadium(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], scale = 1.0, margin: number = 15) {
+        const textWidth = font.getTextWidth(str, scale)
+        const textHeight = font.getTextHeight(str, scale)
+        const rectWidth = textWidth + 2 * margin * scale + textHeight
+        const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
+
         const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
         this.drawStadium(leftTopWidthHeight, backgroundColor, outlineColor)
 
         const descenderDepth = font.getDescenderDepth(str, scale)
-        const verticalOffset = (descenderDepth < -10) ? descenderDepth : 0
-        console.log('descender', descenderDepth)
+
+        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
         // Adjust the position of the text with a margin, ensuring it's vertically centered
         const textPosition = [
-            xy[0] + margin + textHeight,
-            xy[1] + margin + descenderDepth
+            leftTopWidthHeight[0] + margin * scale + textHeight / 2,
+            leftTopWidthHeight[1] + 2 * margin * scale + textHeight - size + descenderDepth
         ]
 
         // Render the text

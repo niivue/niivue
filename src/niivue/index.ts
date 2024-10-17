@@ -8258,7 +8258,9 @@ export class Niivue {
         decimals = 0
       }
       const stringMM = lenMM.toFixed(decimals)
-      this.drawTextBetween(startXYendXY, stringMM, 1, color)
+      // this.drawTextBetween(startXYendXY, stringMM, 1, color)
+      const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2]
+      this.ui.drawTextStadiumCenteredOn(this.defaultFont, pos, stringMM, [1.0, 0, 0, 1.0])
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }

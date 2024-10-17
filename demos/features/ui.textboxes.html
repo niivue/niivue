@@ -27,19 +27,19 @@
 
         function drawText() {
             const ui = new niivue.NVUI(nv1.gl)
-            const str = 'Pello text boxes! j'
+            const str = '55mm'
             const textHeight = font.getTextHeight(str)
             const textWidth = font.getTextWidth(str)
             const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight]
             const fillColor = [0, 1, 0, 0.3]
             const outlineColor = [1, 1, 1, 1]
-            // ui.drawTextStadium(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str)
-            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [1, 1, 1, 1], [0, 0, 1, 1])
+            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str)
+            // ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [1, 1, 1, 1], [0, 0, 1, 1])
             // ui.drawRoundedRect(leftTopWidthHeight, fillColor, outlineColor)
             // ui.drawStadium(leftTopWidthHeight, fillColor, outlineColor)
             // ui.drawRect([(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight], [1, 1, 1, 1])
             const str2 = 'hello world'
-            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + textHeight * 1.5], str2, [1, 1, 1, 1], [1, 0, 1, 1])
+            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + textHeight * 2], str2, [1, 1, 1, 1], [1, 0, 1, 1])
         }
 
 
