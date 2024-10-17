@@ -349,7 +349,7 @@ export class NVConnectome extends NVMesh {
     hasNeg = 'edgeColormapNegative' in this
     // TODO fix edge types
     const edges = this.edges as NVConnectomeEdge[]
-    if (edges.length > 0) {
+    if (edges !== undefined && edges.length > 0) {
       min = this.edgeMin
       max = this.edgeMax
       // issue 1080: autodetect range
