@@ -94,6 +94,7 @@ export type NVConfigOptions = {
   isRuler: boolean
   isColorbar: boolean
   isOrientCube: boolean
+  tileMargin: number
   multiplanarPadPixels: number
   // @deprecated
   multiplanarForceRender: boolean
@@ -186,6 +187,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isRuler: false,
   isColorbar: false,
   isOrientCube: false,
+  tileMargin: 0,
   multiplanarPadPixels: 0,
   // @deprecated
   multiplanarForceRender: false,

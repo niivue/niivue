@@ -82,6 +82,8 @@
       <input type="checkbox" id="equalCheck" checked />
       <label for="cornerCheck">CornerText</label>
       <input type="checkbox" id="cornerCheck" unchecked />
+      <label for="marginCheck">TileMargin</label>
+      <input type="checkbox" id="marginCheck" unchecked />
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%;">
@@ -143,6 +145,10 @@
         nv1.opts.multiplanarEqualSize = this.checked
         nv1.drawScene()
       }
+      marginCheck.onchange = function () {
+        nv1.opts.tileMargin = this.checked  ? -1 : 0
+        nv1.drawScene()
+      }
       cornerCheck.onchange = function () {
         //nv1.opts.isCornerOrientationText = this.checked\
         nv1.setCornerOrientationText(this.checked)
@@ -153,7 +159,7 @@
       }
       var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }];
       let defaults = {
-        backColor: [0, 0, 0, 1],
+        backColor: [0, 0.2, 0.4, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true

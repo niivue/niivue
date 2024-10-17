@@ -10706,9 +10706,9 @@ export class Niivue {
 
   // not included in public docs
   // note: we also have a "sliceScale" method, which could be confusing
-  scaleSlice(w: number, h: number, widthPadPixels = 0, heightPadPixels = 0): number[] {
-    const canvasW = this.effectiveCanvasWidth() - widthPadPixels
-    const canvasH = this.effectiveCanvasHeight() - heightPadPixels
+  scaleSlice(w: number, h: number, padPixelsWH: [number, number] = [0, 0]): number[] {
+    const canvasW = this.effectiveCanvasWidth() - padPixelsWH[0]
+    const canvasH = this.effectiveCanvasHeight() - padPixelsWH[1]
     let scalePix = canvasW / w
     if (h * scalePix > canvasH) {
       scalePix = canvasH / h
@@ -11324,27 +11324,38 @@ export class Niivue {
         if (typeof this.opts.multiplanarPadPixels !== 'number') {
           log.debug('multiplanarPadPixels must be numeric')
         }
-        // TODO this was parseFloat without escaping - passing a number to parseFloat doesn't work
+        // pad is "outer padding" minimum distance between tiles
         const pad = parseFloat(`${this.opts.multiplanarPadPixels}`)
+        // inner pad is padding inside a tile. Note that a display with 1 row of tiles has no outer pad, but does have inner pad
+        let innerPad = this.opts.tileMargin
+        if (innerPad < 0) {
+          innerPad =
+            2 *
+            (2 +
+              Math.ceil(Math.max(this.opts.textHeight, 0.01) * Math.min(this.gl.canvas.height, this.gl.canvas.width)))
+        }
+        function padPixelsWH(cols: number, rows: number): [number, number] {
+          return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]
+        }
         // size for 2 rows, 2 columns
-        const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], pad * 1, pad * 1)
+        const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], padPixelsWH(2, 2))
         const mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0])
         // size for 3 columns and 1 row
         const ltwh3x1 = this.scaleSlice(
           volScale[0] + volScale[0] + volScale[1],
           Math.max(volScale[1], volScale[2]),
-          pad * 2
+          padPixelsWH(3, 1)
         )
         // size for 4 columns and 1 row
         const ltwh4x1 = this.scaleSlice(
           volScale[0] + volScale[0] + volScale[1] + mx,
           Math.max(volScale[1], volScale[2]),
-          pad * 3
+          padPixelsWH(4, 1)
         )
         // size for 1 column * 3 rows
-        const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], 0, pad * 2)
+        const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], padPixelsWH(1, 3))
         // size for 1 column * 4 rows
-        const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, 0, pad * 3)
+        const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, padPixelsWH(1, 4))
         let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph)
         let isDrawColumn = false
         let isDrawGrid = false
@@ -11381,9 +11392,9 @@ export class Niivue {
             isDraw3D = false
           }
         }
-        const sX = volScale[0] * ltwh[4]
-        const sY = volScale[1] * ltwh[4]
-        const sZ = volScale[2] * ltwh[4]
+        const sX = volScale[0] * ltwh[4] + innerPad
+        const sY = volScale[1] * ltwh[4] + innerPad
+        const sZ = volScale[2] * ltwh[4] + innerPad
         const actualX = actualScale[0] * ltwh[4]
         const actualY = actualScale[1] * ltwh[4]
         const actualZ = actualScale[2] * ltwh[4]
