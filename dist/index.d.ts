@@ -638,6 +638,7 @@ type NVConfigOptions = {
     isRuler: boolean;
     isColorbar: boolean;
     isOrientCube: boolean;
+    tileMargin: number;
     multiplanarPadPixels: number;
     multiplanarForceRender: boolean;
     multiplanarEqualSize: boolean;
@@ -3119,7 +3120,7 @@ declare class Niivue {
     frac2mm(frac: vec3, volIdx?: number, isForceSliceMM?: boolean): vec4;
     screenXY2TextureFrac(x: number, y: number, i: number, restrict0to1?: boolean): vec3;
     canvasPos2frac(canvasPos: number[]): vec3;
-    scaleSlice(w: number, h: number, widthPadPixels?: number, heightPadPixels?: number): number[];
+    scaleSlice(w: number, h: number, padPixelsWH?: [number, number]): number[];
     drawThumbnail(): void;
     drawLine(startXYendXY: number[], thickness?: number, lineColor?: number[]): void;
     draw3DLine(startXY: vec2, endXYZ: vec3, thickness?: number, lineColor?: number[]): void;
