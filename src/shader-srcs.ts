@@ -1873,6 +1873,7 @@ float sdStadium(vec2 p, vec2 halfSize, float radius) {
 }
 
 void main() {
+	
     // Convert fragment coordinates to NDC space ([-1, 1] range)
     vec2 p = (2.0 * gl_FragCoord.xy - iResolution.xy) / iResolution;
 
@@ -1898,5 +1899,7 @@ void main() {
 
     // Set the final fragment color, ensuring the outline color takes precedence over the fill
     fragColor = outlineColor + fillColor;
+	
+	fragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 `

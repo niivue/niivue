@@ -176,7 +176,7 @@ export class NVFont {
         return textWidth
     }
 
-    public getDescenderDepth(scale: number, str: string): number {
+    public getDescenderDepth(str: string, scale: number = 1.0): number {
         if (!str) {
             return 0
         }
@@ -195,7 +195,7 @@ export class NVFont {
         return scale * minBottom * this.gl.canvas.height * this.textHeight
     }
 
-    public getAscenderHeight(scale: number, str: string): number {
+    public getAscenderHeight(str: string, scale: number = 1.0): number {
         if (!str) {
             return 0
         }
