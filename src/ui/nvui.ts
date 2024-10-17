@@ -1,5 +1,5 @@
 import { Shader } from '../shader.js';
-import { fragRectShader, fragStadiumShader, vertLineShader, vertRectShader, vertStadiumShader } from '../shader-srcs.js';
+import { fragRectShader, fragRoundedRectShader, fragStadiumShader, vertLineShader, vertRectShader, vertStadiumShader } from '../shader-srcs.js';
 import { NVFont, TEXTURE_FONT } from './nvfont.js';
 
 export class NVUI {
@@ -8,11 +8,12 @@ export class NVUI {
     protected static triangleShader: Shader;
     protected static circleShader: Shader;
     protected static rectShader: Shader;
-    protected static genericVAO: WebGLVertexArrayObject;
+    protected static roundedRectShader: Shader;
     protected static stadiumShader: Shader;
+    protected static genericVAO: WebGLVertexArrayObject;
 
     /**
-     * Creates an instance of NVDrawer.
+     * Creates an instance of NVUI.
      * @param gl - The WebGL2RenderingContext to be used for rendering.
      */
     constructor(gl: WebGL2RenderingContext) {
@@ -22,6 +23,10 @@ export class NVUI {
 
         if (!NVUI.rectShader) {
             NVUI.rectShader = new Shader(gl, vertRectShader, fragRectShader);
+        }
+
+        if (!NVUI.roundedRectShader) {
+            NVUI.roundedRectShader = new Shader(gl, vertStadiumShader, fragRoundedRectShader);
         }
 
         if (!NVUI.stadiumShader) {
@@ -50,21 +55,41 @@ export class NVUI {
         }
     }
 
-    drawChar(font: NVFont, xy: number[], scale: number, char: number): number {
+    drawChar(font: NVFont, xy: number[], size: number, char: number): number {
         if (!font.fontShader) {
             throw new Error('fontShader undefined')
         }
         // draw single character, never call directly: ALWAYS call from drawText()
         const metrics = font.fontMets!.mets[char]!
-        const l = xy[0] + scale * metrics.lbwh[0]
-        const b = -(scale * metrics.lbwh[1])
-        const w = scale * metrics.lbwh[2]
-        const h = scale * metrics.lbwh[3]
-        const t = xy[1] + (b - h) + scale
+        const l = xy[0] + size * metrics.lbwh[0]
+        const b = -(size * metrics.lbwh[1])
+        const w = size * metrics.lbwh[2]
+        const h = size * metrics.lbwh[3]
+        const t = xy[1] + size - h + b//b//+ (b - h) + scale
+        // console.log('scale - b', size)
+        // console.log('t', size - h + b)
+        // const diff = h - b
+        // console.log('diff', diff)
+        // console.log('xy[1] + h - b', xy[1] + h - b)
+        // console.log('xy[1] - t', xy[1] - t)
+        // console.log('xy[1] - t + h', xy[1] - t + h)
+        // console.log('b', b)
+        // console.log('drawChar metrics', metrics)
+
+        const leftTopWidthHeight = [l, t, w, h]
+        this.drawRect(leftTopWidthHeight, [0, 1, 0, 1])
+
+        const gl = this.gl
+        font.fontShader.use(this.gl)
+        gl.activeTexture(TEXTURE_FONT);
+        gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture());
+        this.gl.bindVertexArray(NVUI.genericVAO)
         this.gl.uniform4f(font.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
         this.gl.uniform4fv(font.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-        return scale * metrics.xadv
+        this.gl.bindVertexArray(null)
+        console.log('drawChar leftTopWidthHeight', leftTopWidthHeight)
+        return size * metrics.xadv
     }
 
 
@@ -129,10 +154,21 @@ export class NVUI {
      * @param leftTopWidthHeight - The bounding box of the rectangle (left, top, width, height).
      * @param lineColor - The color of the rectangle.
      */
-    drawRect(leftTopWidthHeight: number[], lineColor = [1, 0, 0, -1]): void {
+    drawRect(leftTopWidthHeight: number[], lineColor: Float32List = [1, 0, 0, -1]): void {
         if (!NVUI.rectShader) {
             throw new Error('rectShader undefined');
         }
+        const gl = this.gl
+
+        // Calculate the NDC width and height based on actual canvas size
+        const dpr = window.devicePixelRatio || 1;
+        const canvas = gl.canvas as HTMLCanvasElement;
+        const canvasWidth = canvas.clientWidth * dpr;
+        const canvasHeight = canvas.clientHeight * dpr;
+
+
+        gl.viewport(0, 0, canvasWidth, canvasHeight);
+
         NVUI.rectShader.use(this.gl);
         this.gl.enable(this.gl.BLEND);
         this.gl.uniform4fv(NVUI.rectShader.uniforms.lineColor, lineColor);
@@ -147,6 +183,126 @@ export class NVUI {
         this.gl.bindVertexArray(NVUI.genericVAO);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
         this.gl.bindVertexArray(null); // switch off to avoid tampering with settings
+    }
+
+    drawTextBox(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], scale = 1.0, margin: number = 5): void {
+        const textWidth = font.getTextWidth(str, scale)
+        const textHeight = font.getTextHeight(str, scale)
+        const rectWidth = textWidth //+ 2 * margin * scale
+        const rectHeight = font.getTextHeight(str, scale) //+ 2 * margin * scale // Height of the rectangle enclosing the text
+        console.log('text height', textHeight)
+        console.log('rectHeight', rectHeight)
+        const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
+
+        this.drawRect(leftTopWidthHeight, backgroundColor)
+
+        const descenderDepth = font.getDescenderDepth(str, scale)
+        console.log('descender depth', descenderDepth)
+
+        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+        // Adjust the position of the text with a margin, ensuring it's vertically centered
+        const textPosition = [
+            xy[0], // + margin,
+            xy[1] + textHeight - size + descenderDepth
+        ]
+
+        // Render the text
+        this.drawText(font, textPosition, str, scale, textColor)
+    }
+
+    /**
+ * Draws a rounded rectangle.
+ * @param leftTopWidthHeight - The bounding box of the rounded rectangle (left, top, width, height).
+ * @param fillColor - The fill color of the rectangle.
+ * @param outlineColor - The outline color of the rectangle.
+ */
+    drawRoundedRect(
+        leftTopWidthHeight: number[],
+        fillColor: Float32List,
+        outlineColor: Float32List,
+    ): void {
+        if (!NVUI.roundedRectShader) {
+            throw new Error('roundedRectShader undefined');
+        }
+        console.log('drawRoundedRect', leftTopWidthHeight, fillColor, outlineColor)
+
+        const gl = this.gl;
+
+        // Use the rounded rectangle shader program
+        NVUI.roundedRectShader.use(gl);
+
+        // Enable blending for transparency
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        // Set the necessary uniforms
+        const shader = NVUI.roundedRectShader;
+
+        // Set the roundness of the corners
+        const radius = 0.02; // Adjust this value as needed for rounded corners
+        gl.uniform4fv(NVUI.roundedRectShader.uniforms.u_cornerRadii, [radius, radius, radius, radius]);
+
+        // Set the fill color
+        const fillColorLocation = gl.getUniformLocation(shader.program, 'u_fillColor');
+        gl.uniform4fv(fillColorLocation, fillColor);
+
+        // Set the outline color
+        const outlineColorLocation = gl.getUniformLocation(shader.program, 'u_outlineColor');
+        gl.uniform4fv(outlineColorLocation, outlineColor);
+
+
+
+        // Set the rectangle position and size (using existing uniform from vertex shader)
+        const canvasWidthHeightLocation = gl.getUniformLocation(shader.program, 'canvasWidthHeight');
+        gl.uniform2fv(canvasWidthHeightLocation, [gl.canvas.width, gl.canvas.height]);
+
+        const leftTopWidthHeightLocation = gl.getUniformLocation(shader.program, 'leftTopWidthHeight');
+        gl.uniform4f(
+            leftTopWidthHeightLocation,
+            leftTopWidthHeight[0],
+            leftTopWidthHeight[1],
+            leftTopWidthHeight[2],
+            leftTopWidthHeight[3]
+        );
+
+        // Calculate the NDC width and height based on actual canvas size
+        const dpr = window.devicePixelRatio || 1;
+        const canvas = gl.canvas;
+
+        canvas.width = Math.floor((canvas as HTMLCanvasElement).clientWidth * dpr);
+        canvas.height = Math.floor((canvas as HTMLCanvasElement).clientHeight * dpr);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        // Canvas dimensions
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        // Calculate NDC position of the top-left corner
+        const ndcX = (2 * leftTopWidthHeight[0] / canvasWidth) - 1;
+        const ndcY = 1 - (2 * leftTopWidthHeight[1] / canvasHeight);
+
+        // Convert width and height to NDC
+        const ndcWidth = (2 * leftTopWidthHeight[2]) / canvasWidth;
+        const ndcHeight = (2 * leftTopWidthHeight[3]) / canvasHeight;
+
+        // Set uniforms for the shader
+        const u_rectPos = [ndcX + ndcWidth / 2, ndcY - ndcHeight / 2]; // Center position in NDC
+        gl.uniform2f(NVUI.roundedRectShader.uniforms.u_rectPos, u_rectPos[0], u_rectPos[1]);
+        gl.uniform2f(NVUI.roundedRectShader.uniforms.u_rectSize, ndcWidth / 2, ndcHeight / 2);
+
+        // Set the outline width
+        const u_outlineWidth = Math.min(ndcWidth, ndcHeight) * 0.03; // Example: 5% of the smallest dimension
+        const outlineWidthLocation = gl.getUniformLocation(shader.program, 'u_outlineWidth');
+        gl.uniform1f(outlineWidthLocation, u_outlineWidth);
+
+        // Bind the VAO that contains the vertex data and attribute pointers
+        gl.bindVertexArray(NVUI.genericVAO);
+
+        // Draw the rounded rectangle using TRIANGLE_STRIP (assuming this VAO holds the appropriate vertex data)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // Unbind the VAO to avoid accidental modification
+        gl.bindVertexArray(null);
     }
 
     /** 
@@ -170,8 +326,8 @@ export class NVUI {
         NVUI.stadiumShader.use(gl);
 
         // Enable blending for transparency
-        // gl.enable(gl.BLEND);
-        gl.disable(gl.DEPTH_TEST);
+        gl.enable(gl.BLEND);
+        // gl.disable(gl.DEPTH_TEST);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
 
@@ -185,25 +341,10 @@ export class NVUI {
         // Set the fill color
         const fillColorLocation = gl.getUniformLocation(shader.program, 'u_fillColor');
         gl.uniform4fv(fillColorLocation, fillColor);
-        console.log('fillcolor', fillColor)
 
         // Set the outline color
         const outlineColorLocation = gl.getUniformLocation(shader.program, 'u_outlineColor');
         gl.uniform4fv(outlineColorLocation, outlineColor);
-        console.log('outline color', outlineColor)
-        // Set the rectangle position and size (using existing uniform from vertex shader)
-        const canvasWidthHeightLocation = gl.getUniformLocation(shader.program, 'canvasWidthHeight');
-        gl.uniform2fv(canvasWidthHeightLocation, [gl.canvas.width, gl.canvas.height]);
-
-        const leftTopWidthHeightLocation = gl.getUniformLocation(shader.program, 'leftTopWidthHeight');
-        gl.uniform4f(
-            leftTopWidthHeightLocation,
-            leftTopWidthHeight[0],
-            leftTopWidthHeight[1],
-            leftTopWidthHeight[2],
-            leftTopWidthHeight[3]
-        );
-        console.log('ltwh drawStadium', leftTopWidthHeight)
 
         // Calculate the NDC width and height based on actual canvas size
         const dpr = window.devicePixelRatio || 1;
@@ -211,8 +352,18 @@ export class NVUI {
         const canvasWidth = canvas.clientWidth * dpr;
         const canvasHeight = canvas.clientHeight * dpr;
 
+        // Set the rectangle position and size (using existing uniform from vertex shader)
+        gl.uniform2fv(NVUI.stadiumShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height]);
+
+        gl.uniform4f(
+            NVUI.stadiumShader.uniforms.leftTopWidthHeight,
+            leftTopWidthHeight[0],
+            leftTopWidthHeight[1],
+            leftTopWidthHeight[2],
+            leftTopWidthHeight[3]
+        );
+
         gl.viewport(0, 0, canvasWidth, canvasHeight);
-        console.log('canvas', canvasWidth, canvasHeight);
         // Calculate NDC position of the top-left corner
         const ndcX = (2 * leftTopWidthHeight[0] / canvasWidth) - 1;
         const ndcY = 1 - (2 * leftTopWidthHeight[1] / canvasHeight);
@@ -242,32 +393,33 @@ export class NVUI {
 
         // Bind the VAO that contains the vertex data and attribute pointers
         gl.bindVertexArray(NVUI.genericVAO);
-        console.log('vao', NVUI.genericVAO)
         // Draw the rounded rectangle using TRIANGLE_STRIP (assuming this VAO holds the appropriate vertex data)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        console.log('draw called')
         // Unbind the VAO to avoid accidental modification
         gl.bindVertexArray(null);
     }
 
     drawTextStadium(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], scale = 1.0, margin: number = 5) {
-        const textWidth = font.getTextHeight(str, scale)
+        const textWidth = font.getTextWidth(str, scale)
         const textHeight = font.getTextHeight(str, scale)
-        const rectWidth = textWidth + 2 * margin + 2 * textHeight
-        const rectHeight = font.getTextHeight(str, scale) + 2 * margin // Height of the rectangle enclosing the text
+        const rectWidth = textWidth + 2 * margin * scale + 2 * textHeight
+        const rectHeight = font.getTextHeight(str, scale) + 2 * margin * scale // Height of the rectangle enclosing the text
+        console.log('text height', textHeight)
+        console.log('rectHeight', rectHeight)
         const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
-        console.log('ltwh', leftTopWidthHeight)
         this.drawStadium(leftTopWidthHeight, backgroundColor, outlineColor)
 
         const descenderDepth = font.getDescenderDepth(str, scale)
+        const verticalOffset = (descenderDepth < -10) ? descenderDepth : 0
+        console.log('descender', descenderDepth)
         // Adjust the position of the text with a margin, ensuring it's vertically centered
         const textPosition = [
             xy[0] + margin + textHeight,
-            xy[1] + margin - textHeight / 2 - descenderDepth
+            xy[1] + margin + descenderDepth
         ]
 
         // Render the text
-        // this.drawText(font, textPosition, str, scale, textColor)
+        this.drawText(font, textPosition, str, scale, textColor)
     }
 
 }

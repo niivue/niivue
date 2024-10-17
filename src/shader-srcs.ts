@@ -1838,15 +1838,78 @@ out vec2 v_position; // Pass normalized position to fragment shader
 
 void main(void) {
     // Convert pixel x, y space to WebGL -1..1, -1..1
-    vec2 normalized = (pos.xy * leftTopWidthHeight.zw + leftTopWidthHeight.xy) / canvasWidthHeight;
+    // vec2 normalized = (pos.xy * leftTopWidthHeight.zw + leftTopWidthHeight.xy) / canvasWidthHeight;
     // Invert y-axis for NDC
-    normalized.y = 1.0 - normalized.y;
+    // normalized.y = 1.0 - normalized.y;
 
     // Convert from [0, 1] to [-1, 1]
-    v_position = (normalized * 2.0) - 1.0;
+    // v_position = (normalized * 2.0) - 1.0;
 
     // Set gl_Position for rendering
-    gl_Position = vec4(v_position, 0.0, 1.0);
+    // gl_Position = vec4(v_position, 0.0, 1.0);
+	// gl_Position = vec4(pos, 1.0);
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	v_position = frac;
+	gl_Position = vec4(frac, 0.0, 1.0);
+}
+`
+export const fragRoundedRectShader = `#version 300 es
+precision highp float;
+
+in vec2 v_position;            // Normalized position from vertex shader in [-1, 1] space
+uniform vec2 u_rectSize;       // Half-size of the rectangle in NDC space
+uniform vec2 u_rectPos;        // Center position of the rectangle in NDC space
+uniform vec4 u_cornerRadii;    // Corner radii for each corner (top-right, top-left, bottom-left, bottom-right)
+
+uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
+uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
+uniform float u_outlineWidth;  // Width of the outline in NDC units
+
+out vec4 color;
+
+// Function to compute the signed distance to a rounded box with different corner radii
+float sdRoundedBox(in vec2 p, in vec2 b, in vec4 r) {
+    // Determine appropriate radius for each quadrant
+    r.xy = (p.x > 0.0) ? r.xy : r.zw;
+    r.x  = (p.y > 0.0) ? r.x  : r.y;
+
+    // Calculate distance to rounded box
+    vec2 q = abs(p) - b + r.x;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+}
+
+void main() {
+	color = vec4(1.0, 0.0, 0.0, 1.0);
+    // Transform the v_position to local space with respect to the rectangle center
+    vec2 localPos = v_position - u_rectPos;
+
+    // Compute the signed distance to the rounded rectangle's boundary
+    float dist = sdRoundedBox(localPos, u_rectSize, u_cornerRadii);
+	if (dist > u_outlineWidth) {
+        // Completely outside the rectangle, should be transparent
+        color = vec4(0.0, 0.0, 0.0, 0.0);
+        return;
+    }
+		
+    // Smooth anti-aliased edge for fill and outline regions
+    float edgeSmooth = fwidth(dist);
+
+    // Calculate the alpha values for the outline and fill regions
+    // Outline region: from -u_outlineWidth to 0 (negative because we're outside the rounded rect)
+    float alphaOutline = smoothstep(-u_outlineWidth - edgeSmooth, -u_outlineWidth + edgeSmooth, dist);
+
+    // Fill region: from 0 inward
+    float alphaFill = smoothstep(0.0, edgeSmooth, -dist);
+
+    // Combine the outline and fill colors with appropriate blending
+    vec4 outlineColor = u_outlineColor * alphaOutline;
+    vec4 fillColor = u_fillColor * alphaFill;
+
+    // Set the final fragment color with outline taking precedence over fill
+    color = mix(fillColor, outlineColor, alphaOutline);
 }
 `
 
@@ -1899,7 +1962,6 @@ void main() {
 
     // Set the final fragment color, ensuring the outline color takes precedence over the fill
     fragColor = outlineColor + fillColor;
-	
-	fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+
 }
 `

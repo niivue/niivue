@@ -27,10 +27,19 @@
 
         function drawText() {
             const ui = new niivue.NVUI(nv1.gl)
-            const str = 'hello, text boxes!'
+            const str = 'Pello text boxes! j'
             const textHeight = font.getTextHeight(str)
             const textWidth = font.getTextWidth(str)
-            ui.drawTextStadium(font, [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2], str)
+            const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight]
+            const fillColor = [0, 1, 0, 0.3]
+            const outlineColor = [1, 1, 1, 1]
+            // ui.drawTextStadium(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str)
+            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [1, 1, 1, 1], [0, 0, 1, 1])
+            // ui.drawRoundedRect(leftTopWidthHeight, fillColor, outlineColor)
+            // ui.drawStadium(leftTopWidthHeight, fillColor, outlineColor)
+            // ui.drawRect([(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight], [1, 1, 1, 1])
+            const str2 = 'hello world'
+            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + textHeight * 1.5], str2, [1, 1, 1, 1], [1, 0, 1, 1])
         }
 
 
@@ -40,7 +49,7 @@
         const font = new niivue.NVFont(nv1.gl)
         await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
         var button = document.getElementById("draw-text");
-        button.onclick = makeDrawText(font);
+        button.onclick = makeDrawText(nv1.defaultFont);
 
     </script>
 </body>

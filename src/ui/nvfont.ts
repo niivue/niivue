@@ -140,7 +140,6 @@ export class NVFont {
             this.fontMets.mets[id].lbwh = [l, b, w, h]
         }
 
-        console.log('font loaded')
         this.isFontLoaded = true
     }
 
@@ -214,29 +213,43 @@ export class NVFont {
         return scale * maxTop * this.gl.canvas.height * this.textHeight
     }
 
+    // public getTextHeight(str: string, scale: number = 1.0): number {
+    //     if (!str) {
+    //         return 0
+    //     }
+
+    //     let minBottom = Infinity
+    //     let maxTop = -Infinity
+
+    //     const bytes = new TextEncoder().encode(str)
+    //     for (let i = 0; i < bytes.length; i++) {
+    //         const glyph = this.fontMets.mets[bytes[i]]
+    //         if (glyph) {
+    //             const bottom = glyph.lbwh[1]
+    //             const top = glyph.lbwh[1] + glyph.lbwh[3]
+    //             minBottom = Math.min(minBottom, bottom)
+    //             maxTop = Math.max(maxTop, top)
+    //         }
+    //     }
+
+    //     const height = maxTop - minBottom
+
+    //     return scale * height * this.gl.canvas.height * this.textHeight
+    // }
     public getTextHeight(str: string, scale: number = 1.0): number {
         if (!str) {
             return 0
         }
+        const byteSet = new Set(Array.from(str))
+        const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
 
-        let minBottom = Infinity
-        let maxTop = -Infinity
-
-        const bytes = new TextEncoder().encode(str)
-        for (let i = 0; i < bytes.length; i++) {
-            const glyph = this.fontMets.mets[bytes[i]]
-            if (glyph) {
-                const bottom = glyph.lbwh[1]
-                const top = glyph.lbwh[1] + glyph.lbwh[3]
-                minBottom = Math.min(minBottom, bottom)
-                maxTop = Math.max(maxTop, top)
-            }
-        }
-
-        const height = maxTop - minBottom
-
+        const tallest = Object.values(this.fontMets!.mets)
+            .filter((_, index) => bytes.includes(index))
+            .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
+        const height = tallest.lbwh[3]
         return scale * height * this.gl.canvas.height * this.textHeight
     }
+
 
     public getTextBounds(scale: number, str: string): number[] {
         const width = this.getTextWidth(str, scale)
