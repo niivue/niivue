@@ -131,29 +131,29 @@ export class NVConnectome extends NVMesh {
     if (nodes && nodes.length > 0) {
       // largest node
       const largest = (nodes as NVConnectomeNode[]).reduce((a, b) => (a.sizeValue > b.sizeValue ? a : b)).sizeValue
-      let min, max;
-      
+      let min, max
+
       // Determine the minimum color value
       if (typeof this.nodeMinColor !== 'undefined' && isFinite(this.nodeMinColor)) {
-          min = this.nodeMinColor;
+        min = this.nodeMinColor
       } else {
-          min = nodes[0].colorValue;  // Initialize min to the first node's colorValue
-          for (let i = 1; i < nodes.length; i++) {
-              if (nodes[i].colorValue < min) {
-                  min = nodes[i].colorValue;
-              }
+        min = nodes[0].colorValue // Initialize min to the first node's colorValue
+        for (let i = 1; i < nodes.length; i++) {
+          if (nodes[i].colorValue < min) {
+            min = nodes[i].colorValue
           }
+        }
       }
       // Determine the maximum color value
       if (typeof this.nodeMaxColor !== 'undefined' && isFinite(this.nodeMaxColor)) {
-          max = this.nodeMaxColor;
+        max = this.nodeMaxColor
       } else {
-          max = nodes[0].colorValue;  // Initialize max to the first node's colorValue
-          for (let i = 1; i < nodes.length; i++) {
-              if (nodes[i].colorValue > max) {
-                  max = nodes[i].colorValue;
-              }
+        max = nodes[0].colorValue // Initialize max to the first node's colorValue
+        for (let i = 1; i < nodes.length; i++) {
+          if (nodes[i].colorValue > max) {
+            max = nodes[i].colorValue
           }
+        }
       }
       const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
       const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
