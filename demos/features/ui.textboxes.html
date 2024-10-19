@@ -33,13 +33,18 @@
             const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight]
             const fillColor = [0, 1, 0, 0.3]
             const outlineColor = [1, 1, 1, 1]
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str)
+            const spacing = textHeight * 2
+            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [0, 0, 1, 1], [1, 1, 1, 1], [0, 1, 0, 1], 15, 0.0)
+            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing], str, [0, 0, 1, 1], [1, 1, 1, 1], [0, 1, 0, 1], 15, 0.25)
+            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 2], str, [0, 0, 1, 1], [1, 1, 1, 1], [0, 1, 0, 1], 15, 0.5)
+            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 3], str, [0, 0, 1, 1], [1, 1, 1, 1], [0, 1, 0, 1], 15, 1.0)
             // ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [1, 1, 1, 1], [0, 0, 1, 1])
             // ui.drawRoundedRect(leftTopWidthHeight, fillColor, outlineColor)
+            // ui.drawRoundedTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str)
             // ui.drawStadium(leftTopWidthHeight, fillColor, outlineColor)
             // ui.drawRect([(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight], [1, 1, 1, 1])
             const str2 = 'hello world'
-            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + textHeight * 2], str2, [1, 1, 1, 1], [1, 0, 1, 1])
+            ui.drawTextBox(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 4], str2, [1, 1, 1, 1], [1, 0, 1, 1])
         }
 
 

@@ -1916,52 +1916,131 @@ void main() {
 export const fragStadiumShader = `#version 300 es
 precision highp float;
 
-uniform vec2 iResolution;   // Canvas resolution (width, height)
-uniform vec2 u_rectPos;     // Center position of the stadium in NDC space
-uniform vec2 u_rectSize;    // Half-size of the rectangle (half-width, half-height in NDC)
-uniform float u_roundness;  // Radius of the semi-circular caps (in NDC)
-uniform float u_outlineWidth; // Width of the outline in NDC units
+in vec2 v_position;            // Normalized position from vertex shader in [-1, 1] space
+uniform vec2 u_rectSize;       // Half-size of the rectangle in NDC space
+uniform vec2 u_rectPos;        // Center position of the rectangle in NDC space
+uniform float u_roundnessScale; // Scale factor for making the caps less round (0.0 - 1.0)
 
 uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
 uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
+uniform float u_outlineWidth;  // Width of the outline in NDC units
 
 out vec4 fragColor;
 
-// Signed distance to a 2D stadium shape
-float sdStadium(vec2 p, vec2 halfSize, float radius) {
-    // Adjust the position to calculate distance correctly for rounded ends
-    vec2 d = abs(p) - vec2(halfSize.x - radius, halfSize.y);
-    d = max(d, 0.0); // Clamp to ensure no negative values for distance calculation
-    return length(d) - radius;
+// Function to compute the signed distance to a stadium shape (rectangle with elliptical caps)
+float sdStadium(vec2 p, vec2 halfSize, float roundnessScale) {
+    // Transform the position to absolute values for easier calculations in the upper right quadrant
+    vec2 absP = abs(p);
+
+    // Use the height of the rectangle as the base radius for the caps, considering the outline width
+    float radius = halfSize.y - u_outlineWidth;
+
+    // Determine the length of the rectangular portion (excluding the caps)
+    float rectLength = max(0.0, halfSize.x - (radius - u_outlineWidth * 0.5));
+
+    // Initialize the distance
+    float dist;
+
+    // Case 1: Point is within the rectangular portion (excluding the rounded ends)
+    if (absP.x <= rectLength) {
+        dist = absP.y - (halfSize.y - u_outlineWidth);  // Make the inner stadium smaller by reducing the height by outline width
+    }
+    // Case 2: Point is near the less round cap
+    else {
+        // Calculate the distance to the less round cap by scaling the curvature, not the height
+        vec2 d = vec2(absP.x - rectLength, max(0.0, absP.y - u_outlineWidth));
+        d.y *= roundnessScale;  // Adjust curvature without changing cap height
+        dist = length(d) - radius + u_outlineWidth;
+    }
+
+    return dist;
 }
 
-void main() {
-	
-    // Convert fragment coordinates to NDC space ([-1, 1] range)
-    vec2 p = (2.0 * gl_FragCoord.xy - iResolution.xy) / iResolution;
+// Function to generate color based on distance from stadium shape with blending
+vec4 getColorFromDistance(float dist, float outlineWidth) {
+    float edgeSmooth = fwidth(dist);
 
-    // Transform the coordinates to local space relative to the stadium center
-    vec2 localPos = p - u_rectPos;
+    // Alpha for the fill region
+    float alphaFill = smoothstep(0.0, edgeSmooth, -dist);
+    // Alpha for the outline region, giving a smooth transition around the outline boundary
+    float alphaOutline = smoothstep(-outlineWidth - edgeSmooth, -outlineWidth + edgeSmooth, dist);
 
-    // Compute signed distance to the stadium shape (filled region)
-    float distFill = sdStadium(localPos, u_rectSize, u_roundness);
-
-    // Compute signed distance to the stadium outline (expanded region)
-    float distOutline = sdStadium(localPos, u_rectSize + vec2(u_outlineWidth, u_outlineWidth), u_roundness + u_outlineWidth);
-
-    // Smooth anti-aliasing edge for fill and outline regions
-    float edgeSmooth = fwidth(distFill);
-
-    // Determine alpha values for fill and outline
-    float alphaFill = smoothstep(-edgeSmooth, edgeSmooth, -distFill);
-    float alphaOutline = smoothstep(-edgeSmooth, edgeSmooth, -distOutline) - alphaFill;
-
-    // Combine the outline and fill colors with appropriate blending
     vec4 outlineColor = u_outlineColor * alphaOutline;
     vec4 fillColor = u_fillColor * alphaFill;
 
-    // Set the final fragment color, ensuring the outline color takes precedence over the fill
-    fragColor = outlineColor + fillColor;
-
+    // The outline should take precedence at the boundary, blend accordingly
+    return mix(fillColor, outlineColor, alphaOutline);
 }
+
+void main() {
+    // Transform the v_position to local space with respect to the rectangle center
+    vec2 localPos = v_position - u_rectPos;
+
+    // Compute the signed distance to the stadium shape
+    float dist = sdStadium(localPos, u_rectSize, u_roundnessScale);
+
+    // Adjust the condition to give enough space for the outline width
+    if (dist > u_rectSize.y) {
+        fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        return;
+    }
+
+    // Set the fragment color based on the computed distance with blending
+    fragColor = getColorFromDistance(dist, u_outlineWidth);
+}
+
+
 `
+
+// export const fragStadiumShader = `#version 300 es
+// precision highp float;
+
+// uniform vec2 iResolution;   // Canvas resolution (width, height)
+// uniform vec2 u_rectPos;     // Center position of the stadium in NDC space
+// uniform vec2 u_rectSize;    // Half-size of the rectangle (half-width, half-height in NDC)
+// uniform float u_roundness;  // Radius of the semi-circular caps (in NDC)
+// uniform float u_outlineWidth; // Width of the outline in NDC units
+
+// uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
+// uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
+
+// out vec4 fragColor;
+
+// // Signed distance to a 2D stadium shape
+// float sdStadium(vec2 p, vec2 halfSize, float radius) {
+//     // Adjust the position to calculate distance correctly for rounded ends
+//     vec2 d = abs(p) - vec2(halfSize.x - radius, halfSize.y);
+//     d = max(d, 0.0); // Clamp to ensure no negative values for distance calculation
+//     return length(d) - radius;
+// }
+
+// void main() {
+	
+//     // Convert fragment coordinates to NDC space ([-1, 1] range)
+//     vec2 p = (2.0 * gl_FragCoord.xy - iResolution.xy) / iResolution;
+
+//     // Transform the coordinates to local space relative to the stadium center
+//     vec2 localPos = p - u_rectPos;
+
+//     // Compute signed distance to the stadium shape (filled region)
+//     float distFill = sdStadium(localPos, u_rectSize, u_roundness);
+
+//     // Compute signed distance to the stadium outline (expanded region)
+//     float distOutline = sdStadium(localPos, u_rectSize + vec2(u_outlineWidth, u_outlineWidth), u_roundness + u_outlineWidth);
+
+//     // Smooth anti-aliasing edge for fill and outline regions
+//     float edgeSmooth = fwidth(distFill);
+
+//     // Determine alpha values for fill and outline
+//     float alphaFill = smoothstep(-edgeSmooth, edgeSmooth, -distFill);
+//     float alphaOutline = smoothstep(-edgeSmooth, edgeSmooth, -distOutline) - alphaFill;
+
+//     // Combine the outline and fill colors with appropriate blending
+//     vec4 outlineColor = u_outlineColor * alphaOutline;
+//     vec4 fillColor = u_fillColor * alphaFill;
+
+//     // Set the final fragment color, ensuring the outline color takes precedence over the fill
+//     fragColor = outlineColor + fillColor;
+
+// }
+// `
