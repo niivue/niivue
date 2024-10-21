@@ -649,6 +649,7 @@ type NVConfigOptions = {
     yoke3Dto2DZoom: boolean;
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
+    heroImageFraction: number;
     sagittalNoseLeft: boolean;
     isSliceMM: boolean;
     isV1SliceShader: boolean;
@@ -2207,6 +2208,13 @@ declare class Niivue {
      */
     setCornerOrientationText(isCornerOrientationText: boolean): void;
     /**
+     * determine proportion of screen real estate devoted to rendering in multiplanar view.
+     * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
+     * @example niivue.setHeroImage(0.5)
+     * @see {@link https://niivue.github.io/niivue/features/layout.html | live demo usage}
+     */
+    setHeroImage(fraction: number): void;
+    /**
      * control whether 2D slices use radiological or neurological convention.
      * @param isRadiologicalConvention - new display convention
      * @example niivue.setRadiologicalConvention(true)
@@ -3120,7 +3128,7 @@ declare class Niivue {
     frac2mm(frac: vec3, volIdx?: number, isForceSliceMM?: boolean): vec4;
     screenXY2TextureFrac(x: number, y: number, i: number, restrict0to1?: boolean): vec3;
     canvasPos2frac(canvasPos: number[]): vec3;
-    scaleSlice(w: number, h: number, padPixelsWH?: [number, number]): number[];
+    scaleSlice(w: number, h: number, padPixelsWH?: [number, number], canvasWH?: [number, number]): number[];
     drawThumbnail(): void;
     drawLine(startXYendXY: number[], thickness?: number, lineColor?: number[]): void;
     draw3DLine(startXY: vec2, endXYZ: vec3, thickness?: number, lineColor?: number[]): void;
