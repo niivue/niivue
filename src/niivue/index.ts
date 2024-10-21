@@ -8260,7 +8260,7 @@ export class Niivue {
       const stringMM = lenMM.toFixed(decimals)
       // this.drawTextBetween(startXYendXY, stringMM, 1, color)
       const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2]
-      this.ui.drawTextStadiumCenteredOn(this.defaultFont, pos, stringMM, [1.0, 0, 0, 1.0])
+      this.ui.drawTextStadiumCenteredOn(this.defaultFont, pos, stringMM, [1.0, 0, 0, 1.0], [1.0, 0, 0, 1.0], [0, 0, 0, 0.5], 15, 0.2)
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }

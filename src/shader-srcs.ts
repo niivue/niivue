@@ -1932,11 +1932,16 @@ float sdStadium(vec2 p, vec2 halfSize, float roundnessScale) {
     // Transform the position to absolute values for easier calculations in the upper right quadrant
     vec2 absP = abs(p);
 
+    // If roundnessScale is 0.0, treat the whole shape as a rectangle
+    if (roundnessScale == 0.0) {
+        return max(absP.x - halfSize.x, absP.y - halfSize.y);
+    }
+
     // Use the height of the rectangle as the base radius for the caps
     float radius = halfSize.y;
 
     // Determine the length of the rectangular portion (excluding the caps)
-    float rectLength = halfSize.x - radius * roundnessScale;
+    float rectLength = max(0.0, halfSize.x - radius * roundnessScale);
 
     // Initialize the distance
     float dist;
@@ -1949,7 +1954,7 @@ float sdStadium(vec2 p, vec2 halfSize, float roundnessScale) {
     else {
         // Calculate the distance to the less round cap by scaling the curvature, not the height
         vec2 d = vec2(absP.x - rectLength, absP.y);
-        if (roundnessScale > 0.0) { d.x /= roundnessScale; } // Ensure the stadium length remains constant regardless of roundness  // Adjust curvature without changing cap height
+        d.x /= roundnessScale;
         dist = length(d) - radius;
     }
 
@@ -1960,17 +1965,26 @@ void main() {
     // Transform the v_position to local space with respect to the rectangle center
     vec2 localPos = v_position - u_rectPos;
 
-    // Compute the signed distance to the stadium shape
-    float dist = sdStadium(localPos, u_rectSize, u_roundnessScale);
+    // Compute the signed distance to the outer stadium shape for the outline
+    float distOuter = sdStadium(localPos, u_rectSize, u_roundnessScale);
+    // Compute the signed distance to the inner stadium shape for the fill
+    float distInner = sdStadium(localPos, u_rectSize - vec2(2.0 * u_outlineWidth, 2.5 * u_outlineWidth), u_roundnessScale);
 
-    // Fill shape based on distance
-    if (dist > 0.0) {
-        fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-    } else {
-        fragColor = u_fillColor;
-    }
+    // Smooth anti-aliased edge for outline and fill regions
+    float edgeSmoothOuter = fwidth(distOuter);
+    float edgeSmoothInner = fwidth(distInner);
+
+    // Calculate the alpha values for the outline and fill regions
+    float alphaOutline = smoothstep(-u_outlineWidth - edgeSmoothOuter, edgeSmoothOuter, -distOuter) * (1.0 - smoothstep(0.0, edgeSmoothInner, -distInner));
+    float alphaFill = smoothstep(0.0, edgeSmoothInner, -distInner);
+
+    // Combine the outline and fill colors with appropriate blending
+    vec4 outlineColor = u_outlineColor * alphaOutline;
+    vec4 fillColor = u_fillColor * alphaFill;
+
+    // Set the final fragment color
+    fragColor = outlineColor + (1.0 - alphaOutline) * fillColor;
 }
-
 
 `
 
