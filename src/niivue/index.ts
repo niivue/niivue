@@ -2344,6 +2344,17 @@ export class Niivue {
   }
 
   /**
+   * determine proportion of screen real estate devoted to rendering in multiplanar view.
+   * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
+   * @example niivue.setHeroImage(0.5)
+   * @see {@link https://niivue.github.io/niivue/features/layout.html | live demo usage}
+   */
+  setHeroImage(fraction: number): void {
+    this.opts.heroImageFraction = fraction
+    this.drawScene()
+  }
+
+  /**
    * control whether 2D slices use radiological or neurological convention.
    * @param isRadiologicalConvention - new display convention
    * @example niivue.setRadiologicalConvention(true)
@@ -10556,9 +10567,17 @@ export class Niivue {
 
   // not included in public docs
   // note: we also have a "sliceScale" method, which could be confusing
-  scaleSlice(w: number, h: number, padPixelsWH: [number, number] = [0, 0]): number[] {
-    const canvasW = this.effectiveCanvasWidth() - padPixelsWH[0]
-    const canvasH = this.effectiveCanvasHeight() - padPixelsWH[1]
+  scaleSlice(
+    w: number,
+    h: number,
+    padPixelsWH: [number, number] = [0, 0],
+    canvasWH: [number, number] = [0, 0]
+  ): number[] {
+    // mork
+    // const canvasW = this.effectiveCanvasWidth() - padPixelsWH[0]
+    // const canvasH = this.effectiveCanvasHeight() - padPixelsWH[1]
+    const canvasW = canvasWH[0] === 0 ? this.effectiveCanvasWidth() - padPixelsWH[0] : canvasWH[0] - padPixelsWH[0]
+    const canvasH = canvasWH[1] === 0 ? this.effectiveCanvasHeight() - padPixelsWH[1] : canvasWH[1] - padPixelsWH[1]
     let scalePix = canvasW / w
     if (h * scalePix > canvasH) {
       scalePix = canvasH / h
@@ -11124,6 +11143,7 @@ export class Niivue {
       this.drawMosaic(this.sliceMosaicString)
     } else {
       // issue56 is use mm else use voxel
+      const heroImageWH = [0, 0]
       this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
       this.screenSlices = [] // empty array
       if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
@@ -11187,25 +11207,44 @@ export class Niivue {
         function padPixelsWH(cols: number, rows: number): [number, number] {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]
         }
+        let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
+        if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {
+          isShowRender = false
+          if (canvasWH[0] > canvasWH[1] && this.opts.multiplanarLayout !== MULTIPLANAR_TYPE.ROW) {
+            // landscape canvas: hero image on LEFT
+            heroImageWH[0] = canvasWH[0] * this.opts.heroImageFraction
+          } else {
+            // portrait canvas: hero image on top
+            heroImageWH[1] = canvasWH[1] * this.opts.heroImageFraction
+          }
+          canvasWH = [canvasWH[0] - heroImageWH[0], canvasWH[1] - heroImageWH[1]]
+        }
         // size for 2 rows, 2 columns
-        const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], padPixelsWH(2, 2))
+        const ltwh2x2 = this.scaleSlice(
+          volScale[0] + volScale[1],
+          volScale[1] + volScale[2],
+          padPixelsWH(2, 2),
+          canvasWH
+        )
         const mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0])
         // size for 3 columns and 1 row
         const ltwh3x1 = this.scaleSlice(
           volScale[0] + volScale[0] + volScale[1],
           Math.max(volScale[1], volScale[2]),
-          padPixelsWH(3, 1)
+          padPixelsWH(3, 1),
+          canvasWH
         )
         // size for 4 columns and 1 row
         const ltwh4x1 = this.scaleSlice(
           volScale[0] + volScale[0] + volScale[1] + mx,
           Math.max(volScale[1], volScale[2]),
-          padPixelsWH(4, 1)
+          padPixelsWH(4, 1),
+          canvasWH
         )
         // size for 1 column * 3 rows
-        const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], padPixelsWH(1, 3))
+        const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], padPixelsWH(1, 3), canvasWH)
         // size for 1 column * 4 rows
-        const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, padPixelsWH(1, 4))
+        const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, padPixelsWH(1, 4), canvasWH)
         let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph)
         let isDrawColumn = false
         let isDrawGrid = false
@@ -11241,6 +11280,16 @@ export class Niivue {
           } else {
             isDraw3D = false
           }
+        }
+        if (this.opts.heroImageFraction > 0.0 && this.opts.heroImageFraction < 1.0) {
+          // issue1082 draw hero image
+          const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0]
+          const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1]
+          // this.draw3D([ltwh[0], ltwh[1], heroW, heroH])
+          this.draw3D([0, 0, heroW, heroH])
+          ltwh[0] += heroImageWH[0]
+          ltwh[1] += heroImageWH[1]
+          isDraw3D = false
         }
         const sX = volScale[0] * ltwh[4] + innerPad
         const sY = volScale[1] * ltwh[4] + innerPad
@@ -11278,6 +11327,10 @@ export class Niivue {
           // however, check if the user asked for auto
           if (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO) {
             isDraw3D = true
+          }
+          // however, hero image is a rendering
+          if (this.opts.heroImageFraction > 0.0 && this.opts.heroImageFraction < 1.0) {
+            isDraw3D = false
           }
           // draw axial
           this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0, NaN, [actualX, actualY])

@@ -14,6 +14,13 @@
     </noscript>
     <header>
       <button id="openBtn">Choose an image or mesh with a dialog</button>
+      <label for="heroDrop">Hero Image</label>
+      <select id="heroDrop">
+        <option value="0" selected>None</option>
+        <option value="0.25">25%</option>
+        <option value="0.5">50%</option>
+        <option value="0.75">75%</option>
+      </select>
       <label for="fiberRadius">Radius</label>
       <input
         type="range"
@@ -153,6 +160,9 @@
         //nv1.opts.isCornerOrientationText = this.checked\
         nv1.setCornerOrientationText(this.checked)
       }
+      heroDrop.onchange = function () {
+        nv1.setHeroImage(parseFloat(this.value))
+      }
       sliceType.onchange = function () {
         let st = parseInt(document.getElementById("sliceType").value);
         nv1.setSliceType(st)
@@ -199,6 +209,7 @@
         cmapEl.appendChild(btn);
       }
       equalCheck.onchange()
+      nv1.setHeroImage(0.75)
     </script>
   </body>
 </html>
