@@ -11144,6 +11144,7 @@ export class Niivue {
     } else {
       // issue56 is use mm else use voxel
       const heroImageWH = [0, 0]
+      let isHeroImage = false
       this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
       this.screenSlices = [] // empty array
       if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
@@ -11210,6 +11211,7 @@ export class Niivue {
         let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
         if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {
           isShowRender = false
+          isHeroImage = true
           if (canvasWH[0] > canvasWH[1] && this.opts.multiplanarLayout !== MULTIPLANAR_TYPE.ROW) {
             // landscape canvas: hero image on LEFT
             heroImageWH[0] = canvasWH[0] * this.opts.heroImageFraction
@@ -11268,20 +11270,20 @@ export class Niivue {
         let ltwh = ltwh2x2
         if (isDrawColumn) {
           ltwh = ltwh1x3
-          if (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4])) {
+          if ((!isHeroImage) && (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4]))) {
             ltwh = ltwh1x4
           } else {
             isDraw3D = false
           }
         } else if (isDrawRow) {
           ltwh = ltwh3x1
-          if (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4])) {
+          if ((!isHeroImage) && (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4]))) {
             ltwh = ltwh4x1
           } else {
             isDraw3D = false
           }
         }
-        if (this.opts.heroImageFraction > 0.0 && this.opts.heroImageFraction < 1.0) {
+        if (isHeroImage) {
           // issue1082 draw hero image
           const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0]
           const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1]
@@ -11329,7 +11331,7 @@ export class Niivue {
             isDraw3D = true
           }
           // however, hero image is a rendering
-          if (this.opts.heroImageFraction > 0.0 && this.opts.heroImageFraction < 1.0) {
+          if (isHeroImage) {
             isDraw3D = false
           }
           // draw axial
