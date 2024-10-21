@@ -407,7 +407,7 @@ export class NVUI {
     }
 
 
-    drawTextStadiumCenteredOn(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], fillColor: Float32List = [0.0, 0.0, 0.0, 0.3], margin: number = 15, roundness: number = 0.0, scale = 1.0) {
+    drawTextStadiumCenteredOn(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], fillColor: Float32List = [0.0, 0.0, 0.0, 0.3], margin: number = 15, roundness: number = 1.0, scale = 1.0) {
         const textWidth = font.getTextWidth(str, scale)
         const textHeight = font.getTextHeight(str, scale)
         const rectWidth = textWidth + 2 * margin * scale + textHeight
@@ -417,7 +417,7 @@ export class NVUI {
         this.drawTextStadium(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale)
     }
 
-    drawTextStadium(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], margin: number = 15, roundness: number = 0.0, scale = 1.0,) {
+    drawTextStadium(font: NVFont, xy: number[], str: string, textColor: Float32List | null = null, outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0], backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3], margin: number = 15, roundness: number = 1.0, scale = 1.0,) {
         const textWidth = font.getTextWidth(str, scale)
         const textHeight = font.getTextHeight(str, scale)
         const rectWidth = textWidth + 2 * margin * scale + textHeight

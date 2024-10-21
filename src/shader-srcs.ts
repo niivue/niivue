@@ -1932,44 +1932,28 @@ float sdStadium(vec2 p, vec2 halfSize, float roundnessScale) {
     // Transform the position to absolute values for easier calculations in the upper right quadrant
     vec2 absP = abs(p);
 
-    // Use the height of the rectangle as the base radius for the caps, considering the outline width
-    float radius = halfSize.y - u_outlineWidth;
+    // Use the height of the rectangle as the base radius for the caps
+    float radius = halfSize.y;
 
     // Determine the length of the rectangular portion (excluding the caps)
-    float rectLength = max(0.0, halfSize.x - (radius - u_outlineWidth * 0.5));
+    float rectLength = halfSize.x - radius * roundnessScale;
 
     // Initialize the distance
     float dist;
 
     // Case 1: Point is within the rectangular portion (excluding the rounded ends)
     if (absP.x <= rectLength) {
-        dist = absP.y - (halfSize.y - u_outlineWidth);  // Make the inner stadium smaller by reducing the height by outline width
+        dist = absP.y - halfSize.y;
     }
     // Case 2: Point is near the less round cap
     else {
         // Calculate the distance to the less round cap by scaling the curvature, not the height
-        vec2 d = vec2(absP.x - rectLength, max(0.0, absP.y - u_outlineWidth));
-        d.y *= roundnessScale;  // Adjust curvature without changing cap height
-        dist = length(d) - radius + u_outlineWidth;
+        vec2 d = vec2(absP.x - rectLength, absP.y);
+        if (roundnessScale > 0.0) { d.x /= roundnessScale; } // Ensure the stadium length remains constant regardless of roundness  // Adjust curvature without changing cap height
+        dist = length(d) - radius;
     }
 
     return dist;
-}
-
-// Function to generate color based on distance from stadium shape with blending
-vec4 getColorFromDistance(float dist, float outlineWidth) {
-    float edgeSmooth = fwidth(dist);
-
-    // Alpha for the fill region
-    float alphaFill = smoothstep(0.0, edgeSmooth, -dist);
-    // Alpha for the outline region, giving a smooth transition around the outline boundary
-    float alphaOutline = smoothstep(-outlineWidth - edgeSmooth, -outlineWidth + edgeSmooth, dist);
-
-    vec4 outlineColor = u_outlineColor * alphaOutline;
-    vec4 fillColor = u_fillColor * alphaFill;
-
-    // The outline should take precedence at the boundary, blend accordingly
-    return mix(fillColor, outlineColor, alphaOutline);
 }
 
 void main() {
@@ -1979,14 +1963,12 @@ void main() {
     // Compute the signed distance to the stadium shape
     float dist = sdStadium(localPos, u_rectSize, u_roundnessScale);
 
-    // Adjust the condition to give enough space for the outline width
-    if (dist > u_rectSize.y) {
+    // Fill shape based on distance
+    if (dist > 0.0) {
         fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-        return;
+    } else {
+        fragColor = u_fillColor;
     }
-
-    // Set the fragment color based on the computed distance with blending
-    fragColor = getColorFromDistance(dist, u_outlineWidth);
 }
 
 
