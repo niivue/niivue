@@ -14,13 +14,6 @@
     </noscript>
     <header>
       <button id="openBtn">Choose an image or mesh with a dialog</button>
-      <label for="heroDrop">Hero Image</label>
-      <select id="heroDrop">
-        <option value="0" selected>None</option>
-        <option value="0.25">25%</option>
-        <option value="0.5">50%</option>
-        <option value="0.75">75%</option>
-      </select>
       <label for="fiberRadius">Radius</label>
       <input
         type="range"
@@ -91,6 +84,15 @@
       <input type="checkbox" id="cornerCheck" unchecked />
       <label for="marginCheck">TileMargin</label>
       <input type="checkbox" id="marginCheck" unchecked />
+      <label for="heroSlider">Hero Image</label>
+      <input
+        type="range"
+        min="0"
+        max="9"
+        value="0"
+        class="slider"
+        id="heroSlider"
+      />
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%;">
@@ -160,8 +162,8 @@
         //nv1.opts.isCornerOrientationText = this.checked\
         nv1.setCornerOrientationText(this.checked)
       }
-      heroDrop.onchange = function () {
-        nv1.setHeroImage(parseFloat(this.value))
+      heroSlider.oninput = function () {
+        nv1.setHeroImage(this.value * 0.1)
       }
       sliceType.onchange = function () {
         let st = parseInt(document.getElementById("sliceType").value);
@@ -209,7 +211,6 @@
         cmapEl.appendChild(btn);
       }
       equalCheck.onchange()
-      nv1.setHeroImage(0.75)
     </script>
   </body>
 </html>
