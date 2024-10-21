@@ -11270,14 +11270,20 @@ export class Niivue {
         let ltwh = ltwh2x2
         if (isDrawColumn) {
           ltwh = ltwh1x3
-          if ((!isHeroImage) && (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4]))) {
+          if (
+            !isHeroImage &&
+            (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh1x4[4] >= ltwh1x3[4]))
+          ) {
             ltwh = ltwh1x4
           } else {
             isDraw3D = false
           }
         } else if (isDrawRow) {
           ltwh = ltwh3x1
-          if ((!isHeroImage) && (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4]))) {
+          if (
+            !isHeroImage &&
+            (isShowRender || (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO && ltwh4x1[4] >= ltwh3x1[4]))
+          ) {
             ltwh = ltwh4x1
           } else {
             isDraw3D = false
