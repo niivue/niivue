@@ -84,6 +84,15 @@
       <input type="checkbox" id="cornerCheck" unchecked />
       <label for="marginCheck">TileMargin</label>
       <input type="checkbox" id="marginCheck" unchecked />
+      <label for="heroSlider">Hero Image</label>
+      <input
+        type="range"
+        min="0"
+        max="9"
+        value="0"
+        class="slider"
+        id="heroSlider"
+      />
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%;">
@@ -152,6 +161,9 @@
       cornerCheck.onchange = function () {
         //nv1.opts.isCornerOrientationText = this.checked\
         nv1.setCornerOrientationText(this.checked)
+      }
+      heroSlider.oninput = function () {
+        nv1.setHeroImage(this.value * 0.1)
       }
       sliceType.onchange = function () {
         let st = parseInt(document.getElementById("sliceType").value);

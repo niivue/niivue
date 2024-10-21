@@ -39,7 +39,15 @@
         <option value="1">Always</option>
         <option value="2" selected>Auto</option>
       </select>
-
+      <label for="heroSlider">Hero Image</label>
+      <input
+        type="range"
+        min="0"
+        max="9"
+        value="0"
+        class="slider"
+        id="heroSlider"
+      />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -47,29 +55,33 @@
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
+  import * as niivue from "../dist/index.js"
   padSlider.oninput = function () {
-    nv1.setMultiplanarPadPixels(this.value);
-  };
+    nv1.setMultiplanarPadPixels(this.value)
+  }
+  heroSlider.oninput = function () {
+    nv1.setHeroImage(this.value * 0.1)
+  }
+
   timelineCheck.onchange = function () {
-    nv1.graph.autoSizeMultiplanar = this.checked;
-    nv1.drawScene();
+    nv1.graph.autoSizeMultiplanar = this.checked
+    nv1.drawScene()
   }
   layoutSelect.onchange = function () {
-    nv1.setMultiplanarLayout(Number(this.value));
+    nv1.setMultiplanarLayout(Number(this.value))
   }
   renderingSelect.onchange = function () {
-    nv1.opts.multiplanarShowRender =  Number(this.value);
-    nv1.drawScene();
+    nv1.opts.multiplanarShowRender =  Number(this.value)
+    nv1.drawScene()
   }
-  var volumeList1 = [{url: "../images/pcasl.nii.gz"},];
+  var volumeList1 = [{url: "../images/pcasl.nii.gz"},]
   let opts = {
     show3Dcrosshair: true,
     backColor: [0.64, 0.76, 0.68, 1],
-  };
-  var nv1 = new niivue.Niivue(opts);
-  nv1.attachTo("gl1");
-  nv1.setMultiplanarPadPixels(5);
-  nv1.graph.opacity = 1.0;
-  await nv1.loadVolumes(volumeList1);
+  }
+  var nv1 = new niivue.Niivue(opts)
+  nv1.attachTo("gl1")
+  nv1.setMultiplanarPadPixels(5)
+  nv1.graph.opacity = 1.0
+  await nv1.loadVolumes(volumeList1)
 </script>

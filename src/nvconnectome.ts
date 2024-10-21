@@ -131,12 +131,30 @@ export class NVConnectome extends NVMesh {
     if (nodes && nodes.length > 0) {
       // largest node
       const largest = (nodes as NVConnectomeNode[]).reduce((a, b) => (a.sizeValue > b.sizeValue ? a : b)).sizeValue
-      const min = this.nodeMinColor
-        ? this.nodeMinColor
-        : nodes.reduce((a, b) => (a.colorValue < b.colorValue ? a : b)).colorValue
-      const max = this.nodeMaxColor
-        ? this.nodeMaxColor
-        : nodes.reduce((a, b) => (a.colorValue > b.colorValue ? a : b)).colorValue
+      let min, max
+
+      // Determine the minimum color value
+      if (typeof this.nodeMinColor !== 'undefined' && isFinite(this.nodeMinColor)) {
+        min = this.nodeMinColor
+      } else {
+        min = nodes[0].colorValue // Initialize min to the first node's colorValue
+        for (let i = 1; i < nodes.length; i++) {
+          if (nodes[i].colorValue < min) {
+            min = nodes[i].colorValue
+          }
+        }
+      }
+      // Determine the maximum color value
+      if (typeof this.nodeMaxColor !== 'undefined' && isFinite(this.nodeMaxColor)) {
+        max = this.nodeMaxColor
+      } else {
+        max = nodes[0].colorValue // Initialize max to the first node's colorValue
+        for (let i = 1; i < nodes.length; i++) {
+          if (nodes[i].colorValue > max) {
+            max = nodes[i].colorValue
+          }
+        }
+      }
       const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
       const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
       const hasNeg = 'nodeColormapNegative' in this
@@ -286,19 +304,33 @@ export class NVConnectome extends NVMesh {
     let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
     let hasNeg = 'nodeColormapNegative' in this
 
-    // TODO this should not be able to occur; fix this in the constructor by deterministically assigning the values
-    if (this.nodeMinColor === undefined || this.nodeMaxColor === undefined) {
-      throw new Error('nodeMinColor or nodeMaxColor is undefined')
+    // issue1080 we can have nodes without edges, so edgeMin/Max need not be defined
+    if (this.nodeMinColor === undefined) {
+      this.nodeMinColor = NaN
     }
-    // TODO should this be edge[Min|Max]Color?
-    if (this.edgeMin === undefined || this.edgeMax === undefined) {
-      throw new Error('edgeMin or edgeMax undefined')
+    if (this.nodeMaxColor === undefined) {
+      this.nodeMaxColor = NaN
     }
+    // issue1080 we can have nodes without edges, so edgeMin/Max need not be defined
 
+    if (this.edgeMin === undefined) {
+      this.edgeMin = NaN
+    }
+    if (this.edgeMax === undefined) {
+      this.edgeMax = NaN
+    }
     let min = this.nodeMinColor
     let max = this.nodeMaxColor
-
-    // TODO these statements can be removed once the node types are clened up
+    if (!isFinite(min) || !isFinite(min)) {
+      const nodes = this.nodes as NVConnectomeNode[]
+      min = nodes[0].colorValue
+      max = nodes[0].colorValue
+      for (let i = 0; i < nodes.length; i++) {
+        min = Math.min(min, nodes[i].colorValue)
+        max = Math.max(max, nodes[i].colorValue)
+      }
+    }
+    // TODO these statements can be removed once the node types are cleaned up
     const nodes = this.nodes as NVConnectomeNode[]
     const nNode = nodes.length
     for (let i = 0; i < nNode; i++) {
@@ -333,37 +365,47 @@ export class NVConnectome extends NVMesh {
     lut = cmapper.colormap(this.edgeColormap, this.colormapInvert)
     lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert)
     hasNeg = 'edgeColormapNegative' in this
-    min = this.edgeMin
-    max = this.edgeMax
-
     // TODO fix edge types
     const edges = this.edges as NVConnectomeEdge[]
-    for (const edge of edges) {
-      let color = edge.colorValue
-      const isNeg = hasNeg && color < 0
-      if (isNeg) {
-        color = -color
+    if (edges !== undefined && edges.length > 0) {
+      min = this.edgeMin
+      max = this.edgeMax
+      // issue 1080: autodetect range
+      if (!isFinite(min) || !isFinite(min)) {
+        min = edges[0].colorValue
+        max = edges[0].colorValue
+        for (let i = 0; i < edges.length; i++) {
+          min = Math.min(min, edges[i].colorValue)
+          max = Math.max(max, edges[i].colorValue)
+        }
       }
-      const radius = color * this.edgeScale
-      if (radius <= 0) {
-        continue
-      }
-      if (min < max) {
-        if (color < min) {
+      for (const edge of edges) {
+        let color = edge.colorValue
+        const isNeg = hasNeg && color < 0
+        if (isNeg) {
+          color = -color
+        }
+        const radius = color * this.edgeScale
+        if (radius <= 0) {
           continue
         }
-        color = (color - min) / (max - min)
-      } else {
-        color = 1.0
+        if (min < max) {
+          if (color < min) {
+            continue
+          }
+          color = (color - min) / (max - min)
+        } else {
+          color = 1.0
+        }
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
+        if (isNeg) {
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
+        }
+        const pti = vec3.fromValues(nodes[edge.first].x, nodes[edge.first].y, nodes[edge.first].z)
+        const ptj = vec3.fromValues(nodes[edge.second].x, nodes[edge.second].y, nodes[edge.second].z)
+        NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
       }
-      color = Math.round(Math.max(Math.min(255, color * 255))) * 4
-      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255]
-      if (isNeg) {
-        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255]
-      }
-      const pti = vec3.fromValues(nodes[edge.first].x, nodes[edge.first].y, nodes[edge.first].z)
-      const ptj = vec3.fromValues(nodes[edge.second].x, nodes[edge.second].y, nodes[edge.second].z)
-      NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba)
     }
 
     const pts32 = new Float32Array(pts)
