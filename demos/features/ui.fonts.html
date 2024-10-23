@@ -12,7 +12,8 @@
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-        <button id="draw-text">Draw text</button>
+        <button id="draw-text">нажмите на меня</button>
+        <button id="draw-hebrew-text">לחץ עליי</button>
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -20,26 +21,29 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        function makeDrawText(font) {
-            return drawText
-        }
+        function makeDrawText(font, text) {
+            return function drawText() {
+                const ui = new niivue.NVUI(nv1.gl)
+                const textHeight = font.getTextHeight(text)
+                const textWidth = font.getTextWidth(text)
+                ui.drawText(font, [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2], text)
+            }
+        }        
 
-        function drawText() {
-            const ui = new niivue.NVUI(nv1.gl)
-            const str = 'передняя комиссура'
-            const textHeight = font.getTextHeight(str)
-            const textWidth = font.getTextWidth(str)
-            ui.drawText(font, [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2], str)
-        }
-
+        const hebrew = 'קומיסורה קדמית'
+        const russian = 'передняя комиссура'
 
         var nv1 = new niivue.Niivue();
         nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
-        const font = new niivue.NVFont(nv1.gl)
-        await font.loadFont("../fonts/Roboto-Regular-Extra.png", "../fonts/Roboto-Regular-Extra.json")
+        const russianFont = new niivue.NVFont(nv1.gl)
+        await russianFont.loadFont("../fonts/Roboto-Regular-Extra.png", "../fonts/Roboto-Regular-Extra.json")
         var button = document.getElementById("draw-text");
-        button.onclick = makeDrawText(font);
+        button.onclick = makeDrawText(russianFont, russian);
+        const hebrewFont = new niivue.NVFont(nv1.gl)
+        await hebrewFont.loadFont("../fonts/Heebo-Regular.png", "../fonts/Heebo-Regular.json")
+        button = document.getElementById("draw-hebrew-text");
+        button.onclick = makeDrawText(hebrewFont, hebrew);
 
     </script>
 </body>

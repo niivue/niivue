@@ -93,14 +93,7 @@ export class NVUI {
   }
 
   // Updated drawText to support RTL strings
-  public drawText(
-    font: NVFont,
-    xy: number[],
-    str: string,
-    scale = 1.0,
-    color: Float32List | null = null,
-    rtl = false
-  ): void {
+  public drawText(font: NVFont, xy: number[], str: string, scale = 1.0, color: Float32List | null = null): void {
     if (!font.isFontLoaded) {
       console.log('font not loaded')
     }
@@ -127,9 +120,11 @@ export class NVUI {
     this.gl.uniform1f(font.fontShader.uniforms.screenPxRange, screenPxRange)
     this.gl.bindVertexArray(NVUI.genericVAO)
 
+    // Automatically detect if the string is RTL
+    const rtl = /[\u0590-\u06FF]/.test(str)
     const chars = rtl ? Array.from(str).reverse() : Array.from(str)
     for (let i = 0; i < chars.length; i++) {
-      xy[0] += this.drawChar(font, xy, size, chars[i]) * (rtl ? -1 : 1)
+      xy[0] += this.drawChar(font, xy, size, chars[i])
     }
     this.gl.bindVertexArray(null)
   }

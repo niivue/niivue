@@ -114,7 +114,6 @@ export class NVFont {
     for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
       const glyph = this.fontMetrics.glyphs[i]
       const char = String.fromCodePoint(glyph.unicode)
-      console.log('code point', char)
 
       this.fontMets.mets[char] = {
         xadv: glyph.advance,
