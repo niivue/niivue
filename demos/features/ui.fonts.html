@@ -26,7 +26,7 @@
 
         function drawText() {
             const ui = new niivue.NVUI(nv1.gl)
-            const str = 'hello, world!'
+            const str = 'передняя комиссура'
             const textHeight = font.getTextHeight(str)
             const textWidth = font.getTextWidth(str)
             ui.drawText(font, [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2], str)
@@ -37,7 +37,7 @@
         nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
         const font = new niivue.NVFont(nv1.gl)
-        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
+        await font.loadFont("../fonts/Roboto-Regular-Extra.png", "../fonts/Roboto-Regular-Extra.json")
         var button = document.getElementById("draw-text");
         button.onclick = makeDrawText(font);
 
