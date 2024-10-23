@@ -19,7 +19,7 @@ const kDrawFunc = `
 }`
 
 const kRenderFunc =
-	`vec3 GetBackPosition(vec3 startPositionTex) {
+  `vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale;
 	vec3 invR = 1.0 / rayDir;
 	vec3 tbot = invR * (vec3(0.0)-startPosition);
@@ -311,7 +311,7 @@ const kRenderTail = `
 
 // https://github.com/niivue/niivue/issues/679
 export const fragRenderSliceShader =
-	`#version 300 es
+  `#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -336,8 +336,8 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-	kRenderFunc +
-	`
+  kRenderFunc +
+  `
 	void main() {
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
@@ -395,10 +395,10 @@ out vec4 fColor;
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
 	samplePos += deltaDir * ran; //jitter ray
 ` +
-	kRenderTail
+  kRenderTail
 
 export const fragRenderShader =
-	`#version 300 es
+  `#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -423,9 +423,9 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-	kRenderFunc +
-	kRenderInit +
-	`while (samplePos.a <= len) {
+  kRenderFunc +
+  kRenderInit +
+  `while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -440,10 +440,10 @@ out vec4 fColor;
 		}
 	}
 ` +
-	kRenderTail
+  kRenderTail
 
 export const fragRenderGradientShader =
-	`#version 300 es
+  `#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -471,9 +471,9 @@ uniform float gradientAmount;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-	kRenderFunc +
-	kRenderInit +
-	`
+  kRenderFunc +
+  kRenderInit +
+  `
 	float startPos = samplePos.a;
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
@@ -504,7 +504,7 @@ out vec4 fColor;
 		samplePos += deltaDir; //advance ray position
 	}
 ` +
-	kRenderTail
+  kRenderTail
 
 export const vertSliceMMShader = `#version 300 es
 #line 392
@@ -525,7 +525,7 @@ void main(void) {
 }`
 
 export const kFragSliceHead =
-	`#version 300 es
+  `#version 300 es
 #line 411
 precision highp int;
 precision highp float;
@@ -542,8 +542,8 @@ uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;` +
-	kDrawFunc +
-	`void main() {
+  kDrawFunc +
+  `void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -671,8 +671,8 @@ export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
 export const fragSliceMMShader = kFragSliceHead + kFragSliceTail
 
 export const fragSliceV1Shader =
-	kFragSliceHead +
-	`	if (ocolor.a > 0.0) {
+  kFragSliceHead +
+  `	if (ocolor.a > 0.0) {
 		//https://gamedev.stackexchange.com/questions/102889/is-it-possible-to-convert-vec4-to-int-in-glsl-using-opengl-es
 		uint alpha = uint(ocolor.a * 255.0);
 		vec3 xyzFlip = vec3(float((uint(1) & alpha) > uint(0)), float((uint(2) & alpha) > uint(0)), float((uint(4) & alpha) > uint(0)));
@@ -707,7 +707,7 @@ export const fragSliceV1Shader =
 		ocolor.rgb += (dx2-dx-(0.5 * pan)) * 1.0;
 	}
 ` +
-	kFragSliceTail
+  kFragSliceTail
 
 export const fragRectShader = `#version 300 es
 #line 480
@@ -1635,7 +1635,7 @@ void main() {
 }`
 
 export const fragVolumePickingShader =
-	`#version 300 es
+  `#version 300 es
 #line 1260
 //precision highp int;
 precision highp float;
@@ -1657,8 +1657,8 @@ uniform int backgroundMasksOverlays;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-	kRenderFunc +
-	`
+  kRenderFunc +
+  `
 void main() {
 	int id = 254;
 	vec3 start = vColor;
@@ -1857,61 +1857,85 @@ void main(void) {
 }
 `
 export const fragRoundedRectShader = `#version 300 es
+precision highp int;
 precision highp float;
 
-in vec2 v_position;            // Normalized position from vertex shader in [-1, 1] space
-uniform vec2 u_rectSize;       // Half-size of the rectangle in NDC space
-uniform vec2 u_rectPos;        // Center position of the rectangle in NDC space
-uniform vec4 u_cornerRadii;    // Corner radii for each corner (top-right, top-left, bottom-left, bottom-right)
-
-uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
-uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
-uniform float u_outlineWidth;  // Width of the outline in NDC units
+uniform vec4 fillColor;
+uniform vec4 borderColor;
+uniform vec4 leftTopWidthHeight; // x, y, width, height
+uniform float thickness; // line thickness in pixels
+uniform float cornerRadius; // also in pixels
+uniform vec2 canvasWidthHeight;
 
 out vec4 color;
 
-// Function to compute the signed distance to a rounded box with different corner radii
-float sdRoundedBox(in vec2 p, in vec2 b, in vec4 r) {
-    // Determine appropriate radius for each quadrant
-    r.xy = (p.x > 0.0) ? r.xy : r.zw;
-    r.x  = (p.y > 0.0) ? r.x  : r.y;
-
-    // Calculate distance to rounded box
-    vec2 q = abs(p) - b + r.x;
-    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
-}
-
 void main() {
-	color = vec4(1.0, 0.0, 0.0, 1.0);
-    // Transform the v_position to local space with respect to the rectangle center
-    vec2 localPos = v_position - u_rectPos;
+    // fragment position in screen coordinates
+    vec2 fragCoord = gl_FragCoord.xy;
 
-    // Compute the signed distance to the rounded rectangle's boundary
-    float dist = sdRoundedBox(localPos, u_rectSize, u_cornerRadii);
-	if (dist > u_outlineWidth) {
-        // Completely outside the rectangle, should be transparent
-        color = vec4(0.0, 0.0, 0.0, 0.0);
-        return;
+    // canvas height
+    float canvasHeight = canvasWidthHeight.y;
+
+    // 'top' and 'bottom' to match gl_FragCoord.y coordinate system
+    float top = canvasHeight - leftTopWidthHeight.y;
+    float bottom = top - leftTopWidthHeight.w;
+
+    // left and right edges
+    float left = leftTopWidthHeight.x;
+    float right = left + leftTopWidthHeight.z;
+
+    // Corner positions
+    vec2 topLeft = vec2(left + cornerRadius, top - cornerRadius);
+    vec2 topRight = vec2(right - cornerRadius, top - cornerRadius);
+    vec2 bottomLeft = vec2(left + cornerRadius, bottom + cornerRadius);
+    vec2 bottomRight = vec2(right - cornerRadius, bottom + cornerRadius);
+
+    // Distance function for rounded rectangle
+    vec2 innerCoord = fragCoord;
+    vec2 cornerDir;
+    float dist = 0.0;
+    bool inCorner = false;
+
+    // Determine distance based on the corner radius
+    if (fragCoord.x < left + cornerRadius && fragCoord.y > top - cornerRadius) {
+        cornerDir = fragCoord - topLeft;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else if (fragCoord.x > right - cornerRadius && fragCoord.y > top - cornerRadius) {
+        cornerDir = fragCoord - topRight;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else if (fragCoord.x < left + cornerRadius && fragCoord.y < bottom + cornerRadius) {
+        cornerDir = fragCoord - bottomLeft;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else if (fragCoord.x > right - cornerRadius && fragCoord.y < bottom + cornerRadius) {
+        cornerDir = fragCoord - bottomRight;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else {
+        // Otherwise, just calculate based on straight lines
+        dist = max(max(left - fragCoord.x, fragCoord.x - right), max(bottom - fragCoord.y, fragCoord.y - top));
     }
-		
-    // Smooth anti-aliased edge for fill and outline regions
-    float edgeSmooth = fwidth(dist);
 
-    // Calculate the alpha values for the outline and fill regions
-    // Outline region: from -u_outlineWidth to 0 (negative because we're outside the rounded rect)
-    float alphaOutline = smoothstep(-u_outlineWidth - edgeSmooth, -u_outlineWidth + edgeSmooth, dist);
+    // Calculate derivatives for anti-aliasing (feathering)
+    float aa = length(vec2(dFdx(dist), dFdy(dist)));
 
-    // Fill region: from 0 inward
-    float alphaFill = smoothstep(0.0, edgeSmooth, -dist);
+    // Feather the border and corners
+    float edgeAlpha = smoothstep(-aa, aa, dist + thickness * 0.5) - smoothstep(-aa, aa, dist - thickness * 0.5);
 
-    // Combine the outline and fill colors with appropriate blending
-    vec4 outlineColor = u_outlineColor * alphaOutline;
-    vec4 fillColor = u_fillColor * alphaFill;
+    // Blend the corner smoothly by computing its alpha value
+    float cornerAlpha = smoothstep(0.0, aa, -dist);
 
-    // Set the final fragment color with outline taking precedence over fill
-    color = mix(fillColor, outlineColor, alphaOutline);
-}
-`
+    // Final color blending for border and fill with feathering
+    vec4 finalColor = mix(fillColor, borderColor, edgeAlpha);
+
+    // Apply alpha blending for corners
+    finalColor.a *= cornerAlpha;
+
+    // Output final color
+    color = finalColor;
+}`
 
 export const fragStadiumShader = `#version 300 es
 precision highp float;
@@ -2011,7 +2035,7 @@ void main() {
 // }
 
 // void main() {
-	
+
 //     // Convert fragment coordinates to NDC space ([-1, 1] range)
 //     vec2 p = (2.0 * gl_FragCoord.xy - iResolution.xy) / iResolution;
 
