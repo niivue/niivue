@@ -1,6 +1,7 @@
 import { Shader } from '../shader.js'
 import { fragRectShader, fragRoundedRectShader, vertLineShader, vertRectShader } from '../shader-srcs.js'
-import { NVFont, TEXTURE_FONT } from './nvfont.js'
+import { TEXTURE3_FONT } from '../niivue/index.js'
+import { NVFont } from './nvfont.js'
 
 export class NVUI {
   private gl: WebGL2RenderingContext
@@ -92,7 +93,7 @@ export class NVUI {
 
     // bind our font texture
     const gl = this.gl
-    gl.activeTexture(TEXTURE_FONT)
+    gl.activeTexture(TEXTURE3_FONT)
     gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
 
     font.fontShader.use(this.gl)

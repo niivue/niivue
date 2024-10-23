@@ -1,10 +1,21 @@
 import { Shader } from '../shader.js'
 import { fragFontShader, vertFontShader } from '../shader-srcs.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
-import defaultFontMetrics from '../fonts/Roboto-Regular.json'
-import { FontMetrics } from '../niivue/index.js'
+import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
+import { TEXTURE3_FONT } from '../niivue/index.js'
 
-export const TEXTURE_FONT = 33987
+export type FontMetrics = {
+  distanceRange: number
+  size: number
+  mets: Record<
+    number,
+    {
+      xadv: number
+      uv_lbwh: number[]
+      lbwh: number[]
+    }
+  >
+}
 
 export class NVFont {
   private gl: WebGL2RenderingContext
@@ -75,7 +86,7 @@ export class NVFont {
         let pngTexture: WebGLTexture | null = null
 
         this.fontShader!.use(this.gl)
-        this.gl.activeTexture(TEXTURE_FONT)
+        this.gl.activeTexture(TEXTURE3_FONT)
         this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
         if (this.fontTexture !== null) {
           this.gl.deleteTexture(this.fontTexture)
