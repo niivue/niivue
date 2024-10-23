@@ -12,7 +12,6 @@
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-        <button id="draw-text">Draw textbox</button>
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -20,12 +19,7 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        function makeDrawText(font) {
-            return drawText
-        }
-
-
-        function drawText() {
+        function drawText(font) {
             const ui = new niivue.NVUI(nv1.gl)
             const str = 'hello world'
             const textHeight = font.getTextHeight(str)
@@ -51,10 +45,8 @@
         nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
         const font = new niivue.NVFont(nv1.gl)
-        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
-        var button = document.getElementById("draw-text");
-        button.onclick = makeDrawText(nv1.defaultFont);
-
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")        
+        drawText(nv1.defaultFont)
     </script>
 </body>
 

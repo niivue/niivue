@@ -165,7 +165,6 @@ export class NVUI {
     this.drawRect(leftTopWidthHeight, backgroundColor)
 
     const descenderDepth = font.getDescenderDepth(str, scale)
-    console.log('descender depth', descenderDepth)
 
     const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
     // Adjust the position of the text with a margin, ensuring it's vertically centered
