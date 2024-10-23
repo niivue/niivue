@@ -239,7 +239,8 @@ export class NVUI {
   ): void {
     const textWidth = font.getTextWidth(str, scale)
     const textHeight = font.getTextHeight(str, scale)
-    const rectWidth = textWidth + 2 * margin * scale + textHeight
+    const padding = textHeight > textWidth ? textHeight - textWidth : 0
+    const rectWidth = textWidth + 2 * margin * scale + textHeight + padding
     const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
 
     const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
@@ -250,7 +251,7 @@ export class NVUI {
     const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
     // Adjust the position of the text with a margin, ensuring it's vertically centered
     const textPosition = [
-      leftTopWidthHeight[0] + margin * scale + textHeight / 2,
+      leftTopWidthHeight[0] + margin * scale + padding + textHeight / 2,
       leftTopWidthHeight[1] + 2 * margin * scale + textHeight - size + descenderDepth
     ]
 
