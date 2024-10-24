@@ -19,8 +19,6 @@ import {
   fragRenderSliceShader,
   vertColorbarShader,
   fragColorbarShader,
-  vertCircleShader,
-  fragCircleShader,
   vertBmpShader,
   fragBmpShader,
   vertOrientShader,
@@ -364,7 +362,6 @@ export class Niivue {
   colorbarShader?: Shader
   fiberShader?: Shader
   fontTexture: WebGLTexture | null = null
-  circleShader?: Shader
   matCapTexture: WebGLTexture | null = null
   bmpShader: Shader | null = null
   bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
@@ -5631,9 +5628,6 @@ export class Niivue {
     // 3D line shader
     this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader)
     this.line3DShader.use(gl)
-    // circle shader
-    this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
-    this.circleShader.use(gl)
     // render shader (3D)
     this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader)
     this.initRenderShader(this.renderVolumeShader)
@@ -8223,25 +8217,6 @@ export class Niivue {
   }
 
   drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0): void {
-    // if (!this.circleShader) {
-    //   throw new Error('circleShader undefined')
-    // }
-    // this.circleShader.use(this.gl)
-    // this.gl.enable(this.gl.BLEND)
-    // this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
-    // this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
-    // this.gl.uniform4f(
-    //   this.circleShader.uniforms.leftTopWidthHeight,
-    //   leftTopWidthHeight[0],
-    //   leftTopWidthHeight[1],
-    //   leftTopWidthHeight[2],
-    //   leftTopWidthHeight[3]
-    // )
-    // this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent)
-    // this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
-    // this.gl.bindVertexArray(this.genericVAO)
-    // this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    // this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
     this.ui.drawCircle(leftTopWidthHeight, circleColor, fillPercent)
   }
 
