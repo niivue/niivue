@@ -10,7 +10,6 @@ export class NVUI {
   protected static circleShader: Shader
   protected static rectShader: Shader
   protected static roundedRectShader: Shader
-  protected static stadiumShader: Shader
   protected static genericVAO: WebGLVertexArrayObject
 
   /**
@@ -81,8 +80,15 @@ export class NVUI {
     return size * metrics.xadv
   }
 
-  // Updated drawText to support RTL strings
-  public drawText(font: NVFont, xy: number[], str: string, scale = 1.0, color: Float32List | null = null): void {
+  // Updated drawText to support RTL strings and word wrapping
+  public drawText(
+    font: NVFont,
+    xy: number[],
+    str: string,
+    scale = 1.0,
+    color: Float32List | null = null,
+    maxWidth = 0
+  ): void {
     if (!font.isFontLoaded) {
       console.log('font not loaded')
     }
@@ -109,11 +115,21 @@ export class NVUI {
     this.gl.uniform1f(font.fontShader.uniforms.screenPxRange, screenPxRange)
     this.gl.bindVertexArray(NVUI.genericVAO)
 
-    // Automatically detect if the string is RTL
-    const rtl = /[\u0590-\u06FF]/.test(str)
-    const chars = rtl ? Array.from(str).reverse() : Array.from(str)
-    for (let i = 0; i < chars.length; i++) {
-      xy[0] += this.drawChar(font, xy, size, chars[i])
+    // Calculate word-wrapped size
+    const words = str.split(' ')
+    let currentX = xy[0]
+    let currentY = xy[1]
+
+    for (const word of words) {
+      const wordWidth = font.getTextWidth(word, scale)
+      if (maxWidth > 0 && currentX + wordWidth > xy[0] + maxWidth) {
+        currentY += size
+        currentX = xy[0]
+      }
+      const chars = Array.from(word + ' ')
+      for (let i = 0; i < chars.length; i++) {
+        currentX += this.drawChar(font, [currentX, currentY], size, chars[i])
+      }
     }
     this.gl.bindVertexArray(null)
   }
@@ -147,33 +163,6 @@ export class NVUI {
   drawRect(leftTopWidthHeight: number[], lineColor: Float32List = [1, 0, 0, -1]): void {
     this.drawRoundedRect(leftTopWidthHeight, lineColor, [0, 0, 0, 0], 0, 0)
   }
-
-  // drawTextBox(
-  //   font: NVFont,
-  //   xy: number[],
-  //   str: string,
-  //   textColor: Float32List | null = null,
-  //   backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3],
-  //   scale = 1.0,
-  //   margin: number = 5
-  // ): void {
-  //   const textWidth = font.getTextWidth(str, scale)
-  //   const textHeight = font.getTextHeight(str, scale)
-  //   const rectWidth = textWidth // + 2 * margin * scale
-  //   const rectHeight = font.getTextHeight(str, scale) // + 2 * margin * scale // Height of the rectangle enclosing the text
-  //   const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
-
-  //   this.drawRect(leftTopWidthHeight, backgroundColor)
-
-  //   const descenderDepth = font.getDescenderDepth(str, scale)
-
-  //   const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-  //   // Adjust the position of the text with a margin, ensuring it's vertically centered
-  //   const textPosition = [xy[0] + margin, xy[1] + textHeight - size + descenderDepth]
-
-  //   // Render the text
-  //   this.drawText(font, textPosition, str, scale, textColor)
-  // }
 
   /**
    * Draws a rounded rectangle.
@@ -228,58 +217,6 @@ export class NVUI {
     gl.bindVertexArray(null)
   }
 
-  drawRoundedTextBox(
-    font: NVFont,
-    xy: number[],
-    str: string,
-    textColor: Float32List | null = null,
-    outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0],
-    fillColor: Float32List = [0.0, 0.0, 0.0, 0.3],
-    scale = 1.0,
-    margin: number = 15
-  ): void {
-    const textWidth = font.getTextWidth(str, scale)
-    const textHeight = font.getTextHeight(str, scale)
-    const padding = textHeight > textWidth ? textHeight - textWidth : 0
-    const rectWidth = textWidth + 2 * margin * scale + textHeight + padding
-    const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
-
-    const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
-    this.drawRoundedRect(leftTopWidthHeight, fillColor, outlineColor)
-
-    const descenderDepth = font.getDescenderDepth(str, scale)
-
-    const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    // Adjust the position of the text with a margin, ensuring it's vertically centered
-    const textPosition = [
-      leftTopWidthHeight[0] + margin * scale + padding + textHeight / 2,
-      leftTopWidthHeight[1] + 2 * margin * scale + textHeight - size + descenderDepth
-    ]
-
-    // Render the text
-    this.drawText(font, textPosition, str, scale, textColor)
-  }
-
-  /**
-   * Draws a rounded rectangle.
-   * @param leftTopWidthHeight - The bounding box of the rounded rectangle (left, top, width, height).
-   * @param fillColor - The fill color of the rectangle.
-   * @param outlineColor - The outline color of the rectangle.
-   */
-  drawStadium(
-    leftTopWidthHeight: number[],
-    fillColor: Float32List,
-    outlineColor: Float32List,
-    roundness: number = 0.0
-  ): void {
-    this.drawRoundedRect(
-      leftTopWidthHeight,
-      fillColor,
-      outlineColor,
-      (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3])
-    )
-  }
-
   drawTextBoxCenteredOn(
     font: NVFont,
     xy: number[],
@@ -288,8 +225,9 @@ export class NVUI {
     outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0],
     fillColor: Float32List = [0.0, 0.0, 0.0, 0.3],
     margin: number = 15,
-    roundness: number = 1.0,
-    scale = 1.0
+    roundness: number = 0.0,
+    scale = 1.0,
+    maxWidth = 0
   ): void {
     const textWidth = font.getTextWidth(str, scale)
     const textHeight = font.getTextHeight(str, scale)
@@ -298,28 +236,34 @@ export class NVUI {
     const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
     const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2]
 
-    this.drawTextBox(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale)
+    this.drawTextBox(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth)
   }
 
+  // Updated drawTextBox method to support maxWidth and word wrapping
   drawTextBox(
     font: NVFont,
     xy: number[],
     str: string,
     textColor: Float32List | null = null,
     outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0],
-    backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3],
+    fillColor: Float32List = [0.0, 0.0, 0.0, 0.3],
     margin: number = 15,
-    roundness: number = 1.0,
-    scale = 1.0
+    roundness: number = 0.0,
+    scale = 1.0,
+    maxWidth = 0
   ): void {
-    const textWidth = font.getTextWidth(str, scale)
     const textHeight = font.getTextHeight(str, scale)
-    const rectWidth = textWidth + 2 * margin * scale + textHeight
-    const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
+    const wrappedSize = font.getWordWrappedSize(str, scale, maxWidth)
+    const rectWidth = wrappedSize[0] + 2 * margin * scale + textHeight
+    const rectHeight = wrappedSize[1] + 4 * margin * scale // Height of the rectangle enclosing the text
 
     const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
-    this.drawStadium(leftTopWidthHeight, backgroundColor, outlineColor, roundness)
-
+    this.drawRoundedRect(
+      leftTopWidthHeight,
+      fillColor,
+      outlineColor,
+      (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3])
+    )
     const descenderDepth = font.getDescenderDepth(str, scale)
 
     const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
@@ -330,6 +274,6 @@ export class NVUI {
     ]
 
     // Render the text
-    this.drawText(font, textPosition, str, scale, textColor)
+    this.drawText(font, textPosition, str, scale, textColor, maxWidth)
   }
 }

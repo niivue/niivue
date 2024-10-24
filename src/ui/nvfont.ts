@@ -1,3 +1,4 @@
+import { vec2 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import { fragFontShader, vertFontShader } from '../shader-srcs.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
@@ -247,5 +248,27 @@ export class NVFont {
     const width = this.getTextWidth(str, scale)
     const height = this.getTextHeight(str, scale)
     return [0, 0, width, height]
+  }
+
+  public getWordWrappedSize(text: string, scale: number = 1.0, maxWidth: number = 0): vec2 {
+    let currentWidth = 0
+    const maxHeight = this.getTextHeight(text, scale)
+    const spaceWidth = this.fontMets.mets[' '].xadv * scale * this.gl.canvas.height * this.textHeight
+
+    if (maxWidth <= 0) {
+      return vec2.fromValues(this.getTextWidth(text, scale), maxHeight)
+    }
+    let lineCount = 1
+    const words = text.split(' ')
+    for (const word of words) {
+      const wordWidth = this.getTextWidth(word, scale)
+      if (currentWidth + wordWidth > maxWidth) {
+        lineCount++
+        currentWidth = wordWidth + spaceWidth
+      } else {
+        currentWidth += wordWidth + spaceWidth
+      }
+    }
+    return vec2.fromValues(Math.max(currentWidth, maxWidth), lineCount * maxHeight)
   }
 }

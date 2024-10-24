@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Textbox Aspect Ratio</title>
+    <title>Textbox Word Wrapping</title>
     <link rel="stylesheet" href="light.css" />
 </head>
 
@@ -21,30 +21,29 @@
 
         function drawText(font) {
             const ui = new niivue.NVUI(nv1.gl)
-            let str = 'very long rectangular box'
-            const textHeight = font.getTextHeight(str)
-            const textWidth = font.getTextWidth(str)
-            const leftTopWidthHeight = [nv1.canvas.width / 2, nv1.canvas.height / 4, textWidth, textHeight]
+            const maxWidth = nv1.canvas.width / 8
             const textColor = [0, 0, 1, 1]
-            const fillColor = [0, 1, 0, 0.5]
-            const outlineColor = [1, 1, 1, 1]
-            const spacing = textHeight * 2
+            const fillColor = [1, 1, 1, 0.6]
+            const outlineColor = [0, 0, 1, 1]
+            const spacing = font.textHeight * Math.min(nv1.gl.canvas.height, nv1.gl.canvas.width) * 2
+            const roundness = 0.25
+            const scale = 0.5
+
             nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, textColor, outlineColor, fillColor, 15, 0.5)
-            str = 'shorter'
-            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing], str, textColor, outlineColor, fillColor, 15, 0.5)
-            str = '!'            
-            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 2], str, textColor, outlineColor, fillColor, 15, 0.5)            
-        }
 
+            let str = 'Sharing neuroimaging datasets enables reproducibility, education, tool development, and new discoveries. Neuroimaging from many studies are publicly available, providing a glimpse into progressive disorders and human development.'
+            ui.drawTextBox(font, [50, 50], str, textColor, outlineColor, fillColor, 15, roundness, scale, maxWidth)
+
+            
+        }
 
         var nv1 = new niivue.Niivue();
         nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
         const font = new niivue.NVFont(nv1.gl)
         await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")        
-        drawText(nv1.defaultFont)
+        drawText(font)
     </script>
 </body>
 
