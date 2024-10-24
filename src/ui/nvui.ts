@@ -244,7 +244,7 @@ export class NVUI {
     font: NVFont,
     xy: number[],
     str: string,
-    textColor: Float32List | null = null,
+    textColor: Float32List | null = [0, 0, 0, 1.0],
     outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0],
     fillColor: Float32List = [0.0, 0.0, 0.0, 0.3],
     margin: number = 15,
@@ -275,5 +275,104 @@ export class NVUI {
 
     // Render the text
     this.drawText(font, textPosition, str, scale, textColor, maxWidth)
+  }
+
+  drawCalendar(
+    font: NVFont,
+    startX: number,
+    startY: number,
+    cellWidth: number,
+    cellHeight: number,
+    selectedDate: Date,
+    selectedColor: Float32List,
+    firstDayOfWeek: number = 0 // 0 represents Sunday
+  ): void {
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const margin = 10
+
+    // Calculate monthDays and starting day of the week
+    const year = selectedDate.getFullYear()
+    const month = selectedDate.getMonth()
+    const monthDays = new Date(year, month + 1, 0).getDate()
+    const firstDay = (new Date(year, month, 1).getDay() - firstDayOfWeek + 7) % 7
+
+    // Determine scale based on longest string ("Wed") to ensure uniform cell size
+    let scale = Math.min(cellWidth, cellHeight) / 100
+    const referenceText = 'Wed'
+    const referenceWidth = font.getTextWidth(referenceText, scale)
+    const referenceHeight = font.getTextHeight(referenceText, scale)
+
+    // Adjust scale to fit the reference text within the cell
+    const maxTextHeight = cellHeight - 2 * margin
+    const maxTextWidth = cellWidth - 2 * margin
+
+    if (referenceHeight > maxTextHeight) {
+      scale *= maxTextHeight / referenceHeight
+    }
+
+    if (referenceWidth > maxTextWidth) {
+      scale *= maxTextWidth / referenceWidth
+    }
+
+    // Draw days of the week headers
+    daysOfWeek.forEach((day, index) => {
+      const x = startX + index * cellWidth
+      const y = startY
+
+      // Draw the cell background
+      this.drawRoundedRect(
+        [x, y, cellWidth, cellHeight],
+        [0.8, 0.8, 0.8, 0.3],
+        [0.2, 0.2, 0.2, 1.0],
+        0, // No roundness for the headers
+        2.0
+      )
+
+      // Calculate text position to center it in the cell
+      const textWidth = font.getTextWidth(day, scale)
+      const textHeight = font.getTextHeight(day, scale)
+      const textX = x + (cellWidth - textWidth) / 2
+      const textY = y + (cellHeight - textHeight) / 2
+
+      // Draw the day name
+      this.drawText(font, [textX, textY], day, scale, [1, 1, 1, 1])
+    })
+
+    // Draw the days of the calendar
+    let dayCount = 1
+    for (let row = 1; row <= 6; row++) {
+      for (let col = 0; col < 7; col++) {
+        if (row === 1 && col < firstDay) {
+          continue // Skip empty cells before the first day of the month
+        }
+        if (dayCount > monthDays) {
+          return // All days are drawn, exit
+        }
+
+        const x = startX + col * cellWidth
+        const y = startY + row * cellHeight
+
+        // Draw the cell background
+        this.drawRoundedRect(
+          [x, y, cellWidth, cellHeight],
+          [0.8, 0.8, 0.8, 0.3],
+          [0.2, 0.2, 0.2, 1.0],
+          0, // No roundness for the day cells
+          2.0
+        )
+
+        // Calculate text position to center it in the cell
+        const dayTextWidth = font.getTextWidth(dayCount.toString(), scale)
+        const dayTextHeight = font.getTextHeight(dayCount.toString(), scale)
+        const dayTextX = x + (cellWidth - dayTextWidth) / 2
+        const dayTextY = y + (cellHeight - dayTextHeight) / 2
+
+        // Draw the day number
+        const textColor: Float32List = dayCount === selectedDate.getDate() ? selectedColor : [0, 0, 0, 1]
+        this.drawText(font, [dayTextX, dayTextY], dayCount.toString(), scale, textColor)
+
+        dayCount++
+      }
+    }
   }
 }
