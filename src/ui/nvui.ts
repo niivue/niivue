@@ -1,5 +1,12 @@
 import { Shader } from '../shader.js'
-import { fragRectShader, fragRoundedRectShader, vertLineShader, vertRectShader } from '../shader-srcs.js'
+import {
+  fragCircleShader,
+  fragRectShader,
+  fragRoundedRectShader,
+  vertCircleShader,
+  vertLineShader,
+  vertRectShader
+} from '../shader-srcs.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { NVFont } from './nvfont.js'
 
@@ -27,6 +34,10 @@ export class NVUI {
 
     if (!NVUI.roundedRectShader) {
       NVUI.roundedRectShader = new Shader(gl, vertRectShader, fragRoundedRectShader)
+    }
+
+    if (!NVUI.circleShader) {
+      NVUI.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
     }
 
     if (!NVUI.genericVAO) {
@@ -374,5 +385,66 @@ export class NVUI {
         dayCount++
       }
     }
+  }
+
+  /**
+   * Draws a circle.
+   * @param leftTopWidthHeight - The bounding box of the circle (left, top, width, height).
+   * @param circleColor - The color of the circle.
+   * @param fillPercent - The percentage of the circle to fill (0 to 1).
+   */
+  drawCircle(leftTopWidthHeight: number[], circleColor: Float32List = [1, 1, 1, 1], fillPercent = 1.0): void {
+    if (!NVUI.circleShader) {
+      throw new Error('circleShader undefined')
+    }
+    NVUI.circleShader.use(this.gl)
+    this.gl.enable(this.gl.BLEND)
+    this.gl.uniform4fv(NVUI.circleShader.uniforms.circleColor, circleColor)
+    this.gl.uniform2fv(NVUI.circleShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
+    this.gl.uniform4f(
+      NVUI.circleShader.uniforms.leftTopWidthHeight,
+      leftTopWidthHeight[0],
+      leftTopWidthHeight[1],
+      leftTopWidthHeight[2],
+      leftTopWidthHeight[3]
+    )
+    this.gl.uniform1f(NVUI.circleShader.uniforms.fillPercent, fillPercent)
+    this.gl.bindVertexArray(NVUI.genericVAO)
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+    this.gl.bindVertexArray(null) // switch off to avoid tampering with settings
+  }
+
+  /**
+   * Draws an Apple-style settings toggle.
+   * @param x - The x-coordinate of the top-left corner of the toggle.
+   * @param y - The y-coordinate of the top-left corner of the toggle.
+   * @param width - The width of the toggle.
+   * @param height - The height of the toggle.
+   * @param isOn - Whether the toggle is on or off.
+   * @param onColor - The color when the toggle is on.
+   * @param offColor - The color when the toggle is off.
+   */
+  drawToggle(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    isOn: boolean,
+    onColor: Float32List,
+    offColor: Float32List
+  ): void {
+    const cornerRadius = height / 2
+
+    // Draw the rounded rectangle background
+    const fillColor = isOn ? onColor : offColor
+    this.drawRoundedRect([x, y, width, height], fillColor, [0.2, 0.2, 0.2, 1.0], cornerRadius, 2.0)
+
+    // Calculate the circle (toggle knob) position
+    const knobSize = height * 0.8
+    const knobX = isOn ? x + width - knobSize - (height - knobSize) / 2 : x + (height - knobSize) / 2
+    const knobY = y + (height - knobSize) / 2
+
+    // Draw the toggle knob as a circle
+    this.drawCircle([knobX, knobY, knobSize, knobSize], [1.0, 1.0, 1.0, 1.0])
   }
 }
