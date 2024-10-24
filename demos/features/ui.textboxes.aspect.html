@@ -24,18 +24,18 @@
             let str = 'very long rectangular box'
             const textHeight = font.getTextHeight(str)
             const textWidth = font.getTextWidth(str)
-            const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 4, textWidth, textHeight]
+            const leftTopWidthHeight = [nv1.canvas.width / 2, nv1.canvas.height / 4, textWidth, textHeight]
             const textColor = [0, 0, 1, 1]
             const fillColor = [0, 1, 0, 0.5]
             const outlineColor = [1, 1, 1, 1]
             const spacing = textHeight * 2
             nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, textColor, outlineColor, fillColor, 15, 0.5)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, textColor, outlineColor, fillColor, 15, 0.5)
             str = 'shorter'
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing], str, textColor, outlineColor, fillColor, 15, 0.5)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing], str, textColor, outlineColor, fillColor, 15, 0.5)
             str = '!'            
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 2], str, textColor, outlineColor, fillColor, 15, 0.5)            
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 2], str, textColor, outlineColor, fillColor, 15, 0.5)            
         }
 
 

@@ -8147,7 +8147,7 @@ export class Niivue {
       const stringMM = lenMM.toFixed(decimals)
       // this.drawTextBetween(startXYendXY, stringMM, 1, color)
       const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2]
-      this.ui.drawTextStadiumCenteredOn(
+      this.ui.drawTextBoxCenteredOn(
         this.defaultFont,
         pos,
         stringMM,

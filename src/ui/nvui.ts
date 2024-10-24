@@ -148,32 +148,32 @@ export class NVUI {
     this.drawRoundedRect(leftTopWidthHeight, lineColor, [0, 0, 0, 0], 0, 0)
   }
 
-  drawTextBox(
-    font: NVFont,
-    xy: number[],
-    str: string,
-    textColor: Float32List | null = null,
-    backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3],
-    scale = 1.0,
-    margin: number = 5
-  ): void {
-    const textWidth = font.getTextWidth(str, scale)
-    const textHeight = font.getTextHeight(str, scale)
-    const rectWidth = textWidth // + 2 * margin * scale
-    const rectHeight = font.getTextHeight(str, scale) // + 2 * margin * scale // Height of the rectangle enclosing the text
-    const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
+  // drawTextBox(
+  //   font: NVFont,
+  //   xy: number[],
+  //   str: string,
+  //   textColor: Float32List | null = null,
+  //   backgroundColor: Float32List = [0.0, 0.0, 0.0, 0.3],
+  //   scale = 1.0,
+  //   margin: number = 5
+  // ): void {
+  //   const textWidth = font.getTextWidth(str, scale)
+  //   const textHeight = font.getTextHeight(str, scale)
+  //   const rectWidth = textWidth // + 2 * margin * scale
+  //   const rectHeight = font.getTextHeight(str, scale) // + 2 * margin * scale // Height of the rectangle enclosing the text
+  //   const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight]
 
-    this.drawRect(leftTopWidthHeight, backgroundColor)
+  //   this.drawRect(leftTopWidthHeight, backgroundColor)
 
-    const descenderDepth = font.getDescenderDepth(str, scale)
+  //   const descenderDepth = font.getDescenderDepth(str, scale)
 
-    const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    // Adjust the position of the text with a margin, ensuring it's vertically centered
-    const textPosition = [xy[0] + margin, xy[1] + textHeight - size + descenderDepth]
+  //   const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+  //   // Adjust the position of the text with a margin, ensuring it's vertically centered
+  //   const textPosition = [xy[0] + margin, xy[1] + textHeight - size + descenderDepth]
 
-    // Render the text
-    this.drawText(font, textPosition, str, scale, textColor)
-  }
+  //   // Render the text
+  //   this.drawText(font, textPosition, str, scale, textColor)
+  // }
 
   /**
    * Draws a rounded rectangle.
@@ -280,7 +280,7 @@ export class NVUI {
     )
   }
 
-  drawTextStadiumCenteredOn(
+  drawTextBoxCenteredOn(
     font: NVFont,
     xy: number[],
     str: string,
@@ -293,14 +293,15 @@ export class NVUI {
   ): void {
     const textWidth = font.getTextWidth(str, scale)
     const textHeight = font.getTextHeight(str, scale)
-    const rectWidth = textWidth + 2 * margin * scale + textHeight
+    const padding = textHeight > textWidth ? textHeight - textWidth : 0
+    const rectWidth = textWidth + 2 * margin * scale + textHeight + padding
     const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
-
     const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2]
-    this.drawTextStadium(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale)
+
+    this.drawTextBox(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale)
   }
 
-  drawTextStadium(
+  drawTextBox(
     font: NVFont,
     xy: number[],
     str: string,

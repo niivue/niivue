@@ -1,0 +1,35 @@
+import { test, expect } from '@playwright/test'
+import { Niivue, NVUI, NVFont } from '../../dist/index.js'
+import { httpServerAddress } from './helpers.js'
+import { TEST_OPTIONS } from './test.types.js'
+
+test.beforeEach(async ({ page }) => {
+  await page.goto(httpServerAddress)
+})
+
+test('nvui drawText unicode rtl fonts', async ({ page }) => {
+  await page.evaluate(async (testOptions) => {
+    const nv = new Niivue(testOptions)
+    await nv.attachTo('gl')
+    const ui = new NVUI(nv.gl)
+
+    const hebrew = 'קומיסורה קדמית'
+    const russian = 'передняя комиссура'
+
+    const russianFont = new NVFont(nv.gl)
+    await russianFont.loadFont('./fonts/Roboto-Regular-Extra.png', './fonts/Roboto-Regular-Extra.json')
+    const left = nv.canvas.width / 2
+    const textHeight = russianFont.getTextHeight(russian)
+    let top = (nv.canvas.height - textHeight) / 2
+
+    const hebrewFont = new NVFont(nv.gl)
+    await hebrewFont.loadFont('./fonts/Heebo-Regular.png', './fonts/Heebo-Regular.json')
+
+    nv.gl.viewport(0, 0, nv.canvas.width, nv.canvas.height)
+    nv.gl.clear(nv.gl.COLOR_BUFFER_BIT)
+    ui.drawText(russianFont, [left, top], russian)
+    top += textHeight * 2
+    ui.drawText(hebrewFont, [left, top], hebrew)
+  }, TEST_OPTIONS)
+  await expect(page).toHaveScreenshot({ timeout: 30000 })
+})

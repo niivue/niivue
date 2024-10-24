@@ -30,15 +30,15 @@
             const spacing = textHeight * 3
             nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.0)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1]], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.0)
             ui.drawText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] - textHeight], 'roundness = 0.0')
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.25)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.25)
             ui.drawText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] + spacing - textHeight], 'roundness = 0.25')
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 2], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.5)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 2], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.5)
             ui.drawText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] + spacing * 2 - textHeight], 'roundness = 0.5')
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 3], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.75)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 3], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 0.75)
             ui.drawText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] + spacing * 3 - textHeight], 'roundness = 0.75')
-            ui.drawTextStadiumCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 4], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 1.0)
+            ui.drawTextBoxCenteredOn(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + spacing * 4], str, [0, 0, 1, 1], [1, 1, 1, 1], fillColor, 15, 1.0)
             ui.drawText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] + spacing * 4 - textHeight], 'roundness = 1.0')
         }
 
