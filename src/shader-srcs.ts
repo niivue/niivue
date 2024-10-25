@@ -1827,3 +1827,223 @@ void main(void) {
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
 }`
+
+export const vertStadiumShader = `#version 300 es
+layout(location = 0) in vec3 pos;
+
+uniform vec2 canvasWidthHeight;
+uniform vec4 leftTopWidthHeight;
+
+out vec2 v_position; // Pass normalized position to fragment shader
+
+void main(void) {
+    // Convert pixel x, y space to WebGL -1..1, -1..1
+    // vec2 normalized = (pos.xy * leftTopWidthHeight.zw + leftTopWidthHeight.xy) / canvasWidthHeight;
+    // Invert y-axis for NDC
+    // normalized.y = 1.0 - normalized.y;
+
+    // Convert from [0, 1] to [-1, 1]
+    // v_position = (normalized * 2.0) - 1.0;
+
+    // Set gl_Position for rendering
+    // gl_Position = vec4(v_position, 0.0, 1.0);
+	// gl_Position = vec4(pos, 1.0);
+	vec2 frac;
+	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
+	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
+	frac = (frac * 2.0) - 1.0;
+	v_position = frac;
+	gl_Position = vec4(frac, 0.0, 1.0);
+}
+`
+export const fragRoundedRectShader = `#version 300 es
+precision highp int;
+precision highp float;
+
+uniform vec4 fillColor;
+uniform vec4 borderColor;
+uniform vec4 leftTopWidthHeight; // x, y, width, height
+uniform float thickness; // line thickness in pixels
+uniform float cornerRadius; // also in pixels
+uniform vec2 canvasWidthHeight;
+
+out vec4 color;
+
+void main() {
+    // fragment position in screen coordinates
+    vec2 fragCoord = gl_FragCoord.xy;
+
+    // canvas height
+    float canvasHeight = canvasWidthHeight.y;
+
+    // 'top' and 'bottom' to match gl_FragCoord.y coordinate system
+    float top = canvasHeight - leftTopWidthHeight.y;
+    float bottom = top - leftTopWidthHeight.w;
+
+    // left and right edges
+    float left = leftTopWidthHeight.x;
+    float right = left + leftTopWidthHeight.z;
+
+    // Corner positions
+    vec2 topLeft = vec2(left + cornerRadius, top - cornerRadius);
+    vec2 topRight = vec2(right - cornerRadius, top - cornerRadius);
+    vec2 bottomLeft = vec2(left + cornerRadius, bottom + cornerRadius);
+    vec2 bottomRight = vec2(right - cornerRadius, bottom + cornerRadius);
+
+    // Distance function for rounded rectangle
+    vec2 innerCoord = fragCoord;
+    vec2 cornerDir;
+    float dist = 0.0;
+    bool inCorner = false;
+
+    // Determine distance based on the corner radius
+    if (fragCoord.x < left + cornerRadius && fragCoord.y > top - cornerRadius) {
+        cornerDir = fragCoord - topLeft;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else if (fragCoord.x > right - cornerRadius && fragCoord.y > top - cornerRadius) {
+        cornerDir = fragCoord - topRight;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else if (fragCoord.x < left + cornerRadius && fragCoord.y < bottom + cornerRadius) {
+        cornerDir = fragCoord - bottomLeft;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else if (fragCoord.x > right - cornerRadius && fragCoord.y < bottom + cornerRadius) {
+        cornerDir = fragCoord - bottomRight;
+        dist = length(cornerDir) - cornerRadius;
+        inCorner = true;
+    } else {
+        // Otherwise, just calculate based on straight lines
+        dist = max(max(left - fragCoord.x, fragCoord.x - right), max(bottom - fragCoord.y, fragCoord.y - top));
+    }
+
+    // Calculate derivatives for anti-aliasing (feathering)
+    float aa = length(vec2(dFdx(dist), dFdy(dist)));
+
+    // Feather the border and corners
+    float edgeAlpha = smoothstep(-aa, aa, dist + thickness * 0.5) - smoothstep(-aa, aa, dist - thickness * 0.5);
+
+    // Blend the corner smoothly by computing its alpha value
+    float cornerAlpha = smoothstep(0.0, aa, -dist);
+
+    // Final color blending for border and fill with feathering
+    vec4 finalColor = mix(fillColor, borderColor, edgeAlpha);
+
+    // Apply alpha blending for corners
+    finalColor.a *= cornerAlpha;
+
+    // Output final color
+    color = finalColor;
+}`
+
+export const fragStadiumShader = `#version 300 es
+precision highp float;
+
+in vec2 v_position;            // Normalized position from vertex shader in [-1, 1] space
+uniform vec2 u_rectSize;       // Half-size of the rectangle in NDC space
+uniform vec2 u_rectPos;        // Center position of the rectangle in NDC space
+uniform float u_roundnessScale; // Scale factor for making the caps less round (0.0 - 1.0)
+
+uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
+uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
+uniform float u_outlineWidth;  // Width of the outline in NDC units
+
+out vec4 fragColor;
+
+// Function to compute the signed distance to a stadium shape (rectangle with elliptical caps)
+float sdStadium(vec2 p, vec2 halfSize, float roundnessScale) {
+    // Transform the position to absolute values for easier calculations in the upper right quadrant
+    vec2 absP = abs(p);
+
+    // If roundnessScale is 0.0, treat the whole shape as a rectangle
+    if (roundnessScale == 0.0) {
+        return max(absP.x - halfSize.x, absP.y - halfSize.y);
+    }
+
+    // Use the height of the rectangle as the base radius for the caps
+    float radius = halfSize.y;
+
+    // Determine the length of the rectangular portion (excluding the caps)
+    float rectLength = max(0.0, halfSize.x - radius * roundnessScale);
+
+    // Initialize the distance
+    float dist;
+
+    // Case 1: Point is within the rectangular portion (excluding the rounded ends)
+    if (absP.x <= rectLength) {
+        dist = absP.y - halfSize.y;
+    }
+    // Case 2: Point is near the less round cap
+    else {
+        // Calculate the distance to the less round cap by scaling the curvature, not the height
+        vec2 d = vec2(absP.x - rectLength, absP.y);
+        d.x /= roundnessScale;
+        dist = length(d) - radius;
+    }
+
+    return dist;
+}
+
+void main() {
+    // Transform the v_position to local space with respect to the rectangle center
+    vec2 localPos = v_position - u_rectPos;
+
+    // Compute the signed distance to the outer stadium shape for the outline
+    float distOuter = sdStadium(localPos, u_rectSize, u_roundnessScale);
+    // Compute the signed distance to the inner stadium shape for the fill
+    float distInner = sdStadium(localPos, u_rectSize - vec2(2.0 * u_outlineWidth, 2.5 * u_outlineWidth), u_roundnessScale);
+
+    // Smooth anti-aliased edge for outline and fill regions
+    float edgeSmoothOuter = fwidth(distOuter);
+    float edgeSmoothInner = fwidth(distInner);
+
+    // Calculate the alpha values for the outline and fill regions
+    float alphaOutline = smoothstep(-u_outlineWidth - edgeSmoothOuter, edgeSmoothOuter, -distOuter) * (1.0 - smoothstep(0.0, edgeSmoothInner, -distInner));
+    float alphaFill = smoothstep(0.0, edgeSmoothInner, -distInner);
+
+    // Combine the outline and fill colors with appropriate blending
+    vec4 outlineColor = u_outlineColor * alphaOutline;
+    vec4 fillColor = u_fillColor * alphaFill;
+
+    // Set the final fragment color
+    fragColor = outlineColor + (1.0 - alphaOutline) * fillColor;
+}
+
+`
+
+export const vertBitmapShader = `#version 300 es
+layout(location = 0) in vec3 a_position;  // Position attribute
+layout(location = 1) in vec2 a_texcoord;  // Texture coordinate attribute
+
+uniform vec2 canvasWidthHeight;           // Canvas dimensions
+uniform vec4 leftTopWidthHeight;          // Position and size of the bitmap
+
+out vec2 v_texcoord;  // Pass texture coordinates to the fragment shader
+
+void main(void) {
+  // Calculate normalized device coordinates (NDC) for the vertex positions
+  vec2 frac;
+  frac.x = (leftTopWidthHeight.x + (a_position.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; // 0..1
+  frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - a_position.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); // 1..0
+  frac = (frac * 2.0) - 1.0;  // Convert to -1..1 range
+
+  // Set the final position of the vertex
+  gl_Position = vec4(frac, 0.0, 1.0);
+  
+  // Pass texture coordinates to the fragment shader
+  v_texcoord = vec2(a_texcoord.x, a_texcoord.y);  // Flip Y-axis for texture coordinates
+}
+`
+
+export const fragBitmapShader = `#version 300 es
+precision mediump float;
+in vec2 v_texcoord;
+uniform sampler2D u_texture;
+out vec4 fragColor;
+
+void main() {
+  fragColor = texture(u_texture, v_texcoord);	
+}
+
+`

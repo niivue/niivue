@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Draw Calendar</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+    </header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js";        
+
+        var nv1 = new niivue.Niivue();
+        nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+        const font = new niivue.NVFont(nv1.gl)
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")        
+        const ui = new niivue.NVUI(nv1.gl)
+        nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
+        nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)    
+        ui.drawCalendar(nv1.defaultFont, nv1.canvas.width / 2, nv1.canvas.height / 2, 100, 100, new Date(), [0, 0, 1, 1]) 
+    </script>
+</body>
+
+</html>

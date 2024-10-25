@@ -19,10 +19,6 @@ import {
   fragRenderSliceShader,
   vertColorbarShader,
   fragColorbarShader,
-  vertFontShader,
-  fragFontShader,
-  vertCircleShader,
-  fragCircleShader,
   vertBmpShader,
   fragBmpShader,
   vertOrientShader,
@@ -64,8 +60,6 @@ import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
-import defaultFontPNG from '../fonts/Roboto-Regular.png'
-import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
@@ -109,6 +103,8 @@ import {
   NiiVueLocationValue,
   SyncOpts
 } from '../types.js'
+import { NVFont } from '../ui/nvfont.js'
+import { NVUI } from '../ui/nvui.js'
 import {
   clamp,
   decodeRLE,
@@ -139,19 +135,9 @@ export { NVMeshUtilities } from '../nvmesh-utilities.js'
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '../types.js'
-
-type FontMetrics = {
-  distanceRange: number
-  size: number
-  mets: Record<
-    number,
-    {
-      xadv: number
-      uv_lbwh: number[]
-      lbwh: number[]
-    }
-  >
-}
+export { NVUI } from '../ui/nvui.js'
+export { NVFont } from '../ui/nvfont.js'
+export { NVBitmap } from '../ui/nvbitmap.js'
 
 type ColormapListEntry = {
   name: string
@@ -269,23 +255,23 @@ const RIGHT_MOUSE_BUTTON = 2
 // gl.TEXTURE0..31 are constants 0x84C0..0x84DF = 33984..34015
 // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
 // persistent textures
-const TEXTURE0_BACK_VOL = 33984
-const TEXTURE1_COLORMAPS = 33985
-const TEXTURE2_OVERLAY_VOL = 33986
-const TEXTURE3_FONT = 33987
-const TEXTURE4_THUMBNAIL = 33988
-const TEXTURE5_MATCAP = 33989
-const TEXTURE6_GRADIENT = 33990
-const TEXTURE7_DRAW = 33991
+export const TEXTURE0_BACK_VOL = 33984
+export const TEXTURE1_COLORMAPS = 33985
+export const TEXTURE2_OVERLAY_VOL = 33986
+export const TEXTURE3_FONT = 33987
+export const TEXTURE4_THUMBNAIL = 33988
+export const TEXTURE5_MATCAP = 33989
+export const TEXTURE6_GRADIENT = 33990
+export const TEXTURE7_DRAW = 33991
 // subsequent textures only used transiently
-const TEXTURE8_GRADIENT_TEMP = 33992
-const TEXTURE9_ORIENT = 33993
-const TEXTURE10_BLEND = 33994
-const TEXTURE11_GC_BACK = 33995
-const TEXTURE12_GC_STRENGTH0 = 33996
-const TEXTURE13_GC_STRENGTH1 = 33997
-const TEXTURE14_GC_LABEL0 = 33998
-const TEXTURE15_GC_LABEL1 = 33999
+export const TEXTURE8_GRADIENT_TEMP = 33992
+export const TEXTURE9_ORIENT = 33993
+export const TEXTURE10_BLEND = 33994
+export const TEXTURE11_GC_BACK = 33995
+export const TEXTURE12_GC_STRENGTH0 = 33996
+export const TEXTURE13_GC_STRENGTH1 = 33997
+export const TEXTURE14_GC_LABEL0 = 33998
+export const TEXTURE15_GC_LABEL1 = 33999
 
 type UIData = {
   mousedown: boolean
@@ -375,10 +361,8 @@ export class Niivue {
   pickingMeshShader?: Shader
   pickingImageShader?: Shader
   colorbarShader?: Shader
-  fontShader: Shader | null = null
   fiberShader?: Shader
   fontTexture: WebGLTexture | null = null
-  circleShader?: Shader
   matCapTexture: WebGLTexture | null = null
   bmpShader: Shader | null = null
   bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
@@ -397,10 +381,6 @@ export class Niivue {
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
-  private DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
-  private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
-  private fontMetrics?: typeof defaultFontMetrics
-  private fontMets: FontMetrics | null = null
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
@@ -774,6 +754,8 @@ export class Niivue {
   initialized = false
   currentDrawUndoBitmap: number
   loadingText: string
+  defaultFont: NVFont
+  ui: NVUI
 
   /**
    * @param options  - options object to set modifiable Niivue properties
@@ -909,7 +891,7 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
-
+    this.ui = new NVUI(this.gl)
     log.info('NIIVUE VERSION ', version)
 
     // set parent background container to black (default empty canvas color)
@@ -5373,15 +5355,6 @@ export class Niivue {
           }
           this.matCapTexture = this.gl.createTexture()
           pngTexture = this.matCapTexture
-        } else {
-          this.fontShader!.use(this.gl)
-          this.gl.activeTexture(TEXTURE3_FONT)
-          this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
-          if (this.fontTexture !== null) {
-            this.gl.deleteTexture(this.fontTexture)
-          }
-          this.fontTexture = this.gl.createTexture()
-          pngTexture = this.fontTexture
         }
         this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture)
         // Set the parameters so we can render any size image.
@@ -5403,12 +5376,6 @@ export class Niivue {
   }
 
   // not included in public docs
-  // load font stored as PNG bitmap with texture unit 3
-  async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null> {
-    return this.loadPngAsTexture(fontUrl, 3)
-  }
-
-  // not included in public docs
   // load PNG bitmap with texture unit 4
   async loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null> {
     return this.loadPngAsTexture(bmpUrl, 4)
@@ -5426,91 +5393,16 @@ export class Niivue {
   }
 
   // not included in public docs
-  // load font bitmap and metrics
-  initFontMets(): void {
-    if (!this.fontMetrics) {
-      throw new Error('fontMetrics undefined')
-    }
-
-    this.fontMets = {
-      distanceRange: this.fontMetrics.atlas.distanceRange,
-      size: this.fontMetrics.atlas.size,
-      mets: {}
-    }
-    for (let id = 0; id < 256; id++) {
-      // clear ASCII codes 0..256
-      this.fontMets.mets[id] = {
-        xadv: 0,
-        uv_lbwh: [0, 0, 0, 0],
-        lbwh: [0, 0, 0, 0]
-      }
-    }
-    const scaleW = this.fontMetrics.atlas.width
-    const scaleH = this.fontMetrics.atlas.height
-    for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
-      const glyph = this.fontMetrics.glyphs[i]
-      const id = glyph.unicode
-      this.fontMets.mets[id].xadv = glyph.advance
-      if (glyph.planeBounds === undefined) {
-        continue
-      }
-      let l = glyph.atlasBounds.left / scaleW
-      let b = (scaleH - glyph.atlasBounds.top) / scaleH
-      let w = (glyph.atlasBounds.right - glyph.atlasBounds.left) / scaleW
-      let h = (glyph.atlasBounds.top - glyph.atlasBounds.bottom) / scaleH
-      this.fontMets.mets[id].uv_lbwh = [l, b, w, h]
-      l = glyph.planeBounds.left
-      b = glyph.planeBounds.bottom
-      w = glyph.planeBounds.right - glyph.planeBounds.left
-      h = glyph.planeBounds.top - glyph.planeBounds.bottom
-      this.fontMets.mets[id].lbwh = [l, b, w, h]
-    }
-  }
-
-  /**
-   * Load typeface for colorbars, measurements and orientation text.
-   * @param name - name of matcap to load ("Roboto", "Garamond", "Ubuntu")
-   * @example
-   * niivue.loadMatCapTexture("Cortex");
-   * @see {@link https://niivue.github.io/niivue/features/selectfont.html | live demo usage}
-   */
-  async loadFont(fontSheetUrl = defaultFontPNG, metricsUrl = defaultFontMetrics): Promise<void> {
-    await this.loadFontTexture(fontSheetUrl)
-    // @ts-expect-error FIXME this doesn't look right - metricsUrl is a huge object
-    const response = await fetch(metricsUrl)
-    if (!response.ok) {
-      throw Error(response.statusText)
-    }
-
-    const jsonText = await response.text()
-    this.fontMetrics = JSON.parse(jsonText)
-
-    this.initFontMets()
-
-    this.fontShader!.use(this.gl)
-    this.drawScene()
-  }
-
-  // not included in public docs
   async loadDefaultMatCap(): Promise<WebGLTexture | null> {
     return this.loadMatCapTexture(defaultMatCap)
   }
-
   // not included in public docs
-  async loadDefaultFont(): Promise<void> {
-    await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET)
-    this.fontMetrics = this.DEFAULT_FONT_METRICS
-    this.initFontMets()
-  }
 
   // not included in public docs
   async initText(): Promise<void> {
-    // font shader
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
-    this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
-    this.fontShader.use(this.gl)
-
-    await this.loadDefaultFont()
+    this.defaultFont = new NVFont(this.gl, this.opts.fontColor)
+    await this.defaultFont.loadDefaultFont()
     await this.loadDefaultMatCap()
     this.drawLoadingText(this.loadingText)
   }
@@ -5737,9 +5629,6 @@ export class Niivue {
     // 3D line shader
     this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader)
     this.line3DShader.use(gl)
-    // circle shader
-    this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
-    this.circleShader.use(gl)
     // render shader (3D)
     this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader)
     this.initRenderShader(this.renderVolumeShader)
@@ -8262,7 +8151,18 @@ export class Niivue {
         decimals = 0
       }
       const stringMM = lenMM.toFixed(decimals)
-      this.drawTextBetween(startXYendXY, stringMM, 1, color)
+      // this.drawTextBetween(startXYendXY, stringMM, 1, color)
+      const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2]
+      this.ui.drawTextBoxCenteredOn(
+        this.defaultFont,
+        pos,
+        stringMM,
+        this.opts.rulerColor,
+        this.opts.rulerColor,
+        [0, 0, 0, 0.3],
+        15,
+        0.2
+      )
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
@@ -8318,25 +8218,7 @@ export class Niivue {
   }
 
   drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0): void {
-    if (!this.circleShader) {
-      throw new Error('circleShader undefined')
-    }
-    this.circleShader.use(this.gl)
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
-    this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
-    this.gl.uniform4f(
-      this.circleShader.uniforms.leftTopWidthHeight,
-      leftTopWidthHeight[0],
-      leftTopWidthHeight[1],
-      leftTopWidthHeight[2],
-      leftTopWidthHeight[3]
-    )
-    this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent)
-    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
-    this.gl.bindVertexArray(this.genericVAO)
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    this.ui.drawCircle(leftTopWidthHeight, circleColor, fillPercent)
   }
 
   // not included in public docs
@@ -8612,49 +8494,16 @@ export class Niivue {
   }
 
   // not included in public docs
+  // TODO(cdrake): remove all instances of textWidth
   textWidth(scale: number, str: string): number {
-    if (!str) {
-      return 0
-    }
-
-    let w = 0
-    const bytes = new TextEncoder().encode(str)
-    for (let i = 0; i < str.length; i++) {
-      w += scale * this.fontMets!.mets[bytes[i]].xadv!
-    }
-    return w
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    return this.defaultFont.getTextWidth(str, scale) / size
   }
 
+  // TODO(cdrake): remove all instances of textHeight
   textHeight(scale: number, str: string): number {
-    if (!str) {
-      return 0
-    }
-    const byteSet = new Set(Array.from(str))
-    const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
-
-    const tallest = Object.values(this.fontMets!.mets)
-      .filter((_, index) => bytes.includes(index))
-      .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
-    const height = tallest.lbwh[3]
-    return scale * height
-  }
-
-  // not included in public docs
-  drawChar(xy: number[], scale: number, char: number): number {
-    if (!this.fontShader) {
-      throw new Error('fontShader undefined')
-    }
-    // draw single character, never call directly: ALWAYS call from drawText()
-    const metrics = this.fontMets!.mets[char]!
-    const l = xy[0] + scale * metrics.lbwh[0]
-    const b = -(scale * metrics.lbwh[1])
-    const w = scale * metrics.lbwh[2]
-    const h = scale * metrics.lbwh[3]
-    const t = xy[1] + (b - h) + scale
-    this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
-    this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    return scale * metrics.xadv
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    return this.defaultFont.getTextHeight(str, scale) / size
   }
 
   // not included in public docs
@@ -8670,30 +8519,7 @@ export class Niivue {
 
   // not included in public docs
   drawText(xy: number[], str: string, scale = 1, color: Float32List | null = null): void {
-    if (this.opts.textHeight <= 0) {
-      return
-    }
-    if (!this.fontShader) {
-      throw new Error('fontShader undefined')
-    }
-    this.fontShader.use(this.gl)
-    // let size = this.opts.textHeight * this.gl.canvas.height * scale;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
-    if (color === null) {
-      color = this.opts.fontColor
-    }
-    this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color as Float32List)
-    let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
-    screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
-    this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
-    const bytes = new TextEncoder().encode(str)
-    this.gl.bindVertexArray(this.genericVAO)
-    for (let i = 0; i < str.length; i++) {
-      xy[0] += this.drawChar(xy, size, bytes[i])
-    }
-    this.gl.bindVertexArray(this.unusedVAO)
+    this.ui.drawText(this.defaultFont, xy, str, scale, color)
   }
 
   // not included in public docs
@@ -9605,7 +9431,7 @@ export class Niivue {
     }
     const minWH = Math.min(graph.LTWH[2], graph.LTWH[3])
     // n.b. dpr encodes retina displays
-    const fntScale = 0.07 * (minWH / (this.fontMets!.size * this.uiData.dpr!))
+    const fntScale = 0.07 * (minWH / (this.defaultFont.fontMets!.size * this.uiData.dpr!))
     let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale
     if (fntSize < 16) {
       fntSize = 0
@@ -10250,6 +10076,7 @@ export class Niivue {
       const text = label.text
       const textHeight = this.textHeight(label.style.textScale, text) * size
       const textWidth = this.textWidth(label.style.textScale, text) * size
+      console.log('textwidht, height', textWidth, textHeight)
       let left: number
       let top: number
 
