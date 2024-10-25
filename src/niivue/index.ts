@@ -137,6 +137,7 @@ export { NVMeshUtilities } from '../nvmesh-utilities.js'
 export * from '../types.js'
 export { NVUI } from '../ui/nvui.js'
 export { NVFont } from '../ui/nvfont.js'
+export { NVBitmap } from '../ui/nvbitmap.js'
 
 type ColormapListEntry = {
   name: string

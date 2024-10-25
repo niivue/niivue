@@ -2012,55 +2012,38 @@ void main() {
 
 `
 
-// export const fragStadiumShader = `#version 300 es
-// precision highp float;
+export const vertBitmapShader = `#version 300 es
+layout(location = 0) in vec3 a_position;  // Position attribute
+layout(location = 1) in vec2 a_texcoord;  // Texture coordinate attribute
 
-// uniform vec2 iResolution;   // Canvas resolution (width, height)
-// uniform vec2 u_rectPos;     // Center position of the stadium in NDC space
-// uniform vec2 u_rectSize;    // Half-size of the rectangle (half-width, half-height in NDC)
-// uniform float u_roundness;  // Radius of the semi-circular caps (in NDC)
-// uniform float u_outlineWidth; // Width of the outline in NDC units
+uniform vec2 canvasWidthHeight;           // Canvas dimensions
+uniform vec4 leftTopWidthHeight;          // Position and size of the bitmap
 
-// uniform vec4 u_fillColor;      // Fill color (r, g, b, a)
-// uniform vec4 u_outlineColor;   // Outline color (r, g, b, a)
+out vec2 v_texcoord;  // Pass texture coordinates to the fragment shader
 
-// out vec4 fragColor;
+void main(void) {
+  // Calculate normalized device coordinates (NDC) for the vertex positions
+  vec2 frac;
+  frac.x = (leftTopWidthHeight.x + (a_position.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; // 0..1
+  frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - a_position.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); // 1..0
+  frac = (frac * 2.0) - 1.0;  // Convert to -1..1 range
 
-// // Signed distance to a 2D stadium shape
-// float sdStadium(vec2 p, vec2 halfSize, float radius) {
-//     // Adjust the position to calculate distance correctly for rounded ends
-//     vec2 d = abs(p) - vec2(halfSize.x - radius, halfSize.y);
-//     d = max(d, 0.0); // Clamp to ensure no negative values for distance calculation
-//     return length(d) - radius;
-// }
+  // Set the final position of the vertex
+  gl_Position = vec4(frac, 0.0, 1.0);
+  
+  // Pass texture coordinates to the fragment shader
+  v_texcoord = vec2(a_texcoord.x, a_texcoord.y);  // Flip Y-axis for texture coordinates
+}
+`
 
-// void main() {
+export const fragBitmapShader = `#version 300 es
+precision mediump float;
+in vec2 v_texcoord;
+uniform sampler2D u_texture;
+out vec4 fragColor;
 
-//     // Convert fragment coordinates to NDC space ([-1, 1] range)
-//     vec2 p = (2.0 * gl_FragCoord.xy - iResolution.xy) / iResolution;
+void main() {
+  fragColor = texture(u_texture, v_texcoord);	
+}
 
-//     // Transform the coordinates to local space relative to the stadium center
-//     vec2 localPos = p - u_rectPos;
-
-//     // Compute signed distance to the stadium shape (filled region)
-//     float distFill = sdStadium(localPos, u_rectSize, u_roundness);
-
-//     // Compute signed distance to the stadium outline (expanded region)
-//     float distOutline = sdStadium(localPos, u_rectSize + vec2(u_outlineWidth, u_outlineWidth), u_roundness + u_outlineWidth);
-
-//     // Smooth anti-aliasing edge for fill and outline regions
-//     float edgeSmooth = fwidth(distFill);
-
-//     // Determine alpha values for fill and outline
-//     float alphaFill = smoothstep(-edgeSmooth, edgeSmooth, -distFill);
-//     float alphaOutline = smoothstep(-edgeSmooth, edgeSmooth, -distOutline) - alphaFill;
-
-//     // Combine the outline and fill colors with appropriate blending
-//     vec4 outlineColor = u_outlineColor * alphaOutline;
-//     vec4 fillColor = u_fillColor * alphaFill;
-
-//     // Set the final fragment color, ensuring the outline color takes precedence over the fill
-//     fragColor = outlineColor + fillColor;
-
-// }
-// `
+`

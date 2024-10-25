@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>UI Widgets - Draw Bitmap</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>niivue requires JavaScript.</noscript>
+  <header>
+    <button id="draw-bitmap-button">Draw Bitmap</button>
+  </header>
+  <main>
+    <canvas id="gl1"></canvas>
+  </main>
+  <script type="module" async>
+    import * as niivue from "../dist/index.js";
+
+    async function drawBitmap() {
+      nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
+      nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
+
+      const bitmap = new niivue.NVBitmap(nv1.gl);
+      await bitmap.loadBitmap("../images/rorden.png");
+
+      
+      const scale = 2.0;
+
+      
+      const left = nv1.canvas.width / 2 // 0; // 
+      const top = nv1.canvas.height / 2; // 0; // 
+      const width = bitmap.getWidth() * scale + 20; //400; // 
+      const height =  bitmap.getHeight() * scale + 20; // 200; //
+      
+      const fillColor = [0, 1, 0, 0.2]
+      const outlineColor = [1, 1, 1, 1]
+      nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
+      nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
+      const xy = [(nv1.canvas.width - width) / 2, (nv1.canvas.height - height) / 2];
+      ui.drawBitmap(bitmap, xy, scale);
+      const leftTopWidthHeight = [xy[0] - 10, xy[1] - 10, width, height]
+      ui.drawRoundedRect(
+        leftTopWidthHeight,
+        fillColor,
+        outlineColor,
+        0
+      )
+    }
+
+
+    const button = document.getElementById('draw-bitmap-button');
+    button.onclick = drawBitmap;
+    var nv1 = new niivue.Niivue();
+    nv1.attachTo("gl1");
+    nv1.setSliceType(nv1.sliceTypeRender);
+    var ui = new niivue.NVUI(nv1.gl);
+    drawBitmap();
+  </script>
+</body>
+
+</html>

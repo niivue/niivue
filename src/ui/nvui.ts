@@ -1,3 +1,4 @@
+import { vec2 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import {
   fragCircleShader,
@@ -9,6 +10,7 @@ import {
 } from '../shader-srcs.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { NVFont } from './nvfont.js'
+import { NVBitmap } from './nvbitmap.js'
 
 export class NVUI {
   private gl: WebGL2RenderingContext
@@ -17,6 +19,7 @@ export class NVUI {
   protected static circleShader: Shader
   protected static rectShader: Shader
   protected static roundedRectShader: Shader
+  protected static bitmapShader: Shader
   protected static genericVAO: WebGLVertexArrayObject
 
   /**
@@ -60,11 +63,34 @@ export class NVUI {
       const vbo = gl.createBuffer()!
 
       gl.bindVertexArray(vao)
+
+      // Setup position VBO
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo)
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rectStrip), gl.STATIC_DRAW)
-
       gl.enableVertexAttribArray(0)
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+
+      const texCoordData = [
+        // TexCoord (u, v)
+        1.0,
+        1.0, // Top-right
+        1.0,
+        0.0, // Bottom-right
+        0.0,
+        1.0, // Top-left
+        0.0,
+        0.0 // Bottom-left
+      ]
+
+      const texCoordBuffer = gl.createBuffer()
+      gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoordData), gl.STATIC_DRAW)
+
+      // Assign a_texcoord (location = 1)
+      gl.enableVertexAttribArray(1)
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0)
+
+      gl.bindVertexArray(null) // Unbind VAO when done
 
       NVUI.genericVAO = vao
     }
@@ -143,6 +169,52 @@ export class NVUI {
       }
     }
     this.gl.bindVertexArray(null)
+  }
+
+  public drawBitmap(bitmap: NVBitmap, xy: vec2, scale: number): void {
+    if (!bitmap.getBitmapTexture()) {
+      console.error('Bitmap texture not loaded')
+      return
+    }
+
+    const gl = this.gl
+    const shader = bitmap.bitmapShader
+    shader.use(gl)
+
+    gl.activeTexture(gl.TEXTURE0)
+    const texture = bitmap.getBitmapTexture()
+    if (!texture) {
+      console.error('Texture not found')
+      return
+    }
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+
+    gl.uniform1i(shader.uniforms.u_textureLocation, 0)
+    // Set the canvas size
+    const canvasWidth = gl.canvas.width
+    const canvasHeight = gl.canvas.height
+    gl.uniform2f(shader.uniforms.canvasWidthHeight, canvasWidth, canvasHeight)
+
+    // Set the position and size of the bitmap based on xy and scale
+    const width = bitmap.getWidth() * scale
+    const height = bitmap.getHeight() * scale
+    gl.uniform4f(shader.uniforms.leftTopWidthHeight, xy[0], xy[1], width, height)
+
+    // Set the viewport and clear the canvas
+    gl.viewport(0, 0, canvasWidth, canvasHeight)
+
+    // Bind the VAO and draw the bitmap
+    gl.bindVertexArray(NVUI.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+    // Check for WebGL errors
+    const error = gl.getError()
+    if (error !== gl.NO_ERROR) {
+      console.error('WebGL Error:', error)
+    }
+
+    // Unbind the VAO
+    gl.bindVertexArray(null)
   }
 
   /**
