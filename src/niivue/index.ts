@@ -8245,9 +8245,9 @@ export class Niivue {
     gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // draw startCap
-    const color = this.opts.rulerColor
-    color[3] = 1.0 // opaque
-    gl.uniform4fv(this.lineShader.uniforms.lineColor, color)
+    const measureLineColor = this.opts.measureLineColor
+    measureLineColor[3] = 1.0 // opaque
+    gl.uniform4fv(this.lineShader.uniforms.lineColor, measureLineColor)
     const w = this.opts.rulerWidth
     gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
     let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
@@ -8293,7 +8293,12 @@ export class Niivue {
           textCoords = startXYendXY
           break
       }
-      this.drawTextBetween(textCoords, stringMM, this.opts.measureTextHeight / this.opts.textHeight, color)
+      this.drawTextBetween(
+        textCoords,
+        stringMM,
+        this.opts.measureTextHeight / this.opts.textHeight,
+        this.opts.measureTextColor
+      )
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
@@ -8773,7 +8778,7 @@ export class Niivue {
     const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2]
     let clr = color
     if (clr === null) {
-      clr = this.opts.measureTextColor
+      clr = this.opts.crosshairColor
     }
     // if color is bright, make rect background dark and vice versa
     if (clr && clr[0] + clr[1] + clr[2] > 0.8) {

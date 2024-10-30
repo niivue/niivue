@@ -159,6 +159,7 @@ export type NVConfigOptions = {
   // measureTextJustify: "origin" | "terminus" | "center"
   measureTextJustify: 'start' | 'center' | 'end' // similar to flexbox justify start, end, center
   measureTextColor: number[]
+  measureLineColor: number[]
   measureTextHeight: number
 }
 
@@ -248,6 +249,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   showMeasureUnits: true, // e.g. 20.2 vs 20.2 mm
   measureTextJustify: 'center', // start, center, end
   measureTextColor: [1, 0, 0, 1], // red
+  measureLineColor: [1, 0, 0, 1], // red
   measureTextHeight: 0.03
 }
 
