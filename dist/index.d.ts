@@ -690,6 +690,11 @@ type NVConfigOptions = {
     selectionBoxLineThickness: number;
     selectionBoxIsOutline: boolean;
     scrollRequiresFocus: boolean;
+    showMeasureUnits: boolean;
+    measureTextJustify: 'start' | 'center' | 'end';
+    measureTextColor: number[];
+    measureLineColor: number[];
+    measureTextHeight: number;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
