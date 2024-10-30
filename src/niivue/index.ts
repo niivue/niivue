@@ -8654,7 +8654,7 @@ export class Niivue {
     const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2] as [number, number, number, number]
     let clr = color
     if (clr === null) {
-      clr = this.opts.measureTextColor
+      clr = this.opts.crosshairColor
     }
     // if color is bright, make rect background dark and vice versa
     if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
