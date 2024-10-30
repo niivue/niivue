@@ -157,6 +157,12 @@ export type NVConfigOptions = {
   selectionBoxLineThickness: number
   selectionBoxIsOutline: boolean
   scrollRequiresFocus: boolean
+  showMeasureUnits: boolean
+  // measureTextJustify: "origin" | "terminus" | "center"
+  measureTextJustify: 'start' | 'center' | 'end' // similar to flexbox justify start, end, center
+  measureTextColor: number[]
+  measureLineColor: number[]
+  measureTextHeight: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -243,7 +249,12 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   clickToSegmentIs2D: false,
   selectionBoxLineThickness: 4,
   selectionBoxIsOutline: false,
-  scrollRequiresFocus: false // determines if the cavas need to be focused to scroll
+  scrollRequiresFocus: false, // determines if the cavas need to be focused to scroll
+  showMeasureUnits: true, // e.g. 20.2 vs 20.2 mm
+  measureTextJustify: 'center', // start, center, end
+  measureTextColor: [1, 0, 0, 1], // red
+  measureLineColor: [1, 0, 0, 1], // red
+  measureTextHeight: 0.03
 }
 
 type SceneData = {

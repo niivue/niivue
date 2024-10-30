@@ -8212,6 +8212,31 @@ export class Niivue {
   // not included in public docs
   // draw line between start/end points and text to report length
   drawMeasurementTool(startXYendXY: number[]): void {
+    function extendTo(
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number,
+      distance: number
+    ): { origin: number[]; terminus: number[] } {
+      const x = x0 - x1
+      const y = y0 - y1
+      if (x === 0 && y === 0) {
+        return {
+          origin: [x1 + distance, y1],
+          terminus: [x1 + distance, y1]
+        }
+      }
+      const c = Math.sqrt(x * x + y * y)
+      const dX = (distance * x) / c
+      const dY = (distance * y) / c
+      return {
+        origin: [x0 + dX, y0 + dY], // next to start point
+        terminus: [x1 - dX, y1 - dY]
+      }
+      // return [x1 - dX, y1 - dY];  // next to end point
+    }
+
     const gl = this.gl
     gl.bindVertexArray(this.genericVAO)
 
@@ -8231,9 +8256,9 @@ export class Niivue {
     gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // draw startCap
-    const color = this.opts.rulerColor
-    color[3] = 1.0 // opaque
-    gl.uniform4fv(this.lineShader.uniforms.lineColor, color)
+    const measureLineColor = this.opts.measureLineColor
+    measureLineColor[3] = 1.0 // opaque
+    gl.uniform4fv(this.lineShader.uniforms.lineColor, measureLineColor)
     const w = this.opts.rulerWidth
     gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
     let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
@@ -8261,8 +8286,30 @@ export class Niivue {
       if (lenMM > 99) {
         decimals = 0
       }
-      const stringMM = lenMM.toFixed(decimals)
-      this.drawTextBetween(startXYendXY, stringMM, 1, color)
+      let stringMM = lenMM.toFixed(decimals)
+      if (this.opts.showMeasureUnits) {
+        stringMM = `${stringMM} mm` // append mm for millimeters to show units
+      }
+      let textCoords = startXYendXY
+      const [x0, y0, x1, y1] = startXYendXY
+      const { origin, terminus } = extendTo(x0, y0, x1, y1, 30)
+      switch (this.opts.measureTextJustify) {
+        case 'start':
+          textCoords = [...origin, ...origin.map((point) => point + 1)]
+          break
+        case 'end':
+          textCoords = textCoords = [...terminus, ...terminus.map((point) => point + 1)]
+          break
+        default:
+          textCoords = startXYendXY
+          break
+      }
+      this.drawTextBetween(
+        textCoords,
+        stringMM,
+        this.opts.measureTextHeight / this.opts.textHeight,
+        this.opts.measureTextColor
+      )
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
@@ -8744,13 +8791,14 @@ export class Niivue {
     if (clr === null) {
       clr = this.opts.crosshairColor
     }
+    // if color is bright, make rect background dark and vice versa
     if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
       clr = [0, 0, 0, 0.5]
     } else {
       clr = [1, 1, 1, 0.5]
     }
-    this.drawRect(LTWH, clr)
-    this.drawText(xy, str, scale, color)
+    this.drawRect(LTWH, clr) // background rect
+    this.drawText(xy, str, scale, color) // the text
   }
 
   // not included in public docs
