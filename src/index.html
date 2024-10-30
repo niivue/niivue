@@ -97,7 +97,8 @@
         NVImage,
         NVMesh,
         NVMeshLoaders,
-        SHOW_RENDER
+        SHOW_RENDER,
+        DRAG_MODE
       } from "./niivue/index.ts";
       async function addVolumeFromFiles(f) {
         console.log("attempting to open ", f[0].name);
@@ -152,11 +153,70 @@
         nv1.setSliceType(st)
       }
       var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }];
+
+      // with roiSelect, show the stats from the ROI in a temporary div
+      const onDragRelease = (data) => {
+        // if there is a div with the id dragReleaseDiv, remove it
+        const divToRemove = document.getElementById("dragReleaseDiv");
+        if (divToRemove) {
+          divToRemove.remove();
+        }
+
+        console.log("drag release", data);
+        let obj = nv1.getDescriptives({
+          layer: 0,
+          startVox: data.voxStart,
+          endVox: data.voxEnd,
+          roiIsMask: true,
+        });
+        console.log(obj);
+        // get dpr
+        const dpr = window.devicePixelRatio;
+        // get mouse x,y. Divide by dpr to get the correct position
+        const x = nv1.uiData.dragEnd[0] / dpr;
+        const y = nv1.uiData.dragEnd[1] / dpr;
+        console.log(x, y);
+        const pad = 1;
+        const div = document.createElement("div");
+        // set id for removal on the next pass
+        div.id = "dragReleaseDiv";
+        div.style.color = "red";
+        div.style.position = "absolute";
+        div.style.backgroundColor = "black";
+        div.style.opacity = 0.8;
+        div.style.padding = "5px";
+        // set z-index to be well above the canvas
+        div.style.zIndex = 1000;
+        div.innerHTML = `Mean: ${obj.mean}<br>Area: ${obj.area}<br>Stdev: ${obj.stdev}`;
+        // set position to be at the mouse x,y relative to the canvas
+        div.style.left = x + pad + "px";
+        div.style.top = y + pad + "px";
+        // get the canvas element reference from niivue
+        const canvas = nv1.gl.canvas;
+        // niivue should always be in a container, so get the parent of the canvas
+        const parentDiv = canvas.parentElement;
+        parentDiv.appendChild(div);
+      };
+
+      const onLocationChange = (data) => {
+        // remove the stats div if it exists when the user clicks away 
+        const divToRemove = document.getElementById("dragReleaseDiv");
+        if (divToRemove) {
+          divToRemove.remove();
+        }
+      };
       let defaults = {
         backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
-        isRuler: true
+        isRuler: true,
+        dragMode: DRAG_MODE.measurement,
+        // onDragRelease: onDragRelease,
+        onLocationChange: onLocationChange,
+        measureTextJustify: 'start',
+        showMeasureUnits: true,
+        measureTextColor: [0, 1, 0, 1],
+        measureTextHeight: 0.04
       };
       var nv1 = new Niivue(defaults);
       nv1.attachToCanvas(gl1);
