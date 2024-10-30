@@ -8146,6 +8146,31 @@ export class Niivue {
   // not included in public docs
   // draw line between start/end points and text to report length
   drawMeasurementTool(startXYendXY: number[]): void {
+    function extendTo(
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number,
+      distance: number
+    ): { origin: number[]; terminus: number[] } {
+      const x = x0 - x1
+      const y = y0 - y1
+      if (x === 0 && y === 0) {
+        return {
+          origin: [x1 + distance, y1],
+          terminus: [x1 + distance, y1]
+        }
+      }
+      const c = Math.sqrt(x * x + y * y)
+      const dX = (distance * x) / c
+      const dY = (distance * y) / c
+      return {
+        origin: [x0 + dX, y0 + dY], // next to start point
+        terminus: [x1 - dX, y1 - dY]
+      }
+      // return [x1 - dX, y1 - dY];  // next to end point
+    }
+
     const gl = this.gl
     gl.bindVertexArray(this.genericVAO)
 
@@ -8629,15 +8654,16 @@ export class Niivue {
     const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2] as [number, number, number, number]
     let clr = color
     if (clr === null) {
-      clr = this.opts.crosshairColor
+      clr = this.opts.measureTextColor
     }
+    // if color is bright, make rect background dark and vice versa
     if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
       clr = [0, 0, 0, 0.5]
     } else {
       clr = [1, 1, 1, 0.5]
     }
-    this.drawRect(LTWH, clr)
-    this.drawText(xy, str, scale, color)
+    this.drawRect(LTWH, clr) // background rect
+    this.drawText(xy, str, scale, color) // the text
   }
 
   // not included in public docs
