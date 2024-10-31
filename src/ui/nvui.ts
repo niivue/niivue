@@ -658,73 +658,8 @@ export class NVUI {
     }
 
 
-
-    /**
-     * Draws rotated text with a uniform rotation for each character.
-     * @param font - The font object containing glyph metrics and shaders.
-     * @param xy - The starting coordinates for the text.
-     * @param str - The string to be rendered.
-     * @param scale - The scaling factor for the text.
-     * @param color - The color of the text.
-     * @param rotation - The rotation angle in radians.
-     */
-    public drawRotatedTextOld(
-        font: NVFont,
-        xy: number[],
-        str: string,
-        scale = 1.0,
-        color: Float32List | null = null,
-        rotation = 0.0 // Rotation in radians
-    ): void {
-        if (!font.isFontLoaded) {
-            console.log('font not loaded');
-            return;
-        }
-
-        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-
-        const cosR = Math.cos(rotation);
-        const sinR = Math.sin(rotation);
-
-        // Calculate the midpoint of the entire text for rotation purposes
-        const textWidth = font.getTextWidth(str, scale);
-        const textHeight = font.getTextHeight(str, scale);
-        const textMidX = xy[0] + textWidth / 2;
-        const textMidY = xy[1] - textHeight / 2;
-
-        let currentX = xy[0];
-        let currentY = xy[1];
-        console.log('rotating')
-        const chars = Array.from(str);
-        for (let i = 0; i < chars.length; i++) {
-            const metrics = font.fontMets!.mets[chars[i]];
-            if (!metrics) {
-                continue;
-            }
-
-            // Calculate rotated position of each character based on the text midpoint
-            const xOffset = currentX - textMidX;
-            const yOffset = currentY - textMidY;
-
-            const rotatedX = xOffset * cosR;// - yOffset * sinR + textMidX;
-            const rotatedY = xOffset * sinR;// + yOffset * cosR + textMidY;
-            const newPos = [rotatedX + textMidX, rotatedY + textMidY];
-            console.log('new pos', newPos)
-            // Set the position and draw the character
-            // this.drawText(font, newPos, chars[i], scale, color);
-            // Set the position and draw the character with rotation
-            // this.drawRotatedCharacter(font, newPos, chars[i], scale, color, rotation);
-            this.drawText(font, newPos, str[i], scale, color, 0)
-            // this.drawChar(font, newPos, size, str[i])
-
-            // Update currentX based on character's advance width
-            currentX += metrics.xadv * size;
-        }
-    }
-
-
     // Function to draw rotated text, supporting individual character drawing including RTL
-    public drawRotatedTextOld1(
+    public drawRotatedTextOld(
         font: NVFont,
         xy: number[],
         str: string,
@@ -747,7 +682,7 @@ export class NVUI {
         gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
 
         rotatedFontShader.use(this.gl)
-        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+        const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
         gl.enable(gl.BLEND)
         gl.uniform2f(rotatedFontShader.uniforms.canvasWidthHeight, gl.canvas.width, gl.canvas.height)
         if (color === null) {
@@ -824,7 +759,7 @@ export class NVUI {
         gl.activeTexture(gl.TEXTURE0)
         gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
 
-        rotatedFontShader.use(this.gl)
+        rotatedFontShader.use(gl)
         const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
         gl.enable(gl.BLEND)
         gl.uniform2f(rotatedFontShader.uniforms.canvasWidthHeight, gl.canvas.width, gl.canvas.height)
@@ -835,46 +770,37 @@ export class NVUI {
         let screenPxRange = (size / font.fontMets!.size) * font.fontMets!.distanceRange
         screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
         gl.uniform1f(rotatedFontShader.uniforms.screenPxRange, screenPxRange)
-        gl.uniform1f(rotatedFontShader.uniforms.rotation, rotation)
         gl.uniform1i(rotatedFontShader.uniforms.fontTexture, 0)
         gl.bindVertexArray(NVUI.genericVAO)
 
         const cosR = Math.cos(rotation)
         const sinR = Math.sin(rotation)
 
-        // Calculate the midpoint of the entire text for rotation purposes
-        const textWidth = font.getTextWidth(str, scale)
-        const textHeight = font.getTextHeight(str, scale)
-        const textMidX = xy[0] + textWidth / 2
-        const textMidY = xy[1] - textHeight / 2
-
+        const mpMatrix = mat4.create()
+        mat4.identity(mpMatrix)
+        mat4.scale(mpMatrix, mpMatrix, [0.1 * scale, 0.1 * scale, 1.0])
+        mat4.rotateZ(mpMatrix, mpMatrix, rotation)
+        console.log('mvp matrix', mpMatrix)
         let currentX = xy[0]
         let currentY = xy[1]
 
         const chars = Array.from(str)
+        let x = (xy[0] / gl.canvas.width) * 2 - 1.0
+        let y = (1.0 - 2 * xy[1] / gl.canvas.height)
         for (let i = 0; i < chars.length; i++) {
             const metrics = font.fontMets!.mets[chars[i]]
             if (!metrics) {
                 continue
             }
-
-            // Calculate rotated position of each character based on the text midpoint
-            const xOffset = currentX - textMidX
-            const yOffset = currentY - textMidY
-
-            const rotatedX = xOffset * cosR - yOffset * sinR + textMidX
-            const rotatedY = xOffset * sinR + yOffset * cosR + textMidY
-            const newPos = [rotatedX, rotatedY]
-
-            const l = newPos[0] + size * metrics.lbwh[0]
-            const b = -(size * metrics.lbwh[1])
-            const w = size * metrics.lbwh[2]
-            const h = size * metrics.lbwh[3]
-            const t = newPos[1] + size - h + b
-            gl.uniform4f(rotatedFontShader.uniforms.leftTopWidthHeight, l, t, w, h)
+            console.log(metrics)
+            const mvpMatrix = mat4.create()
+            mat4.translate(mvpMatrix, mpMatrix, [x, y + metrics.lbwh[1], 0.0])
+            mat4.scale(mvpMatrix, mvpMatrix, [metrics.lbwh[2], metrics.lbwh[3], 1.0])
+            // Set uniform values for MVP matrix and UV coordinates
+            gl.uniformMatrix4fv(rotatedFontShader.uniforms.modelViewProjectionMatrix, false, mvpMatrix)
             gl.uniform4fv(rotatedFontShader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-            currentX += metrics.xadv * size
+            x += metrics.xadv
         }
         gl.bindVertexArray(null)
     }

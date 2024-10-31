@@ -22,21 +22,20 @@
 
         function drawText(font) {
             const ui = new niivue.NVUI(nv1.gl)
-            const str = 'open song'
+            const str = 'The quick brown fox jumps over the lazy dog!'
             const textHeight = font.getTextHeight(str)
             const textWidth = font.getTextWidth(str)
-            const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 4, (nv1.canvas.height - textHeight) / 4, textWidth, textHeight]
+            const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 4, (nv1.canvas.height - textHeight) / 2, textWidth, textHeight]
             const textColor = [0, 0, 1, 1]
             const fillColor = [0, 1, 0, 0.5]
             const outlineColor = [1, 1, 1, 1]
             const spacing = textHeight * 3
             nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-            ui.drawRotatedText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] - textHeight], str, 1.0, textColor, Math.PI / 4)
+            ui.drawRotatedText(font, [leftTopWidthHeight[0], leftTopWidthHeight[1] + 8 * spacing], str, 0.5, textColor, 0)
+            ui.drawRotatedText(font, [leftTopWidthHeight[0] + 8 * spacing, leftTopWidthHeight[1] + 4 * spacing], str, 0.5, textColor, Math.PI / 4)
+            ui.drawRotatedText(font, [50, leftTopWidthHeight[1]], str, 0.5, textColor, Math.PI / 2)
         }
-
-
-
 
         var nv1 = new niivue.Niivue();
         nv1.attachTo("gl1");

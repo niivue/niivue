@@ -2109,51 +2109,33 @@ void main(void) {
 export const vertRotatedFontShader = `#version 300 es
 #line 576
 layout(location=0) in vec3 pos;
-uniform vec2 canvasWidthHeight;
-uniform vec4 leftTopWidthHeight;
+uniform mat4 modelViewProjectionMatrix;
 uniform vec4 uvLeftTopWidthHeight;
-uniform float rotation; // Rotation in radians
 out vec2 vUV;
-void main(void) {
-    // Apply rotation to position
-    mat2 rotationMatrix = mat2(cos(rotation), -sin(rotation), sin(rotation), cos(rotation));
-    vec2 rotatedPos = rotationMatrix * pos.xy;
 
-    // Convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL -1..1,-1..1
-    vec2 frac;
-    frac.x = (leftTopWidthHeight.x + (rotatedPos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; // 0..1
-    frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - rotatedPos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); // 1..0
-    frac = (frac * 2.0) - 1.0;
-    gl_Position = vec4(frac, 0.0, 1.0);
+void main(void) {
+    // Apply MVP matrix to position (initially just using translation and scale)
+    gl_Position = modelViewProjectionMatrix * vec4(pos.xy, 0.0, 1.0);
 
     // Calculate normalized UV coordinates
     vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y + ((1.0 - pos.y) * uvLeftTopWidthHeight.w));
     vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
 }`
 
+export const vertRotatedFontShaderNext = `#version 300 es
+layout(location = 0) in vec2 position;
+uniform vec4 uvLeftTopWidthHeight;
+out vec2 vUV;
 
+void main(void) {
+    // Directly setting a position in normalized device coordinates
+    gl_Position = vec4(position * 0.1, 0.0, 1.0); // Reduce size to ensure it's visible
 
-
-
-export const fragRotatedFontShaderOld = `#version 300 es
-#line 593
-precision highp int;
-precision highp float;
-uniform highp sampler2D fontTexture;
-uniform vec4 fontColor;
-uniform float screenPxRange;
-in vec2 vUV;
-out vec4 color;
-float median(float r, float g, float b) {
-    return max(min(r, g), min(max(r, g), b));
-}
-void main() {
-    vec3 msd = texture(fontTexture, vUV).rgb;
-    float sd = median(msd.r, msd.g, msd.b);
-    float screenPxDistance = screenPxRange * (sd - 0.5);
-    float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
-    color = vec4(fontColor.rgb, fontColor.a * opacity);
+    // Calculate normalized UV coordinates
+    vUV = vec2(uvLeftTopWidthHeight.x + (position.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y + ((1.0 - position.y) * uvLeftTopWidthHeight.w));
+    vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
 }`
+
 
 export const fragRotatedFontShader = `#version 300 es
 #line 593
@@ -2174,6 +2156,8 @@ void main() {
     float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
     color = vec4(fontColor.rgb, fontColor.a * opacity);
 }`
+
+
 
 
 
