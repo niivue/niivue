@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Rotated Text</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+        <button id="draw-button">Draw</button>
+    </header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js";
+
+        function drawText(font) {
+            const ui = new niivue.NVUI(nv1.gl)
+            const str = 'open song'
+            const textHeight = font.getTextHeight(str)
+            const textWidth = font.getTextWidth(str)
+            const leftTopWidthHeight = [(nv1.canvas.width - textWidth) / 4, (nv1.canvas.height - textHeight) / 4, textWidth, textHeight]
+            const textColor = [0, 0, 1, 1]
+            const fillColor = [0, 1, 0, 0.5]
+            const outlineColor = [1, 1, 1, 1]
+            const spacing = textHeight * 3
+            nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
+            nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
+            ui.drawRotatedText(font, [leftTopWidthHeight[0] + textWidth + spacing, leftTopWidthHeight[1] - textHeight], str, 1.0, textColor, Math.PI / 4)
+        }
+
+
+
+
+        var nv1 = new niivue.Niivue();
+        nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+        const font = new niivue.NVFont(nv1.gl)
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
+        drawText(nv1.defaultFont)
+
+        const button = document.getElementById('draw-button');
+        button.onclick = drawText(nv1.defaultFont);
+    </script>
+</body>
+
+</html>
