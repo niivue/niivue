@@ -55,6 +55,7 @@ The command `npm run demo` will minify the project and locally host all of the [
 - [NiiVue Desktop](https://github.com/niivue/desktop) (from the NiiVue team) uses NiiVue in a crossplatform Electron app
 - [NiiVue iOS](https://github.com/niivue/ios) (from the NiiVue team) uses NiiVue in a hybrid Swift + webView mobile app
 - [NiiVue Neglect](https://niivue.github.io/niivue-neglect/) uses NiiVue to visualise stroke lesion data in the spatial neglect severity prediction tool
+- [Plurimedia](https://www.plurimedia.it/) uses NiiVue in client work for medical image visualization
 
 # Funding
 
