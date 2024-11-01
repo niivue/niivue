@@ -9212,6 +9212,19 @@ export class Niivue {
     imageWidthHeight: number[] = [NaN, NaN]
   ): void {
     const padLeftTop = [NaN, NaN]
+    if (imageWidthHeight[0] === Infinity) {
+      const volScale = this.sliceScale().volScale
+      let scale = this.scaleSlice(volScale[0],volScale[1],[0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        scale = this.scaleSlice(volScale[0],volScale[2],[0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        scale = this.scaleSlice(volScale[1],volScale[2],[0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      }
+      imageWidthHeight[0] = scale[2]
+      imageWidthHeight[1] = scale[3]
+      console.log("Hello mork", scale);
+    }
     if (isNaN(imageWidthHeight[0])) {
       this.draw2DMain(leftTopWidthHeight, axCorSag, customMM)
     } else {
@@ -10807,7 +10820,6 @@ export class Niivue {
     padPixelsWH: [number, number] = [0, 0],
     canvasWH: [number, number] = [0, 0]
   ): number[] {
-    // mork
     // const canvasW = this.effectiveCanvasWidth() - padPixelsWH[0]
     // const canvasH = this.effectiveCanvasHeight() - padPixelsWH[1]
     const canvasW = canvasWH[0] === 0 ? this.effectiveCanvasWidth() - padPixelsWH[0] : canvasWH[0] - padPixelsWH[0]
@@ -11528,8 +11540,13 @@ export class Niivue {
           // issue1082 draw hero image
           const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0]
           const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1]
-          // this.draw3D([ltwh[0], ltwh[1], heroW, heroH])
-          this.draw3D([0, 0, heroW, heroH])
+          // 
+          if ((this.opts?.heroSliceType === SLICE_TYPE.AXIAL) || (this.opts?.heroSliceType === SLICE_TYPE.CORONAL) || (this.opts?.heroSliceType === SLICE_TYPE.SAGITTAL)) {
+            this.draw2D([0, 0, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity])
+          } else {
+            this.draw3D([ltwh[0], ltwh[1], heroW, heroH])
+          }
+          //this.draw3D([0, 0, heroW, heroH])
           ltwh[0] += heroImageWH[0]
           ltwh[1] += heroImageWH[1]
           isDraw3D = false
