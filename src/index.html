@@ -82,12 +82,14 @@
         class="slider"
         id="thickSlider"
       />
-      <label for="worldCheck">World space</label>
-      <input type="checkbox" id="worldCheck" unchecked />
       <select id="crosshairUnits">
         <option value="voxels">Voxels</option>
         <option value="mm" selected>MM</option>
       </select>
+      <label for="smoothCheck">&nbsp;Smooth</label>
+      <input type="checkbox" id="smoothCheck" checked />
+      <label for="worldCheck">&nbsp;World space</label>
+      <input type="checkbox" id="worldCheck" unchecked />
       </div>
       <label id="statusLabel">&nbsp; </label>
     </header>
@@ -117,6 +119,9 @@
       thickSlider.oninput = function () {
         nv1.opts.crosshairWidth = this.value * 0.25
         nv1.drawScene()
+      }
+      smoothCheck.onchange = function () {
+        nv1.setInterpolation(!this.checked);
       }
       renderCheck.onchange = function () {
         let rc = this.checked ? 0 : -1;
