@@ -13,6 +13,8 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <label id="menuLabel">≡</label>
+      <div class="panel-box"  id="panelBox" style="display: none;">
       <label for="layoutSelect">Layout</label>
       <select id="layoutSelect">
         <option value="0">Auto</option>
@@ -77,6 +79,8 @@
         <option value="voxels">Voxels</option>
         <option value="mm" selected>MM</option>
       </select>
+      </div>
+      <label id="statusLabel">&nbsp; </label>
     </header>
     <main id="canvas-container">
 
@@ -91,9 +95,6 @@
            style="position: absolute; visibility: hidden;">
       </div>
     </main>
-    <footer>
-      <label id="statusLabel">&nbsp; </label>
-    </footer>
     <script type="module" async>
       import {
         Niivue,
@@ -148,6 +149,14 @@
       function moveSlider() {
         nv1.scene.crosshairPos = [sagSlider.value / 100, corSlider.value / 100, axSlider.value / 100]
         nv1.drawScene()
+      }
+      menuLabel.onclick = function() {
+        if (panelBox.style.display === "none" || panelBox.style.display === "") {
+          panelBox.style.display = "block";
+        } else {
+          panelBox.style.display = "none";
+        }
+        resizeSliders()
       }
       axSlider.oninput = function () {
         moveSlider()
