@@ -9223,7 +9223,6 @@ export class Niivue {
       }
       imageWidthHeight[0] = scale[2]
       imageWidthHeight[1] = scale[3]
-      console.log("Hello mork", scale);
     }
     if (isNaN(imageWidthHeight[0])) {
       this.draw2DMain(leftTopWidthHeight, axCorSag, customMM)
