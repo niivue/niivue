@@ -65,6 +65,7 @@ export type NVConfigOptions = {
   colorbarHeight: number
   // 0 for no crosshairs
   crosshairWidth: number
+  crosshairWidthUnit: 'voxels' | 'mm'
   crosshairGap: number
   rulerWidth: number
   show3Dcrosshair: boolean
@@ -169,6 +170,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   textHeight: 0.06,
   colorbarHeight: 0.05,
   crosshairWidth: 1,
+  crosshairWidthUnit: 'voxels',
   crosshairGap: 0,
   rulerWidth: 4,
   show3Dcrosshair: false,
