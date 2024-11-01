@@ -23,17 +23,44 @@
         function drawLine() {
             nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
+
             const onColor = [0, 0.478, 1, 1]
             const offColor = [0.5, 0.5, 0.5, 1]
-            const hightLightColor = [0.0, 1.0, 0.0, 1.0]
+            const highlightColor = [0.0, 1.0, 0.0, 1.0]
             const red = [1.0, 0.0, 0.0, 1.0]
-            ui.drawLine([nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200], 10, onColor, niivue.NVUI.lineTerminator.ARROW)
+
+            // Use the updated `ui.drawLine()` with correct LineTerminator
+            ui.drawLine(
+                [nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200],
+                10,
+                onColor,
+                niivue.NVUI.lineTerminator.ARROW // <-- Updated to access through NVUI
+            )
+
+            // Example with no terminator specified
             // ui.drawLine([nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200], 10, red)
-            ui.drawLine([nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100], 10, offColor, niivue.NVUI.lineTerminator.CIRCLE)
+
+            ui.drawLine(
+                [nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100],
+                10,
+                offColor,
+                niivue.NVUI.lineTerminator.CIRCLE // <-- Updated to access through NVUI
+            )
+
+            // Example with no terminator specified
             // ui.drawLine([nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100], 10, red)
-            ui.drawLine([nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100], 10, hightLightColor, niivue.NVUI.lineTerminator.RING)
+
+            ui.drawLine(
+                [nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100],
+                10,
+                highlightColor,
+                niivue.NVUI.lineTerminator.RING // <-- Updated to access through NVUI
+            )
+
+            // Example with no terminator specified
             // ui.drawLine([nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100], 10, red)
         }
+
 
         const button = document.getElementById('draw-button');
         button.onclick = drawLine;

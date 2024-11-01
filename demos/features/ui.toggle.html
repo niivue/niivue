@@ -23,11 +23,21 @@
     function drawToggle() {
       nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
       nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
+
       const onColor = [0, 0.478, 1, 1]
       const offColor = [0.5, 0.5, 0.5, 1]
-      ui.drawToggle(nv1.canvas.width / 2, nv1.canvas.height / 2, 400, 50, toggleOn, onColor, offColor)
-      toggleOn = !toggleOn;
+
+      ui.drawToggle(
+        [nv1.canvas.width / 2, nv1.canvas.height / 2], // Position as Vec2
+        [400, 50],                                     // Size as Vec2 (width, height)
+        toggleOn,                                      // Boolean indicating if the toggle is on
+        onColor,                                       // On color
+        offColor                                       // Off color
+      )
+
+      toggleOn = !toggleOn
     }
+
 
     const button = document.getElementById('toggle-button');
     button.onclick = drawToggle;
