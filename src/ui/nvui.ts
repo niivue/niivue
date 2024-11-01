@@ -659,84 +659,6 @@ export class NVUI {
 
 
     // Function to draw rotated text, supporting individual character drawing including RTL
-    public drawRotatedTextOld(
-        font: NVFont,
-        xy: number[],
-        str: string,
-        scale = 1.0,
-        color: Float32List | null = null,
-        rotation = 0.0 // Rotation in radians
-    ): void {
-        if (!font.isFontLoaded) {
-            console.error('font not loaded')
-            return
-        }
-
-        if (!NVUI.rotatedTextShader) {
-            throw new Error('rotatedTextShader undefined')
-        }
-        const rotatedFontShader = NVUI.rotatedTextShader
-        // bind our font texture
-        const gl = this.gl
-        gl.activeTexture(gl.TEXTURE0)
-        gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
-
-        rotatedFontShader.use(this.gl)
-        const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
-        gl.enable(gl.BLEND)
-        gl.uniform2f(rotatedFontShader.uniforms.canvasWidthHeight, gl.canvas.width, gl.canvas.height)
-        if (color === null) {
-            color = font.fontColor
-        }
-        gl.uniform4fv(rotatedFontShader.uniforms.fontColor, color as Float32List)
-        let screenPxRange = (size / font.fontMets!.size) * font.fontMets!.distanceRange
-        screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
-        gl.uniform1f(rotatedFontShader.uniforms.screenPxRange, screenPxRange)
-        gl.uniform1f(rotatedFontShader.uniforms.rotation, rotation)
-        gl.uniform1i(rotatedFontShader.uniforms.fontTexture, 0)
-        gl.bindVertexArray(NVUI.genericVAO)
-
-        const cosR = Math.cos(rotation)
-        const sinR = Math.sin(rotation)
-
-        // Calculate the midpoint of the entire text for rotation purposes
-        const textWidth = font.getTextWidth(str, scale)
-        const textHeight = font.getTextHeight(str, scale)
-        const textMidX = xy[0] + textWidth / 2
-        const textMidY = xy[1] - textHeight / 2
-
-        let currentX = xy[0]
-        let currentY = xy[1]
-
-        const chars = Array.from(str)
-        for (let i = 0; i < chars.length; i++) {
-            const metrics = font.fontMets!.mets[chars[i]]
-            if (!metrics) {
-                continue
-            }
-
-            // Calculate rotated position of each character based on the text midpoint
-            const xOffset = currentX - textMidX
-            const yOffset = currentY - textMidY
-
-            const rotatedX = xOffset * cosR - yOffset * sinR + textMidX
-            const rotatedY = xOffset * sinR + yOffset * cosR + textMidY
-            const newPos = [rotatedX, rotatedY]
-
-            const l = newPos[0] + size * metrics.lbwh[0]
-            const b = -(size * metrics.lbwh[1])
-            const w = size * metrics.lbwh[2]
-            const h = size * metrics.lbwh[3]
-            const t = newPos[1] + size - h + b
-            gl.uniform4f(rotatedFontShader.uniforms.leftTopWidthHeight, l, t, w, h)
-            gl.uniform4fv(rotatedFontShader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-            currentX += metrics.xadv * size
-        }
-        gl.bindVertexArray(null)
-    }
-
-    // Function to draw rotated text, supporting individual character drawing including RTL
     public drawRotatedText(
         font: NVFont,
         xy: number[],
@@ -753,57 +675,85 @@ export class NVUI {
         if (!NVUI.rotatedTextShader) {
             throw new Error('rotatedTextShader undefined')
         }
+
         const rotatedFontShader = NVUI.rotatedTextShader
-        // bind our font texture
         const gl = this.gl
+
+        // Bind the font texture
         gl.activeTexture(gl.TEXTURE0)
         gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
 
         rotatedFontShader.use(gl)
-        const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
+
+        // Enable blending for text rendering
         gl.enable(gl.BLEND)
-        gl.uniform2f(rotatedFontShader.uniforms.canvasWidthHeight, gl.canvas.width, gl.canvas.height)
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        gl.disable(gl.DEPTH_TEST); // TODO: remove
+        gl.disable(gl.CULL_FACE);
+
+        // Set uniform values
         if (color === null) {
             color = font.fontColor
         }
         gl.uniform4fv(rotatedFontShader.uniforms.fontColor, color as Float32List)
-        let screenPxRange = (size / font.fontMets!.size) * font.fontMets!.distanceRange
+        let screenPxRange = (scale / font.fontMets!.size) * font.fontMets!.distanceRange
         screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
         gl.uniform1f(rotatedFontShader.uniforms.screenPxRange, screenPxRange)
         gl.uniform1i(rotatedFontShader.uniforms.fontTexture, 0)
+
+        // Bind VAO for generic rectangle
         gl.bindVertexArray(NVUI.genericVAO)
 
-        const cosR = Math.cos(rotation)
-        const sinR = Math.sin(rotation)
-
-        const mpMatrix = mat4.create()
-        mat4.identity(mpMatrix)
-        mat4.scale(mpMatrix, mpMatrix, [0.1 * scale, 0.1 * scale, 1.0])
-        mat4.rotateZ(mpMatrix, mpMatrix, rotation)
-        console.log('mvp matrix', mpMatrix)
-        let currentX = xy[0]
-        let currentY = xy[1]
+        // Set up orthographic projection matrix
+        const orthoMatrix = mat4.create();
+        // mat4.ortho(orthoMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -1, 1); // Swap top and bottom
+        mat4.ortho(orthoMatrix, 0, gl.canvas.width, gl.canvas.height, 0, -1, 1)
+        const dpr = window.devicePixelRatio || 1;
+        gl.canvas.width = (gl.canvas as HTMLCanvasElement).clientWidth * dpr;
+        gl.canvas.height = (gl.canvas as HTMLCanvasElement).clientHeight * dpr;
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        // Iterate over each character in the string
+        let x = xy[0]
+        let y = xy[1]
+        const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
 
         const chars = Array.from(str)
-        let x = (xy[0] / gl.canvas.width) * 2 - 1.0
-        let y = (1.0 - 2 * xy[1] / gl.canvas.height)
         for (let i = 0; i < chars.length; i++) {
             const metrics = font.fontMets!.mets[chars[i]]
             if (!metrics) {
                 continue
             }
-            console.log(metrics)
+
+            const modelMatrix = mat4.create();
+            mat4.translate(modelMatrix, modelMatrix, [x + Math.sin(rotation) * metrics.lbwh[1] * size, y - Math.cos(rotation) * metrics.lbwh[1] * size, 0.0])
+            mat4.rotateZ(modelMatrix, modelMatrix, rotation)
+
+
+            mat4.scale(modelMatrix, modelMatrix, [metrics.lbwh[2] * size, -metrics.lbwh[3] * size, 1.0])
+
+
+            // Combine the orthographic matrix with the model matrix to create the final MVP matrix
             const mvpMatrix = mat4.create()
-            mat4.translate(mvpMatrix, mpMatrix, [x, y + metrics.lbwh[1], 0.0])
-            mat4.scale(mvpMatrix, mvpMatrix, [metrics.lbwh[2], metrics.lbwh[3], 1.0])
+            mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
+            // Log MVP matrix for debugging
+            // console.log('MVP Matrix modified:', mvpMatrix)
+
             // Set uniform values for MVP matrix and UV coordinates
             gl.uniformMatrix4fv(rotatedFontShader.uniforms.modelViewProjectionMatrix, false, mvpMatrix)
             gl.uniform4fv(rotatedFontShader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-            x += metrics.xadv
+
+            // Update x position for the next character, advancing with rotation in mind
+            const advanceX = Math.cos(rotation) * metrics.xadv * size;
+            const advanceY = Math.sin(rotation) * metrics.xadv * size;
+            x += advanceX;
+            y += advanceY;
         }
+
+        // Unbind the VAO
         gl.bindVertexArray(null)
     }
+
 
 
 

@@ -901,7 +901,7 @@ void main() {
 	float sd = median(msd.r, msd.g, msd.b);
 	float screenPxDistance = screenPxRange*(sd - 0.5);
 	float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
-	color = vec4(fontColor.rgb , fontColor.a * opacity);
+	color = vec4(fontColor.rgb , fontColor.a * opacity);	
 }`
 
 export const vertCircleShader = `#version 300 es
@@ -2115,7 +2115,7 @@ out vec2 vUV;
 
 void main(void) {
     // Apply MVP matrix to position (initially just using translation and scale)
-    gl_Position = modelViewProjectionMatrix * vec4(pos.xy, 0.0, 1.0);
+    gl_Position = modelViewProjectionMatrix * vec4(pos, 1.0);
 
     // Calculate normalized UV coordinates
     vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y + ((1.0 - pos.y) * uvLeftTopWidthHeight.w));
@@ -2157,6 +2157,14 @@ void main() {
     color = vec4(fontColor.rgb, fontColor.a * opacity);
 }`
 
+export const fragRotatedFontShaderG = `#version 300 es
+precision mediump float;
+
+out vec4 FragColor;
+
+void main() {
+    FragColor = vec4(0.5, 0.8, 0.2, 1.0); // Set a solid greenish color
+}`
 
 
 
