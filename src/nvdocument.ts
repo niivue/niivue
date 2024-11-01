@@ -109,6 +109,7 @@ export type NVConfigOptions = {
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
   heroImageFraction: number
+  heroSliceType: SLICE_TYPE
   // sagittal slices can have Y+ going left or right
   sagittalNoseLeft: boolean
   isSliceMM: boolean
@@ -209,6 +210,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isDepthPickMesh: false,
   isCornerOrientationText: false,
   heroImageFraction: 0,
+  heroSliceType: SLICE_TYPE.RENDER,
   sagittalNoseLeft: false,
   isSliceMM: false,
   isV1SliceShader: false,
