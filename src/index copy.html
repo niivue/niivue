@@ -15,8 +15,8 @@
     <header>
       <label for="layoutSelect">Layout</label>
       <select id="layoutSelect">
-        <option value="0">Auto</option>
-        <option value="1" selected>Column</option>
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
         <option value="2">Grid</option>
         <option value="3">Row</option>
       </select>
@@ -40,7 +40,7 @@
         type="range"
         min="0"
         max="9"
-        value="4"
+        value="0"
         class="slider"
         id="heroSlider"
       />
@@ -102,7 +102,7 @@
         NVMeshLoaders,
         SHOW_RENDER,
         DRAG_MODE
-      } from "./niivue/index.ts"
+      } from "./niivue/index.ts";
       thickSlider.oninput = function () {
         nv1.opts.crosshairWidth = this.value * 0.25
         nv1.drawScene()
@@ -112,7 +112,7 @@
         nv1.drawScene()
       }
       worldCheck.onclick = function () {
-        nv1.setSliceMM(this.checked)
+        nv1.setSliceMM(this.checked);
         resizeSliders()
       }
       function resizeSlider(slider) {
@@ -127,15 +127,15 @@
           console.log(ltwh[1])
         }
         if (ltwh[0] < 0) {
-          slider.style.visibility = "hidden"
+          slider.style.visibility = "hidden";
           return
         }
-        slider.style.visibility = "visible"
-        slider.style.left = ltwh[0] + "px"
+        slider.style.visibility = "visible";
+        slider.style.left = ltwh[0] + "px";
         let top = Math.max(ltwh[1] - nv1.opts.tileMargin, 0) 
         console.log(top)
-        slider.style.top = top + "px"
-        slider.style.width = ltwh[2] + "px"
+        slider.style.top = top + "px";
+        slider.style.width = ltwh[2] + "px";
       }
       function resizeSliders() {
         resizeSlider(axSlider)
@@ -167,12 +167,12 @@
         nv1.updateGLVolume()
       }
       layoutSelect.onchange = function () {
-        nv1.setMultiplanarLayout(Number(this.value))
-        resizeSliders()
+        nv1.setMultiplanarLayout(Number(this.value));
+        resizeSliders
       }
       renderingSelect.onchange = function () {
-        nv1.opts.multiplanarShowRender =  Number(this.value)
-        nv1.drawScene()
+        nv1.opts.multiplanarShowRender =  Number(this.value);
+        nv1.drawScene();
       }
       equalCheck.onchange = function () {
         nv1.opts.multiplanarEqualSize = this.checked
@@ -183,43 +183,53 @@
         resizeSliders()
       }
       sliceType.onchange = function () {
-        let st = parseInt(document.getElementById("sliceType").value)
+        let st = parseInt(document.getElementById("sliceType").value);
         nv1.setSliceType(st)
         resizeSliders()
       }
-      var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" }]
+      var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" }];
       const onLocationChange = (data) => {
-        statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
+        statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string;
         let fracXYZ = nv1.scene.crosshairPos
         axSlider.value = Math.round(fracXYZ[2] * 100)
         corSlider.value = Math.round(fracXYZ[1] * 100)
         sagSlider.value = Math.round(fracXYZ[0] * 100)
-      }
+      };
       let defaults = {
         backColor: [0, 0.2, 0.4, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
+        dragMode: DRAG_MODE.measurement,
+        // onDragRelease: onDragRelease,
         onLocationChange: onLocationChange,
-      }
-      window.addEventListener("resize", resizeCanvas)
-      var nv1 = new Niivue(defaults)
-      nv1.onImageLoaded = (volume) => {
-        resizeSliders()
-      }
+        measureTextJustify: 'start',
+        showMeasureUnits: true,
+        measureTextColor: [0, 1, 0, 1],
+        measureLineColor: [1, 0, 0, 1],
+        measureTextHeight: 0.04
+      };
+      var nv1 = new Niivue(defaults);
       nv1.opts.tileMargin = 40
       nv1.attachToCanvas(gl1)
-      await nv1.loadVolumes(volumeList1)
-      nv1.opts.textHeight = 0.02
+      // multiplanarShowRender is the preferred option now, 
+      // but multiplanarForceRender is still available for backwards compatibility
+      // previous use was: nv1.opts.multiplanarForceRender = true;
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+      nv1.opts.yoke3Dto2DZoom = true;
+      await nv1.loadVolumes(volumeList1);
+      nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
+      nv1.opts.fontColor = [1, 1, 1, 1]
+      nv1.opts.textHeight = 0.05
       equalCheck.onchange()
-      layoutSelect.onchange()
       rulerSlider.oninput()
       gapSlider.oninput()
       thickSlider.oninput()
       crosshairUnits.onchange()
-      heroSlider.oninput()
+      window.addEventListener("resize", resizeCanvas);
       await nv1.drawScene()
       resizeSliders()
+      //nv1.setSliceType(nv1.sliceTypeAxial)
     </script>
   </body>
 </html>

@@ -8035,33 +8035,43 @@ export class Niivue {
     }
     const frac10cm = 100.0 / fovMM[0]
     const pix10cm = frac10cm * ltwh[2]
-    const pixLeft = ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm
-    const pixTop = ltwh[1] + ltwh[3] - 2 * this.opts.rulerWidth
+    const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2)
+    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm)
+    const thick = Number(this.opts.rulerWidth)
+    const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * thick
     const startXYendXY = [pixLeft, pixTop, pixLeft + pix10cm, pixTop]
-    this.drawRuler10cm(startXYendXY)
+    let outlineColor = [0,0,0,1]
+    if ((this.opts.rulerColor[0] + this.opts.rulerColor[1] + this.opts.rulerColor[2]) < 0.8) {
+      outlineColor = [1,1,1,1]
+    }
+    this.drawRuler10cm(startXYendXY, outlineColor, thick + 1)
+    this.drawRuler10cm(startXYendXY, this.opts.rulerColor, thick)
   }
 
   // not included in public docs
   // draw 10cm ruler at desired coordinates
-  drawRuler10cm(startXYendXY: number[]): void {
+  drawRuler10cm(startXYendXY: number[], rulerColor: number[], rulerWidth: number = 1): void {
     if (!this.lineShader) {
       throw new Error('lineShader undefined')
     }
     this.gl.bindVertexArray(this.genericVAO)
     this.lineShader.use(this.gl)
-    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
+    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, rulerColor)
     this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
-    this.gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
+    this.gl.uniform1f(this.lineShader.uniforms.thickness, rulerWidth)
     this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     // draw tick marks
+    //const w10cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
     const w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
-    const b = startXYendXY[1]
-    const t = b - 2 * this.opts.rulerWidth
-    const t2 = b - 4 * this.opts.rulerWidth
+    const b = startXYendXY[1] - Math.floor(0.5 * this.opts.rulerWidth)
+    const t = Math.floor(b - 0.35 * w1cm)
+    const t2 = Math.floor(b - 0.7 *  w1cm)
     for (let i = 0; i < 11; i++) {
-      const l = startXYendXY[0] + i * w1cm
+      let l = startXYendXY[0] + i * w1cm
+      l = Math.max(l, startXYendXY[0] + 0.5 * rulerWidth)
+      l = Math.min(l, startXYendXY[2] - 0.5 * rulerWidth)
       const xyxy = [l, b, l, t]
       if (i % 5 === 0) {
         xyxy[3] = t2
@@ -10569,7 +10579,7 @@ export class Niivue {
     alpha = 1.0,
     mvpMtx: mat4 | null = null,
     is2DView = false,
-    isSliceMM = true
+    isSliceMM = true,
   ): void {
     if (!this.opts.show3Dcrosshair && !is2DView) {
       return
@@ -10579,18 +10589,6 @@ export class Niivue {
     }
     const gl = this.gl
     const mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM)
-    // generate our crosshairs for the base volume
-    if (
-      this.crosshairs3D === null ||
-      this.crosshairs3D.mm![0] !== mm[0] ||
-      this.crosshairs3D.mm![1] !== mm[1] ||
-      this.crosshairs3D.mm![2] !== mm[2]
-    ) {
-      if (this.crosshairs3D !== null) {
-        gl.deleteBuffer(this.crosshairs3D.indexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
-        gl.deleteBuffer(this.crosshairs3D.vertexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
-      }
-      const [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM)
       let radius = 1
       if (this.volumes.length > 0) {
         if (!this.back) {
@@ -10601,8 +10599,25 @@ export class Niivue {
         radius = range[0] * 0.02
       } // 2% of first dimension
       radius *= this.opts.crosshairWidth
+      if ((this.opts.crosshairWidthUnit !== 'undefined') && (this.opts.crosshairWidthUnit === 'mm')) {
+        radius = this.opts.crosshairWidth * 0.5
+      }
+    // generate our crosshairs for the base volume
+    if (
+      this.crosshairs3D === null ||
+      this.crosshairs3D.mm![0] !== mm[0] ||
+      this.crosshairs3D.mm![1] !== mm[1] ||
+      this.crosshairs3D.mm![2] !== mm[2] ||
+      this.crosshairs3D.radius! !== radius
+    ) {
+      if (this.crosshairs3D !== null) {
+        gl.deleteBuffer(this.crosshairs3D.indexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
+        gl.deleteBuffer(this.crosshairs3D.vertexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
+      }
+      const [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM)
       this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius, 20, this.opts.crosshairGap)
       this.crosshairs3D.mm = mm
+      this.crosshairs3D.radius = radius
     }
 
     if (!this.surfaceShader) {
