@@ -49,12 +49,6 @@
         class="slider"
         id="heroSlider"
       />
-      <select id="heroType">
-        <option value="0">Axial Hero</option>
-        <option value="1">Coronal Hero</option>
-        <option value="2">Sagittal Hero</option>
-        <option value="4" selected>Render Hero</option>
-      </select>
       <label for="gapSlider">Xhair Gap</label>
       <input
         type="range"
@@ -135,6 +129,19 @@
         nv1.setSliceMM(this.checked)
         resizeSliders()
       }
+      var lastPos = null
+      gl1.ondblclick = async function () {
+        if (!lastPos) return
+        let clickSliceType = lastPos.axCorSag
+        let heroSliceType = nv1.screenSlices[0].axCorSag
+        if (!isFinite(clickSliceType)) return
+        if (!isFinite(heroSliceType)) return
+        if (heroSliceType === clickSliceType) 
+          nv1.opts.heroSliceType = SLICE_TYPE.RENDER
+        else
+          nv1.opts.heroSliceType = clickSliceType
+        nv1.drawScene()
+      }
       function resizeSlider(slider) {
         let ltwh = [-1, 0, 0, 0]
         let orient = parseInt(slider.dataset.axcorsag)
@@ -214,19 +221,6 @@
         nv1.setSliceType(parseInt(sliceType.value))
         resizeSliders()
       }
-      heroType.onchange = function () {
-        let st = parseInt(this.value)
-        if (st === 0)
-          nv1.opts.heroSliceType = SLICE_TYPE.AXIAL
-        else if (st === 1)
-          nv1.opts.heroSliceType = SLICE_TYPE.CORONAL
-        else if (st === 2)
-          nv1.opts.heroSliceType = SLICE_TYPE.SAGITTAL
-        else
-          nv1.opts.heroSliceType = SLICE_TYPE.RENDER
-        nv1.drawScene()
-        resizeSliders()
-      }
       var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" }]
       const onLocationChange = (data) => {
         statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
@@ -234,6 +228,7 @@
         axSlider.value = Math.round(fracXYZ[2] * 100)
         corSlider.value = Math.round(fracXYZ[1] * 100)
         sagSlider.value = Math.round(fracXYZ[0] * 100)
+        lastPos = data
       }
       let defaults = {
         backColor: [0.1, 0.1, 0.1, 1],
@@ -262,7 +257,6 @@
       await nv1.drawScene()
       resizeSliders()
       nv1.resizeListener()
-      
     </script>
   </body>
 </html>
