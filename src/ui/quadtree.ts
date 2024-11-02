@@ -1,5 +1,3 @@
-// quadtree.ts
-
 import { Vec2 } from './types.js'
 import { IUIComponent } from './interfaces.js'
 
@@ -145,6 +143,33 @@ export class QuadTree<T extends IUIComponent> {
                 this.northeast!.query(range, found)
                 this.southwest!.query(range, found)
                 this.southeast!.query(range, found)
+            }
+            return found
+        }
+    }
+
+    queryPoint(point: Vec2, found: T[] = []): T[] {
+        // Normalize point
+        const normalizedPoint: Vec2 = [
+            point[0] / this.canvasWidth,
+            point[1] / this.canvasHeight
+        ]
+
+        if (!this.boundary.contains(normalizedPoint)) {
+            return found
+        } else {
+            for (const component of this.components) {
+                const bounds = component.getBounds()
+                if (bounds[0] <= point[0] && point[0] <= bounds[0] + bounds[2] &&
+                    bounds[1] <= point[1] && point[1] <= bounds[1] + bounds[3]) {
+                    found.push(component)
+                }
+            }
+            if (this.divided) {
+                this.northwest!.queryPoint(point, found)
+                this.northeast!.queryPoint(point, found)
+                this.southwest!.queryPoint(point, found)
+                this.southeast!.queryPoint(point, found)
             }
             return found
         }
