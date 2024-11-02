@@ -53,6 +53,12 @@ export class NVUI {
         // Add event listener for window resize
         this.resizeListener = this.handleWindowResize.bind(this)
         window.addEventListener('resize', this.resizeListener)
+
+        // Add event listeners for click, focus, mouse enter, and mouse leave
+        canvas.addEventListener('click', this.handleClick.bind(this))
+        canvas.addEventListener('focus', this.handleFocus.bind(this))
+        canvas.addEventListener('mouseenter', this.handleMouseEnter.bind(this))
+        canvas.addEventListener('mouseleave', this.handleMouseLeave.bind(this))
     }
 
     // Method to add a component to the QuadTree
@@ -99,9 +105,55 @@ export class NVUI {
         this.quadTree.updateCanvasSize(width, height)
     }
 
+    // Method to handle click events
+    private handleClick(event: MouseEvent): void {
+        const canvas = this.gl.canvas as HTMLCanvasElement
+        const rect = canvas.getBoundingClientRect()
+        const point: Vec2 = [event.clientX - rect.left, event.clientY - rect.top]
+        const components = this.quadTree.queryPoint(point)
+        for (const component of components) {
+            component.applyEventEffects('click')
+        }
+    }
+
+    // Method to handle focus events
+    private handleFocus(event: FocusEvent): void {
+        const components = this.quadTree.getAllElements()
+        for (const component of components) {
+            component.applyEventEffects('focus')
+        }
+    }
+
+    // Method to handle mouse enter events
+    private handleMouseEnter(event: MouseEvent): void {
+        const canvas = this.gl.canvas as HTMLCanvasElement
+        const rect = canvas.getBoundingClientRect()
+        const point: Vec2 = [event.clientX - rect.left, event.clientY - rect.top]
+        const components = this.quadTree.queryPoint(point)
+        for (const component of components) {
+            component.applyEventEffects('mouseEnter')
+        }
+    }
+
+    // Method to handle mouse leave events
+    private handleMouseLeave(event: MouseEvent): void {
+        const canvas = this.gl.canvas as HTMLCanvasElement
+        const rect = canvas.getBoundingClientRect()
+        const point: Vec2 = [event.clientX - rect.left, event.clientY - rect.top]
+        const components = this.quadTree.queryPoint(point)
+        for (const component of components) {
+            component.applyEventEffects('mouseLeave')
+        }
+    }
+
     // Optional: Method to remove the resize listener when NVUI is no longer needed
     public destroy(): void {
         window.removeEventListener('resize', this.resizeListener)
+        const canvas = this.gl.canvas as HTMLCanvasElement
+        canvas.removeEventListener('click', this.handleClick.bind(this))
+        canvas.removeEventListener('focus', this.handleFocus.bind(this))
+        canvas.removeEventListener('mouseenter', this.handleMouseEnter.bind(this))
+        canvas.removeEventListener('mouseleave', this.handleMouseLeave.bind(this))
     }
 
     // Proxy methods for renderer's draw calls

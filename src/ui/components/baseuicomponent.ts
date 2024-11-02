@@ -81,8 +81,8 @@ export abstract class BaseUIComponent implements IUIComponent {
         this.eventEffects.get(event)!.push(effect);
     }
 
-    applyEventEffects(event: string): void {
-        const effects = this.eventEffects.get(event);
+    applyEventEffects(eventName: string): void {
+        const effects = this.eventEffects.get(eventName);
         if (effects) {
             effects.forEach((effect) => this.applyEffect(effect));
         }

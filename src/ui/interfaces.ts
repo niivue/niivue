@@ -16,6 +16,7 @@ export interface IUIComponent {
 
     getScale(): number
     setScale(value: number): void
+    applyEventEffects(eventName: string): void
 }
 
 export interface IColorable extends IUIComponent {
