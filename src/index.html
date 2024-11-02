@@ -18,23 +18,10 @@
       
       <label for="layoutSelect">Layout</label>
       <select id="layoutSelect">
-        <option value="0">Auto</option>
-        <option value="1" selected>Column</option>
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
         <option value="2">Grid</option>
         <option value="3">Row</option>
-      </select>
-      <label for="renderingSelect">MultiplanarRendering</label>
-      <select id="renderingSelect">
-        <option value="0">Never</option>
-        <option value="1">Always</option>
-        <option value="2" selected>Auto</option>
-      </select>
-      <select id="sliceType">
-        <option value="0">Axial</option>
-        <option value="1">Coronal</option>
-        <option value="2">Sagittal</option>
-        <option value="4">Render</option>
-        <option value="3" selected>Multiplanar</option>
       </select>
       <label for="equalCheck">EqualSize</label>
       <input type="checkbox" id="equalCheck" checked />
@@ -45,7 +32,7 @@
         type="range"
         min="0"
         max="9"
-        value="4"
+        value="6"
         class="slider"
         id="heroSlider"
       />
@@ -180,6 +167,7 @@
         } else {
           panelBox.style.display = "none";
         }
+        nv1.resizeListener()
         resizeSliders()
       }
       axSlider.oninput = function () {
@@ -203,11 +191,6 @@
         nv1.setMultiplanarLayout(Number(this.value))
         resizeSliders()
       }
-      renderingSelect.onchange = function () {
-        nv1.opts.multiplanarShowRender =  Number(this.value)
-        nv1.drawScene()
-        resizeSliders()
-      }
       equalCheck.onchange = function () {
         nv1.opts.multiplanarEqualSize = this.checked
         nv1.drawScene()
@@ -217,10 +200,6 @@
         nv1.setHeroImage(this.value * 0.1)
         resizeSliders()
       }
-      sliceType.onchange = function () {
-        nv1.setSliceType(parseInt(sliceType.value))
-        resizeSliders()
-      }
       var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" }]
       const onLocationChange = (data) => {
         statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
@@ -228,6 +207,9 @@
         axSlider.value = Math.round(fracXYZ[2] * 100)
         corSlider.value = Math.round(fracXYZ[1] * 100)
         sagSlider.value = Math.round(fracXYZ[0] * 100)
+        if (!lastPos) {
+          resizeSliders()
+        }
         lastPos = data
       }
       let defaults = {
