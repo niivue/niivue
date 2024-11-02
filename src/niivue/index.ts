@@ -10612,6 +10612,9 @@ export class Niivue {
       radius = range[0] * 0.02
     } // 2% of first dimension
     radius *= this.opts.crosshairWidth
+    if (this.opts?.crosshairWidthUnit === 'percent') {
+      radius = range[0] * this.opts.crosshairWidth * 0.5 * 0.01
+    }
     if (this.opts?.crosshairWidthUnit === 'mm') {
       radius = this.opts.crosshairWidth * 0.5
     }
@@ -10646,7 +10649,7 @@ export class Niivue {
       )
     }
     gl.uniformMatrix4fv(crosshairsShader.uniforms.mvpMtx, false, mvpMtx)
-
+    gl.disable(gl.CULL_FACE)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer)
     gl.enable(gl.DEPTH_TEST)
     const color = [...this.opts.crosshairColor]
@@ -11329,7 +11332,7 @@ export class Niivue {
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
       if (this.meshes.length > 0) {
         this.screenSlices = [] // empty array
-        this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
+        // this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
         this.draw3D() // meshes loaded but no volume
         if (this.opts.isColorbar) {
           this.drawColorbar()

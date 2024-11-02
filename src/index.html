@@ -24,7 +24,7 @@
         <option value="3">Row</option>
       </select>
       <label for="equalCheck">EqualSize</label>
-      <input type="checkbox" id="equalCheck" checked />
+      <input type="checkbox" id="equalCheck" unchecked />
       <label for="renderCheck">Volume Render</label>
       <input type="checkbox" id="renderCheck" checked />
       <label for="heroSlider">Hero Image</label>
@@ -66,6 +66,7 @@
       <select id="crosshairUnits">
         <option value="voxels">Voxels</option>
         <option value="mm" selected>MM</option>
+        <option value="percent">percent</option>
       </select>
       <label for="smoothCheck">&nbsp;Smooth</label>
       <input type="checkbox" id="smoothCheck" checked />
@@ -223,6 +224,11 @@
       var nv1 = new Niivue(defaults)
       nv1.onImageLoaded = (volume) => {
         resizeSliders()
+        lastPos = null
+      }
+      nv1.onMeshLoaded = (volume) => {
+        resizeSliders()
+        lastPos = null
       }
       nv1.opts.tileMargin = 40
       //nv1.opts.multiplanarPadPixels = 40
