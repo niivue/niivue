@@ -5,7 +5,7 @@ import { NVFont } from '../nvfont.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class TextComponent extends BaseUIComponent implements IColorable {
-    private textColor: Color = [0, 0, 0, 1]
+    private textColor: Color
     private backgroundColor: Color = [0, 0, 0, 1]
     private foregroundColor: Color = [1, 1, 1, 1]
     private text: string
@@ -14,11 +14,12 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     private width: number
     private height: number
 
-    constructor(position: Vec2, text: string, font: NVFont, scale = 1.0, maxWidth = 0) {
+    constructor(position: Vec2, text: string, font: NVFont, textColor: Color = [0, 0, 0, 1], scale = 1.0, maxWidth = 0) {
         super()
         this.position = position
         this.text = text
         this.font = font
+        this.textColor = textColor
         this.scale = scale
         this.maxWidth = maxWidth
 
@@ -29,6 +30,7 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     }
 
     draw(renderer: NVRenderer): void {
+        console.log('calling drawText', this)
         renderer.drawText(
             this.font,
             this.position,

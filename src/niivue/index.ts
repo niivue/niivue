@@ -138,6 +138,7 @@ export * from '../types.js'
 export { NVUI } from '../ui/nvui.js'
 export { NVFont } from '../ui/nvfont.js'
 export { NVBitmap } from '../ui/nvbitmap.js'
+export { TextComponent } from '../ui/components/textcomponent.js'
 
 type ColormapListEntry = {
   name: string
@@ -11439,6 +11440,7 @@ export class Niivue {
     this.isBusy = false
     this.needsRefresh = false
     let posString = this.drawSceneCore()
+    this.ui.draw()
     // Chrome and Safari get much more bogged down by concurrent draw calls than Safari
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
