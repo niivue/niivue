@@ -10,6 +10,10 @@ export class BitmapComponent implements IUIComponent {
     private bounds: Vec4   // Screen coordinates [left, top, width, height]
     private bitmap: NVBitmap
     private scale: number  // Scaling factor
+    private width: number
+    private height: number
+    public isVisible: boolean
+    public zIndex: number
 
     constructor(position: Vec2, bitmap: NVBitmap, scale = 1.0) {
         this.position = position
@@ -17,11 +21,23 @@ export class BitmapComponent implements IUIComponent {
         this.scale = scale
 
         // Calculate width and height based on bitmap dimensions and scale
-        const width = bitmap.getWidth() * this.scale
-        const height = bitmap.getHeight() * this.scale
+        this.width = bitmap.getWidth() * this.scale
+        this.height = bitmap.getHeight() * this.scale
 
-        this.bounds = [position[0], position[1], width, height]
+        this.bounds = [position[0], position[1], this.width, this.height]
     }
+    getScale(): number {
+        return this.scale
+    }
+
+    setScale(value: number): void {
+        this.scale = value
+        this.width = this.bitmap.getWidth() * this.scale
+        this.height = this.bitmap.getHeight() * this.scale
+
+        this.bounds = [this.position[0], this.position[1], this.width, this.height]
+    }
+
 
     getBounds(): Vec4 {
         return this.bounds
@@ -34,6 +50,7 @@ export class BitmapComponent implements IUIComponent {
     }
     setPosition(position: Vec2): void {
         this.position = position
+        this.bounds = [this.position[0], this.position[1], this.width, this.height]
     }
     draw(renderer: NVRenderer): void {
         // Draw the bitmap using screen coordinates

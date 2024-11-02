@@ -3,19 +3,19 @@
 import { NVRenderer } from './nvrenderer.js'
 import { Color, Vec2, Vec4 } from './types.js'
 
+// interfaces.ts
 export interface IUIComponent {
-    getBounds(): Vec4 // Screen coordinates [left, top, width, height]
+    getBounds(): Vec4
     setBounds(bounds: Vec4): void
-    getPosition(): Vec2 // Screen coordinates [x, y]
+    getPosition(): Vec2
     setPosition(position: Vec2): void
     draw(renderer: NVRenderer): void
 
-    // Event handlers
-    onClick?(event: MouseEvent): void
-    onFocus?(): void
-    onBlur?(): void
-    onMouseEnter?(event: MouseEvent): void
-    onMouseLeave?(event: MouseEvent): void
+    isVisible: boolean
+    zIndex: number
+
+    getScale(): number
+    setScale(value: number): void
 }
 
 export interface IColorable extends IUIComponent {

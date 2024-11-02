@@ -17,3 +17,35 @@ export enum LineTerminator {
     CIRCLE = 2,
     RING = 3
 }
+
+// Enums for alignment
+export enum HorizontalAlignment {
+    NONE = 'NONE',
+    LEFT = 'LEFT',
+    CENTER = 'CENTER',
+    RIGHT = 'RIGHT'
+}
+
+export enum VerticalAlignment {
+    NONE = 'NONE',
+    TOP = 'TOP',
+    CENTER = 'CENTER',
+    BOTTOM = 'BOTTOM'
+}
+
+// Define the effect types
+export type Effect =
+    | {
+        type: 'setValue';
+        targetObject: any;
+        property: string;
+        value: any;
+    }
+    | {
+        type: 'animateValue';
+        targetObject: any;
+        property: string;
+        from: number | number[];
+        to: number | number[];
+        duration: number;
+    }
