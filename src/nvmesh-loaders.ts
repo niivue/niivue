@@ -642,7 +642,7 @@ export class NVMeshLoaders {
       })
     }
     const dpv32 = []
-    for (let s = 0; s < dpv.length; s++) {
+    for (let i = 0; i < dpv.length; i++) {
       dpv32.push({
         id: dpv[i].id,
         vals: Float32Array.from(dpv[i].vals)

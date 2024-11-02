@@ -13,6 +13,51 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <button id="openBtn">Choose an image or mesh with a dialog</button>
+      <label for="fiberRadius">Radius</label>
+      <input
+        type="range"
+        min="0"
+        max="20"
+        value="5"
+        class="slider"
+        id="fiberRadius"
+      />
+      <label for="fiberDitherSlider">Dither</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="0"
+        class="slider"
+        id="fiberDitherSlider"
+      />
+      <label for="fiberColor">Fiber color</label>
+      <select id="fiberColor">
+        <option value="Global">Global direction</option>
+        <option value="Local">Local direction</option>
+        <option value="Fixed">Fixed</option>
+        <option value="DPV0" selected>
+          First Per Vertex Type (if available)
+        </option>
+      </select>
+      <label for="fiberColormap">Colormap</label>
+      <select id="fiberColormap">
+        <option value="actc">ACTC</option>
+        <option value="inferno" selected>Inferno</option>
+        <option value="plasma">Plasma</option>
+        <option value="warm">Warm</option>
+        <option value="winter">Winter</option>
+      </select>
+      <label for="fiberCalMin">Color Minimum</label>
+      <input
+        type="range"
+        min="10"
+        max="75"
+        value="25"
+        class="slider"
+        id="fiberCalMin"
+      />
       <label for="layoutSelect">Layout</label>
       <select id="layoutSelect">
         <option value="0" selected>Auto</option>
@@ -35,6 +80,10 @@
       </select>
       <label for="equalCheck">EqualSize</label>
       <input type="checkbox" id="equalCheck" checked />
+      <label for="cornerCheck">CornerText</label>
+      <input type="checkbox" id="cornerCheck" unchecked />
+      <label for="marginCheck">TileMargin</label>
+      <input type="checkbox" id="marginCheck" unchecked />
       <label for="heroSlider">Hero Image</label>
       <input
         type="range"
@@ -44,55 +93,14 @@
         class="slider"
         id="heroSlider"
       />
-      <label for="gapSlider">Xhair Gap</label>
-      <input
-        type="range"
-        min="0"
-        max="9"
-        value="2"
-        class="slider"
-        id="gapSlider"
-      />
-      <label for="rulerSlider">Ruler Thick</label>
-      <input
-        type="range"
-        min="1"
-        max="10"
-        value="2"
-        class="slider"
-        id="rulerSlider"
-      />
-      <label for="thickSlider">Crosshair width</label>
-      <input
-        type="range"
-        min="1"
-        max="40"
-        value="4"
-        class="slider"
-        id="thickSlider"
-      />
-      <label for="worldCheck">World space</label>
-      <input type="checkbox" id="worldCheck" unchecked />
-      <select id="crosshairUnits">
-        <option value="voxels">Voxels</option>
-        <option value="mm" selected>MM</option>
-      </select>
     </header>
     <main id="canvas-container">
-
       <div style="display: flex; width: 100%; height: 100%;">
-
         <canvas id="gl1"></canvas>
-    <input type="range" id="axSlider" min="0" max="100" data-axcorsag="0"
-           style="position: absolute; visibility: hidden;">
-    <input type="range" id="corSlider" min="0" max="100" data-axcorsag="1"
-           style="position: absolute; visibility: hidden;">
-    <input type="range" id="sagSlider" min="0" max="100" data-axcorsag="2"
-           style="position: absolute; visibility: hidden;">
       </div>
     </main>
     <footer>
-      <label id="statusLabel">&nbsp; </label>
+      <label id="shaders">Shaders: </label>
     </footer>
     <script type="module" async>
       import {
@@ -103,72 +111,41 @@
         SHOW_RENDER,
         DRAG_MODE
       } from "./niivue/index.ts";
-      thickSlider.oninput = function () {
-        nv1.opts.crosshairWidth = this.value * 0.25
-        nv1.drawScene()
+      async function addVolumeFromFiles(f) {
+        console.log("attempting to open ", f[0].name);
+        console.log("details", f[0]);
+        nv1.loadFromFile(f[0]);
       }
-      crosshairUnits.onchange = function () {
-        nv1.opts.crosshairWidthUnit = this.value
-        nv1.drawScene()
-      }
-      worldCheck.onclick = function () {
-        nv1.setSliceMM(this.checked);
-        resizeSliders()
-      }
-      function resizeSlider(slider) {
-        let ltwh = [-1, 0, 0, 0]
-        let orient = parseInt(slider.dataset.axcorsag)
-        for (let i = 0; i < nv1.screenSlices.length; i++) {
-          if (nv1.screenSlices[i].axCorSag !== orient) {
-            continue
-          }
-          ltwh = nv1.screenSlices[i].leftTopWidthHeight
-          console.log(nv1.screenSlices[i])
-          console.log(ltwh[1])
-        }
-        if (ltwh[0] < 0) {
-          slider.style.visibility = "hidden";
-          return
-        }
-        slider.style.visibility = "visible";
-        slider.style.left = ltwh[0] + "px";
-        let top = Math.max(ltwh[1] - nv1.opts.tileMargin, 0) 
-        console.log(top)
-        slider.style.top = top + "px";
-        slider.style.width = ltwh[2] + "px";
-      }
-      function resizeSliders() {
-        resizeSlider(axSlider)
-        resizeSlider(corSlider)
-        resizeSlider(sagSlider)
-      }
-      function resizeCanvas() {
-        resizeSliders()
-      }
-      function moveSlider() {
-        nv1.scene.crosshairPos = [sagSlider.value / 100, corSlider.value / 100, axSlider.value / 100]
-        nv1.drawScene()
-      }
-      axSlider.oninput = function () {
-        moveSlider()
-      }
-      corSlider.oninput = function () {
-        moveSlider()
-      }
-      sagSlider.oninput = function () {
-        moveSlider()
-      }
-      gapSlider.oninput = function () {
-        nv1.opts.crosshairGap = this.value * 2
-        nv1.updateGLVolume()
-      }
-      rulerSlider.oninput = function () {
-        nv1.opts.rulerWidth = Number(this.value)
-        nv1.updateGLVolume()
-      }
+      openBtn.onclick = function () {
+        let input = document.createElement("input");
+        input.style.display = "none";
+        input.type = "file";
+        document.body.appendChild(input);
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files);
+        };
+        input.click();
+      };
+      fiberRadius.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
+        nv1.updateGLVolume();
+      };
+      fiberColor.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
+      };
+      fiberColormap.onchange = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
+      };
+
+      fiberDitherSlider.oninput = function () {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
+      };
+      fiberCalMin.oninput = function () {
+        nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
+        nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
+      };
       layoutSelect.onchange = function () {
         nv1.setMultiplanarLayout(Number(this.value));
-        resizeSliders
       }
       renderingSelect.onchange = function () {
         nv1.opts.multiplanarShowRender =  Number(this.value);
@@ -178,22 +155,73 @@
         nv1.opts.multiplanarEqualSize = this.checked
         nv1.drawScene()
       }
+      marginCheck.onchange = function () {
+        nv1.opts.tileMargin = this.checked  ? -1 : 0
+        nv1.drawScene()
+      }
+      cornerCheck.onchange = function () {
+        //nv1.opts.isCornerOrientationText = this.checked\
+        nv1.setCornerOrientationText(this.checked)
+      }
       heroSlider.oninput = function () {
         nv1.setHeroImage(this.value * 0.1)
-        resizeSliders()
       }
       sliceType.onchange = function () {
         let st = parseInt(document.getElementById("sliceType").value);
         nv1.setSliceType(st)
-        resizeSliders()
       }
-      var volumeList1 = [{ url: "../demos/images/fslmean.nii.gz" }];
+      var volumeList1 = [{ url: "../demos/images/mni152.nii.gz" }];
+
+      // with roiSelect, show the stats from the ROI in a temporary div
+      const onDragRelease = (data) => {
+        // if there is a div with the id dragReleaseDiv, remove it
+        const divToRemove = document.getElementById("dragReleaseDiv");
+        if (divToRemove) {
+          divToRemove.remove();
+        }
+
+        console.log("drag release", data);
+        let obj = nv1.getDescriptives({
+          layer: 0,
+          startVox: data.voxStart,
+          endVox: data.voxEnd,
+          roiIsMask: true,
+        });
+        console.log(obj);
+        // get dpr
+        const dpr = window.devicePixelRatio;
+        // get mouse x,y. Divide by dpr to get the correct position
+        const x = nv1.uiData.dragEnd[0] / dpr;
+        const y = nv1.uiData.dragEnd[1] / dpr;
+        console.log(x, y);
+        const pad = 1;
+        const div = document.createElement("div");
+        // set id for removal on the next pass
+        div.id = "dragReleaseDiv";
+        div.style.color = "red";
+        div.style.position = "absolute";
+        div.style.backgroundColor = "black";
+        div.style.opacity = 0.8;
+        div.style.padding = "5px";
+        // set z-index to be well above the canvas
+        div.style.zIndex = 1000;
+        div.innerHTML = `Mean: ${obj.mean}<br>Area: ${obj.area}<br>Stdev: ${obj.stdev}`;
+        // set position to be at the mouse x,y relative to the canvas
+        div.style.left = x + pad + "px";
+        div.style.top = y + pad + "px";
+        // get the canvas element reference from niivue
+        const canvas = nv1.gl.canvas;
+        // niivue should always be in a container, so get the parent of the canvas
+        const parentDiv = canvas.parentElement;
+        parentDiv.appendChild(div);
+      };
+
       const onLocationChange = (data) => {
-        statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string;
-        let fracXYZ = nv1.scene.crosshairPos
-        axSlider.value = Math.round(fracXYZ[2] * 100)
-        corSlider.value = Math.round(fracXYZ[1] * 100)
-        sagSlider.value = Math.round(fracXYZ[0] * 100)
+        // remove the stats div if it exists when the user clicks away 
+        const divToRemove = document.getElementById("dragReleaseDiv");
+        if (divToRemove) {
+          divToRemove.remove();
+        }
       };
       let defaults = {
         backColor: [0, 0.2, 0.4, 1],
@@ -210,26 +238,40 @@
         measureTextHeight: 0.04
       };
       var nv1 = new Niivue(defaults);
-      nv1.opts.tileMargin = 40
-      nv1.attachToCanvas(gl1)
+      nv1.attachToCanvas(gl1);
       // multiplanarShowRender is the preferred option now, 
       // but multiplanarForceRender is still available for backwards compatibility
       // previous use was: nv1.opts.multiplanarForceRender = true;
       nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
       nv1.opts.yoke3Dto2DZoom = true;
       await nv1.loadVolumes(volumeList1);
+      var layerList = [{ url: "../demos/images/mni152.SLF1_R.tsf" }];
+      await nv1.loadMeshes([
+        { url: "../demos/images/tract.SLF1_R.tck", layers: layerList },
+      ]);
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
+      nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
+      nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
+      console.log(
+        "fiber vertex intensity range:",
+        nv1.meshes[0].dpv[0].global_min,
+        nv1.meshes[0].dpv[0].global_max,
+      );
       nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
-      nv1.opts.fontColor = [1, 1, 1, 1]
-      nv1.opts.textHeight = 0.05
+      nv1.setClipPlane([0.2, 0, 120]);
+      let cmaps = nv1.meshShaderNames();
+      let cmapEl = document.getElementById("shaders");
+      for (let i = 0; i < cmaps.length; i++) {
+        let btn = document.createElement("button");
+        btn.innerHTML = cmaps[i];
+        btn.onclick = function () {
+          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+        };
+        cmapEl.appendChild(btn);
+      }
       equalCheck.onchange()
-      rulerSlider.oninput()
-      gapSlider.oninput()
-      thickSlider.oninput()
-      crosshairUnits.onchange()
-      window.addEventListener("resize", resizeCanvas);
-      await nv1.drawScene()
-      resizeSliders()
-      //nv1.setSliceType(nv1.sliceTypeAxial)
     </script>
   </body>
 </html>

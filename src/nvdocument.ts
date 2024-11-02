@@ -65,7 +65,7 @@ export type NVConfigOptions = {
   colorbarHeight: number
   // 0 for no crosshairs
   crosshairWidth: number
-  crosshairWidthUnit: 'voxels' | 'mm'
+  crosshairWidthUnit: 'voxels' | 'mm'| 'percent'
   crosshairGap: number
   rulerWidth: number
   show3Dcrosshair: boolean
