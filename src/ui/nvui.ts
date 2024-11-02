@@ -21,7 +21,7 @@ export class NVUI {
 
     private canvasWidth: number
     private canvasHeight: number
-
+    private dpr: number
     private resizeListener: () => void
 
     // Static enum for line terminators
@@ -32,11 +32,16 @@ export class NVUI {
     constructor(gl: WebGL2RenderingContext) {
         this.gl = gl
         this.renderer = new NVRenderer(gl)
-
+        this.dpr = window.devicePixelRatio || 1
         // Initialize canvasWidth and canvasHeight
         const canvas = this.gl.canvas as HTMLCanvasElement
-        this.canvasWidth = canvas.width
-        this.canvasHeight = canvas.height
+        // this.canvasWidth = canvas.parentElement.getBoundingClientRect().width
+        // this.canvasHeight = canvas.parentElement.getBoundingClientRect().height
+        const rect = canvas.parentElement.getBoundingClientRect()
+        console.log('c b', rect)
+        this.canvasWidth = rect.width
+        this.canvasHeight = rect.height
+        console.log('canvas dimensions', this.canvasWidth, this.canvasHeight)
 
         // Initialize style
         this.style = {
@@ -45,10 +50,9 @@ export class NVUI {
             backgroundColor: [0, 0, 0, 1],
             textSize: 12 // default text size
         }
-
         // Initialize QuadTree with canvas bounds
-        const bounds = new Rectangle(0, 0, this.canvasWidth, this.canvasHeight)
-        this.quadTree = new QuadTree<IUIComponent>(bounds, this.canvasWidth, this.canvasHeight)
+        const bounds = new Rectangle(0, 0, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
+        this.quadTree = new QuadTree<IUIComponent>(bounds, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
 
         // Add event listener for window resize
         this.resizeListener = this.handleWindowResize.bind(this)
@@ -58,6 +62,9 @@ export class NVUI {
         canvas.addEventListener('click', this.handleClick.bind(this))
         canvas.addEventListener('focus', this.handleFocus.bind(this))
         canvas.addEventListener('mousemove', this.handleMouseMove.bind(this))
+        // const resizeEvent = window.document.createEvent('UIEvents');
+        // resizeEvent.initUIEvent('resize', true, false, window, 0);
+        // window.dispatchEvent(resizeEvent);
     }
 
     // Method to add a component to the QuadTree
@@ -90,11 +97,10 @@ export class NVUI {
     }
 
     // Method to handle window resize events
-    private handleWindowResize(): void {
+    public handleWindowResize(): void {
         const canvas = this.gl.canvas as HTMLCanvasElement
-        const devicePixelRatio = window.devicePixelRatio || 1
-        const width = canvas.clientWidth * devicePixelRatio
-        const height = canvas.clientHeight * devicePixelRatio
+        const width = canvas.clientWidth * this.dpr
+        const height = canvas.clientHeight * this.dpr
 
         // Update canvasWidth and canvasHeight
         this.canvasWidth = width

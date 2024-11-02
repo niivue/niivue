@@ -68,17 +68,21 @@ export class QuadTree<T extends IUIComponent> {
     }
 
     insert(component: T): boolean {
+        console.log('canvas dimensions', this.canvasWidth, this.canvasHeight)
         // Get component position in screen coordinates
         const position = component.getPosition()
-
+        console.log('inserting component at ', component, position)
         // Normalize position
         const normalizedPosition: Vec2 = [
             position[0] / this.canvasWidth,
             position[1] / this.canvasHeight
         ]
 
+        console.log('normalized position', normalizedPosition)
+
         // Check if the component's normalized position is within the boundary
         if (!this.boundary.contains(normalizedPosition)) {
+            console.log('position outside of boundary')
             return false
         }
 

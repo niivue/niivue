@@ -1130,6 +1130,7 @@ export class Niivue {
       this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr
       this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr
     }
+    this.ui.handleWindowResize()
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     this.drawScene()
   }
@@ -8516,6 +8517,7 @@ export class Niivue {
     this.gl.enable(this.gl.CULL_FACE)
     this.gl.enable(this.gl.BLEND)
     this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3)
+    this.ui.draw()
   }
 
   // not included in public docs
@@ -11071,6 +11073,7 @@ export class Niivue {
         return
       }
       this.drawLoadingText(this.loadingText)
+
       return
     }
     if (this.back === null) {
@@ -11426,6 +11429,7 @@ export class Niivue {
     this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
     this.sync()
     this.drawAnchoredLabels()
+    this.ui.draw()
     return posString
   }
 
@@ -11440,7 +11444,7 @@ export class Niivue {
     this.isBusy = false
     this.needsRefresh = false
     let posString = this.drawSceneCore()
-    this.ui.draw()
+
     // Chrome and Safari get much more bogged down by concurrent draw calls than Safari
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
@@ -11451,6 +11455,7 @@ export class Niivue {
     if (this.needsRefresh) {
       posString = this.drawScene()
     }
+
     return posString
   }
 

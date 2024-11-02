@@ -30,7 +30,6 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     }
 
     draw(renderer: NVRenderer): void {
-        console.log('calling drawText', this)
         renderer.drawText(
             this.font,
             this.position,

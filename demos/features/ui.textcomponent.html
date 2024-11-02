@@ -20,32 +20,40 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        function drawText(font) {
-            const textColor = [1.0, 1.0, 1.0, 1.0]
-            const ui = new niivue.NVUI(nv1.gl)
-            const str = 'The quick brown fox jumps over the lazy dog!'
-            const textComponent = new niivue.TextComponent([200, nv1.canvas.height / 2], str, font, textColor, 0.5)
-
-            // Adding mouse enter and mouse leave effects
-            textComponent.addEventEffect('mouseEnter', textComponent, 'textColor', [0, 1, 0, 1]) // Set text color to green on mouse enter
-            textComponent.addEventEffect('mouseLeave', textComponent, 'textColor', [1, 1, 1, 1]) // Set text color to white on mouse leave
-
-            ui.addComponent(textComponent)
-
-            nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
-            nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-            ui.draw()
+        function makeDrawText(nv, textComponent) {
+            return function drawText() {
+                if (!added) {
+                    nv.ui.addComponent(textComponent)
+                    console.log(nv.ui)
+                    nv.drawScene()
+                }
+                added = true
+            }
         }
 
+
+
+        var added = false
         var nv1 = new niivue.Niivue();
         nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
         const font = new niivue.NVFont(nv1.gl)
         await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
-        drawText(font)
+        const textColor = [1.0, 1.0, 1.0, 1.0]
+        const str = 'The quick brown fox jumps over the lazy dog!'
+        const scale = 0.5
+        const width = font.getTextWidth(str, scale)
+        const textComponent = new niivue.TextComponent([(nv1.canvas.width - width) / 2, nv1.canvas.height / 2 - 150], str, font, textColor, scale)
 
-        const button = document.getElementById('draw-button');
-        button.onclick = () => drawText(font);
+        // Adding mouse enter and mouse leave effects
+        textComponent.addEventEffect('mouseEnter', textComponent, 'textColor', [0, 1, 0, 1]) // Set text color to green on mouse enter
+        textComponent.addEventEffect('mouseLeave', textComponent, 'textColor', [1, 1, 1, 1]) // Set text color to white on mouse leave
+        nv1.ui.addComponent(textComponent)
+        console.log(nv1.ui)
+        nv1.drawScene()
+        // const button = document.getElementById('draw-button');
+        // button.onclick = makeDrawText(nv1, textComponent)
+
     </script>
 </body>
 
