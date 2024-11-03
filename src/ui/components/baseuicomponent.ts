@@ -9,6 +9,7 @@ export abstract class BaseUIComponent implements IUIComponent {
     protected bounds: Vec4 = [0, 0, 0, 0];
     protected scale: number = 1;
     private eventEffects: Map<string, Effect[]> = new Map();
+    public requestRedraw?: () => void;
 
     abstract draw(renderer: NVRenderer): void;
 
@@ -23,6 +24,9 @@ export abstract class BaseUIComponent implements IUIComponent {
                     if (typeof targetObject[setterName] === 'function') {
                         targetObject[setterName](effect.value)
                     }
+                }
+                if (this.requestRedraw) {
+                    this.requestRedraw()
                 }
                 break
 
@@ -46,6 +50,10 @@ export abstract class BaseUIComponent implements IUIComponent {
                         targetObject[property] = interpolate(effect.from, effect.to, progress)
                     }
 
+                    if (this.requestRedraw) {
+                        this.requestRedraw()
+                    }
+
                     if (progress < 1) {
                         requestAnimationFrame(animate)
                     }
@@ -55,7 +63,6 @@ export abstract class BaseUIComponent implements IUIComponent {
                 break
         }
     }
-
 
     addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue', valueOrFrom: any, to?: any, duration?: number): void {
         const effect: Effect =
@@ -82,7 +89,7 @@ export abstract class BaseUIComponent implements IUIComponent {
     }
 
     applyEventEffects(eventName: string): void {
-        const effects = this.eventEffects.get(eventName);
+        const effects = this.eventEffects.get(eventName)
         if (effects) {
             effects.forEach((effect) => this.applyEffect(effect));
         }

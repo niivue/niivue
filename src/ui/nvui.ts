@@ -1,7 +1,8 @@
-import { Rectangle, QuadTree } from './quadtree.js'
 import { IUIComponent } from './interfaces.js'
+import { Rectangle } from './quadtree.js'
+import { Vec2, Vec4, Color } from './types.js'
 import { NVRenderer } from './nvrenderer.js'
-import { Color, Vec2, Vec4 } from './types.js'
+import { QuadTree } from './quadtree.js'
 import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
 import { LineTerminator } from './types.js'
@@ -35,13 +36,9 @@ export class NVUI {
         this.dpr = window.devicePixelRatio || 1
         // Initialize canvasWidth and canvasHeight
         const canvas = this.gl.canvas as HTMLCanvasElement
-        // this.canvasWidth = canvas.parentElement.getBoundingClientRect().width
-        // this.canvasHeight = canvas.parentElement.getBoundingClientRect().height
         const rect = canvas.parentElement.getBoundingClientRect()
-        console.log('c b', rect)
         this.canvasWidth = rect.width
         this.canvasHeight = rect.height
-        console.log('canvas dimensions', this.canvasWidth, this.canvasHeight)
 
         // Initialize style
         this.style = {
@@ -52,7 +49,7 @@ export class NVUI {
         }
         // Initialize QuadTree with canvas bounds
         const bounds = new Rectangle(0, 0, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
-        this.quadTree = new QuadTree<IUIComponent>(bounds, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
+        this.quadTree = new QuadTree<IUIComponent>(bounds)
 
         // Add event listener for window resize
         this.resizeListener = this.handleWindowResize.bind(this)
@@ -62,13 +59,11 @@ export class NVUI {
         canvas.addEventListener('click', this.handleClick.bind(this))
         canvas.addEventListener('focus', this.handleFocus.bind(this))
         canvas.addEventListener('mousemove', this.handleMouseMove.bind(this))
-        // const resizeEvent = window.document.createEvent('UIEvents');
-        // resizeEvent.initUIEvent('resize', true, false, window, 0);
-        // window.dispatchEvent(resizeEvent);
     }
 
     // Method to add a component to the QuadTree
     public addComponent(component: IUIComponent): void {
+        component.requestRedraw = this.requestRedraw.bind(this)
         this.quadTree.insert(component)
     }
 
@@ -96,6 +91,11 @@ export class NVUI {
         }
     }
 
+    // Method to request a redraw
+    private requestRedraw(): void {
+        this.draw()
+    }
+
     // Method to handle window resize events
     public handleWindowResize(): void {
         const canvas = this.gl.canvas as HTMLCanvasElement
@@ -106,8 +106,8 @@ export class NVUI {
         this.canvasWidth = width
         this.canvasHeight = height
 
-        // Update the QuadTree's canvas dimensions
-        this.quadTree.updateCanvasSize(width, height)
+        const bounds = new Rectangle(0, 0, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
+        this.quadTree.updateBoundary(bounds)
     }
 
     // Method to handle click events
@@ -133,9 +133,9 @@ export class NVUI {
     private handleMouseMove(event: MouseEvent): void {
         const canvas = this.gl.canvas as HTMLCanvasElement
         const rect = canvas.getBoundingClientRect()
-        const point: Vec2 = [event.clientX - rect.left, event.clientY - rect.top]
+        const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
+
         const components = new Set(this.quadTree.queryPoint(point))
-        console.log('!')
 
         // Handle mouse enter for newly hovered components
         for (const component of components) {
@@ -152,7 +152,7 @@ export class NVUI {
         }
 
         this.lastHoveredComponents = components
-        if (components.values.length > 0) {
+        if (components.size > 0) {
             this.draw()
         }
     }

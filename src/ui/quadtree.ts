@@ -34,7 +34,7 @@ export class Rectangle {
 }
 
 export class QuadTree<T extends IUIComponent> {
-    boundary: Rectangle // Normalized coordinates [0, 1]
+    boundary: Rectangle
     capacity: number
     components: T[]
     divided: boolean
@@ -43,18 +43,8 @@ export class QuadTree<T extends IUIComponent> {
     southeast: QuadTree<T> | null
     southwest: QuadTree<T> | null
 
-    // Canvas dimensions
-    canvasWidth: number
-    canvasHeight: number
-
-    constructor(boundary: Rectangle, canvasWidth: number, canvasHeight: number, capacity = 4) {
-        // Normalize the boundary coordinates
-        this.boundary = new Rectangle(
-            boundary.x / canvasWidth,
-            boundary.y / canvasHeight,
-            boundary.width / canvasWidth,
-            boundary.height / canvasHeight
-        )
+    constructor(boundary: Rectangle, capacity = 64) {
+        this.boundary = boundary
         this.capacity = capacity
         this.components = []
         this.divided = false
@@ -62,27 +52,12 @@ export class QuadTree<T extends IUIComponent> {
         this.northwest = null
         this.southeast = null
         this.southwest = null
-
-        this.canvasWidth = canvasWidth
-        this.canvasHeight = canvasHeight
     }
 
     insert(component: T): boolean {
-        console.log('canvas dimensions', this.canvasWidth, this.canvasHeight)
-        // Get component position in screen coordinates
         const position = component.getPosition()
-        console.log('inserting component at ', component, position)
-        // Normalize position
-        const normalizedPosition: Vec2 = [
-            position[0] / this.canvasWidth,
-            position[1] / this.canvasHeight
-        ]
 
-        console.log('normalized position', normalizedPosition)
-
-        // Check if the component's normalized position is within the boundary
-        if (!this.boundary.contains(normalizedPosition)) {
-            console.log('position outside of boundary')
+        if (!this.boundary.contains(position)) {
             return false
         }
 
@@ -107,38 +82,25 @@ export class QuadTree<T extends IUIComponent> {
         const w = this.boundary.width / 2
         const h = this.boundary.height / 2
 
-        const ne = new Rectangle(x + w * this.canvasWidth, y * this.canvasHeight, w * this.canvasWidth, h * this.canvasHeight)
-        this.northeast = new QuadTree<T>(ne, this.canvasWidth, this.canvasHeight, this.capacity)
-        const nw = new Rectangle(x * this.canvasWidth, y * this.canvasHeight, w * this.canvasWidth, h * this.canvasHeight)
-        this.northwest = new QuadTree<T>(nw, this.canvasWidth, this.canvasHeight, this.capacity)
-        const se = new Rectangle(x + w * this.canvasWidth, y + h * this.canvasHeight, w * this.canvasWidth, h * this.canvasHeight)
-        this.southeast = new QuadTree<T>(se, this.canvasWidth, this.canvasHeight, this.capacity)
-        const sw = new Rectangle(x * this.canvasWidth, y + h * this.canvasHeight, w * this.canvasWidth, h * this.canvasHeight)
-        this.southwest = new QuadTree<T>(sw, this.canvasWidth, this.canvasHeight, this.capacity)
+        const ne = new Rectangle(x + w, y, w, h)
+        this.northeast = new QuadTree<T>(ne, this.capacity)
+        const nw = new Rectangle(x, y, w, h)
+        this.northwest = new QuadTree<T>(nw, this.capacity)
+        const se = new Rectangle(x + w, y + h, w, h)
+        this.southeast = new QuadTree<T>(se, this.capacity)
+        const sw = new Rectangle(x, y + h, w, h)
+        this.southwest = new QuadTree<T>(sw, this.capacity)
 
         this.divided = true
     }
 
     query(range: Rectangle, found: T[] = []): T[] {
-        // Normalize query range
-        const normalizedRange = new Rectangle(
-            range.x / this.canvasWidth,
-            range.y / this.canvasHeight,
-            range.width / this.canvasWidth,
-            range.height / this.canvasHeight
-        )
-
-        if (!this.boundary.intersects(normalizedRange)) {
+        if (!this.boundary.intersects(range)) {
             return found
         } else {
             for (const component of this.components) {
-                const position = component.getPosition()
-                // Normalize position
-                const normalizedPosition: Vec2 = [
-                    position[0] / this.canvasWidth,
-                    position[1] / this.canvasHeight
-                ]
-                if (normalizedRange.contains(normalizedPosition)) {
+                const bounds = component.getBounds()
+                if (range.contains([bounds[0], bounds[1]])) {
                     found.push(component)
                 }
             }
@@ -153,13 +115,7 @@ export class QuadTree<T extends IUIComponent> {
     }
 
     queryPoint(point: Vec2, found: T[] = []): T[] {
-        // Normalize point
-        const normalizedPoint: Vec2 = [
-            point[0] / this.canvasWidth,
-            point[1] / this.canvasHeight
-        ]
-
-        if (!this.boundary.contains(normalizedPoint)) {
+        if (!this.boundary.contains(point)) {
             return found
         } else {
             for (const component of this.components) {
@@ -190,23 +146,10 @@ export class QuadTree<T extends IUIComponent> {
         return elements
     }
 
-    // Method to update canvas bounds
-    updateCanvasSize(canvasWidth: number, canvasHeight: number): void {
-        this.canvasWidth = canvasWidth
-        this.canvasHeight = canvasHeight
-
-        // Update boundary
-        this.boundary = new Rectangle(
-            0, 0,
-            1, 1 // Since boundary is normalized, remains the same
-        )
-
-        // Update children QuadTrees
+    updateBoundary(newBoundary: Rectangle): void {
+        this.boundary = newBoundary
         if (this.divided) {
-            this.northeast!.updateCanvasSize(canvasWidth, canvasHeight)
-            this.northwest!.updateCanvasSize(canvasWidth, canvasHeight)
-            this.southeast!.updateCanvasSize(canvasWidth, canvasHeight)
-            this.southwest!.updateCanvasSize(canvasWidth, canvasHeight)
+            this.subdivide()
         }
     }
 }
