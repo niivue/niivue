@@ -8110,30 +8110,30 @@ export class Niivue {
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-    if (!this.lineShader) {
-      throw new Error('lineShader undefined')
-    }
+    // if (!this.lineShader) {
+    //   throw new Error('lineShader undefined')
+    // }
 
-    this.lineShader.use(this.gl)
-    gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
-    gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
-    // draw Line
-    gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
-    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    // draw startCap
-    const color = this.opts.rulerColor
-    color[3] = 1.0 // opaque
-    gl.uniform4fv(this.lineShader.uniforms.lineColor, color)
-    const w = this.opts.rulerWidth
-    gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
-    let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
-    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    // end cap
-    sXYeXY = [startXYendXY[2], startXYendXY[3] - w, startXYendXY[2], startXYendXY[3] + w]
-    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    // this.lineShader.use(this.gl)
+    // gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
+    // gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+    // // draw Line
+    // gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
+    // gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
+    // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    // // draw startCap
+    // const color = this.opts.rulerColor
+    // color[3] = 1.0 // opaque
+    // gl.uniform4fv(this.lineShader.uniforms.lineColor, color)
+    // const w = this.opts.rulerWidth
+    // gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
+    // let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
+    // gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
+    // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    // // end cap
+    // sXYeXY = [startXYendXY[2], startXYendXY[3] - w, startXYendXY[2], startXYendXY[3] + w]
+    // gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
+    // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // distance between start and stop
     let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]])
     let endXY = this.canvasPos2frac([startXYendXY[2], startXYendXY[3]])
@@ -8165,7 +8165,7 @@ export class Niivue {
       //   15,
       //   0.2
       // )
-      this.ui.drawCaliper([startXYendXY[0], startXYendXY[1]], [startXYendXY[2], startXYendXY[3]], stringMM, this.defaultFont, this.opts.rulerColor, this.opts.rulerColor)
+      this.ui.drawCaliper([startXYendXY[0], startXYendXY[1]], [startXYendXY[2], startXYendXY[3]], stringMM, this.defaultFont, this.opts.rulerColor, this.opts.rulerColor, this.opts.rulerWidth)
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }

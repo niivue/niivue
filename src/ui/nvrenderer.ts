@@ -758,31 +758,58 @@ export class NVRenderer {
         this.drawText(font, textPosition, str, scale, textColor, maxWidth)
     }
 
-    public drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1]): void {
+    public drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40): void {
         // Calculate the angle between the points
         const deltaX = pointB[0] - pointA[0]
         const deltaY = pointB[1] - pointA[1]
         const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
         let angle = Math.atan2(deltaY, deltaX)
+        console.log('rotation ' + angle * 180 / Math.PI + ' degrees')
+
+        const isAngleAdjusted = (angle < -Math.PI / 2 && angle > -Math.PI)
 
         // Ensure text is not upside down
-        if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-            angle += Math.PI
-        }
+
 
         // Calculate the midpoint
         const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
 
-        // Adjust the text position to ensure it's centered on the midpoint
+        // Adjust the text position to ensure it's centered above the parallel line
         const textWidth = font.getTextWidth(text, 1.0)
         const textHeight = font.getTextHeight(text, 1.0)
-        const textPosition: Vec2 = [
-            midPoint[0] - (textWidth / 2) * Math.cos(angle) + (textHeight / 2) * Math.sin(angle),
-            midPoint[1] - (textWidth / 2) * Math.sin(angle) - (textHeight / 2) * Math.cos(angle)
+        const halfTextWidth = textWidth / 2
+        const halfTextHeight = textHeight / 2
+        let textPosition: Vec2 = [
+            midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
+            midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
         ]
+
+        // Ensure text is not upside down
+        if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+            angle += Math.PI
+            textPosition = [
+                midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
+                midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
+            ]
+        }
 
         // Draw the rotated text at the adjusted position
         this.drawRotatedText(font, textPosition, text, 1.0, textColor, angle)
+
+        // Draw a parallel line of equal length to the original line
+        const parallelPointA: Vec2 = [
+            pointA[0] + offset * deltaY / length,
+            pointA[1] - offset * deltaX / length
+        ]
+        const parallelPointB: Vec2 = [
+            pointB[0] + offset * deltaY / length,
+            pointB[1] - offset * deltaX / length
+        ]
+        this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
+
+        // Draw lines terminating in arrows from the ends of the parallel line to points A and B
+        this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
+        this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
     }
 
 
