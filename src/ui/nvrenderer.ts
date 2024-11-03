@@ -314,6 +314,41 @@ export class NVRenderer {
     }
 
     /**
+ * Draws an elbow line.
+ * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
+ * @param thickness - The thickness of the line.
+ * @param lineColor - The color of the line.
+ * @param horizontalFirst - If true, draw the horizontal segment first, otherwise draw the vertical segment first.
+ */
+    public drawElbowLine(
+        startEnd: Vec4,
+        thickness = 1,
+        lineColor: Color = [1, 0, 0, -1],
+        horizontalFirst = true,
+        terminator: LineTerminator = LineTerminator.NONE
+    ): void {
+        // Extract start and end points
+        const [startX, startY, endX, endY] = startEnd;
+
+        // Calculate the midpoint for the elbow
+        const midX = horizontalFirst ? startX + (endX - startX) / 2 : startX;
+        const midY = horizontalFirst ? startY : startY + (endY - startY) / 2;
+
+        // Draw the first segment (either horizontal or vertical)
+        const firstSegment: Vec4 = horizontalFirst
+            ? [startX, startY, midX, startY]
+            : [startX, startY, startX, midY];
+        this.drawLine(firstSegment, thickness, lineColor);
+
+        // Draw the second segment (the other direction)
+        const secondSegment: Vec4 = horizontalFirst
+            ? [midX, startY, endX, endY]
+            : [startX, midY, endX, endY];
+        this.drawLine(secondSegment, thickness, lineColor, terminator);
+    }
+
+
+    /**
      * Draws a rectangle.
      * @param leftTopWidthHeight - The bounding box of the rectangle (left, top, width, height).
      * @param lineColor - The color of the rectangle.
