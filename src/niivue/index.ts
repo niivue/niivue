@@ -10609,7 +10609,7 @@ export class Niivue {
       }
       this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius, 20, this.opts.crosshairGap)
       this.crosshairs3D.mm = mm
-      //this.crosshairs3D.radius = radius
+      // this.crosshairs3D.radius = radius
     }
 
     if (!this.surfaceShader) {
