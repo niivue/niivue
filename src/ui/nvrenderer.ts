@@ -763,27 +763,26 @@ export class NVRenderer {
         const deltaX = pointB[0] - pointA[0]
         const deltaY = pointB[1] - pointA[1]
         const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-        const angle = Math.atan2(deltaY, deltaX)
+        let angle = Math.atan2(deltaY, deltaX)
+
+        // Ensure text is not upside down
+        if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+            angle += Math.PI
+        }
 
         // Calculate the midpoint
         const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
-
-        // Calculate rotation to keep text upright
-        let textRotation = angle
-        // if (deltaY > 0) {
-        //     textRotation += Math.PI
-        // }
 
         // Adjust the text position to ensure it's centered on the midpoint
         const textWidth = font.getTextWidth(text, 1.0)
         const textHeight = font.getTextHeight(text, 1.0)
         const textPosition: Vec2 = [
-            midPoint[0] - (textWidth / 2) * Math.cos(textRotation) + (textHeight / 2) * Math.sin(textRotation),
-            midPoint[1] - (textWidth / 2) * Math.sin(textRotation) - (textHeight / 2) * Math.cos(textRotation)
+            midPoint[0] - (textWidth / 2) * Math.cos(angle) + (textHeight / 2) * Math.sin(angle),
+            midPoint[1] - (textWidth / 2) * Math.sin(angle) - (textHeight / 2) * Math.cos(angle)
         ]
 
         // Draw the rotated text at the adjusted position
-        this.drawRotatedText(font, textPosition, text, 1.0, textColor, textRotation)
+        this.drawRotatedText(font, textPosition, text, 1.0, textColor, angle)
     }
 
 
