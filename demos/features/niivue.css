@@ -36,7 +36,6 @@ canvas:focus {
 }
 div {
   display: table-row;
-  background-color: blue;
 }
 .dropdown {
   float: left;
