@@ -8154,17 +8154,18 @@ export class Niivue {
       }
       const stringMM = lenMM.toFixed(decimals)
       // this.drawTextBetween(startXYendXY, stringMM, 1, color)
-      const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2]
-      this.ui.drawTextBoxCenteredOn(
-        this.defaultFont,
-        pos,
-        stringMM,
-        this.opts.rulerColor,
-        this.opts.rulerColor,
-        [0, 0, 0, 0.3],
-        15,
-        0.2
-      )
+      const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2] as [number, number]
+      // this.ui.drawTextBoxCenteredOn(
+      //   this.defaultFont,
+      //   pos,
+      //   stringMM,
+      //   this.opts.rulerColor,
+      //   this.opts.rulerColor,
+      //   [0, 0, 0, 0.3],
+      //   15,
+      //   0.2
+      // )
+      this.ui.drawCaliper([startXYendXY[0], startXYendXY[1]], [startXYendXY[2], startXYendXY[3]], stringMM, this.defaultFont, this.opts.rulerColor, this.opts.rulerColor)
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }

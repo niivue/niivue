@@ -720,4 +720,151 @@ export class NVRenderer {
             }
         }
     }
+
+    drawTextBox(
+        font: NVFont,
+        xy: Vec2,
+        str: string,
+        textColor: Color = [0, 0, 0, 1.0],
+        outlineColor: Color = [1.0, 1.0, 1.0, 1.0],
+        fillColor: Color = [0.0, 0.0, 0.0, 0.3],
+        margin: number = 15,
+        roundness: number = 0.0,
+        scale = 1.0,
+        maxWidth = 0
+    ): void {
+        const textHeight = font.getTextHeight(str, scale)
+        const wrappedSize = font.getWordWrappedSize(str, scale, maxWidth)
+        const rectWidth = wrappedSize[0] + 2 * margin * scale + textHeight
+        const rectHeight = wrappedSize[1] + 4 * margin * scale // Height of the rectangle enclosing the text
+
+        const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight] as [number, number, number, number]
+        this.drawRoundedRect(
+            leftTopWidthHeight,
+            fillColor,
+            outlineColor,
+            (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3])
+        )
+        const descenderDepth = font.getDescenderDepth(str, scale)
+
+        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+        // Adjust the position of the text with a margin, ensuring it's vertically centered
+        const textPosition = [
+            leftTopWidthHeight[0] + margin * scale + textHeight / 2,
+            leftTopWidthHeight[1] + 2 * margin * scale + textHeight - size + descenderDepth
+        ] as [number, number]
+
+        // Render the text
+        this.drawText(font, textPosition, str, scale, textColor, maxWidth)
+    }
+
+    public drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1]): void {
+        // Calculate the angle between the points
+        const deltaX = pointB[0] - pointA[0]
+        const deltaY = pointB[1] - pointA[1]
+        const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+        const angle = Math.acos(deltaX / length)
+
+        // Calculate the midpoint
+        const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
+
+        // Calculate rotation to keep text upright
+        let textRotation = angle
+        if (deltaY > 0) {
+            textRotation += Math.PI
+        }
+
+        // Adjust the text position to ensure it's centered on the midpoint
+        const textWidth = font.getTextWidth(text, 1.0)
+        const textHeight = font.getTextHeight(text, 1.0)
+        const textPosition: Vec2 = [
+            midPoint[0] - (textWidth / 2) * Math.cos(textRotation) + (textHeight / 2) * Math.sin(textRotation),
+            midPoint[1] - (textWidth / 2) * Math.sin(textRotation) - (textHeight / 2) * Math.cos(textRotation)
+        ]
+
+        // Draw the rotated text at the adjusted position
+        this.drawRotatedText(font, textPosition, text, 1.0, textColor, textRotation)
+    }
+    // public drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1]): void {
+    //     // Calculate the angle between the points
+    //     const deltaX = pointB[0] - pointA[0]
+    //     const deltaY = pointB[1] - pointA[1]
+    //     const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    //     const angle = Math.acos(deltaX / length)
+
+    //     // Calculate the midpoint
+    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
+
+    //     // Calculate rotation to keep text upright
+    //     let textRotation = angle
+    //     if (deltaY > 0) {
+    //         textRotation += Math.PI
+    //     }
+
+    //     // Adjust the text position to ensure it's centered on the midpoint
+    //     const textWidth = font.getTextWidth(text, 1.0)
+    //     const textHeight = font.getTextHeight(text, 1.0)
+    //     const textPosition: Vec2 = [
+    //         midPoint[0] - (textWidth / 2) * Math.cos(textRotation) + (textHeight / 2) * Math.sin(textRotation),
+    //         midPoint[1] - (textWidth / 2) * Math.sin(textRotation) - (textHeight / 2) * Math.cos(textRotation)
+    //     ]
+
+    //     // Draw the rotated text at the adjusted position
+    //     this.drawRotatedText(font, textPosition, text, 1.0, textColor, textRotation)
+
+    //     // Draw perpendicular lines connecting points A and B to the parallel line
+    //     const perpLength = textHeight / 2 + 10 // Adjust length to reach midpoint of text height
+    //     const perpDirX = -deltaY / length
+    //     const perpDirY = deltaX / length
+
+    //     const arrowPointA: Vec2 = [pointA[0] + perpDirX * perpLength, pointA[1] + perpDirY * perpLength]
+    //     this.drawLine([pointA[0], pointA[1], arrowPointA[0], arrowPointA[1]], 1, lineColor, LineTerminator.ARROW)
+
+    //     const arrowPointB: Vec2 = [pointB[0] + perpDirX * perpLength, pointB[1] + perpDirY * perpLength]
+    //     this.drawLine([pointB[0], pointB[1], arrowPointB[0], arrowPointB[1]], 1, lineColor, LineTerminator.ARROW)
+
+    //     // Draw lines connecting the perpendicular lines to the ends of the text, parallel to the line between A and B
+    //     const textEndA: Vec2 = [midPoint[0] - textWidth / 2, midPoint[1]]
+    //     const textEndB: Vec2 = [midPoint[0] + textWidth / 2, midPoint[1]]
+    //     this.drawLine([arrowPointA[0], arrowPointA[1], textEndA[0], textEndA[1]], 1, lineColor)
+    //     this.drawLine([arrowPointB[0], arrowPointB[1], textEndB[0], textEndB[1]], 1, lineColor)
+    // }
+    // public drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1]): void {
+    //     // Calculate the angle between the points
+    //     const deltaX = pointB[0] - pointA[0]
+    //     const deltaY = pointB[1] - pointA[1]
+    //     const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    //     const angle = Math.acos(deltaX / length)
+
+    //     // Calculate the midpoint
+    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
+
+    //     // Calculate rotation to keep text upright
+    //     let textRotation = angle
+    //     if (deltaY > 0) {
+    //         textRotation += Math.PI
+    //     }
+
+    //     // Adjust the text position to ensure it's centered on the midpoint
+    //     const textWidth = font.getTextWidth(text, 1.0)
+    //     const textHeight = font.getTextHeight(text, 1.0)
+    //     const textPosition: Vec2 = [
+    //         midPoint[0] - (textWidth / 2) * Math.cos(textRotation) + (textHeight / 2) * Math.sin(textRotation),
+    //         midPoint[1] - (textWidth / 2) * Math.sin(textRotation) - (textHeight / 2) * Math.cos(textRotation)
+    //     ]
+
+    //     // Draw the rotated text at the adjusted position
+    //     this.drawRotatedText(font, textPosition, text, 1.0, textColor, textRotation)
+
+    //     // Draw perpendicular lines connecting points A and B to the parallel line
+    //     const perpLength = textHeight / 2 + 10 // Adjust length to reach midpoint of text height
+    //     const perpDirX = -deltaY / length
+    //     const perpDirY = deltaX / length
+
+    //     const arrowPointA: Vec2 = [pointA[0] + perpDirX * perpLength, pointA[1] + perpDirY * perpLength]
+    //     this.drawLine([pointA[0], pointA[1], arrowPointA[0], arrowPointA[1]], 1, lineColor, LineTerminator.ARROW)
+
+    //     const arrowPointB: Vec2 = [pointB[0] + perpDirX * perpLength, pointB[1] + perpDirY * perpLength]
+    //     this.drawLine([pointB[0], pointB[1], arrowPointB[0], arrowPointB[1]], 1, lineColor, LineTerminator.ARROW)
+    // }
 }

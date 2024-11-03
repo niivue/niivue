@@ -1,17 +1,17 @@
-import { IUIComponent } from '../interfaces.js';
+import { IUIComponent } from '../interfaces.js'
 import { NVRenderer } from '../nvrenderer.js'
 import { Effect, Vec2, Vec4 } from '../types.js'
 
 export abstract class BaseUIComponent implements IUIComponent {
-    isVisible: boolean = true;
-    zIndex: number = 0;
-    protected position: Vec2 = [0, 0];
-    protected bounds: Vec4 = [0, 0, 0, 0];
-    protected scale: number = 1;
-    private eventEffects: Map<string, Effect[]> = new Map();
-    public requestRedraw?: () => void;
+    isVisible: boolean = true
+    zIndex: number = 0
+    protected position: Vec2 = [0, 0]
+    protected bounds: Vec4 = [0, 0, 0, 0]
+    protected scale: number = 1
+    private eventEffects: Map<string, Effect[]> = new Map()
+    public requestRedraw?: () => void
 
-    abstract draw(renderer: NVRenderer): void;
+    abstract draw(renderer: NVRenderer): void
 
     applyEffect(effect: Effect): void {
         const { targetObject, property } = effect
@@ -80,43 +80,43 @@ export abstract class BaseUIComponent implements IUIComponent {
                     from: valueOrFrom,
                     to: to!,
                     duration: duration!,
-                };
+                }
 
         if (!this.eventEffects.has(event)) {
-            this.eventEffects.set(event, []);
+            this.eventEffects.set(event, [])
         }
-        this.eventEffects.get(event)!.push(effect);
+        this.eventEffects.get(event)!.push(effect)
     }
 
     applyEventEffects(eventName: string): void {
         const effects = this.eventEffects.get(eventName)
         if (effects) {
-            effects.forEach((effect) => this.applyEffect(effect));
+            effects.forEach((effect) => this.applyEffect(effect))
         }
     }
 
     getBounds(): Vec4 {
-        return this.bounds;
+        return this.bounds
     }
 
     setBounds(bounds: Vec4): void {
-        this.bounds = bounds;
+        this.bounds = bounds
     }
 
     getPosition(): Vec2 {
-        return this.position;
+        return this.position
     }
 
     setPosition(position: Vec2): void {
-        this.position = position;
-        this.bounds = [this.position[0], this.position[1], this.bounds[2], this.bounds[3]];
+        this.position = position
+        this.bounds = [this.position[0], this.position[1], this.bounds[2], this.bounds[3]]
     }
 
     getScale(): number {
-        return this.scale;
+        return this.scale
     }
 
     setScale(value: number): void {
-        this.scale = value;
+        this.scale = value
     }
 }

@@ -57,7 +57,6 @@ export class NVUI {
 
         // Add event listeners for click, focus, and mouse movement
         canvas.addEventListener('click', this.handleClick.bind(this))
-        canvas.addEventListener('focus', this.handleFocus.bind(this))
         canvas.addEventListener('mousemove', this.handleMouseMove.bind(this))
     }
 
@@ -67,7 +66,6 @@ export class NVUI {
         this.quadTree.insert(component)
     }
 
-    // Updated draw method to set the viewport using canvasWidth and canvasHeight
     public draw(boundsInScreenCoords?: Vec4): void {
         // Update the WebGL viewport using canvasWidth and canvasHeight
         this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
@@ -87,9 +85,12 @@ export class NVUI {
         }
 
         for (const component of components) {
-            component.draw(this.renderer)
+            if (component.isVisible) {
+                component.draw(this.renderer)
+            }
         }
     }
+
 
     // Method to request a redraw
     private requestRedraw(): void {
@@ -114,20 +115,13 @@ export class NVUI {
     private handleClick(event: MouseEvent): void {
         const canvas = this.gl.canvas as HTMLCanvasElement
         const rect = canvas.getBoundingClientRect()
-        const point: Vec2 = [event.clientX - rect.left, event.clientY - rect.top]
+        const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
         const components = this.quadTree.queryPoint(point)
         for (const component of components) {
             component.applyEventEffects('click')
         }
     }
 
-    // Method to handle focus events
-    private handleFocus(event: FocusEvent): void {
-        const components = this.quadTree.getAllElements()
-        for (const component of components) {
-            component.applyEventEffects('focus')
-        }
-    }
 
     // Method to handle mouse move events for mouse enter and mouse leave
     private handleMouseMove(event: MouseEvent): void {
@@ -162,7 +156,6 @@ export class NVUI {
         window.removeEventListener('resize', this.resizeListener)
         const canvas = this.gl.canvas as HTMLCanvasElement
         canvas.removeEventListener('click', this.handleClick.bind(this))
-        canvas.removeEventListener('focus', this.handleFocus.bind(this))
         canvas.removeEventListener('mousemove', this.handleMouseMove.bind(this))
     }
 
@@ -250,48 +243,26 @@ export class NVUI {
     // Updated drawTextBox method to support maxWidth and word wrapping
     drawTextBox(
         font: NVFont,
-        xy: number[],
+        xy: Vec2,
         str: string,
-        textColor: Float32List | null = [0, 0, 0, 1.0],
-        outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0],
-        fillColor: Float32List = [0.0, 0.0, 0.0, 0.3],
+        textColor: Color = [0, 0, 0, 1.0],
+        outlineColor: Color = [1.0, 1.0, 1.0, 1.0],
+        fillColor: Color = [0.0, 0.0, 0.0, 0.3],
         margin: number = 15,
         roundness: number = 0.0,
         scale = 1.0,
         maxWidth = 0
     ): void {
-        const textHeight = font.getTextHeight(str, scale)
-        const wrappedSize = font.getWordWrappedSize(str, scale, maxWidth)
-        const rectWidth = wrappedSize[0] + 2 * margin * scale + textHeight
-        const rectHeight = wrappedSize[1] + 4 * margin * scale // Height of the rectangle enclosing the text
-
-        const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight] as [number, number, number, number]
-        this.drawRoundedRect(
-            leftTopWidthHeight,
-            fillColor,
-            outlineColor,
-            (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3])
-        )
-        const descenderDepth = font.getDescenderDepth(str, scale)
-
-        const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-        // Adjust the position of the text with a margin, ensuring it's vertically centered
-        const textPosition = [
-            leftTopWidthHeight[0] + margin * scale + textHeight / 2,
-            leftTopWidthHeight[1] + 2 * margin * scale + textHeight - size + descenderDepth
-        ] as [number, number]
-
-        // Render the text
-        this.drawText(font, textPosition, str, scale, textColor, maxWidth)
+        this.renderer.drawTextBox(font, xy, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth)
     }
 
     drawTextBoxCenteredOn(
         font: NVFont,
-        xy: number[],
+        xy: Vec2,
         str: string,
-        textColor: Float32List | null = null,
-        outlineColor: Float32List | null = [1.0, 1.0, 1.0, 1.0],
-        fillColor: Float32List = [0.0, 0.0, 0.0, 0.3],
+        textColor: Color = [0, 0, 0, 1.0],
+        outlineColor: Color = [1.0, 1.0, 1.0, 1.0],
+        fillColor: Color = [0.0, 0.0, 0.0, 0.3],
         margin: number = 15,
         roundness: number = 0.0,
         scale = 1.0,
@@ -302,7 +273,7 @@ export class NVUI {
         const padding = textHeight > textWidth ? textHeight - textWidth : 0
         const rectWidth = textWidth + 2 * margin * scale + textHeight + padding
         const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
-        const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2]
+        const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2] as Vec2
 
         this.drawTextBox(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth)
     }
@@ -327,5 +298,9 @@ export class NVUI {
             selectedColor,
             firstDayOfWeek
         )
+    }
+
+    drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1]): void {
+        this.renderer.drawCaliper(pointA, pointB, text, font, textColor, lineColor)
     }
 }
