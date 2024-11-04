@@ -34,21 +34,17 @@ export class AnimationManager {
             }
         } else {
             // Handle toggle effect for animation
-            console.log('adding animation', animation)
             if (animation.isToggle) {
                 const currentValue = getObjectProperty(animation.targetObject, animation.property)
-                console.log('current val', currentValue)
                 if (currentValue !== null) {
                     const from = animation.from
                     const to = animation.to
                     const isEqualToFrom = isEqual(currentValue, animation.from)
-                    console.log('obj prop is equal to from', isEqualToFrom)
                     animation.from = isEqualToFrom ? from : to
                     animation.to = isEqualToFrom ? to : from
                 }
 
             }
-            console.log('adding animation after comparing', animation)
             this.animations.add(animation)
             animation.start(this.requestRedrawCallback)
         }
@@ -168,10 +164,7 @@ export class Animation {
             )
             setObjectProperty(this.targetObject, this.property, interpolatedValues)
         } else if (typeof this.from === 'number' && typeof this.to === 'number') {
-            console.log('setting ' + this.property + ' on ', this.targetObject)
-            // console.log(this)
             const value = interpolate(this.from, this.to, progress)
-            console.log('to ', value)
             setObjectProperty(this.targetObject, this.property, value)
         }
 

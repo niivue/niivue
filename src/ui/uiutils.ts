@@ -1,5 +1,4 @@
 export function setObjectProperty(obj: Object, propertyName: string, value: any) {
-    console.log('setObject called for ', obj, propertyName, value)
     if (propertyName in obj) {
         obj[propertyName] = value
     } else {
@@ -22,7 +21,7 @@ export function getObjectProperty(obj: Object, propertyName: string): any {
             return obj[getterName]()
         }
         else {
-            console.log('prop not found', getterName)
+            console.error('prop not found', getterName)
         }
     }
     return null

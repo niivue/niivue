@@ -107,25 +107,6 @@ export abstract class BaseUIComponent implements IUIComponent {
     }
 
     addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue' | 'toggleValue', valueOrFrom: any, to?: any, duration?: number, isBounce: boolean = false, isToggle: boolean = false): void {
-        // const effect: Effect =
-        //     effectType === 'setValue'
-        //         ? {
-        //             type: 'setValue',
-        //             targetObject,
-        //             property,
-        //             value: valueOrFrom,
-        //             isToggle
-        //         }
-        //         : {
-        //             type: 'animateValue',
-        //             targetObject,
-        //             property,
-        //             from: valueOrFrom,
-        //             to: to!,
-        //             duration: duration!,
-        //             isBounce,
-        //             isToggle
-        //         }
         let effect: Effect
         switch (effectType) {
             case 'setValue':
@@ -159,7 +140,6 @@ export abstract class BaseUIComponent implements IUIComponent {
                 }
                 break
         }
-        console.log('effect is ', effect)
 
         if (!this.eventEffects.has(event)) {
             this.eventEffects.set(event, [])

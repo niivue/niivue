@@ -491,7 +491,6 @@ export class NVRenderer {
             cornerRadius,
             2.0 // Outline thickness
         );
-        console.log('knob position', knobPosition)
         // Clamp knobPosition between 0 and 1
         knobPosition = Math.max(0, Math.min(1, knobPosition));
 
@@ -505,51 +504,6 @@ export class NVRenderer {
         // Draw the toggle knob as a circle
         this.drawCircle([knobX, knobY, knobSize, knobSize], new Float32Array([1.0, 1.0, 1.0, 1.0]));
     }
-
-    // /**
-    //  * Draws a toggle switch.
-    //  * @param position - The position of the top-left corner of the toggle.
-    //  * @param size - The size of the toggle ([width, height]).
-    //  * @param isOn - Whether the toggle is on or off.
-    //  * @param onColor - The color when the toggle is on.
-    //  * @param offColor - The color when the toggle is off.
-    //  */
-    // // In nvrenderer.ts
-
-    // public drawToggle(
-    //     position: Vec2,
-    //     size: Vec2,
-    //     isOn: boolean,
-    //     onColor: Color,
-    //     offColor: Color,
-    //     knobPosition: number = isOn ? 1.0 : 0.0
-    // ): void {
-    //     const cornerRadius = size[1] / 2 // Height is used for radius
-
-    //     // Ensure the colors are Float32Array
-    //     const fillColor = isOn ? new Float32Array(onColor) : new Float32Array(offColor)
-
-    //     // Draw the background rounded rectangle
-    //     this.drawRoundedRect(
-    //         [position[0], position[1], size[0], size[1]],
-    //         fillColor,
-    //         [0.2, 0.2, 0.2, 1.0], // Outline color
-    //         cornerRadius,
-    //         2.0 // Outline thickness
-    //     )
-
-    //     // Calculate the circle (toggle knob) position
-    //     const knobSize = size[1] * 0.8
-    //     const knobX = isOn
-    //         ? position[0] + size[0] - knobSize - (size[1] - knobSize) / 2
-    //         : position[0] + (size[1] - knobSize) / 2
-    //     const knobY = position[1] + (size[1] - knobSize) / 2
-
-    //     // Draw the toggle knob as a circle
-    //     this.drawCircle([knobX, knobY, knobSize, knobSize], new Float32Array([1.0, 1.0, 1.0, 1.0]))
-    // }
-
-
 
     public drawTriangle(
         headPoint: Vec2,

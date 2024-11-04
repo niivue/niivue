@@ -89,7 +89,6 @@ export class ToggleComponent extends BaseUIComponent {
     }
 
     setKnobPosition(position: number) {
-        console.log('set knob position called with', position)
         this.knobPosition = position
     }
 
