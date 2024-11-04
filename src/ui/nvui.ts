@@ -7,6 +7,7 @@ import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
 import { LineTerminator } from './types.js'
 import { BaseContainerComponent } from './components/basecontainercomponent.js'
+import { AnimationManager } from './animationmanager.js'
 
 export class NVUI {
     private gl: WebGL2RenderingContext
@@ -51,6 +52,10 @@ export class NVUI {
         // Initialize QuadTree with canvas bounds
         const bounds = new Rectangle(0, 0, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
         this.quadTree = new QuadTree<IUIComponent>(bounds)
+
+        // Assign the redraw call back for the animation manager
+        const animationManager = AnimationManager.getInstance()
+        animationManager.setRequestRedrawCallback(this.requestRedraw.bind(this))
 
         // Add event listener for window resize
         this.resizeListener = this.handleWindowResize.bind(this)

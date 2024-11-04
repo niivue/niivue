@@ -1,6 +1,8 @@
 import { IUIComponent } from '../interfaces.js'
 import { NVRenderer } from '../nvrenderer.js'
 import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
+// Applying centralized animation management in BaseUIComponent
+import { AnimationManager, Animation } from '../animationmanager.js'
 
 export abstract class BaseUIComponent implements IUIComponent {
 
@@ -92,35 +94,9 @@ export abstract class BaseUIComponent implements IUIComponent {
                 break
 
             case 'animateValue':
-                const startTime = performance.now()
-
-                const animate = () => {
-                    const currentTime = performance.now()
-                    const elapsed = currentTime - startTime
-                    const progress = Math.min(elapsed / effect.duration, 1)
-
-                    const interpolate = (start: number, end: number, t: number) =>
-                        start + (end - start) * t
-
-                    if (Array.isArray(effect.from) && Array.isArray(effect.to)) {
-                        const interpolatedValues = effect.from.map((fromValue, index) =>
-                            interpolate(fromValue, effect.to[index], progress)
-                        )
-                        targetObject[property] = interpolatedValues
-                    } else if (typeof effect.from === 'number' && typeof effect.to === 'number') {
-                        targetObject[property] = interpolate(effect.from, effect.to, progress)
-                    }
-
-                    if (this.requestRedraw) {
-                        this.requestRedraw()
-                    }
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate)
-                    }
-                }
-
-                animate()
+                const animationManager = AnimationManager.getInstance()
+                const animation = new Animation(targetObject, property, effect.from, effect.to, effect.duration)
+                animationManager.addAnimation(animation)
                 break
         }
     }
