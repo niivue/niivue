@@ -6,6 +6,7 @@ import { QuadTree } from './quadtree.js'
 import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
 import { LineTerminator } from './types.js'
+import { BaseContainerComponent } from './components/basecontainercomponent.js'
 
 export class NVUI {
     private gl: WebGL2RenderingContext
@@ -62,6 +63,9 @@ export class NVUI {
 
     // Method to add a component to the QuadTree
     public addComponent(component: IUIComponent): void {
+        if (component instanceof BaseContainerComponent) {
+            component.quadTree = this.quadTree
+        }
         component.requestRedraw = this.requestRedraw.bind(this)
         this.quadTree.insert(component)
     }
@@ -84,13 +88,19 @@ export class NVUI {
             components = this.quadTree.getAllElements()
         }
 
+        const canvasBounds = [0, 0, this.canvasWidth, this.canvasHeight]
+        // console.log('canvas bounds', canvasBounds)
         for (const component of components) {
             if (component.isVisible) {
+
+                // component.align(boundsInScreenCoords || canvasBounds as Vec4)
+                // if (component instanceof BaseContainerComponent) {
+                //     component.alignItems()
+                // }
                 component.draw(this.renderer)
             }
         }
     }
-
 
     // Method to request a redraw
     private requestRedraw(): void {
@@ -118,10 +128,11 @@ export class NVUI {
         const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
         const components = this.quadTree.queryPoint(point)
         for (const component of components) {
-            component.applyEventEffects('click')
+            if (component.isVisible) {
+                component.applyEventEffects('click')
+            }
         }
     }
-
 
     // Method to handle mouse move events for mouse enter and mouse leave
     private handleMouseMove(event: MouseEvent): void {
@@ -129,7 +140,7 @@ export class NVUI {
         const rect = canvas.getBoundingClientRect()
         const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
 
-        const components = new Set(this.quadTree.queryPoint(point))
+        const components = new Set(this.quadTree.queryPoint(point).filter(component => component.isVisible))
 
         // Handle mouse enter for newly hovered components
         for (const component of components) {

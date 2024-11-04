@@ -1,4 +1,4 @@
-import { Vec2 } from './types.js'
+import { Vec2, Vec4 } from './types.js'
 import { IUIComponent } from './interfaces.js'
 
 export class Rectangle {
@@ -94,6 +94,28 @@ export class QuadTree<T extends IUIComponent> {
         this.divided = true
     }
 
+    remove(component: T): boolean {
+        const position = component.getPosition()
+        if (!this.boundary.contains(position)) {
+            return false
+        }
+
+        const index = this.components.indexOf(component)
+        if (index !== -1) {
+            this.components.splice(index, 1)
+            return true
+        }
+
+        if (this.divided) {
+            if (this.northwest!.remove(component)) return true
+            if (this.northeast!.remove(component)) return true
+            if (this.southwest!.remove(component)) return true
+            if (this.southeast!.remove(component)) return true
+        }
+
+        return false
+    }
+
     query(range: Rectangle, found: T[] = []): T[] {
         if (!this.boundary.intersects(range)) {
             return found
@@ -151,5 +173,9 @@ export class QuadTree<T extends IUIComponent> {
         if (this.divided) {
             this.subdivide()
         }
+    }
+
+    getBoundary(): Vec4 {
+        return [this.boundary.x, this.boundary.y, this.boundary.width, this.boundary.height]
     }
 }

@@ -1,8 +1,12 @@
 import { IUIComponent } from '../interfaces.js'
 import { NVRenderer } from '../nvrenderer.js'
-import { Effect, Vec2, Vec4 } from '../types.js'
+import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
 
 export abstract class BaseUIComponent implements IUIComponent {
+
+    alignmentPoint: AlignmentPoint = AlignmentPoint.NONE
+    verticalAlignment: VerticalAlignment = VerticalAlignment.NONE
+    horizontalAlignment: HorizontalAlignment = HorizontalAlignment.NONE
     isVisible: boolean = true
     zIndex: number = 0
     protected position: Vec2 = [0, 0]
@@ -12,6 +16,63 @@ export abstract class BaseUIComponent implements IUIComponent {
     public requestRedraw?: () => void
 
     abstract draw(renderer: NVRenderer): void
+
+    align(bounds: Vec4): void {
+        let offsetX = 0
+        let offsetY = 0
+
+        // Calculate alignment offsets based on alignmentPoint
+        switch (this.alignmentPoint) {
+            case AlignmentPoint.TOPLEFT:
+                offsetX = bounds[0]
+                offsetY = bounds[1]
+                break
+            case AlignmentPoint.TOPCENTER:
+                offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2
+                offsetY = bounds[1]
+                break
+            case AlignmentPoint.TOPRIGHT:
+                offsetX = bounds[0] + (bounds[2] - this.bounds[2])
+                offsetY = bounds[1]
+                break
+            case AlignmentPoint.MIDDLELEFT:
+                offsetX = bounds[0]
+                offsetY = bounds[1] + (bounds[3] - this.bounds[3]) / 2
+                break
+            case AlignmentPoint.MIDDLECENTER:
+                offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2
+                offsetY = bounds[1] + (bounds[3] - this.bounds[3]) / 2
+                break
+            case AlignmentPoint.MIDDLERIGHT:
+                offsetX = bounds[0] + (bounds[2] - this.bounds[2])
+                offsetY = bounds[1] + (bounds[3] - this.bounds[3]) / 2
+                break
+            case AlignmentPoint.BOTTOMLEFT:
+                offsetX = bounds[0]
+                offsetY = bounds[1] + (bounds[3] - this.bounds[3])
+                break
+            case AlignmentPoint.BOTTOMCENTER:
+                offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2
+                offsetY = bounds[1] + (bounds[3] - this.bounds[3])
+                break
+            case AlignmentPoint.BOTTOMRIGHT:
+                offsetX = bounds[0] + (bounds[2] - this.bounds[2])
+                offsetY = bounds[1] + (bounds[3] - this.bounds[3])
+                break
+            default:
+                offsetX = bounds[0]
+                offsetY = bounds[1]
+        }
+
+        // Set new position
+        this.setPosition([offsetX, offsetY])
+
+        // Optionally update scale to fit within bounds
+        const scaleX = bounds[2] / this.bounds[2]
+        const scaleY = bounds[3] / this.bounds[3]
+        this.setScale(Math.min(scaleX, scaleY))
+    }
+
 
     applyEffect(effect: Effect): void {
         const { targetObject, property } = effect
@@ -118,5 +179,29 @@ export abstract class BaseUIComponent implements IUIComponent {
 
     setScale(value: number): void {
         this.scale = value
+    }
+
+    getAlignmentPoint(): AlignmentPoint {
+        return this.alignmentPoint
+    }
+
+    setAlignmentPoint(value: AlignmentPoint): void {
+        this.alignmentPoint = value
+    }
+
+    getVerticalAlignment(): VerticalAlignment {
+        return this.verticalAlignment
+    }
+
+    setVerticalAlignment(value: VerticalAlignment): void {
+        this.verticalAlignment = value
+    }
+
+    getHorizontalAlignment(): HorizontalAlignment {
+        return this.horizontalAlignment
+    }
+
+    setHorizontalAlignment(value: HorizontalAlignment): void {
+        this.horizontalAlignment = value
     }
 }

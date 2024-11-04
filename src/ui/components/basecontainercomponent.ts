@@ -1,13 +1,18 @@
 import { BaseUIComponent } from './baseuicomponent.js'
 import { Vec2, Vec4 } from '../types.js'
+import { IUIComponent, IUIContainer } from '../interfaces.js'
+import { QuadTree, Rectangle } from '../quadtree.js'
 
-export abstract class BaseContainerComponent extends BaseUIComponent {
-    protected children: BaseUIComponent[]
+export abstract class BaseContainerComponent extends BaseUIComponent implements IUIContainer {
     protected margin: number
+    protected _quadTree: QuadTree<IUIComponent>
+    protected children: BaseUIComponent[] = []
 
-    constructor(margin: number = 0) {
+    constructor(canvas: HTMLCanvasElement, margin: number = 0) {
         super()
-        this.children = []
+        const bounds = new Rectangle(0, 0, canvas.width, canvas.height)
+
+        this._quadTree = new QuadTree<IUIComponent>(bounds)
         this.margin = margin
         this.bounds = [0, 0, 0, 0]
         this.scale = 1.0
@@ -15,8 +20,44 @@ export abstract class BaseContainerComponent extends BaseUIComponent {
         this.zIndex = 0
     }
 
+    set quadTree(quadTree: QuadTree<IUIComponent>) {
+        this.children.forEach(child => {
+            quadTree.insert(child)
+        })
+        this._quadTree.getAllElements().forEach(child => {
+            this._quadTree.remove(child)
+        })
+        this._quadTree = quadTree
+    }
+
+    get quadTree(): QuadTree<IUIComponent> {
+        return this._quadTree
+    }
+
+    alignItems(): void {
+        // this.children.forEach(child => {
+        //     child.align(this.bounds);
+        //     if (child instanceof BaseContainerComponent) {
+        //         child.alignItems();
+        //     }
+        // });
+    }
+
+    removeChild(child: IUIComponent): void {
+        const index = this.children.indexOf(child as BaseUIComponent)
+        if (index !== -1) {
+            this.children.splice(index, 1)
+        }
+        this._quadTree.remove(child)
+    }
+
+    getChildren(): IUIComponent[] {
+        return this.children
+    }
+
     addChild(component: BaseUIComponent): void {
         this.children.push(component)
+        this._quadTree.insert(component)
         this.updateBounds()
     }
 
@@ -33,7 +74,7 @@ export abstract class BaseContainerComponent extends BaseUIComponent {
         this.scale = value
 
         // Scale child components
-        this.children.forEach(child => {
+        this.getChildren().forEach(child => {
             const childBounds = child.getBounds()
             const newBounds: Vec4 = [
                 childBounds[0] * scaleFactor,

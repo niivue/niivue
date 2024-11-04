@@ -139,6 +139,7 @@ export { NVUI } from '../ui/nvui.js'
 export { NVFont } from '../ui/nvfont.js'
 export { NVBitmap } from '../ui/nvbitmap.js'
 export { TextComponent } from '../ui/components/textcomponent.js'
+export { ColumnComponent } from '../ui/components/columncomponent.js'
 
 type ColormapListEntry = {
   name: string

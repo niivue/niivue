@@ -1,24 +1,29 @@
 // interfaces.ts
 
 import { NVRenderer } from './nvrenderer.js'
-import { Color, Vec2, Vec4 } from './types.js'
+import { AlignmentPoint, Color, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from './types.js'
 
 // interfaces.ts
 export interface IUIComponent {
-    getBounds(): Vec4
-    setBounds(bounds: Vec4): void
-    getPosition(): Vec2
-    setPosition(position: Vec2): void
-    draw(renderer: NVRenderer): void
+    getBounds(): Vec4;
+    setBounds(bounds: Vec4): void;
+    getPosition(): Vec2;
+    setPosition(position: Vec2): void;
+    draw(renderer: NVRenderer): void;
+    align(bounds: Vec4): void
 
-    isVisible: boolean
-    zIndex: number
+    isVisible: boolean;
+    zIndex: number;
 
-    getScale(): number
-    setScale(value: number): void
-    applyEventEffects(eventName: string): void
+    getScale(): number;
+    setScale(value: number): void;
+    applyEventEffects(eventName: string): void;
 
-    requestRedraw?: () => void
+    requestRedraw?: () => void;
+
+    alignmentPoint: AlignmentPoint;
+    verticalAlignment: VerticalAlignment;
+    horizontalAlignment: HorizontalAlignment;
 }
 
 export interface IColorable extends IUIComponent {
@@ -34,4 +39,5 @@ export interface IUIContainer extends IUIComponent {
     addChild(child: IUIComponent): void
     removeChild(child: IUIComponent): void
     getChildren(): IUIComponent[]
+    alignItems(): void
 }
