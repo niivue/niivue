@@ -132,6 +132,8 @@ export class NVUI {
         const rect = canvas.getBoundingClientRect()
         const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
         const components = this.quadTree.queryPoint(point)
+        console.log('click fired')
+        console.log('components', components)
         for (const component of components) {
             if (component.isVisible) {
                 component.applyEventEffects('click')

@@ -57,13 +57,21 @@ export enum VerticalAlignment {
 }
 
 
-// Define the effect types
+// Updated Effect type
 export type Effect =
     | {
         type: 'setValue'
         targetObject: any
         property: string
         value: any
+        isToggle: boolean
+    }
+    | {
+        type: 'toggleValue'
+        targetObject: any
+        property: string
+        value1: any
+        value2: any
     }
     | {
         type: 'animateValue'
@@ -73,4 +81,5 @@ export type Effect =
         to: number | number[]
         duration: number
         isBounce: boolean
+        isToggle: boolean
     }

@@ -140,6 +140,7 @@ export { NVFont } from '../ui/nvfont.js'
 export { NVBitmap } from '../ui/nvbitmap.js'
 export { TextComponent } from '../ui/components/textcomponent.js'
 export { LineComponent } from '../ui/components/linecomponent.js'
+export { ToggleComponent } from '../ui/components/togglecomponent.js'
 export { ColumnComponent } from '../ui/components/columncomponent.js'
 
 type ColormapListEntry = {

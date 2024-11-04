@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>UI Widgets</title>
+  <title>Toggle Component Example</title>
   <link rel="stylesheet" href="light.css" />
 </head>
 
@@ -20,35 +20,32 @@
   <script type="module" async>
     import * as niivue from "../dist/index.js";
 
-    function drawToggle() {
-      nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
-      nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-
-      const onColor = [0, 0.478, 1, 1]
-      const offColor = [0.5, 0.5, 0.5, 1]
-
-      ui.drawToggle(
-        [nv1.canvas.width / 2, nv1.canvas.height / 2], // Position as Vec2
-        [400, 50],                                     // Size as Vec2 (width, height)
-        toggleOn,                                      // Boolean indicating if the toggle is on
-        onColor,                                       // On color
-        offColor                                       // Off color
-      )
-
-      toggleOn = !toggleOn
-    }
-
-
-    const button = document.getElementById('toggle-button');
-    button.onclick = drawToggle;
-    var toggleOn = true;
     var nv1 = new niivue.Niivue();
     nv1.attachTo("gl1");
     nv1.setSliceType(nv1.sliceTypeRender);
-    const font = new niivue.NVFont(nv1.gl)
-    await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
-    var ui = new niivue.NVUI(nv1.gl)
-    drawToggle()
+
+    // Define the toggle component properties
+    const togglePos = [nv1.canvas.width / 2, nv1.canvas.height / 2]; // Position of the toggle
+    const toggleSize = [400, 50]; // Size of the toggle
+    const isOn = true; // Initial state of the toggle
+    const onColor = [0, 0.478, 1, 1]; // Blue color when on
+    const offColor = [0.5, 0.5, 0.5, 1]; // Grey color when off
+
+    // Create the toggle component
+    const toggleComponent = new niivue.ToggleComponent(togglePos, toggleSize, isOn, onColor, offColor);
+
+    // Add the toggle component to the scene
+    nv1.ui.addComponent(toggleComponent);
+
+    // Draw the scene
+    nv1.drawScene();
+
+    // Toggle button handler
+    const button = document.getElementById('toggle-button');
+    button.onclick = () => {
+      toggleComponent.toggle();
+      nv1.drawScene();
+    }
   </script>
 </body>
 

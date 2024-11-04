@@ -1,8 +1,10 @@
 import { IUIComponent } from '../interfaces.js'
 import { NVRenderer } from '../nvrenderer.js'
 import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
+
 // Applying centralized animation management in BaseUIComponent
 import { AnimationManager, Animation } from '../animationmanager.js'
+import { getObjectProperty, isEqual, setObjectProperty } from '../uiutils.js'
 
 export abstract class BaseUIComponent implements IUIComponent {
 
@@ -78,16 +80,10 @@ export abstract class BaseUIComponent implements IUIComponent {
 
     applyEffect(effect: Effect): void {
         const { targetObject, property } = effect
+
         switch (effect.type) {
             case 'setValue':
-                if (property in targetObject) {
-                    targetObject[property] = effect.value
-                } else {
-                    const setterName = `set${property.charAt(0).toUpperCase()}${property.slice(1)}`
-                    if (typeof targetObject[setterName] === 'function') {
-                        targetObject[setterName](effect.value)
-                    }
-                }
+                setObjectProperty(targetObject, property, effect.value)
                 if (this.requestRedraw) {
                     this.requestRedraw()
                 }
@@ -95,30 +91,75 @@ export abstract class BaseUIComponent implements IUIComponent {
 
             case 'animateValue':
                 const animationManager = AnimationManager.getInstance()
-                const animation = new Animation(targetObject, property, effect.from, effect.to, effect.duration)
+                const animation = new Animation(targetObject, property, effect.from, effect.to, effect.duration, effect.isBounce, effect.isToggle)
                 animationManager.addAnimation(animation)
                 break
+
+            case 'toggleValue':
+                const currentValue = getObjectProperty(targetObject, property)
+                if (isEqual(currentValue, effect.value1)) {
+                    setObjectProperty(effect.targetObject, property, effect.value2)
+                }
+                else {
+                    setObjectProperty(effect.targetObject, property, effect.value1)
+                }
         }
     }
 
-    addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue', valueOrFrom: any, to?: any, duration?: number, isBounce: boolean = false): void {
-        const effect: Effect =
-            effectType === 'setValue'
-                ? {
+    addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue' | 'toggleValue', valueOrFrom: any, to?: any, duration?: number, isBounce: boolean = false, isToggle: boolean = false): void {
+        // const effect: Effect =
+        //     effectType === 'setValue'
+        //         ? {
+        //             type: 'setValue',
+        //             targetObject,
+        //             property,
+        //             value: valueOrFrom,
+        //             isToggle
+        //         }
+        //         : {
+        //             type: 'animateValue',
+        //             targetObject,
+        //             property,
+        //             from: valueOrFrom,
+        //             to: to!,
+        //             duration: duration!,
+        //             isBounce,
+        //             isToggle
+        //         }
+        let effect: Effect
+        switch (effectType) {
+            case 'setValue':
+                effect = {
                     type: 'setValue',
                     targetObject,
                     property,
                     value: valueOrFrom,
+                    isToggle
                 }
-                : {
+                break
+            case 'toggleValue':
+                effect = {
+                    type: 'toggleValue',
+                    targetObject,
+                    property,
+                    value1: valueOrFrom,
+                    value2: to,
+                }
+                break
+            case 'animateValue':
+                effect = {
                     type: 'animateValue',
                     targetObject,
                     property,
                     from: valueOrFrom,
                     to: to!,
                     duration: duration!,
-                    isBounce
+                    isBounce,
+                    isToggle
                 }
+                break
+        }
+        console.log('effect is ', effect)
 
         if (!this.eventEffects.has(event)) {
             this.eventEffects.set(event, [])
