@@ -311,7 +311,7 @@ export class NVUI {
         )
     }
 
-    drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40): void {
-        this.renderer.drawCaliper(pointA, pointB, text, font, textColor, lineColor, lineThickness, offset)
+    drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
+        this.renderer.drawCaliper(pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale)
     }
 }

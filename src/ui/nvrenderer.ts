@@ -793,25 +793,22 @@ export class NVRenderer {
         this.drawText(font, textPosition, str, scale, textColor, maxWidth)
     }
 
-    public drawCaliper(pointA: Vec2, pointB: Vec2, text: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40): void {
+    public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
         // Calculate the angle between the points
         const deltaX = pointB[0] - pointA[0]
         const deltaY = pointB[1] - pointA[1]
-        const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+        const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
         let angle = Math.atan2(deltaY, deltaX)
-        console.log('rotation ' + angle * 180 / Math.PI + ' degrees')
-
-        const isAngleAdjusted = (angle < -Math.PI / 2 && angle > -Math.PI)
-
-        // Ensure text is not upside down
-
 
         // Calculate the midpoint
         const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
 
+        // Format the length text
+        const text = `${length.toFixed(2)}`
+
         // Adjust the text position to ensure it's centered above the parallel line
-        const textWidth = font.getTextWidth(text, 1.0)
-        const textHeight = font.getTextHeight(text, 1.0)
+        const textWidth = font.getTextWidth(text, scale)
+        const textHeight = font.getTextHeight(text, scale)
         const halfTextWidth = textWidth / 2
         const halfTextHeight = textHeight / 2
         let textPosition: Vec2 = [
@@ -828,17 +825,28 @@ export class NVRenderer {
             ]
         }
 
-        // Draw the rotated text at the adjusted position
-        this.drawRotatedText(font, textPosition, text, 1.0, textColor, angle)
+        // Draw the rotated length text at the adjusted position
+        this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
+
+        // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
+        const unitsText = units
+        const unitsScale = scale / 2
+        const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
+        const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
+        const unitsTextPosition: Vec2 = [
+            textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
+            textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
+        ]
+        this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
 
         // Draw a parallel line of equal length to the original line
         const parallelPointA: Vec2 = [
-            pointA[0] + offset * deltaY / length,
-            pointA[1] - offset * deltaX / length
+            pointA[0] + offset * deltaY / actualLength,
+            pointA[1] - offset * deltaX / actualLength
         ]
         const parallelPointB: Vec2 = [
-            pointB[0] + offset * deltaY / length,
-            pointB[1] - offset * deltaX / length
+            pointB[0] + offset * deltaY / actualLength,
+            pointB[1] - offset * deltaX / actualLength
         ]
         this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
 
@@ -846,6 +854,10 @@ export class NVRenderer {
         this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
         this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
     }
+
+
+
+
 
 
 }

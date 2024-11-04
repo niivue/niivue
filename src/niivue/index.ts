@@ -8166,7 +8166,7 @@ export class Niivue {
       //   15,
       //   0.2
       // )
-      this.ui.drawCaliper([startXYendXY[0], startXYendXY[1]], [startXYendXY[2], startXYendXY[3]], stringMM, this.defaultFont, this.opts.rulerColor, this.opts.rulerColor, this.opts.rulerWidth)
+      this.ui.drawCaliper([startXYendXY[0], startXYendXY[1]], [startXYendXY[2], startXYendXY[3]], lenMM, 'mm', this.defaultFont, this.opts.rulerColor, this.opts.rulerColor, this.opts.rulerWidth, 100)
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
