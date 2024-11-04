@@ -5,14 +5,13 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>UI Widgets Lines</title>
+    <title>Line component</title>
     <link rel="stylesheet" href="light.css" />
 </head>
 
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-        <button id="draw-button">Draw</button>
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -20,55 +19,49 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        function drawLine() {
-            nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
-            nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
+        function drawLines() {
+            // Create line components and add them to the UI
 
-            const onColor = [0, 0.478, 1, 1]
-            const offColor = [0.5, 0.5, 0.5, 1]
-            const highlightColor = [0.0, 1.0, 0.0, 1.0]
-            const red = [1.0, 0.0, 0.0, 1.0]
+            const onColor = [0, 0.478, 1, 1];
+            const offColor = [0.5, 0.5, 0.5, 1];
+            const highlightColor = [0.0, 1.0, 0.0, 1.0];
 
-            // Use the updated `ui.drawLine()` with correct LineTerminator
-            ui.drawLine(
+            // Create the first line component with an arrow terminator
+            const line1 = new niivue.LineComponent(
                 [nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200],
                 10,
                 onColor,
-                niivue.NVUI.lineTerminator.ARROW // <-- Updated to access through NVUI
-            )
+                niivue.NVUI.lineTerminator.ARROW
+            );
+            ui.addComponent(line1);
 
-            // Example with no terminator specified
-            // ui.drawLine([nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200], 10, red)
-
-            ui.drawLine(
+            // Create the second line component with a circle terminator
+            const line2 = new niivue.LineComponent(
                 [nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100],
                 10,
                 offColor,
-                niivue.NVUI.lineTerminator.CIRCLE // <-- Updated to access through NVUI
-            )
+                niivue.NVUI.lineTerminator.CIRCLE
+            );
+            ui.addComponent(line2);
 
-            // Example with no terminator specified
-            // ui.drawLine([nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100], 10, red)
-
-            ui.drawLine(
+            // Create the third line component with a ring terminator
+            const line3 = new niivue.LineComponent(
                 [nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100],
                 10,
                 highlightColor,
-                niivue.NVUI.lineTerminator.RING // <-- Updated to access through NVUI
-            )
+                niivue.NVUI.lineTerminator.RING
+            );
+            ui.addComponent(line3);
 
-            // Example with no terminator specified
-            // ui.drawLine([nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100], 10, red)
+            nv1.drawScene();
         }
 
-
-        const button = document.getElementById('draw-button');
-        button.onclick = drawLine;
-        var toggleOn = true;
         var nv1 = new niivue.Niivue();
         nv1.attachTo("gl1");
-        var ui = new niivue.NVUI(nv1.gl)
-        drawLine()
+        var ui = nv1.ui;
+
+        // Draw lines initially
+        drawLines();
     </script>
 </body>
 

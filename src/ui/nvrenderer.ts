@@ -238,54 +238,54 @@ export class NVRenderer {
     }
 
     /**
-     * Draws a line.
-     * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
-     * @param thickness - The thickness of the line.
-     * @param lineColor - The color of the line.
-     */
+ * Draws a line.
+ * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
+ * @param thickness - The thickness of the line.
+ * @param lineColor - The color of the line.
+ */
     public drawLine(
         startEnd: Vec4,
         thickness = 1,
         lineColor: Color = [1, 0, 0, -1],
         terminator: LineTerminator = LineTerminator.NONE
     ): void {
-        const gl = this.gl
+        const gl = this.gl;
 
         // Extract start and end points
         const lineCoords = Array.isArray(startEnd)
             ? vec4.fromValues(startEnd[0], startEnd[1], startEnd[2], startEnd[3])
-            : startEnd
+            : startEnd;
 
-        let [startX, startY, endX, endY] = lineCoords
+        let [startX, startY, endX, endY] = lineCoords;
 
         // Calculate direction and adjust for terminator
-        const direction = vec2.sub(vec2.create(), [endX, endY], [startX, startY])
-        vec2.normalize(direction, direction)
+        const direction = vec2.sub(vec2.create(), [endX, endY], [startX, startY]);
+        vec2.normalize(direction, direction);
 
-        const terminatorSize = thickness * 3  // Example terminator size based on thickness
+        const terminatorSize = thickness * 3;  // Example terminator size based on thickness
 
         // Adjust line length to fit terminator bounds
         switch (terminator) {
             case LineTerminator.ARROW:
             case LineTerminator.CIRCLE:
             case LineTerminator.RING:
-                endX -= direction[0] * terminatorSize / 2
-                endY -= direction[1] * terminatorSize / 2
-                break
+                endX -= direction[0] * (terminatorSize / 2 - thickness / 2);
+                endY -= direction[1] * (terminatorSize / 2 - thickness / 2);
+                break;
         }
 
         // Set the adjusted endpoint
-        const shortenedLine = vec4.fromValues(startX, startY, endX, endY)
-        this.lineShader.use(gl)
-        gl.enable(gl.BLEND)
-        gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor as Float32List)
-        gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
-        gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
-        gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine)
+        const shortenedLine = vec4.fromValues(startX, startY, endX, endY);
+        this.lineShader.use(gl);
+        gl.enable(gl.BLEND);
+        gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor as Float32List);
+        gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height]);
+        gl.uniform1f(this.lineShader.uniforms.thickness, thickness);
+        gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine);
 
-        gl.bindVertexArray(NVRenderer.genericVAO)
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-        gl.bindVertexArray(null) // Unbind to avoid side effects
+        gl.bindVertexArray(NVRenderer.genericVAO);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.bindVertexArray(null); // Unbind to avoid side effects
 
         // Draw the terminator
         switch (terminator) {
@@ -295,23 +295,25 @@ export class NVRenderer {
                     [endX - direction[0] * terminatorSize / 2, endY - direction[1] * terminatorSize / 2],
                     terminatorSize,
                     lineColor
-                )
-                break
+                );
+                break;
             case LineTerminator.CIRCLE:
                 this.drawCircle(
                     [startEnd[2] - terminatorSize / 2, startEnd[3] - terminatorSize / 2, terminatorSize, terminatorSize],
                     lineColor
-                )
-                break
+                );
+                break;
             case LineTerminator.RING:
                 this.drawCircle(
                     [startEnd[2] - terminatorSize / 2, startEnd[3] - terminatorSize / 2, terminatorSize, terminatorSize],
                     lineColor,
                     0.5
-                )
-                break
+                );
+                break;
         }
     }
+
+
 
     /**
  * Draws an elbow line.
