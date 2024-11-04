@@ -71,13 +71,15 @@ export class Animation {
     private startTime: number = 0
     private cancelled: boolean = false
     private redrawCallback?: () => void
+    private isBounce: boolean = false
 
-    constructor(targetObject: any, property: string, from: number | number[], to: number | number[], duration: number) {
+    constructor(targetObject: any, property: string, from: number | number[], to: number | number[], duration: number, isBounce: boolean = false) {
         this.targetObject = targetObject
         this.property = property
         this.from = from
         this.to = to
         this.duration = duration
+        this.isBounce = isBounce
     }
 
     public start(redrawCallback?: () => void): void {
@@ -99,8 +101,12 @@ export class Animation {
         if (this.cancelled) return
 
         const elapsed = currentTime - this.startTime
-        const progress = Math.min(elapsed / this.duration, 1)
+        let progress = Math.min(elapsed / this.duration, 1)
         const interpolate = (start: number, end: number, t: number) => start + (end - start) * t
+
+        if (this.isBounce) {
+            progress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2
+        }
 
         if (Array.isArray(this.from) && Array.isArray(this.to)) {
             const interpolatedValues = this.from.map((fromValue, index) =>

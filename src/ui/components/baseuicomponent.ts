@@ -101,7 +101,7 @@ export abstract class BaseUIComponent implements IUIComponent {
         }
     }
 
-    addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue', valueOrFrom: any, to?: any, duration?: number): void {
+    addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue', valueOrFrom: any, to?: any, duration?: number, isBounce: boolean = false): void {
         const effect: Effect =
             effectType === 'setValue'
                 ? {
@@ -117,6 +117,7 @@ export abstract class BaseUIComponent implements IUIComponent {
                     from: valueOrFrom,
                     to: to!,
                     duration: duration!,
+                    isBounce
                 }
 
         if (!this.eventEffects.has(event)) {
