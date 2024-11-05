@@ -25,6 +25,7 @@
             const onColor = [0, 0.478, 1, 1];
             const offColor = [0.5, 0.5, 0.5, 1];
             const highlightColor = [0.0, 1.0, 0.0, 1.0];
+            const elbowColor = [1.0, 0.0, 0.0, 1.0];
 
             // Create the first line component with an arrow terminator
             const line1 = new niivue.LineComponent(
@@ -52,6 +53,26 @@
                 niivue.NVUI.lineTerminator.RING
             );
             ui.addComponent(line3);
+
+            // Create an elbow line component with horizontal first
+            const elbowLine = new niivue.ElbowLineComponent(
+                [nv1.canvas.width / 2, nv1.canvas.height / 2, nv1.canvas.width / 2 + 150, nv1.canvas.height / 2 - 150],
+                10,
+                elbowColor,
+                niivue.NVUI.lineTerminator.NONE,
+                true // Draw the horizontal segment first
+            );
+            ui.addComponent(elbowLine);
+
+            // Create an elbow line component with vertical first
+            const elbowLineVerticalFirst = new niivue.ElbowLineComponent(
+                [nv1.canvas.width / 2 - 150, nv1.canvas.height / 2, nv1.canvas.width / 2, nv1.canvas.height / 2 + 150],
+                10,
+                elbowColor,
+                niivue.NVUI.lineTerminator.NONE,
+                false // Draw the vertical segment first
+            );
+            ui.addComponent(elbowLineVerticalFirst);
 
             nv1.drawScene();
         }
