@@ -2122,7 +2122,7 @@ void main(void) {
     vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
 }`
 
-export const fragRotatedFontShader = `#version 300 es
+export const fragRotatedFontShaderO = `#version 300 es
 #line 593
 precision highp int;
 precision highp float;
@@ -2164,7 +2164,7 @@ void main() {
     color = vec4(finalColor, finalAlpha);
 }`;
 
-export const fragRotatedFontShaderN = `#version 300 es
+export const fragRotatedFontShader = `#version 300 es
 #line 593
 precision highp int;
 precision highp float;
