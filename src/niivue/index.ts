@@ -138,13 +138,15 @@ export * from '../types.js'
 export { NVUI } from '../ui/nvui.js'
 export { NVFont } from '../ui/nvfont.js'
 export { NVBitmap } from '../ui/nvbitmap.js'
+
 export { RoundedRectComponent } from '../ui/components/roundedrectanglecomponent.js'
 export { TextComponent } from '../ui/components/textcomponent.js'
 export { LineComponent } from '../ui/components/linecomponent.js'
-export { ElbowLineComponent } from '../ui/components/elbowlinecomponent.js'
 export { ToggleComponent } from '../ui/components/togglecomponent.js'
-export { ColumnComponent } from '../ui/components/columncomponent.js'
 export { ButtonComponent } from '../ui/components/buttoncomponent.js'
+export { BaseContainerComponent } from '../ui/components/basecontainercomponent.js'
+export { ContainerButtonComponent } from '../ui/components/containerbuttoncomponent.js'
+export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
 
 type ColormapListEntry = {
   name: string

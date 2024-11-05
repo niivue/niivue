@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>UI Widgets - Container Button with Bitmap</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+    </header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js";
+
+        var nv1 = new niivue.Niivue();
+        nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+        var ui = new niivue.NVUI(nv1.gl);
+        nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
+        nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
+
+        const bitmap = new niivue.NVBitmap(nv1.gl);
+        await bitmap.loadBitmap("../images/rorden.png");
+
+        const font = new niivue.NVFont(nv1.gl);
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
+        nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
+        nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
+
+        const position = [nv1.canvas.width / 2 - 100, nv1.canvas.height / 2 - 400];
+        const containerButton = new niivue.ContainerButtonComponent(
+            position,
+            nv1.canvas,
+            [1, 1, 1, 1],     // Outline color
+            [0, 0, 0.3, 0.3],   // Fill color
+            [0.5, 0.5, 0.5, 1.0], // Highlight color
+            0.2,              // Roundness
+            0,                // Max width (no limit)
+            0                 // Max height (no limit)
+        );
+
+        containerButton.addEventEffect('mouseEnter', containerButton, 'fillColor', 'animateValue', [0, 0, 0.3, 0.3], [0, 0.3, 0, 0.3], 200) // Set text color to white on mouse enter
+        containerButton.addEventEffect('mouseLeave', containerButton, 'fillColor', 'animateValue', [0, 0.3, 0, 0.3], [0, 0, 0.3, 0.3], 200) // Set text color to white on mouse leave
+        containerButton.onClick = () => { alert('clicked!') }
+
+        // Create and add bitmap component
+        const bitmapComponent = new niivue.BitmapComponent([10, 10], bitmap, 1.5);
+        containerButton.addComponent(bitmapComponent);
+
+        // Create and add text component
+        const textComponent = new niivue.TextComponent([10, bitmapComponent.getBounds()[3] + 20], "Hello Niivue!", font, [1.0, 1.0, 1.0, 1.0], 0.5);
+        containerButton.addComponent(textComponent);
+
+        const scale = 2.0;
+        const xy = [0, 0]; // Position of the bitmap inside the container
+
+        nv1.ui.addComponent(containerButton);
+        console.log(nv1.ui);
+        nv1.drawScene();
+    </script>
+</body>
+
+</html>

@@ -5,31 +5,19 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Column Component Example</title>
+    <title>Base Container Component Example</title>
     <link rel="stylesheet" href="light.css" />
 </head>
 
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-        <button id="draw-button">Draw</button>
     </header>
     <main>
         <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
         import * as niivue from "../dist/index.js"
-
-        function makeDrawColumn(nv, columnComponent) {
-            return function drawColumn() {
-                if (!added) {
-                    nv.ui.addComponent(columnComponent)
-                    console.log(nv.ui)
-                    nv.drawScene()
-                }
-                added = true
-            }
-        }
 
         var added = false
         var nv1 = new niivue.Niivue()
@@ -61,23 +49,18 @@
             return textComponent
         })
 
-        const columnComponent = new niivue.ColumnComponent(nv1.canvas, 20)
-        const columnWidth = Math.max(...textComponents.map(tc => font.getTextWidth(tc.text, scale)))
-        const columnHeight = textComponents.length * 50
-        columnComponent.setBounds([
-            (nv1.canvas.width - columnWidth) / 2,
-            (nv1.canvas.height - columnHeight) / 2,
-            columnWidth,
-            columnHeight
-        ])
-        textComponents.forEach(textComponent => columnComponent.addChild(textComponent))
-        // textComponents.forEach(textComponent => nv1.ui.addComponent(textComponent))
-        // nv1.ui.addComponent(textComponents[0])
-        nv1.ui.addComponent(columnComponent)
+        const containerComponent = new niivue.BaseContainerComponent([0, 0], nv1.canvas, false, 20)
+
+        const containerWidth = Math.max(...textComponents.map(tc => font.getTextWidth(tc.text, scale)))
+
+
+        textComponents.forEach(textComponent => containerComponent.addComponent(textComponent))
+        const bounds = containerComponent.getBounds()
+        containerComponent.setPosition([(nv1.canvas.width - bounds[2]) / 2, (nv1.canvas.height - bounds[3]) / 2])
+        nv1.ui.addComponent(containerComponent)
         console.log(nv1.ui)
         nv1.drawScene()
 
-        document.getElementById("draw-button").addEventListener("click", makeDrawColumn(nv1, columnComponent))
     </script>
 </body>
 
