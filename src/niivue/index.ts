@@ -144,6 +144,7 @@ export { LineComponent } from '../ui/components/linecomponent.js'
 export { ElbowLineComponent } from '../ui/components/elbowlinecomponent.js'
 export { ToggleComponent } from '../ui/components/togglecomponent.js'
 export { ColumnComponent } from '../ui/components/columncomponent.js'
+export { ButtonComponent } from '../ui/components/buttoncomponent.js'
 
 type ColormapListEntry = {
   name: string

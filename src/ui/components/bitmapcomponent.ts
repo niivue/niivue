@@ -38,24 +38,4 @@ export class BitmapComponent extends BaseUIComponent {
         renderer.drawBitmap(this.bitmap, this.position, this.scale)
     }
 
-    // Event handlers
-    onClick(event: MouseEvent): void {
-        this.applyEventEffects('click')
-    }
-
-    onFocus(): void {
-        this.applyEventEffects('focus')
-    }
-
-    onBlur(): void {
-        this.applyEventEffects('blur')
-    }
-
-    onMouseEnter(event: MouseEvent): void {
-        this.applyEventEffects('mouseEnter')
-    }
-
-    onMouseLeave(event: MouseEvent): void {
-        this.applyEventEffects('mouseLeave')
-    }
 }

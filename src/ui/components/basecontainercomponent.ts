@@ -115,25 +115,4 @@ export abstract class BaseContainerComponent extends BaseUIComponent implements 
     protected updateChildPositions(): void {
         // Abstract method to be implemented by derived classes
     }
-
-    // Event handlers
-    onClick(event: MouseEvent): void {
-        this.applyEventEffects('click')
-    }
-
-    onFocus(): void {
-        this.applyEventEffects('focus')
-    }
-
-    onBlur(): void {
-        this.applyEventEffects('blur')
-    }
-
-    onMouseEnter(event: MouseEvent): void {
-        this.applyEventEffects('mouseEnter')
-    }
-
-    onMouseLeave(event: MouseEvent): void {
-        this.applyEventEffects('mouseLeave')
-    }
 }

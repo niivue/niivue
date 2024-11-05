@@ -19,6 +19,11 @@ export abstract class BaseUIComponent implements IUIComponent {
     private eventEffects: Map<string, Effect[]> = new Map()
     public requestRedraw?: () => void
 
+    // Event handlers
+    public onClick?: (event: MouseEvent) => void
+    public onMouseEnter?: (event: MouseEvent) => void
+    public onMouseLeave?: (event: MouseEvent) => void
+
     abstract draw(renderer: NVRenderer): void
 
     align(bounds: Vec4): void {
@@ -76,7 +81,6 @@ export abstract class BaseUIComponent implements IUIComponent {
         const scaleY = bounds[3] / this.bounds[3]
         this.setScale(Math.min(scaleX, scaleY))
     }
-
 
     applyEffect(effect: Effect): void {
         const { targetObject, property } = effect
@@ -151,6 +155,19 @@ export abstract class BaseUIComponent implements IUIComponent {
         const effects = this.eventEffects.get(eventName)
         if (effects) {
             effects.forEach((effect) => this.applyEffect(effect))
+        }
+
+        // Trigger user-defined event handlers
+        switch (eventName) {
+            case 'click':
+                if (this.onClick) this.onClick(new MouseEvent('click'))
+                break
+            case 'mouseEnter':
+                if (this.onMouseEnter) this.onMouseEnter(new MouseEvent('mouseenter'))
+                break
+            case 'mouseLeave':
+                if (this.onMouseLeave) this.onMouseLeave(new MouseEvent('mouseleave'))
+                break
         }
     }
 

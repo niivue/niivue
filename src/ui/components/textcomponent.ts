@@ -64,23 +64,4 @@ export class TextComponent extends BaseUIComponent implements IColorable {
         this.foregroundColor = color
     }
 
-    onClick(event: MouseEvent): void {
-        // Handle click event
-    }
-
-    onFocus(): void {
-        // Handle focus event
-    }
-
-    onBlur(): void {
-        // Handle blur (lost focus) event
-    }
-
-    onMouseEnter(event: MouseEvent): void {
-        // Handle mouse enter event
-    }
-
-    onMouseLeave(event: MouseEvent): void {
-        // Handle mouse leave event
-    }
 }
