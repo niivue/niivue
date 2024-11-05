@@ -1,6 +1,6 @@
 import { vec2 } from 'gl-matrix'
 import { Shader } from '../shader.js'
-import { fragFontShader, vertFontShader } from '../shader-srcs.js'
+import { fragRotatedFontShader, vertFontShader } from '../shader-srcs.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
 import { TEXTURE3_FONT } from '../niivue/index.js'
@@ -22,52 +22,50 @@ export class NVFont {
   private gl: WebGL2RenderingContext
   private fontTexture: WebGLTexture | null = null
   public fontMetrics: any
-  public fontMets: FontMetrics | null // { distanceRange: number, size: number, mets: { [id: string]: GlyphMetrics } }
+  public fontMets: FontMetrics | null = null
   public fontShader: Shader | null = null
   private DEFAULT_FONT_GLYPH_SHEET: string = defaultFontPNG
   private DEFAULT_FONT_METRICS: any = defaultFontMetrics
   private cuboidVertexBuffer?: WebGLBuffer
-  private genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
+  private genericVAO: WebGLVertexArrayObject | null = null
   private unusedVAO = null
   public isFontLoaded = false
   public fontColor: number[] | Float32Array
+  public outlineColor: number[] | Float32Array
+  public outlineThickness: number
   public textHeight: number
 
   constructor(
     gl: WebGL2RenderingContext,
     fontColor: number[] | Float32Array = [1.0, 0.0, 0.0, 1.0],
-    textHeight = 0.06
+    textHeight = 0.06,
+    outlineColor: number[] | Float32Array = [0.0, 0.0, 0.0, 1.0],
+    outlineThickness: number = 1,
   ) {
     this.gl = gl
     this.fontColor = fontColor
+    this.outlineColor = outlineColor
+    this.outlineThickness = outlineThickness
     this.textHeight = textHeight
 
     const rectStrip = [
-      1,
-      1,
-      0, // RAI
-      1,
-      0,
-      0, // RPI
-      0,
-      1,
-      0, // LAI
-      0,
-      0,
-      0 // LPI
+      1, 1, 0,
+      1, 0, 0,
+      0, 1, 0,
+      0, 0, 0
     ]
 
     this.cuboidVertexBuffer = gl.createBuffer()!
     gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rectStrip), gl.STATIC_DRAW)
-    this.genericVAO = gl.createVertexArray()! // 2D slices, fonts, lines
+    this.genericVAO = gl.createVertexArray()!
     gl.bindVertexArray(this.genericVAO)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
     gl.enableVertexAttribArray(0)
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
-    gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    gl.bindVertexArray(this.unusedVAO)
 
-    this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
+    this.fontShader = new Shader(this.gl, vertFontShader, fragRotatedFontShader)
   }
 
   private requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
@@ -89,6 +87,9 @@ export class NVFont {
         this.fontShader!.use(this.gl)
         this.gl.activeTexture(TEXTURE3_FONT)
         this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
+        this.gl.uniform4fv(this.fontShader!.uniforms.fontColor, this.fontColor)
+        this.gl.uniform4fv(this.fontShader!.uniforms.outlineColor, this.outlineColor)
+        this.gl.uniform1f(this.fontShader!.uniforms.outlineThickness, this.outlineThickness)
         if (this.fontTexture !== null) {
           this.gl.deleteTexture(this.fontTexture)
         }
@@ -122,7 +123,6 @@ export class NVFont {
     const scaleW = this.fontMetrics.atlas.width
     const scaleH = this.fontMetrics.atlas.height
 
-    // Populate the mets object with Unicode character keys
     for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
       const glyph = this.fontMetrics.glyphs[i]
       const char = String.fromCodePoint(glyph.unicode)
@@ -166,8 +166,6 @@ export class NVFont {
     this.fontMetrics = this.DEFAULT_FONT_METRICS
     this.initFontMets()
   }
-
-  // Newly updated functions
 
   public getTextWidth(str: string, scale: number = 1.0): number {
     if (!str) {

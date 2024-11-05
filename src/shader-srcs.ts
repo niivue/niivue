@@ -2122,22 +2122,91 @@ void main(void) {
     vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
 }`
 
-export const vertRotatedFontShaderNext = `#version 300 es
-layout(location = 0) in vec2 position;
-uniform vec4 uvLeftTopWidthHeight;
-out vec2 vUV;
-
-void main(void) {
-    // Directly setting a position in normalized device coordinates
-    gl_Position = vec4(position * 0.1, 0.0, 1.0); // Reduce size to ensure it's visible
-
-    // Calculate normalized UV coordinates
-    vUV = vec2(uvLeftTopWidthHeight.x + (position.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y + ((1.0 - position.y) * uvLeftTopWidthHeight.w));
-    vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
-}`
-
-
 export const fragRotatedFontShader = `#version 300 es
+#line 593
+precision highp int;
+precision highp float;
+
+uniform highp sampler2D fontTexture;
+uniform vec4 fontColor;
+uniform vec4 outlineColor;
+uniform float screenPxRange;
+uniform float outlineThickness;
+uniform vec2 canvasWidthHeight;
+
+in vec2 vUV;
+out vec4 color;
+
+float median(float r, float g, float b) {
+    return max(min(r, g), min(max(r, g), b));
+}
+
+void main() {
+    vec3 msd = texture(fontTexture, vUV).rgb;
+    float sd = median(msd.r, msd.g, msd.b);
+    
+    // Convert outline thickness from pixels to normalized device coordinates (NDC)
+    float outlineThicknessNDC = outlineThickness / max(canvasWidthHeight.x, canvasWidthHeight.y);
+    float screenPxDistance = screenPxRange * (sd - 0.5);
+
+    // Calculate factors for the outline and glyph, aiming for a sharp outline fall-off
+    float outlineFactor = smoothstep(-outlineThicknessNDC, 0.0, screenPxDistance);
+    float glyphFactor = smoothstep(0.0, screenPxRange * 0.5, screenPxDistance + 0.5);
+    
+    // Combine factors to determine the final color
+    float finalOutline = outlineFactor * (1.0 - glyphFactor);
+    float finalGlyph = glyphFactor;
+
+    // Determine the final color
+    vec3 finalColor = mix(outlineColor.rgb, fontColor.rgb, finalGlyph);
+    float finalAlpha = max(outlineColor.a * finalOutline, fontColor.a * finalGlyph);
+
+    color = vec4(finalColor, finalAlpha);
+}`;
+
+export const fragRotatedFontShaderN = `#version 300 es
+#line 593
+precision highp int;
+precision highp float;
+
+uniform highp sampler2D fontTexture;
+uniform vec4 fontColor;
+uniform vec4 outlineColor;
+uniform float screenPxRange;
+uniform float outlineThickness;
+uniform vec2 canvasWidthHeight;
+
+in vec2 vUV;
+out vec4 color;
+
+float median(float r, float g, float b) {
+    return max(min(r, g), min(max(r, g), b));
+}
+
+void main() {
+    vec3 msd = texture(fontTexture, vUV).rgb;
+    float sd = median(msd.r, msd.g, msd.b);
+    
+    // Convert outline thickness from pixels to normalized device coordinates (NDC)
+    float outlineThicknessNDC = outlineThickness / max(canvasWidthHeight.x, canvasWidthHeight.y);
+    float screenPxDistance = screenPxRange * (sd - 0.5);
+
+    // Calculate the glyph visibility
+    float glyphAlpha = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+
+    // Calculate the outline visibility with sharp fall-off
+    float outlineEdgeStart = -outlineThicknessNDC;
+    float outlineEdgeEnd = 0.0;
+    float outlineAlpha = smoothstep(outlineEdgeStart - 0.01, outlineEdgeEnd + 0.01, screenPxDistance) * (1.0 - glyphAlpha);
+
+    // Combine the colors
+    vec3 finalColor = mix(outlineColor.rgb, fontColor.rgb, glyphAlpha);
+    float finalAlpha = max(outlineAlpha * outlineColor.a, glyphAlpha * fontColor.a);
+
+    color = vec4(finalColor, finalAlpha);
+}`;
+
+export const fragRotatedFontShaderOld = `#version 300 es
 #line 593
 precision highp int;
 precision highp float;
@@ -2157,14 +2226,9 @@ void main() {
     color = vec4(fontColor.rgb, fontColor.a * opacity);
 }`
 
-export const fragRotatedFontShaderG = `#version 300 es
-precision mediump float;
 
-out vec4 FragColor;
 
-void main() {
-    FragColor = vec4(0.5, 0.8, 0.2, 1.0); // Set a solid greenish color
-}`
+
 
 
 

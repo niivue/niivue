@@ -32,10 +32,10 @@
             const spacing = textHeight * 3
             nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-            ui.drawRotatedText(font, [200, leftTopWidthHeight[1] + spacing], str, 0.5, textColor, 0)
-            ui.drawRotatedText(font, [300, leftTopWidthHeight[1] - 400], str, 0.5, textColor, Math.PI / 4)
-            ui.drawRotatedText(font, [150, leftTopWidthHeight[1] - spacing], str, 0.5, textColor, Math.PI / 2)
-            ui.drawRotatedText(font, [nv1.canvas.width / 2 + spacing, leftTopWidthHeight[1] + spacing], str, 0.5, textColor, 3 * Math.PI / 2)
+            ui.drawRotatedText(font, [200, leftTopWidthHeight[1] + spacing], str, 0.5, textColor, 0, outlineColor)
+            ui.drawRotatedText(font, [300, leftTopWidthHeight[1] - 400], str, 0.5, textColor, Math.PI / 4, outlineColor)
+            ui.drawRotatedText(font, [150, leftTopWidthHeight[1] - spacing], str, 0.5, textColor, Math.PI / 2, outlineColor)
+            ui.drawRotatedText(font, [nv1.canvas.width / 2 + spacing, leftTopWidthHeight[1] + spacing], str, 0.5, textColor, 3 * Math.PI / 2, outlineColor)
         }
 
         var nv1 = new niivue.Niivue();

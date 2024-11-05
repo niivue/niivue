@@ -251,11 +251,14 @@ export class NVUI {
         text: string,
         scale = 1.0,
         color: Color = [1, 0, 0, 1],
-        rotation = 0.0 // Rotation in radians
+        rotation = 0.0, // Rotation in radians
+        outlineColor: Color = [0, 0, 0, 1],
+        outlineThickness: number = 1
     ): void {
-        this.renderer.drawRotatedText(font, position, text, scale, color, rotation)
+        this.renderer.drawRotatedText(font, position, text, scale, color, rotation, outlineColor, outlineThickness)
     }
 
+    // Updated drawTextBox method to support maxWidth and word wrapping
     // Updated drawTextBox method to support maxWidth and word wrapping
     drawTextBox(
         font: NVFont,
@@ -267,9 +270,11 @@ export class NVUI {
         margin: number = 15,
         roundness: number = 0.0,
         scale = 1.0,
-        maxWidth = 0
+        maxWidth = 0,
+        fontOutlineColor: Color = [0, 0, 0, 1],
+        fontOutlineThickness: number = 1
     ): void {
-        this.renderer.drawTextBox(font, xy, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth)
+        this.renderer.drawTextBox(font, xy, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth, fontOutlineColor, fontOutlineThickness)
     }
 
     drawTextBoxCenteredOn(
@@ -282,7 +287,10 @@ export class NVUI {
         margin: number = 15,
         roundness: number = 0.0,
         scale = 1.0,
-        maxWidth = 0
+        maxWidth = 0,
+        fontOutlineColor: Color = [0, 0, 0, 1],
+        fontOutlineThickness: number = 1
+
     ): void {
         const textWidth = font.getTextWidth(str, scale)
         const textHeight = font.getTextHeight(str, scale)
@@ -291,7 +299,7 @@ export class NVUI {
         const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
         const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2] as Vec2
 
-        this.drawTextBox(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth)
+        this.drawTextBox(font, centeredPos, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth, fontOutlineColor, fontOutlineThickness)
     }
 
     public drawCalendar(

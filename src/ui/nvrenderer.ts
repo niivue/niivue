@@ -140,7 +140,9 @@ export class NVRenderer {
         str: string,
         scale = 1.0,
         color: Color = [1.0, 0.0, 0.0, 1.0],
-        maxWidth = 0
+        maxWidth = 0,
+        outlineColor: Color = [0, 0, 0, 1],
+        outlineThickness: number = 1
     ): void {
         if (!font.isFontLoaded) {
             console.error('font not loaded')
@@ -167,6 +169,11 @@ export class NVRenderer {
         let screenPxRange = (size / font.fontMets!.size) * font.fontMets!.distanceRange
         screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
         this.gl.uniform1f(font.fontShader.uniforms.screenPxRange, screenPxRange)
+
+        // outline
+        this.gl.uniform4fv(font.fontShader.uniforms.outlineColor, outlineColor as Float32List)
+        this.gl.uniform1f(font.fontShader.uniforms.outlineThickness, outlineThickness)
+
         this.gl.bindVertexArray(NVRenderer.genericVAO)
 
         const pos = Array.isArray(position) ? vec2.fromValues(position[0], position[1]) : position
@@ -578,7 +585,9 @@ export class NVRenderer {
         str: string,
         scale = 1.0,
         color: Color = [1.0, 0.0, 0.0, 1.0],
-        rotation = 0.0 // Rotation in radians
+        rotation = 0.0, // Rotation in radians
+        outlineColor: Color = [0, 0, 0, 1.0],
+        outlineThickness: number = 2
     ): void {
         if (!font.isFontLoaded) {
             console.error('font not loaded')
@@ -613,6 +622,10 @@ export class NVRenderer {
         screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
         gl.uniform1f(rotatedFontShader.uniforms.screenPxRange, screenPxRange)
         gl.uniform1i(rotatedFontShader.uniforms.fontTexture, 0)
+
+        // outline
+        this.gl.uniform4fv(rotatedFontShader.uniforms.outlineColor, outlineColor as Float32List)
+        this.gl.uniform1f(rotatedFontShader.uniforms.outlineThickness, outlineThickness)
 
         // Bind VAO for generic rectangle
         gl.bindVertexArray(NVRenderer.genericVAO)
@@ -776,7 +789,9 @@ export class NVRenderer {
         margin: number = 15,
         roundness: number = 0.0,
         scale = 1.0,
-        maxWidth = 0
+        maxWidth = 0,
+        fontOutlineColor: Color = [0, 0, 0, 1],
+        fontOutlineThickness: number = 1
     ): void {
         const textHeight = font.getTextHeight(str, scale)
         const wrappedSize = font.getWordWrappedSize(str, scale, maxWidth)
@@ -800,7 +815,7 @@ export class NVRenderer {
         ] as [number, number]
 
         // Render the text
-        this.drawText(font, textPosition, str, scale, textColor, maxWidth)
+        this.drawText(font, textPosition, str, scale, textColor, maxWidth, fontOutlineColor, fontOutlineThickness)
     }
 
     public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
@@ -836,7 +851,7 @@ export class NVRenderer {
         }
 
         // Draw the rotated length text at the adjusted position
-        this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
+        this.drawRotatedText(font, textPosition, text, scale, textColor, angle, [1, 1, 1, 1], 4)
 
         // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
         const unitsText = units
