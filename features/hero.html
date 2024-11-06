@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label id="menuLabel">≡</label>
+      <div class="panel-box" id="panelBox" style="display: none;">
+      <label for="sceneSelect">Layout</label>
+      <select id="sceneSelect">
+        <option value="0" selected>fMRI</option>
+        <option value="1">T1</option>
+        <option value="2">FLAIR</option>
+        <option value="3">CT</option>
+      </select>
+      <label for="layoutSelect">&nbsp;&nbsp;Layout</label>
+      <select id="layoutSelect">
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
+        <option value="2">Grid</option>
+        <option value="3">Row</option>
+      </select>
+      <label for="sliderCheck">&nbsp;&nbsp;Sliders</label>
+      <input type="checkbox" id="sliderCheck" unchecked />
+      <label for="equalCheck">&nbsp;&nbsp;Equal Size</label>
+      <input type="checkbox" id="equalCheck" unchecked />
+      <label for="renderCheck">&nbsp;&nbsp;Volume Render</label>
+      <input type="checkbox" id="renderCheck" checked />
+      <label for="heroSlider">&nbsp;&nbsp;Hero Image</label>
+      <input
+        type="range"
+        min="0"
+        max="9"
+        value="6"
+        class="slider"
+        id="heroSlider"
+      />
+      <label for="gapSlider">&nbsp;&nbsp;Xhair Gap</label>
+      <input
+        type="range"
+        min="0"
+        max="9"
+        value="2"
+        class="slider"
+        id="gapSlider"
+      />
+      <label for="rulerSlider">&nbsp;&nbsp;Ruler Thick</label>
+      <input
+        type="range"
+        min="1"
+        max="10"
+        value="2"
+        class="slider"
+        id="rulerSlider"
+      />
+      <label for="thickSlider">&nbsp;&nbsp;Crosshair width</label>
+      <input
+        type="range"
+        min="1"
+        max="40"
+        value="4"
+        class="slider"
+        id="thickSlider"
+      />
+      <select id="crosshairUnits">
+        <option value="voxels">Voxels</option>
+        <option value="mm" selected>MM</option>
+        <option value="percent">percent</option>
+      </select>
+      <label for="smoothCheck">&nbsp;&nbsp;Smooth</label>
+      <input type="checkbox" id="smoothCheck" checked />
+      <label for="worldCheck">&nbsp;&nbsp;World space</label>
+      <input type="checkbox" id="worldCheck" unchecked />
+      </div>
+      <label id="statusLabel">&nbsp; </label>
+    </header>
+    <main id="canvas-container">
+
+      <div style="display: flex; width: 100%; height: 100%;">
+
+        <canvas id="gl1"></canvas>
+    <input type="range" id="axSlider" min="0" max="100" data-axcorsag="0"
+           style="position: absolute; visibility: hidden;">
+    <input type="range" id="corSlider" min="0" max="100" data-axcorsag="1"
+           style="position: absolute; visibility: hidden;">
+    <input type="range" id="sagSlider" min="0" max="100" data-axcorsag="2"
+           style="position: absolute; visibility: hidden;">
+      </div>
+    </main>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      thickSlider.oninput = function () {
+        nv1.opts.crosshairWidth = this.value * 0.25
+        nv1.drawScene()
+      }
+      smoothCheck.onchange = function () {
+        nv1.setInterpolation(!this.checked);
+      }
+      renderCheck.onchange = function () {
+        let rc = this.checked ? 0 : -1;
+        nv1.setVolumeRenderIllumination(rc)
+      }
+      crosshairUnits.onchange = function () {
+        nv1.opts.crosshairWidthUnit = this.value
+        nv1.drawScene()
+      }
+      worldCheck.onclick = function () {
+        nv1.setSliceMM(this.checked)
+        resizeSliders()
+      }
+      var lastPos = null
+      gl1.ondblclick = async function () {
+        if (!lastPos) return
+        let clickSliceType = lastPos.axCorSag
+        let heroSliceType = nv1.screenSlices[0].axCorSag
+        if (!isFinite(clickSliceType)) return
+        if (!isFinite(heroSliceType)) return
+        if (heroSliceType === clickSliceType) 
+          nv1.opts.heroSliceType = niivue.SLICE_TYPE.RENDER
+        else
+          nv1.opts.heroSliceType = clickSliceType
+        nv1.drawScene()
+      }
+      function resizeSlider(slider) {
+        let ltwh = [-1, 0, 0, 0]
+        if (sliderCheck.checked) {
+          let orient = parseInt(slider.dataset.axcorsag)
+          for (let i = 0; i < nv1.screenSlices.length; i++) {
+            if (nv1.screenSlices[i].axCorSag !== orient) {
+              continue
+            }
+            ltwh = nv1.screenSlices[i].leftTopWidthHeight
+          }
+        }
+        if (ltwh[0] < 0) {
+          slider.style.visibility = "hidden"
+          return
+        }
+        const dpr = 1/nv1.uiData.dpr
+        slider.style.visibility = "visible"
+        slider.style.left = (ltwh[0] * dpr) + "px"
+        let top = Math.max((ltwh[1] - nv1.opts.tileMargin) * dpr, 0) 
+        slider.style.top = top + "px"
+        slider.style.width = ltwh[2] * dpr + "px"
+      }
+      function resizeSliders() {
+        resizeSlider(axSlider)
+        resizeSlider(corSlider)
+        resizeSlider(sagSlider)
+      }
+      function resizeCanvas() {
+        resizeSliders()
+      }
+      function moveSlider() {
+        nv1.scene.crosshairPos = [sagSlider.value / 100, corSlider.value / 100, axSlider.value / 100]
+        nv1.drawScene()
+      }
+      menuLabel.onclick = function() {
+        if (panelBox.style.display === "none" || panelBox.style.display === "") {
+          panelBox.style.display = "block";
+        } else {
+          panelBox.style.display = "none";
+        }
+        nv1.resizeListener()
+        resizeSliders()
+      }
+      axSlider.oninput = function () {
+        moveSlider()
+      }
+      corSlider.oninput = function () {
+        moveSlider()
+      }
+      sagSlider.oninput = function () {
+        moveSlider()
+      }
+      gapSlider.oninput = function () {
+        nv1.opts.crosshairGap = this.value * 2
+        nv1.updateGLVolume()
+      }
+      rulerSlider.oninput = function () {
+        nv1.opts.rulerWidth = Number(this.value)
+        nv1.updateGLVolume()
+      }
+      sceneSelect.onchange = function () {
+        const root = "../images/";
+        let img = "fslmean"
+        let idx = Number(this.value)
+        if (idx === 1)
+          img = "mni152"
+        if (idx === 2)
+          img = "FLAIR"
+        if (idx === 3)
+          img = "shear"
+        img = root + img + ".nii.gz"
+        console.log("Loading: " + img);
+        volumeList1[0].url = img;
+        nv1.loadVolumes(volumeList1);
+        nv1.updateGLVolume();
+        resizeSliders()
+      }
+      layoutSelect.onchange = function () {
+        nv1.setMultiplanarLayout(Number(this.value))
+        resizeSliders()
+      }
+      equalCheck.onchange = function () {
+        nv1.opts.multiplanarEqualSize = this.checked
+        nv1.drawScene()
+        resizeSliders()
+      }
+      sliderCheck.onchange = function () {
+        resizeSliders()
+      }
+      heroSlider.oninput = function () {
+        nv1.setHeroImage(this.value * 0.1)
+        resizeSliders()
+      }
+      var volumeList1 = [{ url: "../images/fslmean.nii.gz" }]
+      const onLocationChange = (data) => {
+        statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
+        let fracXYZ = nv1.scene.crosshairPos
+        axSlider.value = Math.round(fracXYZ[2] * 100)
+        corSlider.value = Math.round(fracXYZ[1] * 100)
+        sagSlider.value = Math.round(fracXYZ[0] * 100)
+        if (!lastPos) {
+          resizeSliders()
+        }
+        lastPos = data
+      }
+      let defaults = {
+        backColor: [0.1, 0.1, 0.1, 1],
+        show3Dcrosshair: true,
+        loglevel: 'debug',
+        isRuler: true,
+        onLocationChange: onLocationChange,
+      }
+      window.addEventListener("resize", resizeCanvas)
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.onImageLoaded = (volume) => {
+        resizeSliders()
+        lastPos = null
+      }
+      nv1.onMeshLoaded = (volume) => {
+        resizeSliders()
+        lastPos = null
+      }
+      nv1.opts.tileMargin = 40
+      //nv1.opts.multiplanarPadPixels = 40
+      nv1.attachToCanvas(gl1)
+      await nv1.loadVolumes(volumeList1)
+      nv1.opts.textHeight = 0.02
+      equalCheck.onchange()
+      layoutSelect.onchange()
+      rulerSlider.oninput()
+      gapSlider.oninput()
+      thickSlider.oninput()
+      crosshairUnits.onchange()
+      heroSlider.oninput()
+      await nv1.drawScene()
+      resizeSliders()
+      nv1.resizeListener()
+    </script>
+  </body>
+</html>

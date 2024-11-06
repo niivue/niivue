@@ -614,6 +614,7 @@ type NVConfigOptions = {
     textHeight: number;
     colorbarHeight: number;
     crosshairWidth: number;
+    crosshairWidthUnit: 'voxels' | 'mm' | 'percent';
     crosshairGap: number;
     rulerWidth: number;
     show3Dcrosshair: boolean;
@@ -650,6 +651,7 @@ type NVConfigOptions = {
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
     heroImageFraction: number;
+    heroSliceType: SLICE_TYPE;
     sagittalNoseLeft: boolean;
     isSliceMM: boolean;
     isV1SliceShader: boolean;
@@ -3042,7 +3044,7 @@ declare class Niivue {
     sumBitmap(img: Uint8Array): number;
     mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): void;
     drawRuler(): void;
-    drawRuler10cm(startXYendXY: number[]): void;
+    drawRuler10cm(startXYendXY: number[], rulerColor: number[], rulerWidth?: number): void;
     screenXY2mm(x: number, y: number, forceSlice?: number): vec4;
     dragForPanZoom(startXYendXY: number[]): void;
     dragForCenterButton(startXYendXY: number[]): void;
