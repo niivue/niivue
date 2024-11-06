@@ -26,6 +26,7 @@ export class NVUI {
     private canvasHeight: number
     private dpr: number
     private resizeListener: () => void
+    public redrawRequested: () => void
 
     // Static enum for line terminators
     public static lineTerminator = LineTerminator
@@ -76,8 +77,11 @@ export class NVUI {
     }
 
     public draw(boundsInScreenCoords?: Vec4): void {
-        // Update the WebGL viewport using canvasWidth and canvasHeight
         this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
+
+        // Update the WebGL viewport using canvasWidth and canvasHeight
+
+
 
         let components: IUIComponent[]
 
@@ -93,15 +97,8 @@ export class NVUI {
             components = this.quadTree.getAllElements()
         }
 
-        const canvasBounds = [0, 0, this.canvasWidth, this.canvasHeight]
-        // console.log('canvas bounds', canvasBounds)
         for (const component of components) {
             if (component.isVisible) {
-
-                // component.align(boundsInScreenCoords || canvasBounds as Vec4)
-                // if (component instanceof BaseContainerComponent) {
-                //     component.alignItems()
-                // }
                 component.draw(this.renderer)
             }
         }
@@ -109,7 +106,13 @@ export class NVUI {
 
     // Method to request a redraw
     private requestRedraw(): void {
-        this.draw()
+        if (this.redrawRequested) {
+            this.redrawRequested()
+        }
+        else {
+            // no host
+            this.draw()
+        }
     }
 
     // Method to handle window resize events
@@ -146,7 +149,6 @@ export class NVUI {
         const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
 
         const components = new Set(this.quadTree.queryPoint(point).filter(component => component.isVisible))
-
         // Handle mouse enter for newly hovered components
         for (const component of components) {
             if (!this.lastHoveredComponents.has(component)) {
@@ -162,9 +164,7 @@ export class NVUI {
         }
 
         this.lastHoveredComponents = components
-        if (components.size > 0) {
-            this.draw()
-        }
+
     }
 
     // Optional: Method to remove the resize listener when NVUI is no longer needed

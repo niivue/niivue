@@ -901,6 +901,7 @@ export class Niivue {
       antialias: isAntiAlias
     })
     this.ui = new NVUI(this.gl)
+    this.ui.redrawRequested = this.drawScene.bind(this)
     log.info('NIIVUE VERSION ', version)
 
     // set parent background container to black (default empty canvas color)
@@ -8526,7 +8527,6 @@ export class Niivue {
     this.gl.enable(this.gl.CULL_FACE)
     this.gl.enable(this.gl.BLEND)
     this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3)
-    this.ui.draw()
   }
 
   // not included in public docs
@@ -11438,7 +11438,6 @@ export class Niivue {
     this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
     this.sync()
     this.drawAnchoredLabels()
-    this.ui.draw()
     return posString
   }
 
@@ -11446,6 +11445,7 @@ export class Niivue {
   // called to refresh canvas
   drawScene(): string | void {
     if (this.isBusy) {
+      console.log('this.isBusy is true')
       // limit concurrent draw calls (chrome v FireFox)
       this.needsRefresh = true
       return
@@ -11464,7 +11464,7 @@ export class Niivue {
     if (this.needsRefresh) {
       posString = this.drawScene()
     }
-
+    this.ui.draw()
     return posString
   }
 

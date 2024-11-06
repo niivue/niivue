@@ -12,6 +12,7 @@
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
+
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -19,10 +20,12 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
+
+
         var nv1 = new niivue.Niivue();
-        nv1.attachTo("gl1");
+        await nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
-        var ui = new niivue.NVUI(nv1.gl);
+        var ui = nv1.ui
         nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
         nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
 
@@ -34,36 +37,81 @@
         nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
         nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
 
-        const position = [nv1.canvas.width / 2 - 100, nv1.canvas.height / 2 - 400];
+        const position = [nv1.canvas.width / 6 - 100, nv1.canvas.height / 2 - 100];
         const containerButton = new niivue.ContainerButtonComponent(
             position,
             nv1.canvas,
             [1, 1, 1, 1],     // Outline color
-            [0, 0, 0.3, 0.3],   // Fill color
+            [0, 0, 0, 0.3],   // Fill color
             [0.5, 0.5, 0.5, 1.0], // Highlight color
             0.2,              // Roundness
             0,                // Max width (no limit)
             0                 // Max height (no limit)
         );
 
-        containerButton.addEventEffect('mouseEnter', containerButton, 'fillColor', 'animateValue', [0, 0, 0.3, 0.3], [0, 0.3, 0, 0.3], 200) // Set text color to white on mouse enter
-        containerButton.addEventEffect('mouseLeave', containerButton, 'fillColor', 'animateValue', [0, 0.3, 0, 0.3], [0, 0, 0.3, 0.3], 200) // Set text color to white on mouse leave
-        containerButton.onClick = () => { alert('clicked!') }
-
         // Create and add bitmap component
         const bitmapComponent = new niivue.BitmapComponent([10, 10], bitmap, 1.5);
         containerButton.addComponent(bitmapComponent);
 
         // Create and add text component
-        const textComponent = new niivue.TextComponent([10, bitmapComponent.getBounds()[3] + 20], "Hello Niivue!", font, [1.0, 1.0, 1.0, 1.0], 0.5);
-        containerButton.addComponent(textComponent);
-
         const scale = 2.0;
         const xy = [0, 0]; // Position of the bitmap inside the container
 
         nv1.ui.addComponent(containerButton);
+
+        // Draw vertical container and add it to the horizontal container
+        const defaultFont = nv1.defaultFont;
+        const verticalContainer = new niivue.BaseContainerComponent(
+            [0, 0],
+            nv1.canvas,
+            false,  // Vertical layout
+            15      // Padding between components
+        );
+
+        console.log(defaultFont)
+
+        // Create and add text components to vertical container
+        const text1 = new niivue.TextComponent([0, 0], "Figure 1.", font, [1.0, 1.0, 1.0, 1.0], 0.5);
+        const text2 = new niivue.TextComponent([0, 50], "rotate", defaultFont, [1.0, 1.0, 1.0, 1.0], 0.5);
+        const text3 = new niivue.TextComponent([0, 90], "clip", defaultFont, [1.0, 1.0, 1.0, 1.0], 0.5);
+
+        // Adding mouse enter and leave effects
+        text2.addEventEffect('mouseEnter', text2, 'textColor', 'setValue', [0, 0, 1, 1]); // Blue
+        text2.addEventEffect('mouseLeave', text2, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
+        text2.addEventEffect('click', nv1.document.scene, 'renderAzimuth', 'animateValue', 270, 165, 200, true); // Bounce       
+        text3.addEventEffect('mouseEnter', text3, 'textColor', 'setValue', [0, 1, 0, 1]); // Green
+        text3.addEventEffect('mouseLeave', text3, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
+        text2.addEventEffect('click', nv1.document.scene, 'clipPlaneDepthAziElev', 'animateValue', [2, 0, 0], [0, 270, 0], 200, true); // Bounce       
+        this.scene.clipPlaneDepthAziElev = [0, 270, 0]
+
+        verticalContainer.addComponent(text1);
+        verticalContainer.addComponent(text2);
+        verticalContainer.addComponent(text3);
+
+        containerButton.addComponent(verticalContainer);
         console.log(nv1.ui);
+        var volumeList1 = [
+            {
+                url: "../images/mni152.nii.gz",
+                colormap: "gray",
+                visible: true,
+                opacity: 1
+            },
+            {
+                url: "../images/hippo.nii.gz",
+                colormap: "red",
+                visible: true,
+                opacity: 1
+            }
+        ];
+        await nv1.loadVolumes(volumeList1);
+        nv1.setSliceType(nv1.sliceTypeRender);
+        nv1.onAzimuthElevationChange = (azimuth, elevation) => {
+            console.log('a, e', azimuth, elevation)
+        }
         nv1.drawScene();
+
+
     </script>
 </body>
 

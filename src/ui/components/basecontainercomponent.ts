@@ -22,8 +22,13 @@ export abstract class BaseContainerComponent extends BaseUIComponent {
     }
 
     set quadTree(quadTree: QuadTree<IUIComponent>) {
+        console.log('components being moved', this.components)
         this.components.forEach(child => {
             quadTree.insert(child)
+            if (child instanceof BaseContainerComponent) {
+                child.quadTree = this.quadTree
+            }
+            child.requestRedraw = this.requestRedraw
         })
         this._quadTree.getAllElements().forEach(child => {
             this._quadTree.remove(child)
@@ -37,8 +42,12 @@ export abstract class BaseContainerComponent extends BaseUIComponent {
 
     addComponent(component: BaseUIComponent): void {
         this.components.push(component)
-        this._quadTree.insert(component)
         this.updateLayout()
+        if (component instanceof BaseContainerComponent) {
+            component.quadTree = this._quadTree
+        }
+        component.requestRedraw = this.requestRedraw
+        this._quadTree.insert(component)
     }
 
     removeComponent(component: BaseUIComponent): void {

@@ -172,12 +172,18 @@ export class NVFont {
       return 0
     }
     let w = 0
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i]
-      const glyph = this.fontMets.mets[char]
-      if (glyph) {
-        w += scale * glyph.xadv
+    try {
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i]
+        const glyph = this.fontMets.mets[char]
+        if (glyph) {
+          w += scale * glyph.xadv
+        }
       }
+    }
+    catch (e) {
+      console.log(e)
+      return 0
     }
     const textWidth = w * this.gl.canvas.height * this.textHeight
     return textWidth
